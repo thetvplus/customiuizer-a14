@@ -1,0 +1,59 @@
+<PreferenceScreen
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:miuizer="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+		android:key="pref_key_system_charginginfo"
+		android:title="@string/enable_mod"
+		android:defaultValue="false" />
+
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
+		android:title="@string/system_charginginfo_title"
+		android:dependency="pref_key_system_charginginfo"
+		miuizer:dynamic="true">
+
+	<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+		android:key="pref_key_system_charginginfo_view"
+		android:title="@string/system_charginginfo_view_title"
+		android:entries="@array/charginginfo"
+		android:entryValues="@array/charginginfo_val"
+		miuizer:valueAsSummary="true"
+		android:defaultValue="1" />
+
+	<tv.withaibuild.customiuizer.prefs.SeekBarPreference
+		android:key="pref_key_system_charginginfo_fontsize"
+		android:title="@string/system_charginginfo_fontsize_title"
+		android:summary="@string/system_charginginfo_fontsize_summary"
+		android:defaultValue="16"
+		miuizer:minValue="16"
+		miuizer:maxValue="40"
+		miuizer:stepValue="1"
+		miuizer:displayDividerValue="2"
+		miuizer:offtext="@string/array_default"
+		miuizer:format="%s sp" />
+
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+		android:key="pref_key_system_charginginfo_current"
+		android:title="@string/system_charginginfo_current_title"
+		android:defaultValue="false" />
+
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+		android:key="pref_key_system_charginginfo_voltage"
+		android:title="@string/system_charginginfo_voltage_title"
+		android:defaultValue="false" />
+
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+		android:key="pref_key_system_charginginfo_wattage"
+		android:title="@string/system_charginginfo_wattage_title"
+		android:defaultValue="false" />
+
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+		android:key="pref_key_system_charginginfo_temp"
+		android:title="@string/system_charginginfo_temp_title"
+		android:defaultValue="false" />
+
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+
+</PreferenceScreen>

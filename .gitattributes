@@ -1,0 +1,26 @@
+# Repository canonical text policy: UTF-8 without BOM, LF in the index.
+# Checkout CRLF only for Windows batch files.
+
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary patterns — never treat as text.
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.ico -text
+*.jar -text
+*.apk -text
+*.so -text
+*.keystore -text
+*.jks -text
+*.ttf -text
+*.otf -text
+*.pdf -text
+*.zip -text
+*.mp3 -text
+*.mp4 -text

@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" >
+
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.CHANGE_COMPONENT_ENABLED_STATE"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.SET_ANIMATION_SCALE"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.MODIFY_DAY_NIGHT_MODE"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <permission
+        android:name="tv.withaibuild.customiuizer.r14.permission.BROADCAST"
+        android:label="@string/permission_broadcast_label"
+        android:description="@string/permission_broadcast_description"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="tv.withaibuild.customiuizer.r14.permission.BROADCAST" />
+
+    <application
+        android:hasFragileUserData="true"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:description="@string/app_slogan"
+        android:supportsRtl="true"
+        android:name="tv.withaibuild.customiuizer.MainApplication"
+        android:requestLegacyExternalStorage="true"
+        tools:ignore="GoogleAppIndexingWarning">
+
+        <uses-library android:name="com.miui.system" android:required="false" />
+        <uses-library android:name="com.miui.core" android:required="false" />
+        <uses-library android:name="com.miui.rom" android:required="false" />
+
+        <activity
+            android:exported="true"
+            android:name="tv.withaibuild.customiuizer.MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme"
+            android:launchMode="singleTop"
+            android:configChanges="locale|layoutDirection"
+            android:alwaysRetainTaskState="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES"/>
+                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS"/>
+            </intent-filter>
+        </activity>
+
+        <activity-alias
+            android:exported="true"
+            android:name="tv.withaibuild.customiuizer.GateWayLauncher"
+            android:label="@string/title_activity_main"
+            android:targetActivity="tv.withaibuild.customiuizer.MainActivity"
+            android:taskAffinity="com.android.settings.customiuizer"
+            android:allowTaskReparenting="true"
+            android:clearTaskOnLaunch="true"
+            android:enabled="true"
+            android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity
+            android:name="tv.withaibuild.customiuizer.Credentials"
+            android:label="@string/credentials_unlock"
+            android:theme="@style/Invisible"
+            android:icon="@drawable/ic_credentials"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:finishOnTaskLaunch="true"
+            android:configChanges="keyboardHidden|orientation|screenSize">
+        </activity>
+
+        <activity-alias
+            android:name="tv.withaibuild.customiuizer.CredentialsLauncher"
+            android:targetActivity="tv.withaibuild.customiuizer.Credentials"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity
+            android:name="tv.withaibuild.customiuizer.CredentialsShortcut"
+            android:label="@string/credentials_unlock"
+            android:theme="@style/Invisible"
+            android:icon="@drawable/ic_credentials"
+            android:launchMode="singleInstance"
+            android:finishOnTaskLaunch="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:exported="true">
+            <intent-filter android:label="@string/credentials_unlock">
+                <action android:name="android.intent.action.CREATE_SHORTCUT"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="tv.withaibuild.customiuizer.tasker.UnlockSettings"
+            android:theme="@style/AppTheme"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/system_noscreenlock_scr_title">
+            <intent-filter>
+                <action android:name="com.twofortyfouram.locale.intent.action.EDIT_SETTING"/>
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="tv.withaibuild.customiuizer.PrefsProvider"
+            android:authorities="${applicationId}.provider.sharedprefs"
+            android:grantUriPermissions="true"
+            android:exported="true"
+            tools:ignore="ExportedContentProvider" />
+
+        <service
+            android:exported="true"
+            android:name="tv.withaibuild.customiuizer.qs.AutoRotateService"
+            android:icon="@drawable/ic_qs_autorotate_disabled"
+            android:label="@string/qs_toggle_autorotate"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="tv.withaibuild.customiuizer.tasker.UnlockReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.twofortyfouram.locale.intent.action.FIRE_SETTING"/>
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

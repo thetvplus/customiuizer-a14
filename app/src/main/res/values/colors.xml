@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<color name="ic_launcher_background">#ff424a60</color>
+	<color name="color_window_background">@android:color/system_neutral1_10</color>
+	<color name="color_surface_variant">@android:color/system_neutral2_100</color>
+	<color name="color_on_surface">@android:color/system_neutral1_900</color>
+	<color name="color_on_surface_variant">@android:color/system_neutral1_700</color>
+	<color name="about_divider">#33808080</color>
+	<color name="highlight_normal_light">@android:color/system_accent1_600</color>
+
+	<color name="preference_category_text_color">@color/color_on_surface_variant</color>
+	<color name="preference_primary_text_color">@android:color/system_neutral1_900</color>
+	<color name="preference_primary_text_color_disable">@color/preference_primary_text_disable</color>
+	<color name="preference_primary_text_color_pressed">#ff000000</color>
+	<color name="preference_secondary_text_color">@android:color/system_neutral2_700</color>
+	<color name="preference_secondary_text_color_disable">@color/preference_primary_text_disable</color>
+	<color name="preference_secondary_text_color_pressed">#66000000</color>
+	<color name="preference_secondary_text_color_checked">#260091dc</color>
+
+	<color name="hint_edit_text_color">#4c000000</color>
+
+    <color name="list_item_bg_color_pressed">#0d000000</color>
+	<color name="list_item_bg_color">@android:color/transparent</color>
+
+	<color name="light_mode_icon_color_single_tone">#e6ffffff</color>
+	<color name="light_mode_icon_transparent_color_single_tone">#5cffffff</color>
+	<color name="dark_mode_icon_color_single_tone">#bf000000</color>
+	<color name="dark_mode_icon_transparent_color_single_tone">#4c000000</color>
+</resources>

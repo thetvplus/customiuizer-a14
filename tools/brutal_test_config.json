@@ -1,0 +1,1182 @@
+{
+  "name": "A14",
+  "schema_version": 2,
+  "expected_branch": "devin/a14-rom-intelligence-audit",
+  "coverage_target": 74,
+  "minimum_independent_kills": 11,
+  "required_independent_mutations": [
+    "duplicate SMART key",
+    "symbolic verified tree",
+    "ambiguous resume path",
+    "TASK state drift",
+    "generated progress tamper",
+    "remove fetch-depth",
+    "wrong CI branch",
+    "signing leak",
+    "Windows-only path",
+    "duplicate Feature ID",
+    "swallow fatal"
+  ],
+  "smart_state": "SMART_OPERATION_STATE.md",
+  "task_state": "TASK_STATE.md",
+  "progress_json": "docs/progress/A14_PROGRESS_CURRENT.json",
+  "catalog_file": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
+  "feature_id_file": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt",
+  "process_matrix": "docs/rom-intelligence/A14_PROCESS_MATRIX.csv",
+  "installer_roots": [
+    "app/src/main/java/tv/withaibuild/customiuizer/installers"
+  ],
+  "fast_workflows": [
+    ".github/workflows/a14-fast-ci.yml"
+  ],
+  "full_workflows": [
+    ".github/workflows/a14-full-ci.yml"
+  ],
+  "hermetic_commands": [
+    [
+      "python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tools/tests",
+      "-p",
+      "test_*.py"
+    ],
+    [
+      "python",
+      "tools/check_automation_state.py"
+    ],
+    [
+      "python",
+      "tools/progress_snapshot.py",
+      "--check"
+    ],
+    [
+      "python",
+      "tools/ci_contract_scan.py",
+      "--expected-branch",
+      "devin/a14-rom-intelligence-audit",
+      "--default-branch",
+      "main"
+    ],
+    [
+      "python",
+      "tools/catalog_contract_probe.py",
+      "--catalog",
+      "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature",
+      "--feature-id",
+      "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt",
+      "--matrix",
+      "docs/rom-intelligence/A14_PROCESS_MATRIX.csv"
+    ],
+    [
+      "python",
+      "tools/audit_hook_ownership.py",
+      "--check"
+    ]
+  ],
+  "determinism_command": [
+    "python",
+    "tools/progress_snapshot.py",
+    "--write"
+  ],
+  "determinism_outputs": [
+    "docs/progress/A14_PROGRESS_CURRENT.json",
+    "docs/progress/A14_PROGRESS_CURRENT.md"
+  ],
+  "apply_checks": {
+    "a14_contract": [
+      "python",
+      "tools/brutal_a14_contract_scan.py",
+      "--mutation",
+      "{mutator}"
+    ]
+  },
+  "kill_gates": {
+    "automation": [
+      "python",
+      "tools/check_automation_state.py"
+    ],
+    "progress": [
+      "python",
+      "tools/progress_snapshot.py",
+      "--check"
+    ],
+    "ci": [
+      "python",
+      "tools/ci_contract_scan.py",
+      "--expected-branch",
+      "devin/a14-rom-intelligence-audit",
+      "--default-branch",
+      "main"
+    ],
+    "catalog": [
+      "python",
+      "tools/catalog_contract_probe.py",
+      "--catalog",
+      "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature",
+      "--feature-id",
+      "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt",
+      "--matrix",
+      "docs/rom-intelligence/A14_PROCESS_MATRIX.csv"
+    ],
+    "hazard": [
+      "python",
+      "tools/source_hazard_scan.py",
+      "--strict-all",
+      "--path",
+      "app/src/main/java/brutal_mutation"
+    ]
+  },
+  "mutations": [
+    {
+      "name": "duplicate SMART key",
+      "mutator": "duplicate_smart_key",
+      "apply_check": null,
+      "kill_gate": "automation",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "symbolic verified tree",
+      "mutator": "symbolic_verified_tree",
+      "apply_check": null,
+      "kill_gate": "automation",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "ambiguous resume path",
+      "mutator": "ambiguous_resume",
+      "apply_check": null,
+      "kill_gate": "automation",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "TASK state drift",
+      "mutator": "task_state_drift",
+      "apply_check": null,
+      "kill_gate": "progress",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "generated progress tamper",
+      "mutator": "progress_json_tamper",
+      "apply_check": null,
+      "kill_gate": "progress",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "remove fetch-depth",
+      "mutator": "remove_fetch_depth",
+      "apply_check": null,
+      "kill_gate": "ci",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "wrong CI branch",
+      "mutator": "wrong_ci_branch",
+      "apply_check": null,
+      "kill_gate": "ci",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "signing leak",
+      "mutator": "signing_leak",
+      "apply_check": null,
+      "kill_gate": "ci",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "Windows-only path",
+      "mutator": "windows_path",
+      "apply_check": null,
+      "kill_gate": "ci",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "duplicate Feature ID",
+      "mutator": "duplicate_feature_id",
+      "apply_check": null,
+      "kill_gate": "catalog",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "swallow fatal",
+      "mutator": "fatal_swallow",
+      "apply_check": null,
+      "kill_gate": "hazard",
+      "required_independent": true,
+      "coverage_status": "ACTIVE_INDEPENDENT"
+    },
+    {
+      "name": "action_cancel_as_up",
+      "mutator": "action_cancel_as_up",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "bootstrap_guard_removed",
+      "mutator": "bootstrap_guard_removed",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "callback_guard_fatal_to_normal",
+      "mutator": "callback_guard_fatal_to_normal",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "catch_throwable_no_fatal",
+      "mutator": "catch_throwable_no_fatal",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "change_nullable_return",
+      "mutator": "change_nullable_return",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "change_param_nullability",
+      "mutator": "change_param_nullability",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "classloader_cache_global",
+      "mutator": "classloader_cache_global",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "companion_method_rename",
+      "mutator": "companion_method_rename",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "concurrent_reentry",
+      "mutator": "concurrent_reentry",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "config_publisher_stale",
+      "mutator": "config_publisher_stale",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "consume_same_event_twice",
+      "mutator": "consume_same_event_twice",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "default_arg_drift",
+      "mutator": "default_arg_drift",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "dependency_resolver_fallback_removed",
+      "mutator": "dependency_resolver_fallback_removed",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "duplicate_install_all",
+      "mutator": "duplicate_install_all",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "fatal_boundary_removed",
+      "mutator": "fatal_boundary_removed",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "horizontal_vertical_axis_swap",
+      "mutator": "horizontal_vertical_axis_swap",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "installer_boundary_swallow",
+      "mutator": "installer_boundary_swallow",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "installer_java_abi_drift",
+      "mutator": "installer_java_abi_drift",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "installer_order_swap",
+      "mutator": "installer_order_swap",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "internal_name_mangle",
+      "mutator": "internal_name_mangle",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "left_right_action_swap",
+      "mutator": "left_right_action_swap",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "mainmodule_top_boundary_swallow",
+      "mutator": "mainmodule_top_boundary_swallow",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "object_to_class",
+      "mutator": "object_to_class",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "overload_removed",
+      "mutator": "overload_removed",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "plugin_runtime_lifecycle_leak",
+      "mutator": "plugin_runtime_lifecycle_leak",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "preference_bootstrap_eager",
+      "mutator": "preference_bootstrap_eager",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "process_router_fallthrough",
+      "mutator": "process_router_fallthrough",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "r8_broad_mods_keep",
+      "mutator": "r8_broad_mods_keep",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "receiver_registration_duplicate",
+      "mutator": "receiver_registration_duplicate",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "reflection_class_rename",
+      "mutator": "reflection_class_rename",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "reflection_field_rename",
+      "mutator": "reflection_field_rename",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "reflection_method_rename",
+      "mutator": "reflection_method_rename",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "reflection_wrapped_fatal_unwrap",
+      "mutator": "reflection_wrapped_fatal_unwrap",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "remove_consumer_rule",
+      "mutator": "remove_consumer_rule",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "remove_event_dedup",
+      "mutator": "remove_event_dedup",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "remove_jvm_field",
+      "mutator": "remove_jvm_field",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "remove_jvm_static",
+      "mutator": "remove_jvm_static",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "remove_keep_rule",
+      "mutator": "remove_keep_rule",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "remove_side_effect_gate",
+      "mutator": "remove_side_effect_gate",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "sam_lambda_drift",
+      "mutator": "sam_lambda_drift",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "shade_tracker_boundary_drift",
+      "mutator": "shade_tracker_boundary_drift",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "state_reset_removed",
+      "mutator": "state_reset_removed",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "statusbar_maths_sign_rounding_drift",
+      "mutator": "statusbar_maths_sign_rounding_drift",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "swallow_linkage_error",
+      "mutator": "swallow_linkage_error",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "swallow_out_of_memory",
+      "mutator": "swallow_out_of_memory",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "swallow_stack_overflow",
+      "mutator": "swallow_stack_overflow",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "swallow_thread_death",
+      "mutator": "swallow_thread_death",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "swallow_verify_error",
+      "mutator": "swallow_verify_error",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "swallow_virtual_machine_error",
+      "mutator": "swallow_virtual_machine_error",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "systemui_plugin_classloader_replaced",
+      "mutator": "systemui_plugin_classloader_replaced",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "systemui_runtime_swallow",
+      "mutator": "systemui_runtime_swallow",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "wrong_install_phase",
+      "mutator": "wrong_install_phase",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "wrong_process_target",
+      "mutator": "wrong_process_target",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "wrong_threshold_comparison",
+      "mutator": "wrong_threshold_comparison",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    },
+    {
+      "name": "xposedhelpers_abi_drift",
+      "mutator": "xposedhelpers_abi_drift",
+      "apply_check": "a14_contract",
+      "kill_gate": null,
+      "required_independent": false,
+      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+    }
+  ],
+  "coverage_ledger": [
+    {
+      "id": "duplicate SMART key",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "duplicate_smart_key",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "symbolic verified tree",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "symbolic_verified_tree",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "ambiguous resume path",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "ambiguous_resume",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "TASK state drift",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "task_state_drift",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "generated progress tamper",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "progress_json_tamper",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "remove fetch-depth",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "remove_fetch_depth",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "wrong CI branch",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "wrong_ci_branch",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "signing leak",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "signing_leak",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "Windows-only path",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "windows_path",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "duplicate Feature ID",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "duplicate_feature_id",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "swallow fatal",
+      "status": "ACTIVE_INDEPENDENT",
+      "mutator": "fatal_swallow",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "action_cancel_as_up",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "action_cancel_as_up",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "bootstrap_guard_removed",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "bootstrap_guard_removed",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "callback_guard_fatal_to_normal",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "callback_guard_fatal_to_normal",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "catch_throwable_no_fatal",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "catch_throwable_no_fatal",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "change_nullable_return",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "change_nullable_return",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "change_param_nullability",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "change_param_nullability",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "classloader_cache_global",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "classloader_cache_global",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "companion_method_rename",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "companion_method_rename",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "concurrent_reentry",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "concurrent_reentry",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "config_publisher_stale",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "config_publisher_stale",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "consume_same_event_twice",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "consume_same_event_twice",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "default_arg_drift",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "default_arg_drift",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "dependency_resolver_fallback_removed",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "dependency_resolver_fallback_removed",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "duplicate_install_all",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "duplicate_install_all",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "fatal_boundary_removed",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "fatal_boundary_removed",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "horizontal_vertical_axis_swap",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "horizontal_vertical_axis_swap",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "installer_boundary_swallow",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "installer_boundary_swallow",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "installer_java_abi_drift",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "installer_java_abi_drift",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "installer_order_swap",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "installer_order_swap",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "internal_name_mangle",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "internal_name_mangle",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "left_right_action_swap",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "left_right_action_swap",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "mainmodule_top_boundary_swallow",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "mainmodule_top_boundary_swallow",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "object_to_class",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "object_to_class",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "overload_removed",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "overload_removed",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "plugin_runtime_lifecycle_leak",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "plugin_runtime_lifecycle_leak",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "preference_bootstrap_eager",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "preference_bootstrap_eager",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "process_router_fallthrough",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "process_router_fallthrough",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "r8_broad_mods_keep",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "r8_broad_mods_keep",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "receiver_registration_duplicate",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "receiver_registration_duplicate",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "reflection_class_rename",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "reflection_class_rename",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "reflection_field_rename",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "reflection_field_rename",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "reflection_method_rename",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "reflection_method_rename",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "reflection_wrapped_fatal_unwrap",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "reflection_wrapped_fatal_unwrap",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "remove_consumer_rule",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "remove_consumer_rule",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "remove_event_dedup",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "remove_event_dedup",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "remove_jvm_field",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "remove_jvm_field",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "remove_jvm_static",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "remove_jvm_static",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "remove_keep_rule",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "remove_keep_rule",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "remove_side_effect_gate",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "remove_side_effect_gate",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "sam_lambda_drift",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "sam_lambda_drift",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "shade_tracker_boundary_drift",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "shade_tracker_boundary_drift",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "state_reset_removed",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "state_reset_removed",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "statusbar_maths_sign_rounding_drift",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "statusbar_maths_sign_rounding_drift",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "swallow_linkage_error",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "swallow_linkage_error",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "swallow_out_of_memory",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "swallow_out_of_memory",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "swallow_stack_overflow",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "swallow_stack_overflow",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "swallow_thread_death",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "swallow_thread_death",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "swallow_verify_error",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "swallow_verify_error",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "swallow_virtual_machine_error",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "swallow_virtual_machine_error",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "systemui_plugin_classloader_replaced",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "systemui_plugin_classloader_replaced",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "systemui_runtime_swallow",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "systemui_runtime_swallow",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "wrong_install_phase",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "wrong_install_phase",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "wrong_process_target",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "wrong_process_target",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "wrong_threshold_comparison",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "wrong_threshold_comparison",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "xposedhelpers_abi_drift",
+      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "mutator": "xposedhelpers_abi_drift",
+      "reason": "Executable mutation in current configuration",
+      "requiredFollowUp": null
+    },
+    {
+      "id": "fake CI PASS",
+      "status": "MUTATOR_STALE",
+      "mutator": "fake_ci_pass",
+      "reason": "Mutation removed during P11.4R1 because it has no independent gate and the SMART state CI record is not a product contract.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    },
+    {
+      "id": "hardcoded API 37 package",
+      "status": "MUTATOR_STALE",
+      "mutator": "hardcoded_api37_package",
+      "reason": "Mutation removed during P11.4R1 because SDK resolution is CI-infrastructure, not a product contract.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    },
+    {
+      "id": "preference default flip",
+      "status": "MUTATOR_STALE",
+      "mutator": "preference_default_flip",
+      "reason": "Mutation removed during P11.4R1 because default-value drift is blocked only by apply-check, not an independent kill.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    },
+    {
+      "id": "process scope flip",
+      "status": "MUTATOR_STALE",
+      "mutator": "process_scope_flip",
+      "reason": "Mutation removed during P11.4R1 because process scope is only verifiable by catalog/apply-check, not an independent gate.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    },
+    {
+      "id": "install phase flip",
+      "status": "MUTATOR_STALE",
+      "mutator": "install_phase_flip",
+      "reason": "Mutation removed during P11.4R1 because install phase flip lacks an independent product gate.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    },
+    {
+      "id": "remove Installer dispatch",
+      "status": "MUTATOR_STALE",
+      "mutator": "remove_installer_dispatch",
+      "reason": "Mutation removed during P11.4R1 because installer dispatch removal has no independent semantic gate.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    },
+    {
+      "id": "static Context leak",
+      "status": "MUTATOR_STALE",
+      "mutator": "static_context_leak",
+      "reason": "Mutation removed during P11.4R1 because the lifecycle leak pattern is stale without a concrete independent detector.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    },
+    {
+      "id": "eager HandlerThread",
+      "status": "MUTATOR_STALE",
+      "mutator": "eager_handler_thread",
+      "reason": "Mutation removed during P11.4R1 because eager thread creation lacks an independent runtime gate.",
+      "requiredFollowUp": "A14-P11.4R2/R3/R4"
+    }
+  ]
+}

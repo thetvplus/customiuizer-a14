@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "device": {
+    "manufacturer": "Xiaomi",
+    "model": "2211133G",
+    "codename": "fuxi",
+    "androidApi": 34,
+    "hyperos": "OS1.0",
+    "build": "V816.0.7.0.UMCTWXM",
+    "fingerprint": "Xiaomi/fuxi_global/fuxi:14/UKQ1.230804.001/V816.0.7.0.UMCTWXM:user/release-keys"
+  },
+  "evidenceLevels": ["RUNTIME", "ARTIFACT", "SOURCE", "CANDIDATE"],
+  "volumePanel": {
+    "hostPackage": "com.android.systemui",
+    "implementationPackage": "miui.systemui.plugin",
+    "classLoader": "plugin",
+    "window": {
+      "title": "MiuiVolumeDialogImpl",
+      "type": "VOLUME_OVERLAY",
+      "frame": "[0,0][1080,2400]",
+      "evidence": "RUNTIME"
+    },
+    "dialogClass": {
+      "name": "com.android.systemui.miui.volume.MiuiVolumeDialogImpl",
+      "methods": [
+        "showVolumeDialogH(I)V",
+        "dismissH(I)V",
+        "computeTimeoutH()I",
+        "updateExpandedH(ZZ)V",
+        "updateExpandedH(ZZZ)V"
+      ],
+      "fields": ["mHovering:Z", "mExpanded:Z"],
+      "evidence": ["ARTIFACT", "RUNTIME"]
+    },
+    "modeLayoutClass": {
+      "name": "com.android.systemui.miui.volume.MiuiRingerModeLayout",
+      "methods": [
+        "initialize()V",
+        "setRingerModeByUser(Z)V",
+        "setZenModeByUser(Z)V",
+        "updateExpandedH(Z)V",
+        "cleanUp()V"
+      ],
+      "fields": [
+        "mRingerHelper:Lcom/android/systemui/miui/volume/MiuiRingerModeLayout$RingerButtonHelper;",
+        "mDndHelper:Lcom/android/systemui/miui/volume/MiuiRingerModeLayout$RingerButtonHelper;",
+        "mRingerMode:Z",
+        "mZenMode:Z"
+      ],
+      "evidence": "ARTIFACT"
+    },
+    "shortcutClass": {
+      "name": "com.android.systemui.miui.volume.MiuiRingerModeLayout$RingerButtonHelper",
+      "constructor": "<init>(Lcom/android/systemui/miui/volume/MiuiRingerModeLayout;Landroid/view/View;ZZ)V",
+      "methods": ["updateState()V", "setRingerMode(Z)V", "onExpanded(Z)V", "setIcon()V"],
+      "fields": [
+        "mIsZen:Z",
+        "mStandardView:Landroid/view/View;",
+        "mBlurView:Lc/f/b/a/a/g;",
+        "mIcon:Landroid/widget/ImageView;"
+      ],
+      "roleContract": {
+        "false": "MUTE",
+        "true": "DND"
+      },
+      "evidence": ["ARTIFACT", "RUNTIME"]
+    },
+    "currentImplementationAssessment": {
+      "verdict": "CORRECT_TARGET_AND_ABI",
+      "installer": "SystemUIControlCenterHooks.VolumeModeButtonColorsHook(pluginLoader)",
+      "hooks": ["all constructors after", "updateState after"],
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt",
+      "runtimeBehaviorNotProven": [
+        "visual hide result with each preference enabled",
+        "live color result",
+        "preference-driven installation in the currently installed APK"
+      ]
+    }
+  },
+  "priorityComponents": {
+    "P1_CURRENT_PROJECT_MATCHED": {
+      "MIUISystemUIPlugin.apk": [
+        "com.android.systemui.miui.volume.MiuiVolumeDialogImpl",
+        "miui.systemui.controlcenter.panel.main.MainPanelAnimController",
+        "miui.systemui.controlcenter.panel.main.header.StatusHeaderController",
+        "miui.systemui.controlcenter.windowview.ControlCenterWindowViewImpl"
+      ],
+      "MiuiSystemUI.apk": [
+        "com.android.systemui.statusbar.StatusBarMobileView",
+        "com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView",
+        "com.android.systemui.shade.MiuiNotificationPanelViewController",
+        "com.android.systemui.statusbar.phone.CentralSurfacesImpl",
+        "com.android.systemui.statusbar.policy.NetworkSpeedController",
+        "com.android.systemui.statusbar.views.MiuiClock"
+      ],
+      "MiuiHome.apk": [
+        "com.miui.home.launcher.Launcher",
+        "com.miui.home.launcher.DeviceConfig",
+        "com.miui.home.recents.GestureStubView",
+        "com.miui.home.recents.NavStubView",
+        "com.miui.home.recents.views.RecentsContainer"
+      ],
+      "MIUISecurityCenterGlobal.apk": [
+        "com.miui.appmanager.ApplicationsDetailsActivity",
+        "com.miui.appmanager.AppManageUtils",
+        "com.miui.networkassistant.service.FirewallService"
+      ],
+      "GooglePermissionController.apk": [
+        "com.android.permissioncontroller.permission.ui.GrantPermissionsActivity"
+      ]
+    },
+    "P2_RUNTIME_SAMPLING_NEXT": [
+      "volume expanded/collapsed lifecycle",
+      "control center attach/configuration/detach",
+      "status bar inflate and dark/tint callbacks",
+      "launcher gesture and recents runtime branches",
+      "permission request loading lifecycle"
+    ]
+  },
+  "limitations": [
+    "production adbd rejected adb root",
+    "no callable su binary was available to adb shell",
+    "private LSPosed and ART paths were not sampled",
+    "boot framework JARs exposed no DEX classes to the current offline parser",
+    "uiautomator did not expose the non-focusable volume overlay"
+  ]
+}

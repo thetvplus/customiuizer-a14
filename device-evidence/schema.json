@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "$schema": "./schema.json",
+  "title": "CustoMIUIzer A14 device evidence proposal",
+  "type": "object",
+  "required": ["schemaVersion", "proposals"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "proposals": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/proposal" }
+    }
+  },
+  "definitions": {
+    "proposal": {
+      "type": "object",
+      "required": [
+        "featureId",
+        "preferenceKeys",
+        "deviceScope",
+        "buildFingerprint",
+        "romFamily",
+        "androidApi",
+        "moduleVersion",
+        "moduleCommit",
+        "testPlanId",
+        "testPlanSha256",
+        "observedEnableEffect",
+        "observedDisableEffect",
+        "observedValueChangeEffect",
+        "observedRestartTarget",
+        "result",
+        "timestamp",
+        "evidenceFiles",
+        "evidenceFileHashes",
+        "reviewerStatus"
+      ],
+      "properties": {
+        "featureId": { "type": "string" },
+        "preferenceKeys": { "type": "array", "items": { "type": "string" } },
+        "deviceScope": { "type": "string" },
+        "buildFingerprint": { "type": "string" },
+        "romFamily": { "type": "string" },
+        "androidApi": { "type": "integer" },
+        "moduleVersion": { "type": "string" },
+        "moduleCommit": { "type": "string" },
+        "testPlanId": { "type": "string" },
+        "testPlanSha256": { "type": "string" },
+        "observedEnableEffect": { "type": "string" },
+        "observedDisableEffect": { "type": "string" },
+        "observedValueChangeEffect": { "type": "string" },
+        "observedRestartTarget": { "type": "string" },
+        "result": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "evidenceFiles": { "type": "array", "items": { "type": "string" } },
+        "evidenceFileHashes": { "type": "object" },
+        "reviewerStatus": {
+          "type": "string",
+          "enum": ["PENDING_REVIEW", "APPROVED", "REJECTED"]
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:android="http://schemas.android.com/apk/res/android">
+	<item
+		android:id="@+id/search_btn"
+		android:title=""
+		android:icon="@drawable/abc_ic_search_api_material"
+		app:actionViewClass="androidx.appcompat.widget.SearchView"
+		app:showAsAction="always|collapseActionView" />
+	<item
+		android:id="@+id/edit_confirm"
+		android:visible="false"
+		android:title=""
+		android:icon="@drawable/ic_actionbar_done"
+		app:showAsAction="ifRoom"/>
+	<item
+		android:id="@+id/restartlauncher"
+		app:showAsAction="never"
+		android:title="@string/restart_launcher" />
+	<item
+		android:id="@+id/restartsystemui"
+		app:showAsAction="never"
+		android:title="@string/restart_systemui" />
+	<item
+		android:id="@+id/restartsecuritycenter"
+		app:showAsAction="never"
+		android:title="@string/restart_securitycenter" />
+	<item
+		android:id="@+id/restartmatched"
+		app:showAsAction="never"
+		android:title="@string/restart_affected_components" />
+	<item
+		android:id="@+id/softreboot"
+		android:title="@string/soft_reboot"
+		app:showAsAction="never" />
+	<item
+		android:id="@+id/backuprestore"
+		android:title="@string/backup_restore"
+		app:showAsAction="never" />
+	<item
+		android:id="@+id/resetsettings"
+		android:title="@string/reset_settings"
+		app:showAsAction="never" />
+	<item
+		android:id="@+id/about"
+		android:title="@string/app_about"
+		app:showAsAction="never" />
+</menu>

@@ -1,0 +1,59 @@
+﻿*.iml
+.gradle
+.kotlin/
+app/release/*
+app/standalone/*
+/local.properties
+
+# IntelliJ IDEA / Android Studio — local/generated IDE state
+/.idea/caches/
+/.idea/libraries/
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/usage.statistics.xml
+/.idea/shelf/
+/.idea/dictionaries/
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/copilot/
+/.idea/.name
+/.idea/misc.xml
+/.idea/gradle.xml
+/.idea/deploymentTargetDropDown.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/jarRepositories.xml
+/.idea/migrations.xml
+/.idea/inspectionProfiles/
+
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+
+# Temporary local analysis artifacts and build outputs at repo root
+/.vscode/
+/*.apk
+/*.py
+/*.log
+/gradle_*.txt
+/log_summary*.txt
+/tmp-apk/
+*_status.txt
+
+# Signing materials (never commit real keys or passwords)
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+
+# Devin local task state and command logs
+/.devin/
+/.self-eval-scores.jsonl
+
+# Python test cache
+tools/__pycache__/
+tools/tests/__pycache__/
+
+# Local ROM samples and intelligence outputs (never commit real ROM copies)
+/local-rom-samples/

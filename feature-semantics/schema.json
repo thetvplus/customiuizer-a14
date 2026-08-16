@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "$schema": "./schema.json",
+  "title": "CustoMIUIzer A14 feature effect and restart semantics",
+  "type": "object",
+  "required": ["schemaVersion", "contractName", "romFamily", "androidApi", "exclusions", "entries"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "contractName": { "type": "string" },
+    "romFamily": { "type": "string" },
+    "androidApi": { "type": "integer" },
+    "exclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["preferenceKey", "reason"],
+        "properties": {
+          "preferenceKey": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/featureEntry" }
+    }
+  },
+  "definitions": {
+    "featureEntry": {
+      "type": "object",
+      "required": [
+        "featureId",
+        "featureName",
+        "preferenceKeys",
+        "sourceFile",
+        "installer",
+        "targetPackage",
+        "installPhase",
+        "runtimeReadMode",
+        "enableEffect",
+        "disableEffect",
+        "valueChangeEffect",
+        "restartTarget",
+        "hotReloadable",
+        "confidence",
+        "evidence"
+      ],
+      "properties": {
+        "featureId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "featureName": { "type": "string" },
+        "preferenceKeys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "xmlSource": { "type": "string" },
+        "defaultValue": { "type": "string" },
+        "sourceFile": { "type": "string" },
+        "installer": { "type": "string" },
+        "targetPackage": { "type": "string" },
+        "installPhase": {
+          "type": "string",
+          "enum": [
+            "SYSTEM_SERVER_START",
+            "PACKAGE_READY",
+            "APPLICATION_ATTACH",
+            "SYSTEMUI_INIT",
+            "RESOURCE_INIT",
+            "RECEIVER_EVENT",
+            "DEXKIT_ONE_SHOT",
+            "APP_UI_ONLY",
+            "UNKNOWN"
+          ]
+        },
+        "runtimeReadMode": {
+          "type": "string",
+          "description": "How the preference value is read at runtime. OBSERVER_PUSH means an already-installed hook receives a PreferenceObserver callback and applies the new value without a process restart.",
+          "enum": [
+            "INSTALL_TIME_SNAPSHOT",
+            "CALLBACK_READ",
+            "OBSERVER_PUSH",
+            "CAPTURED_AT_INSTALL",
+            "RESOURCE_REPLACEMENT",
+            "ONE_SHOT",
+            "EXTERNAL_PLUGIN",
+            "UNKNOWN"
+          ]
+        },
+        "enableEffect": { "type": "string" },
+        "disableEffect": { "type": "string" },
+        "valueChangeEffect": { "type": "string" },
+        "restartTarget": {
+          "type": "string",
+          "description": "The restart action required for a preference value change to take effect. This is NOT the process that hosts the feature; it is the restart a user must perform so the new value is observed. NONE means no restart is needed because the value is already applied live (e.g. observer push or callback read). UNKNOWN means no per-key evidence was found.",
+          "enum": [
+            "NONE",
+            "SYSTEMUI",
+            "LAUNCHER",
+            "TARGET_APP",
+            "SYSTEM_SERVER",
+            "REBOOT",
+            "MODULE_REENABLE",
+            "TASKER_RESAVE",
+            "UNKNOWN"
+          ]
+        },
+        "hotReloadable": {
+          "type": "boolean",
+          "description": "True when a preference value can take effect in an already-installed runtime without restarting the required host. This must be backed by per-key evidence such as a PreferenceObserver or a per-callback read, not by the host process alone."
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["CODE_VERIFIED", "DEVICE_VERIFIED", "INFERRED", "UNKNOWN"]
+        },
+        "evidence": { "type": "string" },
+        "notes": { "type": "string" },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["preferenceKey", "reason"],
+            "properties": {
+              "preferenceKey": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

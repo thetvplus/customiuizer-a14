@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:paddingTop="@dimen/preference_screen_padding_top"
+	android:gravity="center"
+	android:orientation="vertical"
+	android:clipChildren="false"
+	android:clipToPadding="false">
+
+	<FrameLayout
+		android:layout_width="80dp"
+		android:layout_height="80dp"
+		android:background="@drawable/ic_mask"
+		android:backgroundTint="@color/ic_launcher_background"
+		android:clipChildren="false"
+		android:clipToPadding="false">
+
+		<ImageView
+			android:id="@+id/miuizer_icon"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:contentDescription="@null"
+			android:padding="8dp"
+			android:scaleType="fitCenter"
+			app:srcCompat="@mipmap/ic_launcher_foreground" />
+
+	</FrameLayout>
+
+	<TextView
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="@dimen/preference_item_padding_top"
+		android:gravity="center"
+		android:text="@string/app_name"
+		android:textSize="@dimen/normal_text_size"
+		android:textStyle="bold"
+		android:textColor="@color/preference_primary_text_color" />
+
+	<TextView
+		android:id="@+id/about_maintainer"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="4dp"
+		android:gravity="center"
+		android:paddingStart="@dimen/preference_item_child_padding"
+		android:paddingEnd="@dimen/preference_item_child_padding"
+		android:text="@string/about_maintainer"
+		android:textColor="@color/color_on_surface_variant"
+		android:textSize="@dimen/secondary_text_size" />
+
+	<TextView
+		android:id="@+id/about_based_on"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="4dp"
+		android:gravity="center"
+		android:paddingStart="@dimen/preference_item_child_padding"
+		android:paddingEnd="@dimen/preference_item_child_padding"
+		android:text="@string/about_based_on"
+		android:textColor="@color/color_on_surface_variant"
+		android:textSize="@dimen/secondary_text_size" />
+
+	<TextView
+		android:id="@+id/about_version"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="4dp"
+		android:layout_marginBottom="@dimen/preference_screen_padding_bottom"
+		android:gravity="center"
+		android:paddingStart="@dimen/preference_item_child_padding"
+		android:paddingEnd="@dimen/preference_item_child_padding"
+		android:text="@string/about_version"
+		android:textColor="@color/color_on_surface_variant"
+		android:textSize="@dimen/secondary_text_size" />
+
+	<View
+		android:layout_width="match_parent"
+		android:layout_height="1dp"
+		android:background="@color/about_divider" />
+</LinearLayout>
