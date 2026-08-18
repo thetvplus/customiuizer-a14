@@ -33,6 +33,49 @@ object SystemDisplayHooks {
     @Volatile
     private var forceWindowBlursDisabled = false
 
+    @Volatile
+    private var screenAnimDurationMs = 250
+
+    @Volatile
+    private var noLightUpOnCharge = 1
+
+    @Volatile
+    private var dimTimeRatio = 0f
+
+    @Volatile
+    private var wallpaperScale = 0.6f
+
+    private var displayObserverRegistered = false
+
+    private val DISPLAY_PREF_KEYS = setOf(
+        PREF_DISABLE_WINDOW_BLURS,
+        "system_screenanim_duration",
+        "system_nolightuponcharges",
+        "system_dimtime",
+        "system_other_wallpaper_scale",
+    )
+
+    private fun refreshDisplaySnapshot() {
+        forceWindowBlursDisabled = MainModule.mPrefs.getBoolean(PREF_DISABLE_WINDOW_BLURS)
+        var anim = MainModule.mPrefs.getInt("system_screenanim_duration", 0)
+        if (anim == 0) anim = 250
+        screenAnimDurationMs = anim
+        noLightUpOnCharge = MainModule.mPrefs.getStringAsInt("system_nolightuponcharges", 1)
+        dimTimeRatio = MainModule.mPrefs.getInt("system_dimtime", 0) / 100f
+        wallpaperScale = MainModule.mPrefs.getInt("system_other_wallpaper_scale", 6) / 10.0f
+    }
+
+    private fun installDisplaySnapshot() {
+        refreshDisplaySnapshot()
+        if (displayObserverRegistered) return
+        displayObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in DISPLAY_PREF_KEYS) refreshDisplaySnapshot()
+            }
+        })
+    }
+
     @JvmStatic
     internal fun resolveWindowBlursDisabled(moduleDisabled: Boolean, systemDisabled: Boolean): Boolean =
         moduleDisabled || systemDisabled
@@ -63,7 +106,7 @@ object SystemDisplayHooks {
      */
     @JvmStatic
     fun DisableWindowBlursHook(lpparam: SystemServerStartingParam) {
-        forceWindowBlursDisabled = MainModule.mPrefs.getBoolean(PREF_DISABLE_WINDOW_BLURS)
+        installDisplaySnapshot()
 
         ModuleHelper.findAndHookMethod(
             "com.android.server.wm.BlurController",
@@ -93,7 +136,7 @@ object SystemDisplayHooks {
                     ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
                         override fun onChange(key: String?) = ModuleHelper.guarded {
                             if (key != null && key != PREF_DISABLE_WINDOW_BLURS) return@guarded
-                            forceWindowBlursDisabled = MainModule.mPrefs.getBoolean(PREF_DISABLE_WINDOW_BLURS)
+                            refreshDisplaySnapshot()
                             controllerRef.get()?.let(::applyWindowBlurPolicy)
                         }
                     }, controller)
@@ -104,6 +147,7 @@ object SystemDisplayHooks {
 
     @JvmStatic
     fun ScreenAnimHook(lpparam: SystemServerStartingParam) {
+        installDisplaySnapshot()
         ModuleHelper.findAndHookMethod("com.android.server.display.DisplayPowerController", lpparam.classLoader, "initialize", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -132,17 +176,15 @@ object SystemDisplayHooks {
 
                     val mColorFadeOffAnimator = XposedHelpers.getObjectField(thisObject, "mColorFadeOffAnimator") as ObjectAnimator?
                     if (mColorFadeOffAnimator != null) {
-                        var value = MainModule.mPrefs.getInt("system_screenanim_duration", 0)
-                        if (value == 0) value = 250
+                        var value = screenAnimDurationMs
                         mColorFadeOffAnimator.duration = value.toLong()
                     }
                     ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
                         override fun onChange(key: String?) = ModuleHelper.guarded {
                             if (key == "system_screenanim_duration") {
                                 if (mColorFadeOffAnimator == null) return
-                                var value2 = MainModule.mPrefs.getInt("system_screenanim_duration", 0)
-                                if (value2 == 0) value2 = 250
-                                mColorFadeOffAnimator.duration = value2.toLong()
+                                refreshDisplaySnapshot()
+                                mColorFadeOffAnimator.duration = screenAnimDurationMs.toLong()
                             }
                         }
                     }, thisObject)
@@ -158,6 +200,7 @@ object SystemDisplayHooks {
 
     @JvmStatic
     fun NoLightUpOnChargeHook(lpparam: SystemServerStartingParam) {
+        installDisplaySnapshot()
         ModuleHelper.hookAllMethods("com.android.server.power.PowerManagerService", lpparam.classLoader, "wakePowerGroupLocked", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -167,12 +210,12 @@ object SystemDisplayHooks {
 
                     val reason = chain.getArg(3) as String?
                     if (reason == null) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (
-                        reason.startsWith("android.server.power:PLUGGED")
-                        || reason == "com.android.systemui:RAPID_CHARGE"
-                        || reason == "com.android.systemui:WIRELESS_CHARGE"
-                        || reason == "com.android.systemui:WIRELESS_RAPID_CHARGE"
-                    ) { skipped = true; result = null; throwable = null }
+                    val option = noLightUpOnCharge
+                    if (shouldSkipChargeWake(option, reason)) {
+                        skipped = true
+                        result = null
+                        throwable = null
+                    }
 
                     if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                     result = chain.proceed()
@@ -184,6 +227,25 @@ object SystemDisplayHooks {
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
+    }
+
+    /**
+     * A14 product contract, not upstream option-3 restoration:
+     * - 1 = stock wake
+     * - 2 = suppress charging wake reasons
+     * - 3 = native wake; SystemUI still hides the charge animation
+     *
+     * Option is read on each callback so a live change from 2 to 3 stops blocking wake
+     * without reinstalling the hook.
+     */
+    @JvmStatic
+    internal fun shouldSkipChargeWake(option: Int, reason: String): Boolean {
+        if (option != 2) return false
+        return reason == "android.server.power:POWER" ||
+            reason.startsWith("android.server.power:PLUGGED") ||
+            reason == "com.android.systemui:RAPID_CHARGE" ||
+            reason == "com.android.systemui:WIRELESS_CHARGE" ||
+            reason == "com.android.systemui:WIRELESS_RAPID_CHARGE"
     }
 
     /**
@@ -668,6 +730,7 @@ object SystemDisplayHooks {
 
     @JvmStatic
     fun ScreenDimTimeHook(lpparam: SystemServerStartingParam) {
+        installDisplaySnapshot()
         ModuleHelper.findAndHookMethod("com.android.server.power.PowerManagerService", lpparam.classLoader, "readConfigurationLocked", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -682,7 +745,7 @@ object SystemDisplayHooks {
                 try {
                     val thisObject = chain.thisObject
 
-                    val opt = MainModule.mPrefs.getInt("system_dimtime", 0) / 100f
+                    val opt = dimTimeRatio
                     XposedHelpers.setIntField(thisObject, "mMaximumScreenDimDurationConfig", 600000)
                     XposedHelpers.setFloatField(thisObject, "mMaximumScreenDimRatioConfig", opt)
 
@@ -753,6 +816,7 @@ object SystemDisplayHooks {
 
     @JvmStatic
     fun WallpaperScaleLevelHook(lpparam: SystemServerStartingParam) {
+        installDisplaySnapshot()
         ModuleHelper.hookAllConstructors("com.android.server.wm.WallpaperController", lpparam.classLoader, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -767,13 +831,13 @@ object SystemDisplayHooks {
                 try {
                     val thisObject = chain.thisObject
 
-                    val scale = MainModule.mPrefs.getInt("system_other_wallpaper_scale", 6) / 10.0f
+                    val scale = wallpaperScale
                     XposedHelpers.setObjectField(thisObject, "mMaxWallpaperScale", scale)
                     ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
                         override fun onChange(key: String?) = ModuleHelper.guarded {
                             if (key == "system_other_wallpaper_scale") {
-                                val value = MainModule.mPrefs.getInt("system_other_wallpaper_scale", 6)
-                                XposedHelpers.setObjectField(thisObject, "mMaxWallpaperScale", value / 10.0f)
+                                refreshDisplaySnapshot()
+                                XposedHelpers.setObjectField(thisObject, "mMaxWallpaperScale", wallpaperScale)
                             }
                         }
                     }, thisObject)

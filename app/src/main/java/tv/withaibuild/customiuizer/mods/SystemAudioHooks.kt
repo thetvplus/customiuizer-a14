@@ -33,8 +33,72 @@ import tv.withaibuild.customiuizer.utils.HookUtils
  */
 object SystemAudioHooks {
 
+    internal data class AudioHapticsSnapshot(
+        val qsHapticsIgnore: Boolean = false,
+        val qsHaptics: Int = 1,
+        val vibrationMode: Int = 1,
+        val vibrationApps: Set<String> = emptySet(),
+        val ignoreCallsApps: Set<String> = emptySet(),
+        val ampRinger: Float = 1f,
+        val ampNotif: Float = 1f,
+        val ampOther: Float = 1f,
+        val periodStartMinutes: Int = 0,
+        val periodEndMinutes: Int = 0,
+    )
+
+    @Volatile
+    internal var audioHapticsConfig = AudioHapticsSnapshot()
+
+    private var audioHapticsObserverRegistered = false
+
+    private val AUDIO_HAPTICS_KEYS = setOf(
+        "system_qshaptics_ignore",
+        "system_qshaptics",
+        "system_vibration",
+        "system_vibration_apps",
+        "system_ignorecalls_apps",
+        "system_vibration_amp_ringer",
+        "system_vibration_amp_notif",
+        "system_vibration_amp_other",
+        "system_vibration_amp_period_start_hour",
+        "system_vibration_amp_period_start_minute",
+        "system_vibration_amp_period_end_hour",
+        "system_vibration_amp_period_end_minute",
+    )
+
+    internal fun refreshAudioHapticsSnapshot() {
+        val prefs = MainModule.mPrefs
+        audioHapticsConfig = AudioHapticsSnapshot(
+            qsHapticsIgnore = prefs.getBoolean("system_qshaptics_ignore"),
+            qsHaptics = prefs.getStringAsInt("system_qshaptics", 1),
+            vibrationMode = prefs.getStringAsInt("system_vibration", 1),
+            vibrationApps = HashSet(prefs.getStringSet("system_vibration_apps")),
+            ignoreCallsApps = HashSet(prefs.getStringSet("system_ignorecalls_apps")),
+            ampRinger = prefs.getInt("system_vibration_amp_ringer", 100) / 100f,
+            ampNotif = prefs.getInt("system_vibration_amp_notif", 100) / 100f,
+            ampOther = prefs.getInt("system_vibration_amp_other", 100) / 100f,
+            periodStartMinutes = prefs.getInt("system_vibration_amp_period_start_hour", 0) * 60 +
+                prefs.getInt("system_vibration_amp_period_start_minute", 0),
+            periodEndMinutes = prefs.getInt("system_vibration_amp_period_end_hour", 0) * 60 +
+                prefs.getInt("system_vibration_amp_period_end_minute", 0),
+        )
+    }
+
+    @JvmStatic
+    internal fun installAudioHapticsSnapshot() {
+        refreshAudioHapticsSnapshot()
+        if (audioHapticsObserverRegistered) return
+        audioHapticsObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in AUDIO_HAPTICS_KEYS) refreshAudioHapticsSnapshot()
+            }
+        })
+    }
+
     @JvmStatic
     fun QSHapticHook(lpparam: PackageReadyParam) {
+        installAudioHapticsSnapshot()
         ModuleHelper.findAndHookMethod("com.android.systemui.qs.tileimpl.QSTileImpl", lpparam.classLoader, "click", View::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -52,8 +116,8 @@ object SystemAudioHooks {
                     val state = XposedHelpers.getIntField(mState, "state")
                     if (state != 0) {
                         val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                        val ignoreSystem = MainModule.mPrefs.getBoolean("system_qshaptics_ignore")
-                        val opt = MainModule.mPrefs.getStringAsInt("system_qshaptics", 1)
+                        val ignoreSystem = audioHapticsConfig.qsHapticsIgnore
+                        val opt = audioHapticsConfig.qsHaptics
                         if (opt == 2)
                             HookUtils.performLightVibration(mContext, ignoreSystem)
                         else if (opt == 3)
@@ -68,69 +132,25 @@ object SystemAudioHooks {
         })
     }
 
-    private fun checkVibration(pkgName: String, thisObject: Any): Boolean {
-        try {
-            val opt = XposedHelpers.getAdditionalInstanceField(thisObject, "mVibrationMode") as Int
-            val selectedApps = XposedHelpers.getAdditionalInstanceField(thisObject, "mVibrationApps") as Set<String>?
-            val isSelected = selectedApps != null && selectedApps.contains(pkgName)
-            return (opt == 2 && !isSelected) || (opt == 3 && isSelected)
-        } catch (t: Throwable) {
-            XposedHelpers.log(t)
-            return false
-        }
+    private fun checkVibration(pkgName: String): Boolean {
+        val cfg = audioHapticsConfig
+        val isSelected = pkgName in cfg.vibrationApps
+        return (cfg.vibrationMode == 2 && !isSelected) || (cfg.vibrationMode == 3 && isSelected)
     }
 
     @JvmStatic
     fun SelectiveVibrationHook(lpparam: SystemServerStartingParam) {
-        ModuleHelper.findAndHookMethod("com.android.server.vibrator.VibratorManagerService", lpparam.classLoader, "systemReady", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    XposedHelpers.setAdditionalInstanceField(thisObject, "mVibrationMode", Integer.parseInt(MainModule.mPrefs.getString("system_vibration", "1") ?: "1"))
-                    ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
-                        override fun onChange(key: String?) = ModuleHelper.guarded {
-                            if (key == "system_vibration") {
-                                XposedHelpers.setAdditionalInstanceField(thisObject, "mVibrationMode", MainModule.mPrefs.getStringAsInt("system_vibration", 1))
-                            }
-                        }
-                    }, thisObject)
-
-                    XposedHelpers.setAdditionalInstanceField(thisObject, "mVibrationApps", MainModule.mPrefs.getStringSet("system_vibration_apps"))
-                    ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
-                        override fun onChange(key: String?) = ModuleHelper.guarded {
-                            if (key == "system_vibration_apps") {
-                                XposedHelpers.setAdditionalInstanceField(thisObject, "mVibrationApps", MainModule.mPrefs.getStringSet("system_vibration_apps"))
-                            }
-                        }
-                    }, thisObject)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
+        installAudioHapticsSnapshot()
         ModuleHelper.hookAllMethods("com.android.server.vibrator.VibratorManagerService", lpparam.classLoader, "vibrate", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
                 var result: Any? = null
                 var throwable: Throwable? = null
-                val thisObject = chain.thisObject
                 try {
 
                     val pkgName = chain.getArg(1) as String?
                     if (pkgName == null) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (checkVibration(pkgName, thisObject)) { skipped = true; result = null; throwable = null }
+                    if (checkVibration(pkgName)) { skipped = true; result = null; throwable = null }
 
                     if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                     result = chain.proceed()
@@ -448,8 +468,8 @@ object SystemAudioHooks {
         for (record in mRecords) {
             val callingPackage = XposedHelpers.getObjectField(record, "callingPackage") as String?
             val events = XposedHelpers.getIntField(record, "events")
-            val selectedApps = MainModule.mPrefs.getStringSet("system_ignorecalls_apps")
-            if ((events and PhoneStateListener.LISTEN_CALL_STATE) == PhoneStateListener.LISTEN_CALL_STATE && callingPackage != null && selectedApps != null && selectedApps.contains(callingPackage)) {
+            val selectedApps = audioHapticsConfig.ignoreCallsApps
+            if ((events and PhoneStateListener.LISTEN_CALL_STATE) == PhoneStateListener.LISTEN_CALL_STATE && callingPackage != null && selectedApps.contains(callingPackage)) {
                 val newEvents = events and PhoneStateListener.LISTEN_CALL_STATE.inv()
                 XposedHelpers.setIntField(record, "events", newEvents)
             }
@@ -458,6 +478,7 @@ object SystemAudioHooks {
 
     @JvmStatic
     fun NoCallInterruptionHook(lpparam: SystemServerStartingParam) {
+        installAudioHapticsSnapshot()
         ModuleHelper.hookAllMethods("com.android.server.audio.AudioService", lpparam.classLoader, "requestAudioFocus", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -466,7 +487,7 @@ object SystemAudioHooks {
                 val args = chain.args
                 try {
 
-                    if (args[4] == "AudioFocus_For_Phone_Ring_And_Calls" && audioFocusPkg != null && MainModule.mPrefs.getStringSet("system_ignorecalls_apps")?.contains(audioFocusPkg) == true)
+                    if (args[4] == "AudioFocus_For_Phone_Ring_And_Calls" && audioFocusPkg != null && audioFocusPkg in audioHapticsConfig.ignoreCallsApps)
                         { skipped = true; result = 1; throwable = null }
 
                 } catch (t: Throwable) {
@@ -563,6 +584,7 @@ object SystemAudioHooks {
 
     @JvmStatic
     fun MuffledVibrationHook(lpparam: SystemServerStartingParam) {
+        installAudioHapticsSnapshot()
         ModuleHelper.hookAllMethods("com.android.server.VibratorService", lpparam.classLoader, "doVibratorOn", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -570,9 +592,10 @@ object SystemAudioHooks {
                 val thisObject = chain.thisObject
                 try {
 
-                    val ratio_ringer = MainModule.mPrefs.getInt("system_vibration_amp_ringer", 100) / 100f
-                    val ratio_notif = MainModule.mPrefs.getInt("system_vibration_amp_notif", 100) / 100f
-                    val ratio_other = MainModule.mPrefs.getInt("system_vibration_amp_other", 100) / 100f
+                    val cfg = audioHapticsConfig
+                    val ratio_ringer = cfg.ampRinger
+                    val ratio_notif = cfg.ampNotif
+                    val ratio_other = cfg.ampOther
 
                     var isRingtone = false
                     var isNotification = false
@@ -595,12 +618,8 @@ object SystemAudioHooks {
                         return XposedHelpers.proceedOrThrow(chain, throwable)
                     }
 
-                    val startMinutes =
-                        MainModule.mPrefs.getInt("system_vibration_amp_period_start_hour", 0) * 60 +
-                            MainModule.mPrefs.getInt("system_vibration_amp_period_start_minute", 0)
-                    val endMinutes =
-                        MainModule.mPrefs.getInt("system_vibration_amp_period_end_hour", 0) * 60 +
-                            MainModule.mPrefs.getInt("system_vibration_amp_period_end_minute", 0)
+                    val startMinutes = cfg.periodStartMinutes
+                    val endMinutes = cfg.periodEndMinutes
                     val now = Calendar.getInstance()
                     val nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
                     val insidePeriod = if (startMinutes < endMinutes) {

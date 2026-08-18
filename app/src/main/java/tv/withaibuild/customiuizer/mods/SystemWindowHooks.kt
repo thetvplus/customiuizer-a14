@@ -29,8 +29,47 @@ import java.util.List
  */
 object SystemWindowHooks {
 
+    internal data class WindowSnapshot(
+        val autoRotateState: Int = 0,
+        val allowAllRotations: Int = 0,
+        val floatApps: Set<String> = emptySet(),
+        val floatAppsBlack: Set<String> = emptySet(),
+    )
+
+    @Volatile
+    internal var windowConfig = WindowSnapshot()
+
+    private var windowObserverRegistered = false
+
+    private fun refreshWindowSnapshot() {
+        val prefs = MainModule.mPrefs
+        windowConfig = WindowSnapshot(
+            autoRotateState = prefs.getInt("qs_autorotate_state", 0),
+            allowAllRotations = if (prefs.getStringAsInt("system_allrotations2", 1) == 2) 1 else 0,
+            floatApps = HashSet(prefs.getStringSet("system_betterpopups_allowfloat_apps")),
+            floatAppsBlack = HashSet(prefs.getStringSet("system_betterpopups_allowfloat_apps_black")),
+        )
+    }
+
+    private fun installWindowSnapshot() {
+        refreshWindowSnapshot()
+        if (windowObserverRegistered) return
+        windowObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null ||
+                    key == "qs_autorotate_state" ||
+                    key == "system_allrotations2" ||
+                    key == "system_betterpopups_allowfloat_apps" ||
+                    key == "system_betterpopups_allowfloat_apps_black"
+                ) refreshWindowSnapshot()
+            }
+        })
+    }
+
     @JvmStatic
     fun OrientationLockHook(lpparam: SystemServerStartingParam) {
+        installWindowSnapshot()
         val windowClass = "com.android.server.wm.DisplayRotation"
         val rotMethod = "rotationForOrientation"
         ModuleHelper.hookAllMethods(windowClass, lpparam.classLoader, rotMethod, object : MethodHook() {
@@ -47,7 +86,7 @@ object SystemWindowHooks {
                     val args = chain.args
 
                     if ((args[0] as Int) == -1) {
-                        val opt = MainModule.mPrefs.getInt("qs_autorotate_state", 0)
+                        val opt = windowConfig.autoRotateState
                         var prevOrient = args[1] as Int
                         val res = result as Int
                         if (opt == 1) {
@@ -69,6 +108,7 @@ object SystemWindowHooks {
 
     @JvmStatic
     fun AllRotationsHook(lpparam: SystemServerStartingParam) {
+        installWindowSnapshot()
         ModuleHelper.hookAllConstructors("com.android.server.wm.DisplayRotation", lpparam.classLoader, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -82,7 +122,7 @@ object SystemWindowHooks {
                 try {
                     val thisObject = chain.thisObject
 
-                    XposedHelpers.setIntField(thisObject, "mAllowAllRotations", if (MainModule.mPrefs.getStringAsInt("system_allrotations2", 1) == 2) 1 else 0)
+                    XposedHelpers.setIntField(thisObject, "mAllowAllRotations", windowConfig.allowAllRotations)
 
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)
@@ -230,6 +270,7 @@ object SystemWindowHooks {
 
     @JvmStatic
     fun BetterPopupsAllowFloatHook(lpparam: PackageReadyParam) {
+        installWindowSnapshot()
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiExpandableNotificationRow", lpparam.classLoader, "updateMiniWindowBar", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -238,8 +279,8 @@ object SystemWindowHooks {
                 try {
 
                     val pkgName = XposedHelpers.callMethod(thisObject, "getMiniWindowTargetPkg") as String
-                    val selectedApps = MainModule.mPrefs.getStringSet("system_betterpopups_allowfloat_apps")
-                    val selectedAppsBlack = MainModule.mPrefs.getStringSet("system_betterpopups_allowfloat_apps_black")
+                    val selectedApps = windowConfig.floatApps
+                    val selectedAppsBlack = windowConfig.floatAppsBlack
                     val mAppMiniWindowManager = XposedHelpers.callMethod(thisObject, "getMAppMiniWindowManager")
                     val notificationSettingsManager = XposedHelpers.getObjectField(mAppMiniWindowManager, "notificationSettingsManager")
                     val mAllowNotificationSlide = XposedHelpers.getObjectField(notificationSettingsManager, "mAllowNotificationSlide") as List<String>

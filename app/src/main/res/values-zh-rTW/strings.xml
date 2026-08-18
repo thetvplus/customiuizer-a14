@@ -72,6 +72,8 @@
     <string name="system_batteryindicator_test_summ" formatted="false">未充電時顯示電量條</string>
     <string name="system_statusbarheight_title">狀態欄高度</string>
     <string name="system_statusbarheight_summ">修改固定高度後需完整重啟生效。</string>
+    <string name="system_statusbar_content_vertical_offset_title">狀態欄內容垂直位置</string>
+    <string name="system_statusbar_content_vertical_offset_summ">調整狀態欄內時鐘、圖示及自訂內容的整體垂直位置。不會改變狀態欄高度。</string>
     <string name="system_statusbarcolor_title">狀態欄背景顏色</string>
     <string name="system_statusbarcolor_summ">盡量將狀態欄和應用操作欄的背景顏色保持一致</string>
     <string name="system_statusbarcolor_apps_title">黑名單</string>
@@ -361,7 +363,10 @@
     <string name="system_mods_recents">最近應用列表</string>
     <string name="system_removecleaner_title">移除清理按鈕</string>
     <string name="system_removecleaner_summ">隱藏清理最近應用和記憶體的按鈕</string>
-    <string name="system_recents_disable_wallpaperscale_title">禁用壁紙縮放</string>
+    <string name="launcher_disable_wallpaperscale_title">停用壁紙縮放</string>
+    <string name="launcher_disable_wallpaperscale_summ">關閉最近任務、開啟/關閉應用時的壁紙縮放，並關閉解鎖壁紙縮放動畫。修改後請強制停止桌面。</string>
+    <string name="system_recents_disable_wallpaperscale_title">最近任務中停用壁紙縮放</string>
+    <string name="system_recents_disable_wallpaperscale_summ">與「啟動器 → 其它」為同一套桌面壁紙縮放，但不包含解鎖動畫。兩者不衝突，最近任務和應用過渡開一個即可。修改後請強制停止桌面。</string>
     <string name="system_clearalltasks_title">清空</string>
     <string name="system_clearalltasks_summ">使清潔器按鈕結束所有正在執行中的任務</string>
     <string name="system_hidefromrecents_title">隱藏最近</string>
@@ -878,6 +883,8 @@
     <string name="various_block_location_permission_prompts_summ">不授予前景或背景定位權限並直接關閉 Android 系統授權頁；修改後需重新啟動 PermissionController 或裝置</string>
     <string name="various_permission_scope_unavailable">請將 PermissionController 加入本模組作用域，然後重新啟動裝置。</string>
     <string name="various_permission_scope_failed">PermissionController 作用域請求未獲批准。</string>
+    <string name="dynamic_app_scope_unavailable">此功能需要 Vector/LSPosed API 102 才能將所選應用程式加入模組作用域。若框架無法請求作用域，請手動加入。</string>
+    <string name="dynamic_app_scope_failed">所選應用程式未加入模組作用域。設定已儲存，但在應用程式進入作用域前功能不會生效。</string>
     <string name="animation_scale_bridge_unavailable">系統服務橋無法使用，請確認模組已啟用並完整重新啟動裝置。</string>
     <string name="animation_scale_write_failed">系統拒絕了動畫縮放修改。</string>
     <string name="system_recents_card_style_hide_title">隱藏應用程式名稱</string>

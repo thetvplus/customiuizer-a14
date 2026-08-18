@@ -1,15 +1,15 @@
 {
   "name": "A14",
   "schema_version": 2,
-  "expected_branch": "devin/a14-rom-intelligence-audit",
+  "expected_branch": "main",
   "coverage_target": 74,
   "minimum_independent_kills": 11,
   "required_independent_mutations": [
-    "duplicate SMART key",
-    "symbolic verified tree",
-    "ambiguous resume path",
-    "TASK state drift",
-    "generated progress tamper",
+    "observer pref key",
+    "source test seam",
+    "feature semantics",
+    "process matrix",
+    "release metadata",
     "remove fetch-depth",
     "wrong CI branch",
     "signing leak",
@@ -17,9 +17,6 @@
     "duplicate Feature ID",
     "swallow fatal"
   ],
-  "smart_state": "SMART_OPERATION_STATE.md",
-  "task_state": "TASK_STATE.md",
-  "progress_json": "docs/progress/A14_PROGRESS_CURRENT.json",
   "catalog_file": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
   "feature_id_file": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt",
   "process_matrix": "docs/rom-intelligence/A14_PROCESS_MATRIX.csv",
@@ -45,18 +42,9 @@
     ],
     [
       "python",
-      "tools/check_automation_state.py"
-    ],
-    [
-      "python",
-      "tools/progress_snapshot.py",
-      "--check"
-    ],
-    [
-      "python",
       "tools/ci_contract_scan.py",
       "--expected-branch",
-      "devin/a14-rom-intelligence-audit",
+      "main",
       "--default-branch",
       "main"
     ],
@@ -72,18 +60,31 @@
     ],
     [
       "python",
+      "tools/check_release_metadata.py"
+    ],
+    [
+      "python",
       "tools/audit_hook_ownership.py",
       "--check"
+    ],
+    [
+      "python",
+      "tools/check_observer_key_contract.py"
+    ],
+    [
+      "python",
+      "tools/check_main_source_cleanliness.py"
     ]
   ],
   "determinism_command": [
     "python",
-    "tools/progress_snapshot.py",
-    "--write"
+    "tools/extract_process_matrix.py"
   ],
   "determinism_outputs": [
-    "docs/progress/A14_PROGRESS_CURRENT.json",
-    "docs/progress/A14_PROGRESS_CURRENT.md"
+    "docs/rom-intelligence/A14_PROCESS_MATRIX.json",
+    "docs/rom-intelligence/A14_PROCESS_MATRIX.csv",
+    "docs/rom-intelligence/A14_PROCESS_MATRIX.md",
+    "docs/rom-intelligence/A14_PROCESS_EXCEPTIONS_GENERATED.md"
   ],
   "apply_checks": {
     "a14_contract": [
@@ -94,20 +95,11 @@
     ]
   },
   "kill_gates": {
-    "automation": [
-      "python",
-      "tools/check_automation_state.py"
-    ],
-    "progress": [
-      "python",
-      "tools/progress_snapshot.py",
-      "--check"
-    ],
     "ci": [
       "python",
       "tools/ci_contract_scan.py",
       "--expected-branch",
-      "devin/a14-rom-intelligence-audit",
+      "main",
       "--default-branch",
       "main"
     ],
@@ -127,46 +119,63 @@
       "--strict-all",
       "--path",
       "app/src/main/java/brutal_mutation"
+    ],
+    "observer": [
+      "python",
+      "tools/check_observer_key_contract.py"
+    ],
+    "cleanliness": [
+      "python",
+      "tools/check_main_source_cleanliness.py"
+    ],
+    "semantics": [
+      "python",
+      "tools/audit-feature-semantics.py",
+      "--validate"
+    ],
+    "release": [
+      "python",
+      "tools/check_release_metadata.py"
     ]
   },
   "mutations": [
     {
-      "name": "duplicate SMART key",
-      "mutator": "duplicate_smart_key",
+      "name": "observer pref key",
+      "mutator": "observer_pref_key",
       "apply_check": null,
-      "kill_gate": "automation",
+      "kill_gate": "observer",
       "required_independent": true,
       "coverage_status": "ACTIVE_INDEPENDENT"
     },
     {
-      "name": "symbolic verified tree",
-      "mutator": "symbolic_verified_tree",
+      "name": "source test seam",
+      "mutator": "source_test_seam",
       "apply_check": null,
-      "kill_gate": "automation",
+      "kill_gate": "cleanliness",
       "required_independent": true,
       "coverage_status": "ACTIVE_INDEPENDENT"
     },
     {
-      "name": "ambiguous resume path",
-      "mutator": "ambiguous_resume",
+      "name": "feature semantics",
+      "mutator": "feature_semantics",
       "apply_check": null,
-      "kill_gate": "automation",
+      "kill_gate": "semantics",
       "required_independent": true,
       "coverage_status": "ACTIVE_INDEPENDENT"
     },
     {
-      "name": "TASK state drift",
-      "mutator": "task_state_drift",
+      "name": "process matrix",
+      "mutator": "process_matrix",
       "apply_check": null,
-      "kill_gate": "progress",
+      "kill_gate": "catalog",
       "required_independent": true,
       "coverage_status": "ACTIVE_INDEPENDENT"
     },
     {
-      "name": "generated progress tamper",
-      "mutator": "progress_json_tamper",
+      "name": "release metadata",
+      "mutator": "release_readme",
       "apply_check": null,
-      "kill_gate": "progress",
+      "kill_gate": "release",
       "required_independent": true,
       "coverage_status": "ACTIVE_INDEPENDENT"
     },
@@ -661,37 +670,37 @@
   ],
   "coverage_ledger": [
     {
-      "id": "duplicate SMART key",
+      "id": "observer pref key",
       "status": "ACTIVE_INDEPENDENT",
-      "mutator": "duplicate_smart_key",
+      "mutator": "observer_pref_key",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
     },
     {
-      "id": "symbolic verified tree",
+      "id": "source test seam",
       "status": "ACTIVE_INDEPENDENT",
-      "mutator": "symbolic_verified_tree",
+      "mutator": "source_test_seam",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
     },
     {
-      "id": "ambiguous resume path",
+      "id": "feature semantics",
       "status": "ACTIVE_INDEPENDENT",
-      "mutator": "ambiguous_resume",
+      "mutator": "feature_semantics",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
     },
     {
-      "id": "TASK state drift",
+      "id": "process matrix",
       "status": "ACTIVE_INDEPENDENT",
-      "mutator": "task_state_drift",
+      "mutator": "process_matrix",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
     },
     {
-      "id": "generated progress tamper",
+      "id": "release metadata",
       "status": "ACTIVE_INDEPENDENT",
-      "mutator": "progress_json_tamper",
+      "mutator": "release_readme",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
     },

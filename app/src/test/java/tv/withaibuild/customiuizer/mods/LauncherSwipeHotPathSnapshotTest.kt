@@ -138,6 +138,30 @@ class LauncherSwipeHotPathSnapshotTest {
     }
 
     @Test
+    fun pinchAndFsgSnapshotRefreshWithoutReinstall() {
+        MainModule.mPrefs.put("launcher_pinch_action", 1)
+        MainModule.mPrefs.put("controls_fsg_swipeandstop_disablevibrate", false)
+        MainModule.mPrefs.put("controls_fsg_horiz_apps", emptySet<String>())
+        LauncherGestureHooks.onHomescreenSwipePreferenceChanged(null)
+
+        assertFalse(LauncherGestureHooks.shouldBlockPinchScale())
+        assertFalse(LauncherGestureHooks.isSwipeAndStopVibrateDisabled())
+        assertFalse(LauncherGestureHooks.isFsgHorizApp("com.example.app"))
+
+        MainModule.mPrefs.put("launcher_pinch_action", 2)
+        MainModule.mPrefs.put("controls_fsg_swipeandstop_disablevibrate", true)
+        MainModule.mPrefs.put("controls_fsg_horiz_apps", setOf("com.example.app"))
+        LauncherGestureHooks.onHomescreenSwipePreferenceChanged("launcher_pinch_action")
+        LauncherGestureHooks.onHomescreenSwipePreferenceChanged("controls_fsg_swipeandstop_disablevibrate")
+        LauncherGestureHooks.onHomescreenSwipePreferenceChanged("controls_fsg_horiz_apps")
+
+        assertTrue(LauncherGestureHooks.shouldBlockPinchScale())
+        assertTrue(LauncherGestureHooks.isSwipeAndStopVibrateDisabled())
+        assertTrue(LauncherGestureHooks.isFsgHorizApp("com.example.app"))
+        assertFalse(LauncherGestureHooks.isFsgHorizApp("com.other.app"))
+    }
+
+    @Test
     fun snapshotReflectsPreferenceWithoutReinstallingHooks() {
         MainModule.mPrefs.put(downActionKey, 1)
         LauncherGestureHooks.onHomescreenSwipePreferenceChanged(downActionKey)

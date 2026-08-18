@@ -2,6 +2,79 @@
 
 [English](CHANGELOG.md) | 简体中文
 
+## r14.20.7 — 2026-08-19
+
+面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。
+
+### 修复
+
+- 修复扩展动作页面进入「启动应用 / 启动快捷方式 / 启动活动」选择页面时可能闪退的问题。
+- 修复 MultiAction「切换功能」动作失效的问题。
+- 修复锁屏扩展动作「切换功能」显示项与内部值不一致的问题。
+
+### 稳定性
+
+- 完善启动器 10 项手势动作的映射与执行契约校验。
+- 完善 MultiAction action / toggle / array contract，防止 UI 暴露无执行端动作或 label/value 再次错位。
+
+### 产物信息
+
+- APK：`CustoMIUIzer-A14-r14.20.7.apk`
+- versionCode / versionName：`204 / r14.20.7`
+
+---
+
+## r14.20.6 — 2026-08-18
+
+面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。
+
+### 修复
+
+- 启动器手势以及导航栏、状态栏、锁屏、启动等 MultiAction 页面，选择动作后可以保存，重新进入仍保持设置。
+- 启动器 → 手势页的「重启相关组件」会同时重启桌面和系统界面。
+
+### 性能与稳定性
+
+- 桌面手势热路径复用预分配命令列表。
+- 全局动作部分反射方法改为缓存。
+- Hook 体内 PrefMap 读取已清零并由扫描上限保护；偏好变化刷新快照，不再重装 Hook。
+
+### 产物信息
+
+- APK：`CustoMIUIzer-A14-r14.20.6.apk`
+- versionCode / versionName：`203 / r14.20.6`
+
+---
+
+## r14.20.5 — 2026-08-18
+
+面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。
+
+### 状态栏
+
+- 温度支持 CPU / 电池分源，thermal zone 解析更兼容。
+- 双排关闭「显示在右侧」时，温度改到左侧。
+- 空间不足时字号自动缩小；内容可垂直微调，且不超出状态栏窗口。
+
+### 桌面与最近任务
+
+- 关闭文件夹模糊后，拖动图标不再闪默认模糊。
+- 禁用壁纸缩放改为拦截实际 zoom 调用，最近任务与应用过渡均生效。
+- 启动器、最近任务两处开关文案已区分；任开即可关过渡缩放，仅启动器开关还关解锁缩放与最近任务压暗。
+- 最近任务模糊 0% 对手势进入生效，与窗口级模糊开关无关。
+
+### 修复
+
+- 动态岛上滑收回更稳定。
+- 无网速控制器时，设备温度等信息仍可正常刷新。
+
+### 产物信息
+
+- APK：`CustoMIUIzer-A14-r14.20.5.apk`
+- versionCode / versionName：`202 / r14.20.5`
+
+---
+
 ## r14.20.0 — 2026-08-17
 
 面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a` 与 libxposed API 101/102。
@@ -179,6 +252,4 @@
 - 正式 Release APK 使用 A14 专用证书，产物的版本、SHA-256、签名、zipalign、`debuggable=false` 与 Xposed 元数据在 GitHub Release 中记录。
 - 既有 Xiaomi 13 / HyperOS 1 基线未发现模块导致的 P0/P1、重复安装或持续安装异常；本版本新增的运行期与界面变化尚未完成全部功能逐项实机行为验证，不标记为全面 `DEVICE_VERIFIED`。
 
-### 历代核心实现总结
-
-r14 系列建立了独立包名、签名和 HyperOS 1 / Android 14 维护线，完成设置与核心 Hook 的分批 Kotlin 迁移、libxposed API 101/102 单 APK 兼容、`system` 作用域恢复、偏好同步与快速重启修复、Receiver/Observer/View 生命周期治理、反射与资源缓存加固、状态栏和 Launcher 热路径优化，以及网速、锁屏、控制中心和设置界面的持续修复；细节保留在 Git commits 与历史 tags 中，旧 APK 不再保留为 Release 资产。
+---

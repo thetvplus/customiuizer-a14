@@ -69,6 +69,8 @@
     <string name="system_batteryindicator_test_title">テスト</string>
     <string name="system_batteryindicator_test_summ" formatted="false">放電状態での100%から0%へのアニメーションバー</string>
     <string name="system_statusbarheight_title">ステータスバーの高さ</string>
+    <string name="system_statusbar_content_vertical_offset_title">ステータスバー内容の垂直位置</string>
+    <string name="system_statusbar_content_vertical_offset_summ">時計、アイコン、カスタム内容の全体的な垂直位置を調整します。ステータスバーの高さは変わりません。</string>
     <string name="system_statusbar_iconsize_title">ステータスバーアイコンの大きさ</string>
     <string name="system_statusbarcolor_title">ステータスバーの背景色</string>
     <string name="system_statusbarcolor_summ">ステータスバーとアプリアクションバーの背景色を可能な限り同期します</string>
@@ -388,7 +390,10 @@
     <string name="system_mods_recents">最近のタスクの表示</string>
     <string name="system_removecleaner_title">クリーナーボタンを非表示にする</string>
     <string name="system_removecleaner_summ">すべてのアプリを終了させてメモリ解放を行なうボタンを非表示にします</string>
-    <string name="system_recents_disable_wallpaperscale_title">壁紙のスケールを無効化する</string>
+    <string name="launcher_disable_wallpaperscale_title">壁紙の拡大を無効にする</string>
+    <string name="launcher_disable_wallpaperscale_summ">最近のタスクとアプリの開閉時の壁紙ズームを無効にし、ロック解除時の壁紙スケールも無効にします。変更後はランチャーを強制停止してください。</string>
+    <string name="system_recents_disable_wallpaperscale_title">最近のタスクで壁紙の拡大を無効にする</string>
+    <string name="system_recents_disable_wallpaperscale_summ">「ランチャー → その他」と同じランチャー壁紙ズームです。ロック解除アニメーションは含まれません。競合しないため、どちらか一方で十分です。変更後はランチャーを強制停止してください。</string>
     <string name="system_clearalltasks_title">タスクをすべて終了する</string>
     <string name="system_clearalltasks_summ">クリーナーボタンで実行中のタスクをすべて終了させます</string>
     <string name="system_hidefromrecents_title">履歴上から非表示にする</string>
@@ -994,6 +999,8 @@
     <string name="various_disable_xiaomi_analytics_title">Xiaomi分析とシステム広告を無効化</string>
     <string name="various_exclusive_features_cat_title">独自機能</string>
     <string name="various_permission_scope_failed">PermissionControllerのスコープ要求が承認されませんでした。</string>
+    <string name="dynamic_app_scope_unavailable">選択したアプリをモジュールのスコープに追加するには Vector/LSPosed API 102 が必要です。フレームワークがスコープを要求できない場合は手動で追加してください。</string>
+    <string name="dynamic_app_scope_failed">選択したアプリはモジュールのスコープに追加されませんでした。設定は保存されますが、スコープに入るまで機能は適用されません。</string>
     <string name="various_permission_scope_unavailable">このモジュールのスコープにPermissionControllerを追加し、再起動してください。</string>
     <string name="various_remove_security_center_antivirus_confirm">確認済みのセキュリティセンターのウイルス対策コンポーネント%1$d個を無効化しますか？ウイルススキャン、ウイルス警告、長期間未スキャンの通知が利用できなくなります。オフにすると各コンポーネントを以前の状態に戻します。</string>
     <string name="various_remove_security_center_antivirus_summ">ウイルス対策の入口、ガード、ダイアログ、更新、定期スキャンジョブを無効化して未スキャン通知を抑止します。権限、ファイアウォール、迷惑電話対策、バッテリーツールは維持します</string>

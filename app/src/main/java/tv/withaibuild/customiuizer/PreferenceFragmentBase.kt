@@ -29,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceManager
+import androidx.recyclerview.widget.RecyclerView
 import java.util.Collections
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -520,20 +521,27 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
 
     /**
      * Finishes the source row's ripple before both fragments are translated side by side.
-     * Only currently attached rows are touched, so the work is bounded by the viewport and
-     * allocates no animator or long-lived state.
+     * Preference pages clean the visible RecyclerView rows. Edit pages have no Preference
+     * list; that is a valid state and only the fragment root is cleared.
      */
     private fun finishNavigationFeedback() {
         val fragmentView = view ?: return
-        fragmentView.isPressed = false
-        fragmentView.jumpDrawablesToCurrentState()
-
-        val preferenceList = getListView()
-        preferenceList.stopScroll()
-        preferenceList.isPressed = false
-        preferenceList.jumpDrawablesToCurrentState()
-        for (index in 0 until preferenceList.childCount) {
-            val row = preferenceList.getChildAt(index)
+        val preferenceList = getListView() as RecyclerView?
+        val plan = NavigationFeedback.plan(
+            hasFragmentView = true,
+            hasPreferenceList = preferenceList != null,
+        )
+        if (plan.clearFragmentRoot) {
+            fragmentView.isPressed = false
+            fragmentView.jumpDrawablesToCurrentState()
+        }
+        if (!plan.cleanPreferenceList) return
+        val list = preferenceList ?: return
+        list.stopScroll()
+        list.isPressed = false
+        list.jumpDrawablesToCurrentState()
+        for (index in 0 until list.childCount) {
+            val row = list.getChildAt(index)
             row.isPressed = false
             row.jumpDrawablesToCurrentState()
         }

@@ -59,6 +59,9 @@ object LauncherGestureHooks {
 
     private const val PREF_LAUNCHER_SWIPE_DOWN_ACTION = "launcher_swipedown_action"
     private const val PREF_LAUNCHER_SWIPE_UP_ACTION = "launcher_swipeup_action"
+    private const val PREF_LAUNCHER_PINCH_ACTION = "launcher_pinch_action"
+    private const val PREF_FSG_HORIZ_APPS = "controls_fsg_horiz_apps"
+    private const val PREF_FSG_SWIPE_STOP_DISABLE_VIBRATE = "controls_fsg_swipeandstop_disablevibrate"
 
     @Volatile
     private var swipeDownCustom = false
@@ -66,15 +69,34 @@ object LauncherGestureHooks {
     @Volatile
     private var swipeUpCustom = false
 
+    @Volatile
+    private var pinchCustom = false
+
+    @Volatile
+    private var fsgHorizApps: Set<String> = emptySet()
+
+    @Volatile
+    private var disableSwipeAndStopVibrate = false
+
     private var homescreenSwipeSnapshotInstalled = false
 
     internal fun refreshHomescreenSwipeSnapshots() {
-        swipeDownCustom = MainModule.mPrefs.getInt(PREF_LAUNCHER_SWIPE_DOWN_ACTION, 1) > 1
-        swipeUpCustom = MainModule.mPrefs.getInt(PREF_LAUNCHER_SWIPE_UP_ACTION, 1) > 1
+        val prefs = MainModule.mPrefs
+        swipeDownCustom = prefs.getInt(PREF_LAUNCHER_SWIPE_DOWN_ACTION, 1) > 1
+        swipeUpCustom = prefs.getInt(PREF_LAUNCHER_SWIPE_UP_ACTION, 1) > 1
+        pinchCustom = prefs.getInt(PREF_LAUNCHER_PINCH_ACTION, 1) > 1
+        fsgHorizApps = HashSet(prefs.getStringSet(PREF_FSG_HORIZ_APPS))
+        disableSwipeAndStopVibrate = prefs.getBoolean(PREF_FSG_SWIPE_STOP_DISABLE_VIBRATE)
     }
 
     internal fun onHomescreenSwipePreferenceChanged(key: String?) {
-        if (key == null || key == PREF_LAUNCHER_SWIPE_DOWN_ACTION || key == PREF_LAUNCHER_SWIPE_UP_ACTION) {
+        if (key == null ||
+            key == PREF_LAUNCHER_SWIPE_DOWN_ACTION ||
+            key == PREF_LAUNCHER_SWIPE_UP_ACTION ||
+            key == PREF_LAUNCHER_PINCH_ACTION ||
+            key == PREF_FSG_HORIZ_APPS ||
+            key == PREF_FSG_SWIPE_STOP_DISABLE_VIBRATE
+        ) {
             refreshHomescreenSwipeSnapshots()
         }
     }
@@ -98,6 +120,12 @@ object LauncherGestureHooks {
         return if (swipeUpCustom) false else chain.proceed()
     }
 
+    internal fun shouldBlockPinchScale(): Boolean = pinchCustom
+
+    internal fun isFsgHorizApp(pkg: String): Boolean = pkg in fsgHorizApps
+
+    internal fun isSwipeAndStopVibrateDisabled(): Boolean = disableSwipeAndStopVibrate
+
     @JvmStatic
     fun HomescreenSwipesHook(lpparam: PackageReadyParam) {
         installHomescreenSwipeSnapshot()
@@ -113,19 +141,14 @@ object LauncherGestureHooks {
                         if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                         return XposedHelpers.proceedOrThrow(chain, throwable)
                     }
-                    var key: String? = null
                     val helperContext = (thisObject as ViewGroup).context
                     var numOfFingers = 1
                     if (args[1] != null) numOfFingers = (args[1] as MotionEvent).pointerCount
-                    when (args[0] as Int) {
-                        11 -> {
-                            key = if (numOfFingers == 1) "launcher_swipedown" else if (numOfFingers == 2) "launcher_swipedown2" else key
-                            if (GlobalActions.handleAction(helperContext, key)) { skipped = true; result = true; throwable = null }
-                        }
-                        10 -> {
-                            key = if (numOfFingers == 1) "launcher_swipeup" else if (numOfFingers == 2) "launcher_swipeup2" else key
-                            if (GlobalActions.handleAction(helperContext, key)) { skipped = true; result = true; throwable = null }
-                        }
+                    val key = LauncherVerticalGesture.resolveKey(args[0] as Int, numOfFingers)
+                    if (key != null && GlobalActions.handleAction(helperContext, key)) {
+                        skipped = true
+                        result = true
+                        throwable = null
                     }
                     if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                     result = chain.proceed()
@@ -163,7 +186,7 @@ object LauncherGestureHooks {
                     result = null
                 }
                 try {
-                    if (MainModule.mPrefs.getInt("launcher_swipedown_action", 1) > 1) { result = "no_action"; throwable = null }
+                    if (swipeDownCustom) { result = "no_action"; throwable = null }
                 } catch (t: Throwable) {
                     FatalErrors.rethrowIfFatal(t)
                     XposedHelpers.log(t)
@@ -179,7 +202,7 @@ object LauncherGestureHooks {
                 var result: Any? = null
                 var throwable: Throwable? = null
                 try {
-                    if (MainModule.mPrefs.getInt("launcher_swipeup_action", 1) > 1) { skipped = true; result = "no_action"; throwable = null }
+                    if (swipeUpCustom) { skipped = true; result = "no_action"; throwable = null }
                     if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                     result = chain.proceed()
                 } catch (t: Throwable) {
@@ -197,7 +220,7 @@ object LauncherGestureHooks {
                     var result: Any? = null
                     var throwable: Throwable? = null
                     try {
-                        if (MainModule.mPrefs.getInt("launcher_swipeup_action", 1) > 1) { skipped = true; result = false; throwable = null }
+                        if (swipeUpCustom) { skipped = true; result = false; throwable = null }
                         if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                         result = chain.proceed()
                     } catch (t: Throwable) {
@@ -213,7 +236,7 @@ object LauncherGestureHooks {
                     var result: Any? = null
                     var throwable: Throwable? = null
                     try {
-                        if (MainModule.mPrefs.getInt("launcher_swipedown_action", 1) > 1) { skipped = true; result = false; throwable = null }
+                        if (swipeDownCustom) { skipped = true; result = false; throwable = null }
                         if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                         result = chain.proceed()
                     } catch (t: Throwable) {
@@ -229,7 +252,7 @@ object LauncherGestureHooks {
                     var result: Any? = null
                     var throwable: Throwable? = null
                     try {
-                        if (MainModule.mPrefs.getInt("launcher_swipeup_action", 1) > 1) { skipped = true; result = false; throwable = null }
+                        if (swipeUpCustom) { skipped = true; result = false; throwable = null }
                         if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                         result = chain.proceed()
                     } catch (t: Throwable) {
@@ -245,7 +268,7 @@ object LauncherGestureHooks {
                     var result: Any? = null
                     var throwable: Throwable? = null
                     try {
-                        if (MainModule.mPrefs.getInt("launcher_swipeup_action", 1) > 1) { skipped = true; result = false; throwable = null }
+                        if (swipeUpCustom) { skipped = true; result = false; throwable = null }
                         if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                         result = chain.proceed()
                     } catch (t: Throwable) {
@@ -261,7 +284,7 @@ object LauncherGestureHooks {
                     var result: Any? = null
                     var throwable: Throwable? = null
                     try {
-                        if (MainModule.mPrefs.getInt("launcher_swipeup_action", 1) > 1) { skipped = true; result = false; throwable = null }
+                        if (swipeUpCustom) { skipped = true; result = false; throwable = null }
                         if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                         result = chain.proceed()
                     } catch (t: Throwable) {
@@ -433,6 +456,7 @@ object LauncherGestureHooks {
 
     @JvmStatic
     fun FSGesturesHook(lpparam: PackageReadyParam) {
+        installHomescreenSwipeSnapshot()
         val baseRecentsClass = installForceFsgNavBarCallerScope(lpparam.classLoader)
         ModuleHelper.findAndHookMethod("com.miui.home.launcher.DeviceConfig", lpparam.classLoader, "usingFsGesture", HookerClassHelper.returnConstant(true))
         ModuleHelper.findAndHookMethodSilently(baseRecentsClass, "createAndAddNavStubView", object : MethodHook() {
@@ -543,7 +567,7 @@ object LauncherGestureHooks {
                     val foregroundInfo = ProcessManager.getForegroundInfo()
                     if (foregroundInfo != null) {
                         val pkgName = foregroundInfo.mForegroundPackageName
-                        if (pkgName != null && MainModule.mPrefs.getStringSet("controls_fsg_horiz_apps").contains(pkgName)) { skipped = true; result = false; throwable = null }
+                        if (pkgName != null && pkgName in fsgHorizApps) { skipped = true; result = false; throwable = null }
                     }
 
                     if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
@@ -757,6 +781,7 @@ object LauncherGestureHooks {
 
     @JvmStatic
     fun SwipeAndStopActionHook(lpparam: PackageReadyParam) {
+        installHomescreenSwipeSnapshot()
         val ReadyStateEnum = XposedHelpers.findClassIfExists("com.miui.home.recents.GestureBackArrowView\$ReadyState", lpparam.classLoader)
         if (ReadyStateEnum == null) return
         val states = ReadyStateEnum.enumConstants ?: return
@@ -779,7 +804,7 @@ object LauncherGestureHooks {
                     val mReadyState = XposedHelpers.getObjectField(thisObject, "mReadyState")
                     val readyState = chain.getArg(0)
                     if (readyState != mReadyState) {
-                        val disableVibrate = MainModule.mPrefs.getBoolean("controls_fsg_swipeandstop_disablevibrate")
+                        val disableVibrate = disableSwipeAndStopVibrate
                         val view = thisObject as View
                         XposedHelpers.setObjectField(view, "mRecentTaskIcon", null)
                         if (mReadyState == finalBackState && readyState == finalRecentState) {
@@ -899,6 +924,7 @@ object LauncherGestureHooks {
 
     @JvmStatic
     fun LauncherPinchHook(lpparam: PackageReadyParam) {
+        installHomescreenSwipeSnapshot()
         ModuleHelper.findAndHookMethod("com.miui.home.launcher.Workspace", lpparam.classLoader, "onPinching", Float::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -910,7 +936,7 @@ object LauncherGestureHooks {
                     val dampingScale = XposedHelpers.callMethod(thisObject, "getDampingScale", chain.getArg(0)) as Float
                     val screenScaleRatio = XposedHelpers.callMethod(thisObject, "getScreenScaleRatio") as Float
                     if (dampingScale < screenScaleRatio)
-                        if (MainModule.mPrefs.getInt("launcher_pinch_action", 1) > 1) { skipped = true; result = false; throwable = null }
+                        if (pinchCustom) { skipped = true; result = false; throwable = null }
 
                     if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                     result = chain.proceed()

@@ -2,6 +2,79 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.20.7 — 2026-08-19
+
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Fixes
+
+- Opening Launch App / Launch Shortcut / Launch Activity from an Extended Action page no longer crashes.
+- The MultiAction Toggle action works again.
+- Lock-screen Extended Action now shows Toggle aligned with its stored value.
+
+### Stability
+
+- Launcher's ten gesture actions now have mapping and execution contract checks.
+- MultiAction action, toggle, and array contracts now reject advertised IDs without handlers and label/value mismatches.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.20.7.apk`
+- versionCode / versionName: `204 / r14.20.7`
+
+---
+
+## r14.20.6 — 2026-08-18
+
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Fixes
+
+- Launcher gestures and other MultiAction pages now keep the selected action after save and reopen.
+- Launcher → Gestures “restart related components” now restarts both the launcher and SystemUI.
+
+### Performance and Stability
+
+- Home-screen gesture hot path reuses preallocated command lists.
+- Some GlobalActions reflection methods are cached.
+- PrefMap reads in `MethodHook` bodies are frozen at zero and guarded by a scanner ceiling. Preference changes refresh snapshots without reinstalling hooks.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.20.6.apk`
+- versionCode / versionName: `203 / r14.20.6`
+
+---
+
+## r14.20.5 — 2026-08-18
+
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Status Bar
+
+- Temperature can use separate CPU and battery sources, with better thermal-zone parsing.
+- In dual-row mode, temperature moves left when “show on the right” is off.
+- Text shrinks when space is tight; vertical offset stays within the status-bar window.
+
+### Launcher and Recents
+
+- Folder blur stays off while dragging icons inside a folder.
+- Disable wallpaper scale now clamps actual zoom calls, including recents and app transitions.
+- Launcher and Recents toggles have clearer labels; either one disables transition zoom, and only the launcher toggle also disables unlock zoom and recents dim.
+- Recents blur at 0% applies on gesture enter and is independent of window-level blur disable.
+
+### Fixes
+
+- Dynamic Island upward recall is more reliable.
+- Device info still refreshes without a network-speed controller slot.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.20.5.apk`
+- versionCode / versionName: `202 / r14.20.5`
+
+---
+
 ## r14.20.0 — 2026-08-17
 
 Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, and libxposed API 101/102.
@@ -179,6 +252,4 @@ Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, and libxposed API 101/10
 - The formal Release APK uses the A14-specific certificate; version, SHA-256, signature, zip alignment, `debuggable=false`, and Xposed metadata are recorded in the GitHub Release.
 - The existing Xiaomi 13 / HyperOS 1 baseline found no module-attributable P0/P1, duplicate-install, or stuck-installing issue. The new runtime and UI changes in this release have not completed per-feature device behavior verification and are not claimed as fully `DEVICE_VERIFIED`.
 
-### Historical Core Implementation Summary
-
-The r14 line established an independent package, signing identity, and HyperOS 1 / Android 14 maintenance path; completed staged Kotlin migration of settings and core Hooks; delivered one-APK libxposed API 101/102 compatibility; restored the `system` scope; fixed preference delivery and quick restart; governed Receiver, Observer, and View lifecycles; hardened reflection and resource caches; optimized status-bar and Launcher hot paths; and continuously refined network speed, lock screen, control center, and settings UI behavior. Fine-grained history remains in Git commits and historical tags, while obsolete APKs are no longer retained as Release assets.
+---

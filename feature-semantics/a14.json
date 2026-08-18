@@ -11236,6 +11236,29 @@
       "notes": ""
     },
     {
+      "featureId": "system_statusbar_content_vertical_offset",
+      "featureName": "Status Bar Content Geometry",
+      "preferenceKeys": [
+        "system_statusbar_content_vertical_offset",
+        "pref_key_system_statusbar_content_vertical_offset"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "20",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:evaluateEnabled",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Always installs the SystemUI view-layer geometry hook",
+      "disableEffect": "Offset 0 keeps auto-center; hooks remain for live apply",
+      "valueChangeEffect": "Updates translationY on status_bar_contents without restart",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "INFERRED",
+      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/StatusBarContentGeometryHooks.kt",
+      "notes": "View-layer only. Does not modify InsetsSource, WindowState, DisplayPolicy, or cutout. Stored 0..40 with negativeShift 20 so the default midpoint is 0 dp auto-center."
+    },
+    {
       "featureId": "system_statusbar_dnd_atleft",
       "featureName": "system_statusbar_dnd_atleft",
       "preferenceKeys": [

@@ -2,6 +2,8 @@ package tv.withaibuild.customiuizer.mods.utils
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
+import java.util.concurrent.atomic.AtomicInteger
+import tv.withaibuild.customiuizer.BuildConfig
 
 /**
  * Process-scoped, in-memory collector for Hook installation diagnostics.
@@ -12,10 +14,11 @@ import java.util.concurrent.CopyOnWriteArraySet
  * It does **not** record inside Hook callbacks, draw loops, or other hot paths.
  *
  * Records are keyed by a stable tuple so the same missing target is only
- * counted once. The store is bounded; if it grows beyond [MAX_RECORDS] entries
+ * counted once. The store is bounded; if it grows beyond [detailBound] entries
  * are dropped by arbitrary eviction (the cheapest safe operation on a
- * [ConcurrentHashMap]). Records contain only strings and enums — no Context,
- * ClassLoader, MethodHook, Throwable, or user data is retained.
+ * [ConcurrentHashMap]). Release builds keep successful installs as counters
+ * and retain a smaller failure-detail bound. Records contain only strings and
+ * enums — no Context, ClassLoader, MethodHook, Throwable, or user data is retained.
  */
 object HookDiagnostics {
 
@@ -57,9 +60,13 @@ object HookDiagnostics {
             get() = "$process|$kind|$targetClass|$targetMember|$descriptor|$status"
     }
 
-    private const val MAX_RECORDS = 256
+    const val VERBOSE_DETAIL_BOUND = 256
+    const val RELEASE_DETAIL_BOUND = 32
+
     private val records = ConcurrentHashMap<String, Record>()
     private val printedStages = CopyOnWriteArraySet<String>()
+    private val compactInstalled = AtomicInteger()
+    private val compactSilent = AtomicInteger()
 
     /**
      * The real process name set by [MainModule] from [XC_LoadPackage.LoadPackageParam.getProcessName].
@@ -73,13 +80,35 @@ object HookDiagnostics {
      * so repeated failures of the same target do not inflate the map.
      */
     @JvmStatic
+    fun isVerboseDiagnostics(): Boolean = BuildConfig.BUILD_TYPE != "release"
+
+    @JvmStatic
+    fun detailBound(verbose: Boolean = isVerboseDiagnostics()): Int =
+        if (verbose) VERBOSE_DETAIL_BOUND else RELEASE_DETAIL_BOUND
+
+    @JvmStatic
+    fun shouldRetainDetail(status: Status, verbose: Boolean = isVerboseDiagnostics()): Boolean {
+        if (verbose) return true
+        return status != Status.INSTALLED && status != Status.SILENTLY_SKIPPED
+    }
+
+    @JvmStatic
     fun record(record: Record) {
+        if (!shouldRetainDetail(record.status)) {
+            if (record.status == Status.INSTALLED) {
+                compactInstalled.incrementAndGet()
+            } else {
+                compactSilent.incrementAndGet()
+            }
+            return
+        }
         records[record.key] = record
-        if (records.size > MAX_RECORDS) {
+        val bound = detailBound()
+        if (records.size > bound) {
             // Drop entries to avoid unbounded growth on a pathological ROM.
             // ConcurrentHashMap does not preserve insertion order, so this is
             // arbitrary eviction, not FIFO.
-            val toDrop = records.size - MAX_RECORDS
+            val toDrop = records.size - bound
             val keys = records.keys.take(toDrop)
             keys.forEach { records.remove(it) }
         }
@@ -95,8 +124,17 @@ object HookDiagnostics {
      * Return the summary counts. Does not allocate per successful hook.
      */
     @JvmStatic
-    fun summary(): Map<Status, Int> =
-        Status.entries.associateWith { 0 } + records.values.groupingBy { it.status }.eachCount()
+    fun summary(): Map<Status, Int> {
+        val counts = Status.entries.associateWith { 0 }.toMutableMap()
+        for (record in records.values) {
+            counts[record.status] = (counts[record.status] ?: 0) + 1
+        }
+        if (!isVerboseDiagnostics()) {
+            counts[Status.INSTALLED] = (counts[Status.INSTALLED] ?: 0) + compactInstalled.get()
+            counts[Status.SILENTLY_SKIPPED] = (counts[Status.SILENTLY_SKIPPED] ?: 0) + compactSilent.get()
+        }
+        return counts
+    }
 
     /**
      * Print a one-line summary for the given [stage]. Each stage is only printed
@@ -145,6 +183,8 @@ object HookDiagnostics {
     fun reset() {
         records.clear()
         printedStages.clear()
+        compactInstalled.set(0)
+        compactSilent.set(0)
     }
 
     /**

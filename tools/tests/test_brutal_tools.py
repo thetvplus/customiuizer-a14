@@ -68,6 +68,113 @@ jobs:
             self.assertIn("CI_API37_RESOLUTION", text)
             self.assertIn("CI_EXACT_BRANCH", text)
 
+    def test_pinned_sdk_script_satisfies_api37_contract(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "good.yml"
+            path.write_text(
+                """name: good
+on:
+  push:
+    branches:
+      - main
+jobs:
+  x:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: bash tools/ci_install_android_sdk.sh
+""",
+                encoding="utf-8",
+            )
+            errors = ci_contract_scan.scan_workflow(path, "main", "main")
+            text = "\n".join(errors)
+            self.assertNotIn("CI_API37_RESOLUTION", text)
+            self.assertNotIn("CI_SDK_NONDETERMINISTIC", text)
+
+    def test_requires_checkout_credential_hardening_and_sha_pins(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "bad.yml"
+            path.write_text(
+                """name: bad
+on:
+  push:
+    branches:
+      - main
+jobs:
+  x:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - run: chmod +x ./gradlew
+""",
+                encoding="utf-8",
+            )
+            errors = "\n".join(ci_contract_scan.scan_workflow(path, "main", "main"))
+            self.assertIn("CI_CHECKOUT_CREDENTIALS", errors)
+            self.assertIn("CI_ACTION_PIN", errors)
+            self.assertIn("CI_GRADLEW_MODE", errors)
+
+    def test_accepts_sha_pinned_checkout_without_persisted_credentials(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "good.yml"
+            path.write_text(
+                """name: good
+on:
+  push:
+    branches:
+      - main
+jobs:
+  x:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+""",
+                encoding="utf-8",
+            )
+            errors = "\n".join(ci_contract_scan.scan_workflow(path, "main", "main"))
+            self.assertNotIn("CI_CHECKOUT_CREDENTIALS", errors)
+            self.assertNotIn("CI_ACTION_PIN", errors)
+            self.assertNotIn("CI_GRADLEW_MODE", errors)
+
+    def test_compile_sdk_major_must_match_pinned_platform(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "app").mkdir()
+            (root / "tools").mkdir()
+            (root / "app" / "build.gradle.kts").write_text("compileSdk = 36\n", encoding="utf-8")
+            (root / "tools" / "ci_install_android_sdk.sh").write_text(
+                'PLATFORM_PACKAGE="platforms;android-37.1"\nBUILD_TOOLS_PACKAGE="build-tools;37.0.0"\n',
+                encoding="utf-8",
+            )
+            errors = "\n".join(ci_contract_scan.scan_compile_sdk_contract(root))
+            self.assertIn("CI_SDK_COMPILE_MAJOR", errors)
+
+    def test_repo_compile_sdk_matches_pinned_platform(self):
+        repo = Path(__file__).resolve().parents[2]
+        self.assertEqual([], ci_contract_scan.scan_compile_sdk_contract(repo))
+    def test_pinned_sdk_script_is_stable_and_exact(self):
+        repo = Path(__file__).resolve().parents[2]
+        errors = ci_contract_scan.scan_android_sdk_script(repo)
+        self.assertEqual([], errors)
+
     def test_catches_windows_only_tool_path(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

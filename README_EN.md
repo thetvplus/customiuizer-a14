@@ -4,7 +4,7 @@
 
 CustoMIUIzer A14 is a system UI and interaction customization module maintained for **HyperOS 1 / Android 14 (SDK 34)**. It has an independent package and release line and is not an official upstream release.
 
-- Current release: `r14.20.0`
+- Current release: `r14.20.7`
 - Application ID: `tv.withaibuild.customiuizer.r14`
 - Source: <https://github.com/tomthenpc/customiuizer-a14>
 - User downloads: <https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases>
@@ -49,7 +49,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) and [COMPATIBILITY.md](COMPATIBILITY.md) 
 python tools/verify.py full
 ```
 
-See [BUILD_AND_VERIFICATION.md](docs/BUILD_AND_VERIFICATION.md) for the complete workflow.
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) and [RELEASE.md](docs/RELEASE.md) for the complete workflow.
 
 ## Support and Contact
 

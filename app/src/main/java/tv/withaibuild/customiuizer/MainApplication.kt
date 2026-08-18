@@ -4,7 +4,6 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
-import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -14,6 +13,7 @@ import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.AppLocaleController
 import tv.withaibuild.customiuizer.utils.CurrentPreferenceContract
 import tv.withaibuild.customiuizer.utils.Helpers
+import tv.withaibuild.customiuizer.utils.SettingsMemoryTrim
 import tv.withaibuild.customiuizer.utils.XposedServiceManager
 
 class MainApplication : Application() {
@@ -48,8 +48,8 @@ class MainApplication : Application() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
-            clearAppListsAndIconCache()
+        if (SettingsMemoryTrim.shouldReleaseRegenerableCaches(level)) {
+            SettingsMemoryTrim.releaseRegenerableCaches()
         }
     }
 
@@ -66,17 +66,9 @@ class MainApplication : Application() {
         }
     }
 
-    private fun clearAppListsAndIconCache() {
-        Helpers.memoryCache.evictAll()
-        AppHelper.installedAppsList = null
-        Helpers.shareAppsList = null
-        Helpers.openWithAppsList = null
-        Helpers.launchableAppsList = null
-    }
-
     private val packageChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            clearAppListsAndIconCache()
+            SettingsMemoryTrim.releaseRegenerableCaches()
         }
     }
 }

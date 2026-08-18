@@ -18,6 +18,7 @@ import tv.withaibuild.customiuizer.mods.SystemUIControlCenterHooks
 import tv.withaibuild.customiuizer.mods.SystemUILockScreenHooks
 import tv.withaibuild.customiuizer.mods.SystemUINotificationHooks
 import tv.withaibuild.customiuizer.mods.SystemUIScreenshotHooks
+import tv.withaibuild.customiuizer.mods.StatusBarContentGeometryHooks
 import tv.withaibuild.customiuizer.mods.SystemUIStatusBarHooks
 import tv.withaibuild.customiuizer.mods.SystemWindowHooks
 import tv.withaibuild.customiuizer.mods.utils.FeatureDefinition
@@ -28,6 +29,7 @@ import tv.withaibuild.customiuizer.mods.utils.InstallPhase
 import tv.withaibuild.customiuizer.mods.utils.FeatureSpec
 import tv.withaibuild.customiuizer.mods.utils.LazyFeatureSpec
 import tv.withaibuild.customiuizer.mods.utils.StatusBarHeightConfig
+import tv.withaibuild.customiuizer.mods.utils.resolveDeviceInfoPlacement
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPosition
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
@@ -581,6 +583,31 @@ internal class HideImeDismissButtonFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = Controls.HideImeDismissButtonHook(lpparam)
+}
+
+internal class StatusBarContentGeometryFeature(
+    lpparam: PackageReadyParam,
+    mPrefs: PrefMap
+) : BaseSystemUiFeature(
+    lpparam,
+    mPrefs,
+    StatusBarContentGeometryFeatureId,
+    "Status Bar Content Geometry",
+    "system_statusbar_content_vertical_offset"
+) {
+    companion object {
+        /**
+         * Always installed so status-bar height live changes can re-center content
+         * and the global offset can apply without reinstalling hooks.
+         * The hot path is a no-op when the window already matches the view and
+         * the stored offset is the auto-center sentinel.
+         */
+        @JvmStatic
+        fun evaluateEnabled(prefs: PrefMap): Boolean = true
+    }
+
+    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
+    override fun installHook() = StatusBarContentGeometryHooks.hook(lpparam)
 }
 
 internal class HideNavBarFeature(
@@ -2134,6 +2161,7 @@ internal class NoLightUpOnChargeSystemUiFeature(
     "system_nolightuponcharges"
 ) {
     companion object {
+        // Option 2 and 3 both suppress the charge animation. Option 3 still wakes natively.
         @JvmStatic
         fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getStringAsInt("system_nolightuponcharges", 1) > 1
     }
@@ -2393,6 +2421,15 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> HideImeDismissButtonFeature.evaluateEnabled(prefs) },
             factory = { HideImeDismissButtonFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
+            id = StatusBarContentGeometryFeatureId,
+            name = "Status Bar Content Geometry",
+            preferenceKey = "system_statusbar_content_vertical_offset",
+            target = FeatureTarget.SYSTEM_UI,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> StatusBarContentGeometryFeature.evaluateEnabled(prefs) },
+            factory = { StatusBarContentGeometryFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
             id = HideNavBarFeatureId,
@@ -3030,26 +3067,27 @@ object SystemUiFeatures {
 private fun computeStatusBarIconsAdjust(prefs: PrefMap): Pair<Boolean, Boolean> {
     val dualRows = prefs.getBoolean("system_statusbar_dualrows")
     val netspeedAtRow2 = dualRows && prefs.getBoolean("system_statusbar_netspeed_atsecondrow")
-    val showBatteryDetail = prefs.getBoolean("system_statusbar_batterytempandcurrent")
-    val showDeviceTemp = prefs.getBoolean("system_statusbar_showdevicetemperature")
-    val batteryAtRight = showBatteryDetail && !dualRows && prefs.getBoolean("system_statusbar_batterytempandcurrent_atright")
-    val tempAtRight = showDeviceTemp && !dualRows && prefs.getBoolean("system_statusbar_showdevicetemperature_atright")
-    val batteryAtLeft = showBatteryDetail && !prefs.getBoolean("system_statusbar_batterytempandcurrent_atright")
-    val tempAtLeft = showDeviceTemp && !prefs.getBoolean("system_statusbar_showdevicetemperature_atright")
+    val placement = resolveDeviceInfoPlacement(
+        showBatteryDetail = prefs.getBoolean("system_statusbar_batterytempandcurrent"),
+        showDeviceTemp = prefs.getBoolean("system_statusbar_showdevicetemperature"),
+        dualRows = dualRows,
+        batteryAtRightPref = prefs.getBoolean("system_statusbar_batterytempandcurrent_atright"),
+        tempAtRightPref = prefs.getBoolean("system_statusbar_showdevicetemperature_atright"),
+    )
 
     val alwaysShowAtRight = prefs.getBoolean("system_statusbar_alarm_atright") ||
         prefs.getBoolean("system_statusbar_nfc_atright") ||
         prefs.getBoolean("system_statusbar_btbattery_atright") ||
         prefs.getBoolean("system_statusbar_headset_atright") ||
         prefs.getBoolean("system_statusbar_vpn_atright") ||
-        batteryAtRight || tempAtRight
+        placement.batteryAtRight || placement.tempAtRight
     val moveLeft = prefs.getBoolean("system_statusbar_alarm_atleft") ||
         prefs.getBoolean("system_statusbar_sound_atleft") ||
         prefs.getBoolean("system_statusbar_netspeed_atleft") ||
         prefs.getBoolean("system_statusbar_dnd_atleft") ||
         prefs.getBoolean("system_statusbar_gps_atleft") ||
         prefs.getBoolean("system_statusbaricons_wifi_mobile_atleft") ||
-        batteryAtLeft || tempAtLeft
+        placement.batteryAtLeft || placement.tempAtLeft
     val needsAdjust = alwaysShowAtRight || moveLeft || netspeedAtRow2 ||
         prefs.getBoolean("system_statusbaricons_swap_wifi_mobile")
     return needsAdjust to moveLeft

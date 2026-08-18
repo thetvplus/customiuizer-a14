@@ -68,6 +68,8 @@
     <string name="system_batteryindicator_test_title">Тест</string>
     <string name="system_batteryindicator_test_summ" formatted="false">Анимировать полоску от 100% до 0% в режиме разрядки</string>
     <string name="system_statusbarheight_title">Высота строки состояния</string>
+    <string name="system_statusbar_content_vertical_offset_title">Вертикальное положение содержимого строки состояния</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Смещает часы, значки и пользовательское содержимое внутри строки состояния целиком. Высоту строки состояния не меняет.</string>
     <string name="system_statusbar_iconsize_title">Размер иконок в строке состояния</string>
     <string name="system_statusbarcolor_title">Фоновый цвет строки состояния</string>
     <string name="system_statusbarcolor_summ">Делает одинаковыми цвета фона строки состояния и панели действий приложения, где это возможно</string>
@@ -377,7 +379,10 @@
     <string name="system_mods_recents">Список последних приложений</string>
     <string name="system_removecleaner_title">Убрать кнопку очистки</string>
     <string name="system_removecleaner_summ">Скрывает кнопку для очистки списка последних приложений и памяти</string>
-    <string name="system_recents_disable_wallpaperscale_title">Отключить масштаб обоев</string>
+    <string name="launcher_disable_wallpaperscale_title">Отключить масштаб обоев</string>
+    <string name="launcher_disable_wallpaperscale_summ">Отключает масштаб обоев в недавних задачах и при открытии/закрытии приложений, а также анимацию масштаба при разблокировке. После изменения принудительно остановите рабочий стол.</string>
+    <string name="system_recents_disable_wallpaperscale_title">Отключить масштаб обоев в недавних</string>
+    <string name="system_recents_disable_wallpaperscale_summ">Тот же масштаб обоев рабочего стола, что и в «Рабочий стол → Другое», без анимации разблокировки. Переключатели не конфликтуют; достаточно одного. После изменения принудительно остановите рабочий стол.</string>
     <string name="system_clearalltasks_title">Очистить все</string>
     <string name="system_clearalltasks_summ">Закрывает все запущенные приложения при нажатиии на кнопку очистки</string>
     <string name="system_hidefromrecents_title">Скрыть в недавних</string>
@@ -971,6 +976,8 @@
     <string name="various_disable_xiaomi_analytics_title">Отключить аналитику и системную рекламу Xiaomi</string>
     <string name="various_exclusive_features_cat_title">Эксклюзивные функции</string>
     <string name="various_permission_scope_failed">Запрос области PermissionController не был одобрен.</string>
+    <string name="dynamic_app_scope_unavailable">Для добавления выбранного приложения в область модуля нужен Vector/LSPosed API 102. Если фреймворк не может запросить область, добавьте приложение вручную.</string>
+    <string name="dynamic_app_scope_failed">Выбранное приложение не добавлено в область модуля. Настройка сохранена, но функция не заработает, пока приложение не будет в области.</string>
     <string name="various_permission_scope_unavailable">Добавьте PermissionController в область действия модуля и перезагрузите устройство.</string>
     <string name="various_remove_security_center_antivirus_confirm">Отключить %1$d проверенных антивирусных компонентов приложения «Безопасность»? Сканирование, предупреждения о вирусах и напоминания о давнем сканировании станут недоступны. Выключение этой функции восстановит прежнее состояние каждого компонента.</string>
     <string name="various_remove_security_center_antivirus_summ">Отключает точки входа, защитные службы, диалоги, обновления и периодические задания антивируса, чтобы убрать напоминания о сканировании; сохраняет управление разрешениями, брандмауэр, антиспам и инструменты батареи</string>

@@ -68,7 +68,8 @@ class MultiAction : SubFragment() {
         actionSpinner.entries = resources.getTextArray(entriesResId)
         actionSpinner.entryValues = resources.getIntArray(entryValuesResId)
         actionSpinner.tag = mKey + "_action"
-        actionSpinner.init(AppHelper.getIntOfAppPrefs(mKey + "_action", 1))
+        val savedAction = AppHelper.getIntOfAppPrefs(mKey + "_action", 1)
+        actionSpinner.init(if (savedAction <= 0) 1 else savedAction)
         actionSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 updateControls(parent as SpinnerEx, position)
@@ -120,8 +121,9 @@ class MultiAction : SubFragment() {
             shortcutName?.let { addValue(mKey + "_shortcut_name", it) }
         }
 
-        shortcutIconPath = ctx.filesDir.path + "/shortcuts/" + mKey + "_shortcut.png"
-        val shortcutIconFile = shortcutIcon?.let { File(it) } ?: File(shortcutIconPath)
+        val iconPath = ctx.filesDir.path + "/shortcuts/" + mKey + "_shortcut.png"
+        shortcutIconPath = iconPath
+        val shortcutIconFile = shortcutIcon?.let { File(it) } ?: File(iconPath)
         if (shortcutIconFile.exists()) {
             val sIcon = v.findViewById<ImageView>(R.id.shortcut_icon)
             BitmapFactory.decodeFile(shortcutIconFile.absolutePath)?.let { sIcon.setImageBitmap(it) }
@@ -243,8 +245,9 @@ class MultiAction : SubFragment() {
     override fun saveSharedPrefs() {
         context?.let { ctx ->
             val tmpIconFile = File(ctx.filesDir.path + "/shortcuts/tmp.png")
-            if (tmpIconFile.exists()) {
-                val prefIconFile = File(shortcutIconPath)
+            val iconPath = shortcutIconPath
+            if (tmpIconFile.exists() && iconPath != null) {
+                val prefIconFile = File(iconPath)
                 prefIconFile.delete()
                 tmpIconFile.renameTo(prefIconFile)
             }

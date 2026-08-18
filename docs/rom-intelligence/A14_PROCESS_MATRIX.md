@@ -9,7 +9,12 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 - `com.android.permissioncontroller`
 - `com.android.settings`
 - `com.android.systemui`
+- `com.baidu.input`
+- `com.baidu.input_mi`
+- `com.google.android.inputmethod.latin`
 - `com.google.android.permissioncontroller`
+- `com.iflytek.inputmethod`
+- `com.iflytek.inputmethod.miui`
 - `com.miui.gallery`
 - `com.miui.guardprovider`
 - `com.miui.home`
@@ -18,6 +23,10 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 - `com.miui.powerkeeper`
 - `com.miui.screenshot`
 - `com.miui.securitycenter`
+- `com.sohu.inputmethod.sogou`
+- `com.sohu.inputmethod.sogou.xiaomi`
+- `com.tencent.wetype`
+- `com.touchtype.swiftkey`
 - `system`
 
 ## Package -> Installer routing (MainModule.java)
@@ -299,6 +308,9 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | 245 | Status Bar Height Insets | `system_statusbarheight` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook(lp...` | system_server |  |
 | 246 | Strong Toast Presentation | `system_strong_toast_mode` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `(default base install)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |
 | 247 | Disable Window Blurs | `system_disable_window_blurs` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemDisplayHooks.DisableWindowBlursHook(lpparam)` | system_server |  |
-| 248 | Launcher Recents Card Style | `system_recents_card_style` | LAUNCHER | APPLICATION_ATTACHED | LauncherPostAttachFeatures | `Launcher.RecentsCardStyleHook( lpparam, mPrefs.getStrin...` | com.miui.home | third-party launchers (unless selected app sets) |
+| 248 | Launcher Recents Card Style | `system_recents_card_style` | LAUNCHER | APPLICATION_ATTACHED | LauncherPostAttachFeatures | `Launcher.RecentsHideAppNameHook(lpparam)` | com.miui.home | third-party launchers (unless selected app sets) |
 | 249 | Animation Scale Bridge | `null` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `GlobalActionSystemServerHooks.setupAnimationScaleBridge...` | system_server |  |
 | 250 | Updater Services Bridge | `null` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `GlobalActionSystemServerHooks.setupUpdaterServicesBridg...` | system_server |  |
+| 251 | USB Default Function | `system_usb_default_function` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `(default base install)` | system_server |  |
+| 252 | Hide IME Dismiss Button | `controls_hide_ime_dismiss_button` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `Controls.HideImeDismissButtonHook(lpparam)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |
+| 253 | Status Bar Content Geometry | `system_statusbar_content_vertical_offset` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `StatusBarContentGeometryHooks.hook(lpparam)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |

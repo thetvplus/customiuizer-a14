@@ -41,6 +41,49 @@ import tv.withaibuild.customiuizer.utils.HookUtils
  */
 object SystemNotificationHooks {
 
+    internal data class NotificationSnapshot(
+        val expandHeadsUp: Int = 1,
+        val expandHeadsUpApps: Set<String> = emptySet(),
+        val betterPopupsDelayMs: Int = 5000,
+        val maxSbIcons: Int = 0,
+    )
+
+    @Volatile
+    internal var notificationConfig = NotificationSnapshot()
+
+    private var notificationObserverRegistered = false
+
+    private val NOTIFICATION_PREF_KEYS = setOf(
+        "system_expandheadups",
+        "system_expandheadups_apps",
+        "system_betterpopups_delay",
+        "system_maxsbicons",
+    )
+
+    internal fun refreshNotificationSnapshot() {
+        val prefs = MainModule.mPrefs
+        var delay = prefs.getInt("system_betterpopups_delay", 0) * 1000
+        if (delay == 0) delay = 5000
+        notificationConfig = NotificationSnapshot(
+            expandHeadsUp = prefs.getStringAsInt("system_expandheadups", 1),
+            expandHeadsUpApps = HashSet(prefs.getStringSet("system_expandheadups_apps")),
+            betterPopupsDelayMs = delay,
+            maxSbIcons = prefs.getStringAsInt("system_maxsbicons", 0),
+        )
+    }
+
+    @JvmStatic
+    internal fun installNotificationSnapshot() {
+        refreshNotificationSnapshot()
+        if (notificationObserverRegistered) return
+        notificationObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in NOTIFICATION_PREF_KEYS) refreshNotificationSnapshot()
+            }
+        })
+    }
+
     @JvmStatic
     fun ExpandNotificationsHook(lpparam: PackageReadyParam) {
         NotificationAutoExpandHook.install(lpparam.classLoader)
@@ -48,6 +91,7 @@ object SystemNotificationHooks {
 
     @JvmStatic
     fun ExpandHeadsUpHook(lpparam: PackageReadyParam) {
+        installNotificationSnapshot()
         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow", lpparam.classLoader, "setHeadsUp", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -67,8 +111,8 @@ object SystemNotificationHooks {
                         val notifyRow = thisObject as View
                         val notification = XposedHelpers.getObjectField(XposedHelpers.callMethod(thisObject, "getEntry"), "mSbn")
                         val pkgName = XposedHelpers.callMethod(notification, "getPackageName") as String
-                        val opt = MainModule.mPrefs.getStringAsInt("system_expandheadups", 1)
-                        val isSelected = MainModule.mPrefs.getStringSet("system_expandheadups_apps")?.contains(pkgName) ?: false
+                        val opt = notificationConfig.expandHeadsUp
+                        val isSelected = pkgName in notificationConfig.expandHeadsUpApps
                         if ((opt == 2 && !isSelected) || (opt == 3 && isSelected)) {
                             val oldExpandNotify = XposedHelpers.getAdditionalInstanceField(thisObject, "expandNotifyRunnable") as Runnable?
                             if (oldExpandNotify != null) notifyRow.removeCallbacks(oldExpandNotify)
@@ -97,6 +141,7 @@ object SystemNotificationHooks {
         // any hook. If the ROM contract is missing, throw so FeatureInstallRegistry
         // catches and marks the feature FAILED_TRANSIENT instead of silently
         // installing zero hooks (false success).
+        installNotificationSnapshot()
         val headsUpManagerClass = XposedHelpers.findClass("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader)
         XposedHelpers.findField(headsUpManagerClass, "mMinimumDisplayTime")
         XposedHelpers.findField(headsUpManagerClass, "mHeadsUpNotificationDecay")
@@ -115,15 +160,14 @@ object SystemNotificationHooks {
                 try {
                     val thisObject = chain.thisObject
 
-                    var delay = MainModule.mPrefs.getInt("system_betterpopups_delay", 0) * 1000
-                    if (delay == 0) delay = 5000
+                    val delay = notificationConfig.betterPopupsDelayMs
                     XposedHelpers.setIntField(thisObject, "mMinimumDisplayTime", delay)
                     XposedHelpers.setIntField(thisObject, "mHeadsUpNotificationDecay", delay)
                     ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
                         override fun onChange(key: String?) = ModuleHelper.guarded {
                             if (key == "system_betterpopups_delay") {
-                                var delay2 = MainModule.mPrefs.getInt("system_betterpopups_delay", 0) * 1000
-                                if (delay2 == 0) delay2 = 5000
+                                refreshNotificationSnapshot()
+                                val delay2 = notificationConfig.betterPopupsDelayMs
                                 XposedHelpers.setIntField(thisObject, "mMinimumDisplayTime", delay2)
                                 XposedHelpers.setIntField(thisObject, "mHeadsUpNotificationDecay", delay2)
                             }
@@ -528,6 +572,7 @@ object SystemNotificationHooks {
 
     @JvmStatic
     fun MaxNotificationIconsHook(lpparam: PackageReadyParam) {
+        installNotificationSnapshot()
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.NotificationIconContainer", lpparam.classLoader, "resetViewStates", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -535,7 +580,7 @@ object SystemNotificationHooks {
                 val thisObject = chain.thisObject
                 try {
 
-                    var opt = MainModule.mPrefs.getStringAsInt("system_maxsbicons", 0)
+                    var opt = notificationConfig.maxSbIcons
                     val maxIcons = XposedHelpers.getIntField(thisObject, "mMaxStaticIcons")
                     opt = if (opt == -1) 999 else opt
                     if (opt != maxIcons && maxIcons != 0) {

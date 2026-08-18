@@ -27,6 +27,7 @@ import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.CustomMethodUnhooker
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.utils.Helpers
+import java.io.File
 import java.io.RandomAccessFile
 import java.lang.reflect.Method
 
@@ -856,46 +857,117 @@ class ModuleHelper private constructor() {
         }
 
         /**
-         * Resolves the first CPU thermal zone once per process.
+         * Resolves a CPU thermal zone once per process.
          *
-         * The zone list never changes at runtime, so the sysfs scan is memoized even when nothing
-         * matches; otherwise the SystemUI monitor tick would reopen 19 sysfs files every 2 s.
+         * Topology is listed from `/sys/class/thermal` on this cold path only. The result is
+         * memoized even when nothing matches so the 2 s monitor tick never re-walks sysfs.
          * Called from the NetworkSpeedController background handler thread only.
          *
-         * The [thermalIdScanned] and [thermalId] fields are only written after a complete,
-         * non-fatal scan. Fatal JVM errors are rethrown before any memoized state is committed
-         * so the next call does not return a stale `-1`.
+         * [thermalIdScanned] is written only after a complete non-fatal scan. Fatal JVM errors
+         * are rethrown before memoized state is committed so the next call does not return a
+         * stale `-1`.
          */
         @JvmStatic
         fun getCPUThermalId(): Int {
             if (thermalIdScanned) return thermalId
-            val found = scanForCpuThermalId { readThermalType(it) }
-            thermalId = found
+            val resolved = resolveCpuThermalSource(::listThermalZoneIds, ::readThermalType)
+            thermalId = resolved.zoneId
             thermalIdScanned = true
-            return found
+            if (resolved.zoneId >= 0) {
+                XposedHelpers.log(
+                    "DeviceInfoMonitor: CPU thermal source = zone ${resolved.zoneId} / type ${resolved.type}"
+                )
+            } else {
+                XposedHelpers.log("DeviceInfoMonitor: no supported CPU thermal source")
+            }
+            return thermalId
         }
 
         /**
-         * Scans thermal zones for a CPU sensor. [readType] is injected so unit tests can simulate
-         * I/O results and fatal errors without touching the filesystem.
+         * Scans thermal zones for a CPU sensor. [listZones] and [readType] are injected so unit
+         * tests can simulate topology and I/O without touching the filesystem.
          */
-        internal fun scanForCpuThermalId(readType: (Int) -> String?): Int {
-            var found = -1
-            for (i in 2 until 40 step 2) {
+        internal fun scanForCpuThermalId(
+            listZones: () -> IntArray,
+            readType: (Int) -> String?
+        ): Int = resolveCpuThermalSource(listZones, readType).zoneId
+
+        internal data class CpuThermalResolution(val zoneId: Int, val type: String?)
+
+        internal fun resolveCpuThermalSource(
+            listZones: () -> IntArray,
+            readType: (Int) -> String?
+        ): CpuThermalResolution {
+            var bestId = -1
+            var bestType: String? = null
+            var bestRank = CpuThermalRank.NONE
+            val zones = try {
+                listZones()
+            } catch (oom: OutOfMemoryError) {
+                throw oom
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
+                intArrayOf()
+            }
+            for (zoneId in zones) {
                 val sensorType = try {
-                    readType(i)
+                    readType(zoneId)?.trim()?.takeIf { it.isNotEmpty() }
                 } catch (oom: OutOfMemoryError) {
                     throw oom
                 } catch (t: Throwable) {
                     FatalErrors.unwrapAndRethrowIfFatal(t)
                     null
-                }
-                if (sensorType != null && (sensorType.startsWith("cpu-") || sensorType.startsWith("cpu_big"))) {
-                    found = i
-                    break
+                } ?: continue
+                val rank = rankCpuThermalType(sensorType)
+                if (rank > bestRank) {
+                    bestRank = rank
+                    bestId = zoneId
+                    bestType = sensorType
                 }
             }
-            return found
+            return CpuThermalResolution(bestId, bestType)
+        }
+
+        internal enum class CpuThermalRank {
+            NONE,
+            KNOWN_CPUSS,
+            EXACT_CPU
+        }
+
+        /**
+         * Prefix whitelist from Qualcomm thermal DT / Xiaomi HyperOS sysfs types.
+         * Do not match with a loose `contains("cpu")`: that would accept gpu/skin/camera/modem.
+         */
+        internal fun rankCpuThermalType(type: String): CpuThermalRank {
+            val t = type.trim()
+            if (t.startsWith("cpu-") ||
+                t.startsWith("cpu_big") ||
+                t.startsWith("cpu_little") ||
+                t.startsWith("cpu_prime")
+            ) {
+                return CpuThermalRank.EXACT_CPU
+            }
+            if (t.startsWith("cpuss-")) return CpuThermalRank.KNOWN_CPUSS
+            return CpuThermalRank.NONE
+        }
+
+        internal fun parseThermalZoneIds(names: Array<String>?): IntArray {
+            if (names.isNullOrEmpty()) return intArrayOf()
+            return names.mapNotNull { name ->
+                if (!name.startsWith("thermal_zone")) return@mapNotNull null
+                name.removePrefix("thermal_zone").toIntOrNull()
+            }.sorted().toIntArray()
+        }
+
+        internal fun listThermalZoneIds(): IntArray {
+            return try {
+                parseThermalZoneIds(File("/sys/class/thermal").list())
+            } catch (oom: OutOfMemoryError) {
+                throw oom
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
+                intArrayOf()
+            }
         }
 
         private fun readThermalType(index: Int): String? =

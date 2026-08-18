@@ -1357,35 +1357,96 @@ object SystemUIControlCenterHooks {
         runtime.hookIfNeeded(lpparam)
     }
 
+    internal data class SecureQsSnapshot(
+        val wifi: Boolean = false,
+        val bt: Boolean = false,
+        val cell: Boolean = false,
+        val airplane: Boolean = false,
+        val gps: Boolean = false,
+        val hotspot: Boolean = false,
+        val nfc: Boolean = false,
+        val sync: Boolean = false,
+        val custom: Boolean = false,
+        val keepOpened: Boolean = false,
+    )
+
+    @Volatile
+    private var secureQsSnapshot = SecureQsSnapshot()
+
+    private var secureQsObserverRegistered = false
+
+    private val SECURE_QS_KEYS = setOf(
+        "system_secureqs_wifi",
+        "system_secureqs_bt",
+        "system_secureqs_mobiledata",
+        "system_secureqs_airplane",
+        "system_secureqs_location",
+        "system_secureqs_hotspot",
+        "system_secureqs_nfc",
+        "system_secureqs_sync",
+        "system_secureqs_custom",
+        "system_secureqs_keepopened",
+    )
+
+    internal fun refreshSecureQsSnapshot() {
+        val prefs = MainModule.mPrefs
+        secureQsSnapshot = SecureQsSnapshot(
+            wifi = prefs.getBoolean("system_secureqs_wifi"),
+            bt = prefs.getBoolean("system_secureqs_bt"),
+            cell = prefs.getBoolean("system_secureqs_mobiledata"),
+            airplane = prefs.getBoolean("system_secureqs_airplane"),
+            gps = prefs.getBoolean("system_secureqs_location"),
+            hotspot = prefs.getBoolean("system_secureqs_hotspot"),
+            nfc = prefs.getBoolean("system_secureqs_nfc"),
+            sync = prefs.getBoolean("system_secureqs_sync"),
+            custom = prefs.getBoolean("system_secureqs_custom"),
+            keepOpened = prefs.getBoolean("system_secureqs_keepopened"),
+        )
+    }
+
+    internal fun isSecureQsTile(name: String, snapshot: SecureQsSnapshot = secureQsSnapshot): Boolean =
+        when (name) {
+            "wifi" -> snapshot.wifi
+            "bt" -> snapshot.bt
+            "cell" -> snapshot.cell
+            "airplane" -> snapshot.airplane
+            "gps" -> snapshot.gps
+            "hotspot" -> snapshot.hotspot
+            "nfc" -> snapshot.nfc
+            "sync" -> snapshot.sync
+            "intent", "custom" -> snapshot.custom
+            else -> false
+        }
+
+    internal fun installSecureQsSnapshot() {
+        refreshSecureQsSnapshot()
+        if (secureQsObserverRegistered) return
+        secureQsObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in SECURE_QS_KEYS) refreshSecureQsSnapshot()
+            }
+        })
+    }
+
     @JvmStatic
     fun SecureQSTilesHook(lpparam: PackageReadyParam) {
+        installSecureQsSnapshot()
         val clickHook = object : MethodHook(XposedInterface.PRIORITY_HIGHEST) {
             override fun before(param: BeforeHookCallback) {
                 val tileName = XposedHelpers.getObjectField(param.getThisObject(), "mTileSpec") as String
                 var name = tileName
                 if (name.startsWith("intent(")) name = "intent"
                 else if (name.startsWith("custom(")) name = "custom"
-                val secure = when (name) {
-                    "wifi" -> MainModule.mPrefs.getBoolean("system_secureqs_wifi")
-                    "bt" -> MainModule.mPrefs.getBoolean("system_secureqs_bt")
-                    "cell" -> MainModule.mPrefs.getBoolean("system_secureqs_mobiledata")
-                    "airplane" -> MainModule.mPrefs.getBoolean("system_secureqs_airplane")
-                    "gps" -> MainModule.mPrefs.getBoolean("system_secureqs_location")
-                    "hotspot" -> MainModule.mPrefs.getBoolean("system_secureqs_hotspot")
-                    "nfc" -> MainModule.mPrefs.getBoolean("system_secureqs_nfc")
-                    "sync" -> MainModule.mPrefs.getBoolean("system_secureqs_sync")
-                    "intent", "custom" -> MainModule.mPrefs.getBoolean("system_secureqs_custom")
-                    else -> false
-                }
-                if (secure) {
+                val snapshot = secureQsSnapshot
+                if (isSecureQsTile(name, snapshot)) {
                     val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
                     val kgMgr = mContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                     if (!kgMgr.isKeyguardLocked || !kgMgr.isKeyguardSecure) return
                     val activityStater = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.plugins.ActivityStarter")
                     XposedHelpers.callMethod(activityStater, "postQSRunnableDismissingKeyguard", true, Runnable {
                         ModuleHelper.guarded {
-                            val keepOpened = MainModule.mPrefs.getBoolean("system_secureqs_keepopened")
-                            if (keepOpened) {
+                            if (secureQsSnapshot.keepOpened) {
                                 val handler = Handler(mContext.mainLooper)
                                 handler.postDelayed({
                                     ModuleHelper.guarded {

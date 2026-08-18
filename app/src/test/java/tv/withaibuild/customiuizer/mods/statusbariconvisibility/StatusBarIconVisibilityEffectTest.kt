@@ -337,7 +337,7 @@ class StatusBarIconVisibilityEffectTest {
             speechHdField = field(StatusBarIconVisibilityFixtures.LongSubIdMobileIconState::class.java, "speechHd"),
         )
 
-        val effect = StatusBarIconVisibilityEffect(abi) { makeSnapshot() }
+        val effect = StatusBarIconVisibilityEffect(abi) { makeSnapshot(hideSimNoData = true) }
 
         try {
             effect.process(view, state, "applyMobileState")
@@ -395,6 +395,42 @@ class StatusBarIconVisibilityEffectTest {
         effect.process(view, state, "applyMobileState")
 
         assertFalse(state.visible)
+    }
+
+    @Test
+    fun process_allSignalFlagsOff_doesNotMutate() {
+        val view = StatusBarIconVisibilityFixtures.StatusBarMobileView()
+        view.mState = null
+        val state = StatusBarIconVisibilityFixtures.DeclaredMobileIconState().apply {
+            visible = true
+            roaming = true
+            volte = true
+            speechHd = true
+        }
+        val effect = StatusBarIconVisibilityEffect(fastAbi()) { makeSnapshot() }
+
+        effect.process(view, state, "updateState")
+
+        assertTrue(state.visible)
+        assertTrue(state.roaming)
+        assertTrue(state.volte)
+        assertTrue(state.speechHd)
+    }
+
+    @Test
+    fun process_hideRoamingOnly_writesRoamingWithoutSubscriptionFields() {
+        val view = StatusBarIconVisibilityFixtures.StatusBarMobileView()
+        view.mState = null
+        val state = StatusBarIconVisibilityFixtures.DeclaredMobileIconState().apply {
+            visible = true
+            roaming = true
+        }
+        val effect = StatusBarIconVisibilityEffect(fastAbi()) { makeSnapshot(hideRoaming = true) }
+
+        effect.process(view, state, "updateState")
+
+        assertTrue(state.visible)
+        assertFalse(state.roaming)
     }
 
     // -------------------------------------------------------------------------

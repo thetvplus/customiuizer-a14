@@ -57,6 +57,74 @@ object SystemUILockScreenHooks {
     @Volatile
     private var swipeSuppressionObserverRegistered = false
 
+    internal data class LockScreenConfigSnapshot(
+        val albumArtBlur: Int = 0,
+        val albumArtScale: Int = 1,
+        val albumArtGray: Boolean = false,
+        val leftTapAction: Boolean = false,
+        val leftOff: Boolean = false,
+        val rightAction: Int = 1,
+        val rightOff: Boolean = false,
+        val calendarAppUser: Int = 0,
+        val calendarApp: String = "",
+        val clockAppUser: Int = 0,
+        val clockApp: String = "",
+        val shortcutAppUser: Int = 0,
+        val shortcutApp: String = "",
+    )
+
+    @Volatile
+    internal var lockScreenConfig = LockScreenConfigSnapshot()
+
+    private var lockScreenConfigObserverRegistered = false
+
+    private val LOCK_SCREEN_CONFIG_KEYS = setOf(
+        "system_albumartonlock_blur",
+        "system_albumartonlock_scale",
+        "system_albumartonlock_gray",
+        "system_lockscreenshortcuts_left_tapaction",
+        "system_lockscreenshortcuts_left_off",
+        "system_lockscreenshortcuts_right_action",
+        "system_lockscreenshortcuts_right_off",
+        "system_calendar_app_user",
+        "system_calendar_app",
+        "system_clock_app_user",
+        "system_clock_app",
+        "system_shortcut_app_user",
+        "system_shortcut_app",
+    )
+
+    internal fun refreshLockScreenConfig() {
+        val prefs = MainModule.mPrefs
+        lockScreenConfig = LockScreenConfigSnapshot(
+            albumArtBlur = prefs.getInt("system_albumartonlock_blur", 0),
+            albumArtScale = prefs.getStringAsInt("system_albumartonlock_scale", 1),
+            albumArtGray = prefs.getBoolean("system_albumartonlock_gray"),
+            leftTapAction = prefs.getBoolean("system_lockscreenshortcuts_left_tapaction"),
+            leftOff = prefs.getBoolean("system_lockscreenshortcuts_left_off"),
+            rightAction = prefs.getInt("system_lockscreenshortcuts_right_action", 1),
+            rightOff = prefs.getBoolean("system_lockscreenshortcuts_right_off"),
+            calendarAppUser = prefs.getInt("system_calendar_app_user", 0),
+            calendarApp = prefs.getString("system_calendar_app", ""),
+            clockAppUser = prefs.getInt("system_clock_app_user", 0),
+            clockApp = prefs.getString("system_clock_app", ""),
+            shortcutAppUser = prefs.getInt("system_shortcut_app_user", 0),
+            shortcutApp = prefs.getString("system_shortcut_app", ""),
+        )
+    }
+
+    @JvmStatic
+    internal fun installLockScreenConfigSnapshot() {
+        refreshLockScreenConfig()
+        if (lockScreenConfigObserverRegistered) return
+        lockScreenConfigObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in LOCK_SCREEN_CONFIG_KEYS) refreshLockScreenConfig()
+            }
+        })
+    }
+
     internal fun refreshSwipeSuppression() {
         swipeRightOff = MainModule.mPrefs.getBoolean(PREF_SWIPE_RIGHT_OFF)
         swipeLeftOff = MainModule.mPrefs.getBoolean(PREF_SWIPE_LEFT_OFF)
@@ -133,6 +201,7 @@ object SystemUILockScreenHooks {
 
     @JvmStatic
     fun LockScreenAlbumArtHook(lpparam: PackageReadyParam) {
+        installLockScreenConfigSnapshot()
         val MiuiThemeUtilsClass = XposedHelpers.findClassIfExists("com.android.keyguard.utils.MiuiKeyguardUtils", lpparam.classLoader)
         LockScreenAlbumArtController.setMiuiThemeUtilsClass(MiuiThemeUtilsClass)
 
@@ -220,10 +289,14 @@ object SystemUILockScreenHooks {
                         if (art == null) art = mMediaMetadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                         if (art == null) art = mMediaMetadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
                     }
-                    val blur = MainModule.mPrefs.getInt("system_albumartonlock_blur", 0)
-                    val rescale = MainModule.mPrefs.getStringAsInt("system_albumartonlock_scale", 1)
-                    val grayscale = MainModule.mPrefs.getBoolean("system_albumartonlock_gray")
-                    LockScreenAlbumArtController.updateMediaMetaData(mContext, art, blur, rescale, grayscale)
+                    val config = lockScreenConfig
+                    LockScreenAlbumArtController.updateMediaMetaData(
+                        mContext,
+                        art,
+                        config.albumArtBlur,
+                        config.albumArtScale,
+                        config.albumArtGray,
+                    )
                 } catch (t: Throwable) {
                     FatalErrors.rethrowIfFatal(t)
                     XposedHelpers.log(t)
@@ -263,13 +336,14 @@ object SystemUILockScreenHooks {
 
     @JvmStatic
     fun LockScreenShortcutHook(lpparam: PackageReadyParam) {
-        val rightActionKey = "system_lockscreenshortcuts_right_action"
+        installLockScreenConfigSnapshot()
         ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateLeftIcon", object : MethodHook() {
             override fun after(param: AfterHookCallback) {
                 val thisObject = param.getThisObject()
                 val mLeftButton = XposedHelpers.getObjectField(thisObject, "mLeftButton") as ImageView?
                 if (mLeftButton == null) return
-                if (MainModule.mPrefs.getBoolean("system_lockscreenshortcuts_left_tapaction")) {
+                val config = lockScreenConfig
+                if (config.leftTapAction) {
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                     val mDarkMode = XposedHelpers.getBooleanField(thisObject, "mBottomIconRectIsDeep")
                     val iconImg = if (mDarkMode) R.drawable.keyguard_bottom_flashlight_img_light else R.drawable.keyguard_bottom_flashlight_img_dark
@@ -278,12 +352,12 @@ object SystemUILockScreenHooks {
                     val mFlashlightController = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.statusbar.policy.FlashlightController")
                     val isOn = XposedHelpers.callMethod(mFlashlightController, "isEnabled") as Boolean
                     XposedHelpers.callMethod(mLeftButton, "setCircleRadiusWithoutAnimation", if (isOn) 66f else 0f)
-                } else if (MainModule.mPrefs.getBoolean("system_lockscreenshortcuts_left_off")) {
+                } else if (config.leftOff) {
                     mLeftButton.visibility = View.GONE
                 }
             }
         })
-        if (MainModule.mPrefs.getBoolean("system_lockscreenshortcuts_left_tapaction")) {
+        if (lockScreenConfig.leftTapAction) {
             ModuleHelper.hookAllConstructors("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, object : MethodHook() {
                 override fun after(param: AfterHookCallback) {
                     val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
@@ -309,13 +383,14 @@ object SystemUILockScreenHooks {
                 val thisObject = param.getThisObject()
                 val mRightButton = XposedHelpers.getObjectField(thisObject, "mRightButton") as ImageView?
                 if (mRightButton == null) return
-                if (MainModule.mPrefs.getInt(rightActionKey, 1) > 1) {
+                val config = lockScreenConfig
+                if (config.rightAction > 1) {
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                     val mDarkMode = XposedHelpers.getBooleanField(thisObject, "mBottomIconRectIsDeep")
                     val iconImg = if (mDarkMode) R.drawable.keyguard_bottom_miuizer_img_dark else R.drawable.keyguard_bottom_miuizer_img_light
                     val iconDrawable = ResourcesCompat.getDrawable(ModuleHelper.getModuleRes(mContext), iconImg, mContext.theme)
                     mRightButton.setImageDrawable(iconDrawable)
-                } else if (MainModule.mPrefs.getBoolean("system_lockscreenshortcuts_right_off")) {
+                } else if (config.rightOff) {
                     mRightButton.visibility = View.GONE
                 }
             }
@@ -323,8 +398,8 @@ object SystemUILockScreenHooks {
         ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateRightIcon", updateRightButtonHook)
         ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateRightAffordanceViewLayoutVisibility", updateRightButtonHook)
 
-        val leftAction = MainModule.mPrefs.getBoolean("system_lockscreenshortcuts_left_tapaction")
-        val rightAction = MainModule.mPrefs.getInt(rightActionKey, 1) > 1
+        val leftAction = lockScreenConfig.leftTapAction
+        val rightAction = lockScreenConfig.rightAction > 1
 
         if (leftAction || rightAction) {
             ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateIcons", object : MethodHook() {
@@ -436,10 +511,8 @@ object SystemUILockScreenHooks {
     @JvmStatic
     fun LockScreenSecureLaunchHook() {
         ModuleHelper.findAndHookMethod(Activity::class.java, "onCreate", Bundle::class.java, object : MethodHook() {
-            @Suppress("ConstantConditions")
             override fun after(param: AfterHookCallback) {
-                val act = param.getThisObject() as Activity
-                if (act == null) return
+                val act = param.getThisObject() as Activity? ?: return
                 val intent = act.intent
                 if (intent == null) return
                 val mFromSecureKeyguard = intent.getBooleanExtra("StartActivityWhenLocked", false)
@@ -460,23 +533,25 @@ object SystemUILockScreenHooks {
 
     @JvmStatic
     fun ReplaceShortcutAppHook(lpparam: PackageReadyParam) {
+        installLockScreenConfigSnapshot()
         val openAppHook = object : MethodHook() {
             override fun before(param: BeforeHookCallback) {
                 val mContext = ModuleHelper.findContext(lpparam)
                 var user = 0
                 var pkgAppName = ""
+                val config = lockScreenConfig
                 when (param.getMember().name) {
                     "startCalendarApp" -> {
-                        user = MainModule.mPrefs.getInt("system_calendar_app_user", 0)
-                        pkgAppName = MainModule.mPrefs.getString("system_calendar_app", "")
+                        user = config.calendarAppUser
+                        pkgAppName = config.calendarApp
                     }
                     "startClockApp" -> {
-                        user = MainModule.mPrefs.getInt("system_clock_app_user", 0)
-                        pkgAppName = MainModule.mPrefs.getString("system_clock_app", "")
+                        user = config.clockAppUser
+                        pkgAppName = config.clockApp
                     }
                     "startSettingsApp" -> {
-                        user = MainModule.mPrefs.getInt("system_shortcut_app_user", 0)
-                        pkgAppName = MainModule.mPrefs.getString("system_shortcut_app", "")
+                        user = config.shortcutAppUser
+                        pkgAppName = config.shortcutApp
                     }
                 }
                 if (pkgAppName.isNotEmpty()) {
@@ -505,13 +580,14 @@ object SystemUILockScreenHooks {
                 }
             }
         }
-        if (MainModule.mPrefs.getString("system_shortcut_app", "").isNotEmpty()) {
+        val config = lockScreenConfig
+        if (config.shortcutApp.isNotEmpty()) {
             ModuleHelper.findAndHookMethod("com.miui.systemui.util.CommonUtil", lpparam.classLoader, "startSettingsApp", openAppHook)
         }
-        if (MainModule.mPrefs.getString("system_calendar_app", "").isNotEmpty()) {
+        if (config.calendarApp.isNotEmpty()) {
             ModuleHelper.findAndHookMethod("com.miui.systemui.util.CommonUtil", lpparam.classLoader, "startCalendarApp", Context::class.java, openAppHook)
         }
-        if (MainModule.mPrefs.getString("system_clock_app", "").isNotEmpty()) {
+        if (config.clockApp.isNotEmpty()) {
             ModuleHelper.findAndHookMethod("com.miui.systemui.util.CommonUtil", lpparam.classLoader, "startClockApp", openAppHook)
         }
     }

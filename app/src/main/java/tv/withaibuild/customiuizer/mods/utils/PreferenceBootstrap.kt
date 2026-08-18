@@ -1,7 +1,10 @@
 package tv.withaibuild.customiuizer.mods.utils
 
 import android.content.SharedPreferences
+import java.util.LinkedHashSet
 import tv.withaibuild.customiuizer.utils.PrefMap
+import tv.withaibuild.customiuizer.utils.PreferenceValueType
+import tv.withaibuild.customiuizer.utils.PreferenceValueTypes
 import tv.withaibuild.customiuizer.utils.canonicalPreferenceKey
 
 /**
@@ -269,7 +272,7 @@ class PreferenceBootstrap private constructor(
             val remote = remotePrefs ?: return
 
             val rawValue = if (remote.contains(key)) {
-                remote.all?.get(key)
+                readChangedValue(remote, key)
             } else {
                 null
             }
@@ -290,6 +293,52 @@ class PreferenceBootstrap private constructor(
             FatalErrors.rethrowIfFatal(t)
             XposedHelpers.log(t)
         }
+    }
+
+    /**
+     * Read one changed key without copying the remote map when its type is known.
+     *
+     * libxposed `RemotePreferences.getAll()` allocates a full `TreeMap` copy. Typed getters
+     * read the in-memory map entry directly. Unknown or mismatched keys fall back to that
+     * copy for this key only.
+     */
+    private fun readChangedValue(remote: SharedPreferences, key: String): Any? {
+        return try {
+            when (PreferenceValueTypes.resolve(key)) {
+                PreferenceValueType.BOOLEAN -> remote.getBoolean(key, false)
+                PreferenceValueType.INT -> remote.getInt(key, 0)
+                PreferenceValueType.LONG -> remote.getLong(key, 0L)
+                PreferenceValueType.FLOAT -> remote.getFloat(key, 0f)
+                PreferenceValueType.STRING -> remote.getString(key, null)
+                PreferenceValueType.STRING_SET -> copyOwnedStringSet(remote.getStringSet(key, null))
+                null -> copyIfStringSet(remote.all?.get(key))
+            }
+        } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
+            try {
+                copyIfStringSet(remote.all?.get(key))
+            } catch (fallback: Throwable) {
+                FatalErrors.rethrowIfFatal(fallback)
+                XposedHelpers.log(fallback)
+                null
+            }
+        }
+    }
+
+    private fun copyOwnedStringSet(values: Set<String>?): Set<String>? {
+        if (values == null) return null
+        return LinkedHashSet(values)
+    }
+
+    private fun copyIfStringSet(value: Any?): Any? {
+        if (value is Set<*>) {
+            val owned = LinkedHashSet<String>(value.size)
+            for (item in value) {
+                if (item is String) owned.add(item)
+            }
+            return owned
+        }
+        return value
     }
 
     /**

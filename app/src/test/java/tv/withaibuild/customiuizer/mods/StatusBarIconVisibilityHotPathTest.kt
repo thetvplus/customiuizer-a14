@@ -441,6 +441,33 @@ class StatusBarIconVisibilityHotPathTest {
         assertEquals(false, result.speechHd)
     }
 
+    @Test
+    fun hasMobileSignalHidingWork_falseWhenAllSignalFlagsOff() {
+        val snapshot = defaultSnapshot()
+        assertFalse(SystemUIStatusBarHooks.hasMobileSignalHidingWork(snapshot))
+        assertFalse(SystemUIStatusBarHooks.needsSubscriptionLookup(snapshot))
+    }
+
+    @Test
+    fun hasMobileSignalHidingWork_trueForEachSignalFlag() {
+        assertTrue(SystemUIStatusBarHooks.hasMobileSignalHidingWork(defaultSnapshot().copy(hideSignal = true)))
+        assertTrue(SystemUIStatusBarHooks.hasMobileSignalHidingWork(defaultSnapshot().copy(hideSim1 = true)))
+        assertTrue(SystemUIStatusBarHooks.hasMobileSignalHidingWork(defaultSnapshot().copy(hideSim2 = true)))
+        assertTrue(SystemUIStatusBarHooks.hasMobileSignalHidingWork(defaultSnapshot().copy(hideSimNoData = true)))
+        assertTrue(SystemUIStatusBarHooks.hasMobileSignalHidingWork(defaultSnapshot().copy(hideRoaming = true)))
+        assertTrue(SystemUIStatusBarHooks.hasMobileSignalHidingWork(defaultSnapshot().copy(hideVolte = true)))
+    }
+
+    @Test
+    fun needsSubscriptionLookup_onlyForSimFlags() {
+        assertFalse(SystemUIStatusBarHooks.needsSubscriptionLookup(defaultSnapshot().copy(hideSignal = true)))
+        assertFalse(SystemUIStatusBarHooks.needsSubscriptionLookup(defaultSnapshot().copy(hideRoaming = true)))
+        assertFalse(SystemUIStatusBarHooks.needsSubscriptionLookup(defaultSnapshot().copy(hideVolte = true)))
+        assertTrue(SystemUIStatusBarHooks.needsSubscriptionLookup(defaultSnapshot().copy(hideSim1 = true)))
+        assertTrue(SystemUIStatusBarHooks.needsSubscriptionLookup(defaultSnapshot().copy(hideSim2 = true)))
+        assertTrue(SystemUIStatusBarHooks.needsSubscriptionLookup(defaultSnapshot().copy(hideSimNoData = true)))
+    }
+
     // 17. 默认配置全部关闭
     @Test
     fun buildStatusBarIconVisibilitySnapshot_defaultsAllFalse() {

@@ -57,3 +57,12 @@ tools/tests/__pycache__/
 
 # Local ROM samples and intelligence outputs (never commit real ROM copies)
 /local-rom-samples/
+
+# Local runtime evidence, APK drops, and generated caches
+/.di-evidence/
+/release-output/
+**/.pytest_cache/
+**/__pycache__/
+*.pyc
+*.apk
+!gradle/wrapper/gradle-wrapper.jar

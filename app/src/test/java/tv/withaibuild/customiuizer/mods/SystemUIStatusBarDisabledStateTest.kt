@@ -68,6 +68,14 @@ class SystemUIStatusBarDisabledStateTest {
     }
 
     @Test
+    fun allDisabled_layoutRuntimeState_isNull() {
+        val field = getSystemUiStatusBarField("layoutRuntimeState")
+        if (field != null) {
+            assertNull("layout holder must be null when no layout feature is installed", field.get(SystemUIStatusBarHooks))
+        }
+    }
+
+    @Test
     fun allDisabled_noB1B2B3ObserverRegistrations() {
         // There must be no top-level observer fields.
         assertNullField("netSpeedTextStyleObserver")
@@ -115,6 +123,19 @@ class SystemUIStatusBarDisabledStateTest {
         val b3State = requireIconVisibilityRuntimeState()
         assertNotNull(b3State)
         assertTrue("B1/B2 holder must still be null", getSystemUiStatusBarField("netSpeedRuntimeState")?.get(SystemUIStatusBarHooks) == null)
+        assertTrue("layout holder must still be null", getSystemUiStatusBarField("layoutRuntimeState")?.get(SystemUIStatusBarHooks) == null)
+    }
+
+    @Test
+    fun layoutHooks_shareOneHolderAndOneObserver() {
+        SystemUIStatusBarHooks.installStatusBarLayoutSnapshot()
+        SystemUIStatusBarHooks.installStatusBarLayoutSnapshot()
+        SystemUIStatusBarHooks.installStatusBarLayoutSnapshot()
+
+        val layoutState = getSystemUiStatusBarField("layoutRuntimeState")?.get(SystemUIStatusBarHooks)
+            ?: fail("layoutRuntimeState must exist after a layout hook is installed")
+        val observer = getFieldValue(layoutState, "observer") ?: fail("layout observer must exist")
+        assertEquals("layout hooks must share one observer", 1, activeObserverCount(observer))
     }
 
     @Test
@@ -191,9 +212,20 @@ class SystemUIStatusBarDisabledStateTest {
             }
         }
 
+        getSystemUiStatusBarField("layoutRuntimeState")?.let { field ->
+            (field.get(SystemUIStatusBarHooks))?.let { state ->
+                try {
+                    PreferenceObserverRegistry.unregisterPreferenceObserver(state)
+                } catch (t: Throwable) {
+                    // ignore
+                }
+            }
+        }
+
         // Null out holders.
         getSystemUiStatusBarField("netSpeedRuntimeState")?.set(SystemUIStatusBarHooks, null)
         getSystemUiStatusBarField("iconVisibilityRuntimeState")?.set(SystemUIStatusBarHooks, null)
+        getSystemUiStatusBarField("layoutRuntimeState")?.set(SystemUIStatusBarHooks, null)
     }
 
     private fun getSystemUiStatusBarField(name: String): Field? =
@@ -248,7 +280,10 @@ class SystemUIStatusBarDisabledStateTest {
         for (ref in owners) {
             val observer = (ref as? WeakReference<*>)?.get() ?: continue
             val name = observer.javaClass.name
-            if (name.contains("NetSpeedRuntimeState") || name.contains("StatusBarIconVisibilityRuntimeState")) {
+            if (name.contains("NetSpeedRuntimeState") ||
+                name.contains("StatusBarIconVisibilityRuntimeState") ||
+                name.contains("StatusBarLayoutRuntimeState")
+            ) {
                 count++
             }
         }

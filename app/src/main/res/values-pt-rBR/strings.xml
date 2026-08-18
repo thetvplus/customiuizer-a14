@@ -69,6 +69,8 @@
     <string name="system_batteryindicator_test_title">Teste</string>
     <string name="system_batteryindicator_test_summ" formatted="false">Barra animada de 100% a 0% durante o descarregamento</string>
     <string name="system_statusbarheight_title">Altura da barra de status</string>
+    <string name="system_statusbar_content_vertical_offset_title">Posição vertical do conteúdo da barra de status</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Ajusta a posição vertical geral do relógio, dos ícones e do conteúdo personalizado na barra de status. Não altera a altura da barra.</string>
     <string name="system_statusbar_iconsize_title">Tamanho dos ícones da barra de status</string>
     <string name="system_statusbarcolor_title">Cor de fundo da barra de status</string>
     <string name="system_statusbarcolor_summ">Torne as cores de fundo da barra de status e da barra de ação do app iguais sempre que possível</string>
@@ -388,7 +390,10 @@
     <string name="system_mods_recents">Lista de apps recentes</string>
     <string name="system_removecleaner_title">Remover botão de limpeza</string>
     <string name="system_removecleaner_summ">Oculte o botão que limpa os apps recentes e a memória</string>
-    <string name="system_recents_disable_wallpaperscale_title">Desativar escala do plano de fundo</string>
+    <string name="launcher_disable_wallpaperscale_title">Desativar escala do plano de fundo</string>
+    <string name="launcher_disable_wallpaperscale_summ">Impede o zoom do papel de parede em Recentes e ao abrir/fechar apps, e desativa a animação de escala ao desbloquear. Após alterar, force a parada do launcher.</string>
+    <string name="system_recents_disable_wallpaperscale_title">Desativar escala do plano de fundo em Recentes</string>
+    <string name="system_recents_disable_wallpaperscale_summ">O mesmo zoom do launcher que em Launcher → Outros, sem a animação de desbloqueio. Os dois interruptores não conflitam; um basta. Após alterar, force a parada do launcher.</string>
     <string name="system_clearalltasks_title">Limpar tudo</string>
     <string name="system_clearalltasks_summ">Faça com que o botão de limpeza mate todas as tarefas em execução</string>
     <string name="system_hidefromrecents_title">Ocultar dos recentes</string>
@@ -994,6 +999,8 @@
     <string name="various_disable_xiaomi_analytics_title">Desativar análise da Xiaomi e anúncios do sistema</string>
     <string name="various_exclusive_features_cat_title">Recursos exclusivos</string>
     <string name="various_permission_scope_failed">A solicitação de escopo do PermissionController não foi aprovada.</string>
+    <string name="dynamic_app_scope_unavailable">Este recurso precisa da API 102 do Vector/LSPosed para adicionar o app selecionado ao escopo do módulo. Se o framework não puder solicitar o escopo, adicione-o manualmente.</string>
+    <string name="dynamic_app_scope_failed">O app selecionado não foi adicionado ao escopo do módulo. A configuração foi salva, mas o recurso só vale depois que o app estiver no escopo.</string>
     <string name="various_permission_scope_unavailable">Adicione o PermissionController ao escopo deste módulo e reinicie.</string>
     <string name="various_remove_security_center_antivirus_confirm">Desativar %1$d componentes antivírus verificados da Central de Segurança? Verificações e alertas de vírus e lembretes de verificação atrasada ficarão indisponíveis. Desativar esta opção restaura cada componente ao estado anterior.</string>
     <string name="various_remove_security_center_antivirus_summ">Desativa entradas, proteções, caixas de diálogo, atualizações e tarefas periódicas de verificação do antivírus para suprimir lembretes de verificação atrasada; mantém permissões, firewall, antispam e ferramentas de bateria</string>

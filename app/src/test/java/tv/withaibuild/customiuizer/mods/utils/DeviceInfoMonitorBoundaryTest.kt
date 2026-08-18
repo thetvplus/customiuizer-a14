@@ -105,6 +105,6 @@ class DeviceInfoMonitorBoundaryTest {
             deviceTempContentOpt = 3
         )
         val text = DeviceInfoFormatter.formatDeviceInfo(cfg, props, "")
-        assertTrue(text.isNotEmpty())
+        assertEquals("", text)
     }
 }

@@ -13,11 +13,13 @@ import android.os.Bundle
 import android.os.UserHandle
 import android.view.MotionEvent
 import android.view.View
+import android.view.Window
 import java.util.HashMap
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import miui.security.SecurityManager
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
@@ -38,6 +40,28 @@ import tv.withaibuild.customiuizer.utils.PrefMap
 object Launcher {
 
     private const val MIUI_HOME_PACKAGE = "com.miui.home"
+    private const val PREF_RECENTS_BLUR = "system_recents_blur"
+    private const val PREF_HIDE_FROM_RECENTS = "system_hidefromrecents_apps"
+
+    /**
+     * Recents blur ratio is read from gesture and `fastBlur` callbacks. Snapshot it so those
+     * paths do not hit the preference map, and so a 0% recents value cannot leak into folder
+     * blur through a leftover static flag.
+     */
+    @Volatile
+    private var recentsBlurRatio = 1f
+
+    @Volatile
+    private var recentsBlurOverrideEnabled = false
+
+    @Volatile
+    private var recentsBlurSessionActive = false
+
+    @Volatile
+    private var recentsBlurObserverRegistered = false
+
+    @Volatile
+    private var hideFromRecentsApps: Set<String> = emptySet()
 
     @JvmStatic
     fun HideNavBarHook(lpparam: PackageReadyParam) {
@@ -187,6 +211,7 @@ object Launcher {
 
     @JvmStatic
     fun HideFromRecentsHook(lpparam: PackageReadyParam) {
+        installRecentsBlurSnapshot()
         val ActivityManagerWrapper = XposedHelpers.findClassIfExists("com.android.systemui.shared.recents.system.ActivityManagerWrapper", lpparam.classLoader)
         val TaskInfoCompat = XposedHelpers.findClassIfExists("com.android.systemui.shared.recents.model.GroupedRecentTaskInfoCompat", lpparam.classLoader)
         if (TaskInfoCompat == null) {
@@ -218,7 +243,7 @@ object Launcher {
                             }
                         }
                         if (pkgName != null) {
-                            val selectedApps = MainModule.mPrefs.getStringSet("system_hidefromrecents_apps")
+                            val selectedApps = hideFromRecentsApps
                             if (selectedApps.contains(pkgName)) {
                                 result = true
                                 throwable = null
@@ -234,6 +259,10 @@ object Launcher {
         })
     }
 
+    /**
+     * Launcher-window recents blur. This does not write `disable_window_blurs` or change the
+     * system_server window-blur policy. System-Other disable-window-blurs remains independent.
+     */
     @JvmStatic
     fun RecentsBlurRatioHook(lpparam: PackageReadyParam) {
         val utilsClass = XposedHelpers.findClassIfExists("com.miui.home.launcher.common.BlurUtils", lpparam.classLoader)
@@ -241,6 +270,7 @@ object Launcher {
             XposedHelpers.log("RecentsBlurRatioHook", "Cannot find blur utility class")
             return
         }
+        installRecentsBlurSnapshot()
 
         ModuleHelper.hookAllMethods(utilsClass, "fastBlurWhenEnterRecents", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
@@ -249,12 +279,11 @@ object Launcher {
                 var throwable: Throwable? = null
                 val args = chain.args
                 try {
-
+                    recentsBlurSessionActive = true
                     val mIsFromFsGesture = XposedHelpers.getBooleanField(args[1], "mIsFromFsGesture")
-                    if (!mIsFromFsGesture) {
+                    if (shouldSkipOriginalEnterRecents(mIsFromFsGesture, recentsBlurRatio)) {
                         val launcher = args[0] as Activity
-                        val blurRatio = MainModule.mPrefs.getInt("system_recents_blur", 100) / 100f
-                        XposedHelpers.callStaticMethod(utilsClass, "fastBlur", blurRatio, launcher.window, args[2])
+                        XposedHelpers.callStaticMethod(utilsClass, "fastBlur", recentsBlurRatio, launcher.window, args[2])
                         skipped = true
                         result = null
                         throwable = null
@@ -263,52 +292,146 @@ object Launcher {
                     if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                     result = chain.proceed()
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     throwable = t
                     result = null
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
-        ModuleHelper.hookAllMethods(utilsClass, "fastBlurWhenGestureResetTaskView", object : MethodHook() {
+        val endRecentsBlurSession = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
                 try {
-
-                    XposedHelpers.setAdditionalStaticField(utilsClass, "customBlurRatio", true)
-
                     result = chain.proceed()
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
+                    throwable = t
+                    result = null
+                }
+                recentsBlurSessionActive = false
+                XposedHelpers.removeAdditionalStaticField(utilsClass, "customBlurRatio")
+                return XposedHelpers.throwOrReturn(throwable, result)
+            }
+        }
+        ModuleHelper.hookAllMethodsSilently(utilsClass, "fastBlurWhenExitRecents", endRecentsBlurSession)
+        ModuleHelper.hookAllMethodsSilently(
+            "com.miui.home.recents.OverviewState",
+            lpparam.classLoader,
+            "onStateDisabled",
+            endRecentsBlurSession
+        )
+
+        val markCustomRatio = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                var result: Any? = null
+                var throwable: Throwable? = null
+                try {
+                    XposedHelpers.setAdditionalStaticField(utilsClass, "customBlurRatio", true)
+                    result = chain.proceed()
+                } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     throwable = t
                     result = null
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
-        })
+        }
+        ModuleHelper.hookAllMethods(utilsClass, "fastBlurWhenGestureResetTaskView", markCustomRatio)
+        ModuleHelper.hookAllMethodsSilently(utilsClass, "fastBlurWhenUseCompleteRecentsBlur", markCustomRatio)
 
         ModuleHelper.hookAllMethods(utilsClass, "fastBlur", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
                 try {
-
-                    if (args.size == 3) {
-                        if (XposedHelpers.getAdditionalStaticField(utilsClass, "customBlurRatio") != null) {
-                            val blurRatio = MainModule.mPrefs.getInt("system_recents_blur", 100) / 100f
-                            args[0] = blurRatio
-                            XposedHelpers.removeAdditionalStaticField(utilsClass, "customBlurRatio")
+                    val pendingCustom = XposedHelpers.getAdditionalStaticField(utilsClass, "customBlurRatio") != null
+                    if (pendingCustom) {
+                        XposedHelpers.removeAdditionalStaticField(utilsClass, "customBlurRatio")
+                    }
+                    val requested = chain.getArg(0) as? Float
+                    if (requested != null) {
+                        val host = launcherFromFastBlurWindow(chain)
+                        val applied = resolveRecentsFastBlurRatio(
+                            requested,
+                            recentsBlurOverrideEnabled,
+                            recentsBlurSessionActive,
+                            LauncherFolderHooks.isFolderActiveForBlur(host),
+                            recentsBlurRatio,
+                            pendingCustom
+                        )
+                        if (applied != requested) {
+                            val args = XposedHelpers.getArgsArray(chain)
+                            args[0] = applied
+                            return XposedHelpers.proceedOrThrow(chain, args, null)
                         }
                     }
-
-                    result = chain.proceed(args)
+                    result = chain.proceed()
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     throwable = t
                     result = null
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
+    }
+
+    private fun refreshRecentsBlurPreferences() {
+        val percent = MainModule.mPrefs.getInt(PREF_RECENTS_BLUR, 100)
+        recentsBlurRatio = resolveRecentsBlurRatio(percent)
+        recentsBlurOverrideEnabled = resolveRecentsBlurOverrideEnabled(percent)
+        hideFromRecentsApps = HashSet(MainModule.mPrefs.getStringSet(PREF_HIDE_FROM_RECENTS))
+    }
+
+    @JvmStatic
+    internal fun installRecentsBlurSnapshot() {
+        refreshRecentsBlurPreferences()
+        if (recentsBlurObserverRegistered) return
+        recentsBlurObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key == PREF_RECENTS_BLUR || key == PREF_HIDE_FROM_RECENTS) {
+                    refreshRecentsBlurPreferences()
+                }
+            }
+        })
+    }
+
+    private fun launcherFromFastBlurWindow(chain: XposedInterface.Chain): Any? {
+        return try {
+            (chain.getArg(1) as? Window)?.context
+        } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
+            null
+        }
+    }
+
+    @JvmStatic
+    internal fun resolveRecentsBlurRatio(percent: Int): Float = percent.coerceIn(0, 100) / 100f
+
+    @JvmStatic
+    internal fun resolveRecentsBlurOverrideEnabled(percent: Int): Boolean = percent < 100
+
+    @JvmStatic
+    internal fun shouldSkipOriginalEnterRecents(fromFsGesture: Boolean, blurRatio: Float): Boolean =
+        !fromFsGesture || blurRatio == 0f
+
+    @JvmStatic
+    internal fun resolveRecentsFastBlurRatio(
+        requested: Float,
+        recentsOverride: Boolean,
+        recentsSessionActive: Boolean,
+        folderActive: Boolean,
+        recentsRatio: Float,
+        pendingCustomRatio: Boolean
+    ): Float {
+        if (folderActive) return requested
+        if (!recentsOverride) return requested
+        if (pendingCustomRatio) return recentsRatio
+        if (recentsSessionActive && recentsRatio == 0f) return recentsRatio
+        return requested
     }
 
     @JvmStatic

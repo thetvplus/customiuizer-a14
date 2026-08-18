@@ -10,11 +10,11 @@ REQUIRED_COVERAGE_TARGET = 74
 REQUIRED_INDEPENDENT_KILLS = 11
 
 REQUIRED_INDEPENDENT_MUTATIONS = frozenset({
-    "duplicate SMART key",
-    "symbolic verified tree",
-    "ambiguous resume path",
-    "TASK state drift",
-    "generated progress tamper",
+    "observer pref key",
+    "source test seam",
+    "feature semantics",
+    "process matrix",
+    "release metadata",
     "remove fetch-depth",
     "wrong CI branch",
     "signing leak",

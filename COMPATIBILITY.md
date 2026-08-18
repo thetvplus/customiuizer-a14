@@ -15,12 +15,4 @@
 | API 101 | 最低生产基线 | 所有必经路径可加载 |
 | API 102 | 条件能力 | 类型和初始化隔离、能力探测、安全降级 |
 
-## 跨版本移植
-
-每个 `PORT` 任务记录：
-
-| 功能 | 来源 | A14 状态 | API/ROM 差异 | 证据 |
-|---|---|---|---|---|
-| 示例 | A13 commit/文件 | backlog/active/done | SDK34/HyperOS 生命周期 | static/log/device |
-
-不维护逐文件 parity。
+跨版本工作必须是独立 `PORT` 任务，并记录 API、ROM、生命周期和资源差异。不维护逐文件 parity。

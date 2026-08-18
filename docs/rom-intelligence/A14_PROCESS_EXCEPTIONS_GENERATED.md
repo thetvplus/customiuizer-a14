@@ -4,8 +4,8 @@ This file captures process-routing gaps, package/process mismatches, and targete
 
 ## Scope vs code
 
-- Input method packages are routed by `MainModule.java` to `InputMethodInstaller`, but are **not** listed in `scope.list`. This means they will not receive the module unless the user adds them manually in LSPosed.
-  - Verification: `WAITING_FOR_SAMPLE` (need LSPosed scope behavior with `staticScope=false`).
+- Input method packages are routed by `MainModule.java` to `InputMethodInstaller`, but are **not** listed in `scope.list`. With `staticScope=true`, users must add them manually in LSPosed if they need those hooks.
+  - Verification: optional per-keyboard smoke on target ROM; not a default release gate.
 - `miui.systemui.plugin` is not in `scope.list`; the module stays in `com.android.systemui` and extracts the plugin `ClassLoader` from `PluginInstance$PluginFactory.createPlugin` at runtime.
   - Evidence: `SystemUIControlCenterHooks.kt` line 60-70 and `ControlCenterPluginHook`.
 

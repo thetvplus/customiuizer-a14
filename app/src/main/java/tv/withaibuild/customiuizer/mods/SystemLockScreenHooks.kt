@@ -65,6 +65,58 @@ import java.util.TimeZone
  */
 object SystemLockScreenHooks {
 
+    internal data class NoScreenLockSnapshot(
+        val mode: Int = 1,
+        val skip: Boolean = false,
+        val req: Int = 1,
+        val skipActivities: Set<String> = emptySet(),
+    )
+
+    @Volatile
+    internal var noScreenLockConfig = NoScreenLockSnapshot()
+
+    private var noScreenLockObserverRegistered = false
+
+    private val NO_SCREEN_LOCK_KEYS = setOf(
+        "system_noscreenlock",
+        "system_noscreenlock_skip",
+        "system_noscreenlock_req",
+        "system_applock_skip_activities",
+    )
+
+    internal fun refreshNoScreenLockSnapshot() {
+        val prefs = MainModule.mPrefs
+        val skipKey = "system_applock_skip_activities"
+        val itemStr = prefs.getString(skipKey, "")
+        val pairs = HashSet<String>()
+        if (itemStr.isNotEmpty()) {
+            for (uuid in itemStr.trim().split(PrefPair.DELIMITER)) {
+                val pkgAct = prefs.getString(skipKey + "_" + uuid + "_activity", "")
+                if (pkgAct.isNotEmpty()) pairs.add(pkgAct)
+            }
+        }
+        noScreenLockConfig = NoScreenLockSnapshot(
+            mode = prefs.getStringAsInt("system_noscreenlock", 1),
+            skip = prefs.getBoolean("system_noscreenlock_skip"),
+            req = prefs.getStringAsInt("system_noscreenlock_req", 1),
+            skipActivities = pairs,
+        )
+    }
+
+    @JvmStatic
+    internal fun installNoScreenLockSnapshot() {
+        refreshNoScreenLockSnapshot()
+        if (noScreenLockObserverRegistered) return
+        noScreenLockObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in NO_SCREEN_LOCK_KEYS || key.startsWith("system_applock_skip_activities_")) {
+                    refreshNoScreenLockSnapshot()
+                }
+            }
+        })
+    }
+
     internal val CHARGING_INFO_OBSERVED_KEYS = setOf(
         "system_charginginfo",
         "system_charginginfo_fontsize",
@@ -235,7 +287,7 @@ object SystemLockScreenHooks {
     }
 
     private fun isAuthOnce(): Boolean {
-        val req = MainModule.mPrefs.getStringAsInt("system_noscreenlock_req", 1)
+        val req = noScreenLockConfig.req
         if (req <= 1) return true
         if (req == 2 && !isUnlockedWithFingerprint && !isUnlockedWithStrong) return false
         if (req == 3 && !isUnlockedWithStrong) return false
@@ -296,6 +348,7 @@ object SystemLockScreenHooks {
 
     @JvmStatic
     fun NoScreenLockHook(lpparam: PackageReadyParam) {
+        installNoScreenLockSnapshot()
         // Preflight: resolve all required ROM methods before installing any hook.
         // Each findMethodExact also verifies its declaring class. If any core class
         // or method is missing, throw so FeatureInstallRegistry catches and marks
@@ -441,7 +494,7 @@ object SystemLockScreenHooks {
                 if (!unlocked) { return chain.proceed() }
 
                 val skip = try {
-                    MainModule.mPrefs.getBoolean("system_noscreenlock_skip")
+                    noScreenLockConfig.skip
                 } catch (t: Throwable) {
                     FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
@@ -520,7 +573,7 @@ object SystemLockScreenHooks {
 
                                 var isTrusted = false
                                 if (forcedOption == 1) isTrusted = true
-                                else if (forcedOption != 0 && MainModule.mPrefs.getStringAsInt("system_noscreenlock", 1) == 3) {
+                                else if (forcedOption != 0 && noScreenLockConfig.mode == 3) {
                                     if (action == WifiManager.NETWORK_STATE_CHANGED_ACTION) {
                                         val netInfo = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
                                         if (netInfo == null) return@guarded
@@ -533,7 +586,7 @@ object SystemLockScreenHooks {
                                 }
 
                                 if (isTrusted) {
-                                    val skip = MainModule.mPrefs.getBoolean("system_noscreenlock_skip")
+                                    val skip = noScreenLockConfig.skip
                                     if (skip)
                                         XposedHelpers.callMethod(thisObject, "keyguardDone")
                                     else
@@ -574,7 +627,7 @@ object SystemLockScreenHooks {
                     val thisObject = chain.thisObject
 
                     if (forcedOption == 0) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val skip = MainModule.mPrefs.getBoolean("system_noscreenlock_skip")
+                    val skip = noScreenLockConfig.skip
                     if (skip) { return XposedHelpers.throwOrReturn(throwable, result) }
                     val mKeyguardUpdateMonitor = XposedHelpers.getObjectField(thisObject, "mKeyguardUpdateMonitor")
                     val mContext = XposedHelpers.getObjectField(mKeyguardUpdateMonitor, "mContext") as Context
@@ -1472,6 +1525,7 @@ object SystemLockScreenHooks {
      */
     @JvmStatic
     fun ChargingInfoHook(lpparam: PackageReadyParam): FeatureInstallResult {
+        val chargingPrefs = MainModule.mPrefs
         val callerUnhookers = installChargingHintCallerScopes(lpparam.classLoader) ?: return FeatureInstallResult.FAILED_TRANSIENT
         val coreUnhooker = ModuleHelper.findAndHookMethod(
             "com.miui.charge.ChargeUtils",
@@ -1496,7 +1550,7 @@ object SystemLockScreenHooks {
                         val replacement = computeChargingInfoReplacement(
                             charge,
                             hint,
-                            MainModule.mPrefs,
+                            chargingPrefs,
                             { isKeyguardIndicationCaller() },
                             { readBatteryProperties() }
                         )
@@ -1610,6 +1664,7 @@ object SystemLockScreenHooks {
 
     @JvmStatic
     fun SkipAppLockHook(lpparam: SystemServerStartingParam) {
+        installNoScreenLockSnapshot()
         ModuleHelper.hookAllMethods("com.miui.server.AccessController", lpparam.classLoader, "skipActivity", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -1626,13 +1681,9 @@ object SystemLockScreenHooks {
                     if (intent == null || intent.component == null) { return XposedHelpers.throwOrReturn(throwable, result) }
                     val pkgName = intent.component!!.packageName
                     val actName = intent.component!!.className
-                    val key = "system_applock_skip_activities"
-                    val itemStr = MainModule.mPrefs.getString(key, "")
-                    if (itemStr == null || itemStr.isEmpty()) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val itemArr = itemStr.trim().split(PrefPair.DELIMITER)
-                    for (uuid in itemArr) {
-                        val pkgAct = MainModule.mPrefs.getString(key + "_" + uuid + "_activity", "")
-                        if (pkgAct == pkgName + "|" + actName) { result = true; throwable = null }
+                    if ("$pkgName|$actName" in noScreenLockConfig.skipActivities) {
+                        result = true
+                        throwable = null
                     }
 
                 } catch (t: Throwable) {
@@ -1709,7 +1760,7 @@ object SystemLockScreenHooks {
 
                     if (throwable != null || result == null || args[5] as Int == 1 || "com.android.thememanager" == args[1]) { return XposedHelpers.throwOrReturn(throwable, result) }
 
-                    val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
+                    val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context?
                     if (mContext == null) { return XposedHelpers.throwOrReturn(throwable, result) }
 
                     val handleIncomingUser = resolveWallpaperUserId {

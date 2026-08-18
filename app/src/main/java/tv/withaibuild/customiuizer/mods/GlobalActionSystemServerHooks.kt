@@ -561,6 +561,10 @@ object GlobalActionSystemServerHooks {
         else -> null
     }
 
+    private var cachedMarkShortcutTriggered: java.lang.reflect.Method? = null
+    private var cachedInjectEvent: java.lang.reflect.Method? = null
+    private var cachedCloseApp: java.lang.reflect.Method? = null
+
     @JvmStatic
     fun setupGlobalActions(lpparam: XposedModuleInterface.SystemServerStartingParam) {
         ModuleHelper.hookAllMethods("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.classLoader, "initInternal", object : MethodHook() {
@@ -594,14 +598,19 @@ object GlobalActionSystemServerHooks {
                             when (action) {
                                 GlobalActions.ACTION_PREFIX + "SimulateMenu" -> {
                                     try {
-                                        val fRequestShowMenu = XposedHelpers.findField(thisObject.javaClass.superclass, "mRequestShowMenu")
+                                        val superClass = thisObject.javaClass.superclass!!
+                                        val fRequestShowMenu = XposedHelpers.findField(superClass, "mRequestShowMenu")
                                         fRequestShowMenu.setAccessible(true)
                                         fRequestShowMenu.set(thisObject, true)
-                                        val markShortcutTriggered = thisObject.javaClass.superclass!!.getDeclaredMethod("markShortcutTriggered")
-                                        markShortcutTriggered.setAccessible(true)
+                                        val markShortcutTriggered = cachedMarkShortcutTriggered
+                                            ?: superClass.getDeclaredMethod("markShortcutTriggered").also {
+                                                it.isAccessible = true; cachedMarkShortcutTriggered = it
+                                            }
                                         markShortcutTriggered.invoke(thisObject)
-                                        val injectEvent = thisObject.javaClass.superclass!!.getDeclaredMethod("injectEvent", Int::class.javaPrimitiveType!!)
-                                        injectEvent.setAccessible(true)
+                                        val injectEvent = cachedInjectEvent
+                                            ?: superClass.getDeclaredMethod("injectEvent", Int::class.javaPrimitiveType!!).also {
+                                                it.isAccessible = true; cachedInjectEvent = it
+                                            }
                                         injectEvent.invoke(thisObject, 82)
                                         completed = true
                                     } catch (t1: Throwable) {
@@ -615,8 +624,10 @@ object GlobalActionSystemServerHooks {
                                 }
                                 GlobalActions.ACTION_PREFIX + "ForceClose" -> {
                                     try {
-                                        val closeApp = thisObject.javaClass.superclass!!.getDeclaredMethod("closeApp")
-                                        closeApp.setAccessible(true)
+                                        val closeApp = cachedCloseApp
+                                            ?: thisObject.javaClass.superclass!!.getDeclaredMethod("closeApp").also {
+                                                it.isAccessible = true; cachedCloseApp = it
+                                            }
                                         closeApp.invoke(thisObject)
                                         completed = true
                                     } catch (t: Throwable) {

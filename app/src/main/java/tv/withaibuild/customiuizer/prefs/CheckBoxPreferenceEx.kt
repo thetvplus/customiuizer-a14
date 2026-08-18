@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.TypedArray
 import android.util.AttributeSet
 import android.view.View
+import android.widget.CompoundButton
 import android.widget.TextView
 import androidx.preference.PreferenceViewHolder
 import androidx.preference.SwitchPreference
@@ -47,7 +48,15 @@ class CheckBoxPreferenceEx(context: Context, attrs: AttributeSet?) : SwitchPrefe
         title?.maxLines = 2
         // The row owns the click. Propagate its pressed state to the non-clickable Switch so
         // the thumb/track responds on ACTION_DOWN, before persistence and adapter rebind.
-        holder.findViewById(android.R.id.switch_widget)?.isDuplicateParentStateEnabled = true
+        // Re-apply checked after that: parent selected/pressed during search highlight must
+        // not leave the widget visually behind Preference.isChecked.
+        val switchWidget = holder.findViewById(android.R.id.switch_widget)
+        switchWidget?.isDuplicateParentStateEnabled = true
+        val switchButton = switchWidget as? CompoundButton
+        if (switchButton != null) {
+            switchButton.isChecked = isChecked
+            switchButton.jumpDrawablesToCurrentState()
+        }
         getView(holder.itemView)
     }
 

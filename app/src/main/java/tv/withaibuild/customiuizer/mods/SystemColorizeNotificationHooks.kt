@@ -20,8 +20,36 @@ import tv.withaibuild.customiuizer.utils.HookUtils
 
 object SystemColorizeNotificationHooks {
 
+    @Volatile
+    private var colorizeMode = 1
+
+    @Volatile
+    private var colorizeApps: Set<String> = emptySet()
+
+    private var colorizeObserverRegistered = false
+
+    private fun refreshColorizeSnapshot() {
+        val prefs = MainModule.mPrefs
+        colorizeMode = prefs.getStringAsInt("system_colorizenotifs", 1)
+        colorizeApps = HashSet(prefs.getStringSet("system_colorizenotifs_apps"))
+    }
+
+    private fun installColorizeSnapshot() {
+        refreshColorizeSnapshot()
+        if (colorizeObserverRegistered) return
+        colorizeObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key == "system_colorizenotifs" || key == "system_colorizenotifs_apps") {
+                    refreshColorizeSnapshot()
+                }
+            }
+        })
+    }
+
     @JvmStatic
     fun ColorizeNotificationCardHook(lpparam: PackageReadyParam) {
+        installColorizeSnapshot()
         val ColorScheme = XposedHelpers.findClassIfExists("com.android.systemui.monet.ColorScheme", lpparam.classLoader)
         var contentStyle: Any? = null
         val MonetStyle = XposedHelpers.findClassIfExists("com.android.systemui.monet.Style", lpparam.classLoader)
@@ -220,8 +248,8 @@ object SystemColorizeNotificationHooks {
                     }
                     val mContext = args[1] as Context
                     val pkgName = applicationInfo.packageName
-                    val opt = MainModule.mPrefs.getStringAsInt("system_colorizenotifs", 1)
-                    val isSelected = MainModule.mPrefs.getStringSet("system_colorizenotifs_apps").contains(pkgName)
+                    val opt = colorizeMode
+                    val isSelected = pkgName in colorizeApps
                     if ((opt == 2 && !isSelected) || (opt == 3 && isSelected)) {
                         XposedHelpers.callMethod(builder, "makeNotificationGroupHeader")
                         if (sAppIconManager == null) {

@@ -2,6 +2,7 @@ package tv.withaibuild.customiuizer.mods.utils
 
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -120,7 +121,18 @@ class HookDiagnosticsTest {
             )
         }
 
-        assertTrue(HookDiagnostics.snapshot().size <= 256)
+        assertTrue(HookDiagnostics.snapshot().size <= HookDiagnostics.VERBOSE_DETAIL_BOUND)
+    }
+
+    @Test
+    fun releasePolicyKeepsFailuresAndDropsSuccessfulDetail() {
+        assertTrue(HookDiagnostics.shouldRetainDetail(HookDiagnostics.Status.INSTALLED, verbose = true))
+        assertFalse(HookDiagnostics.shouldRetainDetail(HookDiagnostics.Status.INSTALLED, verbose = false))
+        assertFalse(HookDiagnostics.shouldRetainDetail(HookDiagnostics.Status.SILENTLY_SKIPPED, verbose = false))
+        assertTrue(HookDiagnostics.shouldRetainDetail(HookDiagnostics.Status.INSTALL_FAILED, verbose = false))
+        assertTrue(HookDiagnostics.shouldRetainDetail(HookDiagnostics.Status.TARGET_CLASS_MISSING, verbose = false))
+        assertEquals(HookDiagnostics.VERBOSE_DETAIL_BOUND, HookDiagnostics.detailBound(verbose = true))
+        assertEquals(HookDiagnostics.RELEASE_DETAIL_BOUND, HookDiagnostics.detailBound(verbose = false))
     }
 
     @Test

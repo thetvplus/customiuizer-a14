@@ -154,6 +154,66 @@ class DeviceInfoFormatterTest {
         assert(text.contains("0.0"))
     }
 
+    @Test
+    fun contentOptMappingMatchesPreferenceArrays() {
+        assertEquals(true, DeviceInfoFormatter.needsBatteryTemperature(1))
+        assertEquals(true, DeviceInfoFormatter.needsCpuTemperature(1))
+        assertEquals(true, DeviceInfoFormatter.needsBatteryTemperature(2))
+        assertEquals(false, DeviceInfoFormatter.needsCpuTemperature(2))
+        assertEquals(false, DeviceInfoFormatter.needsBatteryTemperature(3))
+        assertEquals(true, DeviceInfoFormatter.needsCpuTemperature(3))
+    }
+
+    @Test
+    fun batteryOnlyShowsWhenCpuMissing() {
+        val props = Properties().apply { setProperty("POWER_SUPPLY_TEMP", "410") }
+        val cfg = baseConfig().copy(deviceTempContentOpt = 2)
+        val text = DeviceInfoFormatter.formatDeviceInfo(cfg, props, null)
+        assert(text.startsWith("41"))
+        assertFalse(text.contains("\n"))
+    }
+
+    @Test
+    fun cpuOnlyShowsWhenBatteryMissing() {
+        val cfg = baseConfig().copy(deviceTempContentOpt = 3)
+        val text = DeviceInfoFormatter.formatDeviceInfo(cfg, null, "52000")
+        assert(text.startsWith("52"))
+        assertFalse(text.contains("\n"))
+    }
+
+    @Test
+    fun bothShowsBatteryAndCpuWhenPresent() {
+        val props = Properties().apply { setProperty("POWER_SUPPLY_TEMP", "370") }
+        val cfg = baseConfig().copy(deviceTempContentOpt = 1)
+        val text = DeviceInfoFormatter.formatDeviceInfo(cfg, props, "52000")
+        assert(text.contains("37"))
+        assert(text.contains("52"))
+        assert(text.contains("\n"))
+    }
+
+    @Test
+    fun bothFallsBackToBatteryWhenCpuMissing() {
+        val props = Properties().apply { setProperty("POWER_SUPPLY_TEMP", "370") }
+        val cfg = baseConfig().copy(deviceTempContentOpt = 1)
+        val text = DeviceInfoFormatter.formatDeviceInfo(cfg, props, null)
+        assertEquals("37.0℃", text)
+    }
+
+    @Test
+    fun bothFallsBackToCpuWhenBatteryMissing() {
+        val cfg = baseConfig().copy(deviceTempContentOpt = 1)
+        val text = DeviceInfoFormatter.formatDeviceInfo(cfg, null, "52000")
+        assertEquals("52.0℃", text)
+    }
+
+    @Test
+    fun bothMissingSourcesProduceEmptyText() {
+        val cfg = baseConfig().copy(deviceTempContentOpt = 1)
+        assertEquals("", DeviceInfoFormatter.formatDeviceInfo(cfg, null, null))
+        assertEquals("", DeviceInfoFormatter.formatDeviceInfo(cfg.copy(deviceTempContentOpt = 2), null, "52000"))
+        assertEquals("", DeviceInfoFormatter.formatDeviceInfo(cfg.copy(deviceTempContentOpt = 3), Properties(), null))
+    }
+
     private fun baseConfig(): DeviceInfoConfig = DeviceInfoConfig(
         showBatteryDetail = true,
         showDeviceTemp = true,

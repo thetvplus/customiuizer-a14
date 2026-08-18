@@ -73,6 +73,69 @@ import tv.withaibuild.customiuizer.utils.HookUtils
 
 object Various {
 
+    internal data class VariousSnapshot(
+        val alarmCompatApps: Set<String> = emptySet(),
+        val showCallUi: Int = 0,
+        val callUiBrightType: Int = 0,
+        val callUiBrightNight: Boolean = false,
+        val callUiBrightNightStartHour: Int = 0,
+        val callUiBrightNightStartMinute: Int = 0,
+        val callUiBrightNightEndHour: Int = 0,
+        val callUiBrightNightEndMinute: Int = 0,
+        val callUiBrightVal: Int = 0,
+        val gboardPaddingPort: Int = 0,
+        val gboardPaddingLand: Int = 0,
+    )
+
+    @Volatile
+    internal var variousConfig = VariousSnapshot()
+
+    private var variousObserverRegistered = false
+
+    private val VARIOUS_PREF_KEYS = setOf(
+        "various_alarmcompat_apps",
+        "various_showcallui",
+        "various_calluibright_type",
+        "various_calluibright_night",
+        "various_calluibright_night_start_hour",
+        "various_calluibright_night_start_minute",
+        "various_calluibright_night_end_hour",
+        "various_calluibright_night_end_minute",
+        "various_calluibright_val",
+        "various_gboardpadding_port",
+        "various_gboardpadding_land",
+    )
+
+    internal fun refreshVariousSnapshot() {
+        val prefs = MainModule.mPrefs
+        val nightKey = "various_calluibright_night"
+        variousConfig = VariousSnapshot(
+            alarmCompatApps = HashSet(prefs.getStringSet("various_alarmcompat_apps")),
+            showCallUi = prefs.getStringAsInt("various_showcallui", 0),
+            callUiBrightType = prefs.getStringAsInt("various_calluibright_type", 0),
+            callUiBrightNight = prefs.getBoolean(nightKey),
+            callUiBrightNightStartHour = prefs.getInt(nightKey + "_start_hour", 0),
+            callUiBrightNightStartMinute = prefs.getInt(nightKey + "_start_minute", 0),
+            callUiBrightNightEndHour = prefs.getInt(nightKey + "_end_hour", 0),
+            callUiBrightNightEndMinute = prefs.getInt(nightKey + "_end_minute", 0),
+            callUiBrightVal = prefs.getInt("various_calluibright_val", 0),
+            gboardPaddingPort = prefs.getInt("various_gboardpadding_port", 0),
+            gboardPaddingLand = prefs.getInt("various_gboardpadding_land", 0),
+        )
+    }
+
+    @JvmStatic
+    internal fun installVariousSnapshot() {
+        refreshVariousSnapshot()
+        if (variousObserverRegistered) return
+        variousObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in VARIOUS_PREF_KEYS) refreshVariousSnapshot()
+            }
+        })
+    }
+
     @JvmField
     var mLastPackageInfo: PackageInfo? = null
 
@@ -620,9 +683,71 @@ object Various {
         upEvent.recycle()
     }
 
+    internal const val SIDE_BAR_EXPAND_RECEIVER_KEY = "showSideBarReceiver"
+
+    /**
+     * Process-scoped ShowSideBar receiver. The [View] is held only through a
+     * [WeakReference] so [ReceiverRegistry] cannot pin the sidebar view after detach.
+     */
+    internal fun createSideBarExpandReceiver(
+        view: View,
+        originDockLocation: Int,
+    ): BroadcastReceiver {
+        val viewRef = WeakReference(view)
+        return object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
+                val target = viewRef.get() ?: return@guarded
+                val fromPackage = getSentFromPackage()
+                if (fromPackage != Helpers.modulePkg &&
+                    fromPackage != "android" &&
+                    fromPackage != "com.android.systemui" &&
+                    fromPackage != "com.miui.home"
+                ) {
+                    if (isOrderedBroadcast) setResultCode(GlobalActions.ACTION_FAILED)
+                    return@guarded
+                }
+                val bundle = intent.getBundleExtra("actionInfo")
+                var pos = originDockLocation
+                if (bundle != null) {
+                    pos = bundle.getInt("inDirection", 0)
+                    target.context.getSharedPreferences("sp_video_box", 0).edit().putInt("dock_line_location", pos).apply()
+                }
+                showSideBar(target, pos)
+                if (isOrderedBroadcast) setResultCode(GlobalActions.ACTION_HANDLED)
+            }
+        }
+    }
+
+    internal fun releaseSideBarExpandReceiver(receiver: BroadcastReceiver?) {
+        if (receiver == null) return
+        ModuleHelper.unregisterModuleReceiver(SIDE_BAR_EXPAND_RECEIVER_KEY, receiver)
+    }
+
+    /**
+     * Releases the process-scoped sidebar receiver only when [detachedView] is the
+     * current owner. A detach from any other [RegionSamplingHelper] instance, or a
+     * collected owner WeakReference, leaves the slot unchanged.
+     */
+    internal fun takeSideBarExpandReceiverIfOwner(
+        registeredReceiver: Array<BroadcastReceiver?>,
+        registeredOwnerView: Array<WeakReference<View>?>,
+        isHooked: BooleanArray,
+        detachedView: View?,
+    ): BroadcastReceiver? {
+        val currentOwner = registeredOwnerView[0]?.get() ?: return null
+        if (currentOwner !== detachedView) return null
+        val receiverToRelease = registeredReceiver[0]
+        registeredReceiver[0] = null
+        registeredOwnerView[0] = null
+        isHooked[0] = false
+        return receiverToRelease
+    }
+
     @JvmStatic
     fun AddSideBarExpandReceiverHook(lpparam: PackageReadyParam) {
         val isHooked = booleanArrayOf(false, false)
+        val registeredReceiver = arrayOf<BroadcastReceiver?>(null)
+        val registeredOwnerView = arrayOf<WeakReference<View>?>(null)
         val enableSideBar = MainModule.mPrefs.getBoolean("various_swipe_expand_sidebar")
         if (!enableSideBar) {
             MainModule.resHooks.setThemeValueReplacement("com.miui.securitycenter", "dimen", "sidebar_height_default", 8)
@@ -642,40 +767,33 @@ object Various {
                 try {
                     result = chain.proceed()
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     throwable = t
                     result = null
                 }
                 try {
-                    val thisObject = chain.thisObject
-
                     if (!isHooked[0]) {
                         isHooked[0] = true
                         val view = chain.getArg(0) as View
                         if (originDockLocation == -1) {
                             originDockLocation = view.context.getSharedPreferences("sp_video_box", 0).getInt("dock_line_location", 0)
                         }
-                        val showReceiver = object : BroadcastReceiver() {
-                            override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
-                                val fromPackage = getSentFromPackage()
-                                if (fromPackage != Helpers.modulePkg &&
-                                    fromPackage != "android" &&
-                                    fromPackage != "com.android.systemui" &&
-                                    fromPackage != "com.miui.home"
-                                ) {
-                                    if (isOrderedBroadcast) setResultCode(GlobalActions.ACTION_FAILED)
-                                    return@guarded
-                                }
-                                val bundle = intent.getBundleExtra("actionInfo")
-                                var pos = originDockLocation
-                                if (bundle != null) {
-                                    pos = bundle.getInt("inDirection", 0)
-                                    view.context.getSharedPreferences("sp_video_box", 0).edit().putInt("dock_line_location", pos).apply()
-                                }
-                                showSideBar(view, pos)
-                                if (isOrderedBroadcast) setResultCode(GlobalActions.ACTION_HANDLED)
-                            }
+                        val showReceiver = createSideBarExpandReceiver(view, originDockLocation)
+                        if (ModuleHelper.registerModuleReceiver(
+                                view.context,
+                                SIDE_BAR_EXPAND_RECEIVER_KEY,
+                                showReceiver,
+                                IntentFilter(GlobalActions.ACTION_PREFIX + "ShowSideBar"),
+                                Context.RECEIVER_EXPORTED,
+                            )
+                        ) {
+                            registeredReceiver[0] = showReceiver
+                            registeredOwnerView[0] = WeakReference(view)
+                        } else {
+                            registeredReceiver[0] = null
+                            registeredOwnerView[0] = null
+                            isHooked[0] = false
                         }
-                        ModuleHelper.registerModuleReceiver(view.context, "showSideBarReceiver", showReceiver, IntentFilter(GlobalActions.ACTION_PREFIX + "ShowSideBar"), Context.RECEIVER_EXPORTED)
 
                         if (!isHooked[1]) {
                             isHooked[1] = true
@@ -699,6 +817,7 @@ object Various {
                                                 if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                                                 result = chain.proceed()
                                             } catch (t: Throwable) {
+                                                FatalErrors.rethrowIfFatal(t)
                                                 throwable = t
                                                 result = null
                                             }
@@ -717,6 +836,7 @@ object Various {
                                                 if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
                                                 result = chain.proceed()
                                             } catch (t: Throwable) {
+                                                FatalErrors.rethrowIfFatal(t)
                                                 throwable = t
                                                 result = null
                                             }
@@ -730,6 +850,11 @@ object Various {
                         }
                     }
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
+                    if (registeredReceiver[0] == null) {
+                        registeredOwnerView[0] = null
+                        isHooked[0] = false
+                    }
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -743,14 +868,20 @@ object Various {
                 try {
                     result = chain.proceed()
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     throwable = t
                     result = null
                 }
+                val receiverToRelease = takeSideBarExpandReceiverIfOwner(
+                    registeredReceiver,
+                    registeredOwnerView,
+                    isHooked,
+                    chain.getArg(0) as? View,
+                )
                 try {
-                    val thisObject = chain.thisObject
-
-                    isHooked[0] = false
+                    releaseSideBarExpandReceiver(receiverToRelease)
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -1220,6 +1351,7 @@ object Various {
 
     @JvmStatic
     fun AlarmCompatServiceHook(lpparam: SystemServerStartingParam) {
+        installVariousSnapshot()
         ModuleHelper.findAndHookMethod("com.android.server.alarm.AlarmManagerService", lpparam.classLoader, "onBootPhase", Int::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -1275,7 +1407,7 @@ object Various {
                     if (mContext != null) {
                         val pkgName = mContext.packageManager.getNameForUid(Binder.getCallingUid())
                         val mNextAlarmTime = XposedHelpers.getAdditionalInstanceField(thisObject, "mNextAlarmTime")
-                        val set = MainModule.mPrefs.getStringSet("various_alarmcompat_apps")
+                        val set = variousConfig.alarmCompatApps
                         if (mNextAlarmTime != null && pkgName != null && set.contains(pkgName)) {
                             result = if (mNextAlarmTime as Long == 0L) null else AlarmManager.AlarmClockInfo(mNextAlarmTime as Long, null)
                             throwable = null
@@ -1320,6 +1452,7 @@ object Various {
 
     @JvmStatic
     fun ShowCallUIHook(lpparam: PackageReadyParam) {
+        installVariousSnapshot()
         ModuleHelper.hookAllMethods("com.android.incallui.InCallPresenter", lpparam.classLoader, "startUi", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -1335,14 +1468,14 @@ object Various {
 
                     if (!(result as Boolean) || chain.getArg(0).toString() != "INCOMING") { return XposedHelpers.throwOrReturn(throwable, result) }
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    if (MainModule.mPrefs.getStringAsInt("various_showcallui", 0) == 3) {
+                    if (variousConfig.showCallUi == 3) {
                         val topPackage = Settings.Global.getString(mContext.contentResolver, Helpers.modulePkg + ".foreground.package")
                         if (topPackage != null && topPackage != "com.miui.home") {
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
                     }
 
-                    if (MainModule.mPrefs.getStringAsInt("various_showcallui", 0) == 1) {
+                    if (variousConfig.showCallUi == 1) {
                         val fullScreen = Settings.Global.getInt(mContext.contentResolver, Helpers.modulePkg + ".foreground.fullscreen", 0)
                         if (fullScreen == 1) { return XposedHelpers.throwOrReturn(throwable, result) }
                     }
@@ -1362,6 +1495,7 @@ object Various {
 
     @JvmStatic
     fun InCallBrightnessHook(lpparam: PackageReadyParam) {
+        installVariousSnapshot()
         ModuleHelper.findAndHookMethod("com.android.incallui.InCallActivity", lpparam.classLoader, "onCreate", Bundle::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -1377,7 +1511,7 @@ object Various {
 
                     val act = thisObject as Activity
 
-                    val opt = MainModule.mPrefs.getStringAsInt("various_calluibright_type", 0)
+                    val opt = variousConfig.callUiBrightType
                     if (opt == 1 || opt == 2) {
                         val presenter = XposedHelpers.callStaticMethod(XposedHelpers.findClass("com.android.incallui.InCallPresenter", lpparam.classLoader), "getInstance")
                         if (presenter == null) {
@@ -1390,13 +1524,13 @@ object Various {
                         else if (opt == 2 && state != "OUTGOING" && state != "PENDING_OUTGOING") { return XposedHelpers.throwOrReturn(throwable, result) }
                     }
 
-                    val key = "various_calluibright_night"
-                    val checkNight = MainModule.mPrefs.getBoolean(key)
+                    val cfg = variousConfig
+                    val checkNight = cfg.callUiBrightNight
                     if (checkNight) {
-                        val start_hour = MainModule.mPrefs.getInt(key + "_start_hour", 0)
-                        val start_minute = MainModule.mPrefs.getInt(key + "_start_minute", 0)
-                        val end_hour = MainModule.mPrefs.getInt(key + "_end_hour", 0)
-                        val end_minute = MainModule.mPrefs.getInt(key + "_end_minute", 0)
+                        val start_hour = cfg.callUiBrightNightStartHour
+                        val start_minute = cfg.callUiBrightNightStartMinute
+                        val end_hour = cfg.callUiBrightNightEndHour
+                        val end_minute = cfg.callUiBrightNightEndMinute
 
                         val formatter = SimpleDateFormat("H:m", Locale.ENGLISH)
                         formatter.timeZone = TimeZone.getDefault()
@@ -1410,7 +1544,7 @@ object Various {
                     }
 
                     val params = act.window.attributes
-                    val brightness = MainModule.mPrefs.getInt("various_calluibright_val", 0)
+                    val brightness = variousConfig.callUiBrightVal
                     if (brightness == 0) { return XposedHelpers.throwOrReturn(throwable, result) }
                     params.screenBrightness = brightness / 100f
                     act.window.setAttributes(params)
@@ -1619,6 +1753,7 @@ object Various {
 
     @JvmStatic
     fun GboardPaddingHook(lpparam: PackageReadyParam) {
+        installVariousSnapshot()
         ModuleHelper.findAndHookMethod(XposedHelpers.findClass("android.os.SystemProperties", lpparam.classLoader), "get", String::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -1627,10 +1762,10 @@ object Various {
                 try {
                     val key = chain.getArg(0) as String
                     if (key == "ro.com.google.ime.kb_pad_port_b") {
-                        val opt = MainModule.mPrefs.getInt("various_gboardpadding_port", 0)
+                        val opt = variousConfig.gboardPaddingPort
                         if (opt > 0) { skipped = true; result = opt.toString(); throwable = null }
                     } else if (key == "ro.com.google.ime.kb_pad_land_b") {
-                        val opt = MainModule.mPrefs.getInt("various_gboardpadding_land", 0)
+                        val opt = variousConfig.gboardPaddingLand
                         if (opt > 0) { skipped = true; result = opt.toString(); throwable = null }
                     }
 

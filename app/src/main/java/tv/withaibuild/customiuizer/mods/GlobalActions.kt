@@ -45,6 +45,27 @@ import tv.withaibuild.customiuizer.utils.HookUtils
 
 object GlobalActions {
 
+    @Volatile
+    private var settingsIconPos = 1
+
+    private var globalActionsObserverRegistered = false
+
+    private fun refreshGlobalActionsSnapshot() {
+        settingsIconPos = MainModule.mPrefs.getStringAsInt("miuizer_settingsiconpos", 1)
+    }
+
+    private fun installGlobalActionsSnapshot() {
+        refreshGlobalActionsSnapshot()
+        Various.installVariousSnapshot()
+        if (globalActionsObserverRegistered) return
+        globalActionsObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key == "miuizer_settingsiconpos") refreshGlobalActionsSnapshot()
+            }
+        })
+    }
+
     const val ACTION_PREFIX = "tv.withaibuild.customiuizer.mods.action."
     const val EVENT_PREFIX = "tv.withaibuild.customiuizer.mods.event."
 
@@ -520,6 +541,7 @@ object GlobalActions {
 
     @JvmStatic
     fun miuizerSettingsHook(lpparam: PackageReadyParam) {
+        installGlobalActionsSnapshot()
         val settingsIconResId = MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable")
         ModuleHelper.findAndHookMethod("com.android.settings.MiuiSettings", lpparam.classLoader, "updateHeaderList", List::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
@@ -535,7 +557,7 @@ object GlobalActions {
                     if (chain.getArgs()[0] == null) return XposedHelpers.throwOrReturn(throwable, result)
 
                     val mContext = (chain.getThisObject() as Activity).baseContext
-                    val opt = MainModule.mPrefs.getStringAsInt("miuizer_settingsiconpos", 1)
+                    val opt = settingsIconPos
 
                     val headerCls = XposedHelpers.findClassIfExists("com.android.settingslib.miuisettings.preference.PreferenceActivity\$Header", lpparam.classLoader)
                     if (headerCls == null) return XposedHelpers.throwOrReturn(throwable, result)
@@ -611,6 +633,7 @@ object GlobalActions {
 
     @JvmStatic
     fun setupForegroundMonitor(lpparam: PackageReadyParam) {
+        installGlobalActionsSnapshot()
         ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -651,7 +674,7 @@ object GlobalActions {
                             return XposedHelpers.throwOrReturn(throwable2, result2)
                         }
                     })
-                    if (MainModule.mPrefs.getStringAsInt("various_showcallui", 0) > 0) {
+                    if (Various.variousConfig.showCallUi > 0) {
                         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.classLoader, "onSystemBarAttributesChanged", object : MethodHook() {
                             private var fullScreen = false
                             override fun intercept(chain: XposedInterface.Chain): Any? {
@@ -712,25 +735,8 @@ object GlobalActions {
     }
 
     private fun toggleThis(context: Context, what: Int): Boolean {
-        return ModuleHelper.guarded(false) {
-            val whatStr = when (what) {
-                1 -> "WiFi"
-                2 -> "Bluetooth"
-                3 -> "GPS"
-                4 -> "NFC"
-                5 -> "SoundProfile"
-                6 -> "AutoBrightness"
-                7 -> "AutoRotation"
-                8 -> "Flashlight"
-                9 -> "MobileData"
-                10 -> "Hotspot"
-                11 -> "ZenMode"
-                12 -> "NightMode"
-                else -> return false
-            }
-            context.sendBroadcast(Intent(ACTION_PREFIX + "Toggle" + whatStr))
-            true
-        }
+        val action = GlobalActionToggles.broadcastAction(what) ?: return false
+        return commonSendAction(context, action)
     }
 
     @JvmStatic

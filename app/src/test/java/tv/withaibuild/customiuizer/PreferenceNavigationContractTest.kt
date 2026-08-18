@@ -37,5 +37,33 @@ class PreferenceNavigationContractTest {
         assertTrue(stringOverload.contains("isStateSaved"))
         assertTrue(stringOverload.contains(".commit()"))
         assertFalse(stringOverload.contains("commitAllowingStateLoss"))
+        assertFalse(stringOverload.contains("executePendingTransactions"))
+    }
+}
+
+class PreferenceSearchNavigationContractTest {
+
+    @Test
+    fun searchAndCategoryRoutesCreateFreshFragmentInstances() {
+        val main = Files.readString(
+            Path.of("src/main/java/tv/withaibuild/customiuizer/MainFragment.kt")
+        )
+        val category = Files.readString(
+            Path.of("src/main/java/tv/withaibuild/customiuizer/subs/CategorySelector.kt")
+        )
+
+        assertFalse(main.contains("var prefSystem"))
+        assertFalse(main.contains("val catSelector"))
+        assertTrue(main.contains("openSubFragment(SubSystem(), bundle"))
+        assertTrue(main.contains("openSubFragment(CategorySelector(), bundle"))
+        assertTrue(main.contains("openSubFragment(Launcher(), bundle"))
+        assertTrue(main.contains("openSubFragment(Controls(), bundle"))
+        assertTrue(main.contains("openSubFragment(Various(), bundle"))
+
+        assertFalse(category.contains("mainFrag.prefSystem"))
+        assertTrue(category.contains("openSubFragment(System(), bundle"))
+        assertTrue(category.contains("openSubFragment(Launcher(), bundle"))
+        assertTrue(category.contains("openSubFragment(Controls(), bundle"))
+        assertTrue(category.contains("openSubFragment(Various(), bundle"))
     }
 }

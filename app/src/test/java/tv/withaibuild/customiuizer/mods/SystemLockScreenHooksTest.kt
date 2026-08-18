@@ -124,7 +124,7 @@ class SystemLockScreenHooksTest {
         assertTrue("isUnlocked failure must return chain.proceed()", isUnlockedTry >= 0 && isUnlockedCatch > isUnlockedTry)
 
         // Phase 1: skip preference failure → log → chain.proceed().
-        val skipTry = h4Body.indexOf("val skip = try {\n                    MainModule.mPrefs.getBoolean(\"system_noscreenlock_skip\")")
+        val skipTry = h4Body.indexOf("val skip = try {\n                    noScreenLockConfig.skip")
         val skipCatch = h4Body.indexOf("} catch (t: Throwable) {\n                    FatalErrors.unwrapAndRethrowIfFatal(t)\n                    XposedHelpers.log(t)\n                    return chain.proceed()\n                }", skipTry)
         assertTrue("skip preference failure must return chain.proceed()", skipTry >= 0 && skipCatch > skipTry)
 

@@ -69,6 +69,8 @@
     <string name="system_batteryindicator_test_title">Thử nghiệm</string>
     <string name="system_batteryindicator_test_summ" formatted="false">Hiển thị vạch pin khi không sạc</string>
     <string name="system_statusbarheight_title">Chiều cao thanh trạng thái</string>
+    <string name="system_statusbar_content_vertical_offset_title">Vị trí dọc nội dung thanh trạng thái</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Điều chỉnh vị trí dọc tổng thể của đồng hồ, biểu tượng và nội dung tùy chỉnh trong thanh trạng thái. Không thay đổi chiều cao thanh trạng thái.</string>
     <string name="system_statusbar_iconsize_title">Kích thước biểu tượng thanh trạng thái</string>
     <string name="system_statusbarcolor_title">Màu nền thanh trạng thái</string>
     <string name="system_statusbarcolor_summ">Làm cho màu nền của thanh trạng thái và thanh hành động của ứng dụng giống nhau nếu có thể</string>
@@ -388,7 +390,10 @@
     <string name="system_mods_recents">Danh sách ứng dụng gần đây</string>
     <string name="system_removecleaner_title">Xóa nút dọn dẹp</string>
     <string name="system_removecleaner_summ">Ẩn các nút để dọn dẹp các ứng dụng và bộ nhớ gần đây</string>
-    <string name="system_recents_disable_wallpaperscale_title">Vô hiệu hóa tỷ lệ hình nền</string>
+    <string name="launcher_disable_wallpaperscale_title">Tắt thu phóng hình nền</string>
+    <string name="launcher_disable_wallpaperscale_summ">Tắt thu phóng hình nền khi vào đa nhiệm và khi mở/đóng ứng dụng, đồng thời tắt hiệu ứng thu phóng khi mở khóa. Sau khi đổi, hãy buộc dừng trình khởi chạy.</string>
+    <string name="system_recents_disable_wallpaperscale_title">Tắt thu phóng hình nền trong đa nhiệm</string>
+    <string name="system_recents_disable_wallpaperscale_summ">Cùng đường thu phóng hình nền launcher với Trình khởi chạy → Khác, không gồm hiệu ứng mở khóa. Hai công tắc không xung đột; bật một cái là đủ. Sau khi đổi, hãy buộc dừng trình khởi chạy.</string>
     <string name="system_clearalltasks_title">Dọn sạch tất cả</string>
     <string name="system_clearalltasks_summ">Làm cho nút dọn dẹp kết thúc tất cả các tác vụ đang chạy</string>
     <string name="system_hidefromrecents_title">Ẩn gần đây</string>
@@ -994,6 +999,8 @@
     <string name="various_disable_xiaomi_analytics_title">Tắt phân tích Xiaomi và quảng cáo hệ thống</string>
     <string name="various_exclusive_features_cat_title">Tính năng độc quyền</string>
     <string name="various_permission_scope_failed">Yêu cầu phạm vi PermissionController không được chấp thuận.</string>
+    <string name="dynamic_app_scope_unavailable">Tính năng này cần Vector/LSPosed API 102 để thêm ứng dụng đã chọn vào phạm vi mô-đun. Nếu khung không thể yêu cầu phạm vi, hãy thêm thủ công.</string>
+    <string name="dynamic_app_scope_failed">Ứng dụng đã chọn chưa được thêm vào phạm vi mô-đun. Cài đặt đã lưu, nhưng tính năng sẽ không áp dụng cho đến khi ứng dụng nằm trong phạm vi.</string>
     <string name="various_permission_scope_unavailable">Thêm PermissionController vào phạm vi của mô-đun này rồi khởi động lại.</string>
     <string name="various_remove_security_center_antivirus_confirm">Tắt %1$d thành phần chống vi-rút đã xác minh của Trung tâm bảo mật? Quét vi-rút, cảnh báo vi-rút và lời nhắc lâu chưa quét sẽ không còn khả dụng. Tắt tùy chọn này sẽ khôi phục từng thành phần về trạng thái trước đó.</string>
     <string name="various_remove_security_center_antivirus_summ">Tắt các điểm vào, trình bảo vệ, hộp thoại, bản cập nhật và tác vụ quét định kỳ của tính năng chống vi-rút để chặn lời nhắc lâu chưa quét; giữ lại quyền, tường lửa, chống thư rác và công cụ pin</string>

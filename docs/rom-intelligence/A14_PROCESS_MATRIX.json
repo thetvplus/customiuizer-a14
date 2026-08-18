@@ -3181,7 +3181,7 @@
       "phase": "PACKAGE_READY",
       "installer": "SystemUiFeatures",
       "installHook": "(default base install)",
-      "enableCondition": "resolveMode(prefs) != StrongToastPresentationMode.SYSTEM_DEFAULT",
+      "enableCondition": "true",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
@@ -3206,8 +3206,8 @@
       "target": "LAUNCHER",
       "phase": "APPLICATION_ATTACHED",
       "installer": "LauncherPostAttachFeatures",
-      "installHook": "Launcher.RecentsCardStyleHook( lpparam, mPrefs.getStringAsInt(\"system_recents_card_style\", 0) )",
-      "enableCondition": "prefs.getStringAsInt(\"system_recents_card_style\", 0) == 1",
+      "installHook": "Launcher.RecentsHideAppNameHook(lpparam)",
+      "enableCondition": "Launcher.isRecentsHideAppNameEnabled(prefs)",
       "allowedProcess": "com.miui.home",
       "deniedProcess": "third-party launchers (unless selected app sets)"
     },
@@ -3236,6 +3236,45 @@
       "enableCondition": "{ true }",
       "allowedProcess": "system_server",
       "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 251,
+      "featureIdName": "system_usb_default_function",
+      "name": "USB Default Function",
+      "preferenceKey": "system_usb_default_function",
+      "target": "SYSTEM_SERVER",
+      "phase": "SYSTEM_SERVER_STARTING",
+      "installer": "SystemServerFeatures",
+      "installHook": "(default base install)",
+      "enableCondition": "{ true }",
+      "allowedProcess": "system_server",
+      "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 252,
+      "featureIdName": "systemui_hide_ime_dismiss_button",
+      "name": "Hide IME Dismiss Button",
+      "preferenceKey": "controls_hide_ime_dismiss_button",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "Controls.HideImeDismissButtonHook(lpparam)",
+      "enableCondition": "prefs.getBoolean(\"controls_hide_ime_dismiss_button\")",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 253,
+      "featureIdName": "systemui_statusbar_content_geometry",
+      "name": "Status Bar Content Geometry",
+      "preferenceKey": "system_statusbar_content_vertical_offset",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "StatusBarContentGeometryHooks.hook(lpparam)",
+      "enableCondition": "{ true }",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     }
   ],
   "scope": [
@@ -3244,7 +3283,12 @@
     "com.android.permissioncontroller",
     "com.android.settings",
     "com.android.systemui",
+    "com.baidu.input",
+    "com.baidu.input_mi",
+    "com.google.android.inputmethod.latin",
     "com.google.android.permissioncontroller",
+    "com.iflytek.inputmethod",
+    "com.iflytek.inputmethod.miui",
     "com.miui.gallery",
     "com.miui.guardprovider",
     "com.miui.home",
@@ -3253,6 +3297,10 @@
     "com.miui.powerkeeper",
     "com.miui.screenshot",
     "com.miui.securitycenter",
+    "com.sohu.inputmethod.sogou",
+    "com.sohu.inputmethod.sogou.xiaomi",
+    "com.tencent.wetype",
+    "com.touchtype.swiftkey",
     "system"
   ],
   "routing": {

@@ -80,10 +80,25 @@ internal class StatusBarIconVisibilityEffect(
         if (!shouldUpdate) return
 
         val snapshot = snapshotProvider()
-        val wifiAvailable = withLegacyIllegalAccessError { a.wifiAvailableField.getBoolean(mobileIconState) }
-        val subId = withLegacyIllegalAccessError { a.subIdField.get(mobileIconState) } as Int
-        val dataSubId = SubscriptionManager.getActiveDataSubscriptionId()
-        val slotId = SubscriptionManager.getSlotIndex(subId)
+        if (!SystemUIStatusBarHooks.hasMobileSignalHidingWork(snapshot)) return
+
+        val wifiAvailable = if (snapshot.hideSignal) {
+            withLegacyIllegalAccessError { a.wifiAvailableField.getBoolean(mobileIconState) }
+        } else {
+            false
+        }
+        val subId: Int
+        val dataSubId: Int
+        val slotId: Int
+        if (SystemUIStatusBarHooks.needsSubscriptionLookup(snapshot)) {
+            subId = withLegacyIllegalAccessError { a.subIdField.get(mobileIconState) } as Int
+            dataSubId = SubscriptionManager.getActiveDataSubscriptionId()
+            slotId = SubscriptionManager.getSlotIndex(subId)
+        } else {
+            subId = 0
+            dataSubId = 0
+            slotId = 0
+        }
         val result = SystemUIStatusBarHooks.computeSignalIconHiding(
             wifiAvailable,
             subId,
@@ -120,10 +135,25 @@ internal class StatusBarIconVisibilityEffect(
         if (!shouldUpdate) return
 
         val snapshot = snapshotProvider()
-        val wifiAvailable = XposedHelpers.getBooleanField(mobileIconState, "wifiAvailable")
-        val subId = XposedHelpers.getObjectField(mobileIconState, "subId") as Int
-        val dataSubId = SubscriptionManager.getActiveDataSubscriptionId()
-        val slotId = SubscriptionManager.getSlotIndex(subId)
+        if (!SystemUIStatusBarHooks.hasMobileSignalHidingWork(snapshot)) return
+
+        val wifiAvailable = if (snapshot.hideSignal) {
+            XposedHelpers.getBooleanField(mobileIconState, "wifiAvailable")
+        } else {
+            false
+        }
+        val subId: Int
+        val dataSubId: Int
+        val slotId: Int
+        if (SystemUIStatusBarHooks.needsSubscriptionLookup(snapshot)) {
+            subId = XposedHelpers.getObjectField(mobileIconState, "subId") as Int
+            dataSubId = SubscriptionManager.getActiveDataSubscriptionId()
+            slotId = SubscriptionManager.getSlotIndex(subId)
+        } else {
+            subId = 0
+            dataSubId = 0
+            slotId = 0
+        }
         val result = SystemUIStatusBarHooks.computeSignalIconHiding(
             wifiAvailable,
             subId,

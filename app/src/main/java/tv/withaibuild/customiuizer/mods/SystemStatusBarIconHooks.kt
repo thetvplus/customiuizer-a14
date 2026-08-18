@@ -21,6 +21,39 @@ import tv.withaibuild.customiuizer.utils.HookUtils
 
 object SystemStatusBarIconHooks {
 
+    @Volatile
+    private var hideBatteryPercentMark = false
+
+    @Volatile
+    private var hideBatteryCharging = false
+
+    @Volatile
+    private var wifiStandard = 1
+
+    private var iconObserverRegistered = false
+
+    private fun refreshStatusBarIconSnapshot() {
+        val prefs = MainModule.mPrefs
+        hideBatteryPercentMark = prefs.getBoolean("system_statusbaricons_battery4")
+        hideBatteryCharging = prefs.getBoolean("system_statusbaricons_battery3")
+        wifiStandard = prefs.getStringAsInt("system_statusbaricons_wifistandard", 1)
+    }
+
+    private fun installStatusBarIconSnapshot() {
+        refreshStatusBarIconSnapshot()
+        if (iconObserverRegistered) return
+        iconObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null ||
+                    key == "system_statusbaricons_battery4" ||
+                    key == "system_statusbaricons_battery3" ||
+                    key == "system_statusbaricons_wifistandard"
+                ) refreshStatusBarIconSnapshot()
+            }
+        })
+    }
+
     @JvmStatic
     fun HideIconsBattery1Hook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.views.MiuiBatteryMeterView", lpparam.classLoader, "updateAll", object : MethodHook() {
@@ -49,6 +82,7 @@ object SystemStatusBarIconHooks {
 
     @JvmStatic
     fun HideIconsBattery2Hook(lpparam: PackageReadyParam) {
+        installStatusBarIconSnapshot()
         val hideNormalPercentage = MainModule.mPrefs.getBoolean("system_statusbaricons_battery2")
         val batteryId = ResourceHooks.getFakeResId("batterview_in_statusbar")
         if (hideNormalPercentage) {
@@ -112,11 +146,11 @@ object SystemStatusBarIconHooks {
                 try {
                     val thisObject = chain.thisObject
 
-                    if (MainModule.mPrefs.getBoolean("system_statusbaricons_battery4")) {
+                    if (hideBatteryPercentMark) {
                         val mBatteryPercentMarkView = XposedHelpers.getObjectField(thisObject, "mBatteryPercentMarkView") as TextView?
                         mBatteryPercentMarkView?.visibility = View.GONE
                     }
-                    if (MainModule.mPrefs.getBoolean("system_statusbaricons_battery3")) {
+                    if (hideBatteryCharging) {
                         val mBatteryChargingView = XposedHelpers.getObjectField(thisObject, "mBatteryChargingView") as ImageView?
                         mBatteryChargingView?.visibility = View.GONE
                         try {
@@ -248,6 +282,7 @@ object SystemStatusBarIconHooks {
 
     @JvmStatic
     fun DisplayWifiStandardHook(lpparam: PackageReadyParam) {
+        installStatusBarIconSnapshot()
         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarWifiView", lpparam.classLoader, "applyWifiState", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -256,7 +291,7 @@ object SystemStatusBarIconHooks {
 
                     val wifiState = chain.getArg(0)
                     if (wifiState != null) {
-                        val opt = MainModule.mPrefs.getStringAsInt("system_statusbaricons_wifistandard", 1)
+                        val opt = wifiStandard
                         if (opt == 1) { return XposedHelpers.proceedOrThrow(chain, throwable) }
                         val wifiStandard = XposedHelpers.getObjectField(wifiState, "wifiStandard") as Int
                         XposedHelpers.setObjectField(wifiState, "showWifiStandard", opt == 2 && wifiStandard > 0)

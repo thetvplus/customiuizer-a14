@@ -59,6 +59,103 @@ object Controls {
     private var wasRaise2WakeEnabled = false
     private var mHandler: Handler? = null
 
+    internal data class ControlsSnapshot(
+        val powerFlashDelay: Boolean = false,
+        val volumeMediaUp: Int = 0,
+        val volumeMediaDown: Int = 0,
+        val volumeCursorApps: Set<String> = emptySet(),
+        val volumeCursorReverse: Boolean = false,
+        val navbarMargin: Int = 0,
+        val navbarLeftAction: Int = 1,
+        val navbarLeftLongAction: Int = 1,
+        val navbarRightAction: Int = 1,
+        val navbarRightLongAction: Int = 1,
+        val backLongAction: Int = 1,
+        val homeLongAction: Int = 1,
+        val menuLongAction: Int = 1,
+        val fingerprintSuccessIgnore: Boolean = false,
+        val fingerprintSuccess: Int = 1,
+        val fsgCoverage: Int = 60,
+        val fsgWidth: Int = 100,
+        val volumeDownDtTorch: Boolean = false,
+        val powerDtAction: Int = 1,
+    )
+
+    @Volatile
+    internal var controlsConfig = ControlsSnapshot()
+
+    private var controlsObserverRegistered = false
+
+    private val CONTROLS_PREF_KEYS = setOf(
+        "controls_powerflash_delay",
+        "controls_volumemedia_up",
+        "controls_volumemedia_down",
+        "controls_volumecursor_apps",
+        "controls_volumecursor_reverse",
+        "controls_navbarmargin",
+        "controls_navbarleft_action",
+        "controls_navbarleftlong_action",
+        "controls_navbarright_action",
+        "controls_navbarrightlong_action",
+        "controls_backlong_action",
+        "controls_homelong_action",
+        "controls_menulong_action",
+        "controls_fingerprintsuccess_ignore",
+        "controls_fingerprintsuccess",
+        "controls_fsg_coverage",
+        "controls_fsg_width",
+        "controls_volumedowndt_torch",
+        "controls_powerdt_action",
+    )
+
+    internal fun refreshControlsSnapshot() {
+        val prefs = MainModule.mPrefs
+        controlsConfig = ControlsSnapshot(
+            powerFlashDelay = prefs.getBoolean("controls_powerflash_delay"),
+            volumeMediaUp = prefs.getStringAsInt("controls_volumemedia_up", 0),
+            volumeMediaDown = prefs.getStringAsInt("controls_volumemedia_down", 0),
+            volumeCursorApps = HashSet(prefs.getStringSet("controls_volumecursor_apps")),
+            volumeCursorReverse = prefs.getBoolean("controls_volumecursor_reverse"),
+            navbarMargin = prefs.getInt("controls_navbarmargin", 0),
+            navbarLeftAction = prefs.getInt("controls_navbarleft_action", 1),
+            navbarLeftLongAction = prefs.getInt("controls_navbarleftlong_action", 1),
+            navbarRightAction = prefs.getInt("controls_navbarright_action", 1),
+            navbarRightLongAction = prefs.getInt("controls_navbarrightlong_action", 1),
+            backLongAction = prefs.getInt("controls_backlong_action", 1),
+            homeLongAction = prefs.getInt("controls_homelong_action", 1),
+            menuLongAction = prefs.getInt("controls_menulong_action", 1),
+            fingerprintSuccessIgnore = prefs.getBoolean("controls_fingerprintsuccess_ignore"),
+            fingerprintSuccess = prefs.getString("controls_fingerprintsuccess", "1").toIntOrNull() ?: 1,
+            fsgCoverage = prefs.getInt("controls_fsg_coverage", 60),
+            fsgWidth = prefs.getInt("controls_fsg_width", 100),
+            volumeDownDtTorch = prefs.getBoolean("controls_volumedowndt_torch"),
+            powerDtAction = prefs.getInt("controls_powerdt_action", 1),
+        )
+    }
+
+    @JvmStatic
+    internal fun installControlsSnapshot() {
+        refreshControlsSnapshot()
+        if (controlsObserverRegistered) return
+        controlsObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in CONTROLS_PREF_KEYS) refreshControlsSnapshot()
+            }
+        })
+    }
+
+    private fun navbarActionFor(key: String): Int {
+        val cfg = controlsConfig
+        return when (key) {
+            "controls_navbarleft" -> cfg.navbarLeftAction
+            "controls_navbarleftlong" -> cfg.navbarLeftLongAction
+            "controls_navbarright" -> cfg.navbarRightAction
+            "controls_navbarrightlong" -> cfg.navbarRightLongAction
+            else -> 1
+        }
+    }
+
     private fun isTorchEnabled(mContext: Context): Boolean {
         return Settings.Global.getInt(mContext.contentResolver, "torch_state", 0) != 0
     }
@@ -87,6 +184,7 @@ object Controls {
 
     @JvmStatic
     fun PowerKeyHook(lpparam: SystemServerStartingParam) {
+        installControlsSnapshot()
         ModuleHelper.hookAllMethods("com.android.server.policy.PhoneWindowManager", lpparam.classLoader, "init", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -138,7 +236,7 @@ object Controls {
 
                         mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
 
-                        val longPressDelay = (if (MainModule.mPrefs.getBoolean("controls_powerflash_delay")) ViewConfiguration.getLongPressTimeout() * 3 else ViewConfiguration.getLongPressTimeout()) + 500
+                        val longPressDelay = (if (controlsConfig.powerFlashDelay) ViewConfiguration.getLongPressTimeout() * 3 else ViewConfiguration.getLongPressTimeout()) + 500
                         // Post only one delayed runnable that waits for long press timeout
                         if (!isWaitingForPowerLongPressed) {
                             // Runs on the PhoneWindowManager handler inside system_server, outside
@@ -202,6 +300,7 @@ object Controls {
     @JvmStatic
     @SuppressLint("MissingPermission")
     fun VolumeMediaButtonsHook(lpparam: SystemServerStartingParam) {
+        installControlsSnapshot()
         ModuleHelper.findAndHookMethod("com.android.server.policy.MiuiPhoneWindowManager", lpparam.classLoader, "interceptKeyBeforeQueueing", KeyEvent::class.java, Int::class.javaPrimitiveType, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -242,11 +341,11 @@ object Controls {
                                         isVolumeLongPressed = true
                                         when (keyEvent.keyCode) {
                                             KeyEvent.KEYCODE_VOLUME_UP -> {
-                                                val pref_mediaUp = MainModule.mPrefs.getStringAsInt("controls_volumemedia_up", 0)
+                                                val pref_mediaUp = controlsConfig.volumeMediaUp
                                                 if (pref_mediaUp != 0) GlobalActions.sendDownUpKeyEvent(mContext, pref_mediaUp, true)
                                             }
                                             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                                                val pref_mediaDown = MainModule.mPrefs.getStringAsInt("controls_volumemedia_down", 0)
+                                                val pref_mediaDown = controlsConfig.volumeMediaDown
                                                 if (pref_mediaDown != 0) GlobalActions.sendDownUpKeyEvent(mContext, pref_mediaDown, true)
                                             }
                                         }
@@ -326,6 +425,7 @@ object Controls {
 
     @JvmStatic
     fun VolumeCursorHook(lpparam: PackageReadyParam) {
+        installControlsSnapshot()
         ModuleHelper.findAndHookMethod("android.inputmethodservice.InputMethodService", lpparam.classLoader, "onKeyDown", Int::class.javaPrimitiveType, KeyEvent::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -338,8 +438,8 @@ object Controls {
                     val code = chain.getArg(0) as Int
                     if ((code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) && ims.isInputViewShown) {
                         val pkgName = Settings.Global.getString(ims.contentResolver, Helpers.modulePkg + ".foreground.package")
-                        if (pkgName != null && MainModule.mPrefs.getStringSet("controls_volumecursor_apps").contains(pkgName)) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                        val swapDir = MainModule.mPrefs.getBoolean("controls_volumecursor_reverse")
+                        if (pkgName != null && pkgName in controlsConfig.volumeCursorApps) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
+                        val swapDir = controlsConfig.volumeCursorReverse
                         ims.sendDownUpKeyEvents(if (code == (if (swapDir) KeyEvent.KEYCODE_VOLUME_DOWN else KeyEvent.KEYCODE_VOLUME_UP)) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
                         skipped = true; result = true; throwable = null
                     }
@@ -366,7 +466,7 @@ object Controls {
                     val code = chain.getArg(0) as Int
                     if ((code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) && ims.isInputViewShown) {
                         val pkgName = Settings.Global.getString(ims.contentResolver, Helpers.modulePkg + ".foreground.package")
-                        if (pkgName == null || !MainModule.mPrefs.getStringSet("controls_volumecursor_apps").contains(pkgName)) {
+                        if (pkgName == null || pkgName !in controlsConfig.volumeCursorApps) {
                             skipped = true; result = true; throwable = null
                         }
                     }
@@ -383,7 +483,7 @@ object Controls {
     }
 
     private fun handleNavBarAction(context: Context, key: String): Boolean {
-        val action = MainModule.mPrefs.getInt(key + "_action", 1)
+        val action = navbarActionFor(key)
         if (action in 85..88) {
             if (GlobalActions.isMediaActionsAllowed(context)) {
                 GlobalActions.sendDownUpKeyEvent(context, action, false)
@@ -404,7 +504,7 @@ object Controls {
         val mContext = navbar.context
         val displayRotation = navbar.context.display!!.rotation
         val density = mContext.resources.displayMetrics.density
-        val margin = Math.round(MainModule.mPrefs.getInt("controls_navbarmargin", 0) * density)
+        val margin = Math.round(controlsConfig.navbarMargin * density)
         if (displayRotation == Surface.ROTATION_0) {
             val hleft = navbar.findViewWithTag<ImageView>("custom_left_horiz")
             if (hleft != null) {
@@ -524,8 +624,8 @@ object Controls {
         }
         rightbtn.addView(right)
 
-        val hasLeftAction = MainModule.mPrefs.getInt("controls_navbarleft_action", 1) > 1 || MainModule.mPrefs.getInt("controls_navbarleftlong_action", 1) > 1
-        val hasRightAction = MainModule.mPrefs.getInt("controls_navbarright_action", 1) > 1 || MainModule.mPrefs.getInt("controls_navbarrightlong_action", 1) > 1
+        val hasLeftAction = controlsConfig.navbarLeftAction > 1 || controlsConfig.navbarLeftLongAction > 1
+        val hasRightAction = controlsConfig.navbarRightAction > 1 || controlsConfig.navbarRightLongAction > 1
 
 //		float part = 0.55f;
         if (isVertical) {
@@ -551,6 +651,7 @@ object Controls {
 
     @JvmStatic
     fun NavBarButtonsHook(lpparam: PackageReadyParam) {
+        installControlsSnapshot()
         ModuleHelper.findAndHookMethod("com.android.systemui.navigationbar.NavigationBarView", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -667,26 +768,27 @@ object Controls {
         ModuleHelper.guarded {
             if (basePWMContext == null || basePWMObject == null) return@guarded
             if (GlobalActions.handleAction(basePWMContext!!, "controls_backlong")) HookUtils.performStrongVibration(basePWMContext!!)
-            if (MainModule.mPrefs.getInt("controls_backlong_action", 1) != 1) markShortcutTriggered?.invoke(basePWMObject)
+            if (controlsConfig.backLongAction != 1) markShortcutTriggered?.invoke(basePWMObject)
         }
     }
     private val mHomeLongPressAction = Runnable {
         ModuleHelper.guarded {
             if (basePWMContext == null || basePWMObject == null) return@guarded
             if (GlobalActions.handleAction(basePWMContext!!, "controls_homelong")) HookUtils.performStrongVibration(basePWMContext!!)
-            if (MainModule.mPrefs.getInt("controls_homelong_action", 1) != 1) markShortcutTriggered?.invoke(basePWMObject)
+            if (controlsConfig.homeLongAction != 1) markShortcutTriggered?.invoke(basePWMObject)
         }
     }
     private val mMenuLongPressAction = Runnable {
         ModuleHelper.guarded {
             if (basePWMContext == null || basePWMObject == null) return@guarded
             if (GlobalActions.handleAction(basePWMContext!!, "controls_menulong")) HookUtils.performStrongVibration(basePWMContext!!)
-            if (MainModule.mPrefs.getInt("controls_menulong_action", 1) != 1) markShortcutTriggered?.invoke(basePWMObject)
+            if (controlsConfig.menuLongAction != 1) markShortcutTriggered?.invoke(basePWMObject)
         }
     }
 
     @JvmStatic
     fun NavBarActionsHook(lpparam: SystemServerStartingParam) {
+        installControlsSnapshot()
         ModuleHelper.hookAllMethods("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.classLoader, "postKeyLongPress", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -702,15 +804,15 @@ object Controls {
                     val mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
 
                     val key = chain.getArg(0) as Int
-                    if (key == KeyEvent.KEYCODE_BACK && MainModule.mPrefs.getInt("controls_backlong_action", 1) > 1) {
+                    if (key == KeyEvent.KEYCODE_BACK && controlsConfig.backLongAction > 1) {
                         mHandler.removeCallbacks(mBackLongPressAction)
                         mHandler.postDelayed(mBackLongPressAction, ViewConfiguration.getLongPressTimeout().toLong())
                         skipped = true; result = null; throwable = null
-                    } else if (key == KeyEvent.KEYCODE_HOME && MainModule.mPrefs.getInt("controls_homelong_action", 1) > 1) {
+                    } else if (key == KeyEvent.KEYCODE_HOME && controlsConfig.homeLongAction > 1) {
                         mHandler.removeCallbacks(mHomeLongPressAction)
                         mHandler.postDelayed(mHomeLongPressAction, ViewConfiguration.getLongPressTimeout().toLong())
                         skipped = true; result = null; throwable = null
-                    } else if (key == KeyEvent.KEYCODE_APP_SWITCH && MainModule.mPrefs.getInt("controls_menulong_action", 1) > 1) {
+                    } else if (key == KeyEvent.KEYCODE_APP_SWITCH && controlsConfig.menuLongAction > 1) {
                         mHandler.removeCallbacks(mMenuLongPressAction)
                         mHandler.postDelayed(mMenuLongPressAction, ViewConfiguration.getLongPressTimeout().toLong())
                         skipped = true; result = null; throwable = null
@@ -754,6 +856,7 @@ object Controls {
 
     @JvmStatic
     fun FingerprintHapticSuccessHook(lpparam: SystemServerStartingParam) {
+        installControlsSnapshot()
         ModuleHelper.hookAllMethods("com.android.server.biometrics.sensors.AuthenticationClient", lpparam.classLoader, "onAuthenticated", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -771,8 +874,8 @@ object Controls {
                     if (!mAuthSuccess) { return XposedHelpers.throwOrReturn(throwable, result) }
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
 
-                    val ignoreSystem = MainModule.mPrefs.getBoolean("controls_fingerprintsuccess_ignore")
-                    val opt = MainModule.mPrefs.getString("controls_fingerprintsuccess", "1").toInt()
+                    val ignoreSystem = controlsConfig.fingerprintSuccessIgnore
+                    val opt = controlsConfig.fingerprintSuccess
                     if (opt == 2)
                         HookUtils.performLightVibration(mContext, ignoreSystem)
                     else if (opt == 3)
@@ -838,6 +941,7 @@ object Controls {
 
     @JvmStatic
     fun BackGestureAreaHeightHook(lpparam: PackageReadyParam) {
+        installControlsSnapshot()
         ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "getGestureStubWindowParam", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -850,7 +954,7 @@ object Controls {
                 }
                 try {
                     val lp = result as WindowManager.LayoutParams
-                    val pct = MainModule.mPrefs.getInt("controls_fsg_coverage", 60)
+                    val pct = controlsConfig.fsgCoverage
                     lp.height = Math.round(lp.height / 60.0f * pct)
                     result = lp; throwable = null
                 } catch (t: Throwable) {
@@ -863,6 +967,7 @@ object Controls {
 
     @JvmStatic
     fun BackGestureAreaWidthHook(lpparam: PackageReadyParam) {
+        installControlsSnapshot()
         ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "initScreenSizeAndDensity", Int::class.javaPrimitiveType, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -876,7 +981,7 @@ object Controls {
                 try {
                     val thisObject = chain.thisObject
 
-                    val pct = MainModule.mPrefs.getInt("controls_fsg_width", 100)
+                    val pct = controlsConfig.fsgWidth
                     if (pct == 100) { return XposedHelpers.throwOrReturn(throwable, result) }
                     var mGestureStubDefaultSize = XposedHelpers.getIntField(thisObject, "mGestureStubDefaultSize")
                     var mGestureStubSize = XposedHelpers.getIntField(thisObject, "mGestureStubSize")
@@ -898,7 +1003,7 @@ object Controls {
                 try {
                     val thisObject = chain.thisObject
 
-                    val pct = MainModule.mPrefs.getInt("controls_fsg_width", 100)
+                    val pct = controlsConfig.fsgWidth
                     if (pct == 100) { return XposedHelpers.proceedOrThrow(chain, throwable) }
                     val mGestureStubDefaultSize = XposedHelpers.getIntField(thisObject, "mGestureStubDefaultSize")
                     val requestedSize = chain.getArg(0) as Int
@@ -979,7 +1084,8 @@ object Controls {
 
     @JvmStatic
     fun PowerDoubleTapActionHook(lpparam: SystemServerStartingParam) {
-        val dtFromVolumeDown = MainModule.mPrefs.getBoolean("controls_volumedowndt_torch")
+        installControlsSnapshot()
+        val dtFromVolumeDown = controlsConfig.volumeDownDtTorch
         val doubleTapResons = arrayListOf("double_click_power", "power_double_tap", "double_click_power_key")
         ModuleHelper.findAndHookMethod("com.miui.server.input.util.ShortCutActionsUtils", lpparam.classLoader, "triggerFunction", String::class.java, String::class.java, Bundle::class.java, Boolean::class.javaPrimitiveType, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
@@ -990,10 +1096,10 @@ object Controls {
                 try {
                     val thisObject = chain.thisObject
 
-                    val dtFromVolumeDownNow = MainModule.mPrefs.getBoolean("controls_volumedowndt_torch")
+                    val dtFromVolumeDownNow = controlsConfig.volumeDownDtTorch
                     if (dtFromVolumeDownNow && args[1] as String == "double_click_volume_down") {
                         args[0] = "turn_on_torch"
-                    } else if (MainModule.mPrefs.getInt("controls_powerdt_action", 1) > 1 && doubleTapResons.contains(args[1] as String)) {
+                    } else if (controlsConfig.powerDtAction > 1 && doubleTapResons.contains(args[1] as String)) {
                         val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                         GlobalActions.handleAction(mContext, "controls_powerdt", true)
                         skipped = true; result = true; throwable = null

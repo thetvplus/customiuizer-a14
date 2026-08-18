@@ -68,6 +68,8 @@
     <string name="system_batteryindicator_test_title">Test</string>
     <string name="system_batteryindicator_test_summ" formatted="false">Animace pruhu ze 100 % na 0 % ve stavu vybíjení</string>
     <string name="system_statusbarheight_title">Výška stavového řádku</string>
+    <string name="system_statusbar_content_vertical_offset_title">Svislá poloha obsahu stavového řádku</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Upraví celkovou svislou polohu hodin, ikon a vlastního obsahu ve stavovém řádku. Nemění výšku stavového řádku.</string>
     <string name="system_statusbar_iconsize_title">Velikost ikony ve stavovém řádku</string>
     <string name="system_statusbarcolor_title">Barva pozadí stavového řádku</string>
     <string name="system_statusbarcolor_summ">Pokud je to možné, barvy pozadí stavového řádku a akčního řádku aplikace jsou stejné</string>
@@ -382,7 +384,10 @@
     <string name="system_mods_recents">Seznam posledních aplikací</string>
     <string name="system_removecleaner_title">Odstranit tlačítko Smazat</string>
     <string name="system_removecleaner_summ">Skrytí tlačítka, které vymaže poslední aplikace a vyčistí paměť</string>
-    <string name="system_recents_disable_wallpaperscale_title">Zakázat měřítko tapety</string>
+    <string name="launcher_disable_wallpaperscale_title">Zakázat měřítko tapety</string>
+    <string name="launcher_disable_wallpaperscale_summ">Vypne přiblížení tapety v přehledu a při otevírání/zavírání aplikací a také animaci měřítka při odemknutí. Po změně násilně ukončete spouštěč.</string>
+    <string name="system_recents_disable_wallpaperscale_title">Zakázat měřítko tapety v přehledu</string>
+    <string name="system_recents_disable_wallpaperscale_summ">Stejné přiblížení tapety spouštěče jako Spouštěč → Ostatní, bez animace odemknutí. Přepínače se nebijí; stačí jeden. Po změně násilně ukončete spouštěč.</string>
     <string name="system_clearalltasks_title">Smazat vše</string>
     <string name="system_clearalltasks_summ">Tlačítko Smazat zabije všechny spuštěné úlohy</string>
     <string name="system_hidefromrecents_title">Skrýt z posledních spuštěných</string>
@@ -986,6 +991,8 @@
     <string name="various_disable_xiaomi_analytics_title">Vypnout analytiku Xiaomi a systémové reklamy</string>
     <string name="various_exclusive_features_cat_title">Exkluzivní funkce</string>
     <string name="various_permission_scope_failed">Požadavek na rozsah PermissionController nebyl schválen.</string>
+    <string name="dynamic_app_scope_unavailable">Tato funkce potřebuje Vector/LSPosed API 102, aby vybranou aplikaci přidala do rozsahu modulu. Pokud rámec nemůže rozsah vyžádat, přidejte ji ručně.</string>
+    <string name="dynamic_app_scope_failed">Vybraná aplikace nebyla přidána do rozsahu modulu. Nastavení je uloženo, ale funkce se neprojeví, dokud aplikace nebude v rozsahu.</string>
     <string name="various_permission_scope_unavailable">Přidejte PermissionController do rozsahu tohoto modulu a poté zařízení restartujte.</string>
     <string name="various_remove_security_center_antivirus_confirm">Vypnout %1$d ověřených antivirových komponent Centra zabezpečení? Antivirové kontroly, virová varování a upozornění na dlouho neprovedenou kontrolu nebudou dostupné. Vypnutí této možnosti obnoví každou komponentu do předchozího stavu.</string>
     <string name="various_remove_security_center_antivirus_summ">Vypne vstupní body antiviru, ochrany, dialogy, aktualizace a pravidelné úlohy kontroly, aby potlačil upozornění na dlouho neprovedenou kontrolu; zachová oprávnění, firewall, ochranu proti spamu a nástroje baterie</string>

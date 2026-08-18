@@ -17,6 +17,38 @@ class RestartPagePolicyTest {
     }
 
     @Test
+    fun launcher_gestures_page_restarts_launcher_and_systemui() {
+        val expected = RestartMask.LAUNCHER or RestartMask.SYSTEMUI
+        assertEquals(expected, RestartPagePolicy.maskFor(R.xml.prefs_launcher_gestures))
+        assertEquals(
+            expected,
+            RestartPagePolicy.maskFor(R.xml.prefs_launcher, "pref_key_launcher_cat_gestures")
+        )
+        assertEquals(listOf("launcher", "systemui"), RestartPagePolicy.toNameList(expected))
+        assertEquals(0, expected and RestartMask.SECURITY_CENTER)
+        assertEquals(
+            expected,
+            expected and (RestartMask.LAUNCHER or RestartMask.SYSTEMUI or RestartMask.SECURITY_CENTER)
+        )
+    }
+
+    @Test
+    fun other_launcher_category_pages_keep_previous_masks() {
+        assertEquals(RestartMask.LAUNCHER, RestartPagePolicy.maskFor(R.xml.prefs_launcher_folders))
+        assertEquals(RestartMask.LAUNCHER, RestartPagePolicy.maskFor(R.xml.prefs_launcher_titles))
+        assertEquals(RestartMask.LAUNCHER, RestartPagePolicy.maskFor(R.xml.prefs_launcher_bugfixes))
+        assertEquals(RestartMask.LAUNCHER, RestartPagePolicy.maskFor(R.xml.prefs_launcher_other))
+        assertEquals(
+            RestartMask.LAUNCHER or RestartMask.SECURITY_CENTER,
+            RestartPagePolicy.maskFor(R.xml.prefs_launcher_privacyapps)
+        )
+        assertEquals(
+            RestartMask.LAUNCHER,
+            RestartPagePolicy.maskFor(R.xml.prefs_launcher, "pref_key_launcher_cat_folders")
+        )
+    }
+
+    @Test
     fun securityCenter_only_page() {
         assertEquals(RestartMask.SECURITY_CENTER, RestartPagePolicy.maskFor(R.xml.prefs_various_security_center))
     }
@@ -69,7 +101,7 @@ class RestartPagePolicyTest {
             RestartPagePolicy.maskFor(R.xml.prefs_controls, "pref_key_controls_cat_fsg")
         )
         assertEquals(
-            RestartMask.LAUNCHER,
+            RestartMask.LAUNCHER or RestartMask.SYSTEMUI,
             RestartPagePolicy.maskFor(R.xml.prefs_launcher, "pref_key_launcher_cat_gestures")
         )
         assertEquals(
@@ -131,7 +163,7 @@ class RestartPagePolicyTest {
             RestartPagePolicy.maskFor(R.xml.prefs_controls, "pref_key_controls_cat_fsg")
         )
         assertEquals(
-            RestartMask.LAUNCHER,
+            RestartMask.LAUNCHER or RestartMask.SYSTEMUI,
             RestartPagePolicy.maskFor(R.xml.prefs_launcher, "pref_key_launcher_cat_gestures")
         )
         assertEquals(

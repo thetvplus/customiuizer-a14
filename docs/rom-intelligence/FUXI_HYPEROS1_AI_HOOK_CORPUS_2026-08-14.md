@@ -128,8 +128,7 @@ system_server 方法签名。后续若要冻结 system_server ABI，需要 root 
 
 ## 给后续模型的使用规则
 
-1. 先查同目录的机器可读 JSON，再查本文件和
-   `docs/audit/A14_VOLUME_MODE_SHORTCUT_IDENTITY.md`。
+1. 先查同目录的机器可读 JSON，再查本文件。
 2. 类存在不等于方法被调用；ARTIFACT 证据与 RUNTIME 证据必须分开写。
 3. 音量/控制中心类从 plugin ClassLoader 解析；宿主 SystemUI 类从宿主
    ClassLoader 解析，禁止混用。

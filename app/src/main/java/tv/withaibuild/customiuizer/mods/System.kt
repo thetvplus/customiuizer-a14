@@ -36,6 +36,59 @@ import tv.withaibuild.customiuizer.utils.HookUtils
 
 object System {
 
+    internal data class SystemMiscSnapshot(
+        val forceCloseApps: Set<String> = emptySet(),
+        val screenshotFormat: Int = 2,
+        val screenshotPath: Int = 1,
+        val screenshotMyPath: String = "",
+        val screenshotQuality: Int = 100,
+        val toastTime: Int = 0,
+        val blockToasts: Int = 1,
+        val blockToastsApps: Set<String> = emptySet(),
+    )
+
+    @Volatile
+    internal var systemMiscConfig = SystemMiscSnapshot()
+
+    private var systemMiscObserverRegistered = false
+
+    private val SYSTEM_MISC_KEYS = setOf(
+        "system_forceclose_apps",
+        "system_screenshot_format",
+        "system_screenshot_path",
+        "system_screenshot_mypath",
+        "system_screenshot_quality",
+        "system_toasttime",
+        "system_blocktoasts",
+        "system_blocktoasts_apps",
+    )
+
+    internal fun refreshSystemMiscSnapshot() {
+        val prefs = MainModule.mPrefs
+        systemMiscConfig = SystemMiscSnapshot(
+            forceCloseApps = HashSet(prefs.getStringSet("system_forceclose_apps")),
+            screenshotFormat = prefs.getStringAsInt("system_screenshot_format", 2),
+            screenshotPath = prefs.getStringAsInt("system_screenshot_path", 1),
+            screenshotMyPath = prefs.getString("system_screenshot_mypath", ""),
+            screenshotQuality = prefs.getInt("system_screenshot_quality", 100),
+            toastTime = prefs.getInt("system_toasttime", 0),
+            blockToasts = prefs.getStringAsInt("system_blocktoasts", 1),
+            blockToastsApps = HashSet(prefs.getStringSet("system_blocktoasts_apps")),
+        )
+    }
+
+    @JvmStatic
+    internal fun installSystemMiscSnapshot() {
+        refreshSystemMiscSnapshot()
+        if (systemMiscObserverRegistered) return
+        systemMiscObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key in SYSTEM_MISC_KEYS) refreshSystemMiscSnapshot()
+            }
+        })
+    }
+
     @JvmStatic
     fun ViewWifiPasswordHook(lpparam: PackageReadyParam) {
         val titleId = MainModule.resHooks.addFakeResource("system_wifipassword_btn_title", R.string.system_wifipassword_btn_title, "string")
@@ -227,10 +280,9 @@ object System {
 
     private fun checkToast(pkgName: String): Boolean {
         try {
-            val opt = MainModule.mPrefs.getStringAsInt("system_blocktoasts", 1)
-            val selectedApps = MainModule.mPrefs.getStringSet("system_blocktoasts_apps")
-            val isSelected = selectedApps != null && selectedApps.contains(pkgName)
-            return (opt == 2 && !isSelected) || (opt == 3 && isSelected)
+            val cfg = systemMiscConfig
+            val isSelected = pkgName in cfg.blockToastsApps
+            return (cfg.blockToasts == 2 && !isSelected) || (cfg.blockToasts == 3 && isSelected)
         } catch (t: Throwable) {
             XposedHelpers.log(t)
             return false
@@ -239,6 +291,7 @@ object System {
 
     @JvmStatic
     fun SelectiveToastsHook(lpparam: SystemServerStartingParam) {
+        installSystemMiscSnapshot()
         ModuleHelper.hookAllMethods("com.android.server.notification.NotificationManagerService", lpparam.classLoader, "tryShowToast", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -267,6 +320,7 @@ object System {
 
     @JvmStatic
     fun ForceCloseHook(lpparam: SystemServerStartingParam) {
+        installSystemMiscSnapshot()
         ModuleHelper.hookAllConstructors("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.classLoader, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -290,7 +344,7 @@ object System {
                     mSystemKeyPackages.remove("com.jeejen.family.miui")
                     mSystemKeyPackages.remove("com.miui.backup")
                     mSystemKeyPackages.remove("com.xiaomi.mihomemanager")
-                    mSystemKeyPackages.addAll(MainModule.mPrefs.getStringSet("system_forceclose_apps")?.toMutableSet() ?: mutableSetOf())
+                    mSystemKeyPackages.addAll(systemMiscConfig.forceCloseApps)
 
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)
@@ -308,6 +362,7 @@ object System {
 
     @JvmStatic
     fun ScreenshotConfigHook(lpparam: PackageReadyParam) {
+        installSystemMiscSnapshot()
         ModuleHelper.hookAllMethods("android.content.ContentResolver", lpparam.classLoader, "update", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -319,7 +374,7 @@ object System {
                     val contentValues = args[1] as ContentValues
                     var displayName = contentValues.getAsString("_display_name")
                     if (displayName != null && displayName.contains("Screenshot")) {
-                        val format = MainModule.mPrefs.getStringAsInt("system_screenshot_format", 2)
+                        val format = systemMiscConfig.screenshotFormat
                         val ext = if (format <= 2) ".jpg" else if (format == 3) ".png" else ".webp"
 
                         displayName = displayName.replace(".png", "").replace(".jpg", "").replace(".webp", "") + ext
@@ -345,9 +400,9 @@ object System {
                     val contentValues = args[1] as ContentValues
                     var displayName = contentValues.getAsString("_display_name")
                     if (MediaStore.Images.Media.EXTERNAL_CONTENT_URI == imgUri && displayName != null && displayName.contains("Screenshot")) {
-                        val folder = MainModule.mPrefs.getStringAsInt("system_screenshot_path", 1)
-                        val dir = MainModule.mPrefs.getString("system_screenshot_mypath", "")
-                        val format = MainModule.mPrefs.getStringAsInt("system_screenshot_format", 2)
+                        val folder = systemMiscConfig.screenshotPath
+                        val dir = systemMiscConfig.screenshotMyPath
+                        val format = systemMiscConfig.screenshotFormat
                         val ext = if (format <= 2) ".jpg" else if (format == 3) ".png" else ".webp"
 
                         var mScreenshotDir: File? = null
@@ -373,7 +428,7 @@ object System {
             }
         })
 
-        val format = MainModule.mPrefs.getStringAsInt("system_screenshot_format", 2)
+        val format = systemMiscConfig.screenshotFormat
         if (format > 2) {
             val bridge = XposedHelpers.bridge
             if (bridge == null) {
@@ -443,8 +498,8 @@ object System {
 
                     var quality = chain.getArg(1) as Int
                     if (quality != 100 || (chain.getArg(2) is ByteArrayOutputStream)) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val format2 = MainModule.mPrefs.getStringAsInt("system_screenshot_format", 2)
-                    quality = MainModule.mPrefs.getInt("system_screenshot_quality", 100)
+                    val format2 = systemMiscConfig.screenshotFormat
+                    quality = systemMiscConfig.screenshotQuality
                     if (format2 == 3) {
                         quality = 100
                     }
@@ -465,6 +520,7 @@ object System {
 
     @JvmStatic
     fun ToastTimeHook(lpparam: SystemServerStartingParam) {
+        installSystemMiscSnapshot()
         ModuleHelper.findAndHookMethod("com.android.server.notification.NotificationManagerService", lpparam.classLoader, "showNextToastLocked", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -482,7 +538,7 @@ object System {
                     val mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler?
                     val mToastQueue = XposedHelpers.getObjectField(thisObject, "mToastQueue") as ArrayList<Any>?
                     if (mContext == null || mHandler == null || mToastQueue == null || mToastQueue.size == 0) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val mod = (MainModule.mPrefs.getInt("system_toasttime", 0) - 4) * 1000
+                    val mod = (systemMiscConfig.toastTime - 4) * 1000
                     for (record in mToastQueue)
                         if (mHandler.hasMessages(2, record)) {
                             mHandler.removeCallbacksAndMessages(record)
@@ -529,7 +585,7 @@ object System {
 
                     var dur = 0L
                     if (mPrevHideTimeout == 1000L || mPrevHideTimeout == 4000L || mPrevHideTimeout == 5000L || mPrevHideTimeout == 7000L || mPrevHideTimeout != mHideTimeout)
-                        dur = Math.max(1000, 3500 + (MainModule.mPrefs.getInt("system_toasttime", 0) - 4) * 1000).toLong()
+                        dur = Math.max(1000, 3500 + (systemMiscConfig.toastTime - 4) * 1000).toLong()
                     if (dur != 0L) XposedHelpers.setLongField(lp, "hideTimeoutMilliseconds", dur)
 
                 } catch (t: Throwable) {

@@ -28,6 +28,7 @@ import tv.withaibuild.customiuizer.utils.AppData
 import tv.withaibuild.customiuizer.utils.AppDataAdapter
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.AppSelectionSanitizer
+import tv.withaibuild.customiuizer.utils.DynamicAppScope
 import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.utils.LockedAppAdapter
 import tv.withaibuild.customiuizer.utils.PrivacyAppAdapter
@@ -158,6 +159,13 @@ class AppSelector : SubFragmentWithSearch() {
                     bwlist,
                 )
             }
+            if (DynamicAppScope.requiresTargetAppScope(currentKey)) {
+                DynamicAppScope.requestForSelection(
+                    context,
+                    currentKey,
+                    AppHelper.getStringSetOfAppPrefs(currentKey, emptySet()),
+                )
+            }
 
             listView?.adapter = AppDataAdapter(
                 context,
@@ -286,6 +294,7 @@ class AppSelector : SubFragmentWithSearch() {
             }
         }
         AppHelper.appPrefs!!.edit().putStringSet(key, selectedApps).apply()
+        DynamicAppScope.requestForSelection(context, key, selectedApps)
         (parent.adapter as? AppDataAdapter)?.updateSelectedApps()
     }
 

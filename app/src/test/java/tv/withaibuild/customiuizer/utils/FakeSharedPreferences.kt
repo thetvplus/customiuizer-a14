@@ -29,41 +29,46 @@ class FakeSharedPreferences : SharedPreferences {
      */
     val commitSnapshots = mutableListOf<Map<String, Any?>>()
 
+    var getAllCount = 0
+
     fun put(key: String, value: Any?) {
         values[key] = value
     }
 
-    override fun getAll(): Map<String, *> = HashMap(values)
+    override fun getAll(): Map<String, *> {
+        getAllCount++
+        return HashMap(values)
+    }
 
     override fun getString(key: String, defValue: String?): String? {
-        val v = values[key]
-        return if (v is String) v else defValue
+        val v = values[key] ?: return defValue
+        return v as? String ?: throw ClassCastException("$key is ${v.javaClass.name}")
     }
 
     override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? {
-        val v = values[key]
+        val v = values[key] ?: return defValues
         @Suppress("UNCHECKED_CAST")
-        return if (v is Set<*>) v as Set<String> else defValues
+        return v as? Set<String> ?: throw ClassCastException("$key is ${v.javaClass.name}")
     }
 
     override fun getInt(key: String, defValue: Int): Int {
-        val v = values[key]
-        return if (v is Int) v else defValue
+        val v = values[key] ?: return defValue
+        return v as? Int ?: throw ClassCastException("$key is ${v.javaClass.name}")
     }
 
     override fun getLong(key: String, defValue: Long): Long {
-        val v = values[key]
-        return if (v is Long) v else defValue
+        val v = values[key] ?: return defValue
+        return v as? Long ?: throw ClassCastException("$key is ${v.javaClass.name}")
     }
 
     override fun getFloat(key: String, defValue: Float): Float {
-        val v = values[key]
-        return if (v is Float) v else defValue
+        val v = values[key] ?: return defValue
+        return v as? Float ?: throw ClassCastException("$key is ${v.javaClass.name}")
     }
 
     override fun getBoolean(key: String, defValue: Boolean): Boolean {
-        val v = values[key]
-        return if (v is Boolean) v else defValue
+        val v = values[key] ?: return defValue
+        return v as? Boolean ?: throw ClassCastException("$key is ${v.javaClass.name}")
     }
 
     override fun contains(key: String): Boolean = values.containsKey(key)

@@ -24,6 +24,33 @@ import java.util.ArrayList
  */
 object SystemUINotificationHooks {
 
+    @Volatile
+    private var openInFwWhitelist = false
+
+    @Volatile
+    private var openInFwApps: Set<String> = emptySet()
+
+    private var openInFwObserverRegistered = false
+
+    private fun refreshOpenInFwSnapshot() {
+        val prefs = MainModule.mPrefs
+        openInFwWhitelist = prefs.getBoolean("system_notify_openinfw_in_whitelist")
+        openInFwApps = HashSet(prefs.getStringSet("system_notify_openinfw_apps"))
+    }
+
+    private fun installOpenInFwSnapshot() {
+        refreshOpenInFwSnapshot()
+        if (openInFwObserverRegistered) return
+        openInFwObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key == "system_notify_openinfw_in_whitelist" || key == "system_notify_openinfw_apps") {
+                    refreshOpenInFwSnapshot()
+                }
+            }
+        })
+    }
+
     @JvmStatic
     fun HideDismissViewHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.shade.MiuiNotificationPanelViewController", lpparam.classLoader, "updateDismissView", object : MethodHook() {
@@ -70,6 +97,7 @@ object SystemUINotificationHooks {
 
     @JvmStatic
     fun OpenNotifyInFloatingWindowHook(lpparam: PackageReadyParam) {
+        installOpenInFwSnapshot()
         ModuleHelper.hookAllMethods(PendingIntent::class.java, "sendAndReturnResult", object : MethodHook() {
             override fun before(param: BeforeHookCallback) {
                 if (param.getArgs().size != 7) return
@@ -103,8 +131,8 @@ object SystemUINotificationHooks {
                         return
                     }
                 }
-                val whitelist = MainModule.mPrefs.getBoolean("system_notify_openinfw_in_whitelist")
-                val appInList = MainModule.mPrefs.getStringSet("system_notify_openinfw_apps").contains(pkgName)
+                val whitelist = openInFwWhitelist
+                val appInList = pkgName in openInFwApps
                 if (whitelist xor appInList) {
                     return
                 }

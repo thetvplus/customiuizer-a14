@@ -94,6 +94,8 @@
     <string name="system_batteryindicator_test_summ" formatted="false">Animate bar from 100% to 0% in discharging state</string>
     <string name="system_statusbarheight_title">Status bar height</string>
     <string name="system_statusbarheight_summ">A full reboot is required after changing the fixed height.</string>
+    <string name="system_statusbar_content_vertical_offset_title">Status bar content vertical position</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Adjust the overall vertical position of the clock, icons, and custom content inside the status bar. This does not change status bar height.</string>
     <string name="system_statusbar_iconsize_title">Status bar icon size</string>
     <string name="system_statusbarcolor_title">Status bar background color</string>
     <string name="system_statusbarcolor_summ">Make status bar and app\'s action bar background colors the same where possible</string>
@@ -432,7 +434,10 @@
     <string name="system_mods_recents">Recent apps list</string>
     <string name="system_removecleaner_title">Remove cleaner button</string>
     <string name="system_removecleaner_summ">Hide button that clears recent apps and cleans memory</string>
-    <string name="system_recents_disable_wallpaperscale_title">Disable wallpaper scale</string>
+    <string name="launcher_disable_wallpaperscale_title">Disable wallpaper scale</string>
+    <string name="launcher_disable_wallpaperscale_summ">Keep wallpaper from zooming in recents and app open/close, and disable the unlock wallpaper scale animation. Force-stop the launcher after changing.</string>
+    <string name="system_recents_disable_wallpaperscale_title">Disable wallpaper scale in recents</string>
+    <string name="system_recents_disable_wallpaperscale_summ">Same launcher wallpaper zoom as Launcher → Other, without the unlock wallpaper animation. The two switches do not conflict; either one is enough for recents and app transitions. Force-stop the launcher after changing.</string>
     <string name="system_recents_card_style_summ">Hide app names on recent-task cards; requires Launcher restart to apply.</string>
     <string name="system_recents_card_style_hide_title">Hide app name</string>
     <string name="system_clearalltasks_title">Clean all</string>
@@ -759,7 +764,7 @@
     <string name="array_media_playpause">Play/Pause</string>
     <string name="array_media_next">Next track</string>
     <string name="array_media_prev">Previous track</string>
-    <string name="array_lightupwithouanim">Lightup screen without animation</string>
+    <string name="array_lightupwithouanim">Light up screen without animation</string>
     <string name="array_screenlock_no">System default</string>
     <string name="array_screenlock_none">Disable completely</string>
     <string name="array_screenlock_bootonly">Require authentication after boot</string>
@@ -1077,6 +1082,8 @@
     <string name="various_block_location_permission_prompts_summ">Closes the Android system prompt without granting foreground or background location; restart PermissionController or reboot after changing</string>
     <string name="various_permission_scope_unavailable">Add PermissionController to this module’s scope, then reboot.</string>
     <string name="various_permission_scope_failed">PermissionController scope request was not approved.</string>
+    <string name="dynamic_app_scope_unavailable">This feature needs Vector/LSPosed API 102 to add the selected app to the module scope. Add it manually if the framework cannot request scope.</string>
+    <string name="dynamic_app_scope_failed">The selected app was not added to the module scope. The setting is saved, but the feature will not apply until the app is in scope.</string>
     <string name="system_usb_default_function_title">USB default purpose</string>
     <string name="usb_default_function_follow_system">Follow system default</string>
     <string name="usb_default_function_charge_only">Charge only</string>

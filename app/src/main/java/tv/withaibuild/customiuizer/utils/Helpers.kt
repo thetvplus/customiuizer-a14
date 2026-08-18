@@ -246,9 +246,7 @@ object Helpers {
         try {
             val context = act ?: view.context
             val inputManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
-            val token: android.os.IBinder?
-            val currentFocusedView = act?.currentFocus ?: view
-            token = if (currentFocusedView != null) currentFocusedView.windowToken else null
+            val token = (act?.currentFocus ?: view).windowToken
             if (token != null) inputManager.hideSoftInputFromWindow(token, InputMethodManager.HIDE_NOT_ALWAYS)
         } catch (t: Throwable) {
             FatalErrors.rethrowIfFatal(t)

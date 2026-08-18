@@ -59,6 +59,8 @@
     <string name="system_batteryindicator_test_title">Test Et</string>
     <string name="system_batteryindicator_test_summ" formatted="false">Boşalma durumunda çubuğu 100% den 0% a canlandırın</string>
     <string name="system_statusbarheight_title">Durum çubuğu yüksekliği</string>
+    <string name="system_statusbar_content_vertical_offset_title">Durum çubuğu içeriğinin dikey konumu</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Saat, simgeler ve özel içeriğin durum çubuğu içindeki genel dikey konumunu ayarlar. Durum çubuğu yüksekliğini değiştirmez.</string>
     <string name="system_statusbar_iconsize_title">Durum çubuğu boyutu</string>
     <string name="system_statusbarcolor_title">Durum çubuğu arkaplan rengi</string>
     <string name="system_statusbarcolor_summ">Durum çubuğunu ve uygulamanın eylem çubuğu arka plan renklerini mümkün olduğunca aynı yapın</string>
@@ -341,7 +343,10 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_mods_recents">Son uygulamalar listesi</string>
     <string name="system_removecleaner_title">Temizleyici düğmesini kaldır</string>
     <string name="system_removecleaner_summ">Son uygulamaları temizleyen ve belleği temizleyen gizle düğmesi</string>
-    <string name="system_recents_disable_wallpaperscale_title">Duvar kağıdı ölçeğini devre dışı bırak</string>
+    <string name="launcher_disable_wallpaperscale_title">Duvar kağıdı ölçeğini kapat</string>
+    <string name="launcher_disable_wallpaperscale_summ">Son uygulamalar ve uygulama açma/kapama sırasında duvar kağıdı yakınlaştırmasını kapatır; kilit açma ölçek animasyonunu da kapatır. Değiştirdikten sonra başlatıcıyı zorla durdurun.</string>
+    <string name="system_recents_disable_wallpaperscale_title">Son uygulamalarda duvar kağıdı ölçeğini kapat</string>
+    <string name="system_recents_disable_wallpaperscale_summ">Başlatıcı → Diğer ile aynı başlatıcı duvar kağıdı yakınlaştırmasıdır; kilit açma animasyonu yoktur. Çakışmazlar; biri yeter. Değiştirdikten sonra başlatıcıyı zorla durdurun.</string>
     <string name="system_clearalltasks_title">Hepsini temizle</string>
     <string name="system_clearalltasks_summ">Temizleyici düğmesinin çalışan tüm görevleri sonlandırmasını sağlayın</string>
     <string name="system_hidefromrecents_title">Son kullanılanlardan gizle</string>
@@ -899,6 +904,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="various_disable_xiaomi_analytics_title">Xiaomi analizini ve sistem reklamlarını devre dışı bırak</string>
     <string name="various_exclusive_features_cat_title">Özel özellikler</string>
     <string name="various_permission_scope_failed">PermissionController kapsam isteği onaylanmadı.</string>
+    <string name="dynamic_app_scope_unavailable">Seçilen uygulamayı modül kapsamına eklemek için Vector/LSPosed API 102 gerekir. Çerçeve kapsam isteyemezse uygulamayı elle ekleyin.</string>
+    <string name="dynamic_app_scope_failed">Seçilen uygulama modül kapsamına eklenmedi. Ayar kaydedildi ancak uygulama kapsama girene kadar özellik uygulanmaz.</string>
     <string name="various_permission_scope_unavailable">PermissionController bileşenini bu modülün kapsamına ekleyip cihazı yeniden başlatın.</string>
     <string name="various_remove_security_center_antivirus_confirm">Doğrulanmış %1$d Güvenlik Merkezi antivirüs bileşeni devre dışı bırakılsın mı? Virüs taramaları, virüs uyarıları ve gecikmiş tarama hatırlatıcıları kullanılamaz. Bu seçeneği kapatmak her bileşeni önceki durumuna geri yükler.</string>
     <string name="various_remove_security_center_antivirus_summ">Gecikmiş tarama hatırlatıcılarını engellemek için antivirüs giriş noktalarını, korumaları, iletişim kutularını, güncellemeleri ve düzenli tarama işlerini devre dışı bırakır; izinleri, güvenlik duvarını, istenmeyen ileti engellemeyi ve pil araçlarını korur</string>

@@ -25,6 +25,8 @@ import tv.withaibuild.customiuizer.mods.clock.ClockEffect
 import tv.withaibuild.customiuizer.mods.clock.ClockEffectPublication
 import tv.withaibuild.customiuizer.mods.clock.ClockResolver
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
+import tv.withaibuild.customiuizer.mods.utils.StatusBarTextFit
+import tv.withaibuild.customiuizer.mods.utils.StatusbarViewMaths
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
@@ -87,6 +89,9 @@ object SystemClockHooks {
         // Pre-computed seconds flags for the SecondTicker
         val showStatusBarSeconds: Boolean,
         val showCCSeconds: Boolean,
+        val ccClockTweak: Boolean,
+        val qsForceSystemFonts: Boolean,
+        val ccClockVerticalOffset: Int,
     )
 
     /** Maximum number of `mClockListeners` to iterate during a style refresh. */
@@ -128,6 +133,9 @@ object SystemClockHooks {
         "system_cc_dateformat",
         "system_drawer_dateformat",
         "system_statusbar_enable_weather_param",
+        "system_cc_clocktweak",
+        "system_qs_force_systemfonts",
+        "system_cc_clock_verticaloffset",
     )
 
     @Volatile
@@ -227,6 +235,9 @@ object SystemClockHooks {
             statusbarFixedWidth = prefs.getInt("system_statusbar_clock_fixedcontent_width", 10),
             showStatusBarSeconds = showStatusBarSeconds,
             showCCSeconds = showCCSeconds,
+            ccClockTweak = prefs.getBoolean("system_cc_clocktweak"),
+            qsForceSystemFonts = prefs.getBoolean("system_qs_force_systemfonts"),
+            ccClockVerticalOffset = prefs.getInt("system_cc_clock_verticaloffset", 10),
         )
     }
 
@@ -545,7 +556,11 @@ object SystemClockHooks {
                 mClock.setTextSize(TypedValue.COMPLEX_UNIT_PX, originalState.textSizePx)
             }
 
-            mClock.typeface = if (snapshot.statusbarBold) Typeface.DEFAULT_BOLD else originalState.typeface
+            mClock.typeface = if (snapshot.statusbarBold) {
+                Typeface.create(originalState.typeface, Typeface.BOLD)
+            } else {
+                originalState.typeface
+            }
 
             if (snapshot.statusbarChip &&
                 (snapshot.statusbarChipUseMonet || snapshot.statusbarChipCustomTextColor)
@@ -644,6 +659,27 @@ object SystemClockHooks {
             mClock.maxLines = originalState.maxLines
         }
         mClock.setLineSpacing(desiredLineSpacingExtra, desiredLineSpacingMultiplier)
+
+        if (statusBarClock && mClock.height > 0) {
+            val clockLines = if (dualRows) 2 else 1
+            StatusBarTextFit.enableShrinkToFit(
+                mClock,
+                clockLines,
+                mClock.lineSpacingMultiplier,
+            )
+            val clamped = StatusbarViewMaths.clampVerticalOffsetPx(
+                mClock.translationY,
+                mClock.height,
+                StatusbarViewMaths.occupiedHeightPx(
+                    mClock.textSize,
+                    clockLines,
+                    mClock.lineSpacingMultiplier,
+                ).toInt(),
+            )
+            if (clamped != mClock.translationY) {
+                mClock.translationY = clamped
+            }
+        }
 
         return layoutParamsReady
     }
@@ -1223,11 +1259,12 @@ object SystemClockHooks {
                     val thisObject = chain.thisObject
 
                     val clock = XposedHelpers.getObjectField(thisObject, "mBigTime") as TextView
-                    val ccClockTweak = MainModule.mPrefs.getBoolean("system_cc_clocktweak")
-                    val useSystemFonts = MainModule.mPrefs.getBoolean("system_qs_force_systemfonts")
+                    val snapshot = ensureClockStyleSnapshot(clock.resources)
+                    val ccClockTweak = snapshot.ccClockTweak
+                    val useSystemFonts = snapshot.qsForceSystemFonts
                     if (ccClockTweak) {
                         val defaultVerticalOffset = 10
-                        val verticalOffset = MainModule.mPrefs.getInt("system_cc_clock_verticaloffset", defaultVerticalOffset)
+                        val verticalOffset = snapshot.ccClockVerticalOffset
                         if (verticalOffset != defaultVerticalOffset) {
                             val marginTop = HookUtils.dp2px((verticalOffset - defaultVerticalOffset).toFloat())
                             clock.translationY = marginTop

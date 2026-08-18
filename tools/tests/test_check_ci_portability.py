@@ -136,7 +136,7 @@ class CIPortabilityCheckerTest(unittest.TestCase):
                     on:
                       push:
                         branches:
-                          - devin/a14-rom-intelligence-audit
+                          - main
                     jobs:
                       fast:
                         steps:
@@ -159,7 +159,7 @@ class CIPortabilityCheckerTest(unittest.TestCase):
                     on:
                       push:
                         branches:
-                          - devin/a14-rom-intelligence-audit
+                          - main
                     jobs:
                       fast:
                         steps:
@@ -200,6 +200,31 @@ class CIPortabilityCheckerTest(unittest.TestCase):
             result = self.run_checker(root, root / "tools" / "check_ci_portability.py")
             self.assertEqual(1, result.returncode, result.stdout + result.stderr)
             self.assertIn("push branches must be exactly", result.stdout)
+
+    def test_stale_rom_intelligence_branch_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.make_fake_repo(tmp)
+            (root / ".github" / "workflows" / "fast.yml").write_text(
+                textwrap.dedent(
+                    """
+                    on:
+                      push:
+                        branches:
+                          - devin/a14-rom-intelligence-audit
+                    jobs:
+                      fast:
+                        steps:
+                          - uses: actions/checkout@v4
+                            with:
+                              fetch-depth: 0
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            result = self.run_checker(root, root / "tools" / "check_ci_portability.py")
+            self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+            self.assertIn("stale branch", result.stdout)
 
 
 if __name__ == "__main__":

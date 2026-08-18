@@ -24,8 +24,36 @@ import tv.withaibuild.customiuizer.utils.HookUtils
  */
 object SystemShareMenuHooks {
 
+    @Volatile
+    private var cleanShareApps: Set<String> = emptySet()
+
+    @Volatile
+    private var cleanOpenWithApps: Set<String> = emptySet()
+
+    private var shareMenuObserverRegistered = false
+
+    private fun refreshShareMenuSnapshot() {
+        val prefs = MainModule.mPrefs
+        cleanShareApps = HashSet(prefs.getStringSet("system_cleanshare_apps"))
+        cleanOpenWithApps = HashSet(prefs.getStringSet("system_cleanopenwith_apps"))
+    }
+
+    private fun installShareMenuSnapshot() {
+        refreshShareMenuSnapshot()
+        if (shareMenuObserverRegistered) return
+        shareMenuObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key == "system_cleanshare_apps" || key == "system_cleanopenwith_apps") {
+                    refreshShareMenuSnapshot()
+                }
+            }
+        })
+    }
+
     @JvmStatic
     fun CleanShareMenuHook(lpparam: PackageReadyParam) {
+        installShareMenuSnapshot()
         ModuleHelper.hookAllMethods("miui.securityspace.XSpaceResolverActivityHelper.ResolverActivityRunner", lpparam.classLoader, "run", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -49,7 +77,7 @@ object SystemShareMenuHooks {
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                     val mAimPackageName = XposedHelpers.getObjectField(thisObject, "mAimPackageName") as String?
                     if (mAimPackageName == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val selectedApps = MainModule.mPrefs.getStringSet("system_cleanshare_apps") ?: emptySet<String>()
+                    val selectedApps = cleanShareApps
                     val mRootView = XposedHelpers.getObjectField(thisObject, "mRootView") as View
                     val appResId1 = HookUtils.getResId(mContext.resources, "app1", "id", "android.miui")
                     val appResId2 = HookUtils.getResId(mContext.resources, "app2", "id", "android.miui")
@@ -70,6 +98,7 @@ object SystemShareMenuHooks {
 
     @JvmStatic
     fun CleanShareMenuServiceHook(lpparam: SystemServerStartingParam) {
+        installShareMenuSnapshot()
         val hook = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -94,7 +123,7 @@ object SystemShareMenuHooks {
                         if (action != Intent.ACTION_SEND && action != Intent.ACTION_SENDTO && action != Intent.ACTION_SEND_MULTIPLE) { return XposedHelpers.throwOrReturn(throwable, result) }
                         if (intent.dataString != null && intent.dataString!!.contains(":")) { return XposedHelpers.throwOrReturn(throwable, result) }
                         if (intent.hasExtra("CustoMIUIzer") && intent.getBooleanExtra("CustoMIUIzer", false)) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        val selectedApps = MainModule.mPrefs.getStringSet("system_cleanshare_apps") ?: emptySet<String>()
+                        val selectedApps = cleanShareApps
                         val resolved = result as? List<ResolveInfo> ?: return XposedHelpers.throwOrReturn(throwable, result)
                         val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                         val pm = mContext.packageManager
@@ -183,6 +212,7 @@ object SystemShareMenuHooks {
 
     @JvmStatic
     fun CleanOpenWithMenuHook(lpparam: PackageReadyParam) {
+        installShareMenuSnapshot()
         ModuleHelper.hookAllMethods("miui.securityspace.XSpaceResolverActivityHelper.ResolverActivityRunner", lpparam.classLoader, "run", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -203,7 +233,7 @@ object SystemShareMenuHooks {
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                     val mAimPackageName = XposedHelpers.getObjectField(thisObject, "mAimPackageName") as String?
                     if (mAimPackageName == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val selectedApps = MainModule.mPrefs.getStringSet("system_cleanopenwith_apps") ?: emptySet<String>()
+                    val selectedApps = cleanOpenWithApps
                     val mimeType = getContentType(mContext, mOriginalIntent)
                     val isRemove = isRemoveApp(true, mContext, mAimPackageName, selectedApps, mimeType)
 
@@ -225,6 +255,7 @@ object SystemShareMenuHooks {
 
     @JvmStatic
     fun CleanOpenWithMenuServiceHook(lpparam: SystemServerStartingParam) {
+        installShareMenuSnapshot()
         val hook = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -255,7 +286,7 @@ object SystemShareMenuHooks {
                         val mimeType = getContentType(mContext, intent)
 
                         val key = "system_cleanopenwith_apps"
-                        val selectedApps = MainModule.mPrefs.getStringSet(key) ?: emptySet<String>()
+                        val selectedApps = cleanOpenWithApps
                         val resolved = result as? List<ResolveInfo> ?: return XposedHelpers.throwOrReturn(throwable, result)
                         val pm = mContext.packageManager
                         val itr = resolved.iterator()

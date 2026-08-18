@@ -12,6 +12,9 @@ class DynamicIslandDismissLifecycleTest {
         assertTrue(source.contains("clipToOutline = false"))
         assertTrue(source.contains("IslandPillOutline"))
         assertTrue(source.contains("DynamicIslandStatusBarFade.release(root)"))
+        assertTrue(source.contains("applyIslandRecallHit("))
+        assertTrue(source.contains("clearIslandRecallHit("))
+        assertTrue(source.contains("host.touchDelegate = null"))
     }
 
     private fun source(path: String): String {

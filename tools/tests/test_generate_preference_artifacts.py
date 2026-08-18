@@ -389,6 +389,9 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertIn("internal object CurrentPreferenceCatalog", catalog)
         self.assertIn('"pref_key_miuizer_launchericon"', catalog)
         self.assertIn('"pref_key_system_strong_toast_mode"', catalog)
+        self.assertIn("val VALUE_TYPES: Map<String, PreferenceValueType>", catalog)
+        self.assertIn("PreferenceValueType.BOOLEAN", catalog)
+        self.assertIn("PreferenceValueType.STRING_SET", catalog)
         self.assertNotIn('"pref_key_..."', catalog)
         self.assertNotIn("val ALL_VALID_KEYS", catalog)
 

@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -93,6 +94,30 @@ object LauncherAnimationHooks {
         ModuleHelper.hookAllMethods("com.miui.home.recents.QuickstepAppTransitionManagerImpl", lpparam.classLoader, "hasControlRemoteAppTransitionPermission", HookerClassHelper.returnConstant(false))
     }
 
+    private const val PREF_LAUNCHER_WALLPAPER_SCALE = "launcher_disable_wallpaperscale"
+    private const val PREF_RECENTS_WALLPAPER_SCALE = "system_recents_disable_wallpaperscale"
+    private const val PREF_WALLPAPER_COLOR_MODE = "launcher_wallpaper_colormode"
+
+    /**
+     * Wallpaper zoom is applied from recents and app-open/close callbacks. Snapshot the two
+     * preference keys so those paths do not hit the preference map, and so toggling one key
+     * cannot leave the other key's intent stuck in a recents-session flag.
+     */
+    @Volatile
+    private var suppressLauncherWallpaperZoom = false
+
+    @Volatile
+    private var disableRecentsDimLayer = false
+
+    @Volatile
+    private var wallpaperColorMode = 1
+
+    @Volatile
+    private var wallpaperZoomObserverRegistered = false
+
+    @Volatile
+    private var wallpaperZoomClassLoader: ClassLoader? = null
+
     @JvmStatic
     fun DisableUnlockWallpaperScale(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.miui.miwallpaper.manager.WallpaperServiceController", lpparam.classLoader, "noNeedDesktopWallpaperScaleAnim", HookerClassHelper.returnConstant(true))
@@ -100,40 +125,98 @@ object LauncherAnimationHooks {
 
     @JvmStatic
     fun DisableLauncherWallpaperScale(lpparam: PackageReadyParam) {
-        val WallpaperZoomManagerKtClass = XposedHelpers.findClassIfExists("com.miui.home.launcher.wallpaper.WallpaperZoomManagerKt", lpparam.classLoader)
-        if (MainModule.mPrefs.getBoolean("launcher_disable_wallpaperscale")) {
-            XposedHelpers.setStaticBooleanField(WallpaperZoomManagerKtClass, "ZOOM_ENABLED", false)
-            ModuleHelper.findAndHookMethod("com.miui.home.recents.DimLayer", lpparam.classLoader, "isSupportDim", HookerClassHelper.returnConstant(false))
-            return
-        }
-        ModuleHelper.hookAllMethods("com.miui.home.recents.OverviewState", lpparam.classLoader, "onStateEnabled", object : MethodHook() {
+        wallpaperZoomClassLoader = lpparam.classLoader
+        installWallpaperZoomSnapshot()
+        applyWallpaperZoomEnabledFlag(lpparam.classLoader, !suppressLauncherWallpaperZoom)
+
+        val clampZoomOut = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
                 try {
-
-                    if (WallpaperZoomManagerKtClass != null) {
-                        XposedHelpers.setStaticBooleanField(WallpaperZoomManagerKtClass, "ZOOM_ENABLED", false)
+                    if (!suppressLauncherWallpaperZoom) {
+                        return XposedHelpers.proceedOrThrow(chain, null)
                     }
-
+                    val args = XposedHelpers.getArgsArray(chain)
+                    var changed = false
+                    for (i in args.indices) {
+                        val value = args[i]
+                        if (value is Float && value != 0f) {
+                            args[i] = wallpaperZoomOutValue(value, true)
+                            changed = true
+                        }
+                    }
+                    result = if (changed) chain.proceed(args) else chain.proceed()
                 } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     throwable = t
                     result = null
                 }
+                return XposedHelpers.throwOrReturn(throwable, result)
+            }
+        }
+        val skipZoomAnim = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                var result: Any? = null
+                var throwable: Throwable? = null
                 try {
-
-                    if (WallpaperZoomManagerKtClass != null) {
-                        XposedHelpers.setStaticBooleanField(WallpaperZoomManagerKtClass, "ZOOM_ENABLED", true)
+                    if (shouldSkipWallpaperZoomAnimation(suppressLauncherWallpaperZoom)) {
+                        return null
                     }
-
+                    result = chain.proceed()
                 } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    FatalErrors.rethrowIfFatal(t)
+                    throwable = t
+                    result = null
+                }
+                return XposedHelpers.throwOrReturn(throwable, result)
+            }
+        }
+        val homeZoomOut = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                var result: Any? = null
+                var throwable: Throwable? = null
+                try {
+                    if (suppressLauncherWallpaperZoom) {
+                        return 0f
+                    }
+                    result = chain.proceed()
+                } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
+                    throwable = t
+                    result = null
+                }
+                return XposedHelpers.throwOrReturn(throwable, result)
+            }
+        }
+
+        val classLoader = lpparam.classLoader
+        ModuleHelper.hookAllMethodsSilently("android.app.WallpaperManager", classLoader, "setWallpaperZoomOut", clampZoomOut)
+        ModuleHelper.hookAllMethodsSilently("android.view.IWindowSession\$Stub\$Proxy", classLoader, "setWallpaperZoomOut", clampZoomOut)
+        for (zoomClassName in WALLPAPER_ZOOM_MANAGER_CLASSES) {
+            ModuleHelper.hookAllMethodsSilently(zoomClassName, classLoader, "setWallpaperZoomOut", clampZoomOut)
+            ModuleHelper.hookAllMethodsSilently(zoomClassName, classLoader, "animateWallpaperZoom", skipZoomAnim)
+            ModuleHelper.hookAllMethodsSilently(zoomClassName, classLoader, "startWallpaperZoomAnim", skipZoomAnim)
+        }
+        ModuleHelper.hookAllMethodsSilently("com.miui.home.launcher.WallpaperUtils", classLoader, "setWallpaperZoomOut", clampZoomOut)
+        ModuleHelper.hookAllMethodsSilently("com.miui.home.launcher.WallpaperUtils", classLoader, "animateWallpaperZoom", skipZoomAnim)
+        ModuleHelper.hookAllMethodsSilently("com.miui.home.recents.OverviewState", classLoader, "getWallpaperZoomOut", homeZoomOut)
+        ModuleHelper.hookAllMethodsSilently("com.android.quickstep.views.RecentsView", classLoader, "getWallpaperZoomOut", homeZoomOut)
+        ModuleHelper.hookAllMethodsSilently("com.android.launcher3.Launcher", classLoader, "getWallpaperZoomOut", homeZoomOut)
+
+        ModuleHelper.hookAllMethodsSilently("com.miui.home.recents.DimLayer", classLoader, "isSupportDim", object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                var result: Any? = null
+                var throwable: Throwable? = null
+                try {
+                    if (disableRecentsDimLayer) {
+                        return false
+                    }
+                    result = chain.proceed()
+                } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
+                    throwable = t
+                    result = null
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
@@ -141,7 +224,83 @@ object LauncherAnimationHooks {
     }
 
     @JvmStatic
+    internal fun shouldDisableLauncherWallpaperZoomPermanently(launcherPref: Boolean): Boolean = launcherPref
+
+    @JvmStatic
+    internal fun shouldSuppressLauncherWallpaperZoom(recentsPref: Boolean, launcherPref: Boolean): Boolean =
+        recentsPref || launcherPref
+
+    @JvmStatic
+    internal fun shouldKeepRecentsWallpaperZoomDisabled(recentsPref: Boolean, launcherPref: Boolean): Boolean =
+        shouldSuppressLauncherWallpaperZoom(recentsPref, launcherPref)
+
+    @JvmStatic
+    internal fun wallpaperZoomOutValue(requested: Float, suppress: Boolean): Float =
+        if (suppress) 0f else requested
+
+    @JvmStatic
+    internal fun shouldSkipWallpaperZoomAnimation(suppress: Boolean): Boolean = suppress
+
+    @JvmStatic
+    internal fun installWallpaperZoomSnapshot() {
+        refreshWallpaperZoomPreferences()
+        if (wallpaperZoomObserverRegistered) return
+        wallpaperZoomObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key == PREF_LAUNCHER_WALLPAPER_SCALE || key == PREF_RECENTS_WALLPAPER_SCALE || key == PREF_WALLPAPER_COLOR_MODE) {
+                    refreshWallpaperZoomPreferences()
+                    applyWallpaperZoomEnabledFlag(wallpaperZoomClassLoader, !suppressLauncherWallpaperZoom)
+                }
+            }
+        }, this)
+    }
+
+    private fun refreshWallpaperZoomPreferences() {
+        val launcherPref = MainModule.mPrefs.getBoolean(PREF_LAUNCHER_WALLPAPER_SCALE)
+        val recentsPref = MainModule.mPrefs.getBoolean(PREF_RECENTS_WALLPAPER_SCALE)
+        suppressLauncherWallpaperZoom = shouldSuppressLauncherWallpaperZoom(recentsPref, launcherPref)
+        disableRecentsDimLayer = shouldDisableLauncherWallpaperZoomPermanently(launcherPref)
+        wallpaperColorMode = MainModule.mPrefs.getStringAsInt(PREF_WALLPAPER_COLOR_MODE, 1)
+    }
+
+    private val WALLPAPER_ZOOM_MANAGER_CLASSES = arrayOf(
+        "com.miui.home.launcher.wallpaper.WallpaperZoomManagerKt",
+        "com.miui.home.launcher.wallpaper.WallpaperZoomManager",
+    )
+
+    private fun applyWallpaperZoomEnabledFlag(classLoader: ClassLoader?, enabled: Boolean) {
+        if (classLoader == null) return
+        for (className in WALLPAPER_ZOOM_MANAGER_CLASSES) {
+            val zoomClass = XposedHelpers.findClassIfExists(className, classLoader) ?: continue
+            setWallpaperZoomEnabled(zoomClass, enabled)
+            val companionClass = XposedHelpers.findClassIfExists("$className\$Companion", classLoader)
+            setWallpaperZoomEnabled(companionClass, enabled)
+            try {
+                val companion = XposedHelpers.getStaticObjectField(zoomClass, "Companion")
+                if (companion != null) {
+                    val field = XposedHelpers.findFieldIfExists(companion.javaClass, "ZOOM_ENABLED")
+                    field?.setBoolean(companion, enabled)
+                }
+            } catch (t: Throwable) {
+                FatalErrors.rethrowIfFatal(t)
+            }
+        }
+    }
+
+    private fun setWallpaperZoomEnabled(zoomClass: Class<*>?, enabled: Boolean) {
+        if (zoomClass == null) return
+        try {
+            val field = XposedHelpers.findFieldIfExists(zoomClass, "ZOOM_ENABLED") ?: return
+            field.setBoolean(null, enabled)
+        } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
+        }
+    }
+
+    @JvmStatic
     fun WallpaperColorModeHook(lpparam: PackageReadyParam) {
+        installWallpaperZoomSnapshot()
         ModuleHelper.findAndHookMethod("com.miui.home.launcher.WallpaperUtils", lpparam.classLoader, "setCurrentStatusBarAreaColorMode", Int::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -149,7 +308,7 @@ object LauncherAnimationHooks {
                 val args = XposedHelpers.getArgsArray(chain)
                 try {
 
-                    val v = MainModule.mPrefs.getStringAsInt("launcher_wallpaper_colormode", 1)
+                    val v = wallpaperColorMode
                     if (v > 1) {
                         args[0] = if (v == 2) 2 else 0
                     }
@@ -169,7 +328,7 @@ object LauncherAnimationHooks {
                 val args = XposedHelpers.getArgsArray(chain)
                 try {
 
-                    val v = MainModule.mPrefs.getStringAsInt("launcher_wallpaper_colormode", 1)
+                    val v = wallpaperColorMode
                     if (v > 1) {
                         args[0] = if (v == 2) 2 else 0
                     }

@@ -11,6 +11,22 @@ import androidx.appcompat.widget.ListPopupWindow
 import tv.withaibuild.customiuizer.R
 
 open class SpinnerEx(context: Context, attrs: AttributeSet?) : AppCompatSpinner(context, attrs) {
+    companion object {
+        @JvmStatic
+        internal fun resolveSelectionIndex(value: Int, values: IntArray?): Int {
+            values ?: return 0
+            for (i in values.indices) {
+                if (values[i] == value) return i
+            }
+            return 0
+        }
+
+        @JvmStatic
+        internal fun resolveSelectedValue(selectedPosition: Int, values: IntArray?): Int {
+            val vals = values ?: return 0
+            return vals.getOrNull(selectedPosition) ?: vals.firstOrNull() ?: 0
+        }
+    }
 
     var entries: Array<CharSequence>? = null
     var entryValues: IntArray? = null
@@ -42,24 +58,16 @@ open class SpinnerEx(context: Context, attrs: AttributeSet?) : AppCompatSpinner(
         disabledItems.add(position)
     }
 
-    private fun findIndex(value: Int, values: IntArray?): Int {
-        values ?: return -1
-        for (i in values.indices) {
-            if (values[i] == value) return i
-        }
-        return -1
-    }
-
     fun init(value: Int) {
         val ent = entries ?: return
         val vals = entryValues ?: return
         val adapter = ArrayAdapterEx(context, android.R.layout.simple_spinner_item, ent)
         setAdapter(adapter)
-        setSelection(findIndex(value, vals))
+        setSelection(resolveSelectionIndex(value, vals))
     }
 
     fun getSelectedArrayValue(): Int {
-        return entryValues?.getOrNull(selectedItemPosition) ?: 0
+        return resolveSelectedValue(selectedItemPosition, entryValues)
     }
 
     private inner class ArrayAdapterEx(

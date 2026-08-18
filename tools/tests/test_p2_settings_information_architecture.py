@@ -274,6 +274,7 @@ POST_P2_ALLOWED_NEW_PREFERENCES: dict[str, set[str]] = {
     },
     "prefs_system.xml": {
         "pref_key_system_strong_toast_island_offset",
+        "pref_key_system_statusbar_content_vertical_offset",
     },
 }
 
@@ -291,6 +292,54 @@ POST_P2_ALLOWED_REMOVED_PREFERENCES: dict[str, set[str]] = {
 POST_P2_ALLOWED_ATTR_CHANGES: set[tuple[str, str, str, str, str]] = {
     ("prefs_system_hideicons.xml", "pref_key_system_statusbaricons_sim1", f"{{{ANDROID_NS}}}title", "SIM 1", "@string/system_hideicons_sim1_title"),
     ("prefs_system_hideicons.xml", "pref_key_system_statusbaricons_sim2", f"{{{ANDROID_NS}}}title", "SIM 2", "@string/system_hideicons_sim2_title"),
+    ("prefs_system_statusbar_batterytempandcurrent.xml", "pref_key_system_statusbar_batterytempandcurrent_fontsize", f"{{{ANDROID_NS}}}defaultValue", "16", "0"),
+    ("prefs_system_statusbar_batterytempandcurrent.xml", "pref_key_system_statusbar_batterytempandcurrent_fontsize", f"{{{MIUIZER_NS}}}minValue", "14", "0"),
+    ("prefs_system_statusbar_batterytempandcurrent.xml", "pref_key_system_statusbar_batterytempandcurrent_fontsize", f"{{{MIUIZER_NS}}}offtext", "", "@string/array_default"),
+    ("prefs_system_statusbar_showdevicetemperature.xml", "pref_key_system_statusbar_showdevicetemperature_fontsize", f"{{{ANDROID_NS}}}defaultValue", "16", "0"),
+    ("prefs_system_statusbar_showdevicetemperature.xml", "pref_key_system_statusbar_showdevicetemperature_fontsize", f"{{{MIUIZER_NS}}}minValue", "14", "0"),
+    ("prefs_system_statusbar_showdevicetemperature.xml", "pref_key_system_statusbar_showdevicetemperature_fontsize", f"{{{MIUIZER_NS}}}offtext", "", "@string/array_default"),
+    (
+        "prefs_launcher.xml",
+        "pref_key_launcher_disable_wallpaperscale",
+        f"{{{ANDROID_NS}}}title",
+        "@string/system_recents_disable_wallpaperscale_title",
+        "@string/launcher_disable_wallpaperscale_title",
+    ),
+}
+
+# New attributes authorized after P2 (explanatory copy that was previously missing).
+# Tuple: (file_name, preference_key, attr, value)
+POST_P2_ALLOWED_NEW_ATTRIBUTES: set[tuple[str, str, str, str]] = {
+    (
+        "prefs_launcher.xml",
+        "pref_key_launcher_disable_wallpaperscale",
+        f"{{{ANDROID_NS}}}summary",
+        "@string/launcher_disable_wallpaperscale_summ",
+    ),
+    (
+        "prefs_launcher.xml",
+        "pref_key_launcher_disable_wallpaperscale",
+        f"{{{ANDROID_NS}}}defaultValue",
+        "false",
+    ),
+    (
+        "prefs_system.xml",
+        "pref_key_system_recents_disable_wallpaperscale",
+        f"{{{ANDROID_NS}}}summary",
+        "@string/system_recents_disable_wallpaperscale_summ",
+    ),
+    (
+        "prefs_system_statusbar_batterytempandcurrent.xml",
+        "pref_key_system_statusbar_batterytempandcurrent_fontsize",
+        f"{{{MIUIZER_NS}}}offtext",
+        "@string/array_default",
+    ),
+    (
+        "prefs_system_statusbar_showdevicetemperature.xml",
+        "pref_key_system_statusbar_showdevicetemperature_fontsize",
+        f"{{{MIUIZER_NS}}}offtext",
+        "@string/array_default",
+    ),
 }
 
 # -------------------------------------------------------------------------------
@@ -530,6 +579,8 @@ class P2SettingsInformationArchitectureTest(unittest.TestCase):
 
                 # Disallow new attributes on keyed preferences.
                 for attr in set(cur_attrs) - set(base_attrs):
+                    if (path.name, key, attr, cur_attrs[attr]) in POST_P2_ALLOWED_NEW_ATTRIBUTES:
+                        continue
                     failures.append(
                         f"{path.name}:{key}: new attribute {attr}={cur_attrs[attr]!r}"
                     )

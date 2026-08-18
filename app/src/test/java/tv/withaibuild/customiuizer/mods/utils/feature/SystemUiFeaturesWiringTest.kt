@@ -75,8 +75,8 @@ class SystemUiFeaturesWiringTest {
         val features = SystemUiFeatures.all(fakePackageReadyParam(), PrefMap())
 
         assertEquals(
-            "All 97 preference-guarded SystemUI features should be present",
-            97,
+            "All 98 preference-guarded SystemUI features should be present",
+            98,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
@@ -166,6 +166,18 @@ class SystemUiFeaturesWiringTest {
 
         val on = PrefMap().apply { put("system_statusbar_showdevicetemperature", true) }
         assertTrue(feature.isEnabled(on))
+    }
+
+    @Test
+    fun statusBarContentGeometryFeatureIsAlwaysEnabled() {
+        val feature = StatusBarContentGeometryFeature(fakePackageReadyParam(), PrefMap())
+
+        assertEquals(StatusBarContentGeometryFeatureId, feature.id)
+        assertEquals("system_statusbar_content_vertical_offset", feature.preferenceKey)
+        assertEquals(FeatureTarget.SYSTEM_UI, feature.target)
+        assertEquals(InstallPhase.PACKAGE_READY, feature.phase)
+        assertTrue(feature.isEnabled(PrefMap()))
+        assertEquals(253, StatusBarContentGeometryFeatureId.id)
     }
 
     @Test

@@ -26,10 +26,14 @@ class CustomTextIconTintWiringTest {
     fun rightPathRegistersWithCustomTextIconTintRouteAndBindsToGenerationOwner() {
         val source = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt")
         val dualRows = methodBody(source, "fun DualRowsStatusbarHook")
+        val addIcons = methodBody(source, "private fun addDualRowsDeviceInfoIcons")
 
-        assertTrue("right dual rows must call CustomTextIconTintRoute.register", dualRows.contains("val handle = CustomTextIconTintRoute.register(iconView, lpparam.classLoader, \"right\")"))
-        assertTrue("right must bind the returned handle to the status-bar generation owner", dualRows.contains("state.registrations.register(sbView)"))
-        assertTrue("right owner release must call handle.release", dualRows.contains("handle.release(\"generation-replaced\")"))
+        assertTrue("dual rows must create both left and right custom icon slots", dualRows.contains("addDualRowsDeviceInfoIcons"))
+        assertTrue("right dual rows must target secondRight", dualRows.contains("parent = secondRight"))
+        assertTrue("left dual rows must target leftContainer", dualRows.contains("parent = leftContainer"))
+        assertTrue("dual-row custom icons must register a dark-tint handle", addIcons.contains("CustomTextIconTintRoute.register(iconView, classLoader, side)"))
+        assertTrue("right must bind the returned handle to the status-bar generation owner", addIcons.contains("state.registrations.register(sbView)"))
+        assertTrue("right owner release must call handle.release", addIcons.contains("handle.release(\"generation-replaced\")"))
     }
 
     @Test

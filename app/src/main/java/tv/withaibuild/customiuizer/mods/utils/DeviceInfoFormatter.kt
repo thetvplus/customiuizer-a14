@@ -140,26 +140,48 @@ object DeviceInfoFormatter {
     }
 
     /**
-     * Formats the device temperature text for custom icon type 92.
+     * Preference `system_statusbar_showdevicetemperature_content` / `onoff_val`:
+     * 1 = both, 2 = battery temperature, 3 (and any other) = CPU temperature.
      */
     @JvmStatic
-    internal fun formatDeviceInfo(cfg: DeviceInfoConfig, props: Properties, cpuProps: String): String {
-        val batteryTempVal = parseSysfsInt(props.getProperty("POWER_SUPPLY_TEMP"))
-        val cpuTempVal = parseSysfsInt(cpuProps)
-        val simpleBatteryTemp = formatMonitorOneDecimal(batteryTempVal / 10f)
-        val simpleCpuTemp = formatMonitorOneDecimal(cpuTempVal / 1000f)
-        val opt = cfg.deviceTempContentOpt
+    internal fun needsBatteryTemperature(contentOpt: Int): Boolean = contentOpt == 1 || contentOpt == 2
+
+    @JvmStatic
+    internal fun needsCpuTemperature(contentOpt: Int): Boolean = contentOpt != 2
+
+    /**
+     * Formats the device temperature text for custom icon type 92.
+     *
+     * Missing sources are omitted rather than rendered as 0.0. "Both" degrades to whichever
+     * sensor is available; an empty result means nothing to show this tick.
+     */
+    @JvmStatic
+    internal fun formatDeviceInfo(cfg: DeviceInfoConfig, props: Properties?, cpuProps: String?): String {
         val tempUnit = if (cfg.deviceTempHideUnit) "" else "℃"
         val splitChar = if (cfg.deviceTempSingleRow) " " else "\n"
-        return when (opt) {
-            1 -> if (cfg.deviceTempReverseOrder) {
-                simpleCpuTemp + tempUnit + splitChar + simpleBatteryTemp + tempUnit
-            } else {
-                simpleBatteryTemp + tempUnit + splitChar + simpleCpuTemp + tempUnit
-            }
-            2 -> simpleBatteryTemp + tempUnit
-            else -> simpleCpuTemp + tempUnit
+        val batteryPart = props?.let {
+            formatMonitorOneDecimal(parseSysfsInt(it.getProperty("POWER_SUPPLY_TEMP")) / 10f) + tempUnit
         }
+        val cpuPart = cpuProps?.takeUnless { it.isEmpty() }?.let {
+            formatMonitorOneDecimal(parseSysfsInt(it) / 1000f) + tempUnit
+        }
+        return when (cfg.deviceTempContentOpt) {
+            2 -> batteryPart.orEmpty()
+            1 -> formatBothDeviceTemps(batteryPart, cpuPart, cfg.deviceTempReverseOrder, splitChar)
+            else -> cpuPart.orEmpty()
+        }
+    }
+
+    private fun formatBothDeviceTemps(
+        batteryPart: String?,
+        cpuPart: String?,
+        reverse: Boolean,
+        splitChar: String
+    ): String {
+        if (batteryPart != null && cpuPart != null) {
+            return if (reverse) cpuPart + splitChar + batteryPart else batteryPart + splitChar + cpuPart
+        }
+        return batteryPart ?: cpuPart.orEmpty()
     }
 }
 

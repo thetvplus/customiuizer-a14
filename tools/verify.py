@@ -183,6 +183,18 @@ def check_observer_key_contract() -> int:
     return run(cmd)
 
 
+def check_hook_body_prefmap() -> int:
+    """Fail when MethodHook bodies grow new MainModule.mPrefs reads."""
+    cmd = [sys.executable, str(REPO_ROOT / "tools" / "hook_body_prefmap_scan.py"), "--check"]
+    return run(cmd)
+
+
+def check_hotpath_alloc_budget() -> int:
+    """Fail when MethodHook bodies grow new allocation-suspect patterns."""
+    cmd = [sys.executable, str(REPO_ROOT / "tools" / "check_hotpath_alloc_budget.py"), "--check"]
+    return run(cmd)
+
+
 def check_main_source_cleanliness(changed: bool = False, staged: bool = False) -> int:
     """Ensure app/src/main contains no test-only implementation seams."""
     cmd = [sys.executable, str(REPO_ROOT / "tools" / "check_main_source_cleanliness.py")]
@@ -288,6 +300,12 @@ def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -
     code = check_observer_key_contract()
     if code != 0:
         return code
+    code = check_hook_body_prefmap()
+    if code != 0:
+        return code
+    code = check_hotpath_alloc_budget()
+    if code != 0:
+        return code
     code = check_main_source_cleanliness(changed=changed, staged=staged)
     if code != 0:
         return code
@@ -327,6 +345,12 @@ def full() -> int:
     if code != 0:
         return code
     code = check_observer_key_contract()
+    if code != 0:
+        return code
+    code = check_hook_body_prefmap()
+    if code != 0:
+        return code
+    code = check_hotpath_alloc_budget()
     if code != 0:
         return code
     code = check_main_source_cleanliness()

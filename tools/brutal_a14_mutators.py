@@ -60,7 +60,7 @@ def remove_jvm_static(root: Path, cfg: dict) -> None:
     _replace_first(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/ReflectionCache.kt"),
-        r"(    @JvmStatic\n)(    fun getDepInstance)",
+        r"(        @JvmStatic\n)(        fun getDepInstance)",
         r"\2",
     )
 
@@ -76,13 +76,12 @@ def remove_jvm_field(root: Path, cfg: dict) -> None:
 
 
 def object_to_class(root: Path, cfg: dict) -> None:
-    """Turn the ReflectionCache object into a class."""
+    """Turn the ReflectionCache companion object into a named object."""
     _replace_first(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/ReflectionCache.kt"),
-        r"^object ReflectionCache \{",
-        r"class ReflectionCache private constructor() {",
-        flags=re.MULTILINE,
+        r"    companion object \{",
+        r"    object Companion {",
     )
 
 
@@ -185,7 +184,7 @@ def reflection_class_rename(root: Path, cfg: dict) -> None:
     _replace_first(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/ReflectionCache.kt"),
-        r'(internal var dependencyClassName: String = )"com\.android\.systemui\.Dependency"',
+        r'(XposedHelpers\.findClassIfExists\()"com\.android\.systemui\.Dependency"',
         r'\1"com.android.systemui.Dependency2"',
     )
 
@@ -313,18 +312,12 @@ def systemui_plugin_classloader_replaced(root: Path, cfg: dict) -> None:
 
 
 def classloader_cache_global(root: Path, cfg: dict) -> None:
-    """Replace per-loader keying with a single global loader state."""
-    _replace_first(
-        root,
-        _kt_file("tv/withaibuild/customiuizer/mods/utils/ReflectionCache.kt"),
-        r"(    private val lifecycle = AtomicLong\(0L\)\n)(\n    private val loaderStates: MutableMap<ClassLoader\?, LoaderState> = Collections\.synchronizedMap\(\n        object : LinkedHashMap<ClassLoader\?, LoaderState>\(MAX_LOADERS, 0\.75f, true\) \{\n            override fun removeEldestEntry\(eldest: Map\.Entry<ClassLoader\?, LoaderState>\?\): Boolean \{\n                return size > MAX_LOADERS\n            \}\n        \}\n    \)\n)",
-        r"\1\2\n\n    private val globalLoaderState = LoaderState()",
-    )
+    """Replace per-loader keying with the first cached loader state."""
     _replace_first(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/ReflectionCache.kt"),
         r"private fun resolveNewLoader\(classLoader: ClassLoader\?, className: String\): Any\? \{\n        val loaderState = synchronized\(loaderStates\) \{\n            loaderStates\[classLoader\] \?: LoaderState\(\)\.also \{ loaderStates\[classLoader\] = it \}\n        \}\n        return resolve\(loaderState, classLoader, className\)\n    \}",
-        r"private fun resolveNewLoader(classLoader: ClassLoader?, className: String): Any? {\n        return resolve(globalLoaderState, classLoader, className)\n    }",
+        r"private fun resolveNewLoader(classLoader: ClassLoader?, className: String): Any? {\n        val loaderState = loaderStates.values.firstOrNull() ?: LoaderState()\n        return resolve(loaderState, classLoader, className)\n    }",
     )
 
 
@@ -582,12 +575,12 @@ def swallow_virtual_machine_error(root: Path, cfg: dict) -> None:
 
 
 def reflection_wrapped_fatal_unwrap(root: Path, cfg: dict) -> None:
-    """Remove the OOM unwrap in ReflectionCache.invoke/resolve."""
+    """Remove the OOM rethrow around Dependency method invoke."""
     _replace_first(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/ReflectionCache.kt"),
-        r"                if \(cause is OutOfMemoryError\) throw cause\n",
-        "",
+        r"            \} catch \(oom: OutOfMemoryError\) \{\n                throw oom\n            \} catch \(ite: java\.lang\.reflect\.InvocationTargetException\)",
+        r"            } catch (ite: java.lang.reflect.InvocationTargetException)",
     )
 
 
@@ -612,11 +605,11 @@ def mainmodule_top_boundary_swallow(root: Path, cfg: dict) -> None:
 
 
 def installer_boundary_swallow(root: Path, cfg: dict) -> None:
-    """Remove the throw oom path in FeatureInstallRegistry.installOne."""
+    """Remove the OOM rethrow after a Feature install failure."""
     _replace_first(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/FeatureInstallRegistry.kt"),
-        r"                \} catch \(oom: OutOfMemoryError\) \{\n                    FeatureInstallState\.set\(id, FeatureState\.FAILED_TRANSIENT\)\n                    throw oom\n",
+        r"        if \(t is OutOfMemoryError\) throw t\n",
         "",
     )
 

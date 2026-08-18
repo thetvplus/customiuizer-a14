@@ -85,6 +85,8 @@
     <string name="system_batteryindicator_test_summ">未充电时显示电量条</string>
     <string name="system_statusbarheight_title">状态栏高度</string>
     <string name="system_statusbarheight_summ">修改固定高度后需完整重启生效。</string>
+    <string name="system_statusbar_content_vertical_offset_title">状态栏内容垂直位置</string>
+    <string name="system_statusbar_content_vertical_offset_summ">调整状态栏内时钟、图标及自定义内容的整体垂直位置。不会改变状态栏高度。</string>
     <string name="system_statusbar_iconsize_title">图标大小</string>
     <string name="system_statusbarcolor_title">背景色同步</string>
     <string name="system_statusbarcolor_summ">尽量将状态栏和应用操作栏的背景颜色保持一致</string>
@@ -409,7 +411,10 @@
     <string name="system_mods_notifications">通知</string>
     <string name="system_mods_recents">最近任务</string>
     <string name="system_removecleaner_title">移除清理按钮</string>
-    <string name="system_recents_disable_wallpaperscale_title">禁用壁纸缩放</string>
+    <string name="launcher_disable_wallpaperscale_title">禁用壁纸缩放</string>
+    <string name="launcher_disable_wallpaperscale_summ">关闭最近任务、打开/关闭应用时的壁纸缩放，并关闭解锁壁纸缩放动画。修改后请强制停止桌面。</string>
+    <string name="system_recents_disable_wallpaperscale_title">最近任务中禁用壁纸缩放</string>
+    <string name="system_recents_disable_wallpaperscale_summ">与「启动器 → 其它」为同一套桌面壁纸缩放，但不包含解锁动画。两者不冲突，最近任务和应用过渡开一个即可。修改后请强制停止桌面。</string>
     <string name="system_recents_card_style_summ">隐藏最近任务卡片中的应用名称；修改后需重启桌面</string>
     <string name="system_recents_card_style_hide_title">隐藏应用名称</string>
     <string name="system_removecleaner_summ">隐藏清理最近应用和内存的按钮</string>
@@ -1038,6 +1043,8 @@
     <string name="various_block_location_permission_prompts_summ">不授予前台或后台定位权限并直接关闭 Android 系统授权页；修改后需重启 PermissionController 或重启设备</string>
     <string name="various_permission_scope_unavailable">请将 PermissionController 加入本模块作用域，然后重启设备。</string>
     <string name="various_permission_scope_failed">PermissionController 作用域请求未获批准。</string>
+    <string name="dynamic_app_scope_unavailable">此功能需要 Vector/LSPosed API 102 才能将所选应用加入模块作用域。若框架无法请求作用域，请手动添加。</string>
+    <string name="dynamic_app_scope_failed">所选应用未加入模块作用域。设置已保存，但在应用进入作用域前功能不会生效。</string>
     <string name="system_usb_default_function_title">USB 默认用途</string>
     <string name="usb_default_function_follow_system">跟随系统默认</string>
     <string name="usb_default_function_charge_only">仅限充电</string>

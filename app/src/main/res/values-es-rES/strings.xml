@@ -65,6 +65,8 @@
     <string name="system_batteryindicator_test_title">Probar</string>
     <string name="system_batteryindicator_test_summ" formatted="false">Anima la barra en estado de descarga desde 100% a 0%</string>
     <string name="system_statusbarheight_title">Altura de la barra de estado</string>
+    <string name="system_statusbar_content_vertical_offset_title">Posición vertical del contenido de la barra de estado</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Ajusta la posición vertical conjunta del reloj, los iconos y el contenido personalizado. No cambia la altura de la barra de estado.</string>
     <string name="system_statusbar_iconsize_title">Tamaño de iconos en barra de estado</string>
     <string name="system_statusbarcolor_title">Color de fondo de la barra de estado</string>
     <string name="system_statusbarcolor_summ">Hacer que los colores de fondo de la barra de estado y la barra de acción de la aplicación sean iguales cuando sea posible</string>
@@ -358,7 +360,10 @@
     <string name="system_mods_recents">Lista de aplicaciones recientes</string>
     <string name="system_removecleaner_title">Remover botón de cierre</string>
     <string name="system_removecleaner_summ">Ocultar el botón que cierra las apps recientes y limpia la memoria</string>
-    <string name="system_recents_disable_wallpaperscale_title">Desactivar escala de fondo de pantalla</string>
+    <string name="launcher_disable_wallpaperscale_title">Desactivar escala del fondo</string>
+    <string name="launcher_disable_wallpaperscale_summ">Evita el zoom del fondo en Recientes y al abrir/cerrar apps, y desactiva la animación de escala al desbloquear. Tras cambiarlo, fuerza la detención del launcher.</string>
+    <string name="system_recents_disable_wallpaperscale_title">Desactivar escala del fondo en Recientes</string>
+    <string name="system_recents_disable_wallpaperscale_summ">El mismo zoom del launcher que en Launcher → Otros, sin la animación de desbloqueo. No entran en conflicto; basta con uno. Tras cambiarlo, fuerza la detención del launcher.</string>
     <string name="system_clearalltasks_title">Limpiar todo</string>
     <string name="system_clearalltasks_summ">Hacer que el botón de cierre mate todas las apps en ejecución</string>
     <string name="system_hidefromrecents_title">Ocultar de recientes</string>
@@ -928,6 +933,8 @@
     <string name="various_disable_xiaomi_analytics_title">Desactivar análisis de Xiaomi y anuncios del sistema</string>
     <string name="various_exclusive_features_cat_title">Funciones exclusivas</string>
     <string name="various_permission_scope_failed">No se aprobó la solicitud de ámbito de PermissionController.</string>
+    <string name="dynamic_app_scope_unavailable">Esta función necesita Vector/LSPosed API 102 para añadir la app seleccionada al ámbito del módulo. Si el marco no puede pedir el ámbito, añádela manualmente.</string>
+    <string name="dynamic_app_scope_failed">La app seleccionada no se añadió al ámbito del módulo. El ajuste se guardó, pero la función no se aplica hasta que la app esté en el ámbito.</string>
     <string name="various_permission_scope_unavailable">Añade PermissionController al ámbito de este módulo y reinicia.</string>
     <string name="various_remove_security_center_antivirus_confirm">¿Desactivar %1$d componentes antivirus verificados del Centro de seguridad? Los análisis y avisos de virus y los recordatorios de análisis atrasados dejarán de estar disponibles. Al desactivar esta opción, cada componente vuelve a su estado anterior.</string>
     <string name="various_remove_security_center_antivirus_summ">Desactiva los puntos de entrada, protecciones, diálogos, actualizaciones y tareas periódicas de análisis del antivirus para suprimir los recordatorios de análisis atrasados; mantiene los permisos, cortafuegos, antispam y herramientas de batería</string>

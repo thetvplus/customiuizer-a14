@@ -11,6 +11,10 @@ import kotlin.math.abs
  */
 object GestureStateMachine {
 
+    private val CMD_PASS_THROUGH = listOf(GestureCommand.PassThrough)
+    private val CMD_BEGIN_TRACKING = listOf(GestureCommand.BeginTracking)
+    private val CMD_RESET = listOf(GestureCommand.Reset)
+
     /**
      * State transition for a single event.
      */
@@ -27,7 +31,7 @@ object GestureStateMachine {
             GestureAction.CANCEL -> handleCancel(snapshot)
             GestureAction.POINTER_DOWN -> handlePointerDown(snapshot, event)
             GestureAction.POINTER_UP -> handlePointerUp(snapshot, event)
-            else -> snapshot to listOf(GestureCommand.PassThrough)
+            else -> snapshot to CMD_PASS_THROUGH
         }
     }
 
@@ -40,7 +44,7 @@ object GestureStateMachine {
         val isControlCenter = event.entry == GestureEntry.CONTROL_CENTER_TOUCH
         val isSlidingStart = !isControlCenter || event.y <= geometry.statusBarHeight
         if (!isSlidingStart) {
-            return GestureSnapshot(GestureState.IDLE) to listOf(GestureCommand.PassThrough)
+            return GestureSnapshot(GestureState.IDLE) to CMD_PASS_THROUGH
         }
 
         val nextSession = GestureSession(
@@ -53,7 +57,7 @@ object GestureStateMachine {
             lastTouchTime = snapshot.session.lastTouchTime,
             currentBrightnessRatio = -1f,
         )
-        return GestureSnapshot(GestureState.TRACKING, nextSession) to listOf(GestureCommand.BeginTracking)
+        return GestureSnapshot(GestureState.TRACKING, nextSession) to CMD_BEGIN_TRACKING
     }
 
     private fun handleMove(
@@ -66,7 +70,7 @@ object GestureStateMachine {
         if (snapshot.state == GestureState.IDLE) return snapshot to emptyList()
 
         if (event.y - session.startY > geometry.statusBarHeight) {
-            return GestureSnapshot(GestureState.IDLE) to listOf(GestureCommand.Reset)
+            return GestureSnapshot(GestureState.IDLE) to CMD_RESET
         }
 
         val delta = event.x - session.startX
@@ -193,7 +197,7 @@ object GestureStateMachine {
 
     private fun handleCancel(snapshot: GestureSnapshot): Pair<GestureSnapshot, List<GestureCommand>> {
         val nextSession = snapshot.session.copy(currentBrightnessRatio = -1f)
-        return GestureSnapshot(GestureState.IDLE, nextSession) to listOf(GestureCommand.Reset)
+        return GestureSnapshot(GestureState.IDLE, nextSession) to CMD_RESET
     }
 
     private fun handlePointerDown(snapshot: GestureSnapshot, event: GestureEvent): Pair<GestureSnapshot, List<GestureCommand>> {

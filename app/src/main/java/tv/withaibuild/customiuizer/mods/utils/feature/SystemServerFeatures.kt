@@ -720,8 +720,10 @@ internal class NoLightUpOnChargeFeature(
     "system_nolightuponcharges"
 ) {
     companion object {
+        // Option 2 only. Option 3 keeps native wake and must not install this hook.
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getStringAsInt("system_nolightuponcharges", 1) == 2
+        fun evaluateEnabled(prefs: PrefMap): Boolean =
+            prefs.getStringAsInt("system_nolightuponcharges", 1) == 2
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)

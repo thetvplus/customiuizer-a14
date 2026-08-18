@@ -26,6 +26,11 @@ class PreferenceClickFeedbackContractTest {
         val source = source("app/src/main/java/tv/withaibuild/customiuizer/prefs/CheckBoxPreferenceEx.kt")
         assertTrue(source.contains("android.R.id.switch_widget"))
         assertTrue(source.contains("isDuplicateParentStateEnabled = true"))
+        assertTrue(source.contains("switchButton.isChecked = isChecked"))
+        assertTrue(source.contains("jumpDrawablesToCurrentState()"))
+        val duplicate = source.indexOf("isDuplicateParentStateEnabled = true")
+        val reapply = source.indexOf("switchButton.isChecked = isChecked")
+        assertTrue(reapply > duplicate)
     }
 
     private fun source(relativePath: String): String {

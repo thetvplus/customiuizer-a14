@@ -1,8 +1,11 @@
 package tv.withaibuild.customiuizer.mods
 
 import android.graphics.Outline
+import android.graphics.Rect
 import android.view.Gravity
+import android.view.TouchDelegate
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.view.WindowInsets
@@ -14,6 +17,7 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
+import tv.withaibuild.customiuizer.mods.utils.IslandRecallHit
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
@@ -38,6 +42,7 @@ object SystemUIStrongToastHooks {
     private const val FOREHEAD_BOTTOM_ID = "strong_toast_bottom_view"
     private const val RUNTIME_SNAPSHOT_FIELD = "customiuizer_strong_toast_runtime_snapshot"
     private const val MATCH_BASELINE_FIELD = "customiuizer_match_mode_baseline"
+    private const val RECALL_HIT_FIELD = "customiuizer_island_recall_hit"
 
     /** The island's own size comes from the ROM, so it tracks each ROM's density and layout. */
     private const val ISLAND_WIDTH_DIMEN = "strong_toast_width"
@@ -186,7 +191,62 @@ object SystemUIStrongToastHooks {
         // the module's own status bar height feature push the pill down off the camera.
         parent?.setPadding(0, 0, 0, 0)
         (parent as? LinearLayout)?.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+        (root as? ViewGroup)?.let { applyIslandRecallHit(it, capsule) }
         return true
+    }
+
+    /**
+     * Expands the touchable area around the already-laid-out capsule without changing
+     * its visual size. The host is the StrongToast root so the extra margin is not
+     * clipped to a wrap-content parent. The ROM StrongToast gesture stays in charge
+     * of swipe distance.
+     */
+    private fun applyIslandRecallHit(host: ViewGroup, capsule: View) {
+        if (XposedHelpers.getAdditionalInstanceField(host, RECALL_HIT_FIELD) != null) {
+            refreshIslandRecallHit(host, capsule)
+            return
+        }
+        val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            refreshIslandRecallHit(host, capsule)
+        }
+        host.addOnLayoutChangeListener(listener)
+        capsule.addOnLayoutChangeListener(listener)
+        XposedHelpers.setAdditionalInstanceField(host, RECALL_HIT_FIELD, listener)
+        refreshIslandRecallHit(host, capsule)
+    }
+
+    private fun refreshIslandRecallHit(host: ViewGroup, capsule: View) {
+        val childRect = Rect()
+        capsule.getDrawingRect(childRect)
+        host.offsetDescendantRectToMyCoords(capsule, childRect)
+        val slop = ViewConfiguration.get(host.context).scaledTouchSlop
+        val margin = IslandRecallHit.extraMarginPx(host.resources.displayMetrics.density, slop)
+        val box = IslandRecallHit.delegateRect(
+            host.width,
+            host.height,
+            childRect.left,
+            childRect.top,
+            childRect.width(),
+            childRect.height(),
+            margin,
+        )
+        host.touchDelegate = if (box.isEmpty) {
+            null
+        } else {
+            TouchDelegate(Rect(box.left, box.top, box.right, box.bottom), capsule)
+        }
+    }
+
+    private fun clearIslandRecallHit(host: ViewGroup?, capsule: View?) {
+        if (host == null) return
+        val listener = XposedHelpers.getAdditionalInstanceField(host, RECALL_HIT_FIELD)
+            as? View.OnLayoutChangeListener
+        if (listener != null) {
+            host.removeOnLayoutChangeListener(listener)
+            capsule?.removeOnLayoutChangeListener(listener)
+            XposedHelpers.removeAdditionalInstanceField(host, RECALL_HIT_FIELD)
+        }
+        host.touchDelegate = null
     }
 
     /**
@@ -456,8 +516,9 @@ object SystemUIStrongToastHooks {
     }
 
     internal fun resetMatchModeCapsule(root: View) {
-        val baseline = XposedHelpers.getAdditionalInstanceField(root, MATCH_BASELINE_FIELD) as? MatchModeBaseline ?: return
         val capsule = findViewBySystemUiId(root, MESSAGE_CONTAINER_ID)
+        clearIslandRecallHit(root as? ViewGroup, capsule)
+        val baseline = XposedHelpers.getAdditionalInstanceField(root, MATCH_BASELINE_FIELD) as? MatchModeBaseline ?: return
         if (capsule?.outlineProvider === IslandPillOutline) {
             // Back to what the ROM layout declares: no clip, outline follows the background.
             capsule.clipToOutline = false

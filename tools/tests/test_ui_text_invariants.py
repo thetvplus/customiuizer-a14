@@ -37,6 +37,7 @@ TYPEFACE_ALLOWLIST = {
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemUIStatusBarHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemClockHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemUIBatteryHooks.kt",
+    APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "utils" / "StatusBarTextFit.kt",
     # Helpers.applyNewMod() uses StyleSpan(Typeface.ITALIC); explicit files
     # will be checked for StyleSpan separately below.
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "utils" / "Helpers.kt",

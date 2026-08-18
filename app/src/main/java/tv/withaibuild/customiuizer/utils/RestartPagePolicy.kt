@@ -26,7 +26,7 @@ internal object RestartPagePolicy {
         R.xml.prefs_launcher_bugfixes -> RestartMask.LAUNCHER
         R.xml.prefs_launcher_cat -> RestartMask.NONE
         R.xml.prefs_launcher_folders -> RestartMask.LAUNCHER
-        R.xml.prefs_launcher_gestures -> RestartMask.LAUNCHER
+        R.xml.prefs_launcher_gestures -> RestartMask.LAUNCHER or RestartMask.SYSTEMUI
         R.xml.prefs_launcher_other -> RestartMask.LAUNCHER
         R.xml.prefs_launcher_privacyapps -> RestartMask.LAUNCHER or RestartMask.SECURITY_CENTER
         R.xml.prefs_launcher_titles -> RestartMask.LAUNCHER
@@ -98,7 +98,7 @@ internal object RestartPagePolicy {
         R.xml.prefs_launcher -> when (sub) {
             "pref_key_launcher_cat_bugfixes" -> RestartMask.LAUNCHER
             "pref_key_launcher_cat_folders" -> RestartMask.LAUNCHER
-            "pref_key_launcher_cat_gestures" -> RestartMask.LAUNCHER
+            "pref_key_launcher_cat_gestures" -> RestartMask.LAUNCHER or RestartMask.SYSTEMUI
             "pref_key_launcher_cat_other" -> RestartMask.LAUNCHER
             "pref_key_launcher_cat_privacyapps" -> RestartMask.LAUNCHER or RestartMask.SECURITY_CENTER
             "pref_key_launcher_cat_titles" -> RestartMask.LAUNCHER

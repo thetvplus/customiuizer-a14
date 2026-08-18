@@ -303,7 +303,13 @@ def mutate_remove_fetch_depth(root: Path, cfg: dict) -> None:
 
 
 def mutate_wrong_branch(root: Path, cfg: dict) -> None:
-    replace_first(workflow_path(root, cfg), re.escape(cfg["expected_branch"]), "main")
+    path = workflow_path(root, cfg)
+    text = path.read_text(encoding="utf-8")
+    pattern = rf"(?m)^(\s+-\s+){re.escape(cfg['expected_branch'])}\s*$"
+    changed, count = re.subn(pattern, r"\1devin/stale-ci-branch", text, count=1)
+    if count != 1:
+        raise RuntimeError("expected CI branch not found")
+    path.write_text(changed, encoding="utf-8")
 
 
 def mutate_signing_leak(root: Path, cfg: dict) -> None:
@@ -441,6 +447,63 @@ def maybe_extra_mutators() -> dict[str, Callable[[Path, dict], None]]:
         return {}
 
 
+def mutate_observer_pref_key(root: Path, cfg: dict) -> None:
+    path = (
+        root
+        / "app/src/main/java/tv/withaibuild/customiuizer/mods/notificationautoexpand/NotificationAutoExpandRuntimeState.kt"
+    )
+    replace_first(
+        path,
+        r"onPreferenceChanged\(key\)",
+        'if (key == "pref_key_brutal") return@guarded\n            onPreferenceChanged(key)',
+    )
+
+
+def mutate_source_test_seam(root: Path, cfg: dict) -> None:
+    path = root / "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/FatalErrors.kt"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text + "\nfun resetForTest() {}\n", encoding="utf-8")
+
+
+def mutate_feature_semantics(root: Path, cfg: dict) -> None:
+    path = root / "feature-semantics/a14.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    entries = data.get("entries")
+    if not isinstance(entries, list) or not entries:
+        raise RuntimeError("feature-semantics/a14.json has no entries")
+    first = entries[0]
+    if not isinstance(first, dict):
+        raise RuntimeError("feature-semantics/a14.json first entry is not an object")
+    first["installPhase"] = "BRUTAL_INVALID_PHASE"
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def mutate_process_matrix(root: Path, cfg: dict) -> None:
+    path = root / cfg["process_matrix"]
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if len(lines) < 2 or "," not in lines[1]:
+        raise RuntimeError("process matrix CSV has no data row")
+    cols = lines[1].split(",", 2)
+    if len(cols) < 2:
+        raise RuntimeError("process matrix CSV row missing featureIdName")
+    cols[1] = "BRUTAL_FAKE_FEATURE"
+    lines[1] = ",".join(cols)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def mutate_release_readme(root: Path, cfg: dict) -> None:
+    gradle = (root / "app/build.gradle.kts").read_text(encoding="utf-8")
+    match = re.search(r'lastVersionName\s*=\s*"([^"]+)"', gradle)
+    if not match:
+        raise RuntimeError("lastVersionName missing")
+    name = match.group(1)
+    path = root / "README.md"
+    text = path.read_text(encoding="utf-8")
+    if name not in text:
+        raise RuntimeError(f"{name} not found in README.md")
+    path.write_text(text.replace(name, "r14.0.0"), encoding="utf-8")
+
+
 MUTATORS: dict[str, Callable[[Path, dict], None]] = {
     "duplicate_smart_key": mutate_duplicate_smart,
     "fake_ci_pass": mutate_fake_ci_pass,
@@ -448,6 +511,11 @@ MUTATORS: dict[str, Callable[[Path, dict], None]] = {
     "ambiguous_resume": mutate_ambiguous_resume,
     "task_state_drift": mutate_task_drift,
     "progress_json_tamper": mutate_progress_tamper,
+    "observer_pref_key": mutate_observer_pref_key,
+    "source_test_seam": mutate_source_test_seam,
+    "feature_semantics": mutate_feature_semantics,
+    "process_matrix": mutate_process_matrix,
+    "release_readme": mutate_release_readme,
     "remove_fetch_depth": mutate_remove_fetch_depth,
     "wrong_ci_branch": mutate_wrong_branch,
     "signing_leak": mutate_signing_leak,

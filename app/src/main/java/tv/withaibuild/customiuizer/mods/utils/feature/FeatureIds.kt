@@ -1056,3 +1056,8 @@ data object HideImeDismissButtonFeatureId : FeatureId {
     override val id = 252
     override val name = "systemui_hide_ime_dismiss_button"
 }
+
+data object StatusBarContentGeometryFeatureId : FeatureId {
+    override val id = 253
+    override val name = "systemui_statusbar_content_geometry"
+}

@@ -169,10 +169,13 @@ def check_workflow_file(path: Path) -> list[str]:
     )
     if branch_section:
         branches = re.findall(r'-\s+([\w\-/\.]+)', branch_section.group(1))
-        if branches != ["devin/a14-rom-intelligence-audit"]:
+        if branches != ["main"]:
             violations.append(
-                f"  {rel}: push branches must be exactly [devin/a14-rom-intelligence-audit], got {branches}"
+                f"  {rel}: push branches must be exactly [main], got {branches}"
             )
+
+    if "devin/a14-rom-intelligence-audit" in text:
+        violations.append(f"  {rel}: stale branch devin/a14-rom-intelligence-audit is forbidden")
 
     # Forbidden commands / properties.
     forbidden = {

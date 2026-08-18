@@ -66,6 +66,8 @@ def classify(path: Path, line: int, text: str) -> str:
         "DeviceInfoMonitor" in rel
         or "LockScreenAlbumArtController" in rel
         or "ControlCenterPluginRuntime" in rel
+        or "StatusBarTextFit" in rel
+        or "StatusBarContentGeometry" in rel
     ):
         return "REGISTRY_FEATURE"
     if "mods/utils/ModuleHelper" in rel:

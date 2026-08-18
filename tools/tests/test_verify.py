@@ -1,10 +1,12 @@
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
 _VERIFY_PATH = _REPO_ROOT / "tools" / "verify.py"
 _AUDIT_PATH = _REPO_ROOT / "tools" / "audit-feature-semantics.py"
 _INVENTORY_PATH = _REPO_ROOT / "feature-semantics" / "a14.json"
@@ -46,6 +48,10 @@ class VerifyFeatureSemanticsTests(unittest.TestCase):
 
     def test_javaVersionParserRejectsUnrelatedOutput(self):
         self.assertIsNone(_verify.parse_java_major("not a java runtime"))
+
+    def test_hookBodyPrefmapGateIsWired(self):
+        self.assertTrue(callable(_verify.check_hook_body_prefmap))
+        self.assertEqual(0, _verify.check_hook_body_prefmap())
 
     def test_commandEnvironmentNormalizesBinJavaHome(self):
         java_name = "java.exe" if _verify.sys.platform == "win32" else "java"

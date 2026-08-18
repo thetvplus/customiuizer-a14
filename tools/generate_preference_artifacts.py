@@ -288,6 +288,15 @@ def _append_compact_search_category(
 
 FEATURE_PREFERENCE_KEY = re.compile(r'preferenceKey\s*=\s*"([A-Za-z][A-Za-z0-9_]*)"')
 
+XML_VALUE_TYPES = {
+    "tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx": "BOOLEAN",
+    "tv.withaibuild.customiuizer.prefs.ListPreferenceEx": "STRING",
+    "tv.withaibuild.customiuizer.prefs.DropDownPreferenceEx": "STRING",
+    "tv.withaibuild.customiuizer.prefs.EditTextPreferenceEx": "STRING",
+    "tv.withaibuild.customiuizer.prefs.SeekBarPreference": "INT",
+    "tv.withaibuild.customiuizer.prefs.ColorPreferenceEx": "INT",
+}
+
 
 def _storage_key(raw: str) -> str:
     if raw.startswith("pref_key_"):
@@ -306,6 +315,23 @@ def collect_xml_storage_keys(xml_dir: Path) -> set[str]:
     return keys
 
 
+def collect_xml_storage_types(xml_dir: Path) -> dict[str, str]:
+    types: dict[str, str] = {}
+    for path in sorted(xml_dir.glob("*.xml")):
+        root = ET.parse(path).getroot()
+        for element in root.iter():
+            key = element.get(ANDROID_KEY)
+            if not key:
+                continue
+            storage = _storage_key(key)
+            tag_type = XML_VALUE_TYPES.get(element.tag)
+            if tag_type is None and storage.endswith("_apps"):
+                tag_type = "STRING_SET"
+            if tag_type:
+                types[storage] = tag_type
+    return types
+
+
 def collect_feature_storage_keys(java_dir: Path) -> set[str]:
     keys: set[str] = set()
     if not java_dir.is_dir():
@@ -317,7 +343,11 @@ def collect_feature_storage_keys(java_dir: Path) -> set[str]:
     return keys
 
 
-def write_preference_catalog(output_dir: Path, keys: set[str]) -> None:
+def write_preference_catalog(
+    output_dir: Path,
+    keys: set[str],
+    types: dict[str, str] | None = None,
+) -> None:
     package_dir = output_dir / "tv" / "withaibuild" / "customiuizer" / "utils"
     package_dir.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -330,6 +360,13 @@ def write_preference_catalog(output_dir: Path, keys: set[str]) -> None:
     ]
     for key in sorted(keys):
         lines.append(f'        "{key}",')
+    lines.append("    )")
+    lines.append("")
+    lines.append("    @JvmField")
+    lines.append("    val VALUE_TYPES: Map<String, PreferenceValueType> = hashMapOf(")
+    resolved = types or {}
+    for key in sorted(resolved):
+        lines.append(f'        "{key}" to PreferenceValueType.{resolved[key]},')
     lines.extend(
         [
             "    )",
@@ -373,9 +410,13 @@ def generate(
 
     if catalog_output is not None:
         keys = collect_xml_storage_keys(source_dir)
+        types = collect_xml_storage_types(source_dir)
         if java_dir is not None:
-            keys.update(collect_feature_storage_keys(java_dir))
-        write_preference_catalog(catalog_output, keys)
+            feature_keys = collect_feature_storage_keys(java_dir)
+            keys.update(feature_keys)
+            for key in feature_keys:
+                types.setdefault(key, "BOOLEAN")
+        write_preference_catalog(catalog_output, keys, types)
 
 
 def main() -> None:

@@ -25,8 +25,36 @@ import tv.withaibuild.customiuizer.utils.HookUtils
  */
 object LauncherLayoutHooks {
 
+    @Volatile
+    private var hideSeekPointsEdit = false
+
+    @Volatile
+    private var horizWidgetMargin = 0
+
+    private var layoutObserverRegistered = false
+
+    private fun refreshLayoutSnapshot() {
+        val prefs = MainModule.mPrefs
+        hideSeekPointsEdit = prefs.getBoolean("launcher_hideseekpoints_edit")
+        horizWidgetMargin = prefs.getInt("launcher_horizwidgetmargin", 0)
+    }
+
+    private fun installLayoutSnapshot() {
+        refreshLayoutSnapshot()
+        if (layoutObserverRegistered) return
+        layoutObserverRegistered = true
+        ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+            override fun onChange(key: String?) = ModuleHelper.guarded {
+                if (key == null || key == "launcher_hideseekpoints_edit" || key == "launcher_horizwidgetmargin") {
+                    refreshLayoutSnapshot()
+                }
+            }
+        })
+    }
+
     @JvmStatic
     fun HideSeekPointsHook(lpparam: PackageReadyParam) {
+        installLayoutSnapshot()
         ModuleHelper.findAndHookMethod("com.miui.home.launcher.pageindicators.AllAppsIndicator", lpparam.classLoader, "shouldHide", HookerClassHelper.returnConstant(true))
         ModuleHelper.findAndHookMethod("com.miui.home.launcher.pageindicators.AllAppsIndicator", lpparam.classLoader, "hideAllAppsArrow", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
@@ -66,7 +94,7 @@ object LauncherLayoutHooks {
                     if (mHandler.hasMessages(666)) mHandler.removeMessages(666)
                     val mScreenSeekBar = XposedHelpers.getObjectField(thisObject, "mScreenIndicator") as View
                     mScreenSeekBar.animate().cancel()
-                    if (!isInEditingMode && MainModule.mPrefs.getBoolean("launcher_hideseekpoints_edit")) {
+                    if (!isInEditingMode && hideSeekPointsEdit) {
                         mScreenSeekBar.alpha = 0.0f
                         mScreenSeekBar.visibility = View.GONE
                         return XposedHelpers.throwOrReturn(throwable, result)
@@ -414,6 +442,7 @@ object LauncherLayoutHooks {
 
     @JvmStatic
     fun HorizontalWidgetSpacingHook(lpparam: PackageReadyParam) {
+        installLayoutSnapshot()
         ModuleHelper.hookAllMethods("com.miui.home.launcher.DeviceConfig", lpparam.classLoader, "getMiuiWidgetSizeSpec", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
@@ -431,7 +460,7 @@ object LauncherLayoutHooks {
                     val spec = result as Long
                     var width = spec shr 32
                     var height = spec - ((spec shr 32) shl 32)
-                    val opt = Math.round((MainModule.mPrefs.getInt("launcher_horizwidgetmargin", 0) - 21) * Resources.getSystem().displayMetrics.density) * 2
+                    val opt = Math.round((horizWidgetMargin - 21) * Resources.getSystem().displayMetrics.density) * 2
                     width -= opt.toLong()
                     result = (width shl 32) or height
 

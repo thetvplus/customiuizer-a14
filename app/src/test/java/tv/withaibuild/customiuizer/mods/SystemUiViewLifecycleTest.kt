@@ -27,8 +27,9 @@ class SystemUiViewLifecycleTest {
 
         assertFalse(hook.contains("HashSet"))
         assertFalse(hook.contains("secureTitles"))
-        assertTrue(hook.contains("val secure = when (name)"))
-        assertTrue(hook.contains("\"intent\", \"custom\" -> MainModule.mPrefs.getBoolean(\"system_secureqs_custom\")"))
+        assertFalse(hook.contains("MainModule.mPrefs"))
+        assertTrue(hook.contains("isSecureQsTile"))
+        assertTrue(source.contains("\"intent\", \"custom\" -> snapshot.custom"))
     }
 
     private fun source(relativePath: String): String {
