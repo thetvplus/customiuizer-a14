@@ -101,18 +101,27 @@ class SystemServerFeaturesWiringTest {
     }
 
     @Test
-    fun navBarActionsFeatureHasCorrectMultiIntGuard() {
+    fun navBarActionsFeatureIsAlwaysInstalledForFirstEnable() {
         val feature = NavBarActionsFeature(fakeSystemServerStartingParam())
 
         assertEquals(NavBarActionsFeatureId, feature.id)
         assertEquals("controls_backlong_action", feature.preferenceKey)
         assertEquals(FeatureTarget.SYSTEM_SERVER, feature.target)
 
-        val off = PrefMap()
-        assertFalse(feature.isEnabled(off))
+        assertTrue(feature.isEnabled(PrefMap()))
+        assertTrue(feature.isEnabled(PrefMap().apply { put("controls_menulong_action", 5) }))
+    }
 
-        val on = PrefMap().apply { put("controls_menulong_action", 5) }
-        assertTrue(feature.isEnabled(on))
+    @Test
+    fun powerDoubleTapActionFeatureIsAlwaysInstalledForFirstEnable() {
+        val feature = PowerDoubleTapActionFeature(fakeSystemServerStartingParam())
+
+        assertEquals(PowerDoubleTapActionFeatureId, feature.id)
+        assertEquals("controls_powerdt_action", feature.preferenceKey)
+        assertEquals(FeatureTarget.SYSTEM_SERVER, feature.target)
+
+        assertTrue(feature.isEnabled(PrefMap()))
+        assertTrue(feature.isEnabled(PrefMap().apply { put("controls_powerdt_action", 8) }))
     }
 
     @Test

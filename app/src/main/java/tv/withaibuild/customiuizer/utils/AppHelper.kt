@@ -15,6 +15,7 @@ import io.github.libxposed.service.RemotePreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.mods.GlobalActionToggles
 import tv.withaibuild.customiuizer.mods.GlobalActions
 
 
@@ -225,18 +226,8 @@ object AppHelper {
             } else if (action == 10) {
                 val what = getIntOfAppPrefs(key + "_toggle", 0)
                 val toggle = modRes.getString(R.string.array_global_actions_toggle)
-                pair = when (what) {
-                    1 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_wifi))
-                    2 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_bt))
-                    3 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_gps))
-                    4 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_nfc))
-                    5 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_sound))
-                    6 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_brightness))
-                    7 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_rotation))
-                    8 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_torch))
-                    9 -> Pair(toggle, modRes.getString(R.string.array_global_toggle_mobiledata))
-                    else -> null
-                }
+                val labelRes = GlobalActionToggles.labelResId(what)
+                pair = if (labelRes != null) Pair(toggle, modRes.getString(labelRes)) else null
             } else if (action == 20) {
                 val pref = getStringOfAppPrefs(key + "_activity", "") ?: ""
                 var name = Helpers.getAppName(context, pref)?.toString()

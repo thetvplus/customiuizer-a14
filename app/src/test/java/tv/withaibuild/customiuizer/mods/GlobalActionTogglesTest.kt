@@ -2,6 +2,7 @@ package tv.withaibuild.customiuizer.mods
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GlobalActionTogglesTest {
@@ -28,5 +29,10 @@ class GlobalActionTogglesTest {
         }
         assertNull(GlobalActionToggles.broadcastAction(0))
         assertNull(GlobalActionToggles.broadcastAction(13))
+        for (id in 1..12) {
+            assertTrue("toggle $id missing label", GlobalActionToggles.labelResId(id) != null)
+        }
+        assertNull(GlobalActionToggles.labelResId(0))
+        assertNull(GlobalActionToggles.labelResId(13))
     }
 }

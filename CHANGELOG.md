@@ -2,6 +2,29 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.20.8 — 2026-08-19
+
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Fixes
+
+- Some system-level settings now take effect immediately after being configured for the first time.
+- Some global actions no longer need an extra restart after being configured for the first time.
+- Corrected the display names of the Hotspot, Do not disturb and Dark mode actions.
+- Corrected the display names of the Play/Pause, Next and Previous media actions.
+- Improved the runtime availability of global actions in the system service and the system UI.
+
+### Improvements
+
+- Improved runtime synchronization of action settings and host lifecycle handling.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.20.8.apk`
+- versionCode / versionName: `205 / r14.20.8`
+
+---
+
 ## r14.20.7 — 2026-08-19
 
 Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.

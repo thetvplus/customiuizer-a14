@@ -3,7 +3,7 @@ package tv.withaibuild.customiuizer.mods.utils
 import android.util.SparseBooleanArray
 import tv.withaibuild.customiuizer.MainModule
 
-private val customActionKeys = arrayOf(
+internal val customActionKeys = arrayOf(
     "controls_backlong", "controls_homelong", "controls_menulong",
     "controls_powerdt",
     "controls_fsg_assist_left", "controls_fsg_assist_right",

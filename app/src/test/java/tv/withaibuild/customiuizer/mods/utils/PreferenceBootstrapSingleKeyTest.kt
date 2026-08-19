@@ -84,7 +84,8 @@ class PreferenceBootstrapSingleKeyTest {
 
         assertEquals(9L, prefs.getLong("unknown_long_metric", 0L))
         assertEquals(2.5f, prefs.getAll()["unknown_float_metric"])
-        assertTrue(fake.getAllCount > afterBootstrap)
+        // readUnknownType now handles Long/Float via typed getters directly
+        assertEquals(afterBootstrap, fake.getAllCount)
     }
 
     @Test

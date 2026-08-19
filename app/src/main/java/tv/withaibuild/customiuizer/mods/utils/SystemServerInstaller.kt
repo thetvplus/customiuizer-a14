@@ -18,6 +18,7 @@ object SystemServerInstaller {
 
     @JvmStatic
     @JvmOverloads
+    @Suppress("UNUSED_PARAMETER")
     fun install(lpparam: XposedModuleInterface.SystemServerStartingParam, prefReady: Boolean = true) {
         val mPrefs = MainModule.mPrefs
 
@@ -53,11 +54,11 @@ object SystemServerInstaller {
             registerEndBytes = registerEndBytes,
         )
 
-        // Global actions are still checked eagerly because they depend on a cached map that must
-        // not be built before preferences are ready.
-        if (prefReady && hasConfiguredGlobalActions()) {
-            GlobalActionSystemServerHooks.setupGlobalActions(lpparam)
-        }
+        // PhoneWindowManager GlobalAction receiver is a cheap always-on transport.
+        // It must be installed at system_server start so later none → configured
+        // changes do not require restarting system_server. ROM-specific optional
+        // hooks remain lazy inside setupStatusBar.
+        GlobalActionSystemServerHooks.setupGlobalActions(lpparam)
 
         registry.installAll(FeatureTarget.SYSTEM_SERVER, InstallPhase.SYSTEM_SERVER_STARTING, mPrefs)
     }

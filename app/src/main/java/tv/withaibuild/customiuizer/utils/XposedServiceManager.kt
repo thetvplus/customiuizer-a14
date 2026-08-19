@@ -1,5 +1,8 @@
 package tv.withaibuild.customiuizer.utils
 
+import android.app.BroadcastOptions
+import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
@@ -12,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import tv.withaibuild.customiuizer.mods.utils.SystemServerPreferenceInvalidation
 
 /**
  * Single application-level owner for the LSPosed/Vector service connection.
@@ -113,6 +117,9 @@ object XposedServiceManager {
     @JvmField
     @Volatile
     var remotePrefs: RemotePreferences? = null
+
+    @Volatile
+    private var appContext: Context? = null
 
     private const val NOT_STARTED = 0L
 
@@ -258,12 +265,10 @@ object XposedServiceManager {
                 return@launch
             }
             val written = try {
-                // getAll() copies the local map; keep it off the input frame as well.
-                val value = sharedPreferences.all[key]
                 val edit = remote.edit()
+                val value = sharedPreferences.all[key]
                 if (value == null) edit.remove(key) else putValue(edit, key, value)
-                edit.apply()
-                true
+                edit.commit()
             } catch (oom: OutOfMemoryError) {
                 throw oom
             } catch (t: Throwable) {
@@ -271,7 +276,9 @@ object XposedServiceManager {
                 false
             }
 
-            if (!written) {
+            if (written) {
+                sendSystemServerInvalidation(key)
+            } else {
                 markUndelivered("remote write failed")
                 scheduleMirrorRetry(generation)
             }
@@ -302,6 +309,56 @@ object XposedServiceManager {
         if (mirrorState.markUndelivered()) {
             AppHelper.log(LOG_TAG, "settings change not mirrored to the module ($reason)")
         }
+    }
+
+    /**
+     * Sends an explicit preference invalidation broadcast to system_server.
+     *
+     * The libxposed RemotePreferences change listener does not fire in system_server, so
+     * this bridge is the only way system_server learns about runtime preference changes.
+     * The broadcast carries no values: either the changed storage key, or a bulk marker
+     * that makes system_server re-read its own snapshot. It is sent once per committed
+     * remote write, off the caller's thread, and never in response to a received
+     * invalidation - system_server never writes back, so there is no feedback loop.
+     *
+     * @param key the storage key that changed, or null for a bulk invalidation.
+     */
+    private fun sendSystemServerInvalidation(key: String?) {
+        try {
+            val context = appContext() ?: return
+            val intent = Intent(SystemServerPreferenceInvalidation.ACTION_INVALIDATE)
+            if (key == null) {
+                intent.putExtra(SystemServerPreferenceInvalidation.EXTRA_BULK, true)
+            } else {
+                intent.putExtra(SystemServerPreferenceInvalidation.EXTRA_KEY, key)
+            }
+            val options = BroadcastOptions.makeBasic()
+                .setShareIdentityEnabled(true)
+                .toBundle()
+            context.sendBroadcast(intent, null, options)
+        } catch (t: Throwable) {
+            if (t is OutOfMemoryError) throw t
+            AppHelper.log(LOG_TAG, "system_server invalidation broadcast failed: $t")
+        }
+    }
+
+    /**
+     * The application context of this process, resolved once.
+     *
+     * [XposedServiceManager] is bound before any Activity exists and is not handed a
+     * context, so the process-wide application is looked up reflectively, the same way
+     * Helpers resolves the app ContentResolver. Only the application is retained.
+     */
+    private fun appContext(): Context? {
+        appContext?.let { return it }
+        val app = try {
+            val activityThread = Class.forName("android.app.ActivityThread")
+            activityThread.getMethod("currentApplication").invoke(null) as? Context
+        } catch (t: Throwable) {
+            if (t is OutOfMemoryError) throw t
+            null
+        }
+        return app?.also { appContext = it }
     }
 
     /** Queues a pass off the caller's thread. Stale generations are dropped by [runMirror]. */
@@ -354,13 +411,12 @@ object XposedServiceManager {
         return try {
             val plan = PrefsMirror.plan(local, remote.all, IGNORE_KEYS)
             if (!plan.isEmpty) {
-                // One editor for the whole plan: a per-key commit would be a binder call and
-                // a change callback in every hooked process for every single key.
                 val edit = remote.edit()
                 for ((planKey, planValue) in plan.puts) putValue(edit, planKey, planValue)
                 for (planKey in plan.removes) edit.remove(planKey)
-                edit.apply()
+                edit.commit()
                 AppHelper.log(LOG_TAG, "mirrored ${plan.size} setting(s) to the module ($reason)")
+                sendSystemServerInvalidation(null)
             }
             true
         } catch (oom: OutOfMemoryError) {

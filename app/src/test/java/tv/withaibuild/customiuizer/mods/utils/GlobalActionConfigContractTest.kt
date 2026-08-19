@@ -14,7 +14,7 @@ class GlobalActionConfigContractTest {
 
     @Test
     fun configFileOwnsIndexAndIsIndependent() {
-        assertTrue(config.contains("private val customActionKeys = arrayOf("))
+        assertTrue(config.contains("internal val customActionKeys = arrayOf("))
         assertTrue(config.contains("private fun ensureCustomActionMaps()"))
         assertTrue(config.contains("fun hasConfiguredGlobalActions()"))
         assertTrue(config.contains("fun hasConfiguredActionCode("))
@@ -42,9 +42,14 @@ class GlobalActionConfigContractTest {
 
     @Test
     fun bootstrapAndInstallerUseConfigGate() {
-        assertTrue(systemUiBootstrap.contains("hasConfiguredGlobalActions()"))
+        assertFalse(systemUiBootstrap.contains("if (hasConfiguredGlobalActions()) GlobalActionSystemServerHooks.setupStatusBar(lpparam)"))
+        assertTrue(systemUiBootstrap.contains("GlobalActionSystemServerHooks.setupStatusBar(lpparam)"))
         assertFalse(systemUiBootstrap.contains("GlobalActions.hasCustomActions()"))
-        assertTrue(systemServerInstaller.contains("hasConfiguredGlobalActions()"))
+        assertTrue(systemServerInstaller.contains("GlobalActionSystemServerHooks.setupGlobalActions(lpparam)"))
+        assertFalse(
+            "PWM receiver must not wait for configured actions",
+            systemServerInstaller.contains("hasConfiguredGlobalActions()"),
+        )
         assertFalse(systemServerInstaller.contains("GlobalActions.hasCustomActions()"))
     }
 

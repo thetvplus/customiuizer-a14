@@ -167,7 +167,9 @@ internal fun evaluateGlobalActionStatusBarIfReady(
     globalActionStatusBarDone: BooleanArray,
 ) {
     if (shouldSetupGlobalActionStatusBar(shouldEvaluate, globalActionStatusBarDone[0])) {
-        if (hasConfiguredGlobalActions()) GlobalActionSystemServerHooks.setupStatusBar(lpparam)
+        // Base SystemUI receiver must exist before first runtime action selection.
+        // Optional action-specific hooks remain lazy inside setupStatusBar().
+        GlobalActionSystemServerHooks.setupStatusBar(lpparam)
         globalActionStatusBarDone[0] = true
     }
 }

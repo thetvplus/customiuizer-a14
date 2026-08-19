@@ -18,7 +18,7 @@ class FastRebootContractTest {
     @Test
     fun fastRebootRegistersOnceWithoutDependingOnCustomActions() {
         val customActionGate =
-            "if (hasConfiguredGlobalActions()) GlobalActionSystemServerHooks.setupStatusBar(lpparam)"
+            "GlobalActionSystemServerHooks.setupStatusBar(lpparam)"
 
         assertEquals(2, systemUiBootstrap.countOccurrences("setupFastRebootReceiver("))
         assertTrue(systemUiBootstrap.indexOf("setupFastRebootReceiver(") < systemUiBootstrap.indexOf(customActionGate))
@@ -29,7 +29,7 @@ class FastRebootContractTest {
     @Test
     fun customActionRegistrationConditionIsUnchanged() {
         val customActionGate =
-            "if (hasConfiguredGlobalActions()) GlobalActionSystemServerHooks.setupStatusBar(lpparam)"
+            "GlobalActionSystemServerHooks.setupStatusBar(lpparam)"
 
         assertEquals(1, systemUiBootstrap.countOccurrences(customActionGate))
     }

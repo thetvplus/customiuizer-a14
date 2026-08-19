@@ -267,7 +267,27 @@ class PreferenceBootstrap private constructor(
      */
     private fun onPreferenceChanged(key: String?) {
         if (key == null) return
+        doRefreshRemoteKey(key)
+    }
 
+    /**
+     * Re-reads a single key (or full snapshot for bulk) from the remote preferences and
+     * updates the process-local [PrefMap] and dispatches to observers.
+     *
+     * Shared entry point for both the native [OnSharedPreferenceChangeListener] callback
+     * (which works in app processes) and the explicit system_server invalidation bridge.
+     *
+     * @param key the storage key to refresh, or null for a bulk/full refresh.
+     */
+    fun refreshRemoteKey(key: String?) {
+        if (key == null) {
+            doRefreshBulk()
+        } else {
+            doRefreshRemoteKey(key)
+        }
+    }
+
+    private fun doRefreshRemoteKey(key: String) {
         try {
             val remote = remotePrefs ?: return
 
@@ -295,6 +315,19 @@ class PreferenceBootstrap private constructor(
         }
     }
 
+    private fun doRefreshBulk() {
+        try {
+            val remote = remotePrefs ?: return
+            val snapshot = remote.all ?: return
+            prefs.replaceSnapshot(snapshot)
+            synchronizeState()
+            changeDispatcher(null)
+        } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
+            XposedHelpers.log(t)
+        }
+    }
+
     /**
      * Read one changed key without copying the remote map when its type is known.
      *
@@ -311,18 +344,37 @@ class PreferenceBootstrap private constructor(
                 PreferenceValueType.FLOAT -> remote.getFloat(key, 0f)
                 PreferenceValueType.STRING -> remote.getString(key, null)
                 PreferenceValueType.STRING_SET -> copyOwnedStringSet(remote.getStringSet(key, null))
-                null -> copyIfStringSet(remote.all?.get(key))
+                null -> readUnknownType(remote, key)
             }
         } catch (t: Throwable) {
             FatalErrors.rethrowIfFatal(t)
             try {
-                copyIfStringSet(remote.all?.get(key))
+                readUnknownType(remote, key)
             } catch (fallback: Throwable) {
                 FatalErrors.rethrowIfFatal(fallback)
                 XposedHelpers.log(fallback)
                 null
             }
         }
+    }
+
+    /**
+     * Reads a key whose catalog type is unknown by probing the typed accessors, falling back
+     * to a full [SharedPreferences.getAll] copy only if none of them applies.
+     *
+     * A wrong guess costs a [ClassCastException] from the store and nothing else, so the probe
+     * order is simply the most common types first. The point is that the common cases no longer
+     * copy the whole remote map for one key; the caller has already established the key exists.
+     */
+    private fun readUnknownType(remote: SharedPreferences, key: String): Any? {
+        // Most dynamic keys (MultiAction actions/toggles) are INT.
+        try { return remote.getInt(key, 0) } catch (_: ClassCastException) {}
+        try { return remote.getString(key, null) } catch (_: ClassCastException) {}
+        try { return remote.getBoolean(key, false) } catch (_: ClassCastException) {}
+        try { return remote.getLong(key, 0L) } catch (_: ClassCastException) {}
+        try { return remote.getFloat(key, 0f) } catch (_: ClassCastException) {}
+        try { return copyIfStringSet(remote.getStringSet(key, null)) } catch (_: ClassCastException) {}
+        return copyIfStringSet(remote.all?.get(key))
     }
 
     private fun copyOwnedStringSet(values: Set<String>?): Set<String>? {

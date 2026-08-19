@@ -1085,8 +1085,7 @@ object Controls {
     @JvmStatic
     fun PowerDoubleTapActionHook(lpparam: SystemServerStartingParam) {
         installControlsSnapshot()
-        val dtFromVolumeDown = controlsConfig.volumeDownDtTorch
-        val doubleTapResons = arrayListOf("double_click_power", "power_double_tap", "double_click_power_key")
+        val doubleTapResons = arrayOf("double_click_power", "power_double_tap", "double_click_power_key")
         ModuleHelper.findAndHookMethod("com.miui.server.input.util.ShortCutActionsUtils", lpparam.classLoader, "triggerFunction", String::class.java, String::class.java, Bundle::class.java, Boolean::class.javaPrimitiveType, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -1115,10 +1114,16 @@ object Controls {
             }
         })
 
-        if (dtFromVolumeDown) {
-            ModuleHelper.findAndHookMethod("com.android.server.policy.MiuiShortcutTriggerHelper", lpparam.classLoader, "getDoubleVolumeDownKeyFunction", String::class.java, tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.returnConstant("launch_camera"))
-            ModuleHelper.findAndHookMethod("com.android.server.input.shortcut.singlekeyrule.VolumeDownKeyRule", lpparam.classLoader, "isEnableLaunchCamera", tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.returnConstant(true))
-        }
+        ModuleHelper.findAndHookMethod("com.android.server.policy.MiuiShortcutTriggerHelper", lpparam.classLoader, "getDoubleVolumeDownKeyFunction", String::class.java, object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                return if (controlsConfig.volumeDownDtTorch) "launch_camera" else chain.proceed()
+            }
+        })
+        ModuleHelper.findAndHookMethod("com.android.server.input.shortcut.singlekeyrule.VolumeDownKeyRule", lpparam.classLoader, "isEnableLaunchCamera", object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                return if (controlsConfig.volumeDownDtTorch) true else chain.proceed()
+            }
+        })
     }
 
     @JvmStatic

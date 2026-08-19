@@ -51,6 +51,9 @@ public class MainModule extends XposedModule {
 
     private PreferenceBootstrap preferenceBootstrap;
 
+    @Nullable
+    public static volatile PreferenceBootstrap sPreferenceBootstrap;
+
     private static boolean mSystemServerLoadMarkerLogged = false;
 
     @Override
@@ -72,6 +75,7 @@ public class MainModule extends XposedModule {
                 return getRemotePreferences(name);
             }
         });
+        sPreferenceBootstrap = preferenceBootstrap;
     }
 
     private boolean isSupportedAndroidVersion() {

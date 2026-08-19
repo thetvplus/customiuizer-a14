@@ -193,35 +193,7 @@ object GlobalActions {
     }
 
     @JvmStatic
-    fun getActionResId(action: Int): Int {
-        return when (action) {
-            0, 1 -> R.string.notselected
-            2 -> R.string.array_global_actions_notif
-            3 -> R.string.array_global_actions_eqs
-            4 -> R.string.array_global_actions_lock
-            5 -> R.string.array_global_actions_sleep
-            6 -> R.string.array_global_actions_screenshot
-            7 -> R.string.array_global_actions_recents
-            11 -> R.string.array_global_actions_back
-            12 -> R.string.array_global_actions_powermenu_short
-            13 -> R.string.array_global_actions_clearmemory
-            14 -> R.string.array_global_actions_invertcolors
-            15 -> R.string.array_global_actions_goback
-            16 -> R.string.array_global_actions_menu
-            17 -> R.string.array_global_actions_volume
-            18 -> R.string.array_global_actions_volume_up
-            19 -> R.string.array_global_actions_volume_down
-            22 -> R.string.array_global_actions_onehanded_left
-            23 -> R.string.array_global_actions_clear_notifs
-            24 -> R.string.array_global_actions_forceclose
-            25 -> R.string.array_global_actions_scrolltotop
-            26 -> R.string.array_global_actions_expandsidebar
-            27 -> R.string.array_global_actions_floatingwindow
-            28 -> R.string.array_global_actions_pinningwindow
-            29 -> R.string.array_global_actions_splitscreen
-            else -> 0
-        }
-    }
+    fun getActionResId(action: Int): Int = GlobalActionPresentation.titleResId(action)
 
     @JvmField
     val mSBReceiver: BroadcastReceiver = object : BroadcastReceiver() {

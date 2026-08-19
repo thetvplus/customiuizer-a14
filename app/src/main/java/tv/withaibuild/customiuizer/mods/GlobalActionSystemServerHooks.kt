@@ -20,15 +20,17 @@ import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import miui.app.MiuiFreeFormManager
 import miui.process.ForegroundInfo
 import miui.process.ProcessManager
+import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
-import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
+import tv.withaibuild.customiuizer.mods.utils.SystemServerPreferenceInvalidation
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.mods.utils.hasConfiguredActionCode
 import tv.withaibuild.customiuizer.mods.utils.hasConfiguredToggle
+import tv.withaibuild.customiuizer.utils.Helpers
 
 object GlobalActionSystemServerHooks {
 
@@ -572,6 +574,9 @@ object GlobalActionSystemServerHooks {
             override fun after(callback: AfterHookCallback) {
                 val thisObject = callback.getThisObject()!!
                 val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
+                MainModule.sPreferenceBootstrap?.let { bootstrap ->
+                    SystemServerPreferenceInvalidation.install(mContext, bootstrap)
+                }
                 val intentfilter = IntentFilter()
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "SimulateMenu")
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "ForceClose")

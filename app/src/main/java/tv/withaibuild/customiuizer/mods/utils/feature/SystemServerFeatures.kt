@@ -91,8 +91,9 @@ internal class NavBarActionsFeature(
     "controls_backlong_action"
 ) {
     companion object {
+        /** Trigger hook is cheap; behavior is gated by [Controls.controlsConfig] at runtime. */
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getInt("controls_backlong_action", 1) > 1 || prefs.getInt("controls_homelong_action", 1) > 1 || prefs.getInt("controls_menulong_action", 1) > 1
+        fun evaluateEnabled(@Suppress("UNUSED_PARAMETER") prefs: PrefMap): Boolean = true
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
@@ -108,8 +109,9 @@ internal class PowerDoubleTapActionFeature(
     "controls_powerdt_action"
 ) {
     companion object {
+        /** Trigger hook is cheap; behavior is gated by [Controls.controlsConfig] at runtime. */
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getInt("controls_powerdt_action", 1) > 1 || prefs.getBoolean("controls_volumedowndt_torch")
+        fun evaluateEnabled(@Suppress("UNUSED_PARAMETER") prefs: PrefMap): Boolean = true
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)

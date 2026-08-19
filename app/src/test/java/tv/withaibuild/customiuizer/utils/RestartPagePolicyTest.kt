@@ -62,6 +62,15 @@ class RestartPagePolicyTest {
     }
 
     @Test
+    fun power_page_does_not_restart_system_server() {
+        assertEquals(RestartMask.NONE, RestartPagePolicy.maskFor(R.xml.prefs_controls_power))
+        assertEquals(
+            RestartMask.NONE,
+            RestartPagePolicy.maskFor(R.xml.prefs_controls, "pref_key_controls_cat_power")
+        )
+    }
+
+    @Test
     fun multi_target_navbar_page() {
         assertEquals(
             RestartMask.LAUNCHER or RestartMask.SYSTEMUI,
