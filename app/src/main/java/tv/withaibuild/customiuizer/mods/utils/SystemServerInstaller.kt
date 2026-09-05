@@ -36,8 +36,8 @@ object SystemServerInstaller {
         val mPrefs = MainModule.mPrefs
 
         synchronized(lock) {
-            val activeRegistry = registry ?: run {
-                val created = FeatureInstallRegistry()
+            val registry = this.registry ?: run {
+                val registry = FeatureInstallRegistry()
                 val catalogStartNanos = FeatureInstallMetrics.nowNanos()
                 val catalogStartBytes = FeatureInstallMetrics.allocatedBytes()
                 val packagePermissionsFeature = PackagePermissionsFeature(lpparam, mPrefs)
@@ -46,11 +46,11 @@ object SystemServerInstaller {
                 val catalogEndBytes = FeatureInstallMetrics.allocatedBytes()
                 val registerStartNanos = FeatureInstallMetrics.nowNanos()
                 val registerStartBytes = FeatureInstallMetrics.allocatedBytes()
-                created.register(packagePermissionsFeature)
+                registry.register(packagePermissionsFeature)
 
                 // All preference-guarded system_server features.
                 for (feature in features) {
-                    created.register(feature)
+                    registry.register(feature)
                 }
 
                 val registerEndNanos = FeatureInstallMetrics.nowNanos()
@@ -73,14 +73,14 @@ object SystemServerInstaller {
                 // changes do not require restarting system_server. ROM-specific optional
                 // hooks remain lazy inside setupStatusBar.
                 GlobalActionSystemServerHooks.setupGlobalActions(lpparam)
-                registry = created
-                created
+                this.registry = registry
+                registry
             }
 
             // Unready snapshots must not decide business features. Always-on specs
             // (preferenceKey null / isEnabled on an empty map) still install.
             val installPrefs = if (prefReady) mPrefs else PrefMap()
-            activeRegistry.installAll(FeatureTarget.SYSTEM_SERVER, InstallPhase.SYSTEM_SERVER_STARTING, installPrefs)
+            registry.installAll(FeatureTarget.SYSTEM_SERVER, InstallPhase.SYSTEM_SERVER_STARTING, installPrefs)
             if (SystemServerPrefLifecycle.shouldMarkCatchUpComplete(prefReady, currentBootstrapState())) {
                 catchUpDone = true
             }
@@ -98,8 +98,8 @@ object SystemServerInstaller {
             if (!SystemServerPrefLifecycle.shouldRunCatchUp(catchUpDone, currentBootstrapState())) {
                 return
             }
-            val activeRegistry = registry ?: return
-            activeRegistry.installAll(
+            val registry = this.registry ?: return
+            registry.installAll(
                 FeatureTarget.SYSTEM_SERVER,
                 InstallPhase.SYSTEM_SERVER_STARTING,
                 MainModule.mPrefs,
