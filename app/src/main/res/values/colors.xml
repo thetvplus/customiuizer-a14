@@ -8,27 +8,19 @@
 	<color name="color_on_surface">@android:color/system_neutral1_900</color>
 	<color name="color_on_surface_variant">@android:color/system_neutral1_700</color>
 	<color name="color_outline_variant">@android:color/system_neutral2_200</color>
-	<color name="color_primary_container">@android:color/system_accent1_100</color>
-	<color name="color_on_primary_container">@android:color/system_accent1_900</color>
-	<color name="color_secondary_container">@android:color/system_accent2_100</color>
-	<color name="color_on_secondary_container">@android:color/system_accent2_900</color>
-	<color name="color_tertiary_container">@android:color/system_accent3_100</color>
-	<color name="color_on_tertiary_container">@android:color/system_accent3_900</color>
-	<color name="color_neutral_container">@android:color/system_neutral2_100</color>
-	<color name="color_on_neutral_container">@android:color/system_neutral2_800</color>
 	<color name="about_divider">@color/color_outline_variant</color>
 	<color name="highlight_normal_light">@android:color/system_accent1_600</color>
 
 	<color name="preference_category_text_color">@color/color_on_surface_variant</color>
 	<color name="preference_primary_text_color">@android:color/system_neutral1_900</color>
 	<color name="preference_primary_text_color_disable">@color/preference_primary_text_disable</color>
-	<color name="preference_primary_text_color_pressed">#ff000000</color>
+	<color name="preference_primary_text_color_pressed">@color/color_on_surface</color>
 	<color name="preference_secondary_text_color">@android:color/system_neutral2_700</color>
 	<color name="preference_secondary_text_color_disable">@color/preference_primary_text_disable</color>
-	<color name="preference_secondary_text_color_pressed">#66000000</color>
-	<color name="preference_secondary_text_color_checked">#260091dc</color>
+	<color name="preference_secondary_text_color_pressed">@color/color_on_surface_variant</color>
+	<color name="preference_secondary_text_color_checked">@color/highlight_normal_light</color>
 
-	<color name="hint_edit_text_color">#4c000000</color>
+	<color name="hint_edit_text_color">@color/color_on_surface_variant</color>
 
     <color name="list_item_bg_color_pressed">#0d000000</color>
 	<color name="list_item_bg_color">@android:color/transparent</color>

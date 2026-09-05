@@ -2,36 +2,22 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
-## r14.21.1 — 2026-09-05
+## r14.21.2 — 2026-09-06
 
-Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
-
-### Settings UI
-
-- Grouped cards use system dynamic surface and outline tokens. The wallpaper palette is the color source.
-- The home page uses Material category icons on dynamic-color tiles.
-
-### Artifact Information
-
-- APK: `CustoMIUIzer-A14-r14.21.1.apk`
-- versionCode / versionName: `208 / r14.21.1`
-
----
-
-## r14.21.0 — 2026-09-05
-
-Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
 
 ### Settings UI
 
-- Preference lists and About now use grouped inset cards.
+- Preference lists and About use grouped inset cards.
 - Category titles use sentence case instead of ALL CAPS.
 - The 1 dp line under the toolbar is removed.
+- Grouped cards, search results, overflow menus, and dialogs share system dynamic surface and outline tokens. The wallpaper palette is the color source.
+- Title, summary, and category type sizes follow a Settings-like hierarchy.
 
 ### Artifact Information
 
-- APK: `CustoMIUIzer-A14-r14.21.0.apk`
-- versionCode / versionName: `207 / r14.21.0`
+- APK: `CustoMIUIzer-A14-r14.21.2.apk`
+- versionCode / versionName: `209 / r14.21.2`
 
 ---
 

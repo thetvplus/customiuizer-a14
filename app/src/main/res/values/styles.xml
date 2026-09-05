@@ -25,6 +25,12 @@
 		<item name="alertDialogTheme">@style/AppDialogStyle</item>
 		<item name="preferenceTheme">@style/AppPreferenceTheme</item>
 		<item name="actionOverflowMenuStyle">@style/OverflowMenuStyle</item>
+		<item name="popupMenuStyle">@style/OverflowMenuStyle</item>
+		<item name="android:popupMenuStyle">@style/OverflowMenuStyle</item>
+		<item name="textAppearanceLargePopupMenu">@style/AppTextAppearance.PopupMenu</item>
+		<item name="textAppearanceSmallPopupMenu">@style/AppTextAppearance.PopupMenu</item>
+		<item name="android:textAppearanceLargePopupMenu">@style/AppTextAppearance.PopupMenu</item>
+		<item name="android:textAppearanceSmallPopupMenu">@style/AppTextAppearance.PopupMenu</item>
 	</style>
 	<style name="AppSpinnerStyle" parent="@style/Widget.AppCompat.Spinner.DropDown">
 		<item name="overlapAnchor">false</item>
@@ -43,6 +49,8 @@
 		<item name="colorPrimary">@color/color_window_background</item>
 		<item name="android:textColorPrimary">@color/preference_primary_text</item>
 		<item name="android:textColorSecondary">@color/preference_secondary_text</item>
+		<item name="titleTextAppearance">@style/AppTextAppearance.Primary</item>
+		<item name="searchViewStyle">@style/AppSearchView</item>
 	</style>
 	<style name="AppDialogStyle" parent="ThemeOverlay.AppCompat.Dialog">
 		<item name="android:windowBackground">@drawable/popup_background</item>
@@ -59,6 +67,15 @@
 	<style name="OverflowMenuStyle" parent="@style/Widget.AppCompat.PopupMenu.Overflow">
 		<item name="android:overlapAnchor">false</item>
 		<item name="android:popupBackground">@drawable/popmenu_background</item>
+		<item name="android:popupElevation">8dp</item>
+	</style>
+	<style name="AppSearchView" parent="Widget.AppCompat.SearchView">
+		<item name="queryBackground">@android:color/transparent</item>
+		<item name="android:textColorHint">@color/hint_edit_text_color</item>
+	</style>
+	<style name="AppTextAppearance.PopupMenu" parent="TextAppearance.AppCompat.Menu">
+		<item name="android:textSize">@dimen/normal_text_size</item>
+		<item name="android:textColor">@color/preference_primary_text_color</item>
 	</style>
 
 	<style name="Invisible" parent="@android:style/Theme.Translucent">

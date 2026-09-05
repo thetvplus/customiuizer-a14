@@ -2,36 +2,22 @@
 
 [English](CHANGELOG.md) | 简体中文
 
-## r14.21.1 — 2026-09-05
+## r14.21.2 — 2026-09-06
 
-预发布。面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。
-
-### 设置界面
-
-- 分组卡片改用系统动态色的 surface / outline token，颜色来源为壁纸色板。
-- 首页分类使用 Material 图标与动态色圆底。
-
-### 产物信息
-
-- APK：`CustoMIUIzer-A14-r14.21.1.apk`
-- versionCode / versionName：`208 / r14.21.1`
-
----
-
-## r14.21.0 — 2026-09-05
-
-预发布。面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。
+面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。
 
 ### 设置界面
 
-- 偏好列表与关于页改为分组内嵌卡片。
+- 偏好列表与关于页使用分组内嵌卡片。
 - 分类标题改为句首大写，不再使用全大写。
 - 去掉标题栏下方 1 dp 细线。
+- 分组卡片、搜索结果、右上角菜单与对话框共用系统动态色的 surface / outline token，颜色来源为壁纸色板。
+- 标题、摘要与分类字号按设置页层级对齐。
 
 ### 产物信息
 
-- APK：`CustoMIUIzer-A14-r14.21.0.apk`
-- versionCode / versionName：`207 / r14.21.0`
+- APK：`CustoMIUIzer-A14-r14.21.2.apk`
+- versionCode / versionName：`209 / r14.21.2`
 
 ---
 
