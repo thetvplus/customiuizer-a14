@@ -125,15 +125,6 @@ class MainFragment : PreferenceFragmentBase() {
     override fun onCreatePreferences(@Nullable savedInstanceState: Bundle?, @Nullable rootKey: String?) {
         super.onCreatePreferences(savedInstanceState, rootKey)
         setPreferencesFromResource(R.xml.prefs_main, rootKey)
-        applyMainPageIcons()
-    }
-
-    private fun applyMainPageIcons() {
-        val screen = preferenceScreen ?: return
-        screen.findPreference<Preference>("pref_key_system")?.setIcon(R.drawable.pref_icon_system)
-        screen.findPreference<Preference>("pref_key_launcher")?.setIcon(R.drawable.pref_icon_launcher)
-        screen.findPreference<Preference>("pref_key_controls")?.setIcon(R.drawable.pref_icon_controls)
-        screen.findPreference<Preference>("pref_key_various")?.setIcon(R.drawable.pref_icon_various)
     }
 
     private fun doBaseReload() = super.reloadPreferences()

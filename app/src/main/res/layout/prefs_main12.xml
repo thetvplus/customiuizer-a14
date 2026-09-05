@@ -12,6 +12,10 @@
 	android:dividerHeight="0dp"
 	android:drawSelectorOnTop="false"
 	android:listSelector="@drawable/list_item_bg"
+	android:paddingStart="@dimen/preference_group_inset"
+	android:paddingEnd="@dimen/preference_group_inset"
+	android:paddingTop="@dimen/preference_screen_padding_top"
+	android:paddingBottom="@dimen/preference_screen_padding_bottom"
 	android:scrollbarAlwaysDrawVerticalTrack="false"
 	android:background="@color/color_window_background"
 	/>

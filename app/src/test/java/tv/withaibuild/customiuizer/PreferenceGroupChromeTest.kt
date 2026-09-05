@@ -136,6 +136,9 @@ class PreferenceGroupChromeWiringTest {
     private val decoration = Files.readString(
         Path.of("src/main/java/tv/withaibuild/customiuizer/PreferenceGroupChrome.kt")
     )
+    private val searchAdapter = Files.readString(
+        Path.of("src/main/java/tv/withaibuild/customiuizer/utils/ModSearchAdapter.kt")
+    )
     private val styles = source("app/src/main/res/values/styles.xml")
     private val aboutLayout = source("app/src/main/res/layout/fragment_about.xml")
     private val activityMain = source("app/src/main/res/layout/activity_main.xml")
@@ -216,7 +219,6 @@ class PreferenceGroupChromeWiringTest {
             assertTrue(source.contains("@android:color/system_neutral1_"))
             assertTrue(source.contains("color_surface_container"))
             assertTrue(source.contains("color_outline_variant"))
-            assertTrue(source.contains("color_primary_container"))
         }
         assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_50"))
         assertTrue(lightColors.contains("color_surface_container\">@android:color/system_neutral1_10"))
@@ -228,22 +230,32 @@ class PreferenceGroupChromeWiringTest {
     fun sectionHeadersAlignWithInsetCardTitles() {
         assertTrue(categoryEx.contains("preference_group_header_padding"))
         val dimens = source("app/src/main/res/values/dimens.xml")
-        assertTrue(dimens.contains("preference_group_header_padding\">36dp"))
+        assertTrue(dimens.contains("preference_group_header_padding\">32dp"))
+        assertTrue(dimens.contains("normal_text_size\">17sp"))
+        assertTrue(dimens.contains("secondary_text_size\">13sp"))
+        assertTrue(dimens.contains("preference_group_radius\">12dp"))
     }
 
     @Test
-    fun mainPageUsesGoogleNativeCategoryIconsWithoutXmlKeys() {
-        assertTrue(mainFragment.contains("applyMainPageIcons()"))
-        assertTrue(mainFragment.contains("pref_icon_system"))
-        assertTrue(mainFragment.contains("pref_icon_launcher"))
-        assertTrue(mainFragment.contains("pref_icon_controls"))
-        assertTrue(mainFragment.contains("pref_icon_various"))
+    fun homePageDoesNotPinCategoryIcons() {
+        assertFalse(mainFragment.contains("applyMainPageIcons"))
+        assertFalse(mainFragment.contains("pref_icon_system"))
         assertFalse(prefsMain.contains("android:icon"))
-        for (name in listOf("system", "launcher", "controls", "various")) {
-            val tile = source("app/src/main/res/drawable/pref_icon_$name.xml")
-            assertTrue(tile.contains("android:shape=\"oval\""))
-            assertTrue(tile.contains("preference_group_icon_size"))
-        }
+    }
+
+    @Test
+    fun searchResultsAndOverflowMenuUseGroupedCardSurfaces() {
+        assertTrue(searchAdapter.contains("pref_search_row_single"))
+        assertTrue(searchAdapter.contains("pref_search_row_top"))
+        assertTrue(searchAdapter.contains("pref_search_row_middle"))
+        assertTrue(searchAdapter.contains("pref_search_row_bottom"))
+        val searchList = source("app/src/main/res/layout/prefs_main12.xml")
+        assertTrue(searchList.contains("@dimen/preference_group_inset"))
+        val menu = source("app/src/main/res/drawable/popmenu_background.xml")
+        assertTrue(menu.contains("@color/color_surface_container"))
+        assertTrue(menu.contains("@dimen/preference_group_radius"))
+        assertTrue(styles.contains("AppTextAppearance.PopupMenu"))
+        assertTrue(styles.contains("actionOverflowMenuStyle"))
     }
 
     private fun section(source: String, start: String, end: String): String {
