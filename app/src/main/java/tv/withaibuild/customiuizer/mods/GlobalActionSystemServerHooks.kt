@@ -27,6 +27,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallba
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.SystemServerPreferenceInvalidation
+import tv.withaibuild.customiuizer.mods.utils.SystemServerInstaller
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.mods.utils.hasConfiguredActionCode
 import tv.withaibuild.customiuizer.mods.utils.hasConfiguredToggle
@@ -576,6 +577,8 @@ object GlobalActionSystemServerHooks {
                 val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                 MainModule.sPreferenceBootstrap?.let { bootstrap ->
                     SystemServerPreferenceInvalidation.install(mContext, bootstrap)
+                    bootstrap.bootstrap()
+                    SystemServerInstaller.installPendingIfPrefsLoaded()
                 }
                 val intentfilter = IntentFilter()
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "SimulateMenu")

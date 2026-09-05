@@ -14,6 +14,7 @@ import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -240,30 +241,19 @@ object SystemWindowHooks {
 
     @JvmStatic
     fun TempHideOverlayAppHook(lpparam: SystemServerStartingParam) {
-        val flagIndex = 2
         ModuleHelper.hookAllConstructors("com.android.server.wm.WindowSurfaceController", lpparam.classLoader, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-
-                    val windowType = chain.getArg(4) as Int
+                return WindowSurfaceControlArgs.interceptFlags(chain) { flags, windowType ->
                     if (windowType != WindowManager.LayoutParams.TYPE_PHONE
                         && windowType != WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
                         && windowType != WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-                        && windowType != WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val args = XposedHelpers.getArgsArray(chain)
-                    var flags = args[flagIndex] as Int
-                    val skipFlag = 64
-                    flags = flags or skipFlag
-                    args[flagIndex] = flags
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                        && windowType != WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    ) {
+                        null
+                    } else {
+                        flags or WindowSurfaceControlArgs.SKIP_SCREENSHOT
+                    }
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
     }
@@ -576,30 +566,25 @@ object SystemWindowHooks {
     fun AllowUntrustedTouchHook(lpparam: SystemServerStartingParam) {
         ModuleHelper.findAndHookMethod("com.android.server.wm.WindowState", lpparam.classLoader, "getTouchOcclusionMode", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
+                val original = try {
+                    chain.proceed()
                 } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                    throw t
                 }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val mode = result as Int
-                    if (mode == 1) { result = 2; throwable = null }
-                    else {
-                        val mAttrs = XposedHelpers.getObjectField(thisObject, "mAttrs") as WindowManager.LayoutParams
-                        if (mAttrs.type == WindowManager.LayoutParams.TYPE_TOAST) {
-                            result = 2; throwable = null
-                        }
+                return try {
+                    val mode = original as? Int ?: return original
+                    if (mode == 1) {
+                        2
+                    } else {
+                        val mAttrs = XposedHelpers.getObjectField(chain.thisObject, "mAttrs") as? WindowManager.LayoutParams
+                        if (mAttrs?.type == WindowManager.LayoutParams.TYPE_TOAST) 2 else original
                     }
-
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
+                    original
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
     }

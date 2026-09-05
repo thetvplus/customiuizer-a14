@@ -168,6 +168,23 @@ class SystemServerPreferenceInvalidationTest {
         assertEquals(dispatchedByListener, dispatched)
     }
 
+    @Test
+    fun firstLoadedCatchUpIsScheduledFromInvalidationReceiver() {
+        val source = java.io.File("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/SystemServerPreferenceInvalidation.kt")
+            .let { file ->
+                var directory = java.io.File(System.getProperty("user.dir").orEmpty()).absoluteFile
+                while (!java.io.File(directory, file.path).isFile) {
+                    directory = directory.parentFile
+                        ?: error("Repository root not found")
+                }
+                java.io.File(directory, file.path).readText()
+            }
+        assertTrue(
+            "invalidation must schedule system_server catch-up after a trusted refresh",
+            source.contains("SystemServerInstaller.scheduleCatchUp(context)"),
+        )
+    }
+
     private fun primed(key: String, value: Any): FakeSharedPreferences {
         val fake = FakeSharedPreferences()
         fake.put(key, value)

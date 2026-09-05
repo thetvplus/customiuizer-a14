@@ -57,6 +57,14 @@ class StatusBarInsetsRoutingTest {
     }
 
     @Test
+    fun resourceFeature_disabledForGenericPackageEvenWhenPrefSet() {
+        val feature = CommonPackageFeatures.all(fakePackageReadyParam("com.example.app"), PrefMap())
+            .find { it.id == StatusBarHeightFeatureId }
+        assertNotNull(feature)
+        assertFalse(feature!!.isEnabled(PrefMap().apply { put("system_statusbarheight", 40) }))
+    }
+
+    @Test
     fun insetsFeature_disabledWhenPrefIsDefault() {
         val feature = SystemServerFeatures.all(fakeSystemServerStartingParam())
             .find { it.id == StatusBarHeightInsetsFeatureId }

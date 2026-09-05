@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods
 import android.content.pm.ApplicationInfo
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -180,39 +181,25 @@ object SystemSecurityHooks {
         ModuleHelper.findAndHookMethod("com.android.server.wm.WindowState", lpparam.classLoader, "isSecureLocked", HookerClassHelper.returnConstant(false))
         ModuleHelper.findAndHookMethod("com.android.server.wm.WindowSurfaceController", lpparam.classLoader, "setSecure", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
+                var proceedArgs: Array<Any?>? = null
                 try {
-
-                    args[0] = false
-
-                    result = chain.proceed(args)
+                    if (chain.getArg(0) is Boolean) {
+                        val args = XposedHelpers.getArgsArray(chain)
+                        args[0] = false
+                        proceedArgs = args
+                    }
                 } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                    XposedHelpers.log(t)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return if (proceedArgs != null) chain.proceed(proceedArgs) else chain.proceed()
             }
         })
         ModuleHelper.hookAllConstructors("com.android.server.wm.WindowSurfaceController", lpparam.classLoader, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
-                try {
-
-                    var flags = args[2] as Int
-                    val secureFlag = 128
-                    flags = flags and secureFlag.inv()
-                    args[2] = flags
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                return WindowSurfaceControlArgs.interceptFlags(chain) { flags, _ ->
+                    flags and WindowSurfaceControlArgs.FLAG_SECURE.inv()
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
         ModuleHelper.hookAllMethods("com.android.server.wm.WindowManagerServiceImpl", lpparam.classLoader, "notAllowCaptureDisplay", object : MethodHook() {

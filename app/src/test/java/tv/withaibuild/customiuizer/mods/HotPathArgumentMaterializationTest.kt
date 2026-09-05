@@ -40,7 +40,18 @@ class HotPathArgumentMaterializationTest {
 
         val windows = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemWindowHooks.kt")
             .section("fun TempHideOverlayAppHook", "fun BetterPopupsAllowFloatHook")
-        assertAfter(windows, "WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY", "val args = XposedHelpers.getArgsArray(chain)")
+        assertTrue(
+            "overlay type gate must remain before any flag mutation",
+            windows.contains("WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY"),
+        )
+        assertTrue(
+            "TempHideOverlayAppHook must not materialize constructor args",
+            !windows.contains("getArgsArray"),
+        )
+
+        val helper = source("app/src/main/java/tv/withaibuild/customiuizer/mods/WindowSurfaceControlArgs.kt")
+            .section("fun interceptFlags", "private fun isAospLegacySurfaceConstructor")
+        assertAfter(helper, "transform(flags, windowType)", "val args = XposedHelpers.getArgsArray(chain)")
     }
 
     private fun assertAfter(text: String, earlier: String, later: String) {

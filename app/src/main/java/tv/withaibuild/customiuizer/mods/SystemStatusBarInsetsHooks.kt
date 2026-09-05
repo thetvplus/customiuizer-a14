@@ -265,7 +265,7 @@ object SystemStatusBarInsetsHooks {
         private val effect: StatusBarHeightEffect,
     ) : MethodHook() {
         override fun intercept(chain: XposedInterface.Chain): Any? {
-            return onLayoutWindowLw(chain, effect)
+            return isolateWindowManagerHook(chain) { onLayoutWindowLw(chain, effect) }
         }
     }
 
@@ -321,7 +321,7 @@ object SystemStatusBarInsetsHooks {
         private val effect: StatusBarHeightEffect,
     ) : MethodHook() {
         override fun intercept(chain: XposedInterface.Chain): Any? {
-            return onSetFrames(chain, effect)
+            return isolateWindowManagerHook(chain) { onSetFrames(chain, effect) }
         }
     }
 
@@ -361,7 +361,29 @@ object SystemStatusBarInsetsHooks {
         private val effect: StatusBarHeightEffect,
     ) : MethodHook() {
         override fun intercept(chain: XposedInterface.Chain): Any? {
-            return onDecorInsetsInfoUpdate(chain, effect)
+            return isolateWindowManagerHook(chain) { onDecorInsetsInfoUpdate(chain, effect) }
+        }
+    }
+
+    /**
+     * ClassCast / NPE / OOB in a WM callback must not escape into WindowManager.
+     * Host exceptions from `chain.proceed()` inside [block] still propagate.
+     */
+    private inline fun isolateWindowManagerHook(
+        chain: XposedInterface.Chain,
+        block: () -> Any?,
+    ): Any? {
+        return try {
+            block()
+        } catch (t: ClassCastException) {
+            XposedHelpers.log(t)
+            chain.proceed()
+        } catch (t: NullPointerException) {
+            XposedHelpers.log(t)
+            chain.proceed()
+        } catch (t: IndexOutOfBoundsException) {
+            XposedHelpers.log(t)
+            chain.proceed()
         }
     }
 
