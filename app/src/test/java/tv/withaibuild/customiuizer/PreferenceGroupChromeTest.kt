@@ -132,6 +132,7 @@ class PreferenceGroupChromeWiringTest {
     )
     private val styles = source("app/src/main/res/values/styles.xml")
     private val aboutLayout = source("app/src/main/res/layout/fragment_about.xml")
+    private val activityMain = source("app/src/main/res/layout/activity_main.xml")
 
     @Test
     fun preferencePagesDisableStockDividersAndAttachGroupedDecoration() {
@@ -180,6 +181,14 @@ class PreferenceGroupChromeWiringTest {
         val afterContact = aboutLayout.substringAfter("about_contact_row")
             .substringBefore("about_notes_category")
         assertFalse(afterContact.contains("android:background=\"@color/about_divider\""))
+    }
+
+    @Test
+    fun toolbarHasNoHairlineAboveTheWindow() {
+        val between = activityMain.substringAfter("mainActionBar")
+            .substringBefore("fragment_container")
+        assertFalse(between.contains("about_divider"))
+        assertFalse(between.contains("android:layout_height=\"1dp\""))
     }
 
     private fun section(source: String, start: String, end: String): String {

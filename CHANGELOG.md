@@ -2,6 +2,23 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.21.0 — 2026-09-05
+
+Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Settings UI
+
+- Preference lists and About now use grouped inset cards.
+- Category titles use sentence case instead of ALL CAPS.
+- The 1 dp line under the toolbar is removed.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.21.0.apk`
+- versionCode / versionName: `207 / r14.21.0`
+
+---
+
 ## r14.20.9 — 2026-09-05
 
 Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
