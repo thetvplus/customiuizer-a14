@@ -57,12 +57,14 @@ object SystemServerPreferenceInvalidation {
 
                 if (intent.getBooleanExtra(EXTRA_BULK, false)) {
                     bootstrap.refreshRemoteKey(null)
+                    SystemServerInstaller.scheduleCatchUp(context)
                     return@guarded
                 }
 
                 val key = intent.getStringExtra(EXTRA_KEY)
                 if (key == null || !isValidKey(key)) return@guarded
                 bootstrap.refreshRemoteKey(key)
+                SystemServerInstaller.scheduleCatchUp(context)
             }
         }
     }

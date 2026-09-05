@@ -80,6 +80,47 @@ class FeatureInstallRegistryTest {
     }
 
     @Test
+    fun installAll_skippedFeatureInstallsOnLaterEnabledSnapshot() {
+        var gate = false
+        val delayed = object : FeatureDefinition {
+            override val id = TestId("gated-late")
+            override val name = "gated-late"
+            override val preferenceKey: String? = "system_example"
+            override val target = FeatureTarget.SYSTEM_SERVER
+            override val phase = InstallPhase.SYSTEM_SERVER_STARTING
+            var installCalls = 0
+            override fun isEnabled(prefs: PrefMap): Boolean = gate
+            override fun install(): FeatureInstallResult {
+                installCalls++
+                return FeatureInstallResult.INSTALLED
+            }
+        }
+        val registry = FeatureInstallRegistry()
+        registry.register(delayed)
+
+        val first = registry.installAll(
+            FeatureTarget.SYSTEM_SERVER,
+            InstallPhase.SYSTEM_SERVER_STARTING,
+            PrefMap(),
+            collectResults = true,
+        )
+        assertEquals(FeatureInstallResult.SKIPPED, first.single())
+        assertEquals(0, delayed.installCalls)
+        assertEquals(FeatureState.NOT_INSTALLED, FeatureInstallState.get(delayed.id))
+
+        gate = true
+        val second = registry.installAll(
+            FeatureTarget.SYSTEM_SERVER,
+            InstallPhase.SYSTEM_SERVER_STARTING,
+            PrefMap(),
+            collectResults = true,
+        )
+        assertEquals(FeatureInstallResult.INSTALLED, second.single())
+        assertEquals(1, delayed.installCalls)
+        assertEquals(FeatureState.INSTALLED, FeatureInstallState.get(delayed.id))
+    }
+
+    @Test
     fun installAll_idempotent() {
         val registry = FeatureInstallRegistry()
         val f = DummyFeature("idempotent")

@@ -47,7 +47,15 @@ class SystemServerFeaturesWiringTest {
         )
         assertTrue(
             "install() should call installAll for SYSTEM_SERVER at SYSTEM_SERVER_STARTING",
-            installMethod.contains("installAll(FeatureTarget.SYSTEM_SERVER, InstallPhase.SYSTEM_SERVER_STARTING, mPrefs)")
+            installMethod.contains("installAll(FeatureTarget.SYSTEM_SERVER, InstallPhase.SYSTEM_SERVER_STARTING"),
+        )
+        assertTrue(
+            "unready prefs must not decide business features against the live snapshot",
+            installMethod.contains("if (prefReady) mPrefs else PrefMap()"),
+        )
+        assertTrue(
+            "first LOADED snapshot must catch up NOT_INSTALLED features",
+            source.contains("installPendingIfPrefsLoaded"),
         )
     }
 

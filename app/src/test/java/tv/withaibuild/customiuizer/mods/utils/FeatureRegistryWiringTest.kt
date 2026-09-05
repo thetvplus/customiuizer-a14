@@ -28,7 +28,7 @@ class FeatureRegistryWiringTest {
         )
         assertTrue(
             "SystemServerInstaller should install SYSTEM_SERVER features at SYSTEM_SERVER_STARTING",
-            installMethod.contains("installAll(FeatureTarget.SYSTEM_SERVER, InstallPhase.SYSTEM_SERVER_STARTING, mPrefs)")
+            installMethod.contains("installAll(FeatureTarget.SYSTEM_SERVER, InstallPhase.SYSTEM_SERVER_STARTING")
         )
         assertFalse(
             "SystemServerInstaller install() should no longer call PackagePermissions.hook directly",

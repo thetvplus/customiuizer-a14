@@ -2,6 +2,24 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.20.9 — 2026-09-05
+
+Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Stability
+
+- system_server no longer installs preference-gated features before the remote snapshot is ready. The first `LOADED` snapshot installs only features that are still not installed.
+- A fast SystemUI restart no longer skips the whole hook catalog, so killing SystemUI to apply settings actually installs those hooks.
+- WindowManager hot-path type errors are isolated in the hook. Constructor flags are resolved by parameter type instead of a hard-coded `args[2]`.
+- Custom status-bar height resource replacement is limited to `android`, SystemUI, and the launcher. The window height itself remains a system_server insets/layout change.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.20.9.apk`
+- versionCode / versionName: `206 / r14.20.9`
+
+---
+
 ## r14.20.8 — 2026-08-19
 
 Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.

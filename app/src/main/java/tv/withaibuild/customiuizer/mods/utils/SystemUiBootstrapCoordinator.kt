@@ -13,8 +13,8 @@ import java.util.function.Supplier
  *
  * Owns the SystemUI-specific lifecycle that requires a live Context / ClassLoader:
  * initializer hook, fast-reboot receiver, status-bar setup, preference watch and the
- * 10-second restart guard.  MainModule stays focused on routing and delegates the
- * SystemUI branch to this object.
+ * 10-second restart diagnostic. The diagnostic does not skip the SystemUI catalog.
+ * MainModule stays focused on routing and delegates the SystemUI branch to this object.
  */
 object SystemUiBootstrapCoordinator {
 
@@ -119,24 +119,26 @@ object SystemUiBootstrapCoordinator {
         }
         evaluateGlobalActionStatusBarIfReady(lpparam, prefReady, globalActionStatusBarDone)
 
-        // 3. The 10s restart check is only allowed to skip the non-essential hooks below.
-        var skipNonEssential = false
+        // 3. The 10s window used to skip the entire SystemUI catalog, so a force-stop
+        // to apply settings looked like "hooks never installed". FeatureInstallState is
+        // process-scoped and installAll is idempotent, so the catalog always installs.
+        // No catalog feature is currently classified as restart-fighting; keep the
+        // timestamp read only as a diagnostic.
         if (mContext != null) {
             try {
                 val restartTime = Settings.System.getLong(mContext.contentResolver, "systemui_restart_time", 0L)
                 val currentTime = java.lang.System.currentTimeMillis()
-                if (currentTime - restartTime < restartThresholdMs) skipNonEssential = true
+                if (currentTime - restartTime < restartThresholdMs) {
+                    XposedHelpers.log(
+                        "SystemUiBootstrapCoordinator: SystemUI restarted within ${restartThresholdMs}ms, installing catalog"
+                    )
+                }
             } catch (oom: OutOfMemoryError) {
                 throw oom
             } catch (t: Throwable) {
                 FatalErrors.rethrowIfFatal(t)
                 XposedHelpers.log(t)
             }
-        }
-
-        if (skipNonEssential) {
-            HookDiagnostics.printSummaryForStage("onPackageReady")
-            return
         }
 
         SystemUiInstaller.install(lpparam, mPrefs)

@@ -42,8 +42,12 @@ class SystemUiInstallerTest {
             coordinator.contains("currentTime - restartTime < restartThresholdMs")
         )
         assertTrue(
-            "SystemUiBootstrapCoordinator must delegate non-essential hooks to SystemUiInstaller",
+            "SystemUiBootstrapCoordinator must delegate the SystemUI catalog to SystemUiInstaller",
             coordinator.contains("SystemUiInstaller.install(lpparam, mPrefs)")
+        )
+        assertFalse(
+            "fast SystemUI restart must not skip the catalog installer",
+            coordinator.contains("if (skipNonEssential)")
         )
         assertTrue(
             "SystemUiBootstrapCoordinator must call FatalErrors.rethrowIfFatal in catch(Throwable)",

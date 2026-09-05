@@ -21,10 +21,13 @@ class CommonPackageFastGateTest {
     }
 
     @Test
-    fun statusBarHeightEnablesCommonFeatureForEveryPackage() {
+    fun statusBarHeightEnablesCommonFeatureOnlyForResourcePackages() {
         val prefs = PrefMap().apply { put("system_statusbarheight", 12) }
 
-        assertTrue(CommonPackageFeatures.hasEnabledFeature(prefs, "com.example.app"))
+        assertTrue(CommonPackageFeatures.hasEnabledFeature(prefs, "android"))
+        assertTrue(CommonPackageFeatures.hasEnabledFeature(prefs, "com.android.systemui"))
+        assertTrue(CommonPackageFeatures.hasEnabledFeature(prefs, "com.miui.home"))
+        assertFalse(CommonPackageFeatures.hasEnabledFeature(prefs, "com.example.app"))
     }
 
     @Test
