@@ -452,6 +452,18 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
             fixStubLayout(stub.inflate(), 2)
         }
         initFragment()
+        attachGroupedPreferenceChrome()
+    }
+
+    private fun attachGroupedPreferenceChrome() {
+        val list = try {
+            getListView()
+        } catch (_: Throwable) {
+            null
+        } ?: return
+        setDivider(null)
+        setDividerHeight(0)
+        list.addItemDecoration(PreferenceGroupDecoration { preferenceScreen })
     }
 
     open fun openSubFragment(

@@ -52,6 +52,8 @@ class PreferenceCategoryEx(context: Context, attrs: AttributeSet?) : PreferenceC
 
     fun isDynamic(): Boolean = dynamic
 
+    fun isTitleVisible(): Boolean = state == 0
+
     fun hide() {
         state = 2
         notifyChanged()

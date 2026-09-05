@@ -5,6 +5,11 @@
 	<dimen name="preference_item_padding_top">14dp</dimen>
 	<dimen name="preference_item_padding_bottom">14dp</dimen>
 	<dimen name="preference_item_child_padding">20dp</dimen>
+	<dimen name="preference_group_inset">16dp</dimen>
+	<dimen name="preference_group_radius">16dp</dimen>
+	<dimen name="preference_group_gap">10dp</dimen>
+	<dimen name="preference_group_header_bottom">4dp</dimen>
+	<dimen name="preference_group_divider_height">1dp</dimen>
 	<dimen name="preference_summary_padding_right">10dp</dimen>
 	<dimen name="preference_text_size">14sp</dimen>
 	<dimen name="preference_category_text_size">13sp</dimen>
