@@ -14,7 +14,7 @@ import tv.withaibuild.customiuizer.utils.PrefMap
 object CommonPackageFeatures {
     @JvmStatic
     fun hasEnabledFeature(prefs: PrefMap, packageName: String): Boolean =
-        StatusBarHeightFeature.evaluateEnabled(prefs) ||
+        StatusBarHeightFeature.evaluateEnabled(prefs, packageName) ||
             AlarmCompatFeature.evaluateEnabled(prefs, packageName)
 
     @JvmStatic
@@ -25,7 +25,7 @@ object CommonPackageFeatures {
             preferenceKey = "system_statusbarheight",
             target = FeatureTarget.ANY,
             phase = InstallPhase.PACKAGE_READY,
-            enabled = { prefs -> StatusBarHeightFeature.evaluateEnabled(prefs) },
+            enabled = { prefs -> StatusBarHeightFeature.evaluateEnabled(prefs, lpparam.packageName.orEmpty()) },
             factory = { StatusBarHeightFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
@@ -52,11 +52,26 @@ internal class StatusBarHeightFeature(
     FeatureTarget.ANY,
 ) {
     companion object {
+        /**
+         * Resource replacement for `status_bar_height` only belongs in processes that
+         * actually read those dimens. Window height itself is applied in system_server
+         * via [StatusBarHeightInsetsFeature]. Installing the Resources/Theme trampoline
+         * in every app is wasted work and extra crash surface.
+         */
+        internal val RESOURCE_PACKAGES = setOf(
+            "android",
+            "com.android.systemui",
+            "com.miui.home",
+        )
+
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getInt("system_statusbarheight", 11) > 11
+        fun evaluateEnabled(prefs: PrefMap, packageName: String): Boolean =
+            prefs.getInt("system_statusbarheight", 11) > 11 &&
+                packageName in RESOURCE_PACKAGES
     }
 
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
+    override fun isEnabledCondition(prefs: PrefMap) =
+        Companion.evaluateEnabled(prefs, packageName)
     override fun installHook() = ModsSystem.StatusBarHeightHook(lpparam)
 }
 

@@ -15,7 +15,8 @@ import tv.withaibuild.customiuizer.utils.PrefMap
  * This keeps [tv.withaibuild.customiuizer.MainModule] focused on module-level lifecycle
  * and delegates the long list of package-specific SystemUI hooks to a dedicated, stateless class.
  * Base hooks (SystemUIInitializer.init, fast-reboot receiver, status-bar setup and the 10-second
- * restart guard) stay in MainModule so the installer receives an already-validated load point.
+ * restart diagnostic) stay in SystemUiBootstrapCoordinator so the installer receives an
+ * already-validated load point. The 10-second window does not skip this catalog.
  */
 object SystemUiInstaller {
 
