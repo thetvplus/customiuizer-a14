@@ -9,6 +9,9 @@
 	<dimen name="preference_group_radius">16dp</dimen>
 	<dimen name="preference_group_gap">10dp</dimen>
 	<dimen name="preference_group_header_bottom">4dp</dimen>
+	<dimen name="preference_group_header_padding">36dp</dimen>
+	<dimen name="preference_group_icon_size">40dp</dimen>
+	<dimen name="preference_group_icon_glyph">22dp</dimen>
 	<dimen name="preference_group_divider_height">1dp</dimen>
 	<dimen name="preference_summary_padding_right">10dp</dimen>
 	<dimen name="preference_text_size">14sp</dimen>

@@ -2,6 +2,22 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.21.1 — 2026-09-05
+
+Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Settings UI
+
+- Grouped cards use system dynamic surface and outline tokens. The wallpaper palette is the color source.
+- The home page uses Material category icons on dynamic-color tiles.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.21.1.apk`
+- versionCode / versionName: `208 / r14.21.1`
+
+---
+
 ## r14.21.0 — 2026-09-05
 
 Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.

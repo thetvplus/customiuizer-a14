@@ -130,9 +130,18 @@ class PreferenceGroupChromeWiringTest {
     private val categoryEx = Files.readString(
         Path.of("src/main/java/tv/withaibuild/customiuizer/prefs/PreferenceCategoryEx.kt")
     )
+    private val mainFragment = Files.readString(
+        Path.of("src/main/java/tv/withaibuild/customiuizer/MainFragment.kt")
+    )
+    private val decoration = Files.readString(
+        Path.of("src/main/java/tv/withaibuild/customiuizer/PreferenceGroupChrome.kt")
+    )
     private val styles = source("app/src/main/res/values/styles.xml")
     private val aboutLayout = source("app/src/main/res/layout/fragment_about.xml")
     private val activityMain = source("app/src/main/res/layout/activity_main.xml")
+    private val lightColors = source("app/src/main/res/values/colors.xml")
+    private val nightColors = source("app/src/main/res/values-night/colors.xml")
+    private val prefsMain = source("app/src/main/res/xml/prefs_main.xml")
 
     @Test
     fun preferencePagesDisableStockDividersAndAttachGroupedDecoration() {
@@ -189,6 +198,52 @@ class PreferenceGroupChromeWiringTest {
             .substringBefore("fragment_container")
         assertFalse(between.contains("about_divider"))
         assertFalse(between.contains("android:layout_height=\"1dp\""))
+    }
+
+    @Test
+    fun groupedCardsUseSurfaceContainerAndDynamicOutline() {
+        val card = source("app/src/main/res/drawable/pref_group_card.xml")
+        assertTrue(card.contains("@color/color_surface_container"))
+        assertTrue(decoration.contains("R.color.color_surface_container"))
+        assertTrue(decoration.contains("R.color.color_outline_variant"))
+        assertFalse(decoration.contains("R.color.color_surface_variant"))
+        assertFalse(decoration.contains("R.color.about_divider"))
+    }
+
+    @Test
+    fun surfaceTokensUseSystemDynamicPalette() {
+        for (source in listOf(lightColors, nightColors)) {
+            assertTrue(source.contains("@android:color/system_neutral1_"))
+            assertTrue(source.contains("color_surface_container"))
+            assertTrue(source.contains("color_outline_variant"))
+            assertTrue(source.contains("color_primary_container"))
+        }
+        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_50"))
+        assertTrue(lightColors.contains("color_surface_container\">@android:color/system_neutral1_10"))
+        assertTrue(nightColors.contains("color_window_background\">@android:color/system_neutral1_900"))
+        assertTrue(nightColors.contains("color_surface_container\">@android:color/system_neutral1_800"))
+    }
+
+    @Test
+    fun sectionHeadersAlignWithInsetCardTitles() {
+        assertTrue(categoryEx.contains("preference_group_header_padding"))
+        val dimens = source("app/src/main/res/values/dimens.xml")
+        assertTrue(dimens.contains("preference_group_header_padding\">36dp"))
+    }
+
+    @Test
+    fun mainPageUsesGoogleNativeCategoryIconsWithoutXmlKeys() {
+        assertTrue(mainFragment.contains("applyMainPageIcons()"))
+        assertTrue(mainFragment.contains("pref_icon_system"))
+        assertTrue(mainFragment.contains("pref_icon_launcher"))
+        assertTrue(mainFragment.contains("pref_icon_controls"))
+        assertTrue(mainFragment.contains("pref_icon_various"))
+        assertFalse(prefsMain.contains("android:icon"))
+        for (name in listOf("system", "launcher", "controls", "various")) {
+            val tile = source("app/src/main/res/drawable/pref_icon_$name.xml")
+            assertTrue(tile.contains("android:shape=\"oval\""))
+            assertTrue(tile.contains("preference_group_icon_size"))
+        }
     }
 
     private fun section(source: String, start: String, end: String): String {
