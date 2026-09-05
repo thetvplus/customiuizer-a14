@@ -41,7 +41,8 @@ class PreferenceCategoryEx(context: Context, attrs: AttributeSet?) : PreferenceC
             finalView.setPadding(childPadding, 0, childPadding, 0)
         } else {
             val verticalPadding = context.resources.getDimensionPixelSize(R.dimen.preference_item_padding_top)
-            finalView.setPadding(childPadding, verticalPadding, childPadding, verticalPadding)
+            val headerPadding = context.resources.getDimensionPixelSize(R.dimen.preference_group_header_padding)
+            finalView.setPadding(headerPadding, verticalPadding, headerPadding, verticalPadding)
         }
     }
 
@@ -51,6 +52,8 @@ class PreferenceCategoryEx(context: Context, attrs: AttributeSet?) : PreferenceC
     }
 
     fun isDynamic(): Boolean = dynamic
+
+    fun isTitleVisible(): Boolean = state == 0
 
     fun hide() {
         state = 2
