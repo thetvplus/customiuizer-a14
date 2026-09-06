@@ -137,6 +137,20 @@ internal fun preferenceGroupInputRow(pref: Preference): PreferenceGroupChrome.In
     )
 }
 
+internal fun groupedListRowBackground(position: Int, count: Int): Int {
+    if (count <= 1) return R.drawable.pref_search_row_single
+    return when (position) {
+        0 -> R.drawable.pref_search_row_top
+        count - 1 -> R.drawable.pref_search_row_bottom
+        else -> R.drawable.pref_search_row_middle
+    }
+}
+
+internal fun applyGroupedListRow(view: View, position: Int, count: Int) {
+    view.setBackgroundResource(groupedListRowBackground(position, count))
+    if (!view.clipToOutline) view.clipToOutline = true
+}
+
 internal class PreferenceGroupDecoration(
     private val screenProvider: () -> PreferenceScreen?,
 ) : RecyclerView.ItemDecoration() {
@@ -284,7 +298,7 @@ internal class PreferenceGroupDecoration(
         dividerInset = res.getDimensionPixelSize(R.dimen.preference_item_child_padding)
         fillPaint.color = parent.context.getColor(R.color.color_surface_container)
         dividerPaint.color = parent.context.getColor(R.color.color_outline_variant)
-        dividerPaint.alpha = 160
+        dividerPaint.alpha = 102
         paintsReady = true
     }
 

@@ -8,9 +8,9 @@ Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
 
 ### Settings UI
 
-- Grouped lists, search results, overflow menus, dialogs, and About share one 12 dp corner radius.
-- Page and menu surfaces are two tokens only. Light uses Neutral1 100 behind Neutral1 10 cards; dark uses Neutral1 1000 behind Neutral1 800 cards. Wallpaper remains the color source.
-- Press and long-press fills are stronger and clipped inside the card corners. Search rows and the overflow menu use the same treatment.
+- Grouped lists, search, app/Wi-Fi/Bluetooth pickers, sortable actions, overflow menus, dialogs, and About share one 12 dp corner radius.
+- Two surfaces only: the page and the menu card. Light uses Neutral1 200 behind Neutral1 10 cards; dark uses Neutral1 1000 behind Neutral1 700 cards. Wallpaper remains the color source.
+- Tap and long-press are discrete overlays (no ripple), with long-press slightly stronger, clipped inside the card corners.
 
 ### Notifications
 

@@ -82,6 +82,22 @@
 		<item name="android:dividerHeight">0dp</item>
 		<item name="android:cacheColorHint">@android:color/transparent</item>
 	</style>
+	<style name="GroupedListView" parent="@style/Widget.AppCompat.ListView">
+		<item name="android:divider">@null</item>
+		<item name="android:dividerHeight">0dp</item>
+		<item name="android:listSelector">@android:color/transparent</item>
+		<item name="android:cacheColorHint">@android:color/transparent</item>
+		<item name="android:clipToPadding">false</item>
+		<item name="android:paddingStart">@dimen/preference_group_inset</item>
+		<item name="android:paddingEnd">@dimen/preference_group_inset</item>
+		<item name="android:paddingTop">@dimen/preference_screen_padding_top</item>
+		<item name="android:paddingBottom">@dimen/preference_screen_padding_bottom</item>
+		<item name="android:overScrollMode">never</item>
+	</style>
+	<style name="GroupedListView.Nested">
+		<item name="android:paddingTop">0dp</item>
+		<item name="android:paddingBottom">@dimen/preference_group_gap</item>
+	</style>
 	<style name="AppSearchView" parent="Widget.AppCompat.SearchView">
 		<item name="queryBackground">@android:color/transparent</item>
 		<item name="android:textColorHint">@color/hint_edit_text_color</item>

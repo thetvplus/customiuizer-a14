@@ -12,6 +12,7 @@ import android.widget.Filter
 import android.widget.Filterable
 import android.widget.TextView
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.applyGroupedListRow
 import java.util.Locale
 
 class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
@@ -43,9 +44,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
         val itemSummary: TextView = row.findViewById(android.R.id.summary)
 
         val ad = getItem(position)
-        row.setBackgroundResource(rowBackground(position, getCount()))
-        row.clipToOutline = true
-
+        applyGroupedListRow(row, position, getCount())
 
         val start = ad.titleLower.indexOf(filterString)
         if (start >= 0) {
@@ -63,15 +62,6 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
         itemSummary.text = ad.breadcrumbs
 
         return row
-    }
-
-    private fun rowBackground(position: Int, count: Int): Int {
-        if (count <= 1) return R.drawable.pref_search_row_single
-        return when (position) {
-            0 -> R.drawable.pref_search_row_top
-            count - 1 -> R.drawable.pref_search_row_bottom
-            else -> R.drawable.pref_search_row_middle
-        }
     }
 
     private inner class ItemFilter : Filter() {

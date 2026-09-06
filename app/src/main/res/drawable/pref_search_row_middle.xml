@@ -1,25 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ripple xmlns:android="http://schemas.android.com/apk/res/android"
-	android:color="@color/list_item_bg_color_pressed">
-	<item android:id="@android:id/mask">
-		<color android:color="@android:color/white" />
-	</item>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 	<item>
-		<layer-list>
-			<item>
-				<shape android:shape="rectangle">
-					<solid android:color="@color/color_surface_container" />
-				</shape>
-			</item>
-			<item
-				android:gravity="bottom"
-				android:left="@dimen/preference_item_child_padding"
-				android:right="@dimen/preference_item_child_padding">
-				<shape android:shape="rectangle">
-					<size android:height="@dimen/preference_group_divider_height" />
-					<solid android:color="@color/color_outline_variant" />
-				</shape>
-			</item>
-		</layer-list>
+		<shape android:shape="rectangle">
+			<solid android:color="@color/color_surface_container" />
+		</shape>
 	</item>
-</ripple>
+	<item android:drawable="@drawable/list_item_bg" />
+	<item
+		android:alpha="0.4"
+		android:gravity="bottom"
+		android:left="@dimen/preference_item_child_padding"
+		android:right="@dimen/preference_item_child_padding">
+		<shape android:shape="rectangle">
+			<size android:height="@dimen/preference_group_divider_height" />
+			<solid android:color="@color/color_outline_variant" />
+		</shape>
+	</item>
+</layer-list>

@@ -97,6 +97,17 @@ class PreferenceGroupChromeTest {
         assertTrue(PreferenceGroupChrome.layout(emptyList()).isEmpty())
     }
 
+    @Test
+    fun groupedListRowsPickTopMiddleBottomSingle() {
+        assertEquals(R.drawable.pref_search_row_single, groupedListRowBackground(0, 1))
+        assertEquals(R.drawable.pref_search_row_top, groupedListRowBackground(0, 4))
+        assertEquals(R.drawable.pref_search_row_middle, groupedListRowBackground(1, 4))
+        assertEquals(R.drawable.pref_search_row_middle, groupedListRowBackground(2, 4))
+        assertEquals(R.drawable.pref_search_row_bottom, groupedListRowBackground(3, 4))
+        assertEquals(R.drawable.pref_search_row_top, groupedListRowBackground(0, 2))
+        assertEquals(R.drawable.pref_search_row_bottom, groupedListRowBackground(1, 2))
+    }
+
     private fun header() = PreferenceGroupChrome.InputRow(
         isCategory = true,
         isTopLevel = true,
@@ -139,8 +150,18 @@ class PreferenceGroupChromeWiringTest {
     private val searchAdapter = Files.readString(
         Path.of("src/main/java/tv/withaibuild/customiuizer/utils/ModSearchAdapter.kt")
     )
+    private val appDataAdapter = Files.readString(
+        Path.of("src/main/java/tv/withaibuild/customiuizer/utils/AppDataAdapter.kt")
+    )
+    private val preferenceAdapter = Files.readString(
+        Path.of("src/main/java/tv/withaibuild/customiuizer/utils/PreferenceAdapter.kt")
+    )
+    private val helpers = Files.readString(
+        Path.of("src/main/java/tv/withaibuild/customiuizer/utils/Helpers.kt")
+    )
     private val styles = source("app/src/main/res/values/styles.xml")
     private val aboutLayout = source("app/src/main/res/layout/fragment_about.xml")
+    private val aboutHead = source("app/src/main/res/layout/fragment_about_head.xml")
     private val activityMain = source("app/src/main/res/layout/activity_main.xml")
     private val lightColors = source("app/src/main/res/values/colors.xml")
     private val nightColors = source("app/src/main/res/values-night/colors.xml")
@@ -220,10 +241,12 @@ class PreferenceGroupChromeWiringTest {
             assertTrue(source.contains("color_surface_container"))
             assertTrue(source.contains("color_outline_variant"))
         }
-        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_100"))
+        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_200"))
         assertTrue(lightColors.contains("color_surface_container\">@android:color/system_neutral1_10"))
         assertTrue(nightColors.contains("color_window_background\">@android:color/system_neutral1_1000"))
-        assertTrue(nightColors.contains("color_surface_container\">@android:color/system_neutral1_800"))
+        assertTrue(nightColors.contains("color_surface_container\">@android:color/system_neutral1_700"))
+        assertTrue(lightColors.contains("list_item_bg_color_longpress"))
+        assertTrue(nightColors.contains("list_item_bg_color_longpress"))
     }
 
     @Test
@@ -231,21 +254,30 @@ class PreferenceGroupChromeWiringTest {
         assertTrue(decoration.contains("clipToOutline"))
         assertTrue(decoration.contains("GroupedRowOutline"))
         assertTrue(decoration.contains("outline.setPath"))
-        val ripple = source("app/src/main/res/drawable/list_item_bg.xml")
-        assertTrue(ripple.contains("<ripple"))
-        assertTrue(ripple.contains("@android:id/mask"))
-        assertFalse(ripple.contains("23.33dp"))
+        val highlight = source("app/src/main/res/drawable/list_item_bg.xml")
+        assertTrue(highlight.contains("<selector"))
+        assertTrue(highlight.contains("state_pressed"))
+        assertTrue(highlight.contains("state_selected"))
+        assertTrue(highlight.contains("state_activated"))
+        assertTrue(highlight.contains("@drawable/list_item_bg_pressed"))
+        assertTrue(highlight.contains("@drawable/list_item_bg_selected"))
+        assertFalse(highlight.contains("<ripple"))
+        assertFalse(highlight.contains("23.33dp"))
+        val selected = source("app/src/main/res/drawable/list_item_bg_selected.xml")
+        assertTrue(selected.contains("@color/list_item_bg_color_longpress"))
         val searchSingle = source("app/src/main/res/drawable/pref_search_row_single.xml")
         val searchTop = source("app/src/main/res/drawable/pref_search_row_top.xml")
         val searchBottom = source("app/src/main/res/drawable/pref_search_row_bottom.xml")
         for (row in listOf(searchSingle, searchTop, searchBottom)) {
-            assertTrue(row.contains("<ripple"))
+            assertTrue(row.contains("<layer-list"))
+            assertTrue(row.contains("@drawable/list_item_bg"))
             assertTrue(row.contains("@dimen/preference_group_radius"))
-            assertTrue(row.contains("@android:id/mask"))
+            assertFalse(row.contains("<ripple"))
         }
-        assertTrue(searchAdapter.contains("clipToOutline = true"))
-        val searchList = source("app/src/main/res/layout/prefs_main12.xml")
-        assertTrue(searchList.contains("listSelector=\"@android:color/transparent\""))
+        assertTrue(decoration.contains("applyGroupedListRow"))
+        assertTrue(searchAdapter.contains("applyGroupedListRow"))
+        assertTrue(styles.contains("GroupedListView"))
+        assertTrue(styles.contains("@android:color/transparent"))
         val about = source("app/src/main/res/layout/fragment_about.xml")
         assertTrue(about.contains("@drawable/list_item_bg"))
         assertFalse(about.contains("selectableItemBackground"))
@@ -282,15 +314,25 @@ class PreferenceGroupChromeWiringTest {
 
     @Test
     fun searchResultsAndOverflowMenuUseGroupedCardSurfaces() {
-        assertTrue(searchAdapter.contains("pref_search_row_single"))
-        assertTrue(searchAdapter.contains("pref_search_row_top"))
-        assertTrue(searchAdapter.contains("pref_search_row_middle"))
-        assertTrue(searchAdapter.contains("pref_search_row_bottom"))
+        assertTrue(decoration.contains("pref_search_row_single"))
+        assertTrue(decoration.contains("pref_search_row_top"))
+        assertTrue(decoration.contains("pref_search_row_middle"))
+        assertTrue(decoration.contains("pref_search_row_bottom"))
+        assertTrue(searchAdapter.contains("applyGroupedListRow"))
+        assertTrue(appDataAdapter.contains("applyGroupedListRow"))
+        assertTrue(preferenceAdapter.contains("applyGroupedListRow"))
+        assertFalse(preferenceAdapter.contains("setMiuiPrefItem"))
+        assertFalse(helpers.contains("\"miui\""))
         val searchList = source("app/src/main/res/layout/prefs_main12.xml")
-        assertTrue(searchList.contains("@dimen/preference_group_inset"))
+        assertTrue(searchList.contains("GroupedListView"))
+        assertTrue(styles.contains("@dimen/preference_group_inset"))
         val menu = source("app/src/main/res/drawable/popmenu_background.xml")
         assertTrue(menu.contains("@color/color_surface_container"))
         assertTrue(menu.contains("@dimen/preference_group_radius"))
+        val corners = source("app/src/main/res/drawable/rounded_corners.xml")
+        assertTrue(corners.contains("@dimen/preference_group_radius"))
+        assertFalse(corners.contains("13dp"))
+        assertFalse(aboutHead.contains("about_divider"))
         assertTrue(styles.contains("AppTextAppearance.PopupMenu"))
         assertTrue(styles.contains("actionOverflowMenuStyle"))
     }

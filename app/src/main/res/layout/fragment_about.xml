@@ -95,6 +95,7 @@
                 android:layout_height="@dimen/preference_group_divider_height"
                 android:layout_marginStart="@dimen/preference_item_child_padding"
                 android:layout_marginEnd="@dimen/preference_item_child_padding"
+                android:alpha="0.4"
                 android:background="@color/about_divider" />
 
             <LinearLayout
@@ -131,6 +132,7 @@
                 android:layout_height="@dimen/preference_group_divider_height"
                 android:layout_marginStart="@dimen/preference_item_child_padding"
                 android:layout_marginEnd="@dimen/preference_item_child_padding"
+                android:alpha="0.4"
                 android:background="@color/about_divider" />
 
             <LinearLayout
@@ -213,6 +215,7 @@
                 android:layout_height="@dimen/preference_group_divider_height"
                 android:layout_marginStart="@dimen/preference_item_child_padding"
                 android:layout_marginEnd="@dimen/preference_item_child_padding"
+                android:alpha="0.4"
                 android:background="@color/about_divider" />
 
             <LinearLayout
