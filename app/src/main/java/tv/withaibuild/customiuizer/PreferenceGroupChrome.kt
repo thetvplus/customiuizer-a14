@@ -298,7 +298,6 @@ internal class PreferenceGroupDecoration(
         dividerInset = res.getDimensionPixelSize(R.dimen.preference_item_child_padding)
         fillPaint.color = parent.context.getColor(R.color.color_surface_container)
         dividerPaint.color = parent.context.getColor(R.color.color_outline_variant)
-        dividerPaint.alpha = 102
         paintsReady = true
     }
 

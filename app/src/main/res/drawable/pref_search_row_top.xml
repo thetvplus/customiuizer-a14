@@ -10,7 +10,6 @@
 	</item>
 	<item android:drawable="@drawable/list_item_bg" />
 	<item
-		android:alpha="0.4"
 		android:gravity="bottom"
 		android:left="@dimen/preference_item_child_padding"
 		android:right="@dimen/preference_item_child_padding">

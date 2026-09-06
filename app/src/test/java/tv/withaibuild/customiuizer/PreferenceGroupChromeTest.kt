@@ -230,6 +230,7 @@ class PreferenceGroupChromeWiringTest {
         assertTrue(card.contains("@color/color_surface_container"))
         assertTrue(decoration.contains("R.color.color_surface_container"))
         assertTrue(decoration.contains("R.color.color_outline_variant"))
+        assertFalse(decoration.contains("dividerPaint.alpha"))
         assertFalse(decoration.contains("R.color.color_surface_variant"))
         assertFalse(decoration.contains("R.color.about_divider"))
     }
@@ -241,10 +242,14 @@ class PreferenceGroupChromeWiringTest {
             assertTrue(source.contains("color_surface_container"))
             assertTrue(source.contains("color_outline_variant"))
         }
-        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_200"))
+        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_50"))
         assertTrue(lightColors.contains("color_surface_container\">@android:color/system_neutral1_10"))
         assertTrue(nightColors.contains("color_window_background\">@android:color/system_neutral1_1000"))
-        assertTrue(nightColors.contains("color_surface_container\">@android:color/system_neutral1_700"))
+        assertTrue(nightColors.contains("color_surface_container\">@android:color/system_neutral1_900"))
+        assertTrue(lightColors.contains("color_outline_variant\">#1F000000"))
+        assertTrue(nightColors.contains("color_outline_variant\">#26FFFFFF"))
+        assertTrue(lightColors.contains("list_item_bg_color_pressed\">#14000000"))
+        assertTrue(nightColors.contains("list_item_bg_color_pressed\">#14FFFFFF"))
         assertTrue(lightColors.contains("list_item_bg_color_longpress"))
         assertTrue(nightColors.contains("list_item_bg_color_longpress"))
     }
@@ -267,12 +272,16 @@ class PreferenceGroupChromeWiringTest {
         assertTrue(selected.contains("@color/list_item_bg_color_longpress"))
         val searchSingle = source("app/src/main/res/drawable/pref_search_row_single.xml")
         val searchTop = source("app/src/main/res/drawable/pref_search_row_top.xml")
+        val searchMiddle = source("app/src/main/res/drawable/pref_search_row_middle.xml")
         val searchBottom = source("app/src/main/res/drawable/pref_search_row_bottom.xml")
-        for (row in listOf(searchSingle, searchTop, searchBottom)) {
+        for (row in listOf(searchSingle, searchTop, searchMiddle, searchBottom)) {
             assertTrue(row.contains("<layer-list"))
             assertTrue(row.contains("@drawable/list_item_bg"))
-            assertTrue(row.contains("@dimen/preference_group_radius"))
+            assertFalse(row.contains("android:alpha"))
             assertFalse(row.contains("<ripple"))
+        }
+        for (row in listOf(searchSingle, searchTop, searchBottom)) {
+            assertTrue(row.contains("@dimen/preference_group_radius"))
         }
         assertTrue(decoration.contains("applyGroupedListRow"))
         assertTrue(searchAdapter.contains("applyGroupedListRow"))
@@ -300,9 +309,10 @@ class PreferenceGroupChromeWiringTest {
         assertTrue(categoryEx.contains("preference_group_header_padding"))
         val dimens = source("app/src/main/res/values/dimens.xml")
         assertTrue(dimens.contains("preference_group_header_padding\">32dp"))
+        assertTrue(dimens.contains("preference_group_header_bottom\">8dp"))
         assertTrue(dimens.contains("normal_text_size\">17sp"))
         assertTrue(dimens.contains("secondary_text_size\">13sp"))
-        assertTrue(dimens.contains("preference_group_radius\">12dp"))
+        assertTrue(dimens.contains("preference_group_radius\">10dp"))
     }
 
     @Test
