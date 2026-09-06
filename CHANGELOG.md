@@ -2,6 +2,29 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.21.3 — 2026-09-06
+
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Settings UI
+
+- Grouped lists, search, app/Wi-Fi/Bluetooth pickers, sortable actions, overflow menus, dialogs, and About share one 12 dp corner radius.
+- Two surfaces only: the page and the menu card. Light uses Neutral1 200 behind Neutral1 10 cards; dark uses Neutral1 1000 behind Neutral1 700 cards. Wallpaper remains the color source.
+- Tap and long-press are discrete overlays (no ripple), with long-press slightly stronger, clipped inside the card corners.
+
+### Notifications
+
+- Open channel settings uses `Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS` with the live notification, not a SubSettings fragment.
+- Notification importance is wired to both ChannelNotificationSettings implementations and writes the value back.
+- The extra notification-row actions keep the ROM's per-side margin so the sixth action stays on screen.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.21.3.apk`
+- versionCode / versionName: `210 / r14.21.3`
+
+---
+
 ## r14.21.2 — 2026-09-06
 
 Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.

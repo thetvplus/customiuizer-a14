@@ -13,6 +13,7 @@ import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.applyGroupedListRow
 import java.util.ArrayList
 import java.util.HashMap
 import java.util.Locale
@@ -69,6 +70,7 @@ class PrivacyAppAdapter(
         }
 
         val ad = getItem(position)
+        applyGroupedListRow(holder.root, position, count)
         holder.icon.tag = position
         holder.title.text = ad.label
         holder.disableIcon.visibility = if (ad.enabled) View.GONE else View.VISIBLE

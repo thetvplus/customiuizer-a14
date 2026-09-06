@@ -11,6 +11,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.PowerManager
 import android.os.UserHandle
+import android.provider.Settings
+import android.service.notification.StatusBarNotification
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -238,6 +240,12 @@ object SystemNotificationHooks {
 
     @JvmStatic
     fun NotificationRowMenuHook(lpparam: PackageReadyParam) {
+        val menuItemClass = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.MiuiNotificationMenuRow.MiuiNotificationMenuItem", lpparam.classLoader)
+        val menuItemConstructor = XposedHelpers.findConstructorExact(
+            menuItemClass, Context::class.java, Int::class.javaPrimitiveType!!,
+            XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.NotificationSnooze", lpparam.classLoader),
+            Int::class.javaPrimitiveType!!,
+        )
         val appInfoIconResId = MainModule.resHooks.addFakeResource("ic_appinfo", R.drawable.ic_appinfo12, "drawable")
         val forceCloseIconResId = MainModule.resHooks.addFakeResource("ic_forceclose", R.drawable.ic_forceclose12, "drawable")
         val openInFwIconResId = MainModule.resHooks.addFakeResource("ic_openinfw", R.drawable.ic_openinfw, "drawable")
@@ -248,17 +256,9 @@ object SystemNotificationHooks {
         MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "miui_notification_modal_menu_margin_left_right", 3)
         MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "miui_notification_modal_menu_icon_bg_size", 50)
 
-        val MiuiNotificationMenuItem = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.MiuiNotificationMenuRow.MiuiNotificationMenuItem", lpparam.classLoader)
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiNotificationMenuRow", lpparam.classLoader, "createMenuViews", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
+                val result = chain.proceed()
                 try {
                     val thisObject = chain.thisObject
 
@@ -268,15 +268,15 @@ object SystemNotificationHooks {
                     var infoBtn: Any? = null
                     var forceCloseBtn: Any? = null
                     var openFwBtn: Any? = null
-                    val MenuItem = MiuiNotificationMenuItem.constructors[0]
                     try {
-                        infoBtn = MenuItem.newInstance(mContext, appInfoDescId, null, appInfoIconResId)
-                        forceCloseBtn = MenuItem.newInstance(mContext, forceCloseDescId, null, forceCloseIconResId)
-                        openFwBtn = MenuItem.newInstance(mContext, openInFwDescId, null, openInFwIconResId)
+                        infoBtn = menuItemConstructor.newInstance(mContext, appInfoDescId, null, appInfoIconResId)
+                        forceCloseBtn = menuItemConstructor.newInstance(mContext, forceCloseDescId, null, forceCloseIconResId)
+                        openFwBtn = menuItemConstructor.newInstance(mContext, openInFwDescId, null, openInFwIconResId)
                     } catch (t1: Throwable) {
+                        FatalErrors.unwrapAndRethrowIfFatal(t1)
                         XposedHelpers.log(t1)
                     }
-                    if (infoBtn == null || forceCloseBtn == null || openFwBtn == null) { return XposedHelpers.throwOrReturn(throwable, result) }
+                    if (infoBtn == null || forceCloseBtn == null || openFwBtn == null) { return result }
                     val notification = XposedHelpers.getObjectField(thisObject, "mSbn")
                     mMenuItems.add(infoBtn)
                     mMenuItems.add(forceCloseBtn)
@@ -292,7 +292,7 @@ object SystemNotificationHooks {
                     val mOpenFwBtn = XposedHelpers.callMethod(openFwBtn, "getMenuView") as View
                     val expandNotifyRow = XposedHelpers.getObjectField(thisObject, "mParent")
                     val itemClick = View.OnClickListener { view ->
-                        ModuleHelper.guarded {
+                        try {
                             if (view == null) return@OnClickListener
                             val uid = XposedHelpers.getIntField(notification, "mAppUid")
 
@@ -329,13 +329,17 @@ object SystemNotificationHooks {
                             XposedHelpers.callMethod(ModalController, "animExitModal", "OTHER")
                             val mCommandQueue = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.statusbar.CommandQueue")
                             XposedHelpers.callMethod(mCommandQueue, "animateCollapsePanels", 0, false)
+                        } catch (t: Throwable) {
+                            FatalErrors.unwrapAndRethrowIfFatal(t)
+                            XposedHelpers.log("NotificationRowMenu", t)
                         }
                     }
                     mInfoBtn.setOnClickListener(itemClick)
                     mOpenFwBtn.setOnClickListener(itemClick)
                     val layoutParams = LinearLayout.LayoutParams(-2, -2)
-                    layoutParams.leftMargin = menuMargin * 2
-                    layoutParams.rightMargin = menuMargin * 2
+                    // Match the ROM's per-side margin; doubling it clips the sixth action.
+                    layoutParams.leftMargin = menuMargin
+                    layoutParams.rightMargin = menuMargin
                     mMenuContainer.addView(mInfoBtn)
                     if (mForceCloseBtn != null) {
                         mForceCloseBtn.setOnClickListener(itemClick)
@@ -352,9 +356,10 @@ object SystemNotificationHooks {
                     }
 
                 } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                    XposedHelpers.log("NotificationRowMenu", t)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return result
             }
         })
     }
@@ -493,81 +498,119 @@ object SystemNotificationHooks {
 
     @JvmStatic
     fun NotificationImportanceHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllMethods("com.android.settings.notification.BaseNotificationSettings", lpparam.classLoader, "setPrefVisible", object : MethodHook() {
+        val loader = lpparam.classLoader
+        val baseClass = XposedHelpers.findClass("com.android.settings.notification.BaseNotificationSettings", loader)
+        val preferenceClass = XposedHelpers.findClass("androidx.preference.Preference", loader)
+        val listenerClass = XposedHelpers.findClass("androidx.preference.Preference\$OnPreferenceChangeListener", loader)
+        val listenerInterfaces = arrayOf(listenerClass)
+        val getKey = XposedHelpers.findMethodExact(preferenceClass, "getKey", *emptyArray<Any>())
+        val findPreference = XposedHelpers.findMethodBestMatch(baseClass, "findPreference", CharSequence::class.java)
+        val setListener = XposedHelpers.findMethodExact(preferenceClass, "setOnPreferenceChangeListener", listenerClass)
+        val importanceField = XposedHelpers.findField(baseClass, "mImportance")
+        val backupImportanceField = XposedHelpers.findField(baseClass, "mBackupImportance")
+        val channelField = XposedHelpers.findField(baseClass, "mChannel")
+        val backendField = XposedHelpers.findField(baseClass, "mBackend")
+        val packageField = XposedHelpers.findField(baseClass, "mPkg")
+        val uidField = XposedHelpers.findField(baseClass, "mUid")
+        val findIndex = XposedHelpers.findMethodExact(importanceField.type, "findSpinnerIndexOfValue", String::class.java)
+        val setIndex = XposedHelpers.findMethodExact(importanceField.type, "setValueIndex", Int::class.javaPrimitiveType!!)
+        val lockFields = XposedHelpers.findMethodExact(NotificationChannel::class.java, "lockFields", Int::class.javaPrimitiveType!!)
+        val updateChannel = XposedHelpers.findMethodBestMatch(
+            backendField.type, "updateChannel", String::class.java, Int::class.javaPrimitiveType!!, NotificationChannel::class.java,
+        )
+        // HyperOS 1 ships both implementations. The public Intent opens the .app page.
+        // Hook only methods declared by each class so an inherited alias is not installed twice.
+        val channelMethods = listOfNotNull(
+            XposedHelpers.findClassIfExists("com.android.settings.notification.app.ChannelNotificationSettings", loader),
+            XposedHelpers.findClassIfExists("com.android.settings.notification.ChannelNotificationSettings", loader),
+        ).mapNotNull { channelClass ->
+            XposedHelpers.findMethodExactIfExists(channelClass, "setupChannelDefaultPrefs")?.let { setup ->
+                setup to XposedHelpers.findMethodExact(channelClass, "updateDependents", Boolean::class.javaPrimitiveType!!)
+            }
+        }
+        check(channelMethods.isNotEmpty()) { "No supported channel notification settings implementation" }
+
+        ModuleHelper.findAndHookMethod(baseClass, "setPrefVisible", preferenceClass, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
+                val showImportance = try {
+                    val pref = chain.getArg(0)
+                    pref != null && getKey.invoke(pref) == "importance"
+                } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                    XposedHelpers.log("NotificationImportance", t)
+                    false
+                }
+                if (!showImportance) return chain.proceed()
                 val args = XposedHelpers.getArgsArray(chain)
-                try {
-
-                    val pref = args[0]
-                    if (pref != null) {
-                        val prefKey = XposedHelpers.callMethod(pref, "getKey") as String?
-                        if (prefKey == "importance") {
-                            args[1] = true
-                        }
-                    }
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                args[1] = true
+                return chain.proceed(args)
             }
         })
-        ModuleHelper.findAndHookMethod("com.android.settings.notification.ChannelNotificationSettings", lpparam.classLoader, "setupChannelDefaultPrefs", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val pref = XposedHelpers.callMethod(thisObject, "findPreference", "importance")
-                    XposedHelpers.setObjectField(thisObject, "mImportance", pref)
-                    val mBackupImportance = XposedHelpers.getObjectField(thisObject, "mBackupImportance") as Int
-                    if (mBackupImportance > 0) {
-                        val index = XposedHelpers.callMethod(pref, "findSpinnerIndexOfValue", mBackupImportance.toString()) as Int
-                        if (index > -1) {
-                            XposedHelpers.callMethod(pref, "setValueIndex", index)
-                        }
-                        val ImportanceListener = XposedHelpers.findClassIfExists("androidx.preference.Preference\$OnPreferenceChangeListener", lpparam.classLoader)
-                            ?: return XposedHelpers.throwOrReturn(throwable, result)
-                        val handler = InvocationHandler { _, method, args2 ->
-                            if (method.name == "onPreferenceChange") {
-                                val mBackupImportance2 = Integer.parseInt(args2[1] as String)
-                                XposedHelpers.setObjectField(thisObject, "mBackupImportance", mBackupImportance2)
-                                val mChannel = XposedHelpers.getObjectField(thisObject, "mChannel") as NotificationChannel
-                                mChannel.importance = mBackupImportance2
-                                XposedHelpers.callMethod(mChannel, "lockFields", 4)
-                                val mBackend = XposedHelpers.getObjectField(thisObject, "mBackend")
-                                val mPkg = XposedHelpers.getObjectField(thisObject, "mPkg") as String
-                                val mUid = XposedHelpers.getObjectField(thisObject, "mUid") as Int
-                                XposedHelpers.callMethod(mBackend, "updateChannel", mPkg, mUid, mChannel)
-                                XposedHelpers.callMethod(thisObject, "updateDependents", false)
+        for ((setup, updateDependents) in channelMethods) {
+            ModuleHelper.hookMethod(setup, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val result = chain.proceed()
+                    try {
+                        val owner = chain.thisObject
+                        val pref = findPreference.invoke(owner, "importance") ?: return result
+                        importanceField.set(owner, pref)
+                        val importance = backupImportanceField.getInt(owner)
+                        if (importance <= 0) return result
+                        val index = findIndex.invoke(pref, importance.toString()) as Int
+                        if (index >= 0) setIndex.invoke(pref, index)
+                        val handler = ImportanceChangeHandler { value ->
+                            val channel = channelField.get(owner) as NotificationChannel
+                            val previous = channel.importance
+                            try {
+                                channel.importance = value
+                                lockFields.invoke(channel, 4)
+                                val saved = updateChannel.invoke(backendField.get(owner), packageField.get(owner), uidField.getInt(owner), channel)
+                                check(saved != false) { "Notification backend rejected importance update" }
+                            } catch (t: Throwable) {
+                                FatalErrors.unwrapAndRethrowIfFatal(t)
+                                channel.importance = previous
+                                throw t
                             }
-                            true
+                            backupImportanceField.setInt(owner, value)
+                            try {
+                                updateDependents.invoke(owner, false)
+                            } catch (t: Throwable) {
+                                FatalErrors.unwrapAndRethrowIfFatal(t)
+                                XposedHelpers.log("NotificationImportance", t)
+                            }
                         }
-                        val mImportanceListener = Proxy.newProxyInstance(
-                            lpparam.classLoader,
-                            arrayOf(ImportanceListener),
-                            handler
-                        )
-                        XposedHelpers.callMethod(pref, "setOnPreferenceChangeListener", mImportanceListener)
+                        setListener.invoke(pref, Proxy.newProxyInstance(loader, listenerInterfaces, handler))
+                    } catch (t: Throwable) {
+                        FatalErrors.unwrapAndRethrowIfFatal(t)
+                        XposedHelpers.log("NotificationImportance", t)
                     }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    return result
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+            })
+        }
+    }
+
+    internal class ImportanceChangeHandler(private val update: (Int) -> Unit) : InvocationHandler {
+        override fun invoke(proxy: Any, method: java.lang.reflect.Method, args: Array<out Any?>?): Any? {
+            return when (method.name) {
+                "equals" -> proxy === args?.getOrNull(0)
+                "hashCode" -> java.lang.System.identityHashCode(proxy)
+                "toString" -> "CustoMIUIzer NotificationImportanceListener"
+                "onPreferenceChange" -> {
+                    val value = (args?.getOrNull(1) as? String)?.toIntOrNull()
+                    if (value == null || value !in 1..4) return false
+                    try {
+                        update(value)
+                        true
+                    } catch (t: Throwable) {
+                        FatalErrors.unwrapAndRethrowIfFatal(t)
+                        XposedHelpers.log("NotificationImportance", t)
+                        false
+                    }
+                }
+                else -> null
             }
-        })
+        }
     }
 
     @JvmStatic
@@ -707,58 +750,84 @@ object SystemNotificationHooks {
         })
     }
 
+    internal fun shouldOpenNotificationChannel(channelId: String?, hybrid: Boolean): Boolean =
+        !channelId.isNullOrBlank() && channelId != NotificationChannel.DEFAULT_CHANNEL_ID && !hybrid
+
     @JvmStatic
     fun NotificationChannelSettingsHook(lpparam: PackageReadyParam) {
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiNotificationMenuRow", lpparam.classLoader, "createMenuViews", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
+        val loader = lpparam.classLoader
+        val menuClass = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.MiuiNotificationMenuRow", loader)
+        val infoField = XposedHelpers.findField(menuClass, "mInfoItem")
+        val iconField = XposedHelpers.findField(infoField.type, "mIcon")
+        val parentField = XposedHelpers.findField(menuClass, "mParent")
+        val contextField = XposedHelpers.findField(menuClass, "mContext")
+        val getEntry = XposedHelpers.findMethodExact(parentField.type, "getEntry", *emptyArray<Any>())
+        val getChannel = XposedHelpers.findMethodExact(getEntry.returnType, "getChannel", *emptyArray<Any>())
+        val sbnField = XposedHelpers.findField(getEntry.returnType, "mSbn")
+        val uidField = XposedHelpers.findField(sbnField.type, "mAppUid")
+        val notificationUtil = XposedHelpers.findClass("com.android.systemui.statusbar.notification.NotificationUtil", loader)
+        val isHybrid = XposedHelpers.findMethodExact(notificationUtil, "isHybrid", StatusBarNotification::class.java)
+        val getListenerInfo = XposedHelpers.findMethodExact(View::class.java, "getListenerInfo", *emptyArray<Any>())
+        val clickListenerField = XposedHelpers.findField(getListenerInfo.returnType, "mOnClickListener")
+        val startActivity = XposedHelpers.findMethodExact(Context::class.java, "startActivityAsUser", Intent::class.java, UserHandle::class.java)
+        val modalClass = XposedHelpers.findClass("com.android.systemui.statusbar.notification.modal.ModalController", loader)
+        val exitModal = XposedHelpers.findMethodExact(modalClass, "animExitModal", Long::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, String::class.java, Boolean::class.javaPrimitiveType!!)
+        val queueClass = XposedHelpers.findClass("com.android.systemui.statusbar.CommandQueue", loader)
+        val collapsePanels = XposedHelpers.findMethodExact(queueClass, "animateCollapsePanels", Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!)
 
-                    val entry = XposedHelpers.callMethod(XposedHelpers.getObjectField(thisObject, "mParent"), "getEntry")
-                    val channelId = XposedHelpers.callMethod(XposedHelpers.callMethod(entry, "getChannel"), "getId") as String
-                    if ("miscellaneous" == channelId) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    val notification = XposedHelpers.getObjectField(entry, "mSbn")
-                    val nuCls = XposedHelpers.findClassIfExists("com.android.systemui.statusbar.notification.NotificationUtil", lpparam.classLoader)
-                    val isHybrid = if (nuCls != null) XposedHelpers.callStaticMethod(nuCls, "isHybrid", notification) as Boolean else false
-                    if (isHybrid) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val mInfoItem = XposedHelpers.getObjectField(thisObject, "mInfoItem")
-                    val mIcon = XposedHelpers.getObjectField(mInfoItem, "mIcon") as ImageView
-                    mIcon.setOnClickListener(View.OnClickListener {
+        // This HyperOS 1 ABI has no onClickInfoItem. Its info icon owns the real listener.
+        ModuleHelper.findAndHookMethod(menuClass, "createMenuViews", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val result = chain.proceed()
+                try {
+                    val menu = chain.thisObject
+                    val info = infoField.get(menu) ?: return result
+                    val icon = iconField.get(info) as? ImageView ?: return result
+                    val original = clickListenerField.get(getListenerInfo.invoke(icon)) as? View.OnClickListener
+                    icon.setOnClickListener(View.OnClickListener { clicked ->
                         ModuleHelper.guarded {
-                            val bundle = Bundle()
-                            bundle.putString("android.provider.extra.CHANNEL_ID", channelId)
-                            val pkgName = XposedHelpers.callMethod(notification, "getPackageName") as String
-                            bundle.putString("package", pkgName)
-                            val appUid = XposedHelpers.getIntField(notification, "mAppUid")
-                            bundle.putInt("uid", appUid)
-                            bundle.putString("miui.targetPkg", pkgName)
-                            val intent = Intent("android.intent.action.MAIN")
-                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            intent.putExtra(":android:show_fragment", "com.android.settings.notification.ChannelNotificationSettings")
-                            intent.putExtra(":android:show_fragment_args", bundle)
-                            intent.setClassName("com.android.settings", "com.android.settings.SubSettings")
-                            XposedHelpers.callMethod(mContext, "startActivityAsUser", intent, XposedHelpers.getStaticObjectField(UserHandle::class.java, "CURRENT"))
-                            val modalController = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.statusbar.notification.modal.ModalController")
-                            XposedHelpers.callMethod(modalController, "animExitModal", 50L, true, "MORE", false)
-                            val statusBar = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.statusbar.CommandQueue")
-                            XposedHelpers.callMethod(statusBar, "animateCollapsePanels", 0, false)
+                            val opened = try {
+                                run {
+                                    // Resolve the live entry on click; do not retain a channel or Context in the hook.
+                                    val entry = getEntry.invoke(parentField.get(menu)) ?: return@run false
+                                    val channel = getChannel.invoke(entry) as? NotificationChannel ?: return@run false
+                                    val notification = sbnField.get(entry) as? StatusBarNotification ?: return@run false
+                                    if (!shouldOpenNotificationChannel(channel.id, isHybrid.invoke(null, notification) as Boolean)) return@run false
+                                    val packageName = notification.packageName
+                                    val uid = uidField.getInt(notification)
+                                    if (packageName.isNullOrBlank() || uid < 0) return@run false
+                                    val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                                        .setPackage("com.android.settings")
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                                        .putExtra(Settings.EXTRA_CHANNEL_ID, channel.id)
+                                    startActivity.invoke(contextField.get(menu), intent, UserHandle.getUserHandleForUid(uid))
+                                    true
+                                }
+                            } catch (t: Throwable) {
+                                FatalErrors.unwrapAndRethrowIfFatal(t)
+                                XposedHelpers.log("NotificationChannelSettings", t)
+                                false
+                            }
+                            if (!opened) {
+                                original?.onClick(clicked)
+                                return@OnClickListener
+                            }
+                            // A cleanup failure must not launch a second settings page.
+                            try {
+                                exitModal.invoke(ModuleHelper.getDepInstance(loader, modalClass.name), 50L, true, "MORE", false)
+                                collapsePanels.invoke(ModuleHelper.getDepInstance(loader, queueClass.name), 0, false)
+                            } catch (t: Throwable) {
+                                FatalErrors.unwrapAndRethrowIfFatal(t)
+                                XposedHelpers.log("NotificationChannelSettings", t)
+                            }
                         }
                     })
-
                 } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                    XposedHelpers.log("NotificationChannelSettings", t)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return result
             }
         })
     }

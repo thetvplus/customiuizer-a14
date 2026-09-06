@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-	android:shape="rectangle">
-	<solid android:color="@color/color_surface_container" />
-	<corners
-		android:bottomLeftRadius="@dimen/preference_group_radius"
-		android:bottomRightRadius="@dimen/preference_group_radius" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+	<item>
+		<shape android:shape="rectangle">
+			<solid android:color="@color/color_surface_container" />
+			<corners
+				android:bottomLeftRadius="@dimen/preference_group_radius"
+				android:bottomRightRadius="@dimen/preference_group_radius" />
+		</shape>
+	</item>
+	<item android:drawable="@drawable/list_item_bg" />
+</layer-list>

@@ -2,6 +2,29 @@
 
 [English](CHANGELOG.md) | 简体中文
 
+## r14.21.3 — 2026-09-06
+
+面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。
+
+### 设置界面
+
+- 分组列表、搜索、应用/Wi-Fi/蓝牙选择、可排序动作、右上角菜单、对话框和关于页统一 12 dp 圆角。
+- 页面和菜单只保留两套表面色：浅色 Neutral1 200 底 + Neutral1 10 卡片，深色 Neutral1 1000 底 + Neutral1 700 卡片。颜色仍来自壁纸色板。
+- 点按和长按改为实色叠加（无水波纹），长按略深，并裁进卡片圆角内。
+
+### 通知
+
+- 「打开频道设置」改为系统公开 `ACTION_CHANNEL_NOTIFICATION_SETTINGS`，按当前通知打开，不再走 SubSettings fragment。
+- 「通知重要性」同时挂新旧两套 ChannelNotificationSettings，并把档位写回通知系统。
+- 扩展通知菜单恢复 ROM 单侧边距，避免第六项「浮窗」被裁切。
+
+### 产物信息
+
+- APK：`CustoMIUIzer-A14-r14.21.3.apk`
+- versionCode / versionName：`210 / r14.21.3`
+
+---
+
 ## r14.21.2 — 2026-09-06
 
 面向 HyperOS 1 / Android 14（SDK 34）、`arm64-v8a`、libxposed API 101/102。

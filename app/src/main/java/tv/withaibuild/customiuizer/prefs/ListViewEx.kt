@@ -1,6 +1,8 @@
 package tv.withaibuild.customiuizer.prefs
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.util.AttributeSet
 import android.widget.ListView
 
@@ -13,6 +15,7 @@ class ListViewEx @JvmOverloads constructor(
     init {
         divider = null
         dividerHeight = 0
+        selector = ColorDrawable(Color.TRANSPARENT)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
