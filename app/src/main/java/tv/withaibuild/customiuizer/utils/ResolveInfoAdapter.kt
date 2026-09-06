@@ -13,6 +13,7 @@ import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.applyGroupedListRow
 import java.util.ArrayList
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArrayList
@@ -39,6 +40,7 @@ class ResolveInfoAdapter(context: Context, arr: ArrayList<ResolveInfo>) : BaseAd
         }
 
         val ri = getItem(position)
+        applyGroupedListRow(holder.root, position, count)
         holder.icon.tag = position
 
         val ad = AppData().apply {

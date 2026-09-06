@@ -9,6 +9,7 @@ import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.TextView
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.applyGroupedListRow
 
 class PreferenceAdapter(context: Context, private val key: String, private val activities: Boolean) : BaseAdapter() {
 
@@ -36,9 +37,9 @@ class PreferenceAdapter(context: Context, private val key: String, private val a
     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
         val holder = (convertView?.tag as? ViewHolder) ?: run {
             val row = inflater.inflate(R.layout.pref_item, parent, false)
-            Helpers.setMiuiPrefItem(row)
             ViewHolder(row).also { row.tag = it }
         }
+        applyGroupedListRow(holder.root, position, count)
 
         holder.dragHandle.visibility = if (activities) View.GONE else View.VISIBLE
         (parent as? SortableListView)?.let { holder.dragHandle.setOnTouchListener(it.getListenerForStartingSort()) }

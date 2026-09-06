@@ -18,11 +18,6 @@
 		app:theme="@style/AppToolbarStyle"
 		/>
 
-	<View
-		android:layout_width="match_parent"
-		android:layout_height="1dp"
-		android:background="@color/about_divider" />
-
 	<FrameLayout
 		android:id="@+id/fragment_container"
 		android:layout_width="match_parent"
