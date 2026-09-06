@@ -6,15 +6,15 @@ English | [简体中文](CHANGELOG_CN.md)
 
 Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
 
-This is the only r14.21.* release. It keeps the grouped-settings chrome and the notification-channel routing, and maps surfaces to the low-chroma ends of the system palette.
+This is the only r14.21.* release. It keeps the grouped-settings chrome and the notification-channel routing, and uses Telegram-style settings surfaces.
 
 ### Settings UI
 
 - Preference lists, search, app / Wi-Fi / Bluetooth pickers, sortable actions, overflow menus, dialogs, and About use grouped inset cards.
 - One 10 dp corner radius. Category titles are sentence case, not ALL CAPS. Home-page category icons stay off. The 1 dp toolbar hairline is gone.
-- Two surfaces only. Light: Neutral1 50 page behind Neutral1 10 cards. Dark: Neutral1 1000 page behind Neutral1 900 cards. Wallpaper supplies those low-chroma ends; accent stays on switches and checked state.
-- Separators are 12% black / 15% white hairlines, not a tinted Neutral2 stroke.
-- Title / summary / category type is 17 / 13 / 13 sp.
+- Two surfaces only, no wallpaper tint. Light: `#EFEFF4` page behind white cards. Dark: black page behind `#1C1C1D` cards. Accent is Telegram blue (`#3390EC` / `#6CB7F9`) on switches and checked state.
+- Separators are Telegram hairlines (`#D9D9D9` / 8% white).
+- Title / summary / category type is 16 / 13 / 14 sp. Rows are ~50 dp.
 - Tap and long-press are discrete overlays (no ripple), long-press slightly stronger, clipped inside the card corners.
 
 ### Notifications
