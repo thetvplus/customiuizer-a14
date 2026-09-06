@@ -236,22 +236,25 @@ class PreferenceGroupChromeWiringTest {
     }
 
     @Test
-    fun surfaceTokensUseSystemDynamicPalette() {
+    fun surfaceTokensUseTelegramPalette() {
         for (source in listOf(lightColors, nightColors)) {
-            assertTrue(source.contains("@android:color/system_neutral1_"))
+            assertFalse(source.contains("@android:color/system_neutral"))
+            assertFalse(source.contains("@android:color/system_accent"))
             assertTrue(source.contains("color_surface_container"))
             assertTrue(source.contains("color_outline_variant"))
         }
-        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_50"))
-        assertTrue(lightColors.contains("color_surface_container\">@android:color/system_neutral1_10"))
-        assertTrue(nightColors.contains("color_window_background\">@android:color/system_neutral1_1000"))
-        assertTrue(nightColors.contains("color_surface_container\">@android:color/system_neutral1_900"))
-        assertTrue(lightColors.contains("color_outline_variant\">#1F000000"))
-        assertTrue(nightColors.contains("color_outline_variant\">#26FFFFFF"))
-        assertTrue(lightColors.contains("list_item_bg_color_pressed\">#14000000"))
+        assertTrue(lightColors.contains("color_window_background\">#EFEFF4"))
+        assertTrue(lightColors.contains("color_surface_container\">#FFFFFF"))
+        assertTrue(nightColors.contains("color_window_background\">#000000"))
+        assertTrue(nightColors.contains("color_surface_container\">#1C1C1D"))
+        assertTrue(lightColors.contains("color_outline_variant\">#D9D9D9"))
+        assertTrue(nightColors.contains("color_outline_variant\">#14FFFFFF"))
+        assertTrue(lightColors.contains("highlight_normal_light\">#3390EC"))
+        assertTrue(nightColors.contains("highlight_normal_light\">#6CB7F9"))
+        assertTrue(lightColors.contains("list_item_bg_color_pressed\">#0F000000"))
         assertTrue(nightColors.contains("list_item_bg_color_pressed\">#14FFFFFF"))
-        assertTrue(lightColors.contains("list_item_bg_color_longpress"))
-        assertTrue(nightColors.contains("list_item_bg_color_longpress"))
+        assertTrue(lightColors.contains("list_item_bg_color_longpress\">#1A000000"))
+        assertTrue(nightColors.contains("list_item_bg_color_longpress\">#24FFFFFF"))
     }
 
     @Test
@@ -309,10 +312,14 @@ class PreferenceGroupChromeWiringTest {
         assertTrue(categoryEx.contains("preference_group_header_padding"))
         val dimens = source("app/src/main/res/values/dimens.xml")
         assertTrue(dimens.contains("preference_group_header_padding\">32dp"))
-        assertTrue(dimens.contains("preference_group_header_bottom\">8dp"))
-        assertTrue(dimens.contains("normal_text_size\">17sp"))
+        assertTrue(dimens.contains("preference_group_header_bottom\">6dp"))
+        assertTrue(dimens.contains("preference_group_gap\">10dp"))
+        assertTrue(dimens.contains("normal_text_size\">16sp"))
+        assertTrue(dimens.contains("preference_category_text_size\">14sp"))
         assertTrue(dimens.contains("secondary_text_size\">13sp"))
         assertTrue(dimens.contains("preference_group_radius\">10dp"))
+        assertTrue(dimens.contains("preference_item_padding_top\">11dp"))
+        assertTrue(categoryEx.contains("setPadding(headerPadding, 0, headerPadding, 0)"))
     }
 
     @Test

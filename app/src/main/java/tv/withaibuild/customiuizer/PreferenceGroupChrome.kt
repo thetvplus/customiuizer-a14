@@ -17,7 +17,7 @@ import tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
 
 /**
  * Settings-app chrome only. Maps the visible Preference adapter order onto
- * iOS-style grouped inset cards: top-level category titles sit outside the
+ * Telegram-style grouped inset cards: top-level category titles sit outside the
  * card, nested categories stay inside as inner headers.
  */
 internal object PreferenceGroupChrome {

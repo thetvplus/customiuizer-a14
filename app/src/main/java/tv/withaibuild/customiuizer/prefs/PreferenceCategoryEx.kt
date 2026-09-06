@@ -40,9 +40,8 @@ class PreferenceCategoryEx(context: Context, attrs: AttributeSet?) : PreferenceC
         if (state == 2) {
             finalView.setPadding(childPadding, 0, childPadding, 0)
         } else {
-            val verticalPadding = context.resources.getDimensionPixelSize(R.dimen.preference_item_padding_top)
             val headerPadding = context.resources.getDimensionPixelSize(R.dimen.preference_group_header_padding)
-            finalView.setPadding(headerPadding, verticalPadding, headerPadding, verticalPadding)
+            finalView.setPadding(headerPadding, 0, headerPadding, 0)
         }
     }
 
