@@ -6,9 +6,9 @@
 	<dimen name="preference_item_padding_bottom">12dp</dimen>
 	<dimen name="preference_item_child_padding">16dp</dimen>
 	<dimen name="preference_group_inset">16dp</dimen>
-	<dimen name="preference_group_radius">12dp</dimen>
+	<dimen name="preference_group_radius">10dp</dimen>
 	<dimen name="preference_group_gap">12dp</dimen>
-	<dimen name="preference_group_header_bottom">6dp</dimen>
+	<dimen name="preference_group_header_bottom">8dp</dimen>
 	<dimen name="preference_group_header_padding">32dp</dimen>
 	<dimen name="preference_group_divider_height">1dp</dimen>
 	<dimen name="preference_summary_padding_right">10dp</dimen>

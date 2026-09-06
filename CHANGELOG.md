@@ -2,45 +2,31 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
-## r14.21.3 — 2026-09-06
+## r14.21.4 — 2026-09-06
 
 Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
 
+This is the only r14.21.* release. It keeps the grouped-settings chrome and the notification-channel routing, and maps surfaces to the low-chroma ends of the system palette.
+
 ### Settings UI
 
-- Grouped lists, search, app/Wi-Fi/Bluetooth pickers, sortable actions, overflow menus, dialogs, and About share one 12 dp corner radius.
-- Two surfaces only: the page and the menu card. Light uses Neutral1 200 behind Neutral1 10 cards; dark uses Neutral1 1000 behind Neutral1 700 cards. Wallpaper remains the color source.
-- Tap and long-press are discrete overlays (no ripple), with long-press slightly stronger, clipped inside the card corners.
+- Preference lists, search, app / Wi-Fi / Bluetooth pickers, sortable actions, overflow menus, dialogs, and About use grouped inset cards.
+- One 10 dp corner radius. Category titles are sentence case, not ALL CAPS. Home-page category icons stay off. The 1 dp toolbar hairline is gone.
+- Two surfaces only. Light: Neutral1 50 page behind Neutral1 10 cards. Dark: Neutral1 1000 page behind Neutral1 900 cards. Wallpaper supplies those low-chroma ends; accent stays on switches and checked state.
+- Separators are 12% black / 15% white hairlines, not a tinted Neutral2 stroke.
+- Title / summary / category type is 17 / 13 / 13 sp.
+- Tap and long-press are discrete overlays (no ripple), long-press slightly stronger, clipped inside the card corners.
 
 ### Notifications
 
 - Open channel settings uses `Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS` with the live notification, not a SubSettings fragment.
 - Notification importance is wired to both ChannelNotificationSettings implementations and writes the value back.
-- The extra notification-row actions keep the ROM's per-side margin so the sixth action stays on screen.
+- Extra notification-row actions keep the ROM's per-side margin so the sixth action stays on screen.
 
 ### Artifact Information
 
-- APK: `CustoMIUIzer-A14-r14.21.3.apk`
-- versionCode / versionName: `210 / r14.21.3`
-
----
-
-## r14.21.2 — 2026-09-06
-
-Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
-
-### Settings UI
-
-- Preference lists and About use grouped inset cards.
-- Category titles use sentence case instead of ALL CAPS.
-- The 1 dp line under the toolbar is removed.
-- Grouped cards, search results, overflow menus, and dialogs share system dynamic surface and outline tokens. The wallpaper palette is the color source.
-- Title, summary, and category type sizes follow a Settings-like hierarchy.
-
-### Artifact Information
-
-- APK: `CustoMIUIzer-A14-r14.21.2.apk`
-- versionCode / versionName: `209 / r14.21.2`
+- APK: `CustoMIUIzer-A14-r14.21.4.apk`
+- versionCode / versionName: `211 / r14.21.4`
 
 ---
 
