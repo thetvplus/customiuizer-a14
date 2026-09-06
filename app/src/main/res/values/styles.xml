@@ -19,6 +19,9 @@
 		<item name="android:textColorSecondary">@color/preference_secondary_text</item>
 		<item name="android:listPreferredItemPaddingLeft">@dimen/preference_item_child_padding</item>
 		<item name="android:listPreferredItemPaddingStart">@dimen/preference_item_child_padding</item>
+		<item name="android:colorControlHighlight">@color/list_item_bg_color_pressed</item>
+		<item name="android:selectableItemBackground">@drawable/list_item_bg</item>
+		<item name="android:dropDownListViewStyle">@style/OverflowListView</item>
 		<item name="colorAccent">@color/highlight_normal_light</item>
 		<item name="colorControlActivated">@color/highlight_normal_light</item>
 		<item name="dialogTheme">@style/AppDialogStyle</item>
@@ -60,6 +63,7 @@
 
 	<style name="AppPreferenceTheme" parent="@style/PreferenceThemeOverlay.v14.Material">
 		<item name="preferenceFragmentCompatStyle">@style/AppPreferenceFragmentCompatStyle</item>
+		<item name="android:selectableItemBackground">@drawable/list_item_bg</item>
 	</style>
 	<style name="AppPreferenceFragmentCompatStyle" parent="@style/PreferenceFragment.Material">
 		<item name="android:layout">@layout/prefs_fragment_base</item>
@@ -68,6 +72,15 @@
 		<item name="android:overlapAnchor">false</item>
 		<item name="android:popupBackground">@drawable/popmenu_background</item>
 		<item name="android:popupElevation">8dp</item>
+		<item name="android:dropDownListViewStyle">@style/OverflowListView</item>
+	</style>
+	<style name="OverflowListView" parent="@style/Widget.AppCompat.ListView.DropDown">
+		<item name="android:background">@drawable/popmenu_background</item>
+		<item name="android:clipToOutline">true</item>
+		<item name="android:listSelector">@drawable/list_item_bg</item>
+		<item name="android:divider">@null</item>
+		<item name="android:dividerHeight">0dp</item>
+		<item name="android:cacheColorHint">@android:color/transparent</item>
 	</style>
 	<style name="AppSearchView" parent="Widget.AppCompat.SearchView">
 		<item name="queryBackground">@android:color/transparent</item>

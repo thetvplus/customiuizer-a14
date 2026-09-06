@@ -1,11 +1,13 @@
 package tv.withaibuild.customiuizer
 
 import android.graphics.Canvas
+import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.view.View
+import android.view.ViewOutlineProvider
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceGroup
@@ -158,12 +160,14 @@ internal class PreferenceGroupDecoration(
         val position = parent.getChildAdapterPosition(view)
         if (position == RecyclerView.NO_POSITION) {
             outRect.setEmpty()
+            applyRowClip(view, inCard = false, roundTop = false, roundBottom = false)
             return
         }
         ensureMetrics(parent)
         val chrome = chrome(parent)
         if (position >= chrome.size) {
             outRect.setEmpty()
+            applyRowClip(view, inCard = false, roundTop = false, roundBottom = false)
             return
         }
         val row = chrome[position]
@@ -188,6 +192,7 @@ internal class PreferenceGroupDecoration(
         if (position == chrome.lastIndex) {
             outRect.bottom += listBottom
         }
+        applyRowClip(view, row.inCard, row.cardStart, row.cardEnd)
     }
 
     override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
@@ -279,7 +284,7 @@ internal class PreferenceGroupDecoration(
         dividerInset = res.getDimensionPixelSize(R.dimen.preference_item_child_padding)
         fillPaint.color = parent.context.getColor(R.color.color_surface_container)
         dividerPaint.color = parent.context.getColor(R.color.color_outline_variant)
-        dividerPaint.alpha = 80
+        dividerPaint.alpha = 160
         paintsReady = true
     }
 
@@ -294,5 +299,71 @@ internal class PreferenceGroupDecoration(
         radii[5] = bottom
         radii[6] = bottom
         radii[7] = bottom
+    }
+
+    private fun applyRowClip(view: View, inCard: Boolean, roundTop: Boolean, roundBottom: Boolean) {
+        if (!inCard) {
+            if (view.clipToOutline) {
+                view.clipToOutline = false
+                view.outlineProvider = ViewOutlineProvider.BACKGROUND
+            }
+            return
+        }
+        val provider = view.outlineProvider as? GroupedRowOutline ?: GroupedRowOutline()
+        provider.apply(view, radius, roundTop, roundBottom)
+    }
+}
+
+/**
+ * One OutlineProvider per visible row. Reused across binds; getOutline allocates nothing.
+ * minSdk 34, so [Outline.setPath] can round only the card-start / card-end corners.
+ */
+private class GroupedRowOutline : ViewOutlineProvider() {
+    private var radius = 0f
+    private var roundTop = false
+    private var roundBottom = false
+    private val path = Path()
+    private val rect = RectF()
+    private val radii = FloatArray(8)
+
+    fun apply(view: View, radius: Float, roundTop: Boolean, roundBottom: Boolean) {
+        val unchanged = this.radius == radius &&
+            this.roundTop == roundTop &&
+            this.roundBottom == roundBottom &&
+            view.outlineProvider === this &&
+            view.clipToOutline
+        this.radius = radius
+        this.roundTop = roundTop
+        this.roundBottom = roundBottom
+        if (view.outlineProvider !== this) view.outlineProvider = this
+        if (!view.clipToOutline) view.clipToOutline = true
+        if (!unchanged) view.invalidateOutline()
+    }
+
+    override fun getOutline(view: View, outline: Outline) {
+        val width = view.width
+        val height = view.height
+        if (width <= 0 || height <= 0) {
+            outline.setEmpty()
+            return
+        }
+        if (!roundTop && !roundBottom) {
+            outline.setRect(0, 0, width, height)
+            return
+        }
+        rect.set(0f, 0f, width.toFloat(), height.toFloat())
+        val top = if (roundTop) radius else 0f
+        val bottom = if (roundBottom) radius else 0f
+        radii[0] = top
+        radii[1] = top
+        radii[2] = top
+        radii[3] = top
+        radii[4] = bottom
+        radii[5] = bottom
+        radii[6] = bottom
+        radii[7] = bottom
+        path.reset()
+        path.addRoundRect(rect, radii, Path.Direction.CW)
+        outline.setPath(path)
     }
 }

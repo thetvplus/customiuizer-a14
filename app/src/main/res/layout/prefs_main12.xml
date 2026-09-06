@@ -11,7 +11,7 @@
 	android:divider="@null"
 	android:dividerHeight="0dp"
 	android:drawSelectorOnTop="false"
-	android:listSelector="@drawable/list_item_bg"
+	android:listSelector="@android:color/transparent"
 	android:paddingStart="@dimen/preference_group_inset"
 	android:paddingEnd="@dimen/preference_group_inset"
 	android:paddingTop="@dimen/preference_screen_padding_top"

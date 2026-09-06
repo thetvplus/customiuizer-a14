@@ -44,6 +44,8 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
 
         val ad = getItem(position)
         row.setBackgroundResource(rowBackground(position, getCount()))
+        row.clipToOutline = true
+
 
         val start = ad.titleLower.indexOf(filterString)
         if (start >= 0) {

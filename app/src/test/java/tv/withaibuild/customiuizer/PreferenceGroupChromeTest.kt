@@ -220,10 +220,47 @@ class PreferenceGroupChromeWiringTest {
             assertTrue(source.contains("color_surface_container"))
             assertTrue(source.contains("color_outline_variant"))
         }
-        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_50"))
+        assertTrue(lightColors.contains("color_window_background\">@android:color/system_neutral1_100"))
         assertTrue(lightColors.contains("color_surface_container\">@android:color/system_neutral1_10"))
-        assertTrue(nightColors.contains("color_window_background\">@android:color/system_neutral1_900"))
+        assertTrue(nightColors.contains("color_window_background\">@android:color/system_neutral1_1000"))
         assertTrue(nightColors.contains("color_surface_container\">@android:color/system_neutral1_800"))
+    }
+
+    @Test
+    fun pressHighlightIsClippedToGroupedCorners() {
+        assertTrue(decoration.contains("clipToOutline"))
+        assertTrue(decoration.contains("GroupedRowOutline"))
+        assertTrue(decoration.contains("outline.setPath"))
+        val ripple = source("app/src/main/res/drawable/list_item_bg.xml")
+        assertTrue(ripple.contains("<ripple"))
+        assertTrue(ripple.contains("@android:id/mask"))
+        assertFalse(ripple.contains("23.33dp"))
+        val searchSingle = source("app/src/main/res/drawable/pref_search_row_single.xml")
+        val searchTop = source("app/src/main/res/drawable/pref_search_row_top.xml")
+        val searchBottom = source("app/src/main/res/drawable/pref_search_row_bottom.xml")
+        for (row in listOf(searchSingle, searchTop, searchBottom)) {
+            assertTrue(row.contains("<ripple"))
+            assertTrue(row.contains("@dimen/preference_group_radius"))
+            assertTrue(row.contains("@android:id/mask"))
+        }
+        assertTrue(searchAdapter.contains("clipToOutline = true"))
+        val searchList = source("app/src/main/res/layout/prefs_main12.xml")
+        assertTrue(searchList.contains("listSelector=\"@android:color/transparent\""))
+        val about = source("app/src/main/res/layout/fragment_about.xml")
+        assertTrue(about.contains("@drawable/list_item_bg"))
+        assertFalse(about.contains("selectableItemBackground"))
+    }
+
+    @Test
+    fun overflowMenuClipsSelectorToGroupedRadius() {
+        val menu = source("app/src/main/res/drawable/popmenu_background.xml")
+        assertTrue(menu.contains("@color/color_surface_container"))
+        assertTrue(menu.contains("@dimen/preference_group_radius"))
+        assertTrue(styles.contains("OverflowListView"))
+        assertTrue(styles.contains("android:clipToOutline"))
+        assertTrue(styles.contains("@drawable/list_item_bg"))
+        assertTrue(styles.contains("AppTextAppearance.PopupMenu"))
+        assertTrue(styles.contains("actionOverflowMenuStyle"))
     }
 
     @Test
