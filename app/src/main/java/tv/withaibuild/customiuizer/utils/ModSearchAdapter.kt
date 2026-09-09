@@ -47,7 +47,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
         applyGroupedListRow(row, position, getCount())
 
         val start = ad.titleLower.indexOf(filterString)
-        if (start >= 0) {
+        if (filterString.isNotEmpty() && start >= 0 && start + filterString.length <= ad.title.length) {
             val spannable = SpannableString(ad.title)
             spannable.setSpan(
                 ForegroundColorSpan(Helpers.markColorVibrant),
@@ -77,6 +77,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
         override fun performFiltering(constraint: CharSequence?): FilterResults {
             val query = constraint?.toString().orEmpty()
             val loweredQuery = query.lowercase(Locale.ROOT)
+            val terms = searchTerms(query)
             val newModsOnly = query == Helpers.NEW_MODS_SEARCH_QUERY
             val source = Helpers.allModsList
 
@@ -84,7 +85,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
             for (mod in source) {
                 val matched =
                     if (newModsOnly) Helpers.newMods.contains(mod.key)
-                    else mod.titleLower.contains(loweredQuery)
+                    else mod.matchesSearch(terms)
                 if (matched) matches.add(mod)
             }
 

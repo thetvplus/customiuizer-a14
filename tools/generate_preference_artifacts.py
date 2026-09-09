@@ -51,6 +51,36 @@ CATEGORY_SOURCES = (
     CategorySource("pref_key_various", "prefs_various.xml", "@string/various_mods"),
 )
 
+# Standalone pages opened by the category controllers. Search must use the same
+# controller as normal navigation so dependent controls keep their behavior.
+# (entry key, XML resource, controller, dynamic title marker)
+STANDALONE_PAGES = (
+    ("pref_key_system_autobrightness_cat", "prefs_system_autobrightness", "System_AutoBrightness", False),
+    ("pref_key_system_visualizer_cat", "prefs_system_visualizer", "System_Visualizer", False),
+    ("pref_key_system_vibration_amp_cat", "prefs_system_vibration_amp", "System_VibrationAmp", False),
+    ("pref_key_system_detailednetspeed_cat", "prefs_system_detailednetspeed", "System", False),
+    ("pref_key_system_statusbar_batterytempandcurrent_cat", "prefs_system_statusbar_batterytempandcurrent", "System", True),
+    ("prefs_system_statusbar_showdevicetemperature_cat", "prefs_system_statusbar_showdevicetemperature", "System", True),
+    ("pref_key_system_statusbar_batterystyle_cat", "prefs_system_statusbar_batterystyle", "System", False),
+    ("pref_key_system_statusbar_mobile_signal_cat", "prefs_system_statusbar_mobilesignal", "System", True),
+    ("pref_key_system_statusbaricons_cat", "prefs_system_hideicons", "System", True),
+    ("pref_key_system_statusbaricons_atright_cat", "prefs_system_statusbar_righticons", "System", True),
+    ("pref_key_system_statusbar_clocktweak_cat", "prefs_system_statusbar_clock", "System", True),
+    ("pref_key_system_batteryindicator_cat", "prefs_system_batteryindicator", "System_BatteryIndicator", False),
+    ("pref_key_system_statusbarcontrols_cat", "prefs_system_statusbarcontrols", "System", True),
+    ("pref_key_system_cc_clocktweak_cat", "prefs_system_controlcenter_clock", "System", True),
+    ("pref_key_system_cc_tile_style_cat", "prefs_system_controlcenter_themestyle", "System", False),
+    ("pref_key_system_noscreenlock_cat", "prefs_system_noscreenlock", "System_NoScreenLock", False),
+    ("pref_key_system_lockscreenshortcuts_cat", "prefs_system_lockscreenshortcuts", "System", True),
+    ("pref_key_system_albumartonlock_cat", "prefs_system_albumartonlock", "SubFragment", False),
+    ("pref_key_system_charginginfo_cat", "prefs_system_charginginfo", "SubFragment", False),
+    ("pref_key_system_lsalarm_cat", "prefs_system_alarmonlock", "SubFragment", False),
+    ("pref_key_system_secureqs_cat", "prefs_system_secureqs", "SubFragment", False),
+    ("pref_key_system_screenshot_cat", "prefs_system_screenshot", "System_ScreenshotConfig", False),
+    ("pref_key_various_calluibright_cat", "prefs_various_calluibright", "Various_CallUIBright", False),
+    ("pref_key_various_hiddenfeatures_cat", "prefs_various_hiddenfeatures", "Various_HiddenFeatures", False),
+)
+
 VARIOUS_GROUPS = (
     VariousGroup(
         "pref_key_various_cat_exclusive",
@@ -211,12 +241,8 @@ def _search_entries(
                 order += 1
             continue
 
-        if element.get(AUTO_CHILD, "false").lower() == "true":
-            order += 1
-            continue
-
         title = element.get(ANDROID_TITLE, "")
-        if title.startswith("@"):
+        if title.startswith("@") and element.get(ANDROID_KEY):
             route_sub = (
                 various_routes.get(id(element), "")
                 if category.key == "pref_key_various"
@@ -240,6 +266,33 @@ def _search_entries(
     return entries
 
 
+def _standalone_search_entries(
+    source_dir: Path,
+    category: CategorySource,
+    parent_entries: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    parents = {entry["key"]: entry for entry in parent_entries}
+    entries: list[dict[str, str]] = []
+    for entry_key, resource, controller, dynamic in STANDALONE_PAGES:
+        parent = parents.get(entry_key)
+        if parent is None:
+            continue
+        root = ET.parse(source_dir / f"{resource}.xml").getroot()
+        for item in _search_entries(category, root, {}):
+            section = item.get("breadcrumbSubSubTitle") or item.get("breadcrumbSubTitle", "")
+            item.update(
+                routeSub=entry_key,
+                breadcrumbSubTitle=parent.get("breadcrumbSubTitle", ""),
+                breadcrumbSubSubTitle=section,
+                page=f"@xml/{resource}",
+                pageTitle=parent["title"],
+                pageFragment=controller,
+                pageDynamic=str(dynamic).lower(),
+            )
+            entries.append(item)
+    return entries
+
+
 def _append_compact_search_category(
     index_root: ET.Element,
     category: CategorySource,
@@ -251,18 +304,25 @@ def _append_compact_search_category(
         {"key": category.key, "title": category.title},
     )
     group_element: ET.Element | None = None
-    current_group: tuple[str, str] | None = None
+    current_group: tuple[str, ...] | None = None
     current_section = ""
 
     for item in entries:
         group = (
             item.get("routeSub", ""),
             item.get("breadcrumbSubTitle", ""),
+            item.get("page", ""),
+            item.get("pageTitle", ""),
+            item.get("pageFragment", ""),
+            item.get("pageDynamic", ""),
         )
         if group != current_group:
             group_attributes = {"routeSub": group[0]}
             if group[1]:
                 group_attributes["breadcrumbTitle"] = group[1]
+            for name, value in zip(("page", "pageTitle", "pageFragment", "pageDynamic"), group[2:], strict=True):
+                if value:
+                    group_attributes[name] = value
             group_element = ET.SubElement(category_element, "group", group_attributes)
             current_group = group
             current_section = ""
@@ -400,12 +460,19 @@ def generate(
     various_routes = _various_categories(roots["pref_key_various"], xml_dir)
 
     index_root = ET.Element("mod-search-index")
+    all_parent_keys: set[str] = set()
     for category in CATEGORY_SOURCES:
+        entries = _search_entries(category, roots[category.key], various_routes)
+        all_parent_keys.update(item["key"] for item in entries)
+        entries += _standalone_search_entries(source_dir, category, entries)
         _append_compact_search_category(
             index_root,
             category,
-            _search_entries(category, roots[category.key], various_routes),
+            entries,
         )
+    missing_pages = {page[0] for page in STANDALONE_PAGES} - all_parent_keys
+    if missing_pages:
+        raise ValueError(f"Standalone search pages have no navigation entry: {sorted(missing_pages)}")
     _write_xml(xml_dir / "mod_search_index.xml", index_root)
 
     if catalog_output is not None:

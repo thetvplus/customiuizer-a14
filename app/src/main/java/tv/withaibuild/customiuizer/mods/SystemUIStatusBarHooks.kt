@@ -1492,6 +1492,9 @@ object SystemUIStatusBarHooks {
         } else {
             listOf("hotspot", "wifi", "demo_wifi", "no_sim", "hd", "mobile", "demo_mobile", "airplane")
         }
+        if (moveSignalLeft) {
+            leftIcons.addAll(signalRelatedIcons)
+        }
 
         val leftBlockList = ArrayList<String>()
         val keyguardRightBlockList = ArrayList<String>()

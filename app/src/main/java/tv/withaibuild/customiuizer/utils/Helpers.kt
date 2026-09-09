@@ -686,6 +686,7 @@ object Helpers {
                 var routeSub: String? = null
                 var breadcrumbSubTitleResId = 0
                 var breadcrumbSubSubTitleResId = 0
+                var searchPage: SearchPreferencePage? = null
                 while (eventType != XmlPullParser.END_DOCUMENT) {
                     if (eventType == XmlPullParser.START_TAG) {
                         try {
@@ -705,6 +706,16 @@ object Helpers {
                                     breadcrumbSubTitleResId =
                                         xml.getAttributeResourceValue(null, "breadcrumbTitle", 0)
                                     breadcrumbSubSubTitleResId = 0
+                                    val pageResId = xml.getAttributeResourceValue(null, "page", 0)
+                                    val pageTitleResId = xml.getAttributeResourceValue(null, "pageTitle", 0)
+                                    searchPage = if (pageResId != 0 && pageTitleResId != 0) {
+                                        SearchPreferencePage(
+                                            pageResId,
+                                            res.getString(pageTitleResId),
+                                            xml.getAttributeValue(null, "pageFragment").orEmpty(),
+                                            xml.getAttributeBooleanValue(null, "pageDynamic", false),
+                                        )
+                                    } else null
                                 }
                                 "section" -> {
                                     breadcrumbSubSubTitleResId =
@@ -723,6 +734,10 @@ object Helpers {
                                                 append('/')
                                                 append(res.getString(breadcrumbSubTitleResId))
                                             }
+                                            searchPage?.let {
+                                                append('/')
+                                                append(it.title)
+                                            }
                                             if (breadcrumbSubSubTitleResId > 0) {
                                                 append('/')
                                                 append(res.getString(breadcrumbSubSubTitleResId))
@@ -731,6 +746,7 @@ object Helpers {
                                         modData.key = xml.getAttributeValue(null, "key") ?: ""
                                         modData.cat = currentCategory
                                         modData.sub = routeSub
+                                        modData.page = searchPage
                                         modData.order = xml.getAttributeIntValue(null, "order", 0)
                                         allModsList.add(modData)
                                     }

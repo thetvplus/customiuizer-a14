@@ -144,6 +144,9 @@ def _generated_search_entries(index_root: ET.Element) -> list[dict[str, str]]:
                         "category": category.get("key", ""),
                         "categoryTitle": category.get("title", ""),
                         "routeSub": group.get("routeSub", ""),
+                        "page": group.get("page", ""),
+                        "pageFragment": group.get("pageFragment", ""),
+                        "pageTitle": group.get("pageTitle", ""),
                         "breadcrumbSubTitle": group.get("breadcrumbTitle", ""),
                         "breadcrumbSubSubTitle": section_title,
                     }
@@ -245,7 +248,9 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
     def test_search_index_preserves_legacy_display_metadata_and_order(self) -> None:
         legacy = _legacy_search_entries()
         index_root = ET.parse(self.xml_dir / "mod_search_index.xml").getroot()
-        generated = _generated_search_entries(index_root)
+        all_generated = _generated_search_entries(index_root)
+        legacy_keys = {item["key"] for item in legacy}
+        generated = [item for item in all_generated if item["key"] in legacy_keys and not item["page"]]
         comparable_generated = [
             {
                 key: item.get(key, "")
@@ -291,6 +296,47 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         for expected, actual in zip(legacy, generated, strict=True):
             if expected["category"] != "pref_key_various":
                 self.assertEqual(expected["legacySub"], actual.get("routeSub", ""))
+
+    def test_every_standalone_preference_is_searchable_with_its_real_page(self) -> None:
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
+        pages = {item["page"] for item in entries if item["page"]}
+        standalone_files = set(SOURCE_DIR.glob("prefs_*.xml")) - {
+            SOURCE_DIR / name for name in ("prefs_main.xml", *(item[0] for item in CATEGORY_SOURCES.values()))
+        }
+        self.assertEqual({f"@xml/{path.stem}" for path in standalone_files}, pages)
+        identities = [(item["category"], item["page"], item["key"]) for item in entries]
+        self.assertEqual(len(identities), len(set(identities)))
+        for path in standalone_files:
+            with self.subTest(page=path.name):
+                expected = {
+                    element.get(ANDROID_KEY): element.get(ANDROID_TITLE)
+                    for element in ET.parse(path).getroot().iter()
+                    if element.tag != PREFERENCE_CATEGORY
+                    and element.get(ANDROID_KEY)
+                    and element.get(ANDROID_TITLE, "").startswith("@")
+                }
+                actual = {item["key"]: item["title"] for item in entries if item["page"] == f"@xml/{path.stem}"}
+                self.assertEqual(expected, actual)
+        hide_wifi = next(item for item in entries if item["key"] == "pref_key_system_statusbaricons_wifi")
+        self.assertEqual("@xml/prefs_system_hideicons", hide_wifi["page"])
+        self.assertEqual("System", hide_wifi["pageFragment"])
+        self.assertEqual("pref_key_system_statusbaricons_cat", hide_wifi["routeSub"])
+        self.assertEqual("@string/system_statusbaricons_title", hide_wifi["pageTitle"])
+
+    def test_child_presentation_flag_does_not_exclude_a_searchable_setting(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("preference_generator", GENERATOR)
+        generator = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = generator
+        spec.loader.exec_module(generator)
+        root = ET.fromstring(f'''<PreferenceScreen xmlns:android="{ANDROID_NS}" xmlns:app="{AUTO_NS}">
+            <{PREFERENCE_CATEGORY} android:key="pref_key_system_cat_statusbar" android:title="@string/system_statusbar_title">
+                <Preference android:key="pref_key_child" android:title="@string/child" app:child="true" />
+            </{PREFERENCE_CATEGORY}>
+        </PreferenceScreen>''')
+        entries = generator._search_entries(generator.CATEGORY_SOURCES[0], root, {})
+        self.assertEqual(["pref_key_child"], [item["key"] for item in entries])
+        self.assertEqual("pref_key_system_cat_statusbar", entries[0]["routeSub"])
 
     def test_generation_is_byte_for_byte_deterministic(self) -> None:
         subprocess.run(
@@ -351,8 +397,9 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         }
         self.assertEqual(expected_files, {path.name for path in self.xml_dir.glob("*.xml")})
         canonical_size = sum(
-            (SOURCE_DIR / source_name).stat().st_size
-            for source_name, _ in CATEGORY_SOURCES.values()
+            path.stat().st_size
+            for path in SOURCE_DIR.glob("prefs_*.xml")
+            if path.name != "prefs_main.xml"
         )
         self.assertLess(
             (self.xml_dir / "mod_search_index.xml").stat().st_size,
