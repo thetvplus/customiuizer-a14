@@ -108,27 +108,6 @@ internal object PreferenceGroupChrome {
     }
 }
 
-internal fun flattenVisiblePreferences(screen: PreferenceScreen): List<Preference> {
-    val flattened = ArrayList<Preference>()
-    flattenPreferenceGroup(screen, flattened)
-    val visible = ArrayList<Preference>(flattened.size)
-    for (pref in flattened) {
-        if (pref.isVisible) visible.add(pref)
-    }
-    return visible
-}
-
-private fun flattenPreferenceGroup(group: PreferenceGroup, out: MutableList<Preference>) {
-    val count = group.preferenceCount
-    for (i in 0 until count) {
-        val pref = group.getPreference(i)
-        out.add(pref)
-        if (pref is PreferenceGroup && pref !is PreferenceScreen) {
-            flattenPreferenceGroup(pref, out)
-        }
-    }
-}
-
 internal fun preferenceGroupInputRow(pref: Preference): PreferenceGroupChrome.InputRow {
     return PreferenceGroupChrome.InputRow(
         isCategory = pref is PreferenceCategory,
@@ -275,14 +254,32 @@ internal class PreferenceGroupDecoration(
 
     private fun chrome(parent: RecyclerView): List<PreferenceGroupChrome.Chrome> {
         val screen = screenProvider() ?: return emptyList()
-        val count = parent.adapter?.itemCount ?: 0
-        val rows = flattenVisiblePreferences(screen)
-        if (rows.size != count) return emptyList()
-        val inputs = ArrayList<PreferenceGroupChrome.InputRow>(rows.size)
-        for (pref in rows) {
-            inputs.add(preferenceGroupInputRow(pref))
-        }
+        val adapter = parent.adapter ?: return emptyList()
+        val positions = adapter as? PreferenceGroup.PreferencePositionCallback ?: return emptyList()
+        // Visibility can change before the posted adapter update. Keep an inset for
+        // every displayed row and resolve category positions through the public API.
+        // Only categories need lookups; ordinary rows all share the same chrome.
+        val item = PreferenceGroupChrome.InputRow(false, false, true)
+        val inputs = MutableList(adapter.itemCount) { item }
+        collectDisplayedCategories(screen, positions, inputs)
         return PreferenceGroupChrome.layout(inputs)
+    }
+
+    private fun collectDisplayedCategories(
+        group: PreferenceGroup,
+        positions: PreferenceGroup.PreferencePositionCallback,
+        inputs: MutableList<PreferenceGroupChrome.InputRow>,
+    ) {
+        for (index in 0 until group.preferenceCount) {
+            val pref = group.getPreference(index)
+            if (pref is PreferenceCategory) {
+                val position = positions.getPreferenceAdapterPosition(pref)
+                if (position in inputs.indices) inputs[position] = preferenceGroupInputRow(pref)
+            }
+            if (pref is PreferenceGroup && pref !is PreferenceScreen) {
+                collectDisplayedCategories(pref, positions, inputs)
+            }
+        }
     }
 
     private fun ensureMetrics(parent: RecyclerView) {

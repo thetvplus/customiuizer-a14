@@ -1064,4 +1064,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_strong_toast_mode_hide">Durum kapsülünü gizle</string>
     <string name="system_strong_toast_island_offset_title">Dinamik ada dikey konumu</string>
     <string name="system_strong_toast_island_offset_summ">Adanın kamera çentiğiyle hizalanmasını ince ayarlar. 0, sistemin bildirdiği çentik konumunu kullanır.</string>
+    <string name="system_statusbar_lefticons_scale_title">Soldaki simgelerin boyutu</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Sola taşınan simge grubunun tamamını ayarlar. %100, sistem boyutunu korur. Sistem arayüzünün yeniden başlatılması gerekir.</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">Soldaki simgelerin dikey kaydırması</string>
+    <string name="system_statusbar_lefticons_offset_summ">Negatif değerler yukarı, pozitif değerler aşağı kaydırır. 0 dp, sistem konumunu korur. Sistem arayüzünün yeniden başlatılması gerekir.</string>
 </resources>

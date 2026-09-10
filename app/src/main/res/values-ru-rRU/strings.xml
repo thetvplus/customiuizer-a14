@@ -1058,4 +1058,8 @@
     <string name="system_strong_toast_mode_hide">Скрыть капсулу состояния</string>
     <string name="system_strong_toast_island_offset_title">Вертикальное положение островка</string>
     <string name="system_strong_toast_island_offset_summ">Точная подстройка выравнивания островка с отверстием камеры. 0 — использовать положение отверстия, сообщённое системой.</string>
+    <string name="system_statusbar_lefticons_scale_title">Размер значков слева</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Изменяет всю группу значков, перенесённых влево. 100% сохраняет системный размер. Требуется перезапуск интерфейса системы.</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">Смещение значков слева по вертикали</string>
+    <string name="system_statusbar_lefticons_offset_summ">Отрицательные значения сдвигают вверх, положительные — вниз. 0 dp сохраняет системное положение. Требуется перезапуск интерфейса системы.</string>
 </resources>

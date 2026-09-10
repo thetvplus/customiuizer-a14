@@ -110,6 +110,9 @@ def _legacy_search_entries() -> list[dict[str, str]]:
                 continue
 
             title = element.get(ANDROID_TITLE, "")
+            if element.get(f"{{{AUTO_NS}}}isPreferenceVisible", "true").lower() == "false":
+                order += 1
+                continue
             if title.startswith("@string/"):
                 entries.append(
                     {
@@ -313,6 +316,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                     for element in ET.parse(path).getroot().iter()
                     if element.tag != PREFERENCE_CATEGORY
                     and element.get(ANDROID_KEY)
+                    and element.get(f"{{{AUTO_NS}}}isPreferenceVisible", "true").lower() != "false"
                     and element.get(ANDROID_TITLE, "").startswith("@")
                 }
                 actual = {item["key"]: item["title"] for item in entries if item["page"] == f"@xml/{path.stem}"}
@@ -322,6 +326,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertEqual("System", hide_wifi["pageFragment"])
         self.assertEqual("pref_key_system_statusbaricons_cat", hide_wifi["routeSub"])
         self.assertEqual("@string/system_statusbaricons_title", hide_wifi["pageTitle"])
+        self.assertNotIn("pref_key_system_statusbar_icons_atleft_onkeyguard", {item["key"] for item in entries})
 
     def test_child_presentation_flag_does_not_exclude_a_searchable_setting(self) -> None:
         import importlib.util

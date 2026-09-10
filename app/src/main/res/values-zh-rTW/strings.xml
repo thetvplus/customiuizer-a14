@@ -1058,4 +1058,8 @@
     <string name="array_temp_current">溫度與電流</string>
     <string name="array_temp_power">溫度與功率</string>
     <string name="qs_toggle_fps">更新頻率</string>
+    <string name="system_statusbar_lefticons_scale_title">左側圖示大小</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">調整移至左側的整組圖示。100% 使用系統原生大小，修改後需重新啟動系統介面。</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">左側圖示垂直偏移</string>
+    <string name="system_statusbar_lefticons_offset_summ">負數上移、正數下移，0 dp 使用原生位置。修改後需重新啟動系統介面。</string>
 </resources>

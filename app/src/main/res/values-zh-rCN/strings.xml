@@ -1069,4 +1069,8 @@
     <string name="unlock_host_summary">宿主：%1$s\n包名：%2$s\n当前证书：\n%3$s\n证书历史：\n%4$s</string>
     <string name="unlock_host_first">%1$s\n\n点击确定以绑定此宿主并签发安全令牌。</string>
     <string name="unlock_host_reuse">%1$s\n\n此宿主已绑定。现有令牌将复用。</string>
+    <string name="system_statusbar_lefticons_scale_title">左侧图标大小</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">调整移至左侧的整组图标，100% 使用系统尺寸。修改后需重启系统界面。</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">左侧图标垂直偏移</string>
+    <string name="system_statusbar_lefticons_offset_summ">负值向上，正值向下，0 保持系统对齐。修改后需重启系统界面。</string>
 </resources>

@@ -1059,4 +1059,8 @@
     <string name="system_strong_toast_mode_hide">ステータスカプセルを非表示</string>
     <string name="system_strong_toast_island_offset_title">ダイナミックアイランドの垂直位置</string>
     <string name="system_strong_toast_island_offset_summ">カメラのパンチホールとの位置合わせを微調整します。0 はシステムが報告したパンチホールの位置を使用します。</string>
+    <string name="system_statusbar_lefticons_scale_title">左側アイコンのサイズ</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">左側に移動したアイコン全体を調整します。100% でシステム標準のサイズになります。システム UI の再起動が必要です。</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">左側アイコンの上下位置</string>
+    <string name="system_statusbar_lefticons_offset_summ">負の値で上、正の値で下に移動します。0 dp でシステム標準の位置になります。システム UI の再起動が必要です。</string>
 </resources>

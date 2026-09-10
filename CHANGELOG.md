@@ -2,6 +2,20 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.21.7 — 2026-09-10
+
+Debug validation build, versionCode 214, for HyperOS 1 / Android 14.
+
+- Restore and retain the light/dark palette from r14.21.5.
+- Apply initial control-center preference visibility before binding; derive group decorations from the displayed adapter snapshot to prevent transient loss of spacing during navigation.
+- Restore moving mobile/Wi-Fi left and use native row height, padding and icon height. Add left-group size (75%–125%) and vertical offset (-6–6 dp) controls, applied after restarting System UI.
+- Index standalone settings pages and switches; support combined title/path queries and Wi-Fi/WIFI matching, navigate to the actual control, and omit statically hidden entries.
+- Keep Switch feedback and search highlighting without the whole-row pressed background.
+
+Device visual acceptance is performed by the user. This is not a formal release.
+
+---
+
 ## r14.21.5 — 2026-09-06
 
 Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.

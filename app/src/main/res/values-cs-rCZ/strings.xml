@@ -1066,4 +1066,8 @@
     <string name="system_strong_toast_mode_hide">Skrýt stavovou kapsli</string>
     <string name="system_strong_toast_island_offset_title">Svislá poloha ostrůvku</string>
     <string name="system_strong_toast_island_offset_summ">Doladí zarovnání ostrůvku s výřezem kamery. 0 použije polohu výřezu hlášenou systémem.</string>
+    <string name="system_statusbar_lefticons_scale_title">Velikost ikon vlevo</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Upravuje celou skupinu ikon přesunutých doleva. 100 % zachovává systémovou velikost. Vyžaduje restart systémového rozhraní.</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">Vertikální posun ikon vlevo</string>
+    <string name="system_statusbar_lefticons_offset_summ">Záporné hodnoty posouvají nahoru, kladné dolů. 0 dp zachovává systémovou polohu. Vyžaduje restart systémového rozhraní.</string>
 </resources>

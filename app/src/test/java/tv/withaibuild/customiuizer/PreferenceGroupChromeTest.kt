@@ -183,7 +183,12 @@ class PreferenceGroupChromeWiringTest {
         assertTrue(attach.contains("setDivider(null)"))
         assertTrue(attach.contains("setDividerHeight(0)"))
         assertTrue(attach.contains("PreferenceGroupDecoration"))
-        assertTrue(attach.contains("preferenceScreen"))
+        // Decoration must follow the displayed adapter snapshot, including while
+        // visibility changes are waiting for the adapter's posted update.
+        assertTrue(decoration.contains("adapter as? PreferenceGroup.PreferencePositionCallback"))
+        assertTrue(decoration.contains("positions.getPreferenceAdapterPosition(pref)"))
+        assertTrue(decoration.contains("MutableList(adapter.itemCount)"))
+        assertFalse(decoration.contains("flattenVisiblePreferences"))
         assertFalse(attach.contains("getListView() as RecyclerView"))
     }
 

@@ -18,6 +18,7 @@ ANDROID_TITLE = f"{{{ANDROID_NS}}}title"
 ANDROID_LAYOUT_WIDTH = f"{{{ANDROID_NS}}}layout_width"
 ANDROID_LAYOUT_HEIGHT = f"{{{ANDROID_NS}}}layout_height"
 AUTO_CHILD = f"{{{AUTO_NS}}}child"
+AUTO_VISIBLE = f"{{{AUTO_NS}}}isPreferenceVisible"
 PREFERENCE_CATEGORY = "tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx"
 PREFERENCE_ITEM = "tv.withaibuild.customiuizer.prefs.PreferenceEx"
 
@@ -242,6 +243,9 @@ def _search_entries(
             continue
 
         title = element.get(ANDROID_TITLE, "")
+        if element.get(AUTO_VISIBLE, "true").lower() == "false":
+            order += 1
+            continue
         if title.startswith("@") and element.get(ANDROID_KEY):
             route_sub = (
                 various_routes.get(id(element), "")

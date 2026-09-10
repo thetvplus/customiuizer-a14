@@ -1092,4 +1092,8 @@
     <string name="system_hideicons_sim1_title">SIM 1</string>
     <string name="system_hideicons_sim2_title">SIM 2</string>
     <string name="selectcolor_hsv">HSV</string>
+    <string name="system_statusbar_lefticons_scale_title">Left icon size</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Adjust the group of icons moved to the left. 100% uses the system size. Restart System UI after changing.</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">Left icon vertical offset</string>
+    <string name="system_statusbar_lefticons_offset_summ">Negative values move up; positive values move down. 0 keeps system alignment. Restart System UI after changing.</string>
 </resources>

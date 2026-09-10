@@ -1450,6 +1450,8 @@ object SystemUIStatusBarHooks {
         val dualRows = mPrefs.getBoolean("system_statusbar_dualrows")
         val swapWifiSignal = mPrefs.getBoolean("system_statusbaricons_swap_wifi_mobile")
         val moveSignalLeft = mPrefs.getBoolean("system_statusbaricons_wifi_mobile_atleft")
+        val leftIconScale = if (moveSignalLeft) mPrefs.getInt("system_statusbar_lefticons_scale", 100) else 100
+        val leftIconOffset = if (moveSignalLeft) mPrefs.getInt("system_statusbar_lefticons_verticaloffset", 12) else 12
         val netspeedAtRow2 = dualRows && mPrefs.getBoolean("system_statusbar_netspeed_atsecondrow")
         val placement = resolveDeviceInfoPlacement(
             showBatteryDetail = mPrefs.getBoolean("system_statusbar_batterytempandcurrent"),
@@ -1618,6 +1620,19 @@ object SystemUIStatusBarHooks {
                     }
                     iconContainer.layoutDirection = View.LAYOUT_DIRECTION_RTL
                     iconContainer.setTag("leftIconsContainer")
+                    // The ROM's system_icons.xml uses MATCH_PARENT height and unclipped
+                    // children. Default LinearLayout params depend on the parent's orientation.
+                    iconContainer.layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                    ).apply { gravity = Gravity.CENTER_VERTICAL }
+                    iconContainer.clipChildren = false
+                    val nativeContainer = XposedHelpers.getObjectField(mStatusBar, "mStatusBarStatusIcons") as View
+                    iconContainer.setPaddingRelative(
+                        nativeContainer.paddingStart, nativeContainer.paddingTop,
+                        nativeContainer.paddingEnd, nativeContainer.paddingBottom,
+                    )
+                    iconContainer.translationY = HookUtils.dp2px(leftIconOffsetDp(leftIconOffset))
 
                     val leftNotifyContainer = if (dualRows) null else XposedHelpers.getObjectField(mStatusBar, "mDripStatusBarNotificationIconArea") as View
                     val leftContainer: LinearLayout = if (dualRows) {
@@ -1645,6 +1660,10 @@ object SystemUIStatusBarHooks {
                         FatalErrors.unwrapAndRethrowIfFatal(t)
                         return
                     }
+
+                    val nativeManager = XposedHelpers.getObjectField(mStatusBar, "mDarkIconManager")
+                    val nativeHeight = XposedHelpers.getIntField(nativeManager, "mIconSize")
+                    XposedHelpers.setIntField(mDarkIconManager, "mIconSize", leftIconHeight(nativeHeight, leftIconScale))
 
                     val added = try {
                         XposedHelpers.callMethod(iconController, "addIconGroup", mDarkIconManager)
@@ -1703,6 +1722,12 @@ object SystemUIStatusBarHooks {
             installStatusBarViewLifecycleHook(lpparam)
         }
     }
+
+    internal fun leftIconHeight(nativeHeight: Int, scalePercent: Int): Int =
+        Math.round(nativeHeight.coerceAtLeast(1) * scalePercent.coerceIn(75, 125) / 100.0f).coerceAtLeast(1)
+
+    internal fun leftIconOffsetDp(storedOffset: Int): Float =
+        (storedOffset.coerceIn(0, 24) - 12) * 0.5f
 
     @JvmStatic
     fun StatusBarClockPositionHook(lpparam: PackageReadyParam) {

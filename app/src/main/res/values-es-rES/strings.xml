@@ -1057,4 +1057,8 @@
     <string name="system_strong_toast_mode_hide">Ocultar cápsula de estado</string>
     <string name="system_strong_toast_island_offset_title">Posición vertical de la isla dinámica</string>
     <string name="system_strong_toast_island_offset_summ">Ajusta cómo se alinea la isla con el recorte de la cámara. 0 usa la posición del recorte indicada por el sistema.</string>
+    <string name="system_statusbar_lefticons_scale_title">Tamaño de los iconos de la izquierda</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Ajusta todo el grupo de iconos movidos a la izquierda. El 100 % conserva el tamaño del sistema. Requiere reiniciar la interfaz del sistema.</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">Desplazamiento vertical de los iconos de la izquierda</string>
+    <string name="system_statusbar_lefticons_offset_summ">Los valores negativos desplazan hacia arriba y los positivos hacia abajo. 0 dp conserva la posición del sistema. Requiere reiniciar la interfaz del sistema.</string>
 </resources>

@@ -1059,4 +1059,8 @@
     <string name="system_strong_toast_mode_hide">Ẩn viên nang trạng thái</string>
     <string name="system_strong_toast_island_offset_title">Vị trí dọc của Dynamic Island</string>
     <string name="system_strong_toast_island_offset_summ">Tinh chỉnh cách hòn đảo căn với lỗ khoét camera. 0 sử dụng vị trí lỗ khoét do hệ thống báo cáo.</string>
+    <string name="system_statusbar_lefticons_scale_title">Kích thước biểu tượng bên trái</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Điều chỉnh toàn bộ nhóm biểu tượng đã chuyển sang trái. 100% giữ kích thước hệ thống. Cần khởi động lại giao diện hệ thống.</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">Độ lệch dọc của biểu tượng bên trái</string>
+    <string name="system_statusbar_lefticons_offset_summ">Giá trị âm dịch lên, giá trị dương dịch xuống. 0 dp giữ vị trí hệ thống. Cần khởi động lại giao diện hệ thống.</string>
 </resources>
