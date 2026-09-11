@@ -2,9 +2,9 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
-## r14.21.7 — 2026-09-10
+## r14.21.7 — 2026-09-11
 
-Debug validation build, versionCode 214, for HyperOS 1 / Android 14.
+Release build, versionCode 215, for HyperOS 1 / Android 14.
 
 - Restore and retain the light/dark palette from r14.21.5.
 - Apply initial control-center preference visibility before binding; derive group decorations from the displayed adapter snapshot to prevent transient loss of spacing during navigation.
@@ -12,7 +12,7 @@ Debug validation build, versionCode 214, for HyperOS 1 / Android 14.
 - Index standalone settings pages and switches; support combined title/path queries and Wi-Fi/WIFI matching, navigate to the actual control, and omit statically hidden entries.
 - Keep Switch feedback and search highlighting without the whole-row pressed background.
 
-Device visual acceptance is performed by the user. This is not a formal release.
+Device visual acceptance is performed by the user.
 
 ---
 
