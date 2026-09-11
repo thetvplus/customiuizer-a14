@@ -2,7 +2,7 @@
 <resources>
     <string name="app_about">O modulu</string>
     <string name="about_version">Verze %1$s</string>
-    <string name="about_maintainer">Vývoj a údržba: tomthenpc</string>
+    <string name="about_maintainer">Vývoj a údržba: thetvplus</string>
     <string name="about_based_on">založeno na práci Mikanoshi a MonwF (Překlad S11V3R 🇨🇿)</string>
     <string name="about_dynamic">Obecně platí, že změny vyžadují k aktivaci nebo deaktivaci měkký restart, ale změny označené symbolem ⟲ vyžadují pouze jeden měkký restart poté, co byla jejich hodnota změněna z výchozí na vlastní, další změny se použijí okamžitě.</string>
     <string name="about_unsupported">Modifikace označené ⨯ nejsou v tomto zařízení podporovány.</string>
@@ -941,8 +941,6 @@
     <string name="system_cc_switch_ccandnotification_title">Přepnout ovládací centrum a oznamovací lištu</string>
     <!-- A14 r14.18.6+ -->
     <string name="about_compatibility_notes_title">Kompatibilita zařízení</string>
-    <string name="about_contact_summary">Telegram: @Jinji_Kiko</string>
-    <string name="about_contact_title">Kontakt</string>
     <string name="about_donate_image_description">Kód pro příspěvek přes WeChat</string>
     <string name="about_donate_summary">Naskenujte kód a podpořte vývoj</string>
     <string name="about_donate_title">Kód pro příspěvek přes WeChat</string>

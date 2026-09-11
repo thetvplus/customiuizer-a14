@@ -68,9 +68,6 @@ class AboutFragment : Fragment() {
         view.findViewById<View>(R.id.about_repository_row).setOnClickListener {
             openLink(REPOSITORY_URL)
         }
-        view.findViewById<View>(R.id.about_contact_row).setOnClickListener {
-            openLink(CONTACT_URL)
-        }
     }
 
     private fun updateHeadViews(view: View, config: Configuration) {
@@ -142,8 +139,7 @@ class AboutFragment : Fragment() {
     }
 
     private companion object {
-        const val REPOSITORY_URL = "https://github.com/tomthenpc/customiuizer-a14"
-        const val CONTACT_URL = "https://t.me/Jinji_Kiko"
+        const val REPOSITORY_URL = "https://github.com/thetvplus/customiuizer-a14"
         const val PAYPAL_DONATION_URL = "https://paypal.me/Jinjitv"
         const val DONATION_IMAGE_SAMPLE_SIZE = 2
     }

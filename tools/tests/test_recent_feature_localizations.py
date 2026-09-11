@@ -22,8 +22,6 @@ LOCALES = (
 )
 RECENT_FEATURE_KEYS = """
 about_compatibility_notes_title
-about_contact_summary
-about_contact_title
 about_donate_image_description
 about_donate_summary
 about_donate_title

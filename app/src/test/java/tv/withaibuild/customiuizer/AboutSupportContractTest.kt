@@ -21,15 +21,15 @@ class AboutSupportContractTest {
                 .contains("about_divider"),
         )
         assertTrue(layout.contains("about_repository_title"))
-        assertTrue(layout.contains("about_contact_title"))
+        assertFalse(layout.contains("about_contact_row"))
         assertTrue(layout.contains("about_dynamic"))
         assertTrue(layout.contains("about_unsupported"))
         assertFalse(fragment.contains("fragment_about_tail"))
         assertTrue(fragment.contains("inSampleSize = DONATION_IMAGE_SAMPLE_SIZE"))
         assertTrue(fragment.contains("image.setImageDrawable(null)"))
         assertTrue(fragment.contains("bitmap.recycle()"))
-        assertTrue(fragment.contains("https://github.com/tomthenpc/customiuizer-a14"))
-        assertTrue(fragment.contains("https://t.me/Jinji_Kiko"))
+        assertTrue(fragment.contains("https://github.com/thetvplus/customiuizer-a14"))
+        assertFalse(fragment.contains("https://t.me/"))
         assertTrue(fragment.contains("PAYPAL_DONATION_URL"))
         assertTrue(
             "PayPal URL must be paypal.me/Jinjitv",

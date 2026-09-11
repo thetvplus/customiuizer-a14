@@ -4,7 +4,7 @@ English | [简体中文](CHANGELOG_CN.md)
 
 ## r14.21.7 — 2026-09-11
 
-versionCode 215, for HyperOS 1 / Android 14.
+versionCode 216, for HyperOS 1 / Android 14.
 
 Changes since r14.21.5:
 
@@ -13,6 +13,7 @@ Changes since r14.21.5:
 - Fix content shifting upward during the transition into the System → Control center settings page.
 - Expand settings search to include switches on standalone pages such as Hide icons. Support combined page-path and keyword queries, Wi-Fi/WIFI matching, and direct navigation to the matching option.
 - Remove the duplicate pressed background from switch rows while preserving switch feedback and search highlighting.
+- Update the About-page maintainer to thetvplus.
 
 ---
 

@@ -254,14 +254,14 @@ class AppTextInvariantsTest(unittest.TestCase):
                     )
 
     def test_about_attribution_text_not_shortened(self):
-        """The attribution strings must keep the original maintainer and upstream names."""
+        """The attribution strings must name the current maintainer and upstream authors."""
         strings = APP_ROOT / "res" / "values" / "strings.xml"
         text = strings.read_text(encoding="utf-8")
 
         m = re.search(r'<string name="about_maintainer">(.*?)</string>', text, re.DOTALL)
         self.assertIsNotNone(m, "about_maintainer string missing")
         maintainer = m.group(1)
-        self.assertIn("tomthenpc", maintainer.lower(), "about_maintainer must name tomthenpc")
+        self.assertIn("thetvplus", maintainer.lower(), "about_maintainer must name thetvplus")
 
         m = re.search(r'<string name="about_based_on">(.*?)</string>', text, re.DOTALL)
         self.assertIsNotNone(m, "about_based_on string missing")

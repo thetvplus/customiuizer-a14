@@ -3,7 +3,7 @@
     <string name="settings_title">设置</string>
     <string name="app_about">关于</string>
     <string name="about_version">版本：%1$s</string>
-    <string name="about_maintainer">维护与开发：tomthenpc</string>
+    <string name="about_maintainer">维护与开发：thetvplus</string>
     <string name="about_based_on">基于 Mikanoshi 与 MonwF 的开源工作</string>
     <string name="about_dynamic">标记有⟲的模块由默认值修改为其他值后只需软重启一次，之后的更改将立即应用；其他选项始终需要软重启。</string>
     <string name="about_unsupported">标记⨯的模块不支持此设备。</string>
@@ -15,8 +15,6 @@
     <string name="about_paypal_summary">通过 PayPal 支持项目开发</string>
     <string name="about_repository_title">仓库主页</string>
     <string name="about_repository_summary">源代码与版本发布</string>
-    <string name="about_contact_title">联系方式</string>
-    <string name="about_contact_summary">Telegram：@Jinji_Kiko</string>
     <string name="about_donation_unavailable">无法加载赞赏码</string>
     <string name="about_link_unavailable">没有可打开此链接的应用</string>
     <string name="about_notes_category">说明</string>

@@ -216,9 +216,9 @@ class PreferenceGroupChromeWiringTest {
                 .substringBefore("about_paypal_row")
                 .contains("about_divider"),
         )
-        val afterContact = aboutLayout.substringAfter("about_contact_row")
+        val afterRepository = aboutLayout.substringAfter("about_repository_row")
             .substringBefore("about_notes_category")
-        assertFalse(afterContact.contains("android:background=\"@color/about_divider\""))
+        assertFalse(afterRepository.contains("android:background=\"@color/about_divider\""))
     }
 
     @Test

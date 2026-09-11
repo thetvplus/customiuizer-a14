@@ -2,7 +2,7 @@
 <resources>
     <string name="app_about">このアプリについて</string>
     <string name="about_version">バージョン %1$s</string>
-    <string name="about_maintainer">開発・保守：tomthenpc</string>
+    <string name="about_maintainer">開発・保守：thetvplus</string>
     <string name="about_based_on">Mikanoshi / MonwF のオープンソースを基盤に開発</string>
     <string name="about_dynamic">一般的なModの有効化/無効化にはソフトリブートが必要です。⟲のマークがある物は値の変更後、ソフトリブートすることで設定が適用されます。</string>
     <string name="about_unsupported">⨯の付いたModは使用中のデバイスに対応していません。</string>
@@ -949,8 +949,6 @@
     <string name="system_cc_switch_ccandnotification_title">コントロールセンターと通知ドロワーを切り替え</string>
     <!-- A14 r14.18.6+ -->
     <string name="about_compatibility_notes_title">デバイスの互換性</string>
-    <string name="about_contact_summary">Telegram: @Jinji_Kiko</string>
-    <string name="about_contact_title">連絡先</string>
     <string name="about_donate_image_description">WeChat寄付コード</string>
     <string name="about_donate_summary">スキャンして開発を支援</string>
     <string name="about_donate_title">WeChat寄付コード</string>

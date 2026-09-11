@@ -2,7 +2,7 @@
 <resources>
     <string name="app_about">Acerca de</string>
     <string name="about_version">Versión %1$s</string>
-    <string name="about_maintainer">Desarrollo y mantenimiento: tomthenpc</string>
+    <string name="about_maintainer">Desarrollo y mantenimiento: thetvplus</string>
     <string name="about_based_on">Basado en Mikanoshi y MonwF</string>
     <string name="about_dynamic">Normalmente, los mods requieren un reinicio rápido para activarse o desactivarse, pero aquellos marcados con ⟲ solo requieren un reinicio rápido después de cambiarlos de su valor por defecto a uno personalizado, cambios posteriores se aplicarán inmediatamente.</string>
     <string name="about_unsupported">Mods señalados con ⨯ no son soportados en este dispositivo. </string>
@@ -883,8 +883,6 @@
     <string name="system_cc_switch_ccandnotification_title">Cambiar el lado del centro de control y panel de notificaciones</string>
     <!-- A14 r14.18.6+ -->
     <string name="about_compatibility_notes_title">Compatibilidad del dispositivo</string>
-    <string name="about_contact_summary">Telegram: @Jinji_Kiko</string>
-    <string name="about_contact_title">Contacto</string>
     <string name="about_donate_image_description">Código de donación de WeChat</string>
     <string name="about_donate_summary">Escanea para apoyar el desarrollo</string>
     <string name="about_donate_title">Código de donación de WeChat</string>

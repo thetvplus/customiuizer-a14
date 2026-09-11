@@ -2,7 +2,7 @@
 <resources>
     <string name="app_about">О приложении</string>
     <string name="about_version">Версия %1$s</string>
-    <string name="about_maintainer">Разработка и поддержка: tomthenpc</string>
+    <string name="about_maintainer">Разработка и поддержка: thetvplus</string>
     <string name="about_based_on">На основе работ Mikanoshi и MonwF</string>
     <string name="about_dynamic">Для активации или деактивации большинства модов требуется быстрая перезагрузка устройства. Но для модов, помеченных ⟲, перезагрузка требуется только один раз — после смены значения со стандартного на модифицированное, а последующие изменения будут применяться сразу.</string>
     <string name="about_unsupported">Моды, помеченные ⨯, несовместимы с данным устройством.</string>
@@ -926,8 +926,6 @@
     <string name="system_cc_switch_ccandnotification_title">Сменить центр управления и панель уведомлений</string>
     <!-- A14 r14.18.6+ -->
     <string name="about_compatibility_notes_title">Совместимость с устройствами</string>
-    <string name="about_contact_summary">Telegram: @Jinji_Kiko</string>
-    <string name="about_contact_title">Связаться</string>
     <string name="about_donate_image_description">Код для пожертвования через WeChat</string>
     <string name="about_donate_summary">Отсканируйте, чтобы поддержать разработку</string>
     <string name="about_donate_title">Код пожертвования WeChat</string>

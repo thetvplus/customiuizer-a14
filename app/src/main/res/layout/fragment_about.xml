@@ -127,43 +127,6 @@
 
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/preference_group_divider_height"
-                android:layout_marginStart="@dimen/preference_item_child_padding"
-                android:layout_marginEnd="@dimen/preference_item_child_padding"
-                android:alpha="0.4"
-                android:background="@color/about_divider" />
-
-            <LinearLayout
-                android:id="@+id/about_contact_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/list_item_bg"
-                android:paddingStart="@dimen/preference_item_child_padding"
-                android:paddingEnd="@dimen/preference_item_child_padding"
-                android:paddingTop="@dimen/preference_item_padding_top"
-                android:paddingBottom="@dimen/preference_item_padding_bottom"
-                android:clickable="true"
-                android:focusable="true">
-
-                <TextView
-                    android:id="@+id/about_contact_title"
-                    style="@style/AppTextAppearance.Primary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/about_contact_title" />
-
-                <TextView
-                    android:id="@+id/about_contact_summary"
-                    style="@style/AppTextAppearance.Secondary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/about_contact_summary" />
-
-            </LinearLayout>
-
         </LinearLayout>
 
         <TextView

@@ -2,7 +2,7 @@
 <resources>
     <string name="app_about">Hakkında</string>
     <string name="about_version">Versiyon %1$s</string>
-    <string name="about_maintainer">Geliştirme ve bakım: tomthenpc</string>
+    <string name="about_maintainer">Geliştirme ve bakım: thetvplus</string>
     <string name="about_based_on">Mikanoshi ve MonwF çalışmalarını temel alır (Çeviri: H.KÜPELİ❤ andheartman@gmail.com)</string>
     <string name="about_dynamic">Genel olarak, modların etkinleştirilmesi veya devre dışı bırakılması için arayüz yeniden başlatma gerekir, ancak ⟲ ile işaretlenmiş olanlar, değerleri varsayılandan özel olana değiştirildikten sonra yalnızca bir kez arayüz yeniden başlatma gerektirir, sonraki değişiklikler hemen uygulanır.</string>
     <string name="about_unsupported">⨯ ile işaretlenmiş modlar bu cihazda desteklenmiyor.</string>
@@ -854,8 +854,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_cc_switch_ccandnotification_title">Anahtar kontrol merkezi ve bildirim çekmecesi</string>
     <!-- A14 r14.18.6+ -->
     <string name="about_compatibility_notes_title">Cihaz uyumluluğu</string>
-    <string name="about_contact_summary">Telegram: @Jinji_Kiko</string>
-    <string name="about_contact_title">İletişim</string>
     <string name="about_donate_image_description">WeChat bağış kodu</string>
     <string name="about_donate_summary">Geliştirmeyi desteklemek için tarayın</string>
     <string name="about_donate_title">WeChat bağış kodu</string>
