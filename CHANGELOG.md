@@ -4,15 +4,15 @@ English | [简体中文](CHANGELOG_CN.md)
 
 ## r14.21.7 — 2026-09-11
 
-Release build, versionCode 215, for HyperOS 1 / Android 14.
+versionCode 215, for HyperOS 1 / Android 14.
 
-- Restore and retain the light/dark palette from r14.21.5.
-- Apply initial control-center preference visibility before binding; derive group decorations from the displayed adapter snapshot to prevent transient loss of spacing during navigation.
-- Restore moving mobile/Wi-Fi left and use native row height, padding and icon height. Add left-group size (75%–125%) and vertical offset (-6–6 dp) controls, applied after restarting System UI.
-- Index standalone settings pages and switches; support combined title/path queries and Wi-Fi/WIFI matching, navigate to the actual control, and omit statically hidden entries.
-- Keep Switch feedback and search highlighting without the whole-row pressed background.
+Changes since r14.21.5:
 
-Device visual acceptance is performed by the user.
+- Fix moving mobile signal and Wi-Fi icons to the left side of the status bar, and improve their size and vertical alignment.
+- Add left-side icon size (75%–125%) and vertical offset (−6–6 dp) controls. Restart System UI after changing these settings.
+- Fix content shifting upward during the transition into the System → Control center settings page.
+- Expand settings search to include switches on standalone pages such as Hide icons. Support combined page-path and keyword queries, Wi-Fi/WIFI matching, and direct navigation to the matching option.
+- Remove the duplicate pressed background from switch rows while preserving switch feedback and search highlighting.
 
 ---
 
