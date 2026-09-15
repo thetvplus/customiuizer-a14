@@ -2,6 +2,19 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.21.8 — 2026-09-15
+
+versionCode 217, for HyperOS 1 / Android 14.
+
+Changes since r14.21.7:
+
+- Improve sorting and search in app-lock and privacy-app lists, reducing repeated state queries and temporary allocations while preserving selected-first ordering, existing order, and dual-app user separation.
+- Fix icons that could fail to load in app-lock, privacy-app, and shortcut lists because their icon cache keys were not initialized.
+- Reuse shortcut labels and icon metadata to reduce repeated resource reads during scrolling and search.
+- Reduce unnecessary list copying when publishing settings-search and app-list results.
+
+---
+
 ## r14.21.7 — 2026-09-11
 
 versionCode 216, for HyperOS 1 / Android 14.
