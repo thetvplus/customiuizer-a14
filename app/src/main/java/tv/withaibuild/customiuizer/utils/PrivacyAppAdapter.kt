@@ -14,10 +14,10 @@ import android.widget.ImageView
 import android.widget.TextView
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.applyGroupedListRow
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import java.util.ArrayList
 import java.util.HashMap
 import java.util.Locale
-import java.util.concurrent.CopyOnWriteArrayList
 
 @SuppressLint("WrongConstant")
 class PrivacyAppAdapter(
@@ -29,27 +29,17 @@ class PrivacyAppAdapter(
     private val ctx: Context = context
     private val inflater: LayoutInflater = LayoutInflater.from(context)
     private val filter = ItemFilter()
-    private val originalAppList = arr
-    private val filteredAppList = CopyOnWriteArrayList(arr)
+    private val originalAppList = ArrayList(arr).apply { for (app in this) app.prepareForList() }
+    // The live privacy map and published rows are only read or changed on the main thread.
+    private var filteredAppList = ArrayList(originalAppList)
 
     init {
         sortList()
     }
 
     private fun sortList() {
-        filteredAppList.sortWith { app1, app2 ->
-            try {
-                val app1checked = isPrivacyApp(app1.pkgName, app1.user)
-                val app2checked = isPrivacyApp(app2.pkgName, app2.user)
-                when {
-                    app1checked && app2checked -> 0
-                    app1checked -> -1
-                    app2checked -> 1
-                    else -> 0
-                }
-            } catch (_: Throwable) {
-                0
-            }
+        filteredAppList = selectedAppsFirst(filteredAppList) { app ->
+            isPrivacyApp(app.pkgName, app.user)
         }
     }
 
@@ -76,7 +66,7 @@ class PrivacyAppAdapter(
         holder.disableIcon.visibility = if (ad.enabled) View.GONE else View.VISIBLE
         holder.dualIcon.visibility = if (ad.user != 0) View.VISIBLE else View.GONE
 
-        val icon = Helpers.memoryCache[ad.pkgName + "|" + ad.actName]
+        val icon = Helpers.memoryCache[ad.iconKey]
         if (icon == null) {
             val dualIcon = arrayOf(ctx.resources.getDrawable(R.drawable.card_icon_default, ctx.theme))
             val crossfader = TransitionDrawable(dualIcon)
@@ -90,7 +80,8 @@ class PrivacyAppAdapter(
         try {
             holder.checked.visibility = View.VISIBLE
             holder.checked.isChecked = isPrivacyApp(ad.pkgName, ad.user)
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             holder.checked.visibility = View.GONE
         }
 
@@ -112,7 +103,7 @@ class PrivacyAppAdapter(
             val nlist = ArrayList<AppData>()
 
             for (app in originalAppList) {
-                if (app.label.lowercase(Locale.ROOT).contains(filterString)) {
+                if (app.labelLower.contains(filterString)) {
                     nlist.add(app)
                 }
             }
@@ -124,10 +115,7 @@ class PrivacyAppAdapter(
 
         @Suppress("UNCHECKED_CAST")
         override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
-            filteredAppList.clear()
-            if (results != null && results.count > 0 && results.values != null) {
-                filteredAppList.addAll(results.values as ArrayList<AppData>)
-            }
+            filteredAppList = results?.values as? ArrayList<AppData> ?: ArrayList()
             sortList()
             notifyDataSetChanged()
         }

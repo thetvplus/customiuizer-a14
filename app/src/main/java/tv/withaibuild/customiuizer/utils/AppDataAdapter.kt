@@ -83,14 +83,8 @@ class AppDataAdapter(
 
     private fun refreshSearchKeys() {
         for (app in originalAppList) {
-            app.labelLower = app.label.lowercase(Locale.ROOT)
-            app.actNameLower = app.actName.lowercase(Locale.ROOT)
-            app.iconKey = buildIconKey(app)
+            app.prepareForList()
         }
-    }
-
-    private fun buildIconKey(app: AppData): String {
-        return if (app.actName.isNotEmpty()) "${app.pkgName}|${app.actName}" else app.pkgName
     }
 
     private fun removeDualUsers() {

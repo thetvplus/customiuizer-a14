@@ -276,6 +276,12 @@ POST_P2_ALLOWED_NEW_PREFERENCES: dict[str, set[str]] = {
         "pref_key_system_strong_toast_island_offset",
         "pref_key_system_statusbar_content_vertical_offset",
     },
+    # Added in 50a1009b and shipped in r14.21.7. Their full attribute contract is
+    # checked below; this does not permit arbitrary new controls on this page.
+    "prefs_system_statusbar_righticons.xml": {
+        "pref_key_system_statusbar_lefticons_scale",
+        "pref_key_system_statusbar_lefticons_verticaloffset",
+    },
 }
 
 # r14.20.0 removes the Dynamic Island Bottom-only configuration. Persisted values are
@@ -405,6 +411,42 @@ class P2SettingsInformationArchitectureTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.base_strings = {locale: _load_strings(locale) for locale in LOCALES}
+
+    def test_released_left_icon_controls_keep_exact_attributes(self):
+        root = ET.parse(XML_DIR / "prefs_system_statusbar_righticons.xml").getroot()
+        expected = {
+            "pref_key_system_statusbar_lefticons_scale": {
+                f"{{{ANDROID_NS}}}title": "@string/system_statusbar_lefticons_scale_title",
+                f"{{{ANDROID_NS}}}summary": "@string/system_statusbar_lefticons_adjust_summ",
+                f"{{{ANDROID_NS}}}defaultValue": "100",
+                f"{{{MIUIZER_NS}}}minValue": "75",
+                f"{{{MIUIZER_NS}}}maxValue": "125",
+                f"{{{MIUIZER_NS}}}stepValue": "5",
+                f"{{{MIUIZER_NS}}}format": "%d%%",
+            },
+            "pref_key_system_statusbar_lefticons_verticaloffset": {
+                f"{{{ANDROID_NS}}}title": "@string/system_statusbar_lefticons_verticaloffset_title",
+                f"{{{ANDROID_NS}}}summary": "@string/system_statusbar_lefticons_offset_summ",
+                f"{{{ANDROID_NS}}}defaultValue": "12",
+                f"{{{MIUIZER_NS}}}minValue": "0",
+                f"{{{MIUIZER_NS}}}maxValue": "24",
+                f"{{{MIUIZER_NS}}}negativeShift": "12",
+                f"{{{MIUIZER_NS}}}displayDividerValue": "2",
+                f"{{{MIUIZER_NS}}}stepValue": "1",
+                f"{{{MIUIZER_NS}}}format": "%.1f dp",
+            },
+        }
+        for key, attrs in expected.items():
+            with self.subTest(key=key):
+                matches = [el for el in root.iter() if el.get(ATTR_KEY) == key]
+                self.assertEqual(1, len(matches), f"missing or duplicate released key: {key}")
+                self.assertEqual("tv.withaibuild.customiuizer.prefs.SeekBarPreference", matches[0].tag)
+                self.assertEqual({
+                    ATTR_KEY: key,
+                    f"{{{ANDROID_NS}}}dependency": "pref_key_system_statusbaricons_wifi_mobile_atleft",
+                    f"{{{MIUIZER_NS}}}indentLevel": "1",
+                    **attrs,
+                }, dict(matches[0].attrib))
 
     # ------------------------------------------------------------------ Locale
 

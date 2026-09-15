@@ -1,5 +1,7 @@
 package tv.withaibuild.customiuizer.utils
 
+import java.util.Locale
+
 class AppData {
     @JvmField
     var label: String = ""
@@ -26,4 +28,11 @@ class AppData {
     /** Stable cache key for [Helpers.memoryCache] and icon loaders. */
     @JvmField
     var iconKey: String = ""
+
+    /** Prepare once after populating a row, before it is shared with a filter or loader. */
+    fun prepareForList() {
+        labelLower = label.lowercase(Locale.ROOT)
+        actNameLower = actName.lowercase(Locale.ROOT)
+        iconKey = if (actName.isNotEmpty()) "$pkgName|$actName" else pkgName
+    }
 }

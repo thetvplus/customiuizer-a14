@@ -1,7 +1,6 @@
 package tv.withaibuild.customiuizer.utils
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.drawable.TransitionDrawable
 import android.view.LayoutInflater
@@ -16,20 +15,35 @@ import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.applyGroupedListRow
 import java.util.ArrayList
 import java.util.Locale
-import java.util.concurrent.CopyOnWriteArrayList
 
 class ResolveInfoAdapter(context: Context, arr: ArrayList<ResolveInfo>) : BaseAdapter(), Filterable {
 
     private val ctx: Context = context
-    private val pm: PackageManager = ctx.packageManager
     private val inflater: LayoutInflater = LayoutInflater.from(context)
     private val filter = ItemFilter()
-    private val originalAppList = CopyOnWriteArrayList(arr)
-    private val filteredAppList = CopyOnWriteArrayList(arr)
+    private class Entry(val resolveInfo: ResolveInfo, val app: AppData)
+
+    // Labels and loader inputs belong to this adapter. Rebinding must not reload package
+    // resources or leave the loader with only a weak reference to a temporary AppData.
+    private val originalAppList = ArrayList<Entry>(arr.size).apply {
+        val pm = context.packageManager
+        for (ri in arr) {
+            val app = AppData().apply {
+                pkgName = ri.activityInfo.applicationInfo.packageName
+                actName = ri.activityInfo.name
+                enabled = ri.activityInfo.enabled
+                label = ri.loadLabel(pm).toString()
+                prepareForList()
+            }
+            add(Entry(ri, app))
+        }
+    }
+    // Worker-created results are handed to the main thread without further mutation.
+    private var filteredAppList: List<Entry> = originalAppList
 
     override fun getCount(): Int = filteredAppList.size
 
-    override fun getItem(position: Int): ResolveInfo = filteredAppList[position]
+    override fun getItem(position: Int): ResolveInfo = filteredAppList[position].resolveInfo
 
     override fun getItemId(position: Int): Long = position.toLong()
 
@@ -39,20 +53,13 @@ class ResolveInfoAdapter(context: Context, arr: ArrayList<ResolveInfo>) : BaseAd
             ViewHolder(row).also { row.tag = it }
         }
 
-        val ri = getItem(position)
+        val ad = filteredAppList[position].app
         applyGroupedListRow(holder.root, position, count)
         holder.icon.tag = position
 
-        val ad = AppData().apply {
-            pkgName = ri.activityInfo.applicationInfo.packageName
-            actName = ri.activityInfo.name
-            enabled = ri.activityInfo.enabled
-            label = ri.loadLabel(pm).toString()
-        }
-
         holder.title.text = ad.label
         holder.disableIcon.visibility = if (ad.enabled) View.INVISIBLE else View.VISIBLE
-        val icon = Helpers.memoryCache[ad.pkgName + "|" + ad.actName]
+        val icon = Helpers.memoryCache[ad.iconKey]
 
         if (icon == null) {
             val dualIcon = arrayOf(ctx.resources.getDrawable(R.drawable.card_icon_default, ctx.theme))
@@ -77,11 +84,11 @@ class ResolveInfoAdapter(context: Context, arr: ArrayList<ResolveInfo>) : BaseAd
         override fun performFiltering(constraint: CharSequence?): FilterResults {
             val filterString = constraint?.toString()?.lowercase(Locale.ROOT) ?: ""
             val results = FilterResults()
-            val nlist = ArrayList<ResolveInfo>()
+            val nlist = ArrayList<Entry>()
 
-            for (ri in originalAppList) {
-                if (ri.loadLabel(pm).toString().lowercase(Locale.ROOT).contains(filterString)) {
-                    nlist.add(ri)
+            for (entry in originalAppList) {
+                if (entry.app.labelLower.contains(filterString)) {
+                    nlist.add(entry)
                 }
             }
 
@@ -92,10 +99,7 @@ class ResolveInfoAdapter(context: Context, arr: ArrayList<ResolveInfo>) : BaseAd
 
         @Suppress("UNCHECKED_CAST")
         override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
-            filteredAppList.clear()
-            if (results != null && results.count > 0 && results.values != null) {
-                filteredAppList.addAll(results.values as ArrayList<ResolveInfo>)
-            }
+            filteredAppList = results?.values as? List<Entry> ?: emptyList()
             notifyDataSetChanged()
         }
     }

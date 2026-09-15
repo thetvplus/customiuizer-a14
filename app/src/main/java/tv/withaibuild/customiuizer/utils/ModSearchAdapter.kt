@@ -21,12 +21,10 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
     private val mFilter = ItemFilter()
 
     /**
-     * Mutated only in [ItemFilter.publishResults] and read only in [getView], both on the
-     * main thread, so a plain list is correct. It used to be a CopyOnWriteArrayList, which
-     * copied the whole array on clear, on addAll and again on sort — three copies per
-     * keystroke — for concurrency that never happens.
+     * Each filter result is complete before publication and never mutated afterwards.
+     * Adopt that list on the main thread so publication needs no second backing array.
      */
-    private val modsList = ArrayList<ModData>()
+    private var modsList: List<ModData> = emptyList()
 
     /** The query the currently published results were produced from. Main thread only. */
     private var filterString = ""
@@ -101,8 +99,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
             // performFiltering runs on a worker thread, so a newer query can already be in
             // flight, and the highlight span must match the rows actually being shown.
             filterString = constraint?.toString()?.lowercase(Locale.ROOT).orEmpty()
-            modsList.clear()
-            (results?.values as? ArrayList<ModData>)?.let { modsList.addAll(it) }
+            modsList = results?.values as? List<ModData> ?: emptyList()
             notifyDataSetChanged()
         }
     }
