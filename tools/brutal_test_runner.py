@@ -845,7 +845,12 @@ def hermeticity(
 
     before = tracked_hashes(root)
     for command in cfg["hermetic_commands"]:
-        code, _ = run(command, root, timeout)
+        print(f"Hermeticity command: {' '.join(command)}", flush=True)
+        started = time.monotonic()
+        code, output = run(command, root, timeout)
+        if output.strip():
+            print(output.rstrip())
+        print(f"Hermeticity command finished: exit={code}, seconds={time.monotonic() - started:.1f}")
         if code:
             print(f"Hermeticity FAILED: command failed: {' '.join(command)!r}")
             return 1

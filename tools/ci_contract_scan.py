@@ -17,6 +17,35 @@ def line_of(text: str, offset: int) -> int:
     return text[:offset].count("\n") + 1
 
 
+def workflow_steps(text: str) -> list[tuple[int, str]]:
+    """Extract step blocks at their list indentation without a YAML dependency."""
+    starts = list(re.finditer(r"(?m)^([ \t]+)- (?:name|uses|run):", text))
+    blocks = []
+    for index, start in enumerate(starts):
+        end = next(
+            (other.start() for other in starts[index + 1:] if other.group(1) == start.group(1)),
+            len(text),
+        )
+        blocks.append((start.start(), text[start.start():end]))
+    return blocks
+
+
+def mapping_body(text: str, key: str) -> str | None:
+    """Read one block mapping up to the next sibling, never across triggers."""
+    start = re.search(rf"(?m)^([ \t]*){re.escape(key)}[ \t]*:[ \t]*$", text)
+    if start is None:
+        return None
+    indentation = len(start.group(1))
+    lines = []
+    for line in text[start.end():].splitlines(keepends=True):
+        stripped = line.lstrip()
+        if stripped.strip() and not stripped.startswith("#"):
+            if len(line) - len(stripped) <= indentation:
+                break
+        lines.append(line)
+    return "".join(lines)
+
+
 def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list[str]:
     text = path.read_text(encoding="utf-8")
     errors: list[str] = []
@@ -54,6 +83,31 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
                 f"action must be pinned to a 40-char commit SHA, not {spec}",
                 match.start(),
             )
+
+    for offset, step in workflow_steps(text):
+        if "uses: actions/setup-java@" in step and not re.search(
+            r"(?m)^\s+verify-signature:\s*true\s*(?:#.*)?$", step
+        ):
+            add("CI_JDK_SIGNATURE", "setup-java must explicitly require signature verification", offset)
+        if "name: develop-apk-and-mapping" in step and not re.search(
+            r"(?m)^\s+if-no-files-found:\s*error\s*$", step
+        ):
+            add("CI_REQUIRED_ARTIFACT", "missing develop artifacts must fail the upload", offset)
+
+    if path.name == "a14-full-ci.yml":
+        builds = list(re.finditer(r"(?m)^\s*\./gradlew[^\n]*\bclean\b[^\n]*:app:assembleDevelop[^\n]*$", text))
+        if len(builds) != 2:
+            add("CI_REPRO_BUILDS", "Full CI requires two separate clean develop builds")
+        for build in builds:
+            arguments = build.group().split()
+            isolated_options = {
+                "--no-daemon", "--no-build-cache", "--no-configuration-cache",
+                "-Pkotlin.compiler.execution.strategy=in-process", "-Pkotlin.incremental=false",
+            }
+            if not isolated_options.issubset(arguments):
+                add("CI_REPRO_CACHE", "both reproducibility builds must bypass compiled caches and shared processes", build.start())
+        if not re.search(r"(?m)^\s*cmp[^\n]*first-mapping[.]txt[^\n]*mapping[.]txt", text):
+            add("CI_REPRO_MAPPING", "compare R8 mappings as well as APK contents")
 
     if re.search(r"\bpw[s]h\b|\bpowe[r]shell\b", text, re.I):
         add("CI_LINUX_SHELL", "Ubuntu workflow invokes PowerShell")
@@ -100,17 +154,9 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
         if not re.search(r"permissions\s*:\s*\n(?:[ \t]+[^\n]+\n)*?[ \t]+contents\s*:\s*read\b", text):
             add("CI_PERMISSIONS", "set permissions.contents: read")
 
-    push_block = re.search(
-        r"(?ms)^\s*push\s*:\s*\n(?P<body>(?:^[ \t]+.*\n?)*)",
-        text,
-    )
-    if push_block:
-        body = push_block.group("body")
-        branches_match = re.search(
-            r"(?ms)^\s*branches\s*:\s*\n(?P<list>(?:^[ \t]+-.*\n?)*)",
-            body,
-        )
-        branch_text = branches_match.group("list") if branches_match else body
+    push_body = mapping_body(text, "push")
+    if push_body is not None:
+        branch_text = mapping_body(push_body, "branches") or ""
         branches = re.findall(r"^\s*-\s*['\"]?([A-Za-z0-9_./-]+)['\"]?\s*$", branch_text, re.M)
         if expected_branch not in branches:
             add("CI_EXACT_BRANCH", f"push must include exact branch {expected_branch!r}")
@@ -120,7 +166,7 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
 
     has_schedule = bool(re.search(r"(?m)^\s*schedule\s*:", text))
     has_dispatch = bool(re.search(r"(?m)^\s*workflow_dispatch\s*:", text))
-    has_push = bool(push_block)
+    has_push = push_body is not None
     if path.name.lower().find("full") >= 0 and expected_branch != default_branch:
         if (has_schedule or has_dispatch) and not has_push:
             add(
@@ -179,8 +225,8 @@ def scan_android_sdk_script(repo_root: Path) -> list[str]:
         errors.append(f"{rel}:1: CI_SDK_STABLE: pinned SDK packages must not include beta/rc/preview")
     if not re.search(r'PLATFORM_PACKAGE="platforms;android-37\.\d+"', text):
         errors.append(f"{rel}:1: CI_SDK_PIN: PLATFORM_PACKAGE must be a stable platforms;android-37.N pin")
-    if not re.search(r'BUILD_TOOLS_PACKAGE="build-tools;37\.\d+\.\d+"', text):
-        errors.append(f"{rel}:1: CI_SDK_PIN: BUILD_TOOLS_PACKAGE must be a stable build-tools;37.x.y pin")
+    if not re.search(r'BUILD_TOOLS_PACKAGE="build-tools;\d+\.\d+\.\d+"', text):
+        errors.append(f"{rel}:1: CI_SDK_PIN: BUILD_TOOLS_PACKAGE must be an exact stable build-tools pin")
     if re.search(r"\bfind\b", text) or re.search(r"sort\s+-V", text) or "head -n 1" in text:
         errors.append(f"{rel}:1: CI_SDK_NONDETERMINISTIC: verify the pinned package directories, do not glob")
     if "android.jar" not in text or "/aapt" not in text:
@@ -213,6 +259,15 @@ def scan_compile_sdk_contract(repo_root: Path) -> list[str]:
         errors.append(
             "app/build.gradle.kts:1: CI_SDK_COMPILE_MAJOR: "
             f"compileSdk {compile.group(1)} does not match pinned platform major {platform.group(1)}"
+        )
+    selected_tools = re.search(r'(?m)^\s*buildToolsVersion\s*=\s*"(\d+\.\d+\.\d+)"\s*$', gradle)
+    installed_tools = re.search(r'(?m)^\s*BUILD_TOOLS_PACKAGE="build-tools;(\d+\.\d+\.\d+)"\s*$', script)
+    if selected_tools is None or installed_tools is None:
+        errors.append("app/build.gradle.kts:1: CI_SDK_BUILD_TOOLS: both Gradle and CI must explicitly pin SDK build tools")
+    elif selected_tools.group(1) != installed_tools.group(1):
+        errors.append(
+            "app/build.gradle.kts:1: CI_SDK_BUILD_TOOLS: "
+            f"Gradle selects {selected_tools.group(1)} but CI installs {installed_tools.group(1)}"
         )
     return errors
 

@@ -14,6 +14,7 @@
 
 - Fast CI：push `main`、PR → `main`、`workflow_dispatch`
 - Full CI：`workflow_dispatch`、每周、`r14.*` tag、main 提交含 `[full-ci]`
+- 构建、依赖、混淆规则、工作流和 CI 工具的 PR 也触发 Full CI，以验证独立缺陷注入和无缓存双构建。具体职责见 [测试说明](TESTING.md)。
 
 Actions 在 fresh Ubuntu runner 上从 clone 运行。禁止本机路径、本机 keystore、本机 JAVA_HOME。正式签名只在本地完成。
 

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PLATFORM_PACKAGE="platforms;android-37.1"
-BUILD_TOOLS_PACKAGE="build-tools;37.0.0"
+BUILD_TOOLS_PACKAGE="build-tools;36.0.0"
 
 if [[ "${PLATFORM_PACKAGE}${BUILD_TOOLS_PACKAGE}" =~ [Bb]eta|[Rr][Cc][0-9]|[Pp]review ]]; then
   echo "::error::Pinned Android SDK packages must be stable, not beta/rc/preview"
@@ -21,8 +21,8 @@ BUILD_TOOLS_DIR_NAME="${BUILD_TOOLS_PACKAGE#build-tools;}"
 PLATFORM_DIR="${ANDROID_SDK_ROOT}/platforms/${PLATFORM_DIR_NAME}"
 BUILD_TOOLS_DIR="${ANDROID_SDK_ROOT}/build-tools/${BUILD_TOOLS_DIR_NAME}"
 
-echo "Installing ${PLATFORM_PACKAGE} ${BUILD_TOOLS_PACKAGE} platform-tools"
-sdkmanager --channel=0 "platform-tools" "${PLATFORM_PACKAGE}" "${BUILD_TOOLS_PACKAGE}"
+echo "Installing ${PLATFORM_PACKAGE} ${BUILD_TOOLS_PACKAGE}"
+sdkmanager --channel=0 "${PLATFORM_PACKAGE}" "${BUILD_TOOLS_PACKAGE}"
 
 if [ ! -f "${PLATFORM_DIR}/android.jar" ]; then
   echo "::error::Pinned platform package ${PLATFORM_PACKAGE} did not install ${PLATFORM_DIR}/android.jar"

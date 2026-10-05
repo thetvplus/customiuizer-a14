@@ -278,13 +278,20 @@ def check_static_rules() -> int:
 def changed_files(ref: str = "HEAD") -> list[str]:
     """Return files changed relative to the given ref (staged or unstaged)."""
     result = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=ACMR", ref],
+        ["git", "diff", "--name-only", "--diff-filter=ACMRD", ref],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
         check=True,
     )
     return [ln for ln in result.stdout.splitlines() if ln]
+
+
+def is_android_build_input(path: str) -> bool:
+    return path.startswith(("gradle/", "app/lib/")) or ("/" not in path and path.startswith("gradlew")) or path in {
+        "app/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts",
+        "gradle.properties",
+    }
 
 
 def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -> int:
@@ -318,8 +325,8 @@ def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -
 
     if changed or staged:
         changed = changed_files("HEAD" if changed else "--cached")
-        if not any(p.startswith("app/src") for p in changed):
-            print("verify: no app source changes; skipping gradle")
+        if not any(p.startswith("app/src/") or is_android_build_input(p) for p in changed):
+            print("verify: no Android source or build input changes; skipping gradle")
             return 0
 
     if tests:
@@ -329,7 +336,7 @@ def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -
         return gradle("testDebugUnitTest", *test_args)
 
     if changed or staged:
-        if any(p.startswith("app/src/test") for p in changed):
+        if any(p.startswith("app/src/test/") or is_android_build_input(p) for p in changed):
             return gradle("testDebugUnitTest")
     return gradle("compileDebugKotlin", "compileDebugJavaWithJavac")
 

@@ -60,17 +60,6 @@ jobs:
       - name: Brutal config validation
         run: python tools/brutal_test_runner.py --config tools/brutal_test_config.json validate
 
-      - name: Python tool tests
-        run: python -m unittest discover -s tools/tests -p "test_*.py"
-
-      - name: Static governance checks
-        run: |
-          python tools/check-invariants.py
-          python tools/ci_contract_scan.py --expected-branch main --default-branch main
-          python tools/catalog_contract_probe.py --catalog app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature --feature-id app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt --matrix docs/rom-intelligence/A14_PROCESS_MATRIX.csv
-          python tools/check_release_metadata.py
-          python tools/audit_hook_ownership.py --check
-
       - name: Require clean tracked tree before hermeticity
         shell: bash
         run: |
@@ -83,7 +72,9 @@ jobs:
             exit 1
           fi
 
-      - name: Brutal suite fast subset
+      # Hermeticity runs all Python tests and governance commands once, with
+      # diagnostics, while also checking that they leave tracked files intact.
+      - name: Python and governance checks with hermeticity
         run: |
           python tools/brutal_test_runner.py --config tools/brutal_test_config.json hermeticity
           python tools/brutal_test_runner.py --config tools/brutal_test_config.json determinism
@@ -92,6 +83,15 @@ jobs:
         run: python tools/verify.py full
 
       - name: Safe debug and develop builds
-        run: |
-          ./gradlew --no-daemon :app:assembleDebug
-          ./gradlew --no-daemon :app:assembleDevelop
+        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDevelop
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fast-ci-diagnostics
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -6,6 +6,19 @@ on:
       - main
     tags:
       - 'r14.*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - '.github/dependabot.yml'
+      - 'gradle/**'
+      - 'gradlew*'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - 'app/build.gradle.kts'
+      - 'app/proguard-rules.pro'
+      - 'tools/**'
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
@@ -24,6 +37,7 @@ jobs:
     if: >-
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request' ||
       (
         github.event_name == 'push' &&
         (
@@ -68,16 +82,10 @@ jobs:
       - name: CI portability
         run: python tools/check_ci_portability.py
 
-      - name: Python tool tests
-        run: python -m unittest discover -s tools/tests -p "test_*.py"
-
-      - name: Static governance checks
-        run: |
-          python tools/check-invariants.py
-          python tools/ci_contract_scan.py --expected-branch main --default-branch main
-          python tools/catalog_contract_probe.py --catalog app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature --feature-id app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt --matrix docs/rom-intelligence/A14_PROCESS_MATRIX.csv
-          python tools/check_release_metadata.py
-          python tools/audit_hook_ownership.py --check
+      # Run the Python/governance commands only inside their hermeticity gate.
+      # Independent mutations verify that the gates actually reject defects.
+      - name: Python, governance and independent mutation gates
+        run: python tools/brutal_test_runner.py --config tools/brutal_test_config.json all
 
       - name: Tag release metadata
         if: startsWith(github.ref, 'refs/tags/r14.')
@@ -86,24 +94,41 @@ jobs:
       - name: Full machine verifier
         run: python tools/verify.py full
 
+      - name: Preserve verifier reports before clean builds
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/a14-ci-reports"
+          for directory in app/build/reports app/build/test-results; do
+            if [ -d "$directory" ]; then
+              cp -R "$directory" "$RUNNER_TEMP/a14-ci-reports/"
+            fi
+          done
+
+      # Neither build may restore compiled outputs from the Gradle build cache.
+      # Separate Gradle processes also avoid sharing compiler state.
       - name: First clean develop build
         run: |
-          ./gradlew --no-daemon clean :app:assembleDevelop
-          cp app/build/outputs/apk/develop/*.apk first-develop.apk
+          ./gradlew --no-daemon --no-build-cache --no-configuration-cache -Pkotlin.compiler.execution.strategy=in-process -Pkotlin.incremental=false clean :app:assembleDevelop
+          cp app/build/outputs/apk/develop/*.apk "$RUNNER_TEMP/first-develop.apk"
+          test -s app/build/outputs/mapping/develop/mapping.txt
+          cp app/build/outputs/mapping/develop/mapping.txt "$RUNNER_TEMP/first-mapping.txt"
 
-      - name: Second clean develop build
+      - name: Second clean develop build and fatal lint
         run: |
-          ./gradlew --no-daemon clean :app:assembleDevelop
-          cp app/build/outputs/apk/develop/*.apk second-develop.apk
+          ./gradlew --no-daemon --no-build-cache --no-configuration-cache -Pkotlin.compiler.execution.strategy=in-process -Pkotlin.incremental=false clean :app:assembleDevelop :app:lintVitalDevelop
+          cp app/build/outputs/apk/develop/*.apk "$RUNNER_TEMP/second-develop.apk"
 
-      - name: APK semantic diff
-        run: python tools/apk_semantic_diff.py --require-reproducible first-develop.apk second-develop.apk
+      - name: APK content and R8 mapping reproducibility
+        run: |
+          python tools/apk_semantic_diff.py --require-reproducible --json-output "$RUNNER_TEMP/apk-semantic-diff.json" "$RUNNER_TEMP/first-develop.apk" "$RUNNER_TEMP/second-develop.apk"
+          cmp "$RUNNER_TEMP/first-mapping.txt" app/build/outputs/mapping/develop/mapping.txt
 
-      - name: Brutal test suite
-        run: python tools/brutal_test_runner.py --config tools/brutal_test_config.json all
-
-      - name: R8 lint on develop
-        run: ./gradlew --no-daemon :app:lintVitalDevelop
+      - name: Require develop inspection files
+        run: |
+          test -s app/build/outputs/mapping/develop/mapping.txt
+          test -f app/build/outputs/mapping/develop/usage.txt
+          test -s app/build/outputs/mapping/develop/configuration.txt
 
       - name: Upload develop artifacts for inspection
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -114,5 +139,18 @@ jobs:
             app/build/outputs/mapping/develop/mapping.txt
             app/build/outputs/mapping/develop/usage.txt
             app/build/outputs/mapping/develop/configuration.txt
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 30
+
+      - name: Upload verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: full-ci-diagnostics
+          path: |
+            ${{ runner.temp }}/a14-ci-reports/
+            ${{ runner.temp }}/apk-semantic-diff.json
+            ${{ runner.temp }}/first-mapping.txt
+            app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 7

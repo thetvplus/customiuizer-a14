@@ -14,6 +14,56 @@ from tools import ci_contract_scan
 from tools import source_hazard_scan
 
 
+class CIWorkflowRegressionTest(unittest.TestCase):
+    WORKFLOWS = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+
+    def scan(self, name: str, text: str) -> list[str]:
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / name
+            path.write_text(text, encoding="utf-8")
+            return ci_contract_scan.scan_workflow(path, "main", "main")
+
+    def test_real_workflows_pass(self):
+        for name in ("a14-fast-ci.yml", "a14-full-ci.yml"):
+            with self.subTest(name=name):
+                self.assertEqual([], self.scan(name, (self.WORKFLOWS / name).read_text(encoding="utf-8")))
+
+    def test_disabling_jdk_verification_is_rejected(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for replacement in ("verify-signature: false", "# signature setting removed"):
+            with self.subTest(replacement=replacement):
+                errors = self.scan(name, original.replace("verify-signature: true", replacement))
+                self.assertIn("CI_JDK_SIGNATURE", "\n".join(errors))
+
+    def test_either_cached_reproducibility_build_is_rejected(self):
+        name = "a14-full-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for flag in (
+            "--no-daemon", "--no-build-cache", "--no-configuration-cache",
+            "-Pkotlin.compiler.execution.strategy=in-process", "-Pkotlin.incremental=false",
+        ):
+            for occurrence in (0, 1):
+                with self.subTest(flag=flag, occurrence=occurrence):
+                    lines = original.splitlines()
+                    builds = [i for i, line in enumerate(lines) if "clean :app:assembleDevelop" in line]
+                    lines[builds[occurrence]] = lines[builds[occurrence]].replace(flag, "")
+                    errors = self.scan(name, "\n".join(lines) + "\n")
+                    self.assertIn("CI_REPRO_CACHE", "\n".join(errors))
+
+    def test_missing_mapping_comparison_is_rejected(self):
+        name = "a14-full-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        changed = "\n".join(line for line in original.splitlines() if not line.strip().startswith("cmp ")) + "\n"
+        self.assertIn("CI_REPRO_MAPPING", "\n".join(self.scan(name, changed)))
+
+    def test_silent_missing_develop_artifacts_is_rejected(self):
+        name = "a14-full-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        changed = original.replace("if-no-files-found: error", "if-no-files-found: ignore")
+        self.assertIn("CI_REQUIRED_ARTIFACT", "\n".join(self.scan(name, changed)))
+
+
 class SourceHazardTest(unittest.TestCase):
     def test_finds_swallowed_throwable(self):
         with tempfile.TemporaryDirectory() as td:
@@ -173,6 +223,26 @@ jobs:
     def test_repo_compile_sdk_matches_pinned_platform(self):
         repo = Path(__file__).resolve().parents[2]
         self.assertEqual([], ci_contract_scan.scan_compile_sdk_contract(repo))
+
+    def test_sdk_build_tools_pin_must_match_actual_selection(self):
+        for selected, installed, expected in (
+            ('buildToolsVersion = "36.0.0"\n', "36.0.0", False),
+            ('buildToolsVersion = "36.0.0"\n', "37.0.0", True),
+            ("", "36.0.0", True),
+        ):
+            with self.subTest(selected=selected, installed=installed), tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                (root / "app").mkdir()
+                (root / "tools").mkdir()
+                (root / "app/build.gradle.kts").write_text("compileSdk = 37\n" + selected, encoding="utf-8")
+                (root / "tools/ci_install_android_sdk.sh").write_text(
+                    'PLATFORM_PACKAGE="platforms;android-37.1"\n'
+                    f'BUILD_TOOLS_PACKAGE="build-tools;{installed}"\n',
+                    encoding="utf-8",
+                )
+                errors = "\n".join(ci_contract_scan.scan_compile_sdk_contract(root))
+                self.assertEqual(expected, "CI_SDK_BUILD_TOOLS" in errors, errors)
+
     def test_pinned_sdk_script_is_stable_and_exact(self):
         repo = Path(__file__).resolve().parents[2]
         errors = ci_contract_scan.scan_android_sdk_script(repo)

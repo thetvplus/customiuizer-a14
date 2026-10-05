@@ -109,6 +109,8 @@ val generatePreferenceArtifacts = tasks.register<Exec>("generatePreferenceArtifa
 android {
     namespace = "tv.withaibuild.customiuizer"
     compileSdk = 37
+    // Keep CI's SDK package pin aligned with the tool actually used by AGP.
+    buildToolsVersion = "36.0.0"
 
     signingConfigs {
         if (officialRelease) {

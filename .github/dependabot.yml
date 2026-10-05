@@ -8,3 +8,37 @@ updates:
       github-actions:
         patterns:
           - "*"
+  # Open reviewable PRs; runtime libraries are never merged automatically.
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      build-patches:
+        patterns:
+          - "com.android.application"
+          - "com.android.tools.build:gradle"
+          - "org.jetbrains.kotlin:kotlin-bom"
+        update-types:
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+      # Compiler, hook ABI and native engine minor upgrades need a separate plan.
+      - dependency-name: "com.android.application"
+        update-types:
+          - version-update:semver-minor
+      - dependency-name: "com.android.tools.build:gradle"
+        update-types:
+          - version-update:semver-minor
+      - dependency-name: "org.jetbrains.kotlin:*"
+        update-types:
+          - version-update:semver-minor
+      - dependency-name: "io.github.libxposed:*"
+        update-types:
+          - version-update:semver-minor
+      - dependency-name: "org.luckypray:dexkit"
+        update-types:
+          - version-update:semver-minor
