@@ -10,7 +10,7 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.20")
         // Host build tools only: these constraints do not enter the APK.
         constraints {
-            add("classpath", "org.apache.commons:commons-lang3:3.20.0") {
+            add("classpath", "org.apache.commons:commons-lang3:3.21.0") {
                 because("CVE-2025-48924; use the already validated Commons version")
             }
             add("classpath", "org.bitbucket.b_c:jose4j:0.9.6") {
