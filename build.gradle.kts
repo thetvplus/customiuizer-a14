@@ -19,13 +19,13 @@ buildscript {
             add("classpath", "org.jdom:jdom2:2.0.6.1") {
                 because("CVE-2021-33813")
             }
-            add("classpath", "org.bouncycastle:bcprov-jdk18on:1.85") {
+            add("classpath", "org.bouncycastle:bcprov-jdk18on:1.86") {
                 because("Bouncy Castle security fixes through CVE-2026-13506")
             }
-            add("classpath", "org.bouncycastle:bcpkix-jdk18on:1.85") {
+            add("classpath", "org.bouncycastle:bcpkix-jdk18on:1.86") {
                 because("Keep the Bouncy Castle modules aligned")
             }
-            add("classpath", "org.bouncycastle:bcutil-jdk18on:1.85") {
+            add("classpath", "org.bouncycastle:bcutil-jdk18on:1.86") {
                 because("Keep the Bouncy Castle modules aligned")
             }
         }
