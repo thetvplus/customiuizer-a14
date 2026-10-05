@@ -246,7 +246,7 @@ def scan_compile_sdk_contract(repo_root: Path) -> list[str]:
     gradle = gradle_path.read_text(encoding="utf-8")
     script = script_path.read_text(encoding="utf-8")
     compile = re.search(r"(?m)^\s*compileSdk\s*=\s*(\d+)\s*$", gradle)
-    platform = re.search(r'(?m)^\s*PLATFORM_PACKAGE="platforms;android-(\d+)(?:\.\d+)?"\s*$', script)
+    platform = re.search(r'(?m)^\s*PLATFORM_PACKAGE="platforms;android-(\d+)(?:\.(\d+))?"\s*$', script)
     if compile is None:
         errors.append("app/build.gradle.kts:1: CI_SDK_COMPILE_MAJOR: compileSdk major is missing")
         return errors
@@ -259,6 +259,12 @@ def scan_compile_sdk_contract(repo_root: Path) -> list[str]:
         errors.append(
             "app/build.gradle.kts:1: CI_SDK_COMPILE_MAJOR: "
             f"compileSdk {compile.group(1)} does not match pinned platform major {platform.group(1)}"
+        )
+    elif (platform.group(2) or "0") != "0":
+        errors.append(
+            "app/build.gradle.kts:1: CI_SDK_COMPILE_MINOR: "
+            f"integer compileSdk {compile.group(1)} selects android-{compile.group(1)}.0, "
+            f"but CI installs android-{platform.group(1)}.{platform.group(2)}"
         )
     selected_tools = re.search(r'(?m)^\s*buildToolsVersion\s*=\s*"(\d+\.\d+\.\d+)"\s*$', gradle)
     installed_tools = re.search(r'(?m)^\s*BUILD_TOOLS_PACKAGE="build-tools;(\d+\.\d+\.\d+)"\s*$', script)

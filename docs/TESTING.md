@@ -24,7 +24,7 @@ Brutal suite 当前要求 11 项独立缺陷注入被真实门禁拦截。配置
 ## 依赖升级
 
 Actions 使用完整 commit SHA，并明确校验 JDK 下载签名；Gradle wrapper 保留发行包 SHA-256。
-CI 安装的 SDK build tools 必须与 Gradle 的显式 `buildToolsVersion` 相同；当前固定 36.0.0，compile SDK 固定安装 `android-37.1`。安装脚本和构建选择漂移会被契约检查拒绝。
+CI 安装的 SDK build tools 必须与 Gradle 的显式 `buildToolsVersion` 相同；当前固定 36.0.0。整数 `compileSdk = 37` 实际选择 `android-37.0`，CI 必须安装同一平台，不能只匹配大版本号。安装脚本和构建选择漂移会被契约检查拒绝。
 Dependabot 每周提交 Gradle 依赖候选 PR，最多同时 3 个；编译器、libxposed ABI 和 DexKit 原生引擎只自动提出补丁候选。每个升级仍需审查 diff、官方变更和完整构建结果。
 AGP 补丁需检查 debug / develop、R8 mapping、无缓存可重复性和 lint；运行库的升级还需目标 HyperOS 1 / Android 14 验证。编译与 JVM 通过不代替实机兼容性结论。
 本地 `verify.py fast --changed` / `--staged` 遇到版本清单、Gradle 配置、wrapper 或编译用 JAR 变化时也运行 JVM 测试；仅文档或 CI 工具变更仍可跳过 Gradle。

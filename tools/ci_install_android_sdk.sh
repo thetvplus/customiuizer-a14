@@ -3,7 +3,7 @@
 # Pin stable packages. Do not glob android-37* or pick beta/rc.
 set -euo pipefail
 
-PLATFORM_PACKAGE="platforms;android-37.1"
+PLATFORM_PACKAGE="platforms;android-37.0"
 BUILD_TOOLS_PACKAGE="build-tools;36.0.0"
 
 if [[ "${PLATFORM_PACKAGE}${BUILD_TOOLS_PACKAGE}" =~ [Bb]eta|[Rr][Cc][0-9]|[Pp]review ]]; then

@@ -224,6 +224,25 @@ jobs:
         repo = Path(__file__).resolve().parents[2]
         self.assertEqual([], ci_contract_scan.scan_compile_sdk_contract(repo))
 
+    def test_integer_compile_sdk_rejects_different_platform_minor(self):
+        for installed, expected in (("37.0", False), ("37.1", True)):
+            with self.subTest(installed=installed), tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                (root / "app").mkdir()
+                (root / "tools").mkdir()
+                (root / "app/build.gradle.kts").write_text(
+                    'compileSdk = 37\nbuildToolsVersion = "36.0.0"\n', encoding="utf-8"
+                )
+                (root / "tools/ci_install_android_sdk.sh").write_text(
+                    f'PLATFORM_PACKAGE="platforms;android-{installed}"\n'
+                    'BUILD_TOOLS_PACKAGE="build-tools;36.0.0"\n', encoding="utf-8"
+                )
+                errors = ci_contract_scan.scan_compile_sdk_contract(root)
+                if expected:
+                    self.assertIn("CI_SDK_COMPILE_MINOR", "\n".join(errors))
+                else:
+                    self.assertEqual([], errors)
+
     def test_sdk_build_tools_pin_must_match_actual_selection(self):
         for selected, installed, expected in (
             ('buildToolsVersion = "36.0.0"\n', "36.0.0", False),
@@ -236,7 +255,7 @@ jobs:
                 (root / "tools").mkdir()
                 (root / "app/build.gradle.kts").write_text("compileSdk = 37\n" + selected, encoding="utf-8")
                 (root / "tools/ci_install_android_sdk.sh").write_text(
-                    'PLATFORM_PACKAGE="platforms;android-37.1"\n'
+                    'PLATFORM_PACKAGE="platforms;android-37.0"\n'
                     f'BUILD_TOOLS_PACKAGE="build-tools;{installed}"\n',
                     encoding="utf-8",
                 )
