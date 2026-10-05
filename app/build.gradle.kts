@@ -6,6 +6,16 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+kotlin {
+    compilerOptions {
+        // Upgrade the host compiler for its security fix without changing
+        // the project's Kotlin language/API level or Android JVM target.
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 val officialRelease = (project.findProperty("officialRelease")?.toString()?.toBoolean() ?: false)
 
 val keystorePropertiesPath =
@@ -326,6 +336,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.dexkit)
     implementation(platform(libs.kotlin.bom))
+    implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.kotlinx.coroutines.test)
 

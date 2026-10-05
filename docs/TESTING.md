@@ -29,6 +29,8 @@ Dependabot 每周提交 Gradle 依赖候选 PR，最多同时 3 个；编译器�
 AGP 补丁需检查 debug / develop、R8 mapping、无缓存可重复性和 lint；运行库的升级还需目标 HyperOS 1 / Android 14 验证。编译与 JVM 通过不代替实机兼容性结论。
 本地 `verify.py fast --changed` / `--staged` 遇到版本清单、Gradle 配置、wrapper 或编译用 JAR 变化时也运行 JVM 测试；仅文档或 CI 工具变更仍可跳过 Gradle。
 
+构建插件的依赖图与 APK 的运行依赖图需分别审查。当前 AGP 补丁仍默认带入旧 KGP，因此根构建脚本显式使用已修复缓存反序列化问题的 KGP 2.4.20，并对 Commons、jose4j、JDOM、Bouncy Castle 构建依赖设置安全版本约束。应用继续显式使用 Kotlin stdlib / BOM 2.3.21、语言/API 2.2 和 JVM 17，禁止编译器升级隐式抬升 APK 运行库。
+
 优先保留行为测试、兼容契约、备份 V2、preference、lifecycle ownership、hot-path 回归、正式 Dynamic Island、API 边界和 issue 回归。
 
 删除测试的唯一理由：无 production subject、完全重复、或锁死错误实现细节。不得靠删测试制造绿构建。
