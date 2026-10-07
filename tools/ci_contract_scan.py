@@ -47,6 +47,10 @@ def workflow_steps(text: str) -> list[tuple[int, str]]:
     for index, (_, parent_indent, line) in enumerate(lines):
         if re.match(r"(?:- )?<<[ \t]*:", line) or re.match(r"(?:- )?\"[^\"]*\\[^\"]*\"[ \t]*:", line):
             raise ValueError("workflow mapping keys must not use merges or escaped names")
+        if re.match(rf"{key_pattern('jobs')}[ \t]*:", line) and not re.fullmatch(
+            rf"{key_pattern('jobs')}[ \t]*:[ \t]*(?:#.*)?", line
+        ):
+            raise ValueError("jobs must use a block mapping")
         if not re.match(rf"{key_pattern('steps')}[ \t]*:", line):
             continue
         if not re.fullmatch(rf"{key_pattern('steps')}[ \t]*:[ \t]*(?:#.*)?", line):
@@ -77,14 +81,41 @@ def step_action(step: str) -> re.Match[str] | None:
     return re.search(rf"(?m)^(?:[ \t]{{{indent}}}- |[ \t]{{{indent + 2}}}){key_pattern('uses')}[ \t]*:[ \t]*(\S+)", step)
 
 
+def workflow_job_actions(text: str) -> list[tuple[int, str]]:
+    """External reusable workflows are called by jobs.<id>.uses, outside steps."""
+    actions = []
+    parent_indent = job_indent = property_indent = None
+    for offset, indent, line in yaml_mapping_lines(text):
+        if re.fullmatch(rf"{key_pattern('jobs')}[ \t]*:[ \t]*(?:#.*)?", line):
+            parent_indent, job_indent, property_indent = indent, None, None
+            continue
+        if parent_indent is None:
+            continue
+        if indent <= parent_indent:
+            parent_indent = None
+            continue
+        if job_indent is None:
+            job_indent = indent
+        if indent == job_indent:
+            property_indent = None
+            continue
+        if property_indent is None:
+            property_indent = indent
+        if indent == property_indent:
+            match = re.match(rf"{key_pattern('uses')}[ \t]*:[ \t]*(\S+)", line)
+            if match is not None:
+                actions.append((offset, match.group(1)))
+    return actions
+
+
 def mapping_body(text: str, key: str, required_indentation: int | None = None) -> str | None:
     """Read one block mapping up to the next sibling, never across triggers."""
-    matches = re.finditer(rf"(?m)^([ \t]*){key_pattern(key)}[ \t]*:[ \t]*(?:#.*)?$", text)
+    matches = re.finditer(rf"(?m)^([ \t]*)(- )?{key_pattern(key)}[ \t]*:[ \t]*(?:#.*)?$", text)
     start = next((match for match in matches if required_indentation is None
-                  or len(match.group(1)) == required_indentation), None)
+                  or len(match.group(1)) + (2 if match.group(2) else 0) == required_indentation), None)
     if start is None:
         return None
-    indentation = len(start.group(1))
+    indentation = len(start.group(1)) + (2 if start.group(2) else 0)
     lines = []
     for line in text[start.end():].splitlines(keepends=True):
         stripped = line.lstrip()
@@ -141,11 +172,12 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
         add("CI_STEP_FORMAT", str(error))
         steps = []
 
+    actions = workflow_job_actions(text)
     for offset, step in steps:
         match = step_action(step)
-        if match is None:
-            continue
-        spec = match.group(1)
+        if match is not None:
+            actions.append((offset + match.start(), match.group(1)))
+    for offset, spec in actions:
         if spec.startswith("./") or spec.startswith(".\\"):
             continue
         ref = spec.rsplit("@", 1)[-1] if "@" in spec else ""
@@ -153,12 +185,12 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
             add(
                 "CI_ACTION_PIN",
                 f"action must be pinned to a 40-char commit SHA, not {spec}",
-                offset + match.start(),
+                offset,
             )
 
     for offset, step in steps:
         action = step_action(step)
-        is_setup_java = action is not None and action.group(1).startswith("actions/setup-java@")
+        is_setup_java = action is not None and action.group(1).lower().startswith("actions/setup-java@")
         if is_setup_java and not action_input_is_true(step, "verify-signature"):
             add("CI_JDK_SIGNATURE", "setup-java must explicitly require signature verification", offset)
         if is_setup_java and not action_input_is_true(step, "force-download"):

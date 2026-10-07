@@ -120,6 +120,7 @@ class CIWorkflowRegressionTest(unittest.TestCase):
         name = "a14-fast-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
         for changed in (
+            original.replace("jobs:", "jobs: {}"),
             original.replace("    steps:", "    steps: []"),
             original.replace("      - name: Set up JDK 25", "      - *java"),
             original.replace("        uses: actions/setup-java@", "        <<: *java\n        uses: actions/setup-java@"),
@@ -127,6 +128,35 @@ class CIWorkflowRegressionTest(unittest.TestCase):
         ):
             with self.subTest(changed=changed):
                 self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
+
+    def test_external_reusable_workflow_jobs_require_pinned_versions(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for key in ("uses", "'uses'", '"uses"'):
+            with self.subTest(key=key):
+                job = f"\n  shared:\n    {key}: owner/repo/.github/workflows/build.yml@main\n"
+                self.assertIn("CI_ACTION_PIN", "\n".join(self.scan(name, original + job)))
+                self.assertEqual([], self.scan(name, original + job.replace("@main", "@" + "a" * 40)))
+        local = "\n  shared:\n    uses: ./.github/workflows/build.yml\n"
+        self.assertEqual([], self.scan(name, original + local))
+
+    def test_jdk_action_names_are_case_insensitive(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for spelling in ("Actions/Setup-Java", "ACTIONS/SETUP-JAVA"):
+            with self.subTest(spelling=spelling):
+                changed = original.replace("actions/setup-java", spelling)
+                self.assertEqual([], self.scan(name, changed))
+                changed = changed.replace("force-download: true", "force-download: false")
+                changed = changed.replace("verify-signature: true", "verify-signature: false")
+                errors = "\n".join(self.scan(name, changed))
+                self.assertIn("CI_JDK_DOWNLOAD", errors)
+                self.assertIn("CI_JDK_SIGNATURE", errors)
+
+    def test_with_can_be_the_first_step_key(self):
+        text = "      - with:\n          force-download: true\n          verify-signature: true\n        uses: actions/setup-java@example\n"
+        self.assertTrue(ci_contract_scan.action_input_is_true(text, "force-download"))
+        self.assertTrue(ci_contract_scan.action_input_is_true(text, "verify-signature"))
 
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
