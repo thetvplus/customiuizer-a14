@@ -17,22 +17,69 @@ def line_of(text: str, offset: int) -> int:
     return text[:offset].count("\n") + 1
 
 
+def key_pattern(key: str) -> str:
+    return rf"(?:{re.escape(key)}|'{re.escape(key)}'|\"{re.escape(key)}\")"
+
+
+def yaml_mapping_lines(text: str) -> list[tuple[int, int, str]]:
+    """Read structural lines, excluding comments and block scalar contents."""
+    lines = []
+    offset = 0
+    scalar_indent = None
+    for line in text.splitlines(keepends=True):
+        stripped = line.lstrip(" \t")
+        indent = len(line) - len(stripped)
+        if stripped.strip() and not stripped.startswith("#"):
+            if scalar_indent is not None and indent <= scalar_indent:
+                scalar_indent = None
+            if scalar_indent is None:
+                lines.append((offset, indent, stripped.rstrip("\r\n")))
+                if re.search(r":[ \t]*[|>][1-9+-]*[ \t]*(?:#.*)?$", stripped):
+                    scalar_indent = indent + (2 if stripped.startswith("- ") else 0)
+        offset += len(line)
+    return lines
+
+
 def workflow_steps(text: str) -> list[tuple[int, str]]:
-    """Extract step blocks at their list indentation without a YAML dependency."""
-    starts = list(re.finditer(r"(?m)^([ \t]+)- (?:name|uses|run):", text))
+    """Read every mapping in each steps sequence, regardless of first key."""
+    lines = yaml_mapping_lines(text)
     blocks = []
-    for index, start in enumerate(starts):
-        end = next(
-            (other.start() for other in starts[index + 1:] if other.group(1) == start.group(1)),
-            len(text),
-        )
-        blocks.append((start.start(), text[start.start():end]))
+    for index, (_, parent_indent, line) in enumerate(lines):
+        if re.match(r"(?:- )?<<[ \t]*:", line) or re.match(r"(?:- )?\"[^\"]*\\[^\"]*\"[ \t]*:", line):
+            raise ValueError("workflow mapping keys must not use merges or escaped names")
+        if not re.match(rf"{key_pattern('steps')}[ \t]*:", line):
+            continue
+        if not re.fullmatch(rf"{key_pattern('steps')}[ \t]*:[ \t]*(?:#.*)?", line):
+            raise ValueError("steps must use a block sequence")
+        start = None
+        step_indent = None
+        end = len(text)
+        for offset, indent, child in lines[index + 1:]:
+            if indent < parent_indent or (step_indent is not None and indent <= step_indent
+                                          and not child.startswith("- ")):
+                end = offset
+                break
+            if step_indent is None:
+                step_indent = indent
+            if indent == step_indent:
+                if not re.match(r"- (?:[\w-]+|'[\w-]+'|\"[\w-]+\")[ \t]*:", child):
+                    raise ValueError("each step must use a block mapping")
+                if start is not None:
+                    blocks.append((start, text[start:offset]))
+                start = offset
+        if start is not None:
+            blocks.append((start, text[start:end]))
     return blocks
+
+
+def step_action(step: str) -> re.Match[str] | None:
+    indent = len(step) - len(step.lstrip(" \t"))
+    return re.search(rf"(?m)^(?:[ \t]{{{indent}}}- |[ \t]{{{indent + 2}}}){key_pattern('uses')}[ \t]*:[ \t]*(\S+)", step)
 
 
 def mapping_body(text: str, key: str, required_indentation: int | None = None) -> str | None:
     """Read one block mapping up to the next sibling, never across triggers."""
-    matches = re.finditer(rf"(?m)^([ \t]*){re.escape(key)}[ \t]*:[ \t]*$", text)
+    matches = re.finditer(rf"(?m)^([ \t]*){key_pattern(key)}[ \t]*:[ \t]*(?:#.*)?$", text)
     start = next((match for match in matches if required_indentation is None
                   or len(match.group(1)) == required_indentation), None)
     if start is None:
@@ -58,7 +105,7 @@ def action_input_is_true(step: str, key: str) -> bool:
                if line.strip() and not line.lstrip(" \t").startswith("#")]
     if not indents:
         return False
-    values = re.findall(rf"(?m)^[ \t]{{{min(indents)}}}{re.escape(key)}:[ \t]*([^\n]*)", body)
+    values = re.findall(rf"(?m)^[ \t]{{{min(indents)}}}{key_pattern(key)}[ \t]*:[ \t]*([^\n]*)", body)
     return len(values) == 1 and re.fullmatch(r"true[ \t]*(?:#.*)?", values[0]) is not None
 
 
@@ -88,7 +135,16 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
             "CI_GRADLEW_MODE",
             "do not chmod ./gradlew in CI; git tracks the wrapper as 100755",
         )
-    for match in re.finditer(r"(?m)^[ \t]*(?:-\s+)?uses:[ \t]*(\S+)", text):
+    try:
+        steps = workflow_steps(text)
+    except ValueError as error:
+        add("CI_STEP_FORMAT", str(error))
+        steps = []
+
+    for offset, step in steps:
+        match = step_action(step)
+        if match is None:
+            continue
         spec = match.group(1)
         if spec.startswith("./") or spec.startswith(".\\"):
             continue
@@ -97,13 +153,15 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
             add(
                 "CI_ACTION_PIN",
                 f"action must be pinned to a 40-char commit SHA, not {spec}",
-                match.start(),
+                offset + match.start(),
             )
 
-    for offset, step in workflow_steps(text):
-        if "uses: actions/setup-java@" in step and not action_input_is_true(step, "verify-signature"):
+    for offset, step in steps:
+        action = step_action(step)
+        is_setup_java = action is not None and action.group(1).startswith("actions/setup-java@")
+        if is_setup_java and not action_input_is_true(step, "verify-signature"):
             add("CI_JDK_SIGNATURE", "setup-java must explicitly require signature verification", offset)
-        if "uses: actions/setup-java@" in step and not action_input_is_true(step, "force-download"):
+        if is_setup_java and not action_input_is_true(step, "force-download"):
             add("CI_JDK_DOWNLOAD", "setup-java must download the JDK so its signature is actually verified", offset)
         if "name: develop-apk-and-mapping" in step and not re.search(
             r"(?m)^\s+if-no-files-found:\s*error\s*$", step

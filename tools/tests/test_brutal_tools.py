@@ -65,6 +65,69 @@ class CIWorkflowRegressionTest(unittest.TestCase):
                     changed = original.replace(f"          {key}: true", misplaced)
                     self.assertIn(rule, "\n".join(self.scan(name, changed)))
 
+    def test_jdk_gate_checks_every_legal_first_step_key(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        prefix, rest = original.split("      - name: Set up JDK 25\n", 1)
+        prefix = prefix.split("    steps:\n", 1)[0] + "    steps:\n"
+        for first_key in ("id: java", "if: always()", "timeout-minutes: 5",
+                          "continue-on-error: false", "env:\n          NOTE: value"):
+            with self.subTest(first_key=first_key):
+                changed = prefix + f"      - {first_key}\n        name: Set up JDK 25\n" + rest
+                changed = changed.replace("force-download: true", "force-download: false")
+                changed = changed.replace("verify-signature: true", "verify-signature: false")
+                errors = "\n".join(self.scan(name, changed))
+                self.assertIn("CI_JDK_DOWNLOAD", errors)
+                self.assertIn("CI_JDK_SIGNATURE", errors)
+
+    def test_script_text_is_not_an_action_step(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        changed = original + (
+            "\n      - name: Print an example\n        run: |\n"
+            "          cat <<'EXAMPLE'\n          steps:\n"
+            "            - id: example\n              uses: actions/setup-java@example\n"
+            "          EXAMPLE\n"
+        )
+        self.assertEqual([], self.scan(name, changed))
+        self.assertEqual(len(ci_contract_scan.workflow_steps(original)) + 1,
+                         len(ci_contract_scan.workflow_steps(changed)))
+
+    def test_step_extraction_stops_at_each_job_boundary(self):
+        text = ("jobs:\n  first:\n    steps:\n      - id: java\n"
+                "        uses: actions/setup-java@example\n  second:\n"
+                "    env:\n      force-download: true\n    steps:\n"
+                "      - if: always()\n        run: echo checked\n")
+        steps = ci_contract_scan.workflow_steps(text)
+        self.assertEqual(2, len(steps))
+        self.assertNotIn("second:", steps[0][1])
+        self.assertFalse(ci_contract_scan.action_input_is_true(steps[0][1], "force-download"))
+
+    def test_quoted_mapping_keys_do_not_bypass_jdk_gate(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for quote in ("'", '"'):
+            with self.subTest(quote=quote):
+                changed = original
+                for key in ("steps", "uses", "with", "force-download", "verify-signature"):
+                    changed = changed.replace(key + ":", quote + key + quote + ":")
+                self.assertEqual([], self.scan(name, changed))
+                errors = "\n".join(self.scan(name, changed.replace("true", "false")))
+                self.assertIn("CI_JDK_DOWNLOAD", errors)
+                self.assertIn("CI_JDK_SIGNATURE", errors)
+
+    def test_unsupported_step_aliases_and_flow_sequences_fail_closed(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for changed in (
+            original.replace("    steps:", "    steps: []"),
+            original.replace("      - name: Set up JDK 25", "      - *java"),
+            original.replace("        uses: actions/setup-java@", "        <<: *java\n        uses: actions/setup-java@"),
+            original.replace("        uses: actions/setup-java@", r'        "us\u0065s": actions/setup-java@'),
+        ):
+            with self.subTest(changed=changed):
+                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
+
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
