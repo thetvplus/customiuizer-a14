@@ -15,11 +15,12 @@ import java.io.File
 class CustomTextIconTintWiringTest {
 
     @Test
-    fun leftPathRegistersWithCustomTextIconTintRoute() {
+    fun leftPathRoutesTintByIconManagerOwner() {
         val source = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/DeviceInfoMonitor.kt")
         val addHolder = methodBody(source, "private fun interceptAddHolder")
 
-        assertTrue("left addHolder must call CustomTextIconTintRoute.register", addHolder.contains("CustomTextIconTintRoute.register(iconView, classLoader, \"left\")"))
+        assertTrue("addHolder must pass its actual icon manager to the tint route",
+            addHolder.contains("CustomTextIconTintRoute.registerForIconManager(iconView, thisObj, classLoader, \"left\")"))
     }
 
     @Test
