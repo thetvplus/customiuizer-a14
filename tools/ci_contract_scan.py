@@ -12,6 +12,8 @@ import re
 import sys
 from pathlib import Path
 
+SIMPLE_MAPPING_KEY = r"(?:[\w-]+|'[\w-]+'|\"[\w-]+\")"
+
 
 def line_of(text: str, offset: int) -> int:
     return text[:offset].count("\n") + 1
@@ -44,13 +46,21 @@ def workflow_job_properties(text: str) -> list[tuple[int, int, int, str]]:
     """Locate direct jobs.<id> properties, excluding env/with lookalike keys."""
     lines = yaml_mapping_lines(text)
     properties = []
+    root_indent = min((indent for _, indent, line in lines
+                       if re.match(rf"{SIMPLE_MAPPING_KEY}[ \t]*:", line)), default=None)
+    found_jobs = False
     parent_indent = job_indent = property_indent = None
     for index, (offset, indent, line) in enumerate(lines):
         if re.match(r"(?:- )?<<[ \t]*:", line) or re.match(r"(?:- )?\"[^\"]*\\[^\"]*\"[ \t]*:", line):
             raise ValueError("workflow mapping keys must not use merges or escaped names")
-        if indent == 0 and re.match(rf"{key_pattern('jobs')}[ \t]*:", line):
+        if re.match(r"(?:- )?\?(?:[ \t]|$)", line):
+            raise ValueError("workflow mapping keys must use simple inline names")
+        if indent == root_indent and re.match(rf"{key_pattern('jobs')}[ \t]*:", line):
             if not re.fullmatch(rf"{key_pattern('jobs')}[ \t]*:[ \t]*(?:#.*)?", line):
                 raise ValueError("jobs must use a block mapping")
+            if found_jobs:
+                raise ValueError("workflow must have exactly one root jobs block")
+            found_jobs = True
             parent_indent, job_indent, property_indent = indent, None, None
             continue
         if parent_indent is None:
@@ -61,14 +71,18 @@ def workflow_job_properties(text: str) -> list[tuple[int, int, int, str]]:
         if job_indent is None:
             job_indent = indent
         if indent == job_indent:
-            if not re.fullmatch(r"(?:[\w-]+|'[\w-]+'|\"[\w-]+\")[ \t]*:[ \t]*(?:#.*)?", line):
+            if not re.fullmatch(rf"{SIMPLE_MAPPING_KEY}[ \t]*:[ \t]*(?:#.*)?", line):
                 raise ValueError("each job must use a block mapping")
             property_indent = None
             continue
         if property_indent is None:
             property_indent = indent
         if indent == property_indent and not line.startswith("- "):
+            if not re.match(rf"{SIMPLE_MAPPING_KEY}[ \t]*:", line):
+                raise ValueError("job properties must use simple inline mapping keys")
             properties.append((index, offset, indent, line))
+    if not found_jobs:
+        raise ValueError("workflow must contain a root jobs block")
     return properties
 
 
@@ -92,11 +106,13 @@ def workflow_steps(text: str) -> list[tuple[int, str]]:
             if step_indent is None:
                 step_indent = indent
             if indent == step_indent:
-                if not re.match(r"- (?:[\w-]+|'[\w-]+'|\"[\w-]+\")[ \t]*:", child):
+                if not re.match(rf"- {SIMPLE_MAPPING_KEY}[ \t]*:", child):
                     raise ValueError("each step must use a block mapping")
                 if start is not None:
                     blocks.append((start, text[start:offset]))
                 start = offset
+            elif indent == step_indent + 2 and not re.match(rf"{SIMPLE_MAPPING_KEY}[ \t]*:", child):
+                raise ValueError("step properties must use simple inline mapping keys")
         if start is not None:
             blocks.append((start, text[start:end]))
     return blocks

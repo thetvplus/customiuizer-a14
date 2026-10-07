@@ -198,6 +198,29 @@ class CIWorkflowRegressionTest(unittest.TestCase):
         self.assertIn("CI_JDK_DOWNLOAD", errors)
         self.assertIn("CI_JDK_SIGNATURE", errors)
 
+    def test_explicit_and_tagged_mapping_keys_fail_closed(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for key in ("? uses\n        :", "!!str uses:"):
+            with self.subTest(key=key):
+                changed = original.replace("        uses: actions/setup-java@", f"        {key} actions/setup-java@")
+                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
+        shared = "\n  shared:\n    !!str uses: owner/repo/.github/workflows/build.yml@main\n"
+        self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, original + shared)))
+
+    def test_indented_root_with_document_markers_preserves_action_checks(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for indent in ("  ", "    "):
+            with self.subTest(indent=indent):
+                changed = "---\n" + "\n".join(indent + line if line else line for line in original.splitlines()) + "\n...\n"
+                self.assertEqual([], self.scan(name, changed))
+                changed = changed.replace("force-download: true", "force-download: false")
+                changed = changed.replace("verify-signature: true", "verify-signature: false")
+                errors = "\n".join(self.scan(name, changed))
+                self.assertIn("CI_JDK_DOWNLOAD", errors)
+                self.assertIn("CI_JDK_SIGNATURE", errors)
+
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
