@@ -36,6 +36,21 @@ class CIWorkflowRegressionTest(unittest.TestCase):
                 errors = self.scan(name, original.replace("verify-signature: true", replacement))
                 self.assertIn("CI_JDK_SIGNATURE", "\n".join(errors))
 
+    def test_cached_jdk_without_download_is_rejected(self):
+        for name in ("a14-fast-ci.yml", "a14-full-ci.yml"):
+            original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+            for replacement in ("force-download: false", "# download setting removed"):
+                with self.subTest(name=name, replacement=replacement):
+                    changed = original.replace("force-download: true", replacement)
+                    self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(name, changed)))
+
+    def test_download_setting_in_another_step_does_not_satisfy_jdk_gate(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        changed = original.replace("force-download: true", "# download setting removed")
+        changed += "\n      - name: Unrelated step\n        with:\n          force-download: true\n"
+        self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(name, changed)))
+
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")

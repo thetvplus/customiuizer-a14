@@ -89,6 +89,10 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
             r"(?m)^\s+verify-signature:\s*true\s*(?:#.*)?$", step
         ):
             add("CI_JDK_SIGNATURE", "setup-java must explicitly require signature verification", offset)
+        if "uses: actions/setup-java@" in step and not re.search(
+            r"(?m)^\s+force-download:\s*true\s*(?:#.*)?$", step
+        ):
+            add("CI_JDK_DOWNLOAD", "setup-java must download the JDK so its signature is actually verified", offset)
         if "name: develop-apk-and-mapping" in step and not re.search(
             r"(?m)^\s+if-no-files-found:\s*error\s*$", step
         ):

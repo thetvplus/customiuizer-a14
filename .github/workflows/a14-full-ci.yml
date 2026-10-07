@@ -58,6 +58,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          force-download: true
           verify-signature: true
 
       - name: Set up Python
