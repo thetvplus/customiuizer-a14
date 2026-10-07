@@ -30,9 +30,11 @@ def workflow_steps(text: str) -> list[tuple[int, str]]:
     return blocks
 
 
-def mapping_body(text: str, key: str) -> str | None:
+def mapping_body(text: str, key: str, required_indentation: int | None = None) -> str | None:
     """Read one block mapping up to the next sibling, never across triggers."""
-    start = re.search(rf"(?m)^([ \t]*){re.escape(key)}[ \t]*:[ \t]*$", text)
+    matches = re.finditer(rf"(?m)^([ \t]*){re.escape(key)}[ \t]*:[ \t]*$", text)
+    start = next((match for match in matches if required_indentation is None
+                  or len(match.group(1)) == required_indentation), None)
     if start is None:
         return None
     indentation = len(start.group(1))
@@ -44,6 +46,20 @@ def mapping_body(text: str, key: str) -> str | None:
                 break
         lines.append(line)
     return "".join(lines)
+
+
+def action_input_is_true(step: str, key: str) -> bool:
+    """Require one literal true input in the action's direct with mapping."""
+    step_indentation = len(step) - len(step.lstrip(" \t"))
+    body = mapping_body(step, "with", step_indentation + 2)
+    if body is None:
+        return False
+    indents = [len(line) - len(line.lstrip(" \t")) for line in body.splitlines()
+               if line.strip() and not line.lstrip(" \t").startswith("#")]
+    if not indents:
+        return False
+    values = re.findall(rf"(?m)^[ \t]{{{min(indents)}}}{re.escape(key)}:[ \t]*([^\n]*)", body)
+    return len(values) == 1 and re.fullmatch(r"true[ \t]*(?:#.*)?", values[0]) is not None
 
 
 def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list[str]:
@@ -85,13 +101,9 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
             )
 
     for offset, step in workflow_steps(text):
-        if "uses: actions/setup-java@" in step and not re.search(
-            r"(?m)^\s+verify-signature:\s*true\s*(?:#.*)?$", step
-        ):
+        if "uses: actions/setup-java@" in step and not action_input_is_true(step, "verify-signature"):
             add("CI_JDK_SIGNATURE", "setup-java must explicitly require signature verification", offset)
-        if "uses: actions/setup-java@" in step and not re.search(
-            r"(?m)^\s+force-download:\s*true\s*(?:#.*)?$", step
-        ):
+        if "uses: actions/setup-java@" in step and not action_input_is_true(step, "force-download"):
             add("CI_JDK_DOWNLOAD", "setup-java must download the JDK so its signature is actually verified", offset)
         if "name: develop-apk-and-mapping" in step and not re.search(
             r"(?m)^\s+if-no-files-found:\s*error\s*$", step

@@ -51,6 +51,20 @@ class CIWorkflowRegressionTest(unittest.TestCase):
         changed += "\n      - name: Unrelated step\n        with:\n          force-download: true\n"
         self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(name, changed)))
 
+    def test_jdk_security_settings_outside_action_inputs_are_rejected(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for key, rule in (("force-download", "CI_JDK_DOWNLOAD"), ("verify-signature", "CI_JDK_SIGNATURE")):
+            for misplaced in (
+                f"        env:\n          {key}: true",
+                f"        env:\n          NOTE: |\n            {key}: true",
+                f"          unrelated:\n            {key}: true",
+                f"        env:\n          NOTE: |\n            with:\n              {key}: true",
+            ):
+                with self.subTest(key=key, misplaced=misplaced):
+                    changed = original.replace(f"          {key}: true", misplaced)
+                    self.assertIn(rule, "\n".join(self.scan(name, changed)))
+
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
