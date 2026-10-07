@@ -158,6 +158,15 @@ class CIWorkflowRegressionTest(unittest.TestCase):
         self.assertTrue(ci_contract_scan.action_input_is_true(text, "force-download"))
         self.assertTrue(ci_contract_scan.action_input_is_true(text, "verify-signature"))
 
+    def test_inline_job_mappings_fail_closed(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for flow in ("{ uses: owner/repo/.github/workflows/build.yml@main }",
+                     "{ steps: [{uses: actions/setup-java@main}] }"):
+            with self.subTest(flow=flow):
+                changed = original + f"\n  shared: {flow}\n"
+                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
+
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")

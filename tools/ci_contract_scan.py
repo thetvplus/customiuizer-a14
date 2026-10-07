@@ -97,6 +97,8 @@ def workflow_job_actions(text: str) -> list[tuple[int, str]]:
         if job_indent is None:
             job_indent = indent
         if indent == job_indent:
+            if not re.fullmatch(r"(?:[\w-]+|'[\w-]+'|\"[\w-]+\")[ \t]*:[ \t]*(?:#.*)?", line):
+                raise ValueError("each job must use a block mapping")
             property_indent = None
             continue
         if property_indent is None:
@@ -168,11 +170,12 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
         )
     try:
         steps = workflow_steps(text)
+        actions = workflow_job_actions(text)
     except ValueError as error:
         add("CI_STEP_FORMAT", str(error))
         steps = []
+        actions = []
 
-    actions = workflow_job_actions(text)
     for offset, step in steps:
         match = step_action(step)
         if match is not None:
