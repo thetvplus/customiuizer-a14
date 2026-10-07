@@ -167,6 +167,37 @@ class CIWorkflowRegressionTest(unittest.TestCase):
                 changed = original + f"\n  shared: {flow}\n"
                 self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
 
+    def test_multiline_action_values_fail_closed(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for value in ("\n          actions/setup-java@main", "'actions/setup-java@main\n          '",
+                      '"actions/setup-java@main\n          "', ">\n          actions/setup-java@main"):
+            with self.subTest(value=value):
+                changed = original + f"\n      - uses: {value}\n        with:\n          force-download: false\n"
+                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
+        shared = "\n  shared:\n    uses:\n      owner/repo/.github/workflows/build.yml@main\n"
+        self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, original + shared)))
+
+    def test_steps_and_jobs_in_unrelated_mappings_are_not_workflow_structure(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for changed in (
+            "env:\n  steps: production\n  jobs: production\n" + original,
+            original.replace("    steps:\n", "    env:\n      steps: production\n      jobs: production\n    steps:\n"),
+            original + "\n      - run: echo checked\n        env:\n          steps: production\n          jobs: production\n",
+            original.replace("          distribution: zulu", "          steps: production\n          jobs: production\n          distribution: zulu"),
+        ):
+            with self.subTest(changed=changed):
+                self.assertEqual([], self.scan(name, changed))
+
+    def test_duplicate_action_input_mappings_fail_jdk_gate(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        changed = original.replace("          force-download: true", "          force-download: true\n        with:\n          force-download: false\n          verify-signature: false")
+        errors = "\n".join(self.scan(name, changed))
+        self.assertIn("CI_JDK_DOWNLOAD", errors)
+        self.assertIn("CI_JDK_SIGNATURE", errors)
+
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")

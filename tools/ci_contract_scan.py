@@ -40,17 +40,43 @@ def yaml_mapping_lines(text: str) -> list[tuple[int, int, str]]:
     return lines
 
 
-def workflow_steps(text: str) -> list[tuple[int, str]]:
-    """Read every mapping in each steps sequence, regardless of first key."""
+def workflow_job_properties(text: str) -> list[tuple[int, int, int, str]]:
+    """Locate direct jobs.<id> properties, excluding env/with lookalike keys."""
     lines = yaml_mapping_lines(text)
-    blocks = []
-    for index, (_, parent_indent, line) in enumerate(lines):
+    properties = []
+    parent_indent = job_indent = property_indent = None
+    for index, (offset, indent, line) in enumerate(lines):
         if re.match(r"(?:- )?<<[ \t]*:", line) or re.match(r"(?:- )?\"[^\"]*\\[^\"]*\"[ \t]*:", line):
             raise ValueError("workflow mapping keys must not use merges or escaped names")
-        if re.match(rf"{key_pattern('jobs')}[ \t]*:", line) and not re.fullmatch(
-            rf"{key_pattern('jobs')}[ \t]*:[ \t]*(?:#.*)?", line
-        ):
-            raise ValueError("jobs must use a block mapping")
+        if indent == 0 and re.match(rf"{key_pattern('jobs')}[ \t]*:", line):
+            if not re.fullmatch(rf"{key_pattern('jobs')}[ \t]*:[ \t]*(?:#.*)?", line):
+                raise ValueError("jobs must use a block mapping")
+            parent_indent, job_indent, property_indent = indent, None, None
+            continue
+        if parent_indent is None:
+            continue
+        if indent <= parent_indent:
+            parent_indent = None
+            continue
+        if job_indent is None:
+            job_indent = indent
+        if indent == job_indent:
+            if not re.fullmatch(r"(?:[\w-]+|'[\w-]+'|\"[\w-]+\")[ \t]*:[ \t]*(?:#.*)?", line):
+                raise ValueError("each job must use a block mapping")
+            property_indent = None
+            continue
+        if property_indent is None:
+            property_indent = indent
+        if indent == property_indent and not line.startswith("- "):
+            properties.append((index, offset, indent, line))
+    return properties
+
+
+def workflow_steps(text: str) -> list[tuple[int, str]]:
+    """Read every mapping in each job's steps, regardless of first key."""
+    lines = yaml_mapping_lines(text)
+    blocks = []
+    for index, _, parent_indent, line in workflow_job_properties(text):
         if not re.match(rf"{key_pattern('steps')}[ \t]*:", line):
             continue
         if not re.fullmatch(rf"{key_pattern('steps')}[ \t]*:[ \t]*(?:#.*)?", line):
@@ -76,37 +102,42 @@ def workflow_steps(text: str) -> list[tuple[int, str]]:
     return blocks
 
 
-def step_action(step: str) -> re.Match[str] | None:
+def single_line_action(lines: list[tuple[int, int, str]], index: int, value: str) -> str:
+    """Require a complete inline uses scalar; multiline YAML is unsupported."""
+    _, indent, line = lines[index]
+    logical_indent = indent + (2 if line.startswith("- ") else 0)
+    if index + 1 < len(lines) and lines[index + 1][1] > logical_indent:
+        raise ValueError("uses must contain its complete action reference on one line")
+    match = re.fullmatch(r"(?:'([^']+)'|\"([^\"\\]+)\"|([^\s'\"|>#][^\s]*))[ \t]*(?:#.*)?", value)
+    if match is None:
+        raise ValueError("uses must contain its complete action reference on one line")
+    return next(group for group in match.groups() if group is not None)
+
+
+def step_action(step: str) -> tuple[int, str] | None:
     indent = len(step) - len(step.lstrip(" \t"))
-    return re.search(rf"(?m)^(?:[ \t]{{{indent}}}- |[ \t]{{{indent + 2}}}){key_pattern('uses')}[ \t]*:[ \t]*(\S+)", step)
+    lines = yaml_mapping_lines(step)
+    actions = []
+    for index, (offset, physical_indent, line) in enumerate(lines):
+        logical_indent = physical_indent + (2 if line.startswith("- ") else 0)
+        if logical_indent != indent + 2:
+            continue
+        match = re.match(rf"(?:- )?{key_pattern('uses')}[ \t]*:[ \t]*(.*)", line)
+        if match is not None:
+            actions.append((offset, single_line_action(lines, index, match.group(1))))
+    if len(actions) > 1:
+        raise ValueError("each step must have at most one uses key")
+    return actions[0] if actions else None
 
 
 def workflow_job_actions(text: str) -> list[tuple[int, str]]:
     """External reusable workflows are called by jobs.<id>.uses, outside steps."""
     actions = []
-    parent_indent = job_indent = property_indent = None
-    for offset, indent, line in yaml_mapping_lines(text):
-        if re.fullmatch(rf"{key_pattern('jobs')}[ \t]*:[ \t]*(?:#.*)?", line):
-            parent_indent, job_indent, property_indent = indent, None, None
-            continue
-        if parent_indent is None:
-            continue
-        if indent <= parent_indent:
-            parent_indent = None
-            continue
-        if job_indent is None:
-            job_indent = indent
-        if indent == job_indent:
-            if not re.fullmatch(r"(?:[\w-]+|'[\w-]+'|\"[\w-]+\")[ \t]*:[ \t]*(?:#.*)?", line):
-                raise ValueError("each job must use a block mapping")
-            property_indent = None
-            continue
-        if property_indent is None:
-            property_indent = indent
-        if indent == property_indent:
-            match = re.match(rf"{key_pattern('uses')}[ \t]*:[ \t]*(\S+)", line)
-            if match is not None:
-                actions.append((offset, match.group(1)))
+    lines = yaml_mapping_lines(text)
+    for index, offset, _, line in workflow_job_properties(text):
+        match = re.match(rf"{key_pattern('uses')}[ \t]*:[ \t]*(.*)", line)
+        if match is not None:
+            actions.append((offset, single_line_action(lines, index, match.group(1))))
     return actions
 
 
@@ -131,6 +162,11 @@ def mapping_body(text: str, key: str, required_indentation: int | None = None) -
 def action_input_is_true(step: str, key: str) -> bool:
     """Require one literal true input in the action's direct with mapping."""
     step_indentation = len(step) - len(step.lstrip(" \t"))
+    with_headers = [line for _, indent, line in yaml_mapping_lines(step)
+                    if indent + (2 if line.startswith("- ") else 0) == step_indentation + 2
+                    and re.match(rf"(?:- )?{key_pattern('with')}[ \t]*:", line)]
+    if len(with_headers) != 1:
+        return False
     body = mapping_body(step, "with", step_indentation + 2)
     if body is None:
         return False
@@ -171,15 +207,16 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
     try:
         steps = workflow_steps(text)
         actions = workflow_job_actions(text)
+        checked_steps = [(offset, step, step_action(step)) for offset, step in steps]
     except ValueError as error:
         add("CI_STEP_FORMAT", str(error))
         steps = []
         actions = []
+        checked_steps = []
 
-    for offset, step in steps:
-        match = step_action(step)
-        if match is not None:
-            actions.append((offset + match.start(), match.group(1)))
+    for offset, _, action in checked_steps:
+        if action is not None:
+            actions.append((offset + action[0], action[1]))
     for offset, spec in actions:
         if spec.startswith("./") or spec.startswith(".\\"):
             continue
@@ -191,9 +228,8 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
                 offset,
             )
 
-    for offset, step in steps:
-        action = step_action(step)
-        is_setup_java = action is not None and action.group(1).lower().startswith("actions/setup-java@")
+    for offset, step, action in checked_steps:
+        is_setup_java = action is not None and action[1].lower().startswith("actions/setup-java@")
         if is_setup_java and not action_input_is_true(step, "verify-signature"):
             add("CI_JDK_SIGNATURE", "setup-java must explicitly require signature verification", offset)
         if is_setup_java and not action_input_is_true(step, "force-download"):
