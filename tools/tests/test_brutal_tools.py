@@ -29,6 +29,25 @@ class CIWorkflowRegressionTest(unittest.TestCase):
     def test_real_workflow_passes(self):
         self.assertEqual([], self.scan(self.original()))
 
+    def test_unrestricted_push_shorthands_are_rejected(self):
+        original = self.original()
+        start = original.index("on:")
+        end = original.index("permissions:")
+        for events in ("on:\n  push:\n", "on:\n  push: true\n", "on: push\n", "on: [push, pull_request]\n"):
+            with self.subTest(events=events):
+                changed = original[:start] + events + "\n" + original[end:]
+                self.assertIn("CI_EXACT_BRANCH", "\n".join(self.scan(changed)))
+
+    def test_checkout_root_equivalent_paths_preserve_security(self):
+        for spec in ("Actions/Checkout", "actions/checkout/.", "actions/checkout/subdir/.."):
+            with self.subTest(spec=spec):
+                changed = self.original().replace("actions/checkout@", f"{spec}@")
+                self.assertEqual([], self.scan(changed))
+                changed = changed.replace("fetch-depth: 0", "fetch-depth: 1").replace("persist-credentials: false", "persist-credentials: true")
+                errors = "\n".join(self.scan(changed))
+                self.assertIn("CI_FULL_HISTORY", errors)
+                self.assertIn("CI_CHECKOUT_CREDENTIALS", errors)
+
     def test_disabled_or_missing_jdk_security_is_rejected(self):
         for key, rule in (("force-download", "CI_JDK_DOWNLOAD"), ("verify-signature", "CI_JDK_SIGNATURE")):
             for replacement in (f"{key}: false", "# setting removed"):

@@ -67,15 +67,18 @@ jobs:
           cache-cleanup: on-success
 
       - name: Install CI parser
-        if: steps.scope.outputs.tools == 'true'
         run: python -m pip install --disable-pip-version-check -r tools/requirements.txt
 
-      # Python tests and tool contracts execute once, only for relevant changes.
-      - name: Tool tests and contracts
-        if: steps.scope.outputs.tools == 'true'
+      # Includes application-source contracts as well as tests of the tools.
+      - name: Python tests and source contracts
         run: |
           python tools/check_ci_portability.py
           python tools/brutal_test_runner.py --config tools/brutal_test_config.json hermeticity
+
+      - name: Tool consistency and independent mutation gates
+        if: steps.scope.outputs.tools == 'true'
+        run: |
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json determinism
           python tools/brutal_test_runner.py --config tools/brutal_test_config.json mutate --required-only
 
       - name: Code, JVM tests and lint

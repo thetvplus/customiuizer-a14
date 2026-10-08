@@ -15,8 +15,8 @@
 `Fast CI` 和 `Full CI` 是本仓库维护的 GitHub Actions 工作流，名称不对应上游产品版本。
 
 - 同一个 `a14-ci.yml` 编排 Fast / Full 两个 job。Fast 每次 PR / main 更新只执行一遍代码静态门禁、完整 JVM 测试和 debug lint。普通代码修改再构建 develop APK 并运行 fatal lint，省去冗余 debug APK。
-- 工具或 CI 改动时才增加 Python 工具测试、工具契约和 11 项独立缺陷注入；不把 self-detection-only 项当作独立测试。手动、每周和 tag 执行同一组工具门禁。完整 Brutal suite 仍可在本地诊断。
-- Full 使用 `needs: fast`，只在同一提交的 Fast 通过后运行，避免再次执行 JVM 测试、debug lint 和 Python 工具测试。构建、依赖、混淆、CI / 工具改动，以及手动、每周、发布 tag 或 `[full-ci]` 提交触发 Full。
+- Python 测试和源码契约每次 Fast 执行一次，因为它们也验证生产源码、资源、版本和 feature matrix。工具、CI、feature catalog 或 matrix 改动，以及手动、每周和 tag，额外执行 matrix determinism 和 11 项独立缺陷注入；self-detection-only 项保留在本地诊断 suite。
+- Full 使用 `needs: fast`，只在同一提交的 Fast 通过后运行，避免再次执行 JVM 测试、debug lint 和 Python 工具测试。构建、依赖（含 app/lib/framework.jar）、混淆、CI / 工具与 catalog 改动，以及手动、每周、发布 tag 或 `[full-ci]` 提交触发 Full。
 - Full 增加两次禁止 build/configuration cache 的 clean develop 构建、APK 内容和 R8 mapping 对比、develop fatal lint 与必需产物检查。普通 PR 不做两遍 clean 构建。
 - PR 新提交自动取消旧提交的执行；main / tag 的检查正常完成。诊断产物保留 7 天，Full develop APK / mapping 保留 30 天。Fast 失败报告和 Full 构建报告分别保存，不再为重复 verifier 搬运报告。
 - Gradle 下载缓存仍可复用；可重复性构建禁用 Kotlin 增量编译，使用独立 Gradle 进程内编译，确保实际重新编译和混淆。
