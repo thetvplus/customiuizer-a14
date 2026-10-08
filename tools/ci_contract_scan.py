@@ -51,9 +51,9 @@ def action_input_is_true(step: dict, key: str) -> bool:
     return len(values) == 1 and values[0] in ("true", "True", "TRUE")
 
 
-def is_setup_java(spec: str) -> bool:
+def is_root_action(spec: str, repository: str) -> bool:
     parts = spec.rsplit("@", 1)[0].split("/")
-    return (len(parts) >= 2 and [part.lower() for part in parts[:2]] == ["actions", "setup-java"]
+    return (len(parts) >= 2 and "/".join(part.lower() for part in parts[:2]) == repository
             and posixpath.normpath("/".join(parts[2:]) or ".") == ".")
 
 
@@ -82,12 +82,12 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
             spec = spec.strip()
             if not spec.startswith(("./", ".\\")) and not re.fullmatch(r"[0-9a-f]{40}", spec.rsplit("@", 1)[-1]):
                 add("CI_ACTION_PIN", f"action must be pinned to a full commit SHA: {spec}")
-            if is_setup_java(spec):
+            if is_root_action(spec, "actions/setup-java"):
                 if not action_input_is_true(action, "verify-signature"):
                     add("CI_JDK_SIGNATURE", "setup-java must verify the downloaded JDK signature")
                 if not action_input_is_true(action, "force-download"):
                     add("CI_JDK_DOWNLOAD", "setup-java must download the JDK to verify its signature")
-            if spec.lower().startswith("actions/checkout@"):
+            if is_root_action(spec, "actions/checkout"):
                 inputs = action.get("with", {})
                 if not isinstance(inputs, dict):
                     inputs = {}
@@ -138,11 +138,13 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
     events = workflow.get("on", {})
     if isinstance(events, dict):
         push = events.get("push")
-        if isinstance(push, dict) and push.get("branches", []) != [expected_branch]:
+        if "push" in events and (not isinstance(push, dict) or push.get("branches", []) != [expected_branch]):
             add("CI_EXACT_BRANCH", f"push must target only {expected_branch!r}")
         if "full" in path.name.lower() and expected_branch != default_branch and "push" not in events:
             if "schedule" in events or "workflow_dispatch" in events:
                 add("CI_INERT_NONDEFAULT", "non-default full workflow needs a push trigger")
+    elif events == "push" or isinstance(events, list) and "push" in events:
+        add("CI_EXACT_BRANCH", f"push must target only {expected_branch!r}")
     if any(not str(job.get("timeout-minutes", "")).isdigit() for job in workflow["jobs"].values()
            if "steps" in job):
         add("CI_TIMEOUT", "each executable job must have timeout-minutes")

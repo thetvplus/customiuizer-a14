@@ -10,9 +10,13 @@ from pathlib import Path
 
 def select_scope(event_name: str, ref: str, event: dict, paths: list[str]) -> dict[str, bool]:
     periodic = event_name in {"workflow_dispatch", "schedule"} or ref.startswith("refs/tags/r14.")
-    tools_changed = any(path.startswith(("tools/", ".github/")) for path in paths)
+    tools_changed = any(path.startswith((
+        "tools/", ".github/",
+        "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/",
+        "docs/rom-intelligence/A14_PROCESS_",
+    )) for path in paths)
     build_changed = any(
-        path.startswith(("gradle/", "libs/", "gradlew")) or path in {
+        path.startswith(("gradle/", "app/lib/", "gradlew")) or path in {
             "app/build.gradle.kts", "app/proguard-rules.pro", "build.gradle.kts",
             "settings.gradle.kts", "gradle.properties", "local.properties",
         } for path in paths
