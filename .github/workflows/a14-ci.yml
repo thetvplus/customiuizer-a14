@@ -24,6 +24,8 @@ concurrency:
 jobs:
   fast:
     name: Fast CI
+    # Removed branches/tags have no candidate code to validate.
+    if: github.event.deleted != true
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     outputs:
