@@ -48,6 +48,13 @@ class CIWorkflowRegressionTest(unittest.TestCase):
                 self.assertIn("CI_FULL_HISTORY", errors)
                 self.assertIn("CI_CHECKOUT_CREDENTIALS", errors)
 
+    def test_checkout_inputs_follow_the_same_boolean_and_case_rules(self):
+        changed = self.original().replace("persist-credentials: false", "PERSIST-CREDENTIALS: 'False'")
+        changed = changed.replace("fetch-depth:", "FETCH-DEPTH:")
+        self.assertEqual([], self.scan(changed))
+        changed = self.original().replace("persist-credentials: false", "persist-credentials: false\n          PERSIST-CREDENTIALS: true")
+        self.assertIn("CI_CHECKOUT_CREDENTIALS", "\n".join(self.scan(changed)))
+
     def test_disabled_or_missing_jdk_security_is_rejected(self):
         for key, rule in (("force-download", "CI_JDK_DOWNLOAD"), ("verify-signature", "CI_JDK_SIGNATURE")):
             for replacement in (f"{key}: false", "# setting removed"):

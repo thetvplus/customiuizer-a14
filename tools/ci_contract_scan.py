@@ -43,12 +43,16 @@ def line_of(text: str, offset: int) -> int:
     return text[:offset].count("\n") + 1
 
 
-def action_input_is_true(step: dict, key: str) -> bool:
+def action_input(step: dict, key: str) -> str | None:
     inputs = step.get("with", {})
     if not isinstance(inputs, dict) or any(not name.isascii() for name in inputs):
-        return False
+        return None
     values = [value for name, value in inputs.items() if name.lower() == key]
-    return len(values) == 1 and values[0] in ("true", "True", "TRUE")
+    return values[0].strip() if len(values) == 1 and isinstance(values[0], str) else None
+
+
+def action_input_is_true(step: dict, key: str) -> bool:
+    return action_input(step, key) in ("true", "True", "TRUE")
 
 
 def is_root_action(spec: str, repository: str) -> bool:
@@ -88,12 +92,9 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
                 if not action_input_is_true(action, "force-download"):
                     add("CI_JDK_DOWNLOAD", "setup-java must download the JDK to verify its signature")
             if is_root_action(spec, "actions/checkout"):
-                inputs = action.get("with", {})
-                if not isinstance(inputs, dict):
-                    inputs = {}
-                if inputs.get("fetch-depth") != "0":
+                if action_input(action, "fetch-depth") != "0":
                     add("CI_FULL_HISTORY", "checkout must use fetch-depth: 0")
-                if inputs.get("persist-credentials") != "false":
+                if action_input(action, "persist-credentials") not in ("false", "False", "FALSE"):
                     add("CI_CHECKOUT_CREDENTIALS", "checkout must set persist-credentials: false")
                 permissions = job.get("permissions", workflow.get("permissions", {}))
                 if not isinstance(permissions, dict) or permissions.get("contents") != "read":

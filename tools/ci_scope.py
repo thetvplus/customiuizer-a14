@@ -38,7 +38,7 @@ def changed_paths(event_name: str, event: dict, cwd: Path | None = None) -> list
         comparison = f"{before}..{after}"
     else:
         return []
-    output = subprocess.check_output(["git", "diff", "--name-only", "-z", comparison], cwd=cwd)
+    output = subprocess.check_output(["git", "diff", "--no-renames", "--name-only", "-z", comparison], cwd=cwd)
     return output.decode("utf-8").split("\0")[:-1]
 
 

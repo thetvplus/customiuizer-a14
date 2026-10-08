@@ -74,6 +74,30 @@ class CIScopeTest(unittest.TestCase):
             with self.assertRaises(subprocess.CalledProcessError):
                 ci_scope.changed_paths("push", {"before": "a" * 40, "after": "b" * 40})
 
+    def test_renaming_tools_out_of_the_directory_retains_the_original_input(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+
+            def git(*args):
+                return subprocess.check_output(["git", "-c", "user.name=CI Test", "-c",
+                                                "user.email=ci-test@example.invalid", *args], cwd=root).decode().strip()
+
+            git("init", "-q")
+            (root / "tools").mkdir()
+            (root / "tools/gate.py").write_text("fixture", encoding="utf-8")
+            git("add", ".")
+            git("commit", "-m", "fixture")
+            base = git("rev-parse", "HEAD")
+            (root / "docs").mkdir()
+            git("mv", "tools/gate.py", "docs/gate.py")
+            git("commit", "-m", "rename")
+            head = git("rev-parse", "HEAD")
+            paths = ci_scope.changed_paths("push", {"before": base, "after": head}, root)
+            self.assertIn("tools/gate.py", paths)
+            self.assertIn("docs/gate.py", paths)
+            self.assertEqual({"tools": True, "full": True},
+                             ci_scope.select_scope("push", "refs/heads/main", {}, paths))
+
     def test_full_reuses_fast_code_checks_at_the_same_revision(self):
         path = Path(__file__).resolve().parents[2] / ".github/workflows/a14-ci.yml"
         workflow = ci_contract_scan.load_workflow(path.read_text(encoding="utf-8"))
