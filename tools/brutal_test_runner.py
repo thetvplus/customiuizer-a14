@@ -1230,7 +1230,9 @@ def main(argv=None) -> int:
     sub.add_parser("hermeticity")
     sub.add_parser("determinism")
     m = sub.add_parser("mutate")
-    m.add_argument("--case", action="append")
+    selection = m.add_mutually_exclusive_group()
+    selection.add_argument("--case", action="append")
+    selection.add_argument("--required-only", action="store_true", help="run all required independent gates, without self-detection-only cases")
     m.add_argument("--ignore-minimum", action="store_true", help="do not enforce minimum_independent_kills when running a subset")
     sub.add_parser("all")
     args = p.parse_args(argv)
@@ -1263,7 +1265,7 @@ def main(argv=None) -> int:
     if args.command == "determinism":
         return determinism(root, cfg, args.timeout)
     if args.command == "mutate":
-        selected = set(args.case or [])
+        selected = set(cfg["required_independent_mutations"] if args.required_only else (args.case or []))
         return mutation_test(root, cfg, args.timeout, selected or None, ignore_minimum=args.ignore_minimum)
 
     code = hermeticity(root, cfg, args.timeout)

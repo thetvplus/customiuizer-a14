@@ -4,7 +4,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SETTINGS = REPO_ROOT / "settings.gradle.kts"
-CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+BUILD = REPO_ROOT / "build.gradle.kts"
+WORKFLOWS = REPO_ROOT / ".github" / "workflows"
 
 CHINA_HOSTS = (
     "maven.aliyun.com",
@@ -46,13 +47,26 @@ class RepositoryPolicyTest(unittest.TestCase):
     def setUp(self) -> None:
         self.assertTrue(SETTINGS.is_file(), f"{SETTINGS} is missing")
         self.settings_text = SETTINGS.read_text(encoding="utf-8")
-        self.ci_text = CI.read_text(encoding="utf-8") if CI.is_file() else ""
 
     def test_ci_does_not_enable_china_mirrors(self):
-        if not self.ci_text:
-            return
-        self.assertNotIn("useChinaMirrors", self.ci_text,
-                         "CI workflow must not pass -PuseChinaMirrors")
+        for workflow in sorted([*WORKFLOWS.glob("*.yml"), *WORKFLOWS.glob("*.yaml")]):
+            with self.subTest(workflow=workflow.name):
+                self.assertNotIn("useChinaMirrors", workflow.read_text(encoding="utf-8"),
+                                 "CI workflow must not pass -PuseChinaMirrors")
+
+    def test_buildscript_respects_the_same_mirror_selection(self):
+        buildscript = find_block_after(BUILD.read_text(encoding="utf-8"), "buildscript")
+        mirror_repos = find_block_after(buildscript, "if (useChinaMirrors)")
+        default_repos = find_block_after(buildscript, "} else {")
+        self.assertTrue(mirror_repos, "buildscript classpath must honor useChinaMirrors")
+        self.assertTrue(default_repos, "official buildscript repositories must remain the default")
+        for host in CHINA_HOSTS:
+            self.assertIn(host, mirror_repos)
+            self.assertNotIn(host, default_repos)
+        for repo in ("google()", "mavenCentral()"):
+            self.assertIn(repo, default_repos)
+            self.assertNotIn(repo, mirror_repos)
+        self.assertGreaterEqual(mirror_repos.count("content {"), len(CHINA_HOSTS))
 
     def test_china_mirrors_are_conditional(self):
         self.assertIn("useChinaMirrors", self.settings_text,

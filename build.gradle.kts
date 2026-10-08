@@ -1,9 +1,28 @@
 import org.gradle.buildconfiguration.tasks.UpdateDaemonJvm
 
 buildscript {
+    val useChinaMirrors = project.providers.gradleProperty("useChinaMirrors")
+        .map { it == "true" }
+        .getOrElse(false)
+
     repositories {
-        google()
-        mavenCentral()
+        if (useChinaMirrors) {
+            // Match the plugin repositories in settings.gradle.kts.
+            maven("https://maven.aliyun.com/repository/gradle-plugin/") {
+                content {
+                    includeGroupByRegex("""com\.android\..*""")
+                    includeGroupByRegex("""org\.jetbrains\..*""")
+                }
+            }
+            maven("https://mirrors.huaweicloud.com/repository/maven/") {
+                content {
+                    includeGroupByRegex(""".*""")
+                }
+            }
+        } else {
+            google()
+            mavenCentral()
+        }
     }
     dependencies {
         // AGP's built-in Kotlin otherwise resolves KGP 2.2.10 (CVE-2026-53914).
