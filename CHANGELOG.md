@@ -10,6 +10,7 @@ For HyperOS 1 / Android 14, versionCode 228.
 - Let the native Control Center icon manager own custom temperature/text tint, avoiding conflicting wallpaper callbacks and redundant listeners.
 - Coordinate Fast and Full CI in one workflow: compile, JVM tests and lint run once; additional tool consistency and mutation checks follow relevant changes, while full builds retain APK and R8 mapping reproducibility checks.
 - Include build-validated AppCompat 1.8.0, Commons Lang 3.21.0 and build-tool security updates. Preserve Android 14, libxposed API 101 and JVM 17 baselines.
+- Replace the bundled QR image with lossless WebP, preserving every decoded pixel and its drawable ID. Retain R8 optimization, dynamic signal resources and required Hook/JNI keep rules.
 
 ## r14.22.3 — 2026-10-05
 

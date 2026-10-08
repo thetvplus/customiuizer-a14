@@ -4,8 +4,8 @@
 
 CustoMIUIzer A14 is a system UI and interaction customization module maintained for **HyperOS 1 / Android 14 (SDK 34)**. It has an independent package and release line and is not an official upstream release.
 
-- Current version: `r14.22.5` (versionCode 228, local officially signed build)
-- Update notes: resource error handling, Control Center text tint and CI efficiency
+- Current version: `r14.22.5` (versionCode 228, officially signed release)
+- Update notes: resource error handling, Control Center text tint, CI efficiency and lossless APK size reduction
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
 - Source: <https://github.com/thetvplus/customiuizer-a14>
@@ -60,7 +60,7 @@ See [DEVELOPMENT.md](docs/DEVELOPMENT.md) and [RELEASE.md](docs/RELEASE.md) for 
 
 If this project is useful to you, you can support its continued development and maintenance via WeChat or [PayPal](https://paypal.me/Jinjitv).
 
-<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.png" alt="WeChat donation code" width="320">
+<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.webp" alt="WeChat donation code" width="320">
 
 - Repository: <https://github.com/thetvplus/customiuizer-a14>
 
