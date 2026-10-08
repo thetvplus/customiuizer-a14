@@ -8,24 +8,26 @@
 | Python 工具 | `python -m unittest discover -s tools/tests -p "test_*.py"` | 工具、ROM matrix、CI 可移植性 |
 | Android JVM | `testDebugUnitTest` | 行为、契约、生命周期、回归 |
 | Brutal | `tools/brutal_test_runner.py` | 独立 kill：CI、catalog、fatal、observer、matrix |
-| Full CI | GitHub Actions `a14-full-ci.yml` | 双 develop 构建、APK semantic diff、lintVital |
+| Full CI | GitHub Actions `a14-ci.yml` 的 Full CI job | 双 develop 构建、APK semantic diff、lintVital |
 
 ## CI 的职责与证据
 
 `Fast CI` 和 `Full CI` 是本仓库维护的 GitHub Actions 工作流，名称不对应上游产品版本。
 
-- Fast CI 每次 PR / main 更新运行 Python 工具测试、治理检查、hermeticity、matrix determinism、完整 JVM 测试与 debug lint，再构建 debug / develop。工具测试和治理命令在 hermeticity 内只执行一次，失败日志保留；两种 APK 在同一次 Gradle 调用中构建。
-- Full CI 在构建、依赖、混淆规则或 CI 工具的 PR，以及手动、每周、发布 tag 和 `[full-ci]` main 提交运行。它增加独立缺陷注入、两次禁止 build/configuration cache 的 clean develop 构建、APK 内容与 R8 mapping 对比、develop fatal lint 和必需产物检查。
-- Full CI 的 clean 会清除 JVM / lint 报告，因此先将报告保存在 runner 临时目录；诊断产物保留 7 天，develop APK / mapping 保留 30 天。Fast CI 只在失败时上传诊断。
-- Gradle 下载缓存可复用；两次可重复性构建禁用 Kotlin 增量编译，并使用进程内编译随独立 Gradle 进程退出，必须实际重新编译和混淆，不能用缓存命中充当独立构建。
+- 同一个 `a14-ci.yml` 编排 Fast / Full 两个 job。Fast 每次 PR / main 更新只执行一遍代码静态门禁、完整 JVM 测试和 debug lint。普通代码修改再构建 develop APK 并运行 fatal lint，省去冗余 debug APK。
+- 工具或 CI 改动时才增加 Python 工具测试、工具契约和 11 项独立缺陷注入；不把 self-detection-only 项当作独立测试。手动、每周和 tag 执行同一组工具门禁。完整 Brutal suite 仍可在本地诊断。
+- Full 使用 `needs: fast`，只在同一提交的 Fast 通过后运行，避免再次执行 JVM 测试、debug lint 和 Python 工具测试。构建、依赖、混淆、CI / 工具改动，以及手动、每周、发布 tag 或 `[full-ci]` 提交触发 Full。
+- Full 增加两次禁止 build/configuration cache 的 clean develop 构建、APK 内容和 R8 mapping 对比、develop fatal lint 与必需产物检查。普通 PR 不做两遍 clean 构建。
+- PR 新提交自动取消旧提交的执行；main / tag 的检查正常完成。诊断产物保留 7 天，Full develop APK / mapping 保留 30 天。Fast 失败报告和 Full 构建报告分别保存，不再为重复 verifier 搬运报告。
+- Gradle 下载缓存仍可复用；可重复性构建禁用 Kotlin 增量编译，使用独立 Gradle 进程内编译，确保实际重新编译和混淆。
 
 Brutal suite 当前要求 11 项独立缺陷注入被真实门禁拦截。配置中的其余覆盖状态需按 `ACTIVE_INDEPENDENT` / `BLOCKED_NO_INDEPENDENT_GATE` / `MUTATOR_STALE` 解读，不能把 self-detection 或未覆盖项算作通过的运行行为验证。
 
 ## 依赖升级
 
 Actions 使用完整 commit SHA，并明确校验 JDK 下载签名；Gradle wrapper 保留发行包 SHA-256。
-两项 CI 的 setup-java 同时要求 `force-download: true` 和 `verify-signature: true`。预装 JDK 的校验历史不可知，仅设置签名参数会复用 tool cache 而不校验；契约检查逐个 setup-java 步骤的直接 `with` 输入，按 runner 的大小写规则识别输入及重复键，并识别 `/.` 等等价仓库根路径。环境变量、脚本文本、嵌套键或其它步骤的参数不能充当校验。此安全检查会增加少量网络工作。
-契约检查识别每个 `jobs.<id>.steps` 序列中的全部步骤，不依赖 `name`、`id`、`if` 等键的顺序；脚本块中的示例、环境变量及 Action 输入中的同名键不视为工作流。Action 名称按 GitHub 的大小写规则识别，外部 `jobs.<id>.uses` 复用工作流也须固定完整 SHA。工作流整体缩进或文档标记不影响检查。为保持标准库检查可验证，工作流须采用块式 job/步骤映射及简单行内键名，`uses` 引用完整写在一行内，不使用步骤别名、映射合并、显式/带标签/转义键名或内联步骤序列；无法识别根 `jobs` 及其它不支持的格式会报错。重复 `uses` 或重复 Action `with` 映射不能绕过检查。
+每个 runner 的 setup-java 保留 `force-download: true` 和 `verify-signature: true`，确保签名验证覆盖实际下载。它们是下载参数，不再添加单独的下载校验 job。
+工作流契约通过固定版本的 PyYAML 标准解析器读取实际 Action / 输入，支持合法 YAML 引号、别名、内联及多行写法，移除自写格式限制。安全断言继续检查 JDK 输入、Action 完整 SHA、无正式签名配置、SDK 对齐及完整构建的独立性。本地工具测试前安装 `python -m pip install -r tools/requirements.txt`；该依赖只用于主机工具，不进入 APK。
 CI 安装的 SDK build tools 必须与 Gradle 的显式 `buildToolsVersion` 相同；当前固定 36.0.0。整数 `compileSdk = 37` 实际选择 `android-37.0`，CI 必须安装同一平台，不能只匹配大版本号。安装脚本和构建选择漂移会被契约检查拒绝。
 Dependabot 每周提交 Gradle 依赖候选 PR，最多同时 3 个；编译器、libxposed ABI 和 DexKit 原生引擎只自动提出补丁候选。每个升级仍需审查 diff、官方变更和完整构建结果。
 AGP 补丁需检查 debug / develop、R8 mapping、无缓存可重复性和 lint；运行库的升级还需目标 HyperOS 1 / Android 14 验证。编译与 JVM 通过不代替实机兼容性结论。

@@ -1,4 +1,4 @@
-name: A14 Full CI
+name: A14 CI
 
 on:
   push:
@@ -9,16 +9,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/**'
-      - '.github/dependabot.yml'
-      - 'gradle/**'
-      - 'gradlew*'
-      - '*.gradle.kts'
-      - 'gradle.properties'
-      - 'app/build.gradle.kts'
-      - 'app/proguard-rules.pro'
-      - 'tools/**'
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
@@ -26,26 +16,92 @@ on:
 permissions:
   contents: read
 
+# New PR commits replace obsolete runs. Main and tag runs finish normally.
 concurrency:
-  group: a14-full-${{ github.ref }}
-  cancel-in-progress: false
+  group: a14-ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  full:
+  fast:
+    name: Fast CI
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    if: >-
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'pull_request' ||
-      (
-        github.event_name == 'push' &&
-        (
-          startsWith(github.ref, 'refs/tags/r14.') ||
-          contains(github.event.head_commit.message || '', '[full-ci]')
-        )
-      )
+    timeout-minutes: 45
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          force-download: true
+          verify-signature: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Select additional checks
+        id: scope
+        run: python tools/ci_scope.py
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install pinned Android SDK packages
+        run: bash tools/ci_install_android_sdk.sh
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-cleanup: on-success
+
+      - name: Install CI parser
+        if: steps.scope.outputs.tools == 'true'
+        run: python -m pip install --disable-pip-version-check -r tools/requirements.txt
+
+      # Python tests and tool contracts execute once, only for relevant changes.
+      - name: Tool tests and contracts
+        if: steps.scope.outputs.tools == 'true'
+        run: |
+          python tools/check_ci_portability.py
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json hermeticity
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json mutate --required-only
+
+      - name: Code, JVM tests and lint
+        run: python tools/verify.py full
+
+      - name: Develop build and fatal lint
+        if: steps.scope.outputs.full != 'true'
+        run: ./gradlew --no-daemon :app:assembleDevelop :app:lintVitalDevelop
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fast-ci-diagnostics
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  full:
+    name: Full CI
+    needs: fast
+    if: needs.fast.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,31 +136,9 @@ jobs:
         with:
           cache-cleanup: on-success
 
-      - name: CI portability
-        run: python tools/check_ci_portability.py
-
-      # Run the Python/governance commands only inside their hermeticity gate.
-      # Independent mutations verify that the gates actually reject defects.
-      - name: Python, governance and independent mutation gates
-        run: python tools/brutal_test_runner.py --config tools/brutal_test_config.json all
-
       - name: Tag release metadata
         if: startsWith(github.ref, 'refs/tags/r14.')
         run: python tools/check_release_metadata.py --require-tag
-
-      - name: Full machine verifier
-        run: python tools/verify.py full
-
-      - name: Preserve verifier reports before clean builds
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p "$RUNNER_TEMP/a14-ci-reports"
-          for directory in app/build/reports app/build/test-results; do
-            if [ -d "$directory" ]; then
-              cp -R "$directory" "$RUNNER_TEMP/a14-ci-reports/"
-            fi
-          done
 
       # Neither build may restore compiled outputs from the Gradle build cache.
       # Separate Gradle processes also avoid sharing compiler state.
@@ -149,7 +183,6 @@ jobs:
         with:
           name: full-ci-diagnostics
           path: |
-            ${{ runner.temp }}/a14-ci-reports/
             ${{ runner.temp }}/apk-semantic-diff.json
             ${{ runner.temp }}/first-mapping.txt
             app/build/reports/

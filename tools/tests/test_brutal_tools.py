@@ -15,262 +15,153 @@ from tools import source_hazard_scan
 
 
 class CIWorkflowRegressionTest(unittest.TestCase):
-    WORKFLOWS = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+    WORKFLOW = Path(__file__).resolve().parents[2] / ".github/workflows/a14-ci.yml"
 
-    def scan(self, name: str, text: str) -> list[str]:
+    def scan(self, text: str) -> list[str]:
         with tempfile.TemporaryDirectory() as td:
-            path = Path(td) / name
+            path = Path(td) / "a14-ci.yml"
             path.write_text(text, encoding="utf-8")
             return ci_contract_scan.scan_workflow(path, "main", "main")
 
-    def test_real_workflows_pass(self):
-        for name in ("a14-fast-ci.yml", "a14-full-ci.yml"):
-            with self.subTest(name=name):
-                self.assertEqual([], self.scan(name, (self.WORKFLOWS / name).read_text(encoding="utf-8")))
+    def original(self):
+        return self.WORKFLOW.read_text(encoding="utf-8")
 
-    def test_disabling_jdk_verification_is_rejected(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for replacement in ("verify-signature: false", "# signature setting removed"):
-            with self.subTest(replacement=replacement):
-                errors = self.scan(name, original.replace("verify-signature: true", replacement))
-                self.assertIn("CI_JDK_SIGNATURE", "\n".join(errors))
+    def test_real_workflow_passes(self):
+        self.assertEqual([], self.scan(self.original()))
 
-    def test_cached_jdk_without_download_is_rejected(self):
-        for name in ("a14-fast-ci.yml", "a14-full-ci.yml"):
-            original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-            for replacement in ("force-download: false", "# download setting removed"):
-                with self.subTest(name=name, replacement=replacement):
-                    changed = original.replace("force-download: true", replacement)
-                    self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(name, changed)))
-
-    def test_download_setting_in_another_step_does_not_satisfy_jdk_gate(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        changed = original.replace("force-download: true", "# download setting removed")
-        changed += "\n      - name: Unrelated step\n        with:\n          force-download: true\n"
-        self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(name, changed)))
-
-    def test_jdk_security_settings_outside_action_inputs_are_rejected(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+    def test_disabled_or_missing_jdk_security_is_rejected(self):
         for key, rule in (("force-download", "CI_JDK_DOWNLOAD"), ("verify-signature", "CI_JDK_SIGNATURE")):
-            for misplaced in (
-                f"        env:\n          {key}: true",
-                f"        env:\n          NOTE: |\n            {key}: true",
-                f"          unrelated:\n            {key}: true",
-                f"        env:\n          NOTE: |\n            with:\n              {key}: true",
-            ):
-                with self.subTest(key=key, misplaced=misplaced):
-                    changed = original.replace(f"          {key}: true", misplaced)
-                    self.assertIn(rule, "\n".join(self.scan(name, changed)))
+            for replacement in (f"{key}: false", "# setting removed"):
+                with self.subTest(key=key, replacement=replacement):
+                    self.assertIn(rule, "\n".join(self.scan(self.original().replace(f"{key}: true", replacement))))
 
-    def test_jdk_gate_checks_every_legal_first_step_key(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        prefix, rest = original.split("      - name: Set up JDK 25\n", 1)
-        prefix = prefix.split("    steps:\n", 1)[0] + "    steps:\n"
-        for first_key in ("id: java", "if: always()", "timeout-minutes: 5",
-                          "continue-on-error: false", "env:\n          NOTE: value"):
+    def test_other_step_or_env_does_not_satisfy_jdk_gate(self):
+        changed = self.original().replace("force-download: true", "# download removed")
+        changed += "\n      - name: Unrelated step\n        with:\n          force-download: true\n"
+        self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(changed)))
+        changed = self.original().replace("          force-download: true", "          unrelated:\n            force-download: true")
+        self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(changed)))
+        step = {"env": {"force-download": "true", "verify-signature": "true"}}
+        self.assertFalse(ci_contract_scan.action_input_is_true(step, "force-download"))
+        step = {"with": {"NOTE": "force-download: true"}}
+        self.assertFalse(ci_contract_scan.action_input_is_true(step, "force-download"))
+
+    def test_every_first_step_key_preserves_jdk_gate(self):
+        for first_key in ("id: java", "if: always()", "timeout-minutes: 5", "continue-on-error: false", "env:\n          NOTE: value"):
             with self.subTest(first_key=first_key):
-                changed = prefix + f"      - {first_key}\n        name: Set up JDK 25\n" + rest
-                changed = changed.replace("force-download: true", "force-download: false")
-                changed = changed.replace("verify-signature: true", "verify-signature: false")
-                errors = "\n".join(self.scan(name, changed))
+                changed = self.original().replace("      - name: Set up JDK 25\n", f"      - {first_key}\n        name: Set up JDK 25\n")
+                changed = changed.replace("force-download: true", "force-download: false").replace("verify-signature: true", "verify-signature: false")
+                errors = "\n".join(self.scan(changed))
                 self.assertIn("CI_JDK_DOWNLOAD", errors)
                 self.assertIn("CI_JDK_SIGNATURE", errors)
 
-    def test_script_text_is_not_an_action_step(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        changed = original + (
-            "\n      - name: Print an example\n        run: |\n"
-            "          cat <<'EXAMPLE'\n          steps:\n"
-            "            - id: example\n              uses: actions/setup-java@example\n"
-            "          EXAMPLE\n"
-        )
-        self.assertEqual([], self.scan(name, changed))
-        self.assertEqual(len(ci_contract_scan.workflow_steps(original)) + 1,
-                         len(ci_contract_scan.workflow_steps(changed)))
-
-    def test_step_extraction_stops_at_each_job_boundary(self):
-        text = ("jobs:\n  first:\n    steps:\n      - id: java\n"
-                "        uses: actions/setup-java@example\n  second:\n"
-                "    env:\n      force-download: true\n    steps:\n"
-                "      - if: always()\n        run: echo checked\n")
-        steps = ci_contract_scan.workflow_steps(text)
-        self.assertEqual(2, len(steps))
-        self.assertNotIn("second:", steps[0][1])
-        self.assertFalse(ci_contract_scan.action_input_is_true(steps[0][1], "force-download"))
-
-    def test_quoted_mapping_keys_do_not_bypass_jdk_gate(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for quote in ("'", '"'):
-            with self.subTest(quote=quote):
-                changed = original
-                for key in ("steps", "uses", "with", "force-download", "verify-signature"):
-                    changed = changed.replace(key + ":", quote + key + quote + ":")
-                self.assertEqual([], self.scan(name, changed))
-                errors = "\n".join(self.scan(name, changed.replace("true", "false")))
-                self.assertIn("CI_JDK_DOWNLOAD", errors)
-                self.assertIn("CI_JDK_SIGNATURE", errors)
-
-    def test_unsupported_step_aliases_and_flow_sequences_fail_closed(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for changed in (
-            original.replace("jobs:", "jobs: {}"),
-            original.replace("    steps:", "    steps: []"),
-            original.replace("      - name: Set up JDK 25", "      - *java"),
-            original.replace("        uses: actions/setup-java@", "        <<: *java\n        uses: actions/setup-java@"),
-            original.replace("        uses: actions/setup-java@", r'        "us\u0065s": actions/setup-java@'),
+    def test_script_and_quoted_scalar_contents_are_not_structure(self):
+        for snippet in (
+            "env:\n  NOTE: 'first\n    ? harmless text\n    last'\n",
+            "env:\n  NOTE: |\n    steps:\n      - uses: actions/setup-java@main\n",
         ):
-            with self.subTest(changed=changed):
-                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
+            with self.subTest(snippet=snippet):
+                self.assertEqual([], self.scan(snippet + self.original()))
+        changed = self.original() + "\n      - run: |\n          cat <<'EXAMPLE'\n          steps:\n            - uses: actions/setup-java@main\n          EXAMPLE\n"
+        self.assertEqual([], self.scan(changed))
 
-    def test_external_reusable_workflow_jobs_require_pinned_versions(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for key in ("uses", "'uses'", '"uses"'):
+    def test_step_boundaries_do_not_leak_inputs_from_other_jobs(self):
+        data = ci_contract_scan.load_workflow("jobs:\n  first:\n    steps:\n      - uses: actions/setup-java@main\n  second:\n    env:\n      force-download: true\n    steps:\n      - run: echo checked\n")
+        first = data["jobs"]["first"]["steps"][0]
+        self.assertFalse(ci_contract_scan.action_input_is_true(first, "force-download"))
+        self.assertEqual(1, len(data["jobs"]["second"]["steps"]))
+
+    def test_standard_yaml_keys_preserve_security_semantics(self):
+        for key in ("'uses':", '\"us\\u0065s\":', "? uses\n        :", "!!str uses:"):
             with self.subTest(key=key):
-                job = f"\n  shared:\n    {key}: owner/repo/.github/workflows/build.yml@main\n"
-                self.assertIn("CI_ACTION_PIN", "\n".join(self.scan(name, original + job)))
-                self.assertEqual([], self.scan(name, original + job.replace("@main", "@" + "a" * 40)))
-        local = "\n  shared:\n    uses: ./.github/workflows/build.yml\n"
-        self.assertEqual([], self.scan(name, original + local))
-
-    def test_jdk_action_names_are_case_insensitive(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for spelling in ("Actions/Setup-Java", "ACTIONS/SETUP-JAVA"):
-            with self.subTest(spelling=spelling):
-                changed = original.replace("actions/setup-java", spelling)
-                self.assertEqual([], self.scan(name, changed))
+                changed = self.original().replace("        uses: actions/setup-java@", f"        {key} actions/setup-java@")
+                self.assertEqual([], self.scan(changed))
                 changed = changed.replace("force-download: true", "force-download: false")
-                changed = changed.replace("verify-signature: true", "verify-signature: false")
-                errors = "\n".join(self.scan(name, changed))
-                self.assertIn("CI_JDK_DOWNLOAD", errors)
-                self.assertIn("CI_JDK_SIGNATURE", errors)
+                self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(changed)))
 
-    def test_with_can_be_the_first_step_key(self):
-        text = "      - with:\n          force-download: true\n          verify-signature: true\n        uses: actions/setup-java@example\n"
-        self.assertTrue(ci_contract_scan.action_input_is_true(text, "force-download"))
-        self.assertTrue(ci_contract_scan.action_input_is_true(text, "verify-signature"))
+    def test_yaml_alias_steps_preserve_security_semantics(self):
+        changed = self.original().replace("      - name: Set up JDK 25", "      - &java\n        name: Set up JDK 25", 1)
+        changed += "\n      - *java\n"
+        self.assertEqual([], self.scan(changed))
+        self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(changed.replace("force-download: true", "force-download: false"))))
 
-    def test_inline_job_mappings_fail_closed(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for flow in ("{ uses: owner/repo/.github/workflows/build.yml@main }",
-                     "{ steps: [{uses: actions/setup-java@main}] }"):
+    def test_reusable_and_inline_jobs_require_full_action_pins(self):
+        for flow in ("{ uses: owner/repo/.github/workflows/build.yml@main }", "{ steps: [{uses: actions/setup-java@main}] }"):
             with self.subTest(flow=flow):
-                changed = original + f"\n  shared: {flow}\n"
-                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
+                self.assertIn("CI_ACTION_PIN", "\n".join(self.scan(self.original() + f"\n  shared: {flow}\n")))
+        pinned = "\n  shared:\n    uses: owner/repo/.github/workflows/build.yml@" + "a" * 40 + "\n"
+        self.assertEqual([], self.scan(self.original() + pinned))
+        self.assertEqual([], self.scan(self.original() + "\n  shared:\n    uses: ./.github/workflows/build.yml\n"))
 
-    def test_multiline_action_values_fail_closed(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for value in ("\n          actions/setup-java@main", "'actions/setup-java@main\n          '",
-                      '"actions/setup-java@main\n          "', ">\n          actions/setup-java@main"):
+    def test_multiline_actions_are_parsed_and_checked(self):
+        for value in ("\n          actions/setup-java@main", "'actions/setup-java@main\n          '", '\"actions/setup-java@main\n          \"', ">\n          actions/setup-java@main"):
             with self.subTest(value=value):
-                changed = original + f"\n      - uses: {value}\n        with:\n          force-download: false\n"
-                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
-        shared = "\n  shared:\n    uses:\n      owner/repo/.github/workflows/build.yml@main\n"
-        self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, original + shared)))
-
-    def test_steps_and_jobs_in_unrelated_mappings_are_not_workflow_structure(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for changed in (
-            "env:\n  steps: production\n  jobs: production\n" + original,
-            original.replace("    steps:\n", "    env:\n      steps: production\n      jobs: production\n    steps:\n"),
-            original + "\n      - run: echo checked\n        env:\n          steps: production\n          jobs: production\n",
-            original.replace("          distribution: zulu", "          steps: production\n          jobs: production\n          distribution: zulu"),
-        ):
-            with self.subTest(changed=changed):
-                self.assertEqual([], self.scan(name, changed))
-
-    def test_duplicate_action_input_mappings_fail_jdk_gate(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        changed = original.replace("          force-download: true", "          force-download: true\n        with:\n          force-download: false\n          verify-signature: false")
-        errors = "\n".join(self.scan(name, changed))
-        self.assertIn("CI_JDK_DOWNLOAD", errors)
-        self.assertIn("CI_JDK_SIGNATURE", errors)
-
-    def test_explicit_and_tagged_mapping_keys_fail_closed(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for key in ("? uses\n        :", "!!str uses:"):
-            with self.subTest(key=key):
-                changed = original.replace("        uses: actions/setup-java@", f"        {key} actions/setup-java@")
-                self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, changed)))
-        shared = "\n  shared:\n    !!str uses: owner/repo/.github/workflows/build.yml@main\n"
-        self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(name, original + shared)))
-
-    def test_indented_root_with_document_markers_preserves_action_checks(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for indent in ("  ", "    "):
-            with self.subTest(indent=indent):
-                changed = "---\n" + "\n".join(indent + line if line else line for line in original.splitlines()) + "\n...\n"
-                self.assertEqual([], self.scan(name, changed))
-                changed = changed.replace("force-download: true", "force-download: false")
-                changed = changed.replace("verify-signature: true", "verify-signature: false")
-                errors = "\n".join(self.scan(name, changed))
+                changed = self.original() + f"\n      - uses: {value}\n        with:\n          force-download: false\n"
+                errors = "\n".join(self.scan(changed))
+                self.assertIn("CI_ACTION_PIN", errors)
                 self.assertIn("CI_JDK_DOWNLOAD", errors)
-                self.assertIn("CI_JDK_SIGNATURE", errors)
 
-    def test_action_input_case_and_duplicates_follow_runner_semantics(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        uppercase = original.replace("force-download:", "FORCE-DOWNLOAD:").replace("verify-signature:", "VERIFY-SIGNATURE:")
-        self.assertEqual([], self.scan(name, uppercase))
-        changed = original.replace("          force-download: true", "          force-download: true\n          FORCE-DOWNLOAD: false")
-        changed = changed.replace("          verify-signature: true", "          verify-signature: true\n          VERIFY-SIGNATURE: false")
-        errors = "\n".join(self.scan(name, changed))
-        self.assertIn("CI_JDK_DOWNLOAD", errors)
-        self.assertIn("CI_JDK_SIGNATURE", errors)
+    def test_duplicate_mappings_are_rejected(self):
+        changed = self.original().replace("          force-download: true", "          force-download: true\n        with:\n          force-download: false\n          verify-signature: false")
+        self.assertIn("CI_STEP_FORMAT", "\n".join(self.scan(changed)))
 
-    def test_root_equivalent_setup_java_paths_require_security_inputs(self):
-        name = "a14-fast-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for path in (".", "./", "./.", "subdir/.."):
-            with self.subTest(path=path):
-                changed = original.replace("actions/setup-java@", f"actions/setup-java/{path}@")
-                self.assertEqual([], self.scan(name, changed))
-                changed = changed.replace("force-download: true", "force-download: false")
-                changed = changed.replace("verify-signature: true", "verify-signature: false")
-                errors = "\n".join(self.scan(name, changed))
-                self.assertIn("CI_JDK_DOWNLOAD", errors)
-                self.assertIn("CI_JDK_SIGNATURE", errors)
+    def test_duplicate_case_tagged_and_aliased_inputs_cannot_shadow_flags(self):
+        for alias in ("VERIFY-SIGNATURE", "!!str VERIFY-SIGNATURE", "&signature VERIFY-SIGNATURE", "*signature"):
+            with self.subTest(alias=alias):
+                changed = ("env:\n  INPUT_NAME: &signature VERIFY-SIGNATURE\n" if alias == "*signature" else "") + self.original()
+                changed = changed.replace("          verify-signature: true", f"          verify-signature: true\n          {alias}: false", 1)
+                self.assertIn("CI_JDK_SIGNATURE", "\n".join(self.scan(changed)))
+        changed = self.original().replace("          force-download: true", "          force-download: true\n          FORCE-DOWNLOAD: false")
+        self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(changed)))
 
-    def test_either_cached_reproducibility_build_is_rejected(self):
-        name = "a14-full-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        for flag in (
-            "--no-daemon", "--no-build-cache", "--no-configuration-cache",
-            "-Pkotlin.compiler.execution.strategy=in-process", "-Pkotlin.incremental=false",
-        ):
+    def test_true_values_follow_action_boolean_parser(self):
+        for value in ("true", "True", "TRUE", "'true'", '\"true\"'):
+            with self.subTest(value=value):
+                changed = self.original().replace("force-download: true", f"force-download: {value}").replace("verify-signature: true", f"verify-signature: {value}")
+                self.assertEqual([], self.scan(changed))
+        for value in ("yes", "1", "${{ true }}", "tRuE"):
+            with self.subTest(value=value):
+                self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(self.original().replace("force-download: true", f"force-download: '{value}'"))))
+
+    def test_case_and_root_equivalent_action_paths_preserve_security(self):
+        for name in ("Actions/Setup-Java", "ACTIONS/SETUP-JAVA", "actions/setup-java/.", "actions/setup-java/./", "actions/setup-java/subdir/.."):
+            with self.subTest(name=name):
+                changed = self.original().replace("actions/setup-java@", f"{name}@")
+                self.assertEqual([], self.scan(changed))
+                self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(changed.replace("force-download: true", "force-download: false"))))
+        changed = self.original().replace("force-download:", "FORCE-DOWNLOAD:").replace("verify-signature:", "VERIFY-SIGNATURE:")
+        self.assertEqual([], self.scan(changed))
+
+    def test_non_ascii_inputs_cannot_shadow_flags(self):
+        changed = self.original().replace("          verify-signature: true", "          verify-signature: true\n          verify-ſignature: false")
+        self.assertIn("CI_JDK_SIGNATURE", "\n".join(self.scan(changed)))
+
+    def test_indented_documents_preserve_security(self):
+        changed = "---\n" + "\n".join("  " + line if line else line for line in self.original().splitlines()) + "\n...\n"
+        self.assertEqual([], self.scan(changed))
+        self.assertIn("CI_JDK_DOWNLOAD", "\n".join(self.scan(changed.replace("force-download: true", "force-download: false"))))
+
+    def test_unrelated_mapping_keys_are_not_jobs_or_steps(self):
+        changed = "env:\n  steps: production\n  jobs: production\n" + self.original()
+        changed += "\n      - run: echo checked\n        env:\n          steps: production\n          jobs: production\n"
+        self.assertEqual([], self.scan(changed))
+
+    def test_either_cached_repro_build_is_rejected(self):
+        for flag in ("--no-daemon", "--no-build-cache", "--no-configuration-cache", "-Pkotlin.compiler.execution.strategy=in-process", "-Pkotlin.incremental=false"):
             for occurrence in (0, 1):
                 with self.subTest(flag=flag, occurrence=occurrence):
-                    lines = original.splitlines()
+                    lines = self.original().splitlines()
                     builds = [i for i, line in enumerate(lines) if "clean :app:assembleDevelop" in line]
                     lines[builds[occurrence]] = lines[builds[occurrence]].replace(flag, "")
-                    errors = self.scan(name, "\n".join(lines) + "\n")
-                    self.assertIn("CI_REPRO_CACHE", "\n".join(errors))
+                    self.assertIn("CI_REPRO_CACHE", "\n".join(self.scan("\n".join(lines) + "\n")))
 
     def test_missing_mapping_comparison_is_rejected(self):
-        name = "a14-full-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        changed = "\n".join(line for line in original.splitlines() if not line.strip().startswith("cmp ")) + "\n"
-        self.assertIn("CI_REPRO_MAPPING", "\n".join(self.scan(name, changed)))
+        changed = "\n".join(line for line in self.original().splitlines() if not line.strip().startswith("cmp ")) + "\n"
+        self.assertIn("CI_REPRO_MAPPING", "\n".join(self.scan(changed)))
 
-    def test_silent_missing_develop_artifacts_is_rejected(self):
-        name = "a14-full-ci.yml"
-        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
-        changed = original.replace("if-no-files-found: error", "if-no-files-found: ignore")
-        self.assertIn("CI_REQUIRED_ARTIFACT", "\n".join(self.scan(name, changed)))
+    def test_missing_required_artifacts_fail(self):
+        changed = self.original().replace("if-no-files-found: error", "if-no-files-found: ignore")
+        self.assertIn("CI_REQUIRED_ARTIFACT", "\n".join(self.scan(changed)))
 
 
 class SourceHazardTest(unittest.TestCase):
@@ -491,7 +382,7 @@ jobs:
             self.assertIn("CI_WINDOWS_PATH_REPLACE", joined)
             self.assertIn("CI_HARDCODED_DRIVE", joined)
 
-    def test_catches_schedule_without_explicit_if(self):
+    def test_schedule_runs_without_redundant_job_condition(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "bad.yml"
             path.write_text(
@@ -512,7 +403,7 @@ jobs:
             )
             errors = ci_contract_scan.scan_workflow(path, "devin/audit", "main")
             text = "\n".join(errors)
-            self.assertIn("CI_SCHEDULE_CONDITION", text)
+            self.assertNotIn("CI_SCHEDULE_CONDITION", text)
 
     def test_allows_schedule_with_explicit_if(self):
         with tempfile.TemporaryDirectory() as td:

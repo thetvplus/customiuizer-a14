@@ -1,0 +1,2 @@
+# Host CI tooling only; never included in the Android APK.
+PyYAML==6.0.3
