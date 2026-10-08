@@ -221,6 +221,30 @@ class CIWorkflowRegressionTest(unittest.TestCase):
                 self.assertIn("CI_JDK_DOWNLOAD", errors)
                 self.assertIn("CI_JDK_SIGNATURE", errors)
 
+    def test_action_input_case_and_duplicates_follow_runner_semantics(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        uppercase = original.replace("force-download:", "FORCE-DOWNLOAD:").replace("verify-signature:", "VERIFY-SIGNATURE:")
+        self.assertEqual([], self.scan(name, uppercase))
+        changed = original.replace("          force-download: true", "          force-download: true\n          FORCE-DOWNLOAD: false")
+        changed = changed.replace("          verify-signature: true", "          verify-signature: true\n          VERIFY-SIGNATURE: false")
+        errors = "\n".join(self.scan(name, changed))
+        self.assertIn("CI_JDK_DOWNLOAD", errors)
+        self.assertIn("CI_JDK_SIGNATURE", errors)
+
+    def test_root_equivalent_setup_java_paths_require_security_inputs(self):
+        name = "a14-fast-ci.yml"
+        original = (self.WORKFLOWS / name).read_text(encoding="utf-8")
+        for path in (".", "./", "./.", "subdir/.."):
+            with self.subTest(path=path):
+                changed = original.replace("actions/setup-java@", f"actions/setup-java/{path}@")
+                self.assertEqual([], self.scan(name, changed))
+                changed = changed.replace("force-download: true", "force-download: false")
+                changed = changed.replace("verify-signature: true", "verify-signature: false")
+                errors = "\n".join(self.scan(name, changed))
+                self.assertIn("CI_JDK_DOWNLOAD", errors)
+                self.assertIn("CI_JDK_SIGNATURE", errors)
+
     def test_either_cached_reproducibility_build_is_rejected(self):
         name = "a14-full-ci.yml"
         original = (self.WORKFLOWS / name).read_text(encoding="utf-8")

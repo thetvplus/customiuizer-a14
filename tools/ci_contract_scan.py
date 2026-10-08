@@ -8,6 +8,7 @@ signing-aware, or dependent on a package name that is not resolved at runtime.
 from __future__ import annotations
 
 import argparse
+import posixpath
 import re
 import sys
 from pathlib import Path
@@ -190,8 +191,15 @@ def action_input_is_true(step: str, key: str) -> bool:
                if line.strip() and not line.lstrip(" \t").startswith("#")]
     if not indents:
         return False
-    values = re.findall(rf"(?m)^[ \t]{{{min(indents)}}}{key_pattern(key)}[ \t]*:[ \t]*([^\n]*)", body)
+    values = re.findall(rf"(?m)^[ \t]{{{min(indents)}}}{key_pattern(key)}[ \t]*:[ \t]*([^\n]*)", body,
+                        flags=re.IGNORECASE | re.ASCII)
     return len(values) == 1 and re.fullmatch(r"true[ \t]*(?:#.*)?", values[0]) is not None
+
+
+def is_setup_java(spec: str) -> bool:
+    parts = spec.rsplit("@", 1)[0].split("/")
+    return (len(parts) >= 2 and [part.lower() for part in parts[:2]] == ["actions", "setup-java"]
+            and posixpath.normpath("/".join(parts[2:]) or ".") == ".")
 
 
 def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list[str]:
@@ -245,10 +253,10 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
             )
 
     for offset, step, action in checked_steps:
-        is_setup_java = action is not None and action[1].lower().startswith("actions/setup-java@")
-        if is_setup_java and not action_input_is_true(step, "verify-signature"):
+        setup_java = action is not None and is_setup_java(action[1])
+        if setup_java and not action_input_is_true(step, "verify-signature"):
             add("CI_JDK_SIGNATURE", "setup-java must explicitly require signature verification", offset)
-        if is_setup_java and not action_input_is_true(step, "force-download"):
+        if setup_java and not action_input_is_true(step, "force-download"):
             add("CI_JDK_DOWNLOAD", "setup-java must download the JDK so its signature is actually verified", offset)
         if "name: develop-apk-and-mapping" in step and not re.search(
             r"(?m)^\s+if-no-files-found:\s*error\s*$", step
