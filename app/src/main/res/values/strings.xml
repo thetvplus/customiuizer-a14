@@ -1,9 +1,10 @@
 <resources>
     <string name="app_name" translatable="false">米客 A14</string>
+    <string name="app_name_full" translatable="false">米客 A14｜CustoMIUIzer A14</string>
     <string name="settings_title">Settings</string>
     <string name="app_slogan" translatable="false">适用于 HyperOS 1 / Android 14 的系统定制模块</string>
-    <string name="permission_broadcast_label" translatable="false">CustoMIUIzer broadcast control</string>
-    <string name="permission_broadcast_description" translatable="false">Allows the CustoMIUIzer module to send internal protected broadcasts.</string>
+    <string name="permission_broadcast_label" translatable="false">米客 A14｜CustoMIUIzer A14 broadcast control</string>
+    <string name="permission_broadcast_description" translatable="false">Allows 米客 A14｜CustoMIUIzer A14 to send internal protected broadcasts.</string>
     <string name="app_about">About</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_maintainer">Development &amp; Maintenance: thetvplus</string>

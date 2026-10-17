@@ -6,6 +6,7 @@ app/standalone/*
 /local.properties
 
 # IntelliJ IDEA / Android Studio — local/generated IDE state
+/.idea/compiler.xml
 /.idea/caches/
 /.idea/libraries/
 /.idea/modules.xml

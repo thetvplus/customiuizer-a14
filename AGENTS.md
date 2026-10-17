@@ -1,4 +1,4 @@
-# AGENTS.md — CustoMIUIzer A14
+# AGENTS.md — 米客 A14｜CustoMIUIzer A14
 
 共同工程规则，适用于 ChatGPT、Cursor、Devin、Codex 和其它 Agent。
 不要为每个 Agent 复制一份几乎相同的文档。

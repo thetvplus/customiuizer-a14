@@ -11093,7 +11093,7 @@
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
       "evidence": "DuoStatusBarFeature.evaluateEnabled and DuoStatusBarHooks.install; target-device acceptance pending",
-      "notes": "API 101; original icons retained on missing ABI/state and restored on ordinary runtime failure. No polling or animation loop."
+      "notes": "API 102; original icons retained on missing ABI/state and restored on ordinary runtime failure. No polling or animation loop."
     },
     {
       "featureId": "system_statusbar_duo_cat",

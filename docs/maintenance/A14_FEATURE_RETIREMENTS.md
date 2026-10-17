@@ -33,7 +33,7 @@
 
 `CurrentPreferenceContract.CONTRACT_REVISION = 2`，使已完成 revision 1 的用户再次执行一次性清理。上述键及快捷应用派生键进入弃用集合，旧备份恢复时过滤，旧值不能重新进入当前偏好目录。有效设置的值保持原样。
 
-StrongToast 旧隐藏开关仍先迁移为现代 mode=2，再执行弃用判定；旧位置键保持弃用，不恢复 Bottom 入口，不删除受限旧备份解码器。此批减法不更改 API 101 / 102 边界或发布策略。
+StrongToast 旧隐藏开关仍先迁移为现代 mode=2，再执行弃用判定；旧位置键保持弃用，不恢复 Bottom 入口，不删除受限旧备份解码器。当前框架边界统一遵循 [兼容矩阵](../../COMPATIBILITY.md) 的 API 102 基线。
 
 ## 验证边界
 

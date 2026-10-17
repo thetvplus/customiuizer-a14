@@ -1,15 +1,17 @@
-# CustoMIUIzer A14
+# 米客 A14｜CustoMIUIzer A14
 
 简体中文 | [English](README_EN.md)
 
-面向 **HyperOS 1 / Android 14** 的系统界面与交互定制模块，基于 CustoMIUIzer 持续维护。使用独立包名、签名和版本线。
+面向 **HyperOS 1 / Android 14** 的系统界面与交互定制模块，基于 CustoMIUIzer 持续维护。仅支持 **arm64-v8a / libxposed API 102**，使用独立包名、签名和版本线。
 
 - 当前正式版：`r14.23.5`（versionCode 243），要求 libxposed API 102。
 - 维护与开发：`thetvplus`
 - 应用 ID：`tv.withaibuild.customiuizer.r14`
-- [下载正式版](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/latest) · [源码与发行版](https://github.com/thetvplus/customiuizer-a14) · [更新记录](CHANGELOG_CN.md)
+- [下载正式版](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [发行记录](https://github.com/thetvplus/customiuizer-a14/releases) · [更新记录](CHANGELOG_CN.md)
 
 本版减少设置页重复分组计算，修复示例文件读取并收紧外部入口；同签名覆盖安装保留应用数据。升级前确认框架支持 API 102。
+
+仓库与源码完整名称统一为「米客 A14｜CustoMIUIzer A14」，应用短标签保留「米客 A14」。既有正式 APK 不因文案调整重新打包；关于页完整名称随后续正式构建生效。
 
 ## 功能
 

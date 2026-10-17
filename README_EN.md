@@ -1,15 +1,17 @@
-# CustoMIUIzer A14
+# 米客 A14｜CustoMIUIzer A14
 
 [简体中文](README.md) | English
 
-A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It has an independent package, signing identity and release line.
+A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It supports **arm64-v8a / libxposed API 102** and has an independent package, signing identity and release line.
 
 - Current release: `r14.23.5` (versionCode 243), requiring libxposed API 102.
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
-- [Download the official release](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/latest) · [Source and releases](https://github.com/thetvplus/customiuizer-a14) · [Changelog](CHANGELOG.md)
+- [Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Release history](https://github.com/thetvplus/customiuizer-a14/releases) · [Changelog](CHANGELOG.md)
 
 This release reduces repeated settings-page grouping, restores sample-file access and tightens external entry points. Updates retain the existing signing identity and app data. Confirm framework API 102 support before upgrading.
+
+The full product name is 米客 A14｜CustoMIUIzer A14; short app labels retain 米客 A14. Existing official APKs are not repackaged for wording changes. The full About-page name takes effect in a future official build.
 
 ## Features
 

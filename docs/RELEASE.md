@@ -6,8 +6,9 @@
 
 - `versionName` 形如 `r14.22.7`，`versionCode` 单调增加。
 - Gradle、双语 README、双语 CHANGELOG 与发行说明同步。
+- 双仓库 About、主题、主页链接及下载仓库 `SUMMARY` 按当前兼容范围维护；现行文档不得继续声称支持已移除的 API 或平台，历史更新记录保留当时事实。
 - 个人源码仓库 tag：`<versionName>`；下载仓库 tag：`<versionCode>-<versionName>`。
-- 两仓库发布 tag 都绑定构建 APK 的 exact source SHA；下载仓库的 metadata main 独立维护，不要求与源码 main 同 SHA。
+- 新发行的两仓库 tag 都绑定构建 APK 的 exact source SHA；下载仓库的 metadata main 独立维护，不要求与源码 main 同 SHA。历史发行保留原始映射，不能因整理 main 而移动标签。
 - 记录只写前一保留发行版到本版的最终变化，合并同系列内容时去重，排除调试交接与反复调整。发行说明写变化和 APK SHA-256，支持入口留在 README。
 
 ## 门禁与正式签名
