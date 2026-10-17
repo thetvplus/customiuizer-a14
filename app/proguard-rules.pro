@@ -21,7 +21,6 @@
 
 # Obfuscation
 -repackageclasses
--allowaccessmodification
 
 -dontwarn kotlin.jvm.internal.SourceDebugExtension
 -dontwarn android.**

@@ -336,15 +336,6 @@ object LauncherPostAttachFeatures {
             factory = { LauncherNoUnlockAnimationFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
-            id = LauncherNoZoomAnimationFeatureId,
-            name = "Launcher No Zoom Animation",
-            preferenceKey = "launcher_nozoomanim",
-            target = FeatureTarget.LAUNCHER,
-            phase = InstallPhase.APPLICATION_ATTACHED,
-            enabled = { prefs -> LauncherNoZoomAnimationFeature.evaluateEnabled(prefs) },
-            factory = { LauncherNoZoomAnimationFeature(lpparam, mPrefs) },
-        ),
-        LazyFeatureSpec(
             id = LauncherUseOldLaunchAnimationFeatureId,
             name = "Launcher Use Old Launch Animation",
             preferenceKey = "launcher_oldlaunchanim",
@@ -1120,26 +1111,6 @@ internal class LauncherNoUnlockAnimationFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = LauncherAnimationHooks.NoUnlockAnimationHook(lpparam)
-}
-
-internal class LauncherNoZoomAnimationFeature(
-    lpparam: PackageReadyParam,
-    mPrefs: PrefMap
-) : BaseApplicationAttachedFeature(
-    lpparam,
-    mPrefs,
-    LauncherNoZoomAnimationFeatureId,
-    "Launcher No Zoom Animation",
-    "launcher_nozoomanim",
-    FeatureTarget.LAUNCHER,
-) {
-    companion object {
-        @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("launcher_nozoomanim")
-    }
-
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = LauncherAnimationHooks.NoZoomAnimationHook(lpparam)
 }
 
 internal class LauncherUseOldLaunchAnimationFeature(

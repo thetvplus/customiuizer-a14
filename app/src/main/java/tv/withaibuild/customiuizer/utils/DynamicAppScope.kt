@@ -8,9 +8,9 @@ import tv.withaibuild.customiuizer.R
 /**
  * Settings-side contract for features that must hook the user-selected app process.
  *
- * `staticScope=true` plus a fixed `scope.list` means newly chosen ordinary apps are not
- * injected unless Vector/LSPosed API 102 grants them at runtime. Lists that are only
- * filters for system_server / SystemUI / Launcher must not request scope.
+ * With `staticScope=true` and a fixed `scope.list`, newly chosen ordinary apps also need
+ * framework scope authorization, requested through the API 102 service. Lists that are only filters for
+ * system_server / SystemUI / Launcher must not request scope.
  */
 object DynamicAppScope {
 
@@ -56,14 +56,15 @@ object DynamicAppScope {
     }
 
     private fun requestPackages(context: Context?, packages: List<String>) {
-        val requested = XposedServiceManager.requestApi102Scope(packages) { success, message ->
+        val appContext = context?.applicationContext
+        val requested = XposedServiceManager.requestScope(packages) { success, message ->
             if (!success) {
                 AppHelper.log("DynamicAppScope", message ?: "scope request rejected")
-                showToast(context, R.string.dynamic_app_scope_failed)
+                showToast(appContext, R.string.dynamic_app_scope_failed)
             }
         }
         if (!requested && unavailableNotified.compareAndSet(false, true)) {
-            showToast(context, R.string.dynamic_app_scope_unavailable)
+            showToast(appContext, R.string.dynamic_app_scope_unavailable)
         }
     }
 

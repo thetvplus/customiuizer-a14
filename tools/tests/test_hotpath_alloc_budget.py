@@ -16,10 +16,11 @@ BASELINE = REPO_ROOT / "tools" / "HOTPATH_ALLOC_BASELINE.json"
 class HotpathAllocScannerTest(unittest.TestCase):
     def test_check_passes_within_ceiling(self):
         result = subprocess.run(
-            [sys.executable, str(SCANNER), "--check"],
+            [sys.executable, "-X", "utf8", str(SCANNER), "--check"],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("ceiling held", result.stdout)
@@ -35,10 +36,11 @@ class HotpathAllocScannerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             out = Path(tmpdir) / "baseline.json"
             result = subprocess.run(
-                [sys.executable, str(SCANNER), "--write-baseline", "--baseline", str(out)],
+                [sys.executable, "-X", "utf8", str(SCANNER), "--write-baseline", "--baseline", str(out)],
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertTrue(out.exists())
@@ -50,10 +52,11 @@ class HotpathAllocScannerTest(unittest.TestCase):
             fake_baseline = Path(tmpdir) / "baseline.json"
             fake_baseline.write_text('{"hook_body_alloc_total": 0, "files": {}}')
             result = subprocess.run(
-                [sys.executable, str(SCANNER), "--check", "--baseline", str(fake_baseline)],
+                [sys.executable, "-X", "utf8", str(SCANNER), "--check", "--baseline", str(fake_baseline)],
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("FAILED", result.stdout)

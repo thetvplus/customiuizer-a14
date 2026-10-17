@@ -49,6 +49,60 @@ class CurrentPreferenceContractTest {
     }
 
     @Test
+    fun retiredHyperOsOnePreferencesAreDroppedInBothKeyForms() {
+        val keys = listOf(
+            "system_betterpopups_nohide",
+            "system_betterpopups_delay",
+            "system_minimalnotifview",
+            "launcher_nozoomanim",
+            "system_shortcut_app",
+            "system_shortcut_app_user",
+            "system_hidestatusbar_whenscreenrecord",
+            "system_cc_tile_enabled_color_usemonet",
+            "system_statusbar_icons_atleft_onkeyguard",
+            "various_memorystats",
+            "various_appusagestats",
+            "various_aospnotiflog",
+        )
+        for (key in keys) {
+            for (form in listOf(key, "pref_key_$key")) {
+                assertEquals(form, CurrentPreferenceContract.Kind.DROPPED, CurrentPreferenceContract.classify(form))
+                assertFalse(form, CurrentPreferenceContract.isExportable(form))
+            }
+        }
+    }
+
+    @Test
+    fun retainedColorShortcutAndDuoPreferencesRemainCurrent() {
+        val keys = listOf(
+            "system_cc_tile_enabled_color",
+            "system_cc_tile_enabled_color_custom",
+            "system_cc_tile_enabled_iconcolor_custom",
+            "system_clock_app",
+            "system_clock_app_user",
+            "system_calendar_app",
+            "system_calendar_app_user",
+            "system_statusbar_duo",
+            "system_statusbar_duo_percent",
+            "system_statusbar_duo_chargingbolt",
+            "system_statusbar_duo_audio",
+            "system_statusbar_duo_bold",
+            "system_statusbar_duo_networkfallback",
+            "system_statusbar_duo_cellularstyle",
+            "system_statusbar_duo_headphonestyle",
+            "system_statusbar_duo_headphonescale",
+            "system_statusbar_duo_btbattery",
+            "system_statusbar_duo_autosize",
+            "system_statusbar_duo_size",
+            "system_statusbar_duo_verticaloffset",
+        )
+        for (key in keys) {
+            assertEquals(key, CurrentPreferenceContract.Kind.CURRENT, CurrentPreferenceContract.classify(key))
+            assertTrue(key, CurrentPreferenceContract.isExportable("pref_key_$key"))
+        }
+    }
+
+    @Test
     fun internalAndExtraCurrentKeysAreRecognized() {
         assertEquals(
             CurrentPreferenceContract.Kind.INTERNAL,

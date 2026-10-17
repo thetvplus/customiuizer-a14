@@ -82,11 +82,6 @@
 		android:title="@string/system_statusbaricons_atleft_title" />
 
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_statusbar_icons_atleft_onkeyguard"
-		app:isPreferenceVisible="false"
-		android:title="@string/system_statusbar_icons_atleft_onkeyguard" />
-
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 		android:key="pref_key_system_statusbar_netspeed_atleft"
 		android:title="@string/system_statusbaricons_netspeed_title"
 		android:defaultValue="false" />

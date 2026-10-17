@@ -379,10 +379,10 @@ def main() -> int:
         "- `GuardProviderInstaller` and `MediaInstaller` call `MainModule.loadDexKit()` on demand.\n",
         "- `ControlCenterPluginHook` extracts the `miui.systemui.plugin` `ClassLoader` and caches it in `SystemUIControlCenterHooks.pluginLoader`.\n",
         "- `ReflectionCache.onSafeLifecycle` is called by `SystemUiBootstrapCoordinator` and the Launcher branch of `MainModule`.\n\n",
-        "## API 101/102 boundary\n\n",
-        "- `MainModule` is compiled against libxposed API 102 but the production `onPackageReady` / `onSystemServerStarting` paths use only API 101 public symbols.\n",
-        "- `XposedApiCapabilities.initialize(getApiVersion())` runs once per process but does not place API-102-only symbols on hot paths.\n",
-        "- `tools/check-invariants.py` blocks `setId`, `replaceHook`, `HotReloadingParam`, `HotReloadedParam` and `getApiVersion()` in callbacks.\n\n",
+        "## API 102 lifecycle\n\n",
+        "- `MainModule` requires libxposed API 102; metadata declares minApiVersion=102.\n",
+        "- `HookInstallation` shares native installation policy; fixed IDs do not replace one-time installation or owner-bound cleanup.\n",
+        "- `tools/check-invariants.py` blocks explicit `replaceHook` and hot reload, and keeps API version queries off callbacks.\n\n",
     ]
     (out_dir / "A14_PROCESS_EXCEPTIONS_GENERATED.md").write_text("".join(exceptions), encoding="utf-8", newline="\n")
 

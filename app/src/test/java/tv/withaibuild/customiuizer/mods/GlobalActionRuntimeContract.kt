@@ -107,9 +107,9 @@ object GlobalActionRuntimeContract {
     )
 
     val triggerSpecs: List<GlobalActionTriggerSpec> = listOf(
-        sysServerAlways("controls_backlong", "Controls.NavBarActionsHook"),
-        sysServerAlways("controls_homelong", "Controls.NavBarActionsHook"),
-        sysServerAlways("controls_menulong", "Controls.NavBarActionsHook"),
+        navBarGated("controls_backlong", "Controls.NavBarActionsHook"),
+        navBarGated("controls_homelong", "Controls.NavBarActionsHook"),
+        navBarGated("controls_menulong", "Controls.NavBarActionsHook"),
         sysServerAlways("controls_powerdt", "Controls.PowerDoubleTapActionHook"),
         launcherGated("controls_fsg_assist_left", "LAUNCHER|SYSTEMUI", "LauncherGestureHooks.FSGesturesHook"),
         launcherGated("controls_fsg_assist_right", "LAUNCHER|SYSTEMUI", "LauncherGestureHooks.FSGesturesHook"),
@@ -179,6 +179,16 @@ object GlobalActionRuntimeContract {
         executionOwner = "according_to_action",
         receiverInstallMode = ReceiverInstallMode.ALWAYS,
         restartRequirement = "NONE",
+        triggerHook = hook,
+    )
+
+    private fun navBarGated(key: String, hook: String) = GlobalActionTriggerSpec(
+        preferenceKey = key,
+        triggerOwner = GlobalActionOwner.SYSTEM_SERVER,
+        triggerInstallMode = TriggerInstallMode.PREF_GATED_AT_START,
+        executionOwner = "according_to_action",
+        receiverInstallMode = ReceiverInstallMode.ALWAYS,
+        restartRequirement = "REBOOT",
         triggerHook = hook,
     )
 

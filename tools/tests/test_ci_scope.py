@@ -21,11 +21,11 @@ class CIScopeTest(unittest.TestCase):
                 self.assertEqual({"full": True, "tools": False},
                                  ci_scope.select_scope("push", "refs/heads/main", {}, [path]))
 
-    def test_tool_changes_and_periodic_runs_include_tool_gates(self):
-        for path in ("tools/verify.py", ".github/workflows/a14-ci.yml", ".github/dependabot.yml"):
+    def test_tool_changes_release_and_manual_runs_include_tool_gates(self):
+        for path in ("tools/verify.py", ".github/workflows/a14-ci.yml", ".github/ISSUE_TEMPLATE/config.yml"):
             self.assertEqual({"full": True, "tools": True},
                              ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path]))
-        for event, ref in (("schedule", "refs/heads/main"), ("workflow_dispatch", "refs/heads/main"),
+        for event, ref in (("workflow_dispatch", "refs/heads/main"),
                            ("push", "refs/tags/r14.22.5")):
             self.assertEqual({"full": True, "tools": True}, ci_scope.select_scope(event, ref, {}, []))
 

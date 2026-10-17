@@ -75,8 +75,8 @@ class SystemUiFeaturesWiringTest {
         val features = SystemUiFeatures.all(fakePackageReadyParam(), PrefMap())
 
         assertEquals(
-            "All 99 preference-guarded SystemUI features should be present",
-            99,
+            "All 96 active SystemUI features should be present after retiring three obsolete paths",
+            96,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
@@ -86,6 +86,33 @@ class SystemUiFeaturesWiringTest {
             assertEquals(FeatureTarget.SYSTEM_UI, feature.target)
             assertEquals(InstallPhase.PACKAGE_READY, feature.phase)
         }
+    }
+
+    @Test
+    fun retiredNotificationKeysHaveNoFeatureAndDoNotEnableCalendarClockReplacement() {
+        val retiredPrefs = PrefMap().apply {
+            put("system_betterpopups_delay", 10)
+            put("system_betterpopups_nohide", true)
+            put("system_minimalnotifview", true)
+            put("system_shortcut_app", "com.example.app|com.example.Main")
+        }
+        val features = SystemUiFeatures.all(fakePackageReadyParam(), retiredPrefs)
+        val retiredKeys = setOf(
+            "system_betterpopups_delay",
+            "system_betterpopups_nohide",
+            "system_minimalnotifview",
+            "system_shortcut_app",
+        )
+        assertTrue(features.none { it.preferenceKey in retiredKeys })
+        val replacement = features.single { it.id == ReplaceShortcutAppFeatureId }
+        assertEquals("system_calendar_app", replacement.preferenceKey)
+        assertFalse(replacement.isEnabled(retiredPrefs))
+        assertTrue(replacement.isEnabled(PrefMap().apply {
+            put("system_calendar_app", "com.example.calendar|com.example.Main")
+        }))
+        assertTrue(replacement.isEnabled(PrefMap().apply {
+            put("system_clock_app", "com.example.clock|com.example.Main")
+        }))
     }
 
     @Test
@@ -133,6 +160,8 @@ class SystemUiFeaturesWiringTest {
 
         val on = PrefMap().apply { put("controls_navbarrightlong_action", 5) }
         assertTrue(feature.isEnabled(on))
+        assertFalse(feature.isEnabled(PrefMap().apply { put("controls_homelong_action", 2) }))
+        assertFalse(feature.isEnabled(PrefMap().apply { put("controls_homelong_action", 1) }))
     }
 
     @Test

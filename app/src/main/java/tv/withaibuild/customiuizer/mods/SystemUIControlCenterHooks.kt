@@ -5,9 +5,12 @@ import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.content.pm.ApplicationInfo
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.ColorFilter
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.util.TypedValue
@@ -42,6 +45,7 @@ import java.util.ArrayList
 import java.util.Comparator
 import java.lang.System
 import java.lang.reflect.Field
+import java.lang.reflect.Method
 import tv.withaibuild.customiuizer.utils.HookUtils
 import tv.withaibuild.customiuizer.mods.utils.ControlCenterPluginRuntime
 import tv.withaibuild.customiuizer.mods.volumedialogautohide.VolumeDialogAutohideDelayHook
@@ -202,7 +206,12 @@ object SystemUIControlCenterHooks {
         val enabled: Boolean,
         val backgroundColor: Int,
         val iconColor: Int
-    )
+    ) {
+        // The target ROM's selected blends are (ARGB, SRC_OVER), prepared off the update path.
+        val backgroundBlendColors = intArrayOf(backgroundColor, 3)
+        val iconBlendColors = intArrayOf(iconColor, 3)
+        val backgroundColors: ColorStateList? = ColorStateList.valueOf(backgroundColor)
+    }
 
     internal data class VolumeModeButtonVisibilitySnapshot(
         val hideMute: Boolean,
@@ -237,6 +246,10 @@ object SystemUIControlCenterHooks {
         "customiuizer_volumeModeSharedVisibilityState"
     private const val VOLUME_MODE_BUTTON_COLOR_STATE_FIELD =
         "customiuizer_volumeModeButtonColorState"
+    private const val VOLUME_MODE_BUTTON_BACKGROUND_OWNER_FIELD =
+        "customiuizer_volumeModeButtonBackgroundOwner"
+    private const val VOLUME_MODE_BUTTON_ICON_OWNER_FIELD =
+        "customiuizer_volumeModeButtonIconOwner"
 
     internal enum class VolumeModeButtonRole {
         MUTE, DND, UNKNOWN
@@ -324,27 +337,66 @@ object SystemUIControlCenterHooks {
             XposedHelpers.getObjectField(helper, "mIcon") as? ImageView
         )
 
-        var backgroundFilter: PorterDuffColorFilter? = null
         var iconFilter: PorterDuffColorFilter? = null
-        var lastBackgroundColor: Int = 0
         var lastIconColor: Int = 0
-
-        fun getOrCreateBackgroundFilter(color: Int): PorterDuffColorFilter {
-            val existing = backgroundFilter
-            if (existing != null && lastBackgroundColor == color) return existing
-            lastBackgroundColor = color
-            return PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN).also {
-                backgroundFilter = it
-            }
-        }
+        var isSelected = false
+        var snapshot: VolumeModeButtonColorSnapshot? = null
+        var backgroundBlended = false
+        var iconBlended = false
+        var coloredDrawableRef: WeakReference<GradientDrawable>? = null
+        var originalBackgroundColors: ColorStateList? = null
+        var appliedBackgroundColors: ColorStateList? = null
+        var originalIconFilter: ColorFilter? = null
+        var iconFilterApplied = false
 
         fun getOrCreateIconFilter(color: Int): PorterDuffColorFilter {
             val existing = iconFilter
             if (existing != null && lastIconColor == color) return existing
             lastIconColor = color
-            return PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP).also {
+            return PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN).also {
                 iconFilter = it
             }
+        }
+
+        /** Undo only our own writes before the ROM prepares its next state or theme. */
+        fun restoreOwnedColors() {
+            val drawable = coloredDrawableRef?.get()
+            if (drawable != null && drawable.color === appliedBackgroundColors) {
+                drawable.color = originalBackgroundColors
+            }
+            if (drawable == null) coloredDrawableRef = null
+            originalBackgroundColors = null
+            appliedBackgroundColors = null
+            val icon = iconRef.get()
+            if (iconFilterApplied && icon != null && icon.colorFilter === iconFilter) {
+                icon.colorFilter = originalIconFilter
+            }
+            iconFilterApplied = false
+            originalIconFilter = null
+            backgroundBlended = false
+            iconBlended = false
+        }
+    }
+
+    internal fun volumeModeBlendColors(
+        snapshot: VolumeModeButtonColorSnapshot,
+        selected: Boolean,
+        background: Boolean
+    ): IntArray? = if (!snapshot.enabled || !selected) null
+        else if (background) snapshot.backgroundBlendColors else snapshot.iconBlendColors
+
+    internal fun volumeModeGradientDrawable(
+        drawable: Drawable?,
+        smoothChildMethod: Method?
+    ): GradientDrawable? {
+        if (drawable is GradientDrawable) return drawable.mutate() as? GradientDrawable
+        if (drawable == null || smoothChildMethod == null ||
+            !smoothChildMethod.declaringClass.isInstance(drawable)) return null
+        return try {
+            (smoothChildMethod.invoke(drawable) as? GradientDrawable)?.mutate() as? GradientDrawable
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            null
         }
     }
 
@@ -651,6 +703,50 @@ object SystemUIControlCenterHooks {
         val helperClassName =
             "com.android.systemui.miui.volume.MiuiRingerModeLayout\$RingerButtonHelper"
 
+        val smoothChildMethod = try {
+            XposedHelpers.findClassIfExists("miuix.smooth.SmoothContainerDrawable", pluginLoader)
+                ?.getDeclaredMethod("getChildDrawable")
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            null
+        }
+
+        // Replace native selected blend inputs instead of stacking a second tint over them.
+        // Only views bound to these two ROM helpers participate; all other volume views pass.
+        fun blendHook(colorsIndex: Int) = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                ModuleHelper.guarded {
+                    val view = callback.getArg(0) as? View ?: return@guarded
+                    val backgroundOwner = XposedHelpers.getAdditionalInstanceField(
+                        view, VOLUME_MODE_BUTTON_BACKGROUND_OWNER_FIELD
+                    ) as? VolumeModeButtonColorState
+                    val owner = backgroundOwner ?: XposedHelpers.getAdditionalInstanceField(
+                        view, VOLUME_MODE_BUTTON_ICON_OWNER_FIELD
+                    ) as? VolumeModeButtonColorState ?: return@guarded
+                    val snapshot = owner.snapshot ?: return@guarded
+                    val background = backgroundOwner != null
+                    val colors = volumeModeBlendColors(snapshot, owner.isSelected, background)
+                        ?: return@guarded
+                    callback.getArgs()[colorsIndex] = colors
+                    if (background) owner.backgroundBlended = true else owner.iconBlended = true
+                }
+            }
+        }
+        if (mStateField != null && volumeModeButtonColorSnapshot?.enabled == true) {
+            ModuleHelper.findAndHookMethod(
+                "com.android.systemui.miui.volume.Util", pluginLoader,
+                "setMiViewBlurAndBlendColor", View::class.java,
+                Boolean::class.javaPrimitiveType, Context::class.java,
+                Int::class.javaPrimitiveType, IntArray::class.java,
+                Boolean::class.javaPrimitiveType, blendHook(4)
+            )
+            ModuleHelper.findAndHookMethod(
+                "com.android.systemui.miui.volume.Util", pluginLoader,
+                "setMiViewBlurAndBlendColor", View::class.java,
+                Int::class.javaPrimitiveType, IntArray::class.java, blendHook(2)
+            )
+        }
+
         val applyVisibility = { helper: Any ->
             ModuleHelper.guarded {
                 val snapshot = volumeModeButtonVisibilitySnapshot ?: return@guarded
@@ -695,45 +791,53 @@ object SystemUIControlCenterHooks {
 
         val applyColors = { helper: Any ->
             ModuleHelper.guarded {
-                val snapshot = volumeModeButtonColorSnapshot ?: return@guarded
-                if (!snapshot.enabled) return@guarded
                 val colorState = XposedHelpers.getAdditionalInstanceField(
                     helper,
                     VOLUME_MODE_BUTTON_COLOR_STATE_FIELD
                 ) as? VolumeModeButtonColorState ?: return@guarded
-                val preparedField = mStateField ?: return@guarded
-                val isSelected = try {
-                    preparedField.getBoolean(helper)
-                } catch (oom: OutOfMemoryError) {
-                    throw oom
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    return@guarded
-                }
-
+                val snapshot = colorState.snapshot ?: return@guarded
+                if (!snapshot.enabled) return@guarded
+                if (!colorState.isSelected) return@guarded
                 val standardView = colorState.standardViewRef.get() ?: return@guarded
                 val icon = colorState.iconRef.get() ?: return@guarded
 
-                if (isSelected) {
-                    val background = standardView.background
-                    if (background != null) {
-                        background.mutate().setColorFilter(
-                            colorState.getOrCreateBackgroundFilter(snapshot.backgroundColor)
-                        )
-                    }
-
-                    icon.setColorFilter(
-                        colorState.getOrCreateIconFilter(snapshot.iconColor)
-                    )
-                } else {
-                    val background = standardView.background
-                    if (background != null && background.colorFilter == colorState.backgroundFilter) {
-                        background.clearColorFilter()
-                    }
-                    if (icon.colorFilter == colorState.iconFilter) {
-                        icon.setColorFilter(null)
+                if (!colorState.backgroundBlended) {
+                    // Non-blur ROM path: change the solid fill inside its original smooth mask.
+                    // This preserves corners/animation and uses the requested alpha once.
+                    val background = standardView.background?.mutate()
+                    // SmoothContainerDrawable does not mutate its child on this ROM.
+                    // Isolate the actual GradientDrawable ConstantState before changing its fill.
+                    val gradient = volumeModeGradientDrawable(background, smoothChildMethod)
+                    val colors = snapshot.backgroundColors
+                    if (gradient != null && colors != null) {
+                        colorState.originalBackgroundColors = gradient.color
+                        colorState.appliedBackgroundColors = colors
+                        if (colorState.coloredDrawableRef?.get() !== gradient) {
+                            colorState.coloredDrawableRef = WeakReference(gradient)
+                        }
+                        if (gradient.color !== colors) gradient.color = colors
                     }
                 }
+                if (!colorState.iconBlended) {
+                    colorState.originalIconFilter = icon.colorFilter
+                    val filter = colorState.getOrCreateIconFilter(snapshot.iconColor)
+                    if (icon.colorFilter !== filter) icon.colorFilter = filter
+                    colorState.iconFilterApplied = true
+                }
+            }
+        }
+
+        val prepareColors = { helper: Any ->
+            ModuleHelper.guarded {
+                val colorState = XposedHelpers.getAdditionalInstanceField(
+                    helper, VOLUME_MODE_BUTTON_COLOR_STATE_FIELD
+                ) as? VolumeModeButtonColorState ?: return@guarded
+                colorState.isSelected = false
+                colorState.snapshot = volumeModeButtonColorSnapshot
+                colorState.restoreOwnedColors()
+                if (colorState.snapshot?.enabled != true) return@guarded
+                // Resolve the field once per plugin loader, read it before the ROM paints.
+                colorState.isSelected = mStateField?.getBoolean(helper) == true
             }
         }
 
@@ -760,12 +864,17 @@ object SystemUIControlCenterHooks {
                 bindVolumeModeButtonRole(helper, root)
                 bindVolumeModeButtonSharedState(helper, layout)
                 bindVolumeModeButtonColorState(helper)
+                prepareColors(helper)
                 applyColors(helper)
                 applyVisibility(helper)
             }
         }
 
         val updateStateHook = object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                callback.getThisObject()?.let(prepareColors)
+            }
+
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
                 callback.getThisObject()?.let { helper ->
@@ -860,11 +969,18 @@ object SystemUIControlCenterHooks {
         if (XposedHelpers.getAdditionalInstanceField(helper, VOLUME_MODE_BUTTON_COLOR_STATE_FIELD) != null) {
             return
         }
+        val state = VolumeModeButtonColorState(helper)
         XposedHelpers.setAdditionalInstanceField(
             helper,
             VOLUME_MODE_BUTTON_COLOR_STATE_FIELD,
-            VolumeModeButtonColorState(helper)
+            state
         )
+        state.standardViewRef.get()?.let {
+            XposedHelpers.setAdditionalInstanceField(it, VOLUME_MODE_BUTTON_BACKGROUND_OWNER_FIELD, state)
+        }
+        state.iconRef.get()?.let {
+            XposedHelpers.setAdditionalInstanceField(it, VOLUME_MODE_BUTTON_ICON_OWNER_FIELD, state)
+        }
     }
 
     @JvmStatic

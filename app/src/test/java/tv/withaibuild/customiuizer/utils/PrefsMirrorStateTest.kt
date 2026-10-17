@@ -174,4 +174,31 @@ class PrefsMirrorStateTest {
         assertFalse(state.onLocalChange())
         assertFalse(state.claimFollowUpPass(generation))
     }
+
+    @Test
+    fun unconfirmedCommitCannotBeClearedByTheSameCachedSnapshot() {
+        val state = PrefsMirrorState()
+        val generation = state.onBind()
+        state.markUndelivered()
+        state.recordUnconfirmedCommit(generation)
+        assertTrue(state.beginPass(generation))
+        assertTrue(state.endPass(generation))
+        assertFalse(state.clearUndelivered(generation))
+        assertTrue(state.hasUndeliveredChanges)
+        val fresh = state.onBind()
+        assertTrue(state.clearUndelivered(fresh))
+        assertFalse(state.hasUndeliveredChanges)
+    }
+
+    @Test
+    fun staleCommitFailureCannotTaintAFreshConnection() {
+        val state = PrefsMirrorState()
+        val stale = state.onBind()
+        state.onUnbind()
+        val fresh = state.onBind()
+        state.markUndelivered()
+        state.recordUnconfirmedCommit(stale)
+        assertTrue(state.clearUndelivered(fresh))
+        assertFalse(state.hasUndeliveredChanges)
+    }
 }

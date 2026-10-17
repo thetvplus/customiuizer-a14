@@ -24,6 +24,34 @@ class BackupRestoreTest {
     private val TC_OBJECT = 0x73
     private val TC_ENDBLOCKDATA = 0x78
 
+    private val retiredHyperOsOneEntries = linkedMapOf<String, Any?>(
+        "pref_key_system_betterpopups_nohide" to true,
+        "pref_key_system_betterpopups_delay" to 12,
+        "pref_key_system_minimalnotifview" to true,
+        "pref_key_launcher_nozoomanim" to true,
+        "pref_key_system_shortcut_app" to "com.retired|com.retired.MainActivity",
+        "pref_key_system_shortcut_app_user" to 10,
+        "pref_key_system_hidestatusbar_whenscreenrecord" to true,
+        "pref_key_system_cc_tile_enabled_color_usemonet" to true,
+        "pref_key_system_statusbar_icons_atleft_onkeyguard" to true,
+        "pref_key_various_memorystats" to true,
+        "pref_key_various_appusagestats" to true,
+        "pref_key_various_aospnotiflog" to true,
+    )
+
+    private val retainedHyperOsOneEntries = linkedMapOf<String, Any?>(
+        "pref_key_system_cc_tile_enabled_color" to true,
+        "pref_key_system_cc_tile_enabled_color_custom" to 0xFF245678.toInt(),
+        "pref_key_system_cc_tile_enabled_iconcolor_custom" to 0xFFEDCBA9.toInt(),
+        "pref_key_system_clock_app" to "com.clock|com.clock.AlarmActivity",
+        "pref_key_system_clock_app_user" to 10,
+        "pref_key_system_calendar_app" to "com.calendar|com.calendar.MainActivity",
+        "pref_key_system_calendar_app_user" to 0,
+        "pref_key_system_statusbar_duo" to true,
+        "pref_key_system_statusbar_duo_percent" to true,
+        "pref_key_system_statusbar_duo_chargingbolt" to false,
+    )
+
     @Test
     fun generateBackupFilenameHasCorrectPrefixAndTimestamp() {
         val filename = BackupRestore.generateBackupFilename()
@@ -1230,6 +1258,96 @@ class BackupRestoreTest {
             prefs.getInt(CurrentPreferenceContract.CONTRACT_REVISION_KEY, 0),
         )
         assertFalse(CurrentPreferenceContract.pruneOrphanPreferences(prefs))
+    }
+
+    @Test
+    fun revisionOneUpgradePrunesRetiredPreferencesAndPreservesActiveValues() {
+        val prefs = FakeSharedPreferences().apply {
+            for ((key, value) in retiredHyperOsOneEntries + retainedHyperOsOneEntries) put(key, value)
+            put("pref_key_system_notif_disable_strong_toast", true)
+            put(CurrentPreferenceContract.CONTRACT_REVISION_KEY, 1)
+        }
+
+        assertTrue(CurrentPreferenceContract.pruneOrphanPreferences(prefs))
+        assertEquals(1, prefs.getAllCount)
+        assertEquals(1, prefs.commitSnapshotCount())
+        val durable = prefs.commitSnapshot(0)
+        for (key in retiredHyperOsOneEntries.keys) assertFalse(key, durable.containsKey(key))
+        for ((key, value) in retainedHyperOsOneEntries) assertEquals(key, value, durable[key])
+        assertFalse(durable.containsKey("pref_key_system_notif_disable_strong_toast"))
+        assertEquals("2", durable["pref_key_system_strong_toast_mode"])
+        assertEquals(2, durable[CurrentPreferenceContract.CONTRACT_REVISION_KEY])
+
+        assertFalse(CurrentPreferenceContract.pruneOrphanPreferences(prefs))
+        assertEquals(1, prefs.getAllCount)
+        assertEquals(1, prefs.commitSnapshotCount())
+    }
+
+    @Test
+    fun revisionTwoSkipsSnapshotAndEditorCreation() {
+        val prefs = FakeSharedPreferences().apply {
+            put(CurrentPreferenceContract.CONTRACT_REVISION_KEY, 2)
+            editShouldThrow = true
+        }
+
+        assertFalse(CurrentPreferenceContract.pruneOrphanPreferences(prefs))
+        assertEquals(0, prefs.getAllCount)
+        assertEquals(0, prefs.commitSnapshotCount())
+    }
+
+    @Test
+    fun backupOmitsRetiredPreferencesAndPreservesActiveValues() {
+        val prefs = FakeSharedPreferences().apply {
+            for ((key, value) in retiredHyperOsOneEntries + retainedHyperOsOneEntries) put(key, value)
+            put("pref_key_system_notif_disable_strong_toast", true)
+            put(CurrentPreferenceContract.CONTRACT_REVISION_KEY, 1)
+        }
+        val output = ByteArrayOutputStream()
+
+        assertTrue(BackupRestore.performBackup(prefs, output))
+        val decoded = BackupFormatV2.decode(output.toByteArray())
+        for (key in retiredHyperOsOneEntries.keys) assertFalse(key, decoded.containsKey(key))
+        for ((key, value) in retainedHyperOsOneEntries) assertEquals(key, value, decoded[key])
+        assertFalse(decoded.containsKey(CurrentPreferenceContract.CONTRACT_REVISION_KEY))
+        assertFalse(decoded.containsKey("pref_key_system_notif_disable_strong_toast"))
+        assertEquals("2", decoded["pref_key_system_strong_toast_mode"])
+    }
+
+    @Test
+    fun restoringOldV2AndLegacyBackupsCannotReviveRetiredPreferences() {
+        val entries = LinkedHashMap(retiredHyperOsOneEntries + retainedHyperOsOneEntries).apply {
+            put("pref_key_system_notif_disable_strong_toast", true)
+        }
+        val backups = listOf(BackupFormatV2.encode(entries), serialize(HashMap(entries)))
+
+        for (backup in backups) {
+            val prefs = FakeSharedPreferences().apply {
+                for ((key, value) in retiredHyperOsOneEntries) put(key, value)
+                put(CurrentPreferenceContract.CONTRACT_REVISION_KEY, 1)
+            }
+            val result = BackupRestore.performRestore(
+                ByteArrayInputStream(backup),
+                prefs,
+                installedPackages = setOf("com.clock", "com.calendar", "com.retired"),
+                launcherReconciler = { true },
+            )
+
+            assertEquals(BackupRestore.Status.SUCCESS, result.status)
+            assertTrue(result.commitConfirmedDurable)
+            assertEquals(12, result.deprecatedIgnored)
+            assertEquals(0, result.unknownIgnored)
+            assertEquals(0, result.invalidSkipped)
+            assertEquals(0, result.appSelectionsSanitized)
+            assertEquals(1, result.migrated)
+            assertEquals(retainedHyperOsOneEntries.size + 1, result.restored)
+            assertEquals(1, prefs.commitSnapshotCount())
+            val durable = prefs.commitSnapshot(0)
+            for (key in retiredHyperOsOneEntries.keys) assertFalse(key, durable.containsKey(key))
+            for ((key, value) in retainedHyperOsOneEntries) assertEquals(key, value, durable[key])
+            assertFalse(durable.containsKey("pref_key_system_notif_disable_strong_toast"))
+            assertEquals("2", durable["pref_key_system_strong_toast_mode"])
+            assertEquals(2, durable[CurrentPreferenceContract.CONTRACT_REVISION_KEY])
+        }
     }
 
     private fun findFirstClassDataEnd(bytes: List<Byte>): Int {

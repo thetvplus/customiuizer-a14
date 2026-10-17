@@ -1,7 +1,6 @@
 package tv.withaibuild.customiuizer.mods
 
 import android.app.ActivityManager
-import android.app.MiuiNotification
 import android.app.NotificationChannel
 import android.app.PendingIntent
 import android.content.Context
@@ -38,7 +37,7 @@ import tv.withaibuild.customiuizer.utils.HookUtils
 
 /**
  * Notification shade and heads-up popup hooks.
- * Expansion behaviour, heads-up lifetime and placement, per-app importance and
+ * Expansion behaviour, heads-up placement, per-app importance and
  * blocking, the row menu, and the icon limit in the status bar.
  */
 object SystemNotificationHooks {
@@ -46,7 +45,6 @@ object SystemNotificationHooks {
     internal data class NotificationSnapshot(
         val expandHeadsUp: Int = 1,
         val expandHeadsUpApps: Set<String> = emptySet(),
-        val betterPopupsDelayMs: Int = 5000,
         val maxSbIcons: Int = 0,
     )
 
@@ -58,18 +56,14 @@ object SystemNotificationHooks {
     private val NOTIFICATION_PREF_KEYS = setOf(
         "system_expandheadups",
         "system_expandheadups_apps",
-        "system_betterpopups_delay",
         "system_maxsbicons",
     )
 
     internal fun refreshNotificationSnapshot() {
         val prefs = MainModule.mPrefs
-        var delay = prefs.getInt("system_betterpopups_delay", 0) * 1000
-        if (delay == 0) delay = 5000
         notificationConfig = NotificationSnapshot(
             expandHeadsUp = prefs.getStringAsInt("system_expandheadups", 1),
             expandHeadsUpApps = HashSet(prefs.getStringSet("system_expandheadups_apps")),
-            betterPopupsDelayMs = delay,
             maxSbIcons = prefs.getStringAsInt("system_maxsbicons", 0),
         )
     }
@@ -131,107 +125,6 @@ object SystemNotificationHooks {
 
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-    }
-
-    @JvmStatic
-    fun BetterPopupsHideDelayHook(lpparam: PackageReadyParam) {
-        // Preflight: resolve required ROM class and fields before installing
-        // any hook. If the ROM contract is missing, throw so FeatureInstallRegistry
-        // catches and marks the feature FAILED_TRANSIENT instead of silently
-        // installing zero hooks (false success).
-        installNotificationSnapshot()
-        val headsUpManagerClass = XposedHelpers.findClass("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader)
-        XposedHelpers.findField(headsUpManagerClass, "mMinimumDisplayTime")
-        XposedHelpers.findField(headsUpManagerClass, "mHeadsUpNotificationDecay")
-
-        ModuleHelper.findAndHookMethodSilently(MiuiNotification::class.java, "getFloatTime", HookerClassHelper.returnConstant(0))
-        ModuleHelper.hookAllConstructors(headsUpManagerClass, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val delay = notificationConfig.betterPopupsDelayMs
-                    XposedHelpers.setIntField(thisObject, "mMinimumDisplayTime", delay)
-                    XposedHelpers.setIntField(thisObject, "mHeadsUpNotificationDecay", delay)
-                    ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
-                        override fun onChange(key: String?) = ModuleHelper.guarded {
-                            if (key == "system_betterpopups_delay") {
-                                refreshNotificationSnapshot()
-                                val delay2 = notificationConfig.betterPopupsDelayMs
-                                XposedHelpers.setIntField(thisObject, "mMinimumDisplayTime", delay2)
-                                XposedHelpers.setIntField(thisObject, "mHeadsUpNotificationDecay", delay2)
-                            }
-                        }
-                    }, thisObject)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-    }
-
-    @JvmStatic
-    fun BetterPopupsNoHideHook(lpparam: PackageReadyParam) {
-        // Preflight: resolve all required ROM classes and methods before installing
-        // any hook. If the ROM contract is missing, throw so FeatureInstallRegistry
-        // catches and marks the feature FAILED_TRANSIENT instead of silently
-        // installing zero hooks (false success).
-        XposedHelpers.findClass("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader)
-        XposedHelpers.findClass("com.android.systemui.statusbar.policy.HeadsUpManager\$HeadsUpEntry", lpparam.classLoader)
-
-        XposedHelpers.findMethodExact("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader, "removeHeadsUpNotification")
-        XposedHelpers.findMethodExact("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader, "removeOldHeadsUpNotification")
-        XposedHelpers.findMethodExact("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader, "onExpandingFinished")
-        XposedHelpers.findMethodExact("com.android.systemui.statusbar.policy.HeadsUpManager\$HeadsUpEntry", lpparam.classLoader, "updateEntry", Boolean::class.javaPrimitiveType!!)
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader, "removeHeadsUpNotification", HookerClassHelper.DO_NOTHING)
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader, "removeOldHeadsUpNotification", HookerClassHelper.DO_NOTHING)
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.policy.HeadsUpManager\$HeadsUpEntry", lpparam.classLoader, "updateEntry", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
-
-                    XposedHelpers.setObjectField(thisObject, "mRemoveHeadsUpRunnable", Runnable { })
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.policy.HeadsUpManager", lpparam.classLoader, "onExpandingFinished", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
-
-                    XposedHelpers.setBooleanField(thisObject, "mReleaseOnExpandFinish", true)
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
@@ -706,41 +599,6 @@ object SystemNotificationHooks {
                             }
                         }
                     }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-    }
-
-    @JvmStatic
-    fun MinimalNotificationViewHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBar", lpparam.classLoader, "updateNotification", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-                    val args = chain.args
-
-                    if (args.size != 3) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val expandableRow = XposedHelpers.getObjectField(args[0], "row")
-                    val mNotificationData = XposedHelpers.getObjectField(thisObject, "mNotificationData")
-                    val newLowPriority = XposedHelpers.callMethod(mNotificationData, "isAmbient", XposedHelpers.callMethod(args[1], "getKey")) as Boolean && !(XposedHelpers.callMethod(XposedHelpers.callMethod(args[1], "getNotification"), "isGroupSummary") as Boolean)
-                    val hasEntry = XposedHelpers.callMethod(mNotificationData, "get", XposedHelpers.getObjectField(args[0], "key")) != null
-                    val isLowPriority = XposedHelpers.callMethod(expandableRow, "isLowPriority") as Boolean
-                    XposedHelpers.callMethod(expandableRow, "setIsLowPriority", newLowPriority)
-                    val hasLowPriorityChanged = hasEntry && isLowPriority != newLowPriority
-                    XposedHelpers.callMethod(expandableRow, "setLowPriorityStateUpdated", hasLowPriorityChanged)
-                    XposedHelpers.callMethod(expandableRow, "updateNotification", args[0])
 
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)

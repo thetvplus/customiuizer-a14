@@ -26,7 +26,7 @@ buildscript {
     }
     dependencies {
         // AGP's built-in Kotlin otherwise resolves KGP 2.2.10 (CVE-2026-53914).
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.20")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
         // Host build tools only: these constraints do not enter the APK.
         constraints {
             add("classpath", "org.apache.commons:commons-lang3:3.21.0") {

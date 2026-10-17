@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate a machine-readable A14 APK size baseline with compressed/uncompressed attribution.
+"""Generate an A14 APK size baseline or compare two existing baselines.
 
 Usage:
     python tools/apk_size_report.py path/to/app.apk --out path/to/baseline.json
+    python tools/apk_size_report.py before.json --compare after.json
 """
 
 import argparse
@@ -93,11 +94,65 @@ def report(apk_path: Path) -> dict:
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate APK size baseline JSON.")
-    parser.add_argument("apk", help="Path to the APK file.")
+def fmt(value: int) -> str:
+    sign = "+" if value > 0 else ""
+    return f"{sign}{value:,} bytes ({sign}{value / 1024:.1f} KB)"
+
+
+def compare(before_path: Path, after_path: Path, apk_budget_kb: float, dex_budget_kb: float) -> int:
+    """Keep the historical absolute-delta budgets, including size decreases."""
+    before = json.loads(before_path.read_text(encoding="utf-8"))
+    after = json.loads(after_path.read_text(encoding="utf-8"))
+    metrics = (
+        ("Real APK file size", "apkFileBytes"),
+        ("ZIP compressed total", "zipEntriesCompressedBytes"),
+        ("ZIP uncompressed total", "zipEntriesUncompressedBytes"),
+        ("classes*.dex (compressed)", "dexCompressedBytes"),
+        ("classes*.dex (uncompressed)", "dexUncompressedBytes"),
+        ("resources.arsc (compressed)", "resourcesArscCompressedBytes"),
+        ("lib/ (compressed)", "libCompressedBytes"),
+    )
+    print(f"APK: {before['apkPath']} -> {after['apkPath']}")
+    for label, field in metrics:
+        print(f"{label}: {fmt(after[field] - before[field])}")
+
+    before_files = {entry["name"]: entry["compressedSize"] for entry in before["files"]}
+    after_files = {entry["name"]: entry["compressedSize"] for entry in after["files"]}
+    changes = [
+        (name, after_files.get(name, 0) - before_files.get(name, 0))
+        for name in before_files.keys() | after_files.keys()
+        if after_files.get(name, 0) != before_files.get(name, 0)
+    ]
+    changes.sort(key=lambda change: (-abs(change[1]), change[0]))
+    print("\nTop file changes (compressed):")
+    for name, delta in changes[:20]:
+        print(f"  {name}: {fmt(delta)}")
+
+    failed = False
+    for label, field, budget in (
+        ("APK file", "apkFileBytes", apk_budget_kb),
+        ("DEX (compressed)", "dexCompressedBytes", dex_budget_kb),
+    ):
+        delta = after[field] - before[field]
+        if abs(delta) > budget * 1024:
+            print(f"FAIL: {label} delta {delta / 1024:.1f} KB exceeds budget {budget} KB")
+            failed = True
+    return 1 if failed else 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("apk", help="APK path, or the before baseline JSON with --compare.")
     parser.add_argument("--out", help="Path to write the JSON baseline.")
-    args = parser.parse_args()
+    parser.add_argument("--compare", metavar="AFTER_JSON", type=Path, help="Compare two existing baseline JSON files.")
+    parser.add_argument("--apk-budget-kb", type=float, default=100.0, help="Absolute APK delta budget in KB (compare only).")
+    parser.add_argument("--dex-budget-kb", type=float, default=50.0, help="Absolute compressed DEX delta budget in KB (compare only).")
+    args = parser.parse_args(argv)
+
+    if args.compare is not None:
+        if args.out:
+            parser.error("--out applies to baseline generation, not --compare")
+        return compare(Path(args.apk), args.compare, args.apk_budget_kb, args.dex_budget_kb)
 
     apk_path = Path(args.apk)
     if not apk_path.is_file():

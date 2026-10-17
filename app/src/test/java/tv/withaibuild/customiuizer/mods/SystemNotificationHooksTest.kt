@@ -48,89 +48,24 @@ class SystemNotificationHooksTest {
     }
 
     @Test
-    fun betterPopupsNoHideHook_preflightsRequiredClassesBeforeAnyHookInstallation() {
+    fun obsoleteNotificationHooksAreRemovedButSharedSnapshotRemains() {
         val source = sourceFile(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemNotificationHooks.kt"
         ).readText()
-        val fnStart = source.indexOf("fun BetterPopupsNoHideHook(")
-        assertTrue("BetterPopupsNoHideHook must exist", fnStart >= 0)
-
-        val fnBody = source.substring(fnStart)
-
-        val headsUpManagerFindClass = fnBody.indexOf(
-            "findClass(\"com.android.systemui.statusbar.policy.HeadsUpManager\""
-        )
-        val headsUpEntryFindClass = fnBody.indexOf(
-            "findClass(\"com.android.systemui.statusbar.policy.HeadsUpManager\\\$HeadsUpEntry\""
-        )
-        assertTrue(
-            "Preflight must resolve HeadsUpManager class",
-            headsUpManagerFindClass >= 0
-        )
-        assertTrue(
-            "Preflight must resolve HeadsUpManager\$HeadsUpEntry class",
-            headsUpEntryFindClass >= 0
-        )
-
-        val removeHeadsUp = fnBody.indexOf("findMethodExact(\"com.android.systemui.statusbar.policy.HeadsUpManager\", lpparam.classLoader, \"removeHeadsUpNotification\")")
-        val removeOldHeadsUp = fnBody.indexOf("findMethodExact(\"com.android.systemui.statusbar.policy.HeadsUpManager\", lpparam.classLoader, \"removeOldHeadsUpNotification\")")
-        val onExpandingFinished = fnBody.indexOf("findMethodExact(\"com.android.systemui.statusbar.policy.HeadsUpManager\", lpparam.classLoader, \"onExpandingFinished\")")
-        val updateEntry = fnBody.indexOf("findMethodExact(\"com.android.systemui.statusbar.policy.HeadsUpManager\\\$HeadsUpEntry\", lpparam.classLoader, \"updateEntry\", Boolean::class.javaPrimitiveType!!)")
-
-        assertTrue("Preflight must resolve removeHeadsUpNotification", removeHeadsUp >= 0)
-        assertTrue("Preflight must resolve removeOldHeadsUpNotification", removeOldHeadsUp >= 0)
-        assertTrue("Preflight must resolve onExpandingFinished", onExpandingFinished >= 0)
-        assertTrue("Preflight must resolve updateEntry(boolean)", updateEntry >= 0)
-
-        val firstHookInstall = fnBody.indexOf("ModuleHelper.findAndHookMethod(")
-
-        assertTrue("At least one hook installation must exist", firstHookInstall >= 0)
-
-        // All preflight resolutions must occur before the first hook installation.
-        val preflightMax = maxOf(headsUpManagerFindClass, headsUpEntryFindClass, removeHeadsUp, removeOldHeadsUp, onExpandingFinished, updateEntry)
-        assertTrue(
-            "All preflight class/method resolutions must happen before the first ModuleHelper.findAndHookMethod call",
-            preflightMax < firstHookInstall
-        )
-    }
-
-    @Test
-    fun betterPopupsHideDelayHook_preflightsRequiredClassAndFieldsBeforeAnyHookInstallation() {
-        val source = sourceFile(
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemNotificationHooks.kt"
-        ).readText()
-        val fnStart = source.indexOf("fun BetterPopupsHideDelayHook(")
-        assertTrue("BetterPopupsHideDelayHook must exist", fnStart >= 0)
-
-        val fnBody = source.substring(fnStart)
-
-        val findClassPos = fnBody.indexOf("findClass(\"com.android.systemui.statusbar.policy.HeadsUpManager\", lpparam.classLoader)")
-        assertTrue("Preflight must resolve HeadsUpManager class", findClassPos >= 0)
-
-        val findMinDisplayTime = fnBody.indexOf("findField(headsUpManagerClass, \"mMinimumDisplayTime\")")
-        val findDecay = fnBody.indexOf("findField(headsUpManagerClass, \"mHeadsUpNotificationDecay\")")
-        assertTrue("Preflight must resolve mMinimumDisplayTime field", findMinDisplayTime >= 0)
-        assertTrue("Preflight must resolve mHeadsUpNotificationDecay field", findDecay >= 0)
-
-        val firstSilentHook = fnBody.indexOf("ModuleHelper.findAndHookMethodSilently(")
-        val firstConstructorHook = fnBody.indexOf("ModuleHelper.hookAllConstructors(")
-        assertTrue("At least one hook installation must exist", firstSilentHook >= 0)
-        assertTrue("Constructor hook must exist", firstConstructorHook >= 0)
-
-        val firstHookInstall = minOf(firstSilentHook, firstConstructorHook)
-
-        val preflightMax = maxOf(findClassPos, findMinDisplayTime, findDecay)
-        assertTrue(
-            "All preflight class/field resolutions must happen before the first hook installation",
-            preflightMax < firstHookInstall
-        )
-
-        // Verify hookAllConstructors uses the resolved Class, not a string re-resolution.
-        val constructorCall = fnBody.substring(firstConstructorHook, firstConstructorHook + 80)
-        assertTrue(
-            "hookAllConstructors must use the resolved headsUpManagerClass, not a string class name",
-            constructorCall.contains("hookAllConstructors(headsUpManagerClass,")
-        )
+        for (obsolete in listOf(
+            "BetterPopupsNoHideHook",
+            "BetterPopupsHideDelayHook",
+            "MinimalNotificationViewHook",
+            "system_betterpopups_delay",
+            "betterPopupsDelayMs",
+        )) {
+            assertTrue("Retired notification path must not remain: $obsolete", !source.contains(obsolete))
+        }
+        assertTrue(source.contains("fun installNotificationSnapshot()"))
+        assertTrue(source.contains("fun ExpandHeadsUpHook("))
+        assertTrue(source.contains("expandHeadsUp = prefs.getStringAsInt"))
+        assertTrue(source.contains("maxSbIcons = prefs.getStringAsInt"))
+        assertTrue(source.contains("ModuleHelper.observePreferenceChange("))
     }
 
     @Test

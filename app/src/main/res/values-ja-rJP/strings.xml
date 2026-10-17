@@ -75,8 +75,6 @@
     <string name="system_statusbarcolor_title">ステータスバーの背景色</string>
     <string name="system_statusbarcolor_summ">ステータスバーとアプリアクションバーの背景色を可能な限り同期します</string>
     <string name="system_statusbarcolor_apps_title">ブラックリスト</string>
-    <string name="system_shortcut_app_title">ショートカットアプリ</string>
-    <string name="system_shortcut_app_summ">通知シェードのヘッダー上のショートカットアイコンをタップで選択をしたアプリを開くことができます</string>
     <string name="system_clock_app_title">時計アプリ</string>
     <string name="system_clock_app_summ">通知シェードのヘッダー上の時計をタップで選択をしたアプリを開くことができます</string>
     <string name="system_calendar_app_title">カレンダーアプリ</string>
@@ -124,7 +122,6 @@
     <string name="system_4gtolte_title">4GアイコンをLTEアイコンで表示する</string>
     <string name="system_statusbar_mobile_showname_title">モバイルネットワークタイプを変更する</string>
     <string name="system_hidestatusbar_whenscreenshot_title">スクリーンショットの撮影時にステータスバーを非表示にする</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">スクリーンレコード時にステータスバーを非表示にする</string>
     <string name="system_netspeedinterval_title">ネットワーク速度の更新間隔</string>
     <string name="system_detailednetspeed_title">2段表示</string>
     <string name="system_netspeed_cat_title">ネットワーク速度Mod</string>
@@ -155,8 +152,6 @@
     <string name="system_colorizenotiftitle_title">通知のタイトルをカラー化する</string>
     <string name="system_colorizenotiftitle_summ">アイコンの色をカードに適用します</string>
     <string name="system_notify_openinfw_title">通知をフローティングウィンドウで開く</string>
-    <string name="system_minimalnotifview_title">最小限の折りたたみ表示を復活させる</string>
-    <string name="system_minimalnotifview_summ">重要度が低い通知は再度一行のみの表示に折りたためるようになります</string>
     <string name="system_notifchannelsettings_title">通知チャネルの設定を開く</string>
     <string name="system_notifchannelsettings_summ">通知メニューから設定を開くとアプリ共通の通知設定ではなく通知チャネルの設定を表示します</string>
     <string name="system_drawer_removeshortcut_title">通知シェードのショートカットを非表示にする</string>
@@ -397,9 +392,6 @@
     <string name="system_hidefromrecents_title">履歴上から非表示にする</string>
     <string name="system_hidefromrecents_summ">最近のタスクで選択をしたアプリを非表示にします</string>
     <string name="system_mods_betterpopups">ポップアップ通知</string>
-    <string name="system_betterpopups_delay_title">自動消去の遅延</string>
-    <string name="system_betterpopups_nohide_title">自動で消去しない</string>
-    <string name="system_betterpopups_nohide_summ">ポップアップウィンドウを自動的に消去しないようにします</string>
     <string name="system_betterpopups_autoclose_expanded_title">拡張されたポップアップを自動に却下する</string>
     <string name="system_betterpopups_allowfloat_title">フローティングウィンドウを許可する</string>
     <string name="system_betterpopups_allowfloat_summ">通知で適切なクリックアクションが定義されている場合に下にスワイプのジェスチャーでアプリをフローティングウィンドウで開く事ができるようになります</string>
@@ -451,8 +443,6 @@
     <string name="launcher_nowidgetonly_summ">すべての画面でタブレットのウィジェットとアプリのウィジェットの両方をサポートするようにします</string>
     <string name="launcher_nounlockanim_title">ロック解除時のアニメーションを無効化する</string>
     <string name="launcher_nounlockanim_summ">ロック解除時にアイコンをアニメーションさせないようにします</string>
-    <string name="launcher_nozoomanim_title">起動時のアニメーションを無効化する</string>
-    <string name="launcher_nozoomanim_summ">アプリの起動時、終了時にアイコンを拡大・縮小表示させないようにします</string>
     <string name="launcher_oldlaunchanim_title">古い起動アニメーションを使用する</string>
     <string name="launcher_oldlaunchanim_summ">アプリの起動時の遷移を以前の物に戻します</string>
     <string name="launcher_sensorportrait_title">逆の縦方向表示をサポートする</string>
@@ -596,10 +586,7 @@
     <string name="various_hiddenfeatures_not_found">このデバイスでは使用できません</string>
     <string name="various_runningservices_title">実行中のサービス</string>
     <string name="various_batteryoptimization_title">バッテリーの最適化</string>
-    <string name="various_memorystats_title">メモリの使用状況</string>
-    <string name="various_appusagestats_title">使用統計情報</string>
     <string name="various_aospnotif_title">アプリと通知</string>
-    <string name="various_aospnotiflog_title">通知ログ</string>
     <string name="various_miuiinstaller_summ">システムアプリのアップデートを許可する</string>
     <string name="various_miuiinstaller_error">必要なアプリが未インストールまたは無効化されています</string>
     <string name="various_installer_purify_title">パッケージインストーラーを浄化する</string>
@@ -903,7 +890,6 @@
     <string name="system_statusbaricons_atsecondrow_title">一部のアイコンを2段目に移動する</string>
     <string name="system_statusbaricons_wifi_mobile_atleft_title">モバイルデータとWi-Fiを左側に移動する</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">モバイルデータとWi-Fiの表示を入れ替える</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">ロック画面で左に移動する</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">バッテリーアイコンとバッテリーのパーセント表示を入れ替える</string>
     <string name="system_statusbaricons_change_position_title">アイコンの表示位置を変更</string>
     <string name="system_statusbar_mobile_signal_cat_title">モバイル信号アイコンの設定</string>
@@ -1059,6 +1045,8 @@
     <string name="system_statusbar_duo_summ">バッテリーリング、Wi-Fi、携帯電話の電波を1つに表示。デュアルSIMでは既定のデータSIMを使用</string>
     <string name="system_statusbar_duo_restart">設定変更後はシステムUIを再起動してください。Duoの割合とサイズは標準アイコンの非表示やスタイルから独立しています。非対応端末では標準アイコンを維持します。</string>
     <string name="system_statusbar_duo_percent_title">バッテリー残量の割合を表示</string>
+    <string name="system_statusbar_duo_chargingbolt_title">充電中の稲妻を表示</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">充電中に稲妻を表示します。無効にすると、割合表示が有効な場合は数値を表示し、バッテリーリングは緑色のままです。</string>
     <string name="system_statusbar_duo_size_title">アイコンサイズを手動設定</string>
     <string name="system_statusbar_duo_size_summ">自動調整が無効な場合に使用し、行の高さを上限とします。</string>
     <string name="system_statusbar_duo_autosize_title">アイコンサイズを自動調整</string>

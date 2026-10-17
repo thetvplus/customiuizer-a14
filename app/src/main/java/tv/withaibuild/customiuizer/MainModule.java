@@ -31,7 +31,6 @@ import tv.withaibuild.customiuizer.installers.SettingsInstaller;
 import tv.withaibuild.customiuizer.mods.Various;
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper;
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks;
-import tv.withaibuild.customiuizer.mods.utils.XposedApiCapabilities;
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers;
 import tv.withaibuild.customiuizer.mods.utils.FeatureSpec;
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallRegistry;
@@ -61,7 +60,6 @@ public class MainModule extends XposedModule {
         processName = param.getProcessName();
         HookDiagnostics.currentProcessName = processName;
         XposedHelpers.moduleInst = this;
-        XposedApiCapabilities.initialize(getApiVersion());
         // Stamp the build into every process's log. Without it a captured LSPosed log
         // cannot be told apart from one produced by a different build of the same
         // version, which is the first thing anyone reading the log needs to know.

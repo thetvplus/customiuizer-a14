@@ -25,6 +25,12 @@ def _load_module():
 
 
 class AuditHookOwnershipTest(unittest.TestCase):
+    def test_id_installers_remain_visible_to_ownership_scan(self):
+        mod = _load_module()
+        for entry in ("findAndHookMethodWithId", "hookAllMethodsWithId"):
+            with self.subTest(entry=entry):
+                self.assertIsNotNone(mod.HOOK_CALL_RE.search(f'ModuleHelper.{entry}("target", loader, "init", "stable.id", callback)'))
+
     def test_checkDoesNotRequireCommittedMarkdown(self):
         """Default --check works and does not require the deleted inventory."""
         self.assertFalse(

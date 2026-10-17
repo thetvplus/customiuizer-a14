@@ -41,6 +41,18 @@ class System : SubFragment() {
         if (sub == "pref_key_system_cat_qs" && Build.IS_INTERNATIONAL_BUILD) {
             findPreference<Preference>("pref_key_system_cc_switch_qsandnotification")?.isVisible = false
         }
+        if (sub == "pref_key_system_detailednetspeed_cat") {
+            updateDetailedNetSpeedOptions(
+                findPreference<ListPreferenceEx>("pref_key_system_detailednetspeed_style")?.value
+            )
+        }
+    }
+
+    private fun updateDetailedNetSpeedOptions(style: Any?) {
+        val usesModuleFormatter = (style?.toString()?.toIntOrNull() ?: 1) > 1
+        findPreference<Preference>("pref_key_system_detailednetspeed_secunit")?.isEnabled = usesModuleFormatter
+        findPreference<Preference>("pref_key_system_detailednetspeed_low")?.isEnabled = usesModuleFormatter
+        findPreference<Preference>("pref_key_system_detailednetspeed_lowlevel")?.isEnabled = usesModuleFormatter
     }
 
     private fun migrateLegacyRecentsCardStylePreference() {
@@ -152,10 +164,6 @@ class System : SubFragment() {
                 findPreference<Preference>("pref_key_system_statusbarcontrols_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_statusbarcontrols); true }
             }
             "pref_key_system_cat_drawer" -> {
-                findPreference<Preference>("pref_key_system_shortcut_app")?.setOnPreferenceClickListener {
-                    openStandaloneApp(it, this, 0)
-                    true
-                }
                 findPreference<Preference>("pref_key_system_clock_app")?.setOnPreferenceClickListener {
                     openStandaloneApp(it, this, 1)
                     true
@@ -261,6 +269,7 @@ class System : SubFragment() {
                             val viewIntent = Intent().apply {
                                 action = Intent.ACTION_VIEW
                                 setDataAndType(Uri.parse("content://${PrefsProvider.AUTHORITY}/test/$which"), type)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             context.startActivity(Intent.createChooser(viewIntent, null))
                         }
@@ -303,7 +312,13 @@ class System : SubFragment() {
                 })
 
             }
-            "pref_key_system_detailednetspeed_cat" -> {}
+            "pref_key_system_detailednetspeed_cat" -> {
+                findPreference<ListPreferenceEx>("pref_key_system_detailednetspeed_style")?.setOnPreferenceChangeListener { preference, newValue ->
+                    syncPendingListSelection(preference, newValue)
+                    updateDetailedNetSpeedOptions(newValue)
+                    true
+                }
+            }
             "pref_key_system_statusbarcontrols_cat" -> {
                 findPreference<Preference>("pref_key_system_statusbarcontrols_dt")?.setOnPreferenceClickListener(openStatusbarActions)
                 findPreference<Preference>("pref_key_system_statusbarcontrols_dt_left")?.setOnPreferenceClickListener(openStatusbarActions)
@@ -316,7 +331,6 @@ class System : SubFragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (resultCode == Activity.RESULT_OK) {
             val key = when (requestCode) {
-                0 -> "pref_key_system_shortcut_app"
                 1 -> "pref_key_system_clock_app"
                 2 -> "pref_key_system_calendar_app"
                 else -> null

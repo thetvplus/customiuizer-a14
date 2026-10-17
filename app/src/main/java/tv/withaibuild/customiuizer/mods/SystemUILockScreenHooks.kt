@@ -69,8 +69,6 @@ object SystemUILockScreenHooks {
         val calendarApp: String = "",
         val clockAppUser: Int = 0,
         val clockApp: String = "",
-        val shortcutAppUser: Int = 0,
-        val shortcutApp: String = "",
     )
 
     @Volatile
@@ -90,8 +88,6 @@ object SystemUILockScreenHooks {
         "system_calendar_app",
         "system_clock_app_user",
         "system_clock_app",
-        "system_shortcut_app_user",
-        "system_shortcut_app",
     )
 
     internal fun refreshLockScreenConfig() {
@@ -108,8 +104,6 @@ object SystemUILockScreenHooks {
             calendarApp = prefs.getString("system_calendar_app", ""),
             clockAppUser = prefs.getInt("system_clock_app_user", 0),
             clockApp = prefs.getString("system_clock_app", ""),
-            shortcutAppUser = prefs.getInt("system_shortcut_app_user", 0),
-            shortcutApp = prefs.getString("system_shortcut_app", ""),
         )
     }
 
@@ -297,20 +291,6 @@ object SystemUILockScreenHooks {
                         config.albumArtScale,
                         config.albumArtGray,
                     )
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    XposedHelpers.log(t)
-                }
-            }
-        })
-
-        ModuleHelper.findAndHookMethodSilently("com.android.systemui.statusbar.NotificationMediaManager", lpparam.classLoader, "clearCurrentMediaNotification", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                try {
-                    val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
-                    if (isDefaultLockScreenTheme(MiuiThemeUtilsClass)) {
-                        LockScreenAlbumArtController.updateMediaMetaData(mContext, null, 0, 1, false)
-                    }
                 } catch (t: Throwable) {
                     FatalErrors.rethrowIfFatal(t)
                     XposedHelpers.log(t)
@@ -549,10 +529,6 @@ object SystemUILockScreenHooks {
                         user = config.clockAppUser
                         pkgAppName = config.clockApp
                     }
-                    "startSettingsApp" -> {
-                        user = config.shortcutAppUser
-                        pkgAppName = config.shortcutApp
-                    }
                 }
                 if (pkgAppName.isNotEmpty()) {
                     val pkgAppArray = pkgAppName.split(PrefPair.DELIMITER)
@@ -581,9 +557,6 @@ object SystemUILockScreenHooks {
             }
         }
         val config = lockScreenConfig
-        if (config.shortcutApp.isNotEmpty()) {
-            ModuleHelper.findAndHookMethod("com.miui.systemui.util.CommonUtil", lpparam.classLoader, "startSettingsApp", openAppHook)
-        }
         if (config.calendarApp.isNotEmpty()) {
             ModuleHelper.findAndHookMethod("com.miui.systemui.util.CommonUtil", lpparam.classLoader, "startCalendarApp", Context::class.java, openAppHook)
         }

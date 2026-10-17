@@ -91,7 +91,7 @@ class ScopeListTest {
         modulePropFile.reader().use { props.load(it) }
         val minApi = props.getProperty("minApiVersion")?.toIntOrNull()
         val targetApi = props.getProperty("targetApiVersion")?.toIntOrNull()
-        assertTrue("module.prop must declare minApiVersion >= 101", minApi != null && minApi >= 101)
+        assertTrue("module.prop must declare minApiVersion >= 102", minApi != null && minApi >= 102)
         assertTrue("module.prop must declare targetApiVersion >= 102", targetApi != null && targetApi >= 102)
     }
 

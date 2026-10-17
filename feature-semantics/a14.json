@@ -89,11 +89,11 @@
       "enableEffect": "UNKNOWN",
       "disableEffect": "UNKNOWN",
       "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_controls.xml",
-      "notes": ""
+      "confidence": "CODE_VERIFIED",
+      "evidence": "GlobalActionRuntimeContract navigation trigger; NavBarActionsFeature.evaluateEnabled",
+      "notes": "Opens the navigation long-press editor. First enable requires phone reboot; installed action changes and disable use observers. The existing dynamic marker describes that first-enable lifecycle."
     },
     {
       "featureId": "controls_backlong_action",
@@ -102,20 +102,20 @@
         "controls_backlong_action"
       ],
       "xmlSource": "",
-      "defaultValue": "",
+      "defaultValue": "1",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt:intercept",
+      "installer": "Controls.NavBarActionsHook",
       "targetPackage": "android",
       "installPhase": "SYSTEM_SERVER_START",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Install native MiuiSingleKeyRule parent callbacks only if at least one navigation long-press action is configured at startup",
+      "disableEffect": "Already-installed callbacks observe disabled snapshots and delegate to native behavior; a disabled startup installs no navigation business hook",
+      "valueChangeEffect": "First enable requires reboot; installed callbacks observe action changes and disable without reinstall",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt:670",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "NavBarActionsFeature.evaluateEnabled; Controls.interceptNavBarSupportLongPress / interceptNavBarLongPress; GlobalActionRuntimeContract.triggerSpecs",
+      "notes": "Native parent support executes exactly once and refreshes subclass native state before the configured support override. Failed custom actions execute the native parent long-press chain exactly once. MENU uses key code 82. The native detector owns timeout and cancellation; only a successful custom press consumes matching delayed key events, with native MENU preload cleanup on its unique key-up."
     },
     {
       "featureId": "controls_cat_fingerprint",
@@ -660,11 +660,11 @@
       "enableEffect": "UNKNOWN",
       "disableEffect": "UNKNOWN",
       "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_controls.xml",
-      "notes": ""
+      "confidence": "CODE_VERIFIED",
+      "evidence": "GlobalActionRuntimeContract navigation trigger; NavBarActionsFeature.evaluateEnabled",
+      "notes": "Opens the navigation long-press editor. First enable requires phone reboot; installed action changes and disable use observers. The existing dynamic marker describes that first-enable lifecycle."
     },
     {
       "featureId": "controls_homelong_action",
@@ -673,20 +673,20 @@
         "controls_homelong_action"
       ],
       "xmlSource": "",
-      "defaultValue": "",
+      "defaultValue": "1",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt:intercept",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "UNKNOWN",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Updates applied hook behavior",
-      "restartTarget": "UNKNOWN",
+      "installer": "Controls.NavBarActionsHook",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Install native MiuiSingleKeyRule parent callbacks only if at least one navigation long-press action is configured at startup",
+      "disableEffect": "Already-installed callbacks observe disabled snapshots and delegate to native behavior; a disabled startup installs no navigation business hook",
+      "valueChangeEffect": "First enable requires reboot; installed callbacks observe action changes and disable without reinstall",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "UNKNOWN",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt:677",
-      "notes": ""
+      "confidence": "CODE_VERIFIED",
+      "evidence": "NavBarActionsFeature.evaluateEnabled; Controls.interceptNavBarSupportLongPress / interceptNavBarLongPress; GlobalActionRuntimeContract.triggerSpecs",
+      "notes": "Real HOME enters MiuiSingleKeyRule.onLongPress on the target ROM, bypassing the old Default callbacks. Native parent support refreshes subclass state once; failed custom actions execute the native parent chain once. Successful HOME consumes only matching delayed key events. No SystemUI assistant guard or extra-button feature is needed. Native detector timing and cancellation are preserved; first enable requires reboot."
     },
     {
       "featureId": "controls_mediaplayer_apps",
@@ -728,11 +728,11 @@
       "enableEffect": "UNKNOWN",
       "disableEffect": "UNKNOWN",
       "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_controls.xml",
-      "notes": ""
+      "confidence": "CODE_VERIFIED",
+      "evidence": "GlobalActionRuntimeContract navigation trigger; NavBarActionsFeature.evaluateEnabled",
+      "notes": "Opens the navigation long-press editor. First enable requires phone reboot; installed action changes and disable use observers. The existing dynamic marker describes that first-enable lifecycle."
     },
     {
       "featureId": "controls_menulong_action",
@@ -741,20 +741,20 @@
         "controls_menulong_action"
       ],
       "xmlSource": "",
-      "defaultValue": "",
+      "defaultValue": "1",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt:intercept",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "UNKNOWN",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Updates applied hook behavior",
-      "restartTarget": "UNKNOWN",
+      "installer": "Controls.NavBarActionsHook",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Install native MiuiSingleKeyRule parent callbacks only if at least one navigation long-press action is configured at startup",
+      "disableEffect": "Already-installed callbacks observe disabled snapshots and delegate to native behavior; a disabled startup installs no navigation business hook",
+      "valueChangeEffect": "First enable requires reboot; installed callbacks observe action changes and disable without reinstall",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "UNKNOWN",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt:684",
-      "notes": ""
+      "confidence": "CODE_VERIFIED",
+      "evidence": "NavBarActionsFeature.evaluateEnabled; Controls.interceptNavBarSupportLongPress / interceptNavBarLongPress; GlobalActionRuntimeContract.triggerSpecs",
+      "notes": "Native parent support executes exactly once and refreshes subclass native state before the configured support override. Failed custom actions execute the native parent long-press chain exactly once. MENU uses key code 82. The native detector owns timeout and cancellation; only a successful custom press consumes matching delayed key events, with native MENU preload cleanup on its unique key-up."
     },
     {
       "featureId": "controls_navbarleft",
@@ -2546,29 +2546,6 @@
       "hotReloadable": false,
       "confidence": "INFERRED",
       "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:755",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
-    },
-    {
-      "featureId": "launcher_nozoomanim",
-      "featureName": "Launcher No Zoom Animation",
-      "preferenceKeys": [
-        "launcher_nozoomanim",
-        "pref_key_launcher_nozoomanim"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
-      "defaultValue": "",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:evaluateEnabled",
-      "targetPackage": "com.miui.home",
-      "installPhase": "APPLICATION_ATTACH",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:1138",
       "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
     },
     {
@@ -4581,29 +4558,6 @@
       "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
     },
     {
-      "featureId": "system_betterpopups_delay",
-      "featureName": "Better Popups Hide Delay",
-      "preferenceKeys": [
-        "system_betterpopups_delay",
-        "pref_key_system_betterpopups_delay"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
-      "defaultValue": "0",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemNotificationHooks.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemNotificationHooks.kt:intercept",
-      "targetPackage": "com.android.systemui",
-      "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemNotificationHooks.kt:118",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
-    },
-    {
       "featureId": "system_betterpopups_disablewhenmute",
       "featureName": "Disable Heads Up When Mute",
       "preferenceKeys": [
@@ -4624,29 +4578,6 @@
       "hotReloadable": false,
       "confidence": "INFERRED",
       "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:1808",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
-    },
-    {
-      "featureId": "system_betterpopups_nohide",
-      "featureName": "Better Popups No Hide",
-      "preferenceKeys": [
-        "system_betterpopups_nohide",
-        "pref_key_system_betterpopups_nohide"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
-      "defaultValue": "false",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:evaluateEnabled",
-      "targetPackage": "com.android.systemui",
-      "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:208",
       "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
     },
     {
@@ -5752,29 +5683,6 @@
       "notes": ""
     },
     {
-      "featureId": "system_cc_tile_enabled_color_usemonet",
-      "featureName": "system_cc_tile_enabled_color_usemonet",
-      "preferenceKeys": [
-        "pref_key_system_cc_tile_enabled_color_usemonet",
-        "system_cc_tile_enabled_color_usemonet"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_controlcenter_themestyle.xml",
-      "defaultValue": "",
-      "sourceFile": "",
-      "installer": "UNKNOWN",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "APP_UI_ONLY",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "UNKNOWN",
-      "disableEffect": "UNKNOWN",
-      "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_system_controlcenter_themestyle.xml",
-      "notes": ""
-    },
-    {
       "featureId": "system_cc_tile_enabled_iconcolor_custom",
       "featureName": "system_cc_tile_enabled_iconcolor_custom",
       "preferenceKeys": [
@@ -6475,16 +6383,16 @@
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt:buildDetailedNetSpeedFormatSnapshot",
       "targetPackage": "com.android.systemui",
-      "installPhase": "UNKNOWN",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Updates applied hook behavior",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "UNKNOWN",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt:2018",
-      "notes": ""
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Hides each low-speed value when the installed detailed formatter observes a speed below the configured threshold",
+      "disableEffect": "The installed detailed formatter keeps low-speed values visible",
+      "valueChangeEffect": "The preference observer invalidates the installed detailed-format snapshot and the next updateText rebuilds it from current preferences",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemUIStatusBarHooks.kt:DetailedNetSpeedRuntimeState.relevantKeys, NetSpeedRuntimeState.observer, buildDetailedNetSpeedFormatSnapshot and DetailedNetSpeedHook; subs/System.kt:updateDetailedNetSpeedOptions",
+      "notes": "Editing is enabled only for detailed styles 2/3; native style disables the control without deleting its value. These child values update an already-installed detailed hook. Installing or removing the detailed hook after changing the master style still requires restarting SystemUI; these keys do not install it independently."
     },
     {
       "featureId": "system_detailednetspeed_lowlevel",
@@ -6498,16 +6406,16 @@
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt:buildDetailedNetSpeedFormatSnapshot",
       "targetPackage": "com.android.systemui",
-      "installPhase": "UNKNOWN",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Updates applied hook behavior",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "UNKNOWN",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt:2019",
-      "notes": ""
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Sets the low-speed threshold in KB/s used by the detailed formatter for hiding values and choosing arrows",
+      "disableEffect": "This numeric threshold has no independent off state; value hiding is controlled by system_detailednetspeed_low",
+      "valueChangeEffect": "The preference observer invalidates the installed detailed-format snapshot and the next updateText rebuilds it from current preferences",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemUIStatusBarHooks.kt:DetailedNetSpeedRuntimeState.relevantKeys, NetSpeedRuntimeState.observer, buildDetailedNetSpeedFormatSnapshot and DetailedNetSpeedHook; subs/System.kt:updateDetailedNetSpeedOptions",
+      "notes": "Editing is enabled only for detailed styles 2/3; native style disables the control without deleting its value. These child values update an already-installed detailed hook. Installing or removing the detailed hook after changing the master style still requires restarting SystemUI; these keys do not install it independently."
     },
     {
       "featureId": "system_detailednetspeed_secunit",
@@ -6521,16 +6429,16 @@
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt:buildDetailedNetSpeedFormatSnapshot",
       "targetPackage": "com.android.systemui",
-      "installPhase": "UNKNOWN",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Updates applied hook behavior",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "UNKNOWN",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt:2022",
-      "notes": ""
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "The installed detailed formatter omits the B/s unit suffix",
+      "disableEffect": "The installed detailed formatter includes the B/s unit suffix",
+      "valueChangeEffect": "The preference observer invalidates the installed detailed-format snapshot and the next updateText rebuilds it from current preferences",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemUIStatusBarHooks.kt:DetailedNetSpeedRuntimeState.relevantKeys, NetSpeedRuntimeState.observer, buildDetailedNetSpeedFormatSnapshot and DetailedNetSpeedHook; subs/System.kt:updateDetailedNetSpeedOptions",
+      "notes": "Editing is enabled only for detailed styles 2/3; native style disables the control without deleting its value. These child values update an already-installed detailed hook. Installing or removing the detailed hook after changing the master style still requires restarting SystemUI; these keys do not install it independently."
     },
     {
       "featureId": "system_detailednetspeed_style",
@@ -7384,29 +7292,6 @@
       "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
     },
     {
-      "featureId": "system_hidestatusbar_whenscreenrecord",
-      "featureName": "system_hidestatusbar_whenscreenrecord",
-      "preferenceKeys": [
-        "pref_key_system_hidestatusbar_whenscreenrecord",
-        "system_hidestatusbar_whenscreenrecord"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
-      "defaultValue": "",
-      "sourceFile": "",
-      "installer": "UNKNOWN",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "APP_UI_ONLY",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "UNKNOWN",
-      "disableEffect": "UNKNOWN",
-      "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_system.xml",
-      "notes": ""
-    },
-    {
       "featureId": "system_hidestatusbar_whenscreenshot",
       "featureName": "Hide Status Bar When Capture",
       "preferenceKeys": [
@@ -7863,29 +7748,6 @@
       "hotReloadable": false,
       "confidence": "INFERRED",
       "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemNotificationHooks.kt:538",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
-    },
-    {
-      "featureId": "system_minimalnotifview",
-      "featureName": "Minimal Notification View",
-      "preferenceKeys": [
-        "system_minimalnotifview",
-        "pref_key_system_minimalnotifview"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
-      "defaultValue": "false",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:evaluateEnabled",
-      "targetPackage": "com.android.systemui",
-      "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:1827",
       "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
     },
     {
@@ -9637,51 +9499,6 @@
       "notes": "Observed by PreferenceObserver in app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt."
     },
     {
-      "featureId": "system_shortcut_app",
-      "featureName": "Replace Shortcut App",
-      "preferenceKeys": [
-        "system_shortcut_app",
-        "pref_key_system_shortcut_app"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
-      "defaultValue": "",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUILockScreenHooks.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUILockScreenHooks.kt:before",
-      "targetPackage": "com.android.systemui",
-      "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUILockScreenHooks.kt:479",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
-    },
-    {
-      "featureId": "system_shortcut_app_user",
-      "featureName": "Replace Shortcut App",
-      "preferenceKeys": [
-        "system_shortcut_app_user"
-      ],
-      "xmlSource": "",
-      "defaultValue": "",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUILockScreenHooks.kt",
-      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUILockScreenHooks.kt:before",
-      "targetPackage": "com.android.systemui",
-      "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Updates applied hook behavior",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUILockScreenHooks.kt:478",
-      "notes": ""
-    },
-    {
       "featureId": "system_showpct",
       "featureName": "Brightness Pct",
       "preferenceKeys": [
@@ -11308,13 +11125,33 @@
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "INSTALL_TIME_SNAPSHOT",
-      "enableEffect": "Shows percentage in the top ring gap when Duo is enabled",
-      "disableEffect": "Closes the top gap; charging still shows a bolt",
+      "enableEffect": "Shows percentage in the top ring gap when Duo is enabled and no charging bolt is displayed",
+      "disableEffect": "Closes the top gap unless the phone is charging with the charging bolt enabled",
       "valueChangeEffect": "Applies the new drawing configuration after SystemUI restart",
       "restartTarget": "SYSTEMUI",
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
       "evidence": "DuoConfig.read and DuoStatusBarView.drawIcon; target-device acceptance pending"
+    },
+    {
+      "featureId": "system_statusbar_duo_chargingbolt",
+      "featureName": "Duo charging bolt",
+      "preferenceKeys": ["system_statusbar_duo_chargingbolt", "pref_key_system_statusbar_duo_chargingbolt"],
+      "xmlSource": "app/src/main/res/xml/prefs_system_statusbar_duo.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/duostatusbar/DuoConfig.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/duostatusbar/DuoConfig.kt:read",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "INSTALL_TIME_SNAPSHOT",
+      "enableEffect": "Shows a bolt instead of percentage while the phone is charging and Duo is enabled",
+      "disableEffect": "Shows percentage if enabled, otherwise closes the top gap; the charging battery ring stays green",
+      "valueChangeEffect": "Applies the new drawing configuration after SystemUI restart",
+      "restartTarget": "SYSTEMUI",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "DuoConfig.read and DuoStatusBarView.drawIcon; target-device acceptance pending",
+      "notes": "Default on and independent of the percentage switch. Only the displayed bolt and top gap use this setting; battery color uses the actual charging state. No additional hook, listener or refresh task."
     },
     {
       "featureId": "system_statusbar_duo_audio",
@@ -11981,29 +11818,6 @@
       "hotReloadable": false,
       "confidence": "INFERRED",
       "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt:2495",
-      "notes": ""
-    },
-    {
-      "featureId": "system_statusbar_icons_atleft_onkeyguard",
-      "featureName": "system_statusbar_icons_atleft_onkeyguard",
-      "preferenceKeys": [
-        "pref_key_system_statusbar_icons_atleft_onkeyguard",
-        "system_statusbar_icons_atleft_onkeyguard"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_statusbar_righticons.xml",
-      "defaultValue": "",
-      "sourceFile": "",
-      "installer": "UNKNOWN",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "APP_UI_ONLY",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "UNKNOWN",
-      "disableEffect": "UNKNOWN",
-      "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_system_statusbar_righticons.xml",
       "notes": ""
     },
     {
@@ -16593,29 +16407,6 @@
       "notes": ""
     },
     {
-      "featureId": "various_aospnotiflog",
-      "featureName": "various_aospnotiflog",
-      "preferenceKeys": [
-        "pref_key_various_aospnotiflog",
-        "various_aospnotiflog"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_various_hiddenfeatures.xml",
-      "defaultValue": "",
-      "sourceFile": "",
-      "installer": "UNKNOWN",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "APP_UI_ONLY",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "UNKNOWN",
-      "disableEffect": "UNKNOWN",
-      "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_various_hiddenfeatures.xml",
-      "notes": ""
-    },
-    {
       "featureId": "various_appdetails",
       "featureName": "Security Center App Info",
       "preferenceKeys": [
@@ -16660,29 +16451,6 @@
       "confidence": "INFERRED",
       "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:278",
       "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
-    },
-    {
-      "featureId": "various_appusagestats",
-      "featureName": "various_appusagestats",
-      "preferenceKeys": [
-        "pref_key_various_appusagestats",
-        "various_appusagestats"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_various_hiddenfeatures.xml",
-      "defaultValue": "",
-      "sourceFile": "",
-      "installer": "UNKNOWN",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "APP_UI_ONLY",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "UNKNOWN",
-      "disableEffect": "UNKNOWN",
-      "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_various_hiddenfeatures.xml",
-      "notes": ""
     },
     {
       "featureId": "various_batteryoptimization",
@@ -16971,17 +16739,17 @@
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/GuardProviderFeatures.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/GuardProviderFeatures.kt:evaluateEnabled",
-      "targetPackage": "android",
+      "targetPackage": "com.miui.guardprovider",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "enableEffect": "On domestic builds only, runs the existing DexKit query and installs interception only when a target matches; international builds never install this feature",
+      "disableEffect": "A newly started GuardProvider process keeps original behavior; previously installed hooks require a process restart to be removed",
+      "valueChangeEffect": "Requires the GuardProvider process to restart before installation or removal takes effect",
+      "restartTarget": "TARGET_APP",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/GuardProviderFeatures.kt:42",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "GuardProviderFeatures.kt:GuardProviderDisableDefraudAppsFeature.evaluateEnabled and install; Various.kt:DisableDefraudAppsCheck; subs/Various.kt:onCreatePreferences",
+      "notes": "International builds hide the UI and reject installation even if an imported preference is true, before loading DexKit. The domestic query and hook remain; domestic target matching and behavior are not device-verified. Global fuxi V816.0.7.0.UMCTWXM APK SHA-256 1b767096d88e61b51e1f5db928eb963071ba851f47da0f20965ce262e31edeb6 had no production-query match on 2026-10-11."
     },
     {
       "featureId": "various_disable_dock_suggest",
@@ -17304,29 +17072,6 @@
       "confidence": "INFERRED",
       "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/PackageInstallerFeatures.kt:98",
       "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
-    },
-    {
-      "featureId": "various_memorystats",
-      "featureName": "various_memorystats",
-      "preferenceKeys": [
-        "pref_key_various_memorystats",
-        "various_memorystats"
-      ],
-      "xmlSource": "app/src/main/res/xml/prefs_various_hiddenfeatures.xml",
-      "defaultValue": "",
-      "sourceFile": "",
-      "installer": "UNKNOWN",
-      "targetPackage": "UNKNOWN",
-      "installPhase": "APP_UI_ONLY",
-      "runtimeReadMode": "UNKNOWN",
-      "enableEffect": "UNKNOWN",
-      "disableEffect": "UNKNOWN",
-      "valueChangeEffect": "UNKNOWN",
-      "restartTarget": "UNKNOWN",
-      "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "android:key in app/src/main/res/xml/prefs_various_hiddenfeatures.xml",
-      "notes": ""
     },
     {
       "featureId": "various_miuiinstaller",

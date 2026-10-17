@@ -75,8 +75,6 @@
     <string name="system_statusbarcolor_title">Màu nền thanh trạng thái</string>
     <string name="system_statusbarcolor_summ">Làm cho màu nền của thanh trạng thái và thanh hành động của ứng dụng giống nhau nếu có thể</string>
     <string name="system_statusbarcolor_apps_title">Danh sách đen</string>
-    <string name="system_shortcut_app_title">Ứng dụng lối tắt</string>
-    <string name="system_shortcut_app_summ">Mở ứng dụng đã chọn khi nhấn vào biểu tượng phím tắt phía trên ngăn thông báo</string>
     <string name="system_clock_app_title">Ứng dụng đồng hồ</string>
     <string name="system_clock_app_summ">Mở ứng dụng đã chọn khi nhấn vào đồng hồ phía trên ngăn thông báo</string>
     <string name="system_calendar_app_title">Ứng dụng lịch</string>
@@ -124,7 +122,6 @@
     <string name="system_4gtolte_title">Hiển thị biểu tượng LTE cho 4G</string>
     <string name="system_statusbar_mobile_showname_title">Tùy chỉnh loại mạng di động</string>
     <string name="system_hidestatusbar_whenscreenshot_title">Ẩn thanh trạng thái khi chụp ảnh màn hình</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">Ẩn thanh trạng thái khi quay màn hình</string>
     <string name="system_netspeedinterval_title">Thời gian cập nhật tốc độ mạng</string>
     <string name="system_detailednetspeed_title">Tốc độ tải lên và tải xuống được hiển thị trong hàng kép</string>
     <string name="system_netspeed_cat_title">Mod tốc độ mạng</string>
@@ -155,8 +152,6 @@
     <string name="system_colorizenotiftitle_title">Tô màu thẻ thông báo</string>
     <string name="system_colorizenotiftitle_summ">Áp dụng màu của biểu tượng cho thẻ</string>
     <string name="system_notify_openinfw_title">Mở thông báo trong cửa sổ nổi</string>
-    <string name="system_minimalnotifview_title">Khôi phục chế độ xem thu gọn đơn giản</string>
-    <string name="system_minimalnotifview_summ">Thông báo ít quan trọng nhất có thể được thu gọn lại để xem một dòng</string>
     <string name="system_notifchannelsettings_title">Mở cài đặt kênh</string>
     <string name="system_notifchannelsettings_summ">Bật cài đặt menu thông báo sẽ điều hướng đến cài đặt kênh thay vì áp dụng cài đặt thông báo chung</string>
     <string name="system_drawer_removeshortcut_title">Ẩn lối tắt bóng thông báo</string>
@@ -397,9 +392,6 @@
     <string name="system_hidefromrecents_title">Ẩn gần đây</string>
     <string name="system_hidefromrecents_summ">Ẩn các ứng dụng đã chọn khỏi danh sách tác vụ gần đây</string>
     <string name="system_mods_betterpopups">Thông báo nổi</string>
-    <string name="system_betterpopups_delay_title">Độ trễ tự động ẩn</string>
-    <string name="system_betterpopups_nohide_title">Không tự động ẩn</string>
-    <string name="system_betterpopups_nohide_summ">Không tự động đóng cửa sổ nổi</string>
     <string name="system_betterpopups_autoclose_expanded_title">Tự động loại bỏ các cửa sổ bật lên mở rộng</string>
     <string name="system_betterpopups_allowfloat_title">Cho phép cửa sổ nổi</string>
     <string name="system_betterpopups_allowfloat_summ">Mở ứng dụng trong cửa sổ nổi bằng cử chỉ vuốt xuống nếu thông báo xác định hành động nhấn thích hợp</string>
@@ -451,8 +443,6 @@
     <string name="launcher_nowidgetonly_summ">Tạo các tiện ích và ứng dụng hỗ trợ trên tất cả các màn hình máy tính bảng</string>
     <string name="launcher_nounlockanim_title">Xóa hoạt ảnh mở khóa</string>
     <string name="launcher_nounlockanim_summ">Xóa biểu tượng động khi mở khóa thiết bị</string>
-    <string name="launcher_nozoomanim_title">Xóa hoạt ảnh khởi động</string>
-    <string name="launcher_nozoomanim_summ">Biểu tượng không thu nhỏ khi ứng dụng mở/đóng</string>
     <string name="launcher_oldlaunchanim_title">Sử dụng hoạt ảnh khởi động cũ</string>
     <string name="launcher_oldlaunchanim_summ">Hoàn nguyên chuyển tiếp ứng dụng đang mở về trước đó</string>
     <string name="launcher_sensorportrait_title">Đảo ngược chế độ đứng</string>
@@ -596,10 +586,7 @@
     <string name="various_hiddenfeatures_not_found">Thiết bị này không hỗ trợ</string>
     <string name="various_runningservices_title">Dịch vụ đang chạy</string>
     <string name="various_batteryoptimization_title">Tối ưu hóa pin</string>
-    <string name="various_memorystats_title">Thống kê bộ nhớ</string>
-    <string name="various_appusagestats_title">Thống kê sử dụng</string>
     <string name="various_aospnotif_title">Thông báo ứng dụng</string>
-    <string name="various_aospnotiflog_title">Nhật ký thông báo</string>
     <string name="various_miuiinstaller_summ">Cho phép cập nhật ứng dụng hệ thống</string>
     <string name="various_miuiinstaller_error">Ứng dụng được yêu cầu chưa được cài đặt hoặc bị tắt</string>
     <string name="various_installer_purify_title">Làm sạch trình cài đặt gói</string>
@@ -903,7 +890,6 @@
     <string name="system_statusbaricons_atsecondrow_title">Di chuyển một số biểu tượng sang hàng thứ hai</string>
     <string name="system_statusbaricons_wifi_mobile_atleft_title">Di chuyển biểu tượng di động và Wi-Fi sang bên trái</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">Hoán đổi biểu tượng di động và Wi-Fi</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">Di chuyển sang trái trên màn hình khóa</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">Hoán đổi biểu tượng và phần trăm pin</string>
     <string name="system_statusbaricons_change_position_title">Thay đổi vị trí hiển thị biểu tượng</string>
     <string name="system_statusbar_mobile_signal_cat_title">Cài đặt hiển thị biểu tượng tín hiệu di động</string>
@@ -1059,6 +1045,8 @@
     <string name="system_statusbar_duo_summ">Vòng pin, Wi-Fi và tín hiệu di động trong một biểu tượng; hai SIM dùng SIM dữ liệu mặc định</string>
     <string name="system_statusbar_duo_restart">Khởi động lại giao diện hệ thống sau khi đổi cài đặt. Phần trăm và kích thước Duo độc lập với việc ẩn và kiểu biểu tượng gốc. Thiết bị không tương thích giữ biểu tượng gốc.</string>
     <string name="system_statusbar_duo_percent_title">Hiển thị phần trăm pin</string>
+    <string name="system_statusbar_duo_chargingbolt_title">Hiển thị tia sét khi sạc</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">Hiển thị tia sét khi sạc. Khi tắt, hiển thị phần trăm nếu tùy chọn đó được bật; vòng pin vẫn màu xanh lá.</string>
     <string name="system_statusbar_duo_size_title">Kích thước biểu tượng thủ công</string>
     <string name="system_statusbar_duo_size_summ">Dùng khi tắt kích thước tự động; giới hạn bởi chiều cao hàng.</string>
     <string name="system_statusbar_duo_autosize_title">Kích thước biểu tượng tự động</string>

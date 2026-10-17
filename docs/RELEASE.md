@@ -24,7 +24,7 @@ Windows 预检：
 
 它只检查字段与文件存在，不验证密码或签名证书。普通开发无配置可跳过签名，`-RequireSigning` 无配置或无效配置必须失败。
 
-在工作区干净、最终 main SHA 已确认后构建：
+在工作区干净、最终候选 source SHA 已确认后构建；设备验收通过后将同一提交快进至 main，使用同一 APK 发布：
 
 ```powershell
 $releaseRevision = git rev-parse --short=8 HEAD
@@ -37,7 +37,7 @@ $releaseRevision = git rev-parse --short=8 HEAD
 2. 检查 zipalign、V2 签名、证书指纹、文件大小与 SHA-256；签名证书必须与上一正式版一致。
 3. 设备连接稳定时以 `adb install -r` 做 smoke，保留用户数据；明确记录验证 APK、ROM、已测功能与未测范围。
 4. 同一个已验收 APK binary 发布到 [源码仓库](https://github.com/thetvplus/customiuizer-a14/releases) 和 [下载仓库](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)。
-5. 读回两端 tag、notes、`draft=false`、`prerelease=false`、latest 状态与唯一预期 APK asset；下载核对大小、SHA-256 和签名，不能只以“上传成功”收口。
+5. 一次读回两端 tag、notes、`draft=false`、`prerelease=false`、latest 状态与唯一预期 APK asset，将大小和可信 digest 与发布前已验收的本地 APK 比对。一致时无需再次下载；元数据缺失、异常或用户要求时再下载核验，不能只以“上传成功”收口。
 6. 只有本版两端发布和资产验收完成后，才按明确授权移除被替代的 release / tag；保留其他发行版，重新核对列表、latest 与 changelog。发布清理不授权改写 Git 历史。
 
 `tools/check_release_metadata.py --require-tag` 校验源码 tag 与版本元数据；`tools/verify_apk_provenance.py --help` 提供 APK provenance 检查参数。构建通过、ROM 样本与主机 benchmark 都不能替代当前正式 APK 的实机结论。

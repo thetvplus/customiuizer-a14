@@ -245,8 +245,9 @@ def check_static_rules() -> int:
     require_in_text(build, r'compileSdk\s*=\s*3[4-9]', "compileSdk >= 34")
     require_in_text(build, r'minSdk\s*=\s*34', "minSdk 34")
     require_in_text(build, r'targetSdk\s*=\s*34', "targetSdk 34")
-    require_in_text(build, r'sourceCompatibility\s*=\s*JavaVersion\.VERSION_17', "Java source compatibility 17")
-    require_in_text(build, r'targetCompatibility\s*=\s*JavaVersion\.VERSION_17', "Java target compatibility 17")
+    require_in_text(build, r'sourceCompatibility\s*=\s*JavaVersion\.VERSION_25', "Java source compatibility 25")
+    require_in_text(build, r'targetCompatibility\s*=\s*JavaVersion\.VERSION_25', "Java target compatibility 25")
+    require_in_text(build, r'jvmTarget\.set\(org\.jetbrains\.kotlin\.gradle\.dsl\.JvmTarget\.JVM_25\)', "Kotlin JVM target 25")
     require_in_text(build, r'languageVersion\s*=\s*JavaLanguageVersion\.of\(25\)', "Java toolchain 25")
 
     daemon_criteria = REPO_ROOT / "gradle" / "gradle-daemon-jvm.properties"
@@ -254,7 +255,7 @@ def check_static_rules() -> int:
         fail("gradle daemon JVM criteria not found")
     require_in_text(daemon_criteria.read_text(encoding="utf-8"), r'(?m)^toolchainVersion=25$', "Gradle daemon JDK 25")
 
-    require_in_text(prop, r"minApiVersion\s*=\s*101", "module.prop minApiVersion=101")
+    require_in_text(prop, r"minApiVersion\s*=\s*102", "module.prop minApiVersion=102")
     require_in_text(prop, r"targetApiVersion\s*=\s*102", "module.prop targetApiVersion=102")
     require_in_text(prop, r"staticScope\s*=\s*true", "module.prop staticScope=true")
 

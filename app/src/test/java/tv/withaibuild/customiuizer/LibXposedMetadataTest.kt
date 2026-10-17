@@ -9,7 +9,7 @@ import org.junit.Test
 class LibXposedMetadataTest {
 
     @Test
-    fun modulePropertiesDeclareApi101To102Compatibility() {
+    fun modulePropertiesRequireApi102() {
         val properties = Properties()
         javaClass.classLoader
             ?.getResourceAsStream("META-INF/xposed/module.prop")
@@ -18,7 +18,7 @@ class LibXposedMetadataTest {
                 properties.load(input)
             }
 
-        assertEquals("101", properties.getProperty("minApiVersion"))
+        assertEquals("102", properties.getProperty("minApiVersion"))
         assertEquals("102", properties.getProperty("targetApiVersion"))
         assertEquals("true", properties.getProperty("staticScope"))
         assertNull(properties.getProperty("autoHotReload"))

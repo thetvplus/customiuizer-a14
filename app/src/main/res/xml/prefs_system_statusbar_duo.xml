@@ -15,6 +15,13 @@
         android:defaultValue="true" />
 
     <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo_chargingbolt"
+        android:title="@string/system_statusbar_duo_chargingbolt_title"
+        android:summary="@string/system_statusbar_duo_chargingbolt_summ"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:defaultValue="true" />
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
         android:key="pref_key_system_statusbar_duo_audio"
         android:title="@string/system_statusbar_duo_audio_title"
         android:summary="@string/system_statusbar_duo_audio_summ"

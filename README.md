@@ -4,10 +4,12 @@
 
 面向 **HyperOS 1 / Android 14** 的系统界面与交互定制模块，基于 CustoMIUIzer 持续维护。使用独立包名、签名和版本线。
 
-- 当前版本：`r14.22.7`（versionCode 230）
+- 当前正式版：`r14.23.5`（versionCode 243），要求 libxposed API 102。
 - 维护与开发：`thetvplus`
 - 应用 ID：`tv.withaibuild.customiuizer.r14`
 - [下载正式版](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/latest) · [源码与发行版](https://github.com/thetvplus/customiuizer-a14) · [更新记录](CHANGELOG_CN.md)
+
+本版减少设置页重复分组计算，修复示例文件读取并收紧外部入口；同签名覆盖安装保留应用数据。升级前确认框架支持 API 102。
 
 ## 功能
 
@@ -25,18 +27,18 @@
 | --- | --- |
 | 系统 | HyperOS 1 / Android 14，SDK 34 |
 | ABI | `arm64-v8a` |
-| Xposed 框架 | libxposed API 101 为最低基线，API 102 提供隔离的可选能力 |
-| 模块元数据 | `minApiVersion=101`、`targetApiVersion=102`、`staticScope=true` |
+| Xposed 框架 | libxposed API 102 为最低基线 |
+| 模块元数据 | `minApiVersion=102`、`targetApiVersion=102`、`staticScope=true` |
 
 安装正式 APK，在框架中启用模块与所需作用域，然后重启相关进程或设备。设置页会提示需要重启的项目；安装时决定的 Hook 需要重启目标进程才能应用新开关。
 
 Duo 默认关闭，入口为「系统 → 状态栏 → Duo 三合一状态栏」，修改后重启系统界面。大小、信号及提示规则见 [Duo 使用说明](docs/DUO_STATUS_BAR.md)。
 
-功能可用性取决于具体 ROM 和系统应用版本。API 101 框架下，目标应用作用域需手动配置；API 102 的动态请求仍取决于框架授权。请勿与上游版或其他 CustoMIUIzer 派生模块同时启用。不支持 Android 13 / 15 / 16 或其他 MIUI / HyperOS 大版本，详见 [兼容矩阵](COMPATIBILITY.md)。
+功能可用性取决于具体 ROM 和系统应用版本。目标应用作用域的动态请求仍取决于框架授权。请勿与上游版或其他 CustoMIUIzer 派生模块同时启用。不支持 Android 13 / 15 / 16 或其他 MIUI / HyperOS 大版本，详见 [兼容矩阵](COMPATIBILITY.md)。
 
 ## 开发与维护
 
-构建使用 JDK 25，Android 字节码目标保持 17。完整验证入口：
+构建使用 JDK 25，Java / Kotlin 输出目标同步为 25，Kotlin language/API 为 2.4。构建链与 Android 14 运行边界见 [开发说明](docs/DEVELOPMENT.md#环境)。完整验证入口：
 
 ```powershell
 python tools/verify.py full

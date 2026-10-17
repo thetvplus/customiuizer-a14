@@ -25,8 +25,8 @@ SOURCE_ROOT = Path(
 
 HOOK_CALL_RE = re.compile(
     r"(XposedHelpers|XposedBridge)\.(findAndHookMethod|findAndHookConstructor|hookAllMethods|hookAllConstructors|hookMethod|newInstance|set\w+)"
-    r"|findAndHookMethod\s*\("
-    r"|hookAllMethods\s*\("
+    r"|findAndHookMethod(?:WithId)?\s*\("
+    r"|hookAllMethods(?:WithId)?\s*\("
     r"|hookAllConstructors\s*\("
 )
 

@@ -91,9 +91,10 @@ internal class NavBarActionsFeature(
     "controls_backlong_action"
 ) {
     companion object {
-        /** Trigger hook is cheap; behavior is gated by [Controls.controlsConfig] at runtime. */
         @JvmStatic
-        fun evaluateEnabled(@Suppress("UNUSED_PARAMETER") prefs: PrefMap): Boolean = true
+        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getInt("controls_backlong_action", 1) > 1 ||
+            prefs.getInt("controls_homelong_action", 1) > 1 ||
+            prefs.getInt("controls_menulong_action", 1) > 1
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)

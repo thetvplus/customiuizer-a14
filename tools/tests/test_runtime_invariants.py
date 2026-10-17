@@ -1,11 +1,14 @@
-"""Tests for the A14-6G static invariants in tools/check-invariants.py."""
+"""Tests for the runtime static invariants in tools/check-invariants.py."""
 
 import importlib.util
+import re
 import sys
 import tempfile
 import types
 import unittest
 from pathlib import Path
+
+from tools.source_hazard_scan import find_block_end
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CHECK_INVARIANTS = REPO_ROOT / "tools" / "check-invariants.py"
@@ -13,15 +16,15 @@ SOURCE_ROOT = REPO_ROOT / "app" / "src" / "main" / "java"
 
 
 def _load_check_invariants() -> types.ModuleType:
-    spec = importlib.util.spec_from_file_location("check_invariants_a14_6g", CHECK_INVARIANTS)
+    spec = importlib.util.spec_from_file_location("check_invariants_runtime", CHECK_INVARIANTS)
     module = importlib.util.module_from_spec(spec)
-    sys.modules["check_invariants_a14_6g"] = module
+    sys.modules["check_invariants_runtime"] = module
     if spec.loader is not None:
         spec.loader.exec_module(module)
     return module
 
 
-class A14_6GInvariantsTest(unittest.TestCase):
+class RuntimeInvariantsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.mod = _load_check_invariants()
@@ -250,17 +253,28 @@ override fun beforeHook(callback: BeforeHookCallback) {
     catch (oom: OutOfMemoryError) { throw oom }
     catch (td: ThreadDeath) { throw td }
     catch (vme: VirtualMachineError) { throw vme }
-    catch (t: Throwable) { log(t) }
+    catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t); log(t) }
 }
 override fun afterHook(callback: AfterHookCallback) {
     try { after(callback) }
     catch (oom: OutOfMemoryError) { throw oom }
     catch (td: ThreadDeath) { throw td }
     catch (vme: VirtualMachineError) { throw vme }
-    catch (t: Throwable) { log(t) }
+    catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t); log(t) }
 }
 """
         self.assertEqual([], self.mod.check_method_hook_fatal_boundary(path, clean))
+        for replacement in (
+            "",  # Direct catches alone cannot protect wrapped errors.
+            "log(t); FatalErrors.unwrapAndRethrowIfFatal(t); ",
+            "FatalErrors.unwrapAndRethrowIfFatal(other); ",
+        ):
+            broken = clean.replace("FatalErrors.unwrapAndRethrowIfFatal(t); ", replacement)
+            self.assertEqual(2, len(self.mod.check_method_hook_fatal_boundary(path, broken)))
+        centralized = clean
+        for fatal, variable in (("OutOfMemoryError", "oom"), ("ThreadDeath", "td"), ("VirtualMachineError", "vme")):
+            centralized = centralized.replace(f"    catch ({variable}: {fatal}) {{ throw {variable} }}\n", "")
+        self.assertEqual([], self.mod.check_method_hook_fatal_boundary(path, centralized))
 
         unsafe = """
 override fun beforeHook(callback: BeforeHookCallback) {
@@ -523,7 +537,10 @@ private val prefsChanged = Listener { sharedPreferences, key ->
     requestPreferenceWrite(sharedPreferences, key, generation)
 }
 val scope = Dispatchers.Default.limitedParallelism(1)
-if (throwable is OutOfMemoryError) throw throwable
+private val mirrorFailureHandler = CoroutineExceptionHandler { _, throwable ->
+    FatalErrors.unwrapAndRethrowIfFatal(throwable)
+    AppHelper.log("worker failed")
+}
 private fun requestMirrorPass(generation: Long, reason: String) {
     mirrorScope.launch { runMirror(generation, reason) }
 }
@@ -539,6 +556,29 @@ private val prefsChanged = Listener { sharedPreferences, key ->
 """
         findings = self.mod.check_preference_click_feedback(path, unsafe)
         self.assertEqual(7, len(findings))
+
+    def test_mirror_worker_requires_fatal_check_before_logging(self):
+        path = self._source_path("tv/withaibuild/customiuizer/utils/XposedServiceManager.kt")
+        prefix = """
+private val prefsChanged = Listener { sharedPreferences, key ->
+    requestPreferenceWrite(sharedPreferences, key, generation)
+}
+val scope = Dispatchers.Default.limitedParallelism(1)
+private fun requestMirrorPass(generation: Long, reason: String) {
+    mirrorScope.launch { runMirror(generation, reason) }
+}
+"""
+        unsafe_bodies = (
+            'AppHelper.log("worker failed")',
+            'if (throwable is OutOfMemoryError) throw throwable\nAppHelper.log("worker failed")',
+            'AppHelper.log("worker failed")\nFatalErrors.unwrapAndRethrowIfFatal(throwable)',
+        )
+        for body in unsafe_bodies:
+            with self.subTest(body=body):
+                text = prefix + "private val mirrorFailureHandler = Handler { _, throwable ->\n" + body + "\n}"
+                findings = self.mod.check_preference_click_feedback(path, text)
+                self.assertEqual(1, len(findings))
+                self.assertIn("fatal", findings[0].detail)
 
     def test_switch_inherits_row_pressed_state(self):
         path = self._source_path("tv/withaibuild/customiuizer/prefs/CheckBoxPreferenceEx.kt")
@@ -615,6 +655,72 @@ holder.findViewById(android.R.id.switch_widget)?.isDuplicateParentStateEnabled =
             clean_dir.mkdir()
             (clean_dir / "ok.md").write_text("Only LazyFeatureSpec metadata and lightweight lambdas.\n", encoding="utf-8")
             self.assertEqual([], self.mod.check_docs_zero_object_wording(clean_dir))
+
+
+LOCKSCREEN_HOOKS = SOURCE_ROOT / "tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt"
+
+
+def _extract_method_body(text: str, method_name: str) -> str:
+    pattern = re.compile(rf"(?:^|\n)\s*(?:@\w+\s+)*(?:\w+\s+)?fun\s+{re.escape(method_name)}\s*\(", re.S)
+    match = pattern.search(text)
+    if not match:
+        raise AssertionError(f"{method_name} not found in SystemLockScreenHooks.kt")
+    open_brace = text.find("{", match.start())
+    if open_brace < 0:
+        raise AssertionError(f"{method_name} has no body")
+    close_brace = find_block_end(text, open_brace)
+    if close_brace < 0:
+        raise AssertionError(f"could not find end of {method_name} body")
+    return text[open_brace : close_brace + 1]
+
+
+class ChargingInfoOutcomeContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.kt_text = LOCKSCREEN_HOOKS.read_text(encoding="utf-8")
+
+    def test_computeChargingInfoReplacement_returns_nullable_string(self) -> None:
+        # The signature spans multiple lines; find the declaration and the
+        # return type separately.
+        match = re.search(
+            r"internal\s+fun\s+computeChargingInfoReplacement\s*\(.*?:\s*String\?",
+            self.kt_text,
+            re.S,
+        )
+        self.assertIsNotNone(
+            match,
+            "computeChargingInfoReplacement must return a nullable String, not a Pair or outcome wrapper",
+        )
+
+    def _hot_path_forbidden(self, body: str) -> list[str]:
+        issues: list[str] = []
+        if re.search(r"Pair\s*<", body):
+            issues.append("found Pair< in hot path")
+        if re.search(r"\bTriple\b", body):
+            issues.append("found Triple in hot path")
+        if re.search(r"\bdata\s+class\b", body):
+            issues.append("found data class in hot path")
+        if re.search(r"val\s+\(\s*\w+\s*,", body):
+            issues.append("found destructuring result container in hot path")
+        # The `to` infix operator creates a Pair; allow it inside strings/comments
+        # but flag the operator form ` ... to ... `.
+        # Strip string literals to avoid false positives.
+        body_no_strings = re.sub(r'"(?:\\.|[^"\\])*"', '""', body)
+        body_no_strings = re.sub(r"'(?:\\.|[^'\\])*'", "''", body_no_strings)
+        body_no_strings = re.sub(r"`(?:\\.|[^`\\])*`", "``", body_no_strings)
+        if re.search(r"\S\s+to\s+\S", body_no_strings):
+            issues.append("found `to` infix operator in hot path")
+        return issues
+
+    def test_computeChargingInfoReplacement_no_outcome_container(self) -> None:
+        body = _extract_method_body(self.kt_text, "computeChargingInfoReplacement")
+        issues = self._hot_path_forbidden(body)
+        self.assertEqual(issues, [])
+
+    def test_chargingInfoHook_core_no_outcome_container(self) -> None:
+        body = _extract_method_body(self.kt_text, "ChargingInfoHook")
+        issues = self._hot_path_forbidden(body)
+        self.assertEqual(issues, [])
 
 
 if __name__ == "__main__":

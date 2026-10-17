@@ -7,6 +7,7 @@ import android.content.res.AssetFileDescriptor
 import android.database.Cursor
 import android.net.Uri
 import java.io.FileNotFoundException
+import java.io.IOException
 
 class PrefsProvider : ContentProvider() {
 
@@ -30,31 +31,23 @@ class PrefsProvider : ContentProvider() {
 
     @Throws(FileNotFoundException::class)
     override fun openAssetFile(uri: Uri, mode: String): AssetFileDescriptor? {
-        val context = context ?: return null
-
-        val parts = uri.pathSegments ?: return null
-        if (uriMatcher.match(uri) == 5 && parts.size >= 2) {
-            val fileType = parts[1]
-            val filename = when (fileType) {
-                "0" -> "test0.png"
-                "1" -> "test1.mp3"
-                "2" -> "test2.mp4"
-                "3", "5" -> "test3.txt"
-                "4" -> "test4.zip"
-                else -> null
-            }
-
-            return filename?.let {
-                try {
-                    context.assets.openFd(it)
-                } catch (t: Throwable) {
-                    t.printStackTrace()
-                    null
-                }
-            }
+        if (mode != "r" || uri.scheme != "content" || uriMatcher.match(uri) != 5) {
+            throw FileNotFoundException("Unsupported sample request")
         }
-
-        return null
+        val filename = when (uri.pathSegments[1]) {
+            "0" -> "test0.png"
+            "1" -> "test1.mp3"
+            "2" -> "test2.mp4"
+            "3", "5" -> "test3.txt"
+            "4" -> "test4.zip"
+            else -> throw FileNotFoundException("Unknown sample")
+        }
+        val assets = context?.assets ?: throw FileNotFoundException("Provider unavailable")
+        return try {
+            assets.openFd(filename)
+        } catch (e: IOException) {
+            throw FileNotFoundException("Sample unavailable").apply { initCause(e) }
+        }
     }
 
     override fun getType(uri: Uri): String? = null

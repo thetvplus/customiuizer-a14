@@ -84,9 +84,38 @@ class AppSelectionSanitizerTest {
         assertTrue(AppSelectionSanitizer.isMultiAppSelectionKey("pref_key_system_blocktoasts_apps_black"))
         assertFalse(AppSelectionSanitizer.isMultiAppSelectionKey("pref_key_system_noscreenlock_wifi"))
 
-        assertTrue(AppSelectionSanitizer.isSingleAppSelectionKey("pref_key_system_shortcut_app"))
+        assertTrue(AppSelectionSanitizer.isSingleAppSelectionKey("pref_key_system_clock_app"))
+        assertTrue(AppSelectionSanitizer.isSingleAppSelectionKey("pref_key_system_calendar_app"))
         assertTrue(AppSelectionSanitizer.isSingleAppSelectionKey("pref_key_controls_backlong_app"))
         assertTrue(AppSelectionSanitizer.isSingleAppSelectionKey("pref_key_controls_backlong_activity"))
         assertFalse(AppSelectionSanitizer.isSingleAppSelectionKey("pref_key_various_appsort"))
+    }
+
+    @Test
+    fun restoreFiltersRetiredShortcutBeforeSanitizingRetainedClockAndCalendar() {
+        val restored = linkedMapOf<String, Any?>(
+            "pref_key_system_shortcut_app" to "com.example.present|com.example.Shortcut",
+            "pref_key_system_shortcut_app_user" to 999,
+            "pref_key_system_clock_app" to "com.example.present|com.example.Clock",
+            "pref_key_system_clock_app_user" to 999,
+            "pref_key_system_calendar_app" to "com.example.present|com.example.Calendar",
+            "pref_key_system_calendar_app_user" to 0,
+        )
+
+        val (current, counts) = BackupRestore.validateAndNormalizeEntries(restored)
+        val sanitized = AppSelectionSanitizer.sanitizeRestoredEntries(
+            current,
+            setOf("com.example.present"),
+        )
+
+        assertEquals(2, counts.deprecatedIgnored)
+        assertEquals(0, counts.unknownIgnored)
+        assertFalse(sanitized.entries.containsKey("pref_key_system_shortcut_app"))
+        assertFalse(sanitized.entries.containsKey("pref_key_system_shortcut_app_user"))
+        assertEquals("com.example.present|com.example.Clock", sanitized.entries["pref_key_system_clock_app"])
+        assertEquals(999, sanitized.entries["pref_key_system_clock_app_user"])
+        assertEquals("com.example.present|com.example.Calendar", sanitized.entries["pref_key_system_calendar_app"])
+        assertEquals(0, sanitized.entries["pref_key_system_calendar_app_user"])
+        assertEquals(0, sanitized.changedPrimaryCount)
     }
 }

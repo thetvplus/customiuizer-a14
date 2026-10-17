@@ -8,6 +8,7 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
     verticalOffset: Int = 8, headphoneStyle: Int = 1,
     headphoneScale: Int = 100, val networkFallback: Boolean = true,
     val bluetoothBatteryColor: Boolean = true, cellularStyle: Int = 1,
+    val showChargingBolt: Boolean = true,
 ) {
     val sizeDp = sizeDp.coerceIn(20, 40)
     val offsetDp = (verticalOffset.coerceIn(0, 16) - 8) / 2f
@@ -28,6 +29,7 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
             prefs.getBoolean("system_statusbar_duo_networkfallback", true),
             prefs.getBoolean("system_statusbar_duo_btbattery", true),
             prefs.getStringAsInt("system_statusbar_duo_cellularstyle", 1),
+            prefs.getBoolean("system_statusbar_duo_chargingbolt", true),
         )
     }
 }
@@ -67,8 +69,8 @@ internal object DuoGeometry {
     const val RING_START = 148.7f
     const val BOTTOM_GAP = 117.4f
 
-    fun topGap(showPercent: Boolean, charging: Boolean): Float = when {
-        charging -> 55.6f
+    fun topGap(showPercent: Boolean, showBolt: Boolean): Float = when {
+        showBolt -> 55.6f
         showPercent -> 71.3f
         else -> 0f
     }

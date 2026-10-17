@@ -87,8 +87,8 @@ class GlobalActionRuntimeAvailabilityContractTest {
     }
 
     @Test
-    fun systemServerTriggersAreAlwaysInstalled() {
-        for (key in listOf("controls_powerdt", "controls_backlong", "controls_homelong", "controls_menulong")) {
+    fun powerDoubleTapTriggerIsAlwaysInstalled() {
+        for (key in listOf("controls_powerdt")) {
             val spec = GlobalActionRuntimeContract.trigger(key)!!
             assertEquals(key, GlobalActionOwner.SYSTEM_SERVER, spec.triggerOwner)
             assertEquals(key, TriggerInstallMode.ALWAYS, spec.triggerInstallMode)
@@ -96,6 +96,19 @@ class GlobalActionRuntimeAvailabilityContractTest {
             assertEquals(key, "NONE", spec.restartRequirement)
             assertEquals(key, "according_to_action", spec.executionOwner)
         }
+    }
+
+    @Test
+    fun navigationLongPressTriggersRequireRebootForFirstInstall() {
+        for (key in listOf("controls_backlong", "controls_homelong", "controls_menulong")) {
+            val spec = GlobalActionRuntimeContract.trigger(key)!!
+            assertEquals(key, GlobalActionOwner.SYSTEM_SERVER, spec.triggerOwner)
+            assertEquals(key, TriggerInstallMode.PREF_GATED_AT_START, spec.triggerInstallMode)
+            assertEquals(key, ReceiverInstallMode.ALWAYS, spec.receiverInstallMode)
+            assertEquals(key, "REBOOT", spec.restartRequirement)
+            assertTrue(key, spec.triggerHook.contains("Controls.NavBarActionsHook"))
+        }
+        assertEquals("Controls.NavBarActionsHook", GlobalActionRuntimeContract.trigger("controls_homelong")!!.triggerHook)
     }
 
     @Test

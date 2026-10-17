@@ -500,12 +500,6 @@
 			android:key="pref_key_system_hidestatusbar_whenscreenshot"
 			android:title="@string/system_hidestatusbar_whenscreenshot_title" />
 
-		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-			android:key="pref_key_system_hidestatusbar_whenscreenrecord"
-			android:title="@string/system_hidestatusbar_whenscreenrecord_title"
-			app:isPreferenceVisible="false" />
-			/>
-
 		<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
 			android:key="pref_key_system_maxsbicons"
 			android:title="@string/system_maxsbicons_title"
@@ -585,12 +579,6 @@
 			miuizer:format="%d dip"
 			android:dependency="pref_key_system_drawer_hidedate"
 			miuizer:indentLevel="1" />
-
-		<tv.withaibuild.customiuizer.prefs.PreferenceEx
-			android:key="pref_key_system_shortcut_app"
-			android:title="@string/system_shortcut_app_title"
-			android:summary="@string/system_shortcut_app_summ"
-			miuizer:dynamic="true" />
 
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx
 			android:key="pref_key_system_clock_app"
@@ -720,12 +708,6 @@
 
 		<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
 			android:title="@string/launcher_bugfixes" />
-
-		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-			android:key="pref_key_system_minimalnotifview"
-			android:summary="@string/system_minimalnotifview_summ"
-			android:title="@string/system_minimalnotifview_title"
-			android:defaultValue="false" />
 
 		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 			android:key="pref_key_system_notifchannelsettings"
@@ -985,25 +967,6 @@
 			android:key="pref_key_system_betterpopups_disablewhenmute"
 			android:title="@string/system_betterpopups_disablewhenmute_title"
 			android:defaultValue="false" />
-
-		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-			android:key="pref_key_system_betterpopups_nohide"
-			android:summary="@string/system_betterpopups_nohide_summ"
-			android:title="@string/system_betterpopups_nohide_title"
-			android:defaultValue="false"
-			android:disableDependentsState="true" />
-
-		<tv.withaibuild.customiuizer.prefs.SeekBarPreference
-			android:key="pref_key_system_betterpopups_delay"
-			android:title="@string/system_betterpopups_delay_title"
-			android:defaultValue="0"
-			android:dependency="pref_key_system_betterpopups_nohide"
-			miuizer:minValue="0"
-			miuizer:maxValue="60"
-			miuizer:stepValue="1"
-			miuizer:format="@string/format_d_s"
-			miuizer:offtext="@string/array_default"
-			miuizer:dynamic="true" />
 
 	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 

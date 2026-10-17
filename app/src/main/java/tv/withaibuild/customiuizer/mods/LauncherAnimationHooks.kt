@@ -12,7 +12,7 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 
 /**
  * Launcher animation and wallpaper hooks.
- * Spring stiffness, unlock and zoom animations, the legacy launch animation, and
+ * Spring stiffness, unlock animations, the legacy launch animation, and
  * wallpaper scale and colour mode.
  */
 object LauncherAnimationHooks {
@@ -43,50 +43,11 @@ object LauncherAnimationHooks {
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
-
-        val hook = object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.getThisObject()
-                try {
-
-                    var scale = ValueAnimator.getDurationScale()
-                    if (scale == 1.0f) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (scale == 0f) scale = 0.01f
-                    XposedHelpers.setFloatField(thisObject, "mCenterXStiffness", scaleStiffness(XposedHelpers.getFloatField(thisObject, "mCenterXStiffness"), scale))
-                    XposedHelpers.setFloatField(thisObject, "mCenterYStiffness", scaleStiffness(XposedHelpers.getFloatField(thisObject, "mCenterYStiffness"), scale))
-                    XposedHelpers.setFloatField(thisObject, "mWidthStiffness", scaleStiffness(XposedHelpers.getFloatField(thisObject, "mWidthStiffness"), scale))
-                    XposedHelpers.setFloatField(thisObject, "mRadiusStiffness", scaleStiffness(XposedHelpers.getFloatField(thisObject, "mRadiusStiffness"), scale))
-                    XposedHelpers.setFloatField(thisObject, "mAlphaStiffness", scaleStiffness(XposedHelpers.getFloatField(thisObject, "mAlphaStiffness"), scale))
-                    try {
-                        XposedHelpers.setFloatField(thisObject, "mRatioStiffness", scaleStiffness(XposedHelpers.getFloatField(thisObject, "mRatioStiffness"), scale))
-                    } catch (t: Throwable) {
-                        XposedHelpers.setFloatField(thisObject, "mRadioStiffness", scaleStiffness(XposedHelpers.getFloatField(thisObject, "mRadioStiffness"), scale))
-                    }
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        }
-
-        if (!ModuleHelper.hookAllMethodsSilently("com.miui.home.recents.util.RectFSpringAnim", lpparam.classLoader, "start", hook))
-            ModuleHelper.hookAllMethods("com.miui.home.recents.util.RectFSpringAnim", lpparam.classLoader, "initAllAnimations", hook)
     }
 
     @JvmStatic
     fun NoUnlockAnimationHook(lpparam: PackageReadyParam) {
         ModuleHelper.hookAllMethods("com.miui.launcher.utils.MiuiSettingsUtils", lpparam.classLoader, "isSystemAnimationOpen", HookerClassHelper.returnConstant(false))
-    }
-
-    @JvmStatic
-    fun NoZoomAnimationHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllMethods("com.miui.home.recents.util.SpringAnimationUtils", lpparam.classLoader, "startShortcutMenuLayerFadeOutAnim", HookerClassHelper.DO_NOTHING)
-        ModuleHelper.hookAllMethods("com.miui.home.recents.util.SpringAnimationUtils", lpparam.classLoader, "startShortcutMenuLayerFadeInAnim", HookerClassHelper.DO_NOTHING)
     }
 
     @JvmStatic

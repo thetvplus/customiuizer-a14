@@ -75,8 +75,6 @@
     <string name="system_statusbarcolor_title">狀態欄背景顏色</string>
     <string name="system_statusbarcolor_summ">盡量將狀態欄和應用操作欄的背景顏色保持一致</string>
     <string name="system_statusbarcolor_apps_title">黑名單</string>
-    <string name="system_shortcut_app_title">快捷應用</string>
-    <string name="system_shortcut_app_summ">點擊通知抽屜上方的快捷圖示時開啟所選應用</string>
     <string name="system_clock_app_title">時鐘應用</string>
     <string name="system_clock_app_summ">點擊通知抽屜上方的時鐘時開啟所選應用</string>
     <string name="system_calendar_app_title">日曆應用</string>
@@ -145,8 +143,6 @@
     <string name="system_statusbarcontrols_dual_title">雙指水平滑動</string>
     <string name="system_notifimportance_title">開放通知的重要程度</string>
     <string name="system_colorizenotiftitle_title">著色通知標題</string>
-    <string name="system_minimalnotifview_title">還原簡約的折疊檢視</string>
-    <string name="system_minimalnotifview_summ">最低重要性的通知可以重新折疊為單行檢視</string>
     <string name="system_notifchannelsettings_title">開啟頻道設置</string>
     <string name="system_notifchannelsettings_summ">開啟通知功能表的設置會導航至頻道設置而不是應用通用通知設置</string>
     <string name="system_removedismiss_title">隱藏清除按鈕</string>
@@ -368,9 +364,6 @@
     <string name="system_hidefromrecents_title">隱藏最近</string>
     <string name="system_hidefromrecents_summ">隱藏最近任務列表中的所選應用</string>
     <string name="system_mods_betterpopups">彈窗通知</string>
-    <string name="system_betterpopups_delay_title">自動隱藏延遲</string>
-    <string name="system_betterpopups_nohide_title">不自動隱藏</string>
-    <string name="system_betterpopups_nohide_summ">不自動關閉彈窗</string>
     <string name="system_betterpopups_allowfloat_title">允許浮窗</string>
     <string name="system_betterpopups_allowfloat_summ">如果通知定義了適當的點擊動作，向下滑動手勢時在浮動視窗中開啟應用</string>
     <string name="system_betterpopups_center_title">置中顯示</string>
@@ -420,8 +413,6 @@
     <string name="launcher_nowidgetonly_summ">令所有螢幕平板上的支持小部件和應用</string>
     <string name="launcher_nounlockanim_title">去除解鎖動畫</string>
     <string name="launcher_nounlockanim_summ">設備解鎖時去除圖示動畫</string>
-    <string name="launcher_nozoomanim_title">去除啟動動畫</string>
-    <string name="launcher_nozoomanim_summ">app啟動、關閉時不縮放圖示</string>
     <string name="launcher_oldlaunchanim_title">使用舊的啟動動畫</string>
     <string name="launcher_oldlaunchanim_summ">還原應用開啟過渡為前一個</string>
     <string name="launcher_sensorportrait_title">反向豎屏支持</string>
@@ -554,10 +545,7 @@
     <string name="various_hiddenfeatures_not_found">該設備不支援</string>
     <string name="various_runningservices_title">正在執行的服務</string>
     <string name="various_batteryoptimization_title">電池優化</string>
-    <string name="various_memorystats_title">記憶體統計</string>
-    <string name="various_appusagestats_title">使用統計</string>
     <string name="various_aospnotif_title">應用通知</string>
-    <string name="various_aospnotiflog_title">通知記錄</string>
     <string name="various_miuiinstaller_error">請求的應用未安裝或被禁用</string>
     <string name="various_installappinfo_title">安裝程式中的應用訊息</string>
     <string name="various_installappinfo_summ">顯示安裝中應用的相關訊息</string>
@@ -950,7 +938,6 @@
     <string name="system_floatingtime_tile_title">顯示懸浮時間磁貼</string>
     <string name="system_force_darken_allapps_title">移除深色模式黑名單</string>
     <string name="system_forceclose_summ">不允許 HyperOS 強制關閉所選應用程式</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">螢幕錄影時隱藏狀態欄</string>
     <string name="system_hidestatusbar_whenscreenshot_title">截圖時隱藏狀態欄</string>
     <string name="system_lockscreen_disable_edit_title">禁用長按編輯</string>
     <string name="system_lockscreen_hidezenmode_title">隱藏勿擾模式通知</string>
@@ -978,7 +965,6 @@
     <string name="system_statusbar_clock_spread2rows_title">時鐘跨兩排顯示</string>
     <string name="system_statusbar_dualrows_left_ratio_title">無瀏海裝置的左側寬度</string>
     <string name="system_statusbar_enable_weather_param_title">格式中使用 tq 顯示天氣</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">鎖屏時也移至左側</string>
     <string name="system_statusbar_iconsize_title">狀態欄圖示大小</string>
     <string name="system_statusbar_mobile_digital_signal_in2rows_title">雙 SIM 卡時以雙排顯示</string>
     <string name="system_statusbar_mobile_digital_signal_title">以數字 dBm 格式顯示訊號強度</string>
@@ -1059,6 +1045,8 @@
     <string name="system_statusbar_duo_summ">電量圓環、Wi-Fi 與行動訊號合為一個圖示；雙卡顯示預設數據卡訊號</string>
     <string name="system_statusbar_duo_restart">設定變更後請重新啟動系統介面。Duo 的百分比與尺寸獨立控制，原生圖示隱藏與樣式選項不覆蓋它們。不相容時保留原生圖示。</string>
     <string name="system_statusbar_duo_percent_title">顯示電量百分比</string>
+    <string name="system_statusbar_duo_chargingbolt_title">顯示充電閃電</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">充電時顯示閃電。關閉後可依百分比設定顯示數字，電量圓環仍為綠色。</string>
     <string name="system_statusbar_duo_size_title">手動圖示尺寸</string>
     <string name="system_statusbar_duo_size_summ">關閉自動尺寸後生效，受目前列高限制。</string>
     <string name="system_statusbar_duo_autosize_title">自動圖示尺寸</string>

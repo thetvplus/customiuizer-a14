@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.PredictiveBackControl
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.Helpers
 
@@ -21,7 +23,11 @@ class MainActivity : AppCompatActivity() {
     private var mainFrag: MainFragment? = null
     private var windowInsetsController: WindowInsetsControllerCompat? = null
 
+    @OptIn(PredictiveBackControl::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Keep the pre-upgrade, committed-back behavior. Fragment 1.9's seeking
+        // cancellation can leave our custom page translation at its partial value.
+        FragmentManager.enablePredictiveBack(false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)

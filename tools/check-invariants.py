@@ -331,7 +331,7 @@ def check_no_direct_hook_installation(path: Path, text: str) -> list[Finding]:
 
 
 def check_no_legacy_xposed(path: Path, text: str) -> list[Finding]:
-    """The module runs on libxposed API 101/102 only."""
+    """The module runs on libxposed API 102 and later."""
     findings = []
     for match in re.finditer(r"de\.robv\.android\.xposed", text):
         findings.append(
@@ -367,37 +367,19 @@ def check_no_regex_split_on_literal(path: Path, text: str) -> list[Finding]:
     return findings
 
 
-SET_ID_ALLOWED = {
-    "tv/withaibuild/customiuizer/mods/utils/Api102HookBridge.kt",
-}
-
 API_VERSION_ALLOWED = {
     "tv/withaibuild/customiuizer/MainModule.java",
-    "tv/withaibuild/customiuizer/mods/utils/XposedApiCapabilities.kt",
 }
 
 
-def check_api102_isolation(path: Path, text: str) -> list[Finding]:
-    """API 102 hook features are isolated behind a capability gate.
-
-    - setId may only be called from Api102HookBridge.
+def check_api102_lifecycle(path: Path, text: str) -> list[Finding]:
+    """Native API 102 calls must preserve the existing installation lifecycle.
     - replaceHook is not enabled in production.
     - HotReloadingParam / HotReloadedParam are not used.
     - getApiVersion may only be read from the module entry cold path.
     """
     rel = rel_posix(path)
     findings: list[Finding] = []
-
-    for match in re.finditer(r"\bsetId\s*\(", text):
-        if rel not in SET_ID_ALLOWED:
-            findings.append(
-                Finding(
-                    "api102-isolation",
-                    path,
-                    line_of(text, match.start()),
-                    "setId may only be called from Api102HookBridge",
-                )
-            )
 
     for match in re.finditer(r"\breplaceHook\s*\(", text):
         findings.append(
@@ -544,7 +526,6 @@ def check_method_hook_fatal_boundary(path: Path, text: str) -> list[Finding]:
     if rel_posix(path) != HOOKER_CLASS_HELPER:
         return []
     findings = []
-    fatal_types = ("OutOfMemoryError", "VirtualMachineError", "ThreadDeath")
     for callback_name in ("beforeHook", "afterHook"):
         match = re.search(rf"override\s+fun\s+{callback_name}\s*\(", text)
         if match is None:
@@ -558,22 +539,18 @@ def check_method_hook_fatal_boundary(path: Path, text: str) -> list[Finding]:
             )
             continue
         body, _ = block_at(text, match.start())
-        generic = re.search(r"catch\s*\(\s*[A-Za-z]\w*\s*:\s*Throwable\s*\)", body)
-        missing = []
-        for fatal in fatal_types:
-            fatal_match = re.search(
-                rf"catch\s*\(\s*([A-Za-z]\w*)\s*:\s*{fatal}\s*\)\s*\{{\s*throw\s+\1\s*\}}",
-                body,
-            )
-            if fatal_match is None or (generic is not None and fatal_match.start() > generic.start()):
-                missing.append(fatal)
-        if missing:
+        generics = list(re.finditer(r"catch\s*\(\s*([A-Za-z]\w*)\s*:\s*Throwable\s*\)", body))
+        if not generics or any(
+            not _catch_body_starts_with_fatal_guard(block_at(body, generic.start())[0], generic.group(1))
+            for generic in generics
+        ):
             findings.append(
                 Finding(
                     "method-hook-fatal-boundary",
                     path,
                     line_of(text, match.start()),
-                    f"{callback_name} must rethrow {', '.join(missing)} before catch(Throwable)",
+                    f"{callback_name} must propagate direct and wrapped fatal errors before recovery "
+                    "(OutOfMemoryError, VirtualMachineError, ThreadDeath)",
                 )
             )
     return findings
@@ -966,11 +943,27 @@ def check_preference_click_feedback(path: Path, text: str) -> list[Finding]:
     required = (
         ("Dispatchers.Default.limitedParallelism(1)", "serialize mirror work on a shared background dispatcher"),
         ("mirrorScope.launch { runMirror(generation, reason) }", "run full mirror passes off the main looper"),
-        ("if (throwable is OutOfMemoryError) throw throwable", "preserve OOM at the mirror worker boundary"),
     )
     for token, detail in required:
         if token not in text:
             findings.append(Finding("preference-click-feedback", path, 1, detail))
+    worker_start = text.find("private val mirrorFailureHandler")
+    worker_checks_fatal_first = False
+    if worker_start >= 0:
+        worker, _ = block_at(text, worker_start)
+        statements = strip_comments(worker).split("->", 1)
+        worker_checks_fatal_first = len(statements) == 2 and statements[1].lstrip().startswith(
+            "FatalErrors.unwrapAndRethrowIfFatal(throwable)"
+        )
+    if not worker_checks_fatal_first:
+        findings.append(
+            Finding(
+                "preference-click-feedback",
+                path,
+                line_of(text, worker_start) if worker_start >= 0 else 1,
+                "rethrow direct and wrapped fatal errors before mirror worker logging or recovery",
+            )
+        )
     return findings
 
 
@@ -1249,7 +1242,7 @@ def check_gesture_shared_arbiter(path: Path, text: str) -> list[Finding]:
 
 
 def check_gesture_detach_cleanup(path: Path, text: str) -> list[Finding]:
-    """View detach must clear the corresponding GestureMachine owner."""
+    """Status-bar detach and Control Center destroy must clear their gesture owners."""
     findings = []
     if rel_posix(path) == "tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt":
         status_ok = '"onDetachedFromWindow"' in text and "statusBarMachine.clear" in text
@@ -1263,35 +1256,44 @@ def check_gesture_detach_cleanup(path: Path, text: str) -> list[Finding]:
                 )
             )
     if rel_posix(path) == "tv/withaibuild/customiuizer/mods/utils/ControlCenterPluginRuntime.kt":
-        cc_ok = '"onDetachedFromWindow"' in text and "controlCenterMachine.clear" in text
+        # The target HyperOS 1 plugin declares destroy(), but inherits detach.
+        # Follow the registered callback so an unrelated clear elsewhere cannot satisfy this gate.
+        cc_text = strip_comments(text)
+        target_call = (
+            r'\bModuleHelper\.findAndHookMethod\s*\(\s*'
+            r'"miui\.systemui\.controlcenter\.windowview\.ControlCenterWindowViewImpl"\s*,\s*[^,]+,\s*'
+        )
+        install = re.search(target_call + r'"destroy"\s*,\s*(\w+)\s*\)', cc_text)
+        obsolete_detach = re.search(target_call + r'"onDetachedFromWindow"', cc_text)
+        cc_ok = False
+        if install is not None and obsolete_detach is None:
+            declaration = re.search(
+                rf'\bval\s+{re.escape(install.group(1))}\s*=\s*object\s*:\s*MethodHook\s*\(\s*\)',
+                cc_text,
+            )
+            if declaration is not None:
+                callback, _ = block_at(cc_text, declaration.end())
+                before = re.search(r'override\s+fun\s+before\s*\(\s*(\w+)\s*:\s*BeforeHookCallback\s*\)', callback)
+                if before is not None:
+                    body, _ = block_at(callback, before.end())
+                    owner = re.search(
+                        rf'\bval\s+(\w+)\s*=\s*{re.escape(before.group(1))}\.getThisObject\s*\(\s*\)\s+as\?\s+View\s*\?:\s*return\b',
+                        body,
+                    )
+                    if owner is not None:
+                        cc_ok = re.search(
+                            rf'\bcontrolCenterMachine\.clear\s*\(\s*System\.identityHashCode\s*\(\s*{re.escape(owner.group(1))}\s*\)\s*\)',
+                            body,
+                        ) is not None
         if not cc_ok:
             findings.append(
                 Finding(
                     "gesture-detach-cleanup",
                     path,
                     1,
-                    "ControlCenterWindowViewImpl.onDetachedFromWindow must call controlCenterMachine.clear(ownerId)",
+                    "ControlCenterWindowViewImpl.destroy must clear the callback View owner with controlCenterMachine.clear(System.identityHashCode(view)); inherited detach must not be hooked",
                 )
             )
-    return findings
-    if not status_ok:
-        findings.append(
-            Finding(
-                "gesture-detach-cleanup",
-                path,
-                1,
-                "PhoneStatusBarView.onDetachedFromWindow must call statusBarMachine.clear(ownerId)",
-            )
-        )
-    if not cc_ok:
-        findings.append(
-            Finding(
-                "gesture-detach-cleanup",
-                path,
-                1,
-                "ControlCenterWindowViewImpl.onDetachedFromWindow must call controlCenterMachine.clear(ownerId)",
-            )
-        )
     return findings
 
 
@@ -2301,7 +2303,7 @@ RULES = (
     check_no_direct_hook_installation,
     check_no_legacy_xposed,
     check_no_regex_split_on_literal,
-    check_api102_isolation,
+    check_api102_lifecycle,
     check_feature_install_oom_cleanup,
     check_feature_install_boundary,
     check_device_info_monitor_hot_path,

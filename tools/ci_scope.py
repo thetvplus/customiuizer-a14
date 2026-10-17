@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def select_scope(event_name: str, ref: str, event: dict, paths: list[str]) -> dict[str, bool]:
-    periodic = event_name in {"workflow_dispatch", "schedule"} or ref.startswith("refs/tags/r14.")
+    release_or_manual = event_name == "workflow_dispatch" or ref.startswith("refs/tags/r14.")
     tools_changed = any(path.startswith((
         "tools/", ".github/",
         "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/",
@@ -22,8 +22,8 @@ def select_scope(event_name: str, ref: str, event: dict, paths: list[str]) -> di
         } for path in paths
     )
     message = (event.get("head_commit") or {}).get("message", "")
-    return {"tools": periodic or tools_changed,
-            "full": periodic or tools_changed or build_changed or "[full-ci]" in message}
+    return {"tools": release_or_manual or tools_changed,
+            "full": release_or_manual or tools_changed or build_changed or "[full-ci]" in message}
 
 
 def changed_paths(event_name: str, event: dict, cwd: Path | None = None) -> list[str]:

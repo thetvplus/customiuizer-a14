@@ -9,10 +9,14 @@ class HotPathArgumentMaterializationTest {
     @Test
     fun launcherAndGesturePassThroughDoNotMaterializeArguments() {
         val launcher = source("app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherAnimationHooks.kt")
-            .section("fun FixAnimHook", "        val hook = object")
+            .section("fun FixAnimHook", "fun NoUnlockAnimationHook")
         assertAfter(launcher, "if (scale == 1.0f)", "val args = XposedHelpers.getArgsArray(chain)")
         assertTrue(launcher.contains("ValueAnimator.getDurationScale()"))
         assertTrue(!launcher.contains("Helpers.getAnimationScale"))
+        assertTrue(launcher.contains("com.miui.home.launcher.animate.SpringAnimator"))
+        assertTrue(launcher.contains("chain.proceed(args)"))
+        assertTrue(!launcher.contains("RectFSpringAnim"))
+        assertTrue(!launcher.contains("setFloatField"))
 
         val controls = source("app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt")
             .section("fun BackGestureAreaWidthHook", "fun HideNavBarHook")

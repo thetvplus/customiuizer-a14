@@ -67,6 +67,51 @@ class VerifyChangedInputsTests(unittest.TestCase):
         gradle.assert_called_once_with("testDebugUnitTest")
 
 
+class VerifyJvmTargetTests(unittest.TestCase):
+    def check_config(self, build, daemon_version=25):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "gradle").mkdir()
+            (root / "gradle/gradle-daemon-jvm.properties").write_text(
+                f"toolchainVersion={daemon_version}\n", encoding="utf-8"
+            )
+            with (
+                patch.object(_verify, "REPO_ROOT", root),
+                patch.object(_verify, "read_build_gradle", return_value=build),
+                patch.object(_verify, "read_module_prop", return_value=(
+                    "minApiVersion=102\ntargetApiVersion=102\nstaticScope=true\n"
+                )),
+            ):
+                return _verify.check_static_rules()
+
+    def test_trial_keeps_jdk25_and_aligned_java_kotlin25(self):
+        self.assertEqual(0, self.check_config(_verify.read_build_gradle()))
+
+    def test_each_output_target_must_remain25(self):
+        build = _verify.read_build_gradle()
+        for setting in ("sourceCompatibility", "targetCompatibility", "jvmTarget"):
+            with self.subTest(setting=setting):
+                if setting == "jvmTarget":
+                    changed = build.replace("JvmTarget.JVM_25", "JvmTarget.JVM_21")
+                else:
+                    changed = build.replace(
+                        f"{setting} = JavaVersion.VERSION_25",
+                        f"{setting} = JavaVersion.VERSION_21",
+                    )
+                self.assertNotEqual(build, changed)
+                with self.assertRaises(SystemExit):
+                    self.check_config(changed)
+
+    def test_build_jdk_is_independent_of_output_target(self):
+        build = _verify.read_build_gradle()
+        changed = build.replace("JavaLanguageVersion.of(25)", "JavaLanguageVersion.of(21)")
+        self.assertNotEqual(build, changed)
+        with self.assertRaises(SystemExit):
+            self.check_config(changed)
+        with self.assertRaises(SystemExit):
+            self.check_config(build, daemon_version=21)
+
+
 class VerifyFeatureSemanticsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

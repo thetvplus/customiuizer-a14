@@ -32,7 +32,6 @@ import tv.withaibuild.customiuizer.mods.utils.FeatureSpec
 import tv.withaibuild.customiuizer.mods.utils.LazyFeatureSpec
 import tv.withaibuild.customiuizer.mods.utils.StatusBarHeightConfig
 import tv.withaibuild.customiuizer.mods.utils.resolveDeviceInfoPlacement
-import tv.withaibuild.customiuizer.mods.utils.StrongToastPosition
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -195,25 +194,6 @@ internal class ChargeAnimationFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = SystemDisplayHooks.ChargeAnimationHook(lpparam)
-}
-
-internal class BetterPopupsHideDelayFeature(
-    lpparam: PackageReadyParam,
-    mPrefs: PrefMap
-) : BaseSystemUiFeature(
-    lpparam,
-    mPrefs,
-    BetterPopupsHideDelayFeatureId,
-    "Better Popups Hide Delay",
-    "system_betterpopups_delay"
-) {
-    companion object {
-        @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getInt("system_betterpopups_delay", 0) > 0 && !prefs.getBoolean("system_betterpopups_nohide")
-    }
-
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = SystemNotificationHooks.BetterPopupsHideDelayHook(lpparam)
 }
 
 internal class AssistGestureActionFeature(
@@ -433,25 +413,6 @@ internal class ExpandHeadsUpFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = SystemNotificationHooks.ExpandHeadsUpHook(lpparam)
-}
-
-internal class BetterPopupsNoHideFeature(
-    lpparam: PackageReadyParam,
-    mPrefs: PrefMap
-) : BaseSystemUiFeature(
-    lpparam,
-    mPrefs,
-    BetterPopupsNoHideFeatureId,
-    "Better Popups No Hide",
-    "system_betterpopups_nohide"
-) {
-    companion object {
-        @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_betterpopups_nohide")
-    }
-
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = SystemNotificationHooks.BetterPopupsNoHideHook(lpparam)
 }
 
 internal class BetterPopupsCenteredFeature(
@@ -816,13 +777,6 @@ internal class StatusBarIconsPositionAdjustFeature(
 internal data class StrongToastRuntimeSnapshot(
     val mode: StrongToastPresentationMode,
     /**
-     * Compatibility-only value for existing event ownership code. It is always TOP; legacy
-     * persisted Bottom data is deliberately not read into runtime configuration.
-     */
-    val position: StrongToastPosition = StrongToastPosition.TOP,
-    /** Compatibility-only zero. Bottom offsets are not part of TOP-only runtime state. */
-    val bottomOffsetDp: Int = 0,
-    /**
      * Signed manual nudge for the Dynamic Island's vertical anchor, in dp.
      *
      * The island is anchored to the reported display cutout, but panels vary in how faithfully the
@@ -895,10 +849,6 @@ internal class StrongToastRuntimeState private constructor(
     companion object {
         const val MODE_KEY = "system_strong_toast_mode"
         const val ISLAND_OFFSET_KEY = "system_strong_toast_island_offset"
-        /** Legacy key retained only so observers can ignore it without reinstall. */
-        const val POSITION_KEY = "system_strong_toast_position"
-        /** Legacy key retained only so observers can ignore it without reinstall. */
-        const val BOTTOM_OFFSET_KEY = "system_strong_toast_bottom_offset"
 
         /**
          * SeekBarPreference clamps its minimum to zero, so a signed range is persisted unsigned and
@@ -909,9 +859,6 @@ internal class StrongToastRuntimeState private constructor(
 
         internal val DEFAULT_SNAPSHOT = StrongToastRuntimeSnapshot(
             StrongToastPresentationMode.SYSTEM_DEFAULT,
-            StrongToastPosition.TOP,
-            0,
-            0,
         )
 
         @Volatile
@@ -924,8 +871,6 @@ internal class StrongToastRuntimeState private constructor(
             val mode = StrongToastPresentationMode.fromPreference(parsePreferenceInt(source[MODE_KEY]))
             return StrongToastRuntimeSnapshot(
                 mode,
-                StrongToastPosition.TOP,
-                0,
                 resolveIslandOffsetDp(source[ISLAND_OFFSET_KEY]),
             )
         }
@@ -1621,12 +1566,11 @@ internal class ReplaceShortcutAppFeature(
     mPrefs,
     ReplaceShortcutAppFeatureId,
     "Replace Shortcut App",
-    "system_shortcut_app"
+    "system_calendar_app"
 ) {
     companion object {
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getString("system_shortcut_app", "").isNotEmpty() ||
-        prefs.getString("system_calendar_app", "").isNotEmpty() ||
+        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getString("system_calendar_app", "").isNotEmpty() ||
         prefs.getString("system_clock_app", "").isNotEmpty()
     }
 
@@ -1883,25 +1827,6 @@ internal class DisableHeadsUpWhenMuteFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = SystemUINotificationHooks.DisableHeadsUpWhenMuteHook(lpparam)
-}
-
-internal class MinimalNotificationViewFeature(
-    lpparam: PackageReadyParam,
-    mPrefs: PrefMap
-) : BaseSystemUiFeature(
-    lpparam,
-    mPrefs,
-    MinimalNotificationViewFeatureId,
-    "Minimal Notification View",
-    "system_minimalnotifview"
-) {
-    companion object {
-        @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_minimalnotifview")
-    }
-
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = SystemNotificationHooks.MinimalNotificationViewHook(lpparam)
 }
 
 internal class NotificationChannelSettingsFeature(
@@ -2264,15 +2189,6 @@ object SystemUiFeatures {
             factory = { ChargeAnimationFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
-            id = BetterPopupsHideDelayFeatureId,
-            name = "Better Popups Hide Delay",
-            preferenceKey = "system_betterpopups_delay",
-            target = FeatureTarget.SYSTEM_UI,
-            phase = InstallPhase.PACKAGE_READY,
-            enabled = { prefs -> BetterPopupsHideDelayFeature.evaluateEnabled(prefs) },
-            factory = { BetterPopupsHideDelayFeature(lpparam, mPrefs) },
-        ),
-        LazyFeatureSpec(
             id = AssistGestureActionFeatureId,
             name = "Assist Gesture Action",
             preferenceKey = "controls_fsg_assist_left_action",
@@ -2370,15 +2286,6 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> ExpandHeadsUpFeature.evaluateEnabled(prefs) },
             factory = { ExpandHeadsUpFeature(lpparam, mPrefs) },
-        ),
-        LazyFeatureSpec(
-            id = BetterPopupsNoHideFeatureId,
-            name = "Better Popups No Hide",
-            preferenceKey = "system_betterpopups_nohide",
-            target = FeatureTarget.SYSTEM_UI,
-            phase = InstallPhase.PACKAGE_READY,
-            enabled = { prefs -> BetterPopupsNoHideFeature.evaluateEnabled(prefs) },
-            factory = { BetterPopupsNoHideFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
             id = BetterPopupsCenteredFeatureId,
@@ -2833,7 +2740,7 @@ object SystemUiFeatures {
         LazyFeatureSpec(
             id = ReplaceShortcutAppFeatureId,
             name = "Replace Shortcut App",
-            preferenceKey = "system_shortcut_app",
+            preferenceKey = "system_calendar_app",
             target = FeatureTarget.SYSTEM_UI,
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> ReplaceShortcutAppFeature.evaluateEnabled(prefs) },
@@ -2946,15 +2853,6 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> DisableHeadsUpWhenMuteFeature.evaluateEnabled(prefs) },
             factory = { DisableHeadsUpWhenMuteFeature(lpparam, mPrefs) },
-        ),
-        LazyFeatureSpec(
-            id = MinimalNotificationViewFeatureId,
-            name = "Minimal Notification View",
-            preferenceKey = "system_minimalnotifview",
-            target = FeatureTarget.SYSTEM_UI,
-            phase = InstallPhase.PACKAGE_READY,
-            enabled = { prefs -> MinimalNotificationViewFeature.evaluateEnabled(prefs) },
-            factory = { MinimalNotificationViewFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
             id = NotificationChannelSettingsFeatureId,

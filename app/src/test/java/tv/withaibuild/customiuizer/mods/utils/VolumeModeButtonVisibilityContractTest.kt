@@ -71,9 +71,17 @@ class VolumeModeButtonVisibilityContractTest {
         assertTrue(source.contains("miui_volume_ringer_divider"))
         assertTrue(!visibilityBody.contains("miui_volume_ringer"))
 
-        // No updateState before hook is required. Color operations are owned by
-        // VolumeModeButtonColorsContractTest; this contract only checks visibility boundaries.
-        assertTrue(!section.contains("BeforeHookCallback"))
+        // Colors restore owned paint before the ROM update; visibility still changes only after
+        // the native update, preserving the ROM's visibility preparation and throwable boundary.
+        val updateHook = section.substringAfter("val updateStateHook = object : MethodHook()")
+            .substringBefore("ModuleHelper.hookAllConstructors")
+        val before = updateHook.substringAfter("override fun before")
+            .substringBefore("override fun after")
+        assertTrue(before.contains("prepareColors"))
+        assertTrue(!before.contains("applyVisibility"))
+        val after = updateHook.substringAfter("override fun after")
+        assertTrue(after.contains("callback.getThrowable() != null"))
+        assertTrue(after.contains("applyVisibility(helper)"))
     }
 
     private fun source(path: String): String {

@@ -192,14 +192,17 @@
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx
 			android:key="pref_key_controls_backlong"
 			android:title="@string/controls_backlong_title"
+			miuizer:dynamic="true"
 			android:dependency="pref_key_controls_nonavbar" />
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx
 			android:key="pref_key_controls_homelong"
 			android:title="@string/controls_homelong_title"
+			miuizer:dynamic="true"
 			android:dependency="pref_key_controls_nonavbar" />
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx
 			android:key="pref_key_controls_menulong"
 			android:title="@string/controls_menulong_title"
+			miuizer:dynamic="true"
 			android:dependency="pref_key_controls_nonavbar" />
 
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx

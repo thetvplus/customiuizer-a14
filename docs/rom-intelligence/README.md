@@ -1,5 +1,7 @@
 # 进程矩阵与 ROM 证据
 
+开发期深查字符串、调用和指令时，可使用 [DexSQL 指引](DEXSQL.md)。它是可选补充，不代替现有清单、契约门禁或实机证据。
+
 ## 当前源码生成物
 
 `A14_PROCESS_MATRIX.json`、`.csv`、`.md` 和 `A14_PROCESS_EXCEPTIONS_GENERATED.md` 由 [extract_process_matrix.py](../../tools/extract_process_matrix.py) 从 Feature catalog、入口和 scope 生成，属于静态调用矩阵，不是 ROM 实机覆盖表。

@@ -10,7 +10,7 @@ libxposed → MainModule
   → FeatureInstallRegistry → ROM resolver → Hook / Controller
 ```
 
-`MainModule.onModuleLoaded` 初始化 API 能力和偏好来源，记录版本、versionCode 与 Git revision。`onSystemServerStarting` 和首个包的 `onPackageReady` 分别安装对应入口；SDK 不等于 34 时不进入业务安装路径。
+`MainModule.onModuleLoaded` 初始化偏好来源，记录版本、versionCode 与 Git revision。`onSystemServerStarting` 和首个包的 `onPackageReady` 分别安装对应入口；SDK 不等于 34 时不进入业务安装路径。
 
 Installer 按进程与开关选择 Feature。`FeatureInstallRegistry` 使用进程内稳定 Feature ID 和安装状态，偏好更新不会重置已安装 Hook。首次偏好未就绪时，system_server 延后决定受偏好控制的功能；首个已加载快照补装未安装项。SystemUI 的 Context 初始化由 `SystemUiBootstrapCoordinator` 协调，重启时间只作诊断，不跳过整个目录。
 
@@ -18,10 +18,30 @@ Installer 按进程与开关选择 Feature。`FeatureInstallRegistry` 使用进�
 
 ## ROM 与 API 边界
 
-- API 101 是最低基线；`Api102HookBridge` 与 `Api102ScopeRequester` 隔离可选 API 102 类型和调用。
+- API 102 是最低基线；`HookInstallation` 统一原生安装策略，`XposedServiceManager` 管理 Service 与动态作用域。保留设置进程与 compileOnly Hook API 的类加载边界。
 - 宿主 SystemUI 与动态插件使用各自的 ClassLoader；安装时解析 ROM 类、方法、资源及签名，缺失时停止对应功能或保留原生行为。
 - 灵动额头使用 ROM StrongToast 原地调整，加上 `DynamicIslandStatusBarFade`，没有独立模块窗口 Host。
 - 反射缓存按 ClassLoader 隔离且有界；成熟 Hook 基础设施的修改需要目标 ROM 证据。
+
+## API 102 安装与 Service
+
+`minApiVersion=102`、`targetApiVersion=102`、`staticScope=true`。`HookInstallation` 直接调用原生 HookBuilder，统一方法、构造器及基础设施 ID 安装；优先级和 `PASSTHROUGH` 模式保持一致。`HookerClassHelper` 继续承担参数改写、提前返回、原方法异常及 after 恢复，致命错误必须传播。
+
+仅为三个既有基础设施安装点设置固定 ID：
+
+| 安装点 | ID |
+| --- | --- |
+| SystemUIInitializer.init(boolean) | `systemui.init` |
+| PluginFactory.createPlugin 的所有声明重载 | `systemui.plugin.create` |
+| 已选择目标进程的 Application.attach(Context) | `application.attach` |
+
+ID 由模块和 executable 隔离，同 ID 可用于不同重载，不能代替一次安装状态和所有者管理。设置 ID 失败时停止该次安装；`intercept` 永不重试。安装后回读 ID，相等才记录 `<id> (confirmed)`；普通回读失败只记诊断并保留 handle，致命错误传播。
+
+不启用自动热重载、显式 replaceHook 或 detach；这些能力需要独立的旧代任务、JNI、Receiver / Observer、系统持有对象和 ClassLoader 交接设计。API 契约可查 [官方源码](https://repo.maven.apache.org/maven2/io/github/libxposed/api/102.0.0/api-102.0.0-sources.jar)。
+
+`XposedServiceManager` 每次选择只读一次 scope Binder 快照，仅请求尚未授权的包；批准由框架决定。异步失败提示只持有 Application Context。偏好镜像核对真实提交结果，保留每个连接的一次重试预算。
+
+R8 保留 Hooker、入口、JNI 与设置进程的 compileOnly 类加载边界。最终 APK 核查 setId/getId、禁用热重载与替换、ServiceLoader 和入口；[DexSQL](docs/rom-intelligence/DEXSQL.md) 产物检查不能代替框架安装日志与设备验收。
 
 ## 设置与持久化
 

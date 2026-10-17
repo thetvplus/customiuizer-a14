@@ -30,6 +30,7 @@ class PrefsMirrorState {
     private var retryUsedFor = NO_GENERATION
 
     private var undelivered = false
+    private var unconfirmedCommit = false
 
     /**
      * Whether a change the user made has not reached the module.
@@ -58,6 +59,7 @@ class PrefsMirrorState {
         passRunning = false
         dirty = false
         retryUsedFor = NO_GENERATION
+        unconfirmedCommit = false
         generation
     }
 
@@ -135,9 +137,14 @@ class PrefsMirrorState {
         true
     }
 
-    /** Clears the flag, but only for the generation that actually completed the sync. */
+    /** The SDK updates its cache before Binder commits; that cache cannot confirm a failed write. */
+    fun recordUnconfirmedCommit(quoted: Long) = synchronized(lock) {
+        if (bound && quoted == generation) unconfirmedCommit = true
+    }
+
+    /** A failed commit needs a fresh bind snapshot before a complete pass can clear the flag. */
     fun clearUndelivered(quoted: Long): Boolean = synchronized(lock) {
-        if (!bound || quoted != generation) return@synchronized false
+        if (!bound || quoted != generation || unconfirmedCommit) return@synchronized false
         undelivered = false
         true
     }

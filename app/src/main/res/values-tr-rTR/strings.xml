@@ -65,8 +65,6 @@
     <string name="system_statusbarcolor_title">Durum çubuğu arkaplan rengi</string>
     <string name="system_statusbarcolor_summ">Durum çubuğunu ve uygulamanın eylem çubuğu arka plan renklerini mümkün olduğunca aynı yapın</string>
     <string name="system_statusbarcolor_apps_title">Kara liste</string>
-    <string name="system_shortcut_app_title">Kısayol uygulaması</string>
-    <string name="system_shortcut_app_summ">Bildirim çekmecesinin başlığındaki kısayol simgesine dokunulduğunda seçilen uygulamayı aç</string>
     <string name="system_clock_app_title">Saat uygulaması</string>
     <string name="system_clock_app_summ">Bildirim çekmecesinin başlığındaki saate dokunulduğunda seçilen uygulamayı aç</string>
     <string name="system_calendar_app_title">Takvim uygulaması</string>
@@ -130,8 +128,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_notifimportance_title">Bildirim önemini göster</string>
     <string name="system_colorizenotiftitle_title">Bildirim kartını renklendir</string>
     <string name="system_notify_openinfw_title">Kayan bir pencerede bildirim açma</string>
-    <string name="system_minimalnotifview_title">Minimalist daraltılmış görünümü geri getirin</string>
-    <string name="system_minimalnotifview_summ">Minimum öneme sahip bildirimler tekrar tek satırlı görünüme daraltılabilir</string>
     <string name="system_notifchannelsettings_title">Kanal ayarlarını aç</string>
     <string name="system_notifchannelsettings_summ">Bildirim menüsünden ayarların açılması, uygulamanın genel bildirim ayarları yerine kanal ayarlarına yönlendiriyor</string>
     <string name="system_removedismiss_title">Temizle düğmesini gizle</string>
@@ -350,9 +346,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_hidefromrecents_title">Son kullanılanlardan gizle</string>
     <string name="system_hidefromrecents_summ">Seçili uygulamaları son kullanılanlar listesinden gizle</string>
     <string name="system_mods_betterpopups">Açılır bildirimler</string>
-    <string name="system_betterpopups_delay_title">Gecikmeyi otomatik gizle</string>
-    <string name="system_betterpopups_nohide_title">Otomatik gizleme</string>
-    <string name="system_betterpopups_nohide_summ">Açılır pencereleri otomatik olarak kapatma</string>
     <string name="system_betterpopups_autoclose_expanded_title">Genişletilmiş açılır pencereleri otomatik olarak kapat</string>
     <string name="system_betterpopups_allowfloat_title">Kayan pencereye izin ver</string>
     <string name="system_betterpopups_allowfloat_summ">Bildirimde tanımlanmış uygun bir tıklama eylemi varsa, uygulamayı aşağı kaydırma hareketinde kayan bir pencerede açın</string>
@@ -403,8 +396,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="launcher_nowidgetonly_summ">Tüm ekranların tabletlerdeki hem widgetları hem de uygulamaları desteklemesini sağlayın</string>
     <string name="launcher_nounlockanim_title">Kilit açma animasyonunu kaldır</string>
     <string name="launcher_nounlockanim_summ">Cihazın kilidi açıkken simgelere animasyon uygulama</string>
-    <string name="launcher_nozoomanim_title">Başlatma animasyonunu kaldır</string>
-    <string name="launcher_nozoomanim_summ">Uygulama kapatıldığında/açıldığında simgeleri yakınlaştırma/uzaklaştırma</string>
     <string name="launcher_oldlaunchanim_title">Eski başlatma animasyonunu kullan</string>
     <string name="launcher_oldlaunchanim_summ">Uygulama açma geçişini bir öncekine geri döndür</string>
     <string name="launcher_sensorportrait_title">Ters portre desteği</string>
@@ -538,10 +529,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="various_hiddenfeatures_not_found">Bu cihazda mevcut değil</string>
     <string name="various_runningservices_title">Çalışan hizmetler</string>
     <string name="various_batteryoptimization_title">Pil optimizasyonu</string>
-    <string name="various_memorystats_title">Bellek istatistikleri</string>
-    <string name="various_appusagestats_title">Kullanım istatistikleri</string>
     <string name="various_aospnotif_title">Uygulamalar &amp; bildirimler</string>
-    <string name="various_aospnotiflog_title">Bildirim günlüğü</string>
     <string name="various_miuiinstaller_error">Gerekli uygulama yüklü veya devre dışı değil</string>
     <string name="various_installappinfo_title">Yükleyicideki uygulama bilgisi</string>
     <string name="various_installappinfo_summ">Yüklenmekte olan uygulama hakkında bilgi göster</string>
@@ -968,7 +956,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_floatingtime_tile_title">Kayan saat döşemesini göster</string>
     <string name="system_force_darken_allapps_title">Karanlık mod kara listesini kaldır</string>
     <string name="system_forceclose_summ">Seçili uygulamaları kapatmak için stok HyperOS eylemine izin verme</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">Ekran kaydederken durum çubuğunu gizle</string>
     <string name="system_hidestatusbar_whenscreenshot_title">Ekran görüntüsü alırken durum çubuğunu gizle</string>
     <string name="system_lockscreen_disable_edit_title">Düzenlemeye başlamak için uzun basmayı devre dışı bırak</string>
     <string name="system_lockscreen_hidezenmode_title">Zen modu bildirimini gizle</string>
@@ -993,7 +980,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_clock_spread2rows_title">Saati iki satıra yay</string>
     <string name="system_statusbar_dualrows_left_ratio_title">Çentiksiz cihazlar için sol genişliği ayarla</string>
     <string name="system_statusbar_enable_weather_param_title">Biçimlendirirken hava durumunu göstermek için tq kullan</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">Kilit ekranında sola taşı</string>
     <string name="system_statusbar_mobile_digital_signal_in2rows_title">Çift SIM kartlı telefonda çift satır olarak göster</string>
     <string name="system_statusbar_mobile_digital_signal_title">Sinyal gücünü sayısal dBm biçiminde göster</string>
     <string name="system_statusbar_mobiletype_show_wificonnected_title">Wi-Fi bağlıyken göster</string>
@@ -1065,6 +1051,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_duo_summ">Pil halkası, Wi-Fi ve mobil sinyal tek simgede; çift SIM için varsayılan veri SIM kartı kullanılır</string>
     <string name="system_statusbar_duo_restart">Ayar değişikliklerinden sonra sistem arayüzünü yeniden başlatın. Duo yüzdesi ve boyutu, sistem simgelerinin gizlenmesi ve stilinden bağımsızdır. Uyumsuz cihazlarda özgün simgeler korunur.</string>
     <string name="system_statusbar_duo_percent_title">Pil yüzdesini göster</string>
+    <string name="system_statusbar_duo_chargingbolt_title">Şarj sırasında şimşek göster</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">Şarj sırasında şimşek gösterir. Kapatılırsa, yüzde göstergesi açık olduğunda yüzde görünür; pil halkası yeşil kalır.</string>
     <string name="system_statusbar_duo_size_title">Elle simge boyutu</string>
     <string name="system_statusbar_duo_size_summ">Otomatik boyut kapalıyken kullanılır; satır yüksekliğiyle sınırlıdır.</string>
     <string name="system_statusbar_duo_autosize_title">Otomatik simge boyutu</string>

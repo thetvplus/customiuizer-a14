@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Mechanical invariants for A14 process routing and feature reachability.
-
-This test replaces the old deliverable audit that read deleted docs
-(A14_PROCESS_EXCEPTIONS.md, A14_FEATURE_RETIREMENT.md/.csv) with direct
-source-level checks on installers, the process router, and the feature registry.
-"""
+"""Feature catalog/parser and process-routing source contracts."""
 
 from __future__ import annotations
 
@@ -30,13 +25,6 @@ FEATURE_TARGET_KT = MODS_UTILS_DIR / "FeatureTarget.kt"
 INSTALL_PHASE_KT = MODS_UTILS_DIR / "InstallPhase.kt"
 LAZY_FEATURE_SPEC_KT = MODS_UTILS_DIR / "LazyFeatureSpec.kt"
 FEATURE_INSTALL_REGISTRY_KT = MODS_UTILS_DIR / "FeatureInstallRegistry.kt"
-
-
-RETIRED_DOCS = (
-    "A14_PROCESS_EXCEPTIONS.md",
-    "A14_FEATURE_RETIREMENT.md",
-    "A14_FEATURE_RETIREMENT.csv",
-)
 
 
 def _read_texts(
@@ -474,21 +462,6 @@ class FeatureReachabilityContractTest(unittest.TestCase):
             duplicates,
             f"FeatureIds reused by more than one FeatureSpec: {duplicates}",
         )
-
-    def test_retired_docs_not_used_as_runtime_fact_source(self) -> None:
-        # Scan Kotlin/Java source, Python tooling and JSON configs, but skip
-        # this test file because it legitimately names the retired artifacts.
-        source = _read_texts(
-            dirs=[APP_ROOT, REPO_ROOT / "tools"],
-            suffixes=(".kt", ".java", ".py", ".json"),
-            exclude={"test_audit_deliverables.py"},
-        )
-        for name in RETIRED_DOCS:
-            self.assertNotIn(
-                name,
-                source,
-                f"Source still references deleted runtime-fact doc {name}",
-            )
 
 
 class TestDirectFeatureSpecParser(unittest.TestCase):

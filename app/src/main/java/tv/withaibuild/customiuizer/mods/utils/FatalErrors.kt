@@ -1,6 +1,7 @@
 package tv.withaibuild.customiuizer.mods.utils
 
 import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.UndeclaredThrowableException
 import java.util.concurrent.ExecutionException
 
 /**
@@ -29,7 +30,7 @@ object FatalErrors {
     }
 
     /**
-     * Unwrap [InvocationTargetException] or [ExecutionException] and rethrow if the root cause
+     * Unwrap reflection/proxy or [ExecutionException] wrappers and rethrow if the root cause
      * is fatal.  Returns the original throwable if no fatal cause was found, so the caller can
      * still log or handle it.
      */
@@ -42,6 +43,7 @@ object FatalErrors {
             rethrowIfFatal(current)
             current = when (current) {
                 is InvocationTargetException -> current.cause
+                is UndeclaredThrowableException -> current.undeclaredThrowable
                 is ExecutionException -> current.cause
                 is XposedHelpers.InvocationTargetError -> current.cause
                 else -> null

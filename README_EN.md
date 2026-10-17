@@ -4,10 +4,12 @@
 
 A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It has an independent package, signing identity and release line.
 
-- Current version: `r14.22.7` (versionCode 230)
+- Current release: `r14.23.5` (versionCode 243), requiring libxposed API 102.
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
 - [Download the official release](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/latest) · [Source and releases](https://github.com/thetvplus/customiuizer-a14) · [Changelog](CHANGELOG.md)
+
+This release reduces repeated settings-page grouping, restores sample-file access and tightens external entry points. Updates retain the existing signing identity and app data. Confirm framework API 102 support before upgrading.
 
 ## Features
 
@@ -25,18 +27,18 @@ A system UI and interaction customization module maintained for **HyperOS 1 / An
 | --- | --- |
 | System | HyperOS 1 / Android 14, SDK 34 |
 | ABI | `arm64-v8a` |
-| Xposed framework | libxposed API 101 minimum; isolated optional API 102 capabilities |
-| Module metadata | `minApiVersion=101`, `targetApiVersion=102`, `staticScope=true` |
+| Xposed framework | libxposed API 102 minimum |
+| Module metadata | `minApiVersion=102`, `targetApiVersion=102`, `staticScope=true` |
 
 Install the official APK, enable the module and required scopes in your framework, then restart the affected process or device. Settings indicate which changes require a restart. Hooks selected at installation time require restarting their target process after changing the switch.
 
 Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/DUO_STATUS_BAR.md) for sizing, signal and hint behavior.
 
-Availability depends on the ROM and system-app versions. On API 101 frameworks, selected app scopes need manual configuration; dynamic API 102 requests still require framework approval. Do not enable this module together with upstream or another CustoMIUIzer-derived module. Android 13 / 15 / 16 and other major MIUI / HyperOS versions are unsupported. See [COMPATIBILITY.md](COMPATIBILITY.md).
+Availability depends on the ROM and system-app versions. Dynamic app-scope requests still require framework approval. Do not enable this module together with upstream or another CustoMIUIzer-derived module. Android 13 / 15 / 16 and other major MIUI / HyperOS versions are unsupported. See [COMPATIBILITY.md](COMPATIBILITY.md).
 
 ## Development and Maintenance
 
-Builds use JDK 25 and retain Android bytecode target 17. Full local verification:
+Builds use JDK 25, Java/Kotlin output target 25 and Kotlin language/API 2.4. See the [development guide](docs/DEVELOPMENT.md#环境) for the Android 14 runtime boundary. Full local verification:
 
 ```powershell
 python tools/verify.py full

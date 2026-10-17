@@ -71,8 +71,10 @@ APK 验证为
 策略仅在本次请求非空、且所有权限完全属于已启用类别时结束原生授权页：通知仅
 `POST_NOTIFICATIONS`；定位仅 coarse/fine/background location。混合 CAMERA 等其它权限的
 请求保持原生行为，授权状态不被修改。API 102 可在设置开关启用时请求两个
-PermissionController 包的作用域；API 101 保持手动加 scope 的兼容路径，API 102 专属
-类型隔离在独立文件。应用自行绘制的授权说明弹窗不是系统权限页，无法安全全局识别，
+PermissionController 包的作用域；API 101 保持手动加 scope 的兼容路径，作用域请求
+按项目策略隔离在独立文件。`requestScope` 与监听接口在 Service API 101 已存在，
+当前仅在 Service API 102 及以上启用请求，不表示接口首次引入于 API 102。
+应用自行绘制的授权说明弹窗不是系统权限页，无法安全全局识别，
 需要按应用适配。
 
 ## MIUI 遗留与性能复盘

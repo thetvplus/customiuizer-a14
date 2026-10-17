@@ -1,4 +1,4 @@
-"""Tests for the API 102 isolation invariants in tools/check-invariants.py."""
+"""Tests for native API 102 lifecycle invariants."""
 
 import importlib.util
 import sys
@@ -20,7 +20,7 @@ def _load_check_invariants() -> types.ModuleType:
     return module
 
 
-class Api102IsolationTest(unittest.TestCase):
+class Api102LifecycleTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.mod = _load_check_invariants()
@@ -28,34 +28,18 @@ class Api102IsolationTest(unittest.TestCase):
     def _fake_path(self, rel: str) -> Path:
         return SOURCE_ROOT / rel
 
-    def test_setId_only_allowed_in_bridge(self):
-        text = """
-package tv.withaibuild.customiuizer.mods.utils
-
-fun other() {
-    builder.setId("x")
-}
-"""
-        findings = self.mod.check_api102_isolation(self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"), text)
-        self.assertEqual(1, len(findings))
-        self.assertIn("Api102HookBridge", findings[0].detail)
-
-    def test_setId_allowed_in_bridge(self):
-        text = """
-package tv.withaibuild.customiuizer.mods.utils
-
-fun bridge(builder: XposedInterface.HookBuilder) = builder.setId("x")
-"""
-        findings = self.mod.check_api102_isolation(
-            self._fake_path("tv/withaibuild/customiuizer/mods/utils/Api102HookBridge.kt"), text
+    def test_native_setId_is_allowed_in_installers(self):
+        findings = self.mod.check_api102_lifecycle(
+            self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"),
+            'fun install() = builder.setId("x")',
         )
-        self.assertEqual(0, len(findings))
+        self.assertEqual([], findings)
 
     def test_replaceHook_forbidden(self):
         text = """
 fun swap(handle: XposedInterface.HookHandle) = handle.replaceHook(hooker)
 """
-        findings = self.mod.check_api102_isolation(self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"), text)
+        findings = self.mod.check_api102_lifecycle(self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"), text)
         self.assertEqual(1, len(findings))
         self.assertIn("replaceHook", findings[0].detail)
 
@@ -64,24 +48,46 @@ fun swap(handle: XposedInterface.HookHandle) = handle.replaceHook(hooker)
 override fun onHotReloading(param: XposedModuleInterface.HotReloadingParam) {}
 override fun onHotReloaded(param: XposedModuleInterface.HotReloadedParam) {}
 """
-        findings = self.mod.check_api102_isolation(self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"), text)
+        findings = self.mod.check_api102_lifecycle(self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"), text)
         self.assertEqual(2, len(findings))
 
     def test_getApiVersion_only_allowed_in_entry(self):
         text = """
 fun callback() = getApiVersion()
 """
-        findings = self.mod.check_api102_isolation(self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"), text)
+        findings = self.mod.check_api102_lifecycle(self._fake_path("tv/withaibuild/customiuizer/mods/Other.kt"), text)
         self.assertEqual(1, len(findings))
 
     def test_getApiVersion_allowed_in_mainModule(self):
         text = """
-XposedApiCapabilities.initialize(getApiVersion())
+int api = getApiVersion();
 """
-        findings = self.mod.check_api102_isolation(
+        findings = self.mod.check_api102_lifecycle(
             self._fake_path("tv/withaibuild/customiuizer/MainModule.java"), text
         )
         self.assertEqual(0, len(findings))
+
+    def test_native_installation_has_no_api101_fallback_or_r8_barrier(self):
+        root = SOURCE_ROOT / 'tv/withaibuild/customiuizer/mods/utils'
+        self.assertFalse((root / 'XposedApiCapabilities.kt').exists())
+        self.assertFalse((root / 'Api102HookBridge.kt').exists())
+        native = (root / 'HookInstallation.kt').read_text(encoding='utf-8')
+        self.assertIn('configured.setId(id)', native)
+        setter = native.index('configured.setId(id)')
+        intercept = native.index('identified.intercept(hook)')
+        self.assertLess(setter, intercept)
+        self.assertNotIn('catch', native[setter:intercept])
+        rules = (REPO_ROOT / 'app/proguard-rules.pro').read_text(encoding='utf-8')
+        self.assertNotIn('Api102HookBridge', rules)
+        self.assertNotIn('HookInstallation', rules)
+
+    def test_systemui_hook_id_does_not_enable_hot_reload(self):
+        coordinator = (SOURCE_ROOT / 'tv/withaibuild/customiuizer/mods/utils/SystemUiBootstrapCoordinator.kt').read_text(encoding='utf-8')
+        self.assertIn('ModuleHelper.findAndHookMethodWithId(', coordinator)
+        self.assertIn('HookInstallation.STABLE_ID_SYSTEMUI_INIT', coordinator)
+        metadata = (REPO_ROOT / 'app/src/main/resources/META-INF/xposed/module.prop').read_text(encoding='utf-8')
+        self.assertIn('minApiVersion=102', metadata)
+        self.assertNotIn('autoHotReload=true', metadata)
 
 
 if __name__ == "__main__":

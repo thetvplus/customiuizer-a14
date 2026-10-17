@@ -1,12 +1,13 @@
 package tv.withaibuild.customiuizer.mods
 
-import android.graphics.PorterDuffColorFilter
 import android.view.View
 import android.widget.ImageView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 
 class VolumeModeButtonVisualColorTest {
@@ -29,20 +30,24 @@ class VolumeModeButtonVisualColorTest {
     }
 
     @Test
-    fun backgroundFilterReusedForSameColor() {
-        val state = SystemUIControlCenterHooks.VolumeModeButtonColorState(FakeHelper())
-        val first = state.getOrCreateBackgroundFilter(0xffff0000.toInt())
-        val second = state.getOrCreateBackgroundFilter(0xffff0000.toInt())
-        assertSame(first, second)
-        assertNotNull(first)
+    fun selectedBlendUsesConfiguredAlphaAndNativeMode() {
+        val snapshot = SystemUIControlCenterHooks.VolumeModeButtonColorSnapshot(
+            true, 0x80b9f5dc.toInt(), 0xff123456.toInt()
+        )
+        assertArrayEquals(intArrayOf(0x80b9f5dc.toInt(), 3),
+            SystemUIControlCenterHooks.volumeModeBlendColors(snapshot, true, true))
+        assertArrayEquals(intArrayOf(0xff123456.toInt(), 3),
+            SystemUIControlCenterHooks.volumeModeBlendColors(snapshot, true, false))
     }
 
     @Test
-    fun backgroundFilterRecreatedForDifferentColor() {
-        val state = SystemUIControlCenterHooks.VolumeModeButtonColorState(FakeHelper())
-        val first = state.getOrCreateBackgroundFilter(0xffff0000.toInt())
-        val second = state.getOrCreateBackgroundFilter(0xff00ff00.toInt())
-        assertNotSame(first, second)
+    fun inactiveAndDisabledBlendLeaveTheNativeColorsUntouched() {
+        val enabled = SystemUIControlCenterHooks.VolumeModeButtonColorSnapshot(true, 1, 2)
+        val disabled = enabled.copy(enabled = false)
+        assertNull(SystemUIControlCenterHooks.volumeModeBlendColors(enabled, false, true))
+        assertNull(SystemUIControlCenterHooks.volumeModeBlendColors(enabled, false, false))
+        assertNull(SystemUIControlCenterHooks.volumeModeBlendColors(disabled, true, true))
+        assertNull(SystemUIControlCenterHooks.volumeModeBlendColors(disabled, true, false))
     }
 
     @Test
@@ -63,11 +68,29 @@ class VolumeModeButtonVisualColorTest {
     }
 
     @Test
-    fun backgroundAndIconFiltersAreIndependent() {
+    fun repeatedBlendReadsReuseThePreparedArraysAndRolesStaySeparate() {
+        val snapshot = SystemUIControlCenterHooks.VolumeModeButtonColorSnapshot(true, 1, 2)
+        assertSame(snapshot.backgroundBlendColors,
+            SystemUIControlCenterHooks.volumeModeBlendColors(snapshot, true, true))
+        assertSame(snapshot.iconBlendColors,
+            SystemUIControlCenterHooks.volumeModeBlendColors(snapshot, true, false))
+        assertNotSame(snapshot.backgroundBlendColors, snapshot.iconBlendColors)
+    }
+
+    @Test
+    fun restoringWithReleasedViewsClearsOnlyPerHelperOwnership() {
         val state = SystemUIControlCenterHooks.VolumeModeButtonColorState(FakeHelper())
-        val bg = state.getOrCreateBackgroundFilter(0xffffffff.toInt())
-        val icon = state.getOrCreateIconFilter(0xffffffff.toInt())
-        assertNotSame(bg, icon)
+        state.backgroundBlended = true
+        state.iconBlended = true
+        state.iconFilterApplied = true
+        state.restoreOwnedColors()
+        assertEquals(false, state.backgroundBlended)
+        assertEquals(false, state.iconBlended)
+        assertEquals(false, state.iconFilterApplied)
+        assertNull(state.coloredDrawableRef)
+        assertNull(state.originalBackgroundColors)
+        assertNull(state.appliedBackgroundColors)
+        assertNull(state.originalIconFilter)
     }
 
 }

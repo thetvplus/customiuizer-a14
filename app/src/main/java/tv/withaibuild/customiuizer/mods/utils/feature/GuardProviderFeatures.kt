@@ -1,6 +1,7 @@
 package tv.withaibuild.customiuizer.mods.utils.feature
 
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import miui.os.Build
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.Various
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
@@ -39,7 +40,10 @@ internal class GuardProviderDisableDefraudAppsFeature(
 ) {
     companion object {
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("various_disable_defraud_apps_detect")
+        fun evaluateEnabled(
+            prefs: PrefMap,
+            isInternationalBuild: Boolean = Build.IS_INTERNATIONAL_BUILD,
+        ): Boolean = !isInternationalBuild && prefs.getBoolean("various_disable_defraud_apps_detect")
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)

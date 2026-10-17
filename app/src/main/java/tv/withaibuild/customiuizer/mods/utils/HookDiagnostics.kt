@@ -94,14 +94,7 @@ object HookDiagnostics {
 
     @JvmStatic
     fun record(record: Record) {
-        if (!shouldRetainDetail(record.status)) {
-            if (record.status == Status.INSTALLED) {
-                compactInstalled.incrementAndGet()
-            } else {
-                compactSilent.incrementAndGet()
-            }
-            return
-        }
+        if (recordCompactStatus(record.status)) return
         records[record.key] = record
         val bound = detailBound()
         if (records.size > bound) {
@@ -112,6 +105,16 @@ object HookDiagnostics {
             val keys = records.keys.take(toDrop)
             keys.forEach { records.remove(it) }
         }
+    }
+
+    private fun recordCompactStatus(status: Status): Boolean {
+        if (shouldRetainDetail(status)) return false
+        if (status == Status.INSTALLED) {
+            compactInstalled.incrementAndGet()
+        } else {
+            compactSilent.incrementAndGet()
+        }
+        return true
     }
 
     /**
@@ -201,6 +204,8 @@ object HookDiagnostics {
         status: Status,
         exceptionType: String = "",
     ) {
+        // Release successes only need the existing counters, without a temporary Record.
+        if (recordCompactStatus(status)) return
         record(
             Record(
                 process = process,

@@ -249,11 +249,6 @@
 			android:defaultValue="1" />
 
 		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-			android:key="pref_key_launcher_nozoomanim"
-			android:title="@string/launcher_nozoomanim_title"
-			android:summary="@string/launcher_nozoomanim_summ" />
-
-		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 			android:key="pref_key_launcher_oldlaunchanim"
 			android:title="@string/launcher_oldlaunchanim_title"
 			android:summary="@string/launcher_oldlaunchanim_summ" />

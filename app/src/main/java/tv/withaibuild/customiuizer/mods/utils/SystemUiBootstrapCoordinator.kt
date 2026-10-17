@@ -100,10 +100,11 @@ object SystemUiBootstrapCoordinator {
             }
         }
 
-        ModuleHelper.findAndHookMethod(
+        ModuleHelper.findAndHookMethodWithId(
             "com.android.systemui.SystemUIInitializer",
             lpparam.classLoader,
             "init",
+            HookInstallation.STABLE_ID_SYSTEMUI_INIT,
             Boolean::class.javaPrimitiveType,
             initStatusBarHook
         )

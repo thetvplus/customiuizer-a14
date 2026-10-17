@@ -23,20 +23,22 @@ class VolumeModeButtonColorsContractTest {
         assertTrue(section.contains("\"updateState\""))
 
         // The hot callback must read from the prepared snapshot, not from preferences.
-        assertTrue(section.contains("val snapshot = volumeModeButtonColorSnapshot"))
+        assertTrue(section.contains("colorState.snapshot = volumeModeButtonColorSnapshot"))
         assertTrue(section.contains("if (!snapshot.enabled)"))
 
-        // Color must be applied through the actual visual owners: the standard view's
-        // background drawable (SmoothContainerDrawable chain) and the icon's setColorFilter.
+        // Preserve the ROM's blur/outline pipeline and smooth drawable mask. Selected blend
+        // arrays replace native inputs; non-blur shapes receive the configured solid fill.
         assertTrue(section.contains("standardView.background"))
-        assertTrue(section.contains("setColorFilter"))
-        assertTrue(section.contains("icon.setColorFilter"))
+        assertTrue(section.contains("\"setMiViewBlurAndBlendColor\""))
+        assertTrue(section.contains("callback.getArgs()[colorsIndex] = colors"))
+        assertTrue(section.contains("volumeModeGradientDrawable(background, smoothChildMethod)"))
+        assertTrue(source.contains("?.mutate() as? GradientDrawable"))
+        assertTrue(section.contains("gradient.color = colors"))
+        assertTrue(section.contains("icon.colorFilter = filter"))
 
-        // The whole source prepares immutable PorterDuffColorFilters and removes the stale
-        // ColorStateList tint layer.
+        // The icon fallback replaces source color/alpha rather than compounding native alpha.
         assertTrue(source.contains("PorterDuffColorFilter"))
         assertTrue(source.contains("PorterDuff.Mode.SRC_IN"))
-        assertTrue(source.contains("PorterDuff.Mode.SRC_ATOP"))
 
         // The old ineffective view-tint paths must no longer be the primary implementation.
         assertFalse(source.contains("backgroundTintList"))
@@ -56,21 +58,19 @@ class VolumeModeButtonColorsContractTest {
         // The hot callback uses the prepared Field directly and fails open if resolution failed.
         assertTrue(section.contains("resolveVolumeModeButtonStateField("))
         assertTrue(source.contains("XposedHelpers.findFieldIfExists"))
-        assertTrue(applyColorsBody.contains("preparedField.getBoolean(helper)"))
+        assertTrue(applyColorsBody.contains("mStateField?.getBoolean(helper)"))
         assertFalse(applyColorsBody.contains("getBooleanField"))
         assertFalse(applyColorsBody.contains("findField"))
         assertFalse(applyColorsBody.contains("declaredFields"))
 
-        // The active-state color semantics must be respected: the custom color is applied only
-        // when the ROM helper reports mState == true (selected), and the module's own color
-        // filters are cleared on the active -> inactive transition when the ROM has not already
-        // replaced them. Filter identity is checked through the cached PorterDuffColorFilter.
+        // Restore our writes before the ROM paints inactive/theme/disabled states; retain
+        // native writes by checking exact ownership, including the smooth drawable child.
         assertTrue(applyColorsBody.contains("isSelected"))
-        assertTrue(applyColorsBody.contains("if (isSelected)"))
-        assertTrue(applyColorsBody.contains("background.colorFilter"))
-        assertTrue(applyColorsBody.contains("icon.colorFilter"))
-        assertTrue(applyColorsBody.contains("clearColorFilter()"))
-        assertTrue(applyColorsBody.contains("icon.setColorFilter(null)"))
+        assertTrue(applyColorsBody.contains("restoreOwnedColors()"))
+        assertTrue(source.contains("drawable.color === appliedBackgroundColors"))
+        assertTrue(source.contains("icon.colorFilter === iconFilter"))
+        assertTrue(source.contains("icon.colorFilter = originalIconFilter"))
+        assertTrue(source.contains("WeakReference<GradientDrawable>"))
     }
 
     private fun source(path: String): String {

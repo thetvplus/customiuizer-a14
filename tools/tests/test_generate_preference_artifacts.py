@@ -21,6 +21,20 @@ ANDROID_DEPENDENCY = f"{{{ANDROID_NS}}}dependency"
 AUTO_CHILD = f"{{{AUTO_NS}}}child"
 PREFERENCE_CATEGORY = "tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx"
 
+RETIRED_A14_KEYS = {
+    "pref_key_system_betterpopups_nohide",
+    "pref_key_system_betterpopups_delay",
+    "pref_key_system_minimalnotifview",
+    "pref_key_launcher_nozoomanim",
+    "pref_key_system_shortcut_app",
+    "pref_key_system_hidestatusbar_whenscreenrecord",
+    "pref_key_system_cc_tile_enabled_color_usemonet",
+    "pref_key_system_statusbar_icons_atleft_onkeyguard",
+    "pref_key_various_memorystats",
+    "pref_key_various_appusagestats",
+    "pref_key_various_aospnotiflog",
+}
+
 CATEGORY_SOURCES = {
     "pref_key_system": ("prefs_system.xml", "@string/system_mods"),
     "pref_key_launcher": ("prefs_launcher.xml", "@string/launcher_title"),
@@ -326,7 +340,44 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertEqual("System", hide_wifi["pageFragment"])
         self.assertEqual("pref_key_system_statusbaricons_cat", hide_wifi["routeSub"])
         self.assertEqual("@string/system_statusbaricons_title", hide_wifi["pageTitle"])
-        self.assertNotIn("pref_key_system_statusbar_icons_atleft_onkeyguard", {item["key"] for item in entries})
+
+    def test_retired_a14_preferences_have_no_source_or_search_entry(self) -> None:
+        for path in SOURCE_DIR.glob("prefs_*.xml"):
+            root = ET.parse(path).getroot()
+            attributes = {value for element in root.iter() for value in element.attrib.values()}
+            with self.subTest(page=path.name):
+                self.assertFalse(RETIRED_A14_KEYS & attributes)
+
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
+        searchable = {item["key"] for item in entries}
+        self.assertFalse(RETIRED_A14_KEYS & searchable)
+        retained = {
+            "pref_key_system_hidestatusbar_whenscreenshot",
+            "pref_key_system_clock_app",
+            "pref_key_system_calendar_app",
+            "pref_key_system_notifchannelsettings",
+            "pref_key_system_betterpopups_allowfloat",
+            "pref_key_system_betterpopups_disablewhenmute",
+            "pref_key_launcher_fixanim",
+            "pref_key_system_statusbaricons_swap_wifi_mobile",
+            "pref_key_various_runningservices",
+            "pref_key_various_batteryoptimization",
+            "pref_key_various_aospnotif",
+        }
+        self.assertTrue(retained <= searchable, f"Retained settings missing from search: {retained - searchable}")
+
+    def test_custom_tile_colors_depend_on_the_visible_color_switch(self) -> None:
+        root = ET.parse(SOURCE_DIR / "prefs_system_controlcenter_themestyle.xml").getroot()
+        preferences = {element.get(ANDROID_KEY): element for element in root.iter() if element.get(ANDROID_KEY)}
+        master_key = "pref_key_system_cc_tile_enabled_color"
+        self.assertIn(master_key, preferences)
+        self.assertNotEqual("false", preferences[master_key].get(f"{{{AUTO_NS}}}isPreferenceVisible", "true"))
+        for key in (
+            "pref_key_system_cc_tile_enabled_color_custom",
+            "pref_key_system_cc_tile_enabled_iconcolor_custom",
+        ):
+            with self.subTest(key=key):
+                self.assertEqual(master_key, preferences[key].get(ANDROID_DEPENDENCY))
 
     def test_child_presentation_flag_does_not_exclude_a_searchable_setting(self) -> None:
         import importlib.util
@@ -388,10 +439,13 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertIn("res.getXml(R.xml.mod_search_index)", helpers)
         self.assertNotIn("parsePrefXml(context", helpers)
         self.assertIn("generatePreferenceArtifacts", build_script)
-        self.assertIn("dependsOn(generatePreferenceArtifacts)", build_script)
+        for output in ("resourcesOutputDirectory", "catalogOutputDirectory"):
+            self.assertIn(f"GeneratePreferenceArtifacts::{output}", build_script)
         self.assertIn("--catalog-output", build_script)
         self.assertIn("generatedPreferenceCatalogDir", build_script)
-        self.assertIn("kotlin.directories.add", build_script)
+        self.assertIn("variant.sources.res!!.addGeneratedSourceDirectory", build_script)
+        self.assertIn("variant.sources.kotlin!!.addGeneratedSourceDirectory", build_script)
+        self.assertNotIn("afterEvaluate", build_script)
 
         expected_files = set(EXPECTED_SPLITS.values()) | {
             "prefs_system_cat.xml",
@@ -446,6 +500,9 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertIn("PreferenceValueType.STRING_SET", catalog)
         self.assertNotIn('"pref_key_..."', catalog)
         self.assertNotIn("val ALL_VALID_KEYS", catalog)
+        for retired_key in RETIRED_A14_KEYS:
+            with self.subTest(key=retired_key):
+                self.assertNotIn(f'"{retired_key}"', catalog)
 
 
 if __name__ == "__main__":

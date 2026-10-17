@@ -9,9 +9,6 @@ class PermissionControllerHooksContractTest {
     private val hooks = source(
         "app/src/main/java/tv/withaibuild/customiuizer/mods/PermissionControllerHooks.kt"
     )
-    private val api102 = source(
-        "app/src/main/java/tv/withaibuild/customiuizer/utils/Api102ScopeRequester.kt"
-    )
     private val serviceManager = source(
         "app/src/main/java/tv/withaibuild/customiuizer/utils/XposedServiceManager.kt"
     )
@@ -27,12 +24,10 @@ class PermissionControllerHooksContractTest {
     }
 
     @Test
-    fun api102ExclusiveScopeTypesStayInIsolatedFile() {
-        assertTrue(api102.contains("XposedService.OnScopeEventListener"))
-        assertTrue(api102.contains("service.requestScope("))
-        assertFalse(serviceManager.contains("XposedService.OnScopeEventListener"))
-        assertFalse(serviceManager.contains(".requestScope("))
-        assertFalse(serviceManager.contains(".scope"))
+    fun nativeScopeRequestsHaveOneServiceOwner() {
+        assertTrue(serviceManager.contains("XposedService.OnScopeEventListener"))
+        assertTrue(serviceManager.contains("boundService.requestScope("))
+        assertTrue(serviceManager.contains("boundService.scope.toHashSet()"))
     }
 
     private fun source(path: String): String {

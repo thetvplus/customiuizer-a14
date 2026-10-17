@@ -222,7 +222,8 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
     }
 
     private fun drawIcon(canvas: Canvas) {
-        val gap = DuoGeometry.topGap(config.showPercent, charging)
+        val showBolt = charging && config.showChargingBolt
+        val gap = DuoGeometry.topGap(config.showPercent, showBolt)
         val side = DuoGeometry.sideSweep(gap)
         val rightStart = 270f + gap / 2f
         val track = DuoGeometry.dim(foreground)
@@ -247,7 +248,7 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
             if (right > 0f) canvas.drawArc(8f, 10f, 111f, 113f, rightStart, right, false, stroke)
         }
 
-        if (charging) {
+        if (showBolt) {
             fill.color = tint
             canvas.drawPath(bolt, fill)
         } else if (config.showPercent) {

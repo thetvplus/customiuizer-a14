@@ -27,7 +27,7 @@ internal object CurrentPreferenceContract {
         val convert: (Any?) -> Any?,
     )
 
-    const val CONTRACT_REVISION = 1
+    const val CONTRACT_REVISION = 2
     const val CONTRACT_REVISION_KEY = "pref_key_miuizer_preference_contract_revision"
 
     val INTERNAL_KEYS = setOf(

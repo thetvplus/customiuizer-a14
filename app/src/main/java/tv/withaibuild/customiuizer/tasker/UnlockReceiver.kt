@@ -7,21 +7,22 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 class UnlockReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         try {
-            val bundle = intent.getBundleExtra(Constants.EXTRA_BUNDLE)
-
+            if (intent.action != Constants.ACTION_FIRE_SETTING) return
             val sender = getSentFromPackage()
             if (sender == null) {
                 logLimited("identity-missing", "UnlockReceiver: rejected, broadcast sender identity not shared")
                 return
             }
 
+            val bundle = intent.getBundleExtra(Constants.EXTRA_BUNDLE)
             if (!UnlockTokenProvider().verifyBundle(context, bundle, sender)) {
-                logLimited("token-mismatch", "UnlockReceiver: rejected, token/host mismatch for sender=$sender")
+                logLimited("token-mismatch", "UnlockReceiver: rejected, token/host mismatch")
                 return
             }
 
@@ -33,7 +34,8 @@ class UnlockReceiver : BroadcastReceiver() {
             val options = BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle()
             context.sendBroadcast(sendIntent, null, options)
         } catch (t: Throwable) {
-            Log.e(TAG, "UnlockReceiver: unexpected error", t)
+            FatalErrors.rethrowIfFatal(t)
+            logLimited("unexpected-error", "UnlockReceiver: rejected malformed broadcast")
         }
     }
 

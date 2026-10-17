@@ -35,7 +35,7 @@ class DynamicAppScopeContractTest {
     }
 
     @Test
-    fun appSelectorRequestsOnlyThroughIsolatedManager() {
+    fun appSelectorRequestsOnlyThroughServiceOwner() {
         val selector = source("app/src/main/java/tv/withaibuild/customiuizer/subs/AppSelector.kt")
         val scope = source("app/src/main/java/tv/withaibuild/customiuizer/utils/DynamicAppScope.kt")
         val manager = source("app/src/main/java/tv/withaibuild/customiuizer/utils/XposedServiceManager.kt")
@@ -45,10 +45,10 @@ class DynamicAppScopeContractTest {
         assertFalse(selector.contains("Api102ScopeRequester"))
         assertFalse(selector.contains("OnScopeEventListener"))
         assertFalse(scope.contains("OnScopeEventListener"))
-        assertFalse(scope.contains(".requestScope("))
-        assertTrue(scope.contains("XposedServiceManager.requestApi102Scope"))
-        assertTrue(manager.contains("boundService.apiVersion < XposedService.API_102"))
-        assertTrue(manager.contains("Api102ScopeRequester.request"))
+        assertFalse(scope.contains("boundService.requestScope("))
+        assertTrue(scope.contains("XposedServiceManager.requestScope"))
+        assertFalse(manager.contains("boundService.apiVersion"))
+        assertTrue(manager.contains("boundService.requestScope("))
     }
 
     private fun source(relativePath: String): String {

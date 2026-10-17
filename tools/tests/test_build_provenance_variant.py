@@ -142,17 +142,32 @@ class BuildProvenanceVariantTests(unittest.TestCase):
         # Release merged path should not sit under debug.
         self.assertNotIn("debug", release_path.as_posix().lower())
 
-    def test_merge_release_assets_depends_on_write_release_build_provenance(self):
-        output = _run_gradle(":app:mergeReleaseAssets", "--dry-run")
-        self.assertIn("writeReleaseBuildProvenance", output)
-        self.assertIn("mergeReleaseAssets", output)
-        write_pos = output.find("writeReleaseBuildProvenance")
-        merge_pos = output.find("mergeReleaseAssets")
-        self.assertLess(
-            write_pos,
-            merge_pos,
-            "writeReleaseBuildProvenance must appear before mergeReleaseAssets in dry-run",
+    def test_assets_depend_on_variant_provenance(self):
+        output = _run_gradle(
+            ":app:mergeDebugAssets", ":app:mergeDevelopAssets", ":app:mergeReleaseAssets",
+            "--dry-run",
         )
+        for variant in _VARIANTS:
+            variant_cap = variant.capitalize()
+            write_task = f":app:write{variant_cap}BuildProvenance"
+            merge_task = f":app:merge{variant_cap}Assets"
+            self.assertIn(write_task, output)
+            self.assertIn(merge_task, output)
+            self.assertLess(output.find(write_task), output.find(merge_task))
+
+    def test_compile_and_lint_independently_depend_on_generators(self):
+        for consumer, provenance in (
+            (":app:compileDebugKotlin", None),
+            (":app:lintVitalDevelop", ":app:writeDevelopBuildProvenance"),
+        ):
+            output = _run_gradle(consumer, "--dry-run")
+            generator = ":app:generatePreferenceArtifacts"
+            self.assertEqual(output.count(generator), 1, "one shared preference generator")
+            self.assertIn(consumer, output)
+            self.assertLess(output.find(generator), output.find(consumer))
+            if provenance is not None:
+                self.assertIn(provenance, output)
+                self.assertLess(output.find(provenance), output.find(consumer))
 
 
 if __name__ == "__main__":

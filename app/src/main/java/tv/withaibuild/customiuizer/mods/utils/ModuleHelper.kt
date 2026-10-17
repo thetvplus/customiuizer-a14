@@ -117,6 +117,10 @@ class ModuleHelper private constructor() {
             HookInstallerFacade.findAndHookMethod(className, classLoader, methodName, *parameterTypesAndCallback)
 
         @JvmStatic
+        fun findAndHookMethodWithId(className: String, classLoader: ClassLoader?, methodName: String, id: String, vararg parameterTypesAndCallback: Any?): CustomMethodUnhooker? =
+            HookInstallerFacade.findAndHookMethodWithId(className, classLoader, methodName, id, *parameterTypesAndCallback)
+
+        @JvmStatic
         fun callMethodSilently(obj: Any?, methodName: String, vararg args: Any?): Any? {
             return try {
                 XposedHelpers.callMethod(obj, methodName, *args)
@@ -300,6 +304,15 @@ class ModuleHelper private constructor() {
 
         @JvmStatic
         fun hookAllMethods(className: String, classLoader: ClassLoader?, methodName: String, callback: MethodHook) {
+            hookAllMethodsInternal(className, classLoader, methodName, null, callback)
+        }
+
+        @JvmStatic
+        fun hookAllMethodsWithId(className: String, classLoader: ClassLoader?, methodName: String, id: String, callback: MethodHook) {
+            hookAllMethodsInternal(className, classLoader, methodName, id, callback)
+        }
+
+        private fun hookAllMethodsInternal(className: String, classLoader: ClassLoader?, methodName: String, id: String?, callback: MethodHook) {
             try {
                 val hookClass = XposedHelpers.findClassIfExists(className, classLoader)
                 if (hookClass == null) {
@@ -314,8 +327,12 @@ class ModuleHelper private constructor() {
                     )
                     return
                 }
-                val unhookers = XposedHelpers.hookAllMethods(hookClass, methodName, callback)
-                if (unhookers.isEmpty()) {
+                val installed = if (id != null) {
+                    HookInstallation.interceptAllWithStableId(hookClass, methodName, callback, id)
+                } else {
+                    XposedHelpers.hookAllMethods(hookClass, methodName, callback).isNotEmpty()
+                }
+                if (!installed) {
                     XposedHelpers.log("Failed to hook " + methodName + " method in " + className + " (no methods found)")
                     HookDiagnostics.record(
                         PreferenceObserverRegistry.processName(),

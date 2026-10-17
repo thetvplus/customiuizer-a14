@@ -89,8 +89,6 @@
     <string name="system_statusbarcolor_title">背景色同步</string>
     <string name="system_statusbarcolor_summ">尽量将状态栏和应用操作栏的背景颜色保持一致</string>
     <string name="system_statusbarcolor_apps_title">黑名单</string>
-    <string name="system_shortcut_app_title">快捷应用</string>
-    <string name="system_shortcut_app_summ">点击通知中心上方的快捷图标时打开所选应用</string>
     <string name="system_clock_app_title">时钟应用</string>
     <string name="system_clock_app_summ">点击通知中心上方的时钟时打开所选应用</string>
     <string name="system_calendar_app_title">日历应用</string>
@@ -143,7 +141,6 @@
     <string name="system_4gtolte_title">4G显示LTE图标</string>
     <string name="system_statusbar_mobile_showname_title">自定义移动网络类型</string>
     <string name="system_hidestatusbar_whenscreenshot_title">截图时隐藏状态栏</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">录屏时隐藏状态栏</string>
     <string name="system_netspeedinterval_title">网速更新间隔</string>
     <string name="system_detailednetspeed_title">上下行网速双排显示</string>
     <string name="system_netspeed_cat_title">网速相关设置</string>
@@ -174,8 +171,6 @@
     <string name="system_colorizenotiftitle_title">着色通知卡片</string>
     <string name="system_colorizenotiftitle_summ">将图标颜色应用到通知卡片</string>
     <string name="system_notify_openinfw_title">点击通知时以小窗打开</string>
-    <string name="system_minimalnotifview_title">还原简约的折叠视图</string>
-    <string name="system_minimalnotifview_summ">最低重要性的通知可以重新折叠为单行视图</string>
     <string name="system_notifchannelsettings_title">打开频道设置</string>
     <string name="system_notifchannelsettings_summ">打开通知菜单的设置会导航至频道设置而不是应用通用通知设置</string>
     <string name="system_drawer_removeshortcut_title">隐藏通知设置图标</string>
@@ -418,9 +413,6 @@
     <string name="system_hidefromrecents_title">隐藏最近</string>
     <string name="system_hidefromrecents_summ">隐藏最近任务列表中的所选应用</string>
     <string name="system_mods_betterpopups">浮动通知</string>
-    <string name="system_betterpopups_delay_title">自动隐藏延迟</string>
-    <string name="system_betterpopups_nohide_title">不自动隐藏</string>
-    <string name="system_betterpopups_nohide_summ">不自动关闭弹窗</string>
     <string name="system_betterpopups_autoclose_expanded_title">自动隐藏展开的通知</string>
     <string name="system_betterpopups_allowfloat_title">允许浮窗中打开</string>
     <string name="system_betterpopups_allowfloat_summ">向下滑动时，强制在浮动窗口中打开应用</string>
@@ -886,10 +878,7 @@
     <string name="various_hiddenfeatures_title">隐藏特性</string>
     <string name="various_hiddenfeatures_not_found">该设备不支持</string>
     <string name="various_hiddenfeatures_summ">不易找到的界面</string>
-    <string name="various_memorystats_title">内存统计</string>
-    <string name="various_aospnotiflog_title">通知记录</string>
     <string name="various_aospnotif_title">应用通知</string>
-    <string name="various_appusagestats_title">使用统计</string>
     <string name="various_runningservices_title">正在运行的服务</string>
     <string name="various_batteryoptimization_title">电池优化</string>
     <string name="system_statusbaricons_atright_title">强制系统图标显示在状态栏</string>
@@ -901,7 +890,6 @@
     <string name="system_statusbaricons_change_position_title">图标位置调整</string>
     <string name="system_statusbaricons_wifi_mobile_atleft_title">移动信号和Wi-Fi移至左侧显示</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">交换移动信号和Wi-Fi位置</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">锁屏下也移至左侧</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">交换电池的图标和百分比位置</string>
     <string name="system_statusbaricons_netspeed_title">网速</string>
     <string name="system_statusbaricons_clock_title">时钟</string>
@@ -966,8 +954,6 @@
     <string name="various_persist_batteryoptimization_settings_title">将电池优化设置持久化</string>
     <string name="various_disable_defraud_apps_detect_title">扫描时禁止应用远程检测</string>
     <string name="various_disable_access_devicelogs_title">关闭访问设备日志确认</string>
-    <string name="launcher_nozoomanim_title">去除启动动画</string>
-    <string name="launcher_nozoomanim_summ">App启动、关闭时不缩放图标</string>
     <string name="various_skip_interceptperm_title">跳过开启特殊权限的倒计时</string>
     <string name="various_open_by_default_title">默认打开</string>
     <string name="various_skip_securityscan_title">跳过安全体检</string>
@@ -1069,6 +1055,8 @@
     <string name="system_statusbar_duo_summ">电量圆环、Wi-Fi 与蜂窝信号合为一个图标；双卡显示默认数据卡信号</string>
     <string name="system_statusbar_duo_restart">设置变更后请重启系统界面。Duo 的百分比和尺寸独立控制，原生图标隐藏和样式选项不覆盖它们。不兼容时保留原生图标。</string>
     <string name="system_statusbar_duo_percent_title">显示电量百分比</string>
+    <string name="system_statusbar_duo_chargingbolt_title">显示充电闪电</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">充电时显示闪电。关闭后可按百分比设置显示数字，电量环仍为绿色。</string>
     <string name="system_statusbar_duo_size_title">手动图标尺寸</string>
     <string name="system_statusbar_duo_size_summ">关闭自动尺寸后生效，受当前行高限制。</string>
     <string name="system_statusbar_duo_autosize_title">自动图标尺寸</string>

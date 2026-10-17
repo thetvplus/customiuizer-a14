@@ -74,7 +74,7 @@ class CurrentArchitectureTest(unittest.TestCase):
         self.assertIn("public void onPackageReady(", text)
 
         on_loaded = _method_body(text, r"public\s+void\s+onModuleLoaded\s*\(")
-        self.assertIn("XposedApiCapabilities.initialize(getApiVersion())", on_loaded)
+        self.assertNotIn("XposedApiCapabilities", on_loaded)
         self.assertIn("PreferenceBootstrap.create(", on_loaded)
 
         on_server = _method_body(text, r"public\s+void\s+onSystemServerStarting\s*\(")
@@ -119,7 +119,7 @@ class CurrentArchitectureTest(unittest.TestCase):
         self.assertEqual("tv.withaibuild.customiuizer.MainModule", init_list)
 
         module_prop = (RESOURCES_ROOT / "META-INF" / "xposed" / "module.prop").read_text()
-        self.assertIn("minApiVersion=101", module_prop)
+        self.assertIn("minApiVersion=102", module_prop)
         self.assertIn("targetApiVersion=102", module_prop)
 
         jvm_test = test_source("tv/withaibuild/customiuizer/MainModuleSystemServerLoadMarkerTest.kt")
@@ -411,35 +411,35 @@ class CurrentArchitectureTest(unittest.TestCase):
         self.assertIn("bootstrap_nonEmptySnapshot_reachesLoaded", jvm_test)
         self.assertIn("bootstrap_listenerNotRegistered_notReady", jvm_test)
 
-    def test_api102_hook_bridge_is_isolated(self) -> None:
-        bridge_text = source("tv/withaibuild/customiuizer/mods/utils/Api102HookBridge.kt")
-        self.assertIn("internal object Api102HookBridge", bridge_text)
-        self.assertIn("fun setStableHookId(", bridge_text)
-        self.assertIn("XposedApiCapabilities.supportsStableHookId()", bridge_text)
-        self.assertIn("builder.setId(id)", bridge_text)
-        self.assertIn("STABLE_ID_RES_TEXT", bridge_text)
+    def test_native_api102_preserves_installation_lifecycle(self) -> None:
+        bridge_text = source("tv/withaibuild/customiuizer/mods/utils/HookInstallation.kt")
+        self.assertIn("internal object HookInstallation", bridge_text)
+        self.assertIn("fun intercept(", bridge_text)
+        self.assertNotIn("XposedApiCapabilities", bridge_text)
+        self.assertIn("configured.setId(id)", bridge_text)
+        self.assertIn("STABLE_ID_SYSTEMUI_INIT", bridge_text)
 
         findings: list = []
         for path in sorted(SOURCE_ROOT.rglob("*.kt")) + sorted(SOURCE_ROOT.rglob("*.java")):
             text = CI.strip_comments(path.read_text(encoding="utf-8"))
-            findings.extend(CI.check_api102_isolation(path, text))
+            findings.extend(CI.check_api102_lifecycle(path, text))
         if findings:
             for f in findings:
                 print(f)
         self.assertEqual(
             [],
             findings,
-            "API 102 setId/replaceHook/hot-reload must not leak outside Api102HookBridge",
+            "Hook replacement and hot reload require a separate lifecycle design",
         )
 
         xposed_helpers = source("tv/withaibuild/customiuizer/mods/utils/XposedHelpers.java")
-        self.assertNotIn("Api102HookBridge", xposed_helpers)
+        self.assertIn("HookInstallation.intercept(", xposed_helpers)
         self.assertNotIn("setStableHookId", xposed_helpers)
         self.assertNotIn(".setId(", xposed_helpers)
 
-        jvm_test = test_source("tv/withaibuild/customiuizer/mods/utils/Api102CapabilityTest.kt")
-        self.assertIn("api101_flagsAreZero", jvm_test)
-        self.assertIn("bridge_setStableHookId_appliesToBuilder", jvm_test)
+        jvm_test = test_source("tv/withaibuild/customiuizer/mods/utils/Api102HookInstallationTest.kt")
+        self.assertIn("missingRequiredIdApiFailsBeforeIntercept", jvm_test)
+        self.assertIn("api102PreservesPriorityModeCallbackAndUnhookWithStableId", jvm_test)
 
     def test_java_kotlin_boundary_is_preserved(self) -> None:
         java_files = sorted(

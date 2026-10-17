@@ -93,6 +93,22 @@ various_xiaomi_trim_success
 various_xiaomi_trim_unavailable
 """.split()
 FORMAT_TOKEN = re.compile(r"%(?:\d+\$)?[-#+ 0,(<]*\d*(?:\.\d+)?[a-zA-Z%]")
+RETIRED_A14_STRINGS = {
+    "system_shortcut_app_title",
+    "system_shortcut_app_summ",
+    "system_minimalnotifview_title",
+    "system_minimalnotifview_summ",
+    "system_betterpopups_delay_title",
+    "system_betterpopups_nohide_title",
+    "system_betterpopups_nohide_summ",
+    "launcher_nozoomanim_title",
+    "launcher_nozoomanim_summ",
+    "system_hidestatusbar_whenscreenrecord_title",
+    "system_statusbar_icons_atleft_onkeyguard",
+    "various_memorystats_title",
+    "various_appusagestats_title",
+    "various_aospnotiflog_title",
+}
 
 
 def _load_strings(folder: str) -> list[tuple[str, str]]:
@@ -105,6 +121,13 @@ def _load_strings(folder: str) -> list[tuple[str, str]]:
 
 
 class RecentFeatureLocalizationsTest(unittest.TestCase):
+    def test_retired_a14_text_is_removed_and_shared_dynamic_color_is_retained(self):
+        for locale in ("values", *LOCALES):
+            names = {key for key, _ in _load_strings(locale)}
+            with self.subTest(locale=locale):
+                self.assertFalse(RETIRED_A14_STRINGS & names)
+                self.assertIn("array_dynamic", names)
+
     def test_recent_strings_are_present_once_in_every_supported_locale(self):
         for locale in LOCALES:
             counts = collections.Counter(key for key, _ in _load_strings(locale))

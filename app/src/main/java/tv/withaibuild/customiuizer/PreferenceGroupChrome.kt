@@ -148,6 +148,28 @@ internal class PreferenceGroupDecoration(
     private var listBottom = 0
     private var dividerHeight = 0
     private var dividerInset = 0
+    private var observedAdapter: RecyclerView.Adapter<*>? = null
+    private var cachedScreen: PreferenceScreen? = null
+    private var cachedChrome: List<PreferenceGroupChrome.Chrome>? = null
+    private val adapterObserver = object : RecyclerView.AdapterDataObserver() {
+        override fun onChanged() = invalidateSnapshot()
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int) = invalidateSnapshot()
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) = invalidateSnapshot()
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = invalidateSnapshot()
+        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) = invalidateSnapshot()
+        override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) = invalidateSnapshot()
+    }
+
+    private fun invalidateSnapshot() {
+        cachedChrome = null
+        cachedScreen = null
+    }
+
+    fun dispose() {
+        observedAdapter?.unregisterAdapterDataObserver(adapterObserver)
+        observedAdapter = null
+        invalidateSnapshot()
+    }
 
     override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
         val position = parent.getChildAdapterPosition(view)
@@ -253,16 +275,30 @@ internal class PreferenceGroupDecoration(
     }
 
     private fun chrome(parent: RecyclerView): List<PreferenceGroupChrome.Chrome> {
-        val screen = screenProvider() ?: return emptyList()
-        val adapter = parent.adapter ?: return emptyList()
-        val positions = adapter as? PreferenceGroup.PreferencePositionCallback ?: return emptyList()
+        val screen = screenProvider()
+        val adapter = parent.adapter
+        val positions = adapter as? PreferenceGroup.PreferencePositionCallback
+        if (screen == null || adapter == null || positions == null) {
+            dispose()
+            return emptyList()
+        }
+        if (observedAdapter !== adapter) {
+            dispose()
+            observedAdapter = adapter
+            adapter.registerAdapterDataObserver(adapterObserver)
+        }
+        val cached = cachedChrome
+        if (cachedScreen === screen && cached != null && cached.size == adapter.itemCount) return cached
         // Visibility can change before the posted adapter update. Keep an inset for
         // every displayed row and resolve category positions through the public API.
-        // Only categories need lookups; ordinary rows all share the same chrome.
+        // Keep one displayed snapshot until an adapter notification or screen change.
         val item = PreferenceGroupChrome.InputRow(false, false, true)
         val inputs = MutableList(adapter.itemCount) { item }
         collectDisplayedCategories(screen, positions, inputs)
-        return PreferenceGroupChrome.layout(inputs)
+        return PreferenceGroupChrome.layout(inputs).also {
+            cachedScreen = screen
+            cachedChrome = it
+        }
     }
 
     private fun collectDisplayedCategories(

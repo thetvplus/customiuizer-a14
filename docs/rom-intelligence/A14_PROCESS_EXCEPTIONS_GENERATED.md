@@ -31,9 +31,9 @@ This file captures process-routing gaps, package/process mismatches, and targete
 - `ControlCenterPluginHook` extracts the `miui.systemui.plugin` `ClassLoader` and caches it in `SystemUIControlCenterHooks.pluginLoader`.
 - `ReflectionCache.onSafeLifecycle` is called by `SystemUiBootstrapCoordinator` and the Launcher branch of `MainModule`.
 
-## API 101/102 boundary
+## API 102 lifecycle
 
-- `MainModule` is compiled against libxposed API 102 but the production `onPackageReady` / `onSystemServerStarting` paths use only API 101 public symbols.
-- `XposedApiCapabilities.initialize(getApiVersion())` runs once per process but does not place API-102-only symbols on hot paths.
-- `tools/check-invariants.py` blocks `setId`, `replaceHook`, `HotReloadingParam`, `HotReloadedParam` and `getApiVersion()` in callbacks.
+- `MainModule` requires libxposed API 102; metadata declares minApiVersion=102.
+- `HookInstallation` shares native installation policy; fixed IDs do not replace one-time installation or owner-bound cleanup.
+- `tools/check-invariants.py` blocks explicit `replaceHook` and hot reload, and keeps API version queries off callbacks.
 

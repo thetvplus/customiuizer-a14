@@ -23,7 +23,7 @@ class StrongToastRuntimeConfigTest {
     }
 
     @Test
-    fun snapshotIgnoresLegacyPositionAndOffsetButKeepsCompatibilityValues() {
+    fun snapshotIgnoresLegacyPositionAndOffset() {
         val snapshot = StrongToastRuntimeState.buildSnapshot(
             mapOf(
                 "system_strong_toast_mode" to "3",
@@ -32,8 +32,10 @@ class StrongToastRuntimeConfigTest {
             )
         )
         assertEquals(StrongToastPresentationMode.DYNAMIC_ISLAND, snapshot.mode)
-        assertEquals(StrongToastPosition.TOP, snapshot.position)
-        assertEquals(0, snapshot.bottomOffsetDp)
+        assertEquals(
+            StrongToastRuntimeState.buildSnapshot(mapOf("system_strong_toast_mode" to "3")),
+            snapshot,
+        )
         assertEquals(0, snapshot.islandOffsetDp)
     }
 
@@ -101,9 +103,21 @@ class StrongToastRuntimeConfigTest {
     }
 
     @Test
+    fun legacyPositionAndOffsetChangesDoNotReplaceSnapshot() {
+        val prefs = PrefMap().apply { put("system_strong_toast_mode", "3") }
+        val state = StrongToastRuntimeState.install(prefs)
+        val before = state.snapshotRef.get()
+        prefs.put("system_strong_toast_position", "1")
+        prefs.put("system_strong_toast_bottom_offset", 25)
+        state.preferenceObserver.onChange("system_strong_toast_position")
+        state.preferenceObserver.onChange("system_strong_toast_bottom_offset")
+        assertSame(before, state.snapshotRef.get())
+    }
+
+    @Test
     fun eventSnapshotRemainsImmutableAfterLiveChange() {
-        val first = StrongToastRuntimeSnapshot(StrongToastPresentationMode.DYNAMIC_ISLAND, StrongToastPosition.TOP, 0)
-        val second = StrongToastRuntimeSnapshot(StrongToastPresentationMode.HIDE, StrongToastPosition.TOP, 0)
+        val first = StrongToastRuntimeSnapshot(StrongToastPresentationMode.DYNAMIC_ISLAND)
+        val second = StrongToastRuntimeSnapshot(StrongToastPresentationMode.HIDE)
         val view = Object()
         SystemUIStrongToastHooks.snapshotRef = AtomicReference(first)
         SystemUIStrongToastHooks.storeSnapshot(view, first)

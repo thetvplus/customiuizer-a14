@@ -47,8 +47,14 @@ class SystemServerFirstEnableLifecycleContractTest {
                 }
                 TriggerHookInstallMode.PREF_GATED_AT_START -> {
                     assertFalse(row.featureIdName, row.firstEnableWorksWithoutReboot)
-                    assertTrue(row.featureIdName, row.canEnableAfterBoot)
-                    assertEquals(row.featureIdName, FirstEnableClassification.B_KEEP_LAZY, row.classification)
+                    if (row.classification == FirstEnableClassification.C_REBOOT_REQUIRED) {
+                        assertEquals("nav_bar_actions", row.featureIdName)
+                        assertFalse(row.canEnableAfterBoot)
+                        assertEquals("REBOOT", row.restartMask)
+                    } else {
+                        assertTrue(row.featureIdName, row.canEnableAfterBoot)
+                        assertEquals(row.featureIdName, FirstEnableClassification.B_KEEP_LAZY, row.classification)
+                    }
                     assertFalse(
                         "${row.featureIdName} restart must not claim system_server",
                         row.restartMask.contains("SYSTEM_SERVER"),
@@ -56,20 +62,21 @@ class SystemServerFirstEnableLifecycleContractTest {
                 }
             }
         }
-        assertTrue(
-            SystemServerFirstEnableContract.rows.none {
+        assertEquals(
+            setOf("nav_bar_actions"),
+            SystemServerFirstEnableContract.rows.filter {
                 it.classification == FirstEnableClassification.C_REBOOT_REQUIRED
-            },
+            }.map { it.featureIdName }.toSet(),
         )
     }
 
     @Test
-    fun globalActionSystemServerTriggersCannotStayLazy() {
+    fun powerTriggerKeepsItsEstablishedAlwaysInstalledContract() {
         val triggerRows = SystemServerFirstEnableContract.rows.filter {
             it.classification == FirstEnableClassification.A_STABLE_TRIGGER
         }
         assertEquals(
-            setOf("nav_bar_actions", "power_double_tap_action"),
+            setOf("power_double_tap_action"),
             triggerRows.map { it.featureIdName }.toSet(),
         )
         for (row in triggerRows) {
@@ -82,17 +89,18 @@ class SystemServerFirstEnableLifecycleContractTest {
     fun powerAndNavbarHooksKeepRuntimePrefGates() {
         val controls = File(repoRoot(), "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt").readText()
         val powerHook = methodBody(controls, "fun PowerDoubleTapActionHook")
-        val navHook = methodBody(controls, "fun NavBarActionsHook")
 
         assertTrue(powerHook.contains("controlsConfig.powerDtAction > 1"))
         assertTrue(powerHook.contains("chain.proceed"))
         assertFalse(powerHook.contains("if (dtFromVolumeDown) {"))
         assertTrue(powerHook.contains("if (controlsConfig.volumeDownDtTorch)"))
 
-        assertTrue(navHook.contains("controlsConfig.backLongAction > 1"))
-        assertTrue(navHook.contains("controlsConfig.homeLongAction > 1"))
-        assertTrue(navHook.contains("controlsConfig.menuLongAction > 1"))
-        assertTrue(navHook.contains("chain.proceed()"))
+        val configured = Controls.ControlsSnapshot(backLongAction = 2, homeLongAction = 3, menuLongAction = 7)
+        assertEquals(2, Controls.navBarLongPressAction(4, configured))
+        assertEquals(3, Controls.navBarLongPressAction(3, configured))
+        assertEquals(7, Controls.navBarLongPressAction(82, configured))
+        assertEquals(1, Controls.navBarLongPressAction(4, Controls.ControlsSnapshot()))
+        assertEquals(1, Controls.navBarLongPressAction(187, configured))
     }
 
     @Test
@@ -100,7 +108,12 @@ class SystemServerFirstEnableLifecycleContractTest {
         for (spec in GlobalActionRuntimeContract.triggerSpecs) {
             when (spec.triggerOwner) {
                 GlobalActionOwner.SYSTEM_SERVER -> {
-                    assertEquals(spec.preferenceKey, TriggerInstallMode.ALWAYS, spec.triggerInstallMode)
+                    if (spec.preferenceKey in setOf("controls_backlong", "controls_homelong", "controls_menulong")) {
+                        assertEquals(spec.preferenceKey, TriggerInstallMode.PREF_GATED_AT_START, spec.triggerInstallMode)
+                        assertEquals(spec.preferenceKey, "REBOOT", spec.restartRequirement)
+                    } else {
+                        assertEquals(spec.preferenceKey, TriggerInstallMode.ALWAYS, spec.triggerInstallMode)
+                    }
                 }
                 GlobalActionOwner.LAUNCHER, GlobalActionOwner.SYSTEMUI -> {
                     assertEquals(spec.preferenceKey, TriggerInstallMode.PREF_GATED_AT_START, spec.triggerInstallMode)

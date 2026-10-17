@@ -13,22 +13,7 @@
 		android:title="@string/various_batteryoptimization_title" />
 
 	<tv.withaibuild.customiuizer.prefs.PreferenceEx
-		android:key="pref_key_various_memorystats"
-		app:isPreferenceVisible="false"
-		android:title="@string/various_memorystats_title" />
-
-	<tv.withaibuild.customiuizer.prefs.PreferenceEx
-		android:key="pref_key_various_appusagestats"
-		app:isPreferenceVisible="false"
-		android:title="@string/various_appusagestats_title" />
-
-	<tv.withaibuild.customiuizer.prefs.PreferenceEx
 		android:key="pref_key_various_aospnotif"
 		android:title="@string/various_aospnotif_title" />
-
-	<tv.withaibuild.customiuizer.prefs.PreferenceEx
-		android:key="pref_key_various_aospnotiflog"
-		app:isPreferenceVisible="false"
-		android:title="@string/various_aospnotiflog_title" />
 
 </PreferenceScreen>

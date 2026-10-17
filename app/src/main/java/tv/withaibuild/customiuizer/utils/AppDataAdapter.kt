@@ -31,7 +31,7 @@ class AppDataAdapter(
     private val inflater: LayoutInflater = LayoutInflater.from(ctx)
     private val filter = ItemFilter()
     private val originalAppList = ArrayList<AppData>(arr)
-    private val filteredAppList = ArrayList<AppData>(arr)
+    private var filteredAppList = ArrayList<AppData>(arr)
     private var selectedApp = ""
     private var selectedUser = 0
     private var selectedApps: MutableSet<String> = linkedSetOf()
@@ -270,10 +270,9 @@ class AppDataAdapter(
 
         @Suppress("UNCHECKED_CAST")
         override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
-            filteredAppList.clear()
-            if (results != null && results.count > 0 && results.values != null) {
-                filteredAppList.addAll(results.values as ArrayList<AppData>)
-            }
+            // The worker finishes this list before publication and never mutates
+            // it again. Adopt it instead of copying every matching row a second time.
+            filteredAppList = results?.values as? ArrayList<AppData> ?: ArrayList()
             sortList()
             notifyDataSetChanged()
         }

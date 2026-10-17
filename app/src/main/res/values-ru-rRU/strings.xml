@@ -74,8 +74,6 @@
     <string name="system_statusbarcolor_title">Фоновый цвет строки состояния</string>
     <string name="system_statusbarcolor_summ">Делает одинаковыми цвета фона строки состояния и панели действий приложения, где это возможно</string>
     <string name="system_statusbarcolor_apps_title">Чёрный список</string>
-    <string name="system_shortcut_app_title">Приложение быстрого доступа</string>
-    <string name="system_shortcut_app_summ">Открывает выбранное приложение при клике по иконке над батареей в панели уведомлений</string>
     <string name="system_clock_app_title">Приложение часов</string>
     <string name="system_clock_app_summ">Открывает выбранное приложение при клике по часам в панели уведомлений</string>
     <string name="system_calendar_app_title">Приложение Календаря</string>
@@ -151,8 +149,6 @@
     <string name="system_colorizenotiftitle_title">Раскрасить заголовок уведомления</string>
     <string name="system_colorizenotiftitle_summ">Применить цвет значка к карте</string>
     <string name="system_notify_openinfw_title">Открывать уведомление во всплывающем окне</string>
-    <string name="system_minimalnotifview_title">Вернуть минималистичный свёрнутый вид</string>
-    <string name="system_minimalnotifview_summ">Уведомления низкой важности при сворачивании смогут снова принимать вид в одну строку</string>
     <string name="system_notifchannelsettings_title">Открывать настройки канала</string>
     <string name="system_notifchannelsettings_summ">Открытие настроек из меню уведомления ведёт к настройкам канала, а не к общим настройкам уведомлений приложения</string>
     <string name="system_drawer_removeshortcut_title">Скрыть ярлык панели уведомлений</string>
@@ -386,9 +382,6 @@
     <string name="system_hidefromrecents_title">Скрыть в недавних</string>
     <string name="system_hidefromrecents_summ">Убирает выбранные приложения из списка недавно использованных</string>
     <string name="system_mods_betterpopups">Всплывающие уведомления</string>
-    <string name="system_betterpopups_delay_title">Задержка перед скрытием</string>
-    <string name="system_betterpopups_nohide_title">Не прятать автоматом</string>
-    <string name="system_betterpopups_nohide_summ">Отключает автоматическое скрытие</string>
     <string name="system_betterpopups_autoclose_expanded_title">Отклонить расширенные всплывающие окна автоматически</string>
     <string name="system_betterpopups_allowfloat_title">Разрешить плавающее окно</string>
     <string name="system_betterpopups_allowfloat_summ">Открывает приложение в плавающем окне по свайпу вниз, если у уведомления задано подходящее действие на нажатие</string>
@@ -440,8 +433,6 @@
     <string name="launcher_nowidgetonly_summ">Позволяет добавлять виджеты и приложения на любой экран на планшетах</string>
     <string name="launcher_nounlockanim_title">Убрать анимацию разблокировки</string>
     <string name="launcher_nounlockanim_summ">Не анимировать иконки при разблокировке устройства</string>
-    <string name="launcher_nozoomanim_title">Убрать анимацию запуска</string>
-    <string name="launcher_nozoomanim_summ">Не отдалять/приближать иконки при открытии/закрытии приложения</string>
     <string name="launcher_oldlaunchanim_title">Использовать старую анимацию запуска</string>
     <string name="launcher_oldlaunchanim_summ">Возвращает предыдущую анимацию запуска приложений</string>
     <string name="launcher_sensorportrait_title">Поддержка обратного портрета</string>
@@ -583,10 +574,7 @@
     <string name="various_hiddenfeatures_not_found">Недоступно на данном устройстве</string>
     <string name="various_runningservices_title">Запущенные службы</string>
     <string name="various_batteryoptimization_title">Оптимизация батареи</string>
-    <string name="various_memorystats_title">Статистика потребления памяти</string>
-    <string name="various_appusagestats_title">Статистика использования</string>
     <string name="various_aospnotif_title">Приложения и уведомления</string>
-    <string name="various_aospnotiflog_title">Журнал уведомлений</string>
     <string name="various_miuiinstaller_summ">Позволяет обновлять системные приложения</string>
     <string name="various_miuiinstaller_error">Не установлено необходимое приложение. Сделайте долгое нажатие для скачивания.</string>
     <string name="various_installer_purify_title">Очистить установщик пакетов</string>
@@ -1007,13 +995,11 @@
     <string name="system_drawer_remove_emptynotify_title">Скрыть подсказку об отсутствии уведомлений</string>
     <string name="system_floatingtime_tile_summ">Показывает время в плавающем окне</string>
     <string name="system_floatingtime_tile_title">Показать плитку плавающего времени</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">Скрыть строку состояния при записи экрана</string>
     <string name="system_hidestatusbar_whenscreenshot_title">Скрыть строку состояния при создании скриншота</string>
     <string name="system_lockscreen_disable_edit_title">Отключить редактирование по долгому нажатию</string>
     <string name="system_qs_disable_fakeclock_anim_title">Отключить анимацию часов при раскрытии</string>
     <string name="system_statusbar_dualrows_left_ratio_title">Левая ширина для устройств без выреза</string>
     <string name="system_statusbar_enable_weather_param_title">Использовать tq для отображения погоды при форматировании</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">Переместить влево на экране блокировки</string>
     <string name="system_statusbar_mobile_digital_signal_in2rows_title">Отображать в двух рядах при двух SIM-картах</string>
     <string name="system_statusbar_mobile_digital_signal_title">Отображать уровень сигнала в числовом формате dBm</string>
     <string name="system_statusbarheight_summ">После изменения фиксированной высоты требуется полная перезагрузка.</string>
@@ -1058,6 +1044,8 @@
     <string name="system_statusbar_duo_summ">Кольцо заряда, Wi-Fi и мобильный сигнал в одном значке; для двух SIM используется SIM для передачи данных по умолчанию</string>
     <string name="system_statusbar_duo_restart">После изменения настроек перезапустите интерфейс системы. Процент и размер Duo не зависят от скрытия и оформления системных значков. При несовместимости сохраняются исходные значки.</string>
     <string name="system_statusbar_duo_percent_title">Показывать заряд в процентах</string>
+    <string name="system_statusbar_duo_chargingbolt_title">Показывать молнию при зарядке</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">Во время зарядки показывается молния. При отключении отображается процент заряда, если его показ включён; кольцо батареи остаётся зелёным.</string>
     <string name="system_statusbar_duo_size_title">Размер значка вручную</string>
     <string name="system_statusbar_duo_size_summ">Действует без автоматического размера; ограничен высотой строки.</string>
     <string name="system_statusbar_duo_autosize_title">Автоматический размер значка</string>

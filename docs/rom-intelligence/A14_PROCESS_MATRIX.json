@@ -35,7 +35,7 @@
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
       "installHook": "Controls.NavBarActionsHook(lpparam)",
-      "enableCondition": "{ prefs -> NavBarActionsFeature.evaluateEnabled(prefs) }",
+      "enableCondition": "prefs.getInt(\"controls_backlong_action\", 1) > 1 || prefs.getInt(\"controls_homelong_action\", 1) > 1 || prefs.getInt(\"controls_menulong_action\", 1) > 1",
       "allowedProcess": "system_server",
       "deniedProcess": ""
     },
@@ -729,19 +729,6 @@
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
     {
-      "featureIdInt": 57,
-      "featureIdName": "betterpopups_hide_delay",
-      "name": "Better Popups Hide Delay",
-      "preferenceKey": "system_betterpopups_delay",
-      "target": "SYSTEM_UI",
-      "phase": "PACKAGE_READY",
-      "installer": "SystemUiFeatures",
-      "installHook": "SystemNotificationHooks.BetterPopupsHideDelayHook(lpparam)",
-      "enableCondition": "prefs.getInt(\"system_betterpopups_delay\", 0) > 0 && !prefs.getBoolean(\"system_betterpopups_nohide\")",
-      "allowedProcess": "com.android.systemui",
-      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
-    },
-    {
       "featureIdInt": 58,
       "featureIdName": "assist_gesture_action",
       "name": "Assist Gesture Action",
@@ -881,19 +868,6 @@
       "installer": "SystemUiFeatures",
       "installHook": "SystemNotificationHooks.ExpandHeadsUpHook(lpparam)",
       "enableCondition": "prefs.getStringAsInt(\"system_expandheadups\", 1) > 1",
-      "allowedProcess": "com.android.systemui",
-      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
-    },
-    {
-      "featureIdInt": 69,
-      "featureIdName": "betterpopups_no_hide",
-      "name": "Better Popups No Hide",
-      "preferenceKey": "system_betterpopups_nohide",
-      "target": "SYSTEM_UI",
-      "phase": "PACKAGE_READY",
-      "installer": "SystemUiFeatures",
-      "installHook": "SystemNotificationHooks.BetterPopupsNoHideHook(lpparam)",
-      "enableCondition": "prefs.getBoolean(\"system_betterpopups_nohide\")",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
@@ -1499,12 +1473,12 @@
       "featureIdInt": 117,
       "featureIdName": "replace_shortcut_app",
       "name": "Replace Shortcut App",
-      "preferenceKey": "system_shortcut_app",
+      "preferenceKey": "system_calendar_app",
       "target": "SYSTEM_UI",
       "phase": "PACKAGE_READY",
       "installer": "SystemUiFeatures",
       "installHook": "SystemUILockScreenHooks.ReplaceShortcutAppHook(lpparam)",
-      "enableCondition": "prefs.getString(\"system_shortcut_app\", \"\").isNotEmpty() || prefs.getString(\"system_calendar_app\", \"\").isNotEmpty() || prefs.getString(\"system_clock_app\", \"\").isNotEmpty()",
+      "enableCondition": "prefs.getString(\"system_calendar_app\", \"\").isNotEmpty() || prefs.getString(\"system_clock_app\", \"\").isNotEmpty()",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
@@ -1661,19 +1635,6 @@
       "installer": "SystemUiFeatures",
       "installHook": "SystemUINotificationHooks.DisableHeadsUpWhenMuteHook(lpparam)",
       "enableCondition": "prefs.getBoolean(\"system_betterpopups_disablewhenmute\")",
-      "allowedProcess": "com.android.systemui",
-      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
-    },
-    {
-      "featureIdInt": 130,
-      "featureIdName": "minimal_notification_view",
-      "name": "Minimal Notification View",
-      "preferenceKey": "system_minimalnotifview",
-      "target": "SYSTEM_UI",
-      "phase": "PACKAGE_READY",
-      "installer": "SystemUiFeatures",
-      "installHook": "SystemNotificationHooks.MinimalNotificationViewHook(lpparam)",
-      "enableCondition": "prefs.getBoolean(\"system_minimalnotifview\")",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
@@ -2497,19 +2458,6 @@
       "deniedProcess": "third-party launchers (unless selected app sets)"
     },
     {
-      "featureIdInt": 194,
-      "featureIdName": "launcher_no_zoom_animation",
-      "name": "Launcher No Zoom Animation",
-      "preferenceKey": "launcher_nozoomanim",
-      "target": "LAUNCHER",
-      "phase": "APPLICATION_ATTACHED",
-      "installer": "LauncherPostAttachFeatures",
-      "installHook": "LauncherAnimationHooks.NoZoomAnimationHook(lpparam)",
-      "enableCondition": "prefs.getBoolean(\"launcher_nozoomanim\")",
-      "allowedProcess": "com.miui.home",
-      "deniedProcess": "third-party launchers (unless selected app sets)"
-    },
-    {
       "featureIdInt": 195,
       "featureIdName": "launcher_use_old_launch_animation",
       "name": "Launcher Use Old Launch Animation",
@@ -2986,7 +2934,7 @@
       "phase": "PACKAGE_READY",
       "installer": "GuardProviderFeatures",
       "installHook": "(default base install)",
-      "enableCondition": "prefs.getBoolean(\"various_disable_defraud_apps_detect\")",
+      "enableCondition": "!isInternationalBuild && prefs.getBoolean(\"various_disable_defraud_apps_detect\")",
       "allowedProcess": "com.miui.guardprovider",
       "deniedProcess": ""
     },

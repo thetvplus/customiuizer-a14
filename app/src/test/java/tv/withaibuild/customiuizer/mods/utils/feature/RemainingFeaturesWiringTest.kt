@@ -14,6 +14,16 @@ import java.lang.reflect.Proxy
 class RemainingFeaturesWiringTest {
 
     @Test
+    fun guardProviderRetainsChinaPathButRejectsInternationalStalePreference() {
+        val prefs = PrefMap().apply {
+            put("pref_key_various_disable_defraud_apps_detect", true)
+        }
+        assertTrue(GuardProviderDisableDefraudAppsFeature.evaluateEnabled(prefs, false))
+        assertFalse(GuardProviderDisableDefraudAppsFeature.evaluateEnabled(prefs, true))
+        assertFalse(GuardProviderDisableDefraudAppsFeature.evaluateEnabled(PrefMap(), false))
+    }
+
+    @Test
     fun installersNoLongerContainDirectPreferenceChecks() {
         val installers = listOf(
             "app/src/main/java/tv/withaibuild/customiuizer/installers/LauncherInstaller.java",
@@ -50,6 +60,23 @@ class RemainingFeaturesWiringTest {
             GenericAppFeatures.all(fakePackageReadyParam(), PrefMap())
         val ids = all.map { it.id }
         assertEquals("All remaining features should have unique FeatureIds", ids.size, ids.toSet().size)
+    }
+
+    @Test
+    fun retiredLauncherZoomFeatureIsAbsentWhileOtherAnimationFeaturesRemain() {
+        val legacyPrefs = PrefMap().apply { put("launcher_nozoomanim", true) }
+        val features = LauncherPostAttachFeatures.all(fakePackageReadyParam(), legacyPrefs)
+        assertTrue(features.none { it.preferenceKey == "launcher_nozoomanim" })
+        assertFalse(features.single { it.id == LauncherFixAnimFeatureId }.isEnabled(legacyPrefs))
+        assertTrue(features.single { it.id == LauncherFixAnimFeatureId }.isEnabled(PrefMap().apply {
+            put("launcher_fixanim", true)
+        }))
+        assertTrue(features.single { it.id == LauncherNoUnlockAnimationFeatureId }.isEnabled(PrefMap().apply {
+            put("launcher_nounlockanim", true)
+        }))
+        assertTrue(features.single { it.id == LauncherUseOldLaunchAnimationFeatureId }.isEnabled(PrefMap().apply {
+            put("launcher_oldlaunchanim", true)
+        }))
     }
 
     @Test

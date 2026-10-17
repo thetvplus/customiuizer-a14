@@ -108,7 +108,7 @@ object Helpers {
     }
 
     @JvmField
-    val newMods = HashSet(listOf("pref_key_launcher_nozoomanim"))
+    val newMods = HashSet<String>()
 
     object MimeType {
         const val IMAGE = 1
@@ -627,7 +627,10 @@ object Helpers {
                                     val titleResId =
                                         xml.getAttributeResourceValue(null, "title", 0)
                                     val currentCategory = category
-                                    if (titleResId > 0 && categoryTitleResId > 0 && currentCategory != null) {
+                                    val modKey = xml.getAttributeValue(null, "key").orEmpty()
+                                    val supportedOnRom = modKey != "pref_key_various_disable_defraud_apps_detect" ||
+                                        !miui.os.Build.IS_INTERNATIONAL_BUILD
+                                    if (titleResId > 0 && categoryTitleResId > 0 && currentCategory != null && supportedOnRom) {
                                         val modData = ModData()
                                         modData.title = res.getString(titleResId)
                                         modData.breadcrumbs = buildString {
@@ -645,7 +648,7 @@ object Helpers {
                                                 append(res.getString(breadcrumbSubSubTitleResId))
                                             }
                                         }
-                                        modData.key = xml.getAttributeValue(null, "key") ?: ""
+                                        modData.key = modKey
                                         modData.cat = currentCategory
                                         modData.sub = routeSub
                                         modData.page = searchPage

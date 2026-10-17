@@ -98,8 +98,6 @@
     <string name="system_statusbarcolor_title">Status bar background color</string>
     <string name="system_statusbarcolor_summ">Make status bar and app\'s action bar background colors the same where possible</string>
     <string name="system_statusbarcolor_apps_title">Black list</string>
-    <string name="system_shortcut_app_title">Shortcut app</string>
-    <string name="system_shortcut_app_summ">Open selected app when shortcut icon in notification drawer\'s header is tapped</string>
     <string name="system_clock_app_title">Clock app</string>
     <string name="system_clock_app_summ">Open selected app when clock in notification drawer\'s header is tapped</string>
     <string name="system_calendar_app_title">Calendar app</string>
@@ -149,7 +147,6 @@
     <string name="system_4gtolte_title">Show LTE icon for 4G</string>
     <string name="system_statusbar_mobile_showname_title">Custom mobile network type</string>
     <string name="system_hidestatusbar_whenscreenshot_title">Hide status bar when taking screenshot</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">Hide status bar when recording screen</string>
     <string name="system_netspeedinterval_title">Network speed update interval</string>
     <string name="system_detailednetspeed_title">Upload and download speed are displayed in dual rows</string>
     <string name="system_netspeed_cat_title">Network speed mods</string>
@@ -180,8 +177,6 @@
     <string name="system_colorizenotiftitle_title">Colorize notification card</string>
     <string name="system_colorizenotiftitle_summ">Apply icon\'s color to card</string>
     <string name="system_notify_openinfw_title">Open notification in floating window</string>
-    <string name="system_minimalnotifview_title">Bring back minimalistic collapsed view</string>
-    <string name="system_minimalnotifview_summ">Notifications of minimal importance could be collapsed into one-line view again</string>
     <string name="system_notifchannelsettings_title">Open channel settings</string>
     <string name="system_notifchannelsettings_summ">Opening settings from notification menu leads to channel settings instead of app\'s common notification settings</string>
     <string name="system_drawer_removeshortcut_title">Hide notification shade shortcut</string>
@@ -440,9 +435,6 @@
     <string name="system_hidefromrecents_title">Hide from recents</string>
     <string name="system_hidefromrecents_summ">Hide selected apps from recent tasks list</string>
     <string name="system_mods_betterpopups">Popup notifications</string>
-    <string name="system_betterpopups_delay_title">Auto hide delay</string>
-    <string name="system_betterpopups_nohide_title">No auto hide</string>
-    <string name="system_betterpopups_nohide_summ">Do not dismiss popups automatically</string>
     <string name="system_betterpopups_autoclose_expanded_title">Dismiss expanded popups automatically</string>
     <string name="system_betterpopups_allowfloat_title">Allow floating window</string>
     <string name="system_betterpopups_allowfloat_summ">Open app in a floating window on swipe down gesture if notification has an appropriate click action defined</string>
@@ -495,8 +487,6 @@
     <string name="launcher_nowidgetonly_summ">Make all screens support both widgets and apps on tablets</string>
     <string name="launcher_nounlockanim_title">Remove unlock animation</string>
     <string name="launcher_nounlockanim_summ">Do not animate icons when device is unlocked</string>
-    <string name="launcher_nozoomanim_title">Remove launch animation</string>
-    <string name="launcher_nozoomanim_summ">Do not zoom in/out icons when app is closed/opened</string>
     <string name="launcher_oldlaunchanim_title">Use old launch animation</string>
     <string name="launcher_oldlaunchanim_summ">Revert app opening transition to a previous one</string>
     <string name="launcher_sensorportrait_title">Reverse portrait support</string>
@@ -647,10 +637,7 @@
     <string name="various_hiddenfeatures_not_found">Not available on this device</string>
     <string name="various_runningservices_title">Running services</string>
     <string name="various_batteryoptimization_title">Battery optimization</string>
-    <string name="various_memorystats_title">Memory statistics</string>
-    <string name="various_appusagestats_title">Usage statistics</string>
     <string name="various_aospnotif_title">Apps &amp; notifications</string>
-    <string name="various_aospnotiflog_title">Notification log</string>
     <string name="various_miuiinstaller_summ">Allow it to update system apps</string>
     <string name="various_miuiinstaller_error">Required app is not installed or disabled</string>
     <string name="various_installer_purify_title">Purify the package installer</string>
@@ -989,7 +976,6 @@
     <string name="system_statusbaricons_atsecondrow_title">Move some icons to the second row</string>
     <string name="system_statusbaricons_wifi_mobile_atleft_title">Move mobile and Wi-Fi to the left</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">Swap Mobile Signal and Wi-Fi</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">Move to the left on the lock screen</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">Swap icon and percentage of battery</string>
     <string name="system_statusbaricons_change_position_title">Change icons\' position</string>
     <string name="system_statusbar_mobile_signal_cat_title">Mobile signal icon display settings</string>
@@ -1092,6 +1078,8 @@
     <string name="system_statusbar_duo_summ">Battery ring, Wi-Fi and cellular signal in one icon; dual SIM uses the default data SIM</string>
     <string name="system_statusbar_duo_restart">Restart System UI after changing settings. Duo percentage and size are independent of native icon hiding and styling. Incompatible devices keep their original icons.</string>
     <string name="system_statusbar_duo_percent_title">Show battery percentage</string>
+    <string name="system_statusbar_duo_chargingbolt_title">Show charging bolt</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">Show a bolt while charging. Turn off to show the percentage when enabled; the battery ring stays green.</string>
     <string name="system_statusbar_duo_size_title">Manual icon size</string>
     <string name="system_statusbar_duo_size_summ">Used with automatic size off; limited by the current row height.</string>
     <string name="system_statusbar_duo_autosize_title">Automatic icon size</string>

@@ -317,7 +317,19 @@ class UiHotPathPreferenceSnapshotTest {
             "fun NavBarActionsHook",
         )
         assertFalse(nav.contains("MainModule.mPrefs"))
-        assertTrue(nav.contains("controlsConfig.backLongAction"))
+        // The installer captures prepared members; runtime dispatch now lives in two helpers.
+        assertTrue(nav.contains("interceptNavBarSupportLongPress"))
+        assertTrue(nav.contains("interceptNavBarLongPress"))
+        for (callback in listOf("fun interceptNavBarSupportLongPress", "fun interceptNavBarLongPress")) {
+            val body = methodBody(
+                "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt", callback,
+            )
+            assertFalse("navigation callbacks must not read PrefMap", body.contains("MainModule.mPrefs"))
+            assertTrue(body.contains("val config = controlsConfig"))
+            assertTrue(body.contains("config.backLongAction"))
+            assertTrue(body.contains("config.homeLongAction"))
+            assertTrue(body.contains("config.menuLongAction"))
+        }
 
         val fp = methodBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt",

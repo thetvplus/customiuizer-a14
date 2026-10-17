@@ -25,6 +25,15 @@ object HookInstallerFacade {
 
     @JvmStatic
     fun findAndHookMethod(className: String, classLoader: ClassLoader?, methodName: String, vararg parameterTypesAndCallback: Any?): CustomMethodUnhooker? {
+        return findAndHookMethodInternal(className, classLoader, methodName, null, parameterTypesAndCallback)
+    }
+
+    @JvmStatic
+    fun findAndHookMethodWithId(className: String, classLoader: ClassLoader?, methodName: String, id: String, vararg parameterTypesAndCallback: Any?): CustomMethodUnhooker? {
+        return findAndHookMethodInternal(className, classLoader, methodName, id, parameterTypesAndCallback)
+    }
+
+    private fun findAndHookMethodInternal(className: String, classLoader: ClassLoader?, methodName: String, id: String?, parameterTypesAndCallback: Array<out Any?>): CustomMethodUnhooker? {
         val hookClass = XposedHelpers.findClassIfExists(className, classLoader)
         if (hookClass == null) {
             HookDiagnostics.record(
@@ -39,7 +48,19 @@ object HookInstallerFacade {
             return null
         }
         return try {
-            val unhooker = XposedHelpers.findAndHookMethod(hookClass, methodName, *parameterTypesAndCallback)
+            val unhooker = if (id != null) {
+                val callback = parameterTypesAndCallback.lastOrNull() as? HookerClassHelper.MethodHook
+                    ?: throw IllegalArgumentException("no callback defined")
+                val method = XposedHelpers.findMethodExact(
+                    hookClass, methodName, *parameterTypesAndCallback.copyOf(parameterTypesAndCallback.size - 1),
+                )
+                val handle = HookInstallation.intercept(XposedHelpers.moduleInst.hook(method), callback, id)
+                object : CustomMethodUnhooker {
+                    override fun unhook() = handle.unhook()
+                }
+            } else {
+                XposedHelpers.findAndHookMethod(hookClass, methodName, *parameterTypesAndCallback)
+            }
             if (unhooker != null) {
                 HookDiagnostics.record(
                     PreferenceObserverRegistry.processName(),

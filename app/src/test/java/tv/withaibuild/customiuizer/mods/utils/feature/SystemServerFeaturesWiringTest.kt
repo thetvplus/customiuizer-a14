@@ -109,15 +109,18 @@ class SystemServerFeaturesWiringTest {
     }
 
     @Test
-    fun navBarActionsFeatureIsAlwaysInstalledForFirstEnable() {
+    fun navBarActionsFeatureOnlyInstallsWhenAtLeastOneActionIsConfigured() {
         val feature = NavBarActionsFeature(fakeSystemServerStartingParam())
 
         assertEquals(NavBarActionsFeatureId, feature.id)
         assertEquals("controls_backlong_action", feature.preferenceKey)
         assertEquals(FeatureTarget.SYSTEM_SERVER, feature.target)
 
-        assertTrue(feature.isEnabled(PrefMap()))
-        assertTrue(feature.isEnabled(PrefMap().apply { put("controls_menulong_action", 5) }))
+        assertFalse(feature.isEnabled(PrefMap()))
+        for (key in listOf("controls_backlong_action", "controls_homelong_action", "controls_menulong_action")) {
+            assertFalse(feature.isEnabled(PrefMap().apply { put(key, 1) }))
+            assertTrue(feature.isEnabled(PrefMap().apply { put(key, 5) }))
+        }
     }
 
     @Test

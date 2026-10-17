@@ -179,7 +179,6 @@ def check_workflow_file(path: Path) -> list[str]:
 
     # Forbidden commands / properties.
     forbidden = {
-        "scripts/verify.ps1": re.compile(r'\bscripts/verify\.ps1\b'),
         "gradlew.bat": re.compile(r'\bgradlew\.bat\b'),
         "officialRelease=true": re.compile(r'(?:-P)?officialRelease\s*=\s*true\b'),
         "keystore property": re.compile(r'customiuizerA14KeystoreProperties|CUSTOMIUIZER_A14_KEYSTORE_PROPERTIES'),

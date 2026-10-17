@@ -42,6 +42,18 @@ object BackupRestore {
         "pref_key_system_notif_strong_toast_width",
         "pref_key_system_strong_toast_position",
         "pref_key_system_strong_toast_bottom_offset",
+        "pref_key_system_betterpopups_nohide",
+        "pref_key_system_betterpopups_delay",
+        "pref_key_system_minimalnotifview",
+        "pref_key_launcher_nozoomanim",
+        "pref_key_system_shortcut_app",
+        "pref_key_system_shortcut_app_user",
+        "pref_key_system_hidestatusbar_whenscreenrecord",
+        "pref_key_system_cc_tile_enabled_color_usemonet",
+        "pref_key_system_statusbar_icons_atleft_onkeyguard",
+        "pref_key_various_memorystats",
+        "pref_key_various_appusagestats",
+        "pref_key_various_aospnotiflog",
     )
 
     /** Source-device derived or runtime markers that must not be trusted on restore. */

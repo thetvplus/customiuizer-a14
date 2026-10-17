@@ -12,6 +12,7 @@ import android.inputmethodservice.InputMethodService
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import android.os.SystemClock
@@ -38,13 +39,9 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.Helpers
-import java.lang.reflect.Method
+import java.lang.reflect.Field
 import tv.withaibuild.customiuizer.utils.HookUtils
 
-// basePWMContext is the system_server PhoneWindowManager mContext, a per-process
-// singleton, not an Activity Context. It is captured once per PhoneWindowManager
-// and used by the navigation-key long-press Runnables. There is no owner hand-off
-// to manage because the system_server process recreates it only on crash/restart.
 @SuppressLint("StaticFieldLeak")
 object Controls {
 
@@ -652,6 +649,8 @@ object Controls {
     @JvmStatic
     fun NavBarButtonsHook(lpparam: PackageReadyParam) {
         installControlsSnapshot()
+        val config = controlsConfig
+        if (!hasExtraNavBarButtons(config)) return
         ModuleHelper.findAndHookMethod("com.android.systemui.navigationbar.NavigationBarView", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -759,99 +758,136 @@ object Controls {
             })
     }
 
-    @SuppressLint("StaticFieldLeak")
-    private var basePWMContext: Context? = null
-    private var basePWMObject: Any? = null
-    private var markShortcutTriggered: Method? = null
+    internal fun hasExtraNavBarButtons(config: ControlsSnapshot): Boolean =
+        config.navbarLeftAction > 1 || config.navbarLeftLongAction > 1 ||
+            config.navbarRightAction > 1 || config.navbarRightLongAction > 1
 
-    private val mBackLongPressAction = Runnable {
-        ModuleHelper.guarded {
-            if (basePWMContext == null || basePWMObject == null) return@guarded
-            if (GlobalActions.handleAction(basePWMContext!!, "controls_backlong")) HookUtils.performStrongVibration(basePWMContext!!)
-            if (controlsConfig.backLongAction != 1) markShortcutTriggered?.invoke(basePWMObject)
-        }
+    internal fun navBarLongPressAction(keyCode: Int, config: ControlsSnapshot): Int = when (keyCode) {
+        KeyEvent.KEYCODE_BACK -> config.backLongAction
+        KeyEvent.KEYCODE_HOME -> config.homeLongAction
+        // HyperOS 1's navigation rules use MENU (82), not APP_SWITCH (187).
+        KeyEvent.KEYCODE_MENU -> config.menuLongAction
+        else -> 1
     }
-    private val mHomeLongPressAction = Runnable {
-        ModuleHelper.guarded {
-            if (basePWMContext == null || basePWMObject == null) return@guarded
-            if (GlobalActions.handleAction(basePWMContext!!, "controls_homelong")) HookUtils.performStrongVibration(basePWMContext!!)
-            if (controlsConfig.homeLongAction != 1) markShortcutTriggered?.invoke(basePWMObject)
+
+    internal fun interceptNavBarSupportLongPress(
+        chain: XposedInterface.Chain,
+        primaryKeyField: Field,
+    ): Any? {
+        val config = controlsConfig
+        // Native support also refreshes mLongPressFunction for a later failure fallback.
+        val nativeSupport = chain.proceed()
+        if (config.backLongAction <= 1 && config.homeLongAction <= 1 && config.menuLongAction <= 1) {
+            return nativeSupport
         }
+        val enabled = ModuleHelper.guarded(false) {
+            navBarLongPressAction(primaryKeyField.getInt(chain.thisObject), config) > 1
+        }
+        return if (enabled) true else nativeSupport
     }
-    private val mMenuLongPressAction = Runnable {
-        ModuleHelper.guarded {
-            if (basePWMContext == null || basePWMObject == null) return@guarded
-            if (GlobalActions.handleAction(basePWMContext!!, "controls_menulong")) HookUtils.performStrongVibration(basePWMContext!!)
-            if (controlsConfig.menuLongAction != 1) markShortcutTriggered?.invoke(basePWMObject)
+
+    internal fun interceptNavBarLongPress(
+        chain: XposedInterface.Chain,
+        primaryKeyField: Field,
+        contextField: Field,
+        executeAction: (Context, String, Int) -> Boolean,
+        vibrate: (Context) -> Unit,
+        consumption: NavBarLongPressConsumption? = null,
+    ): Any? {
+        val config = controlsConfig
+        if (config.backLongAction <= 1 && config.homeLongAction <= 1 && config.menuLongAction <= 1) {
+            return chain.proceed()
         }
+        var handled = false
+        ModuleHelper.guarded {
+            val owner = chain.thisObject ?: return@guarded
+            val keyCode = primaryKeyField.getInt(owner)
+            val action = navBarLongPressAction(keyCode, config)
+            if (action <= 1) return@guarded
+            val actionKey = when (keyCode) {
+                KeyEvent.KEYCODE_BACK -> "controls_backlong"
+                KeyEvent.KEYCODE_HOME -> "controls_homelong"
+                KeyEvent.KEYCODE_MENU -> "controls_menulong"
+                else -> return@guarded
+            }
+            val context = contextField.get(owner) as? Context ?: return@guarded
+            val downTime = if (consumption == null) 0L else chain.getArg(0) as? Long ?: return@guarded
+            if (consumption != null && !consumption.canTrack(keyCode, downTime)) return@guarded
+            try {
+                handled = executeAction(context, actionKey, action)
+                // A vibration failure must not execute the native action after a successful custom action.
+                if (handled) {
+                    consumption?.markHandled(keyCode, downTime)
+                    vibrate(context)
+                }
+            } catch (failure: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(failure)
+                throw failure
+            }
+        }
+        return if (handled) null else chain.proceed()
+    }
+
+    internal fun interceptNavBarKeyDispatch(
+        chain: XposedInterface.Chain,
+        consumption: NavBarLongPressConsumption,
+    ): Any? {
+        if (!consumption.hasHandledPress()) return chain.proceed()
+        val event = ModuleHelper.guarded<KeyEvent?>(null) {
+            try {
+                chain.getArg(1) as? KeyEvent
+            } catch (failure: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(failure)
+                throw failure
+            }
+        }
+            ?: return chain.proceed()
+        val key = event.keyCode
+        if (key != KeyEvent.KEYCODE_HOME && key != KeyEvent.KEYCODE_BACK && key != KeyEvent.KEYCODE_MENU) {
+            return chain.proceed()
+        }
+        return consumption.dispatch(chain, key, event.downTime, event.action)
     }
 
     @JvmStatic
     fun NavBarActionsHook(lpparam: SystemServerStartingParam) {
+        val ruleClass = XposedHelpers.findClass(
+            "com.android.server.policy.MiuiSingleKeyRule",
+            lpparam.classLoader,
+        )
+        // Resolve the exact ROM members once, before registering either callback.
+        XposedHelpers.findMethodExact(ruleClass, "supportLongPress", *emptyArray<Class<*>>())
+        XposedHelpers.findMethodExact(ruleClass, "onLongPress", Long::class.javaPrimitiveType)
+        val primaryKeyField = XposedHelpers.findField(ruleClass, "mKeyCode")
+        val contextField = XposedHelpers.findField(ruleClass, "mContext")
+        val policyClass = XposedHelpers.findClass("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.classLoader)
+        XposedHelpers.findMethodExact(
+            policyClass, "interceptKeyBeforeDispatching", IBinder::class.java, KeyEvent::class.java, Int::class.javaPrimitiveType,
+        )
+        val cancelMenuPreloadMethod = XposedHelpers.findMethodExact(
+            "com.android.server.policy.MiuiPhoneWindowManager", lpparam.classLoader, "cancelPreloadRecentAppsInternal",
+        )
+        val consumption = NavBarLongPressConsumption { chain -> cancelMenuPreloadMethod.invoke(chain.thisObject) }
         installControlsSnapshot()
-        ModuleHelper.hookAllMethods("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.classLoader, "postKeyLongPress", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    val thisObject = chain.thisObject
-
-                    if (basePWMObject == null) basePWMObject = thisObject
-                    if (basePWMContext == null) basePWMContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    if (markShortcutTriggered == null) markShortcutTriggered = XposedHelpers.findMethodExact("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.classLoader, "markShortcutTriggered")
-
-                    val mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
-
-                    val key = chain.getArg(0) as Int
-                    if (key == KeyEvent.KEYCODE_BACK && controlsConfig.backLongAction > 1) {
-                        mHandler.removeCallbacks(mBackLongPressAction)
-                        mHandler.postDelayed(mBackLongPressAction, ViewConfiguration.getLongPressTimeout().toLong())
-                        skipped = true; result = null; throwable = null
-                    } else if (key == KeyEvent.KEYCODE_HOME && controlsConfig.homeLongAction > 1) {
-                        mHandler.removeCallbacks(mHomeLongPressAction)
-                        mHandler.postDelayed(mHomeLongPressAction, ViewConfiguration.getLongPressTimeout().toLong())
-                        skipped = true; result = null; throwable = null
-                    } else if (key == KeyEvent.KEYCODE_APP_SWITCH && controlsConfig.menuLongAction > 1) {
-                        mHandler.removeCallbacks(mMenuLongPressAction)
-                        mHandler.postDelayed(mMenuLongPressAction, ViewConfiguration.getLongPressTimeout().toLong())
-                        skipped = true; result = null; throwable = null
-                    }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
+        val executeAction: (Context, String, Int) -> Boolean = { context, key, action ->
+            GlobalActions.handleResolvedAction(context, key, action)
+        }
+        val vibrate: (Context) -> Unit = { HookUtils.performStrongVibration(it) }
+        // Real HOME enters this parent method and bypasses the Default hooks on the target ROM.
+        ModuleHelper.findAndHookMethod(ruleClass, "supportLongPress", object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? =
+                interceptNavBarSupportLongPress(chain, primaryKeyField)
         })
-
-        ModuleHelper.hookAllMethods("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.classLoader, "removeKeyLongPress", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    val thisObject = chain.thisObject
-
-                    val key = chain.getArg(0) as Int
-                    val mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
-                    if (key == KeyEvent.KEYCODE_BACK)
-                        mHandler.removeCallbacks(mBackLongPressAction)
-                    else if (key == KeyEvent.KEYCODE_HOME)
-                        mHandler.removeCallbacks(mHomeLongPressAction)
-                    else if (key == KeyEvent.KEYCODE_APP_SWITCH)
-                        mHandler.removeCallbacks(mMenuLongPressAction)
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
+        ModuleHelper.findAndHookMethod(ruleClass, "onLongPress", Long::class.javaPrimitiveType, object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? =
+                interceptNavBarLongPress(chain, primaryKeyField, contextField, executeAction, vibrate, consumption)
         })
+        ModuleHelper.findAndHookMethod(
+            policyClass, "interceptKeyBeforeDispatching", IBinder::class.java, KeyEvent::class.java,
+            Int::class.javaPrimitiveType, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? = interceptNavBarKeyDispatch(chain, consumption)
+            },
+        )
     }
 
     @JvmStatic

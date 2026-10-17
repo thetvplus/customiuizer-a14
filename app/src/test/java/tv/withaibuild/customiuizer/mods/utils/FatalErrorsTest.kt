@@ -3,6 +3,8 @@ package tv.withaibuild.customiuizer.mods.utils
 import org.junit.Assert.assertSame
 import org.junit.Assert.fail
 import org.junit.Test
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.UndeclaredThrowableException
 import java.util.concurrent.ExecutionException
 
 class FatalErrorsTest {
@@ -73,6 +75,25 @@ class FatalErrorsTest {
         val original = IllegalArgumentException("ordinary")
         val result = FatalErrors.unwrapAndRethrowIfFatal(original)
         assertSame(original, result)
+    }
+
+    @Test
+    fun unwrapsProxyAndReflectionLayersWithoutLosingFatalIdentity() {
+        for (fatal in listOf(OutOfMemoryError("proxy"), ThreadDeath(), InternalError("proxy"))) {
+            val wrapped = UndeclaredThrowableException(InvocationTargetException(fatal))
+            try {
+                FatalErrors.unwrapAndRethrowIfFatal(wrapped)
+                fail("Proxy-wrapped fatal must propagate")
+            } catch (actual: Throwable) {
+                assertSame(fatal, actual)
+            }
+        }
+    }
+
+    @Test
+    fun ordinaryProxyFailureRetainsOriginalWrapperForDiagnostics() {
+        val wrapped = UndeclaredThrowableException(InvocationTargetException(IllegalStateException("ordinary")))
+        assertSame(wrapped, FatalErrors.unwrapAndRethrowIfFatal(wrapped))
     }
 
     @Test

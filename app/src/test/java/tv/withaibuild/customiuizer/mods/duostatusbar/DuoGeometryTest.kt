@@ -78,7 +78,7 @@ class DuoGeometryTest {
             last = alpha
         }
     }
-    @Test fun percentAndChargingOpenOnlyTheAppropriateTopGap() {
+    @Test fun percentAndVisibleBoltOpenOnlyTheAppropriateTopGap() {
         assertEquals(0f, DuoGeometry.topGap(false, false), 0f)
         assertEquals(71.3f, DuoGeometry.topGap(true, false), 0f)
         assertEquals(55.6f, DuoGeometry.topGap(true, true), 0f)
@@ -114,6 +114,7 @@ class DuoGeometryTest {
     @Test fun configHasSafeDefaultsAndBoundsImportedSettings() {
         val defaults = DuoConfig.read(PrefMap())
         assertTrue(defaults.showPercent); assertEquals(24, defaults.sizeDp)
+        assertTrue(defaults.showChargingBolt)
         assertTrue(defaults.autoSize); assertTrue(defaults.showAudio)
         assertFalse(defaults.bold)
         val imported = PrefMap().apply {
@@ -122,12 +123,14 @@ class DuoGeometryTest {
             put("system_statusbar_duo_autosize", false)
             put("system_statusbar_duo_audio", false)
             put("system_statusbar_duo_bold", true)
+            put("system_statusbar_duo_chargingbolt", false)
         }
         assertFalse(DuoConfig.read(imported).showPercent)
         assertEquals(40, DuoConfig.read(imported).sizeDp)
         assertFalse(DuoConfig.read(imported).autoSize)
         assertFalse(DuoConfig.read(imported).showAudio)
         assertTrue(DuoConfig.read(imported).bold)
+        assertFalse(DuoConfig.read(imported).showChargingBolt)
         assertEquals(20, DuoConfig(true, -999).sizeDp)
     }
 

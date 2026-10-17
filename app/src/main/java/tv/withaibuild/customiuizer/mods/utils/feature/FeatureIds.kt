@@ -240,10 +240,6 @@ data object ChargeAnimationFeatureId : FeatureId {
     override val id = 56
     override val name = "charge_animation"
 }
-data object BetterPopupsHideDelayFeatureId : FeatureId {
-    override val id = 57
-    override val name = "betterpopups_hide_delay"
-}
 data object AssistGestureActionFeatureId : FeatureId {
     override val id = 58
     override val name = "assist_gesture_action"
@@ -287,10 +283,6 @@ data object LockScreenAlbumArtFeatureId : FeatureId {
 data object ExpandHeadsUpFeatureId : FeatureId {
     override val id = 68
     override val name = "expand_heads_up"
-}
-data object BetterPopupsNoHideFeatureId : FeatureId {
-    override val id = 69
-    override val name = "betterpopups_no_hide"
 }
 data object BetterPopupsCenteredFeatureId : FeatureId {
     override val id = 70
@@ -527,10 +519,6 @@ data object AutoDismissExpandedPopupsFeatureId : FeatureId {
 data object DisableHeadsUpWhenMuteFeatureId : FeatureId {
     override val id = 129
     override val name = "disable_heads_up_when_mute"
-}
-data object MinimalNotificationViewFeatureId : FeatureId {
-    override val id = 130
-    override val name = "minimal_notification_view"
 }
 data object NotificationChannelSettingsFeatureId : FeatureId {
     override val id = 131
@@ -789,10 +777,6 @@ data object LauncherFolderBlurFeatureId : FeatureId {
 data object LauncherNoUnlockAnimationFeatureId : FeatureId {
     override val id = 193
     override val name = "launcher_no_unlock_animation"
-}
-data object LauncherNoZoomAnimationFeatureId : FeatureId {
-    override val id = 194
-    override val name = "launcher_no_zoom_animation"
 }
 data object LauncherUseOldLaunchAnimationFeatureId : FeatureId {
     override val id = 195

@@ -74,8 +74,6 @@
     <string name="system_statusbarcolor_title">Barva pozadí stavového řádku</string>
     <string name="system_statusbarcolor_summ">Pokud je to možné, barvy pozadí stavového řádku a akčního řádku aplikace jsou stejné</string>
     <string name="system_statusbarcolor_apps_title">Černá listina</string>
-    <string name="system_shortcut_app_title">Zástupce aplikace</string>
-    <string name="system_shortcut_app_summ">Otevření vybrané aplikace po klepnutí na ikonu zástupce v záhlaví oznamovací zásuvky</string>
     <string name="system_clock_app_title">Hodiny</string>
     <string name="system_clock_app_summ">Otevření vybrané aplikace po klepnutí na hodiny v záhlaví oznamovací zásuvky</string>
     <string name="system_calendar_app_title">Kalendář</string>
@@ -152,8 +150,6 @@
     <string name="system_colorizenotiftitle_title">Vybarvení názvu oznámení</string>
     <string name="system_colorizenotiftitle_summ">Použít barvu ikony na kartu</string>
     <string name="system_notify_openinfw_title">Otevřít oznámení v plovoucím okně</string>
-    <string name="system_minimalnotifview_title">Vrátit minimalistické zobrazení ve složeném stavu</string>
-    <string name="system_minimalnotifview_summ">Oznámení s minimální důležitostí by mohla být opět sbalena do jednořádkového zobrazení</string>
     <string name="system_notifchannelsettings_title">Nastavení otevřeného kanálu</string>
     <string name="system_notifchannelsettings_summ">Otevření nastavení z nabídky oznámení vede k nastavení kanálu místo běžného nastavení oznámení aplikace</string>
     <string name="system_drawer_removeshortcut_title">Skrýt stín oznámení</string>
@@ -391,9 +387,6 @@
     <string name="system_hidefromrecents_title">Skrýt z posledních spuštěných</string>
     <string name="system_hidefromrecents_summ">Skrytí vybraných aplikací ze seznamu posledních úloh</string>
     <string name="system_mods_betterpopups">Vyskakující oznámení</string>
-    <string name="system_betterpopups_delay_title">Zpoždění automatického skrývání</string>
-    <string name="system_betterpopups_nohide_title">Žádné automatické skrytí</string>
-    <string name="system_betterpopups_nohide_summ">Automaticky neodmítat vyskakovací okna</string>
     <string name="system_betterpopups_autoclose_expanded_title">Automaticky zrušit rozšířená vyskakovací okna</string>
     <string name="system_betterpopups_allowfloat_title">Povolit plovoucí okno</string>
     <string name="system_betterpopups_allowfloat_summ">Otevřít aplikaci v plovoucím okně gestem přejetí prstem dolů, pokud je pro oznámení definována příslušná akce kliknutí</string>
@@ -445,8 +438,6 @@
     <string name="launcher_nowidgetonly_summ">Podpora widgetů i aplikací u tabletů na všech obrazovkách</string>
     <string name="launcher_nounlockanim_title">Odstranit animaci odemknutí</string>
     <string name="launcher_nounlockanim_summ">Neanimovat ikony, když je zařízení odemčené</string>
-    <string name="launcher_nozoomanim_title">Odstranit animaci spuštění</string>
-    <string name="launcher_nozoomanim_summ">Nepřibližovat/oddalovat ikony při zavření/otevření aplikace</string>
     <string name="launcher_oldlaunchanim_title">Použít starší animaci spuštění</string>
     <string name="launcher_oldlaunchanim_summ">Vrátit přechod otevření aplikace na předchozí</string>
     <string name="launcher_sensorportrait_title">Podpora obráceného portrétu</string>
@@ -588,10 +579,7 @@
     <string name="various_hiddenfeatures_not_found">V tomto zařízení není k dispozici</string>
     <string name="various_runningservices_title">Spuštěné služby</string>
     <string name="various_batteryoptimization_title">Optimalizace baterie</string>
-    <string name="various_memorystats_title">Statistické údaje o paměti</string>
-    <string name="various_appusagestats_title">Statistika používání</string>
     <string name="various_aospnotif_title">Aplikace a oznámení</string>
-    <string name="various_aospnotiflog_title">Protokol o oznámeních</string>
     <string name="various_miuiinstaller_summ">Povolit aktualizaci systémových aplikací</string>
     <string name="various_miuiinstaller_error">Požadovaná aplikace není nainstalována. Dlouhým stisknutím ji stáhnete.</string>
     <string name="various_installer_purify_title">Vyčistit instalátor balíčků</string>
@@ -1019,12 +1007,10 @@
     <string name="system_charginginfo_fontsize_summary">Upraví dolní indikaci nabíjení. Výchozí zachovává systémovou velikost písma. Pro uplatnění restartujte SystemUI.</string>
     <string name="system_charginginfo_fontsize_title">Velikost písma nabíjecího textu na zamykací obrazovce</string>
     <string name="system_drawer_remove_emptynotify_title">Skrýt tip Žádná oznámení</string>
-    <string name="system_hidestatusbar_whenscreenrecord_title">Skrýt stavový řádek při nahrávání obrazovky</string>
     <string name="system_hidestatusbar_whenscreenshot_title">Skrýt stavový řádek při pořizování snímku obrazovky</string>
     <string name="system_qs_disable_fakeclock_anim_title">Vypnout animaci hodin při potáhnutí dolů</string>
     <string name="system_statusbar_dualrows_left_ratio_title">Nastavit levou šířku pro zařízení bez výřezu</string>
     <string name="system_statusbar_enable_weather_param_title">Použít tq pro zobrazení počasí při formátování</string>
-    <string name="system_statusbar_icons_atleft_onkeyguard">Přesunout doleva na zamykací obrazovce</string>
     <string name="system_statusbar_mobile_digital_signal_in2rows_title">Zobrazit ve dvou řádcích při dvou SIM kartách</string>
     <string name="system_statusbar_mobile_digital_signal_title">Zobrazit sílu signálu v číselném formátu dBm</string>
     <string name="system_statusbarheight_summ">Po změně pevné výšky je nutný úplný restart.</string>
@@ -1066,6 +1052,8 @@
     <string name="system_statusbar_duo_summ">Kruh baterie, Wi-Fi a mobilní signál v jedné ikoně; u dvou SIM se používá výchozí datová SIM</string>
     <string name="system_statusbar_duo_restart">Po změně nastavení restartujte systémové rozhraní. Procenta a velikost Duo jsou nezávislé na skrytí a stylu systémových ikon. Nekompatibilní zařízení zachovají původní ikony.</string>
     <string name="system_statusbar_duo_percent_title">Zobrazit procenta baterie</string>
+    <string name="system_statusbar_duo_chargingbolt_title">Zobrazit blesk při nabíjení</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">Při nabíjení zobrazí blesk. Po vypnutí se zobrazí procenta, pokud jsou povolena; kruh baterie zůstane zelený.</string>
     <string name="system_statusbar_duo_size_title">Ruční velikost ikony</string>
     <string name="system_statusbar_duo_size_summ">Platí bez automatické velikosti; omezena výškou řádku.</string>
     <string name="system_statusbar_duo_autosize_title">Automatická velikost ikony</string>

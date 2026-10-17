@@ -8,7 +8,6 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -134,8 +133,14 @@
             android:name="tv.withaibuild.customiuizer.PrefsProvider"
             android:authorities="${applicationId}.provider.sharedprefs"
             android:grantUriPermissions="true"
-            android:exported="true"
-            tools:ignore="ExportedContentProvider" />
+            android:exported="false" />
+
+        <!-- The privileged framework can deliver its Binder; ordinary apps cannot
+             replace the settings process's service connection with an arbitrary Binder. -->
+        <provider
+            android:name="io.github.libxposed.service.XposedProvider"
+            android:authorities="${applicationId}.XposedService"
+            android:permission="${applicationId}.permission.BROADCAST" />
 
         <service
             android:exported="true"

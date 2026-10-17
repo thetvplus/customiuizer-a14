@@ -8,8 +8,8 @@
 - HyperOS 1 / Android 14 / SDK 34。
 - `applicationId`：`tv.withaibuild.customiuizer.r14`
 - `minSdk=34`、`targetSdk=34`、ABI `arm64-v8a`
-- libxposed API 101 为最低运行基线，API 102 为隔离能力。
-- API 102 专属类型不得进入 API 101 必经生产路径。
+- libxposed API 102 为最低运行基线；不维护 API 101 兼容路径。
+- 保留设置进程与 compileOnly Hook API 的 R8 类加载边界。
 - 不支持 Android 13、Android 15 或 Android 16。
 - A14 独立版本、签名、APK、发布和兼容策略。
 
@@ -30,6 +30,8 @@ correctness
 少层、少状态、少框架、少重复、少魔法、少后台行为。直接、明确、有界、可验证。
 
 不为微优化增加框架。不重做 PrefMap、ResourceHooks、FeatureRegistry、ProcessRouter、PreferenceBootstrap。不重新设计 Dynamic Island 视觉。不把整个 Java 树 Kotlin 化。不用 Compose 或新 DI。
+
+安全升级与能力试验可以出于新 API、兼容性探索、安全修复、可维护性或开发工具整合，不要求先证明性能提升或 APK 变小。允许在当前授权的试验分支分阶段升级、验证和回退；仍须遵守产品、生命周期、API 隔离和验证边界。没有测量证据时不得宣称性能收益。
 
 ## 3. Git
 
@@ -58,7 +60,7 @@ correctness
 ## 5. JVM
 
 - 构建运行时为 JDK 25。`JAVA_HOME` 指向 JDK 根目录，不得指向 `bin`。
-- Android 产物 `sourceCompatibility` / `targetCompatibility` 保持 17。
+- Android Java / Kotlin 输出目标同步为 25；通过 R8/D8 生成 SDK 34 可运行的 DEX。语言/API 级别与 JVM 输出目标分别验证。
 - 不得为了绕过环境错误降级到 JDK 17。
 - 默认保留 Java：`MainModule.java`、`XposedHelpers.java`、`MemberUtilsX.java`。
 - Java→Kotlin 必须小批量、行为等价，并与功能变化分开。
@@ -79,6 +81,8 @@ python -m unittest discover -s tools/tests -p "test_*.py"
 git diff --check
 ```
 
+同批 PR 先审查 exact head 与已有 CI，整合后统一做一次上述收口验证及必要构建 / 实机检查。相同源码与范围已通过时复用结果；仅新修改、失败或未解决问题追加相关验证，不逐 PR 反复跑全套。纯文档变更只做对应静态检查。
+
 工具目录改动时再跑 Python 工具测试。失败在原任务内修复。不得通过删测试、降断言或吞异常制造通过。
 
 ## 7. 构建与发布
@@ -96,3 +100,4 @@ git diff --check
 - 无实机证据不得修改成熟热路径基础设施。
 - 候选缺陷必须可复现，并有内存 / 线程 / 日志 / CPU 证据。
 - “这里可以 cache” 不构成缺陷。
+- ROM 适配、Hook 定位、目标差异与最终 DEX 复核优先使用 [DexSQL 指引](docs/rom-intelligence/DEXSQL.md) 与 `tools/dexsql/`，复用官方 CLI / MCP；先核实已安装 schema、样本哈希、定义来源和同产物 R8 mapping。仅在相关开发任务调用，不加入 APK 或默认 CI，结果不能代替实机验收。

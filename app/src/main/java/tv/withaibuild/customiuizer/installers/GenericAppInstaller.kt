@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.installers
 import android.app.Application
 import android.content.Context
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import tv.withaibuild.customiuizer.mods.utils.HookInstallation
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallRegistry
 import tv.withaibuild.customiuizer.mods.utils.FeatureSpec
 import tv.withaibuild.customiuizer.mods.utils.FeatureTarget
@@ -32,9 +33,11 @@ object GenericAppInstaller {
         isNoOverscroll: Boolean,
         controlMedia: Boolean
     ) {
-        ModuleHelper.findAndHookMethod(
-            Application::class.java,
+        ModuleHelper.findAndHookMethodWithId(
+            Application::class.java.name,
+            Application::class.java.classLoader,
             "attach",
+            HookInstallation.STABLE_ID_APPLICATION_ATTACH,
             Context::class.java,
             object : MethodHook() {
                 override fun after(param: AfterHookCallback) {

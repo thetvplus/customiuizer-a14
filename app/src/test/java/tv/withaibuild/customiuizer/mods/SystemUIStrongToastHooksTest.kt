@@ -19,7 +19,6 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tv.withaibuild.customiuizer.mods.utils.StrongToastPosition
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.mods.utils.feature.StrongToastRuntimeSnapshot
@@ -87,30 +86,30 @@ class SystemUIStrongToastHooksTest {
 
     private fun setDynamicIslandSnapshot() {
         SystemUIStrongToastHooks.snapshotRef =
-            AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.DYNAMIC_ISLAND, StrongToastPosition.TOP, 0))
+            AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.DYNAMIC_ISLAND))
     }
 
     private fun setHideSnapshot() {
         SystemUIStrongToastHooks.snapshotRef =
-            AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.HIDE, StrongToastPosition.TOP, 0))
+            AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.HIDE))
     }
 
     private fun setSystemDefaultSnapshot() {
         SystemUIStrongToastHooks.snapshotRef =
-            AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.SYSTEM_DEFAULT, StrongToastPosition.TOP, 0))
+            AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.SYSTEM_DEFAULT))
     }
 
     @Test
     fun install_setsInstalledFlag_andReusesExistingInstallation() {
         val lpparam = fakePackageReadyParam()
-        val snapshot = AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.DYNAMIC_ISLAND, StrongToastPosition.TOP, 0))
+        val snapshot = AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.DYNAMIC_ISLAND))
 
         SystemUIStrongToastHooks.install(lpparam, snapshot)
 
         assertTrue(SystemUIStrongToastHooks.installed)
         assertSame(snapshot, SystemUIStrongToastHooks.snapshotRef)
 
-        val anotherSnapshot = AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.HIDE, StrongToastPosition.TOP, 0))
+        val anotherSnapshot = AtomicReference(StrongToastRuntimeSnapshot(StrongToastPresentationMode.HIDE))
         SystemUIStrongToastHooks.install(lpparam, anotherSnapshot)
 
         // A second call does not try to install the hooks again.

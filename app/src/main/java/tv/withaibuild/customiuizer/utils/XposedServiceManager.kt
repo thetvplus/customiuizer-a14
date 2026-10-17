@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.SystemServerPreferenceInvalidation
 
 /**
@@ -126,14 +127,40 @@ object XposedServiceManager {
     private const val LOG_TAG = "XposedService"
 
     @JvmStatic
-    fun requestApi102Scope(
+    fun requestScope(
         packages: List<String>,
         callback: (Boolean, String?) -> Unit,
     ): Boolean {
         val boundService = service ?: return false
-        if (boundService.apiVersion < XposedService.API_102) return false
-        Api102ScopeRequester.request(boundService, packages, callback)
-        return true
+        // getScope is a synchronous Binder call. Snapshot it once per selection.
+        val granted = try {
+            boundService.scope.toHashSet()
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            return false
+        }
+        val missing = packages.filterNot { it in granted }
+        if (missing.isEmpty()) {
+            callback(true, null)
+            return true
+        }
+        return try {
+            boundService.requestScope(missing, object : XposedService.OnScopeEventListener {
+                override fun onScopeRequestApproved(approved: List<String>) {
+                    handler.post { callback(approved.containsAll(missing), null) }
+                }
+
+                override fun onScopeRequestFailed(message: String) {
+                    handler.post { callback(false, message) }
+                }
+            })
+            true
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            // The service can die or deny access before onServiceDied reaches us.
+            // Report unavailability to the existing UI; never retry an uncertain request.
+            false
+        }
     }
 
     private var initialized = false
@@ -157,7 +184,7 @@ object XposedServiceManager {
      */
     private val handler = Handler(Looper.getMainLooper())
     private val mirrorFailureHandler = CoroutineExceptionHandler { _, throwable ->
-        if (throwable is OutOfMemoryError) throw throwable
+        FatalErrors.unwrapAndRethrowIfFatal(throwable)
         AppHelper.log(LOG_TAG, "mirror worker failed: $throwable")
     }
     private val mirrorScope = CoroutineScope(
@@ -268,10 +295,11 @@ object XposedServiceManager {
                 val edit = remote.edit()
                 val value = sharedPreferences.all[key]
                 if (value == null) edit.remove(key) else putValue(edit, key, value)
-                edit.commit()
+                commitRemote(edit, generation)
             } catch (oom: OutOfMemoryError) {
                 throw oom
             } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
                 AppHelper.log(LOG_TAG, "remote write for '$key' failed: $t")
                 false
             }
@@ -311,6 +339,17 @@ object XposedServiceManager {
         }
     }
 
+    /** A rejected write still changes the SDK cache, so a later empty diff is not delivery. */
+    private fun commitRemote(edit: SharedPreferences.Editor, generation: Long): Boolean {
+        return try {
+            edit.commit().also { if (!it) mirrorState.recordUnconfirmedCommit(generation) }
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            mirrorState.recordUnconfirmedCommit(generation)
+            throw t
+        }
+    }
+
     /**
      * Sends an explicit preference invalidation broadcast to system_server.
      *
@@ -337,7 +376,7 @@ object XposedServiceManager {
                 .toBundle()
             context.sendBroadcast(intent, null, options)
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             AppHelper.log(LOG_TAG, "system_server invalidation broadcast failed: $t")
         }
     }
@@ -355,7 +394,7 @@ object XposedServiceManager {
             val activityThread = Class.forName("android.app.ActivityThread")
             activityThread.getMethod("currentApplication").invoke(null) as? Context
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             null
         }
         return app?.also { appContext = it }
@@ -403,7 +442,7 @@ object XposedServiceManager {
         }
     }
 
-    /** One pass. Returns true only if a plan was built and committed without throwing. */
+    /** One pass. A nonempty plan succeeds only after a confirmed commit. */
     private fun mirrorPass(generation: Long, reason: String): Boolean {
         if (!mirrorState.isCurrent(generation)) return false
         val remote = remotePrefs ?: return false
@@ -414,7 +453,11 @@ object XposedServiceManager {
                 val edit = remote.edit()
                 for ((planKey, planValue) in plan.puts) putValue(edit, planKey, planValue)
                 for (planKey in plan.removes) edit.remove(planKey)
-                edit.commit()
+                if (!commitRemote(edit, generation)) {
+                    markUndelivered("mirror commit failed")
+                    scheduleMirrorRetry(generation)
+                    return false
+                }
                 AppHelper.log(LOG_TAG, "mirrored ${plan.size} setting(s) to the module ($reason)")
                 sendSystemServerInvalidation(null)
             }
@@ -422,6 +465,7 @@ object XposedServiceManager {
         } catch (oom: OutOfMemoryError) {
             throw oom
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             AppHelper.log(LOG_TAG, "mirror pass failed ($reason): $t")
             markUndelivered("mirror pass failed")
             scheduleMirrorRetry(generation)
@@ -481,11 +525,13 @@ object XposedServiceManager {
                     AppHelper.log(LOG_TAG, "service died")
                     try {
                         appPrefs?.unregisterOnSharedPreferenceChangeListener(prefsChanged)
-                    } catch (_: Throwable) {
+                    } catch (t: Throwable) {
+                        FatalErrors.unwrapAndRethrowIfFatal(t)
                     }
                 }
             })
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             handler.removeCallbacks(timeoutRunnable)
             state = State.DISCONNECTED
             AppHelper.moduleActive = false

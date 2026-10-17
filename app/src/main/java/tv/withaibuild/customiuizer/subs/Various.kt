@@ -11,6 +11,7 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
+import miui.os.Build
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.SubFragment
 import tv.withaibuild.customiuizer.mods.GlobalActions
@@ -116,6 +117,9 @@ class Various : SubFragment() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         super.onCreatePreferences(savedInstanceState, rootKey)
         selectSub()
+        if (Build.IS_INTERNATIONAL_BUILD) {
+            findPreference<Preference>("pref_key_various_disable_defraud_apps_detect")?.isVisible = false
+        }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -172,7 +176,8 @@ class Various : SubFragment() {
 
     @Suppress("DEPRECATION")
     private fun setupPermissionControllerScopeRequests() {
-        val packageManager = context?.packageManager ?: return
+        val scopeContext = context?.applicationContext ?: return
+        val packageManager = scopeContext.packageManager
         val installedTargets = PERMISSION_CONTROLLER_PACKAGES.filter { packageName ->
             try {
                 packageManager.getApplicationInfo(
@@ -189,12 +194,12 @@ class Various : SubFragment() {
             val preference = findPreference<CheckBoxPreferenceEx>(key) ?: continue
             preference.setOnPreferenceChangeListener { _, newValue ->
                 if (newValue != true) return@setOnPreferenceChangeListener true
-                val requested = XposedServiceManager.requestApi102Scope(installedTargets) {
+                val requested = XposedServiceManager.requestScope(installedTargets) {
                         success, message ->
                     if (!success) {
                         AppHelper.log("PermissionScope", message ?: "scope request rejected")
                         Toast.makeText(
-                            context,
+                            scopeContext,
                             R.string.various_permission_scope_failed,
                             Toast.LENGTH_LONG
                         ).show()
@@ -202,7 +207,7 @@ class Various : SubFragment() {
                 }
                 if (!requested) {
                     Toast.makeText(
-                        context,
+                        scopeContext,
                         R.string.various_permission_scope_unavailable,
                         Toast.LENGTH_LONG
                     ).show()
