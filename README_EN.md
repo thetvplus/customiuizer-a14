@@ -2,72 +2,54 @@
 
 [简体中文](README.md) | English
 
-CustoMIUIzer A14 is a system UI and interaction customization module maintained for **HyperOS 1 / Android 14 (SDK 34)**. It has an independent package and release line and is not an official upstream release.
+A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It has an independent package, signing identity and release line.
 
-- Current version: `r14.21.9` (Release, versionCode 218)
+- Current version: `r14.22.7` (versionCode 230)
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
-- Source: <https://github.com/thetvplus/customiuizer-a14>
-- User downloads: <https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases>
+- [Download the official release](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/latest) · [Source and releases](https://github.com/thetvplus/customiuizer-a14) · [Changelog](CHANGELOG.md)
 
-`r14.21.9` prevents control-center step refreshes from accumulating during slow queries and cancels obsolete refresh work when the screen turns off, the last view is removed, or the controller is reinitialized. See [CHANGELOG.md](CHANGELOG.md) for details.
+## Features
 
-## Core Features
+- Status bar icons, battery, signal, network speed, date and temperature;
+- Optional Duo status icon: battery ring, Wi-Fi / cellular glyph, default data SIM signal, network type text and brief headphone hints;
+- Status capsule / Dynamic Island, USB default purpose, volume and brightness panels;
+- Control center, notifications, lock screen, charging and media UI;
+- Launcher, recents, folders, icons and home-screen gestures;
+- Navigation bar, buttons, custom actions, power menu and system animations;
+- App, permission, installer, sharing, privacy-app and app-lock behavior.
 
-- Status bar icons, battery, signal, network speed, date, and temperature;
-- Status capsule / Dynamic Island, USB default purpose, volume, and brightness;
-- Control center, notifications, lock screen, charging, and media UI;
-- Launcher, recents, folders, icons, and home-screen gestures;
-- Navigation bar, buttons, custom actions, power menu, and system animations;
-- App, permission, installer, sharing, privacy-app, and app-lock behavior.
-
-Availability depends on the device ROM and system-app versions. Do not enable this module together with upstream or another CustoMIUIzer-derived module.
-
-## Compatibility
+## Installation and Compatibility
 
 | Item | Supported range |
 | --- | --- |
-| System | HyperOS 1 / Android 14 |
-| SDK | minSdk 34 / targetSdk 34 |
+| System | HyperOS 1 / Android 14, SDK 34 |
 | ABI | `arm64-v8a` |
-| Xposed framework | libxposed API 101/102 |
+| Xposed framework | libxposed API 101 minimum; isolated optional API 102 capabilities |
 | Module metadata | `minApiVersion=101`, `targetApiVersion=102`, `staticScope=true` |
 
-Android 15, Android 16, and other major MIUI / HyperOS versions are not supported. API 102 capabilities remain isolated from production Hook paths required on API 101.
+Install the official APK, enable the module and required scopes in your framework, then restart the affected process or device. Settings indicate which changes require a restart. Hooks selected at installation time require restarting their target process after changing the switch.
 
-## Runtime Framework
+Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/DUO_STATUS_BAR.md) for sizing, signal and hint behavior.
 
-- Features are installed lazily by target process and preference state; disabled features do not create business Hooks, Receivers, Observers, or tasks.
-- Stable process-local feature IDs and install-once state prevent preference updates from reinstalling Hooks.
-- Receiver, Observer, View, and controller registrations are owner-bound and have replacement, stale-state, and release paths.
-- Reflection caches are bounded and isolated by ClassLoader; reflection, DexKit, and disk I/O stay on cold paths.
-- Hook and callback boundaries isolate ordinary failures while `OutOfMemoryError`, `ThreadDeath`, and `VirtualMachineError` continue to propagate.
-- Module-load logs and build provenance include the version and Git revision for exact build identification.
+Availability depends on the ROM and system-app versions. On API 101 frameworks, selected app scopes need manual configuration; dynamic API 102 requests still require framework approval. Do not enable this module together with upstream or another CustoMIUIzer-derived module. Android 13 / 15 / 16 and other major MIUI / HyperOS versions are unsupported. See [COMPATIBILITY.md](COMPATIBILITY.md).
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) and [COMPATIBILITY.md](COMPATIBILITY.md) for architecture and compatibility boundaries.
+## Development and Maintenance
 
-## Build and Verification
+Builds use JDK 25 and retain Android bytecode target 17. Full local verification:
 
-```bash
+```powershell
 python tools/verify.py full
+python -m unittest discover -s tools/tests -p "test_*.py"
+git diff --check
 ```
 
-See [DEVELOPMENT.md](docs/DEVELOPMENT.md) and [RELEASE.md](docs/RELEASE.md) for the complete workflow.
+Read [AGENTS.md](AGENTS.md) and the [documentation index](docs/README.md) first. Environment setup, builds, tests and releases are documented in [DEVELOPMENT.md](docs/DEVELOPMENT.md), [TESTING.md](docs/TESTING.md) and [RELEASE.md](docs/RELEASE.md). See [ARCHITECTURE.md](ARCHITECTURE.md) for runtime structure.
 
-## Support the Project
+## Support and License
 
-If this project is useful to you, you can support its continued development and maintenance via WeChat or [PayPal](https://paypal.me/Jinjitv).
+Support continued maintenance via WeChat or [PayPal](https://paypal.me/Jinjitv).
 
-<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.png" alt="WeChat donation code" width="320">
+<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.webp" alt="WeChat donation code" width="320">
 
-- Repository: <https://github.com/thetvplus/customiuizer-a14>
-
-## Development Notes
-
-- Stability and behavior preservation come first; compatibility logic stays at ROM and ClassLoader boundaries.
-- Frequent Hooks avoid temporary arrays, collections, Regex, formatting, repeated reflection, and remote preference reads.
-- Java-to-Kotlin migration remains behavior-equivalent and is paired with tests and static gates.
-- `MainModule.java`, `XposedHelpers.java`, and `MemberUtilsX.java` remain as JVM/framework boundaries.
-- Fine-grained history is available in Git commits and tags; release changes are in [CHANGELOG.md](CHANGELOG.md).
-
-Distributed under GPL-3.0. Derived from Mikanoshi/CustoMIUIzer with Android 14 work referenced from MonwF/customiuizer.
+Distributed under [GPL-3.0](LICENSE). Derived from [Mikanoshi/CustoMIUIzer](https://github.com/Mikanoshi/CustoMIUIzer), with Android 14 work referenced from [MonwF/customiuizer](https://github.com/MonwF/customiuizer). Duo references and bundled licenses are listed in the [Duo notes](docs/DUO_STATUS_BAR.md).

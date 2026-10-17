@@ -159,12 +159,12 @@ object DeviceInfoFormatter {
     internal fun formatDeviceInfo(cfg: DeviceInfoConfig, props: Properties?, cpuProps: String?): String {
         val tempUnit = if (cfg.deviceTempHideUnit) "" else "℃"
         val splitChar = if (cfg.deviceTempSingleRow) " " else "\n"
-        val batteryPart = props?.let {
+        val batteryPart = if (needsBatteryTemperature(cfg.deviceTempContentOpt)) props?.let {
             formatMonitorOneDecimal(parseSysfsInt(it.getProperty("POWER_SUPPLY_TEMP")) / 10f) + tempUnit
-        }
-        val cpuPart = cpuProps?.takeUnless { it.isEmpty() }?.let {
+        } else null
+        val cpuPart = if (needsCpuTemperature(cfg.deviceTempContentOpt)) cpuProps?.takeUnless { it.isEmpty() }?.let {
             formatMonitorOneDecimal(parseSysfsInt(it) / 1000f) + tempUnit
-        }
+        } else null
         return when (cfg.deviceTempContentOpt) {
             2 -> batteryPart.orEmpty()
             1 -> formatBothDeviceTemps(batteryPart, cpuPart, cfg.deviceTempReverseOrder, splitChar)

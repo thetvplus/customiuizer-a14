@@ -1,4 +1,19 @@
 <resources>
+    <string-array name="duo_cellular_style_entries">
+        <item>@string/system_statusbar_duo_cellular_graphic</item>
+        <item>@string/system_statusbar_duo_cellular_text</item>
+    </string-array>
+    <string-array name="duo_cellular_style_values">
+        <item>1</item><item>2</item>
+    </string-array>
+    <string-array name="duo_headphone_style_entries">
+        <item>@string/system_statusbar_duo_headphone_auto</item>
+        <item>@string/system_statusbar_duo_headphone_overear</item>
+        <item>@string/system_statusbar_duo_headphone_earbuds</item>
+    </string-array>
+    <string-array name="duo_headphone_style_values">
+        <item>1</item><item>2</item><item>3</item>
+    </string-array>
 	<string-array name="global_actions_launcher">
 		<item>@string/array_global_actions_none</item>
 		<item>@string/array_global_actions_notif</item>

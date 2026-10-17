@@ -345,7 +345,8 @@ def mutate_windows_path(root: Path, cfg: dict) -> None:
 def mutate_duplicate_feature_id(root: Path, cfg: dict) -> None:
     path = root / cfg["catalog_file"]
     text = path.read_text(encoding="utf-8")
-    ids = list(re.finditer(r'\bid\s*=\s*([A-Za-z0-9_]+)', text))
+    # Mutate catalog declarations, not earlier feature classes' own id properties.
+    ids = list(re.finditer(r'\bLazyFeatureSpec\s*\(\s*id\s*=\s*([A-Za-z0-9_]+)', text))
     unique = []
     for m in ids:
         if m.group(1) not in [u.group(1) for u in unique]:
@@ -844,7 +845,12 @@ def hermeticity(
 
     before = tracked_hashes(root)
     for command in cfg["hermetic_commands"]:
-        code, _ = run(command, root, timeout)
+        print(f"Hermeticity command: {' '.join(command)}", flush=True)
+        started = time.monotonic()
+        code, output = run(command, root, timeout)
+        if output.strip():
+            print(output.rstrip())
+        print(f"Hermeticity command finished: exit={code}, seconds={time.monotonic() - started:.1f}")
         if code:
             print(f"Hermeticity FAILED: command failed: {' '.join(command)!r}")
             return 1
@@ -1224,7 +1230,9 @@ def main(argv=None) -> int:
     sub.add_parser("hermeticity")
     sub.add_parser("determinism")
     m = sub.add_parser("mutate")
-    m.add_argument("--case", action="append")
+    selection = m.add_mutually_exclusive_group()
+    selection.add_argument("--case", action="append")
+    selection.add_argument("--required-only", action="store_true", help="run all required independent gates, without self-detection-only cases")
     m.add_argument("--ignore-minimum", action="store_true", help="do not enforce minimum_independent_kills when running a subset")
     sub.add_parser("all")
     args = p.parse_args(argv)
@@ -1257,7 +1265,7 @@ def main(argv=None) -> int:
     if args.command == "determinism":
         return determinism(root, cfg, args.timeout)
     if args.command == "mutate":
-        selected = set(args.case or [])
+        selected = set(cfg["required_independent_mutations"] if args.required_only else (args.case or []))
         return mutation_test(root, cfg, args.timeout, selected or None, ignore_minimum=args.ignore_minimum)
 
     code = hermeticity(root, cfg, args.timeout)

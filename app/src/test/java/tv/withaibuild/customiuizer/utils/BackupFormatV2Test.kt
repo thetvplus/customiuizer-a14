@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.EOFException
 import java.nio.charset.StandardCharsets
 import java.util.LinkedHashSet
 import tv.withaibuild.customiuizer.BuildConfig
@@ -27,8 +28,10 @@ class BackupFormatV2Test {
         )
 
         val encoded = BackupFormatV2.encode(entries)
+        val originalBytes = encoded.copyOf()
         val decoded = BackupFormatV2.decode(encoded)
 
+        assertArrayEquals(originalBytes, encoded)
         assertEquals(entries.size, decoded.size)
         assertEquals(true, decoded["pref_key_bool"])
         assertEquals(42, decoded["pref_key_int"])
@@ -174,6 +177,31 @@ class BackupFormatV2Test {
             fail("Expected BackupFormatException")
         } catch (e: BackupFormatV2.BackupFormatException) {
             assertTrue(e.message?.contains("too short") == true)
+        }
+    }
+
+    @Test
+    fun decodeDoesNotUseCrcFooterAsStringData() {
+        val output = ByteArrayOutputStream()
+        val data = DataOutputStream(output)
+        data.writeInt(BackupFormatV2.MAGIC)
+        data.writeInt(BackupFormatV2.FORMAT_VERSION)
+        data.writeInt(BuildConfig.VERSION_CODE)
+        data.writeInt(1)
+        data.writeShort(1)
+        data.writeByte('k'.code)
+        data.writeByte(BackupFormatV2.TYPE_STRING)
+        data.writeInt(4)
+        data.writeByte('v'.code)
+        data.flush()
+
+        // The checksum is valid, but three string bytes are missing from the payload.
+        val bytes = payloadWithCrc(output.toByteArray())
+        try {
+            BackupFormatV2.decode(bytes)
+            fail("Expected EOFException before reading the CRC footer")
+        } catch (_: EOFException) {
+            // The CRC footer must remain outside the decoder's input range.
         }
     }
 

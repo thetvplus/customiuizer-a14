@@ -3,7 +3,9 @@ import json
 import sys
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
+from unittest.mock import patch
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
@@ -19,6 +21,50 @@ _spec_verify.loader.exec_module(_verify)
 _spec_audit = importlib.util.spec_from_file_location("audit_feature_semantics", _AUDIT_PATH)
 _audit = importlib.util.module_from_spec(_spec_audit)
 _spec_audit.loader.exec_module(_audit)
+
+
+class VerifyChangedInputsTests(unittest.TestCase):
+    def run_changed(self, paths):
+        checks = (
+            "check_java_runtime", "check_static_rules", "check_eol",
+            "check_observer_key_contract", "check_hook_body_prefmap",
+            "check_hotpath_alloc_budget", "check_main_source_cleanliness",
+            "check_invariants", "check_feature_semantics",
+        )
+        with ExitStack() as stack:
+            for name in checks:
+                stack.enter_context(patch.object(_verify, name, return_value=0))
+            stack.enter_context(patch.object(_verify, "changed_files", return_value=paths))
+            gradle = stack.enter_context(patch.object(_verify, "gradle", return_value=0))
+            code = _verify.fast(None, changed=True)
+            return code, gradle
+
+    def test_dependency_and_toolchain_inputs_run_unit_tests(self):
+        for path in (
+            "gradle/libs.versions.toml", "gradle/wrapper/gradle-wrapper.properties",
+            "gradle/gradle-daemon-jvm.properties", "gradle.properties",
+            "app/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts",
+            "app/lib/framework.jar", "gradlew", _verify.GRADLEW,
+        ):
+            with self.subTest(path=path):
+                code, gradle = self.run_changed([path])
+                self.assertEqual(0, code)
+                gradle.assert_called_once_with("testDebugUnitTest")
+
+    def test_documentation_only_changes_still_skip_gradle(self):
+        code, gradle = self.run_changed(["docs/TESTING.md"])
+        self.assertEqual(0, code)
+        gradle.assert_not_called()
+
+    def test_production_source_changes_still_compile(self):
+        code, gradle = self.run_changed(["app/src/main/java/example/Feature.kt"])
+        self.assertEqual(0, code)
+        gradle.assert_called_once_with("compileDebugKotlin", "compileDebugJavaWithJavac")
+
+    def test_test_source_changes_still_run_unit_tests(self):
+        code, gradle = self.run_changed(["app/src/test/java/example/FeatureTest.kt"])
+        self.assertEqual(0, code)
+        gradle.assert_called_once_with("testDebugUnitTest")
 
 
 class VerifyFeatureSemanticsTests(unittest.TestCase):

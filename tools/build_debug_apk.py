@@ -21,26 +21,20 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
-import zipfile
 from pathlib import Path
 
-import build_revision
-import verify_apk_provenance
+if __package__:
+    from . import build_revision, check_release_metadata, verify_apk_provenance
+else:
+    import build_revision
+    import check_release_metadata
+    import verify_apk_provenance
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # Canonical cross-platform wrapper selection; this is not a Windows-only branch.
 GRADLEW = "gradlew.bat" if os.name == "nt" else "gradlew"
 GRADLEW_PATH = REPO_ROOT / GRADLEW
-APK_OUTPUT = (
-    REPO_ROOT
-    / "app"
-    / "build"
-    / "outputs"
-    / "apk"
-    / "debug"
-    / "CustoMIUIzer-A14-r14.16.1-debug.apk"
-)
+APK_OUTPUT_DIR = REPO_ROOT / "app" / "build" / "outputs" / "apk" / "debug"
 
 
 def fail(message: str, code: int = 1) -> None:
@@ -64,6 +58,29 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest().upper()
+
+
+def resolve_debug_apk() -> Path:
+    """Read the current build's AGP output, rejecting stale or ambiguous APKs."""
+    metadata_path = APK_OUTPUT_DIR / "output-metadata.json"
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        fail(f"cannot read Debug output metadata: {error}")
+    code, name = check_release_metadata.parse_gradle_version()
+    elements = metadata.get("elements", [])
+    if metadata.get("variantName") != "debug" or len(elements) != 1:
+        fail("Debug output metadata must contain one APK for the debug variant")
+    element = elements[0]
+    if element.get("versionCode") != code or element.get("versionName") != f"{name}-debug":
+        fail("Debug output metadata does not match the current Gradle version")
+    filename = element.get("outputFile", "")
+    if not isinstance(filename, str) or not filename:
+        fail("Debug output metadata has no APK filename")
+    apk = (APK_OUTPUT_DIR / filename).resolve()
+    if apk.parent != APK_OUTPUT_DIR.resolve() or apk.suffix.lower() != ".apk" or not apk.is_file():
+        fail("Debug output metadata does not reference an APK in the Debug output directory")
+    return apk
 
 
 def build_debug_apk() -> dict[str, object]:
@@ -92,10 +109,8 @@ def build_debug_apk() -> dict[str, object]:
         cwd=REPO_ROOT,
     )
 
-    if not APK_OUTPUT.is_file():
-        fail(f"APK not found at expected path: {APK_OUTPUT}")
-
-    provenance = verify_apk_provenance.read_apk_provenance(APK_OUTPUT)
+    apk_output = resolve_debug_apk()
+    provenance = verify_apk_provenance.read_apk_provenance(apk_output)
     if provenance.get("revision") != short_sha:
         fail(
             f"APK provenance revision mismatch: "
@@ -104,13 +119,13 @@ def build_debug_apk() -> dict[str, object]:
     if provenance.get("buildType") != "debug":
         fail(f"APK provenance buildType is not debug: {provenance.get('buildType')}")
 
-    apk_sha = sha256_file(APK_OUTPUT)
+    apk_sha = sha256_file(apk_output)
 
     return {
         "engineeringFullSha": full_sha,
         "engineeringShortSha": short_sha,
         "buildRevision": short_sha,
-        "apkPath": str(APK_OUTPUT),
+        "apkPath": str(apk_output),
         "apkSha256": apk_sha,
         "trackedWorktreeClean": True,
         "signature": "Debug",

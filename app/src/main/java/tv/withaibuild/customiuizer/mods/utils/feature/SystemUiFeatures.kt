@@ -20,6 +20,8 @@ import tv.withaibuild.customiuizer.mods.SystemUINotificationHooks
 import tv.withaibuild.customiuizer.mods.SystemUIScreenshotHooks
 import tv.withaibuild.customiuizer.mods.StatusBarContentGeometryHooks
 import tv.withaibuild.customiuizer.mods.SystemUIStatusBarHooks
+import tv.withaibuild.customiuizer.mods.duostatusbar.DuoConfig
+import tv.withaibuild.customiuizer.mods.duostatusbar.DuoStatusBarHooks
 import tv.withaibuild.customiuizer.mods.SystemWindowHooks
 import tv.withaibuild.customiuizer.mods.utils.FeatureDefinition
 import tv.withaibuild.customiuizer.mods.utils.FeatureId
@@ -684,6 +686,25 @@ internal class ControlCenterPluginFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = SystemUIControlCenterHooks.ControlCenterPluginHook(lpparam)
+}
+
+internal class DuoStatusBarFeature(
+    private val lpparam: PackageReadyParam,
+    private val prefs: PrefMap,
+) : FeatureDefinition {
+    override val id = DuoStatusBarFeatureId
+    override val name = "Duo Status Bar"
+    override val preferenceKey = "system_statusbar_duo"
+    override val target = FeatureTarget.SYSTEM_UI
+    override val phase = InstallPhase.PACKAGE_READY
+
+    companion object {
+        @JvmStatic
+        fun evaluateEnabled(prefs: PrefMap) = prefs.getBoolean("system_statusbar_duo")
+    }
+
+    override fun isEnabled(prefs: PrefMap) = evaluateEnabled(prefs)
+    override fun install() = DuoStatusBarHooks.install(lpparam.classLoader, DuoConfig.read(prefs))
 }
 
 internal class BatteryIndicatorFeature(
@@ -2475,6 +2496,15 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> BatteryIndicatorFeature.evaluateEnabled(prefs) },
             factory = { BatteryIndicatorFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
+            id = DuoStatusBarFeatureId,
+            name = "Duo Status Bar",
+            preferenceKey = "system_statusbar_duo",
+            target = FeatureTarget.SYSTEM_UI,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> DuoStatusBarFeature.evaluateEnabled(prefs) },
+            factory = { DuoStatusBarFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
             id = DisableAnyNotificationFeatureId,

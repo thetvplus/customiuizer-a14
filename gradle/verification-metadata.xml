@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<verification-metadata xmlns="https://schema.gradle.org/dependency-verification"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd">
+    <configuration>
+        <verify-metadata>true</verify-metadata>
+        <verify-signatures>false</verify-signatures>
+        <trusted-artifacts>
+            <!-- This first verification scope covers libxposed's runtime/API artifacts
+                 and metadata. Other dependency groups retain their existing policy. -->
+            <trust group="^(?!io[.]github[.]libxposed($|[.])).*" regex="true"
+                reason="Verification is currently scoped to libxposed after its repository provenance audit"/>
+            <trust file=".*-(sources|javadoc)[.]jar" regex="true"
+                reason="IDE documentation artifacts are outside the compiled dependency verification scope"/>
+        </trusted-artifacts>
+    </configuration>
+    <components>
+        <component group="io.github.libxposed" name="api" version="102.0.0">
+            <artifact name="api-102.0.0.aar">
+                <sha256 value="423484a6e1807e7a423c4b88fcd8176d104318259d91791877fed88fe91479d0" origin="Maven Central"/>
+            </artifact>
+            <artifact name="api-102.0.0.module">
+                <sha256 value="87ffc6ded5d9348a237e1af14f23fdc3499a3aa170915db3c6460b5ab11e313c" origin="Maven Central"/>
+            </artifact>
+            <artifact name="api-102.0.0.pom">
+                <sha256 value="ef2e15b14ff3c4a70b5645440b5da7ea1089e7cc4ae3d40715a3c7d5293c353a" origin="Maven Central"/>
+            </artifact>
+        </component>
+        <component group="io.github.libxposed" name="interface" version="102.0.0">
+            <artifact name="interface-102.0.0.aar">
+                <sha256 value="4e0b76d6050be1d3dc0d35525180ad7d9b60a47fd8d8fe1d18c2bdc840be9ddb" origin="Maven Central"/>
+            </artifact>
+            <artifact name="interface-102.0.0.module">
+                <sha256 value="a1da0862d5c6f828243a1db7e4a09a5afd7ec3192bcfd97e017dca39febc7e2e" origin="Maven Central"/>
+            </artifact>
+            <artifact name="interface-102.0.0.pom">
+                <sha256 value="f1316821fb4483b489583eba406632b0ba1c67ff44757026f27d7fe649bdc2f6" origin="Maven Central"/>
+            </artifact>
+        </component>
+        <component group="io.github.libxposed" name="service" version="102.0.0">
+            <artifact name="service-102.0.0.aar">
+                <sha256 value="a665e4af4638924047f5d5cb610553e15bc2c0ea2ce64a27afb6dee257ff014c" origin="Maven Central"/>
+            </artifact>
+            <artifact name="service-102.0.0.module">
+                <sha256 value="ded4d631ccd093d12ee5685cfee623dd3114c4b452f6d6b1df531c15c90e7dd1" origin="Maven Central"/>
+            </artifact>
+            <artifact name="service-102.0.0.pom">
+                <sha256 value="bcfdc894d55d431cd79dedf51b836785776cd741cd1724e92a31a673ec09fa3c" origin="Maven Central"/>
+            </artifact>
+        </component>
+    </components>
+</verification-metadata>

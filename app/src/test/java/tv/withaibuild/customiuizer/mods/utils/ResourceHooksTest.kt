@@ -17,7 +17,9 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -229,6 +231,28 @@ class ResourceHooksTest {
     }
 
     @Test
+    fun replaceHookPropagatesFatalFailuresEvenWhenLoggingIsThrottled() {
+        for (fatal in listOf(OutOfMemoryError("fixture"), ThreadDeath(),
+                InternalError("fixture"), StackOverflowError("fixture"))) {
+            for (failure in listOf(fatal, InvocationTargetException(fatal), ExecutionException(fatal),
+                    XposedHelpers.InvocationTargetError(fatal))) {
+                for (kind in ResourceHooks.ResourceGetterKind.entries) {
+                    val calls = mutableListOf<String>()
+                    setLastFailureLogTime(domainOrdinal(kind), SystemClock.elapsedRealtime())
+                    val hook = createReplaceHook(kind)
+                    var thrown: Throwable? = null
+                    try {
+                        hook.intercept(fakeChain(resId = 0, callLog = calls, getArgFailure = failure))
+                    } catch (t: Throwable) { thrown = t }
+                    assertSame("$kind must propagate ${failure.javaClass.simpleName}", fatal, thrown)
+                    assertEquals("fatal failure must not fall through to the native getter", 0,
+                        calls.count { it == "proceed" })
+                }
+            }
+        }
+    }
+
+    @Test
     fun replaceHookRateLimitsExceptionLogging() {
         val chain = fakeChain(resId = 0, throwRuntimeOnGetArg = true)
         val hook = createReplaceHook(ResourceHooks.ResourceGetterKind.GET_TEXT)
@@ -380,6 +404,26 @@ class ResourceHooksTest {
     }
 
     @Test
+    fun installGetterFatalFailuresReleasePendingWithoutConsumingRetries() {
+        for (fatal in listOf(OutOfMemoryError("fixture"), ThreadDeath(),
+                InternalError("fixture"), StackOverflowError("fixture"))) {
+            for (failure in listOf(fatal, InvocationTargetException(fatal), ExecutionException(fatal),
+                    XposedHelpers.InvocationTargetError(fatal))) {
+                val installer = ResourceHooks.GetterInstaller(maxAttempts = 2)
+                val ordinary = IllegalStateException("ordinary fixture")
+                assertSame(ordinary, installer.install { throw ordinary })
+                var thrown: Throwable? = null
+                try { installer.install { throw failure } } catch (t: Throwable) { thrown = t }
+                assertSame("${failure.javaClass.simpleName} must propagate its fatal cause", fatal, thrown)
+                assertEquals(ResourceHooks.HookStatus.FAILED, installer.status)
+                assertEquals("fatal failures do not exhaust the normal retry budget", 1, installer.attempts)
+                assertNull(installer.install { TestUnhooker() })
+                assertEquals(ResourceHooks.HookStatus.HOOKED, installer.status)
+            }
+        }
+    }
+
+    @Test
     fun installGetterStatesAreIndependent() {
         val installers = ResourceHooks.ResourceGetterKind.entries.associateWith {
             ResourceHooks.GetterInstaller()
@@ -419,6 +463,7 @@ class ResourceHooksTest {
         throwOnExecutable: Boolean = false,
         throwOnGetArg: Boolean = false,
         throwRuntimeOnGetArg: Boolean = false,
+        getArgFailure: Throwable? = null,
     ): XposedInterface.Chain {
         val handler = java.lang.reflect.InvocationHandler { _, method, methodArgs ->
             val name = method.name
@@ -459,11 +504,19 @@ class ResourceHooksTest {
                 else -> null
             }
         }
-        return Proxy.newProxyInstance(
+        val delegate = Proxy.newProxyInstance(
             ResourceHooksTest::class.java.classLoader,
             arrayOf(XposedInterface.Chain::class.java),
             handler,
         ) as XposedInterface.Chain
+        // A Java Proxy would wrap checked fixtures in UndeclaredThrowableException.
+        // Throw from the actual Chain method so the hook receives the supplied failure.
+        return object : XposedInterface.Chain by delegate {
+            override fun getArg(index: Int): Any? {
+                if (getArgFailure != null) throw getArgFailure
+                return delegate.getArg(index)
+            }
+        }
     }
 
     private fun createReplaceHook(kind: ResourceHooks.ResourceGetterKind): HookerClassHelper.MethodHook {

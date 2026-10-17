@@ -5,10 +5,10 @@ import io.github.libxposed.api.XposedInterface
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import tv.withaibuild.customiuizer.MainModule
@@ -52,6 +52,9 @@ class DrawerBlurScopeTest {
         assertEquals("ok", result)
         assertEquals(1, chain.proceedCount)
         assertEquals(0.5f, chain.lastProceedArgs[1])
+        assertEquals(0, chain.argumentListReads)
+        assertEquals(1, chain.originalProceedCount)
+        assertNull(chain.replacementArgs)
     }
 
     @Test
@@ -71,6 +74,9 @@ class DrawerBlurScopeTest {
         assertEquals("ok", result)
         assertEquals(1, chain.proceedCount)
         assertEquals(0.25f, chain.lastProceedArgs[1])
+        assertEquals(1, chain.argumentListReads)
+        assertEquals(0, chain.originalProceedCount)
+        assertEquals(0.5f, chain.getArg(1))
     }
 
     @Test
@@ -247,6 +253,79 @@ class DrawerBlurScopeTest {
         }
 
         assertEquals(0.5f, chain.lastProceedArgs[1])
+        assertEquals(1, chain.proceedCount)
+        assertEquals(0, chain.argumentListReads)
+        assertEquals(1, chain.originalProceedCount)
+        assertNull(chain.replacementArgs)
+    }
+
+    @Test
+    fun clearedTargetReferenceDoesNotMaterializeArguments() {
+        val target = Any()
+        val reference = WeakReference<Any>(target).apply { clear() }
+        val chain = FakeApplyBlurChain(originalRatio = 0.5f, target = target)
+        SystemDisplayHooks.DrawerBlurScope.enter(50, reference)
+        try {
+            assertEquals("ok", SystemDisplayHooks.onApplyBlur(chain))
+        } finally {
+            SystemDisplayHooks.DrawerBlurScope.exit()
+        }
+
+        assertEquals(0.5f, chain.lastProceedArgs[1])
+        assertEquals(1, chain.proceedCount)
+        assertEquals(0, chain.argumentListReads)
+        assertNull(chain.replacementArgs)
+    }
+
+    @Test
+    fun matchingScopePreservesFloatBitsAndOriginalArguments() {
+        val target = Any()
+        val ratios = intArrayOf(0, Int.MIN_VALUE, 0x3eaaaaab, 0x7f7fffff, 1,
+            0x7f800000, 0xff800000.toInt(), 0x7fc00001)
+        for (modifier in intArrayOf(-50, 0, 50, 100, 200)) {
+            SystemDisplayHooks.DrawerBlurScope.enter(modifier, WeakReference(target))
+            try {
+                for (bits in ratios) {
+                    val ratio = Float.fromBits(bits)
+                    val chain = FakeApplyBlurChain(ratio, target)
+                    assertEquals("ok", SystemDisplayHooks.onApplyBlur(chain))
+                    val expected = ratio * modifier / 100f
+                    assertEquals(expected.toRawBits(), (chain.lastProceedArgs[1] as Float).toRawBits())
+                    assertEquals(bits, (chain.getArg(1) as Float).toRawBits())
+                    assertEquals(1, chain.proceedCount)
+                    assertEquals(1, chain.argumentListReads)
+                }
+            } finally {
+                SystemDisplayHooks.DrawerBlurScope.exit()
+            }
+        }
+    }
+
+    @Test
+    fun applyBlurPropagatesOriginalExceptionsWithoutRetrying() {
+        val scopeTarget = Any()
+        val failures = listOf(RuntimeException("blur failure"), OutOfMemoryError("blur OOM"),
+            ThreadDeath(), InternalError("blur VM error"))
+        for (active in listOf(false, true)) {
+            if (active) SystemDisplayHooks.DrawerBlurScope.enter(50, WeakReference(scopeTarget))
+            try {
+                for (target in listOf(scopeTarget, Any())) {
+                    for (failure in failures) {
+                        val chain = FakeApplyBlurChain(0.5f, target, failure)
+                        try {
+                            SystemDisplayHooks.onApplyBlur(chain)
+                            fail("Expected the original exception")
+                        } catch (actual: Throwable) {
+                            assertSame(failure, actual)
+                        }
+                        assertEquals(1, chain.proceedCount)
+                        assertEquals(if (active && target === scopeTarget) 1 else 0, chain.argumentListReads)
+                    }
+                }
+            } finally {
+                if (active) SystemDisplayHooks.DrawerBlurScope.exit()
+            }
+        }
     }
 
     @Test
@@ -275,21 +354,41 @@ class DrawerBlurScopeTest {
         assertEquals(1, chain.proceedCount)
     }
 
-    private class FakeApplyBlurChain(val originalRatio: Float, val target: Any? = null) : XposedInterface.Chain {
+    private class FakeApplyBlurChain(
+        val originalRatio: Float,
+        val target: Any? = null,
+        private val failure: Throwable? = null,
+    ) : XposedInterface.Chain {
 
         var proceedCount = 0
-        lateinit var lastProceedArgs: Array<Any?>
+        var originalProceedCount = 0
+        var argumentListReads = 0
+        var replacementArgs: Array<Any?>? = null
+        private val originalArgs: List<Any?> = listOf(null, originalRatio, true)
+        lateinit var lastProceedArgs: List<Any?>
 
         override fun getExecutable(): Executable = error("not used")
         override fun getThisObject(): Any? = target
-        override fun getArgs(): List<Any?> = listOf(null, originalRatio, true)
-        override fun getArg(index: Int): Any? = getArgs()[index]
+        override fun getArgs(): List<Any?> {
+            argumentListReads++
+            return originalArgs
+        }
+        override fun getArg(index: Int): Any? = originalArgs[index]
 
-        override fun proceed(): Any? = error("must use proceed(args)")
+        override fun proceed(): Any? {
+            originalProceedCount++
+            return complete(originalArgs)
+        }
 
         override fun proceed(args: Array<Any?>): Any? {
+            replacementArgs = args
+            return complete(args.asList())
+        }
+
+        private fun complete(args: List<Any?>): Any? {
             proceedCount++
             lastProceedArgs = args
+            failure?.let { throw it }
             return "ok"
         }
 

@@ -144,7 +144,6 @@ def parse_evaluate_enabled(text: str) -> dict[str, str]:
 
 
 def parse_main_module_routing() -> dict[str, str]:
-    text = MAIN_MODULE.read_text(encoding="utf-8")
     routing: dict[str, str] = {
         "android": "AndroidPackageInstaller",
         "com.baidu.input": "InputMethodInstaller",
@@ -166,7 +165,6 @@ def parse_main_module_routing() -> dict[str, str]:
         "com.miui.powerkeeper": "PowerKeeperInstaller",
         "com.android.settings": "SettingsInstaller",
         "com.miui.packageinstaller": "PackageInstallerRouter",
-        "com.android.packageinstaller": "PackageInstallerRouter",
         "com.android.permissioncontroller": "PermissionControllerInstaller",
         "com.google.android.permissioncontroller": "PermissionControllerInstaller",
         "com.miui.home": "LauncherInstaller",
@@ -192,7 +190,14 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
         if installer_base == "PhoneFeatures":
             return ["com.android.incallui"], []
         if installer_base == "PackageInstallerFeatures":
-            return ["com.miui.packageinstaller", "com.android.packageinstaller"], []
+            return ["com.miui.packageinstaller"], []
+        if installer_base == "MediaFeatures":
+            packages = {
+                "launcher_disable_wallpaperscale": "com.miui.miwallpaper",
+                "system_screenshot": "com.miui.screenshot",
+                "system_gallery_screenshots_path": "com.miui.gallery",
+            }
+            return [packages[pref]], []
         return ["android"], []
     if target == "SETTINGS_APP":
         return ["tv.withaibuild.customiuizer.r14"], []
@@ -200,6 +205,8 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
         return ["system_server"], []
     if target == "ANY":
         if installer_base == "CommonPackageFeatures":
+            if pref == "system_statusbarheight":
+                return ["android", "com.android.systemui", "com.miui.home"], []
             return ["any scoped package where hasEnabledFeature() is true"], []
         if installer_base == "InputMethodFeatures":
             return [
@@ -212,7 +219,7 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
                 "com.google.android.inputmethod*",
                 "com.touchtype.swiftkey",
                 "com.tencent.wetype",
-            ], ["not in scope.list"]
+            ], ["packages outside scope.list (no callback with static scope)"]
         if installer_base == "GenericAppFeatures":
             return ["com.miui.home + selected packages"], []
         if installer_base == "AndroidPackageFeatures":
@@ -321,7 +328,7 @@ def main() -> int:
         "com.miui.home": "ReflectionCache; may also trigger GenericAppInstaller post-attach",
         "com.android.settings": "Explicitly denies `com.android.settings:remote`",
         "com.miui.securitycenter": "Explicitly denies `com.miui.securitycenter.bootaware`",
-        "com.miui.packageinstaller": "PackageInstallerRouter handles both MIUI and AOSP installer",
+        "com.miui.packageinstaller": "PackageInstallerRouter handles the scoped MIUI installer",
     }
     for pkg, inst in sorted(routing.items()):
         md.append(f"| `{pkg}` | `{inst}` | {notes.get(pkg, '')} |\n")
@@ -347,29 +354,31 @@ def main() -> int:
         "# A14 Process Exceptions (generated)\n\n",
         "This file captures process-routing gaps, package/process mismatches, and targeted verification notes.\n\n",
         "## Scope vs code\n\n",
-        "- Input method packages are routed by `MainModule.java` to `InputMethodInstaller`, but are **not** listed in `scope.list`. "
-        "This means they will not receive the module unless the user adds them manually in LSPosed.\n",
-        "  - Verification: `WAITING_FOR_SAMPLE` (need LSPosed scope behavior with `staticScope=false`).\n",
+        "- Recognized input method packages are routed through `ProcessRouter` to `InputMethodInstaller`; "
+        "the supported keyboard packages are listed in `scope.list`. Packages outside the static scope receive no callbacks.\n",
+        "  - Verification: optional per-keyboard smoke on target ROM; not a default release gate.\n",
         "- `miui.systemui.plugin` is not in `scope.list`; the module stays in `com.android.systemui` and extracts the plugin "
         "`ClassLoader` from `PluginInstance$PluginFactory.createPlugin` at runtime.\n",
-        "  - Evidence: `SystemUIControlCenterHooks.kt` line 60-70 and `ControlCenterPluginHook`.\n\n",
+        "  - Evidence: `ControlCenterPluginHook` and `SystemUIControlCenterHooks.pluginLoader`.\n\n",
         "## Package / process confusion\n\n",
-        "- `MainModule.onPackageReady` relies on `lpparam.isFirstPackage()` and `lpparam.getPackageName()`; `processName` is only used for explicit denies.\n",
-        "- `com.android.settings` main process is allowed; `com.android.settings:remote` is explicitly refused.\n",
-        "- `com.miui.securitycenter` main process is allowed; `com.miui.securitycenter.bootaware` is explicitly refused.\n",
+        "- `MainModule.onPackageReady` first requires `lpparam.isFirstPackage()`, then resolves package and process "
+        "through `ProcessRouter`. `ProcessScope.isInstallable` rejects unsupported scopes before preference or feature initialization.\n",
+        "- SystemUI, Settings and PermissionController allow their main processes; their secondary processes are refused.\n",
+        "- SecurityCenter allows its main process; `bootaware` and other secondary processes are refused.\n",
         "- `com.android.location.fused` and packages starting with `com.android.networkstack` are refused unconditionally.\n",
-        "- `com.android.systemui` is the only package that triggers `ReflectionCache.onSafeLifecycle` and `SystemUIInitializer.init` post-init.\n",
+        "- SystemUI uses `SystemUiBootstrapCoordinator` for its `SystemUIInitializer.init` hook; "
+        "both SystemUI and Launcher call `ReflectionCache.onSafeLifecycle` before feature installer dispatch.\n",
         "- `com.miui.home` triggers `LauncherInstaller` and, when selected, `GenericAppInstaller.installPostAttach`.\n\n",
         "## Feature target `ANY`\n\n",
         "- `StatusBarHeightFeature` and `AlarmCompatFeature` in `CommonPackageFeatures` use `FeatureTarget.ANY`.\n",
-        "- `StatusBarHeightFeature` is gated by `system_statusbarheight`; if enabled, `hasEnabledFeature()` returns true for every package, "
-        "but `FeatureInstallState` is per-process so installation is idempotent per process.\n",
+        "- `StatusBarHeightFeature` requires `system_statusbarheight > 11` and a package in its `RESOURCE_PACKAGES` set "
+        "(`android`, SystemUI or Launcher). Window geometry is owned by system_server's `StatusBarHeightInsetsFeature`.\n",
         "- `AlarmCompatFeature` is additionally gated by `various_alarmcompat_apps`, so it only installs in the selected packages.\n\n",
         "## ClassLoader and DexKit\n\n",
         "- Most package-ready features use `lpparam.classLoader`.\n",
         "- `GuardProviderInstaller` and `MediaInstaller` call `MainModule.loadDexKit()` on demand.\n",
         "- `ControlCenterPluginHook` extracts the `miui.systemui.plugin` `ClassLoader` and caches it in `SystemUIControlCenterHooks.pluginLoader`.\n",
-        "- `ReflectionCache.onSafeLifecycle` is called for `com.android.systemui` and `com.miui.home` before installer dispatch.\n\n",
+        "- `ReflectionCache.onSafeLifecycle` is called by `SystemUiBootstrapCoordinator` and the Launcher branch of `MainModule`.\n\n",
         "## API 101/102 boundary\n\n",
         "- `MainModule` is compiled against libxposed API 102 but the production `onPackageReady` / `onSystemServerStarting` paths use only API 101 public symbols.\n",
         "- `XposedApiCapabilities.initialize(getApiVersion())` runs once per process but does not place API-102-only symbols on hot paths.\n",

@@ -10,10 +10,8 @@
 # app resolve the compileOnly libxposed API during process initialization.
 -keep,allowobfuscation class * implements io.github.libxposed.api.XposedInterface$Hooker { *; }
 
--keepnames class tv.withaibuild.customiuizer.GateWayLauncher
 -keepnames class tv.withaibuild.customiuizer.MainActivity
 -keepnames class tv.withaibuild.customiuizer.Credentials
--keepnames class tv.withaibuild.customiuizer.CredentialsLauncher
 -keepnames class tv.withaibuild.customiuizer.CredentialsShortcut
 -keepnames class tv.withaibuild.customiuizer.PrefsProvider
 -keepnames class tv.withaibuild.customiuizer.MainApplication
@@ -29,4 +27,3 @@
 -dontwarn android.**
 -dontwarn miui.**
 -dontnote android.**, miui.**, com.android.**
-# -dontnote **

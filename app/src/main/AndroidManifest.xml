@@ -42,7 +42,6 @@
         android:description="@string/app_slogan"
         android:supportsRtl="true"
         android:name="tv.withaibuild.customiuizer.MainApplication"
-        android:requestLegacyExternalStorage="true"
         tools:ignore="GoogleAppIndexingWarning">
 
         <uses-library android:name="com.miui.system" android:required="false" />

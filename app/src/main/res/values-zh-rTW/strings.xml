@@ -280,7 +280,6 @@
     <string name="system_disable_window_blurs_title">關閉視窗層級模糊</string>
     <string name="system_disable_window_blurs_summ">無需開啟開發人員選項；關閉本項後仍由系統原生設定控制。開啟期間 HyperOS 的音量面板與關機選單將沒有獨立背景，下方的音量模糊滑桿也會失效</string>
     <string name="system_blur_title">背景模糊</string>
-    <string name="system_recents_blur_summ">最近應用的背景模糊度</string>
     <string name="system_drawer_blur_summ">通知抽屜的背景模糊度</string>
     <string name="system_mods_lockscreen">鎖屏</string>
     <string name="system_mods_lockscreen_functionality">附加功能</string>
@@ -288,7 +287,6 @@
     <string name="system_blocktoasts_title">阻止toast</string>
     <string name="system_blocktoasts_summ">阻止所選應用顯示toast</string>
     <string name="system_fivegtile_title">5G開關</string>
-    <string name="system_fivegtile_summ">添加5G開關磁貼至快速設置</string>
     <string name="system_qs_force_systemfonts_title">時鐘強制使用系統字體</string>
     <string name="system_cc_dateformat_title">自定義日期格式</string>
     <string name="system_wifipassword_title">檢視已儲存Wi-Fi密碼</string>
@@ -467,7 +465,6 @@
     <string name="launcher_renameapps_list_title">修改標題</string>
     <string name="launcher_renameapps_modified">修改標題</string>
     <string name="launcher_privacyapps">隱藏應用</string>
-    <string name="launcher_privacyapps_fail">未授予所需權限</string>
     <string name="launcher_privacyapps_gest_title">沒有隱藏的資料夾</string>
     <string name="launcher_privacyapps_gest_summ">開啟隱藏應用資料夾禁用雙指手勢</string>
     <string name="launcher_privacyapps_list_title">隱藏應用列表</string>
@@ -606,7 +603,6 @@
     <string name="appsort_install">安裝時間</string>
     <string name="gboard">輸入法設定</string>
     <string name="calls">通話</string>
-    <string name="settings">設置</string>
     <string name="array_default">預設</string>
     <string name="array_system_default">系統</string>
     <string name="array_global_actions_none">無動作</string>
@@ -886,7 +882,6 @@
     <string name="animation_scale_bridge_unavailable">系統服務橋無法使用，請確認模組已啟用並完整重新啟動裝置。</string>
     <string name="animation_scale_write_failed">系統拒絕了動畫縮放修改。</string>
     <string name="system_recents_card_style_hide_title">隱藏應用程式名稱</string>
-    <string name="system_recents_card_style_summ">隱藏最近任務卡片中的應用程式名稱；修改後需重新啟動桌面</string>
     <string name="various_disable_update_services_bridge_unavailable">系統服務橋無法使用，請確認模組已啟用並完整重新啟動裝置。</string>
     <string name="various_disable_update_services_confirm">停用 %1$d 個小米系統更新背景服務？目前元件狀態會儲存，以便精確還原。</string>
     <string name="various_disable_update_services_failed">更新服務狀態修改失敗，已回復。</string>
@@ -1060,4 +1055,30 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">調整移至左側的整組圖示。100% 使用系統原生大小，修改後需重新啟動系統介面。</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">左側圖示垂直偏移</string>
     <string name="system_statusbar_lefticons_offset_summ">負數上移、正數下移，0 dp 使用原生位置。修改後需重新啟動系統介面。</string>
+    <string name="system_statusbar_duo_title">Duo 三合一狀態列</string>
+    <string name="system_statusbar_duo_summ">電量圓環、Wi-Fi 與行動訊號合為一個圖示；雙卡顯示預設數據卡訊號</string>
+    <string name="system_statusbar_duo_restart">設定變更後請重新啟動系統介面。Duo 的百分比與尺寸獨立控制，原生圖示隱藏與樣式選項不覆蓋它們。不相容時保留原生圖示。</string>
+    <string name="system_statusbar_duo_percent_title">顯示電量百分比</string>
+    <string name="system_statusbar_duo_size_title">手動圖示尺寸</string>
+    <string name="system_statusbar_duo_size_summ">關閉自動尺寸後生效，受目前列高限制。</string>
+    <string name="system_statusbar_duo_autosize_title">自動圖示尺寸</string>
+    <string name="system_statusbar_duo_autosize_summ">依裝置原生圖示高度縮放，並配合目前列高。關閉後使用手動尺寸。</string>
+    <string name="system_statusbar_duo_audio_title">顯示耳機連線狀態</string>
+    <string name="system_statusbar_duo_audio_summ">有線或藍牙耳機新連線時提示 3 秒，隨後恢復 Wi-Fi／網路圖案。網路異常提示優先。</string>
+    <string name="system_statusbar_duo_bold_title">圖示線條加粗</string>
+    <string name="system_statusbar_duo_bold_summ">加粗電量圓環、Wi-Fi 與耳機線條。</string>
+    <string name="system_statusbar_duo_verticaloffset_title">垂直微調</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">預設在目前行內置中，每格0.5dp；偏移受行高限制，邊界處自動縮小，避免裁切。</string>
+    <string name="system_statusbar_duo_headphonestyle_title">耳機圖示樣式</string>
+    <string name="system_statusbar_duo_headphone_auto">自動</string>
+    <string name="system_statusbar_duo_headphone_overear">頭戴式耳機</string>
+    <string name="system_statusbar_duo_headphone_earbuds">耳塞式耳機</string>
+    <string name="system_statusbar_duo_headphonescale_title">耳機圖示大小</string>
+    <string name="system_statusbar_duo_networkfallback_title">Wi-Fi中斷時替代圖案</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Wi-Fi 未連線時顯示行動網路圖形或目前網路類型，類型未知時用圖形。</string>
+    <string name="system_statusbar_duo_btbattery_title">藍牙耳機電量顏色</string>
+    <string name="system_statusbar_duo_btbattery_summ">單一裝置且系統剛回報電量時：≤20%紅色，≤50%琥珀色。其餘或未知電量跟隨系統顏色；外環仍是手機電量。</string>
+    <string name="system_statusbar_duo_cellularstyle_title">行動網路中心樣式</string>
+    <string name="system_statusbar_duo_cellular_graphic">圖形</string>
+    <string name="system_statusbar_duo_cellular_text">文字</string>
 </resources>

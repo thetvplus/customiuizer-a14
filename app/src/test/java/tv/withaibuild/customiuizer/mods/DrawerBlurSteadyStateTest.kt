@@ -32,7 +32,7 @@ class DrawerBlurSteadyStateTest {
         assertFalse("applyBlur must not allocate WeakReference", body.contains("WeakReference("))
         assertFalse("applyBlur must not create State", body.contains("State()"))
         assertFalse("applyBlur must not read preferences", body.contains("MainModule.mPrefs"))
-        assertTrue("applyBlur checks the active scope", body.contains("isActive()"))
+        assertTrue("applyBlur checks the active scope", body.contains("state.depth > 0"))
     }
 
     private fun methodBody(relativePath: String, prefix: String): String {

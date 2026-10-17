@@ -333,7 +333,6 @@
     <string name="system_disable_window_blurs_title">Disable window-level blur</string>
     <string name="system_disable_window_blurs_summ">Works without Developer options; when off, Android controls blur normally. While on, HyperOS draws the volume panel and power menu without their own background, and the volume blur sliders below have no effect</string>
     <string name="system_blur_title">Background blur</string>
-    <string name="system_recents_blur_summ">Background blur intensity in recent apps</string>
     <string name="system_drawer_blur_summ">Background blur intensity in notification drawer</string>
     <string name="system_mods_lockscreen">Lock screen</string>
     <string name="system_mods_lockscreen_functionality">Additional functionality</string>
@@ -341,7 +340,6 @@
     <string name="system_blocktoasts_title">Block toasts</string>
     <string name="system_blocktoasts_summ">Prevent selected apps from showing toasts</string>
     <string name="system_fivegtile_title">5G tile</string>
-    <string name="system_fivegtile_summ">Add 5G tile to control center</string>
     <string name="system_cc_fpstile_title">Show refresh rate tile</string>
     <string name="system_cc_fpstile_summ">Show the current display refresh rate</string>
     <string name="system_floatingtime_tile_title">Show floating time tile</string>
@@ -436,7 +434,6 @@
     <string name="launcher_disable_wallpaperscale_summ">Keep wallpaper from zooming in recents and app open/close, and disable the unlock wallpaper scale animation. Force-stop the launcher after changing.</string>
     <string name="system_recents_disable_wallpaperscale_title">Disable wallpaper scale in recents</string>
     <string name="system_recents_disable_wallpaperscale_summ">Same launcher wallpaper zoom as Launcher → Other, without the unlock wallpaper animation. The two switches do not conflict; either one is enough for recents and app transitions. Force-stop the launcher after changing.</string>
-    <string name="system_recents_card_style_summ">Hide app names on recent-task cards; requires Launcher restart to apply.</string>
     <string name="system_recents_card_style_hide_title">Hide app name</string>
     <string name="system_clearalltasks_title">Clean all</string>
     <string name="system_clearalltasks_summ">Make cleaner button kill all running tasks</string>
@@ -547,7 +544,6 @@
     <string name="launcher_renameapps_list_title">Modified titles</string>
     <string name="launcher_renameapps_modified">Modified title</string>
     <string name="launcher_privacyapps">Hidden apps</string>
-    <string name="launcher_privacyapps_fail">Required permissions are not granted</string>
     <string name="animation_scale_bridge_unavailable">The system service bridge is unavailable. Confirm that the module is enabled, then fully reboot the device.</string>
     <string name="animation_scale_write_failed">The system rejected the animation scale change.</string>
     <string name="launcher_privacyapps_gest_title">No hidden folder</string>
@@ -716,7 +712,6 @@
 
     <string name="gboard">Input method settings</string>
     <string name="calls">Calls</string>
-    <string name="settings">Settings</string>
 
     <string name="array_default">Default</string>
     <string name="array_system_default">System</string>
@@ -874,7 +869,6 @@
     <string name="qs_toggle_fps">Refresh rate</string>
     <string name="qs_toggle_floatingtime">Floating time</string>
 
-    <string name="miuizer">米客 A14 settings</string>
     <string name="miuizer_new_mod">New!</string>
     <string name="miuizer_show_launchericon_title">Launcher icon</string>
     <string name="miuizer_show_launchericon_summ">Show icon in launchers</string>
@@ -1094,4 +1088,30 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Adjust the group of icons moved to the left. 100% uses the system size. Restart System UI after changing.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Left icon vertical offset</string>
     <string name="system_statusbar_lefticons_offset_summ">Negative values move up; positive values move down. 0 keeps system alignment. Restart System UI after changing.</string>
+    <string name="system_statusbar_duo_title">Duo three-in-one status icon</string>
+    <string name="system_statusbar_duo_summ">Battery ring, Wi-Fi and cellular signal in one icon; dual SIM uses the default data SIM</string>
+    <string name="system_statusbar_duo_restart">Restart System UI after changing settings. Duo percentage and size are independent of native icon hiding and styling. Incompatible devices keep their original icons.</string>
+    <string name="system_statusbar_duo_percent_title">Show battery percentage</string>
+    <string name="system_statusbar_duo_size_title">Manual icon size</string>
+    <string name="system_statusbar_duo_size_summ">Used with automatic size off; limited by the current row height.</string>
+    <string name="system_statusbar_duo_autosize_title">Automatic icon size</string>
+    <string name="system_statusbar_duo_autosize_summ">Scale from the native device icon height and fit the current row. Turn off to use manual size.</string>
+    <string name="system_statusbar_duo_audio_title">Show headphone connections</string>
+    <string name="system_statusbar_duo_audio_summ">Wired or Bluetooth headphones appear for 3 seconds on a new connection, then restore Wi-Fi or the network glyph. Network warnings take priority.</string>
+    <string name="system_statusbar_duo_bold_title">Bolder icon strokes</string>
+    <string name="system_statusbar_duo_bold_summ">Thicker battery ring, Wi-Fi and headphone lines.</string>
+    <string name="system_statusbar_duo_verticaloffset_title">Vertical adjustment</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">Center in the current row; adjust by 0.5 dp. Offset is limited and drawing shrinks at the edge to prevent clipping.</string>
+    <string name="system_statusbar_duo_headphonestyle_title">Headphone icon style</string>
+    <string name="system_statusbar_duo_headphone_auto">Automatic</string>
+    <string name="system_statusbar_duo_headphone_overear">Over-ear headphones</string>
+    <string name="system_statusbar_duo_headphone_earbuds">Earbuds</string>
+    <string name="system_statusbar_duo_headphonescale_title">Headphone icon size</string>
+    <string name="system_statusbar_duo_networkfallback_title">Replace disconnected Wi-Fi</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Without Wi-Fi, show cellular artwork or the current network type; unknown types use artwork.</string>
+    <string name="system_statusbar_duo_btbattery_title">Bluetooth battery colors</string>
+    <string name="system_statusbar_duo_btbattery_summ">One device with a fresh system report: red up to 20%, amber up to 50%. Other or unknown levels use the system color; the ring stays phone battery.</string>
+    <string name="system_statusbar_duo_cellularstyle_title">Cellular center style</string>
+    <string name="system_statusbar_duo_cellular_graphic">Graphic</string>
+    <string name="system_statusbar_duo_cellular_text">Text</string>
 </resources>

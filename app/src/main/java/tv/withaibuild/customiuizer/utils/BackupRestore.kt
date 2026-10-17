@@ -121,15 +121,15 @@ object BackupRestore {
             }
         }
         CurrentPreferenceContract.applyMigrations(filtered)
-        val exportable = LinkedHashMap<String, Any?>(filtered.size)
-        for ((key, value) in filtered) {
-            when (CurrentPreferenceContract.classify(key)) {
+        val keys = filtered.keys.iterator()
+        while (keys.hasNext()) {
+            when (CurrentPreferenceContract.classify(keys.next())) {
                 CurrentPreferenceContract.Kind.CURRENT,
-                CurrentPreferenceContract.Kind.INTERNAL -> exportable[key] = value
-                else -> Unit
+                CurrentPreferenceContract.Kind.INTERNAL -> Unit
+                else -> keys.remove()
             }
         }
-        return exportable
+        return filtered
     }
 
     @JvmStatic
@@ -174,8 +174,9 @@ object BackupRestore {
      */
     @JvmStatic
     fun capturePreRestoreSnapshot(prefs: SharedPreferences): Map<String, Any?> {
-        val snapshot = HashMap<String, Any?>(prefs.all.size * 4 / 3 + 1)
-        for ((key, value) in prefs.all) {
+        val source = prefs.all
+        val snapshot = HashMap<String, Any?>(source.size * 4 / 3 + 1)
+        for ((key, value) in source) {
             snapshot[key] = when (value) {
                 is Set<*> -> HashSet<String>(value.size).apply {
                     @Suppress("UNCHECKED_CAST")

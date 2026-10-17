@@ -8,7 +8,7 @@ import tv.withaibuild.customiuizer.mods.utils.FeatureId
  * Keeping feature ids together makes it easy to see the complete list and avoids accidental
  * duplicate identities across different installers.
  *
- * Feature ID range: 0..244.
+ * Feature ID range: 0..254.
  */
 
 data object PackagePermissionsFeatureId : FeatureId {
@@ -1060,4 +1060,9 @@ data object HideImeDismissButtonFeatureId : FeatureId {
 data object StatusBarContentGeometryFeatureId : FeatureId {
     override val id = 253
     override val name = "systemui_statusbar_content_geometry"
+}
+
+data object DuoStatusBarFeatureId : FeatureId {
+    override val id = 254
+    override val name = "systemui_duo_status_bar"
 }

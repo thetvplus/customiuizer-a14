@@ -40,6 +40,7 @@ class BackupRestoreTest {
         prefs.put("key1", original)
 
         val snapshot = BackupRestore.capturePreRestoreSnapshot(prefs)
+        assertEquals("Capture one consistent preference snapshot", 1, prefs.getAllCount)
         @Suppress("UNCHECKED_CAST")
         val copied = snapshot["key1"] as HashSet<String>
 
@@ -661,6 +662,36 @@ class BackupRestoreTest {
         assertFalse(decoded.containsKey("pref_key_system_notif_disable_strong_toast"))
         assertFalse(decoded.containsKey("pref_key_removed_old_feature"))
         assertFalse(decoded.containsKey("pref_key_miuizer_locale_applied"))
+    }
+
+    @Test
+    fun filterBackupEntriesKeepsCurrentMigrationTargetAndOwnsStringSets() {
+        val selected = LinkedHashSet(listOf("com.a", "com.b"))
+        val prefs = FakeSharedPreferences().apply {
+            put("pref_key_system_nooverscroll_apps", selected)
+            put("pref_key_system_strong_toast_mode", "3")
+            put("pref_key_system_notif_disable_strong_toast", true)
+            put("pref_key_removed_old_feature", true)
+            put("pref_key_miuizer_locale_applied", "zh-TW")
+        }
+
+        val entries = BackupRestore.filterBackupEntries(prefs)
+        assertEquals(
+            setOf("pref_key_system_nooverscroll_apps", "pref_key_system_strong_toast_mode"),
+            entries.keys,
+        )
+        assertEquals("3", entries["pref_key_system_strong_toast_mode"])
+        assertTrue(prefs.getBoolean("pref_key_system_notif_disable_strong_toast", false))
+        assertTrue(prefs.getBoolean("pref_key_removed_old_feature", false))
+        assertEquals("zh-TW", prefs.getString("pref_key_miuizer_locale_applied", null))
+
+        @Suppress("UNCHECKED_CAST")
+        val exportedSelection = entries["pref_key_system_nooverscroll_apps"] as MutableSet<String>
+        assertEquals(selected, exportedSelection)
+        exportedSelection.remove("com.a")
+        assertEquals(setOf("com.a", "com.b"), selected)
+        selected.add("com.c")
+        assertEquals(setOf("com.b"), exportedSelection)
     }
 
     @Test

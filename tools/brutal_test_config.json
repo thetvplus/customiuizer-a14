@@ -24,10 +24,10 @@
     "app/src/main/java/tv/withaibuild/customiuizer/installers"
   ],
   "fast_workflows": [
-    ".github/workflows/a14-fast-ci.yml"
+    ".github/workflows/a14-ci.yml"
   ],
   "full_workflows": [
-    ".github/workflows/a14-full-ci.yml"
+    ".github/workflows/a14-ci.yml"
   ],
   "hermetic_commands": [
     [

@@ -75,8 +75,8 @@ class SystemUiFeaturesWiringTest {
         val features = SystemUiFeatures.all(fakePackageReadyParam(), PrefMap())
 
         assertEquals(
-            "All 98 preference-guarded SystemUI features should be present",
-            98,
+            "All 99 preference-guarded SystemUI features should be present",
+            99,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
@@ -86,6 +86,19 @@ class SystemUiFeaturesWiringTest {
             assertEquals(FeatureTarget.SYSTEM_UI, feature.target)
             assertEquals(InstallPhase.PACKAGE_READY, feature.phase)
         }
+    }
+
+    @Test
+    fun duoFeatureIsLazyDisabledByDefaultAndRestrictedToSystemUi() {
+        val off = PrefMap()
+        val spec = SystemUiFeatures.all(fakePackageReadyParam(), off).single { it.id == DuoStatusBarFeatureId }
+        assertFalse(spec.isEnabled(off))
+        assertEquals(FeatureTarget.SYSTEM_UI, spec.target)
+        assertEquals(InstallPhase.PACKAGE_READY, spec.phase)
+        assertEquals(254, spec.id.id)
+        val on = PrefMap().apply { put("system_statusbar_duo", true) }
+        assertTrue(spec.isEnabled(on))
+        assertTrue(spec.create() is DuoStatusBarFeature)
     }
 
     @Test

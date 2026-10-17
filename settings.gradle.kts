@@ -34,17 +34,12 @@ dependencyResolutionManagement {
 
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
-        // Local cache only for libxposed snapshots; other artifacts must come from
-        // their declared upstream repositories.
-        mavenLocal {
-            content { includeGroup("io.github.libxposed") }
-        }
-        // JitPack only for GitHub-backed artifacts (com.github.* / io.github.*).
-        maven("https://jitpack.io") {
-            content {
-                includeGroupByRegex("""com\.github\..*""")
-                includeGroupByRegex("""io\.github\..*""")
+        // Stable libxposed artifacts must have the same upstream in both modes.
+        exclusiveContent {
+            forRepository {
+                mavenCentral { name = "LibXposedCentral" }
             }
+            filter { includeGroup("io.github.libxposed") }
         }
 
         if (useChinaMirrors) {
@@ -56,8 +51,7 @@ dependencyResolutionManagement {
                     includeGroupByRegex("""com\.google\..*""")
                 }
             }
-            // Huawei Maven mirror: the rest of Maven Central. libxposed is excluded
-            // so it always resolves from the local-only mavenLocal above.
+            // Huawei Maven mirror: the rest of Maven Central.
             maven("https://mirrors.huaweicloud.com/repository/maven/") {
                 content {
                     excludeGroup("io.github.libxposed")

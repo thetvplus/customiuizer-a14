@@ -63,7 +63,11 @@ class ModData {
 
 // Wi-Fi/WIFI and path separators should not make an otherwise exact word disappear.
 internal fun normalizeSearchText(value: String): String = value.lowercase(Locale.ROOT)
-    .replace("-", "").replace("‑", "").replace("/", " ")
+    .replace("-", "").replace("‑", "").replace('/', ' ')
 
-internal fun searchTerms(query: String): List<String> = normalizeSearchText(query)
-    .trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+private val SEARCH_WHITESPACE = Regex("\\s+")
+
+internal fun searchTerms(query: String): List<String> {
+    val normalized = normalizeSearchText(query).trim()
+    return if (normalized.isEmpty()) emptyList() else normalized.split(SEARCH_WHITESPACE)
+}

@@ -1,0 +1,97 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:miuizer="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo"
+        android:title="@string/enable_mod"
+        android:summary="@string/system_statusbar_duo_restart"
+        android:defaultValue="false" />
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo_percent"
+        android:title="@string/system_statusbar_duo_percent_title"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:defaultValue="true" />
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo_audio"
+        android:title="@string/system_statusbar_duo_audio_title"
+        android:summary="@string/system_statusbar_duo_audio_summ"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:defaultValue="true" />
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo_bold"
+        android:title="@string/system_statusbar_duo_bold_title"
+        android:summary="@string/system_statusbar_duo_bold_summ"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:defaultValue="false" />
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo_networkfallback"
+        android:title="@string/system_statusbar_duo_networkfallback_title"
+        android:summary="@string/system_statusbar_duo_networkfallback_summ"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:defaultValue="true" />
+
+    <tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+        android:key="pref_key_system_statusbar_duo_cellularstyle"
+        android:title="@string/system_statusbar_duo_cellularstyle_title"
+        android:entries="@array/duo_cellular_style_entries"
+        android:entryValues="@array/duo_cellular_style_values"
+        android:dependency="pref_key_system_statusbar_duo_networkfallback"
+        miuizer:valueAsSummary="true"
+        android:defaultValue="1" />
+
+    <tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+        android:key="pref_key_system_statusbar_duo_headphonestyle"
+        android:title="@string/system_statusbar_duo_headphonestyle_title"
+        android:entries="@array/duo_headphone_style_entries"
+        android:entryValues="@array/duo_headphone_style_values"
+        android:dependency="pref_key_system_statusbar_duo_audio"
+        miuizer:valueAsSummary="true"
+        android:defaultValue="1" />
+
+    <tv.withaibuild.customiuizer.prefs.SeekBarPreference
+        android:key="pref_key_system_statusbar_duo_headphonescale"
+        android:title="@string/system_statusbar_duo_headphonescale_title"
+        android:dependency="pref_key_system_statusbar_duo_audio"
+        android:defaultValue="100"
+        miuizer:minValue="85" miuizer:maxValue="115"
+        miuizer:stepValue="5" miuizer:format="%d%%" />
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo_btbattery"
+        android:title="@string/system_statusbar_duo_btbattery_title"
+        android:summary="@string/system_statusbar_duo_btbattery_summ"
+        android:dependency="pref_key_system_statusbar_duo_audio"
+        android:defaultValue="true" />
+
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_statusbar_duo_autosize"
+        android:title="@string/system_statusbar_duo_autosize_title"
+        android:summary="@string/system_statusbar_duo_autosize_summ"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:disableDependentsState="true"
+        android:defaultValue="true" />
+
+    <tv.withaibuild.customiuizer.prefs.SeekBarPreference
+        android:key="pref_key_system_statusbar_duo_size"
+        android:title="@string/system_statusbar_duo_size_title"
+        android:summary="@string/system_statusbar_duo_size_summ"
+        android:dependency="pref_key_system_statusbar_duo_autosize"
+        android:defaultValue="24"
+        miuizer:minValue="20" miuizer:maxValue="40"
+        miuizer:stepValue="1" miuizer:format="%s dip" />
+
+    <tv.withaibuild.customiuizer.prefs.SeekBarPreference
+        android:key="pref_key_system_statusbar_duo_verticaloffset"
+        android:title="@string/system_statusbar_duo_verticaloffset_title"
+        android:summary="@string/system_statusbar_duo_verticaloffset_summ"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:defaultValue="8"
+        miuizer:minValue="0" miuizer:maxValue="16"
+        miuizer:negativeShift="8" miuizer:displayDividerValue="2"
+        miuizer:stepValue="1" miuizer:format="%.1f dp" />
+</PreferenceScreen>

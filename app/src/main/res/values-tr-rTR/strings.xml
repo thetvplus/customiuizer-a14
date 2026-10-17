@@ -262,7 +262,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_screenanim_duration_summ">Animasyon uzunluğunu yapılandırın</string>
     <string name="system_screenanim_desc">Çok düşük değerler, animasyonu fiilen devre dışı bırakır</string>
     <string name="system_blur_title">Arkaplan bulanıklığı</string>
-    <string name="system_recents_blur_summ">Son uygulamalarda arka plan bulanıklığı yoğunluğu</string>
     <string name="system_drawer_blur_summ">Bildirim çekmecesinde arka plan bulanıklığı yoğunluğu</string>
     <string name="system_mods_lockscreen">Kilit ekranı</string>
     <string name="system_mods_lockscreen_functionality">Ek işlevsellik</string>
@@ -270,7 +269,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_blocktoasts_title">Tostları engelle</string>
     <string name="system_blocktoasts_summ">Seçili uygulamaların tost göstermesini engelle</string>
     <string name="system_fivegtile_title">5G kutusu</string>
-    <string name="system_fivegtile_summ">Kontrol merkezine 5G kutucuğu ekleyin</string>
     <string name="system_cc_fpstile_title">Yenileme hızı döşemesini göster</string>
     <string name="system_qs_force_systemfonts_title">Saati sistem yazı tiplerini kullanmaya zorla</string>
     <string name="system_cc_dateformat_title">Özel tarih biçimi</string>
@@ -448,7 +446,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="launcher_renameapps_list_title">Değiştirilmiş başlıklar</string>
     <string name="launcher_renameapps_modified">Değiştirilmiş başlık</string>
     <string name="launcher_privacyapps">Gizli uygulamalar</string>
-    <string name="launcher_privacyapps_fail">Gerekli izinler verilmedi</string>
     <string name="launcher_privacyapps_gest_title">Gizli klasör yok</string>
     <string name="launcher_privacyapps_gest_summ">Gizli uygulamalar klasörünü açan 2 parmak hareketini devre dışı bırakın</string>
     <string name="launcher_privacyapps_list_title">Gizlenecek uygulamaların listesi</string>
@@ -597,7 +594,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="appsort_install">Kurulum süresi</string>
     <string name="gboard">Giriş yöntemi ayarları</string>
     <string name="calls">Aramalar</string>
-    <string name="settings">Ayarlar</string>
     <string name="array_default">Varsayılan</string>
     <string name="array_system_default">Sistem</string>
     <string name="array_global_actions_none">Eylem yok</string>
@@ -872,7 +868,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_disable_window_blurs_summ">Geliştirici seçenekleri olmadan çalışır; kapalıyken bulanıklığı Android normal şekilde kontrol eder. Açıkken HyperOS ses panelini ve güç menüsünü kendi arka planları olmadan çizer, aşağıdaki ses bulanıklığı kaydırıcıları etkisiz kalır</string>
     <string name="system_disable_window_blurs_title">Pencere düzeyinde bulanıklığı devre dışı bırak</string>
     <string name="system_recents_card_style_hide_title">Uygulama adını gizle</string>
-    <string name="system_recents_card_style_summ">Son görev kartlarındaki uygulama adlarını gizle; değişiklikten sonra başlatıcıyı yeniden başlatın</string>
     <string name="system_strong_toast_mode_dynamic_island">Dinamik Ada</string>
     <string name="system_volume_mode_button_colors_summ">Ses panelinin altındaki iki kısayolun arka plan ve simge renklerini özelleştirir. Renkleri değiştirdikten sonra Sistem Arayüzünü yeniden başlatın.</string>
     <string name="system_volume_mode_button_colors_title">Sessiz ve Rahatsız Etmeyin kısayol renkleri</string>
@@ -1066,4 +1061,30 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Sola taşınan simge grubunun tamamını ayarlar. %100, sistem boyutunu korur. Sistem arayüzünün yeniden başlatılması gerekir.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Soldaki simgelerin dikey kaydırması</string>
     <string name="system_statusbar_lefticons_offset_summ">Negatif değerler yukarı, pozitif değerler aşağı kaydırır. 0 dp, sistem konumunu korur. Sistem arayüzünün yeniden başlatılması gerekir.</string>
+    <string name="system_statusbar_duo_title">Duo: üçü bir arada durum simgesi</string>
+    <string name="system_statusbar_duo_summ">Pil halkası, Wi-Fi ve mobil sinyal tek simgede; çift SIM için varsayılan veri SIM kartı kullanılır</string>
+    <string name="system_statusbar_duo_restart">Ayar değişikliklerinden sonra sistem arayüzünü yeniden başlatın. Duo yüzdesi ve boyutu, sistem simgelerinin gizlenmesi ve stilinden bağımsızdır. Uyumsuz cihazlarda özgün simgeler korunur.</string>
+    <string name="system_statusbar_duo_percent_title">Pil yüzdesini göster</string>
+    <string name="system_statusbar_duo_size_title">Elle simge boyutu</string>
+    <string name="system_statusbar_duo_size_summ">Otomatik boyut kapalıyken kullanılır; satır yüksekliğiyle sınırlıdır.</string>
+    <string name="system_statusbar_duo_autosize_title">Otomatik simge boyutu</string>
+    <string name="system_statusbar_duo_autosize_summ">Sistem simgelerinin ve mevcut satırın yüksekliğine göre ayarlar. Elle ayarlamak için kapatın.</string>
+    <string name="system_statusbar_duo_audio_title">Kulaklık bağlantısını göster</string>
+    <string name="system_statusbar_duo_audio_summ">Kablolu veya Bluetooth kulaklık yeni bağlantıda 3 saniye görünür, ardından Wi-Fi veya ağ simgesi geri döner. Ağ uyarıları önceliklidir.</string>
+    <string name="system_statusbar_duo_bold_title">Daha kalın simge çizgileri</string>
+    <string name="system_statusbar_duo_bold_summ">Daha kalın pil halkası, Wi-Fi ve kulaklık çizgileri.</string>
+    <string name="system_statusbar_duo_verticaloffset_title">Dikey ayar</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">Satır içinde ortala, 0,5 dp adımlarla ayarla. Kaydırma yükseklikle sınırlıdır; kenarda kesilmeden küçülür.</string>
+    <string name="system_statusbar_duo_headphonestyle_title">Kulaklık simgesi</string>
+    <string name="system_statusbar_duo_headphone_auto">Otomatik</string>
+    <string name="system_statusbar_duo_headphone_overear">Baş üstü kulaklık</string>
+    <string name="system_statusbar_duo_headphone_earbuds">Kulak içi kulaklık</string>
+    <string name="system_statusbar_duo_headphonescale_title">Kulaklık simgesi boyutu</string>
+    <string name="system_statusbar_duo_networkfallback_title">Bağlantısız Wi-Fi yerine</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Wi-Fi yokken simge veya geçerli ağ türü görünür; bilinmeyen türler simge kullanır.</string>
+    <string name="system_statusbar_duo_btbattery_title">Bluetooth pil renkleri</string>
+    <string name="system_statusbar_duo_btbattery_summ">Tek cihaz ve yeni bildirim: %20’ye kadar kırmızı, %50’ye kadar kehribar. Diğer veya bilinmeyen seviyeler sistem rengini kullanır; halka telefon pilini gösterir.</string>
+    <string name="system_statusbar_duo_cellularstyle_title">Ortadaki hücresel ağ stili</string>
+    <string name="system_statusbar_duo_cellular_graphic">Simge</string>
+    <string name="system_statusbar_duo_cellular_text">Metin</string>
 </resources>

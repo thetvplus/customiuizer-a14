@@ -101,6 +101,25 @@ class HermeticityTest(unittest.TestCase):
             self.assertIn("WARNING", output)
             self.assertIn("tracked.txt", output)
 
+    def test_failing_command_preserves_diagnostics(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = self._make_repo(Path(td))
+            command = [sys.executable, "-c", "print('specific regression detail'); raise SystemExit(7)"]
+            code, output = self._run_hermeticity(root, command=command)
+            self.assertEqual(1, code, output)
+            self.assertIn("specific regression detail", output)
+            self.assertIn("exit=7", output)
+            self.assertIn("Hermeticity FAILED: command failed", output)
+
+    def test_successful_command_reports_test_result_once(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = self._make_repo(Path(td))
+            command = [sys.executable, "-c", "print('actual test result')"]
+            code, output = self._run_hermeticity(root, command=command)
+            self.assertEqual(0, code, output)
+            self.assertEqual(1, output.splitlines().count("actual test result"))
+            self.assertIn("exit=0", output)
+
 
 if __name__ == "__main__":
     unittest.main()

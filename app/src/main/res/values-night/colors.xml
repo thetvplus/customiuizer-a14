@@ -2,7 +2,6 @@
 <resources>
 	<color name="color_window_background">#000000</color>
 	<color name="color_surface_container">#1C1C1D</color>
-	<color name="color_surface_variant">#2C2C2E</color>
 	<color name="color_on_surface">#FFFFFF</color>
 	<color name="color_on_surface_variant">#8A8A8A</color>
 	<color name="color_outline_variant">#14FFFFFF</color>

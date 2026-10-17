@@ -37,6 +37,25 @@ internal object CustomTextIconTintRoute {
     internal val registrations = mutableListOf<DarkTintRegistration>()
 
     /**
+     * Control Center's final MiuiLightDarkIconManager owns its children's tint.
+     * A global receiver would overwrite that color with the wallpaper tint when
+     * the dispatcher reapplies it. The owner already updates NetworkSpeedView
+     * through onIconAdded/setLight, so it needs no additional listener or receiver.
+     */
+    fun registerForIconManager(
+        view: View,
+        iconManager: Any,
+        classLoader: ClassLoader,
+        route: String,
+        darkIconDispatcher: Any? = null,
+    ): DarkTintRegistrationHandle? {
+        if (iconManager.javaClass.name == "com.android.systemui.statusbar.phone.MiuiLightDarkIconManager") {
+            return null
+        }
+        return register(view, classLoader, route, darkIconDispatcher)
+    }
+
+    /**
      * Register [view] with the ROM [DarkIconDispatcher] when attached, release the
      * receiver on normal detach, and allow reattach to re-register.
      *

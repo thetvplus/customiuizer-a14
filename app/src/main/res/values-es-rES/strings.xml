@@ -278,7 +278,6 @@
     <string name="system_screenanim_duration_summ">Configurar duración de animación</string>
     <string name="system_screenanim_desc">Valores muy bajo deshabilitaran animación</string>
     <string name="system_blur_title">Desenfoque de fondo</string>
-    <string name="system_recents_blur_summ">Intensidad de desenfoque de fondo en apps recientes</string>
     <string name="system_drawer_blur_summ">Intensidad de desenfoque de fondo en panel de notificaciones</string>
     <string name="system_mods_lockscreen">Bloquear pantalla</string>
     <string name="system_mods_lockscreen_functionality">Funcionalidad adicional</string>
@@ -286,7 +285,6 @@
     <string name="system_blocktoasts_title">Bloquear notificaciones toast</string>
     <string name="system_blocktoasts_summ">Evitar que las aplicaciones seleccionadas muestren toats</string>
     <string name="system_fivegtile_title">Interruptor 5G</string>
-    <string name="system_fivegtile_summ">Añadir interruptor 5G al centro de control</string>
     <string name="system_cc_fpstile_title">Mostrar interruptor de tasa de refresco</string>
     <string name="system_qs_force_systemfonts_title">Forzar al reloj usar fuente del sistema</string>
     <string name="system_cc_dateformat_title">Formato de fecha personalizado</string>
@@ -469,7 +467,6 @@
     <string name="launcher_renameapps_list_title">Nombres modificados</string>
     <string name="launcher_renameapps_modified">Nombre modificado</string>
     <string name="launcher_privacyapps">Aplicaciones ocultas</string>
-    <string name="launcher_privacyapps_fail">Permisos necesarios no concedidos</string>
     <string name="launcher_privacyapps_gest_title">Sin carpeta oculta</string>
     <string name="launcher_privacyapps_gest_summ">Deshabilita el gesto de dos dedos que abre la carpeta de aplicaciones ocultas y el código secreto es 233233</string>
     <string name="launcher_privacyapps_list_title">Lista de apps a ocultar</string>
@@ -617,7 +614,6 @@
     <string name="appsort_install">Hora de instalación</string>
     <string name="gboard">Ajustes del método de entrada</string>
     <string name="calls">Llamadas</string>
-    <string name="settings">Configuración</string>
     <string name="array_default">Predeterminado</string>
     <string name="array_system_default">Sistema</string>
     <string name="array_global_actions_none">Sin acción</string>
@@ -901,7 +897,6 @@
     <string name="system_disable_window_blurs_summ">Funciona sin las Opciones para desarrolladores; cuando está desactivado, Android controla el desenfoque con normalidad. Cuando está activado, HyperOS dibuja el panel de volumen y el menú de encendido sin fondo propio, y los controles de desenfoque del volumen de abajo no tienen efecto</string>
     <string name="system_disable_window_blurs_title">Desactivar desenfoque a nivel de ventana</string>
     <string name="system_recents_card_style_hide_title">Ocultar nombre de la aplicación</string>
-    <string name="system_recents_card_style_summ">Ocultar nombres de aplicaciones en las tarjetas de tareas recientes; reinicia el lanzador después de cambiarlo</string>
     <string name="system_strong_toast_mode_dynamic_island">Isla dinámica</string>
     <string name="system_volume_mode_button_colors_summ">Personaliza los colores del fondo y los iconos de los dos accesos directos de la parte inferior del panel de volumen. Reinicia la interfaz del sistema después de cambiar los colores.</string>
     <string name="system_volume_mode_button_colors_title">Colores de accesos directos de Silencio y No molestar</string>
@@ -1059,4 +1054,30 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Ajusta todo el grupo de iconos movidos a la izquierda. El 100 % conserva el tamaño del sistema. Requiere reiniciar la interfaz del sistema.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Desplazamiento vertical de los iconos de la izquierda</string>
     <string name="system_statusbar_lefticons_offset_summ">Los valores negativos desplazan hacia arriba y los positivos hacia abajo. 0 dp conserva la posición del sistema. Requiere reiniciar la interfaz del sistema.</string>
+    <string name="system_statusbar_duo_title">Duo: icono de estado tres en uno</string>
+    <string name="system_statusbar_duo_summ">Anillo de batería, Wi-Fi y señal móvil en un icono; con dos SIM se usa la SIM de datos predeterminada</string>
+    <string name="system_statusbar_duo_restart">Reinicia la interfaz del sistema tras cambiar los ajustes. El porcentaje y tamaño de Duo son independientes de la ocultación y estilo de los iconos originales. Los dispositivos incompatibles conservan sus iconos.</string>
+    <string name="system_statusbar_duo_percent_title">Mostrar porcentaje de batería</string>
+    <string name="system_statusbar_duo_size_title">Tamaño manual del icono</string>
+    <string name="system_statusbar_duo_size_summ">Se usa sin tamaño automático; limitado por la altura de la fila.</string>
+    <string name="system_statusbar_duo_autosize_title">Tamaño automático del icono</string>
+    <string name="system_statusbar_duo_autosize_summ">Escala según la altura de los iconos del sistema y de la fila. Desactiva para ajustar el tamaño manualmente.</string>
+    <string name="system_statusbar_duo_audio_title">Mostrar conexión de auriculares</string>
+    <string name="system_statusbar_duo_audio_summ">Los auriculares por cable o Bluetooth aparecen durante 3 segundos con una nueva conexión y luego vuelve Wi-Fi o el símbolo de red. Los avisos de red tienen prioridad.</string>
+    <string name="system_statusbar_duo_bold_title">Líneas más gruesas</string>
+    <string name="system_statusbar_duo_bold_summ">Anillo de batería y líneas de Wi-Fi y auriculares más gruesos.</string>
+    <string name="system_statusbar_duo_verticaloffset_title">Ajuste vertical</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">Centrado en la fila, pasos de 0,5 dp. Desplazamiento limitado; el icono se reduce en el borde para evitar recortes.</string>
+    <string name="system_statusbar_duo_headphonestyle_title">Estilo de auriculares</string>
+    <string name="system_statusbar_duo_headphone_auto">Automático</string>
+    <string name="system_statusbar_duo_headphone_overear">Auriculares de diadema</string>
+    <string name="system_statusbar_duo_headphone_earbuds">Auriculares intraaurales</string>
+    <string name="system_statusbar_duo_headphonescale_title">Tamaño de auriculares</string>
+    <string name="system_statusbar_duo_networkfallback_title">Sustituir Wi-Fi desconectado</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Sin Wi-Fi, muestra un icono o el tipo de red actual; los tipos desconocidos usan el icono.</string>
+    <string name="system_statusbar_duo_btbattery_title">Colores de batería Bluetooth</string>
+    <string name="system_statusbar_duo_btbattery_summ">Un dispositivo y un informe reciente: rojo hasta 20 %, ámbar hasta 50 %. Otros niveles o batería desconocida usan el color del sistema; el anillo es del teléfono.</string>
+    <string name="system_statusbar_duo_cellularstyle_title">Estilo de red móvil en el centro</string>
+    <string name="system_statusbar_duo_cellular_graphic">Icono</string>
+    <string name="system_statusbar_duo_cellular_text">Texto</string>
 </resources>

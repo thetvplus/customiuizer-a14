@@ -293,7 +293,6 @@
     <string name="system_screenanim_duration_summ">アニメーションの再生時間を設定できます</string>
     <string name="system_screenanim_desc">非常に低い値にした場合、実質的にアニメーションが無効となります</string>
     <string name="system_blur_title">背景をぼかす</string>
-    <string name="system_recents_blur_summ">最近のアプリ上の背景のぼかし具合を設定します</string>
     <string name="system_drawer_blur_summ">通知シェード上の背景のぼかし具合を設定します</string>
     <string name="system_mods_lockscreen">ロック画面</string>
     <string name="system_mods_lockscreen_functionality">追加機能</string>
@@ -301,7 +300,6 @@
     <string name="system_blocktoasts_title">トースト通知をブロック</string>
     <string name="system_blocktoasts_summ">選択をしたアプリでトースト通知を表示しないようにします</string>
     <string name="system_fivegtile_title">5Gタイルを表示する</string>
-    <string name="system_fivegtile_summ">クイック設定に5Gタイルのパネルを追加します</string>
     <string name="system_cc_fpstile_title">リフレッシュレートタイルを表示する</string>
     <string name="system_cc_fpstile_summ">現在の画面のリフレッシュレートを表示します</string>
     <string name="system_floatingtime_tile_title">フローティング時間のタイルを表示する</string>
@@ -500,7 +498,6 @@
     <string name="launcher_renameapps_list_title">変更後のタイトル</string>
     <string name="launcher_renameapps_modified">変更後のタイトル</string>
     <string name="launcher_privacyapps">隠されたアプリ</string>
-    <string name="launcher_privacyapps_fail">必要な権限が与えられていません</string>
     <string name="launcher_privacyapps_gest_title">隠しフォルダはありません</string>
     <string name="launcher_privacyapps_gest_summ">隠しフォルダを開く2本指のジェスチャーを無効化 、電話のシークレットコードは233233になります</string>
     <string name="launcher_privacyapps_list_title">非表示にするアプリの一覧</string>
@@ -655,7 +652,6 @@
     <string name="appsort_install">インストール日時</string>
     <string name="gboard">入力方法設定</string>
     <string name="calls">通話</string>
-    <string name="settings">設定</string>
     <string name="array_default">デフォルト</string>
     <string name="array_system_default">システム</string>
     <string name="array_global_actions_none">アクションなし</string>
@@ -802,7 +798,6 @@
     <string name="qs_toggle_5g">5Gネットワーク</string>
     <string name="qs_toggle_fps">リフレッシュレート</string>
     <string name="qs_toggle_floatingtime">フローティング時間</string>
-    <string name="miuizer">米客 A14 の設定</string>
     <string name="miuizer_new_mod">New!</string>
     <string name="miuizer_show_launchericon_title">ランチャーアイコン</string>
     <string name="miuizer_show_launchericon_summ">ランチャーにアイコンを表示します</string>
@@ -967,7 +962,6 @@
     <string name="system_disable_window_blurs_summ">開発者向けオプションなしで動作します。オフではAndroidが通常どおりぼかしを制御します。オンではHyperOSの音量パネルと電源メニューから個別の背景がなくなり、下の音量ぼかしスライダーは効果がありません</string>
     <string name="system_disable_window_blurs_title">ウィンドウ単位のぼかしを無効化</string>
     <string name="system_recents_card_style_hide_title">アプリ名を非表示</string>
-    <string name="system_recents_card_style_summ">最近のタスクカードでアプリ名を非表示にする；変更後はランチャーを再起動してください</string>
     <string name="system_strong_toast_mode_dynamic_island">ダイナミックアイランド</string>
     <string name="system_volume_mode_button_colors_summ">音量パネル下部にある2つのショートカットの背景色とアイコン色を変更します。色の変更後はシステムUIを再起動してください。</string>
     <string name="system_volume_mode_button_colors_title">サイレントとおやすみモードのショートカット色</string>
@@ -1061,4 +1055,30 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">左側に移動したアイコン全体を調整します。100% でシステム標準のサイズになります。システム UI の再起動が必要です。</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">左側アイコンの上下位置</string>
     <string name="system_statusbar_lefticons_offset_summ">負の値で上、正の値で下に移動します。0 dp でシステム標準の位置になります。システム UI の再起動が必要です。</string>
+    <string name="system_statusbar_duo_title">Duo：3つの状態を1つのアイコンに</string>
+    <string name="system_statusbar_duo_summ">バッテリーリング、Wi-Fi、携帯電話の電波を1つに表示。デュアルSIMでは既定のデータSIMを使用</string>
+    <string name="system_statusbar_duo_restart">設定変更後はシステムUIを再起動してください。Duoの割合とサイズは標準アイコンの非表示やスタイルから独立しています。非対応端末では標準アイコンを維持します。</string>
+    <string name="system_statusbar_duo_percent_title">バッテリー残量の割合を表示</string>
+    <string name="system_statusbar_duo_size_title">アイコンサイズを手動設定</string>
+    <string name="system_statusbar_duo_size_summ">自動調整が無効な場合に使用し、行の高さを上限とします。</string>
+    <string name="system_statusbar_duo_autosize_title">アイコンサイズを自動調整</string>
+    <string name="system_statusbar_duo_autosize_summ">端末の標準アイコンと現在の行の高さに合わせます。無効にすると手動サイズを使用します。</string>
+    <string name="system_statusbar_duo_audio_title">ヘッドフォンの接続を表示</string>
+    <string name="system_statusbar_duo_audio_summ">有線またはBluetoothヘッドフォンの新規接続時に3秒間表示し、その後Wi-Fiまたはネットワーク表示に戻ります。ネットワーク警告を優先します。</string>
+    <string name="system_statusbar_duo_bold_title">アイコンの線を太くする</string>
+    <string name="system_statusbar_duo_bold_summ">バッテリーリング、Wi-Fi、ヘッドフォンの線を太くします。</string>
+    <string name="system_statusbar_duo_verticaloffset_title">上下位置の微調整</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">現在の行内で中央に配置し、0.5dp刻みで調整。行高に応じて移動を制限し、端では縮小して欠けを防止。</string>
+    <string name="system_statusbar_duo_headphonestyle_title">イヤホンのアイコン</string>
+    <string name="system_statusbar_duo_headphone_auto">自動</string>
+    <string name="system_statusbar_duo_headphone_overear">ヘッドホン</string>
+    <string name="system_statusbar_duo_headphone_earbuds">イヤホン</string>
+    <string name="system_statusbar_duo_headphonescale_title">イヤホンアイコンの大きさ</string>
+    <string name="system_statusbar_duo_networkfallback_title">Wi-Fi切断時の代替表示</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Wi-Fi未接続時は図形または現在のネットワーク種別を表示。不明な種別は図形を使用。</string>
+    <string name="system_statusbar_duo_btbattery_title">Bluetoothの電池色</string>
+    <string name="system_statusbar_duo_btbattery_summ">単一機器の新しい電池情報のみ：20%以下は赤、50%以下は琥珀色。その他や不明な残量はシステムの色を使用。外周はスマートフォンの電池。</string>
+    <string name="system_statusbar_duo_cellularstyle_title">中央のモバイルネットワーク表示</string>
+    <string name="system_statusbar_duo_cellular_graphic">図形</string>
+    <string name="system_statusbar_duo_cellular_text">文字</string>
 </resources>

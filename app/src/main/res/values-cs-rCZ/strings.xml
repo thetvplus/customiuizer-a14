@@ -288,7 +288,6 @@
     <string name="system_screenanim_duration_summ">Konfigurace délky animace</string>
     <string name="system_screenanim_desc">Velmi nízké hodnoty prakticky vypnou animaci</string>
     <string name="system_blur_title">Rozmazání pozadí</string>
-    <string name="system_recents_blur_summ">Intenzita rozmazání pozadí v posledních aplikacích</string>
     <string name="system_drawer_blur_summ">Intenzita rozostření pozadí v oznamovací liště</string>
     <string name="system_mods_lockscreen">Zámek obrazovky</string>
     <string name="system_mods_lockscreen_functionality">Další funkce</string>
@@ -296,7 +295,6 @@
     <string name="system_blocktoasts_title">Blokovat rychlá oznámení</string>
     <string name="system_blocktoasts_summ">Zabránit vybraným aplikacím v zobrazování rychlých oznámení</string>
     <string name="system_fivegtile_title">Dlaždice 5G</string>
-    <string name="system_fivegtile_summ">Přidat 5G dlaždici do panelu qs</string>
     <string name="system_cc_fpstile_title">Zobrazit dlaždici obnovovací frekvence</string>
     <string name="system_cc_fpstile_summ">Zobrazit aktuální obnovovací frekvenci displeje</string>
     <string name="system_floatingtime_tile_title">Zobrazit plovoucí dlaždici času</string>
@@ -493,7 +491,6 @@
     <string name="launcher_renameapps_list_title">Upravené názvy</string>
     <string name="launcher_renameapps_modified">Změněný název</string>
     <string name="launcher_privacyapps">Skryté aplikace</string>
-    <string name="launcher_privacyapps_fail">Nejsou udělena požadovaná oprávnění</string>
     <string name="launcher_privacyapps_gest_title">Žádná skrytá složka</string>
     <string name="launcher_privacyapps_gest_summ">Zakázat gesto dvěma prsty, které otevře skrytou složku aplikací a tajný telefonní kód je 233233</string>
     <string name="launcher_privacyapps_list_title">Seznam aplikací, které chcete skrýt</string>
@@ -653,7 +650,6 @@
     <string name="appsort_install">Čas instalace</string>
     <string name="gboard">Nastavení metod zadávání</string>
     <string name="calls">Hovory</string>
-    <string name="settings">Nastavení</string>
     <string name="array_default">Výchozí</string>
     <string name="array_system_default">Systém</string>
     <string name="array_global_actions_none">Žádná akce</string>
@@ -798,7 +794,6 @@
     <string name="qs_toggle_5g">5G síť</string>
     <string name="qs_toggle_fps">Obnovovací frekvence</string>
     <string name="qs_toggle_floatingtime">Plovoucí čas</string>
-    <string name="miuizer">Nastavení 米客 A14</string>
     <string name="miuizer_new_mod">Nově!</string>
     <string name="miuizer_show_launchericon_title">Ikona spouštěče</string>
     <string name="miuizer_show_launchericon_summ">Zobrazit ikonu v launcherech</string>
@@ -959,7 +954,6 @@
     <string name="system_disable_window_blurs_summ">Funguje bez možností pro vývojáře; při vypnutí řídí rozmazání běžným způsobem Android. Při zapnutí vykreslí HyperOS panel hlasitosti a nabídku napájení bez vlastního pozadí a níže uvedené posuvníky rozmazání hlasitosti nemají žádný účinek</string>
     <string name="system_disable_window_blurs_title">Vypnout rozmazání na úrovni oken</string>
     <string name="system_recents_card_style_hide_title">Skrýt název aplikace</string>
-    <string name="system_recents_card_style_summ">Skrýt názvy aplikací na kartách posledních úloh; po změně restartujte spouštěč</string>
     <string name="system_strong_toast_mode_dynamic_island">Dynamický ostrov</string>
     <string name="system_volume_mode_button_colors_summ">Přizpůsobí barvy pozadí a ikon dvou zkratek ve spodní části panelu hlasitosti. Po změně barev restartujte systémové rozhraní.</string>
     <string name="system_volume_mode_button_colors_title">Barvy zkratek Tichý režim a Nerušit</string>
@@ -1068,4 +1062,30 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Upravuje celou skupinu ikon přesunutých doleva. 100 % zachovává systémovou velikost. Vyžaduje restart systémového rozhraní.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Vertikální posun ikon vlevo</string>
     <string name="system_statusbar_lefticons_offset_summ">Záporné hodnoty posouvají nahoru, kladné dolů. 0 dp zachovává systémovou polohu. Vyžaduje restart systémového rozhraní.</string>
+    <string name="system_statusbar_duo_title">Duo: stavová ikona tři v jednom</string>
+    <string name="system_statusbar_duo_summ">Kruh baterie, Wi-Fi a mobilní signál v jedné ikoně; u dvou SIM se používá výchozí datová SIM</string>
+    <string name="system_statusbar_duo_restart">Po změně nastavení restartujte systémové rozhraní. Procenta a velikost Duo jsou nezávislé na skrytí a stylu systémových ikon. Nekompatibilní zařízení zachovají původní ikony.</string>
+    <string name="system_statusbar_duo_percent_title">Zobrazit procenta baterie</string>
+    <string name="system_statusbar_duo_size_title">Ruční velikost ikony</string>
+    <string name="system_statusbar_duo_size_summ">Platí bez automatické velikosti; omezena výškou řádku.</string>
+    <string name="system_statusbar_duo_autosize_title">Automatická velikost ikony</string>
+    <string name="system_statusbar_duo_autosize_summ">Velikost podle výšky systémových ikon a aktuálního řádku. Pro ruční velikost vypněte.</string>
+    <string name="system_statusbar_duo_audio_title">Zobrazovat připojení sluchátek</string>
+    <string name="system_statusbar_duo_audio_summ">Kabelová nebo Bluetooth sluchátka se při novém připojení zobrazí na 3 sekundy, pak se vrátí Wi-Fi nebo symbol sítě. Varování sítě mají přednost.</string>
+    <string name="system_statusbar_duo_bold_title">Silnější čáry ikony</string>
+    <string name="system_statusbar_duo_bold_summ">Silnější kruh baterie a čáry Wi-Fi a sluchátek.</string>
+    <string name="system_statusbar_duo_verticaloffset_title">Svislé posunutí</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">Vycentrování v řádku, krok 0,5 dp. Posunutí je omezeno výškou; na okraji se ikona zmenší bez oříznutí.</string>
+    <string name="system_statusbar_duo_headphonestyle_title">Styl ikony sluchátek</string>
+    <string name="system_statusbar_duo_headphone_auto">Automaticky</string>
+    <string name="system_statusbar_duo_headphone_overear">Náhlavní sluchátka</string>
+    <string name="system_statusbar_duo_headphone_earbuds">Špuntová sluchátka</string>
+    <string name="system_statusbar_duo_headphonescale_title">Velikost ikony sluchátek</string>
+    <string name="system_statusbar_duo_networkfallback_title">Náhrada odpojené Wi-Fi</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Bez Wi-Fi zobrazí symbol nebo aktuální typ sítě; neznámý typ použije symbol.</string>
+    <string name="system_statusbar_duo_btbattery_title">Barvy baterie Bluetooth</string>
+    <string name="system_statusbar_duo_btbattery_summ">Jedno zařízení a čerstvé hlášení: červená do 20 %, jantarová do 50 %. Ostatní a neznámé úrovně používají systémovou barvu; kruh ukazuje baterii telefonu.</string>
+    <string name="system_statusbar_duo_cellularstyle_title">Styl mobilní sítě uprostřed</string>
+    <string name="system_statusbar_duo_cellular_graphic">Symbol</string>
+    <string name="system_statusbar_duo_cellular_text">Text</string>
 </resources>

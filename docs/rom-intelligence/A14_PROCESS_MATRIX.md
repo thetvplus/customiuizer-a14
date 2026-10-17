@@ -35,7 +35,6 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 |---|---|---|
 | `android` | `AndroidPackageInstaller` |  |
 | `com.android.incallui` | `PhoneInstaller` |  |
-| `com.android.packageinstaller` | `PackageInstallerRouter` |  |
 | `com.android.permissioncontroller` | `PermissionControllerInstaller` |  |
 | `com.android.settings` | `SettingsInstaller` | Explicitly denies `com.android.settings:remote` |
 | `com.android.systemui` | `SystemUiInstaller` | ReflectionCache + SystemUIInitializer hook; post-init prefs |
@@ -49,7 +48,7 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | `com.miui.guardprovider` | `GuardProviderInstaller` |  |
 | `com.miui.home` | `LauncherInstaller` | ReflectionCache; may also trigger GenericAppInstaller post-attach |
 | `com.miui.miwallpaper` | `MediaInstaller` |  |
-| `com.miui.packageinstaller` | `PackageInstallerRouter` | PackageInstallerRouter handles both MIUI and AOSP installer |
+| `com.miui.packageinstaller` | `PackageInstallerRouter` | PackageInstallerRouter handles the scoped MIUI installer |
 | `com.miui.powerkeeper` | `PowerKeeperInstaller` |  |
 | `com.miui.screenshot` | `MediaInstaller` |  |
 | `com.miui.securitycenter` | `SecurityCenterInstaller` | Explicitly denies `com.miui.securitycenter.bootaware` |
@@ -206,7 +205,7 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | 143 | No Password | `system_nopassword` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `SystemLockScreenHooks.NoPasswordHook(lpparam)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |
 | 144 | Notification Importance | `system_notifimportance` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `SystemUINotificationHooks.NotificationImportanceHook(lp...` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |
 | 145 | No Light Up On Charge System UI | `system_nolightuponcharges` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `SystemUI.NoLightUpOnChargeHook(lpparam)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |
-| 146 | Status Bar Height | `system_statusbarheight` | ANY | PACKAGE_READY | CommonPackageFeatures (MainModule) | `ModsSystem.StatusBarHeightHook(lpparam)` | any scoped package where hasEnabledFeature() is true |  |
+| 146 | Status Bar Height | `system_statusbarheight` | ANY | PACKAGE_READY | CommonPackageFeatures (MainModule) | `ModsSystem.StatusBarHeightHook(lpparam)` | android; com.android.systemui; com.miui.home |  |
 | 147 | Alarm Compat | `various_alarmcompat` | ANY | PACKAGE_READY | CommonPackageFeatures (MainModule) | `Various.AlarmCompatHook()` | any scoped package where hasEnabledFeature() is true |  |
 | 148 | Launcher Folder Columns Res | `launcher_folder_cols` | LAUNCHER | PACKAGE_READY | LauncherPackageReadyFeatures | `LauncherFolderHooks.FolderColumnsRes(mPrefs.getInt("lau...` | com.miui.home | third-party launchers (unless selected app sets) |
 | 149 | Launcher Horizontal Spacing | `launcher_horizmargin` | LAUNCHER | PACKAGE_READY | LauncherPackageReadyFeatures | `LauncherLayoutHooks.HorizontalSpacingRes()` | com.miui.home | third-party launchers (unless selected app sets) |
@@ -263,9 +262,9 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | 200 | Launcher Close On Launch | `launcher_closefolders` | LAUNCHER | APPLICATION_ATTACHED | LauncherPostAttachFeatures | `LauncherFolderHooks.CloseFolderOrDrawerOnLaunchShortcut...` | com.miui.home | third-party launchers (unless selected app sets) |
 | 201 | Launcher Resizable Widgets | `system_resizablewidgets` | LAUNCHER | APPLICATION_ATTACHED | LauncherPostAttachFeatures | `LauncherLayoutHooks.ResizableWidgetsHook(lpparam)` | com.miui.home | third-party launchers (unless selected app sets) |
 | 202 | Launcher Wallpaper Color Mode | `launcher_wallpaper_colormode` | LAUNCHER | APPLICATION_ATTACHED | LauncherPostAttachFeatures | `LauncherAnimationHooks.WallpaperColorModeHook(lpparam)` | com.miui.home | third-party launchers (unless selected app sets) |
-| 203 | Input Method Volume Cursor | `controls_volumecursor` | ANY | PACKAGE_READY | InputMethodFeatures | `Controls.VolumeCursorHook(lpparam)` | com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype | not in scope.list |
-| 204 | Input Method Fix Bottom Margin | `controls_nonavbar_fix_inputmethod` | ANY | PACKAGE_READY | InputMethodFeatures | `Various.FixInputMethodBottomMarginHook(lpparam)` | com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype | not in scope.list |
-| 205 | Input Method Gboard Padding | `various_gboardpadding_port` | ANY | PACKAGE_READY | InputMethodFeatures | `Various.GboardPaddingHook(lpparam)` | com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype | not in scope.list |
+| 203 | Input Method Volume Cursor | `controls_volumecursor` | ANY | PACKAGE_READY | InputMethodFeatures | `Controls.VolumeCursorHook(lpparam)` | com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype | packages outside scope.list (no callback with static scope) |
+| 204 | Input Method Fix Bottom Margin | `controls_nonavbar_fix_inputmethod` | ANY | PACKAGE_READY | InputMethodFeatures | `Various.FixInputMethodBottomMarginHook(lpparam)` | com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype | packages outside scope.list (no callback with static scope) |
+| 205 | Input Method Gboard Padding | `various_gboardpadding_port` | ANY | PACKAGE_READY | InputMethodFeatures | `Various.GboardPaddingHook(lpparam)` | com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype | packages outside scope.list (no callback with static scope) |
 | 206 | Settings Miuizer Icon | `miuizer_settingsiconpos` | SYSTEM_PACKAGE | PACKAGE_READY | SettingsFeatures | `GlobalActions.miuizerSettingsHook(lpparam)` | com.android.settings | com.android.settings:remote |
 | 207 | Settings Disable Any Notification | `system_disableanynotif` | SYSTEM_PACKAGE | PACKAGE_READY | SettingsFeatures | `(default base install)` | com.android.settings | com.android.settings:remote |
 | 208 | Settings Notification Importance | `system_notifimportance` | SYSTEM_PACKAGE | PACKAGE_READY | SettingsFeatures | `SystemNotificationHooks.NotificationImportanceHook(lppa...` | com.android.settings | com.android.settings:remote |
@@ -292,12 +291,12 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | 229 | Power Keeper Apps Restrict | `various_restrictapp` | SYSTEM_PACKAGE | PACKAGE_READY | PowerKeeperFeatures | `Various.AppsRestrictPowerHook(lpparam)` | com.miui.powerkeeper |  |
 | 230 | Power Keeper Persist Battery Optimization | `various_persist_batteryoptimization` | SYSTEM_PACKAGE | PACKAGE_READY | PowerKeeperFeatures | `Various.PersistBatteryOptimizationHook(lpparam)` | com.miui.powerkeeper |  |
 | 231 | Guard Provider Disable Defraud Apps | `various_disable_defraud_apps_detect` | SYSTEM_PACKAGE | PACKAGE_READY | GuardProviderFeatures | `(default base install)` | com.miui.guardprovider |  |
-| 232 | Package Installer Miui Package | `various_miuiinstaller` | SYSTEM_PACKAGE | PACKAGE_READY | PackageInstallerFeatures | `Various.MiuiPackageInstallerHook(lpparam)` | com.miui.packageinstaller; com.android.packageinstaller |  |
-| 233 | Package Installer App Info | `various_installappinfo` | SYSTEM_PACKAGE | PACKAGE_READY | PackageInstallerFeatures | `Various.AppInfoDuringMiuiInstallHook(lpparam)` | com.miui.packageinstaller; com.android.packageinstaller |  |
-| 234 | Package Installer Purify | `various_installer_purify` | SYSTEM_PACKAGE | PACKAGE_READY | PackageInstallerFeatures | `Various.PurePackageInstallerHook(lpparam)` | com.miui.packageinstaller; com.android.packageinstaller |  |
-| 235 | Media Disable Unlock Wallpaper Scale | `launcher_disable_wallpaperscale` | SYSTEM_PACKAGE | PACKAGE_READY | MediaFeatures | `LauncherAnimationHooks.DisableUnlockWallpaperScale(lppa...` | android |  |
-| 236 | Media Screenshot Config | `system_screenshot` | SYSTEM_PACKAGE | PACKAGE_READY | MediaFeatures | `(default base install)` | android |  |
-| 237 | Media Gallery Screenshot Path | `system_gallery_screenshots_path` | SYSTEM_PACKAGE | PACKAGE_READY | MediaFeatures | `ModsSystem.GalleryScreenshotPathHook(lpparam)` | android |  |
+| 232 | Package Installer Miui Package | `various_miuiinstaller` | SYSTEM_PACKAGE | PACKAGE_READY | PackageInstallerFeatures | `Various.MiuiPackageInstallerHook(lpparam)` | com.miui.packageinstaller |  |
+| 233 | Package Installer App Info | `various_installappinfo` | SYSTEM_PACKAGE | PACKAGE_READY | PackageInstallerFeatures | `Various.AppInfoDuringMiuiInstallHook(lpparam)` | com.miui.packageinstaller |  |
+| 234 | Package Installer Purify | `various_installer_purify` | SYSTEM_PACKAGE | PACKAGE_READY | PackageInstallerFeatures | `Various.PurePackageInstallerHook(lpparam)` | com.miui.packageinstaller |  |
+| 235 | Media Disable Unlock Wallpaper Scale | `launcher_disable_wallpaperscale` | SYSTEM_PACKAGE | PACKAGE_READY | MediaFeatures | `LauncherAnimationHooks.DisableUnlockWallpaperScale(lppa...` | com.miui.miwallpaper |  |
+| 236 | Media Screenshot Config | `system_screenshot` | SYSTEM_PACKAGE | PACKAGE_READY | MediaFeatures | `(default base install)` | com.miui.screenshot |  |
+| 237 | Media Gallery Screenshot Path | `system_gallery_screenshots_path` | SYSTEM_PACKAGE | PACKAGE_READY | MediaFeatures | `ModsSystem.GalleryScreenshotPathHook(lpparam)` | com.miui.gallery |  |
 | 238 | Android Clean Share Menu | `system_cleanshare` | SYSTEM_PACKAGE | PACKAGE_READY | AndroidPackageFeatures | `SystemShareMenuHooks.CleanShareMenuHook(lpparam)` | android |  |
 | 239 | Android Clean Open With Menu | `system_cleanopenwith` | SYSTEM_PACKAGE | PACKAGE_READY | AndroidPackageFeatures | `SystemShareMenuHooks.CleanOpenWithMenuHook(lpparam)` | android |  |
 | 240 | Android All Rotations | `system_allrotations2` | SYSTEM_PACKAGE | PACKAGE_READY | AndroidPackageFeatures | `(default base install)` | android |  |
@@ -314,3 +313,4 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | 251 | USB Default Function | `system_usb_default_function` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `(default base install)` | system_server |  |
 | 252 | Hide IME Dismiss Button | `controls_hide_ime_dismiss_button` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `Controls.HideImeDismissButtonHook(lpparam)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |
 | 253 | Status Bar Content Geometry | `system_statusbar_content_vertical_offset` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `StatusBarContentGeometryHooks.hook(lpparam)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |
+| 254 | Duo Status Bar | `system_statusbar_duo` | SYSTEM_UI | PACKAGE_READY | SystemUiFeatures | `(default base install)` | com.android.systemui | miui.systemui.plugin (ClassLoader extracted at runtime) |

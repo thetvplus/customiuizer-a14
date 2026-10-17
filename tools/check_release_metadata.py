@@ -21,6 +21,18 @@ def parse_gradle_version() -> tuple[int, str]:
     return int(code.group(1)), name.group(1)
 
 
+def changelog_sections(text: str) -> list[tuple[str, str]]:
+    """Return release headings and their own bodies, excluding later sections."""
+    headings = list(re.finditer(r"^##\s+([^\n]+)$", text, re.M))
+    sections: list[tuple[str, str]] = []
+    for index, heading in enumerate(headings):
+        version = re.match(r"(r14\.\d+\.\d+)\b", heading.group(1))
+        if version:
+            end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
+            sections.append((version.group(1), text[heading.end():end]))
+    return sections
+
+
 def check(require_tag: bool = False) -> list[str]:
     errors: list[str] = []
     version_code, version_name = parse_gradle_version()
@@ -43,10 +55,14 @@ def check(require_tag: bool = False) -> list[str]:
 
     for changelog in ("CHANGELOG.md", "CHANGELOG_CN.md"):
         text = files[changelog].read_text(encoding="utf-8") if files[changelog].is_file() else ""
-        if not re.search(rf"^## {re.escape(version_name)}\b", text, re.M):
-            errors.append(f"{changelog} missing heading for {version_name}")
-        if str(version_code) not in text:
-            errors.append(f"{changelog} does not mention versionCode {version_code}")
+        sections = changelog_sections(text)
+        if not sections or sections[0][0] != version_name:
+            errors.append(f"{changelog} first release heading must be {version_name}")
+        current = [body for name, body in sections if name == version_name]
+        if len(current) != 1:
+            errors.append(f"{changelog} must contain exactly one heading for {version_name}")
+        elif re.findall(r"\bversionCode(?:\s*[:=]\s*|\s+)(\d+)\b", current[0]) != [str(version_code)]:
+            errors.append(f"{changelog} {version_name} must declare versionCode {version_code} exactly once")
 
     if require_tag:
         result = subprocess.run(

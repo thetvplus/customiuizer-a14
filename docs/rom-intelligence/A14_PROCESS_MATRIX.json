@@ -35,7 +35,7 @@
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
       "installHook": "Controls.NavBarActionsHook(lpparam)",
-      "enableCondition": "prefs.getInt(\"controls_backlong_action\", 1) > 1 || prefs.getInt(\"controls_homelong_action\", 1) > 1 || prefs.getInt(\"controls_menulong_action\", 1) > 1",
+      "enableCondition": "{ prefs -> NavBarActionsFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "system_server",
       "deniedProcess": ""
     },
@@ -48,7 +48,7 @@
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
       "installHook": "Controls.PowerDoubleTapActionHook(lpparam)",
-      "enableCondition": "prefs.getInt(\"controls_powerdt_action\", 1) > 1 || prefs.getBoolean(\"controls_volumedowndt_torch\")",
+      "enableCondition": "{ prefs -> PowerDoubleTapActionFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "system_server",
       "deniedProcess": ""
     },
@@ -1881,8 +1881,8 @@
       "phase": "PACKAGE_READY",
       "installer": "CommonPackageFeatures (MainModule)",
       "installHook": "ModsSystem.StatusBarHeightHook(lpparam)",
-      "enableCondition": "prefs.getInt(\"system_statusbarheight\", 11) > 11",
-      "allowedProcess": "any scoped package where hasEnabledFeature() is true",
+      "enableCondition": "prefs.getInt(\"system_statusbarheight\", 11) > 11 && packageName in RESOURCE_PACKAGES",
+      "allowedProcess": "android; com.android.systemui; com.miui.home",
       "deniedProcess": ""
     },
     {
@@ -2624,7 +2624,7 @@
       "installHook": "Controls.VolumeCursorHook(lpparam)",
       "enableCondition": "prefs.getBoolean(\"controls_volumecursor\")",
       "allowedProcess": "com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype",
-      "deniedProcess": "not in scope.list"
+      "deniedProcess": "packages outside scope.list (no callback with static scope)"
     },
     {
       "featureIdInt": 204,
@@ -2637,7 +2637,7 @@
       "installHook": "Various.FixInputMethodBottomMarginHook(lpparam)",
       "enableCondition": "prefs.getBoolean(\"controls_nonavbar_fix_inputmethod\") && prefs.getBoolean(\"controls_nonavbar\")",
       "allowedProcess": "com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype",
-      "deniedProcess": "not in scope.list"
+      "deniedProcess": "packages outside scope.list (no callback with static scope)"
     },
     {
       "featureIdInt": 205,
@@ -2650,7 +2650,7 @@
       "installHook": "Various.GboardPaddingHook(lpparam)",
       "enableCondition": "packageName.startsWith(\"com.google.android.inputmethod\") && (prefs.getInt(\"various_gboardpadding_port\", 0) > 0 || prefs.getInt(\"various_gboardpadding_land\", 0) > 0)",
       "allowedProcess": "com.baidu.input; com.baidu.input_mi; com.iflytek.inputmethod; com.iflytek.inputmethod.miui; com.sohu.inputmethod.sogou; com.sohu.inputmethod.sogou.xiaomi; com.google.android.inputmethod*; com.touchtype.swiftkey; com.tencent.wetype",
-      "deniedProcess": "not in scope.list"
+      "deniedProcess": "packages outside scope.list (no callback with static scope)"
     },
     {
       "featureIdInt": 206,
@@ -3000,7 +3000,7 @@
       "installer": "PackageInstallerFeatures",
       "installHook": "Various.MiuiPackageInstallerHook(lpparam)",
       "enableCondition": "prefs.getBoolean(\"various_miuiinstaller\")",
-      "allowedProcess": "com.miui.packageinstaller; com.android.packageinstaller",
+      "allowedProcess": "com.miui.packageinstaller",
       "deniedProcess": ""
     },
     {
@@ -3013,7 +3013,7 @@
       "installer": "PackageInstallerFeatures",
       "installHook": "Various.AppInfoDuringMiuiInstallHook(lpparam)",
       "enableCondition": "prefs.getBoolean(\"various_installappinfo\")",
-      "allowedProcess": "com.miui.packageinstaller; com.android.packageinstaller",
+      "allowedProcess": "com.miui.packageinstaller",
       "deniedProcess": ""
     },
     {
@@ -3026,7 +3026,7 @@
       "installer": "PackageInstallerFeatures",
       "installHook": "Various.PurePackageInstallerHook(lpparam)",
       "enableCondition": "prefs.getBoolean(\"various_installer_purify\")",
-      "allowedProcess": "com.miui.packageinstaller; com.android.packageinstaller",
+      "allowedProcess": "com.miui.packageinstaller",
       "deniedProcess": ""
     },
     {
@@ -3039,7 +3039,7 @@
       "installer": "MediaFeatures",
       "installHook": "LauncherAnimationHooks.DisableUnlockWallpaperScale(lpparam)",
       "enableCondition": "packageName == \"com.miui.miwallpaper\" && prefs.getBoolean(\"launcher_disable_wallpaperscale\")",
-      "allowedProcess": "android",
+      "allowedProcess": "com.miui.miwallpaper",
       "deniedProcess": ""
     },
     {
@@ -3052,7 +3052,7 @@
       "installer": "MediaFeatures",
       "installHook": "(default base install)",
       "enableCondition": "packageName == \"com.miui.screenshot\" && prefs.getBoolean(\"system_screenshot\")",
-      "allowedProcess": "android",
+      "allowedProcess": "com.miui.screenshot",
       "deniedProcess": ""
     },
     {
@@ -3065,7 +3065,7 @@
       "installer": "MediaFeatures",
       "installHook": "ModsSystem.GalleryScreenshotPathHook(lpparam)",
       "enableCondition": "packageName == \"com.miui.gallery\" && prefs.getStringAsInt(\"system_gallery_screenshots_path\", 1) > 1",
-      "allowedProcess": "android",
+      "allowedProcess": "com.miui.gallery",
       "deniedProcess": ""
     },
     {
@@ -3272,7 +3272,20 @@
       "phase": "PACKAGE_READY",
       "installer": "SystemUiFeatures",
       "installHook": "StatusBarContentGeometryHooks.hook(lpparam)",
-      "enableCondition": "{ true }",
+      "enableCondition": "true",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 254,
+      "featureIdName": "systemui_duo_status_bar",
+      "name": "Duo Status Bar",
+      "preferenceKey": "system_statusbar_duo",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "(default base install)",
+      "enableCondition": "{ prefs -> DuoStatusBarFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     }
@@ -3324,7 +3337,6 @@
     "com.miui.powerkeeper": "PowerKeeperInstaller",
     "com.android.settings": "SettingsInstaller",
     "com.miui.packageinstaller": "PackageInstallerRouter",
-    "com.android.packageinstaller": "PackageInstallerRouter",
     "com.android.permissioncontroller": "PermissionControllerInstaller",
     "com.google.android.permissioncontroller": "PermissionControllerInstaller",
     "com.miui.home": "LauncherInstaller"

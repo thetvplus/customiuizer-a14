@@ -399,7 +399,7 @@ object DeviceInfoMonitor {
             val classLoader = lpClassLoader
             if (classLoader != null) {
                 @Suppress("UNUSED_VARIABLE")
-                val handle = CustomTextIconTintRoute.register(iconView, classLoader, "left")
+                val handle = CustomTextIconTintRoute.registerForIconManager(iconView, thisObj, classLoader, "left")
             } else {
                 XposedHelpers.log("DeviceInfoMonitor: cannot register dark receiver, class loader not captured")
             }

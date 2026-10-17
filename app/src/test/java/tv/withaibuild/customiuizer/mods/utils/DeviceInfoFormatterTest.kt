@@ -182,6 +182,22 @@ class DeviceInfoFormatterTest {
     }
 
     @Test
+    fun cpuOnlyDoesNotReadUnusedBatteryTemperature() {
+        for (contentOpt in intArrayOf(-1, 0, 3, 4, Int.MAX_VALUE)) {
+            val props = object : Properties() {
+                var reads = 0
+                override fun getProperty(key: String): String? {
+                    reads++
+                    return super.getProperty(key)
+                }
+            }.apply { setProperty("POWER_SUPPLY_TEMP", "370") }
+            val cfg = baseConfig().copy(deviceTempContentOpt = contentOpt)
+            assertEquals("52.0℃", DeviceInfoFormatter.formatDeviceInfo(cfg, props, "52000"))
+            assertEquals("CPU-only text must not compute battery temperature", 0, props.reads)
+        }
+    }
+
+    @Test
     fun bothShowsBatteryAndCpuWhenPresent() {
         val props = Properties().apply { setProperty("POWER_SUPPLY_TEMP", "370") }
         val cfg = baseConfig().copy(deviceTempContentOpt = 1)

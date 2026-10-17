@@ -386,17 +386,15 @@ object AppLocaleController {
      */
     @JvmStatic
     fun buildLocaleDisplayData(systemDefaultLabel: String): Pair<Array<CharSequence>, Array<String>> {
-        val displayNames = ArrayList<CharSequence>(SUPPORTED_LOCALE_TAGS.size)
-        val values = ArrayList<String>(SUPPORTED_LOCALE_TAGS.size)
-        for (tag in SUPPORTED_LOCALE_TAGS) {
-            values.add(tag)
-            displayNames.add(when (tag) {
+        val values = SUPPORTED_LOCALE_TAGS.toTypedArray()
+        val displayNames = Array<CharSequence>(values.size) { index ->
+            when (val tag = values[index]) {
                 "auto" -> systemDefaultLabel
                 "zh-TW" -> "繁體中文（台灣）"
                 else -> buildLanguageDisplayName(tag)
-            })
+            }
         }
-        return Pair(displayNames.toTypedArray(), values.toTypedArray())
+        return Pair(displayNames, values)
     }
 
     private fun buildLanguageDisplayName(tag: String): String {

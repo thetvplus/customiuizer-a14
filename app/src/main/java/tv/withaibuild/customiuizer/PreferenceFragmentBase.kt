@@ -711,7 +711,7 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
                     ?: throw IllegalStateException("Backup input stream unavailable")
                 val prefs = AppHelper.appPrefs
                     ?: throw IllegalStateException("Preferences unavailable")
-                val componentName = ComponentName(validAct, GateWayLauncher::class.java)
+                val componentName = ComponentName(validAct, Helpers.LAUNCHER_ALIAS_NAME)
                 val result = BackupRestore.performRestore(
                     inputStream,
                     validAct.packageManager,

@@ -287,7 +287,6 @@
     <string name="system_screenanim_duration_summ">Задать длительность анимации</string>
     <string name="system_screenanim_desc">Малые значения практически отключат анимацию</string>
     <string name="system_blur_title">Размытие фона</string>
-    <string name="system_recents_blur_summ">Уровень размытия фона на экране последних приложений</string>
     <string name="system_drawer_blur_summ">Уровень размытия фона в панели уведомлений</string>
     <string name="system_mods_lockscreen">Экран блокировки</string>
     <string name="system_mods_lockscreen_functionality">Дополнительная функциональность</string>
@@ -295,7 +294,6 @@
     <string name="system_blocktoasts_title">Блокировка</string>
     <string name="system_blocktoasts_summ">Запретить выбранным приложениям показ всплывающих сообщений</string>
     <string name="system_fivegtile_title">Плитка 5G</string>
-    <string name="system_fivegtile_summ">Добавить плитку 5G на панель быстрых настроек</string>
     <string name="system_cc_fpstile_title">Показать плитку частоты обновления</string>
     <string name="system_qs_force_systemfonts_title">Заставить часы использовать системные шрифты</string>
     <string name="system_cc_dateformat_title">Другой формат даты</string>
@@ -488,7 +486,6 @@
     <string name="launcher_renameapps_list_title">Изменённые названия</string>
     <string name="launcher_renameapps_modified">Изменённое название</string>
     <string name="launcher_privacyapps">Скрытые приложения</string>
-    <string name="launcher_privacyapps_fail">Не получены необходимые разрешения</string>
     <string name="launcher_privacyapps_gest_title">Убрать скрытую папку</string>
     <string name="launcher_privacyapps_gest_summ">Отключить жест двумя пальцами, который открывает папку скрытых приложений и секретный телефонный код, 233233</string>
     <string name="launcher_privacyapps_list_title">Список приложений для скрытия</string>
@@ -641,7 +638,6 @@
     <string name="appsort_install">Время установки</string>
     <string name="gboard">Настройки методов ввода</string>
     <string name="calls">Звонки</string>
-    <string name="settings">Настройки</string>
     <string name="array_default">Стандарт</string>
     <string name="array_system_default">Система</string>
     <string name="array_global_actions_none">Нет действия</string>
@@ -783,7 +779,6 @@
     <string name="qs_toggle_autorotate_landscape">Ландшафт</string>
     <string name="qs_toggle_5g">5G</string>
     <string name="qs_toggle_fps">Частота обновления</string>
-    <string name="miuizer">Настройки 米客 A14</string>
     <string name="miuizer_new_mod">Новый!</string>
     <string name="miuizer_show_launchericon_title">Иконка в ланчере</string>
     <string name="miuizer_show_launchericon_summ">Показывать иконку в ланчерах</string>
@@ -944,7 +939,6 @@
     <string name="system_disable_window_blurs_summ">Работает без параметров разработчика. Когда функция выключена, Android управляет размытием штатно. Когда включена, панель громкости и меню питания HyperOS не имеют собственного фона, а ползунки размытия громкости ниже не действуют</string>
     <string name="system_disable_window_blurs_title">Отключить размытие на уровне окон</string>
     <string name="system_recents_card_style_hide_title">Скрыть название приложения</string>
-    <string name="system_recents_card_style_summ">Скрывать названия приложений на карточках недавних задач; после изменения перезапустите рабочий стол</string>
     <string name="system_strong_toast_mode_dynamic_island">Динамический остров</string>
     <string name="system_volume_mode_button_colors_summ">Настройка цвета фона и значков двух кнопок внизу панели громкости. После изменения цветов перезапустите системный интерфейс.</string>
     <string name="system_volume_mode_button_colors_title">Цвета кнопок беззвучного режима и «Не беспокоить»</string>
@@ -1060,4 +1054,30 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Изменяет всю группу значков, перенесённых влево. 100% сохраняет системный размер. Требуется перезапуск интерфейса системы.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Смещение значков слева по вертикали</string>
     <string name="system_statusbar_lefticons_offset_summ">Отрицательные значения сдвигают вверх, положительные — вниз. 0 dp сохраняет системное положение. Требуется перезапуск интерфейса системы.</string>
+    <string name="system_statusbar_duo_title">Duo: значок состояния «три в одном»</string>
+    <string name="system_statusbar_duo_summ">Кольцо заряда, Wi-Fi и мобильный сигнал в одном значке; для двух SIM используется SIM для передачи данных по умолчанию</string>
+    <string name="system_statusbar_duo_restart">После изменения настроек перезапустите интерфейс системы. Процент и размер Duo не зависят от скрытия и оформления системных значков. При несовместимости сохраняются исходные значки.</string>
+    <string name="system_statusbar_duo_percent_title">Показывать заряд в процентах</string>
+    <string name="system_statusbar_duo_size_title">Размер значка вручную</string>
+    <string name="system_statusbar_duo_size_summ">Действует без автоматического размера; ограничен высотой строки.</string>
+    <string name="system_statusbar_duo_autosize_title">Автоматический размер значка</string>
+    <string name="system_statusbar_duo_autosize_summ">Размер зависит от высоты системных значков и строки. Отключите для ручной настройки.</string>
+    <string name="system_statusbar_duo_audio_title">Показывать подключение наушников</string>
+    <string name="system_statusbar_duo_audio_summ">При новом подключении проводные или Bluetooth-наушники видны 3 секунды, затем возвращается Wi-Fi или символ сети. Предупреждения сети имеют приоритет.</string>
+    <string name="system_statusbar_duo_bold_title">Жирные линии значка</string>
+    <string name="system_statusbar_duo_bold_summ">Более толстые линии кольца батареи, Wi-Fi и наушников.</string>
+    <string name="system_statusbar_duo_verticaloffset_title">Смещение по вертикали</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">Центрирование в строке, шаг 0,5 dp. Смещение ограничено высотой; у края значок уменьшается без обрезки.</string>
+    <string name="system_statusbar_duo_headphonestyle_title">Стиль наушников</string>
+    <string name="system_statusbar_duo_headphone_auto">Авто</string>
+    <string name="system_statusbar_duo_headphone_overear">Накладные наушники</string>
+    <string name="system_statusbar_duo_headphone_earbuds">Вкладыши</string>
+    <string name="system_statusbar_duo_headphonescale_title">Размер значка наушников</string>
+    <string name="system_statusbar_duo_networkfallback_title">Замена отключённого Wi-Fi</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Без Wi-Fi — значок сотовой сети или текущий тип сети. Неизвестный тип заменяется значком.</string>
+    <string name="system_statusbar_duo_btbattery_title">Цвет заряда Bluetooth</string>
+    <string name="system_statusbar_duo_btbattery_summ">Одно устройство и свежий отчёт: красный до 20%, янтарный до 50%. Остальные и неизвестные уровни используют системный цвет; кольцо показывает заряд телефона.</string>
+    <string name="system_statusbar_duo_cellularstyle_title">Стиль сотовой сети в центре</string>
+    <string name="system_statusbar_duo_cellular_graphic">Значок</string>
+    <string name="system_statusbar_duo_cellular_text">Текст</string>
 </resources>

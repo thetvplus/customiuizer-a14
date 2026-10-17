@@ -243,7 +243,7 @@ class MainFragment : PreferenceFragmentBase() {
         findPreference<Preference>("pref_key_miuizer_launchericon")?.setOnPreferenceChangeListener { _, newValue ->
             val act = activity as? AppCompatActivity ?: return@setOnPreferenceChangeListener false
             val pm = act.packageManager
-            val component = ComponentName(act, GateWayLauncher::class.java)
+            val component = ComponentName(act, Helpers.LAUNCHER_ALIAS_NAME)
             if (newValue == true) {
                 pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
             } else {

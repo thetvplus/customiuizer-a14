@@ -76,7 +76,7 @@ object BackupFormatV2 {
 
         // Total size preflight using Long to avoid overflow.
         var totalSize = 16L // MAGIC + FORMAT_VERSION + APP_REVISION + ENTRY_COUNT
-        for (key in entries.keys) {
+        for ((key, value) in entries) {
             val keyBytes = encodeStrictUtf8(key)
             if (keyBytes.size > MAX_KEY_BYTES) {
                 throw BackupFormatException("Key too long: ${keyBytes.size} > $MAX_KEY_BYTES")
@@ -86,7 +86,7 @@ object BackupFormatV2 {
             }
             totalSize += 2 + keyBytes.size // key length + bytes
             totalSize += 1 // type tag
-            totalSize += measureValueSize(entries[key])
+            totalSize += measureValueSize(value)
         }
         totalSize += 4 // CRC footer
 
@@ -134,16 +134,17 @@ object BackupFormatV2 {
             throw BackupFormatException("V2 file too large: ${bytes.size}")
         }
 
-        val storedCrc = readUnsignedInt32(bytes, bytes.size - 4)
-        val payload = bytes.copyOfRange(0, bytes.size - 4)
+        val payloadSize = bytes.size - 4
+        val storedCrc = readUnsignedInt32(bytes, payloadSize)
 
         val crc = CRC32()
-        crc.update(payload, 0, payload.size)
+        crc.update(bytes, 0, payloadSize)
         if (crc.value.toInt() != storedCrc) {
             throw BackupFormatException("V2 CRC mismatch")
         }
 
-        val input = DataInputStream(ByteArrayInputStream(payload))
+        // Limit reads to the payload so a truncated entry cannot consume the CRC footer.
+        val input = DataInputStream(ByteArrayInputStream(bytes, 0, payloadSize))
 
         val magic = input.readInt()
         if (magic != MAGIC) {
@@ -271,7 +272,7 @@ object BackupFormatV2 {
             throw BackupFormatException("StringSet too large: ${values.size} > $MAX_SET_ITEMS")
         }
         @Suppress("UNCHECKED_CAST")
-        val items = (values as Set<String>).toList().sorted()
+        val items = (values as Set<String>).sorted()
         data.writeInt(items.size)
         for (item in items) {
             writeString(data, item)

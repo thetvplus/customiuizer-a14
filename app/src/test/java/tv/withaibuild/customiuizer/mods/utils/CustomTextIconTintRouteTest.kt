@@ -3,10 +3,12 @@ package tv.withaibuild.customiuizer.mods.utils
 import android.app.Application
 import android.content.Context
 import android.view.View
+import com.android.systemui.statusbar.phone.MiuiLightDarkIconManager
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -39,6 +41,44 @@ class CustomTextIconTintRouteTest {
         assertEquals(1, view.onDarkChangedCount)
         assertEquals(1, view.listenerAddCount)
         assertTrue("View should receive initial tint", view.lastDarkTint != null)
+    }
+
+    @Test
+    fun controlCenterOwnerTintIsNotOverwrittenByWallpaperCallbacks() {
+        val dispatcher = FakeDarkIconDispatcher()
+        val view = FakeView(context, attached = true)
+        // MiuiLightDarkIconManager.onIconAdded paints the Control Center view white.
+        // setLight then skips identical values, even if wallpaper tint is reapplied.
+        view.onDarkChanged(null, 0f, 0xFFFFFFFF.toInt())
+        val handle = CustomTextIconTintRoute.registerForIconManager(
+            view, MiuiLightDarkIconManager(), classLoader, "test", dispatcher)
+
+        repeat(10) { dispatcher.dispatchTint(0xFF000000.toInt()) }
+
+        assertEquals("wallpaper callbacks must not overwrite the owner's white tint",
+            0xFFFFFFFF.toInt(), view.lastDarkTint)
+        assertNull(handle)
+        assertEquals(0, dispatcher.addCount)
+        assertEquals(0, view.listenerAddCount)
+        assertTrue(CustomTextIconTintRoute.registrations.isEmpty())
+    }
+
+    @Test
+    fun ordinaryIconManagerStillTracksWallpaperTintAndReleases() {
+        val dispatcher = FakeDarkIconDispatcher()
+        val view = FakeView(context, attached = true)
+        val handle = CustomTextIconTintRoute.registerForIconManager(
+            view, Any(), classLoader, "test", dispatcher)
+        assertNotNull(handle)
+
+        dispatcher.dispatchTint(0xFF000000.toInt())
+        assertEquals(0xFF000000.toInt(), view.lastDarkTint)
+        dispatcher.dispatchTint(0xFFFFFFFF.toInt())
+        assertEquals(0xFFFFFFFF.toInt(), view.lastDarkTint)
+        handle!!.release("fixture")
+        assertEquals(1, dispatcher.removeCount)
+        assertEquals(1, view.listenerRemoveCount)
+        assertTrue(CustomTextIconTintRoute.registrations.isEmpty())
     }
 
     @Test
@@ -261,6 +301,12 @@ class CustomTextIconTintRouteTest {
         fun removeDarkReceiver(view: View) {
             registered.remove(view)
             removeCount++
+        }
+
+        fun dispatchTint(tint: Int) {
+            for (view in registered) {
+                (view as? FakeView)?.onDarkChanged(null, 0f, tint)
+            }
         }
     }
 

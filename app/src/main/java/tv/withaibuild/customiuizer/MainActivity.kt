@@ -161,7 +161,6 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, R.string.permission_permanent, Toast.LENGTH_LONG).show()
                 }
             }
-            Helpers.REQUEST_PERMISSIONS_REPORT -> Toast.makeText(this, ":(", Toast.LENGTH_SHORT).show()
             else -> super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }

@@ -1,0 +1,195 @@
+name: A14 CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'r14.*'
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# New PR commits replace obsolete runs. Main and tag runs finish normally.
+concurrency:
+  group: a14-ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  fast:
+    name: Fast CI
+    # Removed branches/tags have no candidate code to validate.
+    if: github.event.deleted != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          force-download: true
+          verify-signature: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Select additional checks
+        id: scope
+        run: python tools/ci_scope.py
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install pinned Android SDK packages
+        run: bash tools/ci_install_android_sdk.sh
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-cleanup: on-success
+
+      - name: Install CI parser
+        run: python -m pip install --disable-pip-version-check -r tools/requirements.txt
+
+      # Includes application-source contracts as well as tests of the tools.
+      - name: Python tests and source contracts
+        run: |
+          python tools/check_ci_portability.py
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json hermeticity
+
+      - name: Tool consistency and independent mutation gates
+        if: steps.scope.outputs.tools == 'true'
+        run: |
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json determinism
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json mutate --required-only
+
+      - name: Code, JVM tests and lint
+        run: python tools/verify.py full
+
+      - name: Develop build and fatal lint
+        if: steps.scope.outputs.full != 'true'
+        run: ./gradlew --no-daemon :app:assembleDevelop :app:lintVitalDevelop
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fast-ci-diagnostics
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  full:
+    name: Full CI
+    needs: fast
+    if: needs.fast.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          force-download: true
+          verify-signature: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install pinned Android SDK packages
+        run: bash tools/ci_install_android_sdk.sh
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-cleanup: on-success
+
+      - name: Tag release metadata
+        if: startsWith(github.ref, 'refs/tags/r14.')
+        run: python tools/check_release_metadata.py --require-tag
+
+      # Neither build may restore compiled outputs from the Gradle build cache.
+      # Separate Gradle processes also avoid sharing compiler state.
+      - name: First clean develop build
+        run: |
+          ./gradlew --no-daemon --no-build-cache --no-configuration-cache -Pkotlin.compiler.execution.strategy=in-process -Pkotlin.incremental=false clean :app:assembleDevelop
+          cp app/build/outputs/apk/develop/*.apk "$RUNNER_TEMP/first-develop.apk"
+          test -s app/build/outputs/mapping/develop/mapping.txt
+          cp app/build/outputs/mapping/develop/mapping.txt "$RUNNER_TEMP/first-mapping.txt"
+
+      - name: Second clean develop build and fatal lint
+        run: |
+          ./gradlew --no-daemon --no-build-cache --no-configuration-cache -Pkotlin.compiler.execution.strategy=in-process -Pkotlin.incremental=false clean :app:assembleDevelop :app:lintVitalDevelop
+          cp app/build/outputs/apk/develop/*.apk "$RUNNER_TEMP/second-develop.apk"
+
+      - name: APK content and R8 mapping reproducibility
+        run: |
+          python tools/apk_semantic_diff.py --require-reproducible --json-output "$RUNNER_TEMP/apk-semantic-diff.json" "$RUNNER_TEMP/first-develop.apk" "$RUNNER_TEMP/second-develop.apk"
+          cmp "$RUNNER_TEMP/first-mapping.txt" app/build/outputs/mapping/develop/mapping.txt
+
+      - name: Require develop inspection files
+        run: |
+          test -s app/build/outputs/mapping/develop/mapping.txt
+          test -f app/build/outputs/mapping/develop/usage.txt
+          test -s app/build/outputs/mapping/develop/configuration.txt
+
+      - name: Upload develop artifacts for inspection
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: develop-apk-and-mapping
+          path: |
+            app/build/outputs/apk/develop/*.apk
+            app/build/outputs/mapping/develop/mapping.txt
+            app/build/outputs/mapping/develop/usage.txt
+            app/build/outputs/mapping/develop/configuration.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: full-ci-diagnostics
+          path: |
+            ${{ runner.temp }}/apk-semantic-diff.json
+            ${{ runner.temp }}/first-mapping.txt
+            app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 7

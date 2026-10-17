@@ -305,14 +305,13 @@ object LauncherAnimationHooks {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
                 try {
-
                     val v = wallpaperColorMode
-                    if (v > 1) {
-                        args[0] = if (v == 2) 2 else 0
-                    }
-
+                    if (v <= 1) return XposedHelpers.proceedOrThrow(chain, null)
+                    val colorMode = if (v == 2) 2 else 0
+                    if (chain.getArg(0) == colorMode) return XposedHelpers.proceedOrThrow(chain, null)
+                    val args = XposedHelpers.getArgsArray(chain)
+                    args[0] = colorMode
                     result = chain.proceed(args)
                 } catch (t: Throwable) {
                     throwable = t
@@ -325,14 +324,13 @@ object LauncherAnimationHooks {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
                 try {
-
                     val v = wallpaperColorMode
-                    if (v > 1) {
-                        args[0] = if (v == 2) 2 else 0
-                    }
-
+                    if (v <= 1) return XposedHelpers.proceedOrThrow(chain, null)
+                    val colorMode = if (v == 2) 2 else 0
+                    if (chain.getArg(0) == colorMode) return XposedHelpers.proceedOrThrow(chain, null)
+                    val args = XposedHelpers.getArgsArray(chain)
+                    args[0] = colorMode
                     result = chain.proceed(args)
                 } catch (t: Throwable) {
                     throwable = t

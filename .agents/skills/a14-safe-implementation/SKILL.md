@@ -1,6 +1,6 @@
 ---
 name: a14-safe-implementation
-description: Implement one A14 change on tomthenpc/customiuizer-a14. Read AGENTS.md first.
+description: Implement one A14 change on thetvplus/customiuizer-a14. Read AGENTS.md first.
 argument-hint: <task>
 triggers: ["user"]
 ---

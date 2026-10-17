@@ -14,7 +14,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
 import miui.os.Build
-import tv.withaibuild.customiuizer.CredentialsLauncher
 import tv.withaibuild.customiuizer.PrefsProvider
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.SubFragment
@@ -141,6 +140,7 @@ class System : SubFragment() {
                 findPreference<Preference>("pref_key_system_statusbar_batterytempandcurrent_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_statusbar_batterytempandcurrent); true }
                 findPreference<Preference>("prefs_system_statusbar_showdevicetemperature_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_statusbar_showdevicetemperature); true }
                 findPreference<Preference>("pref_key_system_statusbar_batterystyle_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, false, R.xml.prefs_system_statusbar_batterystyle); true }
+                findPreference<Preference>("pref_key_system_statusbar_duo_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_statusbar_duo); true }
                 findPreference<Preference>("pref_key_system_statusbar_mobile_signal_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_statusbar_mobilesignal); true }
                 findPreference<Preference>("pref_key_system_statusbaricons_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_hideicons); true }
                 findPreference<Preference>("pref_key_system_statusbaricons_atright_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_statusbar_righticons); true }
@@ -214,12 +214,12 @@ class System : SubFragment() {
                     val act = activity ?: return@setOnPreferenceChangeListener false
                     val pm = act.packageManager
                     val state = if (newValue == true) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                    pm.setComponentEnabledSetting(ComponentName(act, CredentialsLauncher::class.java), state, PackageManager.DONT_KILL_APP)
+                    pm.setComponentEnabledSetting(ComponentName(act, Helpers.CREDENTIALS_LAUNCHER_ALIAS_NAME), state, PackageManager.DONT_KILL_APP)
                     true
                 }
 
                 activity?.let { act ->
-                    findPreference<CheckBoxPreferenceEx>("pref_key_system_credentials")?.isChecked = act.packageManager.getComponentEnabledSetting(ComponentName(act, CredentialsLauncher::class.java)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                    findPreference<CheckBoxPreferenceEx>("pref_key_system_credentials")?.isChecked = act.packageManager.getComponentEnabledSetting(ComponentName(act, Helpers.CREDENTIALS_LAUNCHER_ALIAS_NAME)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                 }
 
                 if (Helpers.isDeviceEncrypted(context)) {

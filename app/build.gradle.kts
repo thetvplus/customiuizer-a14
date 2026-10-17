@@ -1,9 +1,22 @@
 import java.util.Properties
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.WriteProperties
+import com.android.build.gradle.internal.tasks.OptimizeResourcesTask
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 plugins {
     alias(libs.plugins.android.application)
+}
+
+kotlin {
+    compilerOptions {
+        // Upgrade the host compiler for its security fix without changing
+        // the project's Kotlin language/API level or Android JVM target.
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 val officialRelease = (project.findProperty("officialRelease")?.toString()?.toBoolean() ?: false)
@@ -34,8 +47,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 218
-val lastVersionName = "r14.21.9"
+val lastVersion = 230
+val lastVersionName = "r14.22.7"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -109,6 +122,8 @@ val generatePreferenceArtifacts = tasks.register<Exec>("generatePreferenceArtifa
 android {
     namespace = "tv.withaibuild.customiuizer"
     compileSdk = 37
+    // Keep CI's SDK package pin aligned with the tool actually used by AGP.
+    buildToolsVersion = "36.0.0"
 
     signingConfigs {
         if (officialRelease) {
@@ -174,6 +189,8 @@ android {
                 "META-INF/androidx.*.version",
                 "**.kotlin_builtins",
                 "**.kotlin_metadata",
+                // JVM coroutine-agent replacement bytecode cannot run in an ART APK.
+                "DebugProbesKt.bin",
             )
         }
     }
@@ -312,6 +329,34 @@ androidComponents {
     }
 }
 
+// R8's proto-to-binary conversion rebuilds the table and drops link-time compact
+// encoding. Apply it to the existing optimized resource output, before APK signing.
+// This uses the pinned AGP task and its own AAPT2 binary; check it when upgrading AGP.
+tasks.withType<OptimizeResourcesTask>().configureEach {
+    inputs.property("compactResourceEntries", true)
+    doLast {
+        val resourceTask = this as OptimizeResourcesTask
+        val outputDir = resourceTask.optimizedProcessedRes.get().asFile
+        val executableName = if (System.getProperty("os.name").startsWith("Windows")) "aapt2.exe" else "aapt2"
+        val executable = resourceTask.aapt2.binaryDirectory.singleFile.resolve(executableName)
+        check(executable.isFile) { "AGP AAPT2 binary not found" }
+        var compacted = 0
+        outputDir.walkTopDown().filter { it.isFile && (it.extension == "ap_" || it.extension == "apk") }.forEach { input ->
+            val temporary = input.resolveSibling("${input.name}.compact")
+            try {
+                val exit = ProcessBuilder(executable.absolutePath, "optimize", "--enable-compact-entries",
+                    "-o", temporary.absolutePath, input.absolutePath).inheritIO().start().waitFor()
+                check(exit == 0) { "Compact resource encoding failed for ${input.name}: $exit" }
+                Files.move(temporary.toPath(), input.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                compacted++
+            } finally {
+                Files.deleteIfExists(temporary.toPath())
+            }
+        }
+        check(compacted > 0) { "AGP optimized resource package not found" }
+    }
+}
+
 dependencies {
     compileOnly(files("lib/framework.jar"))
     compileOnly(libs.libxposed.api)
@@ -322,8 +367,14 @@ dependencies {
     implementation(libs.androidx.preference)
     implementation(libs.androidx.palette)
     implementation(libs.androidx.appcompat)
+    constraints {
+        implementation(libs.androidx.fragment.ktx) {
+            because("Keep the transitive Fragment KTX companion aligned with Fragment")
+        }
+    }
     implementation(libs.dexkit)
     implementation(platform(libs.kotlin.bom))
+    implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.kotlinx.coroutines.test)
 

@@ -63,6 +63,7 @@ STANDALONE_PAGES = (
     ("pref_key_system_statusbar_batterytempandcurrent_cat", "prefs_system_statusbar_batterytempandcurrent", "System", True),
     ("prefs_system_statusbar_showdevicetemperature_cat", "prefs_system_statusbar_showdevicetemperature", "System", True),
     ("pref_key_system_statusbar_batterystyle_cat", "prefs_system_statusbar_batterystyle", "System", False),
+    ("pref_key_system_statusbar_duo_cat", "prefs_system_statusbar_duo", "System", True),
     ("pref_key_system_statusbar_mobile_signal_cat", "prefs_system_statusbar_mobilesignal", "System", True),
     ("pref_key_system_statusbaricons_cat", "prefs_system_hideicons", "System", True),
     ("pref_key_system_statusbaricons_atright_cat", "prefs_system_statusbar_righticons", "System", True),

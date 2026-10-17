@@ -1,22 +1,16 @@
 package tv.withaibuild.customiuizer.utils
 
-import android.Manifest
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ArgbEvaluator
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.app.admin.DevicePolicyManager
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.ContentResolver
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.res.Configuration
@@ -30,20 +24,14 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
-import android.os.PowerManager
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.provider.Settings
 import android.text.Spannable
 import android.text.SpannableStringBuilder
-import android.text.TextUtils
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.LruCache
-import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
@@ -72,14 +60,9 @@ object Helpers {
     // references to it no longer touch this class and cannot trigger its object initialiser.
     const val modulePkg = BuildConfig.APPLICATION_ID
 
-    // public static final String versionFile = "xposed_version";
-    // public static final String wallpaperFile = "lockscreen_wallpaper";
-
-    const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
-
-    const val MIUIZER_NS = "http://schemas.android.com/apk/res-auto"
-
-    const val ACCESS_SECURITY_CENTER = "com.miui.securitycenter.permission.ACCESS_SECURITY_CENTER_PROVIDER"
+    // Manifest activity-alias names are component identifiers, not Activity classes.
+    const val LAUNCHER_ALIAS_NAME = "tv.withaibuild.customiuizer.GateWayLauncher"
+    const val CREDENTIALS_LAUNCHER_ALIAS_NAME = "tv.withaibuild.customiuizer.CredentialsLauncher"
 
     const val NEW_MODS_SEARCH_QUERY = "\uD83C\uDD95"
 
@@ -103,11 +86,7 @@ object Helpers {
 
     const val REQUEST_PERMISSIONS_WIFI = 3
 
-    const val REQUEST_PERMISSIONS_REPORT = 4
-
     const val REQUEST_PERMISSIONS_BLUETOOTH = 5
-
-    const val REQUEST_PERMISSIONS_SECURITY_CENTER = 6
 
     @Volatile
     @JvmField
@@ -129,9 +108,6 @@ object Helpers {
     }
 
     @JvmField
-    var showNewMods = true
-
-    @JvmField
     val newMods = HashSet(listOf("pref_key_launcher_nozoomanim"))
 
     object MimeType {
@@ -150,29 +126,8 @@ object Helpers {
     }
 
     @JvmStatic
-    fun setMiuiPrefItem(item: View?) {
-        item ?: return
-        item.setBackgroundResource(R.drawable.list_item_bg)
-        if (!item.clipToOutline) item.clipToOutline = true
-    }
-
-    @JvmStatic
     fun isNightMode(context: Context): Boolean {
         return (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    }
-
-    @JvmStatic
-    fun getMutableActivityPendingIntent(context: Context, requestCode: Int, intent: Intent): PendingIntent {
-        var flags = PendingIntent.FLAG_UPDATE_CURRENT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags = flags or PendingIntent.FLAG_MUTABLE
-        return PendingIntent.getActivity(context, requestCode, intent, flags)
-    }
-
-    @JvmStatic
-    fun getImmutableActivityPendingIntent(context: Context, requestCode: Int, intent: Intent): PendingIntent {
-        var flags = PendingIntent.FLAG_UPDATE_CURRENT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags = flags or PendingIntent.FLAG_IMMUTABLE
-        return PendingIntent.getActivity(context, requestCode, intent, flags)
     }
 
     @JvmStatic
@@ -244,32 +199,12 @@ object Helpers {
     }
 
     @JvmStatic
-    fun checkSettingsPerm(act: AppCompatActivity): Boolean {
-        return act.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
-    }
-
-    @JvmStatic
     fun checkPermAndRequest(act: AppCompatActivity, perm: String, action: Int): Boolean {
         return if (act.checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
             act.requestPermissions(arrayOf(perm), action)
             false
         } else {
             true
-        }
-    }
-
-    @JvmStatic
-    fun updateNewModsMarking(context: Context, opt: Int) {
-        try {
-            val appInfo = context.packageManager.getApplicationInfo(modulePkg, 0)
-            val appInstalled = System.currentTimeMillis() - File(appInfo.sourceDir).lastModified()
-            showNewMods = when (opt) {
-                0 -> false
-                4 -> true
-                else -> appInstalled < (if (opt == 1) 1 else if (opt == 2) 3 else 7) * 24 * 60 * 60 * 1000
-            }
-        } catch (t: Throwable) {
-            t.printStackTrace()
         }
     }
 
@@ -333,13 +268,6 @@ object Helpers {
         })
         finalView.setTag(R.id.search_highlight_animator, colorAnim)
         colorAnim.start()
-    }
-
-    @JvmStatic
-    fun openURL(context: Context?, url: String) {
-        if (context == null) return
-        val uriIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        context.startActivity(uriIntent)
     }
 
     @JvmStatic
@@ -409,32 +337,6 @@ object Helpers {
             FatalErrors.rethrowIfFatal(t)
             XposedHelpers.log(t)
             1.0f
-        }
-    }
-
-    @JvmStatic
-    fun setAnimationScale(type: Int, value: Float) {
-        val resolver = getAppContentResolver() ?: return
-        val key = getAnimationScaleKey(type)
-        var written = false
-        try {
-            written = Settings.Global.putFloat(resolver, key, value)
-        } catch (e: SecurityException) {
-            // app lacks WRITE_SECURE_SETTINGS, fall through to root
-        } catch (e: IllegalArgumentException) {
-            // app lacks WRITE_SECURE_SETTINGS, fall through to root
-        } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
-            XposedHelpers.log(t)
-            return
-        }
-        if (!written) try {
-            val pb = ProcessBuilder("su", "-c", "settings put global $key $value")
-            val p = pb.start()
-            p.waitFor()
-        } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
-            XposedHelpers.log(t)
         }
     }
 
@@ -787,67 +689,6 @@ object Helpers {
     val MOD_DISPLAY_ORDER = Comparator<ModData> { a, b ->
         val byBreadcrumbs = a.breadcrumbs.compareTo(b.breadcrumbs, ignoreCase = true)
         if (byBreadcrumbs != 0) byBreadcrumbs else a.title.compareTo(b.title, ignoreCase = true)
-    }
-
-    @JvmStatic
-    fun performCustomVibration(context: Context, vibration: Int, ownPattern: String) {
-        if (vibration == 0) return
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
-        val pattern = when (vibration) {
-            1 -> {
-                vibrator.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
-                return
-            }
-            2 -> {
-                vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
-                return
-            }
-            3 -> longArrayOf(0, 250, 250, 250)
-            4 -> longArrayOf(0, 250, 150, 125, 100, 125)
-            5 -> longArrayOf(0, 150, 150, 100, 250, 150, 150, 100)
-            6 -> longArrayOf(0, 100, 150, 100, 150, 100)
-            7 -> {
-                if (TextUtils.isEmpty(ownPattern)) return
-                getVibrationPattern(ownPattern)
-            }
-            else -> return
-        }
-        try {
-            vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
-        } catch (t: Throwable) {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(200)
-        }
-    }
-
-    @JvmStatic
-    fun getVibrationPattern(patternStr: String): LongArray {
-        return try {
-            if (TextUtils.isEmpty(patternStr)) return LongArray(0)
-            val sPattern = patternStr.split(",")
-            LongArray(sPattern.size) { i ->
-                if (TextUtils.isEmpty(sPattern[i])) 0L else java.lang.Long.parseLong(sPattern[i])
-            }
-        } catch (t: Throwable) {
-            LongArray(0)
-        }
-    }
-
-    @JvmStatic
-    fun getCacheFilePath(filename: String): String? {
-        return when {
-            File("/cache").canWrite() -> "/cache/$filename"
-            File("/data/cache").canWrite() -> "/data/cache/$filename"
-            File("/data/tmp").canWrite() -> "/data/tmp/$filename"
-            else -> null
-        }
-    }
-
-    @JvmStatic
-    fun copyToClipboard(context: Context, text: String) {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        val mClipData = ClipData.newPlainText("", text)
-        clipboard?.setPrimaryClip(mClipData)
     }
 
 }

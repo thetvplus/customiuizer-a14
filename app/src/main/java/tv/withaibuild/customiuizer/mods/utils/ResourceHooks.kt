@@ -104,7 +104,7 @@ class ResourceHooks {
         /**
          * Attempts [installer] once and updates [status] / [attempts].
          * Returns null on success, or the captured [Throwable] on failure.
-         * [OutOfMemoryError] is rethrown without consuming an attempt.
+         * Fatal errors release PENDING and are rethrown without consuming an attempt.
          */
         fun install(installer: () -> HookerClassHelper.CustomMethodUnhooker?): Throwable? {
             synchronized(lock) {
@@ -122,10 +122,15 @@ class ResourceHooks {
                 if (unhooker == null) {
                     error = IllegalStateException("installer returned null")
                 }
-            } catch (oom: OutOfMemoryError) {
-                synchronized(lock) { status = HookStatus.FAILED }
-                throw oom
             } catch (t: Throwable) {
+                synchronized(lock) {
+                    try {
+                        FatalErrors.unwrapAndRethrowIfFatal(t)
+                    } catch (fatal: Throwable) {
+                        status = HookStatus.FAILED
+                        throw fatal
+                    }
+                }
                 error = t
             }
 
@@ -238,7 +243,7 @@ class ResourceHooks {
                     }
                 }
             } catch (t: Throwable) {
-                if (t is OutOfMemoryError) throw t
+                FatalErrors.unwrapAndRethrowIfFatal(t)
                 logThrottled(t, failureDomain())
             }
             return chain.proceed()
@@ -253,7 +258,7 @@ class ResourceHooks {
     }
 
     private fun logThrottled(t: Throwable, domain: ResourceFailureDomain) {
-        if (t is OutOfMemoryError) throw t
+        FatalErrors.unwrapAndRethrowIfFatal(t)
         val now = SystemClock.elapsedRealtime()
         val idx = domain.ordinal
         val last = lastFailureLogTimes[idx]
@@ -277,6 +282,7 @@ class ResourceHooks {
                     try {
                         result = chain.proceed()
                     } catch (t: Throwable) {
+                        FatalErrors.unwrapAndRethrowIfFatal(t)
                         throwable = t
                         result = null
                     }
@@ -331,7 +337,7 @@ class ResourceHooks {
                             }
                         }
                     } catch (t: Throwable) {
-                        if (t is OutOfMemoryError) throw t
+                        FatalErrors.unwrapAndRethrowIfFatal(t)
                         logThrottled(t, ResourceFailureDomain.THEME_MERGE)
                     }
                     return XposedHelpers.throwOrReturn(throwable, result)
@@ -406,7 +412,7 @@ class ResourceHooks {
             applyHooks(type)
             fakeResId
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
             0
         }
@@ -425,7 +431,7 @@ class ResourceHooks {
             initResourceIdHook(pkg, type, name, ReplacementType.ID, replacementResId)
             applyHooks(type)
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
         }
     }
@@ -443,7 +449,7 @@ class ResourceHooks {
             initResourceIdHook(pkg, type, name, ReplacementType.OBJECT, replacementResValue)
             applyHooks(type)
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
         }
     }
@@ -472,7 +478,7 @@ class ResourceHooks {
             themeValueReplacements["$pkg:$type/$name"] = tv
             tryInitThemeHook()
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
         }
     }

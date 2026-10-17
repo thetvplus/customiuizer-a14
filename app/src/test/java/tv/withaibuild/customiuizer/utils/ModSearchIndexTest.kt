@@ -15,6 +15,23 @@ import org.junit.Test
 class ModSearchIndexTest {
 
     @Test
+    fun searchTermsPreservesPunctuationAndWhitespaceRules() {
+        val cases = listOf(
+            "" to emptyList(),
+            " \t\r\n" to emptyList(),
+            " -‑/ " to emptyList(),
+            " Wi-Fi/状态栏\tIMEI\n" to listOf("wifi", "状态栏", "imei"),
+            "one\u000Btwo\u000Cthree" to listOf("one", "two", "three"),
+            "\u2003IMEI\u2003" to listOf("imei"),
+            "alpha\u00A0beta" to listOf("alpha\u00A0beta"),
+            "—" to listOf("—"),
+        )
+        for ((query, expected) in cases) {
+            assertEquals("query '$query'", expected, searchTerms(query))
+        }
+    }
+
+    @Test
     fun matchesStandaloneSwitchesByTitleAndPageContext() {
         val wifi = mod("系统/状态栏/隐藏图标", "Wi-Fi", "pref_key_system_statusbaricons_wifi")
         assertTrue(wifi.matchesSearch(searchTerms("wifi")))

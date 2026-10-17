@@ -164,7 +164,9 @@ class SystemUiResourceBootstrapArchitectureTest {
     private fun projectRoot(): File {
         var directory = File(java.lang.System.getProperty("user.dir").orEmpty()).absoluteFile
         while (true) {
-            if (File(directory, ".git").isDirectory) return directory
+            // Managed worktrees keep .git as a file pointing to their shared Git directory.
+            if (File(directory, ".git").exists() &&
+                File(directory, "app/src/main").isDirectory) return directory
             directory = directory.parentFile
                 ?: error("Repository root not found")
         }

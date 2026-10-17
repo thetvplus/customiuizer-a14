@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -121,11 +121,13 @@ class UnlockTokenProvider {
         val hostPackage = try {
             bundle.getString(BUNDLE_KEY_HOST_PACKAGE)
         } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
             null
         }
         val token = try {
             bundle.getString(BUNDLE_KEY_TOKEN)
         } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
             null
         }
         if (hostPackage.isNullOrEmpty() || token.isNullOrEmpty()) return false
@@ -147,6 +149,7 @@ class UnlockTokenProvider {
             val certs = extractCertFingerprints(packageInfo)
             if (certs.isEmpty()) null else HostInfo(packageName, label, certs)
         } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
             null
         }
     }
@@ -182,12 +185,7 @@ class UnlockTokenProvider {
     }
 
     private fun extractCertFingerprints(packageInfo: PackageInfo): Set<String> {
-        val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            packageInfo.signingInfo?.signingCertificateHistory
-        } else {
-            @Suppress("DEPRECATION")
-            packageInfo.signatures
-        }
+        val signatures = packageInfo.signingInfo?.signingCertificateHistory
         return signatures?.map { sha256Hex(it.toByteArray()) }?.toSet() ?: emptySet()
     }
 

@@ -293,7 +293,6 @@
     <string name="system_screenanim_duration_summ">Cấu hình độ dài hoạt ảnh</string>
     <string name="system_screenanim_desc">Giá trị quá thấp tương đương với việc tắt hoạt ảnh</string>
     <string name="system_blur_title">Làm mờ nền</string>
-    <string name="system_recents_blur_summ">Làm mờ nền được áp dụng gần đây nhất</string>
     <string name="system_drawer_blur_summ">Làm mờ nền cho ngăn thông báo</string>
     <string name="system_mods_lockscreen">Màn hình khóa</string>
     <string name="system_mods_lockscreen_functionality">Tính năng bổ sung</string>
@@ -301,7 +300,6 @@
     <string name="system_blocktoasts_title">Chặn thông báo</string>
     <string name="system_blocktoasts_summ">Ngăn các ứng dụng đã chọn hiển thị thông báo</string>
     <string name="system_fivegtile_title">Công tắc 5G</string>
-    <string name="system_fivegtile_summ">Đã thêm ô chuyển đổi 5G vào cài đặt nhanh</string>
     <string name="system_cc_fpstile_title">Hiển thị ô tốc độ làm mới</string>
     <string name="system_cc_fpstile_summ">Hiển thị tốc độ làm mới màn hình hiện tại</string>
     <string name="system_floatingtime_tile_title">Hiển thị ô thời gian nổi</string>
@@ -500,7 +498,6 @@
     <string name="launcher_renameapps_list_title">Chỉnh sửa tiêu đề</string>
     <string name="launcher_renameapps_modified">Chỉnh sửa tiêu đề</string>
     <string name="launcher_privacyapps">Ứng dụng ẩn</string>
-    <string name="launcher_privacyapps_fail">Quyền yêu cầu chưa được cấp</string>
     <string name="launcher_privacyapps_gest_title">Không có thư mục ẩn</string>
     <string name="launcher_privacyapps_gest_summ">Vô hiệu hóa cử chỉ hai ngón tay để mở thư mục ứng dụng ẩn và mã điện thoại bí mật là 233233</string>
     <string name="launcher_privacyapps_list_title">Ẩn danh sách ứng dụng</string>
@@ -655,7 +652,6 @@
     <string name="appsort_install">Thời gian cài đặt</string>
     <string name="gboard">Cài đặt phương thức nhập</string>
     <string name="calls">Cuộc gọi</string>
-    <string name="settings">Cài đặt</string>
     <string name="array_default">Mặc định</string>
     <string name="array_system_default">Hệ thống</string>
     <string name="array_global_actions_none">Không có hành động nào</string>
@@ -802,7 +798,6 @@
     <string name="qs_toggle_5g">Mạng 5G</string>
     <string name="qs_toggle_fps">Tần số quét</string>
     <string name="qs_toggle_floatingtime">Thời gian nổi</string>
-    <string name="miuizer">Cài đặt tùy biến HyperOS</string>
     <string name="miuizer_new_mod">Mới!</string>
     <string name="miuizer_show_launchericon_title">Biểu tượng trình khởi chạy</string>
     <string name="miuizer_show_launchericon_summ">Hiển thị biểu tượng trong trình khởi chạy</string>
@@ -967,7 +962,6 @@
     <string name="system_disable_window_blurs_summ">Hoạt động mà không cần Tùy chọn nhà phát triển; khi tắt, Android điều khiển hiệu ứng làm mờ như bình thường. Khi bật, HyperOS vẽ bảng âm lượng và menu nguồn không có nền riêng, đồng thời các thanh trượt làm mờ âm lượng bên dưới không có tác dụng</string>
     <string name="system_disable_window_blurs_title">Tắt làm mờ ở cấp cửa sổ</string>
     <string name="system_recents_card_style_hide_title">Ẩn tên ứng dụng</string>
-    <string name="system_recents_card_style_summ">Ẩn tên ứng dụng trên thẻ tác vụ gần đây; khởi động lại trình khởi chạy sau khi thay đổi</string>
     <string name="system_strong_toast_mode_dynamic_island">Đảo động</string>
     <string name="system_volume_mode_button_colors_summ">Tùy chỉnh màu nền và biểu tượng của hai lối tắt ở cuối bảng âm lượng. Khởi động lại Giao diện hệ thống sau khi đổi màu.</string>
     <string name="system_volume_mode_button_colors_title">Màu lối tắt Im lặng và Không làm phiền</string>
@@ -1061,4 +1055,30 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Điều chỉnh toàn bộ nhóm biểu tượng đã chuyển sang trái. 100% giữ kích thước hệ thống. Cần khởi động lại giao diện hệ thống.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Độ lệch dọc của biểu tượng bên trái</string>
     <string name="system_statusbar_lefticons_offset_summ">Giá trị âm dịch lên, giá trị dương dịch xuống. 0 dp giữ vị trí hệ thống. Cần khởi động lại giao diện hệ thống.</string>
+    <string name="system_statusbar_duo_title">Duo: biểu tượng trạng thái ba trong một</string>
+    <string name="system_statusbar_duo_summ">Vòng pin, Wi-Fi và tín hiệu di động trong một biểu tượng; hai SIM dùng SIM dữ liệu mặc định</string>
+    <string name="system_statusbar_duo_restart">Khởi động lại giao diện hệ thống sau khi đổi cài đặt. Phần trăm và kích thước Duo độc lập với việc ẩn và kiểu biểu tượng gốc. Thiết bị không tương thích giữ biểu tượng gốc.</string>
+    <string name="system_statusbar_duo_percent_title">Hiển thị phần trăm pin</string>
+    <string name="system_statusbar_duo_size_title">Kích thước biểu tượng thủ công</string>
+    <string name="system_statusbar_duo_size_summ">Dùng khi tắt kích thước tự động; giới hạn bởi chiều cao hàng.</string>
+    <string name="system_statusbar_duo_autosize_title">Kích thước biểu tượng tự động</string>
+    <string name="system_statusbar_duo_autosize_summ">Điều chỉnh theo chiều cao biểu tượng hệ thống và hàng hiện tại. Tắt để chỉnh thủ công.</string>
+    <string name="system_statusbar_duo_audio_title">Hiển thị kết nối tai nghe</string>
+    <string name="system_statusbar_duo_audio_summ">Tai nghe có dây hoặc Bluetooth hiện trong 3 giây khi có kết nối mới, rồi trở lại Wi-Fi hoặc biểu tượng mạng. Cảnh báo mạng được ưu tiên.</string>
+    <string name="system_statusbar_duo_bold_title">Nét biểu tượng đậm hơn</string>
+    <string name="system_statusbar_duo_bold_summ">Làm đậm vòng pin và nét Wi-Fi, tai nghe.</string>
+    <string name="system_statusbar_duo_verticaloffset_title">Chỉnh vị trí dọc</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">Căn giữa trong hàng, mỗi bước 0,5 dp. Độ lệch theo chiều cao; thu nhỏ ở mép để tránh cắt biểu tượng.</string>
+    <string name="system_statusbar_duo_headphonestyle_title">Kiểu biểu tượng tai nghe</string>
+    <string name="system_statusbar_duo_headphone_auto">Tự động</string>
+    <string name="system_statusbar_duo_headphone_overear">Tai nghe chụp tai</string>
+    <string name="system_statusbar_duo_headphone_earbuds">Tai nghe nhét tai</string>
+    <string name="system_statusbar_duo_headphonescale_title">Kích thước tai nghe</string>
+    <string name="system_statusbar_duo_networkfallback_title">Thay Wi-Fi đã ngắt</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Không có Wi-Fi thì hiện hình hoặc loại mạng hiện tại; loại chưa rõ dùng hình.</string>
+    <string name="system_statusbar_duo_btbattery_title">Màu pin Bluetooth</string>
+    <string name="system_statusbar_duo_btbattery_summ">Một thiết bị và báo cáo mới: đỏ đến 20%, hổ phách đến 50%. Mức khác hoặc chưa rõ dùng màu hệ thống; vòng vẫn là pin điện thoại.</string>
+    <string name="system_statusbar_duo_cellularstyle_title">Kiểu mạng di động ở giữa</string>
+    <string name="system_statusbar_duo_cellular_graphic">Hình</string>
+    <string name="system_statusbar_duo_cellular_text">Chữ</string>
 </resources>

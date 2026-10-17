@@ -20,6 +20,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 APP_ROOT = REPO_ROOT / "app" / "src" / "main"
 PREFS_DIR = APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "prefs"
+DUO_DIR = APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "duostatusbar"
 
 # File globs that are part of the module's own App UI and must not
 # hard-code font families.
@@ -38,6 +39,9 @@ TYPEFACE_ALLOWLIST = {
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemClockHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemUIBatteryHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "utils" / "StatusBarTextFit.kt",
+    # Duo copies the ROM font object; only nullable types and DEFAULT fallback
+    # are allowed below, never font factories or bundled font loading.
+    DUO_DIR / "DuoStatusBarView.kt",
     # Helpers.applyNewMod() uses StyleSpan(Typeface.ITALIC); explicit files
     # will be checked for StyleSpan separately below.
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "utils" / "Helpers.kt",
@@ -202,6 +206,12 @@ class AppTextInvariantsTest(unittest.TestCase):
                     text_without_imports = re.sub(r"^\s*import\s+.*Typeface.*$", "", text_without_style_spans, flags=re.MULTILINE)
                     for m in re.finditer(r"\bTypeface\b", text_without_imports):
                         bad.append(f"{path.relative_to(REPO_ROOT)}:{m.start()}")
+                elif path == DUO_DIR / "DuoStatusBarView.kt":
+                    text = path.read_text(encoding="utf-8")
+                    text_without_imports = re.sub(r"^\s*import\s+.*Typeface.*$", "", text, flags=re.MULTILINE)
+                    font_reuse_only = re.sub(r"\bTypeface(?:\s*\?|\.DEFAULT\b)", "", text_without_imports)
+                    for m in re.finditer(r"\bTypeface\b", font_reuse_only):
+                        bad.append(f"{path.relative_to(REPO_ROOT)}:{m.start()}")
                 continue
 
             # All other App UI code must not reference Typeface at all.
@@ -217,6 +227,15 @@ class AppTextInvariantsTest(unittest.TestCase):
             "(allowed: StyleSpan(Typeface.ITALIC/BOLD) and explicit ROM surface hooks): "
             + ", ".join(bad),
         )
+
+    def test_duo_reuses_rom_font_without_loading_a_font(self):
+        """The replacement status bar inherits its owner's local font object."""
+        binding = (DUO_DIR / "DuoBinding.kt").read_text(encoding="utf-8")
+        self.assertRegex(binding, r"syncTypeface\(\(abi\.percentView\.get\(owner\) as\? TextView\)\?\.typeface\)")
+        banned_loaders = re.compile(r"\b(?:createFromAsset|createFromFile|FontRequest|FontsContract|ResourcesCompat\.getFont)\b")
+        for path in sorted(DUO_DIR.glob("*.kt")):
+            with self.subTest(path=path.name):
+                self.assertIsNone(banned_loaders.search(path.read_text(encoding="utf-8")))
 
     def test_about_attribution_text_views_allow_wrapping(self):
         """The about page attribution TextViews must not be constrained to one line."""
