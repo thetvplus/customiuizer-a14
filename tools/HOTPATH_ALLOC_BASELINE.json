@@ -1,0 +1,11 @@
+{
+  "hook_body_alloc_total": 13,
+  "files": {
+    "app/src/main/java/tv/withaibuild/customiuizer/mods/GlobalActionSystemServerHooks.kt": 3,
+    "app/src/main/java/tv/withaibuild/customiuizer/mods/System.kt": 2,
+    "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt": 1,
+    "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt": 1,
+    "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIMonitorAndTileHooks.kt": 4,
+    "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt": 2
+  }
+}

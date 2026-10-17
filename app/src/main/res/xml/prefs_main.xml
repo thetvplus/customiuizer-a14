@@ -1,0 +1,56 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:miuizer="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:key="prefs">
+
+	<tv.withaibuild.customiuizer.prefs.PreferenceEx
+		android:key="pref_key_warning"
+		app:isPreferenceVisible="false"
+		miuizer:warning="true" />
+
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
+		android:title="@string/mods"
+		android:key="prefs_cat">
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx
+			android:title="@string/system_mods"
+			android:key="pref_key_system" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx
+			android:title="@string/launcher_title"
+			android:key="pref_key_launcher" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx
+			android:title="@string/controls_mods"
+			android:key="pref_key_controls" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx
+			android:title="@string/various_mods"
+			android:key="pref_key_various" />
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
+		android:title="@string/settings_title"
+		android:key="pref_key_miuizer">
+		<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+			android:key="pref_key_miuizer_settingsiconpos"
+			android:title="@string/miuizer_show_settingsicon_title"
+			android:summary="@string/miuizer_show_settingsicon_summ"
+			android:entries="@array/settingsicon"
+			android:entryValues="@array/settingsicon_val"
+			miuizer:valueAsSummary="true"
+			android:defaultValue="1" />
+		<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+			android:key="pref_key_miuizer_locale"
+			android:title="@string/miuizer_locale_title"
+			android:summary="@string/miuizer_locale_summ"
+			android:entries="@array/placeholder_array"
+			android:entryValues="@array/placeholder_array_strval"
+			miuizer:valueAsSummary="true"
+			android:defaultValue="auto" />
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_miuizer_launchericon"
+			android:summary="@string/miuizer_show_launchericon_summ"
+			android:title="@string/miuizer_show_launchericon_title"
+			android:defaultValue="true" />
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+
+</PreferenceScreen>

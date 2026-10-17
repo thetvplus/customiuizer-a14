@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="horizontal"
+	android:paddingStart="@dimen/preference_item_child_padding"
+	android:paddingEnd="@dimen/preference_item_child_padding"
+	android:paddingTop="@dimen/preference_item_padding_top"
+	android:paddingBottom="@dimen/preference_item_padding_bottom"
+	tools:ignore="RtlSymmetry">
+
+	<ImageView
+		android:id="@android:id/icon"
+		android:visibility="gone"
+		android:layout_width="40dp"
+		android:layout_height="40dp"
+		android:layout_marginStart="0dp"
+		android:layout_marginEnd="20dp"
+		android:layout_marginTop="2dp"
+		android:layout_gravity="center_vertical"
+		android:adjustViewBounds="false"
+		android:scaleType="centerInside"
+		tools:ignore="ContentDescription" />
+
+	<LinearLayout
+		android:layout_weight="1"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_gravity="center_vertical"
+		android:orientation="vertical">
+
+		<TextView
+			android:id="@android:id/title"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:maxLines="1"
+			android:ellipsize="end"
+			android:textColor="@color/preference_primary_text_color"
+			android:textSize="@dimen/normal_text_size" />
+
+		<TextView
+			android:id="@android:id/summary"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textColor="@color/preference_secondary_text_color"
+			android:textSize="@dimen/secondary_text_size" />
+
+		<TextView
+			android:id="@android:id/text1"
+			android:visibility="gone"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="10dp"
+			android:textColor="@color/preference_secondary_text_color"
+			android:textSize="11sp"
+			tools:ignore="SmallSp" />
+
+	</LinearLayout>
+
+	<ImageView
+		android:id="@+id/drag_handle"
+		android:visibility="gone"
+		android:layout_width="wrap_content"
+		android:layout_height="match_parent"
+		app:srcCompat="@drawable/drag_handle"
+		android:paddingStart="30dp"
+		android:paddingEnd="30dp"
+		tools:ignore="ContentDescription" />
+
+</LinearLayout>

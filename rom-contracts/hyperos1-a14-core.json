@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "contractName": "HyperOS 1 / Android 14 core hook contracts",
+  "romFamily": "HyperOS",
+  "androidApi": 34,
+  "coverage": {
+    "status": "partial",
+    "verifiedBy": "source-reference",
+    "deterministicRequiredCount": 15,
+    "optionalCount": 4,
+    "totalPlanned": 30,
+    "totalInThisFile": 19,
+    "notes": [
+      "All 15 required entries have a full smali descriptor that can be derived from the source call: onFinishInflate()V, a concrete init(Z)V, setVisibility(I)V and the standard onClick(Landroid/view/View;)V callback.",
+      "Optional entries are kept when the return type or the exact parameter list could not be confirmed from the repository alone; they must be verified against a real ROM before being promoted to required.",
+      "Framework class android/app/Application is a system framework class; it is not part of the Launcher APK and is therefore in an independent framework target even though the hook is installed from com.miui.home.",
+      "WallpaperManagerService is a system_server service; the hook is already invoked from MainModule.onSystemServerStarting via SystemLockScreenHooks.SetLockscreenWallpaperHook(SystemServerStartingParam)."
+    ]
+  },
+  "targets": [
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/SystemUIInitializer;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/SystemUiBootstrapCoordinator.kt",
+      "sourceHookFunction": "install",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        {
+          "name": "init",
+          "descriptor": "(Z)V",
+          "required": true,
+          "description": "Delayed entry point for SystemUI initialization."
+        }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/keyguard/KeyguardPINView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt",
+      "sourceHookFunction": "ScramblePINHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Scramble PIN layout." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/keyguard/clock/KeyguardClockContainer;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt",
+      "sourceHookFunction": "HideLockScreenClockHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Clock container lifecycle." },
+        { "name": "setVisibility", "descriptor": "(I)V", "required": true, "description": "View visibility change." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/shade/NotificationsQuickSettingsContainer;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt",
+      "sourceHookFunction": "DoubleTapToSleepHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "QS container setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/statusbar/phone/KeyguardIndicationTextView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt",
+      "sourceHookFunction": "ChargingInfoHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Indication text setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/statusbar/phone/MiuiKeyguardStatusBarView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt",
+      "sourceHookFunction": "HideLockScreenStatusBarHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Keyguard status bar setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/statusbar/phone/MiuiPhoneStatusBarView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt",
+      "sourceHookFunction": "StatusBarClockPositionHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Status bar view setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/statusbar/phone/KeyguardStatusBarView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemStatusBarIconHooks.kt",
+      "sourceHookFunction": "HideIconsBattery2Hook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Keyguard status bar icon setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/statusbar/views/NetworkSpeedView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStatusBarHooks.kt",
+      "sourceHookFunction": "NetSpeedStyleHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Network speed view setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/qs/MiuiNotificationHeaderView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemClockHooks.kt",
+      "sourceHookFunction": "CCClockTweakHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Notification header setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lmiui/systemui/controlcenter/qs/tileview/QSTileItemView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt",
+      "sourceHookFunction": "SystemCCGridHookLoader",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "QS tile item view setup." }
+      ]
+    },
+    {
+      "target": "systemui",
+      "class": "Lcom/android/systemui/navigationbar/NavigationBarView;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt",
+      "sourceHookFunction": "NavBarButtonsHook",
+      "targetProcessPackage": "com.android.systemui",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Navigation bar button setup." }
+      ]
+    },
+    {
+      "target": "launcher",
+      "class": "Lcom/miui/home/launcher/ItemIcon;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherIconHooks.kt",
+      "sourceHookFunction": "IconScaleHook",
+      "targetProcessPackage": "com.miui.home",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Launcher icon setup." }
+      ]
+    },
+    {
+      "target": "launcher",
+      "class": "Lcom/miui/home/launcher/Folder;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherFolderHooks.kt",
+      "sourceHookFunction": "FolderColumnsHook",
+      "targetProcessPackage": "com.miui.home",
+      "methods": [
+        { "name": "onFinishInflate", "descriptor": "()V", "required": true, "description": "Launcher folder setup." }
+      ]
+    },
+    {
+      "target": "securitycenter",
+      "class": "Lcom/miui/securityscan/ui/main/MainContentFrame;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/Various.kt",
+      "sourceHookFunction": "SkipSecurityScanHook",
+      "targetProcessPackage": "com.miui.securitycenter",
+      "methods": [
+        { "name": "onClick", "descriptor": "(Landroid/view/View;)V", "required": true, "description": "Security scan skip." }
+      ]
+    },
+    {
+      "target": "framework",
+      "class": "Landroid/app/Application;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/installers/GenericAppInstaller.kt",
+      "sourceHookFunction": "installPostAttach",
+      "targetProcessPackage": "com.miui.home",
+      "methods": [
+        {
+          "name": "attach",
+          "required": false,
+          "optional": true,
+          "description": "Framework Application hook installed from the launcher package; the exact return descriptor is not confirmed from this repository."
+        }
+      ]
+    },
+    {
+      "target": "system_server",
+      "class": "Lcom/android/server/wallpaper/WallpaperManagerService;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt",
+      "sourceHookFunction": "SetLockscreenWallpaperHook",
+      "targetProcessPackage": "android",
+      "methods": [
+        {
+          "name": "setWallpaper",
+          "required": false,
+          "optional": true,
+          "description": "Lock screen wallpaper hook in system_server; the exact smali descriptor has not been verified."
+        }
+      ]
+    },
+    {
+      "target": "system_server",
+      "class": "Lcom/android/server/policy/PhoneWindowManager;",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt",
+      "sourceHookFunction": "EnhancedSecurityHook",
+      "targetProcessPackage": "android",
+      "methods": [
+        {
+          "name": "showGlobalActions",
+          "required": false,
+          "optional": true,
+          "description": "Global actions dialog; exact descriptor not verified."
+        },
+        {
+          "name": "showGlobalActionsInternal",
+          "required": false,
+          "optional": true,
+          "description": "Internal global actions; exact descriptor not verified."
+        }
+      ]
+    }
+  ]
+}

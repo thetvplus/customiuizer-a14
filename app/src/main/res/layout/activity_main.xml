@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:fitsSystemWindows="true"
+	android:orientation="vertical">
+
+	<androidx.appcompat.widget.Toolbar
+		android:id="@+id/mainActionBar"
+		android:layout_width="match_parent"
+		android:layout_height="?attr/actionBarSize"
+		android:elevation="0dp"
+		app:contentInsetStart="@dimen/preference_item_child_padding"
+		app:contentInsetEnd="@dimen/preference_item_child_padding"
+		app:titleMarginStart="0dp"
+		app:titleTextColor="@color/preference_primary_text_color"
+		app:theme="@style/AppToolbarStyle"
+		/>
+
+	<View
+		android:layout_width="match_parent"
+		android:layout_height="1dp"
+		android:background="@color/about_divider" />
+
+	<FrameLayout
+		android:id="@+id/fragment_container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:background="@color/color_window_background"
+		/>
+
+</LinearLayout>

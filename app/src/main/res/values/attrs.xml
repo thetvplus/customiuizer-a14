@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+	<attr name="dynamic" format="boolean" />
+	<attr name="indentLevel" format="integer" />
+
+	<declare-styleable name="PreferenceCategoryEx">
+		<attr name="dynamic" />
+		<attr name="empty" format="boolean" />
+		<attr name="state" format="integer"/>
+	</declare-styleable>
+
+	<declare-styleable name="PreferenceEx">
+		<attr name="dynamic" />
+		<attr name="indentLevel" />
+		<attr name="longClickable" format="boolean" />
+		<attr name="warning" format="boolean" />
+		<attr name="notice" format="boolean" />
+		<attr name="countAsSummary" format="boolean" />
+		<attr name="customSummary" format="boolean" />
+	</declare-styleable>
+
+	<declare-styleable name="CheckBoxPreferenceEx">
+		<attr name="dynamic" />
+		<attr name="indentLevel" />
+	</declare-styleable>
+
+	<declare-styleable name="ListPreferenceEx">
+		<attr name="dynamic" />
+		<attr name="indentLevel" />
+		<attr name="valueAsSummary" format="boolean" />
+	</declare-styleable>
+
+	<declare-styleable name="DropDownPreferenceEx">
+		<attr name="dynamic" />
+		<attr name="indentLevel" />
+	</declare-styleable>
+
+	<declare-styleable name="SpinnerEx">
+		<attr name="android:entries" />
+		<attr name="entryValues" format="reference" />
+	</declare-styleable>
+
+	<declare-styleable name="SeekBarPreference">
+		<attr name="android:defaultValue" />
+		<attr name="minValue" format="integer" />
+		<attr name="maxValue" format="integer" />
+		<attr name="stepValue" format="integer" />
+		<attr name="displayDividerValue" format="integer" />
+		<attr name="negativeShift" format="integer" />
+		<attr name="showplus" format="boolean" />
+		<attr name="format" format="string" />
+		<attr name="note" format="string" />
+		<attr name="offtext" format="string" />
+		<attr name="dynamic" />
+		<attr name="indentLevel" />
+	</declare-styleable>
+
+	<attr name="preferenceSecondaryTextColor" format="reference|color" />
+
+</resources>

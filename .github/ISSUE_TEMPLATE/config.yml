@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 下载正式版 (LSPosed)
+    url: https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases
+    about: 用户安装请从此处下载 APK
+  - name: 发布说明
+    url: https://github.com/tomthenpc/customiuizer-a14/releases
+    about: 版本变更与 SHA-256

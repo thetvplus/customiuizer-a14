@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "contractSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["schemaVersion", "contractName", "romFamily", "androidApi", "targets"],
+    "properties": {
+      "schemaVersion": { "type": "integer", "const": 1 },
+      "contractName": { "type": "string" },
+      "romFamily": { "type": "string" },
+      "androidApi": { "type": "integer" },
+      "targets": {
+        "type": "array",
+        "items": { "$ref": "#/contractSchema/definitions/target" }
+      }
+    },
+    "definitions": {
+      "target": {
+        "type": "object",
+        "required": ["target", "class"],
+        "properties": {
+          "target": { "type": "string", "description": "logical target name, e.g. system_server" },
+          "class": { "type": "string", "description": "full smali class descriptor, e.g. Lcom/android/systemui/SystemUIInitializer;" },
+          "anyOf": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "alternative class descriptors"
+          },
+          "sourceFile": { "type": "string" },
+          "sourceHookFunction": { "type": "string" },
+          "targetProcessPackage": { "type": "string" },
+          "methods": {
+            "type": "array",
+            "items": { "$ref": "#/contractSchema/definitions/method" }
+          },
+          "fields": {
+            "type": "array",
+            "items": { "$ref": "#/contractSchema/definitions/field" }
+          }
+        }
+      },
+      "method": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "descriptor": { "type": "string" },
+          "required": { "type": "boolean", "default": true },
+          "optional": { "type": "boolean", "default": false },
+          "alternatives": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "alternative smali descriptors for the same method name"
+          },
+          "sourceFile": { "type": "string" },
+          "sourceHookFunction": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "field": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "required": { "type": "boolean", "default": true },
+          "optional": { "type": "boolean", "default": false },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}

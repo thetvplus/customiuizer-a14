@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<item name="additem" type="id"/>
+	<item name="deleteitem" type="id"/>
+	<item name="update_alert" type="id"/>
+	<item name="search_highlight_animator" type="id"/>
+	<item name="search_highlight_background" type="id"/>
+</resources>

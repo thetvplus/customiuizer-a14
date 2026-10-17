@@ -1,0 +1,117 @@
+name: A14 Full CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'r14.*'
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a14-full-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  full:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'push' &&
+        (
+          startsWith(github.ref, 'refs/tags/r14.') ||
+          contains(github.event.head_commit.message || '', '[full-ci]')
+        )
+      )
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install pinned Android SDK packages
+        run: bash tools/ci_install_android_sdk.sh
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-cleanup: on-success
+
+      - name: CI portability
+        run: python tools/check_ci_portability.py
+
+      - name: Python tool tests
+        run: python -m unittest discover -s tools/tests -p "test_*.py"
+
+      - name: Static governance checks
+        run: |
+          python tools/check-invariants.py
+          python tools/ci_contract_scan.py --expected-branch main --default-branch main
+          python tools/catalog_contract_probe.py --catalog app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature --feature-id app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt --matrix docs/rom-intelligence/A14_PROCESS_MATRIX.csv
+          python tools/check_release_metadata.py
+          python tools/audit_hook_ownership.py --check
+
+      - name: Tag release metadata
+        if: startsWith(github.ref, 'refs/tags/r14.')
+        run: python tools/check_release_metadata.py --require-tag
+
+      - name: Full machine verifier
+        run: python tools/verify.py full
+
+      - name: First clean develop build
+        run: |
+          ./gradlew --no-daemon clean :app:assembleDevelop
+          cp app/build/outputs/apk/develop/*.apk first-develop.apk
+
+      - name: Second clean develop build
+        run: |
+          ./gradlew --no-daemon clean :app:assembleDevelop
+          cp app/build/outputs/apk/develop/*.apk second-develop.apk
+
+      - name: APK semantic diff
+        run: python tools/apk_semantic_diff.py --require-reproducible first-develop.apk second-develop.apk
+
+      - name: Brutal test suite
+        run: python tools/brutal_test_runner.py --config tools/brutal_test_config.json all
+
+      - name: R8 lint on develop
+        run: ./gradlew --no-daemon :app:lintVitalDevelop
+
+      - name: Upload develop artifacts for inspection
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: develop-apk-and-mapping
+          path: |
+            app/build/outputs/apk/develop/*.apk
+            app/build/outputs/mapping/develop/mapping.txt
+            app/build/outputs/mapping/develop/usage.txt
+            app/build/outputs/mapping/develop/configuration.txt
+          if-no-files-found: ignore
+          retention-days: 30

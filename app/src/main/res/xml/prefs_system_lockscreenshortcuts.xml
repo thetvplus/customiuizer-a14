@@ -1,0 +1,43 @@
+<PreferenceScreen
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:miuizer="http://schemas.android.com/apk/res-auto"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+		android:key="pref_key_system_lockscreenshortcuts"
+		android:title="@string/enable_mod"
+		android:defaultValue="false" />
+
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
+		android:title="@string/system_lockscreenshortcuts_title"
+		miuizer:dynamic="true">
+
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_lockscreenshortcuts_right_off"
+			android:title="@string/system_lockscreenshortcuts_right_off_title"
+			android:dependency="pref_key_system_lockscreenshortcuts"
+			android:defaultValue="false" />
+
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx
+			android:key="pref_key_system_lockscreenshortcuts_right"
+			android:title="@string/system_lockscreenshortcuts_right_title"
+			android:defaultValue="false" />
+
+
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_lockscreenshortcuts_left_off"
+			android:title="@string/system_lockscreenshortcuts_left_off_title"
+			android:dependency="pref_key_system_lockscreenshortcuts"
+			android:defaultValue="false" />
+
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_lockscreenshortcuts_left_tapaction"
+			android:title="@string/system_lockscreenshortcuts_left_tapaction_title"
+			android:dependency="pref_key_system_lockscreenshortcuts"
+			android:defaultValue="false" />
+
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+
+</PreferenceScreen>
