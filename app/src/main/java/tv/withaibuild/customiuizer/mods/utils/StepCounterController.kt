@@ -15,11 +15,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
+import kotlin.coroutines.coroutineContext
 
 /**
  * Control-center step counter.
@@ -28,7 +30,7 @@ import java.lang.ref.WeakReference
  *   destroyed, so a detached view never prevents garbage collection.
  * - TIME_TICK receiver is registered only when at least one view is alive and
  *   the screen is on, and unregistered when the last view dies or the screen
- *   turns off.
+ *   turns off. Both transitions cancel pending refresh work.
  * - Screen on/off is observed through [ScreenStateController] instead of
  *   polling [PowerManager.isInteractive] on every tick.
  * - Step queries are single-flight: a new tick is skipped while a query is
@@ -46,6 +48,8 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
     private var context: Context? = null
     private var timeTickReceiver: BroadcastReceiver? = null
     private var pendingUpdateJob: Job? = null
+    // All request/cancel entry points run on Main, alongside the view lifecycle.
+    private var refreshJob: Job? = null
     private var timeTickRegistered = false
     private var screenStateRegistered = false
 
@@ -60,11 +64,10 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         if (isOn) {
             if (hasActiveViews()) {
                 ensureTickRegistered(ctx)
-                scope.launch { refreshSteps(ctx) }
+                requestRefresh(ctx)
             }
         } else {
-            pendingUpdateJob?.cancel()
-            pendingUpdateJob = null
+            cancelUpdates()
             unregisterTick(ctx)
         }
     }
@@ -97,7 +100,7 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         pendingUpdateJob?.cancel()
         pendingUpdateJob = scope.launch {
             delay(3000L)
-            if (ScreenStateController.isScreenOn()) refreshSteps(ctx)
+            requestRefresh(ctx)
         }
     }
 
@@ -112,8 +115,7 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         // Cancel any pending work from a previous context and recreate the scope.
         scope.cancel()
         scope = newScope()
-        pendingUpdateJob?.cancel()
-        pendingUpdateJob = null
+        cancelUpdates()
 
         val oldContext = this.context
         oldContext?.let { unregisterTick(it) }
@@ -130,7 +132,7 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         timeTickReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
                 if (!ScreenStateController.isScreenOn()) return@guarded
-                scope.launch { refreshSteps(context) }
+                requestRefresh(context)
             }
         }
 
@@ -157,13 +159,19 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
     }
 
     private fun releaseInactiveState() {
-        pendingUpdateJob?.cancel()
-        pendingUpdateJob = null
+        cancelUpdates()
         context?.let { unregisterTick(it) }
         if (screenStateRegistered) {
             screenStateRegistered = false
             ScreenStateController.removeListener(this)
         }
+    }
+
+    private fun cancelUpdates() {
+        pendingUpdateJob?.cancel()
+        pendingUpdateJob = null
+        refreshJob?.cancel()
+        refreshJob = null
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -191,15 +199,35 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         }
     }
 
+    private fun requestRefresh(context: Context) {
+        if (!ScreenStateController.isScreenOn()) return
+        if (!hasActiveViews()) {
+            releaseInactiveState()
+            return
+        }
+        if (refreshJob?.isActive == true) return
+        refreshJob = scope.launch { refreshSteps(context) }
+    }
+
     private suspend fun refreshSteps(context: Context) {
-        if (!hasActiveViews()) return
+        if (!ScreenStateController.isScreenOn() || !hasActiveViews()) return
 
         val newText = withContext(Dispatchers.IO) {
+            // Cancelling a coroutine cannot interrupt a synchronous provider query.
+            // Keep serialization across screen/context replacements, but retain only
+            // one current refresh job so ticks cannot accumulate waiting queries.
             queryMutex.withLock {
+                coroutineContext.ensureActive()
+                if (!ScreenStateController.isScreenOn()) return@withLock null
                 queryStepProvider(context)
             }
         } ?: return
 
+        if (!ScreenStateController.isScreenOn()) return
+        if (!hasActiveViews()) {
+            releaseInactiveState()
+            return
+        }
         if (newText == stepsWithGoal) return
         stepsWithGoal = newText
 

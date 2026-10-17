@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<color name="color_window_background">@android:color/system_neutral1_900</color>
-	<color name="color_surface_variant">@android:color/system_neutral2_700</color>
-	<color name="color_on_surface">@android:color/system_neutral1_100</color>
-	<color name="color_on_surface_variant">@android:color/system_neutral1_200</color>
-	<color name="about_divider">#337f7f7f</color>
-	<color name="highlight_normal_light">@android:color/system_accent1_200</color>
+	<color name="color_window_background">#000000</color>
+	<color name="color_surface_container">#1C1C1D</color>
+	<color name="color_surface_variant">#2C2C2E</color>
+	<color name="color_on_surface">#FFFFFF</color>
+	<color name="color_on_surface_variant">#8A8A8A</color>
+	<color name="color_outline_variant">#14FFFFFF</color>
+	<color name="about_divider">@color/color_outline_variant</color>
+	<color name="highlight_normal_light">#6CB7F9</color>
 
-	<color name="preference_category_text_color">@color/color_on_surface_variant</color>
-	<color name="preference_primary_text_color">@android:color/system_neutral1_100</color>
-	<color name="preference_primary_text_color_pressed">#e6ffffff</color>
-	<color name="preference_secondary_text_color">@android:color/system_neutral2_200</color>
-	<color name="preference_secondary_text_color_pressed">#72ffffff</color>
-	<color name="preference_secondary_text_color_checked">#ff0099ff</color>
+	<color name="preference_category_text_color">#8A8A8A</color>
+	<color name="preference_primary_text_color">#FFFFFF</color>
+	<color name="preference_primary_text_color_pressed">@color/color_on_surface</color>
+	<color name="preference_secondary_text_color">#8A8A8A</color>
+	<color name="preference_secondary_text_color_pressed">@color/color_on_surface_variant</color>
+	<color name="preference_secondary_text_color_checked">@color/highlight_normal_light</color>
 
-	<color name="hint_edit_text_color">#4cffffff</color>
+	<color name="hint_edit_text_color">@color/color_on_surface_variant</color>
 
-	<color name="list_item_bg_color_pressed">#14ffffff</color>
+	<color name="list_item_bg_color_pressed">#14FFFFFF</color>
+	<color name="list_item_bg_color_longpress">#24FFFFFF</color>
 
-	</resources>
+</resources>

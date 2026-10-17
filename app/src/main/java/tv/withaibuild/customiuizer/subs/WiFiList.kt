@@ -31,6 +31,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.SubFragment
+import tv.withaibuild.customiuizer.applyGroupedListRow
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.PrefPair
 
@@ -106,6 +107,7 @@ class WiFiList : SubFragment() {
         val location: View? = view.findViewById(R.id.location_settings)
         location?.findViewById<TextView>(android.R.id.title)?.text = getString(R.string.wifi_location_title)
         location?.findViewById<TextView>(android.R.id.summary)?.text = getString(R.string.wifi_location_summ)
+        location?.let { applyGroupedListRow(it, 0, 1) }
         location?.setOnClickListener {
             startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
         }
@@ -232,6 +234,7 @@ class WiFiList : SubFragment() {
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
             val row = convertView ?: mInflater.inflate(R.layout.pref_item, parent, false)
+            applyGroupedListRow(row, position, count)
 
             val itemTitle: TextView = row.findViewById(android.R.id.title)
             val itemSumm: TextView = row.findViewById(android.R.id.summary)

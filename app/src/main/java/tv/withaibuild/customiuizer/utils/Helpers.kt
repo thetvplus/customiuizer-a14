@@ -43,7 +43,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.LruCache
-import android.util.TypedValue
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
@@ -154,37 +153,7 @@ object Helpers {
     fun setMiuiPrefItem(item: View?) {
         item ?: return
         item.setBackgroundResource(R.drawable.list_item_bg)
-        val title = item.findViewById<TextView>(android.R.id.title)
-        var resId = item.resources.getIdentifier("preference_item_bg", "drawable", "miui")
-        if (resId != 0) item.setBackgroundResource(resId)
-        resId = item.resources.getIdentifier("normal_text_size", "dimen", "miui")
-        if (resId != 0 && title != null) {
-            title.setTextSize(TypedValue.COMPLEX_UNIT_PX, item.resources.getDimensionPixelSize(resId).toFloat())
-        }
-        resId = item.resources.getIdentifier("secondary_text_size", "dimen", "miui")
-        if (resId != 0) {
-            val summary = item.findViewById<TextView>(android.R.id.summary)
-            val text1 = item.findViewById<TextView>(android.R.id.text1)
-            val text2 = item.findViewById<TextView>(android.R.id.text2)
-            val size = item.resources.getDimensionPixelSize(resId).toFloat()
-            summary?.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
-            text1?.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
-            text2?.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
-        }
-        if (title != null && "header" == title.tag) {
-            val resIdSize = item.resources.getIdentifier("preference_category_text_size", "dimen", "miui")
-            if (resIdSize != 0) title.setTextSize(TypedValue.COMPLEX_UNIT_PX, item.resources.getDimensionPixelSize(resIdSize).toFloat())
-        }
-
-        val resIdLeft = item.resources.getIdentifier("preference_item_padding_left", "dimen", "miui")
-        val resIdRight = item.resources.getIdentifier("preference_item_padding_right", "dimen", "miui")
-        val resIdTop = item.resources.getIdentifier("preference_item_padding_top", "dimen", "miui")
-        val resIdBottom = item.resources.getIdentifier("preference_item_padding_bottom", "dimen", "miui")
-        val paddingLeft = if (resIdLeft == 0) item.paddingLeft else item.resources.getDimensionPixelSize(resIdLeft)
-        val paddingRight = if (resIdRight == 0) item.paddingRight else item.resources.getDimensionPixelSize(resIdRight)
-        val paddingTop = if (resIdTop == 0) item.paddingTop else item.resources.getDimensionPixelSize(resIdTop)
-        val paddingBottom = if (resIdBottom == 0) item.paddingBottom else item.resources.getDimensionPixelSize(resIdBottom)
-        item.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom)
+        if (!item.clipToOutline) item.clipToOutline = true
     }
 
     @JvmStatic
@@ -717,6 +686,7 @@ object Helpers {
                 var routeSub: String? = null
                 var breadcrumbSubTitleResId = 0
                 var breadcrumbSubSubTitleResId = 0
+                var searchPage: SearchPreferencePage? = null
                 while (eventType != XmlPullParser.END_DOCUMENT) {
                     if (eventType == XmlPullParser.START_TAG) {
                         try {
@@ -736,6 +706,16 @@ object Helpers {
                                     breadcrumbSubTitleResId =
                                         xml.getAttributeResourceValue(null, "breadcrumbTitle", 0)
                                     breadcrumbSubSubTitleResId = 0
+                                    val pageResId = xml.getAttributeResourceValue(null, "page", 0)
+                                    val pageTitleResId = xml.getAttributeResourceValue(null, "pageTitle", 0)
+                                    searchPage = if (pageResId != 0 && pageTitleResId != 0) {
+                                        SearchPreferencePage(
+                                            pageResId,
+                                            res.getString(pageTitleResId),
+                                            xml.getAttributeValue(null, "pageFragment").orEmpty(),
+                                            xml.getAttributeBooleanValue(null, "pageDynamic", false),
+                                        )
+                                    } else null
                                 }
                                 "section" -> {
                                     breadcrumbSubSubTitleResId =
@@ -754,6 +734,10 @@ object Helpers {
                                                 append('/')
                                                 append(res.getString(breadcrumbSubTitleResId))
                                             }
+                                            searchPage?.let {
+                                                append('/')
+                                                append(it.title)
+                                            }
                                             if (breadcrumbSubSubTitleResId > 0) {
                                                 append('/')
                                                 append(res.getString(breadcrumbSubSubTitleResId))
@@ -762,6 +746,7 @@ object Helpers {
                                         modData.key = xml.getAttributeValue(null, "key") ?: ""
                                         modData.cat = currentCategory
                                         modData.sub = routeSub
+                                        modData.page = searchPage
                                         modData.order = xml.getAttributeIntValue(null, "order", 0)
                                         allModsList.add(modData)
                                     }

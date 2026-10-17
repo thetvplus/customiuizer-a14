@@ -37,6 +37,11 @@ class System : SubFragment() {
         }
         super.onCreatePreferences(savedInstanceState, rootKey)
         selectSub()
+        // Apply ROM-specific visibility before the first adapter bind. Removing this row
+        // in onActivityCreated starts a list relayout during the horizontal page animation.
+        if (sub == "pref_key_system_cat_qs" && Build.IS_INTERNATIONAL_BUILD) {
+            findPreference<Preference>("pref_key_system_cc_switch_qsandnotification")?.isVisible = false
+        }
     }
 
     private fun migrateLegacyRecentsCardStylePreference() {
@@ -167,9 +172,6 @@ class System : SubFragment() {
                 findPreference<Preference>("pref_key_system_colorizenotifs_apps")?.setOnPreferenceClickListener(openAppsEdit)
             }
             "pref_key_system_cat_qs" -> {
-                if (Build.IS_INTERNATIONAL_BUILD) {
-                    findPreference<Preference>("pref_key_system_cc_switch_qsandnotification")?.isVisible = false
-                }
                 findPreference<Preference>("pref_key_system_cc_tile_style_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, false, R.xml.prefs_system_controlcenter_themestyle); true }
             }
             "pref_key_system_cat_recents" -> findPreference<Preference>("pref_key_system_hidefromrecents_apps")?.setOnPreferenceClickListener(openAppsEdit)

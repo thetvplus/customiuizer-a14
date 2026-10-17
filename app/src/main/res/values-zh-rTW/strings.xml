@@ -3,7 +3,7 @@
     <string name="settings_title">設定</string>
     <string name="app_about">關於</string>
     <string name="about_version">版本：%1$s</string>
-    <string name="about_maintainer">維護與開發：tomthenpc</string>
+    <string name="about_maintainer">維護與開發：thetvplus</string>
     <string name="about_based_on">基於 Mikanoshi 與 MonwF 的开源工作</string>
     <string name="about_dynamic">標記有⟲的模組由預設值修改為其他值後只需軟重啟一次，之後的更改將立即應用；其他選項始終需要軟重啟。</string>
     <string name="about_unsupported">標記⨯的模組不支援此設備。</string>
@@ -15,8 +15,6 @@
     <string name="about_paypal_summary">透過 PayPal 支持專案開發</string>
     <string name="about_repository_title">倉庫首頁</string>
     <string name="about_repository_summary">原始碼與版本發布</string>
-    <string name="about_contact_title">聯絡方式</string>
-    <string name="about_contact_summary">Telegram：@Jinji_Kiko</string>
     <string name="about_donation_unavailable">無法載入贊賞碼</string>
     <string name="about_link_unavailable">沒有可開啟此連結的應用程式</string>
     <string name="about_notes_category">說明</string>
@@ -1058,4 +1056,8 @@
     <string name="array_temp_current">溫度與電流</string>
     <string name="array_temp_power">溫度與功率</string>
     <string name="qs_toggle_fps">更新頻率</string>
+    <string name="system_statusbar_lefticons_scale_title">左側圖示大小</string>
+    <string name="system_statusbar_lefticons_adjust_summ" formatted="false">調整移至左側的整組圖示。100% 使用系統原生大小，修改後需重新啟動系統介面。</string>
+    <string name="system_statusbar_lefticons_verticaloffset_title">左側圖示垂直偏移</string>
+    <string name="system_statusbar_lefticons_offset_summ">負數上移、正數下移，0 dp 使用原生位置。修改後需重新啟動系統介面。</string>
 </resources>

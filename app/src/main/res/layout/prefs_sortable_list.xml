@@ -8,11 +8,9 @@
 
 	<tv.withaibuild.customiuizer.utils.SortableListView
 		android:id="@android:id/list"
+		style="@style/GroupedListView"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:overScrollMode="never"
-		android:layout_marginTop="10dp"
-		android:scrollbars="none"
-		android:listSelector="@android:color/transparent" />
+		android:scrollbars="none" />
 
 </RelativeLayout>

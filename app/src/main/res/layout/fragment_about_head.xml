@@ -77,8 +77,4 @@
 		android:textColor="@color/color_on_surface_variant"
 		android:textSize="@dimen/secondary_text_size" />
 
-	<View
-		android:layout_width="match_parent"
-		android:layout_height="1dp"
-		android:background="@color/about_divider" />
 </LinearLayout>

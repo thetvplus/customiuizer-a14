@@ -14,6 +14,18 @@ import org.junit.Test
  */
 class ModSearchIndexTest {
 
+    @Test
+    fun matchesStandaloneSwitchesByTitleAndPageContext() {
+        val wifi = mod("系统/状态栏/隐藏图标", "Wi-Fi", "pref_key_system_statusbaricons_wifi")
+        assertTrue(wifi.matchesSearch(searchTerms("wifi")))
+        assertTrue(wifi.matchesSearch(searchTerms("  状态栏  WIFI ")))
+        assertTrue(wifi.matchesSearch(searchTerms("隐藏图标 Wi-Fi")))
+        org.junit.Assert.assertFalse(wifi.matchesSearch(searchTerms("隐藏图标 蓝牙")))
+        wifi.title = "蓝牙"
+        assertTrue(wifi.matchesSearch(searchTerms("隐藏图标 蓝牙")))
+        org.junit.Assert.assertFalse(wifi.matchesSearch(searchTerms("wifi")))
+    }
+
     private fun mod(breadcrumbs: String, title: String, key: String = title): ModData =
         ModData().apply {
             this.breadcrumbs = breadcrumbs

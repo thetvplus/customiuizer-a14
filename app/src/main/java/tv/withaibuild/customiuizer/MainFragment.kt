@@ -213,7 +213,7 @@ class MainFragment : PreferenceFragmentBase() {
         resultView?.adapter = ModSearchAdapter(requireActivity())
         resultView?.setOnItemClickListener { parent: AdapterView<*>, _, position: Int, _ ->
             val mod = parent.adapter?.getItem(position) as? ModData ?: return@setOnItemClickListener
-            if (openModCat(mod.cat.name, mod.sub, mod.key)) {
+            if (openSearchResult(mod)) {
                 inSearchView = SearchStateMachine.STATE_NAVIGATED
                 isSearchFocused = false
                 Helpers.hideKeyboard(activity as? AppCompatActivity, this@MainFragment.view)
@@ -342,6 +342,21 @@ class MainFragment : PreferenceFragmentBase() {
         }
         inSearchView = SearchStateMachine.STATE_IDLE
         lastFilter = null
+    }
+
+    private fun openSearchResult(mod: ModData): Boolean {
+        val page = mod.page ?: return openModCat(mod.cat.name, mod.sub, mod.key)
+        if (!isAdded || parentFragmentManager.isStateSaved) return false
+        val fragment = page.createFragment() ?: return false
+        val bundle = Bundle().apply {
+            putString("cat", mod.cat.name)
+            putString("sub", mod.sub)
+            putString("mod", mod.key)
+            putBoolean("isStandalone", true)
+            if (page.dynamic) putBundle("catInfo", Bundle().apply { putBoolean("isDynamic", true) })
+        }
+        openSubFragment(fragment, bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, page.title, page.resource)
+        return true
     }
 
     private fun openModCat(cat: String, sub: String?, mod: String): Boolean {

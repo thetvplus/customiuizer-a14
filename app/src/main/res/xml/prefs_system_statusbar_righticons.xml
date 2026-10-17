@@ -10,6 +10,32 @@
 		android:title="@string/system_statusbaricons_wifi_mobile_atleft_title"
 		android:defaultValue="false" />
 
+	<tv.withaibuild.customiuizer.prefs.SeekBarPreference
+		android:key="pref_key_system_statusbar_lefticons_scale"
+		android:title="@string/system_statusbar_lefticons_scale_title"
+		android:summary="@string/system_statusbar_lefticons_adjust_summ"
+		android:dependency="pref_key_system_statusbaricons_wifi_mobile_atleft"
+		android:defaultValue="100"
+		miuizer:indentLevel="1"
+		miuizer:minValue="75"
+		miuizer:maxValue="125"
+		miuizer:stepValue="5"
+		miuizer:format="%d%%" />
+
+	<tv.withaibuild.customiuizer.prefs.SeekBarPreference
+		android:key="pref_key_system_statusbar_lefticons_verticaloffset"
+		android:title="@string/system_statusbar_lefticons_verticaloffset_title"
+		android:summary="@string/system_statusbar_lefticons_offset_summ"
+		android:dependency="pref_key_system_statusbaricons_wifi_mobile_atleft"
+		android:defaultValue="12"
+		miuizer:indentLevel="1"
+		miuizer:minValue="0"
+		miuizer:maxValue="24"
+		miuizer:negativeShift="12"
+		miuizer:displayDividerValue="2"
+		miuizer:stepValue="1"
+		miuizer:format="%.1f dp" />
+
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 		android:key="pref_key_system_statusbaricons_swap_wifi_mobile"
 		android:title="@string/system_statusbaricons_swap_wifi_mobile_title"

@@ -28,6 +28,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.SubFragment
+import tv.withaibuild.customiuizer.applyGroupedListRow
 import tv.withaibuild.customiuizer.mods.GlobalActions
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.utils.AppHelper
@@ -90,6 +91,7 @@ class BTList : SubFragment() {
         val location: View? = view.findViewById(R.id.fetch_devices)
         location?.findViewById<TextView>(android.R.id.title)?.text = getString(R.string.bt_fetch_devices_title)
         location?.findViewById<TextView>(android.R.id.summary)?.text = getString(R.string.bt_fetch_devices_summ)
+        location?.let { applyGroupedListRow(it, 0, 1) }
         location?.setOnClickListener {
             btList.clear()
             btAdapter1?.notifyDataSetChanged()
@@ -206,6 +208,7 @@ class BTList : SubFragment() {
             } else {
                 mInflater.inflate(R.layout.pref_item, parent, false)
             }
+            applyGroupedListRow(row, position, count)
 
             val itemTitle: TextView = row.findViewById(android.R.id.title)
             val itemSumm: TextView = row.findViewById(android.R.id.summary)

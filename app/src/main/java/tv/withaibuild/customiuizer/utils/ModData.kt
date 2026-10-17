@@ -24,13 +24,29 @@ class ModData {
         set(value) {
             field = value
             titleLower = value.lowercase(Locale.ROOT)
+            updateSearchText()
         }
 
     var titleLower: String = ""
         private set
 
-    @JvmField
     var breadcrumbs: String = ""
+        set(value) {
+            field = value
+            updateSearchText()
+        }
+
+    var searchText: String = ""
+        private set
+
+    private fun updateSearchText() {
+        searchText = normalizeSearchText(title + " " + breadcrumbs)
+    }
+
+    fun matchesSearch(terms: List<String>): Boolean = terms.all { searchText.contains(it) }
+
+    @JvmField
+    var page: SearchPreferencePage? = null
 
     @JvmField
     var key: String = ""
@@ -44,3 +60,10 @@ class ModData {
     @JvmField
     var order: Int = 0
 }
+
+// Wi-Fi/WIFI and path separators should not make an otherwise exact word disappear.
+internal fun normalizeSearchText(value: String): String = value.lowercase(Locale.ROOT)
+    .replace("-", "").replace("‑", "").replace("/", " ")
+
+internal fun searchTerms(query: String): List<String> = normalizeSearchText(query)
+    .trim().split(Regex("\\s+")).filter { it.isNotEmpty() }

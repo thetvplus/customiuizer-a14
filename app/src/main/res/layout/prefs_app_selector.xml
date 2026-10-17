@@ -4,17 +4,17 @@
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
 	android:orientation="vertical"
-	android:paddingTop="20dp"
+	android:paddingTop="@dimen/preference_screen_padding_top"
 	android:animateLayoutChanges="true">
 
 	<include layout="@layout/search_stub" />
 
 	<ListView
 		android:id="@android:id/list"
+		style="@style/GroupedListView"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
 		android:layout_below="@+id/searchView"
-		android:overScrollMode="never"
 		android:scrollbars="vertical" />
 
 	<LinearLayout

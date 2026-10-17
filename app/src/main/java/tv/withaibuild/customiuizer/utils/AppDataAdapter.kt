@@ -16,6 +16,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.applyGroupedListRow
 import java.util.ArrayList
 import java.util.Locale
 
@@ -82,14 +83,8 @@ class AppDataAdapter(
 
     private fun refreshSearchKeys() {
         for (app in originalAppList) {
-            app.labelLower = app.label.lowercase(Locale.ROOT)
-            app.actNameLower = app.actName.lowercase(Locale.ROOT)
-            app.iconKey = buildIconKey(app)
+            app.prepareForList()
         }
-    }
-
-    private fun buildIconKey(app: AppData): String {
-        return if (app.actName.isNotEmpty()) "${app.pkgName}|${app.actName}" else app.pkgName
     }
 
     private fun removeDualUsers() {
@@ -172,6 +167,7 @@ class AppDataAdapter(
         }
 
         val ad = getItem(position)
+        applyGroupedListRow(holder.root, position, count)
         holder.title.text = ad.label
         holder.disableIcon.visibility = if (ad.enabled) View.GONE else View.VISIBLE
 

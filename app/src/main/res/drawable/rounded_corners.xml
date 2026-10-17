@@ -4,8 +4,8 @@
 	<gradient android:angle="0" />
 	<stroke
 		android:width="1px"
-		android:color="#FF999999" />
-	<corners android:radius="13dp" />
+		android:color="@color/color_outline_variant" />
+	<corners android:radius="@dimen/preference_group_radius" />
 	<padding
 		android:bottom="5dp"
 		android:left="5dp"

@@ -2,9 +2,70 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
+## r14.21.9 — 2026-09-30
+
+versionCode 218, for HyperOS 1 / Android 14.
+
+Changes since r14.21.8:
+
+- Coalesce repeated control-center step refresh requests so slow queries do not accumulate waiting work.
+- Cancel obsolete refreshes when the screen turns off, the last step view is removed, or the controller is reinitialized, preventing queued queries and stale view updates after exit.
+- Keep provider queries serialized across rapid screen changes and controller replacement; add regression coverage for slow queries, lifecycle cleanup, and refresh recovery.
+
+---
+
+## r14.21.8 — 2026-09-15
+
+versionCode 217, for HyperOS 1 / Android 14.
+
+Changes since r14.21.7:
+
+- Improve sorting and search in app-lock and privacy-app lists, reducing repeated state queries and temporary allocations while preserving selected-first ordering, existing order, and dual-app user separation.
+- Fix icons that could fail to load in app-lock, privacy-app, and shortcut lists because their icon cache keys were not initialized.
+- Reuse shortcut labels and icon metadata to reduce repeated resource reads during scrolling and search.
+- Reduce unnecessary list copying when publishing settings-search and app-list results.
+
+---
+
+## r14.21.7 — 2026-09-11
+
+versionCode 216, for HyperOS 1 / Android 14.
+
+Changes since r14.21.5:
+
+- Fix moving mobile signal and Wi-Fi icons to the left side of the status bar, and improve their size and vertical alignment.
+- Add left-side icon size (75%–125%) and vertical offset (−6–6 dp) controls. Restart System UI after changing these settings.
+- Fix content shifting upward during the transition into the System → Control center settings page.
+- Expand settings search to include switches on standalone pages such as Hide icons. Support combined page-path and keyword queries, Wi-Fi/WIFI matching, and direct navigation to the matching option.
+- Remove the duplicate pressed background from switch rows while preserving switch feedback and search highlighting.
+- Update the About-page maintainer to thetvplus.
+
+---
+
+## r14.21.5 — 2026-09-06
+
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+
+### Settings UI
+
+- Optimized the settings UI.
+
+### Notifications
+
+- Open channel settings now opens the system channel page for the current notification.
+- Notification importance works with both ChannelNotificationSettings implementations.
+- Extra notification-row actions keep the last item on screen.
+
+### Artifact Information
+
+- APK: `CustoMIUIzer-A14-r14.21.5.apk`
+- versionCode / versionName: `212 / r14.21.5`
+
+---
+
 ## r14.20.9 — 2026-09-05
 
-Prerelease. Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
+Targeting HyperOS 1 / Android 14 (SDK 34), `arm64-v8a`, libxposed API 101/102.
 
 ### Stability
 

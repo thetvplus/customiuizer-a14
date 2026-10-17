@@ -1,19 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape
-            android:shape="rectangle"
-            android:useLevel="true">
-            <corners android:radius="8dp" />
-            <solid android:color="@color/color_window_background" />
-        </shape>
-    </item>
-    <item>
-        <shape
-            android:shape="rectangle"
-            android:useLevel="true">
-            <corners android:radius="8dp" />
-            <solid android:color="@color/color_popmenu_background" />
-        </shape>
-    </item>
-</layer-list>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+	android:shape="rectangle">
+	<corners android:radius="@dimen/preference_group_radius" />
+	<solid android:color="@color/color_surface_container" />
+</shape>

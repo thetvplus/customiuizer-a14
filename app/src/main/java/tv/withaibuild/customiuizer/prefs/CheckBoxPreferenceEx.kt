@@ -44,6 +44,8 @@ class CheckBoxPreferenceEx(context: Context, attrs: AttributeSet?) : SwitchPrefe
 
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
+        // The Switch supplies press feedback; keep the row background for search/focus only.
+        holder.itemView.setBackgroundResource(R.drawable.list_item_bg_switch)
         val title = holder.findViewById(android.R.id.title) as? TextView
         title?.maxLines = 2
         // The row owns the click. Propagate its pressed state to the non-clickable Switch so

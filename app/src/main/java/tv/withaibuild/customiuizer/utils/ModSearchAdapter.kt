@@ -12,6 +12,7 @@ import android.widget.Filter
 import android.widget.Filterable
 import android.widget.TextView
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.applyGroupedListRow
 import java.util.Locale
 
 class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
@@ -20,12 +21,10 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
     private val mFilter = ItemFilter()
 
     /**
-     * Mutated only in [ItemFilter.publishResults] and read only in [getView], both on the
-     * main thread, so a plain list is correct. It used to be a CopyOnWriteArrayList, which
-     * copied the whole array on clear, on addAll and again on sort — three copies per
-     * keystroke — for concurrency that never happens.
+     * Each filter result is complete before publication and never mutated afterwards.
+     * Adopt that list on the main thread so publication needs no second backing array.
      */
-    private val modsList = ArrayList<ModData>()
+    private var modsList: List<ModData> = emptyList()
 
     /** The query the currently published results were produced from. Main thread only. */
     private var filterString = ""
@@ -43,9 +42,10 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
         val itemSummary: TextView = row.findViewById(android.R.id.summary)
 
         val ad = getItem(position)
+        applyGroupedListRow(row, position, getCount())
 
         val start = ad.titleLower.indexOf(filterString)
-        if (start >= 0) {
+        if (filterString.isNotEmpty() && start >= 0 && start + filterString.length <= ad.title.length) {
             val spannable = SpannableString(ad.title)
             spannable.setSpan(
                 ForegroundColorSpan(Helpers.markColorVibrant),
@@ -75,6 +75,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
         override fun performFiltering(constraint: CharSequence?): FilterResults {
             val query = constraint?.toString().orEmpty()
             val loweredQuery = query.lowercase(Locale.ROOT)
+            val terms = searchTerms(query)
             val newModsOnly = query == Helpers.NEW_MODS_SEARCH_QUERY
             val source = Helpers.allModsList
 
@@ -82,7 +83,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
             for (mod in source) {
                 val matched =
                     if (newModsOnly) Helpers.newMods.contains(mod.key)
-                    else mod.titleLower.contains(loweredQuery)
+                    else mod.matchesSearch(terms)
                 if (matched) matches.add(mod)
             }
 
@@ -98,8 +99,7 @@ class ModSearchAdapter(context: Context) : BaseAdapter(), Filterable {
             // performFiltering runs on a worker thread, so a newer query can already be in
             // flight, and the highlight span must match the rows actually being shown.
             filterString = constraint?.toString()?.lowercase(Locale.ROOT).orEmpty()
-            modsList.clear()
-            (results?.values as? ArrayList<ModData>)?.let { modsList.addAll(it) }
+            modsList = results?.values as? List<ModData> ?: emptyList()
             notifyDataSetChanged()
         }
     }

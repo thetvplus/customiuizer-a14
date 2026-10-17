@@ -4,11 +4,13 @@
 
 CustoMIUIzer A14 是面向 **HyperOS 1 / Android 14（SDK 34）** 的系统界面与交互定制模块，基于 CustoMIUIzer 项目持续维护。它使用独立包名和版本线，不是上游官方版本。
 
-- 当前正式版：`r14.20.8`
-- 当前预发布：`r14.20.9`
+- 当前版本：`r14.21.9`（Release，versionCode 218）
+- 维护与开发：`thetvplus`
 - 应用 ID：`tv.withaibuild.customiuizer.r14`
-- 源码仓库：<https://github.com/tomthenpc/customiuizer-a14>
+- 源码仓库：<https://github.com/thetvplus/customiuizer-a14>
 - 用户下载：<https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases>
+
+`r14.21.9` 修复控制中心计步刷新任务积压，减少慢查询期间的重复请求，并在熄屏、界面移除或控制器重新初始化时取消过期刷新。详细变化见 [CHANGELOG_CN.md](CHANGELOG_CN.md)。
 
 ## 核心功能
 
@@ -52,14 +54,13 @@ python tools/verify.py full
 
 完整流程见 [DEVELOPMENT.md](docs/DEVELOPMENT.md) 和 [RELEASE.md](docs/RELEASE.md)。
 
-## 支持与联系
+## 支持项目
 
 如果这个项目对你有帮助，可以通过微信赞赏或 [PayPal](https://paypal.me/Jinjitv) 支持后续开发与维护。
 
 <img src="app/src/main/res/drawable-nodpi/wechat_donation_code.png" alt="微信赞赏码" width="320">
 
-- 仓库主页：<https://github.com/tomthenpc/customiuizer-a14>
-- 联系方式（Telegram）：<https://t.me/Jinji_Kiko>
+- 仓库主页：<https://github.com/thetvplus/customiuizer-a14>
 
 ## 开发说明
 
