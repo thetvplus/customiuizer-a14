@@ -26,6 +26,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -213,6 +214,26 @@ class StepCounterRefreshLifecycleTest {
         scopes.add(currentJob())
     }
 
+    @Test
+    fun failedScreenRegistrationCanRetryTheSameViewAttachment() {
+        val context = QueryContext(probe)
+        initialize(context)
+        context.registerFailure = IllegalStateException("screen registration unavailable")
+        val view = AttachedTextView()
+        try {
+            StepCounterController.bindStepView(view)
+            fail("registration must report the failure")
+        } catch (_: IllegalStateException) {
+            assertFalse("failed registration must not be committed",
+                controllerField("screenStateRegistered").getBoolean(null))
+        }
+        context.registerFailure = null
+        view.attach()
+        assertEquals("the same view must be able to acquire screen and tick receivers", 2, context.receivers.size)
+        view.detach()
+        assertTrue(context.receivers.isEmpty())
+    }
+
     private fun attachView() = AttachedTextView().also { StepCounterController.bindStepView(it) }
 
     private fun blockNext(context: QueryContext) = QueryAttempt().also {
@@ -296,11 +317,13 @@ class StepCounterRefreshLifecycleTest {
     }
 
     private class QueryContext(private val probe: QueryProbe) : Application() {
+        var registerFailure: Throwable? = null
         val attempts = ConcurrentLinkedQueue<QueryAttempt>()
         val receivers = ArrayList<BroadcastReceiver>()
         override fun getApplicationContext(): Context = this
         override fun getSystemService(name: String): Any? = null
         override fun registerReceiver(receiver: BroadcastReceiver?, filter: IntentFilter?, flags: Int): Intent? {
+            registerFailure?.let { throw it }
             if (receiver != null) receivers.add(receiver)
             return null
         }

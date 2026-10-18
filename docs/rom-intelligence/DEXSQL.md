@@ -51,9 +51,14 @@ codex mcp get dexsql --json
 3. 选择 [查询集](../../tools/dexsql/README.md)，把文件内容作为 `query.sql` 数组中的一项。
    输入宿主、插件或 split 时分别保留来源，用 `dex_files` 将 `file_id` 映射到源路径和 DEX。
    搜索先收敛字符串与签名，再查调用 / 字段交叉引用，最后 `decode`。
+   相关 SQL 合并为一次批量请求；重复使用的筛选可定义 `named_temp_queries`，其生命周期仅限该 Dataset，
+   不会物化结果或建立磁盘缓存。接口实现先查 `class_interfaces`，再结合定义与调用关系复核。
 4. 大结果按 `next_offset` 继续；查询分页须保持 SQL 与确定排序不变。
    decode 的文本续页位于对应 `methods[]` 条目中，使用其 `next_offset`。
    `int64` / `uint64` 单元格是十进制字符串，不按浮点数读取；空结果不是执行失败。
+   已安装 schema 支持且客户端能读取 `structuredContent` 时，查询、decode、Manifest / Resources 工具优先
+   使用 `compact: true`；同时用选择性 WHERE、SQL LIMIT、`limit` / `max_bytes` 限制工作和输出。
+   旧版本不传未支持的参数；精简输出不会替代查询范围限制或改变分页规则。
 5. 用现有解析器、SDK dexdump 或 DexKit 核对关键目标；保存原 SQL、工具版本、
    输入哈希、完整描述符、文件来源和匹配数量。独立 DEX 索引不能跨文件直接连接。
    R8 分析使用同一 APK 的 mapping，不把混淆名写成长期生产合同。

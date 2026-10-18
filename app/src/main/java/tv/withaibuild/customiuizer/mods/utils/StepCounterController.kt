@@ -89,10 +89,13 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
     private fun addStepView(sv: TextView) {
         cleanupDeadViews()
         if (stepViewList.any { it.get() === sv }) return
+        val ctx = context
+        // A failed screen registration must leave this attachment retryable.
+        if (ctx != null) ensureScreenStateRegistered(ctx)
         stepViewList.add(WeakReference(sv))
+        stepsWithGoal?.let { sv.text = it }
 
-        val ctx = context ?: return
-        ensureScreenStateRegistered(ctx)
+        if (ctx == null) return
         if (ScreenStateController.isScreenOn()) {
             ensureTickRegistered(ctx)
         }
@@ -154,8 +157,8 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
 
     private fun ensureScreenStateRegistered(ctx: Context) {
         if (screenStateRegistered) return
-        screenStateRegistered = true
         ScreenStateController.addListener(ctx, this)
+        screenStateRegistered = true
     }
 
     private fun releaseInactiveState() {

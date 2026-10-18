@@ -9,22 +9,25 @@ import android.database.Cursor
 import android.net.Uri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
+import kotlin.coroutines.coroutineContext
 
 /**
  * Weather data cache for the status bar clock.
  *
  * - Only the application context is retained. The clock controller is weakly
  *   referenced so rebuilding SystemUI clock controllers cannot leak old views.
- * - The ContentProvider query is protected by a Mutex so ticks do not pile up
- *   while a query is already in flight.
+ * - One refresh job coalesces ticks and forced updates while a query is in flight.
+ *   A Mutex also serializes uncancellable provider work across scope replacements.
  * - TIME_TICK is only registered while the screen is on; screen off stops both
  *   the receiver and any delayed refresh job.
  * - A missed force refresh is remembered and executed when the screen turns
@@ -48,6 +51,7 @@ object WeatherDataController : ScreenStateController.ScreenStateListener {
     private var context: Context? = null
 
     private var controllerScope = newScope()
+    private var refreshJob: Job? = null
     private val queryMutex = Mutex()
     private var timeTickRegistered = false
     private var pendingForceRefresh = false
@@ -61,26 +65,24 @@ object WeatherDataController : ScreenStateController.ScreenStateListener {
         if (isOn) {
             ensureTickRegistered(ctx)
             if (pendingForceRefresh) {
-                pendingForceRefresh = false
                 refreshWeatherData(true)
             }
         } else {
             controllerScope.cancel()
             controllerScope = newScope()
+            refreshJob = null
             unregisterTick(ctx)
         }
     }
 
-    private fun queryWeather() {
-        val ctx = context ?: return
-
+    private fun queryWeather(ctx: Context): String? {
         var cursor: Cursor? = null
-        try {
+        return try {
             cursor = ctx.contentResolver.query(
                 Uri.parse("content://weather/actualWeatherData/1"),
                 null, null, null, null
             )
-            if (cursor != null && cursor.moveToFirst()) {
+            val result = if (cursor != null && cursor.moveToFirst()) {
                 var newWeather = ""
                 var columnIndex = cursor.getColumnIndex("description")
                 if (columnIndex >= 0) {
@@ -90,16 +92,19 @@ object WeatherDataController : ScreenStateController.ScreenStateListener {
                 if (columnIndex >= 0) {
                     newWeather += (" " + cursor.getString(columnIndex))
                 }
-                weatherInfo = newWeather
-            }
+                newWeather
+            } else null
             queryFailureLogged = false
+            result
         } catch (oom: OutOfMemoryError) {
             throw oom
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             if (!queryFailureLogged) {
                 queryFailureLogged = true
                 XposedHelpers.log(t)
             }
+            null
         } finally {
             cursor?.close()
         }
@@ -107,18 +112,23 @@ object WeatherDataController : ScreenStateController.ScreenStateListener {
 
     @JvmStatic
     fun refreshWeatherData(forceRefresh: Boolean) {
-        if (!ScreenStateController.isScreenOn()) {
-            if (forceRefresh) pendingForceRefresh = true
-            return
-        }
+        if (forceRefresh) pendingForceRefresh = true
+        if (!ScreenStateController.isScreenOn()) return
+        val ctx = context ?: return
+        if (refreshJob?.isActive == true) return
 
-        if (forceRefresh) pendingForceRefresh = false
-
-        controllerScope.launch {
-            withContext(Dispatchers.IO) {
-                queryMutex.withLock { queryWeather() }
+        refreshJob = controllerScope.launch {
+            val weather = withContext(Dispatchers.IO) {
+                queryMutex.withLock {
+                    coroutineContext.ensureActive()
+                    if (!ScreenStateController.isScreenOn()) return@withLock null
+                    queryWeather(ctx)
+                }
             }
-            if (forceRefresh) {
+            // Publish only after withContext has checked the current scope's cancellation.
+            if (weather != null) weatherInfo = weather
+            if (pendingForceRefresh) {
+                pendingForceRefresh = false
                 val target = updateTarget?.get()
                 if (target != null) {
                     ModuleHelper.guarded { XposedHelpers.callMethod(target, "updateTime") }
@@ -133,6 +143,7 @@ object WeatherDataController : ScreenStateController.ScreenStateListener {
         // Cancel any pending work from a previous context and start fresh.
         controllerScope.cancel()
         controllerScope = newScope()
+        refreshJob = null
         pendingForceRefresh = false
 
         val appContext = context.applicationContext

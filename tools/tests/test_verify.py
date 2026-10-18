@@ -1,9 +1,10 @@
 import importlib.util
+import io
 import json
 import sys
 import tempfile
 import unittest
-from contextlib import ExitStack
+from contextlib import ExitStack, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -65,6 +66,21 @@ class VerifyChangedInputsTests(unittest.TestCase):
         code, gradle = self.run_changed(["app/src/test/java/example/FeatureTest.kt"])
         self.assertEqual(0, code)
         gradle.assert_called_once_with("testDebugUnitTest")
+
+
+class VerifyProcessOutputTests(unittest.TestCase):
+    def test_unicode_and_invalid_bytes_keep_diagnostics_and_exit_status(self):
+        for status in (0, 7):
+            with self.subTest(status=status), redirect_stdout(io.StringIO()) as output:
+                code = _verify.run([
+                    sys.executable, "-c",
+                    "import sys; print('中文诊断'); "
+                    "sys.stderr.buffer.write(b'bad byte: \\xff\\n'); "
+                    f"sys.exit({status})",
+                ])
+                self.assertEqual(status, code)
+                self.assertIn("中文诊断", output.getvalue())
+                self.assertIn(r"bad byte: \xff", output.getvalue())
 
 
 class VerifyJvmTargetTests(unittest.TestCase):

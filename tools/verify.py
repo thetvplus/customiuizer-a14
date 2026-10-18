@@ -60,8 +60,10 @@ def _summarize(output: str, tail_lines: int = 12) -> str:
 
 
 def command_environment(source: dict[str, str] | None = None) -> dict[str, str]:
-    """Return a subprocess environment with a legacy JAVA_HOME/bin value normalized."""
+    """Use UTF-8 diagnostics and normalize legacy JAVA_HOME/bin for child tools."""
     env = dict(os.environ if source is None else source)
+    # Piped Python diagnostics must agree with Gradle/JDK's UTF-8 output on Windows.
+    env["PYTHONIOENCODING"] = "utf-8:backslashreplace"
     raw_home = env.get("JAVA_HOME", "").strip().strip('"')
     if not raw_home:
         return env
@@ -121,6 +123,8 @@ def run(cmd: list[str]) -> int:
         env=command_environment(),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="backslashreplace",
     )
     output = (result.stdout or "") + (result.stderr or "")
     if result.returncode != 0:
