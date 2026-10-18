@@ -14,9 +14,13 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 from pathlib import Path
+
+try:
+    from tools.git_changes import changed_paths
+except ModuleNotFoundError:
+    from git_changes import changed_paths
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MAIN_ROOT = REPO_ROOT / "app" / "src" / "main"
@@ -82,16 +86,10 @@ def _rel_main(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 
-def _git_changed_files(ref: str | None = None) -> list[Path]:
-    cmd = ["git", "diff", "--name-only", "--diff-filter=ACMR"]
-    if ref:
-        cmd.append(ref)
-    result = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, check=True)
+def _git_changed_files(*, staged: bool = False) -> list[Path]:
     paths = []
-    for line in result.stdout.splitlines():
-        if not line:
-            continue
-        path = REPO_ROOT / line
+    for name in changed_paths(REPO_ROOT, staged=staged):
+        path = REPO_ROOT / name
         if path.is_file() and _rel_main(path).startswith("app/src/main/"):
             paths.append(path)
     return paths
@@ -161,7 +159,7 @@ def main() -> int:
     parser.add_argument(
         "--changed",
         action="store_true",
-        help="check files changed relative to HEAD (staged or unstaged)",
+        help="check changes relative to HEAD, including non-ignored untracked files",
     )
     args = parser.parse_args()
 
@@ -169,9 +167,9 @@ def main() -> int:
         parser.error("--staged and --changed are mutually exclusive")
 
     if args.staged:
-        files = _git_changed_files("--cached")
+        files = _git_changed_files(staged=True)
     elif args.changed:
-        files = _git_changed_files("HEAD")
+        files = _git_changed_files()
     else:
         files = _all_main_files()
 

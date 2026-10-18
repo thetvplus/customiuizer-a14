@@ -26,6 +26,11 @@ from pathlib import Path
 
 import eol_check
 
+try:
+    from tools.git_changes import changed_paths
+except ModuleNotFoundError:
+    from git_changes import changed_paths
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_JAVA_MAJOR = 25
 
@@ -280,18 +285,6 @@ def check_static_rules() -> int:
     return 0
 
 
-def changed_files(ref: str = "HEAD") -> list[str]:
-    """Return files changed relative to the given ref (staged or unstaged)."""
-    result = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=ACMRD", ref],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return [ln for ln in result.stdout.splitlines() if ln]
-
-
 def is_android_build_input(path: str) -> bool:
     return path.startswith(("gradle/", "app/lib/")) or ("/" not in path and path.startswith("gradlew")) or path in {
         "app/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts",
@@ -328,12 +321,6 @@ def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -
     if code != 0:
         return code
 
-    if changed or staged:
-        changed = changed_files("HEAD" if changed else "--cached")
-        if not any(p.startswith("app/src/") or is_android_build_input(p) for p in changed):
-            print("verify: no Android source or build input changes; skipping gradle")
-            return 0
-
     if tests:
         test_args = []
         for t in tests:
@@ -341,7 +328,11 @@ def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -
         return gradle("testDebugUnitTest", *test_args)
 
     if changed or staged:
-        if any(p.startswith("app/src/test/") or is_android_build_input(p) for p in changed):
+        paths = changed_paths(REPO_ROOT, staged=staged)
+        if not any(p.startswith("app/src/") or is_android_build_input(p) for p in paths):
+            print("verify: no Android source or build input changes; skipping gradle")
+            return 0
+        if any(p.startswith("app/src/test/") or is_android_build_input(p) for p in paths):
             return gradle("testDebugUnitTest")
     return gradle("compileDebugKotlin", "compileDebugJavaWithJavac")
 
@@ -393,12 +384,13 @@ def main() -> int:
         nargs="+",
         help="run only these test classes (e.g. PreferenceBootstrapTest)",
     )
-    fast_parser.add_argument(
+    scope = fast_parser.add_mutually_exclusive_group()
+    scope.add_argument(
         "--changed",
         action="store_true",
-        help="only check source files changed relative to HEAD",
+        help="check changes relative to HEAD, including non-ignored untracked files",
     )
-    fast_parser.add_argument(
+    scope.add_argument(
         "--staged",
         action="store_true",
         help="only check source files staged in the index",

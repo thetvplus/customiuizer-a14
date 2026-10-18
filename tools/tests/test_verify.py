@@ -1,10 +1,11 @@
 import importlib.util
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import ExitStack, redirect_stdout
+from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -25,7 +26,7 @@ _spec_audit.loader.exec_module(_audit)
 
 
 class VerifyChangedInputsTests(unittest.TestCase):
-    def run_changed(self, paths):
+    def run_changed(self, paths, tests=None, staged=False):
         checks = (
             "check_java_runtime", "check_static_rules", "check_eol",
             "check_observer_key_contract", "check_hook_body_prefmap",
@@ -35,9 +36,9 @@ class VerifyChangedInputsTests(unittest.TestCase):
         with ExitStack() as stack:
             for name in checks:
                 stack.enter_context(patch.object(_verify, name, return_value=0))
-            stack.enter_context(patch.object(_verify, "changed_files", return_value=paths))
+            stack.enter_context(patch.object(_verify, "changed_paths", return_value=paths))
             gradle = stack.enter_context(patch.object(_verify, "gradle", return_value=0))
-            code = _verify.fast(None, changed=True)
+            code = _verify.fast(tests, changed=not staged, staged=staged)
             return code, gradle
 
     def test_dependency_and_toolchain_inputs_run_unit_tests(self):
@@ -66,6 +67,108 @@ class VerifyChangedInputsTests(unittest.TestCase):
         code, gradle = self.run_changed(["app/src/test/java/example/FeatureTest.kt"])
         self.assertEqual(0, code)
         gradle.assert_called_once_with("testDebugUnitTest")
+
+    def test_explicit_tests_run_even_without_android_changes(self):
+        for staged in (False, True):
+            for paths in ([], ["docs/TESTING.md"]):
+                with self.subTest(staged=staged, paths=paths):
+                    code, gradle = self.run_changed(paths, ["*FeatureTest"], staged=staged)
+                    self.assertEqual(0, code)
+                    gradle.assert_called_once_with("testDebugUnitTest", "--tests", "*FeatureTest")
+
+    def test_scope_flags_are_exclusive_and_allow_explicit_tests(self):
+        for option in ("--changed", "--staged"):
+            with patch.object(sys, "argv", ["verify.py", "fast", option, "--tests", "*FeatureTest"]):
+                with patch.object(_verify, "fast", return_value=0) as fast:
+                    self.assertEqual(0, _verify.main())
+                    fast.assert_called_once_with(
+                        ["*FeatureTest"], changed=option == "--changed", staged=option == "--staged"
+                    )
+        with patch.object(sys, "argv", ["verify.py", "fast", "--changed", "--staged"]):
+            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                _verify.main()
+            self.assertEqual(2, error.exception.code)
+
+
+class VerifyGitChangesTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import check_main_source_cleanliness
+        cls.cleanliness = check_main_source_cleanliness
+        spec = importlib.util.spec_from_file_location("invariants_git_test", _REPO_ROOT / "tools/check-invariants.py")
+        cls.invariants = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.invariants)
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.source = "app/src/main/java/example/Existing.kt"
+        self.git("init", "-q")
+        self.write(".gitignore", "app/src/main/java/ignored/\n")
+        self.write(self.source, "class Existing\n")
+        self.git("add", ".")
+        self.git("commit", "-qm", "baseline")
+
+    def git(self, *args):
+        return subprocess.check_output([
+            "git", "-c", "user.name=Gate Test", "-c", "user.email=gate-test@example.invalid",
+            "-c", "core.autocrlf=false", *args,
+        ], cwd=self.root)
+
+    def write(self, name, text="class Fixture\n"):
+        path = self.root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def source_paths(self, staged=False):
+        with (
+            patch.object(self.cleanliness, "REPO_ROOT", self.root),
+            patch.object(self.invariants, "REPO_ROOT", self.root),
+            patch.object(self.invariants, "SOURCE_ROOT", self.root / "app/src/main/java"),
+        ):
+            return (
+                self.cleanliness._git_changed_files(staged=staged),
+                self.invariants.staged_kotlin_files() if staged else self.invariants.changed_kotlin_files(),
+            )
+
+    def test_untracked_unicode_source_and_tests_are_included_ignored_files_are_not(self):
+        source = "app/src/main/java/example/中文 新功能.kt"
+        test = "app/src/test/java/example/新功能 Test.kt"
+        self.write(source, "import org.junit.Test\n")
+        self.write(test)
+        self.write("app/src/main/java/ignored/Skipped.kt")
+        self.assertEqual({source, test}, set(_verify.changed_paths(self.root)))
+        for paths in self.source_paths():
+            self.assertEqual([self.root / source], paths)
+        with patch.object(self.cleanliness, "REPO_ROOT", self.root):
+            self.assertIn("test-dependency-reference", self.cleanliness._scan_file(self.root / source)[0])
+
+    def test_staged_scope_excludes_unstaged_and_untracked_changes(self):
+        source = "app/src/main/java/example/Staged.kt"
+        self.write(source)
+        self.git("add", "--", source)
+        self.write(self.source, "class Changed\n")
+        self.write("app/src/test/java/example/UntrackedTest.kt")
+        self.assertEqual([source], _verify.changed_paths(self.root, staged=True))
+        self.assertEqual(3, len(_verify.changed_paths(self.root)))
+        for paths in self.source_paths(staged=True):
+            self.assertEqual([self.root / source], paths)
+
+    def test_source_moved_out_of_android_tree_keeps_the_deleted_input(self):
+        target = "docs/Existing.kt"
+        (self.root / "docs").mkdir()
+        self.git("mv", self.source, target)
+        for staged in (False, True):
+            self.assertEqual({self.source, target}, set(_verify.changed_paths(self.root, staged=staged)))
+        for paths in self.source_paths():
+            self.assertEqual([], paths)
+
+    def test_git_failure_does_not_report_a_clean_worktree(self):
+        with patch.object(subprocess, "check_output", side_effect=subprocess.CalledProcessError(1, "git")):
+            with self.assertRaises(subprocess.CalledProcessError):
+                _verify.changed_paths(self.root)
 
 
 class VerifyProcessOutputTests(unittest.TestCase):

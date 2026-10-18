@@ -19,9 +19,13 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
+
+try:
+    from tools.git_changes import changed_paths
+except ModuleNotFoundError:
+    from git_changes import changed_paths
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE_ROOT = REPO_ROOT / "app" / "src" / "main" / "java"
@@ -2319,13 +2323,9 @@ RULES = (
 )
 
 
-def _git_changed_files(ref: str | None = None) -> list[Path]:
-    cmd = ["git", "diff", "--name-only", "--diff-filter=ACMR"]
-    if ref:
-        cmd.extend([ref])
-    result = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, check=True)
+def _git_changed_files(*, staged: bool = False) -> list[Path]:
     files = []
-    for name in result.stdout.splitlines():
+    for name in changed_paths(REPO_ROOT, staged=staged):
         path = REPO_ROOT / name
         if path.suffix == ".kt" and path.is_file() and SOURCE_ROOT in path.parents:
             files.append(path)
@@ -2333,12 +2333,12 @@ def _git_changed_files(ref: str | None = None) -> list[Path]:
 
 
 def staged_kotlin_files() -> list[Path]:
-    return _git_changed_files("--cached")
+    return _git_changed_files(staged=True)
 
 
 def changed_kotlin_files() -> list[Path]:
-    """Files changed relative to HEAD (staged or unstaged)."""
-    return _git_changed_files("HEAD")
+    """Files changed relative to HEAD, including non-ignored untracked files."""
+    return _git_changed_files()
 
 
 MANIFEST = REPO_ROOT / "app" / "src" / "main" / "AndroidManifest.xml"
@@ -2607,7 +2607,7 @@ def check_rom_contracts() -> list[Finding]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--staged", action="store_true", help="check only files staged in git")
-    parser.add_argument("--changed", action="store_true", help="check files changed relative to HEAD (staged or unstaged)")
+    parser.add_argument("--changed", action="store_true", help="check changes relative to HEAD, including non-ignored untracked files")
     args = parser.parse_args()
 
     if args.staged and args.changed:
