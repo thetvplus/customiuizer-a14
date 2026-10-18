@@ -389,8 +389,7 @@ public final class XposedHelpers {
 
     public static void log(Throwable t) {
         if (t instanceof OutOfMemoryError) throw (OutOfMemoryError) t;
-        if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
-        if (t instanceof ThreadDeath) throw (ThreadDeath) t;
+        FatalErrors.unwrapAndRethrowIfFatal(t);
         String logStr = Log.getStackTraceString(t);
         Log.e(TAG, "[Pengeek] " + logStr);
     }
@@ -401,8 +400,7 @@ public final class XposedHelpers {
 
     public static void log(String mod, Throwable t) {
         if (t instanceof OutOfMemoryError) throw (OutOfMemoryError) t;
-        if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
-        if (t instanceof ThreadDeath) throw (ThreadDeath) t;
+        FatalErrors.unwrapAndRethrowIfFatal(t);
         String logStr = Log.getStackTraceString(t);
         Log.e(TAG, "[Pengeek][" + mod + "] " + logStr);
     }

@@ -158,7 +158,7 @@ object SystemDisplayHooks {
                     try {
                         XposedHelpers.setObjectField(thisObject, "mColorFadeEnabled", true)
                         XposedHelpers.setObjectField(thisObject, "mColorFadeFadesConfig", true)
-                    } catch (ignore: Throwable) { FatalErrors.rethrowIfFatal(ignore) }
+                    } catch (ignore: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(ignore) }
 
                 } catch (t: Throwable) {
                     FatalErrors.rethrowIfFatal(t)
@@ -382,7 +382,7 @@ object SystemDisplayHooks {
                 val value = XposedHelpers.getObjectField(controller, name)
                 if (value != null && isBlurUtilsExt(value)) return value
             } catch (ignored: Throwable) {
-                FatalErrors.rethrowIfFatal(ignored)
+                FatalErrors.unwrapAndRethrowIfFatal(ignored)
             }
         }
 
@@ -395,7 +395,7 @@ object SystemDisplayHooks {
                     val value = field.get(controller)
                     if (value != null) return value
                 } catch (ignored: Throwable) {
-                FatalErrors.rethrowIfFatal(ignored)
+                FatalErrors.unwrapAndRethrowIfFatal(ignored)
             }
             }
         }
@@ -408,7 +408,7 @@ object SystemDisplayHooks {
                     field.isAccessible = true
                     field.get(controller)
                 } catch (ignored: Throwable) {
-                    FatalErrors.rethrowIfFatal(ignored)
+                    FatalErrors.unwrapAndRethrowIfFatal(ignored)
                     null
                 } ?: continue
                 if (isBlurUtilsExt(value)) return value

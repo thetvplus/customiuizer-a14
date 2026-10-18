@@ -489,7 +489,8 @@ object Controls {
         } else if (action == 1) {
             try {
                 Toast.makeText(ModuleHelper.getModuleContext(context), R.string.controls_navbar_noaction, Toast.LENGTH_SHORT).show()
-            } catch (ignore: Throwable) {
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
             }
             return false
         } else {
@@ -581,7 +582,8 @@ object Controls {
             try {
                 val lripple = kbrCls.getConstructor(Context::class.java, View::class.java).newInstance(mContext, leftbtn) as Drawable
                 leftbtn.background = lripple
-            } catch (ignore: Throwable) {
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
             }
         }
         leftbtn.isClickable = true
@@ -608,7 +610,8 @@ object Controls {
             try {
                 val rripple = kbrCls.getConstructor(Context::class.java, View::class.java).newInstance(mContext, rightbtn) as Drawable
                 rightbtn.background = rripple
-            } catch (ignore: Throwable) {
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
             }
         }
         rightbtn.isClickable = true

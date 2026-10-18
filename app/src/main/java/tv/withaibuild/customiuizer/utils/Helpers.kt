@@ -378,7 +378,7 @@ object Helpers {
                 result.add(appDual)
             }
         } catch (ignore: Throwable) {
-            FatalErrors.rethrowIfFatal(ignore)
+            FatalErrors.unwrapAndRethrowIfFatal(ignore)
         }
     }
 

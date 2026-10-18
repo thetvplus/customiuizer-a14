@@ -18,6 +18,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.HookUtils
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 object SystemStatusBarIconHooks {
 
@@ -156,7 +157,7 @@ object SystemStatusBarIconHooks {
                         try {
                             val mBatteryChargingInView = XposedHelpers.getObjectField(thisObject, "mBatteryChargingInView") as ImageView?
                             mBatteryChargingInView?.visibility = View.GONE
-                        } catch (ignore: Throwable) {}
+                        } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
                     }
                     if (hideNormalPercentage) {
                         val mBatteryView = thisObject as View

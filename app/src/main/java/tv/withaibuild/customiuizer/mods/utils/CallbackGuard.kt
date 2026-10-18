@@ -5,8 +5,8 @@ package tv.withaibuild.customiuizer.mods.utils
  *
  * Framework-invoked callbacks run outside the [MethodHook] try/catch, so an
  * unhandled throw from one of them can kill the host process. These inline
- * helpers log non-fatal failures and continue; [OutOfMemoryError] is rethrown
- * so the process does not continue in a corrupt state.
+ * helpers log non-fatal failures and continue; fatal JVM errors propagate,
+ * including those wrapped by reflection, proxies or asynchronous work.
  */
 object CallbackGuard {
 
@@ -24,7 +24,7 @@ object CallbackGuard {
         try {
             block()
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError || t is ThreadDeath || t is VirtualMachineError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
         }
     }
@@ -40,7 +40,7 @@ object CallbackGuard {
         return try {
             block()
         } catch (t: Throwable) {
-            if (t is OutOfMemoryError || t is ThreadDeath || t is VirtualMachineError) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
             fallback
         }

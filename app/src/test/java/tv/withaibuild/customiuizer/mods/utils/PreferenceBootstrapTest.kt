@@ -465,6 +465,22 @@ class PreferenceBootstrapTest {
     }
 
     @Test
+    fun listenerCallback_wrappedFatalDoesNotBecomeARecoverableReadFailure() {
+        val fake = FakeSharedPreferences()
+        fake.put("pref_key_system_statusbarheight", 12)
+        val fatal = InternalError("injected")
+        val throwing = object : SharedPreferences by fake {
+            override fun contains(key: String): Boolean = throw java.lang.reflect.InvocationTargetException(fatal)
+        }
+        val bootstrap = PreferenceBootstrap.create(PrefMap()) { throwing }
+        assertTrue(bootstrap.bootstrap())
+        val listener = requireNotNull(getListener(bootstrap))
+        assertSame(fatal, org.junit.Assert.assertThrows(InternalError::class.java) {
+            listener.onSharedPreferenceChanged(throwing, "pref_key_system_statusbarheight")
+        })
+    }
+
+    @Test
     fun prefMap_replaceSnapshot_isAtomic() {
         val prefs = PrefMap()
 

@@ -210,7 +210,8 @@ object LockScreenAlbumArtController {
             XposedHelpers.getAdditionalStaticField(cls, "mAlbumArt") as Bitmap?
         } catch (oom: OutOfMemoryError) {
             throw oom
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             null
         }
     }
@@ -221,7 +222,8 @@ object LockScreenAlbumArtController {
             XposedHelpers.getAdditionalStaticField(cls, "mAlbumArtSource") as Bitmap?
         } catch (oom: OutOfMemoryError) {
             throw oom
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             null
         }
     }
@@ -271,7 +273,8 @@ object LockScreenAlbumArtController {
                     WallpaperColors.fromBitmap(processed)
                 } catch (oom: OutOfMemoryError) {
                     throw oom
-                } catch (_: Throwable) {
+                } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     null
                 }
             } else {

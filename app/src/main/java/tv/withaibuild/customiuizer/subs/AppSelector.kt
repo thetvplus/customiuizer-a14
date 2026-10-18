@@ -32,6 +32,7 @@ import tv.withaibuild.customiuizer.utils.DynamicAppScope
 import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.utils.LockedAppAdapter
 import tv.withaibuild.customiuizer.utils.PrivacyAppAdapter
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 class AppSelector : SubFragmentWithSearch() {
 
@@ -330,7 +331,7 @@ class AppSelector : SubFragmentWithSearch() {
     private fun unregisterReceivers() {
         try {
             getValidContext().unregisterReceiver(configReceiver)
-        } catch (_: Throwable) {}
+        } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
     }
 
     override fun onDestroy() {

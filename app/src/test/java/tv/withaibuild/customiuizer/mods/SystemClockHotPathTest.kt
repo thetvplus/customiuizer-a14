@@ -2170,13 +2170,15 @@ class SystemClockHotPathTest {
         // --- B. CallbackGuard.guarded rethrows the required fatal categories ---
         val guard = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/CallbackGuard.kt")
 
-        // Whitespace-insensitive regex proving the fatal categories are connected to the same throw.
+        // Both overloads must enter the shared direct/wrapped fatal boundary before logging.
+        // FatalErrorsTest and RegistrationFatalBoundaryTest exercise the actual error categories.
         val fatalRethrowPattern = Regex(
-            """if\s*\(\s*t\s+is\s+OutOfMemoryError\s+\|\|\s+t\s+is\s+ThreadDeath\s+\|\|\s+t\s+is\s+VirtualMachineError\s*\)\s+throw\s+t"""
+            """catch\s*\(t:\s*Throwable\)\s*\{\s*FatalErrors\.unwrapAndRethrowIfFatal\(t\)\s*XposedHelpers\.log\(t\)"""
         )
-        assertTrue(
-            "CallbackGuard.guarded must rethrow OutOfMemoryError, ThreadDeath, and VirtualMachineError in a single fatal branch",
-            fatalRethrowPattern.find(guard) != null
+        assertEquals(
+            "Both CallbackGuard overloads must propagate direct and wrapped fatal errors before logging",
+            2,
+            fatalRethrowPattern.findAll(guard).count(),
         )
     }
 }

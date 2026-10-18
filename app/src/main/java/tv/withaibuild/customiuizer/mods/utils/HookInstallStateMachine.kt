@@ -36,7 +36,7 @@ class HookInstallStateMachine {
             install()
         } catch (t: Throwable) {
             currentState = State.UNINSTALLED
-            FatalErrors.rethrowIfFatal(t)
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             false
         }
         currentState = if (ok) State.INSTALLED else State.UNINSTALLED

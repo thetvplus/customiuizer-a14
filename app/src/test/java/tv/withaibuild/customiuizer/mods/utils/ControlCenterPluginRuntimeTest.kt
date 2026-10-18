@@ -119,6 +119,22 @@ class ControlCenterPluginRuntimeTest {
     }
 
     @Test
+    fun wrappedFatalPluginFailureDoesNotPublishHalfState() {
+        val fatal = InternalError("injected")
+        engine.installPluginHooksFailure = java.lang.reflect.InvocationTargetException(fatal)
+        assertSame(fatal, org.junit.Assert.assertThrows(InternalError::class.java) { engine.bind(testLoader) })
+        assertNull(engine.activeLoader())
+        assertNull(engine.runtimeHolder().activeRuntime())
+    }
+
+    @Test
+    fun wrappedFatalCreatePluginFailurePropagates() {
+        val fatal = ThreadDeath()
+        engine.installCreatePluginHookFailure = java.util.concurrent.ExecutionException(fatal)
+        assertSame(fatal, org.junit.Assert.assertThrows(ThreadDeath::class.java) { engine.hookIfNeeded(testLoader) })
+    }
+
+    @Test
     fun ordinaryPartialFailureIsNotSilent() {
         val loader = testLoader
         val failure = RuntimeException("partial install")

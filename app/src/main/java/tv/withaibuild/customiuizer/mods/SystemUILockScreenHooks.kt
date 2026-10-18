@@ -304,11 +304,11 @@ object SystemUILockScreenHooks {
         return try {
             XposedHelpers.callStaticMethod(cls, "isDefaultLockScreenTheme") as Boolean
         } catch (ignored: Throwable) {
-            FatalErrors.rethrowIfFatal(ignored)
+            FatalErrors.unwrapAndRethrowIfFatal(ignored)
             try {
                 XposedHelpers.callStaticMethod(cls, "isDefaultKeyguardNotTheme") as Boolean
             } catch (ignored2: Throwable) {
-                FatalErrors.rethrowIfFatal(ignored2)
+                FatalErrors.unwrapAndRethrowIfFatal(ignored2)
                 false
             }
         }
@@ -500,7 +500,7 @@ object SystemUILockScreenHooks {
                 try {
                     mStartedFromLockScreen = XposedHelpers.getAdditionalInstanceField(act.application, "wasStartedFromLockScreen") as Boolean
                 } catch (ignore: Throwable) {
-                    FatalErrors.rethrowIfFatal(ignore)
+                    FatalErrors.unwrapAndRethrowIfFatal(ignore)
                 }
                 if (mFromSecureKeyguard || mStartedFromLockScreen) {
                     XposedHelpers.setAdditionalInstanceField(act.application, "wasStartedFromLockScreen", true)

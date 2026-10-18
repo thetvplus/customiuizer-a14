@@ -834,7 +834,7 @@ internal class StrongToastRuntimeState private constructor(
             val source = refreshSource()
             snapshotRef.set(buildSnapshot(source))
         } catch (e: Exception) {
-            FatalErrors.rethrowIfFatal(e)
+            FatalErrors.unwrapAndRethrowIfFatal(e)
             XposedHelpers.log("StrongToastRuntimeState", e)
         }
     }

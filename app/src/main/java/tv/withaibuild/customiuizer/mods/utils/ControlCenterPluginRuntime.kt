@@ -140,7 +140,7 @@ open class ControlCenterPluginRuntimeEngine(
             ControlCenterBindResult.Installed
         } catch (e: Throwable) {
             clearInternal()
-            FatalErrors.rethrowIfFatal(e)
+            FatalErrors.unwrapAndRethrowIfFatal(e)
             activeLoader = loader
             installState = InstallState.FAILED_PARTIAL
             lastFailure = e
@@ -198,7 +198,7 @@ open class ControlCenterPluginRuntimeEngine(
             )
             hooked = true
         } catch (e: Throwable) {
-            FatalErrors.rethrowIfFatal(e)
+            FatalErrors.unwrapAndRethrowIfFatal(e)
             installState = InstallState.FAILED_PARTIAL
             lastFailure = e
         }

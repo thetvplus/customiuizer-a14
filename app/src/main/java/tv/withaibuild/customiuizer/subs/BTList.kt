@@ -33,6 +33,7 @@ import tv.withaibuild.customiuizer.mods.GlobalActions
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.PrefPair
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 class BTList : SubFragment() {
 
@@ -159,7 +160,8 @@ class BTList : SubFragment() {
             fetchJob?.cancel()
             fetchJob = null
             getValidContext().unregisterReceiver(devicesReceiver)
-        } catch (ignored: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
         }
     }
 

@@ -16,6 +16,7 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.Helpers.MimeType
 import java.util.List
 import tv.withaibuild.customiuizer.utils.HookUtils
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 /**
  * Share sheet and open-with chooser hooks.
@@ -135,7 +136,7 @@ object SystemShareMenuHooks {
                             var hasDual = false
                             try {
                                 hasDual = XposedHelpers.callMethod(pm, "getPackageInfoAsUser", resolveInfo.activityInfo.packageName, 0, 999) != null
-                            } catch (ignore: Throwable) {}
+                            } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
                             if ((removeOriginal && !hasDual) || (removeOriginal && hasDual && removeDual)) itr.remove()
                         }
                         result = resolved; throwable = null
@@ -190,7 +191,7 @@ object SystemShareMenuHooks {
         if (mimeType == null && linkSchemes) mimeType = "link/*"
         if (mimeType == null && intent.data != null) try {
             mimeType = context.contentResolver.getType(intent.data!!)
-        } catch (ignore: Throwable) {}
+        } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
         return mimeType
     }
 
@@ -296,7 +297,7 @@ object SystemShareMenuHooks {
                             var hasDual = false
                             try {
                                 hasDual = XposedHelpers.callMethod(pm, "getPackageInfoAsUser", resolveInfo.activityInfo.packageName, 0, 999) != null
-                            } catch (ignore: Throwable) {}
+                            } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
                             if ((isRemove.first && !hasDual) || (isRemove.first && hasDual && isRemove.second)) itr.remove()
                         }
 

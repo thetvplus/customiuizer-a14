@@ -4,7 +4,8 @@
 
 面向 **HyperOS 1 / Android 14** 的系统界面与交互定制模块，基于 CustoMIUIzer 持续维护。仅支持 **arm64-v8a / libxposed API 102**，使用独立包名、签名和版本线。
 
-- 当前正式版：`r14.23.5`（versionCode 243），要求 libxposed API 102。
+- 当前源码：`r14.23.6`（versionCode 244），要求 libxposed API 102。
+- 已发布正式版：`r14.23.5`（versionCode 243）；源码更新不代表已发布新的下载。
 - 维护与开发：`thetvplus`
 - 应用 ID：`tv.withaibuild.customiuizer.r14`
 - [下载正式版](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [发行记录](https://github.com/thetvplus/customiuizer-a14/releases) · [更新记录](CHANGELOG_CN.md)

@@ -174,6 +174,7 @@ object WeatherDataController : ScreenStateController.ScreenStateListener {
             )
             timeTickRegistered = true
         } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
         }
     }
@@ -184,7 +185,9 @@ object WeatherDataController : ScreenStateController.ScreenStateListener {
         val receiver = timeTickReceiver ?: return
         try {
             ctx.unregisterReceiver(receiver)
-        } catch (ignored: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            XposedHelpers.log(t)
         }
     }
 }

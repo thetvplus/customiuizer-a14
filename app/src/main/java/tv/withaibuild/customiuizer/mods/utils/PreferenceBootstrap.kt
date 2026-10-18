@@ -310,7 +310,7 @@ class PreferenceBootstrap private constructor(
                 changeDispatcher(canonicalKey)
             }
         } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
         }
     }
@@ -323,7 +323,7 @@ class PreferenceBootstrap private constructor(
             synchronizeState()
             changeDispatcher(null)
         } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
         }
     }
@@ -347,11 +347,11 @@ class PreferenceBootstrap private constructor(
                 null -> readUnknownType(remote, key)
             }
         } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             try {
                 readUnknownType(remote, key)
             } catch (fallback: Throwable) {
-                FatalErrors.rethrowIfFatal(fallback)
+                FatalErrors.unwrapAndRethrowIfFatal(fallback)
                 XposedHelpers.log(fallback)
                 null
             }

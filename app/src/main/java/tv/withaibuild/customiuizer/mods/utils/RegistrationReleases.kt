@@ -26,11 +26,7 @@ fun releaseRegistrationSilently(
         return
     }
 
-    val targetClass = try {
-        target.javaClass.name
-    } catch (_: Throwable) {
-        "?"
-    }
+    val targetClass = target.javaClass.name
 
     try {
         XposedHelpers.callMethod(target, methodName, argument)

@@ -4,7 +4,8 @@
 
 A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It supports **arm64-v8a / libxposed API 102** and has an independent package, signing identity and release line.
 
-- Current release: `r14.23.5` (versionCode 243), requiring libxposed API 102.
+- Current source: `r14.23.6` (versionCode 244), requiring libxposed API 102.
+- Published release: `r14.23.5` (versionCode 243); source updates do not imply a new published download.
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
 - [Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Release history](https://github.com/thetvplus/customiuizer-a14/releases) · [Changelog](CHANGELOG.md)

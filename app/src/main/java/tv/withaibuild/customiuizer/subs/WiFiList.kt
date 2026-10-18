@@ -34,6 +34,7 @@ import tv.withaibuild.customiuizer.SubFragment
 import tv.withaibuild.customiuizer.applyGroupedListRow
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.PrefPair
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 class WiFiList : SubFragment() {
 
@@ -167,7 +168,7 @@ class WiFiList : SubFragment() {
         scanJob = scope.launch {
             if (initialDelayMs > 0) delay(initialDelayMs)
             while (isActive) {
-                try { wifiManager.startScan() } catch (ignored: Throwable) {}
+                try { wifiManager.startScan() } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
                 updateProgressBar()
                 delay(scanInterval.toLong())
             }
@@ -190,7 +191,8 @@ class WiFiList : SubFragment() {
             scanJob?.cancel()
             scanJob = null
             requireActivity().unregisterReceiver(wifiReceiver)
-        } catch (ignored: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
         }
     }
 

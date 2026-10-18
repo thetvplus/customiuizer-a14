@@ -25,6 +25,7 @@ import tv.withaibuild.customiuizer.utils.AudioVisualizer
 import java.util.ArrayList
 import java.util.Calendar
 import tv.withaibuild.customiuizer.utils.HookUtils
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 /**
  * Audio, media and haptics hooks.
@@ -632,7 +633,7 @@ object SystemAudioHooks {
                     var mSupportsAmplitudeControl = false
                     try {
                         mSupportsAmplitudeControl = XposedHelpers.getBooleanField(thisObject, "mSupportsAmplitudeControl")
-                    } catch (ignore: Throwable) {}
+                    } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
 
                     val args = XposedHelpers.getArgsArray(chain)
                     if (mSupportsAmplitudeControl)

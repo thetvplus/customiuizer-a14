@@ -17,6 +17,7 @@ import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.mods.GlobalActionToggles
 import tv.withaibuild.customiuizer.mods.GlobalActions
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 
 object AppHelper {
@@ -306,7 +307,7 @@ object AppHelper {
             Log.e(TAG, "executeRootCommand failed: ${t.message}")
             Pair(-1, t.message ?: "unknown error")
         } finally {
-            try { process?.destroy() } catch (_: Throwable) {}
+            try { process?.destroy() } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
         }
     }
 

@@ -61,8 +61,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 243
-val lastVersionName = "r14.23.5"
+val lastVersion = 244
+val lastVersionName = "r14.23.6"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -109,14 +109,17 @@ val preferenceSourceDir = layout.projectDirectory.dir("src/main/res/xml")
 val preferenceArtifactGenerator = rootProject.layout.projectDirectory.file("tools/generate_preference_artifacts.py")
 val generatedPreferenceResourcesDir = layout.buildDirectory.dir("generated/res/preference-artifacts/main")
 val generatedPreferenceCatalogDir = layout.buildDirectory.dir("generated/source/preference-catalog/main")
-val preferenceJavaDir = layout.projectDirectory.dir("src/main/java")
+// FeatureSpec preferenceKey declarations live here. A full-tree parity test prevents
+// an out-of-package declaration from silently disappearing from the catalog.
+val preferenceFeatureDir = layout.projectDirectory.dir("src/main/java/tv/withaibuild/customiuizer/mods/utils/feature")
+val preferenceFeatureSources = fileTree(preferenceFeatureDir) { include("**/*.kt") }
 
 val generatePreferenceArtifacts = tasks.register<GeneratePreferenceArtifacts>("generatePreferenceArtifacts") {
     description = "Generates lazy preference pages, search index, and current preference catalog"
     group = "build"
     inputs.file(preferenceArtifactGenerator)
     inputs.dir(preferenceSourceDir)
-    inputs.dir(preferenceJavaDir)
+    inputs.files(preferenceFeatureSources).withPathSensitivity(PathSensitivity.RELATIVE)
     resourcesOutputDirectory.set(generatedPreferenceResourcesDir)
     catalogOutputDirectory.set(generatedPreferenceCatalogDir)
     commandLine(
@@ -129,7 +132,7 @@ val generatePreferenceArtifacts = tasks.register<GeneratePreferenceArtifacts>("g
         "--catalog-output",
         catalogOutputDirectory.get().asFile.absolutePath,
         "--java-dir",
-        preferenceJavaDir.asFile.absolutePath,
+        preferenceFeatureDir.asFile.absolutePath,
     )
 }
 

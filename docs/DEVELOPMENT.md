@@ -58,4 +58,6 @@ git diff --check
 
 输出在 `app/build/outputs/`。设置 XML 的分页面、搜索索引与偏好目录由 `generatePreferenceArtifacts` 生成到 `app/build/generated/`，不要直接改生成文件。生成 res / Kotlin 与各变体独立的 provenance assets 通过 AGP 的 [addGeneratedSourceDirectory](https://developer.android.com/reference/tools/gradle-api/9.3/com/android/build/api/variant/SourceDirectories#addGeneratedSourceDirectory(org.gradle.api.tasks.TaskProvider,kotlin.Function1)) 注册，由声明的输出建立消费任务依赖。独立 lint 不继承 assets 的生成依赖，对应 provenance 另用 [公开 PreBuild 生命周期 API](https://developer.android.com/reference/tools/gradle-api/9.3/com/android/build/api/variant/LifecycleTasks) 注册，不匹配内部任务名。正式构建使用 [RELEASE.md](RELEASE.md) 中的外部签名与 exact revision 命令；未提供正式签名的 release 带 `-unsigned`，不能冒充正式版。
 
+生成器的源码输入只跟踪 `mods/utils/feature/` 内的 Kotlin 声明，XML 仍完整跟踪；普通 Hook、Java 或 UI 源码变更不再触发设置资源重生成。Python 回归以全源码扫描生成的目录逐字节比对限定目录的结果；新增偏好键声明应放在该 feature 目录，移到其它位置必须同步生成依赖。增删 feature 文件及 XML 变更仍须触发生成。
+
 ROM 样本、日志、mapping、profiler 数据、APK 和签名材料留在忽略目录或仓库外。整合分支逐项审查冲突，完整通过收口门禁后再按授权清理旧分支；普通开发授权不包含 push / merge main / tag / release。

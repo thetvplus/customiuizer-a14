@@ -44,40 +44,50 @@ object ScreenStateController {
             listeners.add(listener)
 
             if (first) {
-                val ctx = context.applicationContext
-                appContext = ctx
-                screenOn = (ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive != false
-                receiver = object : BroadcastReceiver() {
-                    override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
-                        val isOn = when (intent.action) {
-                            Intent.ACTION_SCREEN_ON -> true
-                            Intent.ACTION_SCREEN_OFF -> false
-                            else -> return
-                        }
-                        if (screenOn == isOn) return
-                        screenOn = isOn
-                        // Copy to avoid concurrent modification while iterating.
-                        val copy: List<ScreenStateListener>
-                        synchronized(lock) {
-                            copy = ArrayList(listeners)
-                        }
-                        for (l in copy) {
-                            try {
-                                l.onScreenStateChanged(isOn)
-                            } catch (t: Throwable) {
-                                XposedHelpers.log(t)
+                try {
+                    val ctx = context.applicationContext ?: context
+                    appContext = ctx
+                    screenOn = (ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive != false
+                    receiver = object : BroadcastReceiver() {
+                        override fun onReceive(context: Context, intent: Intent): Unit = ModuleHelper.guarded {
+                            val isOn = when (intent.action) {
+                                Intent.ACTION_SCREEN_ON -> true
+                                Intent.ACTION_SCREEN_OFF -> false
+                                else -> return
+                            }
+                            if (screenOn == isOn) return
+                            screenOn = isOn
+                            // Copy to avoid concurrent modification while iterating.
+                            val copy: List<ScreenStateListener>
+                            synchronized(lock) {
+                                copy = ArrayList(listeners)
+                            }
+                            for (l in copy) {
+                                try {
+                                    l.onScreenStateChanged(isOn)
+                                } catch (t: Throwable) {
+                                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                                    XposedHelpers.log(t)
+                                }
                             }
                         }
+                    }.also { r ->
+                        ctx.registerReceiver(
+                            r,
+                            IntentFilter().apply {
+                                addAction(Intent.ACTION_SCREEN_ON)
+                                addAction(Intent.ACTION_SCREEN_OFF)
+                            },
+                            Context.RECEIVER_NOT_EXPORTED
+                        )
                     }
-                }.also { r ->
-                    ctx.registerReceiver(
-                        r,
-                        IntentFilter().apply {
-                            addAction(Intent.ACTION_SCREEN_ON)
-                            addAction(Intent.ACTION_SCREEN_OFF)
-                        },
-                        Context.RECEIVER_NOT_EXPORTED
-                    )
+                } catch (t: Throwable) {
+                    listeners.remove(listener)
+                    receiver = null
+                    appContext = null
+                    screenOn = true
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                    throw t
                 }
                 notifyInitial = false
                 initialState = screenOn
@@ -92,6 +102,7 @@ object ScreenStateController {
             try {
                 listener.onScreenStateChanged(initialState)
             } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
                 XposedHelpers.log(t)
             }
         }
@@ -110,11 +121,14 @@ object ScreenStateController {
     private fun stopLocked() {
         val r = receiver ?: return
         receiver = null
-        try {
-            appContext?.unregisterReceiver(r)
-        } catch (_: Throwable) {
-        }
+        val ctx = appContext
         appContext = null
         screenOn = true
+        try {
+            ctx?.unregisterReceiver(r)
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            XposedHelpers.log(t)
+        }
     }
 }

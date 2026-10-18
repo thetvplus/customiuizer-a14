@@ -4,6 +4,15 @@ English | [简体中文](CHANGELOG_CN.md)
 
 Retained releases; each section consolidates changes since the previous retained version. Original source tags and APK provenance are preserved.
 
+## r14.23.6 — 2026-10-18
+
+versionCode 244. Changes since r14.23.5:
+
+- Propagate direct and wrapped fatal JVM errors from receiver registration, replacement, cleanup, logging, callbacks and ROM fallbacks. Roll back failed registrations before propagation; release the screen controller's context even if unregister fails, and allow initialization to recover after a failed registration. Preserve ordinary optional-feature fallbacks.
+- Detach stale receiver and listener cleanup batches before calling framework or user cleanup. Keep bounded retry queues while avoiding recursive retries and map locks held across cleanup callbacks.
+- Limit preference generation inputs to Kotlin feature declarations and preference XML. Check the generated catalog against a full-source scan so ordinary Hook, Java and UI edits no longer invalidate settings resources without losing preference keys.
+- Retain the validated Gradle, AGP, JDK 25, Kotlin and DexKit versions, API 102 baseline, runtime behavior and release gates. Device performance and target-ROM acceptance require separate verification.
+
 ## r14.23.5 — 2026-10-17
 
 versionCode 243. Changes since r14.22.7:

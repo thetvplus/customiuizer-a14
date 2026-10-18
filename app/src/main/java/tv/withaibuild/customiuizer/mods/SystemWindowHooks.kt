@@ -171,7 +171,8 @@ object SystemWindowHooks {
                         try {
                             XposedHelpers.callMethod(thisObject, "setSpringBackEnable", false)
                         } catch (t: Throwable) {
-                            try { XposedHelpers.setBooleanField(thisObject, "mSpringBackEnable", false) } catch (ignore: Throwable) {}
+                            FatalErrors.unwrapAndRethrowIfFatal(t)
+                            try { XposedHelpers.setBooleanField(thisObject, "mSpringBackEnable", false) } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
                         }
 
                     } catch (t: Throwable) {
@@ -202,7 +203,8 @@ object SystemWindowHooks {
                         try {
                             XposedHelpers.callMethod(thisObject, "setSpringEnabled", false)
                         } catch (t: Throwable) {
-                            try { XposedHelpers.setBooleanField(thisObject, "mSpringEnabled", false) } catch (ignore: Throwable) {}
+                            FatalErrors.unwrapAndRethrowIfFatal(t)
+                            try { XposedHelpers.setBooleanField(thisObject, "mSpringEnabled", false) } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
                         }
 
                     } catch (t: Throwable) {

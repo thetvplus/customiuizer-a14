@@ -31,6 +31,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import kotlin.math.min
 import kotlin.math.roundToInt
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 class BatteryIndicator @JvmOverloads constructor(
     context: Context,
@@ -310,7 +311,8 @@ class BatteryIndicator @JvmOverloads constructor(
             imageAlpha = 255 - (255 * mTransparency / 100f).roundToInt()
         } catch (oom: OutOfMemoryError) {
             throw oom
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
         }
         this.visibility = mVisibility
         this.scaleType = if (mCentered) ImageView.ScaleType.CENTER else ImageView.ScaleType.MATRIX

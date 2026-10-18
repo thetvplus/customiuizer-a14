@@ -50,8 +50,8 @@ class SystemUiInstallerTest {
             coordinator.contains("if (skipNonEssential)")
         )
         assertTrue(
-            "SystemUiBootstrapCoordinator must call FatalErrors.rethrowIfFatal in catch(Throwable)",
-            coordinator.contains("FatalErrors.rethrowIfFatal(")
+            "SystemUiBootstrapCoordinator must propagate direct and wrapped fatal errors in catch(Throwable)",
+            coordinator.contains("FatalErrors.unwrapAndRethrowIfFatal(")
         )
     }
 

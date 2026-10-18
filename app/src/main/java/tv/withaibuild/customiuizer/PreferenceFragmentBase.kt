@@ -524,7 +524,8 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
         try {
             val view = view
             if (view != null) order = view.translationZ
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
         }
         fragmentArgs.putFloat("order", order)
 

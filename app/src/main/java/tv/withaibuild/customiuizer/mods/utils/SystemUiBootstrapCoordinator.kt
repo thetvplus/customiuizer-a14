@@ -55,7 +55,7 @@ object SystemUiBootstrapCoordinator {
                 } catch (oom: OutOfMemoryError) {
                     throw oom
                 } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                     return
                 }
@@ -92,7 +92,7 @@ object SystemUiBootstrapCoordinator {
                 } catch (oom: OutOfMemoryError) {
                     throw oom
                 } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                     // Do not set isHooked: one failed init step must not mark the whole pass as complete.
                     coordinatorState = State.FAILED_TRANSIENT
@@ -137,7 +137,7 @@ object SystemUiBootstrapCoordinator {
             } catch (oom: OutOfMemoryError) {
                 throw oom
             } catch (t: Throwable) {
-                FatalErrors.rethrowIfFatal(t)
+                FatalErrors.unwrapAndRethrowIfFatal(t)
                 XposedHelpers.log(t)
             }
         }

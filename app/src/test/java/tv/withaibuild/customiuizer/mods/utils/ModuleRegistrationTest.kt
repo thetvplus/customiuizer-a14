@@ -8,7 +8,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Regression tests for [ReceiverRegistry.replaceModuleRegistration].
@@ -70,6 +73,68 @@ class ModuleRegistrationTest {
         val staleQueue = staleMap["boundedRegKey"] as? Collection<*>
         assertNotNull("stale queue must exist", staleQueue)
         assertTrue("stale queue must be bounded", staleQueue!!.size <= 3)
+    }
+
+    @Test
+    fun staleCleanupReentryDoesNotRetryItsOwnInFlightCleanup() {
+        val attempts = AtomicInteger()
+        val nestedCleanup = AtomicInteger()
+        ReceiverRegistry.replaceModuleRegistration("reentry") {
+            when (attempts.incrementAndGet()) {
+                1 -> throw IllegalStateException("retryable")
+                2 -> ReceiverRegistry.replaceModuleRegistration("reentry") { nestedCleanup.incrementAndGet() }
+                else -> throw AssertionError("recursive cleanup")
+            }
+        }
+        ReceiverRegistry.replaceModuleRegistration("reentry") {}
+        ReceiverRegistry.replaceModuleRegistration("reentry") {}
+        assertEquals("a retry must detach its batch before calling user cleanup", 2, attempts.get())
+        assertEquals(1, nestedCleanup.get())
+        assertTrue(getStaleModuleRegistrationsMap().isEmpty())
+    }
+
+    @Test
+    fun blockedStaleCleanupDoesNotHoldTheRegistryMapLock() {
+        val attempts = AtomicInteger()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val completed = CountDownLatch(1)
+        val failure = AtomicReference<Throwable?>()
+        ReceiverRegistry.replaceModuleRegistration("blocked") {
+            if (attempts.incrementAndGet() == 1) throw IllegalStateException("retryable")
+            entered.countDown()
+            check(release.await(5, TimeUnit.SECONDS))
+        }
+        ReceiverRegistry.replaceModuleRegistration("blocked") {}
+        val retry = Thread {
+            try {
+                ReceiverRegistry.replaceModuleRegistration("blocked") {}
+            } catch (t: Throwable) {
+                failure.set(t)
+            }
+        }
+        val replacement = Thread {
+            try {
+                ReceiverRegistry.replaceModuleRegistration("blocked") {}
+            } catch (t: Throwable) {
+                failure.set(t)
+            } finally {
+                completed.countDown()
+            }
+        }
+        try {
+            retry.start()
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            replacement.start()
+            assertTrue("replacement must finish while stale cleanup is blocked", completed.await(1, TimeUnit.SECONDS))
+        } finally {
+            release.countDown()
+            retry.join(5000)
+            replacement.join(5000)
+        }
+        assertFalse(retry.isAlive)
+        assertFalse(replacement.isAlive)
+        assertEquals(null, failure.get())
     }
 
     @Suppress("UNCHECKED_CAST")

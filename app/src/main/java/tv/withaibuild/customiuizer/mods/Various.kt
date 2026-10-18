@@ -166,7 +166,8 @@ object Various {
                         try {
                             val piField = XposedHelpers.findFirstFieldByExactType(thisObject.javaClass, PackageInfo::class.java)
                             if (piField != null) mSupportFragment = thisObject
-                        } catch (ignore: Throwable) {
+                        } catch (t: Throwable) {
+                            FatalErrors.unwrapAndRethrowIfFatal(t)
                         }
                         result = chain.proceed()
                     } catch (t: Throwable) {

@@ -31,7 +31,8 @@ object ContextResolver {
                     context = XposedHelpers.callMethod(currentActivityThread, "getSystemContext") as? Context
                 }
             }
-        } catch (ignore: Throwable) {
+        } catch (t: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(t)
         }
         return context
     }

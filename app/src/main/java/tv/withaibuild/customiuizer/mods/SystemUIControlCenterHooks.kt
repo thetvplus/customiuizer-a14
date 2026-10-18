@@ -1235,7 +1235,7 @@ object SystemUIControlCenterHooks {
                 try {
                     XposedHelpers.setObjectField(thisObj, "childControllers", childControllers)
                 } catch (ignored: Throwable) {
-                    FatalErrors.rethrowIfFatal(ignored)
+                    FatalErrors.unwrapAndRethrowIfFatal(ignored)
                     // final or unmodifiable field: rely on the distributePanels fallback
                 }
             }
