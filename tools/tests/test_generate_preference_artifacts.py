@@ -62,6 +62,7 @@ EXPECTED_SPLITS = {
     "pref_key_launcher_cat_privacyapps": "prefs_launcher_privacyapps.xml",
     "pref_key_launcher_cat_gestures": "prefs_launcher_gestures.xml",
     "pref_key_launcher_cat_bugfixes": "prefs_launcher_bugfixes.xml",
+    "pref_key_launcher_cat_dock": "prefs_launcher_dock.xml",
     "pref_key_launcher_cat_other": "prefs_launcher_other.xml",
     "pref_key_controls_cat_fingerprint": "prefs_controls_fingerprint.xml",
     "pref_key_controls_cat_power": "prefs_controls_power.xml",

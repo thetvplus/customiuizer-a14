@@ -59,6 +59,26 @@ class PreferenceResourceContractTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.base_strings = {locale: _load_strings(locale) for locale in LOCALES}
 
+    def test_dock_page_preserves_geometry_keys_and_gates_only_background_options(self):
+        root = ET.parse(XML_DIR / "prefs_launcher.xml").getroot()
+        category = next(el for el in root if el.get(ATTR_KEY) == "pref_key_launcher_cat_dock")
+        controls = {el.get(ATTR_KEY): el for el in category}
+        master = "pref_key_launcher_dock_background"
+        self.assertEqual("false", controls[master].get(f"{{{ANDROID_NS}}}defaultValue"))
+        for suffix in ("material", "opacity", "radius", "inset"):
+            self.assertEqual(master, controls[f"{master}_{suffix}"].get(f"{{{ANDROID_NS}}}dependency"))
+        for key in ("launcher_unlockhotseat", "launcher_dock_height", "launcher_dock_topmargin", "launcher_dock_bottommargin"):
+            self.assertNotIn(f"{{{ANDROID_NS}}}dependency", controls[f"pref_key_{key}"].attrib)
+        self.assertEqual("60", controls["pref_key_launcher_dock_height"].get(f"{{{ANDROID_NS}}}defaultValue"))
+        required = {"launcher_dock_category", "launcher_dock_background_title", "launcher_dock_background_summ",
+                    "launcher_dock_background_material_title", "launcher_dock_background_auto_glass",
+                    "launcher_dock_background_translucent", "launcher_dock_background_opacity_title",
+                    "launcher_dock_background_radius_title", "launcher_dock_background_inset_title",
+                    "launcher_dock_background_auto"}
+        for locale, strings in self.base_strings.items():
+            with self.subTest(locale=locale):
+                self.assertTrue(required <= strings, required - strings)
+
     def test_duo_charging_bolt_keeps_independent_exact_attributes(self):
         root = ET.parse(XML_DIR / "prefs_system_statusbar_duo.xml").getroot()
         key = "pref_key_system_statusbar_duo_chargingbolt"

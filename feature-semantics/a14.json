@@ -17417,6 +17417,144 @@
       "confidence": "INFERRED",
       "evidence": "android:key in app/src/main/res/xml/prefs_main.xml",
       "notes": ""
+    },
+    {
+      "featureId": "launcher_cat_dock",
+      "featureName": "launcher_cat_dock",
+      "preferenceKeys": [
+        "pref_key_launcher_cat_dock",
+        "launcher_cat_dock"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "",
+      "sourceFile": "",
+      "installer": "UNKNOWN",
+      "targetPackage": "UNKNOWN",
+      "installPhase": "APP_UI_ONLY",
+      "runtimeReadMode": "UNKNOWN",
+      "enableEffect": "UNKNOWN",
+      "disableEffect": "UNKNOWN",
+      "valueChangeEffect": "UNKNOWN",
+      "restartTarget": "UNKNOWN",
+      "hotReloadable": false,
+      "confidence": "INFERRED",
+      "evidence": "android:key in app/src/main/res/xml/prefs_launcher.xml",
+      "notes": ""
+    },
+    {
+      "featureId": "launcher_dock_background",
+      "featureName": "Launcher Dock Background",
+      "preferenceKeys": [
+        "launcher_dock_background",
+        "pref_key_launcher_dock_background"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPackageReadyFeatures.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPackageReadyFeatures.kt:evaluateEnabled",
+      "targetPackage": "com.miui.home",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Applies hook when enabled",
+      "disableEffect": "Restores the native Dock after launcher restart",
+      "valueChangeEffect": "Requires launcher restart",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": false,
+      "confidence": "INFERRED",
+      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPackageReadyFeatures.kt:396",
+      "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
+    },
+    {
+      "featureId": "launcher_dock_background_inset",
+      "featureName": "Launcher Dock Background",
+      "preferenceKeys": [
+        "launcher_dock_background_inset",
+        "pref_key_launcher_dock_background_inset"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "0",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:read",
+      "targetPackage": "com.miui.home",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Applies hook when enabled",
+      "disableEffect": "Restores the native Dock after launcher restart",
+      "valueChangeEffect": "Requires launcher restart",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": false,
+      "confidence": "INFERRED",
+      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:84",
+      "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
+    },
+    {
+      "featureId": "launcher_dock_background_material",
+      "featureName": "Launcher Dock Background",
+      "preferenceKeys": [
+        "launcher_dock_background_material",
+        "pref_key_launcher_dock_background_material"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "0",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:read",
+      "targetPackage": "com.miui.home",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Applies hook when enabled",
+      "disableEffect": "Restores the native Dock after launcher restart",
+      "valueChangeEffect": "Requires launcher restart",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": false,
+      "confidence": "INFERRED",
+      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:81",
+      "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
+    },
+    {
+      "featureId": "launcher_dock_background_opacity",
+      "featureName": "Launcher Dock Background",
+      "preferenceKeys": [
+        "launcher_dock_background_opacity",
+        "pref_key_launcher_dock_background_opacity"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "65",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:read",
+      "targetPackage": "com.miui.home",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Applies hook when enabled",
+      "disableEffect": "Restores the native Dock after launcher restart",
+      "valueChangeEffect": "Requires launcher restart",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": false,
+      "confidence": "INFERRED",
+      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:82",
+      "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
+    },
+    {
+      "featureId": "launcher_dock_background_radius",
+      "featureName": "Launcher Dock Background",
+      "preferenceKeys": [
+        "launcher_dock_background_radius",
+        "pref_key_launcher_dock_background_radius"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "0",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:read",
+      "targetPackage": "com.miui.home",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Applies hook when enabled",
+      "disableEffect": "Restores the native Dock after launcher restart",
+      "valueChangeEffect": "Requires launcher restart",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": false,
+      "confidence": "INFERRED",
+      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:83",
+      "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
     }
   ]
 }

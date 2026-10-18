@@ -1069,4 +1069,14 @@
     <string name="system_statusbar_duo_cellularstyle_title">Kiểu mạng di động ở giữa</string>
     <string name="system_statusbar_duo_cellular_graphic">Hình</string>
     <string name="system_statusbar_duo_cellular_text">Chữ</string>
+    <string name="launcher_dock_category">Dock</string>
+    <string name="launcher_dock_background_title">Nền Dock</string>
+    <string name="launcher_dock_background_summ">Tích hợp vào Dock gốc. Khởi động lại màn hình chính sau khi thay đổi.</string>
+    <string name="launcher_dock_background_material_title">Chất liệu</string>
+    <string name="launcher_dock_background_auto_glass">Kính hệ thống (tự động)</string>
+    <string name="launcher_dock_background_translucent">Trong mờ</string>
+    <string name="launcher_dock_background_opacity_title">Độ đục</string>
+    <string name="launcher_dock_background_radius_title">Bán kính góc</string>
+    <string name="launcher_dock_background_inset_title">Lề ngang</string>
+    <string name="launcher_dock_background_auto">Tự động</string>
 </resources>

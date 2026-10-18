@@ -1103,4 +1103,14 @@
     <string name="system_statusbar_duo_cellularstyle_title">Cellular center style</string>
     <string name="system_statusbar_duo_cellular_graphic">Graphic</string>
     <string name="system_statusbar_duo_cellular_text">Text</string>
+    <string name="launcher_dock_category">Dock</string>
+    <string name="launcher_dock_background_title">Dock background</string>
+    <string name="launcher_dock_background_summ">Blends into the native Dock. Restart the launcher after changes.</string>
+    <string name="launcher_dock_background_material_title">Material</string>
+    <string name="launcher_dock_background_auto_glass">Native glass (automatic)</string>
+    <string name="launcher_dock_background_translucent">Translucent</string>
+    <string name="launcher_dock_background_opacity_title">Opacity</string>
+    <string name="launcher_dock_background_radius_title">Corner radius</string>
+    <string name="launcher_dock_background_inset_title">Horizontal inset</string>
+    <string name="launcher_dock_background_auto">Automatic</string>
 </resources>

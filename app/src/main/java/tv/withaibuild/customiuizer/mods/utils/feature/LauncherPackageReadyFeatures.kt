@@ -2,6 +2,7 @@ package tv.withaibuild.customiuizer.mods.utils.feature
 
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.Launcher
+import tv.withaibuild.customiuizer.mods.LauncherDockBackground
 import tv.withaibuild.customiuizer.mods.LauncherFolderHooks
 import tv.withaibuild.customiuizer.mods.LauncherIconHooks
 import tv.withaibuild.customiuizer.mods.LauncherLayoutHooks
@@ -113,6 +114,15 @@ object LauncherPackageReadyFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> LauncherDockHeightFeature.evaluateEnabled(prefs) },
             factory = { LauncherDockHeightFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
+            id = LauncherDockBackgroundFeatureId,
+            name = "Launcher Dock Background",
+            preferenceKey = "launcher_dock_background",
+            target = FeatureTarget.LAUNCHER,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> LauncherDockBackgroundFeature.evaluateEnabled(prefs) },
+            factory = { LauncherDockBackgroundFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
             id = LauncherPrivacyAppsGestFeatureId,
@@ -368,4 +378,24 @@ internal class LauncherPrivacyAppsGestFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = Launcher.setupLauncher(lpparam)
+}
+
+internal class LauncherDockBackgroundFeature(
+    lpparam: PackageReadyParam,
+    mPrefs: PrefMap
+) : BasePackageReadyFeature(
+    lpparam,
+    mPrefs,
+    LauncherDockBackgroundFeatureId,
+    "Launcher Dock Background",
+    "launcher_dock_background",
+    FeatureTarget.LAUNCHER,
+) {
+    companion object {
+        @JvmStatic
+        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("launcher_dock_background")
+    }
+
+    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
+    override fun installHook() = LauncherDockBackground.install(lpparam)
 }

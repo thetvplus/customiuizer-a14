@@ -1075,4 +1075,14 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_duo_cellularstyle_title">Ortadaki hücresel ağ stili</string>
     <string name="system_statusbar_duo_cellular_graphic">Simge</string>
     <string name="system_statusbar_duo_cellular_text">Metin</string>
+    <string name="launcher_dock_category">Dock</string>
+    <string name="launcher_dock_background_title">Dock arka planı</string>
+    <string name="launcher_dock_background_summ">Yerel Dock ile bütünleşir. Değişikliklerden sonra başlatıcıyı yeniden başlatın.</string>
+    <string name="launcher_dock_background_material_title">Malzeme</string>
+    <string name="launcher_dock_background_auto_glass">Sistem camı (otomatik)</string>
+    <string name="launcher_dock_background_translucent">Yarı saydam</string>
+    <string name="launcher_dock_background_opacity_title">Opaklık</string>
+    <string name="launcher_dock_background_radius_title">Köşe yarıçapı</string>
+    <string name="launcher_dock_background_inset_title">Yatay boşluk</string>
+    <string name="launcher_dock_background_auto">Otomatik</string>
 </resources>

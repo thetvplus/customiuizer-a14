@@ -729,4 +729,12 @@
 		<item>3</item>
 	</string-array>
 
+    <string-array name="launcher_dock_background_material">
+        <item>@string/launcher_dock_background_auto_glass</item>
+        <item>@string/launcher_dock_background_translucent</item>
+    </string-array>
+    <string-array name="launcher_dock_background_material_values" translatable="false">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
 </resources>

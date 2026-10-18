@@ -1068,4 +1068,14 @@
     <string name="system_statusbar_duo_cellularstyle_title">Estilo de red móvil en el centro</string>
     <string name="system_statusbar_duo_cellular_graphic">Icono</string>
     <string name="system_statusbar_duo_cellular_text">Texto</string>
+    <string name="launcher_dock_category">Dock</string>
+    <string name="launcher_dock_background_title">Fondo del Dock</string>
+    <string name="launcher_dock_background_summ">Integrado en el Dock nativo. Reinicia el lanzador tras los cambios.</string>
+    <string name="launcher_dock_background_material_title">Material</string>
+    <string name="launcher_dock_background_auto_glass">Cristal del sistema (automático)</string>
+    <string name="launcher_dock_background_translucent">Translúcido</string>
+    <string name="launcher_dock_background_opacity_title">Opacidad</string>
+    <string name="launcher_dock_background_radius_title">Radio de las esquinas</string>
+    <string name="launcher_dock_background_inset_title">Márgenes laterales</string>
+    <string name="launcher_dock_background_auto">Automático</string>
 </resources>

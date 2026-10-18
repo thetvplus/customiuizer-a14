@@ -45,6 +45,7 @@ internal object PreferenceResourceResolver {
         "pref_key_launcher_cat_privacyapps" -> R.xml.prefs_launcher_privacyapps
         "pref_key_launcher_cat_gestures" -> R.xml.prefs_launcher_gestures
         "pref_key_launcher_cat_bugfixes" -> R.xml.prefs_launcher_bugfixes
+        "pref_key_launcher_cat_dock" -> R.xml.prefs_launcher_dock
         "pref_key_launcher_cat_other" -> R.xml.prefs_launcher_other
         else -> R.xml.prefs_launcher
     }

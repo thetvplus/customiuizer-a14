@@ -1050,3 +1050,8 @@ data object DuoStatusBarFeatureId : FeatureId {
     override val id = 254
     override val name = "systemui_duo_status_bar"
 }
+
+data object LauncherDockBackgroundFeatureId : FeatureId {
+    override val id = 255
+    override val name = "launcher_dock_background"
+}

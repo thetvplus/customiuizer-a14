@@ -1069,4 +1069,14 @@
     <string name="system_statusbar_duo_cellularstyle_title">中央のモバイルネットワーク表示</string>
     <string name="system_statusbar_duo_cellular_graphic">図形</string>
     <string name="system_statusbar_duo_cellular_text">文字</string>
+    <string name="launcher_dock_category">Dock</string>
+    <string name="launcher_dock_background_title">Dock の背景</string>
+    <string name="launcher_dock_background_summ">標準の Dock に統合します。変更後はホームアプリを再起動してください。</string>
+    <string name="launcher_dock_background_material_title">素材</string>
+    <string name="launcher_dock_background_auto_glass">システムガラス（自動）</string>
+    <string name="launcher_dock_background_translucent">半透明</string>
+    <string name="launcher_dock_background_opacity_title">不透明度</string>
+    <string name="launcher_dock_background_radius_title">角の半径</string>
+    <string name="launcher_dock_background_inset_title">左右の余白</string>
+    <string name="launcher_dock_background_auto">自動</string>
 </resources>

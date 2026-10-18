@@ -1079,4 +1079,14 @@
     <string name="system_statusbar_duo_cellularstyle_title">蜂窝中心样式</string>
     <string name="system_statusbar_duo_cellular_graphic">图形</string>
     <string name="system_statusbar_duo_cellular_text">文字</string>
+    <string name="launcher_dock_category">Dock</string>
+    <string name="launcher_dock_background_title">Dock 背景</string>
+    <string name="launcher_dock_background_summ">融入原生 Dock。更改后重启桌面生效。</string>
+    <string name="launcher_dock_background_material_title">材质</string>
+    <string name="launcher_dock_background_auto_glass">系统玻璃（自动）</string>
+    <string name="launcher_dock_background_translucent">轻透</string>
+    <string name="launcher_dock_background_opacity_title">不透明度</string>
+    <string name="launcher_dock_background_radius_title">圆角</string>
+    <string name="launcher_dock_background_inset_title">左右留白</string>
+    <string name="launcher_dock_background_auto">自动</string>
 </resources>

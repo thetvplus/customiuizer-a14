@@ -1076,4 +1076,14 @@
     <string name="system_statusbar_duo_cellularstyle_title">Styl mobilní sítě uprostřed</string>
     <string name="system_statusbar_duo_cellular_graphic">Symbol</string>
     <string name="system_statusbar_duo_cellular_text">Text</string>
+    <string name="launcher_dock_category">Dock</string>
+    <string name="launcher_dock_background_title">Pozadí Docku</string>
+    <string name="launcher_dock_background_summ">Součást původního Docku. Po změnách restartujte spouštěč.</string>
+    <string name="launcher_dock_background_material_title">Materiál</string>
+    <string name="launcher_dock_background_auto_glass">Systémové sklo (automaticky)</string>
+    <string name="launcher_dock_background_translucent">Průsvitné</string>
+    <string name="launcher_dock_background_opacity_title">Neprůhlednost</string>
+    <string name="launcher_dock_background_radius_title">Poloměr rohů</string>
+    <string name="launcher_dock_background_inset_title">Boční odsazení</string>
+    <string name="launcher_dock_background_auto">Automaticky</string>
 </resources>
