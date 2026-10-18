@@ -1065,7 +1065,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Wi-Fi切断時の代替表示</string>
     <string name="system_statusbar_duo_networkfallback_summ">Wi-Fi未接続時は図形または現在のネットワーク種別を表示。不明な種別は図形を使用。</string>
     <string name="system_statusbar_duo_btbattery_title">Bluetoothの電池色</string>
-    <string name="system_statusbar_duo_btbattery_summ">単一機器の新しい電池情報のみ：20%以下は赤、50%以下は琥珀色。その他や不明な残量はシステムの色を使用。外周はスマートフォンの電池。</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">単一機器の新しい電池情報のみ：20%以下は赤、50%以下は琥珀色。その他や不明な残量はシステムの色を使用。外周はスマートフォンの電池。</string>
     <string name="system_statusbar_duo_cellularstyle_title">中央のモバイルネットワーク表示</string>
     <string name="system_statusbar_duo_cellular_graphic">図形</string>
     <string name="system_statusbar_duo_cellular_text">文字</string>

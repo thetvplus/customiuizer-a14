@@ -1075,7 +1075,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Wi-Fi断连时替代图案</string>
     <string name="system_statusbar_duo_networkfallback_summ">Wi-Fi 未连接时显示蜂窝图形或当前网络类型，类型未知时用图形。</string>
     <string name="system_statusbar_duo_btbattery_title">蓝牙耳机电量颜色</string>
-    <string name="system_statusbar_duo_btbattery_summ">单设备且系统刚报告电量时：≤20%红色，≤50%琥珀色。其余或未知电量跟随系统颜色；外环仍是手机电量。</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">单设备且系统刚报告电量时：≤20%红色，≤50%琥珀色。其余或未知电量跟随系统颜色；外环仍是手机电量。</string>
     <string name="system_statusbar_duo_cellularstyle_title">蜂窝中心样式</string>
     <string name="system_statusbar_duo_cellular_graphic">图形</string>
     <string name="system_statusbar_duo_cellular_text">文字</string>

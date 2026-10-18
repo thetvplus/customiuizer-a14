@@ -1072,7 +1072,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Náhrada odpojené Wi-Fi</string>
     <string name="system_statusbar_duo_networkfallback_summ">Bez Wi-Fi zobrazí symbol nebo aktuální typ sítě; neznámý typ použije symbol.</string>
     <string name="system_statusbar_duo_btbattery_title">Barvy baterie Bluetooth</string>
-    <string name="system_statusbar_duo_btbattery_summ">Jedno zařízení a čerstvé hlášení: červená do 20 %, jantarová do 50 %. Ostatní a neznámé úrovně používají systémovou barvu; kruh ukazuje baterii telefonu.</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">Jedno zařízení a čerstvé hlášení: červená do 20 %, jantarová do 50 %. Ostatní a neznámé úrovně používají systémovou barvu; kruh ukazuje baterii telefonu.</string>
     <string name="system_statusbar_duo_cellularstyle_title">Styl mobilní sítě uprostřed</string>
     <string name="system_statusbar_duo_cellular_graphic">Symbol</string>
     <string name="system_statusbar_duo_cellular_text">Text</string>

@@ -1064,7 +1064,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Замена отключённого Wi-Fi</string>
     <string name="system_statusbar_duo_networkfallback_summ">Без Wi-Fi — значок сотовой сети или текущий тип сети. Неизвестный тип заменяется значком.</string>
     <string name="system_statusbar_duo_btbattery_title">Цвет заряда Bluetooth</string>
-    <string name="system_statusbar_duo_btbattery_summ">Одно устройство и свежий отчёт: красный до 20%, янтарный до 50%. Остальные и неизвестные уровни используют системный цвет; кольцо показывает заряд телефона.</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">Одно устройство и свежий отчёт: красный до 20%, янтарный до 50%. Остальные и неизвестные уровни используют системный цвет; кольцо показывает заряд телефона.</string>
     <string name="system_statusbar_duo_cellularstyle_title">Стиль сотовой сети в центре</string>
     <string name="system_statusbar_duo_cellular_graphic">Значок</string>
     <string name="system_statusbar_duo_cellular_text">Текст</string>

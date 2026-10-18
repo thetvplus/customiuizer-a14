@@ -1065,7 +1065,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Wi-Fi中斷時替代圖案</string>
     <string name="system_statusbar_duo_networkfallback_summ">Wi-Fi 未連線時顯示行動網路圖形或目前網路類型，類型未知時用圖形。</string>
     <string name="system_statusbar_duo_btbattery_title">藍牙耳機電量顏色</string>
-    <string name="system_statusbar_duo_btbattery_summ">單一裝置且系統剛回報電量時：≤20%紅色，≤50%琥珀色。其餘或未知電量跟隨系統顏色；外環仍是手機電量。</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">單一裝置且系統剛回報電量時：≤20%紅色，≤50%琥珀色。其餘或未知電量跟隨系統顏色；外環仍是手機電量。</string>
     <string name="system_statusbar_duo_cellularstyle_title">行動網路中心樣式</string>
     <string name="system_statusbar_duo_cellular_graphic">圖形</string>
     <string name="system_statusbar_duo_cellular_text">文字</string>

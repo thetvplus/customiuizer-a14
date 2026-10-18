@@ -1064,7 +1064,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Sustituir Wi-Fi desconectado</string>
     <string name="system_statusbar_duo_networkfallback_summ">Sin Wi-Fi, muestra un icono o el tipo de red actual; los tipos desconocidos usan el icono.</string>
     <string name="system_statusbar_duo_btbattery_title">Colores de batería Bluetooth</string>
-    <string name="system_statusbar_duo_btbattery_summ">Un dispositivo y un informe reciente: rojo hasta 20 %, ámbar hasta 50 %. Otros niveles o batería desconocida usan el color del sistema; el anillo es del teléfono.</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">Un dispositivo y un informe reciente: rojo hasta 20 %, ámbar hasta 50 %. Otros niveles o batería desconocida usan el color del sistema; el anillo es del teléfono.</string>
     <string name="system_statusbar_duo_cellularstyle_title">Estilo de red móvil en el centro</string>
     <string name="system_statusbar_duo_cellular_graphic">Icono</string>
     <string name="system_statusbar_duo_cellular_text">Texto</string>

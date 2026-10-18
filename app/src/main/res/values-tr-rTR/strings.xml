@@ -1071,7 +1071,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_duo_networkfallback_title">Bağlantısız Wi-Fi yerine</string>
     <string name="system_statusbar_duo_networkfallback_summ">Wi-Fi yokken simge veya geçerli ağ türü görünür; bilinmeyen türler simge kullanır.</string>
     <string name="system_statusbar_duo_btbattery_title">Bluetooth pil renkleri</string>
-    <string name="system_statusbar_duo_btbattery_summ">Tek cihaz ve yeni bildirim: %20’ye kadar kırmızı, %50’ye kadar kehribar. Diğer veya bilinmeyen seviyeler sistem rengini kullanır; halka telefon pilini gösterir.</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">Tek cihaz ve yeni bildirim: %20’ye kadar kırmızı, %50’ye kadar kehribar. Diğer veya bilinmeyen seviyeler sistem rengini kullanır; halka telefon pilini gösterir.</string>
     <string name="system_statusbar_duo_cellularstyle_title">Ortadaki hücresel ağ stili</string>
     <string name="system_statusbar_duo_cellular_graphic">Simge</string>
     <string name="system_statusbar_duo_cellular_text">Metin</string>

@@ -1065,7 +1065,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Thay Wi-Fi đã ngắt</string>
     <string name="system_statusbar_duo_networkfallback_summ">Không có Wi-Fi thì hiện hình hoặc loại mạng hiện tại; loại chưa rõ dùng hình.</string>
     <string name="system_statusbar_duo_btbattery_title">Màu pin Bluetooth</string>
-    <string name="system_statusbar_duo_btbattery_summ">Một thiết bị và báo cáo mới: đỏ đến 20%, hổ phách đến 50%. Mức khác hoặc chưa rõ dùng màu hệ thống; vòng vẫn là pin điện thoại.</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">Một thiết bị và báo cáo mới: đỏ đến 20%, hổ phách đến 50%. Mức khác hoặc chưa rõ dùng màu hệ thống; vòng vẫn là pin điện thoại.</string>
     <string name="system_statusbar_duo_cellularstyle_title">Kiểu mạng di động ở giữa</string>
     <string name="system_statusbar_duo_cellular_graphic">Hình</string>
     <string name="system_statusbar_duo_cellular_text">Chữ</string>

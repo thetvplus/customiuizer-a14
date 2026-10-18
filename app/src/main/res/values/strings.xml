@@ -1099,7 +1099,7 @@
     <string name="system_statusbar_duo_networkfallback_title">Replace disconnected Wi-Fi</string>
     <string name="system_statusbar_duo_networkfallback_summ">Without Wi-Fi, show cellular artwork or the current network type; unknown types use artwork.</string>
     <string name="system_statusbar_duo_btbattery_title">Bluetooth battery colors</string>
-    <string name="system_statusbar_duo_btbattery_summ">One device with a fresh system report: red up to 20%, amber up to 50%. Other or unknown levels use the system color; the ring stays phone battery.</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">One device with a fresh system report: red up to 20%, amber up to 50%. Other or unknown levels use the system color; the ring stays phone battery.</string>
     <string name="system_statusbar_duo_cellularstyle_title">Cellular center style</string>
     <string name="system_statusbar_duo_cellular_graphic">Graphic</string>
     <string name="system_statusbar_duo_cellular_text">Text</string>
