@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.telephony.SubscriptionInfo
+import android.telephony.SubscriptionManager
 import android.util.SparseArray
 import android.view.View
 import android.view.ViewGroup
@@ -179,8 +180,14 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
         val state = abi.mobileState.get(controller) ?: return
         val info = abi.subscription.get(controller) as SubscriptionInfo
         if (network.mobile(info.simSlotIndex, info.subscriptionId, abi.mobileLevel.getInt(state),
-                abi.mobileConnected.getBoolean(state), abi.mobileDataSim.getBoolean(state),
+                abi.mobileConnected.getBoolean(state),
                 abi.mobileMaxLevel, cellularType?.read(state) ?: 0)) queueRefresh()
+    }
+
+    private fun readActiveData() = synchronized(network) {
+        // Serialize attachment and native events so a seed cannot overwrite a newer selection.
+        // The framework cache is read only here, never on strength/activity callbacks or drawing.
+        if (network.activeData(SubscriptionManager.getActiveDataSubscriptionId())) queueRefresh()
     }
 
     private fun readSubscriptions(subscriptions: List<*>) {
@@ -207,11 +214,12 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
             ?: error("Duo: NetworkController unavailable")
         require(abi.batteryController.isInstance(battery) && abi.networkController.isInstance(controller))
         readBattery(battery)
-        readWifi(abi.networkWifi.get(controller))
+        readWifi(abi.networkWifi.get(controller) ?: error("Duo: Wi-Fi controller unavailable"))
         val mobiles = abi.networkMobile.get(controller) as SparseArray<*>
         val subs = ArrayList<SubscriptionInfo>(2)
         for (i in 0 until mobiles.size()) subs.add(abi.subscription.get(mobiles.valueAt(i)) as SubscriptionInfo)
         readSubscriptions(subs)
+        readActiveData()
         for (i in 0 until mobiles.size()) readMobile(mobiles.valueAt(i))
         network.airplane(abi.airplane.getBoolean(controller))
         if (audioAbi != null && !audioFailed) protectAudio {
@@ -252,7 +260,7 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
         view.binding = binding
         bindings[slot] = WeakReference(binding)
         bindingCount++
-        owner.addView(view, ViewGroup.LayoutParams(view.iconSizePx, ViewGroup.LayoutParams.MATCH_PARENT))
+        owner.addView(view, ViewGroup.LayoutParams(view.layoutWidthPx, ViewGroup.LayoutParams.MATCH_PARENT))
         reconcile(binding)
         refreshGeometry()
         val host = when {
@@ -392,6 +400,15 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
             after(abi.saverChanged, ::readBattery)
             after(abi.wifiChanged, ::readWifi)
             after(abi.mobileChanged, ::readMobile)
+            hook(abi.activeDataChanged, object : MethodHook() {
+                override fun before(callback: BeforeHookCallback) {
+                    if (!failed) protect {
+                        // Like the native tracker, read the current cached ID: queued events for
+                        // different SIMs can still carry an older ID after a rapid switch.
+                        readActiveData()
+                    }
+                }
+            })
             hook(abi.airplaneChanged, object : MethodHook() {
                 override fun before(param: BeforeHookCallback) {
                     if (!failed) protect {

@@ -11246,6 +11246,29 @@
       "notes": "Manual size is preserved across upgrades and used only with automatic size off; native row constraints still apply."
     },
     {
+      "featureId": "system_statusbar_duo_horizontalpadding",
+      "featureName": "Duo horizontal spacing",
+      "preferenceKeys": [
+        "system_statusbar_duo_horizontalpadding",
+        "pref_key_system_statusbar_duo_horizontalpadding"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_statusbar_duo.xml",
+      "defaultValue": "3",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/duostatusbar/DuoConfig.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/duostatusbar/DuoConfig.kt:read",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "INSTALL_TIME_SNAPSHOT",
+      "enableEffect": "Reserves 0-6 dp on each side in half-dp steps, default 1.5 dp, independently of automatic icon sizing",
+      "disableEffect": "Ignored while Duo is disabled",
+      "valueChangeEffect": "Applies this setting after SystemUI restart",
+      "restartTarget": "SYSTEMUI",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "DuoConfig.horizontalPaddingDp and DuoStatusBarView.layoutWidthPx / onMeasure / onDraw",
+      "notes": "Symmetric native child padding; preserves drawing size and shared status bar / Control Center row geometry."
+    },
+    {
       "featureId": "system_statusbar_duo_verticaloffset",
       "featureName": "Duo vertical adjustment",
       "preferenceKeys": [

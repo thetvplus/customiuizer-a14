@@ -1061,6 +1061,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_duo_audio_summ">Kablolu veya Bluetooth kulaklık yeni bağlantıda 3 saniye görünür, ardından Wi-Fi veya ağ simgesi geri döner. Ağ uyarıları önceliklidir.</string>
     <string name="system_statusbar_duo_bold_title">Daha kalın simge çizgileri</string>
     <string name="system_statusbar_duo_bold_summ">Daha kalın pil halkası, Wi-Fi ve kulaklık çizgileri.</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">Yatay boşluk</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">Simge boyutunu koruyarak her iki taraftaki boşluğu 0,5 dp adımlarla ayarlayın.</string>
     <string name="system_statusbar_duo_verticaloffset_title">Dikey ayar</string>
     <string name="system_statusbar_duo_verticaloffset_summ">Satır içinde ortala, 0,5 dp adımlarla ayarla. Kaydırma yükseklikle sınırlıdır; kenarda kesilmeden küçülür.</string>
     <string name="system_statusbar_duo_headphonestyle_title">Kulaklık simgesi</string>

@@ -43,10 +43,10 @@ class DuoCellularTypeTest {
         assertEquals(2, text.cellularStyle)
         val state = DuoNetworkState()
         state.subscriptions(10, -1, true)
-        state.mobile(0, 10, 4, true, true, 5, 5)
+        state.mobile(0, 10, 4, true, 5, 5)
         assertEquals(5, DuoCenter.value(DuoCenter.key(state.snapshot, 0, text)))
         assertEquals(0, DuoCenter.value(DuoCenter.key(state.snapshot, 0, DuoConfig(true, 24))))
-        state.mobile(0, 10, 4, true, true, 5, 0)
+        state.mobile(0, 10, 4, true, 5, 0)
         assertEquals(0, DuoCenter.value(DuoCenter.key(state.snapshot, 0, text)))
     }
 
@@ -54,7 +54,7 @@ class DuoCellularTypeTest {
         val text = DuoConfig(true, 24, cellularStyle = 2)
         val state = DuoNetworkState()
         state.subscriptions(10, -1, true)
-        state.mobile(0, 10, 4, true, true, 5, 5)
+        state.mobile(0, 10, 4, true, 5, 5)
         fun glyph(audio: Int = 0, config: DuoConfig = text) = DuoCenter.glyph(DuoCenter.key(state.snapshot, audio, config))
         assertEquals(DuoAudioState.CELLULAR_GLYPH, glyph())
         state.wifi(true, true, 3)
@@ -66,7 +66,7 @@ class DuoCellularTypeTest {
         state.airplane(true)
         assertEquals(DuoAudioState.PLANE_GLYPH, glyph(DuoAudioState.WIRED))
         state.airplane(false)
-        state.mobile(0, 10, 4, false, true, 5, 5)
+        state.mobile(0, 10, 4, false, 5, 5)
         assertEquals(DuoAudioState.OFFLINE_GLYPH, glyph())
         assertEquals(DuoAudioState.WIFI_GLYPH, glyph(config = DuoConfig(true, 24, networkFallback = false, cellularStyle = 2)))
     }

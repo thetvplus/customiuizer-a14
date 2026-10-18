@@ -1065,6 +1065,8 @@
     <string name="system_statusbar_duo_audio_summ">有线或蓝牙耳机新连接时提示 3 秒，随后恢复 Wi-Fi／网络图案。网络异常提示优先。</string>
     <string name="system_statusbar_duo_bold_title">图标线条加粗</string>
     <string name="system_statusbar_duo_bold_summ">加粗电量圆环、Wi-Fi 和耳机线条。</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">水平间距</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">调整左右两侧留白，每档 0.5 dp，保持图标尺寸。</string>
     <string name="system_statusbar_duo_verticaloffset_title">垂直微调</string>
     <string name="system_statusbar_duo_verticaloffset_summ">默认在当前行内居中，每档0.5dp；偏移受行高限制，边界处自动缩小，避免裁切。</string>
     <string name="system_statusbar_duo_headphonestyle_title">耳机图标样式</string>

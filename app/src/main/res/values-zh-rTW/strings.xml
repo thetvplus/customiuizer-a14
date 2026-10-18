@@ -1055,6 +1055,8 @@
     <string name="system_statusbar_duo_audio_summ">有線或藍牙耳機新連線時提示 3 秒，隨後恢復 Wi-Fi／網路圖案。網路異常提示優先。</string>
     <string name="system_statusbar_duo_bold_title">圖示線條加粗</string>
     <string name="system_statusbar_duo_bold_summ">加粗電量圓環、Wi-Fi 與耳機線條。</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">水平間距</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">調整左右兩側留白，每階 0.5 dp，保留圖示尺寸。</string>
     <string name="system_statusbar_duo_verticaloffset_title">垂直微調</string>
     <string name="system_statusbar_duo_verticaloffset_summ">預設在目前行內置中，每格0.5dp；偏移受行高限制，邊界處自動縮小，避免裁切。</string>
     <string name="system_statusbar_duo_headphonestyle_title">耳機圖示樣式</string>

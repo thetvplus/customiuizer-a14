@@ -1,5 +1,12 @@
 package com.android.systemui.statusbar.mobile
 
+@Suppress("UNUSED_PARAMETER")
+class MobileStatusTracker {
+    class MobileTelephonyCallback {
+        fun onActiveDataSubscriptionIdChanged(subscriptionId: Int) {}
+    }
+}
+
 /** Xiaomi's native icon table includes zero plus five strength levels. */
 class TelephonyIcons {
     companion object {

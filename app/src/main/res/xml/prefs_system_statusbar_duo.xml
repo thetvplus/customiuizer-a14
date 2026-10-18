@@ -93,6 +93,16 @@
         miuizer:stepValue="1" miuizer:format="%s dip" />
 
     <tv.withaibuild.customiuizer.prefs.SeekBarPreference
+        android:key="pref_key_system_statusbar_duo_horizontalpadding"
+        android:title="@string/system_statusbar_duo_horizontalpadding_title"
+        android:summary="@string/system_statusbar_duo_horizontalpadding_summ"
+        android:dependency="pref_key_system_statusbar_duo"
+        android:defaultValue="3"
+        miuizer:minValue="0" miuizer:maxValue="12"
+        miuizer:displayDividerValue="2"
+        miuizer:stepValue="1" miuizer:format="%.1f dp" />
+
+    <tv.withaibuild.customiuizer.prefs.SeekBarPreference
         android:key="pref_key_system_statusbar_duo_verticaloffset"
         android:title="@string/system_statusbar_duo_verticaloffset_title"
         android:summary="@string/system_statusbar_duo_verticaloffset_summ"

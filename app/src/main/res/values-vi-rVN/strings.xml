@@ -1055,6 +1055,8 @@
     <string name="system_statusbar_duo_audio_summ">Tai nghe có dây hoặc Bluetooth hiện trong 3 giây khi có kết nối mới, rồi trở lại Wi-Fi hoặc biểu tượng mạng. Cảnh báo mạng được ưu tiên.</string>
     <string name="system_statusbar_duo_bold_title">Nét biểu tượng đậm hơn</string>
     <string name="system_statusbar_duo_bold_summ">Làm đậm vòng pin và nét Wi-Fi, tai nghe.</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">Khoảng cách ngang</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">Chỉnh khoảng trống mỗi bên theo bước 0,5 dp, giữ nguyên kích thước biểu tượng.</string>
     <string name="system_statusbar_duo_verticaloffset_title">Chỉnh vị trí dọc</string>
     <string name="system_statusbar_duo_verticaloffset_summ">Căn giữa trong hàng, mỗi bước 0,5 dp. Độ lệch theo chiều cao; thu nhỏ ở mép để tránh cắt biểu tượng.</string>
     <string name="system_statusbar_duo_headphonestyle_title">Kiểu biểu tượng tai nghe</string>

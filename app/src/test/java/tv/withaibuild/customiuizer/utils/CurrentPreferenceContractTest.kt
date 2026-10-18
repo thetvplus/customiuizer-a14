@@ -95,6 +95,7 @@ class CurrentPreferenceContractTest {
             "system_statusbar_duo_autosize",
             "system_statusbar_duo_size",
             "system_statusbar_duo_verticaloffset",
+            "system_statusbar_duo_horizontalpadding",
         )
         for (key in keys) {
             assertEquals(key, CurrentPreferenceContract.Kind.CURRENT, CurrentPreferenceContract.classify(key))

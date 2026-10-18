@@ -10,7 +10,7 @@ internal class DuoNetworkState {
     // Ready-to-publish cellular bits for each SIM; -1 until its native level arrives.
     private val cells = intArrayOf(-1, -1)
     private val connected = booleanArrayOf(false, false)
-    private val dataSim = booleanArrayOf(false, false)
+    private var activeDataSubscription = -1
     private var subscriptionsKnown = false
     private var supported = true
     private var wifiKnown = false
@@ -37,11 +37,17 @@ internal class DuoNetworkState {
         ids[slot] = id
         cells[slot] = -1
         connected[slot] = false
-        dataSim[slot] = false
+    }
+
+    /** Native dataSim flags can both be true, or briefly stale while changing SIMs. */
+    @Synchronized
+    fun activeData(id: Int): Boolean {
+        activeDataSubscription = id
+        return publish()
     }
 
     @Synchronized
-    fun mobile(slot: Int, id: Int, level: Int, hasService: Boolean, isDataSim: Boolean,
+    fun mobile(slot: Int, id: Int, level: Int, hasService: Boolean,
         maxLevel: Int = 4, cellularType: Int = 0,
     ): Boolean {
         // Keep current-card state during native fallback; publish suppresses its display until supported.
@@ -53,9 +59,6 @@ internal class DuoNetworkState {
             (if (maxLevel == 5) CELL_FIVE_LEVELS else 0) or
             ((if (cellularType in 2..5) cellularType else 0) shl CELL_TYPE_SHIFT)
         connected[slot] = hasService
-        dataSim[slot] = isDataSim
-        // A new default-data controller takes priority even before the old one refreshes.
-        if (isDataSim) dataSim[1 - slot] = false
         return publish()
     }
 
@@ -76,8 +79,8 @@ internal class DuoNetworkState {
 
     private fun publish(): Boolean {
         val selected = when {
-            dataSim[0] && cells[0] >= 0 -> 0
-            dataSim[1] && cells[1] >= 0 -> 1
+            activeDataSubscription >= 0 && ids[0] == activeDataSubscription && cells[0] >= 0 -> 0
+            activeDataSubscription >= 0 && ids[1] == activeDataSubscription && cells[1] >= 0 -> 1
             ids[0] >= 0 && ids[1] < 0 && cells[0] >= 0 -> 0
             ids[1] >= 0 && ids[0] < 0 && cells[1] >= 0 -> 1
             else -> -1

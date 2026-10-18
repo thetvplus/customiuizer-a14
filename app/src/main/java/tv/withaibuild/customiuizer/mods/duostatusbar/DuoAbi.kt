@@ -59,7 +59,7 @@ internal class DuoAbi(private val loader: ClassLoader) {
     val wifiState = field(wifiController, "mCurrentState")
     val mobileState = field(mobileController, "mCurrentState")
     // HyperOS 1 cleanState() erases both concrete states to SignalIcon.State.
-    // Resolve the actual state classes; the base class has no dataSim field.
+    // Resolve the actual state classes, including inherited and Xiaomi-specific fields.
     private val wifiStateType = cls("statusbar.policy.MiuiWifiSignalController\$WifiState")
     private val mobileStateType = cls("statusbar.SignalIcon\$MobileState")
     val wifiLevel = field(wifiStateType, "level", Int::class.javaPrimitiveType)
@@ -68,7 +68,10 @@ internal class DuoAbi(private val loader: ClassLoader) {
     val wifiInternet = field(wifiStateType, "inetCondition", Int::class.javaPrimitiveType)
     val mobileLevel = field(mobileStateType, "level", Int::class.javaPrimitiveType)
     val mobileConnected = field(mobileStateType, "connected", Boolean::class.javaPrimitiveType)
-    val mobileDataSim = field(mobileStateType, "dataSim", Boolean::class.javaPrimitiveType)
+    val activeDataChanged = method(cls("statusbar.mobile.MobileStatusTracker\$MobileTelephonyCallback"),
+        "onActiveDataSubscriptionIdChanged", 1).also {
+        require(it.parameterTypes[0] == Int::class.javaPrimitiveType && it.returnType == Void.TYPE)
+    }
     // Xiaomi publishes 0..5, AOSP-like variants 0..4. Resolve the scale once, never per frame.
     val mobileMaxLevel = (field(cls("statusbar.mobile.TelephonyIcons"), "TELEPHONY_SIGNAL_STRENGTH",
         IntArray::class.java).get(null) as IntArray).size.let { size ->

@@ -71,7 +71,7 @@ class DuoGeometryTest {
         val foreground = 0x99ffffff.toInt()
         var last = -1
         for (level in 0..5) {
-            state.mobile(0, 10, level, true, true, 5)
+            state.mobile(0, 10, level, true, 5)
             val alpha = (0..3).sumOf { DuoGeometry.signalColor(foreground, state.snapshot, it) ushr 24 }
             assertTrue(alpha > last)
             for (dot in 0..3) assertTrue(DuoGeometry.signalColor(foreground, state.snapshot, dot) ushr 24 in 33..153)
@@ -117,6 +117,7 @@ class DuoGeometryTest {
         assertTrue(defaults.showChargingBolt)
         assertTrue(defaults.autoSize); assertTrue(defaults.showAudio)
         assertFalse(defaults.bold)
+        assertEquals(1.5f, defaults.horizontalPaddingDp, 0f)
         val imported = PrefMap().apply {
             put("system_statusbar_duo_percent", false)
             put("system_statusbar_duo_size", 999)
@@ -124,6 +125,7 @@ class DuoGeometryTest {
             put("system_statusbar_duo_audio", false)
             put("system_statusbar_duo_bold", true)
             put("system_statusbar_duo_chargingbolt", false)
+            put("system_statusbar_duo_horizontalpadding", 999)
         }
         assertFalse(DuoConfig.read(imported).showPercent)
         assertEquals(40, DuoConfig.read(imported).sizeDp)
@@ -131,7 +133,27 @@ class DuoGeometryTest {
         assertFalse(DuoConfig.read(imported).showAudio)
         assertTrue(DuoConfig.read(imported).bold)
         assertFalse(DuoConfig.read(imported).showChargingBolt)
+        assertEquals(6f, DuoConfig.read(imported).horizontalPaddingDp, 0f)
+        assertEquals(0f, DuoConfig(true, 24, horizontalPadding = -999).horizontalPaddingDp, 0f)
         assertEquals(20, DuoConfig(true, -999).sizeDp)
+    }
+
+    @Test fun wifiRetainsEveryNativeLevelAndOnlyTheHighestLevelFillsAllThreeElements() {
+        for (foreground in intArrayOf(0xffffffff.toInt(), 0xff000000.toInt(), 0x99ffffff.toInt())) {
+            var previous = -1
+            for (level in 0..4) {
+                val sum = (0..2).sumOf { DuoGeometry.wifiColor(foreground, level, it) ushr 24 }
+                assertTrue("native Wi-Fi level $level must look different", sum > previous)
+                previous = sum
+                for (part in 0..2) {
+                    val color = DuoGeometry.wifiColor(foreground, level, part)
+                    assertEquals(foreground and 0xffffff, color and 0xffffff)
+                    assertTrue(color ushr 24 <= foreground ushr 24)
+                    if (level == 4) assertEquals(foreground, color)
+                }
+            }
+            assertNotEquals(foreground, DuoGeometry.wifiColor(foreground, 3, 2))
+        }
     }
 
     @Test fun automaticSizeUsesNativeDensityAndKeepsImportedManualSizeSeparate() {

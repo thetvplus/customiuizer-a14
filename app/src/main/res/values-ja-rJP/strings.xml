@@ -1055,6 +1055,8 @@
     <string name="system_statusbar_duo_audio_summ">有線またはBluetoothヘッドフォンの新規接続時に3秒間表示し、その後Wi-Fiまたはネットワーク表示に戻ります。ネットワーク警告を優先します。</string>
     <string name="system_statusbar_duo_bold_title">アイコンの線を太くする</string>
     <string name="system_statusbar_duo_bold_summ">バッテリーリング、Wi-Fi、ヘッドフォンの線を太くします。</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">左右の余白</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">左右それぞれの余白を 0.5 dp 刻みで調整。アイコンのサイズは維持します。</string>
     <string name="system_statusbar_duo_verticaloffset_title">上下位置の微調整</string>
     <string name="system_statusbar_duo_verticaloffset_summ">現在の行内で中央に配置し、0.5dp刻みで調整。行高に応じて移動を制限し、端では縮小して欠けを防止。</string>
     <string name="system_statusbar_duo_headphonestyle_title">イヤホンのアイコン</string>

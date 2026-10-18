@@ -18,19 +18,34 @@ class DuoAbiTest {
         assertEquals(5, abi.mobileMaxLevel)
     }
 
-    @Test fun erasedCleanStateReturnDoesNotHideConcreteMobileDataSim() {
+    @Test fun erasedCleanStateReturnStillResolvesMobileAndWifiMembers() {
         assertSame(SignalIcon.State::class.java,
             MobileSignalController::class.java.getMethod("cleanState").returnType)
         val abi = requireNotNull(DuoAbi.resolve(loader))
         val mobile = MobileSignalController()
         val state = mobile.mCurrentState as SignalIcon.MobileState
-        state.dataSim = true
+        state.connected = true
         state.level = 4
-        assertTrue(abi.mobileDataSim.getBoolean(abi.mobileState.get(mobile)))
+        assertTrue(abi.mobileConnected.getBoolean(abi.mobileState.get(mobile)))
         assertEquals(4, abi.mobileLevel.getInt(abi.mobileState.get(mobile)))
         val wifi = MiuiWifiSignalController()
         wifi.mCurrentState.connected = true
         assertTrue(abi.wifiConnected.getBoolean(abi.wifiState.get(wifi)))
+    }
+
+    @Test fun activeDataEventUsesTheNativeTrackerAndSubscriptionIdSignature() {
+        val callback = requireNotNull(DuoAbi.resolve(loader)).activeDataChanged
+        assertEquals("com.android.systemui.statusbar.mobile.MobileStatusTracker\$MobileTelephonyCallback",
+            callback.declaringClass.name)
+        assertArrayEquals(arrayOf(Int::class.javaPrimitiveType), callback.parameterTypes)
+        assertSame(loader, callback.declaringClass.classLoader)
+        val absent = object : ClassLoader(loader) {
+            override fun loadClass(name: String, resolve: Boolean): Class<*> {
+                if (name == callback.declaringClass.name) throw ClassNotFoundException(name)
+                return super.loadClass(name, resolve)
+            }
+        }
+        assertNull(DuoAbi.resolve(absent))
     }
 
     @Test fun missingControllerKeepsTheFeatureUnavailable() {

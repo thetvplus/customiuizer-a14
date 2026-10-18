@@ -1089,6 +1089,8 @@
     <string name="system_statusbar_duo_audio_summ">Wired or Bluetooth headphones appear for 3 seconds on a new connection, then restore Wi-Fi or the network glyph. Network warnings take priority.</string>
     <string name="system_statusbar_duo_bold_title">Bolder icon strokes</string>
     <string name="system_statusbar_duo_bold_summ">Thicker battery ring, Wi-Fi and headphone lines.</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">Horizontal spacing</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">Space on each side; adjust by 0.5 dp while keeping the icon size.</string>
     <string name="system_statusbar_duo_verticaloffset_title">Vertical adjustment</string>
     <string name="system_statusbar_duo_verticaloffset_summ">Center in the current row; adjust by 0.5 dp. Offset is limited and drawing shrinks at the edge to prevent clipping.</string>
     <string name="system_statusbar_duo_headphonestyle_title">Headphone icon style</string>

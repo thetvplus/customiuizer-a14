@@ -1055,6 +1055,8 @@
     <string name="system_statusbar_duo_audio_summ">Fones com fio ou Bluetooth aparecem por 3 segundos em uma nova conexão, depois retornam Wi-Fi ou o símbolo de rede. Alertas de rede têm prioridade.</string>
     <string name="system_statusbar_duo_bold_title">Linhas mais grossas</string>
     <string name="system_statusbar_duo_bold_summ">Anel de bateria e linhas de Wi-Fi e fones mais grossos.</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">Espaçamento horizontal</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">Ajuste o espaço de cada lado em passos de 0,5 dp, mantendo o tamanho do ícone.</string>
     <string name="system_statusbar_duo_verticaloffset_title">Ajuste vertical</string>
     <string name="system_statusbar_duo_verticaloffset_summ">Centralizado na linha, passos de 0,5 dp. Deslocamento limitado; o ícone diminui na borda para evitar cortes.</string>
     <string name="system_statusbar_duo_headphonestyle_title">Estilo dos fones</string>

@@ -77,6 +77,7 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
     private val nativeHeightId = resources.getIdentifier("status_bar_icon_height", "dimen", "com.android.systemui")
     var iconSizePx = 0
         private set
+    val layoutWidthPx: Int get() = iconSizePx + paddingLeft + paddingRight
     var binding: DuoBinding? = null
     private var level = -1
     private var charging = false
@@ -116,6 +117,8 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
         val nativeHeight = if (nativeHeightId == 0) 0 else resources.getDimensionPixelSize(nativeHeightId)
         iconSizePx = DuoSizing.pixels(config, nativeHeight, resources.displayMetrics.density)
         offsetPx = config.offsetDp * resources.displayMetrics.density
+        val horizontal = (config.horizontalPaddingDp * resources.displayMetrics.density + 0.5f).toInt()
+        setPadding(horizontal, paddingTop, horizontal, paddingBottom)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -124,7 +127,7 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
         try {
             updateSize()
             binding?.syncTypeface()
-            layoutParams?.let { it.width = iconSizePx }
+            layoutParams?.let { it.width = layoutWidthPx }
             onGeometryChanged()
             requestLayout()
         } catch (t: Throwable) {
@@ -193,8 +196,8 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         // A wrap-content battery host must retain a height after its original children are hidden.
-        val desired = iconSizePx
-        setMeasuredDimension(resolveSize(desired, widthMeasureSpec), resolveSize(desired, heightMeasureSpec))
+        setMeasuredDimension(resolveSize(layoutWidthPx, widthMeasureSpec),
+            resolveSize(iconSizePx + paddingTop + paddingBottom, heightMeasureSpec))
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -279,7 +282,6 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
     private fun drawCenterGlyph(canvas: Canvas, key: Int, foreground: Int) {
         val glyph = DuoCenter.glyph(key)
         val value = DuoCenter.value(key)
-        val track = DuoGeometry.dim(foreground)
         if (glyph == DuoAudioState.PLANE_GLYPH) {
             fill.color = foreground
             canvas.drawPath(plane, fill)
@@ -323,11 +325,11 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
             canvas.drawLine(70.5f, 54f, 48.5f, 76f, stroke)
         } else {
             stroke.strokeWidth = if (config.bold) 9f else 7f
-            stroke.color = if (value >= 3) foreground else track
+            stroke.color = DuoGeometry.wifiColor(foreground, value, 2)
             canvas.drawArc(28.5f, 47.3f, 90.5f, 109.3f, 227.35f, 85.3f, false, stroke)
-            stroke.color = if (value >= 2) foreground else track
+            stroke.color = DuoGeometry.wifiColor(foreground, value, 1)
             canvas.drawArc(41f, 60.39f, 78f, 97.39f, 227.5f, 85f, false, stroke)
-            fill.color = if (value >= 1) foreground else track
+            fill.color = DuoGeometry.wifiColor(foreground, value, 0)
             canvas.drawPath(wifiDot, fill)
             if (key and DuoCenter.WARNING != 0) {
                 text.color = foreground

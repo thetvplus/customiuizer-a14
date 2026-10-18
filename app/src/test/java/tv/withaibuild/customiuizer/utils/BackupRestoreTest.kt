@@ -50,6 +50,7 @@ class BackupRestoreTest {
         "pref_key_system_statusbar_duo" to true,
         "pref_key_system_statusbar_duo_percent" to true,
         "pref_key_system_statusbar_duo_chargingbolt" to false,
+        "pref_key_system_statusbar_duo_horizontalpadding" to 3,
     )
 
     @Test

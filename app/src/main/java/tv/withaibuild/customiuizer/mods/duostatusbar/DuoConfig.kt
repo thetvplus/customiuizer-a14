@@ -9,12 +9,14 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
     headphoneScale: Int = 100, val networkFallback: Boolean = true,
     val bluetoothBatteryColor: Boolean = true, cellularStyle: Int = 1,
     val showChargingBolt: Boolean = true,
+    horizontalPadding: Int = 3,
 ) {
     val sizeDp = sizeDp.coerceIn(20, 40)
     val offsetDp = (verticalOffset.coerceIn(0, 16) - 8) / 2f
     val headphoneStyle = headphoneStyle.coerceIn(1, 3)
     val headphoneScale = headphoneScale.coerceIn(85, 115) / 100f
     val cellularStyle = cellularStyle.coerceIn(1, 2)
+    val horizontalPaddingDp = horizontalPadding.coerceIn(0, 12) / 2f
 
     companion object {
         fun read(prefs: PrefMap) = DuoConfig(
@@ -30,6 +32,7 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
             prefs.getBoolean("system_statusbar_duo_btbattery", true),
             prefs.getStringAsInt("system_statusbar_duo_cellularstyle", 1),
             prefs.getBoolean("system_statusbar_duo_chargingbolt", true),
+            prefs.getInt("system_statusbar_duo_horizontalpadding", 3),
         )
     }
 }
@@ -90,9 +93,16 @@ internal object DuoGeometry {
     fun withAlpha(color: Int, alpha: Int) = (color and 0x00ffffff) or (alpha.coerceIn(0, 255) shl 24)
     fun dim(color: Int) = withAlpha(color, (color ushr 24) * 56 / 255)
     fun signalColor(foreground: Int, network: Int, dot: Int): Int {
+        return strengthColor(foreground, DuoNetworkState.dotCoverage(network, dot))
+    }
+    /** Three Wi-Fi elements retain all five native levels; level 3 must not look full. */
+    fun wifiColor(foreground: Int, level: Int, part: Int): Int =
+        strengthColor(foreground, (level.coerceIn(0, 4) * 3 - part * 4).coerceIn(0, 4) * 255 / 4)
+
+    private fun strengthColor(foreground: Int, coverage: Int): Int {
         val alpha = foreground ushr 24
         val track = alpha * 56 / 255
-        return withAlpha(foreground, track + (alpha - track) * DuoNetworkState.dotCoverage(network, dot) / 255)
+        return withAlpha(foreground, track + (alpha - track) * coverage / 255)
     }
     fun bluetoothColor(foreground: Int, batteryStep: Int): Int {
         val lightIcons = ((foreground shr 16 and 255) * 299 +

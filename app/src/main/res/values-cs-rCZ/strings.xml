@@ -1062,6 +1062,8 @@
     <string name="system_statusbar_duo_audio_summ">Kabelová nebo Bluetooth sluchátka se při novém připojení zobrazí na 3 sekundy, pak se vrátí Wi-Fi nebo symbol sítě. Varování sítě mají přednost.</string>
     <string name="system_statusbar_duo_bold_title">Silnější čáry ikony</string>
     <string name="system_statusbar_duo_bold_summ">Silnější kruh baterie a čáry Wi-Fi a sluchátek.</string>
+    <string name="system_statusbar_duo_horizontalpadding_title">Vodorovné rozestupy</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">Odsazení na každé straně po 0,5 dp při zachování velikosti ikony.</string>
     <string name="system_statusbar_duo_verticaloffset_title">Svislé posunutí</string>
     <string name="system_statusbar_duo_verticaloffset_summ">Vycentrování v řádku, krok 0,5 dp. Posunutí je omezeno výškou; na okraji se ikona zmenší bez oříznutí.</string>
     <string name="system_statusbar_duo_headphonestyle_title">Styl ikony sluchátek</string>

@@ -28,7 +28,7 @@ class DuoTransitionAllocationTest {
                 transition.change(DuoCenter.key(network, headphones.snapshot, config), i.toLong(), 180L)
                 val progress = transition.fraction(i.toLong())
                 checksum += transition.drawAlpha(progress) + transition.drawKey(progress)
-                signals.mobile(0, 10, i % 6, true, true, 5, DuoCellularType.generation("5G"))
+                signals.mobile(0, 10, i % 6, true, 5, DuoCellularType.generation("5G"))
                 checksum += DuoGeometry.signalColor(-1, signals.snapshot, i % 4) ushr 24
                 checksum += DuoCellularType.label(DuoCenter.value(DuoCenter.key(signals.snapshot, 0, textConfig))).length
             }
