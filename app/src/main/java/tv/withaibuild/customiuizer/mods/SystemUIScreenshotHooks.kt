@@ -32,11 +32,10 @@ object SystemUIScreenshotHooks {
             override fun after(param: AfterHookCallback) {
                 val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
                 if (!isActListened) {
-                    isActListened = true
                     val intentFilter = IntentFilter()
                     intentFilter.addAction("miui.intent.TAKE_SCREENSHOT")
                     val thisObject = param.getThisObject()
-                    ModuleHelper.registerModuleReceiver(mContext, "pipScreenshotReceiver", object : BroadcastReceiver() {
+                    isActListened = ModuleHelper.registerModuleReceiver(mContext, "pipScreenshotReceiver", object : BroadcastReceiver() {
                         override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
                             val action = intent.action ?: return@guarded
                             if (action == "miui.intent.TAKE_SCREENSHOT") {
@@ -63,6 +62,7 @@ object SystemUIScreenshotHooks {
         private val restorePreviousVisibility: Boolean
     ) : BroadcastReceiver(), View.OnAttachStateChangeListener {
         private var registered = false
+        private var hiding = false
         private var visibleState = View.VISIBLE
 
         fun bind() {
@@ -77,13 +77,24 @@ object SystemUIScreenshotHooks {
         }
 
         override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
-            if (intent.action != SCREENSHOT_ACTION) return@guarded
+            if (!registered || intent.action != SCREENSHOT_ACTION) return@guarded
             val finished = intent.getBooleanExtra("IsFinished", true)
-            if (restorePreviousVisibility) {
-                if (!finished) visibleState = view.visibility
-                view.visibility = if (finished) visibleState else View.INVISIBLE
+            if (finished) {
+                restoreVisibility()
             } else {
-                view.visibility = if (finished) View.VISIBLE else View.INVISIBLE
+                if (hiding) return@guarded
+                hiding = true
+                if (restorePreviousVisibility) visibleState = view.visibility
+                view.visibility = View.INVISIBLE
+            }
+        }
+
+        private fun restoreVisibility() {
+            if (!hiding) return
+            hiding = false
+            // Restore only the state this receiver wrote; preserve a later host change.
+            if (view.visibility == View.INVISIBLE) {
+                view.visibility = if (restorePreviousVisibility) visibleState else View.VISIBLE
             }
         }
 
@@ -98,6 +109,7 @@ object SystemUIScreenshotHooks {
         }
 
         override fun onViewDetachedFromWindow(v: View) = ModuleHelper.guarded {
+            restoreVisibility()
             if (!registered) return@guarded
             registered = false
             v.context.unregisterReceiver(this)

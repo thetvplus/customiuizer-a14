@@ -27,6 +27,14 @@ r14.23.3 起最低要求 API 102，直接使用原生 Hook 安装和 Service 能
 
 已有样本来自 Xiaomi 13 / fuxi、`V816.0.7.0.UMCTWXM`、Android 14。样本哈希和插件 ClassLoader 边界保存在 [ROM 资料](docs/rom-intelligence/README.md)。这些历史资料不证明当前安装 APK、其他机型或全部功能已经验收。其他框架实现仍需专项验收。
 
+2026-10-18 新增两份 fuxi / SDK 34 离线样本：国行 `V816.0.19.0.UMCCNXM` 和台湾版
+`V816.0.8.0.UMCTWXM`。SystemUI 初始化、插件创建、音量按钮、截图保存及截图相关视图生命周期的
+14 个已选目标签名一致；插件 APK 与 `miui-services.jar` 的文件哈希相同。截图 APK 版本分别为
+`RELEASE-1.4.113-06271450` 和 `RELEASE-1.4.122-10151355`，两者均使用
+`miui.intent.TAKE_SCREENSHOT` / `IsFinished` 开始与结束广播。GuardProvider 的生产双字符串条件
+在国行命中唯一 `List` 返回方法，在台湾版零命中，保留国际版禁用策略。两包同时存在地区与版本差异，
+这些结果仅约束指定样本和已查目标，不代表整包或实机功能验收；原件、哈希、查询及 Smali 留在本地证据中。
+
 ## 当前功能边界
 
 - 已下线缺少有效 A14 安装路径的浮动通知不自动隐藏、自动隐藏延迟、简约折叠视图、桌面去除启动动画及通知中心快捷应用；保留日历 / 时钟替换和其他通知功能。六个已隐藏入口也从配置目录移除，清理范围和升级规则见 [功能退役说明](docs/maintenance/A14_FEATURE_RETIREMENTS.md)。
