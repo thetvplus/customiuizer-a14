@@ -4,15 +4,14 @@
 
 A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It supports **arm64-v8a / libxposed API 102** and has an independent package, signing identity and release line.
 
-- Current source: `r14.23.6` (versionCode 244), requiring libxposed API 102.
-- Published release: `r14.23.5` (versionCode 243); source updates do not imply a new published download.
+- Current official release: `r14.24.1` (versionCode 245), requiring libxposed API 102.
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
 - [Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Release history](https://github.com/thetvplus/customiuizer-a14/releases) · [Changelog](CHANGELOG.md)
 
-This release reduces repeated settings-page grouping, restores sample-file access and tightens external entry points. Updates retain the existing signing identity and app data. Confirm framework API 102 support before upgrading.
+This release adds a native Dock background, corrects Duo data-SIM selection and spacing, and improves weather, steps, screenshot and registration-cleanup lifecycles. Updates retain the existing signing identity and app data. Confirm framework API 102 support before upgrading.
 
-The full product name is 米客 A14｜CustoMIUIzer A14; short app labels retain 米客 A14. Existing official APKs are not repackaged for wording changes. The full About-page name takes effect in a future official build.
+The full repository, source and About-page name is 米客 A14｜CustoMIUIzer A14; short app labels retain 米客 A14.
 
 ## Features
 
@@ -36,6 +35,8 @@ The full product name is 米客 A14｜CustoMIUIzer A14; short app labels retain 
 Install the official APK, enable the module and required scopes in your framework, then restart the affected process or device. Settings indicate which changes require a restart. Hooks selected at installation time require restarting their target process after changing the switch.
 
 Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/DUO_STATUS_BAR.md) for sizing, signal and hint behavior.
+
+Dock background is disabled by default. Open Launcher → Dock, then restart the launcher after changes. Background shrink adjusts all four edges: positive values contract, negative values expand, with a +1 dp default. Icon space and host clipping bound the effective adjustment; icons retain their native positions and sizes.
 
 Availability depends on the ROM and system-app versions. Dynamic app-scope requests still require framework approval. Do not enable this module together with upstream or another CustoMIUIzer-derived module. Android 13 / 15 / 16 and other major MIUI / HyperOS versions are unsupported. See [COMPATIBILITY.md](COMPATIBILITY.md).
 
