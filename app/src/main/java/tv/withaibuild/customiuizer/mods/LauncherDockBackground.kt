@@ -22,6 +22,7 @@ import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
+import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
@@ -38,12 +39,29 @@ object LauncherDockBackground {
         val hotseats = XposedHelpers.findClass("com.miui.home.launcher.hotseats.HotSeats", lpparam.classLoader)
         check(FrameLayout::class.java.isAssignableFrom(hotseats))
         val content = DockContentAccess.resolve(lpparam.classLoader)
+        val launcher = XposedHelpers.findClass("com.miui.home.launcher.Launcher", lpparam.classLoader)
+        val state = XposedHelpers.findClass("com.miui.home.launcher.LauncherState", lpparam.classLoader)
+        val overview = XposedHelpers.findClass("com.miui.home.recents.OverviewState", lpparam.classLoader)
+        val owner = XposedHelpers.findField(hotseats, "mLauncher")
+        val getHotSeats = launcher.getMethod("getHotSeats")
+        val getStateManager = launcher.getMethod("getStateManager")
+        val getState = getStateManager.returnType.getMethod("getState")
         val material = XposedHelpers.findClassIfExists(
             "com.miui.blur.sdk.backdrop.BackdropBlurRelativeLayout", lpparam.classLoader
         )?.constructors?.firstOrNull { it.parameterTypes.contentEquals(arrayOf(Context::class.java)) }
         ModuleHelper.findAndHookMethod(hotseats, "updateContent", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                attach(callback.getThisObject() as FrameLayout, config, material, content)
+                val host = callback.getThisObject() as FrameLayout
+                val manager = owner.get(host)?.let { getStateManager.invoke(it) }
+                val visible = !overview.isInstance(manager?.let { getState.invoke(it) })
+                attach(host, config, material, content, visible)
+            }
+        })
+        ModuleHelper.findAndHookMethod(launcher, "onStateSetStart", state, object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) {
+                val host = getHotSeats.invoke(callback.getThisObject()) as? FrameLayout ?: return
+                findBackground(host)?.visibility =
+                    if (overview.isInstance(callback.getArg(0))) View.INVISIBLE else View.VISIBLE
             }
         })
         ModuleHelper.findAndHookMethod(hotseats, "onMeasure", Int::class.javaPrimitiveType,
@@ -60,10 +78,16 @@ object LauncherDockBackground {
     }
 
     internal fun attach(host: FrameLayout, config: DockBackgroundConfig, material: Constructor<*>?,
-        content: DockContentAccess? = null,
+        content: DockContentAccess? = null, visible: Boolean = true,
     ) {
-        findBackground(host)?.let { it.scheduleGeometry(); return }
-        val decoration = DockBackgroundView(host.context, config, material, content)
+        findBackground(host)?.let {
+            it.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+            it.scheduleGeometry()
+            return
+        }
+        val decoration = DockBackgroundView(host.context, config, material, content).apply {
+            visibility = if (visible) View.VISIBLE else View.INVISIBLE
+        }
         val inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
         host.addView(decoration, 0, FrameLayout.LayoutParams(-1, -1).apply {
             leftMargin = inset
@@ -86,11 +110,8 @@ internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Cl
     private val icon = XposedHelpers.findField(iconType, "mIconImageView")
     private val title = XposedHelpers.findField(iconType, "mTitleContainer")
     private val hiddenTitle = XposedHelpers.findField(iconType, "mIsHideTitle")
-    private val positionChanged = content.type.getMethod("onTranslationChanged")
     private val dragController = XposedHelpers.findFieldIfExists(hotseatType, "mDragController")
     private val dragging = dragController?.type?.let { XposedHelpers.findFieldIfExists(it, "mDragging") }
-
-    fun positionChanged(row: ViewGroup) { positionChanged.invoke(row) }
 
     fun isDragging(host: ViewGroup): Boolean {
         val controller = dragController?.get(host) ?: return false
@@ -108,7 +129,7 @@ internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Cl
     private fun collect(host: ViewGroup, parent: ViewGroup, out: Rect, scratch: Rect) {
         for (i in 0 until parent.childCount) {
             val child = parent.getChildAt(i)
-            if (child.visibility != View.VISIBLE) continue
+            if (child.visibility == View.GONE) continue
             if (iconType.isInstance(child)) {
                 include(host, icon.get(child) as? View, out, scratch)
                 if (!hiddenTitle.getBoolean(child)) include(host, title.get(child) as? View, out, scratch)
@@ -117,7 +138,8 @@ internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Cl
     }
 
     private fun include(host: ViewGroup, view: View?, out: Rect, scratch: Rect) {
-        if (view == null || view.visibility != View.VISIBLE || view.alpha == 0f || view.width <= 0 || view.height <= 0) return
+        // Floating launch/return icons temporarily hide their native source, without relayout.
+        if (view == null || view.visibility == View.GONE || view.width <= 0 || view.height <= 0) return
         view.getDrawingRect(scratch)
         host.offsetDescendantRectToMyCoords(view, scratch)
         if (scratch.right > 0 && scratch.left < host.width) out.union(scratch)
@@ -153,7 +175,7 @@ internal data class DockBackgroundConfig(
     }
 }
 
-/** The ROM component owns blur sampling and animation alpha; this owner only handles cold updates. */
+/** The ROM owns rendering; layout and native scene changes are the only business update sources. */
 internal class DockBackgroundView(
     context: Context,
     private val config: DockBackgroundConfig,
@@ -162,14 +184,13 @@ internal class DockBackgroundView(
 ) : FrameLayout(context), ViewTreeObserver.OnPreDrawListener, View.OnLayoutChangeListener {
     private val tint = DockBackgroundTint()
     private var nativeMaterial: View? = null
+    private var materialEnabled = false
     private var screenRadius = 0f
     private val contentBounds = Rect()
     private val scratch = Rect()
     private var pendingObserver: ViewTreeObserver? = null
-    private var alignedContent: ViewGroup? = null
-    private var appliedTranslationY = 0f
-    private var appliedOffset = 0f
-    private var alignmentFailed = false
+    private var observedContent: ViewGroup? = null
+    private var contentFailed = false
     private var edgeInset = 0f
     private val materialOutline = object : ViewOutlineProvider() {
         override fun getOutline(view: View, outline: Outline) {
@@ -215,17 +236,10 @@ internal class DockBackgroundView(
             XposedHelpers.callMethod(candidate, "setBlurRadius", blurRadius)
             XposedHelpers.callMethod(candidate, "setCornerRadius", tint.radius)
             XposedHelpers.callMethod(candidate, "setBlurEnabled", true)
-            if (config.material == 2 && XposedHelpers.callMethod(candidate, "isGoogleBlurSupported") == true) {
-                // Keep the native background blur; omit the SDK's glass color-blend layers.
-                try {
-                    XposedHelpers.callMethod(XposedHelpers.getObjectField(candidate, "mBlurLayerHolder"), "setEnable", false)
-                } catch (error: Throwable) {
-                    FatalErrors.unwrapAndRethrowIfFatal(error)
-                    XposedHelpers.log("Dock background: using native glass blend", error)
-                }
-            }
+            configureGlassBlend(candidate)
             addView(candidate, LayoutParams(-1, -1))
             nativeMaterial = candidate
+            materialEnabled = true
         } catch (error: Throwable) {
             try {
                 if (candidate?.parent === this) removeView(candidate)
@@ -236,26 +250,38 @@ internal class DockBackgroundView(
         }
     }
 
+    private fun configureGlassBlend(material: View) {
+        if (config.material != 2 || XposedHelpers.callMethod(material, "isGoogleBlurSupported") != true) return
+        try {
+            XposedHelpers.callMethod(XposedHelpers.getObjectField(material, "mBlurLayerHolder"), "setEnable", false)
+        } catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            XposedHelpers.log("Dock background: using native glass blend", error)
+        }
+    }
+
     override fun onDetachedFromWindow() {
         try {
             ModuleHelper.guarded {
                 cancelGeometry()
-                restoreContent()
-                val material = nativeMaterial
-                nativeMaterial = null
-                if (material != null) {
-                    // Retire the old root's blur drawable before a possible reattach.
-                    ModuleHelper.guarded { material.background?.alpha = 0 }
-                    try {
-                        removeView(material)
-                    } finally {
-                        material.background = null
-                    }
-                }
-                tint.rounded = false
+                observeContent(null)
+                retireMaterial()
             }
         } finally {
             super.onDetachedFromWindow()
+        }
+    }
+
+    private fun retireMaterial() {
+        val material = nativeMaterial ?: return
+        nativeMaterial = null
+        materialEnabled = false
+        ModuleHelper.guarded { material.background?.alpha = 0 }
+        try {
+            removeView(material)
+        } finally {
+            material.background = null
+            tint.rounded = false
         }
     }
 
@@ -292,18 +318,35 @@ internal class DockBackgroundView(
     }
 
     private fun syncNativeMaterialVisibility(isVisible: Boolean) {
-        val drawable = nativeMaterial?.background ?: return
-        // Google blur regions live in SurfaceFlinger, independently of ancestor View visibility.
-        drawable.alpha = if (isVisible) (config.opacity * 2.55f).roundToInt() else 0
-        if (isVisible) {
-            // A resize/corner update while alpha == 0 leaves BackgroundBlurDrawable's path empty.
-            val bounds = drawable.bounds
-            drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+        val material = nativeMaterial ?: return
+        try {
+            // Retire the Google region before the SDK clears its background; disable the MIUI binder too.
+            if (!isVisible) material.background?.alpha = 0
+            if (materialEnabled != isVisible) {
+                if (isVisible) {
+                    // setBlurEnabled(false) also resets the SDK's saved radius to zero.
+                    val radius = if (config.material == 2) (28 * resources.displayMetrics.density).roundToInt() else 12
+                    XposedHelpers.callMethod(material, "setBlurRadius", radius)
+                }
+                XposedHelpers.callMethod(material, "setBlurEnabled", isVisible)
+                materialEnabled = isVisible
+                if (isVisible) configureGlassBlend(material)
+            }
+            if (isVisible) material.background?.let { drawable ->
+                drawable.alpha = (config.opacity * 2.55f).roundToInt()
+                // A hidden bounds/corner update leaves BackgroundBlurDrawable's path empty.
+                val bounds = drawable.bounds
+                drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+            }
+        } catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            retireMaterial()
+            XposedHelpers.log("Dock background: native material retired after visibility failure", error)
         }
     }
 
     fun scheduleGeometry() {
-        if (!isAttachedToWindow || pendingObserver != null) return
+        if (!isAttachedToWindow || !isShown || pendingObserver != null) return
         viewTreeObserver.let { observer ->
             pendingObserver = observer
             observer.addOnPreDrawListener(this)
@@ -327,13 +370,16 @@ internal class DockBackgroundView(
             if (!isShown || host.height <= 0) return@guarded
             val dragging = contentAccess?.isDragging(host) == true
             contentBounds.setEmpty()
-            if (!dragging && !alignmentFailed && contentAccess != null) try {
-                alignContent(host)
+            if (!dragging && !contentFailed && contentAccess != null) try {
+                val row = contentAccess.content(host)
+                observeContent(row)
+                if (row != null) contentAccess.bounds(host, row, contentBounds, scratch)
             } catch (error: Throwable) {
                 FatalErrors.unwrapAndRethrowIfFatal(error)
-                alignmentFailed = true
-                restoreContent()
-                XposedHelpers.log("Dock background: native alignment disabled", error)
+                contentFailed = true
+                observeContent(null)
+                contentBounds.setEmpty()
+                XposedHelpers.log("Dock background: native bounds unavailable", error)
             }
             val root = rootView as? ViewGroup ?: return@guarded
             // Layout coordinates exclude the launcher's scale/translation animations.
@@ -342,15 +388,21 @@ internal class DockBackgroundView(
             val density = resources.displayMetrics.density
             val params = layoutParams as? LayoutParams
             var inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * density).roundToInt()
-            var verticalInset = 0
+            var topInset = params?.topMargin ?: 0
+            var bottomInset = params?.bottomMargin ?: 0
             if (dragging && params != null) {
                 inset = params.leftMargin
-                verticalInset = params.topMargin
             } else if (!contentBounds.isEmpty) {
-                val availableHeight = host.height - host.paddingTop - host.paddingBottom
-                val padding = maxOf(8 * density, contentBounds.height() * 0.3f)
-                verticalInset = minOf((4 * density).roundToInt(),
-                    ((availableHeight - contentBounds.height()) * 0.5f - padding).roundToInt().coerceAtLeast(0))
+                var padding = maxOf(8 * density, contentBounds.height() * 0.3f).roundToInt()
+                if (host.clipChildren || host.clipToPadding) {
+                    padding = minOf(padding, contentBounds.top - host.paddingTop,
+                        host.height - host.paddingBottom - contentBounds.bottom).coerceAtLeast(0)
+                }
+                // Native HotSeats permits overflow. Fit its background around the native icon row,
+                // leaving animation landing coordinates intact, with a tiny optical trim at the top.
+                val trim = minOf(padding, (0.5f * density).roundToInt().coerceAtLeast(1))
+                topInset = contentBounds.top - host.paddingTop - padding + trim
+                bottomInset = host.height - host.paddingBottom - contentBounds.bottom - padding
                 if (config.sideInsetDp == 0) {
                     val sideRoom = minOf(contentBounds.left - host.paddingLeft,
                         host.width - host.paddingRight - contentBounds.right)
@@ -360,15 +412,15 @@ internal class DockBackgroundView(
                 }
             }
             if (params != null && (params.leftMargin != inset || params.rightMargin != inset ||
-                    params.topMargin != verticalInset || params.bottomMargin != verticalInset)) {
+                    params.topMargin != topInset || params.bottomMargin != bottomInset)) {
                 params.leftMargin = inset
                 params.rightMargin = inset
-                params.topMargin = verticalInset
-                params.bottomMargin = verticalInset
+                params.topMargin = topInset
+                params.bottomMargin = bottomInset
                 layoutParams = params
                 ready = false // apply the new geometry before presenting it
             }
-            val bottomGap = (root.height - scratch.top - host.height + host.paddingBottom + verticalInset).coerceAtLeast(0)
+            val bottomGap = (root.height - scratch.top - host.height + host.paddingBottom + bottomInset).coerceAtLeast(0)
             val leftGap = scratch.left + host.paddingLeft + inset
             val rightGap = root.width - scratch.right + host.paddingRight + inset
             edgeInset = maxOf(leftGap, rightGap, bottomGap).toFloat()
@@ -378,40 +430,11 @@ internal class DockBackgroundView(
         return ready
     }
 
-    private fun alignContent(host: FrameLayout) {
-        val access = contentAccess ?: return
-        val row = access.content(host)
-        if (alignedContent !== row) {
-            restoreContent()
-            alignedContent = row
-            row?.addOnLayoutChangeListener(this)
-        }
-        if (row == null) return
-        val nativeTranslation = row.translationY - if (row.translationY == appliedTranslationY) appliedOffset else 0f
-        access.bounds(host, row, contentBounds, scratch)
-        if (contentBounds.isEmpty || contentBounds.height() > height) return
-        val offset = ((top + bottom - contentBounds.top - contentBounds.bottom) / 2f).roundToInt()
-            .coerceIn(top - contentBounds.top, bottom - contentBounds.bottom).toFloat()
-        val translation = nativeTranslation + offset
-        val changed = row.translationY != translation
-        // Changing ScreenView's frame makes the ROM skip its next icon-reorder animation.
-        if (changed) row.translationY = translation
-        alignedContent = row
-        appliedOffset = offset
-        appliedTranslationY = translation
-        if (changed) access.positionChanged(row)
-    }
-
-    private fun restoreContent() {
-        val row = alignedContent
-        val offset = appliedOffset
-        row?.removeOnLayoutChangeListener(this)
-        alignedContent = null
-        appliedOffset = 0f
-        if (row != null && row.translationY == appliedTranslationY && offset != 0f) {
-            row.translationY -= offset
-            if (row.parent === parent) ModuleHelper.guarded { contentAccess?.positionChanged(row) }
-        }
+    private fun observeContent(row: ViewGroup?) {
+        if (observedContent === row) return
+        observedContent?.removeOnLayoutChangeListener(this)
+        observedContent = row
+        row?.addOnLayoutChangeListener(this)
     }
 
     private fun readScreenRadius(insets: WindowInsets?) {

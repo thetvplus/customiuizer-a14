@@ -17478,7 +17478,7 @@
       "targetPackage": "com.miui.home",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Decorates native HotSeats and centers its visible icon/title content at layout boundaries; native blur regions retire when the host hides, and owned visual translations restore on detach without altering native frames",
+      "enableEffect": "Fits the background around native icon/title layout bounds with a small optical top trim; never changes native icon frames or transforms. Overview state and View visibility retire both native blur backends",
       "disableEffect": "Restores the native Dock after launcher restart",
       "valueChangeEffect": "Requires launcher restart",
       "restartTarget": "LAUNCHER",
