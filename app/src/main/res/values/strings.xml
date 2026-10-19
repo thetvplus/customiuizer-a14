@@ -1111,10 +1111,12 @@
     <string name="launcher_dock_background_material_title">Material</string>
     <string name="launcher_dock_background_auto_glass">Native glass (automatic)</string>
     <string name="launcher_dock_background_translucent">Translucent</string>
+    <string name="launcher_dock_background_gaussian">Gaussian blur</string>
+    <string name="launcher_dock_background_material_summ">Softens the background while keeping icons clear. Falls back to translucent when system materials are unavailable.</string>
     <string name="launcher_dock_background_opacity_title">Opacity</string>
     <string name="launcher_dock_background_radius_title">Corner radius</string>
     <string name="launcher_dock_background_inset_title">Horizontal inset</string>
     <string name="launcher_dock_background_radius_summ">Automatic follows the bottom screen corners and inset; all four corners share one radius.</string>
-    <string name="launcher_dock_background_inset_summ">Automatic balances the side spacing with the bottom screen edge.</string>
+    <string name="launcher_dock_background_inset_summ">Automatic uses a narrow, stable side spacing; adjust manually if needed.</string>
     <string name="launcher_dock_background_auto">Automatic</string>
 </resources>

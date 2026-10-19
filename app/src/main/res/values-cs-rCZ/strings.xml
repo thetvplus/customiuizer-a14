@@ -1084,10 +1084,12 @@
     <string name="launcher_dock_background_material_title">Materiál</string>
     <string name="launcher_dock_background_auto_glass">Systémové sklo (automaticky)</string>
     <string name="launcher_dock_background_translucent">Průsvitné</string>
+    <string name="launcher_dock_background_gaussian">Gaussovské rozostření</string>
+    <string name="launcher_dock_background_material_summ">Zjemní pozadí a zachová ostré ikony. Pokud systémové materiály nejsou dostupné, použije se průsvitné pozadí.</string>
     <string name="launcher_dock_background_opacity_title">Neprůhlednost</string>
     <string name="launcher_dock_background_radius_title">Poloměr rohů</string>
     <string name="launcher_dock_background_inset_title">Boční odsazení</string>
     <string name="launcher_dock_background_radius_summ">Automaticky podle dolních rohů obrazovky a odsazení; všechny čtyři rohy mají stejný poloměr.</string>
-    <string name="launcher_dock_background_inset_summ">Automaticky vyváží boční odsazení podle vzdálenosti od dolního okraje obrazovky.</string>
+    <string name="launcher_dock_background_inset_summ">Automaticky používá úzké a stálé boční odsazení; podle potřeby jej upravte ručně.</string>
     <string name="launcher_dock_background_auto">Automaticky</string>
 </resources>

@@ -62,6 +62,10 @@ class PreferenceResourceContractTest(unittest.TestCase):
     def test_dock_page_preserves_geometry_keys_and_gates_only_background_options(self):
         root = ET.parse(XML_DIR / "prefs_launcher.xml").getroot()
         category = next(el for el in root if el.get(ATTR_KEY) == "pref_key_launcher_cat_dock")
+        order = [el.get(ATTR_KEY) for el in root]
+        dock = order.index("pref_key_launcher_cat_dock")
+        self.assertEqual(["pref_key_launcher_cat_titles", "pref_key_launcher_cat_dock", "pref_key_launcher_cat_privacyapps"],
+                         order[dock - 1:dock + 2])
         controls = {el.get(ATTR_KEY): el for el in category}
         master = "pref_key_launcher_dock_background"
         self.assertEqual("false", controls[master].get(f"{{{ANDROID_NS}}}defaultValue"))
@@ -70,9 +74,16 @@ class PreferenceResourceContractTest(unittest.TestCase):
         for key in ("launcher_unlockhotseat", "launcher_dock_height", "launcher_dock_topmargin", "launcher_dock_bottommargin"):
             self.assertNotIn(f"{{{ANDROID_NS}}}dependency", controls[f"pref_key_{key}"].attrib)
         self.assertEqual("60", controls["pref_key_launcher_dock_height"].get(f"{{{ANDROID_NS}}}defaultValue"))
+        self.assertEqual("90", controls[f"{master}_opacity"].get(f"{{{ANDROID_NS}}}defaultValue"))
+        arrays = ET.parse(RES_ROOT / "values" / "arrays.xml").getroot()
+        material_entries = arrays.find("string-array[@name='launcher_dock_background_material']")
+        material_values = arrays.find("string-array[@name='launcher_dock_background_material_values']")
+        self.assertEqual(["0", "1", "2"], [el.text for el in material_values])
+        self.assertEqual("@string/launcher_dock_background_gaussian", material_entries[2].text)
         required = {"launcher_dock_category", "launcher_dock_background_title", "launcher_dock_background_summ",
                     "launcher_dock_background_material_title", "launcher_dock_background_auto_glass",
                     "launcher_dock_background_translucent", "launcher_dock_background_opacity_title",
+                    "launcher_dock_background_gaussian", "launcher_dock_background_material_summ",
                     "launcher_dock_background_radius_title", "launcher_dock_background_inset_title",
                     "launcher_dock_background_auto"}
         for locale, strings in self.base_strings.items():

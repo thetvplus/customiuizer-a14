@@ -11,7 +11,9 @@ import android.graphics.RectF
 import android.graphics.drawable.ColorDrawable
 import android.os.Looper
 import android.view.MotionEvent
+import android.view.RoundedCorner
 import android.view.View
+import android.view.WindowInsets
 import android.widget.FrameLayout
 import org.junit.After
 import org.junit.Assert.*
@@ -24,6 +26,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import tv.withaibuild.customiuizer.utils.PrefMap
 import kotlin.math.PI
+import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
@@ -40,6 +43,8 @@ class DockBackgroundTest {
         activity.pause().stop().destroy()
         NativeMaterial.supported = true
         NativeMaterial.failure = null
+        NativeMaterial.googleSupported = false
+        BlendLayer.failure = null
     }
 
     @Test
@@ -79,7 +84,7 @@ class DockBackgroundTest {
         val first = decoration.getChildAt(0) as NativeMaterial
         assertEquals(12, first.appliedBlurRadius)
         assertTrue(first.appliedEnabled)
-        assertEquals(0.65f, first.alpha)
+        assertEquals(0.9f, first.alpha)
         host.removeView(decoration)
         assertNull(first.parent)
         assertNull(first.background)
@@ -152,6 +157,46 @@ class DockBackgroundTest {
         val decoration = host.getChildAt(0) as DockBackgroundView
         assertEquals(0, decoration.childCount)
         assertEquals(0, decoration.foreground.alpha)
+    }
+
+    @Test
+    fun gaussianUsesNativeBackgroundBlurAndRetiresOnlyItsGlassBlendLayers() {
+        NativeMaterial.googleSupported = true
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
+        layout()
+        val decoration = host.getChildAt(0) as DockBackgroundView
+        val material = decoration.getChildAt(0) as NativeMaterial
+        assertEquals((28 * host.resources.displayMetrics.density).roundToInt(), material.appliedBlurRadius)
+        assertFalse(material.mBlurLayerHolder.enabled)
+        assertTrue(material.appliedEnabled)
+        assertEquals(0.9f, material.alpha)
+        host.removeView(decoration)
+        host.addView(decoration)
+        layout()
+        val replacement = decoration.getChildAt(0) as NativeMaterial
+        assertNotSame(material, replacement)
+        assertFalse(replacement.mBlurLayerHolder.enabled)
+        assertTrue(replacement.appliedEnabled)
+    }
+
+    @Test
+    fun optionalGlassBlendFailureKeepsTheNativeBlur() {
+        NativeMaterial.googleSupported = true
+        BlendLayer.failure = IllegalStateException("different SDK blend holder")
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
+        layout()
+        val decoration = host.getChildAt(0) as DockBackgroundView
+        assertTrue((decoration.getChildAt(0) as NativeMaterial).appliedEnabled)
+    }
+
+    @Test
+    fun fatalGlassBlendFailureIsNotSwallowed() {
+        NativeMaterial.googleSupported = true
+        val fatal = OutOfMemoryError("native blend")
+        BlendLayer.failure = fatal
+        assertSame(fatal, assertThrows(OutOfMemoryError::class.java) {
+            LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
+        })
     }
 
     @Test
@@ -235,6 +280,12 @@ class DockBackgroundTest {
         assertEquals(0, config.opacity)
         assertEquals(80, config.radiusDp)
         assertEquals(0, config.sideInsetDp)
+        assertEquals(65, DockBackgroundConfig.read(PrefMap().apply {
+            put("launcher_dock_background_opacity", 65)
+        }).opacity) // explicit existing choices survive a default change
+        assertEquals(2, DockBackgroundConfig.read(PrefMap().apply {
+            put("launcher_dock_background_material", "2")
+        }).material)
     }
 
     @Test
@@ -256,8 +307,9 @@ class DockBackgroundTest {
         return native
     }
 
-    private fun attachNative(native: HotSeatsFixture): DockBackgroundView {
-        LauncherDockBackground.attach(native, DockBackgroundConfig(material = 1, sideInsetDp = 12), null,
+    private fun attachNative(native: HotSeatsFixture, material: Int = 1): DockBackgroundView {
+        LauncherDockBackground.attach(native, DockBackgroundConfig(material = material, sideInsetDp = 12),
+            if (material == 1) null else materialConstructor,
             DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java))
         layout()
         native.viewTreeObserver.dispatchOnPreDraw()
@@ -313,7 +365,7 @@ class DockBackgroundTest {
         val decoration = attachNative(native)
         val row = native.mContent
         row.layout(0, 3, 360, 83) // a new native base position, independent of our previous offset
-        decoration.scheduleGeometry()
+        // The native row listener schedules realignment without a new parent measurement.
         native.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(10, row.top)
         native.removeView(decoration)
@@ -322,6 +374,54 @@ class DockBackgroundTest {
         decoration.scheduleGeometry()
         native.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(3, row.top)
+    }
+
+    @Test
+    fun animationTransformsAndTransientMissingInsetsCannotFlattenTheDock() {
+        val native = nativeHost()
+        val decoration = attachNative(native, material = 0)
+        host.rootView.layout(0, 0, 360, 80)
+        val insets = WindowInsets.Builder().setRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT,
+            RoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT, 100, 100, 100)).build()
+        decoration.onApplyWindowInsets(insets)
+        native.viewTreeObserver.dispatchOnPreDraw()
+        decoration.onApplyWindowInsets(insets)
+        val radius = (decoration.foreground as DockBackgroundTint).radius
+        assertEquals(40f, radius)
+        val material = decoration.getChildAt(0) as NativeMaterial
+        val params = decoration.layoutParams as FrameLayout.LayoutParams
+        val margin = params.leftMargin
+        for (offset in floatArrayOf(-400f, 120f, 0f)) {
+            native.translationY = offset
+            native.translationX = 70f
+            native.scaleX = 0.8f
+            native.scaleY = 0.8f
+            decoration.scheduleGeometry()
+            native.viewTreeObserver.dispatchOnPreDraw()
+            decoration.onApplyWindowInsets(insets)
+            assertEquals(radius, material.appliedCornerRadius)
+            decoration.onApplyWindowInsets(WindowInsets.Builder().build())
+            assertEquals(radius, (decoration.foreground as DockBackgroundTint).radius)
+            assertEquals(margin, params.leftMargin)
+            assertEquals(margin, params.rightMargin)
+            assertEquals(10, native.mContent.top)
+        }
+    }
+
+    @Test
+    fun automaticSideSpacingStaysNarrowWhenBottomSpacingChanges() {
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 1), null)
+        layout()
+        val decoration = host.getChildAt(0) as DockBackgroundView
+        val expected = (12 * host.resources.displayMetrics.density).roundToInt()
+        for (bottom in intArrayOf(80, 500)) {
+            host.rootView.layout(0, 0, 360, bottom)
+            decoration.scheduleGeometry()
+            host.viewTreeObserver.dispatchOnPreDraw()
+            val params = decoration.layoutParams as FrameLayout.LayoutParams
+            assertEquals(expected, params.leftMargin)
+            assertEquals(expected, params.rightMargin)
+        }
     }
 
     @Test
@@ -339,6 +439,10 @@ class DockBackgroundTest {
         native.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(0, old.top)
         assertEquals(10, native.mContent.top)
+        val updates = native.mContent.positionUpdates
+        old.layout(0, 20, 360, 100)
+        native.viewTreeObserver.dispatchOnPreDraw()
+        assertEquals(updates, native.mContent.positionUpdates)
         native.removeView(decoration)
         assertEquals(0, native.mContent.top)
     }
@@ -385,11 +489,13 @@ class DockBackgroundTest {
     class NativeMaterial(context: Context) : FrameLayout(context) {
         var appliedBlurRadius = 0
         var appliedEnabled = false
+        var appliedCornerRadius = 0f
+        @JvmField val mBlurLayerHolder = BlendLayer()
         init { background = ColorDrawable(Color.WHITE) }
         fun isBackdropBlurSupported() = supported
-        fun isGoogleBlurSupported() = false
+        fun isGoogleBlurSupported() = googleSupported
         fun setBlurRadius(value: Int) { appliedBlurRadius = value }
-        fun setCornerRadius(value: Float) { require(value >= 0f) }
+        fun setCornerRadius(value: Float) { require(value >= 0f); appliedCornerRadius = value }
         fun setBlurEnabled(value: Boolean) {
             failure?.let { throw it }
             appliedEnabled = value
@@ -397,6 +503,17 @@ class DockBackgroundTest {
         companion object {
             var supported = true
             var failure: Throwable? = null
+            var googleSupported = false
         }
+    }
+
+    class BlendLayer {
+        var enabled = true
+            private set
+        fun setEnable(value: Boolean) {
+            failure?.let { throw it }
+            enabled = value
+        }
+        companion object { var failure: Throwable? = null }
     }
 }

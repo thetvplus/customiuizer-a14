@@ -38,7 +38,7 @@ object LauncherDockBackground {
         val hotseats = XposedHelpers.findClass("com.miui.home.launcher.hotseats.HotSeats", lpparam.classLoader)
         check(FrameLayout::class.java.isAssignableFrom(hotseats))
         val content = DockContentAccess.resolve(lpparam.classLoader)
-        val material = if (config.material == 0) {
+        val material = if (config.material != 1) {
             XposedHelpers.findClassIfExists(
                 "com.miui.blur.sdk.backdrop.BackdropBlurRelativeLayout", lpparam.classLoader
             )?.constructors?.firstOrNull { it.parameterTypes.contentEquals(arrayOf(Context::class.java)) }
@@ -66,7 +66,7 @@ object LauncherDockBackground {
     ) {
         findBackground(host)?.let { it.scheduleGeometry(); return }
         val decoration = DockBackgroundView(host.context, config, material, content)
-        val inset = ((if (config.sideInsetDp == 0) 16 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
+        val inset = ((if (config.sideInsetDp == 0) 12 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
         host.addView(decoration, 0, FrameLayout.LayoutParams(-1, -1).apply {
             leftMargin = inset
             rightMargin = inset
@@ -134,14 +134,14 @@ internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Cl
 
 internal data class DockBackgroundConfig(
     val material: Int = 0,
-    val opacity: Int = 65,
+    val opacity: Int = 90,
     val radiusDp: Int = 0,
     val sideInsetDp: Int = 0,
 ) {
     companion object {
         fun read(prefs: PrefMap) = DockBackgroundConfig(
-            material = prefs.getStringAsInt("launcher_dock_background_material", 0).coerceIn(0, 1),
-            opacity = prefs.getInt("launcher_dock_background_opacity", 65).coerceIn(0, 100),
+            material = prefs.getStringAsInt("launcher_dock_background_material", 0).coerceIn(0, 2),
+            opacity = prefs.getInt("launcher_dock_background_opacity", 90).coerceIn(0, 100),
             radiusDp = prefs.getInt("launcher_dock_background_radius", 0).coerceIn(0, 80),
             sideInsetDp = prefs.getInt("launcher_dock_background_inset", 0).coerceIn(0, 40),
         )
@@ -154,13 +154,12 @@ internal class DockBackgroundView(
     private val config: DockBackgroundConfig,
     private val materialConstructor: Constructor<*>?,
     private val contentAccess: DockContentAccess? = null,
-) : FrameLayout(context), ViewTreeObserver.OnPreDrawListener {
+) : FrameLayout(context), ViewTreeObserver.OnPreDrawListener, View.OnLayoutChangeListener {
     private val tint = DockBackgroundTint()
     private var nativeMaterial: View? = null
     private var screenRadius = 0f
     private val contentBounds = Rect()
     private val scratch = Rect()
-    private val location = IntArray(2)
     private var pendingObserver: ViewTreeObserver? = null
     private var alignedContent: ViewGroup? = null
     private var appliedTop = 0
@@ -206,9 +205,19 @@ internal class DockBackgroundView(
             candidate.alpha = config.opacity / 100f
             candidate.outlineProvider = materialOutline
             candidate.clipToOutline = true
-            XposedHelpers.callMethod(candidate, "setBlurRadius", 12)
+            val blurRadius = if (config.material == 2) (28 * resources.displayMetrics.density).roundToInt() else 12
+            XposedHelpers.callMethod(candidate, "setBlurRadius", blurRadius)
             XposedHelpers.callMethod(candidate, "setCornerRadius", tint.radius)
             XposedHelpers.callMethod(candidate, "setBlurEnabled", true)
+            if (config.material == 2 && XposedHelpers.callMethod(candidate, "isGoogleBlurSupported") == true) {
+                // Keep the native background blur; omit the SDK's glass color-blend layers.
+                try {
+                    XposedHelpers.callMethod(XposedHelpers.getObjectField(candidate, "mBlurLayerHolder"), "setEnable", false)
+                } catch (error: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(error)
+                    XposedHelpers.log("Dock background: using native glass blend", error)
+                }
+            }
             addView(candidate, LayoutParams(-1, -1))
             nativeMaterial = candidate
         } catch (error: Throwable) {
@@ -247,6 +256,7 @@ internal class DockBackgroundView(
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         ModuleHelper.guarded {
+            screenRadius = 0f
             readScreenRadius(rootWindowInsets)
             refreshAppearance()
             scheduleGeometry()
@@ -255,7 +265,7 @@ internal class DockBackgroundView(
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
         ModuleHelper.guarded {
-            readScreenRadius(rootWindowInsets ?: insets)
+            readScreenRadius(insets)
             updateGeometry()
             scheduleGeometry()
         }
@@ -280,6 +290,10 @@ internal class DockBackgroundView(
         }
     }
 
+    override fun onLayoutChange(view: View, left: Int, top: Int, right: Int, bottom: Int,
+        oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
+    ) { scheduleGeometry() }
+
     private fun cancelGeometry() {
         pendingObserver?.let { if (it.isAlive) it.removeOnPreDrawListener(this) }
         pendingObserver = null
@@ -298,23 +312,21 @@ internal class DockBackgroundView(
                 restoreContent()
                 XposedHelpers.log("Dock background: native alignment disabled", error)
             }
-            getLocationInWindow(location)
-            val backgroundBottom = location[1] + height
-            host.getLocationInWindow(location)
-            val hostLeft = location[0]
-            rootView.getLocationInWindow(location)
-            val bottomGap = (location[1] + rootView.height - backgroundBottom).coerceAtLeast(0)
+            val root = rootView as? ViewGroup ?: return@guarded
+            // Layout coordinates exclude the launcher's scale/translation animations.
+            scratch.set(0, 0, host.width, host.height)
+            root.offsetDescendantRectToMyCoords(host, scratch)
+            val bottomGap = (root.height - scratch.top - bottom).coerceAtLeast(0)
             val density = resources.displayMetrics.density
-            val inset = if (config.sideInsetDp > 0) (config.sideInsetDp * density).roundToInt()
-                else bottomGap.coerceIn((12 * density).roundToInt(), (24 * density).roundToInt())
+            val inset = ((if (config.sideInsetDp == 0) 12 else config.sideInsetDp) * density).roundToInt()
             val params = layoutParams as? LayoutParams
             if (params != null && (params.leftMargin != inset || params.rightMargin != inset)) {
                 params.leftMargin = inset
                 params.rightMargin = inset
                 layoutParams = params
             }
-            val leftGap = hostLeft - location[0] + host.paddingLeft + inset
-            val rightGap = location[0] + rootView.width - (hostLeft + host.width - host.paddingRight - inset)
+            val leftGap = scratch.left + host.paddingLeft + inset
+            val rightGap = root.width - scratch.right + host.paddingRight + inset
             edgeInset = maxOf(leftGap, rightGap, bottomGap).toFloat()
             readScreenRadius(rootWindowInsets)
             updateGeometry()
@@ -325,7 +337,11 @@ internal class DockBackgroundView(
     private fun alignContent(host: FrameLayout) {
         val access = contentAccess ?: return
         val row = access.content(host)
-        if (alignedContent !== row) restoreContent()
+        if (alignedContent !== row) {
+            restoreContent()
+            alignedContent = row
+            row?.addOnLayoutChangeListener(this)
+        }
         if (row == null) return
         if (row.top != appliedTop) appliedOffset = 0 // native layout replaced our old position
         access.bounds(host, row, contentBounds, scratch)
@@ -342,6 +358,7 @@ internal class DockBackgroundView(
     private fun restoreContent() {
         val row = alignedContent
         val offset = appliedOffset
+        row?.removeOnLayoutChangeListener(this)
         alignedContent = null
         appliedOffset = 0
         if (row != null && row.top == appliedTop && offset != 0) {
@@ -353,7 +370,9 @@ internal class DockBackgroundView(
     private fun readScreenRadius(insets: WindowInsets?) {
         val left = insets?.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT)?.radius ?: 0
         val right = insets?.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT)?.radius ?: 0
-        screenRadius = maxOf(left, right).toFloat()
+        val radius = maxOf(left, right).toFloat()
+        if (radius > 0f) screenRadius = radius
+        // Insets can briefly omit corners while window focus / floating-window state changes.
         if (screenRadius > 0f) return
         val id = resources.getIdentifier("rounded_corner_radius_bottom", "dimen", "android")
         if (id != 0) screenRadius = resources.getDimension(id)

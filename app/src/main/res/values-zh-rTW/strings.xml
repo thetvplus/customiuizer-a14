@@ -1077,10 +1077,12 @@
     <string name="launcher_dock_background_material_title">材質</string>
     <string name="launcher_dock_background_auto_glass">系統玻璃（自動）</string>
     <string name="launcher_dock_background_translucent">輕透</string>
+    <string name="launcher_dock_background_gaussian">高斯模糊</string>
+    <string name="launcher_dock_background_material_summ">柔化背景，保持圖示清晰。系統材質無法使用時採用輕透背景。</string>
     <string name="launcher_dock_background_opacity_title">不透明度</string>
     <string name="launcher_dock_background_radius_title">圓角</string>
     <string name="launcher_dock_background_inset_title">左右留白</string>
     <string name="launcher_dock_background_radius_summ">自動依據螢幕底部圓角與實際內縮調整，四角使用同一圓角。</string>
-    <string name="launcher_dock_background_inset_summ">自動參照底部螢幕邊緣距離，平衡左右留白。</string>
+    <string name="launcher_dock_background_inset_summ">自動使用較窄且穩定的左右留白，也可手動微調。</string>
     <string name="launcher_dock_background_auto">自動</string>
 </resources>
