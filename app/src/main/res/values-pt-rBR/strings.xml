@@ -1080,5 +1080,7 @@
     <string name="launcher_dock_background_opacity_title">Opacidade</string>
     <string name="launcher_dock_background_radius_title">Raio dos cantos</string>
     <string name="launcher_dock_background_inset_title">Margens laterais</string>
+    <string name="launcher_dock_background_radius_summ">O modo automático segue os cantos inferiores da tela e o recuo; os quatro cantos usam o mesmo raio.</string>
+    <string name="launcher_dock_background_inset_summ">O modo automático equilibra o espaço lateral com a distância até a borda inferior da tela.</string>
     <string name="launcher_dock_background_auto">Automático</string>
 </resources>

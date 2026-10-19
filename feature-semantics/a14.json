@@ -17478,13 +17478,13 @@
       "targetPackage": "com.miui.home",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
+      "enableEffect": "Decorates native HotSeats and centers its visible icon/title content at layout boundaries; owned offsets are restored on detach",
       "disableEffect": "Restores the native Dock after launcher restart",
       "valueChangeEffect": "Requires launcher restart",
       "restartTarget": "LAUNCHER",
       "hotReloadable": false,
       "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPackageReadyFeatures.kt:396",
+      "evidence": "LauncherDockBackground, DockContentAccess and DockBackgroundTest; target-device acceptance pending",
       "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
     },
     {
@@ -17501,13 +17501,13 @@
       "targetPackage": "com.miui.home",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
+      "enableEffect": "Automatically balances side spacing with the bottom screen edge, or applies the manual inset",
       "disableEffect": "Restores the native Dock after launcher restart",
       "valueChangeEffect": "Requires launcher restart",
       "restartTarget": "LAUNCHER",
       "hotReloadable": false,
       "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:84",
+      "evidence": "DockBackgroundView.onPreDraw",
       "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
     },
     {
@@ -17570,13 +17570,13 @@
       "targetPackage": "com.miui.home",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
+      "enableEffect": "Uses the device bottom corner radius minus actual screen-edge inset, uniformly across four corners; manual radius overrides automatic",
       "disableEffect": "Restores the native Dock after launcher restart",
       "valueChangeEffect": "Requires launcher restart",
       "restartTarget": "LAUNCHER",
       "hotReloadable": false,
       "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherDockBackground.kt:83",
+      "evidence": "DockCornerGeometry.radius and DockBackgroundView.updateGeometry",
       "notes": "One install-time snapshot. The master gate prevents all Dock background hooks and views when disabled; value changes require launcher restart."
     }
   ]

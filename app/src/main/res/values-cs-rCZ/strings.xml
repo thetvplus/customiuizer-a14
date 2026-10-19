@@ -1087,5 +1087,7 @@
     <string name="launcher_dock_background_opacity_title">Neprůhlednost</string>
     <string name="launcher_dock_background_radius_title">Poloměr rohů</string>
     <string name="launcher_dock_background_inset_title">Boční odsazení</string>
+    <string name="launcher_dock_background_radius_summ">Automaticky podle dolních rohů obrazovky a odsazení; všechny čtyři rohy mají stejný poloměr.</string>
+    <string name="launcher_dock_background_inset_summ">Automaticky vyváží boční odsazení podle vzdálenosti od dolního okraje obrazovky.</string>
     <string name="launcher_dock_background_auto">Automaticky</string>
 </resources>

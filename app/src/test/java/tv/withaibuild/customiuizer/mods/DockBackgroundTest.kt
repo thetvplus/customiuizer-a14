@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.ColorDrawable
 import android.os.Looper
@@ -234,6 +235,144 @@ class DockBackgroundTest {
         assertEquals(0, config.opacity)
         assertEquals(80, config.radiusDp)
         assertEquals(0, config.sideInsetDp)
+    }
+
+    @Test
+    fun automaticCornersFollowTheDeviceBottomRadiusAndInsetWithoutHeightRatios() {
+        assertEquals(64f, DockCornerGeometry.radius(80f, 16f, 0f, 28f, 100f), 0f)
+        assertEquals(64f, DockCornerGeometry.radius(80f, 16f, 0f, 28f, 140f), 0f)
+        assertEquals(40f, DockCornerGeometry.radius(80f, 16f, 0f, 28f, 40f), 0f)
+        assertEquals(0f, DockCornerGeometry.radius(10f, 16f, 0f, 28f, 40f), 0f)
+        assertEquals(24f, DockCornerGeometry.radius(80f, 16f, 24f, 28f, 40f), 0f)
+        assertEquals(28f, DockCornerGeometry.radius(0f, 16f, 0f, 28f, 40f), 0f)
+    }
+
+    private fun nativeHost(hidden: Boolean = true): HotSeatsFixture {
+        val native = HotSeatsFixture(host.context)
+        val icon = ItemIconFixture(host.context).apply { mIsHideTitle = hidden }
+        native.mContent.addView(icon, FrameLayout.LayoutParams(100, 80))
+        native.addView(native.mContent, FrameLayout.LayoutParams(-1, -1))
+        host.addView(native, FrameLayout.LayoutParams(360, 80))
+        return native
+    }
+
+    private fun attachNative(native: HotSeatsFixture): DockBackgroundView {
+        LauncherDockBackground.attach(native, DockBackgroundConfig(material = 1, sideInsetDp = 12), null,
+            DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java))
+        layout()
+        native.viewTreeObserver.dispatchOnPreDraw()
+        return native.getChildAt(0) as DockBackgroundView
+    }
+
+    @Test
+    fun nativeIconsAreCenteredWithoutChangingTheirOwnAnimationPropertiesOrTouch() {
+        val native = nativeHost()
+        layout()
+        val icon = native.mContent.getChildAt(0) as ItemIconFixture
+        assertEquals(30, icon.mIconImageView.bottom / 2 + icon.mIconImageView.top / 2)
+        val row = native.mContent
+        row.alpha = 0.8f
+        val decoration = attachNative(native)
+        assertEquals(10, row.top) // hidden title space formerly left the icon 10px above center
+        assertEquals(0.8f, row.alpha)
+        assertEquals(0f, row.translationY)
+        assertEquals(1f, row.scaleY)
+        var clicks = 0
+        icon.mIconImageView.setOnClickListener { clicks++ }
+        for (action in intArrayOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+            val event = MotionEvent.obtain(0, 10, action, 24f, 40f, 0)
+            try { native.dispatchTouchEvent(event) } finally { event.recycle() }
+        }
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, clicks)
+        repeat(100) { decoration.scheduleGeometry() }
+        native.viewTreeObserver.dispatchOnPreDraw()
+        repeat(100) { native.viewTreeObserver.dispatchOnPreDraw() }
+        assertEquals(10, row.top)
+        assertEquals(1, row.positionUpdates)
+        native.removeView(decoration)
+        assertEquals(0, row.top)
+    }
+
+    @Test
+    fun visibleTitlesAndParentPaddingParticipateInTheActualCenteringBounds() {
+        val native = nativeHost(hidden = false)
+        native.setPadding(0, 4, 0, 8)
+        val decoration = attachNative(native)
+        val bounds = Rect()
+        val access = DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java)
+        access.bounds(native, native.mContent, bounds, Rect())
+        assertTrue(kotlin.math.abs((decoration.top + decoration.bottom) - (bounds.top + bounds.bottom)) <= 1)
+        assertTrue(bounds.top >= decoration.top)
+        assertTrue(bounds.bottom <= decoration.bottom)
+    }
+
+    @Test
+    fun nativeRelayoutAndDetachRestoreOnlyTheOwnedOffset() {
+        val native = nativeHost()
+        val decoration = attachNative(native)
+        val row = native.mContent
+        row.layout(0, 3, 360, 83) // a new native base position, independent of our previous offset
+        decoration.scheduleGeometry()
+        native.viewTreeObserver.dispatchOnPreDraw()
+        assertEquals(10, row.top)
+        native.removeView(decoration)
+        assertEquals(3, row.top)
+        // A pending one-shot callback must not keep or move a detached owner.
+        decoration.scheduleGeometry()
+        native.viewTreeObserver.dispatchOnPreDraw()
+        assertEquals(3, row.top)
+    }
+
+    @Test
+    fun replacementContentRetiresTheOldOffsetAndCentersOnlyTheNewNativeRow() {
+        val native = nativeHost()
+        val decoration = attachNative(native)
+        val old = native.mContent
+        native.removeView(old)
+        native.mContent = ContentFixture(host.context).apply {
+            addView(ItemIconFixture(context), FrameLayout.LayoutParams(100, 80))
+        }
+        native.addView(native.mContent, FrameLayout.LayoutParams(-1, -1))
+        layout()
+        decoration.scheduleGeometry()
+        native.viewTreeObserver.dispatchOnPreDraw()
+        assertEquals(0, old.top)
+        assertEquals(10, native.mContent.top)
+        native.removeView(decoration)
+        assertEquals(0, native.mContent.top)
+    }
+
+    @Test
+    fun nativePositionCallbackFailureRestoresTheRowAndStopsRetrying() {
+        val native = nativeHost()
+        native.mContent.failure = IllegalStateException("native content retired")
+        val decoration = attachNative(native)
+        assertEquals(0, native.mContent.top)
+        val attempts = native.mContent.positionUpdates
+        repeat(10) { decoration.scheduleGeometry(); native.viewTreeObserver.dispatchOnPreDraw() }
+        assertEquals(attempts, native.mContent.positionUpdates)
+        assertEquals(View.VISIBLE, decoration.visibility)
+    }
+
+    class HotSeatsFixture(context: Context) : FrameLayout(context) {
+        @JvmField var mContent = ContentFixture(context)
+    }
+
+    class ContentFixture(context: Context) : FrameLayout(context) {
+        var positionUpdates = 0
+        var failure: Throwable? = null
+        fun onTranslationChanged() { positionUpdates++; failure?.let { throw it } }
+    }
+
+    class ItemIconFixture(context: Context) : FrameLayout(context) {
+        @JvmField val mIconImageView = View(context)
+        @JvmField val mTitleContainer = View(context)
+        @JvmField var mIsHideTitle = true
+        init {
+            addView(mIconImageView, LayoutParams(48, 48).apply { topMargin = 6 })
+            addView(mTitleContainer, LayoutParams(80, 12).apply { topMargin = 56 })
+        }
     }
 
     private fun layout() {

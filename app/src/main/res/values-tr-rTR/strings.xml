@@ -1086,5 +1086,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="launcher_dock_background_opacity_title">Opaklık</string>
     <string name="launcher_dock_background_radius_title">Köşe yarıçapı</string>
     <string name="launcher_dock_background_inset_title">Yatay boşluk</string>
+    <string name="launcher_dock_background_radius_summ">Otomatik mod alt ekran köşelerini ve iç boşluğu izler; dört köşe aynı yarıçapı kullanır.</string>
+    <string name="launcher_dock_background_inset_summ">Otomatik mod yan boşlukları ekranın alt kenarına olan mesafeyle dengeler.</string>
     <string name="launcher_dock_background_auto">Otomatik</string>
 </resources>

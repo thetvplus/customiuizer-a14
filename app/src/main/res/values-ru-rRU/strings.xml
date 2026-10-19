@@ -1079,5 +1079,7 @@
     <string name="launcher_dock_background_opacity_title">Непрозрачность</string>
     <string name="launcher_dock_background_radius_title">Радиус углов</string>
     <string name="launcher_dock_background_inset_title">Боковые отступы</string>
+    <string name="launcher_dock_background_radius_summ">Автоматически учитывает нижние углы экрана и отступ. Радиус всех четырёх углов одинаковый.</string>
+    <string name="launcher_dock_background_inset_summ">Автоматически согласует боковые отступы с расстоянием до нижнего края экрана.</string>
     <string name="launcher_dock_background_auto">Автоматически</string>
 </resources>

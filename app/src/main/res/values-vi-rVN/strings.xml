@@ -1080,5 +1080,7 @@
     <string name="launcher_dock_background_opacity_title">Độ đục</string>
     <string name="launcher_dock_background_radius_title">Bán kính góc</string>
     <string name="launcher_dock_background_inset_title">Lề ngang</string>
+    <string name="launcher_dock_background_radius_summ">Tự động theo góc dưới màn hình và độ thụt vào; bốn góc dùng cùng bán kính.</string>
+    <string name="launcher_dock_background_inset_summ">Tự động cân bằng khoảng trống hai bên theo khoảng cách đến mép dưới màn hình.</string>
     <string name="launcher_dock_background_auto">Tự động</string>
 </resources>

@@ -1079,5 +1079,7 @@
     <string name="launcher_dock_background_opacity_title">Opacidad</string>
     <string name="launcher_dock_background_radius_title">Radio de las esquinas</string>
     <string name="launcher_dock_background_inset_title">Márgenes laterales</string>
+    <string name="launcher_dock_background_radius_summ">El modo automático sigue las esquinas inferiores de la pantalla y el margen interior; las cuatro usan el mismo radio.</string>
+    <string name="launcher_dock_background_inset_summ">El modo automático equilibra el espacio lateral con la distancia al borde inferior de la pantalla.</string>
     <string name="launcher_dock_background_auto">Automático</string>
 </resources>

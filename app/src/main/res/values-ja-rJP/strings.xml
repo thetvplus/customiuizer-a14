@@ -1080,5 +1080,7 @@
     <string name="launcher_dock_background_opacity_title">不透明度</string>
     <string name="launcher_dock_background_radius_title">角の半径</string>
     <string name="launcher_dock_background_inset_title">左右の余白</string>
+    <string name="launcher_dock_background_radius_summ">自動では画面下部の角と内側の余白に合わせ、四隅を同じ半径にします。</string>
+    <string name="launcher_dock_background_inset_summ">自動では画面下端までの距離に合わせて左右の余白を調整します。</string>
     <string name="launcher_dock_background_auto">自動</string>
 </resources>

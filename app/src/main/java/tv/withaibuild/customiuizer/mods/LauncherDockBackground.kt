@@ -9,10 +9,13 @@ import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.view.RoundedCorner
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.widget.FrameLayout
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
@@ -27,13 +30,14 @@ import java.lang.reflect.Constructor
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** A non-interactive decoration owned by HotSeats, below its unmodified icon content. */
+/** A non-interactive decoration owned by HotSeats, below its native icon content. */
 object LauncherDockBackground {
     @JvmStatic
     fun install(lpparam: PackageReadyParam) {
         val config = DockBackgroundConfig.read(MainModule.mPrefs)
         val hotseats = XposedHelpers.findClass("com.miui.home.launcher.hotseats.HotSeats", lpparam.classLoader)
         check(FrameLayout::class.java.isAssignableFrom(hotseats))
+        val content = DockContentAccess.resolve(lpparam.classLoader)
         val material = if (config.material == 0) {
             XposedHelpers.findClassIfExists(
                 "com.miui.blur.sdk.backdrop.BackdropBlurRelativeLayout", lpparam.classLoader
@@ -41,9 +45,15 @@ object LauncherDockBackground {
         } else null
         ModuleHelper.findAndHookMethod(hotseats, "updateContent", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                attach(callback.getThisObject() as FrameLayout, config, material)
+                attach(callback.getThisObject() as FrameLayout, config, material, content)
             }
         })
+        ModuleHelper.findAndHookMethod(hotseats, "onMeasure", Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType, object : MethodHook() {
+                override fun after(callback: AfterHookCallback) {
+                    findBackground(callback.getThisObject() as FrameLayout)?.scheduleGeometry()
+                }
+            })
         ModuleHelper.findAndHookMethod(hotseats, "onWallpaperColorChanged", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 findBackground(callback.getThisObject() as FrameLayout)?.refreshAppearance()
@@ -51,10 +61,12 @@ object LauncherDockBackground {
         })
     }
 
-    internal fun attach(host: FrameLayout, config: DockBackgroundConfig, material: Constructor<*>?) {
-        if (findBackground(host) != null) return
-        val decoration = DockBackgroundView(host.context, config, material)
-        val inset = ((if (config.sideInsetDp == 0) 4 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
+    internal fun attach(host: FrameLayout, config: DockBackgroundConfig, material: Constructor<*>?,
+        content: DockContentAccess? = null,
+    ) {
+        findBackground(host)?.let { it.scheduleGeometry(); return }
+        val decoration = DockBackgroundView(host.context, config, material, content)
+        val inset = ((if (config.sideInsetDp == 0) 16 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
         host.addView(decoration, 0, FrameLayout.LayoutParams(-1, -1).apply {
             leftMargin = inset
             rightMargin = inset
@@ -67,6 +79,56 @@ object LauncherDockBackground {
             if (child is DockBackgroundView) return child
         }
         return null
+    }
+}
+
+/** Per-launcher metadata. Only layout events read native views; no icon snapshots or frame polling. */
+internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Class<*>) {
+    private val content = XposedHelpers.findField(hotseatType, "mContent")
+    private val icon = XposedHelpers.findField(iconType, "mIconImageView")
+    private val title = XposedHelpers.findField(iconType, "mTitleContainer")
+    private val hiddenTitle = XposedHelpers.findField(iconType, "mIsHideTitle")
+    private val positionChanged = content.type.getMethod("onTranslationChanged")
+
+    fun positionChanged(row: ViewGroup) { positionChanged.invoke(row) }
+
+    fun content(host: ViewGroup): ViewGroup? =
+        (content.get(host) as? ViewGroup)?.takeIf { it.parent === host }
+
+    fun bounds(host: ViewGroup, row: ViewGroup, out: Rect, scratch: Rect) {
+        out.setEmpty()
+        collect(host, row, out, scratch)
+    }
+
+    private fun collect(host: ViewGroup, parent: ViewGroup, out: Rect, scratch: Rect) {
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChildAt(i)
+            if (child.visibility != View.VISIBLE) continue
+            if (iconType.isInstance(child)) {
+                include(host, icon.get(child) as? View, out, scratch)
+                if (!hiddenTitle.getBoolean(child)) include(host, title.get(child) as? View, out, scratch)
+            } else if (child is ViewGroup) collect(host, child, out, scratch)
+        }
+    }
+
+    private fun include(host: ViewGroup, view: View?, out: Rect, scratch: Rect) {
+        if (view == null || view.visibility != View.VISIBLE || view.alpha == 0f || view.width <= 0 || view.height <= 0) return
+        view.getDrawingRect(scratch)
+        host.offsetDescendantRectToMyCoords(view, scratch)
+        if (scratch.right > 0 && scratch.left < host.width) out.union(scratch)
+    }
+
+    companion object {
+        fun resolve(loader: ClassLoader): DockContentAccess? = try {
+            DockContentAccess(
+                XposedHelpers.findClass("com.miui.home.launcher.hotseats.HotSeats", loader),
+                XposedHelpers.findClass("com.miui.home.launcher.ItemIcon", loader),
+            )
+        } catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            XposedHelpers.log("Dock background: native alignment unavailable", error)
+            null
+        }
     }
 }
 
@@ -91,10 +153,20 @@ internal class DockBackgroundView(
     context: Context,
     private val config: DockBackgroundConfig,
     private val materialConstructor: Constructor<*>?,
-) : FrameLayout(context) {
+    private val contentAccess: DockContentAccess? = null,
+) : FrameLayout(context), ViewTreeObserver.OnPreDrawListener {
     private val tint = DockBackgroundTint()
     private var nativeMaterial: View? = null
     private var screenRadius = 0f
+    private val contentBounds = Rect()
+    private val scratch = Rect()
+    private val location = IntArray(2)
+    private var pendingObserver: ViewTreeObserver? = null
+    private var alignedContent: ViewGroup? = null
+    private var appliedTop = 0
+    private var appliedOffset = 0
+    private var alignmentFailed = false
+    private var edgeInset = 0f
     private val materialOutline = object : ViewOutlineProvider() {
         override fun getOutline(view: View, outline: Outline) {
             outline.setRoundRect(0, 0, view.width, view.height, tint.radius)
@@ -116,6 +188,7 @@ internal class DockBackgroundView(
             readScreenRadius(rootWindowInsets)
             installMaterial()
             refreshAppearance()
+            scheduleGeometry()
         }
     }
 
@@ -151,6 +224,8 @@ internal class DockBackgroundView(
     override fun onDetachedFromWindow() {
         try {
             ModuleHelper.guarded {
+                cancelGeometry()
+                restoreContent()
                 val material = nativeMaterial
                 nativeMaterial = null
                 if (material != null) {
@@ -174,20 +249,105 @@ internal class DockBackgroundView(
         ModuleHelper.guarded {
             readScreenRadius(rootWindowInsets)
             refreshAppearance()
+            scheduleGeometry()
         }
     }
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
         ModuleHelper.guarded {
-            readScreenRadius(insets)
+            readScreenRadius(rootWindowInsets ?: insets)
             updateGeometry()
+            scheduleGeometry()
         }
         return super.onApplyWindowInsets(insets)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        ModuleHelper.guarded { updateGeometry() }
+        ModuleHelper.guarded { updateGeometry(); scheduleGeometry() }
+    }
+
+    override fun onVisibilityAggregated(isVisible: Boolean) {
+        super.onVisibilityAggregated(isVisible)
+        ModuleHelper.guarded { if (isVisible) scheduleGeometry() else cancelGeometry() }
+    }
+
+    fun scheduleGeometry() {
+        if (!isAttachedToWindow || pendingObserver != null) return
+        viewTreeObserver.let { observer ->
+            pendingObserver = observer
+            observer.addOnPreDrawListener(this)
+        }
+    }
+
+    private fun cancelGeometry() {
+        pendingObserver?.let { if (it.isAlive) it.removeOnPreDrawListener(this) }
+        pendingObserver = null
+    }
+
+    override fun onPreDraw(): Boolean {
+        cancelGeometry()
+        ModuleHelper.guarded {
+            val host = parent as? FrameLayout ?: return@guarded
+            if (!isShown || host.height <= 0) return@guarded
+            if (!alignmentFailed && contentAccess != null) try {
+                alignContent(host)
+            } catch (error: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(error)
+                alignmentFailed = true
+                restoreContent()
+                XposedHelpers.log("Dock background: native alignment disabled", error)
+            }
+            getLocationInWindow(location)
+            val backgroundBottom = location[1] + height
+            host.getLocationInWindow(location)
+            val hostLeft = location[0]
+            rootView.getLocationInWindow(location)
+            val bottomGap = (location[1] + rootView.height - backgroundBottom).coerceAtLeast(0)
+            val density = resources.displayMetrics.density
+            val inset = if (config.sideInsetDp > 0) (config.sideInsetDp * density).roundToInt()
+                else bottomGap.coerceIn((12 * density).roundToInt(), (24 * density).roundToInt())
+            val params = layoutParams as? LayoutParams
+            if (params != null && (params.leftMargin != inset || params.rightMargin != inset)) {
+                params.leftMargin = inset
+                params.rightMargin = inset
+                layoutParams = params
+            }
+            val leftGap = hostLeft - location[0] + host.paddingLeft + inset
+            val rightGap = location[0] + rootView.width - (hostLeft + host.width - host.paddingRight - inset)
+            edgeInset = maxOf(leftGap, rightGap, bottomGap).toFloat()
+            readScreenRadius(rootWindowInsets)
+            updateGeometry()
+        }
+        return true
+    }
+
+    private fun alignContent(host: FrameLayout) {
+        val access = contentAccess ?: return
+        val row = access.content(host)
+        if (alignedContent !== row) restoreContent()
+        if (row == null) return
+        if (row.top != appliedTop) appliedOffset = 0 // native layout replaced our old position
+        access.bounds(host, row, contentBounds, scratch)
+        if (contentBounds.isEmpty || contentBounds.height() > height) return
+        val shift = ((top + bottom - contentBounds.top - contentBounds.bottom) / 2f).roundToInt()
+            .coerceIn(top - contentBounds.top, bottom - contentBounds.bottom)
+        if (shift != 0) row.offsetTopAndBottom(shift)
+        alignedContent = row
+        appliedOffset += shift
+        appliedTop = row.top
+        if (shift != 0) access.positionChanged(row)
+    }
+
+    private fun restoreContent() {
+        val row = alignedContent
+        val offset = appliedOffset
+        alignedContent = null
+        appliedOffset = 0
+        if (row != null && row.top == appliedTop && offset != 0) {
+            row.offsetTopAndBottom(-offset)
+            if (row.parent === parent) ModuleHelper.guarded { contentAccess?.positionChanged(row) }
+        }
     }
 
     private fun readScreenRadius(insets: WindowInsets?) {
@@ -204,13 +364,6 @@ internal class DockBackgroundView(
     }
 
     fun refreshAppearance() {
-        val inset = ((if (config.sideInsetDp == 0) 4 else config.sideInsetDp) * resources.displayMetrics.density).roundToInt()
-        val params = layoutParams as? LayoutParams
-        if (params != null && (params.leftMargin != inset || params.rightMargin != inset)) {
-            params.leftMargin = inset
-            params.rightMargin = inset
-            layoutParams = params
-        }
         val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
         val wallpaper = XposedHelpers.findClassIfExists("com.miui.home.launcher.WallpaperUtils", context.classLoader)
         val lightWallpaper = if (wallpaper == null) false else try {
@@ -223,13 +376,13 @@ internal class DockBackgroundView(
         tint.alpha = (config.opacity * 0.55f).roundToInt()
         tint.rounded = nativeMaterial != null
         updateGeometry()
+        scheduleGeometry()
     }
 
     private fun updateGeometry() {
-        val limit = min(width, height) * 0.5f
-        val radius = if (config.radiusDp > 0) config.radiusDp * resources.displayMetrics.density
-            else maxOf(height * 0.35f, screenRadius * 0.5f)
-        val fitted = radius.coerceIn(0f, limit)
+        val density = resources.displayMetrics.density
+        val fitted = DockCornerGeometry.radius(screenRadius, edgeInset, config.radiusDp * density,
+            28f * density, min(width, height) * 0.5f)
         if (tint.radius == fitted) return
         tint.radius = fitted
         nativeMaterial?.let {

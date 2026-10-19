@@ -379,6 +379,7 @@
 		<tv.withaibuild.customiuizer.prefs.SeekBarPreference
 			android:key="pref_key_launcher_dock_background_radius"
 			android:title="@string/launcher_dock_background_radius_title"
+			android:summary="@string/launcher_dock_background_radius_summ"
 			android:dependency="pref_key_launcher_dock_background"
 			android:defaultValue="0"
 			miuizer:minValue="0"
@@ -389,6 +390,7 @@
 		<tv.withaibuild.customiuizer.prefs.SeekBarPreference
 			android:key="pref_key_launcher_dock_background_inset"
 			android:title="@string/launcher_dock_background_inset_title"
+			android:summary="@string/launcher_dock_background_inset_summ"
 			android:dependency="pref_key_launcher_dock_background"
 			android:defaultValue="0"
 			miuizer:minValue="0"
