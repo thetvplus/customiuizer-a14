@@ -1089,5 +1089,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="launcher_dock_background_inset_title">Yatay boşluk</string>
     <string name="launcher_dock_background_radius_summ">Otomatik mod alt ekran köşelerini ve iç boşluğu izler; dört köşe aynı yarıçapı kullanır.</string>
     <string name="launcher_dock_background_inset_summ">Otomatik mod dar ve sabit yan boşluklar kullanır; gerekirse elle ayarlayın.</string>
+    <string name="launcher_dock_background_shrink_title">Arka planı daralt</string>
+    <string name="launcher_dock_background_shrink_summ">Dört kenarı birlikte ayarlar. Pozitif değerler daraltır, negatif değerler genişletir; simgelerin konumu korunur.</string>
     <string name="launcher_dock_background_auto">Otomatik</string>
 </resources>

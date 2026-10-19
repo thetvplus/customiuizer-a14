@@ -230,7 +230,7 @@ class DockBackgroundTest {
             decoration.visibility = View.VISIBLE
             decoration.onVisibilityAggregated(true)
             assertTrue(material.appliedEnabled)
-            assertEquals((28 * host.resources.displayMetrics.density).roundToInt(), material.appliedBlurRadius)
+            assertEquals((35 * host.resources.displayMetrics.density).roundToInt(), material.appliedBlurRadius)
             if (google) assertFalse(material.mBlurLayerHolder.enabled)
             assertSame(drawable, material.background)
             assertSame(material, decoration.getChildAt(0))
@@ -256,7 +256,7 @@ class DockBackgroundTest {
         decoration.onVisibilityAggregated(true)
         assertSame(material, decoration.getChildAt(0))
         assertTrue(material.appliedEnabled)
-        assertEquals((28 * host.resources.displayMetrics.density).roundToInt(), material.appliedBlurRadius)
+        assertEquals((35 * host.resources.displayMetrics.density).roundToInt(), material.appliedBlurRadius)
         assertFalse(material.mBlurLayerHolder.enabled)
         val activeCalls = material.enableCalls
         repeat(100) { decoration.onVisibilityAggregated(true) }
@@ -290,7 +290,7 @@ class DockBackgroundTest {
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
         val material = decoration.getChildAt(0) as NativeMaterial
-        assertEquals((28 * host.resources.displayMetrics.density).roundToInt(), material.appliedBlurRadius)
+        assertEquals((35 * host.resources.displayMetrics.density).roundToInt(), material.appliedBlurRadius)
         assertFalse(material.mBlurLayerHolder.enabled)
         assertTrue(material.appliedEnabled)
         assertEquals(0.9f, material.alpha)
@@ -615,6 +615,99 @@ class DockBackgroundTest {
             val params = decoration.layoutParams as FrameLayout.LayoutParams
             assertEquals(expected, params.leftMargin)
             assertEquals(expected, params.rightMargin)
+        }
+    }
+
+    @Test
+    fun raisingTheDockForNativeIconCenteringDoesNotFlattenDeviceCorners() {
+        val native = nativeHost()
+        val decoration = attachNative(native, withMaterial = true)
+        host.rootView.layout(0, 0, 360, 900)
+        val insets = WindowInsets.Builder().setRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT,
+            RoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT, 100, 100, 100)).build()
+        val material = decoration.getChildAt(0) as NativeMaterial
+        for (top in intArrayOf(650, 420)) {
+            native.layout(0, top, 360, top + 80)
+            decoration.onApplyWindowInsets(insets)
+            native.viewTreeObserver.dispatchOnPreDraw()
+            val expected = minOf(100f - decoration.left, minOf(decoration.width, decoration.height) * 0.5f)
+            assertTrue(expected > 0f)
+            assertEquals(expected, (decoration.foreground as DockBackgroundTint).radius, 0f)
+            assertEquals(expected, material.appliedCornerRadius, 0f)
+            val outline = android.graphics.Outline()
+            material.outlineProvider.getOutline(material, outline)
+            assertEquals(expected, outline.radius, 0f)
+            assertEquals(0f, native.mContent.translationY)
+        }
+    }
+
+    @Test
+    fun gaussianRadiusIsOneAndAQuarterOfThePrevious28DpOnAttachAndResume() {
+        NativeMaterial.googleSupported = true
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
+        layout()
+        val decoration = host.getChildAt(0) as DockBackgroundView
+        val material = decoration.getChildAt(0) as NativeMaterial
+        val expected = (35 * host.resources.displayMetrics.density).roundToInt()
+        assertEquals(expected, material.appliedBlurRadius)
+        decoration.visibility = View.INVISIBLE
+        decoration.onVisibilityAggregated(false)
+        assertEquals(0, material.appliedBlurRadius)
+        decoration.visibility = View.VISIBLE
+        decoration.onVisibilityAggregated(true)
+        assertEquals(expected, material.appliedBlurRadius)
+        assertSame(material, decoration.getChildAt(0))
+    }
+
+    @Test
+    fun signedShrinkAdjustsAllFourEdgesEquallyAndPreservesNativeIconCenters() {
+        val access = DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java)
+        var baseline = Rect()
+        for (amount in intArrayOf(0, 1, -4, 4, -12, 12)) {
+            val native = nativeHost()
+            val row = native.mContent
+            row.removeAllViews()
+            repeat(4) { index ->
+                val item = ItemIconFixture(host.context)
+                (item.mIconImageView.layoutParams as FrameLayout.LayoutParams).leftMargin = 21
+                row.addView(item, FrameLayout.LayoutParams(90, 80).apply { leftMargin = index * 90 })
+            }
+            LauncherDockBackground.attach(native, DockBackgroundConfig(sideInsetDp = 12, shrinkDp = amount), null, access)
+            repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
+            val decoration = native.getChildAt(0) as DockBackgroundView
+            val panel = Rect(decoration.left, decoration.top, decoration.right, decoration.bottom)
+            if (amount == 0) baseline = panel
+            val applied = panel.left - baseline.left
+            assertEquals(applied, baseline.right - panel.right)
+            assertEquals(applied, panel.top - baseline.top)
+            assertEquals(applied, baseline.bottom - panel.bottom)
+            assertEquals(baseline.exactCenterX(), panel.exactCenterX(), 0f)
+            assertEquals(baseline.exactCenterY(), panel.exactCenterY(), 0f)
+            if (amount == 1) assertEquals(host.resources.displayMetrics.density.roundToInt(), applied)
+            if (amount < 0) assertTrue(applied < 0)
+            if (amount > 0) assertTrue(applied > 0)
+            val icons = Rect()
+            access.bounds(native, row, icons, Rect())
+            assertOpticalCenter(decoration, icons)
+            assertTrue(panel.contains(icons))
+            assertEquals(0f, row.translationY)
+            assertEquals(0, row.positionUpdates)
+            repeat(4) { index ->
+                val item = row.getChildAt(index) as ItemIconFixture
+                assertEquals(index * 90, item.left)
+                assertEquals(48, item.mIconImageView.width)
+                assertEquals(0f, item.translationY)
+            }
+            repeat(30) { decoration.scheduleGeometry(); native.viewTreeObserver.dispatchOnPreDraw() }
+            assertEquals(panel, Rect(decoration.left, decoration.top, decoration.right, decoration.bottom))
+            native.removeView(decoration)
+            host.removeView(native)
+        }
+        assertEquals(1, DockBackgroundConfig.read(PrefMap()).shrinkDp)
+        for (stored in intArrayOf(-100, 0, 12, 13, 24, 100)) {
+            assertEquals(stored.coerceIn(0, 24) - 12, DockBackgroundConfig.read(PrefMap().apply {
+                put("launcher_dock_background_shrink", stored)
+            }).shrinkDp)
         }
     }
 

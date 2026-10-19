@@ -1082,5 +1082,7 @@
     <string name="launcher_dock_background_inset_title">Márgenes laterales</string>
     <string name="launcher_dock_background_radius_summ">El modo automático sigue las esquinas inferiores de la pantalla y el margen interior; las cuatro usan el mismo radio.</string>
     <string name="launcher_dock_background_inset_summ">El modo automático mantiene un espacio lateral estrecho y estable; ajústalo manualmente si es necesario.</string>
+    <string name="launcher_dock_background_shrink_title">Contracción del fondo</string>
+    <string name="launcher_dock_background_shrink_summ">Ajusta los cuatro bordes. Los valores positivos contraen y los negativos expanden; los iconos mantienen su posición.</string>
     <string name="launcher_dock_background_auto">Automático</string>
 </resources>

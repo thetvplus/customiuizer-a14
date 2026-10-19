@@ -1081,7 +1081,9 @@
     <string name="launcher_dock_background_opacity_title">不透明度</string>
     <string name="launcher_dock_background_radius_title">圓角</string>
     <string name="launcher_dock_background_inset_title">左右間距</string>
-    <string name="launcher_dock_background_radius_summ">自動依據螢幕底部圓角與實際內縮調整，四角使用同一圓角。</string>
+    <string name="launcher_dock_background_radius_summ">自動依據螢幕底部圓角與左右間距調整，四角使用同一圓角。</string>
     <string name="launcher_dock_background_inset_summ">自動依原生圖示數量和尺寸調整左右間距，也可手動微調。</string>
+    <string name="launcher_dock_background_shrink_title">背景收縮</string>
+    <string name="launcher_dock_background_shrink_summ">同時微調上下和左右。正值收縮，負值擴展，自動保留圖示空間與位置。</string>
     <string name="launcher_dock_background_auto">自動</string>
 </resources>

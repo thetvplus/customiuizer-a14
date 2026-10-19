@@ -14,9 +14,9 @@ import kotlin.math.sin
 internal object DockCornerGeometry {
     private const val STEPS = 32
 
-    /** One inset contour from the device's bottom corners, shared by all four corners. */
-    fun radius(screenRadius: Float, inset: Float, manual: Float, fallback: Float, limit: Float): Float {
-        val radius = if (manual > 0f) manual else if (screenRadius > 0f) screenRadius - inset else fallback
+    /** Device bottom corners minus horizontal inset; the Dock's vertical position is independent. */
+    fun radius(screenRadius: Float, horizontalInset: Float, manual: Float, fallback: Float, limit: Float): Float {
+        val radius = if (manual > 0f) manual else if (screenRadius > 0f) screenRadius - horizontalInset else fallback
         return radius.coerceIn(0f, limit.coerceAtLeast(0f))
     }
 

@@ -1083,5 +1083,7 @@
     <string name="launcher_dock_background_inset_title">Lề ngang</string>
     <string name="launcher_dock_background_radius_summ">Tự động theo góc dưới màn hình và độ thụt vào; bốn góc dùng cùng bán kính.</string>
     <string name="launcher_dock_background_inset_summ">Tự động giữ khoảng trống hai bên hẹp và ổn định; có thể tinh chỉnh thủ công.</string>
+    <string name="launcher_dock_background_shrink_title">Thu gọn nền</string>
+    <string name="launcher_dock_background_shrink_summ">Tinh chỉnh cả bốn cạnh. Giá trị dương thu gọn, giá trị âm mở rộng; giữ nguyên vị trí biểu tượng.</string>
     <string name="launcher_dock_background_auto">Tự động</string>
 </resources>

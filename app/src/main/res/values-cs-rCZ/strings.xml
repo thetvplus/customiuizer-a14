@@ -1090,5 +1090,7 @@
     <string name="launcher_dock_background_inset_title">Boční odsazení</string>
     <string name="launcher_dock_background_radius_summ">Automaticky podle dolních rohů obrazovky a odsazení; všechny čtyři rohy mají stejný poloměr.</string>
     <string name="launcher_dock_background_inset_summ">Automaticky používá úzké a stálé boční odsazení; podle potřeby jej upravte ručně.</string>
+    <string name="launcher_dock_background_shrink_title">Zmenšení pozadí</string>
+    <string name="launcher_dock_background_shrink_summ">Upravuje všechny čtyři okraje. Kladné hodnoty pozadí zmenšují, záporné rozšiřují; ikony zůstávají na místě.</string>
     <string name="launcher_dock_background_auto">Automaticky</string>
 </resources>

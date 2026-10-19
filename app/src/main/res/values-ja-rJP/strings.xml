@@ -1083,5 +1083,7 @@
     <string name="launcher_dock_background_inset_title">左右の余白</string>
     <string name="launcher_dock_background_radius_summ">自動では画面下部の角と内側の余白に合わせ、四隅を同じ半径にします。</string>
     <string name="launcher_dock_background_inset_summ">自動では左右の余白を狭く一定に保ちます。必要に応じて手動調整できます。</string>
+    <string name="launcher_dock_background_shrink_title">背景の縮小</string>
+    <string name="launcher_dock_background_shrink_summ">上下左右を同時に微調整します。正の値で縮小、負の値で拡大し、アイコンの位置を維持します。</string>
     <string name="launcher_dock_background_auto">自動</string>
 </resources>

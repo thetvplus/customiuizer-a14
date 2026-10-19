@@ -154,6 +154,18 @@
 			miuizer:offtext="@string/launcher_dock_background_auto" />
 
 		<tv.withaibuild.customiuizer.prefs.SeekBarPreference
+			android:key="pref_key_launcher_dock_background_shrink"
+			android:title="@string/launcher_dock_background_shrink_title"
+			android:summary="@string/launcher_dock_background_shrink_summ"
+			android:dependency="pref_key_launcher_dock_background"
+			android:defaultValue="13"
+			miuizer:minValue="0"
+			miuizer:maxValue="24"
+			miuizer:negativeShift="12"
+			miuizer:showplus="true"
+			miuizer:format="%d dp" />
+
+		<tv.withaibuild.customiuizer.prefs.SeekBarPreference
 			android:key="pref_key_launcher_dock_background_inset"
 			android:title="@string/launcher_dock_background_inset_title"
 			android:summary="@string/launcher_dock_background_inset_summ"

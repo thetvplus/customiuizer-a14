@@ -164,6 +164,7 @@ internal data class DockBackgroundConfig(
     val opacity: Int = 90,
     val radiusDp: Int = 0,
     val sideInsetDp: Int = 0,
+    val shrinkDp: Int = 1,
 ) {
     companion object {
         fun read(prefs: PrefMap) = DockBackgroundConfig(
@@ -171,6 +172,7 @@ internal data class DockBackgroundConfig(
             opacity = prefs.getInt("launcher_dock_background_opacity", 90).coerceIn(0, 100),
             radiusDp = prefs.getInt("launcher_dock_background_radius", 0).coerceIn(0, 80),
             sideInsetDp = prefs.getInt("launcher_dock_background_inset", 0).coerceIn(0, 40),
+            shrinkDp = prefs.getInt("launcher_dock_background_shrink", 13).coerceIn(0, 24) - 12,
         )
     }
 }
@@ -191,7 +193,7 @@ internal class DockBackgroundView(
     private var pendingObserver: ViewTreeObserver? = null
     private var observedContent: ViewGroup? = null
     private var contentFailed = false
-    private var edgeInset = 0f
+    private var horizontalInset = 0f
     private val materialOutline = object : ViewOutlineProvider() {
         override fun getOutline(view: View, outline: Outline) {
             outline.setRoundRect(0, 0, view.width, view.height, tint.radius)
@@ -232,8 +234,7 @@ internal class DockBackgroundView(
             candidate.alpha = config.opacity / 100f
             candidate.outlineProvider = materialOutline
             candidate.clipToOutline = true
-            val blurRadius = if (config.material == 2) (28 * resources.displayMetrics.density).roundToInt() else 12
-            XposedHelpers.callMethod(candidate, "setBlurRadius", blurRadius)
+            XposedHelpers.callMethod(candidate, "setBlurRadius", blurRadius())
             XposedHelpers.callMethod(candidate, "setCornerRadius", tint.radius)
             XposedHelpers.callMethod(candidate, "setBlurEnabled", true)
             configureGlassBlend(candidate)
@@ -249,6 +250,9 @@ internal class DockBackgroundView(
             XposedHelpers.log("Dock background: native material unavailable", error)
         }
     }
+
+    private fun blurRadius(): Int =
+        if (config.material == 2) (35 * resources.displayMetrics.density).roundToInt() else 12
 
     private fun configureGlassBlend(material: View) {
         if (config.material != 2 || XposedHelpers.callMethod(material, "isGoogleBlurSupported") != true) return
@@ -325,8 +329,7 @@ internal class DockBackgroundView(
             if (materialEnabled != isVisible) {
                 if (isVisible) {
                     // setBlurEnabled(false) also resets the SDK's saved radius to zero.
-                    val radius = if (config.material == 2) (28 * resources.displayMetrics.density).roundToInt() else 12
-                    XposedHelpers.callMethod(material, "setBlurRadius", radius)
+                    XposedHelpers.callMethod(material, "setBlurRadius", blurRadius())
                 }
                 XposedHelpers.callMethod(material, "setBlurEnabled", isVisible)
                 materialEnabled = isVisible
@@ -394,22 +397,31 @@ internal class DockBackgroundView(
                 inset = params.leftMargin
             } else if (!contentBounds.isEmpty) {
                 var padding = maxOf(8 * density, contentBounds.height() * 0.3f).roundToInt()
-                if (host.clipChildren || host.clipToPadding) {
-                    padding = minOf(padding, contentBounds.top - host.paddingTop,
+                val maxPadding = if (host.clipChildren || host.clipToPadding)
+                    minOf(contentBounds.top - host.paddingTop,
                         host.height - host.paddingBottom - contentBounds.bottom).coerceAtLeast(0)
+                else Int.MAX_VALUE
+                padding = minOf(padding, maxPadding)
+                val sideRoom = minOf(contentBounds.left - host.paddingLeft,
+                    host.width - host.paddingRight - contentBounds.right)
+                if (config.sideInsetDp == 0) {
+                    // Fit dense native rows without resizing icons or changing their layout.
+                    inset = minOf(inset, (sideRoom - contentBounds.height() * 0.25f).roundToInt())
+                        .coerceAtLeast(minOf((8 * density).roundToInt(), sideRoom.coerceAtLeast(0)))
                 }
+                // One signed inset for all four edges, bounded by the native icon/host space.
+                val minimumPadding = (4 * density).roundToInt()
+                val maxShrink = minOf((padding - minimumPadding).coerceAtLeast(0),
+                    (sideRoom - inset - minimumPadding).coerceAtLeast(0))
+                val minShrink = maxOf(-inset, padding - maxPadding)
+                val shrink = (config.shrinkDp * density).roundToInt().coerceIn(minShrink, maxShrink)
+                padding -= shrink
+                inset += shrink
                 // Native HotSeats permits overflow. Fit its background around the native icon row,
                 // leaving animation landing coordinates intact, with a tiny optical trim at the top.
                 val trim = minOf(padding, (0.5f * density).roundToInt().coerceAtLeast(1))
                 topInset = contentBounds.top - host.paddingTop - padding + trim
                 bottomInset = host.height - host.paddingBottom - contentBounds.bottom - padding
-                if (config.sideInsetDp == 0) {
-                    val sideRoom = minOf(contentBounds.left - host.paddingLeft,
-                        host.width - host.paddingRight - contentBounds.right)
-                    // Fit dense native rows without resizing icons or changing their layout.
-                    inset = minOf(inset, (sideRoom - contentBounds.height() * 0.25f).roundToInt())
-                        .coerceAtLeast(minOf((8 * density).roundToInt(), sideRoom.coerceAtLeast(0)))
-                }
             }
             if (params != null && (params.leftMargin != inset || params.rightMargin != inset ||
                     params.topMargin != topInset || params.bottomMargin != bottomInset)) {
@@ -420,10 +432,10 @@ internal class DockBackgroundView(
                 layoutParams = params
                 ready = false // apply the new geometry before presenting it
             }
-            val bottomGap = (root.height - scratch.top - host.height + host.paddingBottom + bottomInset).coerceAtLeast(0)
             val leftGap = scratch.left + host.paddingLeft + inset
             val rightGap = root.width - scratch.right + host.paddingRight + inset
-            edgeInset = maxOf(leftGap, rightGap, bottomGap).toFloat()
+            // Raising the Dock to follow native icons must not reduce its corner radius.
+            horizontalInset = maxOf(leftGap, rightGap).toFloat()
             readScreenRadius(rootWindowInsets)
             updateGeometry()
         }
@@ -470,7 +482,7 @@ internal class DockBackgroundView(
 
     private fun updateGeometry() {
         val density = resources.displayMetrics.density
-        val fitted = DockCornerGeometry.radius(screenRadius, edgeInset, config.radiusDp * density,
+        val fitted = DockCornerGeometry.radius(screenRadius, horizontalInset, config.radiusDp * density,
             28f * density, min(width, height) * 0.5f)
         if (tint.radius == fitted) return
         tint.radius = fitted

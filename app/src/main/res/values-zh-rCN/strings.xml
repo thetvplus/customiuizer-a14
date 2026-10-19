@@ -1091,7 +1091,9 @@
     <string name="launcher_dock_background_opacity_title">不透明度</string>
     <string name="launcher_dock_background_radius_title">圆角</string>
     <string name="launcher_dock_background_inset_title">左右间距</string>
-    <string name="launcher_dock_background_radius_summ">自动依据屏幕底部圆角和实际内缩适配，四角使用同一圆角。</string>
+    <string name="launcher_dock_background_radius_summ">自动依据屏幕底部圆角和左右间距适配，四角使用同一圆角。</string>
     <string name="launcher_dock_background_inset_summ">自动依据原生图标数量和尺寸调整左右间距，也可手动微调。</string>
+    <string name="launcher_dock_background_shrink_title">背景收缩</string>
+    <string name="launcher_dock_background_shrink_summ">同时微调上下和左右。正值收缩，负值扩展，自动保留图标空间与位置。</string>
     <string name="launcher_dock_background_auto">自动</string>
 </resources>

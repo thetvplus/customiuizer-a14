@@ -69,12 +69,16 @@ class PreferenceResourceContractTest(unittest.TestCase):
         controls = {el.get(ATTR_KEY): el for el in category}
         master = "pref_key_launcher_dock_background"
         self.assertEqual("false", controls[master].get(f"{{{ANDROID_NS}}}defaultValue"))
-        for suffix in ("material", "opacity", "radius", "inset"):
+        for suffix in ("material", "opacity", "radius", "shrink", "inset"):
             self.assertEqual(master, controls[f"{master}_{suffix}"].get(f"{{{ANDROID_NS}}}dependency"))
         for key in ("launcher_unlockhotseat", "launcher_dock_height", "launcher_dock_topmargin", "launcher_dock_bottommargin"):
             self.assertNotIn(f"{{{ANDROID_NS}}}dependency", controls[f"pref_key_{key}"].attrib)
         self.assertEqual("60", controls["pref_key_launcher_dock_height"].get(f"{{{ANDROID_NS}}}defaultValue"))
         self.assertEqual("90", controls[f"{master}_opacity"].get(f"{{{ANDROID_NS}}}defaultValue"))
+        shrink = controls[f"{master}_shrink"]
+        self.assertEqual("13", shrink.get(f"{{{ANDROID_NS}}}defaultValue"))
+        for name, value in {"minValue": "0", "maxValue": "24", "negativeShift": "12", "showplus": "true"}.items():
+            self.assertEqual(value, shrink.get(f"{{{MIUIZER_NS}}}{name}"))
         arrays = ET.parse(RES_ROOT / "values" / "arrays.xml").getroot()
         material_entries = arrays.find("string-array[@name='launcher_dock_background_material']")
         material_values = arrays.find("string-array[@name='launcher_dock_background_material_values']")
@@ -85,6 +89,7 @@ class PreferenceResourceContractTest(unittest.TestCase):
                     "launcher_dock_background_opacity_title",
                     "launcher_dock_background_gaussian", "launcher_dock_background_material_summ",
                     "launcher_dock_background_radius_title", "launcher_dock_background_inset_title",
+                    "launcher_dock_background_shrink_title", "launcher_dock_background_shrink_summ",
                     "launcher_dock_background_auto"}
         for locale, strings in self.base_strings.items():
             with self.subTest(locale=locale):

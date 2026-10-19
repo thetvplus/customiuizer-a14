@@ -1082,5 +1082,7 @@
     <string name="launcher_dock_background_inset_title">Боковые отступы</string>
     <string name="launcher_dock_background_radius_summ">Автоматически учитывает нижние углы экрана и отступ. Радиус всех четырёх углов одинаковый.</string>
     <string name="launcher_dock_background_inset_summ">Автоматический режим сохраняет узкие постоянные боковые отступы. При необходимости настройте их вручную.</string>
+    <string name="launcher_dock_background_shrink_title">Сжатие фона</string>
+    <string name="launcher_dock_background_shrink_summ">Регулирует все четыре края. Положительные значения сжимают фон, отрицательные расширяют; значки остаются на месте.</string>
     <string name="launcher_dock_background_auto">Автоматически</string>
 </resources>
