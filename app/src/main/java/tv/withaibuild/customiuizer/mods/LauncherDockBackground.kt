@@ -38,11 +38,9 @@ object LauncherDockBackground {
         val hotseats = XposedHelpers.findClass("com.miui.home.launcher.hotseats.HotSeats", lpparam.classLoader)
         check(FrameLayout::class.java.isAssignableFrom(hotseats))
         val content = DockContentAccess.resolve(lpparam.classLoader)
-        val material = if (config.material != 1) {
-            XposedHelpers.findClassIfExists(
-                "com.miui.blur.sdk.backdrop.BackdropBlurRelativeLayout", lpparam.classLoader
-            )?.constructors?.firstOrNull { it.parameterTypes.contentEquals(arrayOf(Context::class.java)) }
-        } else null
+        val material = XposedHelpers.findClassIfExists(
+            "com.miui.blur.sdk.backdrop.BackdropBlurRelativeLayout", lpparam.classLoader
+        )?.constructors?.firstOrNull { it.parameterTypes.contentEquals(arrayOf(Context::class.java)) }
         ModuleHelper.findAndHookMethod(hotseats, "updateContent", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 attach(callback.getThisObject() as FrameLayout, config, material, content)
@@ -66,7 +64,7 @@ object LauncherDockBackground {
     ) {
         findBackground(host)?.let { it.scheduleGeometry(); return }
         val decoration = DockBackgroundView(host.context, config, material, content)
-        val inset = ((if (config.sideInsetDp == 0) 12 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
+        val inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
         host.addView(decoration, 0, FrameLayout.LayoutParams(-1, -1).apply {
             leftMargin = inset
             rightMargin = inset
@@ -89,8 +87,15 @@ internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Cl
     private val title = XposedHelpers.findField(iconType, "mTitleContainer")
     private val hiddenTitle = XposedHelpers.findField(iconType, "mIsHideTitle")
     private val positionChanged = content.type.getMethod("onTranslationChanged")
+    private val dragController = XposedHelpers.findFieldIfExists(hotseatType, "mDragController")
+    private val dragging = dragController?.type?.let { XposedHelpers.findFieldIfExists(it, "mDragging") }
 
     fun positionChanged(row: ViewGroup) { positionChanged.invoke(row) }
+
+    fun isDragging(host: ViewGroup): Boolean {
+        val controller = dragController?.get(host) ?: return false
+        return dragging?.getBoolean(controller) == true
+    }
 
     fun content(host: ViewGroup): ViewGroup? =
         (content.get(host) as? ViewGroup)?.takeIf { it.parent === host }
@@ -140,7 +145,7 @@ internal data class DockBackgroundConfig(
 ) {
     companion object {
         fun read(prefs: PrefMap) = DockBackgroundConfig(
-            material = prefs.getStringAsInt("launcher_dock_background_material", 0).coerceIn(0, 2),
+            material = if (prefs.getStringAsInt("launcher_dock_background_material", 0) == 2) 2 else 0,
             opacity = prefs.getInt("launcher_dock_background_opacity", 90).coerceIn(0, 100),
             radiusDp = prefs.getInt("launcher_dock_background_radius", 0).coerceIn(0, 80),
             sideInsetDp = prefs.getInt("launcher_dock_background_inset", 0).coerceIn(0, 40),
@@ -162,8 +167,8 @@ internal class DockBackgroundView(
     private val scratch = Rect()
     private var pendingObserver: ViewTreeObserver? = null
     private var alignedContent: ViewGroup? = null
-    private var appliedTop = 0
-    private var appliedOffset = 0
+    private var appliedTranslationY = 0f
+    private var appliedOffset = 0f
     private var alignmentFailed = false
     private var edgeInset = 0f
     private val materialOutline = object : ViewOutlineProvider() {
@@ -186,6 +191,7 @@ internal class DockBackgroundView(
         ModuleHelper.guarded {
             readScreenRadius(rootWindowInsets)
             installMaterial()
+            syncNativeMaterialVisibility(isShown)
             refreshAppearance()
             scheduleGeometry()
         }
@@ -279,7 +285,21 @@ internal class DockBackgroundView(
 
     override fun onVisibilityAggregated(isVisible: Boolean) {
         super.onVisibilityAggregated(isVisible)
-        ModuleHelper.guarded { if (isVisible) scheduleGeometry() else cancelGeometry() }
+        ModuleHelper.guarded {
+            if (isVisible) scheduleGeometry() else cancelGeometry()
+            syncNativeMaterialVisibility(isVisible)
+        }
+    }
+
+    private fun syncNativeMaterialVisibility(isVisible: Boolean) {
+        val drawable = nativeMaterial?.background ?: return
+        // Google blur regions live in SurfaceFlinger, independently of ancestor View visibility.
+        drawable.alpha = if (isVisible) (config.opacity * 2.55f).roundToInt() else 0
+        if (isVisible) {
+            // A resize/corner update while alpha == 0 leaves BackgroundBlurDrawable's path empty.
+            val bounds = drawable.bounds
+            drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+        }
     }
 
     fun scheduleGeometry() {
@@ -301,10 +321,13 @@ internal class DockBackgroundView(
 
     override fun onPreDraw(): Boolean {
         cancelGeometry()
+        var ready = true
         ModuleHelper.guarded {
             val host = parent as? FrameLayout ?: return@guarded
             if (!isShown || host.height <= 0) return@guarded
-            if (!alignmentFailed && contentAccess != null) try {
+            val dragging = contentAccess?.isDragging(host) == true
+            contentBounds.setEmpty()
+            if (!dragging && !alignmentFailed && contentAccess != null) try {
                 alignContent(host)
             } catch (error: Throwable) {
                 FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -316,22 +339,43 @@ internal class DockBackgroundView(
             // Layout coordinates exclude the launcher's scale/translation animations.
             scratch.set(0, 0, host.width, host.height)
             root.offsetDescendantRectToMyCoords(host, scratch)
-            val bottomGap = (root.height - scratch.top - bottom).coerceAtLeast(0)
             val density = resources.displayMetrics.density
-            val inset = ((if (config.sideInsetDp == 0) 12 else config.sideInsetDp) * density).roundToInt()
             val params = layoutParams as? LayoutParams
-            if (params != null && (params.leftMargin != inset || params.rightMargin != inset)) {
+            var inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * density).roundToInt()
+            var verticalInset = 0
+            if (dragging && params != null) {
+                inset = params.leftMargin
+                verticalInset = params.topMargin
+            } else if (!contentBounds.isEmpty) {
+                val availableHeight = host.height - host.paddingTop - host.paddingBottom
+                val padding = maxOf(8 * density, contentBounds.height() * 0.3f)
+                verticalInset = minOf((4 * density).roundToInt(),
+                    ((availableHeight - contentBounds.height()) * 0.5f - padding).roundToInt().coerceAtLeast(0))
+                if (config.sideInsetDp == 0) {
+                    val sideRoom = minOf(contentBounds.left - host.paddingLeft,
+                        host.width - host.paddingRight - contentBounds.right)
+                    // Fit dense native rows without resizing icons or changing their layout.
+                    inset = minOf(inset, (sideRoom - contentBounds.height() * 0.25f).roundToInt())
+                        .coerceAtLeast(minOf((8 * density).roundToInt(), sideRoom.coerceAtLeast(0)))
+                }
+            }
+            if (params != null && (params.leftMargin != inset || params.rightMargin != inset ||
+                    params.topMargin != verticalInset || params.bottomMargin != verticalInset)) {
                 params.leftMargin = inset
                 params.rightMargin = inset
+                params.topMargin = verticalInset
+                params.bottomMargin = verticalInset
                 layoutParams = params
+                ready = false // apply the new geometry before presenting it
             }
+            val bottomGap = (root.height - scratch.top - host.height + host.paddingBottom + verticalInset).coerceAtLeast(0)
             val leftGap = scratch.left + host.paddingLeft + inset
             val rightGap = root.width - scratch.right + host.paddingRight + inset
             edgeInset = maxOf(leftGap, rightGap, bottomGap).toFloat()
             readScreenRadius(rootWindowInsets)
             updateGeometry()
         }
-        return true
+        return ready
     }
 
     private fun alignContent(host: FrameLayout) {
@@ -343,16 +387,19 @@ internal class DockBackgroundView(
             row?.addOnLayoutChangeListener(this)
         }
         if (row == null) return
-        if (row.top != appliedTop) appliedOffset = 0 // native layout replaced our old position
+        val nativeTranslation = row.translationY - if (row.translationY == appliedTranslationY) appliedOffset else 0f
         access.bounds(host, row, contentBounds, scratch)
         if (contentBounds.isEmpty || contentBounds.height() > height) return
-        val shift = ((top + bottom - contentBounds.top - contentBounds.bottom) / 2f).roundToInt()
-            .coerceIn(top - contentBounds.top, bottom - contentBounds.bottom)
-        if (shift != 0) row.offsetTopAndBottom(shift)
+        val offset = ((top + bottom - contentBounds.top - contentBounds.bottom) / 2f).roundToInt()
+            .coerceIn(top - contentBounds.top, bottom - contentBounds.bottom).toFloat()
+        val translation = nativeTranslation + offset
+        val changed = row.translationY != translation
+        // Changing ScreenView's frame makes the ROM skip its next icon-reorder animation.
+        if (changed) row.translationY = translation
         alignedContent = row
-        appliedOffset += shift
-        appliedTop = row.top
-        if (shift != 0) access.positionChanged(row)
+        appliedOffset = offset
+        appliedTranslationY = translation
+        if (changed) access.positionChanged(row)
     }
 
     private fun restoreContent() {
@@ -360,9 +407,9 @@ internal class DockBackgroundView(
         val offset = appliedOffset
         row?.removeOnLayoutChangeListener(this)
         alignedContent = null
-        appliedOffset = 0
-        if (row != null && row.top == appliedTop && offset != 0) {
-            row.offsetTopAndBottom(-offset)
+        appliedOffset = 0f
+        if (row != null && row.translationY == appliedTranslationY && offset != 0f) {
+            row.translationY -= offset
             if (row.parent === parent) ModuleHelper.guarded { contentAccess?.positionChanged(row) }
         }
     }
@@ -392,7 +439,7 @@ internal class DockBackgroundView(
             false
         }
         tint.color = if (night || lightWallpaper) Color.rgb(24, 26, 30) else Color.WHITE
-        tint.alpha = (config.opacity * 0.55f).roundToInt()
+        tint.alpha = (config.opacity * 0.85f).roundToInt()
         tint.rounded = nativeMaterial != null
         updateGeometry()
         scheduleGeometry()

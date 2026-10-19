@@ -1075,9 +1075,8 @@
     <string name="launcher_dock_background_summ">Integrado en el Dock nativo. Reinicia el lanzador tras los cambios.</string>
     <string name="launcher_dock_background_material_title">Material</string>
     <string name="launcher_dock_background_auto_glass">Cristal del sistema (automático)</string>
-    <string name="launcher_dock_background_translucent">Translúcido</string>
     <string name="launcher_dock_background_gaussian">Desenfoque gaussiano</string>
-    <string name="launcher_dock_background_material_summ">Suaviza el fondo y mantiene los iconos nítidos. Usa un fondo translúcido si los materiales del sistema no están disponibles.</string>
+    <string name="launcher_dock_background_material_summ">Suaviza el fondo y mantiene los iconos nítidos. Usa un fondo sencillo si los materiales del sistema no están disponibles.</string>
     <string name="launcher_dock_background_opacity_title">Opacidad</string>
     <string name="launcher_dock_background_radius_title">Radio de las esquinas</string>
     <string name="launcher_dock_background_inset_title">Márgenes laterales</string>

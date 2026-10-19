@@ -56,8 +56,8 @@ class DockBackgroundTest {
         var clicks = 0
         icon.setOnClickListener { clicks++ }
         host.addView(icon)
-        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 1), null)
-        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 1), null)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(), null)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(), null)
         layout()
         assertEquals(2, host.childCount)
         assertSame(icon, host.getChildAt(1))
@@ -157,6 +157,56 @@ class DockBackgroundTest {
         val decoration = host.getChildAt(0) as DockBackgroundView
         assertEquals(0, decoration.childCount)
         assertEquals(0, decoration.foreground.alpha)
+    }
+
+    @Test
+    fun hiddenHotseatRetiresNativeBlurAndRestoresItWithoutRecreatingTheMaterial() {
+        for (style in intArrayOf(0, 2)) {
+            LauncherDockBackground.attach(host, DockBackgroundConfig(material = style), materialConstructor)
+            layout()
+            val decoration = host.getChildAt(0) as DockBackgroundView
+            val material = decoration.getChildAt(0) as NativeMaterial
+            val drawable = material.background
+            host.visibility = View.INVISIBLE // native AlphaUpdateListener at the end of Recents entry
+            decoration.onVisibilityAggregated(false)
+            assertEquals(0, drawable.alpha)
+            repeat(10) { decoration.scheduleGeometry(); host.viewTreeObserver.dispatchOnPreDraw() }
+            assertEquals(0, drawable.alpha)
+            host.alpha = 0f // native return animation makes the host visible before alpha increases
+            host.visibility = View.VISIBLE
+            decoration.onVisibilityAggregated(true)
+            host.alpha = 1f
+            assertEquals(230, drawable.alpha)
+            assertSame(material, decoration.getChildAt(0))
+            host.removeView(decoration)
+            assertNull(material.background)
+        }
+    }
+
+    @Test
+    fun materialAttachedWhileHiddenRestoresItsPathAfterAHiddenResize() {
+        host.visibility = View.INVISIBLE
+        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        layout()
+        val decoration = host.getChildAt(0) as DockBackgroundView
+        val material = decoration.getChildAt(0) as NativeMaterial
+        assertEquals(0, material.background.alpha)
+        // AOSP BackgroundBlurDrawable omits its path when bounds/corners change at alpha == 0.
+        val drawable = object : ColorDrawable(Color.WHITE) {
+            var pathReady = false
+            override fun setBounds(left: Int, top: Int, right: Int, bottom: Int) {
+                super.setBounds(left, top, right, bottom)
+                pathReady = alpha != 0 && right > left && bottom > top
+            }
+        }
+        drawable.alpha = 0
+        material.background = drawable
+        drawable.setBounds(0, 0, 280, 72)
+        assertFalse(drawable.pathReady)
+        host.visibility = View.VISIBLE
+        decoration.onVisibilityAggregated(true)
+        assertEquals(230, drawable.alpha)
+        assertTrue(drawable.pathReady)
     }
 
     @Test
@@ -286,6 +336,9 @@ class DockBackgroundTest {
         assertEquals(2, DockBackgroundConfig.read(PrefMap().apply {
             put("launcher_dock_background_material", "2")
         }).material)
+        assertEquals(0, DockBackgroundConfig.read(PrefMap().apply {
+            put("launcher_dock_background_material", "1")
+        }).material)
     }
 
     @Test
@@ -307,17 +360,16 @@ class DockBackgroundTest {
         return native
     }
 
-    private fun attachNative(native: HotSeatsFixture, material: Int = 1): DockBackgroundView {
-        LauncherDockBackground.attach(native, DockBackgroundConfig(material = material, sideInsetDp = 12),
-            if (material == 1) null else materialConstructor,
+    private fun attachNative(native: HotSeatsFixture, withMaterial: Boolean = false): DockBackgroundView {
+        LauncherDockBackground.attach(native, DockBackgroundConfig(sideInsetDp = 12),
+            if (withMaterial) materialConstructor else null,
             DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java))
-        layout()
-        native.viewTreeObserver.dispatchOnPreDraw()
+        repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
         return native.getChildAt(0) as DockBackgroundView
     }
 
     @Test
-    fun nativeIconsAreCenteredWithoutChangingTheirOwnAnimationPropertiesOrTouch() {
+    fun nativeIconsAreCenteredWithoutChangingTheirFramesAnimationPropertiesOrTouch() {
         val native = nativeHost()
         layout()
         val icon = native.mContent.getChildAt(0) as ItemIconFixture
@@ -325,9 +377,11 @@ class DockBackgroundTest {
         val row = native.mContent
         row.alpha = 0.8f
         val decoration = attachNative(native)
-        assertEquals(10, row.top) // hidden title space formerly left the icon 10px above center
+        assertEquals(0, row.top)
+        assertEquals(10f, row.translationY) // owned visual offset leaves the native frame intact
         assertEquals(0.8f, row.alpha)
-        assertEquals(0f, row.translationY)
+        assertEquals(0f, icon.translationY)
+        assertEquals(1f, icon.scaleY)
         assertEquals(1f, row.scaleY)
         var clicks = 0
         icon.mIconImageView.setOnClickListener { clicks++ }
@@ -340,10 +394,12 @@ class DockBackgroundTest {
         repeat(100) { decoration.scheduleGeometry() }
         native.viewTreeObserver.dispatchOnPreDraw()
         repeat(100) { native.viewTreeObserver.dispatchOnPreDraw() }
-        assertEquals(10, row.top)
+        assertEquals(0, row.top)
+        assertEquals(10f, row.translationY)
         assertEquals(1, row.positionUpdates)
         native.removeView(decoration)
         assertEquals(0, row.top)
+        assertEquals(0f, row.translationY)
     }
 
     @Test
@@ -354,9 +410,46 @@ class DockBackgroundTest {
         val bounds = Rect()
         val access = DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java)
         access.bounds(native, native.mContent, bounds, Rect())
+        bounds.offset(0, native.mContent.translationY.roundToInt())
         assertTrue(kotlin.math.abs((decoration.top + decoration.bottom) - (bounds.top + bounds.bottom)) <= 1)
         assertTrue(bounds.top >= decoration.top)
         assertTrue(bounds.bottom <= decoration.bottom)
+    }
+
+    @Test
+    fun repeatedNativeLayoutsDoNotDisableTheNextIconReorderAnimation() {
+        val native = nativeHost()
+        layout()
+        val row = native.mContent
+        val nativeFrameChanges = row.frameChanges
+        val decoration = attachNative(native)
+        repeat(5) {
+            row.requestLayout()
+            layout()
+            decoration.scheduleGeometry()
+            native.viewTreeObserver.dispatchOnPreDraw()
+        }
+        // ROM HotSeatsScreenViewContent.setFrame skips icon animation whenever this changes.
+        assertEquals(nativeFrameChanges, row.frameChanges)
+        assertEquals(0, row.top)
+        assertEquals(10f, row.translationY)
+    }
+
+    @Test
+    fun ownedTranslationPreservesTheNativeBaseAndDoesNotOverwriteALaterNativeWriter() {
+        val native = nativeHost()
+        val row = native.mContent
+        row.translationY = 2.5f
+        var decoration = attachNative(native)
+        assertEquals(12.5f, row.translationY)
+        repeat(20) { decoration.scheduleGeometry(); native.viewTreeObserver.dispatchOnPreDraw() }
+        assertEquals(12.5f, row.translationY)
+        native.removeView(decoration)
+        assertEquals(2.5f, row.translationY)
+        decoration = attachNative(native)
+        row.translationY = -3f
+        native.removeView(decoration)
+        assertEquals(-3f, row.translationY)
     }
 
     @Test
@@ -367,9 +460,11 @@ class DockBackgroundTest {
         row.layout(0, 3, 360, 83) // a new native base position, independent of our previous offset
         // The native row listener schedules realignment without a new parent measurement.
         native.viewTreeObserver.dispatchOnPreDraw()
-        assertEquals(10, row.top)
+        assertEquals(3, row.top)
+        assertEquals(7f, row.translationY)
         native.removeView(decoration)
         assertEquals(3, row.top)
+        assertEquals(0f, row.translationY)
         // A pending one-shot callback must not keep or move a detached owner.
         decoration.scheduleGeometry()
         native.viewTreeObserver.dispatchOnPreDraw()
@@ -379,7 +474,7 @@ class DockBackgroundTest {
     @Test
     fun animationTransformsAndTransientMissingInsetsCannotFlattenTheDock() {
         val native = nativeHost()
-        val decoration = attachNative(native, material = 0)
+        val decoration = attachNative(native, withMaterial = true)
         host.rootView.layout(0, 0, 360, 80)
         val insets = WindowInsets.Builder().setRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT,
             RoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT, 100, 100, 100)).build()
@@ -387,7 +482,7 @@ class DockBackgroundTest {
         native.viewTreeObserver.dispatchOnPreDraw()
         decoration.onApplyWindowInsets(insets)
         val radius = (decoration.foreground as DockBackgroundTint).radius
-        assertEquals(40f, radius)
+        assertEquals(minOf(decoration.width, decoration.height) * 0.5f, radius)
         val material = decoration.getChildAt(0) as NativeMaterial
         val params = decoration.layoutParams as FrameLayout.LayoutParams
         val margin = params.leftMargin
@@ -404,16 +499,17 @@ class DockBackgroundTest {
             assertEquals(radius, (decoration.foreground as DockBackgroundTint).radius)
             assertEquals(margin, params.leftMargin)
             assertEquals(margin, params.rightMargin)
-            assertEquals(10, native.mContent.top)
+            assertEquals(0, native.mContent.top)
+            assertEquals(10f, native.mContent.translationY)
         }
     }
 
     @Test
     fun automaticSideSpacingStaysNarrowWhenBottomSpacingChanges() {
-        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 1), null)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(), null)
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
-        val expected = (12 * host.resources.displayMetrics.density).roundToInt()
+        val expected = (14 * host.resources.displayMetrics.density).roundToInt()
         for (bottom in intArrayOf(80, 500)) {
             host.rootView.layout(0, 0, 360, bottom)
             decoration.scheduleGeometry()
@@ -421,6 +517,62 @@ class DockBackgroundTest {
             val params = decoration.layoutParams as FrameLayout.LayoutParams
             assertEquals(expected, params.leftMargin)
             assertEquals(expected, params.rightMargin)
+        }
+    }
+
+    @Test
+    fun compactBackgroundFitsFourFiveAndSixNativeIconsWithoutResizingThemOrBreathingDuringDrag() {
+        val access = DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java)
+        for (count in 4..6) {
+            val native = nativeHost()
+            val row = native.mContent
+            row.removeAllViews()
+            val cellWidth = 360 / count
+            repeat(count) { index ->
+                val item = ItemIconFixture(host.context)
+                (item.mIconImageView.layoutParams as FrameLayout.LayoutParams).leftMargin = (cellWidth - 48) / 2
+                row.addView(item, FrameLayout.LayoutParams(cellWidth, 80).apply { leftMargin = index * cellWidth })
+            }
+            LauncherDockBackground.attach(native, DockBackgroundConfig(), null, access)
+            repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
+            val decoration = native.getChildAt(0) as DockBackgroundView
+            val params = decoration.layoutParams as FrameLayout.LayoutParams
+            val bounds = Rect()
+            access.bounds(native, row, bounds, Rect())
+            bounds.offset(0, row.translationY.roundToInt())
+            assertTrue(decoration.height < native.height)
+            assertEquals(params.topMargin, params.bottomMargin)
+            assertTrue(kotlin.math.abs(bounds.centerY() - (decoration.top + decoration.bottom) / 2f) <= 0.5f)
+            assertTrue(params.leftMargin <= bounds.left)
+            assertTrue(params.rightMargin <= native.width - bounds.right)
+            assertEquals(77, decoration.foreground.alpha)
+            repeat(count) { index ->
+                val item = row.getChildAt(index) as ItemIconFixture
+                assertEquals(index * cellWidth, item.left)
+                assertEquals(48, item.mIconImageView.width)
+                assertEquals(1f, item.mIconImageView.scaleX)
+                assertEquals(1f, item.mIconImageView.scaleY)
+            }
+            val sideInset = params.leftMargin
+            val verticalInset = params.topMargin
+            val translation = row.translationY
+            native.mDragController.mDragging = true
+            row.getChildAt(0).visibility = View.INVISIBLE
+            row.getChildAt(count - 1).visibility = View.INVISIBLE
+            repeat(10) { decoration.scheduleGeometry(); native.viewTreeObserver.dispatchOnPreDraw() }
+            assertEquals(sideInset, params.leftMargin)
+            assertEquals(verticalInset, params.topMargin)
+            assertEquals(translation, row.translationY)
+            assertEquals(0, row.top)
+            native.mDragController.mDragging = false
+            row.getChildAt(0).visibility = View.VISIBLE
+            row.getChildAt(count - 1).visibility = View.VISIBLE
+            decoration.scheduleGeometry()
+            repeat(2) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
+            assertEquals(sideInset, params.leftMargin)
+            native.removeView(decoration)
+            assertEquals(0f, row.translationY)
+            host.removeView(native)
         }
     }
 
@@ -438,13 +590,16 @@ class DockBackgroundTest {
         decoration.scheduleGeometry()
         native.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(0, old.top)
-        assertEquals(10, native.mContent.top)
+        assertEquals(0f, old.translationY)
+        assertEquals(0, native.mContent.top)
+        assertEquals(10f, native.mContent.translationY)
         val updates = native.mContent.positionUpdates
         old.layout(0, 20, 360, 100)
         native.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(updates, native.mContent.positionUpdates)
         native.removeView(decoration)
         assertEquals(0, native.mContent.top)
+        assertEquals(0f, native.mContent.translationY)
     }
 
     @Test
@@ -461,12 +616,20 @@ class DockBackgroundTest {
 
     class HotSeatsFixture(context: Context) : FrameLayout(context) {
         @JvmField var mContent = ContentFixture(context)
+        @JvmField val mDragController = DragControllerFixture()
     }
+
+    class DragControllerFixture { @JvmField var mDragging = false }
 
     class ContentFixture(context: Context) : FrameLayout(context) {
         var positionUpdates = 0
+        var frameChanges = 0
         var failure: Throwable? = null
         fun onTranslationChanged() { positionUpdates++; failure?.let { throw it } }
+        override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+            if (changed) frameChanges++
+            super.onLayout(changed, left, top, right, bottom)
+        }
     }
 
     class ItemIconFixture(context: Context) : FrameLayout(context) {

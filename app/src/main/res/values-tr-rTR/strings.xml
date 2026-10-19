@@ -1082,9 +1082,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="launcher_dock_background_summ">Yerel Dock ile bütünleşir. Değişikliklerden sonra başlatıcıyı yeniden başlatın.</string>
     <string name="launcher_dock_background_material_title">Malzeme</string>
     <string name="launcher_dock_background_auto_glass">Sistem camı (otomatik)</string>
-    <string name="launcher_dock_background_translucent">Yarı saydam</string>
     <string name="launcher_dock_background_gaussian">Gauss bulanıklığı</string>
-    <string name="launcher_dock_background_material_summ">Simgeleri net tutarken arka planı yumuşatır. Sistem malzemeleri kullanılamadığında yarı saydam arka plan kullanılır.</string>
+    <string name="launcher_dock_background_material_summ">Simgeleri net tutarken arka planı yumuşatır. Sistem malzemeleri kullanılamadığında normal arka plan kullanılır.</string>
     <string name="launcher_dock_background_opacity_title">Opaklık</string>
     <string name="launcher_dock_background_radius_title">Köşe yarıçapı</string>
     <string name="launcher_dock_background_inset_title">Yatay boşluk</string>

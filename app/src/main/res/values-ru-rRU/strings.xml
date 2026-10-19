@@ -1075,9 +1075,8 @@
     <string name="launcher_dock_background_summ">Встроенный фон Dock. После изменений перезапустите рабочий стол.</string>
     <string name="launcher_dock_background_material_title">Материал</string>
     <string name="launcher_dock_background_auto_glass">Системное стекло (авто)</string>
-    <string name="launcher_dock_background_translucent">Полупрозрачный</string>
     <string name="launcher_dock_background_gaussian">Размытие по Гауссу</string>
-    <string name="launcher_dock_background_material_summ">Смягчает фон, сохраняя чёткость значков. Если системные материалы недоступны, используется полупрозрачный фон.</string>
+    <string name="launcher_dock_background_material_summ">Смягчает фон, сохраняя чёткость значков. Если системные материалы недоступны, используется обычный фон.</string>
     <string name="launcher_dock_background_opacity_title">Непрозрачность</string>
     <string name="launcher_dock_background_radius_title">Радиус углов</string>
     <string name="launcher_dock_background_inset_title">Боковые отступы</string>

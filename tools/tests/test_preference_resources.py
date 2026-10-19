@@ -78,11 +78,11 @@ class PreferenceResourceContractTest(unittest.TestCase):
         arrays = ET.parse(RES_ROOT / "values" / "arrays.xml").getroot()
         material_entries = arrays.find("string-array[@name='launcher_dock_background_material']")
         material_values = arrays.find("string-array[@name='launcher_dock_background_material_values']")
-        self.assertEqual(["0", "1", "2"], [el.text for el in material_values])
-        self.assertEqual("@string/launcher_dock_background_gaussian", material_entries[2].text)
+        self.assertEqual(["0", "2"], [el.text for el in material_values])
+        self.assertEqual("@string/launcher_dock_background_gaussian", material_entries[1].text)
         required = {"launcher_dock_category", "launcher_dock_background_title", "launcher_dock_background_summ",
                     "launcher_dock_background_material_title", "launcher_dock_background_auto_glass",
-                    "launcher_dock_background_translucent", "launcher_dock_background_opacity_title",
+                    "launcher_dock_background_opacity_title",
                     "launcher_dock_background_gaussian", "launcher_dock_background_material_summ",
                     "launcher_dock_background_radius_title", "launcher_dock_background_inset_title",
                     "launcher_dock_background_auto"}

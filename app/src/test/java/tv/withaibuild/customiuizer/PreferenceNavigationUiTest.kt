@@ -9,6 +9,7 @@ import android.widget.PopupMenu
 import androidx.activity.BackEventCompat
 import androidx.fragment.app.Fragment
 import androidx.preference.Preference
+import androidx.preference.ListPreference
 import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -110,6 +111,28 @@ class PreferenceNavigationUiTest {
 
         assertTrue(currentPage() is MainFragment)
         assertPreferencePageVisible(currentPage())
+    }
+
+    @Test
+    fun removedDockMaterialMigratesToGlassAndKeepsGaussianSelectable() {
+        val key = "pref_key_launcher_dock_background_material"
+        requireNotNull(AppHelper.appPrefs).edit().putString(key, "1").commit()
+        val home = currentPage() as MainFragment
+        home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_launcher")))
+        settleNavigation()
+        val selector = currentPage() as SubFragment
+        requireNotNull(selector.findPreference<Preference>("pref_key_launcher_cat_dock")).performClick()
+        settleNavigation()
+        val page = currentPage() as SubFragment
+        val material = requireNotNull(page.findPreference<ListPreference>(key))
+        assertEquals(listOf("0", "2"), material.entryValues.map { it.toString() })
+        assertEquals("0", material.value)
+        assertEquals("0", requireNotNull(AppHelper.appPrefs).getString(key, null))
+        material.value = "2"
+        pressToolbarBack()
+        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_launcher_cat_dock")).performClick()
+        settleNavigation()
+        assertEquals("2", (currentPage() as SubFragment).findPreference<ListPreference>(key)?.value)
     }
 
     @Test

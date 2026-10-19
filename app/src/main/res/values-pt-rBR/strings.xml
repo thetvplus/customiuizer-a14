@@ -1076,9 +1076,8 @@
     <string name="launcher_dock_background_summ">Integrado ao Dock nativo. Reinicie o inicializador após alterar.</string>
     <string name="launcher_dock_background_material_title">Material</string>
     <string name="launcher_dock_background_auto_glass">Vidro do sistema (automático)</string>
-    <string name="launcher_dock_background_translucent">Translúcido</string>
     <string name="launcher_dock_background_gaussian">Desfoque gaussiano</string>
-    <string name="launcher_dock_background_material_summ">Suaviza o fundo e mantém os ícones nítidos. Usa um fundo translúcido quando os materiais do sistema estão indisponíveis.</string>
+    <string name="launcher_dock_background_material_summ">Suaviza o fundo e mantém os ícones nítidos. Usa um fundo simples quando os materiais do sistema estão indisponíveis.</string>
     <string name="launcher_dock_background_opacity_title">Opacidade</string>
     <string name="launcher_dock_background_radius_title">Raio dos cantos</string>
     <string name="launcher_dock_background_inset_title">Margens laterais</string>

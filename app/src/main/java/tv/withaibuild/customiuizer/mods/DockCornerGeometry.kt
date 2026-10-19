@@ -6,9 +6,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * G4 curvature model: quintic curvature ramps have zero first/second derivatives at both
- * ends. Integrate heading by arc length, then approximate the curve with cached Hermite
- * cubics. No native library, bitmap, shader, or work in draw().
+ * Analytic G4 model: quintic curvature ramps have zero first/second derivatives at both
+ * ends. Integrate heading by arc length, then render a cached Hermite cubic approximation,
+ * rather than an exact G4 spline. No native library, bitmap, shader, or work in draw().
  * Geometry approach: https://github.com/tsuijunxi/ContinuousCornerKit
  */
 internal object DockCornerGeometry {

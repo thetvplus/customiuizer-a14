@@ -1076,9 +1076,8 @@
     <string name="launcher_dock_background_summ">Tích hợp vào Dock gốc. Khởi động lại màn hình chính sau khi thay đổi.</string>
     <string name="launcher_dock_background_material_title">Chất liệu</string>
     <string name="launcher_dock_background_auto_glass">Kính hệ thống (tự động)</string>
-    <string name="launcher_dock_background_translucent">Trong mờ</string>
     <string name="launcher_dock_background_gaussian">Làm mờ Gaussian</string>
-    <string name="launcher_dock_background_material_summ">Làm mờ nền và giữ biểu tượng rõ nét. Dùng nền trong mờ khi chất liệu hệ thống không khả dụng.</string>
+    <string name="launcher_dock_background_material_summ">Làm mờ nền và giữ biểu tượng rõ nét. Dùng nền thông thường khi chất liệu hệ thống không khả dụng.</string>
     <string name="launcher_dock_background_opacity_title">Độ đục</string>
     <string name="launcher_dock_background_radius_title">Bán kính góc</string>
     <string name="launcher_dock_background_inset_title">Lề ngang</string>

@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.subs
 import android.os.Bundle
 import android.widget.SeekBar
 import androidx.preference.Preference
+import androidx.preference.ListPreference
 import tv.withaibuild.customiuizer.SubFragment
 import tv.withaibuild.customiuizer.prefs.SeekBarPreference
 import tv.withaibuild.customiuizer.utils.AppHelper
@@ -28,6 +29,11 @@ class Launcher : SubFragment() {
         }
 
         when (sub) {
+            "pref_key_launcher_cat_dock" -> {
+                findPreference<ListPreference>("pref_key_launcher_dock_background_material")?.let { material ->
+                    if (material.value !in material.entryValues) material.value = "0"
+                }
+            }
             "pref_key_launcher_cat_folders" -> {
                 val folderCols = findPreference<SeekBarPreference>("pref_key_launcher_folder_cols")
                 findPreference<Preference>("pref_key_launcher_folderwidth")?.isEnabled = AppHelper.getIntOfAppPrefs("pref_key_launcher_folder_cols", 1) > 1
