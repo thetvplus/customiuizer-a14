@@ -45,11 +45,43 @@ $releaseRevision = git rev-parse --short=8 HEAD
 
 ## Actions 正式候选
 
-[A14 Signed Build](../.github/workflows/a14-signed-build.yml) 手动执行，默认选择 main。也可使用原生分支选择器或 Agent 接口：
+[A14 Signed Build](../.github/workflows/a14-signed-build.yml) 是一次确认的构建与发布入口。选择原生分支（通常 main），检查版本后点击 **Run workflow**，即确认本次所选操作；普通 push / PR 不会签名或发布。
+
+| 选项 | 默认值 | 结果 |
+| --- | --- | --- |
+| `destination` | `source` | 自动构建、正式签名、验证，并发布到本源码仓库 Release |
+| `destination=both` | 手动选择 | 将同一个已验证 APK 同步发布到源码与下载仓库 |
+| `destination=actions-only` | 手动选择 | 仅生成 Actions 中的签名候选，不创建 tag / Release |
+| `prerelease` | `false` | 正式发行并设为 Latest；开启后标记为预发行且不抢占 Latest |
+
+自动发布只消费本次成功签名任务的原始产物，依次固定 source SHA、run / attempt、artifact ID、APK 摘要，再验证 Android 签名和 GitHub 来源证明。签名与发布使用独立的受保护 Environment。发布任务不会重新构建、重签或修改 APK。手动晋升与自动发布共用发布锁，防止彼此并发写入。
+
+构建前核对版本未发布、无冲突 tag、versionName / versionCode 高于已发布版本（含预发行）；发布锁内再次检查。当前已发布 `r14.25.1` / `246`，后续正式发布先同步提高 Gradle、README 与双语 CHANGELOG；本次流程维护不代替版本决策，也不重发旧版。测试同版本候选时选 `actions-only`。
+
+发布先建立草稿、上传并核对全部四个资产的 SHA-256 和大小，再公开发布。正式版读回 Latest 状态，预发行版显式不设为 Latest。上传或检查失败时不公开草稿，不覆盖旧版；遗留草稿需先检查和处理后再重试。双仓库写入不具备跨仓库事务，第二端失败时保留已成功端并报告失败，不删除成功发行。
+
+名称固定为：
+
+| 对象 | 格式 |
+| --- | --- |
+| Release 标题 | `米客 A14｜CustoMIUIzer A14 · <versionName>` |
+| 源码 tag | `<versionName>` |
+| 下载 tag | `<versionCode>-<versionName>` |
+| APK（候选和发布保持同名） | `CustoMIUIzer-A14-<versionName>-<sha6>.apk` |
+| 校验与证明 | `SHA256SUMS`、`build-metadata.json`、`attestation.sigstore.json` |
+
+Release 说明从候选 exact SHA 的双语 CHANGELOG 提取本版内容，并附源码 SHA、原始构建、APK 摘要、Android 证书、GitHub Attestations 入口和精确验证命令。
+
+CLI / Agent 入口：
 
 ```sh
+# 以下命令会公开发布：destination 默认 source。
 gh workflow run a14-signed-build.yml --ref main
-gh workflow run a14-signed-build.yml --ref codex/a14-feature-refinement-20261019
+# 仅构建试用 APK 时必须明确选择 actions-only。
+gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
+gh workflow run a14-signed-build.yml --ref codex/a14-feature-refinement-20261019 -f destination=actions-only
+# 预发行，不设为 Latest。
+gh workflow run a14-signed-build.yml --ref main -f prerelease=true
 gh run list --workflow a14-signed-build.yml
 gh run view <run-id>
 gh run download <run-id> --name a14-signed-<run-id>-<attempt> --dir candidate
@@ -65,9 +97,9 @@ gh run download <run-id> --name a14-signed-<run-id>-<attempt> --dir candidate
 
 未发布的正式候选命名为 `CustoMIUIzer-A14-<versionName>-<source SHA 前六位>.apk`，例如 `CustoMIUIzer-A14-r14.24.1-502d9a.apk`。版本来自该提交的 Gradle 配置，SHA 来自触发时的完整提交；改名不改 APK 内容，校验、元数据、摘要、证明与后续晋升均使用这一文件名。旧的无 SHA 文件名候选仍按原始证明验证，不重命名或重建。普通 CI 的 develop 产物也带短 SHA，并保留 develop / unsigned 标识，始终出现在 Artifacts。
 
-成功产物 `a14-signed-<run-id>-<attempt>` 保留 30 天，包含唯一 APK、`SHA256SUMS`、`build-metadata.json`、Sigstore bundle 和非敏感验证结果。Summary 提供版本、提交、APK 哈希及下载链接。失败时没有正式候选；不会创建 tag / Release 或改变版本号。
+成功产物 `a14-signed-<run-id>-<attempt>` 保留 30 天，包含唯一 APK、`SHA256SUMS`、`build-metadata.json`、Sigstore bundle 和非敏感验证结果。Summary 提供版本、提交、APK 哈希及下载链接；选择发布时另给出 Release 链接与资产验收结果。签名或验证失败时没有正式候选，也不发布；仅发布步骤失败时保留已验证的候选，不重新构建。流程不改变版本号。
 
-用户只要求通过 Actions 生成签名试用 APK，并明确表示自行查看、无需等待时：完成必要本地验证，复用相同源码 / 范围的通过结果；从已授权受信分支触发，确认运行绑定预期 exact SHA 后给出链接即可收口。不轮询至完成、不为交付重复下载或本地验证产物、不自动创建后续监控；如实标为“已触发，尚未确认构建成功”。Actions 自身的验证、签名、证书与来源证明门禁继续执行。公开发布和 main 合并仍按各自授权处理。
+用户只要求通过 Actions 生成签名试用 APK，并明确表示自行查看、无需等待时：必须传入 `destination=actions-only`；完成必要本地验证，复用相同源码 / 范围的通过结果；从已授权受信分支触发，确认运行绑定预期 exact SHA 后给出链接即可收口。不轮询至完成、不为交付重复下载或本地验证产物、不自动创建后续监控；如实标为“已触发，尚未确认构建成功”。Actions 自身的验证、签名、证书与来源证明门禁继续执行。公开发布和 main 合并仍按各自授权处理。
 
 下载后的按需校验：
 
@@ -78,6 +110,14 @@ gh attestation verify candidate/<apk> --repo thetvplus/customiuizer-a14 --signer
 也可传 `--bundle candidate/attestation.sigstore.json` 验证已保存的证明。CLI 的身份约束见[官方说明](https://cli.github.com/manual/gh_attestation_verify)。摘要相同不代替 Android 签名校验。
 
 GitHub 手动入口通常要求工作流已在默认分支注册。本任务分支为两个工作流保留各自仅匹配本文件的窄 push 引导：正式构建只检查契约；晋升跳过所有 job，绝不签名或发布。注册后可用 CLI 指定授权分支手动执行。合入 main 仍需单独授权；不能为了显示手动按钮擅自改默认分支或合并。
+
+`codex/a14-release-automation-20261023` 只用于流程审查，没有加入签名受信名单或 Environment 授权。配置完成并不意味着本分支会发布 APK。
+
+### GitHub 认证标记
+
+- **APK 来源证明**：使用官方 `actions/attest`，以 OIDC 身份生成、保存并验证。证明对应 APK 摘要与构建身份，可在 [Attestations](https://github.com/thetvplus/customiuizer-a14/attestations) 查看；此能力已在流程中接通。
+- **绿色 Verified**：这是 Git commit / tag 的签名验证标记，与 APK 来源证明不同。需要 GitHub 可验证的 GPG / SSH / S/MIME 签名；工作流不生成替代签名身份、不改写历史标签，也不伪造徽标。若要让新发行的 tag 自身显示 Verified，应先用已登记公钥签署指向 exact candidate SHA 的新 tag；已有同名 tag 仅在指向同一 SHA 时允许发布，原签名得以保留。参见 [GitHub 签名标签说明](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-tags)。
+- **Immutable**：仓库设置中开启 release immutability 后，新发行的 tag 和资产锁定，GitHub 自动生成 release attestation；与绿色 Verified 也不同。本流程使用“草稿→上传→校验→发布”，可兼容不可变发行；本次代码修改不变更仓库全局设置。参见 [GitHub 不可变发行](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)。
 
 ## 同一 APK 按需晋升
 

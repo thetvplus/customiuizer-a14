@@ -3,10 +3,22 @@ run-name: A14 Signed Build / ${{ github.ref_name }} / ${{ github.sha }}
 
 on:
   workflow_dispatch:
+    inputs:
+      destination:
+        description: '确认本次操作：构建后自动发布，或仅生成签名 APK'
+        required: true
+        default: source
+        type: choice
+        options: [source, both, actions-only]
+      prerelease:
+        description: '标记为预发行版（不设为 Latest）'
+        required: true
+        default: false
+        type: boolean
   # Register this workflow while it is reviewed on the authorized task branch.
   # Push only validates the workflow contract; it can never enter the signing job.
   push:
-    branches: [codex/a14-feature-refinement-20261019]
+    branches: [codex/a14-release-automation-20261023]
     paths: [.github/workflows/a14-signed-build.yml]
 
 permissions:
@@ -45,6 +57,11 @@ jobs:
         id: source
         if: github.event_name == 'workflow_dispatch'
         run: python tools/signed_release.py source-policy
+      - name: Check release version before building
+        if: github.event_name == 'workflow_dispatch' && steps.source.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/signed_release.py release-plan
       - name: Look for trusted CI on this exact SHA
         id: ci
         if: github.event_name == 'workflow_dispatch'
@@ -101,6 +118,11 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    outputs:
+      source_sha: ${{ steps.candidate.outputs.source_sha }}
+      apk_sha256: ${{ steps.candidate.outputs.apk_sha256 }}
+      run_attempt: ${{ steps.candidate.outputs.run_attempt }}
+      artifact_id: ${{ steps.artifact.outputs.artifact-id }}
     steps:
       - name: Checkout triggering commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -145,6 +167,7 @@ jobs:
         if: always()
         run: rm -rf -- "$RUNNER_TEMP/a14-signing"
       - name: Verify APK and record candidate metadata
+        id: candidate
         run: python tools/signed_release.py candidate --directory "$RUNNER_TEMP/candidate"
       - name: Attest the final signed APK and its metadata
         id: provenance
@@ -179,5 +202,43 @@ jobs:
           from pathlib import Path
           data = json.loads((Path(os.environ['RUNNER_TEMP']) / 'candidate/build-metadata.json').read_text())
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write(f"### Verified signed APK\n\n{data['version_name']} ({data['version_code']})\n\nSource: `{data['source_sha']}`\n\nAPK SHA-256: `{data['apk_sha256']}`\n\nAndroid signature and GitHub provenance passed. [Download artifact]({os.environ['ARTIFACT_URL']}). No Release or tag created.\n")
+              summary.write(f"### Verified signed APK\n\n{data['version_name']} ({data['version_code']})\n\nSource: `{data['source_sha']}`\n\nAPK SHA-256: `{data['apk_sha256']}`\n\nAndroid signature and GitHub provenance passed. [Download artifact]({os.environ['ARTIFACT_URL']}). Release publication, when selected, follows in a separate protected job.\n")
           PY
+
+  publish:
+    name: Publish verified APK to Release
+    needs: [validate, sign]
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && needs.validate.outputs.authorized == 'true' && inputs.destination != 'actions-only'
+    environment: release-publishing
+    concurrency:
+      group: a14-release-publish
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+      attestations: read
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+      - name: Install pinned Android SDK packages
+        run: bash tools/ci_install_android_sdk.sh
+      - name: Publish the exact APK from this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          A14_XPOSED_RELEASE_TOKEN: ${{ secrets.A14_XPOSED_RELEASE_TOKEN }}
+          VERIFIED_SOURCE_SHA: ${{ needs.sign.outputs.source_sha }}
+          VERIFIED_APK_SHA256: ${{ needs.sign.outputs.apk_sha256 }}
+          VERIFIED_RUN_ATTEMPT: ${{ needs.sign.outputs.run_attempt }}
+          VERIFIED_ARTIFACT_ID: ${{ needs.sign.outputs.artifact_id }}
+        run: python tools/signed_release.py publish-current --directory "$RUNNER_TEMP/original-candidate"

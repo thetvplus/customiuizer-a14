@@ -10,7 +10,8 @@ import json
 
 SIGN_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && needs.validate.outputs.authorized == 'true'"
 PUBLISH_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'actions-only' && inputs.authorization != ''"
-BOOTSTRAP_BRANCH = "codex/a14-feature-refinement-20261019"
+AUTO_PUBLISH_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && needs.validate.outputs.authorized == 'true' && inputs.destination != 'actions-only'"
+BOOTSTRAP_BRANCH = "codex/a14-release-automation-20261023"
 KEYS = ("A14_KEYSTORE_BASE64", "A14_STORE_PASSWORD", "A14_KEY_ALIAS", "A14_KEY_PASSWORD")
 BUILD_COMMAND = ('trap \'rm -rf -- "$RUNNER_TEMP/a14-signing"\' EXIT\n'
                  'python tools/signed_release.py prepare-signing\n'
@@ -42,8 +43,12 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
     dispatch = events.get("workflow_dispatch") or {}
     need(isinstance(dispatch, dict), "invalid dispatch configuration")
     if signed:
-        need(not dispatch, "signing must use the native ref selector without ref inputs")
-        need(set(jobs) == {"validate", "sign"}, "only validation and protected signing jobs are allowed")
+        inputs = dispatch.get("inputs", {}) if isinstance(dispatch, dict) else {}
+        need(set(inputs) == {"destination", "prerelease"}, "signing accepts only destination and pre-release selection, never a ref input")
+        need(inputs.get("destination", {}).get("type") == "choice" and inputs.get("destination", {}).get("default") == "source"
+             and inputs.get("destination", {}).get("options") == ["source", "both", "actions-only"], "native dispatch must preselect source publication and allow candidate-only builds")
+        need(inputs.get("prerelease", {}).get("type") == "boolean" and inputs.get("prerelease", {}).get("default") == "false", "pre-release must be explicit")
+        need(set(jobs) == {"validate", "sign", "publish"}, "validation, protected signing and protected publication must stay separate")
         job = jobs.get("sign", {})
         need(job.get("environment") == "release-signing", "signing requires release-signing Environment")
         need(job.get("if") == SIGN_IF and job.get("needs") == "validate", "signing must require successful authorized manual validation")
@@ -53,7 +58,27 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
         need(validate.get("outputs") == {"authorized": "${{ steps.source.outputs.authorized }}"}, "authorization must come from the native source policy step")
         need(any(step.get("id") == "source" and step.get("run") == "python tools/signed_release.py source-policy"
                  and step.get("if") == "github.event_name == 'workflow_dispatch'" for step in validate.get("steps", [])), "native source policy validation is required")
+        need(any(step.get("run") == "python tools/signed_release.py release-plan"
+                 and step.get("if") == "github.event_name == 'workflow_dispatch' && steps.source.outputs.authorized == 'true'"
+                 for step in validate.get("steps", [])), "release version must be checked before signing")
+        receipt = {key: "${{ steps.candidate.outputs." + key + " }}" for key in ("source_sha", "apk_sha256", "run_attempt")}
+        receipt["artifact_id"] = "${{ steps.artifact.outputs.artifact-id }}"
+        need(job.get("outputs") == receipt, "signing must pin the original candidate and immutable artifact ID")
+        publisher = jobs.get("publish", {})
+        need(publisher.get("if") == AUTO_PUBLISH_IF and publisher.get("needs") == ["validate", "sign"], "automatic publication must depend on successful validation/signing and native dispatch selection")
+        need(publisher.get("environment") == "release-publishing", "automatic publication requires a separate protected Environment")
+        need(publisher.get("permissions") == {"contents": "write", "actions": "read", "attestations": "read"}, "automatic publisher permissions must be minimal")
+        need(publisher.get("concurrency") == {"group": "a14-release-publish", "cancel-in-progress": "false"}, "all publication paths must serialize writes")
+        need("gradlew" not in json.dumps(publisher) and "prepare-signing" not in json.dumps(publisher), "automatic publication cannot rebuild or resign")
+        publications = [(i, step) for i, step in enumerate(publisher.get("steps", [])) if "signed_release.py publish" in step.get("run", "")]
+        need(len(publications) == 1, "one automatic publication step is required")
+        if len(publications) == 1:
+            _, publication = publications[0]
+            env = {"VERIFIED_" + key.upper(): "${{ needs.sign.outputs." + key + " }}" for key in receipt}
+            env.update(GH_TOKEN="${{ github.token }}", A14_XPOSED_RELEASE_TOKEN="${{ secrets.A14_XPOSED_RELEASE_TOKEN }}")
+            need(publication.get("env") == env and publication.get("run") == 'python tools/signed_release.py publish-current --directory "$RUNNER_TEMP/original-candidate"', "automatic publisher must consume the signing receipt and native dispatch")
         steps = job.get("steps", [])
+        need(any(step.get("id") == "candidate" and step.get("run") == 'python tools/signed_release.py candidate --directory "$RUNNER_TEMP/candidate"' for step in steps), "candidate outputs must come from APK verification")
         builds = [(index, step) for index, step in enumerate(steps) if "-PofficialRelease=true" in step.get("run", "")]
         need(len(builds) == 1, "exactly one official APK build is required")
         if len(builds) == 1:
@@ -73,6 +98,7 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
             if not errors:
                 sanitized["jobs"]["sign"]["steps"][index]["env"] = {}
                 sanitized["jobs"]["sign"]["steps"][index]["run"] = "protected signing build"
+                sanitized["jobs"]["publish"]["steps"][publications[0][0]]["run"] = "confirmed protected publication"
     else:
         inputs = dispatch.get("inputs", {}) if isinstance(dispatch, dict) else {}
         need(set(inputs) == {"build_run_id", "destination", "authorization"}, "promotion inputs must identify the original build and explicit authorization")
@@ -82,6 +108,7 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
         need(job.get("environment") == "release-publishing", "publication requires its own protected Environment")
         need(job.get("if") == PUBLISH_IF and job.get("needs") == "verify", "publication must require verification and explicit opt-in")
         need(job.get("permissions") == {"contents": "write", "actions": "read", "attestations": "read"}, "publisher permissions must be minimal")
+        need(job.get("concurrency") == {"group": "a14-release-publish", "cancel-in-progress": "false"}, "all publication paths must serialize writes")
         need(jobs.get("verify", {}).get("permissions") == {"contents": "read", "actions": "read", "attestations": "read"}, "candidate verification must be read-only")
         receipt = {key: "${{ steps.candidate.outputs." + key + " }}" for key in ("source_sha", "apk_sha256", "run_attempt", "artifact_id")}
         need(jobs.get("verify", {}).get("outputs") == receipt, "verification must pin the original artifact identity")

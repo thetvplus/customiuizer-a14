@@ -106,7 +106,7 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
                 if action_input(action, "persist-credentials") not in ("false", "False", "FALSE"):
                     add("CI_CHECKOUT_CREDENTIALS", "checkout must set persist-credentials: false")
                 permissions = job.get("permissions", workflow.get("permissions", {}))
-                publisher = (path.name == "a14-promote-release.yml" and not protected_errors
+                publisher = (path.name in {"a14-promote-release.yml", "a14-signed-build.yml"} and not protected_errors
                              and job is workflow["jobs"].get("publish"))
                 if not isinstance(permissions, dict) or permissions.get("contents") != ("write" if publisher else "read"):
                     add("CI_PERMISSIONS", "set permissions.contents: read")

@@ -159,6 +159,55 @@ def source_version(text: str) -> tuple[str, int]:
     return name[1], int(code[1])
 
 
+def dispatch_options() -> tuple[str, bool]:
+    """Read the native dispatch, rather than accepting publication via an env flag."""
+    ref, sha = event_source()
+    require(os.environ.get("GITHUB_WORKFLOW_REF") == f"{REPO}/{WORKFLOW}@{ref}"
+            and os.environ.get("GITHUB_WORKFLOW_SHA") == sha, "Automatic publication requires the native signed-build workflow")
+    event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+    inputs = event.get("inputs") or {}
+    destination, prerelease = inputs.get("destination"), inputs.get("prerelease")
+    require(destination in {"source", "both", "actions-only"}, "Select a release destination explicitly")
+    require(prerelease in {"true", "false"}, "Invalid pre-release selection")
+    return destination, prerelease == "true"
+
+
+def check_new_release(name: str, code: int, sha: str) -> None:
+    check_tag(REPO, name, sha)
+    require(optional_api(f"repos/{REPO}/releases/tags/{name}") is None,
+            f"Release {name} already exists; increment versionName and versionCode, or select actions-only")
+    # Include pre-releases, and paginate rather than assuming /latest is newest.
+    published = []
+    page = 1
+    while True:
+        records = api(f"repos/{REPO}/releases?per_page=100&page={page}")
+        require(not any(record["tag_name"] == name for record in records),
+                f"Release or draft {name} already exists; inspect it instead of overwriting")
+        published.extend(record["tag_name"] for record in records
+                         if not record["draft"] and re.fullmatch(r"r14\.\d+\.\d+", record["tag_name"]))
+        if len(records) < 100:
+            break
+        page += 1
+    if published:
+        previous = max(published, key=lambda tag: tuple(map(int, tag[1:].split("."))))
+        content = api(f"repos/{REPO}/contents/app/build.gradle.kts?ref={previous}")
+        _, previous_code = source_version(base64.b64decode(content["content"]).decode("utf-8"))
+        require(code > previous_code, f"versionCode {code} must exceed published {previous_code} ({previous})")
+        require(tuple(map(int, name[1:].split("."))) > tuple(map(int, previous[1:].split("."))),
+                f"versionName {name} must exceed published {previous}")
+
+
+def release_plan() -> None:
+    destination, prerelease = dispatch_options()
+    if destination == "actions-only":
+        print("Build a signed candidate only; no Release or tag will be created")
+        return
+    _, sha = event_source()
+    name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
+    check_new_release(name, code, sha)
+    print(f"Confirmed automatic publication: {name} ({code}), destination={destination}, prerelease={prerelease}")
+
+
 def check_badging(badging: str, name: str, code: int) -> None:
     package = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
     require(package is not None and package.groups() == ("tv.withaibuild.customiuizer.r14", str(code), name), "APK package/version differs from source")
@@ -211,13 +260,26 @@ def candidate(folder: Path) -> None:
                     run_id=int(os.environ["GITHUB_RUN_ID"]), run_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]))
     write_json(folder / "build-metadata.json", metadata)
     (folder / "SHA256SUMS").write_text(f"{metadata['apk_sha256']}  {metadata['apk']}\n", encoding="ascii")
+    output(source_sha=sha, apk_sha256=metadata["apk_sha256"], run_attempt=metadata["run_attempt"])
     print(f"APK checks passed: {name} ({code}), {metadata['apk_sha256']}")
 
 
-def check_run(record: dict, workflow_id: int) -> None:
+def check_run(record: dict, workflow_id: int, *, current_run: bool = False) -> None:
     require(record.get("workflow_id") == workflow_id and record.get("path") == WORKFLOW, "Wrong source workflow")
     require(record.get("event") == "workflow_dispatch", "Source must be a manually requested signed build")
-    require(record.get("status") == "completed" and record.get("conclusion") == "success", "Source build did not finish successfully")
+    if current_run:
+        # The publish job is still part of this run. It may consume only the
+        # successful sign dependency's immutable artifact/receipt, never another
+        # running workflow. Manual promotion still requires a completed run.
+        ref, sha = event_source()
+        require(record.get("id") == int(os.environ["GITHUB_RUN_ID"])
+                and record.get("run_attempt") == int(os.environ["GITHUB_RUN_ATTEMPT"])
+                and record.get("head_sha") == sha and "refs/heads/" + record.get("head_branch", "") == ref,
+                "Automatic publication cannot select another run, attempt or source")
+        require(record.get("status") == "in_progress" and record.get("conclusion") is None,
+                "Current signed-build run is not in progress")
+    else:
+        require(record.get("status") == "completed" and record.get("conclusion") == "success", "Source build did not finish successfully")
     require(record.get("head_repository", {}).get("full_name") == REPO, "Wrong source repository")
     require(record.get("head_branch") in POLICY["trusted_branches"], "Source branch is not authorized")
     require(bool(SHA.fullmatch(record.get("head_sha", ""))), "Invalid source commit")
@@ -263,11 +325,11 @@ def attest(folder: Path, metadata: dict) -> None:
     print("GitHub provenance verified: repository, workflow, commit, ref, run and file digests")
 
 
-def fetch_candidate(run_id: str, folder: Path) -> dict:
+def fetch_candidate(run_id: str, folder: Path, *, current_run: bool = False) -> dict:
     require(run_id.isdecimal() and int(run_id) > 0, "Build run ID must be a positive integer")
     workflow = api(f"repos/{REPO}/actions/workflows/a14-signed-build.yml")
     record = api(f"repos/{REPO}/actions/runs/{run_id}")
-    check_run(record, workflow["id"])
+    check_run(record, workflow["id"], current_run=current_run)
     artifact_name = f"a14-signed-{run_id}-{record['run_attempt']}"
     artifacts = api(f"repos/{REPO}/actions/runs/{run_id}/artifacts?per_page=100")["artifacts"]
     matches = [item for item in artifacts if item["name"] == artifact_name and not item["expired"]]
@@ -301,9 +363,10 @@ def optional_api(endpoint: str) -> dict | None:
     return None
 
 
-def check_tag(repository: str, tag: str, sha: str) -> None:
+def check_tag(repository: str, tag: str, sha: str, *, must_exist: bool = False) -> None:
     record = optional_api(f"repos/{repository}/git/ref/tags/{tag}")
     if record is None:
+        require(not must_exist, f"Published tag {repository}:{tag} is missing")
         return
     obj = record["object"]
     for _ in range(4):
@@ -329,6 +392,34 @@ def publish(folder: Path, run_id: str, destination: str, authorization: str) -> 
     name, code, sha = metadata["version_name"], metadata["version_code"], metadata["source_sha"]
     require(authorization == f"publish {name} from {run_id}", "Explicit authorization must match version and original build run")
     check_verification_receipt(metadata)
+    publish_verified(folder, run_id, destination, metadata)
+
+
+def publish_current(folder: Path) -> None:
+    destination, prerelease = dispatch_options()
+    require(destination != "actions-only", "This dispatch did not authorize publication")
+    require(os.environ.get("GITHUB_JOB") == "publish", "Automatic publication requires the protected publish job")
+    run_id = os.environ["GITHUB_RUN_ID"]
+    metadata = fetch_candidate(run_id, folder, current_run=True)
+    check_verification_receipt(metadata)
+    publish_verified(folder, run_id, destination, metadata, prerelease=prerelease)
+
+
+def check_release_assets(record: dict, folder: Path, filenames: tuple[str, ...], *, draft: bool, prerelease: bool) -> None:
+    require(record["draft"] is draft and record["prerelease"] is prerelease, "Release draft/pre-release state differs")
+    assets = record["assets"]
+    require(len(assets) == len(filenames) and {item["name"] for item in assets} == set(filenames),
+            "Release must contain exactly the verified APK, checksums, metadata and attestation")
+    for asset in assets:
+        path = folder / asset["name"]
+        require(asset.get("digest") == "sha256:" + digest(path) and asset["size"] == path.stat().st_size,
+                f"Published asset digest/size differs: {path.name}")
+
+
+def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict, *, prerelease: bool = False) -> None:
+    name, code, sha = metadata["version_name"], metadata["version_code"], metadata["source_sha"]
+    require(destination in {"source", "both"}, "Invalid publication destination")
+    check_new_release(name, code, sha)
     repositories = [(REPO, name)]
     if destination == "both":
         require(bool(os.environ.get("A14_XPOSED_RELEASE_TOKEN")), "Cross-repository publishing requires A14_XPOSED_RELEASE_TOKEN in release-publishing")
@@ -340,15 +431,26 @@ def publish(folder: Path, run_id: str, destination: str, authorization: str) -> 
     for repository, tag in repositories:
         check_tag(repository, tag, sha)
         require(optional_api(f"repos/{repository}/releases/tags/{tag}") is None, f"Release {repository}:{tag} already exists; refusing to overwrite")
-    changelog = api(f"repos/{REPO}/contents/CHANGELOG_CN.md?ref={sha}")
     try:
         from tools.check_release_metadata import changelog_sections
     except ModuleNotFoundError:
         from check_release_metadata import changelog_sections
-    sections = dict(changelog_sections(base64.b64decode(changelog["content"]).decode("utf-8")))
-    require(name in sections and bool(sections[name].strip()), "Source release notes are missing")
+    sections = []
+    for filename, language in (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English")):
+        changelog = api(f"repos/{REPO}/contents/{filename}?ref={sha}")
+        matches = [body.strip() for version, body in changelog_sections(base64.b64decode(changelog["content"]).decode("utf-8")) if version == name]
+        require(len(matches) == 1 and bool(matches[0]), f"Source release notes are missing or ambiguous: {filename}")
+        sections.append(f"## {language}\n\n{matches[0]}")
     notes = folder / "release-notes.md"
-    notes.write_text(sections[name].strip() + f"\n\nSource: `{sha}`\nBuild: https://github.com/{REPO}/actions/runs/{run_id}\nAPK SHA-256: `{metadata['apk_sha256']}`\n", encoding="utf-8")
+    notes.write_text("\n\n".join(sections) + f"\n\n## APK / Provenance\n\nSource: `{sha}`\n\n"
+                     f"[Build](https://github.com/{REPO}/actions/runs/{run_id}) · "
+                     f"[GitHub attestations](https://github.com/{REPO}/attestations)\n\n"
+                     f"APK: `{metadata['apk']}`\n\nAPK SHA-256: `{metadata['apk_sha256']}`\n\n"
+                     f"Android signer SHA-256: `{CERT}`\n\n"
+                     f"```sh\ngh attestation verify {metadata['apk']} --repo {REPO} "
+                     f"--signer-workflow {REPO}/{WORKFLOW} --source-digest {sha} --signer-digest {sha} "
+                     f"--source-ref {metadata['source_ref']} --deny-self-hosted-runners\n```\n", encoding="utf-8")
+    filenames = (metadata["apk"], "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json")
     for repository, tag in repositories:
         env = dict(os.environ)
         if repository != REPO:
@@ -357,20 +459,37 @@ def publish(folder: Path, run_id: str, destination: str, authorization: str) -> 
             run("git", "fetch", "--no-tags", f"https://github.com/{REPO}.git", sha)
             run("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
                 "push", f"https://github.com/{repository}.git", f"{sha}:refs/tags/{tag}", env=env)
-        run("gh", "release", "create", tag, str(folder / metadata["apk"]), str(folder / "SHA256SUMS"),
-            str(folder / "build-metadata.json"), str(folder / "attestation.sigstore.json"),
-            "--repo", repository, "--target", sha, "--title", name, "--notes-file", str(notes), env=env)
+        # Upload and verify every asset while private, then publish. Compatible
+        # with repositories that enable immutable releases; never patch binaries.
+        request = folder / "release-request.json"
+        write_json(request, {"tag_name": tag, "target_commitish": sha, "name": f"米客 A14｜CustoMIUIzer A14 · {name}",
+                             "body": notes.read_text(encoding="utf-8"), "draft": True, "prerelease": prerelease})
+        created = json.loads(run("gh", "api", f"repos/{repository}/releases", "--method", "POST", "--input", str(request), env=env))
+        require(created["draft"] is True and created["tag_name"] == tag, "Draft creation returned another release")
+        run("gh", "release", "upload", tag, *(str(folder / filename) for filename in filenames), "--repo", repository, env=env)
+        # GET by tag is for published releases. Bind draft readback to the
+        # numeric ID returned by creation, including when its tag is still new.
+        draft = json.loads(run("gh", "api", f"repos/{repository}/releases/{created['id']}", env=env))
+        check_release_assets(draft, folder, filenames, draft=True, prerelease=prerelease)
+        run("gh", "release", "edit", tag, "--repo", repository, "--draft=false",
+            f"--prerelease={str(prerelease).lower()}", f"--latest={str(not prerelease).lower()}", env=env)
         release = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}", env=env))
-        assets = [item for item in release["assets"] if item["name"] == metadata["apk"]]
-        require(not release["draft"] and not release["prerelease"] and len(assets) == 1, "Release readback differs")
-        require(assets[0].get("digest") == "sha256:" + metadata["apk_sha256"] and assets[0]["size"] == metadata["apk_size"], "Published APK digest/size differs from original candidate")
-        check_tag(repository, tag, sha)
+        check_release_assets(release, folder, filenames, draft=False, prerelease=prerelease)
+        check_tag(repository, tag, sha, must_exist=True)
+        if not prerelease:
+            latest = json.loads(run("gh", "api", f"repos/{repository}/releases/latest", env=env))
+            require(latest["id"] == release["id"], "Published stable release was not marked Latest")
+        if os.environ.get("GITHUB_STEP_SUMMARY"):
+            with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+                summary.write(f"### Published {'pre-release' if prerelease else 'release'}\n\n[{name}]({release['html_url']})\n\n"
+                              f"APK: `{metadata['apk']}`\n\nSHA-256: `{metadata['apk_sha256']}`\n\n"
+                              "Android signature, GitHub provenance, source tag and all asset digests verified.\n")
         print(release["html_url"])
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["source-policy", "ci-status", "prepare-signing", "candidate", "attest", "fetch", "publish"])
+    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "prepare-signing", "candidate", "attest", "fetch", "publish", "publish-current"])
     parser.add_argument("--directory", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--destination", choices=["source", "both"], default="source")
@@ -378,11 +497,13 @@ def main() -> int:
     try:
         if args.command == "source-policy": source_policy()
         elif args.command == "ci-status": ci_status()
+        elif args.command == "release-plan": release_plan()
         elif args.command == "prepare-signing": prepare_signing()
         elif args.command == "candidate": candidate(args.directory)
         elif args.command == "attest": attest(args.directory, json.loads((args.directory / "build-metadata.json").read_text(encoding="utf-8")))
         elif args.command == "fetch": fetch_candidate(args.run_id or "", args.directory)
         elif args.command == "publish": publish(args.directory, args.run_id or "", args.destination, os.environ.get("RELEASE_AUTHORIZATION", ""))
+        elif args.command == "publish-current": publish_current(args.directory)
     except (ValueError, RuntimeError, OSError, KeyError) as error:
         print(f"signed_release: {error}", file=sys.stderr)
         return 1
