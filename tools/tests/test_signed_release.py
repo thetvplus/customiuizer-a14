@@ -53,7 +53,7 @@ class AutomaticReleaseTest(unittest.TestCase):
 
     def test_main_ci_event_has_native_source_and_default_dual_publication(self):
         with tempfile.TemporaryDirectory() as temp:
-            env = self.environment(Path(temp) / "event.json")
+            env = self.environment(Path(temp) / "event.json", dict(ci_run(), name="A14 CI / main"))
             self.assertEqual((REF, COMMIT), release.event_source(env))
             with patch.dict(os.environ, env):
                 self.assertEqual(("both", False), release.dispatch_options())
@@ -64,7 +64,7 @@ class AutomaticReleaseTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "event.json"
             for key, value in (("event", "pull_request"), ("head_branch", "other"), ("head_sha", "b" * 40),
-                               ("head_repository", {"full_name": "attacker/fork"}), ("conclusion", "failure"), ("name", "Untrusted CI")):
+                               ("head_repository", {"full_name": "attacker/fork"}), ("conclusion", "failure"), ("path", ".github/workflows/untrusted.yml")):
                 env = self.environment(path, dict(ci_run(), **{key: value}))
                 with self.subTest(key=key), self.assertRaisesRegex(ValueError, "upstream main CI"):
                     release.event_source(env)

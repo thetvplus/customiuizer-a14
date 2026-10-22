@@ -77,7 +77,7 @@ def event_source(env: dict = os.environ) -> tuple[str, str]:
         event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
         record = event.get("workflow_run") or {}
         require(ref == "refs/heads/main" and event.get("action") == "completed"
-                and record.get("name") == "A14 CI" and record.get("head_branch") == "main"
+                and record.get("path") == ".github/workflows/a14-ci.yml" and record.get("head_branch") == "main"
                 and record.get("head_sha") == sha and record.get("event") in {"push", "workflow_dispatch"}
                 and record.get("head_repository", {}).get("full_name") == REPO
                 and record.get("status") == "completed" and record.get("conclusion") == "success",
