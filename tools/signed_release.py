@@ -43,11 +43,11 @@ def run(*args: str, env: dict | None = None) -> str:
     return result.stdout
 
 
-def api(endpoint: str, **fields) -> dict | list:
+def api(endpoint: str, *, env: dict | None = None, **fields) -> dict | list:
     args = ["gh", "api", endpoint]
     for key, value in fields.items():
         args.extend(["-f", f"{key}={value}"])
-    return json.loads(run(*args))
+    return json.loads(run(*args, env=env))
 
 
 def write_json(path: Path, value) -> None:
@@ -69,10 +69,19 @@ def output(**values) -> None:
 
 def event_source(env: dict = os.environ) -> tuple[str, str]:
     require(env.get("GITHUB_REPOSITORY") == REPO, "Only the upstream repository is allowed")
-    require(env.get("GITHUB_EVENT_NAME") == "workflow_dispatch", "Signing requires manual workflow dispatch")
+    require(env.get("GITHUB_EVENT_NAME") in {"workflow_dispatch", "workflow_run"}, "Signing requires native dispatch or completed main CI")
     ref, sha = env.get("GITHUB_REF", ""), env.get("GITHUB_SHA", "")
     require(ref.startswith("refs/heads/"), "Select an existing branch, not a tag or pull request")
     require(bool(SHA.fullmatch(sha)), "A full triggering commit SHA is required")
+    if env.get("GITHUB_EVENT_NAME") == "workflow_run":
+        event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+        record = event.get("workflow_run") or {}
+        require(ref == "refs/heads/main" and event.get("action") == "completed"
+                and record.get("name") == "A14 CI" and record.get("head_branch") == "main"
+                and record.get("head_sha") == sha and record.get("event") in {"push", "workflow_dispatch"}
+                and record.get("head_repository", {}).get("full_name") == REPO
+                and record.get("status") == "completed" and record.get("conclusion") == "success",
+                "Automatic signing requires successful upstream main CI on the native exact SHA")
     return ref, sha
 
 
@@ -98,11 +107,53 @@ def trusted_ci(record: dict, sha: str, workflow_id: int) -> bool:
 
 def ci_status() -> None:
     _, sha = event_source()
+    if os.environ["GITHUB_EVENT_NAME"] == "workflow_run":
+        match = automatic_ci()
+        output(reuse="true")
+        print(f"Reusing completed main CI run {match['id']} for {sha}")
+        return
     workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
     records = api(f"repos/{REPO}/actions/workflows/{workflow['id']}/runs?head_sha={sha}&status=success&per_page=30")
     match = next((record for record in records["workflow_runs"] if trusted_ci(record, sha, workflow["id"])), None)
     output(reuse=str(match is not None).lower())
     print(f"Reusing trusted A14 CI run {match['id']} for {sha}" if match else "No trusted CI for this SHA; validating source once")
+
+
+def automatic_ci() -> dict:
+    _, sha = event_source()
+    event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+    original = event["workflow_run"]
+    workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
+    record = api(f"repos/{REPO}/actions/runs/{int(original['id'])}")
+    require(trusted_ci(record, sha, workflow["id"]) and record.get("head_branch") == "main"
+            and record.get("run_attempt") == original.get("run_attempt"),
+            "Triggering main CI is not successful, or its attempt/source changed")
+    return record
+
+
+def require_current_main(sha: str) -> None:
+    require(api(f"repos/{REPO}/git/ref/heads/main").get("object", {}).get("sha") == sha,
+            "main moved; validate and confirm its latest commit instead")
+
+
+def require_main_ci(sha: str, *, current: bool = True) -> None:
+    if current:
+        require_current_main(sha)
+    workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
+    records = api(f"repos/{REPO}/actions/workflows/{workflow['id']}/runs?head_sha={sha}&status=success&per_page=30")
+    require(any(trusted_ci(record, sha, workflow["id"]) and record.get("head_branch") == "main"
+                for record in records["workflow_runs"]), "Publication requires successful A14 CI on this exact main commit")
+
+
+def confirmation_policy() -> None:
+    """Automatic triggers cannot interpret an unprotected Environment as approval."""
+    environment = api(f"repos/{REPO}/environments/release-signing")
+    rules = environment.get("protection_rules", [])
+    require(any(rule.get("type") == "required_reviewers" and rule.get("reviewers") for rule in rules),
+            "Automatic release requires a required reviewer on release-signing; configure it once or use manual dispatch")
+    policy = environment.get("deployment_branch_policy") or {}
+    require(policy.get("custom_branch_policies") is True and policy.get("protected_branches") is False,
+            "release-signing must restrict deployment to explicitly selected trusted branches")
 
 
 def property_escape(value: str) -> str:
@@ -160,10 +211,12 @@ def source_version(text: str) -> tuple[str, int]:
 
 
 def dispatch_options() -> tuple[str, bool]:
-    """Read the native dispatch, rather than accepting publication via an env flag."""
+    """Read native event options; publication cannot come from an env flag."""
     ref, sha = event_source()
     require(os.environ.get("GITHUB_WORKFLOW_REF") == f"{REPO}/{WORKFLOW}@{ref}"
             and os.environ.get("GITHUB_WORKFLOW_SHA") == sha, "Automatic publication requires the native signed-build workflow")
+    if os.environ["GITHUB_EVENT_NAME"] == "workflow_run":
+        return "both", False
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
     inputs = event.get("inputs") or {}
     destination, prerelease = inputs.get("destination"), inputs.get("prerelease")
@@ -172,19 +225,20 @@ def dispatch_options() -> tuple[str, bool]:
     return destination, prerelease == "true"
 
 
-def check_new_release(name: str, code: int, sha: str) -> None:
+def check_new_release(name: str, code: int, sha: str, *, resume: bool = False) -> None:
     check_tag(REPO, name, sha)
-    require(optional_api(f"repos/{REPO}/releases/tags/{name}") is None,
+    require(resume or optional_api(f"repos/{REPO}/releases/tags/{name}") is None,
             f"Release {name} already exists; increment versionName and versionCode, or select actions-only")
     # Include pre-releases, and paginate rather than assuming /latest is newest.
     published = []
     page = 1
     while True:
         records = api(f"repos/{REPO}/releases?per_page=100&page={page}")
-        require(not any(record["tag_name"] == name for record in records),
+        require(resume or not any(record["tag_name"] == name for record in records),
                 f"Release or draft {name} already exists; inspect it instead of overwriting")
         published.extend(record["tag_name"] for record in records
-                         if not record["draft"] and re.fullmatch(r"r14\.\d+\.\d+", record["tag_name"]))
+                         if not record["draft"] and not (resume and record["tag_name"] == name)
+                         and re.fullmatch(r"r14\.\d+\.\d+", record["tag_name"]))
         if len(records) < 100:
             break
         page += 1
@@ -199,13 +253,77 @@ def check_new_release(name: str, code: int, sha: str) -> None:
 
 def release_plan() -> None:
     destination, prerelease = dispatch_options()
+    _, sha = event_source()
+    automatic = os.environ["GITHUB_EVENT_NAME"] == "workflow_run"
+    if automatic:
+        automatic_ci()
+        require_current_main(sha)
     if destination == "actions-only":
+        output(ready="true", destination=destination, prerelease=str(prerelease).lower())
         print("Build a signed candidate only; no Release or tag will be created")
         return
-    _, sha = event_source()
+    require(os.environ["GITHUB_REF"] == "refs/heads/main", "Publish from main after CI; use actions-only on a trusted test branch")
+    if not automatic:
+        require_main_ci(sha)
     name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
+    if automatic:
+        existing = optional_api(f"repos/{REPO}/releases/tags/{name}")
+        if existing is not None and existing.get("draft") is False:
+            output(ready="false", destination=destination, prerelease="false")
+            print(f"{name} is already published; ordinary main changes do not request another release")
+            if os.environ.get("GITHUB_STEP_SUMMARY"):
+                with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+                    summary.write(f"### No new release requested\n\n{name} is already published. Main CI passed; no signing or publication was started.\n")
+            return
     check_new_release(name, code, sha)
-    print(f"Confirmed automatic publication: {name} ({code}), destination={destination}, prerelease={prerelease}")
+    local_release_notes(name, code)
+    if automatic:
+        confirmation_policy()
+    output(ready="true", destination=destination, prerelease=str(prerelease).lower())
+    if os.environ.get("GITHUB_STEP_SUMMARY"):
+        with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+            summary.write(f"### Release confirmation\n\n{name} ({code}) · `{sha}`\n\n"
+                          "Approve **release-signing** to build and publish this exact version. Reject/cancel to keep it unpublished.\n\n"
+                          + "\n\n".join(local_release_notes(name, code)) + "\n")
+    print(f"Prepared release request: {name} ({code}), destination={destination}, prerelease={prerelease}")
+
+
+def release_notes_section(text: str, name: str, code: int, filename: str) -> str:
+    try:
+        from tools.check_release_metadata import changelog_sections
+    except ModuleNotFoundError:
+        from check_release_metadata import changelog_sections
+    matches = [body.strip() for version, body in changelog_sections(text) if version == name]
+    require(len(matches) == 1 and bool(matches[0]), f"Source release notes are missing or ambiguous: {filename}")
+    body = matches[0]
+    require(re.findall(r"\bversionCode(?:\s*[:=]\s*|\s+)(\d+)\b", body) == [str(code)]
+            and re.search(r"^[-*] \S", body, re.M) is not None, f"Release notes need versionCode {code} and change entries: {filename}")
+    return body
+
+
+def local_release_notes(name: str, code: int) -> list[str]:
+    try:
+        from tools.check_release_metadata import check
+    except ModuleNotFoundError:
+        from check_release_metadata import check
+    errors = check()
+    require(not errors, "Release metadata is not aligned: " + "; ".join(errors))
+    return [f"## {language}\n\n" + release_notes_section((ROOT / filename).read_text(encoding="utf-8"), name, code, filename)
+            for filename, language in (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English"))]
+
+
+def signing_preflight() -> None:
+    """Recheck after the human approval, before any signing secret is exposed."""
+    destination, _ = dispatch_options()
+    _, sha = event_source()
+    if os.environ["GITHUB_EVENT_NAME"] == "workflow_run":
+        automatic_ci()
+        confirmation_policy()
+    if destination != "actions-only":
+        require_main_ci(sha)
+        name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
+        check_new_release(name, code, sha)
+        local_release_notes(name, code)
 
 
 def check_badging(badging: str, name: str, code: int) -> None:
@@ -264,9 +382,11 @@ def candidate(folder: Path) -> None:
     print(f"APK checks passed: {name} ({code}), {metadata['apk_sha256']}")
 
 
-def check_run(record: dict, workflow_id: int, *, current_run: bool = False) -> None:
+def check_run(record: dict, workflow_id: int, *, current_run: bool = False, publication_failed: bool = False) -> None:
     require(record.get("workflow_id") == workflow_id and record.get("path") == WORKFLOW, "Wrong source workflow")
-    require(record.get("event") == "workflow_dispatch", "Source must be a manually requested signed build")
+    require(record.get("event") == "workflow_dispatch" or
+            record.get("event") == "workflow_run" and record.get("head_branch") == "main",
+            "Source must be a native dispatch or a main CI release")
     if current_run:
         # The publish job is still part of this run. It may consume only the
         # successful sign dependency's immutable artifact/receipt, never another
@@ -279,7 +399,9 @@ def check_run(record: dict, workflow_id: int, *, current_run: bool = False) -> N
         require(record.get("status") == "in_progress" and record.get("conclusion") is None,
                 "Current signed-build run is not in progress")
     else:
-        require(record.get("status") == "completed" and record.get("conclusion") == "success", "Source build did not finish successfully")
+        require(record.get("status") == "completed" and
+                (record.get("conclusion") == "success" or publication_failed and record.get("conclusion") == "failure"),
+                "Source build did not finish successfully")
     require(record.get("head_repository", {}).get("full_name") == REPO, "Wrong source repository")
     require(record.get("head_branch") in POLICY["trusted_branches"], "Source branch is not authorized")
     require(bool(SHA.fullmatch(record.get("head_sha", ""))), "Invalid source commit")
@@ -329,7 +451,15 @@ def fetch_candidate(run_id: str, folder: Path, *, current_run: bool = False) -> 
     require(run_id.isdecimal() and int(run_id) > 0, "Build run ID must be a positive integer")
     workflow = api(f"repos/{REPO}/actions/workflows/a14-signed-build.yml")
     record = api(f"repos/{REPO}/actions/runs/{run_id}")
-    check_run(record, workflow["id"], current_run=current_run)
+    publication_failed = False
+    if not current_run and record.get("status") == "completed" and record.get("conclusion") == "failure":
+        jobs = api(f"repos/{REPO}/actions/runs/{run_id}/attempts/{int(record['run_attempt'])}/jobs?per_page=100")
+        expected = {"Validate exact source": "success", "Build, sign and verify Release": "success",
+                    "Publish verified APK to Release": "failure"}
+        publication_failed = (jobs.get("total_count") == len(expected) and len(jobs["jobs"]) == len(expected)
+                              and {job["name"]: job["conclusion"] for job in jobs["jobs"]} == expected
+                              and all(job["status"] == "completed" for job in jobs["jobs"]))
+    check_run(record, workflow["id"], current_run=current_run, publication_failed=publication_failed)
     artifact_name = f"a14-signed-{run_id}-{record['run_attempt']}"
     artifacts = api(f"repos/{REPO}/actions/runs/{run_id}/artifacts?per_page=100")["artifacts"]
     matches = [item for item in artifacts if item["name"] == artifact_name and not item["expired"]]
@@ -355,16 +485,16 @@ def fetch_candidate(run_id: str, folder: Path, *, current_run: bool = False) -> 
     return metadata
 
 
-def optional_api(endpoint: str) -> dict | None:
-    result = subprocess.run(["gh", "api", endpoint], capture_output=True, text=True, encoding="utf-8")
+def optional_api(endpoint: str, *, env: dict | None = None) -> dict | None:
+    result = subprocess.run(["gh", "api", endpoint], capture_output=True, text=True, encoding="utf-8", env=env)
     if result.returncode == 0:
         return json.loads(result.stdout)
     require("HTTP 404" in result.stderr, "GitHub permission or API failure; refusing to publish")
     return None
 
 
-def check_tag(repository: str, tag: str, sha: str, *, must_exist: bool = False) -> None:
-    record = optional_api(f"repos/{repository}/git/ref/tags/{tag}")
+def check_tag(repository: str, tag: str, sha: str, *, must_exist: bool = False, env: dict | None = None) -> None:
+    record = optional_api(f"repos/{repository}/git/ref/tags/{tag}", env=env)
     if record is None:
         require(not must_exist, f"Published tag {repository}:{tag} is missing")
         return
@@ -374,7 +504,7 @@ def check_tag(repository: str, tag: str, sha: str, *, must_exist: bool = False) 
             require(obj["sha"] == sha, f"Existing tag {repository}:{tag} points to another source commit")
             return
         require(obj["type"] == "tag", "Unexpected tag target type")
-        obj = api(f"repos/{repository}/git/tags/{obj['sha']}")["object"]
+        obj = api(f"repos/{repository}/git/tags/{obj['sha']}", env=env)["object"]
     raise ValueError("Tag chain exceeds verification limit")
 
 
@@ -385,14 +515,14 @@ def check_verification_receipt(metadata: dict, env: dict = os.environ) -> None:
             "Original verified artifact changed or receipt is missing; select and verify the build again")
 
 
-def publish(folder: Path, run_id: str, destination: str, authorization: str) -> None:
+def publish(folder: Path, run_id: str, destination: str, authorization: str, *, prerelease: bool = False) -> None:
     ref, _ = event_source()
     require(ref.removeprefix("refs/heads/") in POLICY["trusted_branches"], "Untrusted promotion workflow branch")
     metadata = fetch_candidate(run_id, folder)
     name, code, sha = metadata["version_name"], metadata["version_code"], metadata["source_sha"]
     require(authorization == f"publish {name} from {run_id}", "Explicit authorization must match version and original build run")
     check_verification_receipt(metadata)
-    publish_verified(folder, run_id, destination, metadata)
+    publish_verified(folder, run_id, destination, metadata, prerelease=prerelease)
 
 
 def publish_current(folder: Path) -> None:
@@ -405,10 +535,11 @@ def publish_current(folder: Path) -> None:
     publish_verified(folder, run_id, destination, metadata, prerelease=prerelease)
 
 
-def check_release_assets(record: dict, folder: Path, filenames: tuple[str, ...], *, draft: bool, prerelease: bool) -> None:
+def check_release_assets(record: dict, folder: Path, filenames: tuple[str, ...], *, draft: bool, prerelease: bool, partial: bool = False) -> None:
     require(record["draft"] is draft and record["prerelease"] is prerelease, "Release draft/pre-release state differs")
     assets = record["assets"]
-    require(len(assets) == len(filenames) and {item["name"] for item in assets} == set(filenames),
+    names = {item["name"] for item in assets}
+    require(len(assets) == len(names) and (names <= set(filenames) if partial else names == set(filenames)),
             "Release must contain exactly the verified APK, checksums, metadata and attestation")
     for asset in assets:
         path = folder / asset["name"]
@@ -421,31 +552,41 @@ def check_release_identity(record: dict, release_id: int, tag: str, sha: str) ->
             and record.get("target_commitish") == sha, "Release source identity changed during publication")
 
 
+def find_release(repository: str, tag: str, env: dict) -> dict | None:
+    """The by-tag endpoint cannot find drafts; read all pages with the right token."""
+    page = 1
+    found = None
+    while True:
+        records = api(f"repos/{repository}/releases?per_page=100&page={page}", env=env)
+        for record in records:
+            if record["tag_name"] == tag:
+                require(found is None, "Ambiguous release identity")
+                found = record
+            elif repository == POLICY["download_repository"] and not record["draft"]:
+                version = re.fullmatch(r"(\d+)-r14\.\d+\.\d+", record["tag_name"])
+                require(version is None or int(version[1]) < int(tag.split("-", 1)[0]),
+                        "Xposed repository already has an equal or newer versionCode; refusing to roll back")
+        if len(records) < 100:
+            return found
+        page += 1
+
+
 def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict, *, prerelease: bool = False) -> None:
     name, code, sha = metadata["version_name"], metadata["version_code"], metadata["source_sha"]
     require(destination in {"source", "both"}, "Invalid publication destination")
-    check_new_release(name, code, sha)
-    repositories = [(REPO, name)]
+    repositories = [(REPO, name, dict(os.environ))]
     if destination == "both":
         require(bool(os.environ.get("A14_XPOSED_RELEASE_TOKEN")), "Cross-repository publishing requires A14_XPOSED_RELEASE_TOKEN in release-publishing")
         token_env = dict(os.environ, GH_TOKEN=os.environ["A14_XPOSED_RELEASE_TOKEN"])
         access = json.loads(run("gh", "api", f"repos/{POLICY['download_repository']}", env=token_env))
-        require(access.get("permissions", {}).get("push") is True, "Download repository contents:write permission is required")
-        repositories.append((POLICY["download_repository"], f"{code}-{name}"))
-    # Check every destination before the first write. Existing releases are immutable here.
-    for repository, tag in repositories:
-        check_tag(repository, tag, sha)
-        require(optional_api(f"repos/{repository}/releases/tags/{tag}") is None, f"Release {repository}:{tag} already exists; refusing to overwrite")
-    try:
-        from tools.check_release_metadata import changelog_sections
-    except ModuleNotFoundError:
-        from check_release_metadata import changelog_sections
+        require(access.get("permissions", {}).get("push") is True,
+                "Download repository contents:write permission is required; source tags containing workflows also need Workflows:write")
+        repositories.append((POLICY["download_repository"], f"{code}-{name}", token_env))
     sections = []
     for filename, language in (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English")):
         changelog = api(f"repos/{REPO}/contents/{filename}?ref={sha}")
-        matches = [body.strip() for version, body in changelog_sections(base64.b64decode(changelog["content"]).decode("utf-8")) if version == name]
-        require(len(matches) == 1 and bool(matches[0]), f"Source release notes are missing or ambiguous: {filename}")
-        sections.append(f"## {language}\n\n{matches[0]}")
+        body = release_notes_section(base64.b64decode(changelog["content"]).decode("utf-8"), name, code, filename)
+        sections.append(f"## {language}\n\n{body}")
     notes = folder / "release-notes.md"
     notes.write_text("\n\n".join(sections) + f"\n\n## APK / Provenance\n\nSource: `{sha}`\n\n"
                      f"[Build](https://github.com/{REPO}/actions/runs/{run_id}) · "
@@ -456,35 +597,73 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
                      f"--signer-workflow {REPO}/{WORKFLOW} --source-digest {sha} --signer-digest {sha} "
                      f"--source-ref {metadata['source_ref']} --deny-self-hosted-runners\n```\n", encoding="utf-8")
     filenames = (metadata["apk"], "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json")
-    for repository, tag in repositories:
-        env = dict(os.environ)
+    existing = {}
+    # All existing destinations must belong to this exact verified candidate.
+    # A matching published source is read-only; a matching draft may be completed
+    # by adding missing assets. Never replace assets, tags or another candidate.
+    for repository, tag, env in repositories:
+        check_tag(repository, tag, sha, env=env)
+        record = find_release(repository, tag, env)
+        existing[repository] = record
+        if record is not None:
+            check_release_identity(record, record["id"], tag, sha)
+            require(record.get("name") == f"米客 A14｜CustoMIUIzer A14 · {name}"
+                    and record.get("body", "").strip() == notes.read_text(encoding="utf-8").strip(),
+                    "Existing release notes/title differ from the verified original candidate")
+            check_release_assets(record, folder, filenames, draft=record["draft"], prerelease=prerelease, partial=record["draft"])
+    source = existing[REPO]
+    require_main_ci(sha, current=source is None or source["draft"])
+    check_new_release(name, code, sha, resume=source is not None)
+    for repository, tag, env in repositories:
+        record = existing[repository]
+        if record is not None and not record["draft"]:
+            check_tag(repository, tag, sha, must_exist=True, env=env)
+            if not prerelease:
+                require(api(f"repos/{repository}/releases/latest", env=env)["id"] == record["id"],
+                        "Existing stable release is no longer Latest; refusing to roll back publication")
+            print(f"Already verified, no changes: {record['html_url']}")
+            if os.environ.get("GITHUB_STEP_SUMMARY"):
+                with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+                    summary.write(f"### Existing release verified\n\n[{name}]({record['html_url']})\n\n"
+                                  f"Same source, notes and all asset digests; no changes. APK SHA-256: `{metadata['apk_sha256']}`\n")
+            continue
         if repository != REPO:
-            env["GH_TOKEN"] = os.environ["A14_XPOSED_RELEASE_TOKEN"]
             # The download repository shares source tags, but keeps its metadata main separate.
             run("git", "fetch", "--no-tags", f"https://github.com/{REPO}.git", sha)
-            run("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
-                "push", f"https://github.com/{repository}.git", f"{sha}:refs/tags/{tag}", env=env)
+            try:
+                run("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
+                    "push", f"https://github.com/{repository}.git", f"{sha}:refs/tags/{tag}", env=env)
+            except RuntimeError as error:
+                raise RuntimeError("Xposed tag push failed; check token Contents/Workflows write, organization approval and connectivity. Recover using the original candidate.") from error
         # Upload and verify every asset while private, then publish. Compatible
         # with repositories that enable immutable releases; never patch binaries.
-        request = folder / "release-request.json"
-        write_json(request, {"tag_name": tag, "target_commitish": sha, "name": f"米客 A14｜CustoMIUIzer A14 · {name}",
-                             "body": notes.read_text(encoding="utf-8"), "draft": True, "prerelease": prerelease})
-        created = json.loads(run("gh", "api", f"repos/{repository}/releases", "--method", "POST", "--input", str(request), env=env))
+        if record is None:
+            request = folder / "release-request.json"
+            write_json(request, {"tag_name": tag, "target_commitish": sha, "name": f"米客 A14｜CustoMIUIzer A14 · {name}",
+                                 "body": notes.read_text(encoding="utf-8"), "draft": True, "prerelease": prerelease})
+            created = json.loads(run("gh", "api", f"repos/{repository}/releases", "--method", "POST", "--input", str(request), env=env))
+        else:
+            created = record
         require(created["draft"] is True and created["tag_name"] == tag, "Draft creation returned another release")
         check_release_identity(created, created["id"], tag, sha)
-        run("gh", "release", "upload", tag, *(str(folder / filename) for filename in filenames), "--repo", repository, env=env)
+        present = {asset["name"] for asset in created.get("assets", [])}
+        missing = [str(folder / filename) for filename in filenames if filename not in present]
+        if missing:
+            run("gh", "release", "upload", tag, *missing, "--repo", repository, env=env)
         # GET by tag is for published releases. Bind draft readback to the
         # numeric ID returned by creation, including when its tag is still new.
         draft = json.loads(run("gh", "api", f"repos/{repository}/releases/{created['id']}", env=env))
         check_release_identity(draft, created["id"], tag, sha)
         check_release_assets(draft, folder, filenames, draft=True, prerelease=prerelease)
-        check_tag(repository, tag, sha)
+        if source is None or source["draft"]:
+            require_current_main(sha)
+        check_tag(repository, tag, sha, env=env)
         run("gh", "release", "edit", tag, "--repo", repository, "--draft=false",
             f"--prerelease={str(prerelease).lower()}", f"--latest={str(not prerelease).lower()}", env=env)
         release = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}", env=env))
         check_release_identity(release, created["id"], tag, sha)
         check_release_assets(release, folder, filenames, draft=False, prerelease=prerelease)
-        check_tag(repository, tag, sha, must_exist=True)
+        check_tag(repository, tag, sha, must_exist=True, env=env)
         if not prerelease:
             latest = json.loads(run("gh", "api", f"repos/{repository}/releases/latest", env=env))
             require(latest["id"] == release["id"], "Published stable release was not marked Latest")
@@ -498,7 +677,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "prepare-signing", "candidate", "attest", "fetch", "publish", "publish-current"])
+    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "signing-preflight", "prepare-signing", "candidate", "attest", "fetch", "publish", "publish-current"])
     parser.add_argument("--directory", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--destination", choices=["source", "both"], default="source")
@@ -507,11 +686,15 @@ def main() -> int:
         if args.command == "source-policy": source_policy()
         elif args.command == "ci-status": ci_status()
         elif args.command == "release-plan": release_plan()
+        elif args.command == "signing-preflight": signing_preflight()
         elif args.command == "prepare-signing": prepare_signing()
         elif args.command == "candidate": candidate(args.directory)
         elif args.command == "attest": attest(args.directory, json.loads((args.directory / "build-metadata.json").read_text(encoding="utf-8")))
         elif args.command == "fetch": fetch_candidate(args.run_id or "", args.directory)
-        elif args.command == "publish": publish(args.directory, args.run_id or "", args.destination, os.environ.get("RELEASE_AUTHORIZATION", ""))
+        elif args.command == "publish":
+            prerelease = os.environ.get("RELEASE_PRERELEASE", "false")
+            require(prerelease in {"true", "false"}, "Invalid promotion pre-release selection")
+            publish(args.directory, args.run_id or "", args.destination, os.environ.get("RELEASE_AUTHORIZATION", ""), prerelease=prerelease == "true")
         elif args.command == "publish-current": publish_current(args.directory)
     except (ValueError, RuntimeError, OSError, KeyError) as error:
         print(f"signed_release: {error}", file=sys.stderr)

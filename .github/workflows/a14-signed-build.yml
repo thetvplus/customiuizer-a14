@@ -7,14 +7,20 @@ on:
       destination:
         description: '确认本次操作：构建后自动发布，或仅生成签名 APK'
         required: true
-        default: source
+        default: both
         type: choice
-        options: [source, both, actions-only]
+        options: [both, source, actions-only]
       prerelease:
         description: '标记为预发行版（不设为 Latest）'
         required: true
         default: false
         type: boolean
+  # Only completed CI from main may request an automatic release. The native
+  # SHA must still match; no PR artifact or arbitrary ref ever reaches secrets.
+  workflow_run:
+    workflows: [A14 CI]
+    types: [completed]
+    branches: [main]
   # Register this workflow while it is reviewed on the authorized task branch.
   # Push only validates the workflow contract; it can never enter the signing job.
   push:
@@ -25,12 +31,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: a14-signed-${{ github.ref }}
+  group: a14-signed-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   validate:
     name: Validate exact source
+    if: github.repository == 'thetvplus/customiuizer-a14' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_sha == github.sha && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -38,6 +45,8 @@ jobs:
       actions: read
     outputs:
       authorized: ${{ steps.source.outputs.authorized }}
+      ready: ${{ steps.plan.outputs.ready }}
+      destination: ${{ steps.plan.outputs.destination }}
     steps:
       - name: Checkout triggering commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,21 +64,22 @@ jobs:
         run: python tools/ci_contract_scan.py --expected-branch main
       - name: Authorize native ref
         id: source
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'push'
         run: python tools/signed_release.py source-policy
       - name: Check release version before building
-        if: github.event_name == 'workflow_dispatch' && steps.source.outputs.authorized == 'true'
+        id: plan
+        if: github.event_name != 'push' && steps.source.outputs.authorized == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: python tools/signed_release.py release-plan
       - name: Look for trusted CI on this exact SHA
         id: ci
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'push' && (steps.source.outputs.authorized != 'true' || steps.plan.outputs.ready == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
         run: python tools/signed_release.py ci-status
       - name: Set up JDK 25
-        if: github.event_name == 'workflow_dispatch' && steps.ci.outputs.reuse != 'true'
+        if: github.event_name != 'push' && steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
@@ -77,25 +87,31 @@ jobs:
           force-download: true
           verify-signature: true
       - name: Set up Android SDK
-        if: github.event_name == 'workflow_dispatch' && steps.ci.outputs.reuse != 'true'
+        if: github.event_name != 'push' && steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           packages: ''
           log-accepted-android-sdk-licenses: false
       - name: Install pinned Android SDK packages
-        if: github.event_name == 'workflow_dispatch' && steps.ci.outputs.reuse != 'true'
+        if: github.event_name != 'push' && steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
         run: bash tools/ci_install_android_sdk.sh
       - name: Set up Gradle
-        if: github.event_name == 'workflow_dispatch' && steps.ci.outputs.reuse != 'true'
+        if: github.event_name != 'push' && steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-read-only: true
       - name: Source, tools, JVM tests and lint
-        if: github.event_name == 'workflow_dispatch' && steps.ci.outputs.reuse != 'true'
+        if: github.event_name != 'push' && steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
         run: |
           python tools/check_ci_portability.py
           python tools/brutal_test_runner.py --config tools/brutal_test_config.json hermeticity
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json determinism
+          python tools/brutal_test_runner.py --config tools/brutal_test_config.json mutate --required-only
           python tools/verify.py full
+          ./gradlew --no-daemon :app:assembleDevelop :app:lintVitalDevelop
+          test -s app/build/outputs/mapping/develop/mapping.txt
+          test -s app/build/outputs/mapping/develop/configuration.txt
+          test -f app/build/outputs/mapping/develop/usage.txt
       - name: Upload validation diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -110,12 +126,13 @@ jobs:
   sign:
     name: Build, sign and verify Release
     needs: validate
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && needs.validate.outputs.authorized == 'true'
+    if: github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run') && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'
     environment: release-signing
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read
+      actions: read
       id-token: write
       attestations: write
     outputs:
@@ -130,6 +147,14 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Recheck source and release after confirmation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/signed_release.py signing-preflight
       - name: Set up JDK 25
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -137,10 +162,6 @@ jobs:
           java-version: '25'
           force-download: true
           verify-signature: true
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.12'
       - name: Set up Android SDK
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
@@ -208,7 +229,7 @@ jobs:
   publish:
     name: Publish verified APK to Release
     needs: [validate, sign]
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && needs.validate.outputs.authorized == 'true' && inputs.destination != 'actions-only'
+    if: github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run') && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && needs.validate.outputs.destination != 'actions-only'
     environment: release-publishing
     concurrency:
       group: a14-release-publish

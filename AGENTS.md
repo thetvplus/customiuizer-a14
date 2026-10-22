@@ -89,7 +89,7 @@ git diff --check
 - Debug / develop 构建不得冒充正式版。
 - 正式 Release 仅在用户明确要求、仓库外签名配置有效时执行。
 - 禁止提交 APK、keystore、密码或本地签名配置。
-- GitHub Actions 不得硬编码本机路径。普通 A14 CI 永不接触正式密钥；仅原生 ref / exact SHA、受分支规则保护的 `release-signing` Environment 与独立 `A14 Signed Build` 可以正式签名。手动确认该工作流的 `source` / `both` 操作可授权本次构建后自动发布；仅试用必须选 `actions-only`。既有候选的手动晋升仍需匹配版本和 run ID 的明确授权；发布始终使用已验证的同一 APK，详见 `docs/RELEASE.md`。
+- GitHub Actions 不得硬编码本机路径。普通 A14 CI 永不接触正式密钥；仅原生 ref / exact SHA、受分支规则保护的 `release-signing` Environment 与独立 `A14 Signed Build` 可以正式签名。main CI 成功且新版本 / 双语 Changelog 齐备时可自动请求发布，但必须经过 `release-signing` 的 Required reviewer 确认；手动入口默认 `both`，也可选 `source`，仅试用必须选 `actions-only`。新发布要求 exact main CI，默认先验收源码仓库再同步 Xposed。既有候选晋升及失败恢复仍需匹配版本和原 run ID 的明确授权，不能重建或覆盖已发布资产；详见 `docs/RELEASE.md`。
 - ROM 样本、trace、mapping、profiler 数据不得入库。
 - 版本名与 `CHANGELOG` 必须同步；`versionCode` 必须单调增加。
 

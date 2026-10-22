@@ -23,6 +23,11 @@ on:
         description: 'To publish, type: publish <versionName> from <build_run_id>'
         required: false
         type: string
+      prerelease:
+        description: '预发行版（恢复发布时必须与原始选择一致）'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -104,6 +109,7 @@ jobs:
           BUILD_RUN_ID: ${{ inputs.build_run_id }}
           RELEASE_DESTINATION: ${{ inputs.destination }}
           RELEASE_AUTHORIZATION: ${{ inputs.authorization }}
+          RELEASE_PRERELEASE: ${{ inputs.prerelease }}
           VERIFIED_SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
           VERIFIED_APK_SHA256: ${{ needs.verify.outputs.apk_sha256 }}
           VERIFIED_RUN_ATTEMPT: ${{ needs.verify.outputs.run_attempt }}
