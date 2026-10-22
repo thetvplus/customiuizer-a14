@@ -305,7 +305,7 @@ class PublicationTest(unittest.TestCase):
                 assets = [{"name": filename, "digest": "sha256:" + release.digest(folder / filename), "size": (folder / filename).stat().st_size} for filename in filenames]
                 if tamper:
                     assets[-1]["digest"] = "sha256:" + "a" * 64
-                records = {"id": 99, "tag_name": "r14.25.2", "draft": True, "prerelease": prerelease, "assets": assets,
+                records = {"id": 99, "tag_name": "r14.25.2", "target_commitish": COMMIT, "draft": True, "prerelease": prerelease, "assets": assets,
                            "html_url": "https://github.com/example/release"}
                 writes = []
                 def command(*args, **kwargs):
@@ -359,6 +359,13 @@ class PublicationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing"):
                 with patch.object(release, "optional_api", return_value=None):
                     release.check_tag(release.REPO, "r14.25.2", COMMIT, must_exist=True)
+
+    def test_draft_source_cannot_be_changed_before_publication(self):
+        record = {"id": 99, "tag_name": "r14.25.2", "target_commitish": COMMIT}
+        release.check_release_identity(record, 99, "r14.25.2", COMMIT)
+        for key, value in (("id", 100), ("tag_name", "r14.25.3"), ("target_commitish", "b" * 40)):
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "source identity changed"):
+                release.check_release_identity(dict(record, **{key: value}), 99, "r14.25.2", COMMIT)
 
 
 class ProtectedWorkflowTest(unittest.TestCase):

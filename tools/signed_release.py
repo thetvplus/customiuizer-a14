@@ -416,6 +416,11 @@ def check_release_assets(record: dict, folder: Path, filenames: tuple[str, ...],
                 f"Published asset digest/size differs: {path.name}")
 
 
+def check_release_identity(record: dict, release_id: int, tag: str, sha: str) -> None:
+    require(record.get("id") == release_id and record.get("tag_name") == tag
+            and record.get("target_commitish") == sha, "Release source identity changed during publication")
+
+
 def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict, *, prerelease: bool = False) -> None:
     name, code, sha = metadata["version_name"], metadata["version_code"], metadata["source_sha"]
     require(destination in {"source", "both"}, "Invalid publication destination")
@@ -466,14 +471,18 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
                              "body": notes.read_text(encoding="utf-8"), "draft": True, "prerelease": prerelease})
         created = json.loads(run("gh", "api", f"repos/{repository}/releases", "--method", "POST", "--input", str(request), env=env))
         require(created["draft"] is True and created["tag_name"] == tag, "Draft creation returned another release")
+        check_release_identity(created, created["id"], tag, sha)
         run("gh", "release", "upload", tag, *(str(folder / filename) for filename in filenames), "--repo", repository, env=env)
         # GET by tag is for published releases. Bind draft readback to the
         # numeric ID returned by creation, including when its tag is still new.
         draft = json.loads(run("gh", "api", f"repos/{repository}/releases/{created['id']}", env=env))
+        check_release_identity(draft, created["id"], tag, sha)
         check_release_assets(draft, folder, filenames, draft=True, prerelease=prerelease)
+        check_tag(repository, tag, sha)
         run("gh", "release", "edit", tag, "--repo", repository, "--draft=false",
             f"--prerelease={str(prerelease).lower()}", f"--latest={str(not prerelease).lower()}", env=env)
         release = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}", env=env))
+        check_release_identity(release, created["id"], tag, sha)
         check_release_assets(release, folder, filenames, draft=False, prerelease=prerelease)
         check_tag(repository, tag, sha, must_exist=True)
         if not prerelease:
