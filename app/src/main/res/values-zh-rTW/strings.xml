@@ -1180,7 +1180,7 @@
     <string name="seekbar_value_error">請輸入符合上方範圍及間距的數值。</string>
     <string name="restart_settings_sync_failed">設定尚未同步成功，請等待模組連線後再重試。</string>
     <string name="system_island_title">動態島</string>
-    <string name="system_island_intro">選擇動態島模式後啟用應用程式回饋和媒體接入；開啟接入後需重新啟動系統介面。鎖定螢幕、熄屏、橫向或展開通知欄時隱藏。充電等原生系統提示優先。</string>
+    <string name="system_island_intro">首次選擇動態島模式，或啟用應用程式回饋、媒體與通知接管後，請重新啟動系統介面。鎖定畫面、熄屏、橫向或展開通知欄時隱藏。</string>
     <string name="system_island_media_title">音樂與媒體</string>
     <string name="system_island_media_summ">沿用系統選中的主要播放器，上滑可隱藏。已顯示的音樂島暫停 2 秒後收起；未顯示時保持隱藏。</string>
     <string name="system_island_media_swipe_title">左右滑動切歌</string>

@@ -1186,7 +1186,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="seekbar_value_error">Yukarıdaki aralık ve adıma uygun bir sayı girin.</string>
     <string name="restart_settings_sync_failed">Ayarlar eşitlenemedi. Modül bağlantısını bekleyip tekrar deneyin.</string>
     <string name="system_island_title">Dinamik Ada</string>
-    <string name="system_island_intro">Ada modunu seçip bağlantıları etkinleştirin ve sistem arayüzünü yeniden başlatın. Kilitli veya kapalı ekranda, yatay yönde ve panel açıkken gizlenir. Yerel sistem bildirimleri önceliklidir.</string>
+    <string name="system_island_intro">Dynamic Island ilk kez seçildiğinde veya bir entegrasyon açıldığında sistem arayüzünü yeniden başlatın. Kilit ekranında, ekran kapalıyken, yatay modda ve bildirim paneli açıkken gizlenir.</string>
     <string name="system_island_media_title">Müzik ve medya</string>
     <string name="system_island_media_summ">Sistemin seçtiği oynatıcıyı kullanır. Gizlemek için yukarı kaydırın. Görünen müzik duraklatılınca 2 saniye sonra kapanır; gizli ve duraklatılmış müzik görünmez.</string>
     <string name="system_island_media_swipe_title">Kaydırarak parça değiştir</string>

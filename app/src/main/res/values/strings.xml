@@ -1213,7 +1213,7 @@
     <string name="seekbar_value_error">Enter a number within the range and step shown above.</string>
     <string name="restart_settings_sync_failed">Settings could not be synchronized. Wait for the module connection, then try again.</string>
     <string name="system_island_title">Dynamic Island</string>
-    <string name="system_island_intro">Select Dynamic Island mode to enable app feedback and media. Restart System UI after enabling an integration. Hidden on the lock screen, screen off, landscape or an open shade. Native system prompts take priority.</string>
+    <string name="system_island_intro">Restart System UI after first selecting Dynamic Island or enabling an integration. Hidden on the lock screen, with the screen off, in landscape or while the notification shade is open.</string>
     <string name="system_island_media_title">Music and media</string>
     <string name="system_island_media_summ">Uses the player selected by System UI. Swipe up to hide. Visible music closes 2 seconds after pausing; hidden paused music stays hidden.</string>
     <string name="system_island_media_swipe_title">Swipe to change tracks</string>

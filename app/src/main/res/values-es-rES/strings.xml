@@ -1179,7 +1179,7 @@
     <string name="seekbar_value_error">Introduce un número dentro del rango y con el paso indicados.</string>
     <string name="restart_settings_sync_failed">No se pudieron sincronizar los ajustes. Espera a que se conecte el módulo e inténtalo de nuevo.</string>
     <string name="system_island_title">Isla dinámica</string>
-    <string name="system_island_intro">Seleccione el modo Isla dinámica y active las integraciones. Reinicie la interfaz del sistema. Se oculta con la pantalla bloqueada o apagada, en horizontal y con el panel abierto. Los avisos nativos tienen prioridad.</string>
+    <string name="system_island_intro">Reinicia la interfaz del sistema tras seleccionar Dynamic Island por primera vez o activar una integración. Se oculta en la pantalla de bloqueo, con la pantalla apagada, en horizontal o con el panel de notificaciones abierto.</string>
     <string name="system_island_media_title">Música y multimedia</string>
     <string name="system_island_media_summ">Usa el reproductor seleccionado por el sistema. Desliza hacia arriba para ocultar. La música visible se cierra 2 segundos después de pausar; la música pausada y oculta permanece oculta.</string>
     <string name="system_island_media_swipe_title">Deslizar para cambiar de pista</string>

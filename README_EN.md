@@ -11,7 +11,7 @@ A system UI and interaction customization module maintained for **HyperOS 1 / An
 
 This release rebuilds settings pages and navigation, adds Dynamic Island, Toast positioning and direct slider-value entry, expands full-width Dock and glass controls, and refines audio, vibration, System UI and maintenance recovery. Updates preserve the signing identity and app data.
 
-The full repository, source and About-page name is 米客 A14｜CustoMIUIzer A14; short app labels retain 米客 A14.
+The full repository and source name is 米客 A14｜CustoMIUIzer A14. The app and About page use 米客 A14 or CustoMIUIzer A14 according to the selected language.
 
 ## Features
 

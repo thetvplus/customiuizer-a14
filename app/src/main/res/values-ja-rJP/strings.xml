@@ -1180,7 +1180,7 @@
     <string name="seekbar_value_error">上記の範囲と刻みに合う数値を入力してください。</string>
     <string name="restart_settings_sync_failed">設定を同期できません。モジュールの接続を待って再試行してください。</string>
     <string name="system_island_title">ダイナミックアイランド</string>
-    <string name="system_island_intro">ダイナミックアイランドモードで通知とメディアを有効にします。有効化後はシステムUIを再起動してください。ロック中、画面オフ、横向き、通知パネル表示中は非表示です。システムの標準通知が優先されます。</string>
+    <string name="system_island_intro">初めてこのモードを選ぶか、連携を有効にした後はシステムUIを再起動してください。ロック画面、画面オフ、横向き、通知パネル展開中は非表示になります。</string>
     <string name="system_island_media_title">音楽とメディア</string>
     <string name="system_island_media_summ">システムが選択したプレーヤーを使用します。上スワイプで非表示にできます。表示中の音楽は一時停止から2秒後に閉じ、非表示の音楽はそのまま表示しません。</string>
     <string name="system_island_media_swipe_title">左右スワイプで曲を切り替え</string>

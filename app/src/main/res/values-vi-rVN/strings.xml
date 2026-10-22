@@ -1180,7 +1180,7 @@
     <string name="seekbar_value_error">Nhập số trong phạm vi và đúng bước nêu trên.</string>
     <string name="restart_settings_sync_failed">Không thể đồng bộ cài đặt. Hãy đợi mô-đun kết nối rồi thử lại.</string>
     <string name="system_island_title">Đảo động</string>
-    <string name="system_island_intro">Chọn chế độ đảo và bật tích hợp, sau đó khởi động lại giao diện hệ thống. Ẩn khi khóa hoặc tắt màn hình, xoay ngang và mở bảng thông báo. Thông báo gốc của hệ thống được ưu tiên.</string>
+    <string name="system_island_intro">Khởi động lại giao diện hệ thống sau khi chọn Dynamic Island lần đầu hoặc bật tích hợp. Ẩn trên màn hình khóa, khi tắt màn hình, ở chế độ ngang hoặc khi mở bảng thông báo.</string>
     <string name="system_island_media_title">Nhạc và phương tiện</string>
     <string name="system_island_media_summ">Dùng trình phát do hệ thống chọn. Vuốt lên để ẩn. Đảo đang hiển thị sẽ đóng sau 2 giây tạm dừng; nhạc tạm dừng đang ẩn sẽ không hiện lại.</string>
     <string name="system_island_media_swipe_title">Vuốt ngang để chuyển bài</string>
