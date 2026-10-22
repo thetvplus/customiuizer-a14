@@ -1181,7 +1181,9 @@
     <string name="system_island_title">Isla dinámica</string>
     <string name="system_island_intro">Seleccione el modo Isla dinámica y active las integraciones. Reinicie la interfaz del sistema. Se oculta con la pantalla bloqueada o apagada, en horizontal y con el panel abierto. Los avisos nativos tienen prioridad.</string>
     <string name="system_island_media_title">Música y multimedia</string>
-    <string name="system_island_media_summ">Usa el reproductor seleccionado por el sistema. Desliza a los lados para cambiar de pista y hacia arriba para ocultar. Solo ejecuta acciones compatibles. Se cierra tras 2 segundos en pausa.</string>
+    <string name="system_island_media_summ">Usa el reproductor seleccionado por el sistema. Desliza hacia arriba para ocultar. La música visible se cierra 2 segundos después de pausar; la música pausada y oculta permanece oculta.</string>
+    <string name="system_island_media_swipe_title">Deslizar para cambiar de pista</string>
+    <string name="system_island_media_swipe_summ">Desliza a la izquierda para la siguiente pista y a la derecha para la anterior, si el reproductor lo permite. Al desactivar, se mantienen tocar para abrir y deslizar hacia arriba para ocultar.</string>
     <string name="system_island_waveform_title">Onda musical ligera</string>
     <string name="system_island_waveform_summ">Sigue el estado de reproducción sin capturar audio. Se detiene en pausa, oculta o con la pantalla apagada.</string>
     <string name="system_island_entrance_style_title">Animación de entrada y salida</string>

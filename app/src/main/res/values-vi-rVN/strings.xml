@@ -1182,7 +1182,9 @@
     <string name="system_island_title">Đảo động</string>
     <string name="system_island_intro">Chọn chế độ đảo và bật tích hợp, sau đó khởi động lại giao diện hệ thống. Ẩn khi khóa hoặc tắt màn hình, xoay ngang và mở bảng thông báo. Thông báo gốc của hệ thống được ưu tiên.</string>
     <string name="system_island_media_title">Nhạc và phương tiện</string>
-    <string name="system_island_media_summ">Dùng trình phát do hệ thống chọn. Vuốt ngang để chuyển bài, vuốt lên để ẩn; chỉ thực hiện thao tác được hỗ trợ. Đóng sau 2 giây tạm dừng.</string>
+    <string name="system_island_media_summ">Dùng trình phát do hệ thống chọn. Vuốt lên để ẩn. Đảo đang hiển thị sẽ đóng sau 2 giây tạm dừng; nhạc tạm dừng đang ẩn sẽ không hiện lại.</string>
+    <string name="system_island_media_swipe_title">Vuốt ngang để chuyển bài</string>
+    <string name="system_island_media_swipe_summ">Vuốt trái để chuyển bài tiếp theo, vuốt phải để về bài trước nếu trình phát hỗ trợ. Khi tắt vẫn có thể chạm để mở và vuốt lên để ẩn.</string>
     <string name="system_island_waveform_title">Sóng nhạc nhẹ</string>
     <string name="system_island_waveform_summ">Chuyển động theo trạng thái phát, không thu âm. Dừng khi tạm dừng, bị ẩn hoặc tắt màn hình.</string>
     <string name="system_island_entrance_style_title">Hiệu ứng hiện và ẩn</string>

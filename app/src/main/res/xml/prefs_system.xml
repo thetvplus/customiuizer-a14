@@ -590,6 +590,7 @@
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_media_title">
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media" android:title="@string/system_island_media_title" android:defaultValue="false" android:summary="@string/system_island_media_summ" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media_swipe" android:title="@string/system_island_media_swipe_title" android:defaultValue="true" android:summary="@string/system_island_media_swipe_summ" android:dependency="pref_key_system_island_media" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_waveform" android:title="@string/system_island_waveform_title" android:defaultValue="true" android:summary="@string/system_island_waveform_summ" android:dependency="pref_key_system_island_media" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/prefs_group_apps">

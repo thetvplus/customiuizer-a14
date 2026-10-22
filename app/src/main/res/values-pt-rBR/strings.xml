@@ -1182,7 +1182,9 @@
     <string name="system_island_title">Ilha Dinâmica</string>
     <string name="system_island_intro">Selecione o modo Ilha Dinâmica e ative as integrações. Reinicie a interface do sistema. Oculta na tela bloqueada ou desligada, na horizontal e com o painel aberto. Avisos nativos têm prioridade.</string>
     <string name="system_island_media_title">Música e mídia</string>
-    <string name="system_island_media_summ">Usa o player selecionado pelo sistema. Deslize para os lados para trocar de faixa e para cima para ocultar. Executa apenas ações compatíveis. Fecha após 2 segundos em pausa.</string>
+    <string name="system_island_media_summ">Usa o player selecionado pelo sistema. Deslize para cima para ocultar. A música visível fecha 2 segundos após pausar; a música pausada e oculta continua oculta.</string>
+    <string name="system_island_media_swipe_title">Deslizar para trocar de faixa</string>
+    <string name="system_island_media_swipe_summ">Deslize à esquerda para a próxima faixa e à direita para a anterior, se o player permitir. Ao desativar, o toque para abrir e o deslize para cima para ocultar continuam disponíveis.</string>
     <string name="system_island_waveform_title">Onda musical leve</string>
     <string name="system_island_waveform_summ">Segue o estado da reprodução sem capturar áudio. Para em pausa, oculta ou com a tela desligada.</string>
     <string name="system_island_entrance_style_title">Animação de entrada e saída</string>

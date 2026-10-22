@@ -174,7 +174,12 @@ internal class IslandActivityController(
                 key != "system_strong_toast_island_offset" && key != "system_toast_capsule" &&
                 !key.startsWith("system_island_")) return
             onMain {
+                val previousOptions = options
                 options = IslandOptions.read(prefs)
+                if (previousOptions.mediaSwipe && !options.mediaSwipe) {
+                    actionEpoch++
+                    actionJob?.cancel(); actionJob = null
+                }
                 if (!options.enabled) dispose()
                 else {
                     if (!options.toast && state.toast(SystemClock.uptimeMillis())?.let {
@@ -290,7 +295,13 @@ internal class IslandActivityController(
         val previous = foregroundPackage
         foregroundPackage = packageName
         media?.let {
-            if (packageName == it.packageName) mediaRevealAt = null
+            if (packageName == it.packageName) {
+                mediaRevealAt = null
+                if (it.playbackState == PlaybackState.STATE_PAUSED) {
+                    pauseDeadline = null
+                    state.setMedia(it.token, null)
+                }
+            }
             else if (previous == it.packageName && it.playbackState != PlaybackState.STATE_PAUSED)
                 mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
         }
@@ -483,8 +494,12 @@ internal class IslandActivityController(
                     render()
                     return@launch
                 }
-                // A very short play/pause before the delayed entrance must not flash a paused island.
-                if (paused && mediaRevealAt != null && !attached) {
+                // Pause grace belongs to music already on screen. A retained PLAYING
+                // snapshot inside the player, a pending entrance or an unrelated Toast
+                // is not visible music and must not create a new paused island on Home.
+                val visibleMedia = attached && !exiting && prepared.packageName != foregroundPackage &&
+                    (lastContent as? IslandMediaContent)?.token == prepared.token
+                if (paused && !fromShade && previous != PlaybackState.STATE_PAUSED && !visibleMedia) {
                     mediaRevealAt = null; pauseDeadline = null; media = prepared
                     state.setMedia(prepared.token, null); render(); return@launch
                 }
@@ -499,7 +514,7 @@ internal class IslandActivityController(
                     pauseDeadline = now + IslandMotion.PAUSE_LIFETIME - exitLead
                 }
                 media = prepared
-                state.setMedia(prepared.token, if (paused && !attached && pauseDeadline == null) null else prepared)
+                state.setMedia(prepared.token, if (paused && pauseDeadline?.let { now < it } != true) null else prepared)
                 if (fromShade) clearShadePlayback()
             }
             render()
@@ -725,7 +740,7 @@ internal class IslandActivityController(
         shell.bind(toast?.text ?: current!!.title, if (showingMedia) current?.artist else toast?.detail,
             toast?.icon ?: current?.icon,
             showingMedia && current?.playing == true,
-            showingMedia, options.waveform, if (showingMedia) current?.actions ?: 0L else 0L, showingMedia,
+            showingMedia, options.waveform, if (showingMedia) current?.actions ?: 0L else 0L, showingMedia && options.mediaSwipe,
             current?.playbackState ?: PlaybackState.STATE_NONE, toast?.avatar == true, toast?.status == true)
         shell.geometry(geometry.width, geometry.height, geometry.gap, geometry.maximumWidth)
         screen?.let { bounds ->
@@ -814,7 +829,7 @@ internal class IslandActivityController(
         }
 
         private fun control(requested: Long) {
-            if (!state.allowed || state.media(SystemClock.uptimeMillis()) == null) return
+            if (!options.mediaSwipe || !state.allowed || state.media(SystemClock.uptimeMillis()) == null) return
             val controller = selected ?: return
             val epoch = actionEpoch
             actionJob?.cancel()

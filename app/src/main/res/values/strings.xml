@@ -1215,7 +1215,9 @@
     <string name="system_island_title">Dynamic Island</string>
     <string name="system_island_intro">Select Dynamic Island mode to enable app feedback and media. Restart System UI after enabling an integration. Hidden on the lock screen, screen off, landscape or an open shade. Native system prompts take priority.</string>
     <string name="system_island_media_title">Music and media</string>
-    <string name="system_island_media_summ">Uses the player selected by System UI. Swipe left/right to change tracks and up to hide; only supported player actions run. Paused activity closes after 2 seconds.</string>
+    <string name="system_island_media_summ">Uses the player selected by System UI. Swipe up to hide. Visible music closes 2 seconds after pausing; hidden paused music stays hidden.</string>
+    <string name="system_island_media_swipe_title">Swipe to change tracks</string>
+    <string name="system_island_media_swipe_summ">Swipe left for the next track and right for the previous track. Only supported player actions run. Turning this off keeps tap-to-open and swipe-up-to-hide.</string>
     <string name="system_island_waveform_title">Lightweight waveform</string>
     <string name="system_island_waveform_summ">Animation follows playback state without recording audio. Stops when paused, hidden or the screen is off.</string>
     <string name="system_island_entrance_style_title">In/out animation</string>

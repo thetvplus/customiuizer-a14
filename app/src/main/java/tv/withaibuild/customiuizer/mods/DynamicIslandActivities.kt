@@ -34,6 +34,7 @@ internal data class IslandOptions(
     val longWidth: Int = 240,
     val entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
     val chatExcludedApps: Set<String> = emptySet(),
+    val mediaSwipe: Boolean = true,
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
@@ -50,7 +51,8 @@ internal data class IslandOptions(
                 shortWidth,
                 prefs.getInt("system_island_width_medium", 240).coerceIn(184, 280).coerceAtLeast(shortWidth),
                 IslandEntranceStyle.fromPreference(prefs.getStringAsInt("system_island_entrance_style", 1)),
-                prefs.getStringSet("system_island_chat_excluded_apps"))
+                prefs.getStringSet("system_island_chat_excluded_apps"),
+                prefs.getBoolean("system_island_media_swipe", true))
         }
     }
 }

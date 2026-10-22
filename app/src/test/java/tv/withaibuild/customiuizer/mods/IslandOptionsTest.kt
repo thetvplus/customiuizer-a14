@@ -5,6 +5,17 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun musicSwipeDefaultsOnAndIsIndependentOfRetiredGesturePreferences() {
+        val prefs = PrefMap()
+        assertTrue(IslandOptions.read(prefs).mediaSwipe)
+        prefs.put("system_island_gestures_horizontal", false)
+        assertTrue(IslandOptions.read(prefs).mediaSwipe)
+        prefs.put("system_island_media_swipe", false)
+        assertFalse(IslandOptions.read(prefs).mediaSwipe)
+        prefs.put("system_island_media_swipe", true)
+        assertTrue(IslandOptions.read(prefs).mediaSwipe)
+    }
+
     @Test fun entranceStyleDefaultsSafelyAndRetainsItsChoiceWithSimplifiedAnimation() {
         val prefs = PrefMap()
         assertEquals(IslandEntranceStyle.TOP, IslandOptions.read(prefs).entranceStyle)

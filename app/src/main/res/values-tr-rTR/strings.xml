@@ -1188,7 +1188,9 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_title">Dinamik Ada</string>
     <string name="system_island_intro">Ada modunu seçip bağlantıları etkinleştirin ve sistem arayüzünü yeniden başlatın. Kilitli veya kapalı ekranda, yatay yönde ve panel açıkken gizlenir. Yerel sistem bildirimleri önceliklidir.</string>
     <string name="system_island_media_title">Müzik ve medya</string>
-    <string name="system_island_media_summ">Sistemin seçtiği oynatıcıyı kullanır. Parça değiştirmek için yana, gizlemek için yukarı kaydırın. Yalnızca desteklenen işlemler çalışır. Duraklatıldığında 2 saniye sonra kapanır.</string>
+    <string name="system_island_media_summ">Sistemin seçtiği oynatıcıyı kullanır. Gizlemek için yukarı kaydırın. Görünen müzik duraklatılınca 2 saniye sonra kapanır; gizli ve duraklatılmış müzik görünmez.</string>
+    <string name="system_island_media_swipe_title">Kaydırarak parça değiştir</string>
+    <string name="system_island_media_swipe_summ">Oynatıcı destekliyorsa sonraki parça için sola, önceki parça için sağa kaydırın. Kapatıldığında dokunarak açma ve yukarı kaydırarak gizleme kullanılabilir.</string>
     <string name="system_island_waveform_title">Hafif müzik dalgası</string>
     <string name="system_island_waveform_summ">Ses kaydetmeden oynatma durumuyla hareket eder. Duraklatıldığında, gizliyken ve ekran kapalıyken durur.</string>
     <string name="system_island_entrance_style_title">Giriş ve çıkış animasyonu</string>

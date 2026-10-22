@@ -1182,7 +1182,9 @@
     <string name="system_island_title">ダイナミックアイランド</string>
     <string name="system_island_intro">ダイナミックアイランドモードで通知とメディアを有効にします。有効化後はシステムUIを再起動してください。ロック中、画面オフ、横向き、通知パネル表示中は非表示です。システムの標準通知が優先されます。</string>
     <string name="system_island_media_title">音楽とメディア</string>
-    <string name="system_island_media_summ">システムが選択したプレーヤーを使用します。左右スワイプで曲を切り替え、上スワイプで非表示にします。対応する操作のみ実行し、一時停止から2秒後に閉じます。</string>
+    <string name="system_island_media_summ">システムが選択したプレーヤーを使用します。上スワイプで非表示にできます。表示中の音楽は一時停止から2秒後に閉じ、非表示の音楽はそのまま表示しません。</string>
+    <string name="system_island_media_swipe_title">左右スワイプで曲を切り替え</string>
+    <string name="system_island_media_swipe_summ">左スワイプで次の曲、右スワイプで前の曲に切り替えます。対応する操作のみ実行します。オフでもタップで開く操作と上スワイプで隠す操作は使えます。</string>
     <string name="system_island_waveform_title">軽量な音楽波形</string>
     <string name="system_island_waveform_summ">音声を収集せず再生状態で動きます。一時停止中、非表示、画面オフでは更新しません。</string>
     <string name="system_island_entrance_style_title">表示アニメーション</string>

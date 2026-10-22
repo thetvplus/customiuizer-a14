@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods
 import android.animation.ValueAnimator
 import android.app.Activity
 import android.os.Looper
+import android.media.session.PlaybackState
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
@@ -93,6 +94,37 @@ class IslandGestureRecoveryTest {
             motion()?.end()
         }
         assertEquals(0, dismissed)
+        touch(MotionEvent.ACTION_DOWN, y = 30f)
+        touch(MotionEvent.ACTION_MOVE, y = -80f)
+        touch(MotionEvent.ACTION_UP, y = -80f)
+        assertEquals(1, dismissed)
+    }
+
+    @Test fun disablingTrackSwipesBlocksBothDirectionsAndKeepsTapAndUpwardDismissal() {
+        val actions = PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS
+        val controls = mutableListOf<Long>()
+        var opened = 0; var dismissed = 0
+        shell.onControl = { controls.add(it) }
+        shell.onOpen = { opened++ }
+        shell.onDismiss = { dismissed++ }
+        fun bind(enabled: Boolean) {
+            shell.bind("Song", null, null, true, true, false, actions, enabled)
+            layout(240, 40)
+        }
+        fun swipe(endX: Float) {
+            touch(MotionEvent.ACTION_DOWN)
+            touch(MotionEvent.ACTION_MOVE, x = endX)
+            touch(MotionEvent.ACTION_UP, x = endX)
+            motion()?.end()
+        }
+        bind(true)
+        swipe(-80f); swipe(320f)
+        assertEquals(listOf(PlaybackState.ACTION_SKIP_TO_NEXT, PlaybackState.ACTION_SKIP_TO_PREVIOUS), controls)
+        bind(false)
+        swipe(-80f); swipe(320f)
+        assertEquals(2, controls.size)
+        assertTrue(shell.performClick())
+        assertEquals(1, opened)
         touch(MotionEvent.ACTION_DOWN, y = 30f)
         touch(MotionEvent.ACTION_MOVE, y = -80f)
         touch(MotionEvent.ACTION_UP, y = -80f)

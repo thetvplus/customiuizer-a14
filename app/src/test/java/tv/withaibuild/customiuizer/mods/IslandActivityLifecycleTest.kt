@@ -203,6 +203,65 @@ class IslandActivityLifecycleTest {
         assertEquals(3, adds)
     }
 
+    @Test fun pausingInsideThePlayerThenReturningImmediatelyNeverCreatesAPausedIsland() {
+        val controller = controller(media = true, simplified = true)
+        val session = MediaSession(context, "foreground-pause")
+        val player = MediaController(context, session.sessionToken)
+        shadowOf(player).setPackageName(context.packageName)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        controller.foregroundChanged(context.packageName)
+        native.player = player; controller.updateFromNative(native); drain(); revealMedia()
+        assertEquals(0, adds)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        controller.foregroundChanged("com.miui.home")
+        revealMedia()
+        assertEquals(0, adds) // Still inside the original two-second pause lifetime.
+        controller.updateFromNative(native); drain(); revealMedia()
+        assertEquals(0, adds)
+    }
+
+    @Test fun returningBeforeThePauseReadCompletesCannotFlashEvenWithAToastAttached() {
+        val controller = controller(media = true, simplified = true)
+        val session = MediaSession(context, "pause-return-race")
+        val player = MediaController(context, session.sessionToken)
+        shadowOf(player).setPackageName(context.packageName)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        controller.foregroundChanged(context.packageName)
+        native.player = player; controller.updateFromNative(native); drain(); revealMedia()
+        val feedback = controller.showToast(IslandToastContent("Saved", context.packageName, null), 5000)!!
+        assertEquals(1, adds)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.updateFromNative(native)
+        controller.foregroundChanged("com.miui.home") // Snapshot coroutine is still queued.
+        drain()
+        controller.updateFromNative(native); drain() // Repeated paused metadata is not new activity.
+        controller.releaseToast(feedback)
+        revealMedia()
+        assertEquals(1, adds)
+        assertEquals(1, removes)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        controller.updateFromNative(native); drain(); revealMedia()
+        assertEquals(2, adds) // Genuine playback still returns after the normal entrance delay.
+    }
+
+    @Test fun enteringThePlayerDuringPauseGraceConsumesTheGraceWithoutReopeningOnHome() {
+        val controller = controller(media = true, simplified = true)
+        val session = MediaSession(context, "visible-pause")
+        val player = MediaController(context, session.sessionToken)
+        shadowOf(player).setPackageName(context.packageName)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        native.player = player; controller.updateFromNative(native); drain(); revealMedia()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        assertEquals(0, removes) // Visible music retains its existing pause grace.
+        controller.foregroundChanged(context.packageName)
+        controller.foregroundChanged("com.miui.home")
+        controller.updateFromNative(native); drain(); revealMedia()
+        assertEquals(1, adds)
+        assertEquals(1, removes)
+    }
+
     @Test fun repeatedPausedCallbacksInShadeDoNotExtendTheTwoSecondLifetimeButNewPlayPauseDoes() {
         val controller = controller(media = true, simplified = true)
         val session = MediaSession(context, "shade-edges")

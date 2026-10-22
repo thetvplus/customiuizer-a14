@@ -1192,7 +1192,9 @@
     <string name="system_island_title">动态岛</string>
     <string name="system_island_intro">选择动态岛模式后启用应用反馈和媒体接入；开启接入后需重启系统界面。锁屏、息屏、横屏或展开通知栏时隐藏。充电等原生系统提示优先。</string>
     <string name="system_island_media_title">音乐与媒体</string>
-    <string name="system_island_media_summ">沿用系统选中的主播放器。左右滑动切歌，上滑隐藏；仅执行播放器支持的操作。暂停 2 秒后收起。</string>
+    <string name="system_island_media_summ">沿用系统选中的主播放器，上滑可隐藏。已显示的音乐岛暂停 2 秒后收起；未显示时保持隐藏。</string>
+    <string name="system_island_media_swipe_title">左右滑动切歌</string>
+    <string name="system_island_media_swipe_summ">左滑下一曲，右滑上一曲，仅执行播放器支持的操作。关闭后仍可点击打开播放器、上滑隐藏。</string>
     <string name="system_island_waveform_title">轻量音乐波形</string>
     <string name="system_island_waveform_summ">随播放状态变化，不采集音频。暂停、不可见或息屏时停止刷新。</string>
     <string name="system_island_entrance_style_title">进出动画</string>
