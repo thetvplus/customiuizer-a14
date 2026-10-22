@@ -8,14 +8,13 @@ Retained releases; each section consolidates changes since the previous retained
 
 versionCode 246. Changes since r14.24.1:
 
-- Unify Dynamic Island into short and long forms with the same height. Music, system feedback, brief notices and supported notifications share one window and motion, with camera, clock, battery and Duo clearance.
-- Offer Vertical and Center animation styles: Vertical enters and leaves through the top at full size; Center keeps its final height and vertical position while using interruptible horizontal damped motion. Use a slower layered handoff between music and secondary activities. Place Dynamic Island directly after Status bar in the System interface group.
-- Retain the latest valid system feedback while Control Center is open and show it after collapse when still valid. Hide only status icons actually covered by the island.
-- Prefer the ROM's native feedback icons for Do Not Disturb and silent mode; use a bounded set of native SystemUI resources for other states. Normalize visible icon size without distortion. Keep media swipes, swipe-up dismissal, artwork and concise success notices enabled.
-- Follow the native-selected music player, with a 750 ms entrance delay and roughly two-second pause retirement. Media gestures respect session capabilities. Optional notification takeover retains native heads-up eligibility, notification-center entries, clicks and expiry.
-- Support full-width Dock backgrounds, symmetric icon-centered sizing and bounded wallpaper-sampled glass. Keep material and tint fallbacks when blur or sampling is unavailable, without overriding the global blur setting.
-- Connect vibration intensity to A14 native scaling; fix high-volume confirmations, volume timer rendering, panel timeout and backdrop cleanup. Refine audio-focus handling, settings grouping and precise slider input.
-- Improve visualizer cancellation, maintenance-snapshot failure handling and Hook process registration. Retain HyperOS 1 / Android 14, arm64-v8a and libxposed API 102.
+- Rebuild settings pages around System, Home screen, Buttons and gestures, and Apps and maintenance. Unify grouped cards, headings and descriptions, improve search navigation, and collect restart actions on the home page.
+- Add Dynamic Island for music, system states, brief notices and optional message notifications, with short and long forms, secondary activities, Vertical/Center animations, native ROM icons and familiar gestures. Hide status icons only when actually covered.
+- Add full-width Dock backgrounds, symmetric sizing and wallpaper-tinted glass. Refine background transitions for recents and app returns, with native-material and tint fallbacks.
+- Add top, center and bottom Toast positioning, with spacing and vertical offsets constrained to the safe screen area.
+- Allow direct numeric entry by tapping slider values, with range, step and unit validation for precise adjustments.
+- Connect vibration intensity to A14 native scaling. Correct volume timers, panel auto-hide, high-volume confirmation and audio-focus behavior.
+- Improve state recovery for Control Center, the status bar and visualization, plus exception handling, restore records and resource cleanup for maintenance and privacy operations.
 
 ## r14.24.1 — 2026-10-19
 
