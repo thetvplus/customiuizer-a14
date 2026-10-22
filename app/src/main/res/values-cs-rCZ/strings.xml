@@ -1218,7 +1218,7 @@
     <string name="system_island_height_title">Výška ostrova</string>
     <string name="system_island_height_summ">Krátký i dlouhý ostrov používají stejnou pevnou výšku.</string>
     <string name="system_island_width_auto_title">Automatická šířka sbaleného ostrova</string>
-    <string name="system_island_width_auto_summ">Šířku krátkého a středního ostrova určí obsah a dostupné místo ve stavovém řádku.</string>
+    <string name="system_island_width_auto_summ">Šířku krátkého a dlouhého ostrova určí obsah a dostupné místo ve stavovém řádku. Vypnutím umožníte samostatné nastavení.</string>
     <string name="system_island_width_short_title">Šířka krátkého ostrova</string>
     <string name="system_island_width_short_summ">Pro obal, vlnu a krátký stav. Omezeno místem pro kameru, čas a baterii.</string>
     <string name="system_island_width_medium_title">Šířka dlouhého ostrůvku</string>

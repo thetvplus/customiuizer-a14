@@ -43,7 +43,7 @@ $releaseRevision = git rev-parse --short=8 HEAD
 
 `tools/check_release_metadata.py --require-tag` 校验源码 tag 与版本元数据；`tools/verify_apk_provenance.py --help` 提供 APK provenance 检查参数。构建通过、ROM 样本与主机 benchmark 都不能替代当前正式 APK 的实机结论。
 
-## Actions 正式候选
+## Actions 构建与自动发布
 
 [A14 Signed Build](../.github/workflows/a14-signed-build.yml) 是一次确认的构建与发布入口。选择原生分支（通常 main），检查版本后点击 **Run workflow**，即确认本次所选操作；普通 push / PR 不会签名或发布。
 

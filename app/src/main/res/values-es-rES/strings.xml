@@ -1210,7 +1210,7 @@
     <string name="system_island_height_title">Altura de la isla</string>
     <string name="system_island_height_summ">Las islas corta y larga usan la misma altura fija.</string>
     <string name="system_island_width_auto_title">Ancho contraído automático</string>
-    <string name="system_island_width_auto_summ">Ajusta las islas corta y mediana al contenido y al espacio de la barra de estado.</string>
+    <string name="system_island_width_auto_summ">Ajusta las islas corta y larga al contenido y al espacio de la barra de estado. Desactiva para ajustarlas por separado.</string>
     <string name="system_island_width_short_title">Ancho de la isla corta</string>
     <string name="system_island_width_short_summ">Para carátula, onda y estados breves. Respeta el espacio de cámara, hora y batería.</string>
     <string name="system_island_width_medium_title">Ancho de la isla larga</string>

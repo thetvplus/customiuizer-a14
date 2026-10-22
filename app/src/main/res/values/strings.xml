@@ -1244,7 +1244,7 @@
     <string name="system_island_height_title">Island height</string>
     <string name="system_island_height_summ">Short and long islands use the same fixed height.</string>
     <string name="system_island_width_auto_title">Automatic collapsed width</string>
-    <string name="system_island_width_auto_summ">Choose short and medium widths from content and available status bar space.</string>
+    <string name="system_island_width_auto_summ">Choose short and long widths from content and available status bar space. Turn off to adjust them separately.</string>
     <string name="system_island_width_short_title">Short island width</string>
     <string name="system_island_width_short_summ">Used for artwork, waveform and brief status. Limited by the camera and time/battery space.</string>
     <string name="system_island_width_medium_title">Long island width</string>

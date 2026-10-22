@@ -187,7 +187,7 @@
     <string name="system_disableanynotif_summ">同样也允许禁用系统通知</string>
     <string name="system_expandnotifs_title">展开通知</string>
     <string name="system_expandnotifs_summ">显示完整展开的通知</string>
-    <string name="system_expandnotifs_apps_title">黑&amp;白名单</string>
+    <string name="system_expandnotifs_apps_title">黑白名单</string>
     <string name="system_toasttime_title">显示时长</string>
     <string name="system_toasttime_summ">修改 Toast 显示时长</string>
     <string name="system_toasttime_note">显示时长始终大于 1 秒</string>
@@ -224,7 +224,7 @@
     <string name="system_firstpress_summ">首次按键时调整媒体流音量</string>
     <string name="system_volumetimer_title">扩展计时器</string>
     <string name="system_volumetimer_summ">添加更多间隔到静音和勿扰模式的定时器</string>
-    <string name="system_volumebar_blur_mtk_title">针对MTK设备开启音量条模糊</string>
+    <string name="system_volumebar_blur_mtk_title">联发科设备音量面板模糊</string>
     <string name="system_volume_mode_button_colors_title">静音与勿扰快捷按钮颜色</string>
     <string name="system_volume_mode_button_colors_summ">自定义音量面板底部两个快捷按钮的背景色和图标色。修改颜色后需重启系统界面。</string>
     <string name="system_volumedialogdelay_collapsed_title">折叠时自动隐藏</string>
@@ -296,7 +296,7 @@
     <string name="system_noscreenlock_summ">选择性禁用屏幕锁(不会更改任何应用的安全性，也不会移除指纹数据)</string>
     <string name="system_noscreenlock_scr_title">跳过屏幕锁</string>
     <string name="system_noscreenlock_scr_summ">屏幕锁禁用时不再显示锁屏</string>
-    <string name="system_noscreenlock_wifi_title">可信Wi-Fi网络</string>
+    <string name="system_noscreenlock_wifi_title">可信 Wi-Fi 网络</string>
     <string name="system_noscreenlock_wifi_summ">连接到这些网络时暂时禁用屏幕锁</string>
     <string name="system_noscreenlock_bt_title">可信蓝牙设备</string>
     <string name="system_noscreenlock_bt_summ">连接到这些设备时暂时禁用屏幕锁</string>
@@ -472,14 +472,14 @@
     <string name="launcher_hideseekpoints_edit_title">仅在编辑模式中显示</string>
     <string name="launcher_unlockgrids_title">解锁桌面布局</string>
     <string name="launcher_unlockgrids_summ">可在系统桌面布局设置中使用3x4到8x10之间的所有布局</string>
-    <string name="launcher_unlockhotseat_title">Dock栏显示更多图标</string>
+    <string name="launcher_unlockhotseat_title">Dock 显示更多图标</string>
     <string name="launcher_unlockhotseat_summ">解除底栏图标数量的限制</string>
     <string name="launcher_iconscale_title">图标缩放</string>
     <string name="launcher_horizmargin_title">桌面网格水平边距</string>
     <string name="launcher_topmargin_title">桌面网格顶部边距</string>
-    <string name="launcher_dock_height_title">Dock栏高度</string>
-    <string name="launcher_dock_topmargin_title">Dock栏顶部边距</string>
-    <string name="launcher_dock_bottommargin_title">Dock栏底部边距</string>
+    <string name="launcher_dock_height_title">Dock 高度</string>
+    <string name="launcher_dock_topmargin_title">Dock 顶部边距</string>
+    <string name="launcher_dock_bottommargin_title">Dock 底部边距</string>
     <string name="launcher_indicatorheight_title">页面指示器高度</string>
     <string name="launcher_indicator_topmargin_title">页面指示器顶部边距</string>
     <string name="launcher_folders">文件夹</string>
@@ -574,7 +574,7 @@
     <string name="controls_nonavbar_fix_inputmethod_title">修复输入法全面屏优化</string>
     <string name="controls_nonavbar_fix_inputmethod_summ">手势线隐藏后，键盘底部边距优化(请将输入法App加入作用域)</string>
     <string name="controls_backlong_title">长按返回键动作</string>
-    <string name="controls_homelong_title">长按Home键动作</string>
+    <string name="controls_homelong_title">长按 Home 键动作</string>
     <string name="controls_menulong_title">长按菜单键动作</string>
     <string name="controls_navbarleft_summ">按下左侧导航键的动作</string>
     <string name="controls_navbarleft_title">左键动作</string>
@@ -702,7 +702,7 @@
     <string name="array_screenlock_no">系统默认</string>
     <string name="array_screenlock_none">完全禁用</string>
     <string name="array_screenlock_bootonly">开机后需要验证</string>
-    <string name="array_screenlock_trusted">在可信Wi-Fi网络/设备上禁用</string>
+    <string name="array_screenlock_trusted">在可信 Wi-Fi 网络或设备上禁用</string>
     <string name="array_screenlock_noreq">不要求</string>
     <string name="array_screenlock_weak">弱（指纹）</string>
     <string name="array_screenlock_strong">强（PIN/密码/图案）</string>
@@ -828,9 +828,9 @@
     <string name="no_activities_found">没有找到活动</string>
     <string name="select_shortcut">选择快捷方式</string>
     <string name="search_input_description">搜索模块</string>
-    <string name="wifi_networks">Wi-Fi网络</string>
+    <string name="wifi_networks">Wi-Fi 网络</string>
     <string name="wifi_location_title">位置设置</string>
-    <string name="wifi_location_summ">应用需要位置权限才能获取Wi-Fi网络列表</string>
+    <string name="wifi_location_summ">应用需要位置权限才能获取 Wi-Fi 网络列表</string>
     <string name="wifi_category1">可信网络</string>
     <string name="wifi_category2">可用网络</string>
     <string name="bt_fetch_devices_title">获取设备列表</string>
@@ -863,7 +863,7 @@
     <string name="auto_color">状态栏颜色</string>
     <string name="launcher_closedrawer_title">启动应用后关闭抽屉</string>
     <string name="launcher_closedrawer_summ">启动后关闭应用抽屉</string>
-    <string name="system_networkindicator_wifi_title">隐藏Wi-Fi网络活动指示器</string>
+    <string name="system_networkindicator_wifi_title">隐藏 Wi-Fi 网络活动指示器</string>
     <string name="system_networkindicator_mobile_title">隐藏移动网络活动指示器</string>
     <string name="system_lswallpaper_title">将壁纸应用到任意应用</string>
     <string name="system_lswallpaper_summ">让第三方应用能够设置锁屏壁纸。必须安装主题应用并给予其存储访问权限。</string>
@@ -1221,7 +1221,7 @@
     <string name="system_island_height_title">动态岛高度</string>
     <string name="system_island_height_summ">短岛与长岛使用相同的固定高度。</string>
     <string name="system_island_width_auto_title">自动调整收起宽度</string>
-    <string name="system_island_width_auto_summ">根据内容和状态栏空间决定短岛、中岛宽度。关闭后可分别调整。</string>
+    <string name="system_island_width_auto_summ">根据内容和状态栏空间决定短岛、长岛宽度。关闭后可分别调整。</string>
     <string name="system_island_width_short_title">短岛宽度</string>
     <string name="system_island_width_short_summ">用于封面、波形和简短状态，实际宽度受摄像头及时间、电量空间限制。</string>
     <string name="system_island_width_medium_title">长岛宽度</string>

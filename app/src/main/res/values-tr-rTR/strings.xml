@@ -1217,7 +1217,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_height_title">Ada yüksekliği</string>
     <string name="system_island_height_summ">Kısa ve uzun ada aynı sabit yüksekliği kullanır.</string>
     <string name="system_island_width_auto_title">Otomatik daraltılmış genişlik</string>
-    <string name="system_island_width_auto_summ">Kısa ve orta ada genişliğini içeriğe ve durum çubuğundaki alana göre belirler.</string>
+    <string name="system_island_width_auto_summ">Kısa ve uzun ada genişliğini içeriğe ve durum çubuğundaki alana göre belirler. Ayrı ayarlamak için kapatın.</string>
     <string name="system_island_width_short_title">Kısa ada genişliği</string>
     <string name="system_island_width_short_summ">Kapak, dalga ve kısa durumlar için. Kamera, saat ve pil alanlarıyla sınırlıdır.</string>
     <string name="system_island_width_medium_title">Uzun ada genişliği</string>

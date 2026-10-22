@@ -41,7 +41,7 @@ Python 套件验证工具、生成器、资源及必要的源码边界；Kotlin 
 - 所有成功的普通 CI 都保留唯一 develop APK 与 mapping；不再按 scope 隐藏下载产物，也不追加第二次构建。R8 输出始终检查。专门排查构建可重复性时可手动运行两次隔离构建及 `apk_semantic_diff.py`；不加入日常 CI。
 - main / PR 新提交取消同一分支的旧执行，tag 验证正常完成。诊断保留 7 天，检查产物保留 30 天；清理历史运行时保留正式发行的成功验证记录。
 
-独立 [正式构建与晋升](RELEASE.md#actions-正式候选) 通过 Environment 隔离密钥，原生 ref 固定 exact SHA；同 SHA 可信 CI 已成功则复用，否则只补一次源码门禁。正式流程只构建一次 Release，不先构建 develop。晋升只验证和上传原文件，不构建。回归覆盖未授权来源、缺失 Secrets、错误证书、APK / provenance 篡改、失败构建和错误发布来源；普通 CI 的签名泄漏 mutation 必须继续被拦截。
+独立 [正式构建与自动发布](RELEASE.md#actions-构建与自动发布) 通过 Environment 隔离密钥，原生 ref 固定 exact SHA；同 SHA 可信 CI 已成功则复用，否则只补一次源码门禁。手动确认默认构建后发布，试用 APK 必须选择 `actions-only`；正式流程只构建一次 Release，不先构建 develop。自动发布固定同 run / attempt 的签名任务产物与 artifact ID；既有候选的手动晋升要求已完成的成功 run。两条路径都只验证和上传原文件，不重新构建，并在草稿阶段检查全部资产。回归覆盖未授权来源、缺失 Secrets、错误证书、APK / provenance 篡改、失败 / 错误来源、发布时序、版本重复、草稿摘要错误及预发行不设 Latest；普通 CI 的签名泄漏 mutation 必须继续被拦截。
 
 Dock 定向回归覆盖 4 → 5 → 4、1 / 3–6 个图标、容器边界不变的子布局、拖拽结束 / 取消、文件夹与占位、空 Dock 和重新填充、空闲帧不读图标，以及高度 / 间距 / 圆角独立。使用原生事件顺序和 Android 14 渲染模型；目标 ROM 上还需连续拖拽、重排与动画验收。
 

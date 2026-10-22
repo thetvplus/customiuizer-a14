@@ -1211,7 +1211,7 @@
     <string name="system_island_height_title">Chiều cao đảo</string>
     <string name="system_island_height_summ">Đảo ngắn và đảo dài dùng cùng một chiều cao cố định.</string>
     <string name="system_island_width_auto_title">Tự động chỉnh chiều rộng thu gọn</string>
-    <string name="system_island_width_auto_summ">Chọn chiều rộng đảo ngắn và vừa theo nội dung và khoảng trống trên thanh trạng thái.</string>
+    <string name="system_island_width_auto_summ">Chọn chiều rộng đảo ngắn và dài theo nội dung và khoảng trống trên thanh trạng thái. Tắt để điều chỉnh riêng.</string>
     <string name="system_island_width_short_title">Chiều rộng đảo ngắn</string>
     <string name="system_island_width_short_summ">Dùng cho ảnh bìa, sóng và trạng thái ngắn. Chừa chỗ cho camera, giờ và pin.</string>
     <string name="system_island_width_medium_title">Chiều rộng đảo dài</string>

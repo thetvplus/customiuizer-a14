@@ -2,7 +2,13 @@
 
 English | [简体中文](CHANGELOG_CN.md)
 
-Retained releases; each section consolidates changes since the previous retained version. Original source tags and APK provenance are preserved.
+Unreleased changes and retained releases; each release section consolidates changes since the previous retained version. Original source tags and APK provenance are preserved.
+
+## Unreleased
+
+- Automate signing, verification and Release publication after one confirmation, with candidate-only and pre-release options, consistent names, bilingual notes and provenance.
+- Add a track-swipe switch, enabled by default. Keep hidden paused music from appearing when returning Home while preserving pause exit behavior for visible music.
+- Refine Dynamic Island sizing, animation, content and music groups, unify short/long terminology and settings wording, and align the current page map and architecture guide.
 
 ## r14.25.1 — 2026-10-22
 

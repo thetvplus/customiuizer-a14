@@ -1210,7 +1210,7 @@
     <string name="system_island_height_title">Высота острова</string>
     <string name="system_island_height_summ">Короткий и длинный остров используют одинаковую фиксированную высоту.</string>
     <string name="system_island_width_auto_title">Автоматическая ширина острова</string>
-    <string name="system_island_width_auto_summ">Ширина короткого и среднего острова зависит от содержимого и места в строке состояния.</string>
+    <string name="system_island_width_auto_summ">Ширина короткого и длинного острова зависит от содержимого и места в строке состояния. Отключите для раздельной настройки.</string>
     <string name="system_island_width_short_title">Ширина короткого острова</string>
     <string name="system_island_width_short_summ">Для обложки, волны и краткого статуса. Сохраняется место для камеры, часов и батареи.</string>
     <string name="system_island_width_medium_title">Ширина длинного острова</string>

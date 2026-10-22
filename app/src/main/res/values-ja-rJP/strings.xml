@@ -1211,7 +1211,7 @@
     <string name="system_island_height_title">アイランドの高さ</string>
     <string name="system_island_height_summ">短いアイランドと長いアイランドは同じ固定高さを使用します。</string>
     <string name="system_island_width_auto_title">収納時の幅を自動調整</string>
-    <string name="system_island_width_auto_summ">内容とステータスバーの空きに合わせて、短いアイランドと中サイズの幅を決めます。</string>
+    <string name="system_island_width_auto_summ">内容とステータスバーの空きに合わせて、短いアイランドと長いアイランドの幅を決めます。オフにすると個別に調整できます。</string>
     <string name="system_island_width_short_title">短いアイランドの幅</string>
     <string name="system_island_width_short_summ">アートワーク、波形、短い状態に使用します。カメラ、時刻、電池の領域を優先します。</string>
     <string name="system_island_width_medium_title">長いアイランドの幅</string>

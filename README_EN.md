@@ -36,6 +36,8 @@ Install the official APK, enable the module and required scopes in your framewor
 
 Open System → Dynamic Island for app feedback and media integrations, disabled by default. Restart System UI after enabling. See the [Dynamic Island guide](docs/DYNAMIC_ISLAND.md) for behavior and pending device checks.
 
+The working branch also adds a track-swipe switch enabled by default, prevents hidden paused music from flashing when returning Home, and refines settings wording and grouping. These changes are not yet part of the official release above. See the [release guide](docs/RELEASE.md) for the automated build and publication entry point.
+
 Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/DUO_STATUS_BAR.md) for sizing, signal and hint behavior.
 
 Dock background is disabled by default. Open Home screen → Dock, then restart the launcher after changes. Background shrink adjusts all four edges: positive values contract, negative values expand, with a +1 dp default. Icon space and host clipping bound the effective adjustment; icons retain their native positions and sizes.

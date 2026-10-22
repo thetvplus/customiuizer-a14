@@ -163,7 +163,7 @@ class System : SubFragment() {
                     )
                     val enabled = presentation == StrongToastPresentationMode.DYNAMIC_ISLAND
                     islandOffset?.isVisible = enabled
-                    for (key in listOf("icons", "concise", "media", "waveform", "controls", "gestures", "gestures_horizontal", "gestures_vertical", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps")) {
+                    for (key in listOf("media", "media_swipe", "waveform", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps")) {
                         findPreference<Preference>("pref_key_system_island_$key")?.isEnabled = enabled
                     }
                     findPreference<Preference>("pref_key_system_toast_capsule")?.isEnabled =

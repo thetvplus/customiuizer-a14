@@ -1211,7 +1211,7 @@
     <string name="system_island_height_title">Altura da ilha</string>
     <string name="system_island_height_summ">As ilhas curta e longa usam a mesma altura fixa.</string>
     <string name="system_island_width_auto_title">Largura recolhida automática</string>
-    <string name="system_island_width_auto_summ">Ajusta as ilhas curta e média ao conteúdo e ao espaço da barra de status.</string>
+    <string name="system_island_width_auto_summ">Ajusta as ilhas curta e longa ao conteúdo e ao espaço da barra de status. Desative para ajustar separadamente.</string>
     <string name="system_island_width_short_title">Largura da ilha curta</string>
     <string name="system_island_width_short_summ">Para capa, onda e estados breves. Respeita o espaço da câmera, hora e bateria.</string>
     <string name="system_island_width_medium_title">Largura da ilha longa</string>

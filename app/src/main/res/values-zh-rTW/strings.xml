@@ -1211,7 +1211,7 @@
     <string name="system_island_height_title">動態島高度</string>
     <string name="system_island_height_summ">短島與長島使用相同的固定高度。</string>
     <string name="system_island_width_auto_title">自動調整收起寬度</string>
-    <string name="system_island_width_auto_summ">依內容和狀態列空間決定短島、中島寬度。關閉後可分別調整。</string>
+    <string name="system_island_width_auto_summ">依內容和狀態列空間決定短島、長島寬度。關閉後可分別調整。</string>
     <string name="system_island_width_short_title">短島寬度</string>
     <string name="system_island_width_short_summ">用於封面、波形和簡短狀態，實際寬度受攝影機及時間、電量空間限制。</string>
     <string name="system_island_width_medium_title">長島寬度</string>
