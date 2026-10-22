@@ -15,10 +15,12 @@ import miui.os.Build
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.SubFragment
 import tv.withaibuild.customiuizer.mods.GlobalActions
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 import tv.withaibuild.customiuizer.prefs.PreferenceEx
 import tv.withaibuild.customiuizer.utils.AppHelper
+import tv.withaibuild.customiuizer.utils.parseMaintenanceStates
 import tv.withaibuild.customiuizer.utils.XposedServiceManager
 
 class Various : SubFragment() {
@@ -64,6 +66,7 @@ class Various : SubFragment() {
             )
         )
         val SECURITY_CENTER_MARKETING_COMPONENTS = listOf(
+            ComponentName("com.miui.securitycenter", "com.miui.analytics.RemoteAnalyticsReceiver"),
             ComponentName(
                 "com.miui.securitycenter",
                 "com.facebook.ads.AudienceNetworkContentProvider"
@@ -242,7 +245,7 @@ class Various : SubFragment() {
     private fun setupMiuiDaemonControl() {
         val preference = findPreference<CheckBoxPreferenceEx>(MIUI_DAEMON_PREF) ?: return
         val context = context ?: return
-        val originalState = try {
+        try {
             val info = context.packageManager.getApplicationInfo(
                 MIUI_DAEMON_PACKAGE,
                 PackageManager.MATCH_DISABLED_COMPONENTS
@@ -250,7 +253,6 @@ class Various : SubFragment() {
             if (info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM == 0) {
                 throw PackageManager.NameNotFoundException()
             }
-            context.packageManager.getApplicationEnabledSetting(MIUI_DAEMON_PACKAGE)
         } catch (_: PackageManager.NameNotFoundException) {
             preference.isChecked = false
             preference.setUnsupported(true)
@@ -259,6 +261,8 @@ class Various : SubFragment() {
         }
         preference.setOnPreferenceChangeListener { _, value ->
             val disable = value == true
+            // Capture each operation, not the state from when this page was opened.
+            val originalState = context.packageManager.getApplicationEnabledSetting(MIUI_DAEMON_PACKAGE)
             val targetState = if (disable) {
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
             } else {
@@ -531,10 +535,7 @@ class Various : SubFragment() {
     }
 
     private fun readProfileStates(key: String): IntArray? =
-        AppHelper.appPrefs?.getString(key + PROFILE_STATES_SUFFIX, null)
-            ?.split(',')
-            ?.mapNotNull { it.toIntOrNull() }
-            ?.toIntArray()
+        parseMaintenanceStates(AppHelper.appPrefs?.getString(key + PROFILE_STATES_SUFFIX, null))
 
     private fun requestMaintenanceAction(
         preference: Preference,
@@ -550,7 +551,7 @@ class Various : SubFragment() {
                 preference.isEnabled = true
                 if (resultCode == GlobalActions.ACTION_HANDLED) {
                     onSuccess?.invoke()
-                    Toast.makeText(context, successMessage, Toast.LENGTH_LONG).show()
+                    if (successMessage != 0) Toast.makeText(context, successMessage, Toast.LENGTH_LONG).show()
                     return
                 }
                 val message = if (resultCode == GlobalActions.ACTION_UNHANDLED) {
@@ -561,14 +562,21 @@ class Various : SubFragment() {
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         }
-        ModuleHelper.sendOrderedBroadcastWithIdentity(
-            context,
-            intent,
-            null,
-            resultReceiver,
-            Handler(Looper.getMainLooper()),
-            GlobalActions.ACTION_UNHANDLED
-        )
+        try {
+            ModuleHelper.sendOrderedBroadcastWithIdentity(
+                context,
+                intent,
+                null,
+                resultReceiver,
+                Handler(Looper.getMainLooper()),
+                GlobalActions.ACTION_UNHANDLED
+            )
+        } catch (t: Throwable) {
+            preference.isEnabled = true
+            FatalErrors.unwrapAndRethrowIfFatal(t)
+            AppHelper.log("SystemMaintenance", t)
+            Toast.makeText(context, failedMessage, Toast.LENGTH_LONG).show()
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -612,14 +620,19 @@ class Various : SubFragment() {
                     .setTitle(R.string.various_disable_update_services_title)
                     .setMessage(getString(R.string.various_disable_update_services_confirm, current.first.size))
                     .setPositiveButton(android.R.string.ok) { _, _ ->
+                        val latest = declaredUpdaterServices()
+                        if (latest == null) {
+                            Toast.makeText(context, R.string.various_disable_update_services_failed, Toast.LENGTH_LONG).show()
+                            return@setPositiveButton
+                        }
                         requestUpdaterServiceState(
                             preference,
                             true,
-                            current.first,
-                            IntArray(current.first.size) {
+                            latest.first,
+                            IntArray(latest.first.size) {
                                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED
                             },
-                            current.second
+                            latest.second
                         )
                     }
                     .setNegativeButton(android.R.string.cancel, null)
@@ -650,15 +663,11 @@ class Various : SubFragment() {
         val prefs = AppHelper.appPrefs ?: return null
         val names = prefs.getString(UPDATE_SERVICE_NAMES_SNAPSHOT, null)
             ?.split('\n')
-            ?.filter { it.isNotEmpty() }
             ?.toTypedArray()
             ?: return null
-        val states = prefs.getString(UPDATE_SERVICE_STATES_SNAPSHOT, null)
-            ?.split(',')
-            ?.mapNotNull { it.toIntOrNull() }
-            ?.toIntArray()
+        val states = parseMaintenanceStates(prefs.getString(UPDATE_SERVICE_STATES_SNAPSHOT, null))
             ?: return null
-        return if (names.isNotEmpty() && names.size == states.size) names to states else null
+        return if (names.isNotEmpty() && names.none { it.isEmpty() } && names.size == states.size) names to states else null
     }
 
     private fun requestUpdaterServiceState(
@@ -668,45 +677,23 @@ class Various : SubFragment() {
         requestedStates: IntArray,
         snapshotStates: IntArray?
     ) {
-        val context = context ?: return
-        preference.isEnabled = false
         val intent = Intent(GlobalActions.SET_UPDATER_SERVICES_ACTION).apply {
             setPackage("android")
             putExtra(GlobalActions.EXTRA_UPDATER_SERVICE_NAMES, names)
             putExtra(GlobalActions.EXTRA_UPDATER_SERVICE_STATES, requestedStates)
         }
-        val resultReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent?) {
-                preference.isEnabled = true
-                if (resultCode == GlobalActions.ACTION_HANDLED) {
-                    AppHelper.appPrefs?.edit()?.apply {
-                        putBoolean(UPDATE_SERVICES_PREF, enabled)
-                        if (enabled && snapshotStates != null) {
-                            putString(UPDATE_SERVICE_NAMES_SNAPSHOT, names.joinToString("\n"))
-                            putString(UPDATE_SERVICE_STATES_SNAPSHOT, snapshotStates.joinToString(","))
-                        } else if (!enabled) {
-                            remove(UPDATE_SERVICE_NAMES_SNAPSHOT)
-                            remove(UPDATE_SERVICE_STATES_SNAPSHOT)
-                        }
-                    }?.apply()
-                    preference.isChecked = enabled
-                    return
+        requestMaintenanceAction(preference, intent, 0, R.string.various_disable_update_services_failed) {
+            AppHelper.appPrefs?.edit()?.apply {
+                putBoolean(UPDATE_SERVICES_PREF, enabled)
+                if (enabled && snapshotStates != null) {
+                    putString(UPDATE_SERVICE_NAMES_SNAPSHOT, names.joinToString("\n"))
+                    putString(UPDATE_SERVICE_STATES_SNAPSHOT, snapshotStates.joinToString(","))
+                } else if (!enabled) {
+                    remove(UPDATE_SERVICE_NAMES_SNAPSHOT)
+                    remove(UPDATE_SERVICE_STATES_SNAPSHOT)
                 }
-                val message = if (resultCode == GlobalActions.ACTION_UNHANDLED) {
-                    R.string.various_disable_update_services_bridge_unavailable
-                } else {
-                    R.string.various_disable_update_services_failed
-                }
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-            }
+            }?.apply()
+            preference.isChecked = enabled
         }
-        ModuleHelper.sendOrderedBroadcastWithIdentity(
-            context,
-            intent,
-            null,
-            resultReceiver,
-            Handler(Looper.getMainLooper()),
-            GlobalActions.ACTION_UNHANDLED
-        )
     }
 }

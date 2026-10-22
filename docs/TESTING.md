@@ -11,7 +11,8 @@
 | Android JVM | `testDebugUnitTest` | 行为、契约与回归；不运行真实 ROM Hook |
 | 设置界面模型 | `PreferenceNavigationUiTest`，由上述 JVM 任务执行 | 在 Android 14 模型中运行实际 FragmentManager、偏好 XML、动画与返回流程 |
 | 独立缺陷注入 | `tools/brutal_test_runner.py` | 注入缺陷是否被真实独立门禁拒绝 |
-| Full CI | `a14-ci.yml` 的 Full job | 无缓存 develop 双构建、APK 内容、R8 mapping 与 fatal lint |
+| CI APK | `a14-ci.yml` | 一次未签名 develop、R8 输出与 fatal lint |
+| 正式候选 | `a14-signed-build.yml` | 同 SHA 门禁、一次正式 Release、签名 / 元数据 / 来源证明 |
 | 实机 | 指定 APK / ROM 下的操作与日志 | 实际安装、Hook、UI、生命周期和性能，限于已测场景 |
 
 静态命中数、用例数或一次绿构建不代表已知问题数量与全设备兼容性。保留行为、备份 V2、偏好、所有权、热路径、Dynamic Island、API 边界与 issue 回归测试；只有无 production subject、完全重复或锁死错误实现细节才可删除测试。
@@ -33,19 +34,41 @@ Python 套件验证工具、生成器、资源及必要的源码边界；Kotlin 
 
 ## CI 分工
 
-仅保留核心工作流 [a14-ci.yml](../.github/workflows/a14-ci.yml)，在 main push、PR、`r14.*` tag 和手动触发；main 的纯 Markdown 推送不启动构建，tag 验证不受路径过滤影响。[ci_scope.py](../tools/ci_scope.py) 根据完整 diff 选择追加检查。不安排定时构建或依赖自动更新任务。
+普通 [a14-ci.yml](../.github/workflows/a14-ci.yml) 在 main push、PR、`r14.*` tag 和手动触发；main 的纯 Markdown 推送不启动构建，tag 验证不受路径过滤影响。[ci_scope.py](../tools/ci_scope.py) 根据完整 diff 选择追加工具检查。不安排定时构建或依赖自动更新任务。
 
-- Fast 每次运行源码契约 / Python 工具测试和 `verify.py full`。工具、CI、catalog、matrix 改动及 tag / 手动执行还检查矩阵确定性与必需独立缺陷注入。
-- Full 依赖同提交 Fast 通过；构建、依赖、混淆、工具、CI、catalog、matrix 改动，tag / 手动，或 main 提交含 `[full-ci]` 时触发。
-- 未触发 Full 时，Fast 构建一次 develop 并运行 fatal lint；Full 不重复 JVM / debug lint / Python 套件，而增加两次 clean develop、内容与 mapping 比较和 develop fatal lint。
-- 双构建禁用 build / configuration cache 与 Kotlin 增量编译，分别使用独立 Gradle 进程。下载缓存可复用。
-- main / PR 新提交取消同一分支的旧执行，tag 验证正常完成。诊断保留 7 天，Full develop / mapping 保留 30 天；清理历史运行时保留正式发行的成功验证记录。
+- 同一个 job 执行源码契约 / Python 工具测试、`verify.py full`、一次 develop 和 fatal lint；没有第二次 APK 构建或重复准备环境。
+- 工具、CI、catalog、matrix 改动及 tag / 手动执行还检查矩阵确定性与必需独立缺陷注入。
+- 所有成功的普通 CI 都保留唯一 develop APK 与 mapping；不再按 scope 隐藏下载产物，也不追加第二次构建。R8 输出始终检查。专门排查构建可重复性时可手动运行两次隔离构建及 `apk_semantic_diff.py`；不加入日常 CI。
+- main / PR 新提交取消同一分支的旧执行，tag 验证正常完成。诊断保留 7 天，检查产物保留 30 天；清理历史运行时保留正式发行的成功验证记录。
+
+独立 [正式构建与晋升](RELEASE.md#actions-正式候选) 通过 Environment 隔离密钥，原生 ref 固定 exact SHA；同 SHA 可信 CI 已成功则复用，否则只补一次源码门禁。正式流程只构建一次 Release，不先构建 develop。晋升只验证和上传原文件，不构建。回归覆盖未授权来源、缺失 Secrets、错误证书、APK / provenance 篡改、失败构建和错误发布来源；普通 CI 的签名泄漏 mutation 必须继续被拦截。
+
+Dock 定向回归覆盖 4 → 5 → 4、1 / 3–6 个图标、容器边界不变的子布局、拖拽结束 / 取消、文件夹与占位、空 Dock 和重新填充、空闲帧不读图标，以及高度 / 间距 / 圆角独立。使用原生事件顺序和 Android 14 渲染模型；目标 ROM 上还需连续拖拽、重排与动画验收。
 
 独立 mutation 的名单与数量以 [brutal_test_config.json](../tools/brutal_test_config.json) 为准。`ACTIVE_INDEPENDENT`、`BLOCKED_NO_INDEPENDENT_GATE` 与 `MUTATOR_STALE` 必须分开报告；self-detection 与未覆盖项不算独立通过。
 
+## 按需行为与故障验证
+
+`verify.py fast / full` 共用同一组源码检查，范围及失败语义保持一致。开发中按改动选择测试类，已有同范围结果可复用；无需为测试工具改动重建 APK。
+
+```powershell
+python tools/verify.py fast --changed --tests DockBackgroundTest SystemUIToastPresentationTest SystemAudioFocusChainTest
+python tools/brutal_test_runner.py --config tools/brutal_test_config.json mutate --behavior-only
+```
+
+行为变异只在需要时执行，普通 CI 的 `--required-only` 仍运行原有 11 项静态安全门禁。四项新增独立门禁分别注入取消误提交、去重失效、跨 ClassLoader 缓存污染、插件运行时释放遗漏；复用实际状态机、动作门禁、反射缓存与 owner 测试，不为这些缺陷新增生产状态或改写基础设施。变异从**已提交 HEAD** 建临时 worktree；相同测试命令先跑一次干净基线，失败即停止该组，不能把原有失败算成检出。
+
+底层 `python tools/verify.py behavior --tests <完整测试类名>` 不运行源码扫描，不接收变异名称。强制重跑选定 JVM 任务并检查新生成的 JUnit：0 为执行通过，1 仅限实际测试失败，2 为整类未执行，3 为编译、工具、环境、陈旧报告或矛盾结果。只有 1 可计独立检出；保留失败测试摘要。临时 worktree 只复制 `sdk.dir`，不复制签名配置。
+
+取消回归必须包含滑动中临时亮度与长按中断；只验证 DOWN 后 CANCEL 回到 IDLE 无法发现误提交。ClassLoader 隔离用同名类在一个加载器中缺失、另一个中可用的实际返回值验证；两侧共用同一伪单例会误绿。临时工作区校验目录和 Git 注册均已移除，Windows 文件锁仅有界重试；异常原样传播，清理失败仍使整次任务失败，并记录清理前的门禁结果。
+
+Dock 用种子 `0xA14 / 0xD0C`、各 32 步复放 0–6 图标、拖拽提交 / 取消及 owner 重建，检查拖拽期间尺寸稳定、提交后匹配有效布局且图标不被改动。Toast 用 `0xA14 / 0x70A5`、各 48 步交替横竖屏、安全区、文本 / 字号、定位极值与 View 重建，检查完整内容位于当前安全区。随机烟雾测试从 2000 步缩为 160 步并补释放断言；既有三种子、3 万步的状态机行为模型保留。
+
+这些测试不模拟真实插件加载、Binder、ROM 动画合成或硬件振幅能力。振动回归验证 native 调用一次、usage 分流、默认 / 异常回退、致命错误传播及跨午夜时段；预制效果与实机触感单独验收。
+
 ## 依赖与构建变更
 
-Actions 固定完整 commit SHA；JDK 下载保留 `force-download: true` 与 `verify-signature: true`，wrapper 保留 SHA-256。CI 契约使用固定 PyYAML 解析实际 YAML，允许合法别名、引号、内联与多行语法，继续检查无正式签名材料、平台对齐与构建独立性。
+Actions 固定完整 commit SHA；JDK 下载保留 `force-download: true` 与 `verify-signature: true`，wrapper 保留 SHA-256。CI 契约使用固定 PyYAML 解析实际 YAML，允许合法别名、引号、内联与多行语法。普通 CI 永禁签名；受保护流程仅对已识别、完整满足契约的签名步骤开放，其他字段继续扫描，不以文件名整体豁免。平台对齐、最小权限、原生 exact SHA、清理、签名后证明和验证后上传均受检查。
 
 SDK package 与 Gradle 的 compileSdk / buildToolsVersion 必须一致，具体安装参数以 [ci_install_android_sdk.sh](../tools/ci_install_android_sdk.sh) 为准。主机构建 classpath 与 APK runtime 依赖分开审查；固定版本和安全约束保存在构建配置，避免在文档复制易失效清单。
 
@@ -56,3 +79,14 @@ SDK package 与 Gradle 的 compileSdk / buildToolsVersion 必须一致，具体�
 ## 实机边界
 
 历史样本索引和未确认行为见 [COMPATIBILITY.md](../COMPATIBILITY.md)。记录 APK revision、设备 / ROM、开关、操作、日志与前后对照；重复稳定的设备连接和实际操作才可标为 DEVICE。主机 JVM 或独立 ART probe 应注明隔离环境，不能当作完整应用的帧率、内存或功耗改善。
+
+轻量采集仅按需使用，不加入普通 CI：
+
+```powershell
+# 15 秒内手动操作 Dock、Toast、控制中心或音量面板
+python tools/adb_stress.py --scenario observe --observe-seconds 15
+# 固定种子、有限次数的桌面 / 最近任务 / 返回导航
+python tools/adb_stress.py --scenario navigation --seed 0xA14 --steps 24
+```
+
+多设备用 `--serial` 指定；工具先确认稳定连接，不安装 APK、不清理数据或日志、不使用 root。输出默认在忽略目录 `.di-evidence/adb-stress/`：操作接受数、前后 PID / PSS / 线程、原始帧与 CPU 快照、从设备起始时间筛选的 crash / events 日志。未知指标为 null，保留真实 0；断连或无设备为 `UNAVAILABLE`，退出 2，不算通过。`COLLECTED` 仅表示采集完成，不能证明操作体验、性能或没有崩溃 / ANR；日志缓冲区、权限和 ROM 支持仍有限制。原始日志可能含个人信息，不提交入库。2026-10-21 本机无设备，真实 ADB 操作及性能尚未验证。

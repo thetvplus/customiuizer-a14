@@ -78,6 +78,21 @@ class GestureStateMachineTest {
         val (s2, c) = GestureStateMachine.process(s1, cancel, config, geometry)
         assertEquals(GestureState.IDLE, s2.state)
         assertEquals(GestureCommand.Reset, c.single())
+
+        // Cancellation during an active slide must never commit temporary brightness.
+        val (sliding, temporary) = GestureStateMachine.process(s1,
+            event(GestureAction.MOVE, x = 300f, y = 10f, eventTime = 40L), config, geometry)
+        assertTrue(temporary.any { it is GestureCommand.ApplyTemporaryBrightness })
+        val (cancelled, commands) = GestureStateMachine.process(sliding,
+            event(GestureAction.CANCEL, x = 300f, y = 10f, eventTime = 50L), config, geometry)
+        assertEquals(GestureState.IDLE, cancelled.state)
+        assertEquals(-1f, cancelled.session.currentBrightnessRatio, 0f)
+        assertEquals(listOf(GestureCommand.Reset), commands)
+
+        // A held gesture cancelled by its owner must not trigger the long-press action.
+        val (_, heldCommands) = GestureStateMachine.process(s1,
+            event(GestureAction.CANCEL, x = 100f, y = 10f, eventTime = 2000L), config, geometry)
+        assertEquals(listOf(GestureCommand.Reset), heldCommands)
     }
 
     @Test

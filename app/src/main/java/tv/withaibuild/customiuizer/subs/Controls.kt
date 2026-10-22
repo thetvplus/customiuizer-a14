@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.subs
 import android.os.Bundle
 import androidx.preference.Preference
 import tv.withaibuild.customiuizer.SubFragment
+import tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 import tv.withaibuild.customiuizer.utils.AppHelper
 
 class Controls : SubFragment() {
@@ -22,6 +23,14 @@ class Controls : SubFragment() {
                 findPreference<Preference>("pref_key_controls_mediaplayer_apps")?.setOnPreferenceClickListener(openAppsEdit)
             }
             "pref_key_controls_cat_navbar" -> {
+                val hideNavigation = findPreference<CheckBoxPreferenceEx>("pref_key_controls_nonavbar")
+                val keyboardFix = findPreference<Preference>("pref_key_controls_nonavbar_fix_inputmethod")
+                // Other dependents need a visible bar; this fix requires the opposite state.
+                keyboardFix?.isEnabled = hideNavigation?.isChecked == true
+                hideNavigation?.setOnPreferenceChangeListener { _, value ->
+                    keyboardFix?.isEnabled = value == true
+                    true
+                }
                 findPreference<Preference>("pref_key_controls_backlong")?.setOnPreferenceClickListener(openNavbarActions)
                 findPreference<Preference>("pref_key_controls_homelong")?.setOnPreferenceClickListener(openNavbarActions)
                 findPreference<Preference>("pref_key_controls_menulong")?.setOnPreferenceClickListener(openNavbarActions)

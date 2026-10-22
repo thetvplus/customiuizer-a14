@@ -60,7 +60,7 @@ class DropDownPreferenceEx(context: Context, attrs: AttributeSet?) : DropDownPre
         valSummary?.text = if (valueAsSummary) sValue else ""
         if (valueAsSummary) valSummary?.setTextColor(if (Helpers.isNightMode(context)) secondary else primary)
         title?.setTextColor(if (isEnabled) primary else secondary)
-        title?.text = Helpers.appendStatusMarker(title?.text, unsupported, dynamic)
+        Helpers.bindPreferenceTitle(title, this.title, unsupported, dynamic)
         if (newmod) title?.let { Helpers.applyNewMod(it) }
         if (highlight) {
             // One-shot: the row rebinds whenever its own state changes, and a flash

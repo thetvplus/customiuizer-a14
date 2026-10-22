@@ -1,6 +1,8 @@
 package tv.withaibuild.customiuizer.mods
 
 import java.io.File
+import java.lang.ref.WeakReference
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -9,12 +11,9 @@ class SystemUiViewLifecycleTest {
 
     @Test
     fun percentageOverlayDoesNotKeepStrongProcessLifetimeView() {
-        val source = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt")
-
-        assertFalse(source.contains("@SuppressLint(\"StaticFieldLeak\")\n    private var mPct"))
-        assertTrue(source.contains("private var mPctRef: WeakReference<TextView>? = null"))
-        assertTrue(source.contains("if (mPctRef?.get() === mPctText) mPctRef = null"))
-        assertTrue(source.contains("val pct = mPct ?: return"))
+        val fields = SystemUIControlCenterHooks::class.java.declaredFields.filter { it.name.startsWith("mPct") }
+        assertEquals(setOf("mPctRef", "mPctOwnerRef"), fields.map { it.name }.toSet())
+        fields.forEach { assertEquals("${it.name} must not retain its referent", WeakReference::class.java, it.type) }
     }
 
     @Test

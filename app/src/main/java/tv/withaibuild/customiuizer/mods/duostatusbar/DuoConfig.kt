@@ -38,11 +38,11 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
 }
 
 internal object DuoSizing {
-    /** A little room for the ring, bounded by the native row during measurement. */
+    /** Automatic sizing adds half a dp before pixel rounding; drawing remains bounded by the native row. */
     fun pixels(config: DuoConfig, nativeHeight: Int, density: Float): Int {
         val dp = if (!config.autoSize) config.sizeDp.toFloat()
-            else if (nativeHeight > 0) (nativeHeight / density * 1.14345f).coerceIn(19.8f, 23.76f)
-            else 22.869f
+            else (if (nativeHeight > 0) (nativeHeight / density * 1.14345f).coerceIn(19.8f, 23.76f)
+                else 22.869f) + 0.5f
         return (dp * density + 0.5f).toInt().coerceAtLeast(1)
     }
 

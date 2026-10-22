@@ -317,7 +317,7 @@ def classloader_cache_global(root: Path, cfg: dict) -> None:
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/ReflectionCache.kt"),
         r"private fun resolveNewLoader\(classLoader: ClassLoader\?, className: String\): Any\? \{\n        val loaderState = synchronized\(loaderStates\) \{\n            loaderStates\[classLoader\] \?: LoaderState\(\)\.also \{ loaderStates\[classLoader\] = it \}\n        \}\n        return resolve\(loaderState, classLoader, className\)\n    \}",
-        r"private fun resolveNewLoader(classLoader: ClassLoader?, className: String): Any? {\n        val loaderState = loaderStates.values.firstOrNull() ?: LoaderState()\n        return resolve(loaderState, classLoader, className)\n    }",
+        r"private fun resolveNewLoader(classLoader: ClassLoader?, className: String): Any? {\n        val loaderState = synchronized(loaderStates) {\n            loaderStates.values.firstOrNull() ?: LoaderState().also { loaderStates[classLoader] = it }\n        }\n        return resolve(loaderState, classLoader, className)\n    }",
     )
 
 
@@ -380,7 +380,7 @@ def remove_event_dedup(root: Path, cfg: dict) -> None:
     _replace_first(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/gesture/GestureSideEffectGate.kt"),
-        r"        val fp = fingerprint\(ownerId, event\)\n        if \(fp in seen\) return emptyList\(\)\n",
+        r"        if \(fp in seen\) return emptyList\(\)\n",
         "",
     )
 

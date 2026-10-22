@@ -22,8 +22,7 @@ internal fun setupSystemUiResources(mContext: Context) {
         MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "integer", "force_use_control_panel", 0)
     }
     if (MainModule.mPrefs.getBoolean("system_volumetimer")) {
-        val module_volume_timer_segments = intArrayOf(0, 1800, 3600, 7200, 10800, 14400, 18000, 21600, 28800, 36000, 43200)
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "integer-array", "miui_volume_timer_segments", module_volume_timer_segments)
+        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "integer-array", "miui_volume_timer_segments", VolumeTimerValues.segments())
     }
     val iconSize = MainModule.mPrefs.getInt("system_statusbar_iconsize", 6)
     if (iconSize > 6) {

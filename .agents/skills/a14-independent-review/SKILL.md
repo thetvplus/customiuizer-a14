@@ -1,7 +1,6 @@
 ---
 name: independent-review
 description: Independently review a Git diff for actionable defects, regressions, security, performance and compatibility risks. Read-only, evidence-driven and repository-agnostic. Do not implement fixes or approve the authoring agent's work.
-argument-hint: "<base-ref> <head-ref>"
 ---
 
 # Independent Review
@@ -33,11 +32,13 @@ Perform an independent, adversarial review of the specified changes. Prioritize 
    - Incorrect behavior or broken contracts.
    - Crashes, leaks, races and lifecycle defects.
    - Security, privacy or data-integrity regressions.
-   - Unnecessary allocations, blocking or hot-path overhead.
+   - Unnecessary allocations, blocking or hot-path overhead; bounded memory, CPU, GPU and long-running costs of new technology.
    - Platform, dependency and backward-compatibility issues.
    - Missing critical validation or regression coverage.
 5. Validate suspected defects against available code and evidence.
 6. Report only actionable findings introduced or materially worsened by the diff.
+
+For architecture, dependency, cache, scheduling or drawing changes, check the stated benefit against reproducible evidence and the repository's `AGENTS.md` priorities. More classes, memory, APK bytes or a new dependency alone do not establish a defect. Check owner, capacity, invalidation, cancellation, stale-result rejection and rollback scope; distinguish a missing required measurement from a confirmed regression. Performance claims need measurements in the claimed environment; Host JVM data cannot prove ART, PSS or frame-time gains. Security, compatibility, capability and maintenance improvements may justify changes without a speed or size improvement.
 
 ## Finding Standards
 

@@ -6,18 +6,24 @@ import android.graphics.Canvas
 import android.view.ContextThemeWrapper
 import android.view.View
 import android.view.ViewGroup
+import android.view.LayoutInflater
+import android.widget.TextView
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceManager
+import androidx.preference.PreferenceViewHolder
 import androidx.recyclerview.widget.RecyclerView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
+import tv.withaibuild.customiuizer.utils.Helpers
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -37,6 +43,41 @@ class PreferenceGroupDecorationTest {
     private val decoration = PreferenceGroupDecoration { screen }
     private val canvas = Canvas()
     private val state = RecyclerView.State()
+
+    @Test
+    fun aHiddenPageContainerPromotesOnlyItsImmediateHeadings() {
+        val page = PreferenceCategoryEx(context, null)
+        screen.addPreference(page)
+        page.hide()
+        val section = PreferenceCategoryEx(context, null)
+        val inner = PreferenceCategoryEx(context, null)
+        page.addPreference(section)
+        section.addPreference(inner)
+        assertFalse(preferenceGroupInputRow(page).titleVisible)
+        assertTrue(preferenceGroupInputRow(section).isTopLevel)
+        assertFalse(preferenceGroupInputRow(inner).isTopLevel)
+
+        val holder = PreferenceViewHolder.createInstanceForTests(
+            LayoutInflater.from(context).inflate(R.layout.preference_category, android.widget.FrameLayout(context), false),
+        )
+        section.onBindViewHolder(holder)
+        assertEquals(context.resources.getDimensionPixelSize(R.dimen.preference_group_header_padding), holder.itemView.paddingStart)
+        inner.onBindViewHolder(holder)
+        assertEquals(context.resources.getDimensionPixelSize(R.dimen.preference_item_child_padding), holder.itemView.paddingStart)
+    }
+
+    @Test
+    fun rebindingStatusKeepsTitlesCleanAndExplainsUnavailableOptions() {
+        val title = TextView(context)
+        repeat(2) { Helpers.bindPreferenceTitle(title, "Feature", false, true) }
+        assertEquals("Feature", title.text.toString())
+        assertEquals(context.getString(R.string.preference_applies_immediately), title.stateDescription)
+        repeat(2) { Helpers.bindPreferenceTitle(title, "Feature", true, false) }
+        assertEquals("Feature · ${context.getString(R.string.preference_unavailable)}", title.text.toString())
+        Helpers.bindPreferenceTitle(title, "Feature", false, false)
+        assertEquals("Feature", title.text.toString())
+        assertEquals(null, title.stateDescription)
+    }
 
     @Test
     fun repeatedFramesReuseOneDisplayedSnapshot() {

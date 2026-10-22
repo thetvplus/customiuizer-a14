@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.SystemServerPreferenceInvalidation
 
@@ -187,9 +188,8 @@ object XposedServiceManager {
         FatalErrors.unwrapAndRethrowIfFatal(throwable)
         AppHelper.log(LOG_TAG, "mirror worker failed: $throwable")
     }
-    private val mirrorScope = CoroutineScope(
-        SupervisorJob() + Dispatchers.Default.limitedParallelism(1) + mirrorFailureHandler
-    )
+    private val mirrorDispatcher = Dispatchers.Default.limitedParallelism(1)
+    private val mirrorScope = CoroutineScope(SupervisorJob() + mirrorDispatcher + mirrorFailureHandler)
 
     /**
      * Upper bound on how long [state] may stay [State.UNKNOWN].
@@ -428,8 +428,8 @@ object XposedServiceManager {
      * change that arrives after that leaves the mirror reported as incomplete rather than
      * starting a third pass - the flag is recoverable, an unbounded loop is not.
      */
-    private fun runMirror(generation: Long, reason: String) {
-        if (!mirrorState.beginPass(generation)) return
+    private fun runMirror(generation: Long, reason: String): Boolean {
+        if (!mirrorState.beginPass(generation)) return false
 
         var complete = mirrorPass(generation, reason)
         if (mirrorState.claimFollowUpPass(generation)) {
@@ -437,9 +437,17 @@ object XposedServiceManager {
         }
 
         val settled = mirrorState.endPass(generation)
-        if (complete && settled) {
-            mirrorState.clearUndelivered(generation)
+        return complete && settled && mirrorState.clearUndelivered(generation)
+    }
+
+    /** A component restart must not overtake queued writes or a bind-time reconciliation. */
+    suspend fun synchronizeBeforeRestart(): Boolean = withContext(mirrorDispatcher) {
+        val generation = mirrorState.currentGeneration
+        if (generation == PrefsMirrorState.NO_GENERATION || remotePrefs == null) {
+            markUndelivered("restart requested without a preference connection")
+            return@withContext false
         }
+        runMirror(generation, "before component restart")
     }
 
     /** One pass. A nonempty plan succeeds only after a confirmed commit. */

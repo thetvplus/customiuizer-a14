@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods.utils.feature
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.Controls
 import tv.withaibuild.customiuizer.mods.GlobalActions
+import tv.withaibuild.customiuizer.mods.IslandEntranceStyle
 import java.util.concurrent.atomic.AtomicReference
 import tv.withaibuild.customiuizer.mods.System as ModsSystem
 import tv.withaibuild.customiuizer.mods.SystemAudioHooks
@@ -10,6 +11,8 @@ import tv.withaibuild.customiuizer.mods.SystemClockHooks
 import tv.withaibuild.customiuizer.mods.SystemColorizeNotificationHooks
 import tv.withaibuild.customiuizer.mods.SystemDisplayHooks
 import tv.withaibuild.customiuizer.mods.SystemUIStrongToastHooks
+import tv.withaibuild.customiuizer.mods.SystemUIToastPresentation
+import tv.withaibuild.customiuizer.mods.ToastPresentationConfig
 import tv.withaibuild.customiuizer.mods.SystemLockScreenHooks
 import tv.withaibuild.customiuizer.mods.SystemNotificationHooks
 import tv.withaibuild.customiuizer.mods.SystemStatusBarIconHooks
@@ -784,6 +787,12 @@ internal data class StrongToastRuntimeSnapshot(
      * means "use the anchor as reported".
      */
     val islandOffsetDp: Int = 0,
+    val islandHeightDp: Int = 40,
+    val automaticWidth: Boolean = true,
+    val shortWidthDp: Int = 184,
+    val longWidthDp: Int = 240,
+    val entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
+    val simplified: Boolean = false,
 ) {
     val isDynamicIsland: Boolean
         get() = mode == StrongToastPresentationMode.DYNAMIC_ISLAND
@@ -794,7 +803,7 @@ internal data class StrongToastRuntimeSnapshot(
  *
  * - Installs exactly one preference observer per process.
  * - Publishes an immutable [StrongToastRuntimeSnapshot] through an [AtomicReference].
- * - Rebuilds the snapshot when the presentation mode or island offset changes.
+ * - Rebuilds the snapshot when presentation, island geometry or entrance style changes.
  * - Keeps reflection, Binder and disk I/O out of the hot path.
  * - Never reinstalls hooks on preference change.
  */
@@ -815,7 +824,9 @@ internal class StrongToastRuntimeState private constructor(
 
     private fun onPreferenceChanged(key: String?) {
         // Legacy position / bottom-offset keys are ignored: TOP-only migration is unconditional.
-        if (key != null && key != MODE_KEY && key != ISLAND_OFFSET_KEY) {
+        if (key != null && key != MODE_KEY && key != ISLAND_OFFSET_KEY && key != ISLAND_HEIGHT_KEY &&
+            key != AUTO_WIDTH_KEY && key != SHORT_WIDTH_KEY && key != MEDIUM_WIDTH_KEY &&
+            key != ENTRANCE_STYLE_KEY && key != SIMPLIFIED_KEY) {
             return
         }
         synchronized(refreshLock) {
@@ -849,6 +860,12 @@ internal class StrongToastRuntimeState private constructor(
     companion object {
         const val MODE_KEY = "system_strong_toast_mode"
         const val ISLAND_OFFSET_KEY = "system_strong_toast_island_offset"
+        const val ISLAND_HEIGHT_KEY = "system_island_height"
+        const val AUTO_WIDTH_KEY = "system_island_width_auto"
+        const val SHORT_WIDTH_KEY = "system_island_width_short"
+        const val MEDIUM_WIDTH_KEY = "system_island_width_medium"
+        const val ENTRANCE_STYLE_KEY = "system_island_entrance_style"
+        const val SIMPLIFIED_KEY = "system_island_simplified"
 
         /**
          * SeekBarPreference clamps its minimum to zero, so a signed range is persisted unsigned and
@@ -869,9 +886,16 @@ internal class StrongToastRuntimeState private constructor(
         @JvmStatic
         internal fun buildSnapshot(source: Map<String, Any>): StrongToastRuntimeSnapshot {
             val mode = StrongToastPresentationMode.fromPreference(parsePreferenceInt(source[MODE_KEY]))
+            val shortWidth = parsePreferenceInt(source[SHORT_WIDTH_KEY], 184).coerceIn(160, 224)
             return StrongToastRuntimeSnapshot(
                 mode,
                 resolveIslandOffsetDp(source[ISLAND_OFFSET_KEY]),
+                parsePreferenceInt(source[ISLAND_HEIGHT_KEY], 40).coerceIn(38, 44),
+                source[AUTO_WIDTH_KEY] as? Boolean ?: true,
+                shortWidth,
+                parsePreferenceInt(source[MEDIUM_WIDTH_KEY], 240).coerceIn(184, 280).coerceAtLeast(shortWidth),
+                IslandEntranceStyle.fromPreference(parsePreferenceInt(source[ENTRANCE_STYLE_KEY], 1)),
+                source[SIMPLIFIED_KEY] as? Boolean ?: false,
             )
         }
 
@@ -913,6 +937,17 @@ internal class StrongToastRuntimeState private constructor(
     }
 }
 
+internal class ToastPresentationFeature(lpparam: PackageReadyParam, mPrefs: PrefMap) : BaseSystemUiFeature(
+    lpparam, mPrefs, ToastPresentationFeatureId, "Toast Presentation", "system_toast_position"
+) {
+    companion object {
+        @JvmStatic
+        fun evaluateEnabled(prefs: PrefMap): Boolean = ToastPresentationConfig.read(prefs).enabled
+    }
+    override fun isEnabledCondition(prefs: PrefMap) = evaluateEnabled(prefs)
+    override fun installHook() = SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs))
+}
+
 internal class StrongToastPresentationFeature(
     lpparam: PackageReadyParam,
     mPrefs: PrefMap
@@ -946,6 +981,7 @@ internal class StrongToastPresentationFeature(
     override fun installHook() {
         val runtimeState = StrongToastRuntimeState.install(mPrefs)
         SystemUIStrongToastHooks.install(lpparam, runtimeState.snapshotRef)
+        tv.withaibuild.customiuizer.mods.DynamicIslandActivities.install(lpparam, mPrefs)
     }
 }
 
@@ -2448,6 +2484,15 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> StatusBarIconsPositionAdjustFeature.evaluateEnabled(prefs) },
             factory = { StatusBarIconsPositionAdjustFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
+            id = ToastPresentationFeatureId,
+            name = "Toast Presentation",
+            preferenceKey = "system_toast_position",
+            target = FeatureTarget.SYSTEM_UI,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> ToastPresentationFeature.evaluateEnabled(prefs) },
+            factory = { ToastPresentationFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
             id = StrongToastPresentationFeatureId,

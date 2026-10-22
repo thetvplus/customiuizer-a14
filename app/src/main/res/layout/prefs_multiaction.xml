@@ -4,6 +4,8 @@
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
 	android:animateLayoutChanges="false"
+	android:paddingStart="@dimen/preference_group_inset"
+	android:paddingEnd="@dimen/preference_group_inset"
 	android:orientation="vertical">
 
 	<TextView
@@ -15,7 +17,7 @@
 
 	<tv.withaibuild.customiuizer.prefs.SpinnerEx
 		android:id="@+id/action"
-		android:layout_width="240dp"
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:prompt="@string/launcher_gestures_action"
 		android:entries="@array/placeholder_array"
@@ -38,7 +40,7 @@
 
 		<tv.withaibuild.customiuizer.prefs.SpinnerExFake
 			android:id="@+id/app_to_launch"
-			android:layout_width="240dp"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:entries="@array/placeholder_array"
 			miuizer:entryValues="@array/placeholder_array_val"
@@ -62,7 +64,7 @@
 
 		<tv.withaibuild.customiuizer.prefs.SpinnerExFake
 			android:id="@+id/shortcut_to_launch"
-			android:layout_width="240dp"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:entries="@array/placeholder_array"
 			miuizer:entryValues="@array/placeholder_array_val"
@@ -92,7 +94,7 @@
 
 		<tv.withaibuild.customiuizer.prefs.SpinnerExFake
 			android:id="@+id/activity_to_launch"
-			android:layout_width="240dp"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:entries="@array/placeholder_array"
 			miuizer:entryValues="@array/placeholder_array_val"
@@ -125,7 +127,7 @@
 
 		<tv.withaibuild.customiuizer.prefs.SpinnerEx
 			android:id="@+id/toggle"
-			android:layout_width="240dp"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:prompt="@string/launcher_gestures_setting"
 			android:entries="@array/global_toggles"

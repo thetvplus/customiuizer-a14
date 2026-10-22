@@ -40,11 +40,11 @@ object GlobalActionSystemServerHooks {
     private const val MIUI_SECURITY_CENTER_PACKAGE = "com.miui.securitycenter"
 
     /**
-     * Exact component allowlist extracted from the connected fuxi HyperOS 1 system image.
+     * Exact component allowlist verified against the fuxi HyperOS 1 CN/TW system images.
      *
      * The bridge deliberately does not accept arbitrary privileged component requests. Daemon
-     * performance services (MiuiPerf, MemCompact, GcBooster and Sysopt) and Security Center
-     * protection services are absent from this set.
+     * performance services (MiuiPerf, MemCompact, GcBooster and Sysopt) are excluded. Security
+     * Center targets are limited to marketing/analytics and the explicit antivirus opt-out.
      */
     private val XIAOMI_TRIM_COMPONENTS = mapOf(
         MIUI_DAEMON_PACKAGE to setOf(
@@ -55,6 +55,7 @@ object GlobalActionSystemServerHooks {
             "com.miui.daemon.mqsas.jobs.HeartBeatUploadService"
         ),
         MIUI_SECURITY_CENTER_PACKAGE to setOf(
+            "com.miui.analytics.RemoteAnalyticsReceiver",
             "com.facebook.ads.AudienceNetworkContentProvider",
             "com.my.target.common.MyTargetContentProvider",
             "com.yandex.mobile.ads.core.initializer.MobileAdsInitializeProvider",
@@ -324,7 +325,7 @@ object GlobalActionSystemServerHooks {
         return try {
             packageManager.setApplicationEnabledSetting(MIUI_DAEMON_PACKAGE, state, 0)
             if (packageManager.getApplicationEnabledSetting(MIUI_DAEMON_PACKAGE) != state) {
-                return false
+                error("Daemon package state was not applied")
             }
             if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
                 stopMiuiDaemon(context)

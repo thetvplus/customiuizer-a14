@@ -37,14 +37,6 @@ class CategorySource:
         return self.key.removeprefix("pref_key_")
 
 
-@dataclasses.dataclass(frozen=True)
-class VariousGroup:
-    key: str
-    title: str
-    output_name: str
-    source_title: str | None = None
-
-
 CATEGORY_SOURCES = (
     CategorySource("pref_key_system", "prefs_system.xml", "@string/system_mods"),
     CategorySource("pref_key_launcher", "prefs_launcher.xml", "@string/launcher_title"),
@@ -83,37 +75,6 @@ STANDALONE_PAGES = (
     ("pref_key_various_hiddenfeatures_cat", "prefs_various_hiddenfeatures", "Various_HiddenFeatures", False),
 )
 
-VARIOUS_GROUPS = (
-    VariousGroup(
-        "pref_key_various_cat_exclusive",
-        "@string/various_exclusive_features_cat_title",
-        "prefs_various_exclusive.xml",
-    ),
-    VariousGroup(
-        "pref_key_various_cat_general",
-        "@string/various_general_cat_title",
-        "prefs_various_general.xml",
-    ),
-    VariousGroup(
-        "pref_key_various_cat_package_installer",
-        "@string/various_package_installer_cat_title",
-        "prefs_various_package_installer.xml",
-    ),
-    VariousGroup(
-        "pref_key_various_cat_security_center",
-        "@string/various_securitycenter_unlock_title",
-        "prefs_various_security_center.xml",
-    ),
-    VariousGroup("pref_key_various_cat_calls", "@string/calls", "prefs_various_calls.xml"),
-    VariousGroup(
-        "pref_key_various_cat_settings",
-        "@string/various_app_management_cat_title",
-        "prefs_various_settings.xml",
-    ),
-    VariousGroup("pref_key_various_cat_gboard", "@string/gboard", "prefs_various_gboard.xml"),
-)
-
-
 def _new_screen(source_root: ET.Element) -> ET.Element:
     return ET.Element(source_root.tag, dict(source_root.attrib))
 
@@ -149,125 +110,74 @@ def _structured_categories(
 ) -> None:
     selector = _selector_screen()
     found = 0
-    for source_category in list(source_root):
-        key = source_category.get(ANDROID_KEY, "")
-        if not key:
-            raise ValueError(
-                f"{category.source_name} has an unkeyed top-level preference; "
-                "structured sources must contain only keyed category wrappers"
-            )
-        title = source_category.get(ANDROID_TITLE, "")
-        if source_category.tag != PREFERENCE_CATEGORY or not title:
-            raise ValueError(f"Unexpected top-level node {source_category.tag!r} in {category.source_name}")
+    def append_group(source_group: ET.Element, selector_group: ET.Element) -> None:
+        nonlocal found
+        for source_category in source_group:
+            key = source_category.get(ANDROID_KEY, "")
+            title = source_category.get(ANDROID_TITLE, "")
+            if source_category.tag != PREFERENCE_CATEGORY or not title:
+                raise ValueError(f"Invalid directory node in {category.source_name}: {source_category.tag}")
+            if not key:
+                if not len(source_category):
+                    raise ValueError(f"Empty directory section in {category.source_name}: {title}")
+                section = ET.SubElement(selector_group, PREFERENCE_CATEGORY, {ANDROID_TITLE: title})
+                append_group(source_category, section)
+                continue
 
-        split_root = _new_screen(source_root)
-        split_root.append(copy.deepcopy(source_category))
-        _write_xml(xml_dir / _split_name(category, key), split_root)
+            split_root = _new_screen(source_root)
+            split_root.append(copy.deepcopy(source_category))
+            _write_xml(xml_dir / _split_name(category, key), split_root)
+            selector_group.append(ET.Element(PREFERENCE_ITEM, {ANDROID_KEY: key, ANDROID_TITLE: title}))
+            found += 1
 
-        selector.append(ET.Element(PREFERENCE_ITEM, {ANDROID_KEY: key, ANDROID_TITLE: title}))
-        found += 1
-
+    append_group(source_root, selector)
     if found == 0:
         raise ValueError(f"No categories found in {category.source_name}")
     _write_xml(xml_dir / f"prefs_{category.suffix}_cat.xml", selector)
 
 
-def _partition_various(source_root: ET.Element) -> list[list[ET.Element]]:
-    groups: list[list[ET.Element]] = [[] for _ in VARIOUS_GROUPS]
-    group_index = -1
-    for child in list(source_root):
-        if child.tag == PREFERENCE_CATEGORY:
-            group_index += 1
-            if group_index >= len(VARIOUS_GROUPS):
-                raise ValueError("prefs_various.xml contains more category headers than expected")
-            spec = VARIOUS_GROUPS[group_index]
-            expected_title = spec.source_title or spec.title
-            actual_title = child.get(ANDROID_TITLE, "")
-            if actual_title != expected_title:
-                raise ValueError(
-                    f"Unexpected prefs_various.xml header {actual_title!r}; expected {expected_title!r}"
-                )
-            continue
-        if group_index < 0:
-            raise ValueError("prefs_various.xml must start with an explicit category header")
-        groups[group_index].append(child)
-
-    if group_index != len(VARIOUS_GROUPS) - 1:
-        raise ValueError("prefs_various.xml category header count changed; update the explicit grouping contract")
-    if any(not group for group in groups):
-        raise ValueError("Every generated prefs_various group must contain at least one preference")
-    return groups
-
-
-def _various_categories(source_root: ET.Element, xml_dir: Path) -> dict[int, str]:
-    selector = _selector_screen()
-    route_by_element: dict[int, str] = {}
-    for spec, source_children in zip(VARIOUS_GROUPS, _partition_various(source_root), strict=True):
-        split_root = _new_screen(source_root)
-        wrapper = ET.Element(PREFERENCE_CATEGORY, {ANDROID_KEY: spec.key, ANDROID_TITLE: spec.title})
-        for child in source_children:
-            wrapper.append(copy.deepcopy(child))
-            for descendant in child.iter():
-                route_by_element[id(descendant)] = spec.key
-        split_root.append(wrapper)
-        _write_xml(xml_dir / spec.output_name, split_root)
-        selector.append(ET.Element(PREFERENCE_ITEM, {ANDROID_KEY: spec.key, ANDROID_TITLE: spec.title}))
-
-    _write_xml(xml_dir / "prefs_various_cat.xml", selector)
-    return route_by_element
-
-
 def _search_entries(
     category: CategorySource,
     source_root: ET.Element,
-    various_routes: dict[int, str],
 ) -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
-    last_sub = ""
-    last_sub_title = ""
-    last_sub_sub_title = ""
     order = 0
 
-    for element in source_root.iter():
-        if element is source_root:
-            continue
-        if element.tag == PREFERENCE_CATEGORY:
+    def visit(group: ET.Element, route: str = "", page_title: str = "", section: str = "") -> None:
+        nonlocal order
+        for element in group:
+            if element.get(AUTO_VISIBLE, "true").lower() == "false":
+                continue
+            title = element.get(ANDROID_TITLE, "")
             key = element.get(ANDROID_KEY, "")
-            if key:
-                last_sub = key
-                last_sub_title = element.get(ANDROID_TITLE, "")
-                last_sub_sub_title = ""
-                order = 1
-            else:
-                last_sub_sub_title = element.get(ANDROID_TITLE, "")
+            if element.tag == PREFERENCE_CATEGORY:
                 order += 1
-            continue
-
-        title = element.get(ANDROID_TITLE, "")
-        if element.get(AUTO_VISIBLE, "true").lower() == "false":
+                if key:
+                    order = 1
+                    visit(element, key, title)
+                else:
+                    # A hidden dependency container does not add a breadcrumb.
+                    heading = section if element.get(f"{{{AUTO_NS}}}state") in ("1", "2") else title
+                    visit(element, route, page_title, heading)
+                continue
+            if title.startswith("@") and key:
+                item = {
+                    "title": title,
+                    "key": key,
+                    "category": category.key,
+                    "categoryTitle": category.title,
+                    "order": str(order),
+                }
+                if route:
+                    item["routeSub"] = route
+                if page_title:
+                    item["breadcrumbSubTitle"] = page_title
+                if section:
+                    item["breadcrumbSubSubTitle"] = section
+                entries.append(item)
             order += 1
-            continue
-        if title.startswith("@") and element.get(ANDROID_KEY):
-            route_sub = (
-                various_routes.get(id(element), "")
-                if category.key == "pref_key_various"
-                else last_sub
-            )
-            item = {
-                "title": title,
-                "key": element.get(ANDROID_KEY, ""),
-                "category": category.key,
-                "categoryTitle": category.title,
-                "order": str(order),
-            }
-            if route_sub:
-                item["routeSub"] = route_sub
-            if last_sub_title:
-                item["breadcrumbSubTitle"] = last_sub_title
-            if last_sub_sub_title:
-                item["breadcrumbSubSubTitle"] = last_sub_sub_title
-            entries.append(item)
-        order += 1
+
+    visit(source_root)
     return entries
 
 
@@ -283,7 +193,7 @@ def _standalone_search_entries(
         if parent is None:
             continue
         root = ET.parse(source_dir / f"{resource}.xml").getroot()
-        for item in _search_entries(category, root, {}):
+        for item in _search_entries(category, root):
             section = item.get("breadcrumbSubSubTitle") or item.get("breadcrumbSubTitle", "")
             item.update(
                 routeSub=entry_key,
@@ -460,14 +370,13 @@ def generate(
             raise FileNotFoundError(source_path)
         roots[category.key] = ET.parse(source_path).getroot()
 
-    for category in CATEGORY_SOURCES[:3]:
+    for category in CATEGORY_SOURCES:
         _structured_categories(category, roots[category.key], xml_dir)
-    various_routes = _various_categories(roots["pref_key_various"], xml_dir)
 
     index_root = ET.Element("mod-search-index")
     all_parent_keys: set[str] = set()
     for category in CATEGORY_SOURCES:
-        entries = _search_entries(category, roots[category.key], various_routes)
+        entries = _search_entries(category, roots[category.key])
         all_parent_keys.update(item["key"] for item in entries)
         entries += _standalone_search_entries(source_dir, category, entries)
         _append_compact_search_category(

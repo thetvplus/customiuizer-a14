@@ -350,9 +350,10 @@ class UiHotPathPreferenceSnapshotTest {
 
         val muffled = methodBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemAudioHooks.kt",
-            "fun MuffledVibrationHook",
+            "internal fun interceptVibrationScale",
         )
         assertFalse(muffled.contains("MainModule.mPrefs"))
+        assertTrue(muffled.contains("val cfg = audioHapticsConfig"))
         assertTrue(muffled.contains("ampRinger"))
     }
 

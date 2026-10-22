@@ -2,6 +2,11 @@ package com.android.systemui.statusbar.mobile
 
 @Suppress("UNUSED_PARAMETER")
 class MobileStatusTracker {
+    @JvmField val mCallback = Callback()
+    class MobileStatus
+    class Callback {
+        fun onMobileStatusChanged(updateTelephony: Boolean, status: MobileStatus) {}
+    }
     class MobileTelephonyCallback {
         fun onActiveDataSubscriptionIdChanged(subscriptionId: Int) {}
     }

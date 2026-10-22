@@ -1,0 +1,108 @@
+name: A14 Promote Release
+run-name: A14 Promote Release / build ${{ inputs.build_run_id }} / ${{ inputs.destination }}
+
+on:
+  # Register on the authorized branch without merging main. Every job below
+  # requires manual dispatch, so this event never downloads or publishes an APK.
+  push:
+    branches: [codex/a14-feature-refinement-20261019]
+    paths: [.github/workflows/a14-promote-release.yml]
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful A14 Signed Build run ID
+        required: true
+        type: string
+      destination:
+        description: Keep in Actions, publish source, or explicitly publish both repositories
+        required: true
+        default: actions-only
+        type: choice
+        options: [actions-only, source, both]
+      authorization:
+        description: 'To publish, type: publish <versionName> from <build_run_id>'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a14-promote-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify original candidate
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    outputs:
+      source_sha: ${{ steps.candidate.outputs.source_sha }}
+      apk_sha256: ${{ steps.candidate.outputs.apk_sha256 }}
+      run_attempt: ${{ steps.candidate.outputs.run_attempt }}
+      artifact_id: ${{ steps.candidate.outputs.artifact_id }}
+    steps:
+      - name: Checkout trusted verification tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check native source
+        run: python tools/signed_release.py source-policy
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+      - name: Install pinned Android SDK packages
+        run: bash tools/ci_install_android_sdk.sh
+      - name: Verify original artifact, Android signature and attestation
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: python tools/signed_release.py fetch --run-id "$BUILD_RUN_ID" --directory "$RUNNER_TEMP/original-candidate"
+
+  publish:
+    name: Publish the exact verified binary
+    needs: verify
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'actions-only' && inputs.authorization != ''
+    environment: release-publishing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+      attestations: read
+    steps:
+      - name: Checkout trusted promotion tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+      - name: Install pinned Android SDK packages
+        run: bash tools/ci_install_android_sdk.sh
+      - name: Publish only with matching explicit authorization
+        env:
+          GH_TOKEN: ${{ github.token }}
+          A14_XPOSED_RELEASE_TOKEN: ${{ secrets.A14_XPOSED_RELEASE_TOKEN }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          RELEASE_DESTINATION: ${{ inputs.destination }}
+          RELEASE_AUTHORIZATION: ${{ inputs.authorization }}
+          VERIFIED_SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
+          VERIFIED_APK_SHA256: ${{ needs.verify.outputs.apk_sha256 }}
+          VERIFIED_RUN_ATTEMPT: ${{ needs.verify.outputs.run_attempt }}
+          VERIFIED_ARTIFACT_ID: ${{ needs.verify.outputs.artifact_id }}
+        run: python tools/signed_release.py publish --run-id "$BUILD_RUN_ID" --destination "$RELEASE_DESTINATION" --directory "$RUNNER_TEMP/original-candidate"

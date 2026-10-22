@@ -34,8 +34,29 @@ class System : SubFragment() {
         if (sub == "pref_key_system_cat_recents") {
             migrateLegacyRecentsCardStylePreference()
         }
+        if (sub == "pref_key_system_cat_toasts") {
+            val prefs = AppHelper.appPrefs
+            if (prefs != null && !prefs.contains("pref_key_system_toast_position") &&
+                (prefs.all["pref_key_system_toast_bottom"] as? Number)?.toInt()?.let { it > 0 } == true) {
+                prefs.edit().putString("pref_key_system_toast_position", "3").apply()
+            }
+        }
         super.onCreatePreferences(savedInstanceState, rootKey)
         selectSub()
+        if (sub == "pref_key_system_cat_toasts") {
+            val position = findPreference<ListPreferenceEx>("pref_key_system_toast_position")
+            fun showOffset(value: Any?) {
+                findPreference<Preference>("pref_key_system_toast_top")?.isVisible = value?.toString() == "1"
+                findPreference<Preference>("pref_key_system_toast_center")?.isVisible = value?.toString() == "2"
+                findPreference<Preference>("pref_key_system_toast_bottom")?.isVisible = value?.toString() == "3"
+            }
+            position?.setOnPreferenceChangeListener { preference, value ->
+                syncPendingListSelection(preference, value)
+                showOffset(value)
+                true
+            }
+            showOffset(position?.value)
+        }
         // Apply ROM-specific visibility before the first adapter bind. Removing this row
         // in onActivityCreated starts a list relayout during the horizontal page animation.
         if (sub == "pref_key_system_cat_qs" && Build.IS_INTERNATIONAL_BUILD) {
@@ -133,13 +154,20 @@ class System : SubFragment() {
             }
             "pref_key_system_cat_toasts" -> findPreference<Preference>("pref_key_system_blocktoasts_apps")?.setOnPreferenceClickListener(openAppsEdit)
 
-            "pref_key_system_cat_statusbar" -> {
+            "pref_key_system_cat_island" -> {
                 val strongToastMode = findPreference<ListPreferenceEx>("pref_key_system_strong_toast_mode")
                 val islandOffset = findPreference<Preference>("pref_key_system_strong_toast_island_offset")
                 fun showIslandOffset(mode: Any?) {
-                    islandOffset?.isVisible = StrongToastPresentationMode.fromPreference(
+                    val presentation = StrongToastPresentationMode.fromPreference(
                         mode?.toString()?.toIntOrNull() ?: 0
-                    ) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                    )
+                    val enabled = presentation == StrongToastPresentationMode.DYNAMIC_ISLAND
+                    islandOffset?.isVisible = enabled
+                    for (key in listOf("icons", "concise", "media", "waveform", "controls", "gestures", "gestures_horizontal", "gestures_vertical", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps")) {
+                        findPreference<Preference>("pref_key_system_island_$key")?.isEnabled = enabled
+                    }
+                    findPreference<Preference>("pref_key_system_toast_capsule")?.isEnabled =
+                        enabled || presentation == StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT
                 }
                 strongToastMode?.setOnPreferenceChangeListener { preference, newValue ->
                     syncPendingListSelection(preference, newValue)
@@ -147,6 +175,10 @@ class System : SubFragment() {
                     true
                 }
                 showIslandOffset(strongToastMode?.value)
+                findPreference<Preference>("pref_key_system_island_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
+                findPreference<Preference>("pref_key_system_island_chat_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
+            }
+            "pref_key_system_cat_statusbar" -> {
                 findPreference<Preference>("pref_key_system_statusbarcolor_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_detailednetspeed_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, false, R.xml.prefs_system_detailednetspeed); true }
                 findPreference<Preference>("pref_key_system_statusbar_batterytempandcurrent_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.xml.prefs_system_statusbar_batterytempandcurrent); true }

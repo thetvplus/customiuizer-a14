@@ -204,7 +204,7 @@ class VolumeDialogAutohideDelayEffectTest {
             mExpanded = true
         }
 
-        val effect = VolumeDialogAutohideDelayEffect(fastAbi(), AtomicReference(null))
+        val effect = testEffect(fastAbi(), AtomicReference(null))
         val callback = makeCallback(dialog)
 
         val processFast = VolumeDialogAutohideDelayEffect::class.java.getDeclaredMethod(
@@ -230,7 +230,7 @@ class VolumeDialogAutohideDelayEffectTest {
         }
         MainModule.mPrefs.put("system_volumedialogdelay_expanded", 42)
 
-        val effect = VolumeDialogAutohideDelayEffect(fastAbi(), AtomicReference(null))
+        val effect = testEffect(fastAbi(), AtomicReference(null))
         val callback = makeCallback(dialog)
 
         effect.before(callback)
@@ -248,7 +248,7 @@ class VolumeDialogAutohideDelayEffectTest {
         }
         MainModule.mPrefs.put("system_volumedialogdelay_expanded", 42)
 
-        val effect = VolumeDialogAutohideDelayEffect(fastAbi(), AtomicReference(VolumeDialogAutohideDelaySnapshot(0, 0)))
+        val effect = testEffect(fastAbi(), AtomicReference(VolumeDialogAutohideDelaySnapshot(0, 0)))
         val callback = makeCallback(dialog)
 
         effect.before(callback)
@@ -315,7 +315,7 @@ class VolumeDialogAutohideDelayEffectTest {
             mIsSafetyShowing = false
             mExpanded = true
         }
-        val effect = VolumeDialogAutohideDelayEffect(
+        val effect = testEffect(
             fastAbi(),
             AtomicReference(null),
         )
@@ -346,7 +346,7 @@ class VolumeDialogAutohideDelayEffectTest {
         // Revoke accessibility to force IllegalAccessException.
         abi.mHoveringField.isAccessible = false
 
-        val effect = VolumeDialogAutohideDelayEffect(
+        val effect = testEffect(
             abi,
             AtomicReference(VolumeDialogAutohideDelaySnapshot(42, 0)),
         )
@@ -375,7 +375,7 @@ class VolumeDialogAutohideDelayEffectTest {
             badExpandedField,
         )
         val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl()
-        val effect = VolumeDialogAutohideDelayEffect(
+        val effect = testEffect(
             abi,
             AtomicReference(VolumeDialogAutohideDelaySnapshot(0, 0)),
         )
@@ -392,6 +392,13 @@ class VolumeDialogAutohideDelayEffectTest {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+    // Keep the existing ABI/mode tests independent of accessibility policy; dedicated tests
+    // exercise recommendation flags, live manager settings and missing-manager fallback.
+    private fun testEffect(
+        abi: VolumeDialogAutohideDelayAbi?,
+        snapshot: AtomicReference<VolumeDialogAutohideDelaySnapshot?>,
+    ) = VolumeDialogAutohideDelayEffect(abi, snapshot) { _, millis, _ -> millis }
+
     private fun fastAbi(): VolumeDialogAutohideDelayAbi {
         return VolumeDialogAutohideDelayResolver.resolve(
             VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl::class.java,
@@ -411,7 +418,7 @@ class VolumeDialogAutohideDelayEffectTest {
         expanded: Int = 5000,
         collapsed: Int = 0,
     ): VolumeDialogAutohideDelayEffect {
-        return VolumeDialogAutohideDelayEffect(
+        return testEffect(
             VolumeDialogAutohideDelayResolver.resolve(rootClass)!!,
             AtomicReference(VolumeDialogAutohideDelaySnapshot(expanded, collapsed)),
         )
@@ -420,7 +427,7 @@ class VolumeDialogAutohideDelayEffectTest {
     private fun legacyEffect(snapshot: VolumeDialogAutohideDelaySnapshot): VolumeDialogAutohideDelayEffect {
         MainModule.mPrefs.put("system_volumedialogdelay_expanded", snapshot.expanded)
         MainModule.mPrefs.put("system_volumedialogdelay_collapsed", snapshot.collapsed)
-        return VolumeDialogAutohideDelayEffect(null, AtomicReference(null))
+        return testEffect(null, AtomicReference(null))
     }
 
     private fun makeCallback(target: Any?, args: Array<Any?> = emptyArray()): HookerClassHelper.BeforeHookCallback {

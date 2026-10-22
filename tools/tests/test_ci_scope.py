@@ -98,20 +98,20 @@ class CIScopeTest(unittest.TestCase):
             self.assertEqual({"tools": True, "full": True},
                              ci_scope.select_scope("push", "refs/heads/main", {}, paths))
 
-    def test_full_reuses_fast_code_checks_at_the_same_revision(self):
+    def test_ci_checks_and_builds_only_once_in_one_job(self):
         path = Path(__file__).resolve().parents[2] / ".github/workflows/a14-ci.yml"
         workflow = ci_contract_scan.load_workflow(path.read_text(encoding="utf-8"))
-        fast, full = workflow["jobs"]["fast"], workflow["jobs"]["full"]
-        self.assertEqual("fast", full["needs"])
-        self.assertEqual("needs.fast.outputs.full == 'true'", full["if"])
-        fast_commands = "\n".join(step.get("run", "") for step in fast["steps"])
-        full_commands = "\n".join(step.get("run", "") for step in full["steps"])
-        self.assertEqual(1, fast_commands.count("tools/verify.py full"))
-        self.assertNotIn("tools/verify.py full", full_commands)
-        self.assertNotIn("brutal_test_runner.py", full_commands)
-        self.assertNotIn(":app:assembleDebug", fast_commands)
+        self.assertEqual({"fast"}, set(workflow["jobs"]))
+        fast = workflow["jobs"]["fast"]
+        commands = "\n".join(step.get("run", "") for step in fast["steps"])
+        self.assertEqual(1, commands.count("tools/verify.py full"))
+        self.assertEqual(1, commands.count(":app:assembleDevelop"))
+        self.assertEqual(1, commands.count(":app:lintVitalDevelop"))
+        self.assertNotIn(":app:assembleDebug", commands)
+        build = next(step for step in fast["steps"] if ":app:assembleDevelop" in step.get("run", ""))
+        self.assertNotIn("if", build)
         checks = next(step for step in fast["steps"] if " hermeticity" in step.get("run", ""))
-        self.assertNotIn("if", checks, "source contract tests must run for ordinary application changes")
+        self.assertNotIn("if", checks, "source contracts run for ordinary application changes")
         additional = next(step for step in fast["steps"] if " mutate " in step.get("run", ""))
         self.assertIn(" determinism", additional["run"])
 

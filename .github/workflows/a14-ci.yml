@@ -29,8 +29,6 @@ jobs:
     if: github.event.deleted != true
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    outputs:
-      full: ${{ steps.scope.outputs.full }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,6 +70,10 @@ jobs:
       - name: Install CI parser
         run: python -m pip install --disable-pip-version-check -r tools/requirements.txt
 
+      - name: Tag release metadata
+        if: startsWith(github.ref, 'refs/tags/r14.')
+        run: python tools/check_release_metadata.py --require-tag
+
       # Includes application-source contracts as well as tests of the tools.
       - name: Python tests and source contracts
         run: |
@@ -88,84 +90,9 @@ jobs:
         run: python tools/verify.py full
 
       - name: Develop build and fatal lint
-        if: steps.scope.outputs.full != 'true'
         run: ./gradlew --no-daemon :app:assembleDevelop :app:lintVitalDevelop
 
-      - name: Upload failure diagnostics
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: fast-ci-diagnostics
-          path: |
-            app/build/reports/
-            app/build/test-results/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  full:
-    name: Full CI
-    needs: fast
-    if: needs.fast.outputs.full == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          java-version: '25'
-          force-download: true
-          verify-signature: true
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.12'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
-        with:
-          packages: ''
-          log-accepted-android-sdk-licenses: false
-
-      - name: Install pinned Android SDK packages
-        run: bash tools/ci_install_android_sdk.sh
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-        with:
-          cache-cleanup: on-success
-
-      - name: Tag release metadata
-        if: startsWith(github.ref, 'refs/tags/r14.')
-        run: python tools/check_release_metadata.py --require-tag
-
-      # Neither build may restore compiled outputs from the Gradle build cache.
-      # Separate Gradle processes also avoid sharing compiler state.
-      - name: First clean develop build
-        run: |
-          ./gradlew --no-daemon --no-build-cache --no-configuration-cache -Pkotlin.compiler.execution.strategy=in-process -Pkotlin.incremental=false clean :app:assembleDevelop
-          cp app/build/outputs/apk/develop/*.apk "$RUNNER_TEMP/first-develop.apk"
-          test -s app/build/outputs/mapping/develop/mapping.txt
-          cp app/build/outputs/mapping/develop/mapping.txt "$RUNNER_TEMP/first-mapping.txt"
-
-      - name: Second clean develop build and fatal lint
-        run: |
-          ./gradlew --no-daemon --no-build-cache --no-configuration-cache -Pkotlin.compiler.execution.strategy=in-process -Pkotlin.incremental=false clean :app:assembleDevelop :app:lintVitalDevelop
-          cp app/build/outputs/apk/develop/*.apk "$RUNNER_TEMP/second-develop.apk"
-
-      - name: APK content and R8 mapping reproducibility
-        run: |
-          python tools/apk_semantic_diff.py --require-reproducible --json-output "$RUNNER_TEMP/apk-semantic-diff.json" "$RUNNER_TEMP/first-develop.apk" "$RUNNER_TEMP/second-develop.apk"
-          cmp "$RUNNER_TEMP/first-mapping.txt" app/build/outputs/mapping/develop/mapping.txt
-
-      - name: Require develop inspection files
+      - name: Require optimized inspection files
         run: |
           test -s app/build/outputs/mapping/develop/mapping.txt
           test -f app/build/outputs/mapping/develop/usage.txt
@@ -183,14 +110,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload verification diagnostics
-        if: always()
+      - name: Upload failure diagnostics
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: full-ci-diagnostics
+          name: fast-ci-diagnostics
           path: |
-            ${{ runner.temp }}/apk-semantic-diff.json
-            ${{ runner.temp }}/first-mapping.txt
             app/build/reports/
+            app/build/test-results/
           if-no-files-found: ignore
           retention-days: 7

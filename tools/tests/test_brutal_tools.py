@@ -172,22 +172,33 @@ class CIWorkflowRegressionTest(unittest.TestCase):
         changed += "\n      - run: echo checked\n        env:\n          steps: production\n          jobs: production\n"
         self.assertEqual([], self.scan(changed))
 
-    def test_either_cached_repro_build_is_rejected(self):
-        for flag in ("--no-daemon", "--no-build-cache", "--no-configuration-cache", "-Pkotlin.compiler.execution.strategy=in-process", "-Pkotlin.incremental=false"):
-            for occurrence in (0, 1):
-                with self.subTest(flag=flag, occurrence=occurrence):
-                    lines = self.original().splitlines()
-                    builds = [i for i, line in enumerate(lines) if "clean :app:assembleDevelop" in line]
-                    lines[builds[occurrence]] = lines[builds[occurrence]].replace(flag, "")
-                    self.assertIn("CI_REPRO_CACHE", "\n".join(self.scan("\n".join(lines) + "\n")))
+    def test_duplicate_or_missing_full_build_is_rejected(self):
+        line = "        run: ./gradlew --no-daemon :app:assembleDevelop :app:lintVitalDevelop"
+        duplicate = "        run: |\n" + ("          " + line.strip().removeprefix("run: ") + "\n") * 2
+        for replacement in ("        run: echo missing", duplicate):
+            changed = self.original().replace(line, replacement)
+            self.assertIn("CI_SINGLE_BUILD", "\n".join(self.scan(changed)))
 
-    def test_missing_mapping_comparison_is_rejected(self):
-        changed = "\n".join(line for line in self.original().splitlines() if not line.strip().startswith("cmp ")) + "\n"
-        self.assertIn("CI_REPRO_MAPPING", "\n".join(self.scan(changed)))
+    def test_missing_fatal_lint_is_rejected(self):
+        changed = self.original().replace(":app:lintVitalDevelop", "")
+        self.assertIn("CI_RELEASE_LINT", "\n".join(self.scan(changed)))
+
+    def test_missing_r8_mapping_is_rejected(self):
+        changed = self.original().replace("test -s app/build/outputs/mapping/develop/mapping.txt", "echo missing")
+        self.assertIn("CI_R8_OUTPUT", "\n".join(self.scan(changed)))
 
     def test_missing_required_artifacts_fail(self):
         changed = self.original().replace("if-no-files-found: error", "if-no-files-found: ignore")
         self.assertIn("CI_REQUIRED_ARTIFACT", "\n".join(self.scan(changed)))
+
+    def test_successful_ci_always_has_a_downloadable_apk(self):
+        for changed in (
+            self.original().replace("      - name: Upload develop artifacts for inspection",
+                                    "      - name: Upload develop artifacts for inspection\n        if: steps.scope.outputs.full == 'true'"),
+            self.original().replace("name: develop-apk-and-mapping", "name: no-apk"),
+            self.original().replace("app/build/outputs/apk/develop/*.apk", "app/build/outputs/no-apk/*.txt"),
+        ):
+            self.assertIn("CI_REQUIRED_ARTIFACT", "\n".join(self.scan(changed)))
 
 
 class SourceHazardTest(unittest.TestCase):

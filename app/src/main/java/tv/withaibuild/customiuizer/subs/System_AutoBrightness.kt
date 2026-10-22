@@ -15,11 +15,12 @@ class System_AutoBrightness : SubFragment() {
 
         maxBrightness = findPreference("pref_key_system_autobrightness_max")
         minBrightness = findPreference("pref_key_system_autobrightness_min")
+        maxBrightness?.setMinValue((minBrightness?.getValue() ?: 0) + 1)
         minBrightness?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
                 if ((maxBrightness?.getValue() ?: 0) <= progress) {
-                    maxBrightness?.setValue(progress + 1)
+                    maxBrightness?.setValue(progress + 1, true)
                 }
                 maxBrightness?.setMinValue(progress + 1)
             }

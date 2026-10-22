@@ -1,6 +1,8 @@
 package tv.withaibuild.customiuizer.mods.utils.gesture
 
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import kotlin.random.Random
 
@@ -105,7 +107,8 @@ class GestureMachineStressTest {
         m.prepare(2, dummyContext)
 
         var time = 0L
-        repeat(100) { sequence ->
+        // Keep a short invalid-input smoke test; the behavioral model owns the long sequences.
+        repeat(8) { sequence ->
             repeat(20) { index ->
                 val owner = if (index % 3 == 0) 2 else 1
                 val action = randomAction()
@@ -121,7 +124,11 @@ class GestureMachineStressTest {
             m.clear(if (sequence % 2 == 0) 1 else 2)
         }
 
-        // The only real assertion is that we made it here without crashing.
         assertTrue(time > 0L)
+        m.clear()
+        for (owner in 1..2) {
+            assertEquals(GestureState.IDLE, m.snapshot(owner).state)
+            assertNull(m.resolvedConfig(owner))
+        }
     }
 }

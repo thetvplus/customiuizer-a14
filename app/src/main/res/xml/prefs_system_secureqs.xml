@@ -1,5 +1,6 @@
 <PreferenceScreen
 	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:miuizer="http://schemas.android.com/apk/res-auto"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent">
 
@@ -16,53 +17,53 @@
 		android:dependency="pref_key_system_secureqs" />
 
 	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
-		android:title="@string/secure_tiles"
+		android:title="@string/prefs_group_tiles"
 		android:dependency="pref_key_system_secureqs">
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_wifi"
-		android:title="@string/array_global_toggle_wifi"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_wifi"
+			android:title="@string/array_global_toggle_wifi"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_bt"
-		android:title="@string/array_global_toggle_bt"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_bt"
+			android:title="@string/array_global_toggle_bt"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_mobiledata"
-		android:title="@string/array_global_toggle_mobiledata"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_mobiledata"
+			android:title="@string/array_global_toggle_mobiledata"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_airplane"
-		android:title="@string/system_secureqs_airplane_title"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_airplane"
+			android:title="@string/system_secureqs_airplane_title"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_location"
-		android:title="@string/system_secureqs_location_title"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_location"
+			android:title="@string/system_secureqs_location_title"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_hotspot"
-		android:title="@string/system_statusbaricons_hotspot_title"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_hotspot"
+			android:title="@string/system_statusbaricons_hotspot_title"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_nfc"
-		android:title="@string/array_global_toggle_nfc"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_nfc"
+			android:title="@string/array_global_toggle_nfc"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_sync"
-		android:title="@string/system_secureqs_sync_title"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_sync"
+			android:title="@string/system_secureqs_sync_title"
+			android:defaultValue="true" />
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_secureqs_custom"
-		android:title="@string/system_secureqs_custom_title"
-		android:defaultValue="true"/>
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_secureqs_custom"
+			android:title="@string/system_secureqs_custom_title"
+			android:defaultValue="true" />
 
 	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 

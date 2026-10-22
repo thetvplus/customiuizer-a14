@@ -3249,6 +3249,19 @@
       "enableCondition": "prefs.getBoolean(\"launcher_dock_background\")",
       "allowedProcess": "com.miui.home",
       "deniedProcess": "third-party launchers (unless selected app sets)"
+    },
+    {
+      "featureIdInt": 256,
+      "featureIdName": "systemui_toast_presentation",
+      "name": "Toast Presentation",
+      "preferenceKey": "system_toast_position",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs))",
+      "enableCondition": "ToastPresentationConfig.read(prefs).enabled",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     }
   ],
   "scope": [

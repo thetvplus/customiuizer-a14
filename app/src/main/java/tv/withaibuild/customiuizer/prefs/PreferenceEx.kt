@@ -63,7 +63,7 @@ open class PreferenceEx(context: Context, attrs: AttributeSet?) : Preference(con
         if (warning) {
             title?.setTextColor(Helpers.markColor)
         }
-        title?.text = Helpers.appendStatusMarker(title?.text, unsupported, dynamic)
+        Helpers.bindPreferenceTitle(title, this.title, unsupported, dynamic)
         if (newmod) title?.let { Helpers.applyNewMod(it) }
         if (highlight) {
             // One-shot: the row rebinds whenever its own state changes, and a flash

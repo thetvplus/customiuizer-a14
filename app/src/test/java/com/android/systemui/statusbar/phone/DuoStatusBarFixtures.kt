@@ -1,6 +1,8 @@
 package com.android.systemui.statusbar.phone
 
-class MiuiPhoneStatusBarView
+class MiuiPhoneStatusBarView {
+    fun handleEvent(@Suppress("UNUSED_PARAMETER") event: android.view.MotionEvent) = false
+}
 class KeyguardStatusBarView
 
 open class PhoneStatusBarPolicy {

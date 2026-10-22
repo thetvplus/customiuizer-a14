@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from tools.extract_process_matrix import FEATURE_DIR, extract_class_body
+from tools.catalog_contract_probe import balanced_blocks, parse_feature_ids, parse_lazy_spec
 
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX = ROOT / "docs/rom-intelligence/A14_PROCESS_MATRIX.json"
@@ -21,6 +22,16 @@ class ProcessMatrixEligibilityTest(unittest.TestCase):
         package_set = re.search(r"RESOURCE_PACKAGES\s*=\s*setOf\((.*?)\)", source, re.S).group(1)
         actual = set(re.findall(r'"([^"]+)"', package_set))
         self.assertEqual(actual, set(self.rows["status_bar_height"]["allowedProcess"].split("; ")))
+
+    def test_every_registered_feature_is_present_in_the_current_matrix(self):
+        identities = parse_feature_ids(FEATURE_DIR / "FeatureIds.kt")
+        registered = set()
+        for path in FEATURE_DIR.glob("*Features.kt"):
+            for block in balanced_blocks(path.read_text(encoding="utf-8"), "LazyFeatureSpec"):
+                spec = parse_lazy_spec(block)
+                if spec is not None:
+                    registered.add(identities[spec["id"]])
+        self.assertEqual(registered, set(self.rows))
 
     def test_media_rows_match_their_package_enable_conditions(self):
         source = (FEATURE_DIR / "MediaFeatures.kt").read_text(encoding="utf-8")

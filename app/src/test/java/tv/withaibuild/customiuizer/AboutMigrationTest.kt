@@ -70,7 +70,7 @@ class AboutMigrationTest {
     }
 
     @Test
-    fun languageControlLivesOnHomeBelowSettingsEntry() {
+    fun languageAndLauncherIconPrecedeTheSystemSettingsEntryOnHome() {
         assertFalse("AboutFragment must not own locale behavior", aboutFragment.contains("AppLocaleController"))
         assertFalse("About layout must not contain a language row", aboutLayout.contains("about_language_row"))
 
@@ -78,8 +78,9 @@ class AboutMigrationTest {
         val localeEntry = mainPreferences.indexOf("pref_key_miuizer_locale")
         val launcherEntry = mainPreferences.indexOf("pref_key_miuizer_launchericon")
         assertTrue("Home must contain the settings entry", settingsEntry >= 0)
-        assertTrue("Language must follow the settings entry", localeEntry > settingsEntry)
+        assertTrue("Home must contain the language entry", localeEntry >= 0)
         assertTrue("Language must be before the launcher icon entry", launcherEntry > localeEntry)
+        assertTrue("The system settings position follows the common appearance settings", settingsEntry > launcherEntry)
 
         assertTrue("MainFragment must guard fatal locale-data failures", mainFragment.contains("FatalErrors.rethrowIfFatal(t)"))
         assertTrue("MainFragment must use the centralized locale display data", mainFragment.contains("AppLocaleController.buildLocaleDisplayData(locale.context)"))

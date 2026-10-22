@@ -75,8 +75,8 @@ class SystemUiFeaturesWiringTest {
         val features = SystemUiFeatures.all(fakePackageReadyParam(), PrefMap())
 
         assertEquals(
-            "All 96 active SystemUI features should be present after retiring three obsolete paths",
-            96,
+            "All 97 active SystemUI features include the new Toast presentation adapter",
+            97,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
@@ -126,6 +126,18 @@ class SystemUiFeaturesWiringTest {
         val on = PrefMap().apply { put("system_statusbar_duo", true) }
         assertTrue(spec.isEnabled(on))
         assertTrue(spec.create() is DuoStatusBarFeature)
+    }
+
+    @Test
+    fun safeVolumeWarningFeatureRetainsItsIdHostPhaseAndDisabledDefault() {
+        val off = PrefMap()
+        val spec = SystemUiFeatures.all(fakePackageReadyParam(), off).single { it.id == HideSafeVolumeDlgFeatureId }
+        assertEquals(140, spec.id.id)
+        assertEquals("system_nosafevolume", spec.preferenceKey)
+        assertEquals(FeatureTarget.SYSTEM_UI, spec.target)
+        assertEquals(InstallPhase.PACKAGE_READY, spec.phase)
+        assertFalse(spec.isEnabled(off))
+        assertTrue(spec.isEnabled(PrefMap().apply { put("system_nosafevolume", true) }))
     }
 
     @Test

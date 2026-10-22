@@ -41,6 +41,8 @@ class CIPortabilityCheckerTest(unittest.TestCase):
         (root / "tools" / "tests").mkdir()
         (root / ".github" / "workflows").mkdir(parents=True)
         shutil.copy(REPO_CHECKER, root / "tools" / "check_ci_portability.py")
+        for name in ("ci_contract_scan.py", "release_workflow_contract.py"):
+            shutil.copy(REPO_ROOT / "tools" / name, root / "tools" / name)
         (root / "tools" / "tests" / "test_check_ci_portability.py").touch()
         return root
 
@@ -199,7 +201,7 @@ class CIPortabilityCheckerTest(unittest.TestCase):
             )
             result = self.run_checker(root, root / "tools" / "check_ci_portability.py")
             self.assertEqual(1, result.returncode, result.stdout + result.stderr)
-            self.assertIn("push branches must be exactly", result.stdout)
+            self.assertIn("CI_EXACT_BRANCH", result.stdout)
 
     def test_stale_rom_intelligence_branch_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

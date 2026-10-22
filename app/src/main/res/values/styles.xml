@@ -168,9 +168,11 @@
 		<item name="android:textSize">@dimen/preference_text_size</item>
 	</style>
 	<style name="Widget.InputField.Category">
-		<item name="android:paddingBottom">9dp</item>
+		<item name="android:paddingTop">8dp</item>
+		<item name="android:paddingBottom">@dimen/preference_group_header_bottom</item>
 		<item name="android:layout_marginTop">8dp</item>
-		<item name="android:layout_height">50dp</item>
+		<item name="android:layout_height">wrap_content</item>
+		<item name="android:minHeight">40dp</item>
 		<item name="android:paddingStart">@dimen/preference_item_child_padding</item>
 		<item name="android:textSize">@dimen/preference_category_text_size</item>
 		<item name="android:textColor">@color/preference_category_text_color</item>
@@ -179,7 +181,7 @@
 		<item name="android:layout_marginTop">0dp</item>
 	</style>
 	<style name="Widget.InputField.Category.Middle">
-		<item name="android:layout_marginTop">16dp</item>
+		<item name="android:layout_marginTop">@dimen/preference_group_gap</item>
 	</style>
 	<style name="Widget.ProgressBar">
 		<item name="background">@android:color/transparent</item>

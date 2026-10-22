@@ -158,38 +158,11 @@ def check_workflow_file(path: Path) -> list[str]:
     violations = []
     rel = path.relative_to(REPO_ROOT)
 
-    # Require full-history checkout.
-    if "actions/checkout" in text and "fetch-depth: 0" not in text:
-        violations.append(f"  {rel}: checkout must use fetch-depth: 0")
-
-    # Exact branch lock.
-    branch_section = re.search(
-        r'on:\s*\n(?:\s+\w+:\s*\n)*\s+push:\s*\n\s+branches:\s*\n((?:\s+-\s+.*\n)+)',
-        text,
-    )
-    if branch_section:
-        branches = re.findall(r'-\s+([\w\-/\.]+)', branch_section.group(1))
-        if branches != ["main"]:
-            violations.append(
-                f"  {rel}: push branches must be exactly [main], got {branches}"
-            )
-
+    # One parsed security contract governs ordinary CI and protected release jobs.
+    from ci_contract_scan import scan_workflow
+    violations.extend(scan_workflow(path, "main", "main"))
     if "devin/a14-rom-intelligence-audit" in text:
         violations.append(f"  {rel}: stale branch devin/a14-rom-intelligence-audit is forbidden")
-
-    # Forbidden commands / properties.
-    forbidden = {
-        "gradlew.bat": re.compile(r'\bgradlew\.bat\b'),
-        "officialRelease=true": re.compile(r'(?:-P)?officialRelease\s*=\s*true\b'),
-        "keystore property": re.compile(r'customiuizerA14KeystoreProperties|CUSTOMIUIZER_A14_KEYSTORE_PROPERTIES'),
-        "keystore secret": re.compile(r'\b(KEYSTORE_|SIGNING_|KEY_PASSWORD|STORE_PASSWORD|secrets\.[A-Z_]*(?:SIGN|KEY|STORE))\b'),
-        "r14 signing path": re.compile(r'r14[\\/]buildkey|\$?C:\\\\Users\\\\tv\\\\Documents\\\\buildkey'),
-    }
-    for name, pattern in forbidden.items():
-        for match in pattern.finditer(text):
-            line = text[: match.start()].count("\n") + 1
-            violations.append(f"  {rel}:{line}: forbidden {name}")
-
     return violations
 
 

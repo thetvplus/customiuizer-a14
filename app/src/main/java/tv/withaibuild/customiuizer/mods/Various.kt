@@ -16,7 +16,6 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.database.ContentObserver
-import android.graphics.Canvas
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Binder
@@ -685,6 +684,38 @@ object Various {
     }
 
     internal const val SIDE_BAR_EXPAND_RECEIVER_KEY = "showSideBarReceiver"
+    private const val SIDE_BAR_HIDE_TASK = "customiuizer_sidebar_hide_task"
+
+    internal fun scheduleSideBarHandleHide(view: View) {
+        if (XposedHelpers.getAdditionalInstanceField(view, SIDE_BAR_HIDE_TASK) != null) return
+        val owner = WeakReference(view)
+        val task = Runnable {
+            val target = owner.get() ?: return@Runnable
+            XposedHelpers.removeAdditionalInstanceField(target, SIDE_BAR_HIDE_TASK) ?: return@Runnable
+            ModuleHelper.guarded {
+                val listenerInfo = XposedHelpers.getObjectField(target, "mListenerInfo")
+                val listener = listenerInfo?.let {
+                    XposedHelpers.getObjectField(it, "mOnTouchListener") as? View.OnTouchListener
+                }
+                if (listener != null) {
+                    target.setOnTouchListener { ownerView, event ->
+                        ModuleHelper.guarded(false) {
+                            event.source == 9999 && listener.onTouch(ownerView, event)
+                        }
+                    }
+                }
+                target.background = null
+            }
+        }
+        XposedHelpers.setAdditionalInstanceField(view, SIDE_BAR_HIDE_TASK, task)
+        view.postDelayed(task, 150)
+    }
+
+    internal fun cancelSideBarHandleHide(view: View?) {
+        if (view == null) return
+        val task = XposedHelpers.removeAdditionalInstanceField(view, SIDE_BAR_HIDE_TASK) as? Runnable ?: return
+        view.removeCallbacks(task)
+    }
 
     /**
      * Process-scoped ShowSideBar receiver. The [View] is held only through a
@@ -746,7 +777,7 @@ object Various {
 
     @JvmStatic
     fun AddSideBarExpandReceiverHook(lpparam: PackageReadyParam) {
-        val isHooked = booleanArrayOf(false, false)
+        val isHooked = booleanArrayOf(false)
         val registeredReceiver = arrayOf<BroadcastReceiver?>(null)
         val registeredOwnerView = arrayOf<WeakReference<View>?>(null)
         val enableSideBar = MainModule.mPrefs.getBoolean("various_swipe_expand_sidebar")
@@ -772,6 +803,7 @@ object Various {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     if (!isHooked[0]) {
                         isHooked[0] = true
@@ -790,64 +822,11 @@ object Various {
                         ) {
                             registeredReceiver[0] = showReceiver
                             registeredOwnerView[0] = WeakReference(view)
+                            if (!enableSideBar) scheduleSideBarHandleHide(view)
                         } else {
                             registeredReceiver[0] = null
                             registeredOwnerView[0] = null
                             isHooked[0] = false
-                        }
-
-                        if (!isHooked[1]) {
-                            isHooked[1] = true
-                            val myhandler = Handler(Looper.myLooper()!!)
-                            val removeBg = Runnable { ModuleHelper.guarded {
-                                myhandler.removeCallbacks(this as Runnable)
-                                if (!enableSideBar) {
-                                    val li = XposedHelpers.getObjectField(view, "mListenerInfo")
-                                    val mOnTouchListener = XposedHelpers.getObjectField(li, "mOnTouchListener")
-                                    ModuleHelper.findAndHookMethod(mOnTouchListener.javaClass, "onTouch", View::class.java, MotionEvent::class.java, object : MethodHook() {
-                                        override fun intercept(chain: XposedInterface.Chain): Any? {
-                                            var skipped = false
-                                            var result: Any? = null
-                                            var throwable: Throwable? = null
-                                            try {
-                                                val me = chain.getArg(1) as MotionEvent
-                                                if (me.source != 9999) {
-                                                    skipped = true; result = false; throwable = null
-                                                }
-
-                                                if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                                                result = chain.proceed()
-                                            } catch (t: Throwable) {
-                                                FatalErrors.rethrowIfFatal(t)
-                                                throwable = t
-                                                result = null
-                                            }
-                                            return XposedHelpers.throwOrReturn(throwable, result)
-                                        }
-                                    })
-                                    val bgDrawable = view.background!!.javaClass
-                                    ModuleHelper.findAndHookMethod(bgDrawable, "draw", Canvas::class.java, object : MethodHook() {
-                                        override fun intercept(chain: XposedInterface.Chain): Any? {
-                                            var skipped = false
-                                            var result: Any? = null
-                                            var throwable: Throwable? = null
-                                            try {
-                                                skipped = true; result = null; throwable = null
-
-                                                if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                                                result = chain.proceed()
-                                            } catch (t: Throwable) {
-                                                FatalErrors.rethrowIfFatal(t)
-                                                throwable = t
-                                                result = null
-                                            }
-                                            return XposedHelpers.throwOrReturn(throwable, result)
-                                        }
-                                    })
-                                    view.background = null
-                                }
-                            }}
-                            myhandler.postDelayed(removeBg, 150)
                         }
                     }
                 } catch (t: Throwable) {
@@ -873,6 +852,7 @@ object Various {
                     throwable = t
                     result = null
                 }
+                cancelSideBarHandleHide(chain.getArg(0) as? View)
                 val receiverToRelease = takeSideBarExpandReceiverIfOwner(
                     registeredReceiver,
                     registeredOwnerView,
@@ -1277,13 +1257,10 @@ object Various {
 
                         val msg = chain.getArg(0) as Message
                         if (msg.what == 1) {
-                            val wk = XposedHelpers.getObjectField(thisObject, finalFieldName)
-                            val frag = XposedHelpers.callMethod(wk, "get")
+                            val wk = XposedHelpers.getObjectField(thisObject, finalFieldName) as? WeakReference<*>
+                            val frag = wk?.get()
                             if (frag == null) return XposedHelpers.throwOrReturn(throwable, result)
-                            val batteryView = XposedHelpers.callMethod(frag, "getActivity") as Activity
-                            val temp = (batteryView.registerReceiver(null, IntentFilter("android.intent.action.BATTERY_CHANGED"), Context.RECEIVER_NOT_EXPORTED)?.getIntExtra("temperature", 0) ?: 0) / 10
-                            val tempPreference = XposedHelpers.callMethod(frag, "findPreference", "reference_current_temp")
-                            XposedHelpers.callMethod(tempPreference, "setText", "${temp}℃")
+                            updateBatteryTemperature(frag)
                         }
 
                     } catch (t: Throwable) {
@@ -1293,6 +1270,15 @@ object Various {
                 }
             })
         }
+    }
+
+    internal fun updateBatteryTemperature(fragment: Any) {
+        val activity = XposedHelpers.callMethod(fragment, "getActivity") as? Activity ?: return
+        val battery = activity.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+            Context.RECEIVER_NOT_EXPORTED) ?: return
+        if (!battery.hasExtra("temperature")) return
+        val preference = XposedHelpers.callMethod(fragment, "findPreference", "reference_current_temp") ?: return
+        XposedHelpers.callMethod(preference, "setText", "${battery.getIntExtra("temperature", 0) / 10}℃")
     }
 
     @JvmStatic

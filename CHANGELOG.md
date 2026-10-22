@@ -4,12 +4,26 @@ English | [简体中文](CHANGELOG_CN.md)
 
 Retained releases; each section consolidates changes since the previous retained version. Original source tags and APK provenance are preserved.
 
+## r14.25.1 — 2026-10-22
+
+versionCode 246. Changes since r14.24.1:
+
+- Unify Dynamic Island into short and long forms with the same height. Music, system feedback, brief notices and supported notifications share one window and motion, with camera, clock, battery and Duo clearance.
+- Offer Vertical and Center animation styles: Vertical enters and leaves through the top at full size; Center keeps its final height and vertical position while using interruptible horizontal damped motion. Use a slower layered handoff between music and secondary activities. Place Dynamic Island directly after Status bar in the System interface group.
+- Retain the latest valid system feedback while Control Center is open and show it after collapse when still valid. Hide only status icons actually covered by the island.
+- Prefer the ROM's native feedback icons for Do Not Disturb and silent mode; use a bounded set of native SystemUI resources for other states. Normalize visible icon size without distortion. Keep media swipes, swipe-up dismissal, artwork and concise success notices enabled.
+- Follow the native-selected music player, with a 750 ms entrance delay and roughly two-second pause retirement. Media gestures respect session capabilities. Optional notification takeover retains native heads-up eligibility, notification-center entries, clicks and expiry.
+- Support full-width Dock backgrounds, symmetric icon-centered sizing and bounded wallpaper-sampled glass. Keep material and tint fallbacks when blur or sampling is unavailable, without overriding the global blur setting.
+- Connect vibration intensity to A14 native scaling; fix high-volume confirmations, volume timer rendering, panel timeout and backdrop cleanup. Refine audio-focus handling, settings grouping and precise slider input.
+- Improve visualizer cancellation, maintenance-snapshot failure handling and Hook process registration. Retain HyperOS 1 / Android 14, arm64-v8a and libxposed API 102.
+
 ## r14.24.1 — 2026-10-19
 
 versionCode 245. Changes since r14.23.5:
 
 - Add an optional background inside the native Launcher Dock, disabled by default. Reuse system glass or Gaussian blur, fit the background to native icon bounds and device corners, and expose opacity, radius, horizontal spacing and signed four-edge shrink controls without moving or resizing icons.
 - Keep Dock background visibility tied to the native recent-tasks state, retire hidden blur regions, and preserve native icon reorder and app-return animation coordinates. Use one shared corner radius for native material and outline; retain cached G4 geometry when native material is unavailable.
+- Fix Dock size adjustment when one edge reaches its limit, and ease background width changes over 180 ms when the icon count changes. Raise common slider number-entry dialogs slightly and fit them above the visible keyboard.
 - Select Duo cellular signal from the active data subscription instead of ambiguous per-controller flags. Preserve all native signal levels, distinguish Wi-Fi levels 3 and 4, and add adjustable horizontal spacing.
 - Coalesce weather refreshes and discard cancelled provider results, recover step-view state after reattachment, and restore screenshot-hidden overlays across repeated events and detachments.
 - Propagate direct and wrapped fatal JVM errors from receiver registration, replacement, cleanup, logging, callbacks and ROM fallbacks. Roll back failed registrations before propagation; release the screen controller's context even if unregister fails, and allow initialization to recover after a failed registration. Preserve ordinary optional-feature fallbacks.

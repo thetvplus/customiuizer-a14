@@ -55,18 +55,13 @@ class StrongToastPresentationModeTest {
     }
 
     @Test
-    fun dynamicIslandReshapesTheRomRowInPlace() {
-        val source = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStrongToastHooks.kt")
-        val branch = source.substringAfter("StrongToastPresentationMode.DYNAMIC_ISLAND -> {")
-            .substringBefore("\n                            }")
-        assertTrue(branch.contains("applyDynamicIslandCapsule"))
-        assertTrue(branch.contains("setFitInsetsTypes(0)"))
-        assertTrue(branch.contains("FLAG_LAYOUT_NO_LIMITS"))
-        assertFalse(branch.contains("layoutParams.width = 1"))
-        assertFalse(source.contains("Gravity.BOTTOM"))
-        assertFalse(source.contains("forBottom("))
-        assertFalse(source.contains("resolveBottom"))
-        assertFalse(source.contains("DynamicIslandHost.shared"))
+    fun dynamicIslandDoesNotCreateOrReshapeAnyNativeForeheadWindow() {
+        val hooks = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIStrongToastHooks.kt")
+        assertTrue(hooks.contains("StrongToastPresentationMode.DYNAMIC_ISLAND -> Unit"))
+        assertFalse(hooks.contains("installContentLayout"))
+        assertFalse(hooks.contains("applyDynamicIslandCapsule"))
+        assertFalse(hooks.contains("NativeWindow("))
+        assertTrue(hooks.contains("snapshot.isDynamicIsland || snapshot.mode == StrongToastPresentationMode.HIDE"))
     }
 
     @Test

@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.provider.Settings
+import android.telephony.CellInfo
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import android.util.Pair
@@ -220,7 +221,8 @@ internal fun resolveMobileTypeDisplayName(romName: String, snapshot: StatusBarLa
 }
 
 internal fun formatDigitalSignalLabel(level: Int, hideUnit: Boolean): String =
-    if (hideUnit) level.toString() else level.toString() + "dBm"
+    if (level == CellInfo.UNAVAILABLE) "—"
+    else if (hideUnit) level.toString() else level.toString() + "dBm"
 
 /** Converts [dp] to physical pixels using the current [Resources] display metrics. */
 private fun Resources.dp2px(dp: Float): Float =
@@ -1099,59 +1101,57 @@ object SystemUIStatusBarHooks {
                 if (signalStrength != null) {
                     val dbm = XposedHelpers.callMethod(signalStrength, "getDbm") as Int
                     signalLevelMap.put(sid, dbm)
+                } else {
+                    signalLevelMap.delete(sid)
                 }
             }
         })
         val stateUpdateHook = object : MethodHook() {
-            private var initAction = false
-            override fun before(param: BeforeHookCallback) {
-                if (param.getMember().name == "updateState") {
-                    return
-                }
-                val mState = XposedHelpers.getObjectField(param.getThisObject(), "mState")
-                initAction = mState == null
-            }
-
             override fun after(param: AfterHookCallback) {
-                val updateStateMethod = param.getMember().name == "updateState"
                 val mMobile = XposedHelpers.getObjectField(param.getThisObject(), "mMobile") as View
                 val signalImageContainer = mMobile.parent as FrameLayout
-                if (initAction) {
-                    val digitalView = TextView(signalImageContainer.context)
+                var digitalView = signalImageContainer.findViewWithTag<TextView>("digitalSignalView")
+                val mobileIconState = if (param.getMember().name == "setDripEnd") {
+                    XposedHelpers.getObjectField(param.getThisObject(), "mState")
+                } else param.getArgs()[0]
+                if (mobileIconState == null) {
+                    digitalView?.visibility = View.GONE
+                    return
+                }
+                val visible = XposedHelpers.getBooleanField(mobileIconState, "visible") &&
+                    !XposedHelpers.getBooleanField(mobileIconState, "airplane")
+                if (!visible) {
+                    digitalView?.visibility = View.GONE
+                    return
+                }
+                if (digitalView == null) {
+                    digitalView = TextView(signalImageContainer.context)
                     initDigitalSignalView(signalImageContainer.context, digitalView)
-                    signalImageContainer.addView(digitalView)
+                    val nativeText = XposedHelpers.getObjectField(param.getThisObject(), "mMobileTypeSingle") as TextView
+                    digitalView.setTextColor(nativeText.currentTextColor)
                     digitalView.setTag("digitalSignalView")
-                    mMobile.visibility = View.GONE
+                    signalImageContainer.addView(digitalView)
                 }
-                if (updateStateMethod || initAction) {
-                    val mobileIconState = param.getArgs()[0]
-                    val visible = XposedHelpers.getBooleanField(mobileIconState, "visible")
-                    if (!visible) return
-                    val airplane = XposedHelpers.getBooleanField(mobileIconState, "airplane")
-                    if (airplane) return
-                    val layout = currentOrBuildStatusBarLayoutSnapshot()
-                    val dualRows = layout.digitalSignalDualRows
-                    val subId = XposedHelpers.getObjectField(mobileIconState, "subId") as Int
-                    val digitalView = signalImageContainer.findViewWithTag<TextView>("digitalSignalView")
-                    val hideUnit = layout.digitalSignalHideUnit
-                    if (dualRows) {
-                        val slotId = SubscriptionManager.getSlotIndex(subId)
-                        if (slotId == 0) {
-                            val subSubId = SubscriptionManager.getSubscriptionId(1)
-                            digitalView?.text = formatDigitalSignalLabel(signalLevelMap.get(subId), hideUnit) +
-                                "\n" + formatDigitalSignalLabel(signalLevelMap.get(subSubId), hideUnit)
-                        }
-                    } else {
-                        digitalView?.text = formatDigitalSignalLabel(signalLevelMap.get(subId), hideUnit)
-                    }
+                mMobile.visibility = View.GONE
+                digitalView.visibility = View.VISIBLE
+                val layout = currentOrBuildStatusBarLayoutSnapshot()
+                val subId = XposedHelpers.getObjectField(mobileIconState, "subId") as Int
+                val hideUnit = layout.digitalSignalHideUnit
+                val mainLabel = formatDigitalSignalLabel(signalLevelMap.get(subId, CellInfo.UNAVAILABLE), hideUnit)
+                val secondSubId = if (layout.digitalSignalDualRows && SubscriptionManager.getSlotIndex(subId) == 0) {
+                    SubscriptionManager.getSubscriptionId(1)
+                } else {
+                    SubscriptionManager.INVALID_SUBSCRIPTION_ID
                 }
-                if (!updateStateMethod) {
-                    initAction = false
-                }
+                digitalView.text = if (SubscriptionManager.isValidSubscriptionId(secondSubId)) {
+                    mainLabel + "\n" + formatDigitalSignalLabel(signalLevelMap.get(secondSubId, CellInfo.UNAVAILABLE), hideUnit)
+                } else mainLabel
             }
         }
         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateUpdateHook)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", stateUpdateHook)
+        // Both fuxi ROMs call updateState from these two entry points. Refresh once after the
+        // caller finishes, including the initial-state branch that never calls updateState.
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "setDripEnd", Boolean::class.javaPrimitiveType!!, stateUpdateHook)
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyDarknessInternal", object : MethodHook() {
             override fun after(param: AfterHookCallback) {
                 val mMobileTypeSingle = XposedHelpers.getObjectField(param.getThisObject(), "mMobileTypeSingle") as TextView
@@ -1164,11 +1164,7 @@ object SystemUIStatusBarHooks {
         val dualRows = currentOrBuildStatusBarLayoutSnapshot().digitalSignalDualRows
         if (dualRows) {
             ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", object : MethodHook() {
-                private var isHooked = false
                 override fun before(param: BeforeHookCallback) {
-                    if (!isHooked) {
-                        isHooked = true
-                    }
                     val iconStates = param.getArgs()[1] as List<*>
                     if (iconStates.size == 2) {
                         val iconState0 = iconStates[0]

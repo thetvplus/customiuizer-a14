@@ -13,25 +13,28 @@
 		android:icon="@drawable/ic_actionbar_done"
 		app:showAsAction="ifRoom"/>
 	<item
-		android:id="@+id/restartlauncher"
-		app:showAsAction="never"
-		android:title="@string/restart_launcher" />
-	<item
-		android:id="@+id/restartsystemui"
-		app:showAsAction="never"
-		android:title="@string/restart_systemui" />
-	<item
-		android:id="@+id/restartsecuritycenter"
-		app:showAsAction="never"
-		android:title="@string/restart_securitycenter" />
-	<item
-		android:id="@+id/restartmatched"
-		app:showAsAction="never"
-		android:title="@string/restart_affected_components" />
-	<item
-		android:id="@+id/softreboot"
-		android:title="@string/soft_reboot"
-		app:showAsAction="never" />
+		android:id="@+id/restart_menu"
+		android:title="@string/restart_menu"
+		app:showAsAction="never">
+		<menu>
+			<item
+				android:id="@+id/restartlauncher"
+				app:showAsAction="never"
+				android:title="@string/restart_launcher" />
+			<item
+				android:id="@+id/restartsystemui"
+				app:showAsAction="never"
+				android:title="@string/restart_systemui" />
+			<item
+				android:id="@+id/restartsecuritycenter"
+				app:showAsAction="never"
+				android:title="@string/restart_securitycenter" />
+			<item
+				android:id="@+id/softreboot"
+				android:title="@string/soft_reboot"
+				app:showAsAction="never" />
+		</menu>
+	</item>
 	<item
 		android:id="@+id/backuprestore"
 		android:title="@string/backup_restore"

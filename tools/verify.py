@@ -22,6 +22,7 @@ import re
 import shutil
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import eol_check
@@ -292,33 +293,22 @@ def is_android_build_input(path: str) -> bool:
     }
 
 
+def check_source(changed: bool = False, staged: bool = False) -> int:
+    for check in (
+        check_java_runtime, check_static_rules, check_eol, check_observer_key_contract,
+        check_hook_body_prefmap, check_hotpath_alloc_budget,
+        lambda: check_main_source_cleanliness(changed=changed, staged=staged),
+        lambda: check_invariants(changed=changed, staged=staged), check_feature_semantics,
+    ):
+        code = check()
+        if code:
+            return code
+    return 0
+
+
 def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -> int:
-    code = check_java_runtime()
-    if code != 0:
-        return code
-    code = check_static_rules()
-    if code != 0:
-        return code
-    code = check_eol()
-    if code != 0:
-        return code
-    code = check_observer_key_contract()
-    if code != 0:
-        return code
-    code = check_hook_body_prefmap()
-    if code != 0:
-        return code
-    code = check_hotpath_alloc_budget()
-    if code != 0:
-        return code
-    code = check_main_source_cleanliness(changed=changed, staged=staged)
-    if code != 0:
-        return code
-    code = check_invariants(changed=changed, staged=staged)
-    if code != 0:
-        return code
-    code = check_feature_semantics()
-    if code != 0:
+    code = check_source(changed, staged)
+    if code:
         return code
 
     if tests:
@@ -338,32 +328,8 @@ def fast(tests: list[str] | None, changed: bool = False, staged: bool = False) -
 
 
 def full() -> int:
-    code = check_java_runtime()
-    if code != 0:
-        return code
-    code = check_static_rules()
-    if code != 0:
-        return code
-    code = check_eol()
-    if code != 0:
-        return code
-    code = check_observer_key_contract()
-    if code != 0:
-        return code
-    code = check_hook_body_prefmap()
-    if code != 0:
-        return code
-    code = check_hotpath_alloc_budget()
-    if code != 0:
-        return code
-    code = check_main_source_cleanliness()
-    if code != 0:
-        return code
-    code = check_invariants()
-    if code != 0:
-        return code
-    code = check_feature_semantics()
-    if code != 0:
+    code = check_source()
+    if code:
         return code
 
     return gradle(
@@ -372,6 +338,47 @@ def full() -> int:
         "testDebugUnitTest",
         "lintDebug",
     )
+
+
+def behavior(tests: list[str]) -> int:
+    """Independent JVM gate: assertion failure=1, unavailable=2, build/tool error=3.
+
+    No mutation name or source scanner is involved. Fresh JUnit reports prevent
+    compilation failures or an old failing report from being counted as a kill.
+    """
+    if not tests or any(not re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+", name) for name in tests):
+        print("behavior: supply exact, fully qualified JVM test classes", file=sys.stderr)
+        return 3
+    try:
+        check_java_runtime()
+        folder = REPO_ROOT / "app/build/test-results/testDebugUnitTest"
+        reports = [folder / f"TEST-{name}.xml" for name in dict.fromkeys(tests)]
+        before = {p: p.stat().st_mtime_ns if p.exists() else None for p in reports}
+        args = ["testDebugUnitTest", "--rerun"]
+        for name in dict.fromkeys(tests):
+            args.extend(["--tests", name])
+        code = gradle(*args)
+        if any(not p.is_file() or p.stat().st_mtime_ns == before[p] for p in reports):
+            print("behavior: missing/stale JUnit reports; build failure is not a semantic kill", file=sys.stderr)
+            return 3
+        roots = [ET.parse(p).getroot() for p in reports]
+        if any(int(r.get("tests", 0)) <= int(r.get("skipped", 0)) for r in roots):
+            print("behavior: a selected suite executed no tests", file=sys.stderr)
+            return 2
+        failures = [f"{r.get('name')}.{case.get('name')}: {failure.get('message', '')[:400]}"
+                    for r in roots for case in r.findall("testcase")
+                    for failure in [*case.findall("failure"), *case.findall("error")]]
+        if code != 0 and failures:
+            print("behavior: fresh JVM failures\n" + "\n".join(failures[:12]))
+            return 1
+        if code != 0 or failures:
+            print("behavior: inconsistent Gradle/JUnit result", file=sys.stderr)
+            return 3
+        print(f"behavior: {sum(int(r.get('tests', 0)) for r in roots)} tests passed")
+        return 0
+    except (OSError, ET.ParseError, ValueError, subprocess.SubprocessError, SystemExit) as error:
+        print(f"behavior: cannot execute gate: {error}", file=sys.stderr)
+        return 3
 
 
 def main() -> int:
@@ -397,6 +404,8 @@ def main() -> int:
     )
 
     subparsers.add_parser("full", help="static checks + invariants + compile + tests + lintDebug")
+    behavior_parser = subparsers.add_parser("behavior", help="fresh JVM reports for an independent mutation gate; no APK")
+    behavior_parser.add_argument("--tests", nargs="+", required=True, help="exact fully qualified JVM test classes")
 
     args = parser.parse_args()
 
@@ -404,6 +413,8 @@ def main() -> int:
         return fast(args.tests, changed=args.changed, staged=args.staged)
     if args.command == "full":
         return full()
+    if args.command == "behavior":
+        return behavior(args.tests)
     return 2
 
 

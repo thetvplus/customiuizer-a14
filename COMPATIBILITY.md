@@ -11,6 +11,8 @@
 
 较新的 compileSdk 或构建工具不会扩展运行支持范围。跨版本移植需要独立任务和 API、ROM、生命周期、资源差异证据，不维护逐文件上游 parity。
 
+工程现代化遵循 [AGENTS.md](AGENTS.md)：允许有证据的局部技术升级和有界资源交换，以上产品范围、API / ClassLoader / R8、旧设置与备份兼容不随之放宽。语言语法、JVM 输出、D8/R8 转换和 Android 14 ART 可用 API 必须分别验证。
+
 `staticScope=true`。框架需启用模块并授予目标包作用域；四类普通应用选择（状态栏颜色、去除滚动边缘效果、媒体按键、闹钟兼容）通过原生 Service 请求动态作用域，仍需框架授权。PermissionController 同时识别 AOSP 与 Google 包名，模块不能安全识别应用自绘授权说明页。
 
 r14.23.3 起最低要求 API 102，直接使用原生 Hook 安装和 Service 能力；不维护 API 101 兼容路径。固定 ID、回调语义、类加载与生命周期边界见 [架构说明](ARCHITECTURE.md#api-102-安装与-service)。

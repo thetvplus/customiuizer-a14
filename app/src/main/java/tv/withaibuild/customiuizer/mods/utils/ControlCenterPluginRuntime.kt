@@ -190,7 +190,8 @@ open class ControlCenterPluginRuntimeEngine(
                 object : MethodHook() {
                     override fun before(param: BeforeHookCallback) {
                         val lease = activeLease
-                        if (lease != null && !lease.active) return
+                        // A failed plugin lease must not disable discovery of its replacement loader.
+                        if (lease != null && !lease.active && installState != InstallState.FAILED_PARTIAL) return
                         val loader = SystemUIControlCenterHooks.extractPluginLoader(param.getThisObject()) ?: return
                         bind(loader)
                     }

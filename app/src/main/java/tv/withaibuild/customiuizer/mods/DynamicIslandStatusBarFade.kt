@@ -1,34 +1,25 @@
 package tv.withaibuild.customiuizer.mods
 
+import android.graphics.Rect
 import android.view.View
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.ref.WeakReference
 
-/**
- * Fades HyperOS status-bar contents while a Dynamic Island event owns the top of the screen.
- *
- * The island keeps the ROM StrongToast window, geometry and animator. This only animates alpha on
- * the already-resolved `status_bar_contents` view. Ownership is the current island root: a later
- * event replaces the owner, and a stale detach cannot fade the icons back in.
- */
+/** One visible island lease; only individual status icons intersecting its screen bounds are affected. */
 internal object DynamicIslandStatusBarFade {
     private const val SYSTEM_UI_PACKAGE = "com.android.systemui"
     private const val CONTENTS_ID = "status_bar_contents"
     private const val LEFT_CONTAINER_FIELD = "mStatusBarLeftContainer"
-
-    internal fun interface AlphaRunner {
-        fun run(view: View, target: Float, onEnd: (() -> Unit)?)
-    }
-
-    internal var alphaRunner: AlphaRunner = AlphaRunner { view, target, onEnd ->
-        view.animate().cancel()
-        view.animate().alpha(target).withEndAction(onEnd).start()
-    }
-
     internal var contentsRef: WeakReference<View>? = null
     internal var ownerRef: WeakReference<Any>? = null
-    internal var originalAlpha: Float? = null
+    private val islandBounds = Rect()
+    private var compact: IslandStatusBarCompact? = null
+
+    fun compactClearance(screenWidth: Int, fallback: Int): Int {
+        if (compact == null) contentsRef?.get()?.let { compact = IslandStatusBarCompact.resolve(it) }
+        return compact?.maximumWidth(screenWidth) ?: fallback
+    }
 
     fun bindFromStatusBar(statusBar: View) {
         val contents = resolveContents(statusBar) ?: return
@@ -36,23 +27,34 @@ internal object DynamicIslandStatusBarFade {
     }
 
     internal fun bind(contents: View) {
-        val previous = contentsRef?.get()
+        if (contentsRef?.get() !== contents) {
+            compact?.restore()
+            compact = null
+        }
         contentsRef = WeakReference(contents)
-        if (ownerRef?.get() == null) return
-        if (previous !== contents) originalAlpha = null
-        fadeTo(0f, capturingOriginal = true)
+        if (ownerRef?.get() != null) applyBounds()
     }
 
-    fun acquire(owner: Any) {
+    fun acquire(owner: Any, bounds: Rect) {
+        if (ownerRef?.get() === owner && islandBounds == bounds) return
         ownerRef = WeakReference(owner)
-        fadeTo(0f, capturingOriginal = true)
+        islandBounds.set(bounds)
+        applyBounds()
     }
 
     fun release(owner: Any) {
         if (ownerRef?.get() !== owner) return
         ownerRef = null
-        val target = originalAlpha ?: return
-        fadeTo(target, capturingOriginal = false)
+        islandBounds.setEmpty()
+        // Keep the weak helper until its reveal ends, so a successor can cancel it.
+        compact?.restore(animate = true)
+    }
+
+    private fun applyBounds() {
+        val contents = contentsRef?.get() ?: return
+        if (compact == null) compact = IslandStatusBarCompact.resolve(contents)
+        // An unknown ROM hierarchy must never fall back to fading the whole status bar.
+        compact?.show(islandBounds)
     }
 
     internal fun resolveContents(statusBar: View): View? {
@@ -74,25 +76,4 @@ internal object DynamicIslandStatusBarFade {
         }
     }
 
-    private fun fadeTo(target: Float, capturingOriginal: Boolean) {
-        val contents = contentsRef?.get() ?: return
-        if (!contents.isAttachedToWindow) {
-            if (!capturingOriginal) originalAlpha = null
-            return
-        }
-        if (capturingOriginal && originalAlpha == null) originalAlpha = contents.alpha
-        try {
-            val onEnd = if (capturingOriginal) {
-                null
-            } else {
-                {
-                    if (ownerRef?.get() == null) originalAlpha = null
-                }
-            }
-            alphaRunner.run(contents, target, onEnd)
-        } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
-            XposedHelpers.log("DynamicIslandStatusBarFade", t)
-        }
-    }
 }

@@ -1,6 +1,6 @@
 # Java Boundary Allowlist
 
-这些文件保持 Java，不继续迁移到 Kotlin。
+这些文件默认保持 Java，以保护入口发现、Java/Kotlin ABI 和第三方来源。现代语言能力不要求迁移文件；确需局部迁移时单独给出行为等价、字节码 / R8 类加载验证与回退单位，和功能变化分开。共同决策规则见 [AGENTS.md](../AGENTS.md)。
 
 ## KEEP_JAVA_FRAMEWORK_ENTRY
 

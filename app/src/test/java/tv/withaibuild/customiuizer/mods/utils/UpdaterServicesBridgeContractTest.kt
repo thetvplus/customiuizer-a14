@@ -42,6 +42,8 @@ class UpdaterServicesBridgeContractTest {
         assertTrue(bridge.contains("declaredByPackage.getValue(packageName)"))
         assertTrue(screen.contains("persistComponentProfileSnapshot("))
         assertTrue(screen.contains("persistPackageProfileSnapshot("))
+        assertTrue(screen.contains("parseMaintenanceStates(AppHelper.appPrefs?.getString(key + PROFILE_STATES_SUFFIX, null))"))
+        assertTrue(screen.contains("parseMaintenanceStates(prefs.getString(UPDATE_SERVICE_STATES_SNAPSHOT, null))"))
         assertTrue(screen.contains("DAEMON_NETWORK_COMPONENTS"))
         assertTrue(screen.contains("SECURITY_CENTER_MARKETING_COMPONENTS"))
         assertTrue(screen.contains("SECURITY_CENTER_ANTIVIRUS_COMPONENTS"))

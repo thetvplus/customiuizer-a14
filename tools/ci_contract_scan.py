@@ -14,6 +14,11 @@ from pathlib import Path
 
 import yaml
 
+try:
+    from tools.release_workflow_contract import check as check_protected_release, BOOTSTRAP_BRANCH
+except ModuleNotFoundError:
+    from release_workflow_contract import check as check_protected_release, BOOTSTRAP_BRANCH
+
 
 class WorkflowLoader(yaml.BaseLoader):
     def construct_mapping(self, node, deep=False):
@@ -74,6 +79,10 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
         add("CI_STEP_FORMAT", str(error))
         return errors
 
+    protected_errors, security_text = check_protected_release(workflow, path.name)
+    for error in protected_errors:
+        add("CI_PROTECTED_RELEASE", error.removeprefix("CI_PROTECTED_RELEASE: "))
+
     for job in workflow["jobs"].values():
         steps = job.get("steps", [])
         for action in [job, *steps]:
@@ -97,23 +106,31 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
                 if action_input(action, "persist-credentials") not in ("false", "False", "FALSE"):
                     add("CI_CHECKOUT_CREDENTIALS", "checkout must set persist-credentials: false")
                 permissions = job.get("permissions", workflow.get("permissions", {}))
-                if not isinstance(permissions, dict) or permissions.get("contents") != "read":
+                publisher = (path.name == "a14-promote-release.yml" and not protected_errors
+                             and job is workflow["jobs"].get("publish"))
+                if not isinstance(permissions, dict) or permissions.get("contents") != ("write" if publisher else "read"):
                     add("CI_PERMISSIONS", "set permissions.contents: read")
             if isinstance(action.get("with"), dict) and action["with"].get("name") == "develop-apk-and-mapping":
                 if action["with"].get("if-no-files-found") != "error":
                     add("CI_REQUIRED_ARTIFACT", "missing develop artifacts must fail the upload")
+                if action.get("if") not in (None, "success()"):
+                    add("CI_REQUIRED_ARTIFACT", "every successful CI build must upload its APK")
 
-        if job is workflow["jobs"].get("full") and path.name == "a14-ci.yml":
+        if job is workflow["jobs"].get("fast") and path.name == "a14-ci.yml":
+            artifacts = [step for step in steps if isinstance(step.get("with"), dict)
+                         and step["with"].get("name") == "develop-apk-and-mapping"
+                         and isinstance(step.get("uses"), str)
+                         and is_root_action(step.get("uses", ""), "actions/upload-artifact")]
+            if len(artifacts) != 1 or "app/build/outputs/apk/develop/*.apk" not in artifacts[0]["with"].get("path", ""):
+                add("CI_REQUIRED_ARTIFACT", "CI requires one downloadable develop APK artifact")
             commands = "\n".join(step.get("run", "") for step in steps)
-            builds = re.findall(r"(?m)^\s*\./gradlew[^\n]*\bclean\b[^\n]*:app:assembleDevelop[^\n]*$", commands)
-            if len(builds) != 2:
-                add("CI_REPRO_BUILDS", "Full CI requires two separate clean develop builds")
-            options = {"--no-daemon", "--no-build-cache", "--no-configuration-cache",
-                       "-Pkotlin.compiler.execution.strategy=in-process", "-Pkotlin.incremental=false"}
-            if any(not options.issubset(build.split()) for build in builds):
-                add("CI_REPRO_CACHE", "reproducibility builds must bypass compiled caches and shared processes")
-            if not re.search(r"(?m)^\s*cmp[^\n]*first-mapping[.]txt[^\n]*mapping[.]txt", commands):
-                add("CI_REPRO_MAPPING", "compare R8 mappings as well as APK contents")
+            builds = re.findall(r"(?m)^\s*\./gradlew[^\n]*:app:assembleDevelop[^\n]*$", commands)
+            if len(builds) != 1:
+                add("CI_SINGLE_BUILD", "CI requires exactly one optimized develop build")
+            if not builds or ":app:lintVitalDevelop" not in builds[0]:
+                add("CI_RELEASE_LINT", "optimized build requires fatal lint")
+            if not re.search(r"test -s app/build/outputs/mapping/develop/mapping[.]txt", commands):
+                add("CI_R8_OUTPUT", "require the optimized build's R8 mapping")
 
     # Portability and forbidden signing/publication are text checks, independent
     # of YAML formatting. SDK installation is checked against Gradle below.
@@ -121,25 +138,30 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
         ("CI_GRADLEW_MODE", r"chmod\s+\+x\s+\./gradlew\b", "git tracks the executable wrapper"),
         ("CI_LINUX_SHELL", r"\bpwsh\b|\bpowershell\b", "Ubuntu workflow invokes PowerShell"),
         ("CI_LINUX_GRADLE", r"\bgradlew[.]bat\b", "Ubuntu workflow invokes the Windows wrapper"),
-        ("CI_SIGNING", r"(?:-P)?officialRelease\s*=\s*true\b|customiuizerA1[34]KeystoreProperties|CUSTOMIUIZER_A1[34]_KEYSTORE_PROPERTIES|secrets[.][A-Z0-9_]*(?:KEYSTORE|SIGN|PASSWORD|KEY)", "official signing is forbidden in CI"),
         ("CI_SDK_LICENSE", r"yes\s*\|\s*sdkmanager\s+--licenses", "setup action already accepts licenses"),
         ("CI_SDK_MASKED_FAILURE", r"sdkmanager[^\n]*(?:\|\|\s*true|;\s*true)", "sdkmanager failure must not be masked"),
         ("CI_SDK_LEGACY_TOOLS", r"packages\s*:\s*[\"']?tools[\"']?\s*$", "do not install legacy SDK tools"),
         ("CI_API37_RESOLUTION", r"sdkmanager[^\n]*[\"']platforms;android-37[\"']", "use the pinned SDK install script"),
         ("CI_SDK_NONDETERMINISTIC", r"android-37\*|android-CinnamonBun|sort\s+-V", "do not glob or sort SDK packages"),
-        ("CI_RELEASE", r"\b(?:gh\s+release|softprops/action-gh-release|create-release)\b", "CI must not create a public release"),
     ]
     for rule, pattern, message in rules:
         match = re.search(pattern, text, re.I | re.M)
         if match:
             add(rule, message, match.start())
+    for rule, pattern, message in [
+        ("CI_SIGNING", r"(?:-P)?officialRelease\s*=\s*true\b|customiuizerA1[34]KeystoreProperties|CUSTOMIUIZER_A1[34]_KEYSTORE_PROPERTIES|secrets\s*(?:[.]\s*|\[\s*\\?['\"])[A-Z0-9_]*(?:KEYSTORE|SIGN|PASSWORD|KEY|STORE)|\b(?:KEYSTORE_[A-Z0-9_]*|SIGNING_[A-Z0-9_]*|KEY_PASSWORD|STORE_PASSWORD)\b|signed_release[.]py\s+prepare-signing", "ordinary CI forbids officialRelease=true, keystore configuration and signing secrets"),
+        ("CI_RELEASE", r"\b(?:gh\s+release|softprops/action-gh-release|create-release|signed_release[.]py\s+publish)\b", "publication is only allowed in the protected explicit promotion step"),
+    ]:
+        if re.search(pattern, security_text, re.I):
+            add(rule, message)
     if "android-actions/setup-android" in text and "tools/ci_install_android_sdk.sh" not in text:
         add("CI_SDK_PIN", "install the pinned Android SDK packages")
 
     events = workflow.get("on", {})
     if isinstance(events, dict):
         push = events.get("push")
-        if "push" in events and (not isinstance(push, dict) or push.get("branches", []) != [expected_branch]):
+        push_branch = BOOTSTRAP_BRANCH if path.name in {"a14-signed-build.yml", "a14-promote-release.yml"} else expected_branch
+        if "push" in events and (not isinstance(push, dict) or push.get("branches", []) != [push_branch]):
             add("CI_EXACT_BRANCH", f"push must target only {expected_branch!r}")
         if "full" in path.name.lower() and expected_branch != default_branch and "push" not in events:
             if "schedule" in events or "workflow_dispatch" in events:

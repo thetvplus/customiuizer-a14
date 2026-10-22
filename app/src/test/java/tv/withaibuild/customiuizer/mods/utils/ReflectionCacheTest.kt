@@ -176,7 +176,12 @@ class ReflectionCacheTest {
 
     @Test
     fun getDepInstance_isolatedPerClassLoader() {
-        val loader1 = object : ClassLoader(javaClass.classLoader) {}
+        val loader1 = object : ClassLoader(javaClass.classLoader) {
+            override fun loadClass(name: String, resolve: Boolean): Class<*> {
+                if (name == "java.lang.Runnable") throw ClassNotFoundException(name)
+                return super.loadClass(name, resolve)
+            }
+        }
         val loader2 = object : ClassLoader(javaClass.classLoader) {}
         resolver.className = FakeDependency::class.java.name
         FakeDependency.ready = true
@@ -184,10 +189,12 @@ class ReflectionCacheTest {
         val r1 = cache.getDepInstance(loader1, "java.lang.Runnable")
         val r2 = cache.getDepInstance(loader2, "java.lang.Runnable")
 
-        assertNotNull(r1)
-        assertNotNull(r2)
-        assertEquals(r1, cache.getDepInstance(loader1, "java.lang.Runnable"))
-        assertEquals(r2, cache.getDepInstance(loader2, "java.lang.Runnable"))
+        // A plugin loader's negative result must not hide a host dependency.
+        assertNull(r1)
+        assertSame(FakeDependency.INSTANCE, r2)
+        cache.onSafeLifecycle(loader2)
+        assertNull(cache.getDepInstance(loader1, "java.lang.Runnable"))
+        assertSame(r2, cache.getDepInstance(loader2, "java.lang.Runnable"))
     }
 
     @Test

@@ -18,7 +18,6 @@ AUTO_NS = "http://schemas.android.com/apk/res-auto"
 ANDROID_KEY = f"{{{ANDROID_NS}}}key"
 ANDROID_TITLE = f"{{{ANDROID_NS}}}title"
 ANDROID_DEPENDENCY = f"{{{ANDROID_NS}}}dependency"
-AUTO_CHILD = f"{{{AUTO_NS}}}child"
 PREFERENCE_CATEGORY = "tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx"
 
 RETIRED_A14_KEYS = {
@@ -48,6 +47,7 @@ EXPECTED_SPLITS = {
     "pref_key_system_cat_vibration": "prefs_system_vibration.xml",
     "pref_key_system_cat_toasts": "prefs_system_toasts.xml",
     "pref_key_system_cat_statusbar": "prefs_system_statusbar.xml",
+    "pref_key_system_cat_island": "prefs_system_island.xml",
     "pref_key_system_cat_drawer": "prefs_system_drawer.xml",
     "pref_key_system_cat_notifications": "prefs_system_notifications.xml",
     "pref_key_system_cat_qs": "prefs_system_qs.xml",
@@ -78,17 +78,6 @@ EXPECTED_SPLITS = {
     "pref_key_various_cat_gboard": "prefs_various_gboard.xml",
 }
 
-VARIOUS_GROUPS = (
-    ("pref_key_various_cat_exclusive", "@string/various_exclusive_features_cat_title"),
-    ("pref_key_various_cat_general", "@string/various_general_cat_title"),
-    ("pref_key_various_cat_package_installer", "@string/various_package_installer_cat_title"),
-    ("pref_key_various_cat_security_center", "@string/various_securitycenter_unlock_title"),
-    ("pref_key_various_cat_calls", "@string/calls"),
-    ("pref_key_various_cat_settings", "@string/various_app_management_cat_title"),
-    ("pref_key_various_cat_gboard", "@string/gboard"),
-)
-
-
 def _signature(element: ET.Element) -> tuple:
     return (
         element.tag,
@@ -97,51 +86,29 @@ def _signature(element: ET.Element) -> tuple:
     )
 
 
-def _legacy_search_entries() -> list[dict[str, str]]:
+def _source_search_entries() -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
     for category, (source_name, category_title) in CATEGORY_SOURCES.items():
         root = ET.parse(SOURCE_DIR / source_name).getroot()
-        last_sub = ""
-        last_sub_title = ""
-        last_sub_sub_title = ""
-        order = 0
-        for element in root.iter():
-            if element is root:
+        parents = {child: parent for parent in root.iter() for child in parent}
+        for page in root.iter():
+            page_key = page.get(ANDROID_KEY)
+            if page_key not in EXPECTED_SPLITS:
                 continue
-            if element.tag == PREFERENCE_CATEGORY:
-                key = element.get(ANDROID_KEY, "")
-                if key:
-                    last_sub = key
-                    last_sub_title = element.get(ANDROID_TITLE, "")
-                    last_sub_sub_title = ""
-                    order = 1
-                else:
-                    last_sub_sub_title = element.get(ANDROID_TITLE, "")
-                    order += 1
-                continue
-
-            if element.get(AUTO_CHILD, "false").lower() == "true":
-                order += 1
-                continue
-
-            title = element.get(ANDROID_TITLE, "")
-            if element.get(f"{{{AUTO_NS}}}isPreferenceVisible", "true").lower() == "false":
-                order += 1
-                continue
-            if title.startswith("@string/"):
-                entries.append(
-                    {
-                        "title": title,
-                        "key": element.get(ANDROID_KEY, ""),
-                        "category": category,
-                        "categoryTitle": category_title,
-                        "breadcrumbSubTitle": last_sub_title,
-                        "breadcrumbSubSubTitle": last_sub_sub_title,
-                        "legacySub": last_sub,
-                        "order": str(order),
-                    }
-                )
-            order += 1
+            for order, element in enumerate(page.iter()):
+                key = element.get(ANDROID_KEY)
+                if element.tag == PREFERENCE_CATEGORY or not key or not element.get(ANDROID_TITLE, "").startswith("@"):
+                    continue
+                if element.get(f"{{{AUTO_NS}}}isPreferenceVisible", "true").lower() == "false":
+                    continue
+                parent = parents[element]
+                section = "" if parent is page else parent.get(ANDROID_TITLE, "")
+                entries.append({
+                    "title": element.get(ANDROID_TITLE), "key": key,
+                    "category": category, "categoryTitle": category_title,
+                    "breadcrumbSubTitle": page.get(ANDROID_TITLE),
+                    "breadcrumbSubSubTitle": section, "routeSub": page_key, "order": str(order),
+                })
     return entries
 
 
@@ -196,37 +163,35 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
 
     def test_every_structured_category_is_an_exact_single_category_slice(self) -> None:
         found_keys: set[str] = set()
-        for category in ("system", "launcher", "controls"):
+        for category in ("system", "launcher", "controls", "various"):
             source_root = ET.parse(SOURCE_DIR / f"prefs_{category}.xml").getroot()
-            for source_category in list(source_root):
+            for source_category in source_root.iter():
                 key = source_category.get(ANDROID_KEY, "")
-                if not key:
+                if key not in EXPECTED_SPLITS:
                     continue
                 found_keys.add(key)
                 split_root = ET.parse(self.xml_dir / EXPECTED_SPLITS[key]).getroot()
                 self.assertEqual(1, len(split_root))
                 self.assertEqual(_signature(source_category), _signature(split_root[0]))
 
-        self.assertEqual(set(EXPECTED_SPLITS) - {key for key, _ in VARIOUS_GROUPS}, found_keys)
+        self.assertEqual(set(EXPECTED_SPLITS), found_keys)
 
     def test_various_groups_preserve_every_real_preference_once(self) -> None:
         source_root = ET.parse(SOURCE_DIR / "prefs_various.xml").getroot()
         source_preferences = [
-            _signature(child)
-            for child in list(source_root)
-            if child.tag != PREFERENCE_CATEGORY
+            _signature(child) for child in source_root.iter()
+            if child is not source_root and child.tag != PREFERENCE_CATEGORY
         ]
         generated_preferences: list[tuple] = []
-
-        for key, title in VARIOUS_GROUPS:
+        for page in source_root.iter():
+            key = page.get(ANDROID_KEY)
+            if key not in EXPECTED_SPLITS:
+                continue
             split_root = ET.parse(self.xml_dir / EXPECTED_SPLITS[key]).getroot()
-            self.assertEqual(1, len(split_root))
-            wrapper = split_root[0]
-            self.assertEqual(PREFERENCE_CATEGORY, wrapper.tag)
-            self.assertEqual(key, wrapper.get(ANDROID_KEY))
-            self.assertEqual(title, wrapper.get(ANDROID_TITLE))
-            generated_preferences.extend(_signature(child) for child in list(wrapper))
-
+            generated_preferences.extend(
+                _signature(child) for child in split_root.iter()
+                if child is not split_root and child.tag != PREFERENCE_CATEGORY
+            )
         self.assertEqual(source_preferences, generated_preferences)
 
     def test_every_dependency_target_remains_in_the_same_lazy_page(self) -> None:
@@ -247,73 +212,30 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
     def test_category_selectors_are_derived_from_generated_slices(self) -> None:
         for category in CATEGORY_SOURCES:
             suffix = category.removeprefix("pref_key_")
+            source = ET.parse(SOURCE_DIR / f"prefs_{suffix}.xml").getroot()
             selector = ET.parse(self.xml_dir / f"prefs_{suffix}_cat.xml").getroot()
-            actual = [
-                (child.get(ANDROID_KEY), child.get(ANDROID_TITLE))
-                for child in list(selector)
-            ]
-            if category == "pref_key_various":
-                expected = list(VARIOUS_GROUPS)
-            else:
-                source = ET.parse(SOURCE_DIR / f"prefs_{suffix}.xml").getroot()
-                expected = [
-                    (child.get(ANDROID_KEY), child.get(ANDROID_TITLE))
-                    for child in list(source)
-                    if child.get(ANDROID_KEY)
-                ]
+            expected = [(child.get(ANDROID_KEY), child.get(ANDROID_TITLE)) for child in source.iter()
+                        if child.get(ANDROID_KEY) in EXPECTED_SPLITS]
+            actual = [(child.get(ANDROID_KEY), child.get(ANDROID_TITLE)) for child in selector.iter()
+                      if child is not selector and child.tag != PREFERENCE_CATEGORY]
             self.assertEqual(expected, actual)
+            self.assertEqual([child.get(ANDROID_TITLE) for child in source],
+                             [child.get(ANDROID_TITLE) for child in selector])
+            self.assertTrue(all(child.tag == PREFERENCE_CATEGORY and len(child) for child in selector))
 
-    def test_search_index_preserves_legacy_display_metadata_and_order(self) -> None:
-        legacy = _legacy_search_entries()
-        index_root = ET.parse(self.xml_dir / "mod_search_index.xml").getroot()
-        all_generated = _generated_search_entries(index_root)
-        legacy_keys = {item["key"] for item in legacy}
-        generated = [item for item in all_generated if item["key"] in legacy_keys and not item["page"]]
-        comparable_generated = [
-            {
-                key: item.get(key, "")
-                for key in (
-                    "title",
-                    "key",
-                    "category",
-                    "categoryTitle",
-                    "breadcrumbSubTitle",
-                    "breadcrumbSubSubTitle",
-                    "order",
-                )
-            }
-            for item in generated
-        ]
-        comparable_legacy = [
-            {key: item[key] for key in comparable_generated[0]}
-            for item in legacy
-        ]
-        self.assertEqual(comparable_legacy, comparable_generated)
-
-        various_routes = {
-            item["key"]: item.get("routeSub", "")
-            for item in generated
-            if item["category"] == "pref_key_various"
-        }
-        self.assertTrue(various_routes)
-        self.assertNotIn("", various_routes.values())
-        self.assertTrue(set(various_routes.values()).issubset({key for key, _ in VARIOUS_GROUPS}))
-        expected_various_routes: dict[str, str] = {}
-        various_root = ET.parse(SOURCE_DIR / "prefs_various.xml").getroot()
-        group_index = -1
-        for child in list(various_root):
-            if child.tag == PREFERENCE_CATEGORY:
-                group_index += 1
-                continue
-            for element in child.iter():
-                key = element.get(ANDROID_KEY, "")
-                title = element.get(ANDROID_TITLE, "")
-                if key and title.startswith("@string/"):
-                    expected_various_routes[key] = VARIOUS_GROUPS[group_index][0]
-        self.assertEqual(expected_various_routes, various_routes)
-        for expected, actual in zip(legacy, generated, strict=True):
-            if expected["category"] != "pref_key_various":
-                self.assertEqual(expected["legacySub"], actual.get("routeSub", ""))
+    def test_search_index_matches_page_ownership_sections_and_adapter_order(self) -> None:
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
+        generated = [{key: item.get(key, "") for key in (
+            "title", "key", "category", "categoryTitle", "breadcrumbSubTitle",
+            "breadcrumbSubSubTitle", "routeSub", "order",
+        )} for item in entries if not item["page"]]
+        self.assertEqual(_source_search_entries(), generated)
+        by_key = {item["key"]: item for item in generated}
+        for suffix in ("collapsed", "expanded"):
+            item = by_key[f"pref_key_system_volumeblur_{suffix}"]
+            self.assertEqual("pref_key_system_cat_audio", item["routeSub"])
+            self.assertEqual("@string/prefs_group_material", item["breadcrumbSubSubTitle"])
+        self.assertEqual("pref_key_various_cat_exclusive", by_key["pref_key_various_disable_miui_daemon"]["routeSub"])
 
     def test_every_standalone_preference_is_searchable_with_its_real_page(self) -> None:
         entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
@@ -391,9 +313,22 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                 <Preference android:key="pref_key_child" android:title="@string/child" app:child="true" />
             </{PREFERENCE_CATEGORY}>
         </PreferenceScreen>''')
-        entries = generator._search_entries(generator.CATEGORY_SOURCES[0], root, {})
+        entries = generator._search_entries(generator.CATEGORY_SOURCES[0], root)
         self.assertEqual(["pref_key_child"], [item["key"] for item in entries])
         self.assertEqual("pref_key_system_cat_statusbar", entries[0]["routeSub"])
+
+        page = root[0]
+        section = ET.SubElement(page, PREFERENCE_CATEGORY, {ANDROID_TITLE: "@string/section"})
+        ET.SubElement(section, "Preference", {ANDROID_KEY: "nested", ANDROID_TITLE: "@string/nested"})
+        ET.SubElement(page, "Preference", {ANDROID_KEY: "sibling", ANDROID_TITLE: "@string/sibling"})
+        hidden = ET.SubElement(page, PREFERENCE_CATEGORY, {
+            ANDROID_TITLE: "@string/hidden", f"{{{AUTO_NS}}}state": "2",
+        })
+        ET.SubElement(hidden, "Preference", {ANDROID_KEY: "dependent", ANDROID_TITLE: "@string/dependent"})
+        entries = {item["key"]: item for item in generator._search_entries(generator.CATEGORY_SOURCES[0], root)}
+        self.assertEqual("@string/section", entries["nested"]["breadcrumbSubSubTitle"])
+        self.assertNotIn("breadcrumbSubSubTitle", entries["sibling"])
+        self.assertNotIn("breadcrumbSubSubTitle", entries["dependent"])
 
     def test_generation_is_byte_for_byte_deterministic(self) -> None:
         subprocess.run(

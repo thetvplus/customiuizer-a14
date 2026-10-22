@@ -101,7 +101,7 @@ internal object PreferenceGroupChrome {
                     inCard = true,
                     cardStart = i == start,
                     cardEnd = i == last,
-                    dividerBelow = i != last,
+                    dividerBelow = i != last && !rows[i].isCategory && !rows[i + 1].isCategory,
                 )
             )
         }
@@ -111,7 +111,8 @@ internal object PreferenceGroupChrome {
 internal fun preferenceGroupInputRow(pref: Preference): PreferenceGroupChrome.InputRow {
     return PreferenceGroupChrome.InputRow(
         isCategory = pref is PreferenceCategory,
-        isTopLevel = pref.parent is PreferenceScreen,
+        isTopLevel = pref.parent is PreferenceScreen ||
+            (pref.parent as? PreferenceCategoryEx)?.isPageContainer() == true,
         titleVisible = (pref as? PreferenceCategoryEx)?.isTitleVisible() ?: true,
     )
 }

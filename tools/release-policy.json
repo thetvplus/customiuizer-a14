@@ -1,0 +1,6 @@
+{
+  "repository": "thetvplus/customiuizer-a14",
+  "trusted_branches": ["main", "codex/a14-feature-refinement-20261019"],
+  "certificate_sha256": "c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70",
+  "download_repository": "Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14"
+}

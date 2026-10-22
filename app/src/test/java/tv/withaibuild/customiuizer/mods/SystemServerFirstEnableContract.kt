@@ -69,7 +69,7 @@ object SystemServerFirstEnableContract {
         lazyB("app_lock", "system_applock", "SystemLockScreenHooks.AppLockHook", "prefs_system_applock", "SECURITY_CENTER"),
         lazyB("skip_app_lock", "system_applock_skip", "SystemLockScreenHooks.SkipAppLockHook", "prefs_system_applock", "SECURITY_CENTER"),
         lazyB("alarm_compat_service", "various_alarmcompat", "SystemLockScreenHooks.AlarmCompatServiceHook", "prefs_system_alarmonlock", "SYSTEMUI"),
-        lazyB("no_call_interruption", "system_ignorecalls", "SystemAudioHooks.NoCallInterruptionHook", "prefs_various_calls", "SYSTEMUI"),
+        lazyB("no_call_interruption", "system_ignorecalls", "SystemAudioHooks.NoCallInterruptionHook", "prefs_system_audio", "SYSTEMUI"),
         lazyB("force_close", "system_forceclose", "SystemWindowHooks.ForceCloseHook", "prefs_system_other", "SYSTEMUI|SECURITY_CENTER"),
         lazyB("hide_proximity_warning", "system_hideproxywarn", "SystemDisplayHooks.HideProximityWarningHook", "prefs_system_screen", "SYSTEMUI"),
         lazyB("first_volume_press", "system_firstpress", "SystemAudioHooks.FirstVolumePressHook", "prefs_system_audio", "SYSTEMUI"),

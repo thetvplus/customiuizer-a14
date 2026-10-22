@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.SeekBar
 import androidx.preference.Preference
 import androidx.preference.ListPreference
+import androidx.preference.TwoStatePreference
 import tv.withaibuild.customiuizer.SubFragment
 import tv.withaibuild.customiuizer.prefs.SeekBarPreference
 import tv.withaibuild.customiuizer.utils.AppHelper
@@ -30,6 +31,13 @@ class Launcher : SubFragment() {
 
         when (sub) {
             "pref_key_launcher_cat_dock" -> {
+                val fullWidth = findPreference<TwoStatePreference>("pref_key_launcher_dock_background_full_width")
+                fun updateDockStyle(full: Boolean) {
+                    for (suffix in listOf("radius", "inset", "shrink"))
+                        findPreference<Preference>("pref_key_launcher_dock_background_$suffix")?.isVisible = !full
+                }
+                updateDockStyle(fullWidth?.isChecked == true)
+                fullWidth?.setOnPreferenceChangeListener { _, value -> updateDockStyle(value == true); true }
                 findPreference<ListPreference>("pref_key_launcher_dock_background_material")?.let { material ->
                     if (material.value !in material.entryValues) material.value = "0"
                 }

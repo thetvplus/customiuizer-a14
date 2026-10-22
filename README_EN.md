@@ -4,12 +4,12 @@
 
 A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It supports **arm64-v8a / libxposed API 102** and has an independent package, signing identity and release line.
 
-- Current official release: `r14.24.1` (versionCode 245), requiring libxposed API 102.
+- Current official release: `r14.25.1` (versionCode 246), requiring libxposed API 102.
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
 - [Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Release history](https://github.com/thetvplus/customiuizer-a14/releases) · [Changelog](CHANGELOG.md)
 
-This release adds a native Dock background, corrects Duo data-SIM selection and spacing, and improves weather, steps, screenshot and registration-cleanup lifecycles. Updates retain the existing signing identity and app data. Confirm framework API 102 support before upgrading.
+This release keeps two equally tall Dynamic Island capsules, ties status-bar ownership to visible events, and retains complete native charging-video feedback. It adds notification takeover, a full-width Dock and bounded wallpaper-sampled glass, and refines volume, vibration and settings. Updates retain the signing identity and app data; retired expanded-island settings are removed from stored preferences and old backup imports.
 
 The full repository, source and About-page name is 米客 A14｜CustoMIUIzer A14; short app labels retain 米客 A14.
 
@@ -17,7 +17,7 @@ The full repository, source and About-page name is 米客 A14｜CustoMIUIzer A14
 
 - Status bar icons, battery, signal, network speed, date and temperature;
 - Optional Duo status icon: battery ring, Wi-Fi / cellular glyph, default data SIM signal, network type text and brief headphone hints;
-- Status capsule / Dynamic Island, USB default purpose, volume and brightness panels;
+- Dynamic Island app feedback and music activities, USB default purpose, volume and brightness panels;
 - Control center, notifications, lock screen, charging and media UI;
 - Launcher, recents, folders, icons and home-screen gestures;
 - Navigation bar, buttons, custom actions, power menu and system animations;
@@ -33,6 +33,8 @@ The full repository, source and About-page name is 米客 A14｜CustoMIUIzer A14
 | Module metadata | `minApiVersion=102`, `targetApiVersion=102`, `staticScope=true` |
 
 Install the official APK, enable the module and required scopes in your framework, then restart the affected process or device. Settings indicate which changes require a restart. Hooks selected at installation time require restarting their target process after changing the switch.
+
+Open System → Dynamic Island for app feedback and media integrations, disabled by default. Restart System UI after enabling. See the [Dynamic Island guide](docs/DYNAMIC_ISLAND.md) for behavior and pending device checks.
 
 Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/DUO_STATUS_BAR.md) for sizing, signal and hint behavior.
 

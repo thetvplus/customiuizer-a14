@@ -136,6 +136,16 @@
     "release": [
       "python",
       "tools/check_release_metadata.py"
+    ],
+    "behavior": [
+      "python",
+      "tools/verify.py",
+      "behavior",
+      "--tests",
+      "tv.withaibuild.customiuizer.mods.utils.gesture.GestureStateMachineTest",
+      "tv.withaibuild.customiuizer.mods.utils.gesture.GestureSideEffectGateTest",
+      "tv.withaibuild.customiuizer.mods.utils.ReflectionCacheTest",
+      "tv.withaibuild.customiuizer.mods.utils.gesture.ControlCenterGestureRuntimeHolderTest"
     ]
   },
   "mutations": [
@@ -230,10 +240,11 @@
     {
       "name": "action_cancel_as_up",
       "mutator": "action_cancel_as_up",
-      "apply_check": "a14_contract",
-      "kill_gate": null,
+      "apply_check": null,
+      "kill_gate": "behavior",
       "required_independent": false,
-      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+      "coverage_status": "ACTIVE_INDEPENDENT",
+      "baseline_required": true
     },
     {
       "name": "bootstrap_guard_removed",
@@ -278,10 +289,11 @@
     {
       "name": "classloader_cache_global",
       "mutator": "classloader_cache_global",
-      "apply_check": "a14_contract",
-      "kill_gate": null,
+      "apply_check": null,
+      "kill_gate": "behavior",
       "required_independent": false,
-      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+      "coverage_status": "ACTIVE_INDEPENDENT",
+      "baseline_required": true
     },
     {
       "name": "companion_method_rename",
@@ -422,10 +434,11 @@
     {
       "name": "plugin_runtime_lifecycle_leak",
       "mutator": "plugin_runtime_lifecycle_leak",
-      "apply_check": "a14_contract",
-      "kill_gate": null,
+      "apply_check": null,
+      "kill_gate": "behavior",
       "required_independent": false,
-      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+      "coverage_status": "ACTIVE_INDEPENDENT",
+      "baseline_required": true
     },
     {
       "name": "preference_bootstrap_eager",
@@ -502,10 +515,11 @@
     {
       "name": "remove_event_dedup",
       "mutator": "remove_event_dedup",
-      "apply_check": "a14_contract",
-      "kill_gate": null,
+      "apply_check": null,
+      "kill_gate": "behavior",
       "required_independent": false,
-      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+      "coverage_status": "ACTIVE_INDEPENDENT",
+      "baseline_required": true
     },
     {
       "name": "remove_jvm_field",

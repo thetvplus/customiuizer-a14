@@ -44,6 +44,7 @@ def verify_apk_provenance(
     expected_build_type: str = "debug",
     expected_version_name: str | None = None,
     expected_version_code: str | None = None,
+    expected_source_sha: str | None = None,
 ) -> dict[str, str]:
     """Verify provenance and return the parsed properties."""
     if not REVISION_RE.fullmatch(expected_revision):
@@ -62,6 +63,12 @@ def verify_apk_provenance(
         raise RuntimeError(
             f"provenance revision mismatch: expected {expected_revision}, found {revision}"
         )
+
+    if expected_source_sha is not None:
+        if not re.fullmatch(r"[0-9a-f]{40}", expected_source_sha) or expected_source_sha[:8] != expected_revision.lower():
+            raise ValueError("expected source SHA must be a full commit matching the revision")
+        if props.get("sourceCommit") != expected_source_sha:
+            raise RuntimeError("provenance sourceCommit does not match the exact source SHA")
 
     build_type = props["buildType"]
     if build_type != expected_build_type:
@@ -91,6 +98,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apk", required=True, type=Path, help="path to the APK")
     parser.add_argument(
+        "--expected-source-sha", help="require the exact 40-character release source commit",
+    )
+    parser.add_argument(
         "--expected-revision",
         required=True,
         help="expected 8-character engineering SHA",
@@ -119,6 +129,7 @@ def main() -> int:
             expected_build_type=args.expected_build_type,
             expected_version_name=args.expected_version,
             expected_version_code=args.expected_version_code,
+            expected_source_sha=args.expected_source_sha,
         )
     except (RuntimeError, ValueError) as exc:
         print(f"verify_apk_provenance: {exc}", file=sys.stderr)

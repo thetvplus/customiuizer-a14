@@ -1296,6 +1296,32 @@ class BackupRestoreTest {
         assertEquals(0, prefs.commitSnapshotCount())
     }
 
+    @Test fun revisionTwoRetiresOnlyIslandPanelWidthWithoutGeneralCleanup() {
+        val prefs = FakeSharedPreferences().apply {
+            put(CurrentPreferenceContract.CONTRACT_REVISION_KEY, 2)
+            put("pref_key_system_island_expanded_width", 364)
+            for (key in listOf("system_island_icons", "system_island_concise", "system_island_controls",
+                "system_island_gestures", "system_island_gestures_horizontal", "system_island_gestures_vertical")) {
+                put(key, false); put("pref_key_$key", false)
+            }
+            put("system_island_expanded_width", 600)
+            put("pref_key_system_island_width_medium", 260)
+            put("unrelated_preserved_value", "unchanged")
+        }
+        assertTrue(CurrentPreferenceContract.pruneOrphanPreferences(prefs))
+        assertFalse(prefs.contains("pref_key_system_island_expanded_width"))
+        assertFalse(prefs.contains("system_island_expanded_width"))
+        for (key in listOf("system_island_icons", "system_island_concise", "system_island_controls",
+            "system_island_gestures", "system_island_gestures_horizontal", "system_island_gestures_vertical")) {
+            assertFalse(prefs.contains(key)); assertFalse(prefs.contains("pref_key_$key"))
+        }
+        assertEquals(260, prefs.getInt("pref_key_system_island_width_medium", 0))
+        assertEquals("unchanged", prefs.getString("unrelated_preserved_value", null))
+        assertEquals(0, prefs.getAllCount)
+        assertFalse(CurrentPreferenceContract.pruneOrphanPreferences(prefs))
+        assertEquals(1, prefs.commitSnapshotCount())
+    }
+
     @Test
     fun backupOmitsRetiredPreferencesAndPreservesActiveValues() {
         val prefs = FakeSharedPreferences().apply {

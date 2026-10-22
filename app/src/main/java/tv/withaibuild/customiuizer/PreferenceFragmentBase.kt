@@ -45,9 +45,6 @@ import tv.withaibuild.customiuizer.utils.AppLocaleController
 import tv.withaibuild.customiuizer.utils.AppSelectionSanitizer
 import tv.withaibuild.customiuizer.utils.BackupRestore
 import tv.withaibuild.customiuizer.utils.Helpers
-import tv.withaibuild.customiuizer.utils.MatchedRestartExecutor
-import tv.withaibuild.customiuizer.utils.RestartMask
-import tv.withaibuild.customiuizer.utils.RestartPagePolicy
 import tv.withaibuild.customiuizer.utils.XposedServiceManager
 
 open class PreferenceFragmentBase : PreferenceFragmentCompat() {
@@ -90,8 +87,6 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
         return act?.supportActionBar
     }
 
-    protected open fun matchedRestartMask(): Int = RestartMask.NONE
-
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         if (toolbarMenu) {
             inflater.inflate(R.menu.menu_mods, menu)
@@ -103,15 +98,15 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
             }
         } else {
             val isMainFragment = this is MainFragment
-            val matchedMask = if (!isMainFragment && toolbarMenu) matchedRestartMask() else RestartMask.NONE
             for (i in 0 until menu.size()) {
                 val item = menu.getItem(i)
                 val menuId = item.itemId
                 item.isVisible = when {
-                    menuId == R.id.restartmatched -> !isMainFragment && matchedMask != RestartMask.NONE
+                    menuId == R.id.restart_menu -> isMainFragment
                     menuId == R.id.restartlauncher ||
                         menuId == R.id.restartsystemui ||
-                        menuId == R.id.restartsecuritycenter -> {
+                        menuId == R.id.restartsecuritycenter ||
+                        menuId == R.id.softreboot -> {
                         isMainFragment && (activeMenus == "all" || activeMenus.contains(MAP_KEYS[menuId] ?: ""))
                     }
                     activeMenus == "all" && menuId == R.id.edit_confirm -> false
@@ -125,46 +120,6 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
         }
     }
 
-    private fun restartMatchedTargets() {
-        val mask = matchedRestartMask()
-        if (mask == RestartMask.NONE) return
-
-        val executor = MatchedRestartExecutor()
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = executor.execute(mask)
-
-            withContext(Dispatchers.Main) {
-                val act = activity as? AppCompatActivity ?: return@withContext
-                if (act.isFinishing || act.isDestroyed || !isAdded) return@withContext
-
-                val message = when {
-                    !result.rootGranted -> act.getString(R.string.restart_no_root)
-                    result.failed == 0 -> act.getString(R.string.restart_affected_components_done)
-                    result.succeeded == 0 -> act.getString(
-                        R.string.restart_affected_components_failed,
-                        formatFailedMask(result.failedMask)
-                    )
-                    else -> act.getString(
-                        R.string.restart_affected_components_partial,
-                        formatFailedMask(result.failedMask)
-                    )
-                }
-                Toast.makeText(act, message, Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun formatFailedMask(mask: Int): String {
-        return RestartPagePolicy.toNameList(mask).joinToString(", ") { name ->
-            when (name) {
-                "launcher" -> getString(R.string.restart_launcher)
-                "systemui" -> getString(R.string.restart_systemui)
-                "securitycenter" -> getString(R.string.restart_securitycenter)
-                else -> name
-            }
-        }
-    }
-
     open fun confirmEdit() {}
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -173,6 +128,7 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (this !is MainFragment && item.itemId in RESTART_MENU_IDS) return false
         when (item.itemId) {
             R.id.edit_confirm -> {
                 confirmEdit()
@@ -188,10 +144,6 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
             }
             R.id.restartsecuritycenter -> {
                 restartTarget("com.miui.securitycenter", R.string.restart_securitycenter_done, R.string.restart_securitycenter_failed)
-                return true
-            }
-            R.id.restartmatched -> {
-                restartMatchedTargets()
                 return true
             }
             R.id.backuprestore -> {
@@ -355,6 +307,7 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
                 }
                 return@launch
             }
+            if (!synchronizeForRestart()) return@launch
             val cmd = "am force-stop $packageName"
             val result = AppHelper.executeRootCommand(cmd)
             withContext(Dispatchers.Main) {
@@ -381,6 +334,7 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
                 }
                 return@launch
             }
+            if (!synchronizeForRestart()) return@launch
             // pidof returns exit 1 when no process is found; handle that explicitly.
             val pidResult = AppHelper.executeRootCommand("pidof $processName")
             if (pidResult.first != 0 || pidResult.second.isBlank()) {
@@ -401,6 +355,14 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
                 }
             }
         }
+    }
+
+    private suspend fun synchronizeForRestart(): Boolean {
+        if (XposedServiceManager.synchronizeBeforeRestart()) return true
+        withContext(Dispatchers.Main) {
+            if (isAdded) Toast.makeText(getValidContext(), R.string.restart_settings_sync_failed, Toast.LENGTH_LONG).show()
+        }
+        return false
     }
 
     open fun showBackupRestoreDialog() {
@@ -771,6 +733,9 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
     }
 
     companion object {
+        private val RESTART_MENU_IDS = intArrayOf(
+            R.id.restartlauncher, R.id.restartsystemui, R.id.restartsecuritycenter, R.id.softreboot,
+        )
         const val PICK_BACKFILE = 11
         const val SAVE_BACKFILE = 12
 

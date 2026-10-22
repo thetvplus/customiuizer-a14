@@ -10,7 +10,7 @@
 		android:defaultValue="false" />
 
 	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
-		android:title="@string/system_autobrightness_title"
+		android:title="@string/prefs_group_brightness"
 		android:dependency="pref_key_system_autobrightness">
 
 		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx

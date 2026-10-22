@@ -33,24 +33,10 @@ import tv.withaibuild.customiuizer.subs.MultiAction
 import tv.withaibuild.customiuizer.subs.SortableList
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.Helpers
-import tv.withaibuild.customiuizer.utils.RestartMask
-import tv.withaibuild.customiuizer.utils.RestartPagePolicy
-
-/**
- * Pure decision policy for whether a SubFragment-derived page should enable the
- * options menu.  [Preference] pages always get menu capability so the matched
- * restart action can be resolved; [Edit] pages only get a menu when they use
- * a custom action bar (e.g. the edit-confirm action).
- */
-internal fun shouldEnablePreferenceToolbar(
-    settingsType: AppHelper.SettingsType,
-    isCustomActionBar: Boolean
-): Boolean = isCustomActionBar || (settingsType == AppHelper.SettingsType.Preference)
 
 open class SubFragment : PreferenceFragmentBase() {
 
     private var contentResId = 0
-    private var pageRestartMask = RestartMask.NONE
     @JvmField
     var settingTitle = ""
     @JvmField
@@ -144,12 +130,7 @@ open class SubFragment : PreferenceFragmentBase() {
         if (abType == AppHelper.ActionBarType.Edit) {
             isCustomActionBar = true
         }
-        pageRestartMask = if (settingsType == AppHelper.SettingsType.Preference) {
-            RestartPagePolicy.maskFor(contentResId, sub)
-        } else {
-            RestartMask.NONE
-        }
-        toolbarMenu = toolbarMenu || shouldEnablePreferenceToolbar(settingsType, isCustomActionBar)
+        toolbarMenu = toolbarMenu || isCustomActionBar
 
         if (contentResId == 0) {
             activity?.finish()
@@ -171,17 +152,10 @@ open class SubFragment : PreferenceFragmentBase() {
         val actionBar: ActionBar? = getActionBar()
         if (actionBar != null) {
             when {
-                isStandalone && catInfo != null && catInfo!!.getBoolean("isDynamic") -> {
-                    actionBar.setTitle(settingTitle + " ⟲")
-                }
                 !isStandalone && !sub.isNullOrBlank() -> {
                     val screen = preferenceScreen
                     val category = screen.getPreference(0) as PreferenceCategoryEx
-                    if (category.isDynamic()) {
-                        actionBar.setTitle(category.title.toString() + " ⟲")
-                    } else {
-                        actionBar.setTitle(category.title)
-                    }
+                    actionBar.setTitle(category.title)
                 }
                 else -> actionBar.setTitle(settingTitle)
             }
@@ -392,11 +366,7 @@ open class SubFragment : PreferenceFragmentBase() {
                 val category = pref as PreferenceCategoryEx
                 val actionBar: ActionBar? = getActionBar()
                 if (actionBar != null) {
-                    if (category.isDynamic()) {
-                        actionBar.setTitle(pref.title.toString() + " ⟲")
-                    } else {
-                        actionBar.setTitle(pref.title)
-                    }
+                    actionBar.setTitle(pref.title)
                 }
                 category.hide()
             }
@@ -416,6 +386,4 @@ open class SubFragment : PreferenceFragmentBase() {
         saveSharedPrefs()
         finish()
     }
-
-    override fun matchedRestartMask(): Int = pageRestartMask
 }

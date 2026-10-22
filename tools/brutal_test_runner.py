@@ -137,7 +137,7 @@ def active_worktrees(root: Path) -> list[Path]:
 
 @contextlib.contextmanager
 def detached_worktree(root: Path):
-    temp_parent = Path(tempfile.mkdtemp(prefix="brutal-worktree-"))
+    temp_parent = Path(tempfile.mkdtemp(prefix="brutal-worktree-")).resolve()
     target = temp_parent / "repo"
     worktree_proc = subprocess.run(
         ["git", "worktree", "add", "--detach", "--force", str(target), "HEAD"],
@@ -150,6 +150,13 @@ def detached_worktree(root: Path):
     if worktree_proc.returncode != 0:
         raise RuntimeError(worktree_proc.stdout)
     try:
+        # Only the SDK location is needed; never copy signing or other local properties.
+        properties = root / "local.properties"
+        if properties.is_file():
+            sdk = next((line for line in properties.read_text(encoding="utf-8").splitlines()
+                        if re.match(r"^sdk[.]dir\s*=", line)), None)
+            if sdk is not None:
+                (target / "local.properties").write_text(sdk + "\n", encoding="utf-8")
         yield target
     except BaseException as original_exc:
         # Preserve the original exception when we later raise CleanupError.
@@ -158,10 +165,12 @@ def detached_worktree(root: Path):
         original = None
     finally:
         cleanup_failures: list[str] = []
+        if temp_parent.resolve() != temp_parent or target.resolve().parent != temp_parent:
+            raise CleanupError("temporary worktree target changed; refusing recursive cleanup") from original
 
         # 1. Remove the git worktree.
         start = time.monotonic()
-        removed = False
+        remove_error = ""
         while True:
             remove_proc = subprocess.run(
                 ["git", "worktree", "remove", "--force", str(target)],
@@ -171,25 +180,34 @@ def detached_worktree(root: Path):
                 text=True,
             )
             if remove_proc.returncode == 0:
-                removed = True
+                break
+            remove_error = remove_proc.stdout
+            # Git on Windows can unregister the worktree before directory removal
+            # fails on a transient file lock. Finish directory cleanup below.
+            if target not in active_worktrees(root):
                 break
             if time.monotonic() - start > 10:
-                cleanup_failures.append(
-                    f"git worktree remove failed: {remove_proc.stdout}"
-                )
                 break
             time.sleep(0.1)
 
         # 2. Remove the temp parent directory, failing closed.
-        try:
-            shutil.rmtree(temp_parent, ignore_errors=False)
-        except Exception as exc:
-            cleanup_failures.append(f"shutil.rmtree failed: {exc!r}")
+        while temp_parent.exists():
+            try:
+                shutil.rmtree(temp_parent, ignore_errors=False)
+                break
+            except PermissionError as exc:
+                if time.monotonic() - start > 10:
+                    cleanup_failures.append(f"shutil.rmtree failed: {exc!r}")
+                    break
+                time.sleep(0.1)
+            except OSError as exc:
+                cleanup_failures.append(f"shutil.rmtree failed: {exc!r}")
+                break
 
         # 3. Verify no stray worktree entry remains.
         for active in active_worktrees(root):
             if active == target:
-                cleanup_failures.append("worktree still listed after removal")
+                cleanup_failures.append(f"worktree still listed after removal: {remove_error}")
                 break
 
         # 4. If anything went wrong, raise CleanupError.  Preserve the original
@@ -199,6 +217,8 @@ def detached_worktree(root: Path):
             if original is not None:
                 raise exc from original
             raise exc
+        if original is not None:
+            raise original
 
 
 # ---------------------------------------------------------------------------
@@ -677,6 +697,10 @@ def validate_config(cfg: dict) -> None:
         coverage_status = m.get("coverage_status")
         if coverage_status not in policy.VALID_COVERAGE_STATUSES:
             errors.append(f"mutation {name!r} has invalid coverage_status {coverage_status!r}")
+        if not isinstance(m.get("baseline_required", False), bool):
+            errors.append(f"mutation {name!r} baseline_required must be boolean")
+        elif m.get("baseline_required") and (not kill_gate or coverage_status != "ACTIVE_INDEPENDENT"):
+            errors.append(f"mutation {name!r} needs an active independent gate for its baseline")
 
         required_independent = m.get("required_independent")
         if not isinstance(required_independent, bool):
@@ -949,6 +973,11 @@ def determinism(root: Path, cfg: dict, timeout: int) -> int:
             {"PYTHONHASHSEED": "777", "TZ": "Asia/Tokyo", "LC_ALL": "C"},
         ):
             before = tracked_hashes(work)
+            # detached_worktree prepares an SDK-only configuration before this
+            # command. Treat it as an immutable input, including deletion checks.
+            sdk_config = work / "local.properties"
+            if sdk_config.is_file():
+                before["local.properties"] = hashlib.sha256(sdk_config.read_bytes()).hexdigest()
             code, _ = run(command, work, timeout, env)
             if code:
                 print(f"Determinism FAILED: command failed: {' '.join(command)!r}")
@@ -969,6 +998,8 @@ def determinism(root: Path, cfg: dict, timeout: int) -> int:
                 return 1
 
             after = tracked_hashes(work)
+            if sdk_config.is_file():
+                after["local.properties"] = hashlib.sha256(sdk_config.read_bytes()).hexdigest()
             changed = [rel for rel in set(before) if before[rel] != after.get(rel, "<missing>")]
             unexpected_changed = [rel for rel in changed if rel not in expected_output_paths]
             if unexpected_changed:
@@ -1058,13 +1089,16 @@ def _run_kill_gate(
     kill_template = cfg["kill_gates"][kill_name]
     argv = protocol.render_command(kill_template, name=case["name"], mutator=mutator_id)
     try:
-        code, _ = run(argv, work, cfg.get("kill_gate_timeout", 300))
+        code, log = run(argv, work, cfg.get("kill_gate_timeout", 300))
     except subprocess.TimeoutExpired:
         return GATE_ERROR
     except Exception as exc:
         print(f"  kill gate raised {exc!r}", file=sys.stderr)
         return GATE_ERROR
-    return protocol.classify_kill(code)
+    status = protocol.classify_kill(code)
+    if status in (GATE_ERROR, INDEPENDENT_GATE_KILLED):
+        print("\n".join(log.splitlines()[-16:]))
+    return status
 
 
 def _mutator_modified_files(work: Path, allowed: set[str]) -> bool:
@@ -1091,9 +1125,11 @@ def mutation_test(
         return 1
 
     results: list[tuple[dict, str, str]] = []
+    baselines: dict[tuple[str, ...], str] = {}
 
     for case in cases:
         name = case["name"]
+        print(f"Mutation: {name}", flush=True)
         mutator_id = case["mutator"]
         mutator = MUTATORS.get(mutator_id)
         if mutator is None:
@@ -1105,6 +1141,16 @@ def mutation_test(
         try:
             with detached_worktree(root) as work:
                 allowed = allowed_untracked_patterns()
+                if case.get("baseline_required"):
+                    command = tuple(protocol.render_command(cfg["kill_gates"][case["kill_gate"]],
+                                                            name=name, mutator=mutator_id))
+                    if command not in baselines:
+                        print("  Running clean HEAD behavior baseline", flush=True)
+                        baselines[command] = _run_kill_gate(work, cfg, case, mutator_id)
+                        print(f"  Baseline: {baselines[command]} (SURVIVED means clean tests passed)", flush=True)
+                    if baselines[command] != SURVIVED:
+                        results.append((case, GATE_ERROR, "clean HEAD behavior baseline did not pass"))
+                        continue
                 mutator(work, cfg)
                 status = _run_apply_check(work, cfg, case, mutator_id)
 
@@ -1120,11 +1166,13 @@ def mutation_test(
                 # independent kill gate, this is self-detection only.
                 if status == MUTATION_APPLIED:
                     status = _run_kill_gate(work, cfg, case, mutator_id)
+                print(f"  Gate result: {status}", flush=True)
 
         except subprocess.TimeoutExpired as exc:
             status = GATE_ERROR
             detail = f"mutator timed out after {exc.timeout}s"
         except CleanupError as exc:
+            detail = f"gate result before cleanup: {status}"
             cause = exc.__cause__ or exc.__context__
             if cause:
                 detail = f"{detail}; original={cause!r}; cleanup failed: {exc}"
@@ -1164,7 +1212,7 @@ def mutation_test(
     required_cases = [c for c in cases if c.get("required_independent")]
     required_names = {c["name"] for c in required_cases}
     required_killed = [c["name"] for c, s, _ in results if c["name"] in required_names and s == INDEPENDENT_GATE_KILLED]
-    required_survived = [c["name"] for c, s, _ in results if c["name"] in required_names and s == SURVIVED]
+    independent_survived = [c["name"] for c, s, _ in results if c.get("kill_gate") and s == SURVIVED]
 
     print("\nBrutal mutation summary")
     print(f"  Configured mutations:            {configured}")
@@ -1176,7 +1224,7 @@ def mutation_test(
     print(f"  Gate errors:                     {gate_errors}")
     print(f"  Not applied:                     {not_applied}")
     print(f"  Cleanup errors:                  {cleanup_errors}")
-    print(f"  Independent semantic kill rate:  {independent_kills}/{len(required_cases) if required_cases else configured}")
+    print(f"  Independent semantic kill rate:  {independent_kills}/{sum(bool(c.get('kill_gate')) for c in cases)}")
 
     failed = False
 
@@ -1186,8 +1234,8 @@ def mutation_test(
             print(f"\nFAILED: independent kill count {independent_kills} below minimum {minimum}")
             failed = True
 
-    if required_survived:
-        print(f"\nFAILED: required independent mutation(s) survived: {required_survived}")
+    if independent_survived:
+        print(f"\nFAILED: independent mutation(s) survived: {independent_survived}")
         failed = True
 
     if not_applied:
@@ -1233,6 +1281,7 @@ def main(argv=None) -> int:
     selection = m.add_mutually_exclusive_group()
     selection.add_argument("--case", action="append")
     selection.add_argument("--required-only", action="store_true", help="run all required independent gates, without self-detection-only cases")
+    selection.add_argument("--behavior-only", action="store_true", help="opt-in JVM behavior mutations with a clean baseline; excluded from ordinary CI")
     m.add_argument("--ignore-minimum", action="store_true", help="do not enforce minimum_independent_kills when running a subset")
     sub.add_parser("all")
     args = p.parse_args(argv)
@@ -1265,8 +1314,13 @@ def main(argv=None) -> int:
     if args.command == "determinism":
         return determinism(root, cfg, args.timeout)
     if args.command == "mutate":
-        selected = set(cfg["required_independent_mutations"] if args.required_only else (args.case or []))
-        return mutation_test(root, cfg, args.timeout, selected or None, ignore_minimum=args.ignore_minimum)
+        selected = set(c["name"] for c in cfg["mutations"] if c.get("baseline_required")) if args.behavior_only else set(
+            cfg["required_independent_mutations"] if args.required_only else (args.case or []))
+        if args.behavior_only and not selected:
+            print("No behavior mutations configured", file=sys.stderr)
+            return 2
+        return mutation_test(root, cfg, args.timeout, selected or None,
+                             ignore_minimum=args.ignore_minimum or args.behavior_only)
 
     code = hermeticity(root, cfg, args.timeout)
     if code:

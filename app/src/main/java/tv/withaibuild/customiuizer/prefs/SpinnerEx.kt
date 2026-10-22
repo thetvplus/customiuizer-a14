@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import androidx.appcompat.widget.AppCompatSpinner
-import androidx.appcompat.widget.ListPopupWindow
 import tv.withaibuild.customiuizer.R
 
 open class SpinnerEx(context: Context, attrs: AttributeSet?) : AppCompatSpinner(context, attrs) {
@@ -43,15 +42,6 @@ open class SpinnerEx(context: Context, attrs: AttributeSet?) : AppCompatSpinner(
 
         val childPadding = context.resources.getDimensionPixelSize(R.dimen.preference_item_child_padding)
         setPadding(childPadding, 0, childPadding, 0)
-
-        try {
-            val mPopup = AppCompatSpinner::class.java.getDeclaredField("mPopup")
-            mPopup.isAccessible = true
-            val popupWindow = mPopup.get(this) as ListPopupWindow
-            popupWindow.setHeight((40 * 10 * resources.displayMetrics.density).toInt())
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
     }
 
     fun addDisabledItems(position: Int) {

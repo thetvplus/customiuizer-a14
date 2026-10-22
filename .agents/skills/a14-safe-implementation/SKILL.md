@@ -1,34 +1,34 @@
 ---
 name: a14-safe-implementation
-description: Implement and validate user-requested code, Hook, UI, build or ROM compatibility changes in thetvplus/customiuizer-a14. Prioritize correctness, stability, compatibility and minimal overhead. Not for review-only or release tasks.
-argument-hint: "<task>"
+description: Implement and validate user-requested code, Hook, UI, build or ROM compatibility changes in thetvplus/customiuizer-a14. Use evidence to balance stability, experience, resource costs and maintainability. Not for review-only or release tasks.
 ---
 
 # A14 Safe Implementation
 
-Implement the requested change with minimal complexity, regression risk and resource overhead.
+Implement the requested outcome under the priorities in root `AGENTS.md`. Choose technology by demonstrated benefit, cost and recoverability.
 
 ## Authority
 
 - Read root `AGENTS.md` first. It governs architecture, toolchains, compatibility and verification.
 - Follow the current authorized task. Do not expand its scope without necessity.
-- Reuse existing architecture and conventions. Avoid duplicate rules, speculative refactoring and unnecessary abstractions.
+- Use `AGENTS.md` as the common policy entrypoint. Reuse existing mechanisms where suitable; evidence-backed local refactoring, abstractions and mature dependencies are valid when they improve the authorized outcome.
 
 ## Workflow
 
 1. Inspect `git status`, record the exact HEAD SHA and identify affected code and contracts.
 2. For implementation, reuse an authorized isolated task branch or create one from an exact SHA. Preserve unrelated worktree changes.
 3. Trace the actual behavior and failure path before editing. Use relevant source, tests, logs and ROM evidence.
-4. Make the smallest coherent change. Update affected tests and contracts when necessary.
+4. Choose a coherent rollback unit. State the expected benefit, resource costs, dependency need and validation method; update affected tests and contracts. Do not equate the fewest lines or lowest memory use with the best solution.
 5. Review the final diff for correctness, compatibility, lifecycle, performance and unintended changes.
 
 ## Engineering Boundaries
 
 - Preserve existing Hook behavior, timing, call chains and failure semantics.
 - Keep disabled features inactive and lifecycle ownership explicit.
-- Avoid allocations, blocking operations, repeated reflection and unnecessary observers in hot paths.
-- Prefer bounded state, minimal dependencies and straightforward control flow.
-- Do not redesign PrefMap, ResourceHooks, FeatureRegistry, ProcessRouter, PreferenceBootstrap or Dynamic Island visuals unless explicitly authorized.
+- Avoid unnecessary high-frequency allocations; keep blocking I/O, synchronous Binder, DexKit and repeated reflection off hot paths. Static matches are regression clues, not runtime measurements.
+- Bounded caches and controlled asynchronous work may trade memory for a verifiable benefit. Identify owner, capacity, invalidation, concurrency and release paths; prefer the existing coroutine mechanisms over new pools.
+- Apply the architecture and visual-contract rules in `AGENTS.md`. Changes to mature infrastructure need evidence and focused contract regression coverage, not a blanket ban or a full rewrite.
+- Measure according to the claimed benefit and host process: SystemUI, Launcher, system_server and settings have different costs. Keep static, Host JVM, ART, APK and device evidence separate; use `docs/OPTIMIZATION_GATES.md` for budgets and measurement.
 - Use DexSQL for relevant ROM / DEX / Hook compatibility investigations, not routine edits.
 - Do not claim device compatibility or performance gains without appropriate evidence.
 

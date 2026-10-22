@@ -28,7 +28,7 @@ class EditTextPreferenceEx(context: Context, attrs: AttributeSet?) : EditTextPre
 
     fun getView(finalView: View) {
         val title = finalView.findViewById<TextView>(android.R.id.title)
-        title?.text = (title?.text?.toString() ?: "") + if (unsupported) " ⨯" else if (dynamic) " ⟲" else ""
+        Helpers.bindPreferenceTitle(title, this.title, unsupported, dynamic)
         if (newmod) title?.let { Helpers.applyNewMod(it) }
         if (highlight) {
             // One-shot: the row rebinds whenever its own state changes, and a flash

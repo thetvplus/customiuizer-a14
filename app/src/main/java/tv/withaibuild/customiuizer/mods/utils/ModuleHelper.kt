@@ -705,6 +705,7 @@ class ModuleHelper private constructor() {
         val coroutineFailureHandler: CoroutineExceptionHandler =
             CoroutineExceptionHandler { _, throwable ->
                 if (throwable is OutOfMemoryError) throw throwable
+                FatalErrors.unwrapAndRethrowIfFatal(throwable)
                 XposedHelpers.log(throwable)
             }
 

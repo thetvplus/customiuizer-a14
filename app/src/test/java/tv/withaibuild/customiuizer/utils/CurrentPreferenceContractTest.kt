@@ -7,6 +7,16 @@ import org.junit.Test
 
 class CurrentPreferenceContractTest {
 
+    @Test fun retiredIslandPanelWidthIsDroppedAndCannotReturnFromABackup() {
+        assertEquals(CurrentPreferenceContract.Kind.DROPPED,
+            CurrentPreferenceContract.classify("pref_key_system_island_expanded_width"))
+        assertFalse(CurrentPreferenceContract.isExportable("system_island_expanded_width"))
+        val preferences = PrefMap().apply { put("system_island_expanded_width", 600) }
+        val previous = tv.withaibuild.customiuizer.mods.IslandOptions.read(preferences)
+        preferences.put("system_island_expanded_width", 240)
+        assertEquals(previous, tv.withaibuild.customiuizer.mods.IslandOptions.read(preferences))
+    }
+
     @Test
     fun catalogXmlKeyIsCurrent() {
         assertEquals(

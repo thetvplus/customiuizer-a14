@@ -1,0 +1,393 @@
+#!/usr/bin/env python3
+"""Protected Actions signing, APK verification and exact-binary promotion.
+
+No workflow ref input is accepted. Signing uses the native event ref/SHA;
+promotion treats downloaded metadata as untrusted until independently checked.
+"""
+from __future__ import annotations
+
+import argparse
+import base64
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+try:
+    from tools.verify_apk_provenance import verify_apk_provenance
+except ModuleNotFoundError:
+    from verify_apk_provenance import verify_apk_provenance
+
+ROOT = Path(__file__).resolve().parents[1]
+POLICY = json.loads((ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
+REPO = POLICY["repository"]
+WORKFLOW = ".github/workflows/a14-signed-build.yml"
+SHA = re.compile(r"[0-9a-f]{40}")
+CERT = POLICY["certificate_sha256"]
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise ValueError(message)
+
+
+def run(*args: str, env: dict | None = None) -> str:
+    result = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", env=env)
+    # Never echo arguments/output from keytool or a failing signing operation.
+    if result.returncode:
+        raise RuntimeError(f"{Path(args[0]).name} failed (exit {result.returncode})")
+    return result.stdout
+
+
+def api(endpoint: str, **fields) -> dict | list:
+    args = ["gh", "api", endpoint]
+    for key, value in fields.items():
+        args.extend(["-f", f"{key}={value}"])
+    return json.loads(run(*args))
+
+
+def write_json(path: Path, value) -> None:
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def digest(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def output(**values) -> None:
+    if os.environ.get("GITHUB_OUTPUT"):
+        with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
+            for key, value in values.items():
+                require("\n" not in str(value), "Invalid multiline workflow output")
+                stream.write(f"{key}={value}\n")
+
+
+def event_source(env: dict = os.environ) -> tuple[str, str]:
+    require(env.get("GITHUB_REPOSITORY") == REPO, "Only the upstream repository is allowed")
+    require(env.get("GITHUB_EVENT_NAME") == "workflow_dispatch", "Signing requires manual workflow dispatch")
+    ref, sha = env.get("GITHUB_REF", ""), env.get("GITHUB_SHA", "")
+    require(ref.startswith("refs/heads/"), "Select an existing branch, not a tag or pull request")
+    require(bool(SHA.fullmatch(sha)), "A full triggering commit SHA is required")
+    return ref, sha
+
+
+def source_policy() -> None:
+    ref, sha = event_source()
+    require(run("git", "rev-parse", "HEAD").strip() == sha, "Checkout differs from triggering SHA")
+    authorized = ref.removeprefix("refs/heads/") in POLICY["trusted_branches"]
+    output(authorized=str(authorized).lower())
+    print("Trusted signing source" if authorized else "Validation only: branch is not authorized for signing")
+    if not authorized and os.environ.get("GITHUB_STEP_SUMMARY"):
+        with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as stream:
+            stream.write("Validation only: this branch is not authorized for signing. No official APK will be created.\n")
+
+
+def trusted_ci(record: dict, sha: str, workflow_id: int) -> bool:
+    return (record.get("workflow_id") == workflow_id and record.get("head_sha") == sha
+            and record.get("status") == "completed" and record.get("conclusion") == "success"
+            and record.get("event") in {"push", "workflow_dispatch"}
+            and record.get("head_repository", {}).get("full_name") == REPO
+            and record.get("head_branch") in POLICY["trusted_branches"]
+            and record.get("path") == ".github/workflows/a14-ci.yml")
+
+
+def ci_status() -> None:
+    _, sha = event_source()
+    workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
+    records = api(f"repos/{REPO}/actions/workflows/{workflow['id']}/runs?head_sha={sha}&status=success&per_page=30")
+    match = next((record for record in records["workflow_runs"] if trusted_ci(record, sha, workflow["id"])), None)
+    output(reuse=str(match is not None).lower())
+    print(f"Reusing trusted A14 CI run {match['id']} for {sha}" if match else "No trusted CI for this SHA; validating source once")
+
+
+def property_escape(value: str) -> str:
+    # java.util.Properties.load(InputStream) uses ISO-8859-1 and backslash escapes.
+    result = []
+    for char in value:
+        if char in "\\:=#! ":
+            result.append("\\" + char)
+        elif char in "\n\r\t\f":
+            result.append({"\n": "\\n", "\r": "\\r", "\t": "\\t", "\f": "\\f"}[char])
+        elif ord(char) > 126 or ord(char) < 32:
+            units = char.encode("utf-16-be")
+            result.extend(f"\\u{int.from_bytes(units[i:i+2], 'big'):04x}" for i in range(0, len(units), 2))
+        else:
+            result.append(char)
+    return "".join(result)
+
+
+def signing_directory() -> Path:
+    return Path(os.environ["RUNNER_TEMP"]) / "a14-signing"
+
+
+def prepare_signing(env: dict = os.environ) -> None:
+    ref, _ = event_source(env)
+    require(ref.removeprefix("refs/heads/") in POLICY["trusted_branches"], "Branch is not authorized for signing")
+    names = ("A14_KEYSTORE_BASE64", "A14_STORE_PASSWORD", "A14_KEY_ALIAS", "A14_KEY_PASSWORD")
+    missing = [name for name in names if not env.get(name)]
+    require(not missing, "Missing release-signing secrets: " + ", ".join(missing))
+    folder = signing_directory()
+    folder.mkdir(mode=0o700, exist_ok=False)
+    store = folder / "release.p12"
+    data = base64.b64decode("".join(env[names[0]].split()), validate=True)
+    require(0 < len(data) <= 8 * 1024 * 1024, "Invalid PKCS#12 size")
+    store.write_bytes(data)
+    store.chmod(0o600)
+    certificate = subprocess.run([
+        "keytool", "-exportcert", "-storetype", "PKCS12", "-keystore", str(store),
+        "-storepass:env", "A14_STORE_PASSWORD", "-alias", env["A14_KEY_ALIAS"],
+    ], capture_output=True, env=env)
+    require(certificate.returncode == 0, "Cannot open the PKCS#12 signing entry; check environment secrets")
+    require(hashlib.sha256(certificate.stdout).hexdigest() == CERT, "Signing certificate differs from the historical A14 certificate")
+    props = folder / "keystore.properties"
+    values = {"storeFile": store.as_posix(), "storePassword": env[names[1]],
+              "keyAlias": env[names[2]], "keyPassword": env[names[3]]}
+    props.write_text("".join(f"{key}={property_escape(value)}\n" for key, value in values.items()), encoding="ascii")
+    props.chmod(0o600)
+    print("Historical signing certificate confirmed; temporary PKCS#12 configuration ready")
+
+
+def source_version(text: str) -> tuple[str, int]:
+    name = re.search(r'^val lastVersionName\s*=\s*"(r14\.\d+\.\d+)"\s*$', text, re.M)
+    code = re.search(r"^val lastVersion\s*=\s*(\d+)\s*$", text, re.M)
+    require(name is not None and code is not None, "Source version metadata is invalid")
+    return name[1], int(code[1])
+
+
+def check_badging(badging: str, name: str, code: int) -> None:
+    package = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
+    require(package is not None and package.groups() == ("tv.withaibuild.customiuizer.r14", str(code), name), "APK package/version differs from source")
+    require("application-debuggable" not in badging, "APK must not be debuggable")
+    require(re.search(r"^sdkVersion:'34'$", badging, re.M) is not None, "APK minSdk must be 34")
+    require(re.search(r"^targetSdkVersion:'34'$", badging, re.M) is not None, "APK targetSdk must be 34")
+    require(re.search(r"^native-code: 'arm64-v8a'\s*$", badging, re.M) is not None, "APK must contain only arm64-v8a native code")
+
+
+def check_signature(signature: str) -> None:
+    require("Verified using v2 scheme (APK Signature Scheme v2): true" in signature, "APK V2 signature verification failed")
+    certificates = re.findall(r"Signer #\d+ certificate SHA-256 digest: ([0-9a-f]+)", signature)
+    require(certificates == [CERT], "APK must have exactly the historical A14 signer")
+
+
+def verify_apk(apk: Path, sha: str, name: str, code: int) -> dict:
+    require(bool(SHA.fullmatch(sha)), "Invalid source SHA")
+    tools = Path(os.environ["ANDROID_HOME"]) / "build-tools" / "36.0.0"
+    badging = run(str(tools / "aapt"), "dump", "badging", str(apk))
+    check_badging(badging, name, code)
+    run(str(tools / "zipalign"), "-c", "-P", "16", "4", str(apk))
+    signature = run(str(tools / "apksigner"), "verify", "--verbose", "--print-certs", str(apk))
+    check_signature(signature)
+    verify_apk_provenance(apk, sha[:8], "release", name, str(code), expected_source_sha=sha)
+    return {"application_id": "tv.withaibuild.customiuizer.r14", "version_name": name, "version_code": code,
+            "min_sdk": 34, "target_sdk": 34, "abi": "arm64-v8a", "debuggable": False,
+            "certificate_sha256": CERT, "apk": apk.name, "apk_sha256": digest(apk), "apk_size": apk.stat().st_size,
+            "checks": ["manifest", "zipalign-16k", "apk-v2", "historical-certificate", "embedded-provenance"]}
+
+
+def candidate_filename(version: str, sha: str) -> str:
+    require(isinstance(version, str) and re.fullmatch(r"r14\.\d+\.\d+", version) is not None, "Invalid candidate version")
+    require(bool(SHA.fullmatch(sha)), "Invalid candidate source SHA")
+    return f"CustoMIUIzer-A14-{version}-{sha[:6]}.apk"
+
+
+def candidate(folder: Path) -> None:
+    ref, sha = event_source()
+    require(ref.removeprefix("refs/heads/") in POLICY["trusted_branches"], "Untrusted signing source")
+    apks = list((ROOT / "app/build/outputs/apk/release").glob("*.apk"))
+    require(len(apks) == 1, "Expected exactly one Release APK")
+    for filename in ("mapping.txt", "configuration.txt", "usage.txt"):
+        require((ROOT / "app/build/outputs/mapping/release" / filename).is_file(), "Missing R8 outputs")
+    name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
+    folder.mkdir(parents=True, exist_ok=False)
+    apk = folder / candidate_filename(name, sha)
+    shutil.copyfile(apks[0], apk)
+    metadata = verify_apk(apk, sha, name, code)
+    metadata.update(repository=REPO, source_sha=sha, source_ref=ref, workflow=WORKFLOW,
+                    run_id=int(os.environ["GITHUB_RUN_ID"]), run_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]))
+    write_json(folder / "build-metadata.json", metadata)
+    (folder / "SHA256SUMS").write_text(f"{metadata['apk_sha256']}  {metadata['apk']}\n", encoding="ascii")
+    print(f"APK checks passed: {name} ({code}), {metadata['apk_sha256']}")
+
+
+def check_run(record: dict, workflow_id: int) -> None:
+    require(record.get("workflow_id") == workflow_id and record.get("path") == WORKFLOW, "Wrong source workflow")
+    require(record.get("event") == "workflow_dispatch", "Source must be a manually requested signed build")
+    require(record.get("status") == "completed" and record.get("conclusion") == "success", "Source build did not finish successfully")
+    require(record.get("head_repository", {}).get("full_name") == REPO, "Wrong source repository")
+    require(record.get("head_branch") in POLICY["trusted_branches"], "Source branch is not authorized")
+    require(bool(SHA.fullmatch(record.get("head_sha", ""))), "Invalid source commit")
+
+
+def check_metadata(metadata: dict, record: dict) -> None:
+    expected = {"repository": REPO, "source_sha": record["head_sha"], "source_ref": "refs/heads/" + record["head_branch"],
+                "workflow": WORKFLOW, "run_id": record["id"], "run_attempt": record["run_attempt"]}
+    require(all(metadata.get(key) == value for key, value in expected.items()), "Artifact metadata differs from the selected workflow run")
+    version = metadata.get("version_name", "")
+    # Existing attested candidates retain their original names and exact binary identity.
+    names = {candidate_filename(version, record["head_sha"]), f"CustoMIUIzer-A14-{version}.apk"}
+    filename = metadata.get("apk")
+    require(isinstance(filename, str) and filename in names, "Invalid APK filename or version/source suffix")
+
+
+def check_attestation(results: list, sha: str, ref: str, run_id: int, attempt: int) -> None:
+    invocation = f"https://github.com/{REPO}/actions/runs/{run_id}/attempts/{attempt}"
+    for result in results:
+        statement = result.get("verificationResult", {}).get("statement", {})
+        predicate = statement.get("predicate", {})
+        definition = predicate.get("buildDefinition", {})
+        workflow = definition.get("externalParameters", {}).get("workflow", {})
+        dependencies = definition.get("resolvedDependencies", [])
+        if (statement.get("predicateType") == "https://slsa.dev/provenance/v1"
+                and predicate.get("runDetails", {}).get("metadata", {}).get("invocationId") == invocation
+                and workflow == {"repository": f"https://github.com/{REPO}", "path": WORKFLOW, "ref": ref}
+                and any(item.get("digest", {}).get("gitCommit") == sha for item in dependencies)):
+            return
+    raise ValueError("Verified attestation does not match the original workflow run/source")
+
+
+def attest(folder: Path, metadata: dict) -> None:
+    reports = {}
+    for filename in (metadata["apk"], "build-metadata.json"):
+        result = json.loads(run("gh", "attestation", "verify", str(folder / filename), "--repo", REPO,
+                                "--signer-workflow", f"{REPO}/{WORKFLOW}", "--signer-digest", metadata["source_sha"],
+                                "--source-digest", metadata["source_sha"], "--source-ref", metadata["source_ref"],
+                                "--deny-self-hosted-runners", "--format", "json"))
+        check_attestation(result, metadata["source_sha"], metadata["source_ref"], metadata["run_id"], metadata["run_attempt"])
+        reports[filename] = result
+    write_json(folder / "attestation-verification.json", reports)
+    print("GitHub provenance verified: repository, workflow, commit, ref, run and file digests")
+
+
+def fetch_candidate(run_id: str, folder: Path) -> dict:
+    require(run_id.isdecimal() and int(run_id) > 0, "Build run ID must be a positive integer")
+    workflow = api(f"repos/{REPO}/actions/workflows/a14-signed-build.yml")
+    record = api(f"repos/{REPO}/actions/runs/{run_id}")
+    check_run(record, workflow["id"])
+    artifact_name = f"a14-signed-{run_id}-{record['run_attempt']}"
+    artifacts = api(f"repos/{REPO}/actions/runs/{run_id}/artifacts?per_page=100")["artifacts"]
+    matches = [item for item in artifacts if item["name"] == artifact_name and not item["expired"]]
+    require(len(matches) == 1, "Original signed artifact is missing, expired or ambiguous; do not rebuild it")
+    require(not folder.exists(), "Use a fresh candidate download directory")
+    run("gh", "run", "download", run_id, "--repo", REPO, "--name", artifact_name, "--dir", str(folder))
+    metadata = json.loads((folder / "build-metadata.json").read_text(encoding="utf-8"))
+    check_metadata(metadata, record)
+    apk = folder / metadata["apk"]
+    require(list(folder.glob("*.apk")) == [apk], "Artifact must contain exactly one APK")
+    require(digest(apk) == metadata.get("apk_sha256"), "APK digest differs from signed build metadata")
+    require((folder / "SHA256SUMS").read_text(encoding="ascii") == f"{digest(apk)}  {apk.name}\n", "APK checksum file differs")
+    content = api(f"repos/{REPO}/contents/app/build.gradle.kts?ref={record['head_sha']}")
+    name, code = source_version(base64.b64decode(content["content"]).decode("utf-8"))
+    checked = verify_apk(apk, record["head_sha"], name, code)
+    require(all(metadata.get(key) == value for key, value in checked.items()), "APK verification differs from candidate metadata")
+    attest(folder, metadata)
+    output(version=name, source_sha=record["head_sha"], apk_sha256=checked["apk_sha256"],
+           run_attempt=record["run_attempt"], artifact_id=matches[0]["id"])
+    print(f"Original candidate verified: {name}, source {record['head_sha']}")
+    # Keep the immutable artifact identity in memory, outside the attested metadata file.
+    metadata["artifact_id"] = matches[0]["id"]
+    return metadata
+
+
+def optional_api(endpoint: str) -> dict | None:
+    result = subprocess.run(["gh", "api", endpoint], capture_output=True, text=True, encoding="utf-8")
+    if result.returncode == 0:
+        return json.loads(result.stdout)
+    require("HTTP 404" in result.stderr, "GitHub permission or API failure; refusing to publish")
+    return None
+
+
+def check_tag(repository: str, tag: str, sha: str) -> None:
+    record = optional_api(f"repos/{repository}/git/ref/tags/{tag}")
+    if record is None:
+        return
+    obj = record["object"]
+    for _ in range(4):
+        if obj["type"] == "commit":
+            require(obj["sha"] == sha, f"Existing tag {repository}:{tag} points to another source commit")
+            return
+        require(obj["type"] == "tag", "Unexpected tag target type")
+        obj = api(f"repos/{repository}/git/tags/{obj['sha']}")["object"]
+    raise ValueError("Tag chain exceeds verification limit")
+
+
+def check_verification_receipt(metadata: dict, env: dict = os.environ) -> None:
+    fields = {"VERIFIED_SOURCE_SHA": "source_sha", "VERIFIED_APK_SHA256": "apk_sha256",
+              "VERIFIED_RUN_ATTEMPT": "run_attempt", "VERIFIED_ARTIFACT_ID": "artifact_id"}
+    require(all(env.get(key) and env[key] == str(metadata.get(field)) for key, field in fields.items()),
+            "Original verified artifact changed or receipt is missing; select and verify the build again")
+
+
+def publish(folder: Path, run_id: str, destination: str, authorization: str) -> None:
+    ref, _ = event_source()
+    require(ref.removeprefix("refs/heads/") in POLICY["trusted_branches"], "Untrusted promotion workflow branch")
+    metadata = fetch_candidate(run_id, folder)
+    name, code, sha = metadata["version_name"], metadata["version_code"], metadata["source_sha"]
+    require(authorization == f"publish {name} from {run_id}", "Explicit authorization must match version and original build run")
+    check_verification_receipt(metadata)
+    repositories = [(REPO, name)]
+    if destination == "both":
+        require(bool(os.environ.get("A14_XPOSED_RELEASE_TOKEN")), "Cross-repository publishing requires A14_XPOSED_RELEASE_TOKEN in release-publishing")
+        token_env = dict(os.environ, GH_TOKEN=os.environ["A14_XPOSED_RELEASE_TOKEN"])
+        access = json.loads(run("gh", "api", f"repos/{POLICY['download_repository']}", env=token_env))
+        require(access.get("permissions", {}).get("push") is True, "Download repository contents:write permission is required")
+        repositories.append((POLICY["download_repository"], f"{code}-{name}"))
+    # Check every destination before the first write. Existing releases are immutable here.
+    for repository, tag in repositories:
+        check_tag(repository, tag, sha)
+        require(optional_api(f"repos/{repository}/releases/tags/{tag}") is None, f"Release {repository}:{tag} already exists; refusing to overwrite")
+    changelog = api(f"repos/{REPO}/contents/CHANGELOG_CN.md?ref={sha}")
+    try:
+        from tools.check_release_metadata import changelog_sections
+    except ModuleNotFoundError:
+        from check_release_metadata import changelog_sections
+    sections = dict(changelog_sections(base64.b64decode(changelog["content"]).decode("utf-8")))
+    require(name in sections and bool(sections[name].strip()), "Source release notes are missing")
+    notes = folder / "release-notes.md"
+    notes.write_text(sections[name].strip() + f"\n\nSource: `{sha}`\nBuild: https://github.com/{REPO}/actions/runs/{run_id}\nAPK SHA-256: `{metadata['apk_sha256']}`\n", encoding="utf-8")
+    for repository, tag in repositories:
+        env = dict(os.environ)
+        if repository != REPO:
+            env["GH_TOKEN"] = os.environ["A14_XPOSED_RELEASE_TOKEN"]
+            # The download repository shares source tags, but keeps its metadata main separate.
+            run("git", "fetch", "--no-tags", f"https://github.com/{REPO}.git", sha)
+            run("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
+                "push", f"https://github.com/{repository}.git", f"{sha}:refs/tags/{tag}", env=env)
+        run("gh", "release", "create", tag, str(folder / metadata["apk"]), str(folder / "SHA256SUMS"),
+            str(folder / "build-metadata.json"), str(folder / "attestation.sigstore.json"),
+            "--repo", repository, "--target", sha, "--title", name, "--notes-file", str(notes), env=env)
+        release = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}", env=env))
+        assets = [item for item in release["assets"] if item["name"] == metadata["apk"]]
+        require(not release["draft"] and not release["prerelease"] and len(assets) == 1, "Release readback differs")
+        require(assets[0].get("digest") == "sha256:" + metadata["apk_sha256"] and assets[0]["size"] == metadata["apk_size"], "Published APK digest/size differs from original candidate")
+        check_tag(repository, tag, sha)
+        print(release["html_url"])
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", choices=["source-policy", "ci-status", "prepare-signing", "candidate", "attest", "fetch", "publish"])
+    parser.add_argument("--directory", type=Path)
+    parser.add_argument("--run-id")
+    parser.add_argument("--destination", choices=["source", "both"], default="source")
+    args = parser.parse_args()
+    try:
+        if args.command == "source-policy": source_policy()
+        elif args.command == "ci-status": ci_status()
+        elif args.command == "prepare-signing": prepare_signing()
+        elif args.command == "candidate": candidate(args.directory)
+        elif args.command == "attest": attest(args.directory, json.loads((args.directory / "build-metadata.json").read_text(encoding="utf-8")))
+        elif args.command == "fetch": fetch_candidate(args.run_id or "", args.directory)
+        elif args.command == "publish": publish(args.directory, args.run_id or "", args.destination, os.environ.get("RELEASE_AUTHORIZATION", ""))
+    except (ValueError, RuntimeError, OSError, KeyError) as error:
+        print(f"signed_release: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

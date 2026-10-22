@@ -10,23 +10,23 @@
 		android:defaultValue="false" />
 
 	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
-		android:title="@string/system_lsalarm_title"
+		android:title="@string/prefs_group_display"
 		android:dependency="pref_key_system_lsalarm"
 		miuizer:dynamic="true">
 
-	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
-		android:key="pref_key_system_lsalarm_all"
-		android:summary="@string/system_lsalarm_all_summ"
-		android:title="@string/system_lsalarm_all_title"
-		android:defaultValue="false" />
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+			android:key="pref_key_system_lsalarm_all"
+			android:summary="@string/system_lsalarm_all_summ"
+			android:title="@string/system_lsalarm_all_title"
+			android:defaultValue="false" />
 
-	<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
-		android:key="pref_key_system_lsalarm_format"
-		android:title="@string/system_lsalarm_format_title"
-		android:entries="@array/alarmformats"
-		android:entryValues="@array/alarmformats_val"
-		android:defaultValue="1"
-		miuizer:valueAsSummary="true" />
+		<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+			android:key="pref_key_system_lsalarm_format"
+			android:title="@string/system_lsalarm_format_title"
+			android:entries="@array/alarmformats"
+			android:entryValues="@array/alarmformats_val"
+			android:defaultValue="1"
+			miuizer:valueAsSummary="true" />
 
 	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 

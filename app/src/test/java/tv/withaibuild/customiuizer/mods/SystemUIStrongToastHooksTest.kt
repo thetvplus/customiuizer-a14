@@ -50,14 +50,14 @@ class SystemUIStrongToastHooksTest {
         SystemUIStrongToastHooks.installed = false
     }
 
-    private fun fakePackageReadyParam(): XposedModuleInterface.PackageReadyParam {
+    private fun fakePackageReadyParam(onClassLoader: () -> Unit = {}): XposedModuleInterface.PackageReadyParam {
         return Proxy.newProxyInstance(
             XposedModuleInterface.PackageReadyParam::class.java.classLoader,
             arrayOf(XposedModuleInterface.PackageReadyParam::class.java)
         ) { _, method, _ ->
             when (method.name) {
                 "getPackageName" -> "com.android.systemui"
-                "getClassLoader" -> ClassLoader.getSystemClassLoader()
+                "getClassLoader" -> { onClassLoader(); ClassLoader.getSystemClassLoader() }
                 "getApplicationInfo" -> null
                 else -> null
             }
@@ -120,14 +120,7 @@ class SystemUIStrongToastHooksTest {
     fun controlHook_systemDefault_proceedsOnce() {
         setSystemDefaultSnapshot()
         val control = FakeControl()
-        val controllerField = FakeControl::class.java.getDeclaredField("mKeyguardStateController")
-        val showingField = FakeKeyguard::class.java.getDeclaredField("mShowing")
-        val hook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            true
-        )
+        val hook = SystemUIStrongToastHooks.StrongToastControlHook(true)
 
         var proceedCount = 0
         val chain = fakeChain(control) { proceedCount++; null }
@@ -141,14 +134,7 @@ class SystemUIStrongToastHooksTest {
     fun controlHook_hideWithAllowHide_skipsAndDoesNotProceed() {
         setHideSnapshot()
         val control = FakeControl()
-        val controllerField = FakeControl::class.java.getDeclaredField("mKeyguardStateController")
-        val showingField = FakeKeyguard::class.java.getDeclaredField("mShowing")
-        val hook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            true
-        )
+        val hook = SystemUIStrongToastHooks.StrongToastControlHook(true)
 
         var proceedCount = 0
         val chain = fakeChain(control) { proceedCount++; null }
@@ -162,14 +148,7 @@ class SystemUIStrongToastHooksTest {
     fun controlHook_hideWithoutAllowHide_proceedsOnce() {
         setHideSnapshot()
         val control = FakeControl()
-        val controllerField = FakeControl::class.java.getDeclaredField("mKeyguardStateController")
-        val showingField = FakeKeyguard::class.java.getDeclaredField("mShowing")
-        val hook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            false
-        )
+        val hook = SystemUIStrongToastHooks.StrongToastControlHook(false)
 
         var proceedCount = 0
         val chain = fakeChain(control) { proceedCount++; null }
@@ -180,81 +159,55 @@ class SystemUIStrongToastHooksTest {
     }
 
     @Test
-    fun controlHook_dynamicIsland_opensAndClosesGate() {
+    fun controlHook_dynamicIsland_blocksTheForeheadBeforeAnyNativeWindowOrQueue() {
         setDynamicIslandSnapshot()
         val control = FakeControl()
-        val controllerField = FakeControl::class.java.getDeclaredField("mKeyguardStateController")
-        val showingField = FakeKeyguard::class.java.getDeclaredField("mShowing")
-        val hook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            true
-        )
+        val hook = SystemUIStrongToastHooks.StrongToastControlHook(true)
 
         var proceedCount = 0
         val chain = fakeChain(control) { proceedCount++; null }
 
         assertNull(hook.intercept(chain))
-        assertEquals(1, proceedCount)
+        assertEquals(0, proceedCount)
         assertTrue(control.mKeyguardStateController.mShowing)
     }
 
     @Test
-    fun controlHook_nestedDynamicIsland_usesLifoGateOwnership() {
+    fun controlHook_nestedDynamicIsland_neverChangesTheNativeGate() {
         setDynamicIslandSnapshot()
         val control = FakeControl()
-        val controllerField = FakeControl::class.java.getDeclaredField("mKeyguardStateController")
-        val showingField = FakeKeyguard::class.java.getDeclaredField("mShowing")
-        val outerHook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            true
-        )
-        val innerHook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            true
-        )
+        val outerHook = SystemUIStrongToastHooks.StrongToastControlHook(true)
+        val innerHook = SystemUIStrongToastHooks.StrongToastControlHook(true)
 
         var outerProceed = 0
         var innerProceed = 0
 
         val innerChain = fakeChain(control) {
             innerProceed++
-            assertFalse("inner should see gate already open", control.mKeyguardStateController.mShowing)
+            assertTrue("inner must see the original locked state", control.mKeyguardStateController.mShowing)
             null
         }
 
         val outerChain = fakeChain(control) {
             outerProceed++
-            assertFalse("outer should have opened the gate", control.mKeyguardStateController.mShowing)
+            assertTrue("outer must keep the original locked state", control.mKeyguardStateController.mShowing)
             innerHook.intercept(innerChain)
             // Inner has finished; the outer still owns the gate.
-            assertFalse("outer gate must still be open after inner exits", control.mKeyguardStateController.mShowing)
+            assertTrue("nested presentation must leave the locked state intact", control.mKeyguardStateController.mShowing)
             null
         }
 
         assertNull(outerHook.intercept(outerChain))
-        assertEquals(1, outerProceed)
-        assertEquals(1, innerProceed)
+        assertEquals(0, outerProceed)
+        assertEquals(0, innerProceed)
         assertTrue("outer must restore the gate after the whole chain", control.mKeyguardStateController.mShowing)
     }
 
     @Test
     fun controlHook_ordinaryFailure_restoresGateAndRethrows() {
-        setDynamicIslandSnapshot()
+        setSystemDefaultSnapshot()
         val control = FakeControl()
-        val controllerField = FakeControl::class.java.getDeclaredField("mKeyguardStateController")
-        val showingField = FakeKeyguard::class.java.getDeclaredField("mShowing")
-        val hook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            true
-        )
+        val hook = SystemUIStrongToastHooks.StrongToastControlHook(true)
 
         val failure = RuntimeException("chain failed")
         val chain = fakeChain(control) { throw failure }
@@ -266,16 +219,9 @@ class SystemUIStrongToastHooksTest {
 
     @Test
     fun controlHook_fatalError_restoresGateAndPropagates() {
-        setDynamicIslandSnapshot()
+        setSystemDefaultSnapshot()
         val control = FakeControl()
-        val controllerField = FakeControl::class.java.getDeclaredField("mKeyguardStateController")
-        val showingField = FakeKeyguard::class.java.getDeclaredField("mShowing")
-        val hook = SystemUIStrongToastHooks.StrongToastControlHook(
-            controllerField,
-            showingField,
-            null,
-            true
-        )
+        val hook = SystemUIStrongToastHooks.StrongToastControlHook(true)
 
         val error = InternalError("fatal")
         val chain = fakeChain(control) { throw error }

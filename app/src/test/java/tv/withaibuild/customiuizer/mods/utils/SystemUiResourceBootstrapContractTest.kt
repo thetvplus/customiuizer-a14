@@ -65,7 +65,7 @@ class SystemUiResourceBootstrapContractTest {
         assertTrue(
             "system_volumetimer and miui_volume_timer_segments replacement must be present",
             bootstrap.contains("system_volumetimer") &&
-                bootstrap.contains("\"miui_volume_timer_segments\"")
+                bootstrap.contains("\"miui_volume_timer_segments\", VolumeTimerValues.segments()")
         )
     }
 

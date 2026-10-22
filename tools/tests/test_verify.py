@@ -25,6 +25,36 @@ _audit = importlib.util.module_from_spec(_spec_audit)
 _spec_audit.loader.exec_module(_audit)
 
 
+class BehaviorGateTests(unittest.TestCase):
+    def run_gate(self, code, report=None, stale=False):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            xml = root / "app/build/test-results/testDebugUnitTest/TEST-example.RealTest.xml"
+            xml.parent.mkdir(parents=True)
+            if stale:
+                xml.write_text('<testsuite name="example.RealTest" tests="1" failures="1"><testcase name="old"><failure/></testcase></testsuite>')
+            def execute(*args):
+                self.assertEqual(("testDebugUnitTest", "--rerun", "--tests", "example.RealTest"), args)
+                if report is not None:
+                    xml.write_text(report)
+                return code
+            with patch.object(_verify, "REPO_ROOT", root), patch.object(_verify, "check_java_runtime", return_value=0), \
+                    patch.object(_verify, "gradle", side_effect=execute), redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                return _verify.behavior(["example.RealTest"])
+
+    def test_only_fresh_executed_junit_failures_count_as_a_kill(self):
+        failing = '<testsuite name="example.RealTest" tests="1"><testcase name="cancel"><failure message="effect committed"/></testcase></testsuite>'
+        self.assertEqual(1, self.run_gate(1, failing))
+        self.assertEqual(3, self.run_gate(1))  # compilation/tool failure
+        self.assertEqual(3, self.run_gate(1, stale=True))
+        self.assertEqual(3, self.run_gate(0, failing))  # contradictory result
+
+    def test_success_skip_and_invalid_reports_are_distinct(self):
+        self.assertEqual(0, self.run_gate(0, '<testsuite name="example.RealTest" tests="2"/>'))
+        self.assertEqual(2, self.run_gate(0, '<testsuite name="example.RealTest" tests="2" skipped="2"/>'))
+        self.assertEqual(3, self.run_gate(1, '<broken'))
+
+
 class VerifyChangedInputsTests(unittest.TestCase):
     def run_changed(self, paths, tests=None, staged=False):
         checks = (

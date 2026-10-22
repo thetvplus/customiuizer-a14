@@ -18,21 +18,6 @@ import tv.withaibuild.customiuizer.utils.AppHelper
 class SubFragmentMenuPolicyTest {
 
     @Test
-    fun preference_pages_enable_toolbar() {
-        assertTrue(shouldEnablePreferenceToolbar(AppHelper.SettingsType.Preference, false))
-    }
-
-    @Test
-    fun edit_pages_without_custom_action_bar_do_not_enable_toolbar() {
-        assertFalse(shouldEnablePreferenceToolbar(AppHelper.SettingsType.Edit, false))
-    }
-
-    @Test
-    fun edit_pages_with_custom_action_bar_enable_toolbar() {
-        assertTrue(shouldEnablePreferenceToolbar(AppHelper.SettingsType.Edit, true))
-    }
-
-    @Test
     fun main_fragment_is_not_a_sub_fragment() {
         val main = loadClass("tv.withaibuild.customiuizer.MainFragment")
         assertFalse(SubFragment::class.java.isAssignableFrom(main))
@@ -56,7 +41,7 @@ class SubFragmentMenuPolicyTest {
     }
 
     @Test
-    fun edit_pages_do_not_enable_matched_restart_toolbar() {
+    fun edit_pages_share_the_navigation_base() {
         // AppSelector and SortableList are opened with Edit + HomeUp.
         for (name in EDIT_PAGE_CLASSES) {
             val cls = loadClass(name)
@@ -65,7 +50,6 @@ class SubFragmentMenuPolicyTest {
                 SubFragment::class.java.isAssignableFrom(cls)
             )
         }
-        assertFalse(shouldEnablePreferenceToolbar(AppHelper.SettingsType.Edit, false))
     }
 
     private fun loadClass(name: String): Class<*> {

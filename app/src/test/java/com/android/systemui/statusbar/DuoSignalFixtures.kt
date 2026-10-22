@@ -28,5 +28,7 @@ class StatusBarMobileView {
     @JvmField var mState: StatusBarSignalPolicy.MobileIconState? = null
     fun applyMobileState(state: StatusBarSignalPolicy.MobileIconState) {}
     fun updateState(state: StatusBarSignalPolicy.MobileIconState) = false
+    fun applyDarknessInternal() {}
+    fun setDripEnd(enabled: Boolean) {}
     fun setVisibleState(state: Int, animate: Boolean) {}
 }

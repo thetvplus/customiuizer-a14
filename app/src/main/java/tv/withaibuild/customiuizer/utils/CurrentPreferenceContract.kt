@@ -139,7 +139,19 @@ internal object CurrentPreferenceContract {
      * @return true if a commit was attempted (revision was stale).
      */
     fun pruneOrphanPreferences(prefs: SharedPreferences): Boolean {
-        if (prefs.getInt(CONTRACT_REVISION_KEY, 0) >= CONTRACT_REVISION) return false
+        // Narrow retirement even for users whose general contract migration is complete.
+        // Existing backups are filtered by DROPPED_KEYS at import/export as well.
+        val retiredIsland = arrayOf(
+            "system_island_expanded_width", "system_island_icons", "system_island_concise",
+            "system_island_controls", "system_island_gestures", "system_island_gestures_horizontal",
+            "system_island_gestures_vertical",
+        ).flatMap { listOf(it, "pref_key_$it") }
+        if (prefs.getInt(CONTRACT_REVISION_KEY, 0) >= CONTRACT_REVISION) {
+            if (retiredIsland.none(prefs::contains)) return false
+            val editor = prefs.edit()
+            retiredIsland.forEach(editor::remove)
+            return editor.commit()
+        }
         val working = LinkedHashMap<String, Any?>()
         for ((key, value) in prefs.all) {
             working[key] = when (value) {

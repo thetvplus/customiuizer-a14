@@ -3,11 +3,13 @@ package tv.withaibuild.customiuizer.prefs
 import android.content.Context
 import android.content.res.TypedArray
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.View
 import android.widget.TextView
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceViewHolder
+import androidx.preference.PreferenceScreen
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.utils.Helpers
 
@@ -33,16 +35,17 @@ class PreferenceCategoryEx(context: Context, attrs: AttributeSet?) : PreferenceC
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
         val title = holder.findViewById(android.R.id.title) as? TextView
-        title?.text = Helpers.appendStatusMarker(title?.text, unsupported, dynamic)
+        Helpers.bindPreferenceTitle(title, this.title, unsupported, dynamic)
         title?.visibility = if (state == 2 || state == 1) View.GONE else View.VISIBLE
         val finalView = holder.itemView
         val childPadding = context.resources.getDimensionPixelSize(R.dimen.preference_item_child_padding)
-        if (state == 2) {
-            finalView.setPadding(childPadding, 0, childPadding, 0)
-        } else {
-            val headerPadding = context.resources.getDimensionPixelSize(R.dimen.preference_group_header_padding)
-            finalView.setPadding(headerPadding, 0, headerPadding, 0)
-        }
+        val section = parent is PreferenceScreen || (parent as? PreferenceCategoryEx)?.isPageContainer() == true
+        val padding = if (section) context.resources.getDimensionPixelSize(R.dimen.preference_group_header_padding) else childPadding
+        val vertical = if (isTitleVisible() && !section) childPadding / 2 else 0
+        finalView.setPadding(padding, vertical, padding, vertical)
+        title?.setTextSize(TypedValue.COMPLEX_UNIT_PX, context.resources.getDimension(
+            if (section) R.dimen.preference_category_text_size else R.dimen.secondary_text_size,
+        ))
     }
 
     fun setUnsupported(value: Boolean) {
@@ -53,6 +56,8 @@ class PreferenceCategoryEx(context: Context, attrs: AttributeSet?) : PreferenceC
     fun isDynamic(): Boolean = dynamic
 
     fun isTitleVisible(): Boolean = state == 0
+
+    fun isPageContainer(): Boolean = state == 2 && parent is PreferenceScreen
 
     fun hide() {
         state = 2

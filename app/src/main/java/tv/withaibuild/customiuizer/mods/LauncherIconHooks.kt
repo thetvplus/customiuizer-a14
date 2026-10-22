@@ -531,9 +531,9 @@ object LauncherIconHooks {
                     result = null
                 }
                 try {
-                    val args = chain.args
-
-                    val buddyIcon = XposedHelpers.callMethod(args[3], "getBuddyIconView", args[2])
+                    // The two ROM overloads place ShortcutInfo at different argument indexes.
+                    // Both return the icon whose native creation has just completed.
+                    val buddyIcon = result
                     if (buddyIcon == null) { return XposedHelpers.throwOrReturn(throwable, result) }
                     val mTitle = XposedHelpers.getObjectField(buddyIcon, "mTitle") as? TextView
                     if (mTitle != null) mTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconStyleConfig.titleFontSizeSp)

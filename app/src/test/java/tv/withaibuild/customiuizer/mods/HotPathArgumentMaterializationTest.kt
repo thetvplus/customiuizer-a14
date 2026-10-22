@@ -39,8 +39,11 @@ class HotPathArgumentMaterializationTest {
     @Test
     fun systemServerPassThroughDoesNotMaterializeArguments() {
         val audio = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemAudioHooks.kt")
-            .section("fun MuffledVibrationHook", "\n}\n")
-        assertAfter(audio, "if (!insidePeriod)", "val args = XposedHelpers.getArgsArray(chain)")
+            .section("internal fun interceptVibrationScale", "internal fun vibrationPeriodContains")
+        assertTrue("native scaling never copies the argument array", !audio.contains("getArgsArray"))
+        assertAfter(audio, "val nativeEffect = chain.proceed()", "val cfg = audioHapticsConfig")
+        assertAfter(audio, "if (ratio == 1f)", "scale.invoke(nativeEffect, ratio)")
+        assertAfter(audio, "if (!vibrationPeriodContains", "scale.invoke(nativeEffect, ratio)")
 
         val windows = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemWindowHooks.kt")
             .section("fun TempHideOverlayAppHook", "fun BetterPopupsAllowFloatHook")

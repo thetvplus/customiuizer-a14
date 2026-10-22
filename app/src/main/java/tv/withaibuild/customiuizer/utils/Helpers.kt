@@ -209,9 +209,15 @@ object Helpers {
     }
 
     @JvmStatic
-    fun appendStatusMarker(text: CharSequence?, unsupported: Boolean, dynamic: Boolean): CharSequence {
-        val marker = if (unsupported) " ⨯" else if (dynamic) " ⟲" else ""
-        return if (text.isNullOrEmpty()) marker else "$text$marker"
+    fun bindPreferenceTitle(title: TextView?, text: CharSequence?, unsupported: Boolean, dynamic: Boolean) {
+        if (title == null) return
+        val status = when {
+            unsupported -> title.context.getString(R.string.preference_unavailable)
+            dynamic -> title.context.getString(R.string.preference_applies_immediately)
+            else -> null
+        }
+        title.stateDescription = status
+        title.text = if (unsupported) if (text.isNullOrEmpty()) status else "$text · $status" else text
     }
 
     @JvmStatic

@@ -3,7 +3,7 @@
 用于开发期 APK / DEX 取证，不参与 Gradle、APK runtime 或默认 CI。
 安装、MCP 操作、证据边界及实测结果见 [DexSQL 指引](../../docs/rom-intelligence/DEXSQL.md)。
 
-每个 `.sql` 文件是一条可直接传给官方 CLI 或 MCP `query.sql` 的语句：
+每个 `.sql` 文件是一组可直接传给官方 CLI 或 MCP `query.sql` 的只读语句：
 
 | 文件 | 输入 | 用途 |
 | --- | --- | --- |
@@ -13,7 +13,16 @@
 | `screenshot_candidates.sql` | MIUIScreenshot APK | 当前 DexKit 子串、排除包和第 5 个参数约束；生产入口要求唯一候选。 |
 | `screenshot_callers.sql` | MIUIScreenshot APK | 字符串目标的直接调用者；仍需用 candidates 查询筛选、用 decode 复核。 |
 | `guardprovider_candidates.sql` | GuardProvider APK | 同一 DEX、同一方法同时使用两个子串；零结果只约束输入样本。 |
-| `volume_contract.sql` | SystemUI 宿主 + plugin APK | 查询音量按钮声明，配合 `dex_files` 确认来自哪个 APK。 |
+| `volume_contract.sql` | SystemUI 宿主 + plugin APK | 查询按钮、计时器、超时 / 无障碍、窗口模糊及百分比 owner 声明；宿主亮度与插件音量分别确认来源。宽度资源 ID、默认材质和关闭时序须结合 Smali。 |
+| `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 原生显示、透明度、编辑动画、拖拽提交 / 取消、子布局重排、设备圆角、材质 / Drawable 和导航取样声明；decode 核对实际 Transformation、手势反向及边界刷新，不另行推进动画或等待结束才恢复。 |
+| `toast_presentation_contract.sql` | SystemUI 与 boot framework.jar | 普通 Toast 的窗口插入 / 回收、旋转重排、安全区与原生 StrongToast 文本模型；decode 核对 text_bitmap 分支、展示门禁、队列和 finishToken，不能只凭方法存在判定兼容。 |
+| `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器选择、媒体 / 状态栏回调、Toast 来源与 StrongToast 生命周期；decode 复核状态分发和窗口类型，保留 ROM 锁屏门禁。 |
+| `statusbar_height_contract.sql` | 双区域 services.jar 与 framework.jar | InsetsSource、WindowState、DecorInsets 缓存及应用 Insets 消费链；区分挖孔安全区、旧 API 与应用缓存，不据此扩大全局 Hook。 |
+| `audio_focus_contract.sql` | 两份适用 ROM 的 services.jar | 声音页焦点 / 首次音量按键的精确声明、状态字段和定义来源；结合 decode 核对语义。 |
+| `audio_focus_calls.sql` | 与上述相同的 Dataset | 焦点失去 / 恢复 / 释放与原生栈操作的直接调用；核对放弃焦点和 Binder 死亡路径。 |
+| `safe_volume_contract.sql` | 两份适用 ROM 的 SystemUI 宿主 + framework.jar + services.jar | 高音量警告工作线程、owner / 原生门禁、确认接口及服务端重新限幅声明；decode 核对消息 14 与独立 CSD 消息 17，不混入音量插件加载器。 |
+| `safe_volume_calls.sql` | 与上述相同的 Dataset | 原生确认、重新限幅、警告分发与待处理音量命令回放的直接调用；消息合并、权限、失败回退和按键是否消耗仍须结合 Smali 与实机。 |
+| `audio_haptics_contract.sql` | 两份适用 ROM 的 services.jar + framework.jar | 按应用振动的 uid / deviceId / opPkg 签名、原生缩放调用及 Effect / Segment 实现；核对时长、重复与预制效果，不因旧目标缺失直接退役。 |
 | `bootstrap_contract.sql` | SystemUI 宿主及插件 APK | 查询既有初始化 / 插件创建的声明与来源；boot framework 缺失仍是 UNKNOWN。 |
 | `api102_bridge_calls.sql` | 最终 R8 模块 APK | 统一统计 setId / getId / replaceHook 的 invoke；结合 mapping 核对原生安装策略及禁止替换，替代旧 setId 单项查询。 |
 | `api102_hook_ids.sql` | 最终 R8 模块 APK | 找到三个固定 ID 的指令使用位置；需结合 mapping 和设备回读。 |

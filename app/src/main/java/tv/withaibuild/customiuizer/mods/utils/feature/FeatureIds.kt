@@ -1055,3 +1055,8 @@ data object LauncherDockBackgroundFeatureId : FeatureId {
     override val id = 255
     override val name = "launcher_dock_background"
 }
+
+data object ToastPresentationFeatureId : FeatureId {
+    override val id = 256
+    override val name = "systemui_toast_presentation"
+}

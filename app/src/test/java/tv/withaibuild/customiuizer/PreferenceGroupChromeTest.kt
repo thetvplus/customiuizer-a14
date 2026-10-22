@@ -49,6 +49,8 @@ class PreferenceGroupChromeTest {
         assertEquals(chrome[2].groupId, chrome[3].groupId)
         assertTrue(chrome[1].cardStart)
         assertTrue(chrome[3].cardEnd)
+        assertFalse("Inner headings have breathing room, without rules on either side", chrome[1].dividerBelow)
+        assertFalse(chrome[2].dividerBelow)
     }
 
     @Test
@@ -324,7 +326,7 @@ class PreferenceGroupChromeWiringTest {
         assertTrue(dimens.contains("secondary_text_size\">13sp"))
         assertTrue(dimens.contains("preference_group_radius\">10dp"))
         assertTrue(dimens.contains("preference_item_padding_top\">11dp"))
-        assertTrue(categoryEx.contains("setPadding(headerPadding, 0, headerPadding, 0)"))
+        assertTrue(categoryEx.contains("isPageContainer()"))
     }
 
     @Test

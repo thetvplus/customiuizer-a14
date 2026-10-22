@@ -248,12 +248,13 @@ class AudioVisualizer @JvmOverloads constructor(
             }
             "system_visualizer_colorval" -> {
                 customColor = MainModule.mPrefs.getInt("system_visualizer_colorval", Color.WHITE)
-                setColor(customColor)
+                if (colorMode == ColorMode.STATIC) setColor(customColor)
             }
             "system_visualizer_dyntime" -> {
-                randomizeInterval = MainModule.mPrefs.getInt("system_visualizer_dyntime", 10) * 1000
+                randomizeInterval = MainModule.mPrefs.getInt("system_visualizer_dyntime", 10).coerceIn(3, 60) * 1000
                 randomizeColorJob?.cancel()
-                randomizeColorJob = viewScope.launch { runRandomizeColor() }
+                randomizeColorJob = null
+                updateColorMode()
             }
             "system_visualizer_drawer" ->
                 showInDrawer = MainModule.mPrefs.getBoolean("system_visualizer_drawer", false)
@@ -267,7 +268,9 @@ class AudioVisualizer @JvmOverloads constructor(
         private val ownerRef = java.lang.ref.WeakReference(owner)
 
         override fun onChange(key: String?) {
-            ownerRef.get()?.handlePreferenceChanged(key)
+            if (key?.startsWith("system_visualizer_") != true) return
+            val owner = ownerRef.get() ?: return
+            owner.viewScope.launch { owner.handlePreferenceChanged(key) }
         }
     }
 
@@ -311,7 +314,7 @@ class AudioVisualizer @JvmOverloads constructor(
         renderType = RenderType.values()[MainModule.mPrefs.getStringAsInt("system_visualizer_render", 0)]
         glowLevel = MainModule.mPrefs.getInt("system_visualizer_glowlevel", 50)
         customColor = MainModule.mPrefs.getInt("system_visualizer_colorval", Color.WHITE)
-        randomizeInterval = MainModule.mPrefs.getInt("system_visualizer_dyntime", 10) * 1000
+        randomizeInterval = MainModule.mPrefs.getInt("system_visualizer_dyntime", 10).coerceIn(3, 60) * 1000
         showInDrawer = MainModule.mPrefs.getBoolean("system_visualizer_drawer")
         showWithControllerOnly = MainModule.mPrefs.getBoolean("system_visualizer_controller")
 
@@ -431,14 +434,15 @@ class AudioVisualizer @JvmOverloads constructor(
 
     fun setBitmap() {
         try {
+            if (detached || !mDisplaying || colorMode != ColorMode.MATCH) return
             if (mProcessedArt === mArt && mArt != null) return
+            cancelPaletteGeneration()
             mProcessedArt = mArt
             val art = mProcessedArt
             if (art != null) {
-                paletteGenerationJob?.cancel()
                 paletteGenerationJob = viewScope.launch {
                     val palette = withContext(Dispatchers.Default) { Palette.from(art).generate() }
-                    if (!isActive) return@launch
+                    if (!isActive || detached || !mDisplaying || colorMode != ColorMode.MATCH || mArt !== art) return@launch
                     onPaletteGenerated(palette)
                 }
             } else {
@@ -447,6 +451,13 @@ class AudioVisualizer @JvmOverloads constructor(
         } catch (t: Throwable) {
             XposedHelpers.log(t)
         }
+    }
+
+    private fun cancelPaletteGeneration() {
+        paletteGenerationJob?.cancel()
+        paletteGenerationJob = null
+        // A hidden or superseded request is not a successfully processed source.
+        mProcessedArt = null
     }
 
     fun setColor(color: Int) {
@@ -481,10 +492,19 @@ class AudioVisualizer @JvmOverloads constructor(
     }
 
     private fun updateColorMode() {
-        if (!isMusicPlaying) return
+        if (colorMode != ColorMode.DYNAMIC || !isMusicPlaying || !mDisplaying || detached) {
+            randomizeColorJob?.cancel()
+            randomizeColorJob = null
+        }
+        if (colorMode != ColorMode.MATCH || !isMusicPlaying || !mDisplaying || detached) {
+            cancelPaletteGeneration()
+        }
+        if (!isMusicPlaying || !mDisplaying || detached) return
         when (colorMode) {
             ColorMode.MATCH -> setBitmap()
-            ColorMode.DYNAMIC -> setColor(getRandomColor())
+            ColorMode.DYNAMIC -> if (randomizeColorJob?.isActive != true) {
+                randomizeColorJob = viewScope.launch { runRandomizeColor() }
+            }
             ColorMode.STATIC -> setColor(customColor)
             else -> setColor(Color.WHITE)
         }
@@ -581,9 +601,9 @@ class AudioVisualizer @JvmOverloads constructor(
         mVisualizerColorAnimator?.cancel()
         mVisualizerGlowColorAnimator?.cancel()
         randomizeColorJob?.cancel()
-        paletteGenerationJob?.cancel()
+        randomizeColorJob = null
+        cancelPaletteGeneration()
         mArt = null
-        mProcessedArt = null
         val callback = onDisposed
         onDisposed = null
         callback?.invoke(this)
@@ -788,7 +808,7 @@ class AudioVisualizer @JvmOverloads constructor(
     }
 
     private suspend fun runRandomizeColor() {
-        while (coroutineContext.isActive && colorMode == ColorMode.DYNAMIC) {
+        while (coroutineContext.isActive && !detached && mDisplaying && colorMode == ColorMode.DYNAMIC) {
             setColor(getRandomColor())
             delay(randomizeInterval.toLong())
         }
@@ -826,8 +846,7 @@ class AudioVisualizer @JvmOverloads constructor(
                 startFrameScheduler()
                 resetBandsToBaseline()
                 viewScope.launch { linkVisualizer(generation) }
-                randomizeColorJob?.cancel()
-                randomizeColorJob = viewScope.launch { runRandomizeColor() }
+                updateColorMode()
                 animate().alpha(1.0f).withEndAction(null).setDuration((800 * animDur / 65f).roundToInt().toLong())
             }
         } else {
@@ -835,6 +854,8 @@ class AudioVisualizer @JvmOverloads constructor(
                 mDisplaying = false
                 stopFrameScheduler()
                 randomizeColorJob?.cancel()
+                randomizeColorJob = null
+                cancelPaletteGeneration()
                 resetBandsToBaseline()
                 val visualizer = synchronized(visualizerLock) {
                     val current = mVisualizer

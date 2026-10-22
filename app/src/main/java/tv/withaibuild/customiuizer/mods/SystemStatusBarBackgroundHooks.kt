@@ -19,42 +19,46 @@ import java.lang.reflect.Method
 
 object SystemStatusBarBackgroundHooks {
 
-    private const val NOCOLOR = 0x01010101
-    private var actionBarColor = NOCOLOR
+    private const val ACTION_BAR_COLOR_FIELD = "customiuizer_statusbar_actionbar_color"
 
     private fun getActionBarColor(window: Window, oldColor: Int): Int {
-        if (actionBarColor != NOCOLOR) return actionBarColor
+        val actionBarColor = XposedHelpers.getAdditionalInstanceField(window, ACTION_BAR_COLOR_FIELD) as? Int
+        if (actionBarColor != null) return actionBarColor
 
         val outValue = TypedValue()
         window.context.theme.resolveAttribute(android.R.attr.actionBarStyle, outValue, true)
         val abStyle: TypedArray = window.context.theme.obtainStyledAttributes(outValue.resourceId, intArrayOf(android.R.attr.background))
-        val bg = abStyle.getDrawable(0)
-        abStyle.recycle()
-
-        return if (bg is ColorDrawable) bg.color else oldColor
+        return try {
+            val bg = abStyle.getDrawable(0)
+            if (bg is ColorDrawable) bg.color else oldColor
+        } finally {
+            abStyle.recycle()
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
     private fun hookToolbar(thisObject: Any, bg: Drawable?) {
         if (bg !is ColorDrawable) return
-        actionBarColor = bg.color
         val mDecorToolbar = XposedHelpers.getObjectField(thisObject, "mDecorToolbar")
         val mToolbar = XposedHelpers.getObjectField(mDecorToolbar, "mToolbar") as ViewGroup
         val mDecorContext = mToolbar.rootView.context
         if (mDecorContext != null) {
             val mActivityContext = XposedHelpers.getObjectField(mDecorContext, "mActivityContext") as WeakReference<Context>
             val mContext = mActivityContext.get()
-            if (mContext != null) {
-                (mContext as Activity).window.setStatusBarColor(actionBarColor)
+            if (mContext is Activity) {
+                val window = mContext.window
+                XposedHelpers.setAdditionalInstanceField(window, ACTION_BAR_COLOR_FIELD, bg.color)
+                window.setStatusBarColor(bg.color)
             }
         }
     }
 
     private fun hookWindowDecor(thisObject: Any, bg: Drawable?) {
         if (bg !is ColorDrawable) return
-        actionBarColor = bg.color
         val mActivity = XposedHelpers.getObjectField(thisObject, "mActivity") as Activity?
-        mActivity?.window?.setStatusBarColor(actionBarColor)
+        val window = mActivity?.window ?: return
+        XposedHelpers.setAdditionalInstanceField(window, ACTION_BAR_COLOR_FIELD, bg.color)
+        window.setStatusBarColor(bg.color)
     }
 
     @JvmStatic
@@ -94,7 +98,8 @@ object SystemStatusBarBackgroundHooks {
                 val args = XposedHelpers.getArgsArray(chain)
                 try {
 
-                    if (actionBarColor != NOCOLOR) args[0] = actionBarColor
+                    val actionBarColor = XposedHelpers.getAdditionalInstanceField(chain.thisObject, ACTION_BAR_COLOR_FIELD) as? Int
+                    if (actionBarColor != null) args[0] = actionBarColor
                     else if (Color.alpha(args[0] as Int) < 255) args[0] = Color.TRANSPARENT
 
                     result = chain.proceed(args)

@@ -9,7 +9,8 @@ import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.PlaybackState
-import android.telephony.PhoneStateListener
+import android.os.VibrationAttributes
+import java.lang.reflect.Method
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +25,7 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.AudioVisualizer
 import java.util.ArrayList
 import java.util.Calendar
+import java.util.Stack
 import tv.withaibuild.customiuizer.utils.HookUtils
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
@@ -142,48 +144,45 @@ object SystemAudioHooks {
     @JvmStatic
     fun SelectiveVibrationHook(lpparam: SystemServerStartingParam) {
         installAudioHapticsSnapshot()
-        ModuleHelper.hookAllMethods("com.android.server.vibrator.VibratorManagerService", lpparam.classLoader, "vibrate", object : MethodHook() {
+        ModuleHelper.findAndHookMethod("com.android.server.vibrator.VibratorManagerService", lpparam.classLoader,
+            "vibrate", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, String::class.java,
+            "android.os.CombinedVibration", "android.os.VibrationAttributes", String::class.java,
+            "android.os.IBinder", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-
-                    val pkgName = chain.getArg(1) as String?
-                    if (pkgName == null) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (checkVibration(pkgName)) { skipped = true; result = null; throwable = null }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return interceptSelectiveVibration(chain)
             }
         })
     }
 
+    internal fun interceptSelectiveVibration(chain: XposedInterface.Chain): Any? {
+        val blocked = ModuleHelper.guarded(false) {
+            // A14: uid, deviceId, opPkg, effect, attributes, reason, token.
+            // Do not replace the native device, vibration attributes or original exception.
+            val packageName = chain.getArg(2) as? String ?: return@guarded false
+            checkVibration(packageName)
+        }
+        return if (blocked) null else chain.proceed()
+    }
+
     @JvmStatic
     fun NoDuckingHook(lpparam: SystemServerStartingParam) {
-        ModuleHelper.hookAllMethods("com.android.server.audio.FocusRequester", lpparam.classLoader, "handleFocusLoss", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-
-                    if ((chain.getArg(0) as Int) == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) { skipped = true; result = null; throwable = null }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+        val requesterClass = XposedHelpers.findClass("com.android.server.audio.FocusRequester", lpparam.classLoader)
+        ModuleHelper.findAndHookMethod(
+            requesterClass, "frameworkHandleFocusLoss", Int::class.javaPrimitiveType!!,
+            requesterClass, Boolean::class.javaPrimitiveType!!,
+            object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? = interceptDucking(chain)
             }
-        })
+        )
+    }
+
+    internal fun interceptDucking(chain: XposedInterface.Chain): Any? {
+        // handleFocusLoss must still update loss/notified state and inform the focus policy.
+        val handled = ModuleHelper.guarded(false) {
+            chain.getArg(0) == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK &&
+                chain.getArg(1) != null
+        }
+        return if (handled) true else chain.proceed()
     }
 
     private var audioViz: AudioVisualizer? = null
@@ -461,194 +460,161 @@ object SystemAudioHooks {
         })
     }
 
-    private var audioFocusPkg: String? = null
+    private const val PHONE_FOCUS_CLIENT = "AudioFocus_For_Phone_Ring_And_Calls"
 
-    private fun removeListener(thisObject: Any) {
-        val mRecords = XposedHelpers.getObjectField(thisObject, "mRecords") as ArrayList<Any>?
-        if (mRecords == null) return
-        for (record in mRecords) {
-            val callingPackage = XposedHelpers.getObjectField(record, "callingPackage") as String?
-            val events = XposedHelpers.getIntField(record, "events")
-            val selectedApps = audioHapticsConfig.ignoreCallsApps
-            if ((events and PhoneStateListener.LISTEN_CALL_STATE) == PhoneStateListener.LISTEN_CALL_STATE && callingPackage != null && selectedApps.contains(callingPackage)) {
-                val newEvents = events and PhoneStateListener.LISTEN_CALL_STATE.inv()
-                XposedHelpers.setIntField(record, "events", newEvents)
+    /** Field handles belong to this installation's ClassLoader; no service/owner is retained. */
+    internal class CallAudioFocusAccess(serviceClass: Class<*>, controlClass: Class<*>, requesterClass: Class<*>) {
+        private val controlField = XposedHelpers.findField(serviceClass, "mMediaFocusControl")
+        private val stackField = XposedHelpers.findField(controlClass, "mFocusStack")
+        private val policyField = XposedHelpers.findField(controlClass, "mFocusPolicy")
+        private val multiFocusField = XposedHelpers.findField(controlClass, "mMultiAudioFocusEnabled")
+        private val callActiveField = XposedHelpers.findField(controlClass, "mRingOrCallActive")
+        private val packageField = XposedHelpers.findField(requesterClass, "mPackageName")
+        private val clientField = XposedHelpers.findField(requesterClass, "mClientId")
+        private val lossField = XposedHelpers.findField(requesterClass, "mFocusLossReceived")
+        private val focusLockField = XposedHelpers.findField(controlClass, "mAudioFocusLock")
+
+        fun shouldIgnoreCall(service: Any?, selectedApps: Set<String>): Boolean {
+            if (service == null || selectedApps.isEmpty()) return false
+            val control = controlField.get(service) ?: return false
+            val focusLock = focusLockField.get(null) ?: return false
+            synchronized(focusLock) {
+                // A single stack owner cannot describe an external policy or multiple owners.
+                if (policyField.get(control) != null || multiFocusField.getBoolean(control) ||
+                    callActiveField.getBoolean(control)
+                ) return false
+                val stack = stackField.get(control) as? Stack<*> ?: return false
+                val owner = if (stack.empty()) null else stack.peek()
+                if (owner == null || lossField.getInt(owner) != 0 ||
+                    clientField.get(owner) == PHONE_FOCUS_CLIENT
+                ) return false
+                val packageName = packageField.get(owner) as? String ?: return false
+                return packageName in selectedApps
             }
+        }
+    }
+
+    internal fun interceptCallAudioFocus(chain: XposedInterface.Chain, access: CallAudioFocusAccess): Any? {
+        val ignored = ModuleHelper.guarded(false) {
+            chain.getArg(4) == PHONE_FOCUS_CLIENT &&
+                access.shouldIgnoreCall(chain.thisObject, audioHapticsConfig.ignoreCallsApps)
+        }
+        return if (ignored) AudioManager.AUDIOFOCUS_REQUEST_GRANTED else chain.proceed()
+    }
+
+    internal fun filterCallStateEvents(callingPackage: String?, events: Set<Int>): Set<Int> {
+        // A14 TelephonyRegistry uses callback event IDs, not PhoneStateListener bit masks.
+        // Both fuxi ROMs dispatch call state as 6 (modern) and 36 (legacy).
+        if (callingPackage !in audioHapticsConfig.ignoreCallsApps ||
+            (6 !in events && 36 !in events)
+        ) return events
+        return HashSet(events).apply {
+            remove(6)
+            remove(36)
         }
     }
 
     @JvmStatic
     fun NoCallInterruptionHook(lpparam: SystemServerStartingParam) {
         installAudioHapticsSnapshot()
-        ModuleHelper.hookAllMethods("com.android.server.audio.AudioService", lpparam.classLoader, "requestAudioFocus", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                try {
-
-                    if (args[4] == "AudioFocus_For_Phone_Ring_And_Calls" && audioFocusPkg != null && audioFocusPkg in audioHapticsConfig.ignoreCallsApps)
-                        { skipped = true; result = 1; throwable = null }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+        // Audio-focus adaptation and telephony registration are independent failure domains.
+        ModuleHelper.guarded {
+            val serviceClass = XposedHelpers.findClass("com.android.server.audio.AudioService", lpparam.classLoader)
+            val access = CallAudioFocusAccess(
+                serviceClass,
+                XposedHelpers.findClass("com.android.server.audio.MediaFocusControl", lpparam.classLoader),
+                XposedHelpers.findClass("com.android.server.audio.FocusRequester", lpparam.classLoader),
+            )
+            ModuleHelper.findAndHookMethod(
+                serviceClass, "requestAudioFocus", "android.media.AudioAttributes", Int::class.javaPrimitiveType!!,
+                "android.os.IBinder", "android.media.IAudioFocusDispatcher", String::class.java,
+                String::class.java, String::class.java, Int::class.javaPrimitiveType!!,
+                "android.media.audiopolicy.IAudioPolicyCallback", Int::class.javaPrimitiveType!!,
+                object : MethodHook() {
+                    override fun intercept(chain: XposedInterface.Chain): Any? = interceptCallAudioFocus(chain, access)
                 }
-                if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
+            )
+        }
 
-                    val res = result as Int
-                    if (res != AudioManager.AUDIOFOCUS_REQUEST_FAILED && args[4] != "AudioFocus_For_Phone_Ring_And_Calls")
-                        audioFocusPkg = args[5] as String?
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+        ModuleHelper.findAndHookMethod(
+            "com.android.server.TelephonyRegistry", lpparam.classLoader, "listen",
+            Boolean::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!,
+            String::class.java, String::class.java, "com.android.internal.telephony.IPhoneStateListener",
+            Set::class.java, Boolean::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
+            object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val args = XposedHelpers.getArgsArray(chain)
+                    try {
+                        @Suppress("UNCHECKED_CAST")
+                        val events = args[5] as Set<Int>
+                        args[5] = filterCallStateEvents(args[2] as? String, events)
+                    } catch (t: Throwable) {
+                        XposedHelpers.log(t)
+                    }
+                    // Filter only this registration. Never mutate shared records or the caller's Set.
+                    return chain.proceed(args)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
             }
-        })
-
-        ModuleHelper.findAndHookMethod("com.android.server.TelephonyRegistry", lpparam.classLoader, "notifyCallState", Int::class.javaPrimitiveType!!, String::class.java, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
-
-                    removeListener(thisObject)
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.android.server.TelephonyRegistry", lpparam.classLoader, "notifyCallStateForPhoneId", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, String::class.java, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
-
-                    removeListener(thisObject)
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+        )
     }
 
     @JvmStatic
     fun FirstVolumePressHook(lpparam: SystemServerStartingParam) {
         ModuleHelper.findAndHookMethod("com.android.server.audio.AudioService\$VolumeController", lpparam.classLoader, "suppressAdjustment", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-                    val args = chain.args
-
-                    val streamType = args[0] as Int
-                    if (streamType != AudioManager.STREAM_MUSIC) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val isMuteAdjust = args[2] as Boolean
-                    if (isMuteAdjust) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val mController = XposedHelpers.getObjectField(thisObject, "mController")
-                    if (mController == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = false; throwable = null
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
+            override fun intercept(chain: XposedInterface.Chain): Any? = interceptFirstVolumePress(chain)
         })
+    }
+
+    internal fun interceptFirstVolumePress(chain: XposedInterface.Chain): Any? {
+        // Preserve native long-press bookkeeping and propagate its exceptions exactly once.
+        val result = chain.proceed()
+        return ModuleHelper.guarded(result) {
+            if (chain.getArg(0) != AudioManager.STREAM_MUSIC || chain.getArg(2) != false ||
+                XposedHelpers.getObjectField(chain.thisObject, "mController") == null
+            ) result else false
+        }
     }
 
     @JvmStatic
     fun MuffledVibrationHook(lpparam: SystemServerStartingParam) {
+        val effect = XposedHelpers.findClass("android.os.VibrationEffect", lpparam.classLoader)
+        val scale = effect.getMethod("scale", Float::class.javaPrimitiveType)
         installAudioHapticsSnapshot()
-        ModuleHelper.hookAllMethods("com.android.server.VibratorService", lpparam.classLoader, "doVibratorOn", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
+        ModuleHelper.findAndHookMethod("com.android.server.vibrator.VibrationScaler", lpparam.classLoader,
+            "scale", effect, Int::class.javaPrimitiveType, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? = interceptVibrationScale(chain, scale)
+            })
+    }
 
-                    val cfg = audioHapticsConfig
-                    val ratio_ringer = cfg.ampRinger
-                    val ratio_notif = cfg.ampNotif
-                    val ratio_other = cfg.ampOther
-
-                    var isRingtone = false
-                    var isNotification = false
-                    val mCurrentVibration = XposedHelpers.getObjectField(thisObject, "mCurrentVibration")
-                    if (mCurrentVibration != null) try {
-                        isRingtone = XposedHelpers.callMethod(mCurrentVibration, "isRingtone") as Boolean
-                        isNotification = XposedHelpers.callMethod(mCurrentVibration, "isNotification") as Boolean
-                    } catch (t: Throwable) {
-                        val mUsageHint = XposedHelpers.getIntField(mCurrentVibration, "mUsageHint")
-                        isRingtone = mUsageHint == 6
-                        isNotification = mUsageHint == 5 || mUsageHint == 7 || mUsageHint == 8 || mUsageHint == 9
-                    }
-
-                    val ratio = when {
-                        isRingtone -> ratio_ringer
-                        isNotification -> ratio_notif
-                        else -> ratio_other
-                    }
-                    if (ratio == 1.0f) {
-                        return XposedHelpers.proceedOrThrow(chain, throwable)
-                    }
-
-                    val startMinutes = cfg.periodStartMinutes
-                    val endMinutes = cfg.periodEndMinutes
-                    val now = Calendar.getInstance()
-                    val nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-                    val insidePeriod = if (startMinutes < endMinutes) {
-                        nowMinutes > startMinutes && nowMinutes < endMinutes
-                    } else {
-                        nowMinutes < endMinutes || nowMinutes > startMinutes
-                    }
-                    if (!insidePeriod) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-
-                    var mSupportsAmplitudeControl = false
-                    try {
-                        mSupportsAmplitudeControl = XposedHelpers.getBooleanField(thisObject, "mSupportsAmplitudeControl")
-                    } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
-
-                    val args = XposedHelpers.getArgsArray(chain)
-                    if (mSupportsAmplitudeControl)
-                        args[1] = Math.round((if (args[1] as Int == -1) XposedHelpers.getIntField(thisObject, "mDefaultVibrationAmplitude") else args[1] as Int) * ratio)
-                    else
-                        args[0] = Math.max(3L, Math.round((args[0] as Long) * ratio.toDouble()))
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun interceptVibrationScale(chain: XposedInterface.Chain, scale: Method): Any? {
+        // Preserve native strength, amplitude resolution, permission checks and exceptions first.
+        val nativeEffect = chain.proceed() ?: return null
+        return ModuleHelper.guarded(nativeEffect) {
+            val cfg = audioHapticsConfig
+            val ratio = when (chain.getArg(1) as? Int) {
+                VibrationAttributes.USAGE_RINGTONE -> cfg.ampRinger
+                VibrationAttributes.USAGE_NOTIFICATION -> cfg.ampNotif
+                null -> return@guarded nativeEffect
+                else -> cfg.ampOther
+            }.coerceIn(0.01f, 1f)
+            if (ratio == 1f) return@guarded nativeEffect
+            val start = cfg.periodStartMinutes.coerceIn(0, 1439)
+            val end = cfg.periodEndMinutes.coerceIn(0, 1439)
+            // Equal endpoints mean all day and need no clock allocation.
+            if (start != end) {
+                val now = Calendar.getInstance()
+                val minutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+                if (!vibrationPeriodContains(start, end, minutes)) return@guarded nativeEffect
             }
-        })
+            // Native scale preserves duration, frequency, repeat index and unsupported prebaked effects.
+            scale.invoke(nativeEffect, ratio) ?: nativeEffect
+        }
+    }
+
+    internal fun vibrationPeriodContains(start: Int, end: Int, minute: Int): Boolean = when {
+        start == end -> true
+        start < end -> minute >= start && minute < end
+        else -> minute >= start || minute < end
     }
 
 }

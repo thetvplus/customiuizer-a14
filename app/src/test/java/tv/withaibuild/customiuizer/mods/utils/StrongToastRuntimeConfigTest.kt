@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tv.withaibuild.customiuizer.mods.IslandEntranceStyle
 import tv.withaibuild.customiuizer.mods.SystemUIStrongToastHooks
 import tv.withaibuild.customiuizer.mods.utils.feature.StrongToastPresentationFeature
 import tv.withaibuild.customiuizer.mods.utils.feature.StrongToastRuntimeSnapshot
@@ -20,6 +21,55 @@ class StrongToastRuntimeConfigTest {
         StrongToastRuntimeState.installed = false
         SystemUIStrongToastHooks.snapshotRef = null
         SystemUIStrongToastHooks.installed = false
+    }
+
+    @Test
+    fun nativeMotionSimplificationRefreshesWithoutChangingAnActiveEventSnapshot() {
+        val prefs = PrefMap().apply { put("system_strong_toast_mode", "3") }
+        val state = StrongToastRuntimeState.install(prefs)
+        val first = state.snapshotRef.get()
+        assertEquals(false, first.simplified)
+        prefs.put("system_island_simplified", true)
+        state.preferenceObserver.onChange("system_island_simplified")
+        assertEquals(true, state.snapshotRef.get().simplified)
+        assertEquals(false, first.simplified)
+    }
+
+    @Test
+    fun entranceStyleChangesApplyToTheNextEventWithoutChangingTheCurrentEvent() {
+        val prefs = PrefMap().apply { put("system_strong_toast_mode", "3") }
+        val state = StrongToastRuntimeState.install(prefs)
+        val first = state.snapshotRef.get()
+        assertEquals(IslandEntranceStyle.TOP, first.entranceStyle)
+        val event = Object()
+        SystemUIStrongToastHooks.snapshotRef = state.snapshotRef
+        SystemUIStrongToastHooks.storeSnapshot(event, first)
+
+        prefs.put("system_island_entrance_style", "0")
+        state.preferenceObserver.onChange("system_island_entrance_style")
+        assertEquals(IslandEntranceStyle.CENTER, state.snapshotRef.get().entranceStyle)
+        assertEquals(IslandEntranceStyle.TOP, SystemUIStrongToastHooks.resolveSnapshot(event)!!.entranceStyle)
+        assertEquals(StrongToastPresentationMode.DYNAMIC_ISLAND, state.snapshotRef.get().mode)
+        assertSame(state, StrongToastRuntimeState.install(prefs))
+    }
+
+    @Test
+    fun entranceStyleParsingMatchesModuleOptionsAndRejectsUnknownRestoredValues() {
+        for ((stored, expected) in listOf(
+            "0" to IslandEntranceStyle.CENTER,
+            "1" to IslandEntranceStyle.TOP,
+            1 to IslandEntranceStyle.TOP,
+            -1 to IslandEntranceStyle.TOP,
+            "2" to IslandEntranceStyle.TOP,
+            "invalid" to IslandEntranceStyle.TOP,
+            true to IslandEntranceStyle.TOP,
+        )) {
+            val prefs = PrefMap().apply { put("system_island_entrance_style", stored) }
+            val native = StrongToastRuntimeState.buildSnapshot(prefs.getAll())
+            assertEquals(expected, native.entranceStyle)
+            assertEquals(tv.withaibuild.customiuizer.mods.IslandOptions.read(prefs).entranceStyle,
+                native.entranceStyle)
+        }
     }
 
     @Test
@@ -72,6 +122,47 @@ class StrongToastRuntimeConfigTest {
         state.preferenceObserver.onChange("system_strong_toast_island_offset")
         assertEquals(6, state.snapshotRef.get().islandOffsetDp)
         assertEquals(StrongToastPresentationMode.DYNAMIC_ISLAND, state.snapshotRef.get().mode)
+    }
+
+    @Test
+    fun compactHeightIsBoundedAndChangesOnlyTheNextFrozenNativeEvent() {
+        val prefs = PrefMap().apply { put("system_strong_toast_mode", "3") }
+        val state = StrongToastRuntimeState.install(prefs)
+        val original = state.snapshotRef.get()
+        assertEquals(40, original.islandHeightDp)
+        val event = Object()
+        SystemUIStrongToastHooks.snapshotRef = state.snapshotRef
+        SystemUIStrongToastHooks.storeSnapshot(event, original)
+
+        prefs.put("system_island_height", 44)
+        state.preferenceObserver.onChange("system_island_height")
+        assertEquals(44, state.snapshotRef.get().islandHeightDp)
+        assertEquals(40, SystemUIStrongToastHooks.resolveSnapshot(event)!!.islandHeightDp)
+        for ((stored, expected) in listOf(-100 to 38, 100 to 44, 41 to 41)) {
+            prefs.put("system_island_height", stored)
+            state.preferenceObserver.onChange("system_island_height")
+            assertEquals(expected, state.snapshotRef.get().islandHeightDp)
+        }
+    }
+
+    @Test
+    fun manualCollapsedWidthsPublishLiveAndCannotInvertTheTwoForms() {
+        val prefs = PrefMap().apply { put("system_strong_toast_mode", "3") }
+        val state = StrongToastRuntimeState.install(prefs)
+        val first = state.snapshotRef.get()
+        assertTrue(first.automaticWidth)
+        assertEquals(184, first.shortWidthDp)
+        assertEquals(240, first.longWidthDp)
+        prefs.put("system_island_width_auto", false)
+        state.preferenceObserver.onChange("system_island_width_auto")
+        assertEquals(false, state.snapshotRef.get().automaticWidth)
+        prefs.put("system_island_width_short", 1000)
+        state.preferenceObserver.onChange("system_island_width_short")
+        assertEquals(224, state.snapshotRef.get().shortWidthDp)
+        prefs.put("system_island_width_medium", -1)
+        state.preferenceObserver.onChange("system_island_width_medium")
+        assertEquals(224, state.snapshotRef.get().longWidthDp)
+        assertEquals(184, first.shortWidthDp)
     }
 
     @Test

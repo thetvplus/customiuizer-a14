@@ -61,36 +61,57 @@ class PreferenceResourceContractTest(unittest.TestCase):
 
     def test_dock_page_preserves_geometry_keys_and_gates_only_background_options(self):
         root = ET.parse(XML_DIR / "prefs_launcher.xml").getroot()
-        category = next(el for el in root if el.get(ATTR_KEY) == "pref_key_launcher_cat_dock")
-        order = [el.get(ATTR_KEY) for el in root]
+        category = next(el for el in root.iter() if el.get(ATTR_KEY) == "pref_key_launcher_cat_dock")
+        order = [el.get(ATTR_KEY) for el in root.iter() if el.tag == CATEGORY_CLASS and el.get(ATTR_KEY)]
         dock = order.index("pref_key_launcher_cat_dock")
-        self.assertEqual(["pref_key_launcher_cat_titles", "pref_key_launcher_cat_dock", "pref_key_launcher_cat_privacyapps"],
+        self.assertEqual(["pref_key_launcher_cat_titles", "pref_key_launcher_cat_dock", "pref_key_launcher_cat_folders"],
                          order[dock - 1:dock + 2])
-        controls = {el.get(ATTR_KEY): el for el in category}
+        controls = {el.get(ATTR_KEY): el for el in category.iter()}
         master = "pref_key_launcher_dock_background"
         self.assertEqual("false", controls[master].get(f"{{{ANDROID_NS}}}defaultValue"))
-        for suffix in ("material", "opacity", "radius", "shrink", "inset"):
+        for suffix in ("material", "opacity", "radius", "inset", "shrink"):
             self.assertEqual(master, controls[f"{master}_{suffix}"].get(f"{{{ANDROID_NS}}}dependency"))
         for key in ("launcher_unlockhotseat", "launcher_dock_height", "launcher_dock_topmargin", "launcher_dock_bottommargin"):
             self.assertNotIn(f"{{{ANDROID_NS}}}dependency", controls[f"pref_key_{key}"].attrib)
         self.assertEqual("60", controls["pref_key_launcher_dock_height"].get(f"{{{ANDROID_NS}}}defaultValue"))
         self.assertEqual("90", controls[f"{master}_opacity"].get(f"{{{ANDROID_NS}}}defaultValue"))
         shrink = controls[f"{master}_shrink"]
-        self.assertEqual("13", shrink.get(f"{{{ANDROID_NS}}}defaultValue"))
-        for name, value in {"minValue": "0", "maxValue": "24", "negativeShift": "12", "showplus": "true"}.items():
-            self.assertEqual(value, shrink.get(f"{{{MIUIZER_NS}}}{name}"))
+        self.assertEqual("17", shrink.get(f"{{{ANDROID_NS}}}defaultValue"))
+        self.assertEqual("17", shrink.get(f"{{{MIUIZER_NS}}}negativeShift"))
+        self.assertEqual("34", shrink.get(f"{{{MIUIZER_NS}}}maxValue"))
         arrays = ET.parse(RES_ROOT / "values" / "arrays.xml").getroot()
         material_entries = arrays.find("string-array[@name='launcher_dock_background_material']")
         material_values = arrays.find("string-array[@name='launcher_dock_background_material_values']")
-        self.assertEqual(["0", "2"], [el.text for el in material_values])
+        self.assertEqual(["0", "2", "3"], [el.text for el in material_values])
         self.assertEqual("@string/launcher_dock_background_gaussian", material_entries[1].text)
         required = {"launcher_dock_category", "launcher_dock_background_title", "launcher_dock_background_summ",
                     "launcher_dock_background_material_title", "launcher_dock_background_auto_glass",
                     "launcher_dock_background_opacity_title",
-                    "launcher_dock_background_gaussian", "launcher_dock_background_material_summ",
+                    "launcher_dock_background_gaussian", "launcher_dock_background_liquid", "launcher_dock_background_material_summ",
                     "launcher_dock_background_radius_title", "launcher_dock_background_inset_title",
-                    "launcher_dock_background_shrink_title", "launcher_dock_background_shrink_summ",
-                    "launcher_dock_background_auto"}
+                    "launcher_dock_background_auto", "launcher_dock_background_geometry",
+                    "launcher_dock_background_shrink_title", "launcher_dock_background_shrink_summ"}
+        for locale, strings in self.base_strings.items():
+            with self.subTest(locale=locale):
+                self.assertTrue(required <= strings, required - strings)
+
+    def test_toast_position_has_independent_offsets_and_complete_translations(self):
+        root = ET.parse(XML_DIR / "prefs_system.xml").getroot()
+        controls = {el.get(ATTR_KEY): el for el in root.iter()}
+        position = controls['pref_key_system_toast_position']
+        self.assertEqual('0', position.get(f'{{{ANDROID_NS}}}defaultValue'))
+        self.assertEqual('@array/system_toast_position', position.get(f'{{{ANDROID_NS}}}entries'))
+        for mode, default in [('top', '24'), ('center', '400'), ('bottom', '0')]:
+            control = controls[f'pref_key_system_toast_{mode}']
+            self.assertEqual(default, control.get(f'{{{ANDROID_NS}}}defaultValue'))
+            self.assertEqual('800', control.get(f'{{{MIUIZER_NS}}}maxValue'))
+            self.assertEqual('%d dp', control.get(f'{{{MIUIZER_NS}}}format'))
+            self.assertNotIn(f'{{{MIUIZER_NS}}}offtext', control.attrib)
+        self.assertEqual('400', controls['pref_key_system_toast_center'].get(f'{{{MIUIZER_NS}}}negativeShift'))
+        required = {'system_toast_position_title', 'system_toast_position_summ',
+                    'system_toast_position_top', 'system_toast_position_center', 'system_toast_position_bottom',
+                    'system_toast_top_title', 'system_toast_center_title', 'system_toast_bottom_title',
+                    'system_toast_center_summ', 'system_toast_edge_summ'}
         for locale, strings in self.base_strings.items():
             with self.subTest(locale=locale):
                 self.assertTrue(required <= strings, required - strings)
@@ -200,6 +221,18 @@ class PreferenceResourceContractTest(unittest.TestCase):
             unresolved,
             f"Category title references missing in values/strings.xml: {unresolved}",
         )
+
+    def test_shared_section_headings_are_translated_in_every_supported_locale(self):
+        headings = {
+            el.get(ATTR_TITLE)[8:]
+            for path in XML_DIR.glob("prefs_*.xml")
+            for el in ET.parse(path).getroot().iter()
+            if _is_category(el) and el.get(ATTR_TITLE, "").startswith("@string/prefs_group_")
+        }
+        self.assertGreater(len(headings), 30)
+        for locale, names in self.base_strings.items():
+            with self.subTest(locale=locale):
+                self.assertTrue(headings <= names, headings - names)
 
     def test_no_duplicate_preference_keys(self):
         seen: dict[str, str] = {}

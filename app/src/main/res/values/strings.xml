@@ -1,16 +1,16 @@
 <resources>
-    <string name="app_name" translatable="false">米客 A14</string>
-    <string name="app_name_full" translatable="false">米客 A14｜CustoMIUIzer A14</string>
+    <string name="app_name">CustoMIUIzer A14</string>
+    <string name="app_name_full" translatable="false">@string/app_name</string>
     <string name="settings_title">Settings</string>
     <string name="app_slogan" translatable="false">适用于 HyperOS 1 / Android 14 的系统定制模块</string>
-    <string name="permission_broadcast_label" translatable="false">米客 A14｜CustoMIUIzer A14 broadcast control</string>
-    <string name="permission_broadcast_description" translatable="false">Allows 米客 A14｜CustoMIUIzer A14 to send internal protected broadcasts.</string>
+    <string name="permission_broadcast_label" translatable="false">CustoMIUIzer A14 broadcast control</string>
+    <string name="permission_broadcast_description" translatable="false">Allows CustoMIUIzer A14 to send internal protected broadcasts.</string>
     <string name="app_about">About</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_maintainer">Development &amp; Maintenance: thetvplus</string>
     <string name="about_based_on">Based on open-source work by Mikanoshi and MonwF</string>
-    <string name="about_dynamic">Generally, mods require soft reboot to be activated or deactivated, but those marked with ⟲ only require one soft reboot after their value was changed from default to custom one, subsequent changes are applied immediately.</string>
-    <string name="about_unsupported">Mods marked with ⨯ are not supported on this device.</string>
+    <string name="about_dynamic">Restart controls are in the home menu. Follow each setting’s instructions; a full reboot requires restarting the device.</string>
+    <string name="about_unsupported">Unavailable options are disabled on this device.</string>
     <string name="about_support_category">Development and support</string>
     <string name="about_donate_title">WeChat donation code</string>
     <string name="about_donate_summary">Scan to support development</string>
@@ -31,7 +31,7 @@
     <string name="common_background_color">Background color</string>
     <string name="common_icon_color">Icon color</string>
 
-    <string name="enable_mod">Enable mod</string>
+    <string name="enable_mod">Enable</string>
     <string name="white_lists">Turn on whitelisting</string>
     <string name="system_mods">System</string>
     <string name="system_mods_screen">Screen</string>
@@ -93,8 +93,8 @@
     <string name="system_batteryindicator_test_summ" formatted="false">Animate bar from 100% to 0% in discharging state</string>
     <string name="system_statusbarheight_title">Status bar height</string>
     <string name="system_statusbarheight_summ">A full reboot is required after changing the fixed height.</string>
-    <string name="system_statusbar_content_vertical_offset_title">Status bar content vertical position</string>
-    <string name="system_statusbar_content_vertical_offset_summ">Adjust the overall vertical position of the clock, icons, and custom content inside the status bar. This does not change status bar height.</string>
+    <string name="system_statusbar_content_vertical_offset_title">Vertical offset</string>
+    <string name="system_statusbar_content_vertical_offset_summ">Moves content without changing the status bar height.</string>
     <string name="system_statusbar_iconsize_title">Status bar icon size</string>
     <string name="system_statusbarcolor_title">Status bar background color</string>
     <string name="system_statusbarcolor_summ">Make status bar and app\'s action bar background colors the same where possible</string>
@@ -197,7 +197,7 @@
     <string name="system_expandnotifs_title">Expand notifications</string>
     <string name="system_expandnotifs_summ">Show notifications fully expanded</string>
     <string name="system_expandnotifs_apps_title">Black &amp; white list</string>
-    <string name="system_toasttime_title">Display time modification</string>
+    <string name="system_toasttime_title">Display duration</string>
     <string name="system_toasttime_summ">Changes both short and long durations</string>
     <string name="system_toasttime_note">Resulting duration won\'t fall below 1 second</string>
     <string name="system_betterpopups_disablewhenmute_title">Disable heads up notifications if volume is set to mute</string>
@@ -227,9 +227,9 @@
     <string name="system_maxbrightness_title">Maximum auto brightness</string>
     <string name="system_nosafevolume_title">Disable high volume warning</string>
     <string name="system_nosafevolume_summ">Do not show dialog when volume reaches unsafe level</string>
-    <string name="system_noducking_title">Disable ducking</string>
+    <string name="system_noducking_title">Keep music volume during notifications</string>
     <string name="system_noducking_summ">Do not lower volume of currently playing music to play notification sound</string>
-    <string name="system_firstpress_title">Immediate volume adjustment</string>
+    <string name="system_firstpress_title">Adjust media volume on first press</string>
     <string name="system_firstpress_summ">Adjust media stream volume on first key press</string>
     <string name="system_volumetimer_title">Extended timers</string>
     <string name="system_volumetimer_summ">Add more intervals to timers for Silent and Do Not Disturb modes</string>
@@ -240,7 +240,7 @@
     <string name="system_volume_hide_mute_shortcut_summ">Removes the silent/Mute button from the volume panel.</string>
     <string name="system_volume_hide_dnd_shortcut_title">Hide DND shortcut</string>
     <string name="system_volume_hide_dnd_shortcut_summ">Removes the Do Not Disturb button from the volume panel.</string>
-    <string name="system_volumedialogdelay_collapsed_title">Volume dialog autohide delay</string>
+    <string name="system_volumedialogdelay_collapsed_title">Auto-hide: collapsed</string>
     <string name="system_volumedialogdelay_collapsed_summ">Collapsed</string>
     <string name="system_volumedialogdelay_expanded_summ">Expanded</string>
     <string name="system_visualizer_title">Music visualizer</string>
@@ -261,13 +261,13 @@
     <string name="system_visualizer_colorval_title">Select custom color</string>
     <string name="system_visualizer_dyntime_title">Dynamic color change interval</string>
     <string name="system_ignorecalls_title">Ignore calls</string>
-    <string name="system_ignorecalls_summ">Prevent incoming calls from stealing audio focus when it\'s on selected apps and stop notifying them about call state changes</string>
+    <string name="system_ignorecalls_summ">Prevents calls from interrupting selected apps. Restart the device after changing this switch.</string>
     <string name="system_nosilentvibrate_title">No test vibration</string>
     <string name="system_nosilentvibrate_summ">Do not vibrate when switching ringer mode to silent or turning on vibration in this mode</string>
-    <string name="system_vibration_amp_title">Muffled vibration</string>
+    <string name="system_vibration_amp_title">Vibration intensity</string>
     <string name="system_vibration_amp_summ">Reduce vibration intensity during selected hours</string>
     <string name="system_vibration_amp_val_title">Vibration intensity</string>
-    <string name="system_vibration_amp_val_summ">Changes either duration or strength of the vibration depending on amplitude control support by device</string>
+    <string name="system_vibration_amp_val_summ">Native effect scaling preserves duration. Hardware presets may stay unchanged. Equal start/end means all day.</string>
     <string name="system_vibration_amp_ringer_title">Calls</string>
     <string name="system_vibration_amp_notif_title">Notifications</string>
     <string name="system_vibration_amp_other_title">Everything else</string>
@@ -323,17 +323,17 @@
     <string name="unlock_host_summary">Host: %1$s\nPackage: %2$s\nCurrent certificate:\n%3$s\nCertificate history:\n%4$s</string>
     <string name="unlock_host_first">%1$s\n\nTap OK to bind this host and issue a security token.</string>
     <string name="unlock_host_reuse">%1$s\n\nThis host is already bound. The existing token will be reused.</string>
-    <string name="system_screenanim_duration_title">Turning off animation</string>
+    <string name="system_screenanim_duration_title">Screen-off animation duration</string>
     <string name="system_screenanim_duration_summ">Configure animation length</string>
     <string name="system_screenanim_desc">Very low values will practically disable animation</string>
     <string name="system_disable_window_blurs_title">Disable window-level blur</string>
-    <string name="system_disable_window_blurs_summ">Works without Developer options; when off, Android controls blur normally. While on, HyperOS draws the volume panel and power menu without their own background, and the volume blur sliders below have no effect</string>
+    <string name="system_disable_window_blurs_summ">Also removes the volume panel and power menu backgrounds. Volume blur sliders have no effect while enabled.</string>
     <string name="system_blur_title">Background blur</string>
     <string name="system_drawer_blur_summ">Background blur intensity in notification drawer</string>
     <string name="system_mods_lockscreen">Lock screen</string>
     <string name="system_mods_lockscreen_functionality">Additional functionality</string>
     <string name="system_mods_lockscreen_security">Security</string>
-    <string name="system_blocktoasts_title">Block toasts</string>
+    <string name="system_blocktoasts_title">Block Toasts</string>
     <string name="system_blocktoasts_summ">Prevent selected apps from showing toasts</string>
     <string name="system_fivegtile_title">5G tile</string>
     <string name="system_cc_fpstile_title">Show refresh rate tile</string>
@@ -408,7 +408,7 @@
     <string name="system_charginginfo_title">Display charging data</string>
     <string name="system_charginginfo_summ">Show additional charging information at the bottom of lock screen</string>
     <string name="system_charginginfo_view_title">How to display</string>
-    <string name="system_charginginfo_fontsize_title">Lock screen charging text size</string>
+    <string name="system_charginginfo_fontsize_title">Font size</string>
     <string name="system_charginginfo_fontsize_summary">Adjusts the bottom charging indication. Default keeps the system text size. Restart System UI to apply.</string>
     <string name="system_charginginfo_current_title">Charging current</string>
     <string name="system_charginginfo_voltage_title">Battery voltage</string>
@@ -429,7 +429,7 @@
     <string name="launcher_disable_wallpaperscale_title">Disable wallpaper scale</string>
     <string name="launcher_disable_wallpaperscale_summ">Keep wallpaper from zooming in recents and app open/close, and disable the unlock wallpaper scale animation. Force-stop the launcher after changing.</string>
     <string name="system_recents_disable_wallpaperscale_title">Disable wallpaper scale in recents</string>
-    <string name="system_recents_disable_wallpaperscale_summ">Same launcher wallpaper zoom as Launcher → Other, without the unlock wallpaper animation. The two switches do not conflict; either one is enough for recents and app transitions. Force-stop the launcher after changing.</string>
+    <string name="system_recents_disable_wallpaperscale_summ">Shares the home screen wallpaper setting, excluding unlock. Restart Home after changes.</string>
     <string name="system_recents_card_style_hide_title">Hide app name</string>
     <string name="system_clearalltasks_title">Clean all</string>
     <string name="system_clearalltasks_summ">Make cleaner button kill all running tasks</string>
@@ -463,7 +463,7 @@
     <string name="system_qs_hideoperator_delimiter_title">Hide delimiter between carrier name</string>
     <string name="system_qshaptic_title">Quick settings haptic feedback</string>
     <string name="system_qshaptic_summ">Vibrate on Quick settings tile tap</string>
-    <string name="system_mods_other">Other</string>
+    <string name="system_mods_other">Advanced settings</string>
     <string name="system_mods_connectivity">Connectivity</string>
     <string name="system_mods_volumeblur">Volume dialog background blur</string>
     <string name="system_volumeblur_collapsed_title">Collapsed dialog</string>
@@ -479,7 +479,7 @@
     <string name="launcher_gestures_launch">App to launch</string>
     <string name="launcher_gestures_shortcut">Shortcut to launch</string>
     <string name="launcher_gestures_activity">Activity to launch</string>
-    <string name="launcher_title">Launcher</string>
+    <string name="launcher_title">Home screen</string>
     <string name="launcher_infinitescroll_title">Infinite scrolling</string>
     <string name="launcher_infinitescroll_summ">Jump from the last page to the first one and vice versa</string>
     <string name="launcher_noclockhide_title">No clock hide</string>
@@ -499,7 +499,7 @@
     <string name="launcher_unlockgrids_summ">Make all grid sizes from 3x4 to 8x10 available in home screen layout setting</string>
     <string name="launcher_unlockhotseat_title">More icons in dock</string>
     <string name="launcher_unlockhotseat_summ">Unlimited number of dock icons</string>
-    <string name="launcher_closedrawer_title">Auto close app drawer</string>
+    <string name="launcher_closedrawer_title">Close drawer after opening an app</string>
     <string name="launcher_closedrawer_summ">Close app drawer after launch</string>
     <string name="launcher_iconscale_title">Icons scaling</string>
     <string name="launcher_horizmargin_title">Horizontal grid margins</string>
@@ -557,16 +557,16 @@
     <string name="launcher_shakeaction_summ">Action for shaking the device on any home screen</string>
     <string name="launcher_doubletap_title">Double tap action</string>
     <string name="launcher_doubletap_summ">Action for double tap on empty space of any home screen</string>
-    <string name="launcher_pinch_title">Pinch action</string>
+    <string name="launcher_pinch_title">Two-finger pinch</string>
     <string name="launcher_pinch_summ">Action for moving 2 fingers towards each other on any home screen</string>
-    <string name="launcher_spread_title">Spread action</string>
+    <string name="launcher_spread_title">Two-finger spread</string>
     <string name="launcher_spread_summ">Action for moving 2 fingers away from each other on any home screen</string>
-    <string name="launcher_bugfixes">Bug fixes</string>
+    <string name="launcher_bugfixes">Compatibility &amp; fixes</string>
     <string name="launcher_wallpaper_colormode_title">Force homescreen wallpaper color mode</string>
     <string name="system_resizablewidgets_title">Free widget resize</string>
     <string name="system_resizablewidgets_summ">Remove any widget size limitations</string>
 
-    <string name="controls_mods">Controls</string>
+    <string name="controls_mods">Buttons &amp; gestures</string>
     <string name="controls_powerdt_summ">Replace camera launch on power key double press. Requires stock button shortcut to be enabled.</string>
     <string name="controls_powerflash_title">Quick flashlight</string>
     <string name="controls_powerflash_summ">Long press power button while screen is off to turn flashlight on</string>
@@ -580,7 +580,7 @@
     <string name="controls_fingerprintwake_summ">Don\'t turn screen on when no fingerprints are enrolled</string>
     <string name="controls_fingerprintsuccess_title">Vibrate on success</string>
     <string name="controls_fingerprintsuccess_summ">Haptic feedback on successful authentication</string>
-    <string name="controls_fingerprintsuccess_ignore_title">Ignore system settings</string>
+    <string name="controls_fingerprintsuccess_ignore_title">Vibrate when system haptics are off</string>
     <string name="controls_fingerprintsuccess_ignore_summ">Do not disable haptic feedback when vibration on tap is disabled</string>
     <string name="controls_fingerprintfailure_title">No vibrate on failure</string>
     <string name="controls_fingerprintfailure_summ">Remove haptic feedback on authentication failure</string>
@@ -588,7 +588,7 @@
     <string name="controls_mods_volume">Volume keys</string>
     <string name="controls_volumecursor_title">Control input cursor</string>
     <string name="controls_volumecursor_summ">Move text input cursor using volume keys</string>
-    <string name="controls_volumecursor_reverse_title">Change directions</string>
+    <string name="controls_volumecursor_reverse_title">Reverse cursor direction</string>
     <string name="controls_volumecursor_reverse_summ">Swap directions of cursor movements</string>
     <string name="controls_volumedowndt_turnon_torch_title">Double tap volume down to turn on torch</string>
     <string name="controls_mediaplayer_apps_title">Media player apps(Add to LSPosed scope first)</string>
@@ -629,10 +629,10 @@
     <string name="controls_fsg_swipeandstop_title">Swipe across the screen starting from the edge and stop action</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">Do not vibrate</string>
 
-    <string name="various_mods">Various</string>
+    <string name="various_mods">Apps &amp; maintenance</string>
     <string name="various_general_cat_title">System &amp; compatibility</string>
     <string name="various_app_management_cat_title">App management</string>
-    <string name="various_exclusive_features_cat_title">Exclusive features</string>
+    <string name="various_exclusive_features_cat_title">Maintenance &amp; privacy</string>
     <string name="various_hiddenfeatures_title">Hidden features</string>
     <string name="various_hiddenfeatures_summ">Activities that are not always easily accessible</string>
     <string name="various_hiddenfeatures_not_found">Not available on this device</string>
@@ -674,8 +674,8 @@
     <string name="various_disable_update_services_unavailable">Xiaomi updater or its declared services were not found.</string>
     <string name="various_disable_update_services_bridge_unavailable">The system service bridge is unavailable. Confirm that the module is enabled, then fully reboot the device.</string>
     <string name="various_disable_update_services_failed">The updater service state change failed and was rolled back.</string>
-    <string name="various_securitycenter_unlock_title">Unlock security center features</string>
-    <string name="various_package_installer_cat_title">Unlock package installer features</string>
+    <string name="various_securitycenter_unlock_title">Security app</string>
+    <string name="various_package_installer_cat_title">Package installer</string>
     <string name="various_apps_title">Show additional app details</string>
     <string name="various_apps_summ">Add new fields to app info page:\n- version code\n- full path to apk\n- data path\n- user ID\n- target SDK version\n- link to Play Store page\n- launch an app</string>
     <string name="various_appsort_title">Installed apps initial sort order</string>
@@ -882,10 +882,6 @@
     <string name="restart_securitycenter_failed">Failed to restart security center</string>
     <string name="restart_no_root">Root permission unavailable</string>
     <string name="restart_target_not_running">Target process is not running</string>
-    <string name="restart_affected_components">Restart affected</string>
-    <string name="restart_affected_components_done">Restarted</string>
-    <string name="restart_affected_components_partial">Partial: %1$s</string>
-    <string name="restart_affected_components_failed">Failed: %1$s</string>
     <string name="backup_restore">Settings management</string>
     <string name="reset_settings">Reset settings</string>
     <string name="reset_settings_done">Reset done. Please reboot</string>
@@ -923,7 +919,7 @@
 
     <string name="lsposed_not_connected">Not connected to the LSPosed service yet.\nIf the module is not activated, open LSPosed, activate it and reboot.</string>
     <string name="lsposed_changes_not_delivered">Settings changed since then have not reached the module, so they are not in effect yet. They are saved and will be sent as soon as the connection is back.</string>
-    <string name="needs_systemui_restart">Takes effect after SystemUI is restarted</string>
+    <string name="needs_systemui_restart">Restart System UI to apply.</string>
     <string name="delete_item_info">Long press item to delete</string>
     <string name="permission_scan">Do you want to get a list of networks/devices or not?</string>
     <string name="permission_permanent">You\'ll have to manually enable permission for this option now. Good job!</string>
@@ -1015,8 +1011,8 @@
     <string name="system_cc_freeform_when_longclick_title">Open in freeform when longclick on tile</string>
     <string name="system_show_step_count_title">Show step count</string>
     <string name="system_cc_switch_ccandnotification_title">Switch control center and notification drawer</string>
-    <string name="system_strong_toast_title">HyperOS status capsule</string>
-    <string name="system_strong_toast_summ">A full reboot is required. Dynamic Island follows HyperOS event eligibility, supports the lock screen and consecutive-event feedback, and adds soft vertical motion with directional swipe-to-dismiss without a resident service.</string>
+    <string name="system_strong_toast_title">System prompt style</string>
+    <string name="system_strong_toast_summ">Applies to the next system popup.</string>
     <string name="system_strong_toast_mode_match_height">Match status bar height</string>
     <string name="system_strong_toast_mode_dynamic_island">Dynamic Island</string>
     <string name="system_strong_toast_mode_hide">Hide status capsule</string>
@@ -1045,9 +1041,9 @@
     <string name="various_disable_xiaomi_analytics_title">Disable Xiaomi analytics and system ads</string>
     <string name="various_disable_xiaomi_analytics_summ">Disables the standalone system com.miui.analytics and com.miui.msa.global packages; does not disable push, cloud sync, or Security Center protection</string>
     <string name="various_disable_xiaomi_analytics_confirm">Disable %1$d installed Xiaomi analytics or system-ad packages? Their current application states will be saved for exact restoration.</string>
-    <string name="various_trim_security_center_marketing_title">Trim Security Center marketing startup</string>
-    <string name="various_trim_security_center_marketing_summ">Disables only verified Facebook, MyTarget, Yandex Ads, and Metrica startup components; keeps permissions, antivirus, firewall, anti-spam, power, and install security</string>
-    <string name="various_trim_security_center_marketing_confirm">Disable %1$d installed third-party marketing startup components in Security Center? Restart Security Center or reboot to release already loaded providers.</string>
+    <string name="various_trim_security_center_marketing_title">Trim Security Center marketing and analytics</string>
+    <string name="various_trim_security_center_marketing_summ">Disables verified Xiaomi remote analytics and international-ROM marketing startup components; keeps permissions, antivirus, firewall, anti-spam and power services</string>
+    <string name="various_trim_security_center_marketing_confirm">Disable %1$d verified marketing or analytics startup components in Security Center? Restart Security Center or the device for already loaded components.</string>
     <string name="various_remove_security_center_antivirus_title">Remove Security Center antivirus and reminders</string>
     <string name="various_remove_security_center_antivirus_summ">Disables antivirus entry points, guards, dialogs, updates, and periodic scan jobs to suppress stale-scan reminders; keeps permissions, firewall, anti-spam, and battery tools</string>
     <string name="various_remove_security_center_antivirus_confirm">Disable %1$d verified Security Center antivirus components? Antivirus scans, virus warnings, and stale-scan reminders will be unavailable. Turning this off restores every component to its previous state.</string>
@@ -1075,7 +1071,7 @@
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Adjust the group of icons moved to the left. 100% uses the system size. Restart System UI after changing.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Left icon vertical offset</string>
     <string name="system_statusbar_lefticons_offset_summ">Negative values move up; positive values move down. 0 keeps system alignment. Restart System UI after changing.</string>
-    <string name="system_statusbar_duo_title">Duo three-in-one status icon</string>
+    <string name="system_statusbar_duo_title">Duo three-in-one icon</string>
     <string name="system_statusbar_duo_summ">Battery ring, Wi-Fi and cellular signal in one icon; dual SIM uses the default data SIM</string>
     <string name="system_statusbar_duo_restart">Restart System UI after changing settings. Duo percentage and size are independent of native icon hiding and styling. Incompatible devices keep their original icons.</string>
     <string name="system_statusbar_duo_percent_title">Show battery percentage</string>
@@ -1106,18 +1102,151 @@
     <string name="system_statusbar_duo_cellular_graphic">Graphic</string>
     <string name="system_statusbar_duo_cellular_text">Text</string>
     <string name="launcher_dock_category">Dock</string>
+    <string name="system_toast_bottom_title">Bottom spacing</string>
+    <string name="system_toast_capsule_title">App feedback on the island</string>
+    <string name="system_toast_capsule_summ">Short plain Toasts use the island in Dynamic Island mode; match-height mode uses the native prompt window. Complex or long Toasts keep their ordinary presentation. Restart System UI after enabling.</string>
     <string name="launcher_dock_background_title">Dock background</string>
     <string name="launcher_dock_background_summ">Blends into the native Dock. Restart the launcher after changes.</string>
     <string name="launcher_dock_background_material_title">Material</string>
-    <string name="launcher_dock_background_auto_glass">Native glass (automatic)</string>
-    <string name="launcher_dock_background_gaussian">Gaussian blur</string>
-    <string name="launcher_dock_background_material_summ">Softens the background while keeping icons clear. Uses a plain background if system materials are unavailable.</string>
+    <string name="launcher_dock_background_auto_glass">Solid panel</string>
+    <string name="launcher_dock_background_gaussian">Frosted glass</string>
+    <string name="launcher_dock_background_liquid">Liquid glass</string>
+    <string name="launcher_dock_background_material_summ">Liquid glass bends wallpaper details with a clear lens edge. If unavailable, frosted glass is used. Restart Launcher to apply.</string>
     <string name="launcher_dock_background_opacity_title">Opacity</string>
     <string name="launcher_dock_background_radius_title">Corner radius</string>
     <string name="launcher_dock_background_inset_title">Horizontal inset</string>
-    <string name="launcher_dock_background_radius_summ">Automatic follows the bottom screen corners and horizontal inset; all four corners share one radius.</string>
-    <string name="launcher_dock_background_inset_summ">Automatic adapts to the native icon row; adjust manually if needed.</string>
-    <string name="launcher_dock_background_shrink_title">Background shrink</string>
-    <string name="launcher_dock_background_shrink_summ">Adjusts all four edges. Positive values shrink, negative values expand; icon positions stay unchanged.</string>
+    <string name="launcher_dock_background_radius_summ">Automatic balances Launcher panel corners with Dock height. You can also set a radius manually.</string>
+    <string name="launcher_dock_background_inset_summ">Automatic fits the native icons. Manual spacing sets the base width before background size adjustment.</string>
+    <string name="launcher_dock_background_geometry">Background size</string>
+    <string name="launcher_dock_background_shrink_title">Background size adjustment</string>
+    <string name="launcher_dock_background_shrink_summ">Positive expands all four edges; negative contracts. Centered on Dock icons and limited evenly by available space and the navigation area.</string>
     <string name="launcher_dock_background_auto">Automatic</string>
+    <string name="prefs_group_display">Display</string>
+    <string name="prefs_group_style">Style</string>
+    <string name="prefs_group_behavior">Behavior</string>
+    <string name="prefs_group_layout">Layout</string>
+    <string name="prefs_group_volume_panel">Volume panel</string>
+    <string name="prefs_group_animation_wallpaper">Animations and wallpaper</string>
+    <string name="prefs_group_widgets">Widgets</string>
+    <string name="prefs_group_workspace_gestures">Workspace gestures</string>
+    <string name="prefs_group_keyboard">Keyboard</string>
+    <string name="system_toast_position_title">Toast position</string>
+    <string name="system_toast_position_summ">Position within the safe screen area. Restart System UI after changes.</string>
+    <string name="system_toast_position_top">Top</string>
+    <string name="system_toast_position_center">Center</string>
+    <string name="system_toast_position_bottom">Bottom</string>
+    <string name="system_toast_top_title">Top spacing</string>
+    <string name="system_toast_center_title">Vertical offset</string>
+    <string name="system_toast_center_summ">Positive moves down; negative moves up. Automatically kept on screen.</string>
+    <string name="system_toast_edge_summ">Distance inward from the safe edge. Automatically limited to fit the Toast.</string>
+    <string name="prefs_group_actions">Actions</string>
+    <string name="prefs_group_animation">Animations</string>
+    <string name="prefs_group_appearance">Layout &amp; appearance</string>
+    <string name="prefs_group_apps">Apps</string>
+    <string name="prefs_group_authentication">Authentication</string>
+    <string name="prefs_group_back_gesture">Back gesture</string>
+    <string name="prefs_group_background">Background</string>
+    <string name="prefs_group_battery">Battery</string>
+    <string name="prefs_group_brightness">Brightness</string>
+    <string name="prefs_group_buttons">Buttons</string>
+    <string name="prefs_group_cards">Cards</string>
+    <string name="prefs_group_clock_date">Clock &amp; date</string>
+    <string name="prefs_group_clock_format">Time format</string>
+    <string name="prefs_group_color">Colors</string>
+    <string name="prefs_group_compatibility">Compatibility</string>
+    <string name="prefs_group_connectivity">Connections</string>
+    <string name="prefs_group_content">Content</string>
+    <string name="prefs_group_daily">Calls &amp; keyboard</string>
+    <string name="prefs_group_devices">Devices &amp; connections</string>
+    <string name="prefs_group_display_sound">Screen, sound &amp; vibration</string>
+    <string name="prefs_group_dual_sim">Dual SIM</string>
+    <string name="prefs_group_feedback">Gestures &amp; feedback</string>
+    <string name="prefs_group_image">Image &amp; storage</string>
+    <string name="prefs_group_interaction">Interaction</string>
+    <string name="prefs_group_lock_content">Lock screen content</string>
+    <string name="prefs_group_material">Material</string>
+    <string name="prefs_group_navigation">System navigation</string>
+    <string name="prefs_group_network">Network</string>
+    <string name="prefs_group_network_label">Separate network label</string>
+    <string name="prefs_group_network_type">Network type</string>
+    <string name="prefs_group_permission_prompts">Permission prompts</string>
+    <string name="prefs_group_position">Position</string>
+    <string name="prefs_group_preview">Preview</string>
+    <string name="prefs_group_privacy">Privacy</string>
+    <string name="prefs_group_rules">Rules &amp; restrictions</string>
+    <string name="prefs_group_schedule">Schedule</string>
+    <string name="prefs_group_screen_timeout">Screen off &amp; charging</string>
+    <string name="prefs_group_screenshot">Screenshots</string>
+    <string name="prefs_group_security_advanced">Security &amp; advanced</string>
+    <string name="prefs_group_securitycenter">Security app</string>
+    <string name="prefs_group_settings">Settings</string>
+    <string name="prefs_group_sharing">Sharing &amp; opening</string>
+    <string name="prefs_group_sidebar">Sidebar</string>
+    <string name="prefs_group_signal_text">Signal strength text</string>
+    <string name="prefs_group_spacing">Spacing &amp; alignment</string>
+    <string name="prefs_group_status_data">Clock, battery &amp; data</string>
+    <string name="prefs_group_status_icons">Status icons</string>
+    <string name="prefs_group_system_status">System status</string>
+    <string name="prefs_group_system_tools">System tools</string>
+    <string name="prefs_group_system_ui">System interface</string>
+    <string name="prefs_group_telemetry">Diagnostics &amp; analytics</string>
+    <string name="prefs_group_text">Text style</string>
+    <string name="prefs_group_tiles">Quick settings tiles</string>
+    <string name="prefs_group_trusted_devices">Trusted connections</string>
+    <string name="prefs_group_updates">System updates</string>
+    <string name="prefs_group_visibility">Visibility</string>
+    <string name="system_mods_rotation">Rotation</string>
+    <string name="system_mods_backlight">Brightness</string>
+    <string name="preference_unavailable">Unavailable</string>
+    <string name="preference_applies_immediately">Live adjustment after activation</string>
+    <string name="launcher_mods_other">Home layout</string>
+    <string name="system_volumedialogdelay_expanded_title">Auto-hide: expanded</string>
+
+    <string name="system_clock_fixed_width_title">Fixed width</string>
+
+    <string name="restart_menu">Restart</string>
+
+    <string name="needs_device_restart">Restart the device after changing this switch.</string>
+    <string name="seekbar_edit_value">%1$s: %2$s. Tap to enter a value</string>
+    <string name="seekbar_value_range">Range: %1$s to %2$s. Step: %3$s %4$s</string>
+    <string name="seekbar_value_special">%1$s represents %2$s</string>
+    <string name="seekbar_value_error">Enter a number within the range and step shown above.</string>
+    <string name="restart_settings_sync_failed">Settings could not be synchronized. Wait for the module connection, then try again.</string>
+    <string name="system_island_title">Dynamic Island</string>
+    <string name="system_island_intro">Select Dynamic Island mode to enable app feedback and media. Restart System UI after enabling an integration. Hidden on the lock screen, screen off, landscape or an open shade. Native system prompts take priority.</string>
+    <string name="system_island_media_title">Music and media</string>
+    <string name="system_island_media_summ">Uses the player selected by System UI. Swipe left/right to change tracks and up to hide; only supported player actions run. Paused activity closes after 2 seconds.</string>
+    <string name="system_island_waveform_title">Lightweight waveform</string>
+    <string name="system_island_waveform_summ">Animation follows playback state without recording audio. Stops when paused, hidden or the screen is off.</string>
+    <string name="system_island_entrance_style_title">In/out animation</string>
+    <string name="system_island_entrance_style_center">Center</string>
+    <string name="system_island_entrance_style_top">Vertical</string>
+    <string name="system_island_simplified_title">Simplified animation</string>
+    <string name="system_island_simplified_summ">Reduces transitions and keeps the waveform still.</string>
+    <string name="system_island_excluded_apps_title">Excluded apps</string>
+    <string name="system_island_excluded_apps_summ">These apps keep ordinary Toasts and do not show media on the island. Ordinary Toast filtering stays on the Toast page.</string>
+    <string name="system_island_playing">Playing</string>
+    <string name="system_island_paused">Paused</string>
+    <string name="system_island_connecting">Connecting</string>
+    <string name="system_island_chat_title">App notification takeover</string>
+    <string name="system_island_chat_summ">Replace eligible message heads-up notifications after the island is shown. Keep the notification center and native tap behavior. Restart System UI after enabling.</string>
+    <string name="launcher_dock_background_full_width_title">Full-width Dock</string>
+    <string name="launcher_dock_background_full_width_summ">Extend the background across the screen to the bottom edge without moving icons. Restart Launcher.</string>
+    <string name="system_island_state_enabled">Enabled</string>
+    <string name="system_island_state_disabled">Disabled</string>
+    <string name="system_island_mode_silent">Silent mode</string>
+    <string name="system_island_mode_vibrate">Vibrate mode</string>
+    <string name="system_island_mode_ring">Ring mode</string>
+    <string name="system_island_mode_dark">Dark mode</string>
+    <string name="system_island_mode_light">Light mode</string>
+    <string name="system_island_height_title">Island height</string>
+    <string name="system_island_height_summ">Short and long islands use the same fixed height.</string>
+    <string name="system_island_width_auto_title">Automatic collapsed width</string>
+    <string name="system_island_width_auto_summ">Choose short and medium widths from content and available status bar space.</string>
+    <string name="system_island_width_short_title">Short island width</string>
+    <string name="system_island_width_short_summ">Used for artwork, waveform and brief status. Limited by the camera and time/battery space.</string>
+    <string name="system_island_width_medium_title">Long island width</string>
+    <string name="system_island_width_medium_summ">Used for longer text. Never narrower than the short island and limited by status bar space.</string>
+    <string name="system_island_chat_excluded_apps_title">Native notification apps</string>
+    <string name="system_island_chat_excluded_apps_summ">Selected apps keep native heads-up notifications. Toasts and media are unaffected.</string>
 </resources>

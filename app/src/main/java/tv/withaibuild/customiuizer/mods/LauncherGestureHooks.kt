@@ -7,7 +7,6 @@ import android.graphics.Rect
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Bundle
-import android.os.SystemClock
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -592,37 +591,53 @@ object LauncherGestureHooks {
         private var mFirstClickRawX: Float = 0f
         private var mFirstClickRawY: Float = 0f
         private var mLastClickTime: Long = 0L
-        private var mTouchSlop: Int = ViewConfiguration.get(context).scaledTouchSlop * 2
+        private val mTouchSlop: Int = ViewConfiguration.get(context).scaledTouchSlop * 2
+        private var tapInProgress = false
 
         fun isDoubleTapEvent(motionEvent: MotionEvent): Boolean {
             val action = motionEvent.actionMasked
             if (action == MotionEvent.ACTION_DOWN) {
                 mActionDownRawX = motionEvent.rawX
                 mActionDownRawY = motionEvent.rawY
+                tapInProgress = true
                 return false
-            } else if (action != MotionEvent.ACTION_UP) {
-                return false
-            } else {
-                val rawX = motionEvent.rawX
-                val rawY = motionEvent.rawY
-                if (Math.abs(rawX - mActionDownRawX) <= mTouchSlop.toFloat() && Math.abs(rawY - mActionDownRawY) <= mTouchSlop.toFloat()) {
-                    if (SystemClock.elapsedRealtime() - mLastClickTime > MAX_DURATION || rawY - mFirstClickRawY > mTouchSlop.toFloat() || rawX - mFirstClickRawX > mTouchSlop.toFloat()) {
-                        mClickCount = 0
-                    }
-                    mClickCount++
-                    if (mClickCount == 1) {
-                        mFirstClickRawX = rawX
-                        mFirstClickRawY = rawY
-                        mLastClickTime = SystemClock.elapsedRealtime()
-                        return false
-                    } else if (Math.abs(rawY - mFirstClickRawY) <= mTouchSlop.toFloat() && Math.abs(rawX - mFirstClickRawX) <= mTouchSlop.toFloat() && SystemClock.elapsedRealtime() - mLastClickTime <= MAX_DURATION) {
-                        mClickCount = 0
-                        return true
-                    }
-                }
+            }
+            if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_DOWN ||
+                (action == MotionEvent.ACTION_MOVE &&
+                    (Math.abs(motionEvent.rawX - mActionDownRawX) > mTouchSlop ||
+                        Math.abs(motionEvent.rawY - mActionDownRawY) > mTouchSlop))
+            ) {
+                tapInProgress = false
+                mClickCount = 0
+            }
+            if (action != MotionEvent.ACTION_UP) return false
+            val validTap = tapInProgress && motionEvent.pointerCount == 1 &&
+                motionEvent.eventTime - motionEvent.downTime < ViewConfiguration.getLongPressTimeout()
+            tapInProgress = false
+            if (!validTap) {
                 mClickCount = 0
                 return false
             }
+            val rawX = motionEvent.rawX
+            val rawY = motionEvent.rawY
+            if (Math.abs(rawX - mActionDownRawX) <= mTouchSlop && Math.abs(rawY - mActionDownRawY) <= mTouchSlop) {
+                if (motionEvent.eventTime - mLastClickTime > MAX_DURATION ||
+                    Math.abs(rawY - mFirstClickRawY) > mTouchSlop || Math.abs(rawX - mFirstClickRawX) > mTouchSlop
+                ) {
+                    mClickCount = 0
+                }
+                mClickCount++
+                if (mClickCount == 1) {
+                    mFirstClickRawX = rawX
+                    mFirstClickRawY = rawY
+                    mLastClickTime = motionEvent.eventTime
+                    return false
+                }
+                mClickCount = 0
+                return true
+            }
+            mClickCount = 0
+            return false
         }
 
         fun onDoubleTapEvent() {

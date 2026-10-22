@@ -61,8 +61,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 245
-val lastVersionName = "r14.24.1"
+val lastVersion = 246
+val lastVersionName = "r14.25.1"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -261,6 +261,12 @@ android {
 }
 
 val buildProvenanceDir = layout.buildDirectory.dir("generated/assets/build-provenance")
+val releaseSourceCommit = providers.exec {
+    workingDir(rootDir)
+    commandLine("git", "rev-parse", "HEAD")
+}.standardOutput.asText.map { value ->
+    value.trim().also { require(it.matches(Regex("^[0-9a-f]{40}$"))) { "Release source commit must be a full SHA" } }
+}
 
 val writeDebugBuildProvenance = tasks.register<WriteBuildProvenance>("writeDebugBuildProvenance") {
     description = "Writes build-provenance.properties for the debug variant"
@@ -300,6 +306,7 @@ val writeReleaseBuildProvenance = tasks.register<WriteBuildProvenance>("writeRel
     properties(
         mapOf(
             "revision" to buildRevision,
+            "sourceCommit" to releaseSourceCommit,
             "versionName" to lastVersionName,
             "versionCode" to lastVersion.toString(),
             "buildType" to "release",
@@ -333,7 +340,7 @@ androidComponents {
             val suffix = when (variant.name) {
                 "debug" -> "-debug"
                 "release" -> if (officialRelease) "" else "-unsigned"
-                "develop" -> if (officialRelease) "-develop" else "-develop-unsigned"
+                "develop" -> "-${buildRevision.take(6)}" + if (officialRelease) "-develop" else "-develop-unsigned"
                 else -> ""
             }
             output.outputFileName.set("CustoMIUIzer-A14-$lastVersionName$suffix.apk")

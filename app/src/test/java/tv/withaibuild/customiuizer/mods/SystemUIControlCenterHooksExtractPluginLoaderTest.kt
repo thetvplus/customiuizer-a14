@@ -4,6 +4,7 @@ import android.content.pm.ApplicationInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 
@@ -126,5 +127,19 @@ class SystemUIControlCenterHooksExtractPluginLoaderTest {
             factory = factory,
             callInstanceMethod = { _, _ -> throw OutOfMemoryError("oom in callMethod") }
         )
+    }
+
+    @Test
+    fun wrappedFatalReflectionFailuresStillPropagate() {
+        val fatal = InternalError("loader failure")
+        val factory = ValidFactory(appInfo("miui.systemui.plugin"), ClassLoaderFactory(testLoader))
+        assertSame(fatal, assertThrows(InternalError::class.java) {
+            SystemUIControlCenterHooks.extractPluginLoader(factory,
+                getObjectField = { _, _ -> throw java.lang.reflect.InvocationTargetException(fatal) })
+        })
+        assertSame(fatal, assertThrows(InternalError::class.java) {
+            SystemUIControlCenterHooks.extractPluginLoader(factory,
+                callInstanceMethod = { _, _ -> throw XposedHelpers.InvocationTargetError(fatal) })
+        })
     }
 }

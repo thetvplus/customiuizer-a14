@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Scan MethodHook bodies for allocation-suspect patterns on the hot path.
 
-This gate prevents introduction of new per-invocation allocations, reflection,
-or I/O inside hook callbacks. Existing violations are tracked in a baseline
-file that can only decrease over time (ceiling model).
+This source regression gate finds suspicious patterns, not measured runtime
+allocations or performance. Total and per-file ceilings can only decrease;
+writing an existing baseline cannot raise either ceiling. No allocation
+exceptions are enabled without location-specific evidence and review under
+AGENTS.md and docs/OPTIMIZATION_GATES.md. I/O and reflection protections remain.
 
 Usage:
     python tools/check_hotpath_alloc_budget.py
@@ -125,12 +127,39 @@ def scan_all() -> list[FileReport]:
 
 
 def load_baseline(path: Path) -> dict:
-    if not path.exists():
-        return {"hook_body_alloc_total": 999, "files": {}}
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("baseline must be an object")
+    total = data.get("hook_body_alloc_total")
+    files = data.get("files")
+    if type(total) is not int or total < 0 or not isinstance(files, dict):
+        raise ValueError("baseline requires a non-negative integer total and a files object")
+    for name, count in files.items():
+        if not isinstance(name, str) or not name or type(count) is not int or count < 0:
+            raise ValueError("baseline file entries require paths and non-negative integer counts")
+    if sum(files.values()) != total:
+        raise ValueError("baseline total must equal the sum of file ceilings")
+    return data
+
+
+def ceiling_violations(reports: list[FileReport], baseline: dict) -> list[str]:
+    violations = []
+    total = sum(report.count for report in reports)
+    ceiling = baseline["hook_body_alloc_total"]
+    if total > ceiling:
+        violations.append(f"{total} exceeds total ceiling {ceiling}")
+    for report in reports:
+        file_ceiling = baseline["files"].get(report.path, 0)
+        if report.count > file_ceiling:
+            violations.append(f"{report.path}: {report.count} exceeds file ceiling {file_ceiling}")
+    return violations
 
 
 def write_baseline(reports: list[FileReport], path: Path) -> None:
+    if path.exists():
+        violations = ceiling_violations(reports, load_baseline(path))
+        if violations:
+            raise ValueError("refusing to raise existing baseline: " + "; ".join(violations))
     total = sum(r.count for r in reports)
     files = {r.path: r.count for r in reports}
     data = {"hook_body_alloc_total": total, "files": files}
@@ -154,14 +183,17 @@ def main() -> int:
         print(json.dumps([asdict(r) for r in reports], indent=2))
         return 0
 
-    if args.write_baseline:
-        write_baseline(reports, args.baseline)
-        return 0
+    try:
+        if args.write_baseline:
+            write_baseline(reports, args.baseline)
+            return 0
+        baseline = load_baseline(args.baseline)
+    except (OSError, ValueError) as error:
+        print(f"hotpath-alloc: FAILED — {error}")
+        return 1
+    ceiling = baseline["hook_body_alloc_total"]
 
-    baseline = load_baseline(args.baseline)
-    ceiling = baseline.get("hook_body_alloc_total", 999)
-
-    print(f"hotpath-alloc: {total} hits across {file_count} files (ceiling {ceiling})")
+    print(f"hotpath-alloc: {total} static suspect matches across {file_count} files (ceiling {ceiling})")
 
     if total > 0:
         print("hotpath-alloc: allocation-suspect patterns in MethodHook bodies:")
@@ -170,8 +202,10 @@ def main() -> int:
                 print(f"  {r.path}:{h.line}: {h.snippet}")
 
     if args.check:
-        if total > ceiling:
-            print(f"hotpath-alloc: FAILED — {total} exceeds ceiling {ceiling}")
+        violations = ceiling_violations(reports, baseline)
+        if violations:
+            for violation in violations:
+                print(f"hotpath-alloc: FAILED — {violation}")
             return 1
         print("hotpath-alloc: ceiling held")
 

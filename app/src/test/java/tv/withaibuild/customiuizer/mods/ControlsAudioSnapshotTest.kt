@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -74,5 +75,29 @@ class ControlsAudioSnapshotTest {
 
         assertEquals(3, SystemAudioHooks.audioHapticsConfig.qsHaptics)
         assertEquals(1.0f, SystemAudioHooks.audioHapticsConfig.ampRinger, 0.001f)
+    }
+
+    @Test
+    fun ignoredAppsLoseOnlyModernAndLegacyCallEventsWithoutMutatingTheCaller() {
+        MainModule.mPrefs.put("system_ignorecalls_apps", setOf("com.player"))
+        SystemAudioHooks.refreshAudioHapticsSnapshot()
+        val requested = setOf(1, 6, 16, 32, 36)
+        assertEquals(setOf(1, 16, 32), SystemAudioHooks.filterCallStateEvents("com.player", requested))
+        assertEquals(setOf(1, 6, 16, 32, 36), requested)
+        assertSame(requested, SystemAudioHooks.filterCallStateEvents("com.phone", requested))
+        assertSame(requested, SystemAudioHooks.filterCallStateEvents(null, requested))
+    }
+
+    @Test
+    fun unaffectedRegistrationsAreReusedAndCallOnlyRegistrationsBecomeEmpty() {
+        MainModule.mPrefs.put("system_ignorecalls_apps", setOf("com.player"))
+        SystemAudioHooks.refreshAudioHapticsSnapshot()
+        val unrelated = setOf(1, 16, 32)
+        assertSame(unrelated, SystemAudioHooks.filterCallStateEvents("com.player", unrelated))
+        assertTrue(SystemAudioHooks.filterCallStateEvents("com.player", setOf(6, 36)).isEmpty())
+        MainModule.mPrefs.put("system_ignorecalls_apps", emptySet<String>())
+        SystemAudioHooks.refreshAudioHapticsSnapshot()
+        val callEvents = setOf(6, 36)
+        assertSame(callEvents, SystemAudioHooks.filterCallStateEvents("com.player", callEvents))
     }
 }
