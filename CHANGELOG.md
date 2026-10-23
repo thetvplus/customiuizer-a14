@@ -6,6 +6,8 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+- Refine Dynamic Island safe-edge layout, bounded input regions and upward recall; add a guarded current-player launch fallback. Add an experimental live waveform while keeping lightweight animation as default, regroup settings and preserve legacy feedback and backup choices.
+
 ## r14.25.2 — 2026-10-23
 
 versionCode 247. Changes since r14.25.1:

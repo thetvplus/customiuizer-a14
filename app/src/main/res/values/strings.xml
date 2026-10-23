@@ -1226,7 +1226,7 @@
     <string name="system_island_simplified_title">Simplified animation</string>
     <string name="system_island_simplified_summ">Reduces transitions and keeps the waveform still.</string>
     <string name="system_island_excluded_apps_title">Excluded apps</string>
-    <string name="system_island_excluded_apps_summ">These apps keep ordinary Toasts and do not show media on the island. Ordinary Toast filtering stays on the Toast page.</string>
+    <string name="system_island_excluded_apps_summ">These apps keep native Toasts and notifications; their media stays off the island. Exclusions take priority over the notification allowlist.</string>
     <string name="system_island_playing">Playing</string>
     <string name="system_island_paused">Paused</string>
     <string name="system_island_connecting">Connecting</string>
@@ -1244,11 +1244,11 @@
     <string name="system_island_height_title">Island height</string>
     <string name="system_island_height_summ">Short and long islands use the same fixed height.</string>
     <string name="system_island_width_auto_title">Automatic collapsed width</string>
-    <string name="system_island_width_auto_summ">Choose short and long widths from content and available status bar space. Turn off to adjust them separately.</string>
+    <string name="system_island_width_auto_summ">Choose widths from content, height and the physical safe area. Turn off to set short and long widths separately.</string>
     <string name="system_island_width_short_title">Short island width</string>
-    <string name="system_island_width_short_summ">Used for artwork, waveform and brief status. Limited by the camera and time/battery space.</string>
+    <string name="system_island_width_short_summ">Preferred short-island width. Physical cutouts and screen safety take priority.</string>
     <string name="system_island_width_medium_title">Long island width</string>
-    <string name="system_island_width_medium_summ">Used for longer text. Never narrower than the short island and limited by status bar space.</string>
+    <string name="system_island_width_medium_summ">Preferred long-island width, never narrower than the short island. Physical safety takes priority.</string>
     <string name="system_island_chat_excluded_apps_title">Native notification apps</string>
     <string name="system_island_chat_excluded_apps_summ">Selected apps keep native heads-up notifications. Toasts and media are unaffected.</string>
     <string name="system_island_gesture_left">Swipe left</string>
@@ -1264,10 +1264,20 @@
     <string name="system_island_horizontal_offset_title">Horizontal offset</string>
     <string name="system_island_feedback_title">System feedback</string>
     <string name="system_island_notification_apps_title">Allowed notification apps</string>
-    <string name="system_island_notification_apps_summ">Only selected apps can use the island. Excluded apps keep their native notifications.</string>
+    <string name="system_island_notification_apps_summ">Only selected apps are taken over. App exclusions and Keep native heads-up take priority over this list.</string>
     <string name="system_island_action_play">Play</string>
     <string name="system_island_action_pause">Pause</string>
     <string name="system_island_action_player">Open player</string>
     <string name="system_island_music_group">Music and media</string>
     <string name="system_island_feedback_ringer_title">Ringer mode</string>
+    <string name="system_island_basic_group">Basics</string>
+    <string name="system_island_geometry_group">Position and size</string>
+    <string name="system_island_appearance_group">Appearance and animation</string>
+    <string name="system_island_feedback_group">Feedback and notifications</string>
+    <string name="system_island_interaction_group">Music and interaction</string>
+    <string name="system_island_gestures_title">Music gestures</string>
+    <string name="system_island_waveform_off">Off</string>
+    <string name="system_island_waveform_light">Lightweight animation</string>
+    <string name="system_island_waveform_real">Live waveform (experimental)</string>
+    <string name="system_island_waveform_mode_summ">Live mode uses five measured audio bands only while visible and playing. Unsupported permissions, routes or sessions fall back to lightweight animation.</string>
 </resources>

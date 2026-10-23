@@ -52,10 +52,10 @@ class IslandSystemMotionTest {
         when (method.name) {
             "getCurrentWindowMetrics" -> WindowMetrics(Rect(0, 0, 1080, 2400), WindowInsets.Builder().build())
             "addView" -> {
-                shell = args!![0] as IslandActivityView
+                shell = (args!![0] as IslandTouchWindow).shell
                 val params = args[1] as WindowManager.LayoutParams
                 latestParams = params
-                activity.get().setContentView(shell, FrameLayout.LayoutParams(params.width, params.height))
+                activity.get().setContentView(args[0] as View, FrameLayout.LayoutParams(params.width, params.height))
                 layoutShell(params)
                 adds++
                 null
@@ -156,9 +156,10 @@ class IslandSystemMotionTest {
     private fun motion(): ValueAnimator = getField(shell, "motion")
 
     private fun layoutShell(params: WindowManager.LayoutParams) {
-        shell.measure(View.MeasureSpec.makeMeasureSpec(params.width, View.MeasureSpec.EXACTLY),
+        val root = shell.parent as IslandTouchWindow
+        root.measure(View.MeasureSpec.makeMeasureSpec(params.width, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(params.height, View.MeasureSpec.EXACTLY))
-        shell.layout(0, 0, params.width, params.height)
+        root.layout(0, 0, params.width, params.height)
     }
 
     private fun advance(millis: Long) {

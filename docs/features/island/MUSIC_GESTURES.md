@@ -1,10 +1,10 @@
 # 音乐手势与操作
 
-[返回动态岛说明](README.md)。以下为 r14.25.2 源码行为；主机、ROM 静态证据与设备验收分别记录。
+[返回动态岛说明](README.md)。以下为当前工作分支源码行为；主机、ROM 静态证据与设备验收分别记录。
 
 ## 配置与动作
 
-入口为「系统 → 动态岛 → 音乐与媒体」。五项配置复用 MultiAction 编辑器、确认按钮及现有 payload；MUSIC 追加在枚举末尾，既有动作整数和编辑器索引保持。
+入口为「系统 → 动态岛 → 音乐与交互 → 音乐手势」。五项配置复用 MultiAction 编辑器、确认按钮及现有 payload；MUSIC 追加在枚举末尾，既有动作整数和编辑器索引保持。
 
 | 手势 | 默认 | 配置键 |
 | --- | --- | --- |
@@ -25,7 +25,7 @@
 | `30 / 31` | 独立播放 / 暂停；新增动作编号，不是 KeyEvent 编码 |
 | `88 / 87` | 上一曲 / 下一曲 |
 | `18 / 19` | 当前会话音量增 / 减一级 |
-| `17 / 32` | 已有音量面板入口 / 当前播放器 sessionActivity |
+| `17 / 32` | 已有音量面板入口 / 打开当前播放器（优先 sessionActivity） |
 | `8 / 9 / 20` | 已配置应用 / 快捷方式 / Activity |
 | `2 / 3` | 既有通知中心 / 快捷设置入口 |
 
@@ -35,9 +35,17 @@
 
 每个岛体 View 使用一份平台 GestureDetector，采用 ViewConfiguration 的双击 / 长按时间，不增加全局监听或五套调度器。未配置双击时单击立即响应；配置后双击与确认单击互斥。长按只执行一次，之后不提交单击或滑动。拖动锁轴，满足方向和距离阈值才在释放时提交；多指、CANCEL、斜向无效输入取消候选。
 
-内容、控制器、配置、来源应用、隐私、退场、解绑及 owner 更换使未提交输入和任务失效。执行端检查实际可见媒体、前台 / 隐私、token、当前 Controller、action epoch、真实 PlaybackState 与能力位，使用同一 Controller.TransportControls，不退回全系统媒体键。不支持的动作静默结束。无障碍保留点击、收起和已配置动作菜单，使用相同门禁。
+内容、控制器、动作配置、来源应用、隐私、退场、解绑及 owner 更换使未提交输入和任务失效。单纯几何参数变更不重置已接收的媒体动作；位置 / 尺寸变更仍会取消需要重新布局的触摸候选。执行端检查实际可见媒体、前台 / 隐私、token、当前 Controller、action epoch、真实 PlaybackState 与能力位，使用同一 Controller.TransportControls，不退回全系统媒体键。不支持的动作静默结束。无障碍保留点击、收起和已配置动作菜单，使用相同门禁。
 
 音量通过 MediaController.adjustVolume 跟随当前会话。本地（含蓝牙媒体路由）要求媒体用途且设备非固定音量；远程跟随其相对 / 绝对调节能力，固定音量忽略。每次完成手势只调节一次，不在 MOVE 中连续修改。实际蓝牙、投放与固定音量设备仍待验收。平台契约：[MediaController](https://developer.android.com/reference/android/media/session/MediaController)、[TransportControls](https://developer.android.com/reference/android/media/session/MediaController.TransportControls)。
+
+## 打开当前播放器
+
+单击和映射为 `32` 的下滑等手势共用同一事务。执行时重新读取当前选中 MediaController 的 sessionActivity；只发送同一 UID / 包的 Activity PendingIntent。缺失、非 Activity 或明确取消后，才评估 API 33+ 的 `PackageManager.getLaunchIntentSenderForPackage`。一个成功入口立即结束，不再发第二个请求，也不发送全系统广播或媒体键。
+
+A14 MediaSession.Token 的 UID 与当前前台用户必须匹配；包入口只在 Context 所属用户相同且包 UID 一致、应用启用、锁屏允许时使用。工作资料、匿名 UID、旧 Controller / epoch、取消中的动作和不存在的入口安全失败。跨用户 Context 的包入口不尝试绕过限制；有效且同用户的会话 PendingIntent 仍可保留系统自己的启动行为。失败日志只保留固定原因，每个 owner 最多八类，不包含包名、标题或 Intent 数据。
+
+平台依据：[PackageManager.getLaunchIntentSenderForPackage](https://developer.android.com/reference/android/content/pm/PackageManager#getLaunchIntentSenderForPackage(java.lang.String))、[AOSP A14 MediaSession.Token UID](https://android.googlesource.com/platform/frameworks/base/+/android-14.0.0_r1/media/java/android/media/session/MediaSession.java)。主机测试对 Robolectric 4.17 尚未实现的包启动 Binder 使用替身；设备上的任务栈、后台启动限制与各播放器 PendingIntent 仍须验收。
 
 ## 暂停可见性
 
@@ -66,4 +74,6 @@ Controller 从现有 IslandWindowPresentation 的预绘制取得展示证据；a
 
 `IslandMusicActionsTest` 验证默认、开关、能力位、音量策略和几何；`IslandMusicGestureTest` 在 Robolectric SDK 34 执行 View 的单击 / 双击、长按 / 滑动、取消、无操作及无障碍。`IslandActivityLifecycleTest` 检查 PREPARED、入场延迟、暂停 / 停止、来源应用、metadata、旧回调、抢占、会话更换和关闭的完整时序与状态栏占用。`IslandWindowPresentationTest` 覆盖同身份退场重入，设置导航、动作矩阵和备份另有回归。
 
-这些是主机 / Robolectric / ROM 静态证据。目标 HyperOS 触摸手感、TalkBack、蓝牙 / 远程音量、物理开孔、横竖屏、SystemUI 重建、通知工作资料和帧时间 / 功耗仍待实际设备验证。新增 ROM 专属动作及更多系统开关继续作为候选，需样本哈希、唯一目标、调用 / 字段和 ClassLoader 证据后单独开发；不把本次静态结果标为实机 PASS。
+本次专项保留以上既有 CN / TW 取证，没有取得这些样本原件或 DexSQL 连接，未重跑或扩充 ROM 结论。音频 UID / session 隐藏 API 只由 AOSP A14 源码确认；SystemUI 权限和实际音频路由仍保留实验性状态。
+
+这些是主机 / Robolectric / 既有 ROM 静态证据。目标 HyperOS 触摸手感、TalkBack、蓝牙 / 远程音量、物理开孔、横竖屏、SystemUI 重建、通知工作资料和帧时间 / 功耗仍待实际设备验证。新增 ROM 专属动作及更多系统开关继续作为候选，需样本哈希、唯一目标、调用 / 字段和 ClassLoader 证据后单独开发；不把本次静态结果标为实机 PASS。

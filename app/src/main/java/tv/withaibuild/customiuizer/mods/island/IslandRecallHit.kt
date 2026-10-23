@@ -2,7 +2,7 @@ package tv.withaibuild.customiuizer.mods.island
 
 /**
  * Hit-region math for Dynamic Island recall. Visual capsule geometry is unchanged;
- * the parent may attach a [android.view.TouchDelegate] using [delegateRect].
+ * [IslandTouchWindow] applies [delegateRect] to the actual WindowManager input region.
  *
  * Returns a plain int box so unit tests do not depend on the stub
  * `android.graphics.Rect` constructor.
@@ -22,13 +22,13 @@ object IslandRecallHit {
 
     /**
      * Extra touch margin around the capsule. Two scaled touch slops, never below 12 dp
-     * and never a full status-bar band.
+     * capped at 16 dp and never a full status-bar band.
      */
     @JvmStatic
     fun extraMarginPx(density: Float, scaledTouchSlopPx: Int): Int {
-        val floor = (12f * density.coerceAtLeast(1f) + 0.5f).toInt()
+        val floor = (12f * density.coerceAtLeast(.5f) + 0.5f).toInt()
         val fromSlop = (scaledTouchSlopPx * 2).coerceAtLeast(0)
-        val cap = (36f * density.coerceAtLeast(1f) + 0.5f).toInt()
+        val cap = (16f * density.coerceAtLeast(.5f) + 0.5f).toInt()
         return fromSlop.coerceAtLeast(floor).coerceAtMost(cap)
     }
 

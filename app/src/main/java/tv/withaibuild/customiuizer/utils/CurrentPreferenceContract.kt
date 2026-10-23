@@ -42,6 +42,8 @@ internal object CurrentPreferenceContract {
      */
     val EXTRA_CURRENT_KEYS = setOf(
         "pref_key_qs_autorotate_state",
+        // Retained verbatim for old backups; the mode key takes precedence after upgrade.
+        "pref_key_system_island_waveform",
     )
 
     val LEGACY_MIGRATIONS = mapOf(

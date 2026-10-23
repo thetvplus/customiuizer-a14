@@ -26,11 +26,11 @@ object IslandRecallGesture {
     )
 
     @JvmStatic
-    fun configFromSlop(scaledTouchSlopPx: Int): Config {
+    fun configFromSlop(scaledTouchSlopPx: Int, heightPx: Int = Int.MAX_VALUE): Config {
         val slop = scaledTouchSlopPx.coerceAtLeast(1)
         return Config(
             scaledTouchSlopPx = slop,
-            minUpDistancePx = slop * 2.5f,
+            minUpDistancePx = minOf(slop * 1.75f, heightPx * .35f).coerceAtLeast(slop * 1.25f),
             maxHorizontalRatio = 0.85f,
         )
     }
@@ -50,6 +50,15 @@ object IslandRecallGesture {
         val adx = kotlin.math.abs(dx)
         if (adx > dy * config.maxHorizontalRatio) return current
         return current.copy(state = STATE_TRIGGERED)
+    }
+
+    /** Complete displacement is authoritative when the dispatcher coalesces all MOVE events. */
+    @JvmStatic
+    fun onUp(current: Snapshot, pointerId: Int, x: Float, y: Float, config: Config, durationMs: Long): Snapshot {
+        val distance = current.downY - y
+        val fast = durationMs in 1..160 && distance / durationMs >= config.scaledTouchSlopPx * .05f
+        return onMove(current, pointerId, x, y, if (fast)
+            config.copy(minUpDistancePx = config.scaledTouchSlopPx * 1.25f) else config)
     }
 
     @JvmStatic

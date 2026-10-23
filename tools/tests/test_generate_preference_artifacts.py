@@ -237,6 +237,28 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             self.assertEqual("@string/prefs_group_material", item["breadcrumbSubSubTitle"])
         self.assertEqual("pref_key_various_cat_exclusive", by_key["pref_key_various_disable_miui_daemon"]["routeSub"])
 
+    def test_island_subpages_preserve_feedback_gesture_keys_and_search_targets(self) -> None:
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
+        for suffix, keys in (
+            ("feedback", [f"pref_key_system_island_feedback_{kind}" for kind in
+                          ("dnd", "ringer", "dark", "airplane", "nfc", "hotspot", "torch", "wifi", "data", "bluetooth")]),
+            ("music", [f"pref_key_system_island_music_{gesture}" for gesture in ("left", "right", "down", "double", "long")]),
+        ):
+            for key in keys:
+                match = [entry for entry in entries if entry["key"] == key]
+                self.assertEqual(1, len(match), key)
+                self.assertEqual(f"@xml/prefs_system_island_{suffix}", match[0]["page"])
+                self.assertEqual("System", match[0]["pageFragment"])
+                self.assertEqual(f"pref_key_system_island_{suffix}_cat", match[0]["routeSub"])
+        source = ET.parse(SOURCE_DIR / "prefs_system.xml").getroot()
+        island = next(e for e in source.iter() if e.get(ANDROID_KEY) == "pref_key_system_cat_island")
+        self.assertEqual([f"@string/system_island_{name}_group" for name in
+                          ("basic", "geometry", "appearance", "feedback", "interaction")],
+                         [e.get(ANDROID_TITLE) for e in island])
+        keys = {e.get(ANDROID_KEY) for e in island.iter()}
+        self.assertIn("pref_key_system_island_waveform_mode", keys)
+        self.assertNotIn("pref_key_system_island_waveform", keys)
+
     def test_every_standalone_preference_is_searchable_with_its_real_page(self) -> None:
         entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
         pages = {item["page"] for item in entries if item["page"]}

@@ -570,13 +570,15 @@ object BackupRestore {
             )
         }
 
+        val migratedEntries = sanitizedEntries.toMutableMap()
+        IslandPreferenceDefaults.migrate(migratedEntries)
         restored = sanitizedEntries.size
 
         val snapshot = capturePreRestoreSnapshot(prefs)
 
         val primaryEditor = prefs.edit()
         primaryEditor.clear()
-        putSupportedPreferenceEntries(primaryEditor, sanitizedEntries)
+        putSupportedPreferenceEntries(primaryEditor, migratedEntries)
         AppLocaleController.stageReconcileMarker(primaryEditor)
         primaryEditor.putInt(
             CurrentPreferenceContract.CONTRACT_REVISION_KEY,

@@ -1199,7 +1199,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_simplified_title">Basitleştirilmiş animasyon</string>
     <string name="system_island_simplified_summ">Geçişleri azaltır ve dalgayı sabit tutar.</string>
     <string name="system_island_excluded_apps_title">Hariç tutulan uygulamalar</string>
-    <string name="system_island_excluded_apps_summ">Normal Toast kullanır ve adada medya göstermez. Normal Toast süzgeci Toast sayfasındadır.</string>
+    <string name="system_island_excluded_apps_summ">Bu uygulamalar yerel Toast ve bildirimleri korur; müzik adaya alınmaz. Hariç tutmalar bildirim izin listesinden önceliklidir.</string>
     <string name="system_island_playing">Oynatılıyor</string>
     <string name="system_island_paused">Duraklatıldı</string>
     <string name="system_island_connecting">Bağlanıyor</string>
@@ -1217,11 +1217,11 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_height_title">Ada yüksekliği</string>
     <string name="system_island_height_summ">Kısa ve uzun ada aynı sabit yüksekliği kullanır.</string>
     <string name="system_island_width_auto_title">Otomatik daraltılmış genişlik</string>
-    <string name="system_island_width_auto_summ">Kısa ve uzun ada genişliğini içeriğe ve durum çubuğundaki alana göre belirler. Ayrı ayarlamak için kapatın.</string>
+    <string name="system_island_width_auto_summ">İçerik, yükseklik ve güvenli alana göre genişlik seçilir. Kısa ve uzun adayı ayrı ayarlamak için kapatın.</string>
     <string name="system_island_width_short_title">Kısa ada genişliği</string>
-    <string name="system_island_width_short_summ">Kapak, dalga ve kısa durumlar için. Kamera, saat ve pil alanlarıyla sınırlıdır.</string>
+    <string name="system_island_width_short_summ">Kısa ada için tercih edilen genişlik. Kamera deliği ve güvenli ekran alanı önceliklidir.</string>
     <string name="system_island_width_medium_title">Uzun ada genişliği</string>
-    <string name="system_island_width_medium_summ">Uzun metinler için. Kısa adadan dar olmaz ve durum çubuğu alanıyla sınırlıdır.</string>
+    <string name="system_island_width_medium_summ">Uzun ada için tercih edilen genişlik; kısa adadan dar olmaz. Güvenli alan önceliklidir.</string>
     <string name="system_island_chat_excluded_apps_title">Sistem bildirimi kullanan uygulamalar</string>
     <string name="system_island_chat_excluded_apps_summ">Seçilen uygulamalar sistemin kayan bildirimlerini korur. Toast ve müzik etkilenmez.</string>
     <string name="system_island_gesture_left">Sola kaydırma</string>
@@ -1237,10 +1237,20 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_horizontal_offset_title">Yatay kaydırma</string>
     <string name="system_island_feedback_title">Sistem geri bildirimi</string>
     <string name="system_island_notification_apps_title">Bildirimlerine izin verilen uygulamalar</string>
-    <string name="system_island_notification_apps_summ">Yalnızca seçilen uygulamalar adayı kullanır. Hariç tutulan uygulamalar yerel bildirimleri korur.</string>
+    <string name="system_island_notification_apps_summ">Yalnızca seçili uygulamalar. Hariç tutulan uygulamalar ve yerel kayan bildirimleri koruma önceliklidir.</string>
     <string name="system_island_action_play">Oynat</string>
     <string name="system_island_action_pause">Duraklat</string>
     <string name="system_island_action_player">Oynatıcıyı aç</string>
     <string name="system_island_music_group">Müzik ve medya</string>
     <string name="system_island_feedback_ringer_title">Zil modu</string>
+    <string name="system_island_basic_group">Temel ayarlar</string>
+    <string name="system_island_geometry_group">Konum ve boyut</string>
+    <string name="system_island_appearance_group">Görünüm ve animasyon</string>
+    <string name="system_island_feedback_group">Geri bildirim ve bildirimler</string>
+    <string name="system_island_interaction_group">Müzik ve etkileşim</string>
+    <string name="system_island_gestures_title">Müzik hareketleri</string>
+    <string name="system_island_waveform_off">Kapalı</string>
+    <string name="system_island_waveform_light">Hafif animasyon</string>
+    <string name="system_island_waveform_real">Canlı dalga biçimi (deneysel)</string>
+    <string name="system_island_waveform_mode_summ">Beş frekans bandı yalnızca ada görünürken ve müzik çalarken alınır. İzin, ses yolu veya oturum desteklenmiyorsa hafif animasyona dönülür.</string>
 </resources>

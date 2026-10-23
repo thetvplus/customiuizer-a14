@@ -220,6 +220,31 @@ class BackupRestoreTest {
         assertNull(prefs.getString("pref_key_removed_old_feature", null))
     }
 
+    @Test fun numericModeImportsAndStartupAreCanonicalBeforeTheStringPreferenceIsRead() {
+        val input = ByteArrayInputStream(serialize(hashMapOf<String, Any?>(
+            "pref_key_system_island_waveform_mode" to 2, "pref_key_system_island_waveform" to false)))
+        val prefs = FakeSharedPreferences()
+        assertTrue(BackupRestore.performRestore(input, prefs, emptySet(), { true }).commitSucceeded)
+        assertEquals("2", prefs.getString(IslandPreferenceDefaults.waveformModeKey, null))
+        assertFalse(prefs.getBoolean("pref_key_system_island_waveform", true))
+        prefs.put(IslandPreferenceDefaults.waveformModeKey, 0)
+        IslandPreferenceDefaults.initialize(prefs)
+        assertEquals("0", prefs.getString(IslandPreferenceDefaults.waveformModeKey, null))
+    }
+
+    @Test fun restoringOldIslandBackupsMigratesBeforeTheSettingsActivityCanPersistDefaults() {
+        for (mode in listOf("3", "4")) {
+            val input = ByteArrayInputStream(serialize(hashMapOf<String, Any?>(
+                "pref_key_system_strong_toast_mode" to mode, "pref_key_system_island_waveform" to false)))
+            val prefs = FakeSharedPreferences()
+            val result = BackupRestore.performRestore(input, prefs, emptySet(), { true })
+            assertTrue(result.commitSucceeded)
+            assertTrue(IslandPreferenceDefaults.feedbackKeys.all { prefs.getBoolean(it, false) })
+            assertEquals("0", prefs.getString(IslandPreferenceDefaults.waveformModeKey, null))
+            assertFalse(prefs.getBoolean("pref_key_system_island_waveform", true))
+        }
+    }
+
     @Test
     fun performRestorePrimaryCommitFalseAndRollbackTrueUpdatesAndRestoresVisibleState() {
         val map = HashMap<String, Any?>()

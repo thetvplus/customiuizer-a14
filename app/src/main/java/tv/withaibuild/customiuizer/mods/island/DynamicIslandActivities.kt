@@ -39,16 +39,20 @@ internal data class IslandOptions(
     val horizontalOffset: Int = 0,
     val feedback: Set<IslandSystemKind> = emptySet(),
     val notificationApps: Set<String> = emptySet(),
+    val waveformMode: Int = if (waveform) 1 else 0,
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
             val mode = StrongToastPresentationMode.fromPreference(prefs.getStringAsInt("system_strong_toast_mode", 0))
+            val waveformMode = if (prefs.containsKey("system_island_waveform_mode"))
+                prefs.getStringAsInt("system_island_waveform_mode", 1).let { if (it in 0..2) it else 1 }
+                else if (prefs.getBoolean("system_island_waveform", true)) 1 else 0
             val shortWidth = prefs.getInt("system_island_width_short", 184).coerceIn(160, 224)
             val legacyFeedback = mode == StrongToastPresentationMode.DYNAMIC_ISLAND &&
                 IslandSystemKind.entries.none { prefs.containsKey(it.preferenceKey) }
             return IslandOptions(mode == StrongToastPresentationMode.DYNAMIC_ISLAND,
                 prefs.getBoolean("system_toast_capsule"), prefs.getBoolean("system_island_media"),
-                prefs.getBoolean("system_island_waveform", true),
+                waveformMode != 0,
                 prefs.getBoolean("system_island_simplified"),
                 prefs.getStringSet("system_island_excluded_apps"),
                 prefs.getBoolean("system_island_chat"),
@@ -65,7 +69,7 @@ internal data class IslandOptions(
                 IslandSystemKind.entries.filterTo(linkedSetOf()) {
                     prefs.getBoolean(it.preferenceKey, legacyFeedback)
                 },
-                prefs.getStringSet("system_island_notification_apps"))
+                prefs.getStringSet("system_island_notification_apps"), waveformMode)
         }
     }
 }

@@ -1,0 +1,8 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" xmlns:miuizer="http://schemas.android.com/apk/res-auto">
+	<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_left" android:title="@string/system_island_gesture_left" />
+	<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_right" android:title="@string/system_island_gesture_right" />
+	<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_down" android:title="@string/system_island_gesture_down" />
+	<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_double" android:title="@string/system_island_gesture_double" />
+	<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_long" android:title="@string/system_island_gesture_long" />
+	<tv.withaibuild.customiuizer.prefs.PreferenceEx android:summary="@string/system_island_gesture_up_summary" android:selectable="false" />
+</PreferenceScreen>

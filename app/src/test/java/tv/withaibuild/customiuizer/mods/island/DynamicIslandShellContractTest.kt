@@ -12,7 +12,7 @@ class DynamicIslandShellContractTest {
         val island = File(base, "island")
         val controller = File(island, "IslandActivityController.kt").readText()
         assertTrue(controller.contains("IslandActivityView(context)"))
-        assertTrue(controller.contains("window!!.addView(shell, params)"))
+        assertTrue(controller.contains("window!!.addView(touchWindow, params)"))
         for (name in listOf("IslandNativeLayout.kt", "IslandNativeMotion.kt", "IslandNativeModeFeedback.kt")) {
             assertFalse(File(base, name).exists())
             assertFalse(File(island, name).exists())

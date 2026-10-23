@@ -31,6 +31,14 @@
     {
       "preferenceKey": "various_cat_settings",
       "reason": "Existing navigation-only page key, moved from generated metadata into canonical XML; no stored setting or Hook."
+    },
+    {
+      "preferenceKey": "system_island_feedback_cat",
+      "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
+    },
+    {
+      "preferenceKey": "system_island_music_cat",
+      "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
     }
   ],
   "entries": [
@@ -17831,7 +17839,7 @@
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandActivityStateTest, IslandPresentationTest, IslandActivityLifecycleTest; CN/TW DexSQL native contracts",
-      "notes": "No audio capture, independent session discovery, foreground service or application-overlay permission"
+      "notes": "Media alone performs no audio capture. Experimental waveform mode can acquire only an attributed local session while visibly playing; all audio resources are released on pause, hiding or replacement."
     },
     {
       "featureId": "system_island_media_swipe",
@@ -17886,21 +17894,21 @@
         "system_island_waveform",
         "pref_key_system_island_waveform"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "",
       "defaultValue": "true",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "OBSERVER_PUSH",
-      "enableEffect": "Dynamic Island activity integration, owned by the attached default-display status bar; native-selected media and plain Toast feedback only",
-      "disableEffect": "Release owned windows, animation, jobs and selected-session callbacks; native prompts remain native",
-      "valueChangeEffect": "Owned preference observer updates the enabled activity controller on Main; does not install new integrations",
+      "enableEffect": "Compatibility input used only when the new waveform mode is absent",
+      "disableEffect": "Legacy false migrates to mode 0; legacy true to mode 1",
+      "valueChangeEffect": "Preserved verbatim through upgrade and backup; explicit waveform mode takes precedence",
       "restartTarget": "NONE",
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
-      "evidence": "IslandActivityStateTest, IslandPresentationTest, IslandActivityLifecycleTest; CN/TW DexSQL native contracts",
-      "notes": "No audio capture, independent session discovery, foreground service or application-overlay permission"
+      "evidence": "IslandPreferenceDefaultsTest; BackupRestoreTest; IslandOptionsTest",
+      "notes": "Compatibility key has no visible switch; never enables real audio capture"
     },
     {
       "featureId": "system_island_chat",
@@ -18139,7 +18147,7 @@
         "system_island_feedback_dnd",
         "pref_key_system_island_feedback_dnd"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18162,7 +18170,7 @@
         "system_island_feedback_ringer",
         "pref_key_system_island_feedback_ringer"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18185,7 +18193,7 @@
         "system_island_feedback_dark",
         "pref_key_system_island_feedback_dark"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18208,7 +18216,7 @@
         "system_island_feedback_airplane",
         "pref_key_system_island_feedback_airplane"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18231,7 +18239,7 @@
         "system_island_feedback_nfc",
         "pref_key_system_island_feedback_nfc"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18254,7 +18262,7 @@
         "system_island_feedback_hotspot",
         "pref_key_system_island_feedback_hotspot"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18277,7 +18285,7 @@
         "system_island_feedback_torch",
         "pref_key_system_island_feedback_torch"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18300,7 +18308,7 @@
         "system_island_feedback_wifi",
         "pref_key_system_island_feedback_wifi"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18323,7 +18331,7 @@
         "system_island_feedback_data",
         "pref_key_system_island_feedback_data"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18346,7 +18354,7 @@
         "system_island_feedback_bluetooth",
         "pref_key_system_island_feedback_bluetooth"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18392,7 +18400,7 @@
         "system_island_music_left",
         "pref_key_system_island_music_left"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18415,7 +18423,7 @@
         "system_island_music_right",
         "pref_key_system_island_music_right"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18438,7 +18446,7 @@
         "system_island_music_down",
         "pref_key_system_island_music_down"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18461,7 +18469,7 @@
         "system_island_music_double",
         "pref_key_system_island_music_double"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18484,7 +18492,7 @@
         "system_island_music_long",
         "pref_key_system_island_music_long"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18499,6 +18507,29 @@
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandMusicActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest; IslandPreferenceDefaultsTest",
       "notes": "Requires the island integration installed at SystemUI startup; updates within that integration are immediate"
+    },
+    {
+      "featureId": "system_island_waveform_mode",
+      "featureName": "system_island_waveform_mode",
+      "preferenceKeys": [
+        "system_island_waveform_mode",
+        "pref_key_system_island_waveform_mode"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "1",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "0 off; 1 lightweight playback animation; 2 experimental selected-session FFT with safe lightweight fallback",
+      "disableEffect": "Invalidate callbacks and release the Visualizer, audio callback and coroutine when hidden, paused, screen-off, replaced or disabled",
+      "valueChangeEffect": "Existing owner updates mode on Main; default and old true map to lightweight, old false maps to off",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandAudioSpectrumTest; AudioFftBandsTest; IslandActivityLifecycleTest; IslandPreferenceDefaultsTest; BackupRestoreTest",
+      "notes": "Experimental on HyperOS: requires inherited RECORD_AUDIO and MODIFY_AUDIO_ROUTING, unique UID/session attribution and a supported local route; never captures session 0. One 512-sample Visualizer at at most 20 Hz; no added permission, recording service or polling."
     }
   ]
 }

@@ -16,6 +16,30 @@ class IslandPreferenceDefaultsTest {
         assertEquals(false, upgraded["pref_key_system_island_feedback_wifi"])
     }
 
+    @Test fun legacyModeFourAndWaveformOffMigrateWithoutChangingStoredChoices() {
+        val entries = mutableMapOf<String, Any?>("pref_key_system_strong_toast_mode" to "4",
+            "pref_key_system_island_waveform" to false)
+        IslandPreferenceDefaults.migrate(entries)
+        assertTrue(IslandPreferenceDefaults.feedbackKeys.all { entries[it] == true })
+        assertEquals("0", entries[IslandPreferenceDefaults.waveformModeKey])
+        assertEquals(false, entries["pref_key_system_island_waveform"])
+        entries[IslandPreferenceDefaults.waveformModeKey] = "2"
+        IslandPreferenceDefaults.migrate(entries)
+        assertEquals("2", entries[IslandPreferenceDefaults.waveformModeKey])
+        assertTrue(CurrentPreferenceContract.isExportable("pref_key_system_island_waveform"))
+        assertTrue(CurrentPreferenceContract.isExportable(IslandPreferenceDefaults.waveformModeKey))
+    }
+
+    @Test fun importedWaveformModesUseAStringStorageContractBeforeListPreferenceInflation() {
+        for ((raw, expected) in listOf(2 to "2", 0 to "0", 99 to "1", true to "1")) {
+            val entries = mutableMapOf<String, Any?>(IslandPreferenceDefaults.waveformModeKey to raw,
+                "pref_key_system_island_waveform" to false)
+            IslandPreferenceDefaults.migrate(entries)
+            assertEquals(expected, entries[IslandPreferenceDefaults.waveformModeKey])
+            assertEquals(false, entries["pref_key_system_island_waveform"])
+        }
+    }
+
     @Test fun partialNewFormatBackupNeverReenablesUnselectedKindsAndAllGesturePayloadsAreExportable() {
         val restored = mutableMapOf<String,Any?>("pref_key_system_strong_toast_mode" to "3",
             "pref_key_system_island_feedback_dnd" to true)

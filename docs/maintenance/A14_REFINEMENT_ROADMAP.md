@@ -416,3 +416,66 @@ MiuiHome Manifest 为 `com.miui.home` / `RELEASE-4.39.30.8604-08262248` / 439308
 本地收口：`verify.py fast --changed`（含 66 项 Dock / 手势专项）、`verify.py full`（编译、全套 JVM / Robolectric 与 Lint，2m16s）、591 项 Python 工具测试（5 skipped）以及 `git diff --check` 均退出 0。补看 ROM setSize Smali 后，测试替身同步写两个真实字段，追加相关两项行为回归退出 0；生产源码未变，复用完整门禁。exact main CI、最终 APK 和双仓库结果另以相应运行 / 发行记录读回。本地历史签名配置预检有效；正式 APK 仍须在干净 main 上构建并核验证书与来源。
 
 ADB 当前无设备；所有实机功能和 CPU / GPU / PSS / 帧时间仍未验证。回退单位为 Dock 原生动画接入（含全宽容器）与返回区域初始化，未改变 PrefMap、FeatureRegistry、ResourceHooks、ProcessRouter 或 PreferenceBootstrap。
+
+## 12. 2026-10-23：r14.25.2 后续动态岛专项（独立分支）
+
+起点为最新 main / PR #46 合并提交 `d6f47fd64ff76af2391bdcab14bc56535d93b56a`，工作分支 `codex/a14-island-refinement-20261023`。本次合同只授权动态岛审查与专项修复，不预设新版本号，不合并 main，不创建 tag 或发布 Release。此前版本发布授权不延续到本任务。
+
+### A. 最新提交质量与复现
+
+PR #46 已具备单窗口、状态租约、有限动画时钟、媒体 epoch、原生额头互斥及真实相交避让；已有五项音乐动作、暂停可见性和分类反馈保持。本次没有重复开发这些功能。主要不足在跨层契约：左右仍借用中央留白与时钟限宽，触摸辅助只存在于数学 / 单测，播放器打开仅信任快照入口，以及设置恢复没有完成迁移闭环。
+
+| 确认问题 | 原基线的可复核失败 | 修复单位 |
+| --- | --- | --- |
+| 左侧与摄像头冲突回中 | 400 px 场景：旧 `IslandPosition.left(184,12,388,0,0,40,192,208,true)` 返回 `108`，位置成为中央 | `IslandPosition.layout` 同侧缩宽或下移；Controller 使用物理安全边界，侧边不保留中央 gap / 时钟限宽，View 按选定边展开 |
+| 上滑缺少 MOVE 不收起 | DOWN → 500 ms → UP，向上 1.8×slop；旧实现提交 0 次 | 按高度 / DPI 约束短滑阈值，UP 完整位移补判，保留锁轴、取消、多指与一次提交；原窗口接入 12–16 dp 有界实际触摸区 |
+| 当前播放器缺少入口 | 原 Controller 的实际单击 / 下滑测试在 `sessionActivity=null` 时没有启动 | 执行时读取当前 Controller；首选同 UID / 包的 Activity PendingIntent，明确失败后使用同用户的包 IntentSender；成功只提交一次 |
+| 旧模式 `4` 关闭反馈 | 原 `IslandPreferenceDefaults.migrate` 只识别 `3` | 复用 StrongToastPresentationMode 的兼容解析 |
+| 旧备份恢复丢失反馈 | 原 performRestore 成功后立即读取，十分类全部未迁移 | 原子提交前迁移；保留部分新配置、旧键与值，失败沿用已有回滚 |
+
+`IslandRegressionReproductionTest` 同一份文件在原 SHA 四项均失败，在修复源码通过。播放器端到端测试另在原 SHA 确认缺少入口的失败。证据保留于本地忽略目录 `.di-evidence/island-refinement/`，原基线替身工作树没有修改本分支历史。具体测试结果见下文最终验证记录。
+
+### B. 布局、动作与所有权
+
+左右以安全区域真实边界为锚；偏移先作用于选定边，随后根据物理挖孔与内容最小空间缩宽。缩宽保留选定边；不足时向孔下方避让，不跨侧跳跃。左右连续内容布局、摄像头居中融合和中心扩展 pivot 分开。横屏沿用原有隐藏策略，转向后重新取得 metrics / Insets。状态栏的相交对象来自内层胶囊，触摸外扩不参与图标淡出。
+
+只在既有窗口加入 `IslandTouchWindow`：负责有界 padding、动画矩阵对应的 touchableRegion 和事件转发，不含第二 Controller 或媒体状态。Surface 仍采用对称 80 dp 绘制外扩。UP 补判与 MOVE 共用锁轴；点击 / 双击 / 长按 / 横向动作继续使用原 GestureDetector 和单次提交规则。仅几何变化不修改 action epoch；动作重映射、排除、来源、替换和隐私失效仍取消旧操作。
+
+打开播放器同时复核当前 UID、前台用户、Controller 身份、epoch、协程取消与锁屏。缺失或取消入口才进入包级 IntentSender，拒绝跨用户 Context、工作资料、不匹配 UID、失效包及不受控 Intent；没有媒体键 / 广播回退。固定诊断原因每个 owner 最多八类，无包名、标题、Intent 或音频内容。主机包 IntentSender Binder 使用 Robolectric 4.17 缺失 API 的测试替身；不把该替身等同于设备后台启动验收。
+
+### C. 实时波形的实现和限制
+
+保留轻量动画，模式为 `0/1/2`（关闭 / 轻量 / 实时），默认 `1`。旧布尔键保持原值，只在新键不存在时映射；新键明确优先，以字符串 0/1/2 保存；数字导入值先规范为字符串，未知值回退轻量，避免 ListPreference 类型错误。十种维护语言、搜索、默认摘要和备份规则同步。反馈十项、音乐五手势分入两个子页；首页五组为基础、位置尺寸、外观动画、反馈通知、音乐交互。通知允许名单、保留原生与应用排除相邻，后两者优先。
+
+原 AudioVisualizer 会尝试多个媒体 / 游戏会话并可回退全局混音，不适合作为当前播放器的身份来源；保留它原有选择策略，仅共享 `AudioFftBands` 的复数峰值能力，同时服务原可视化与音乐岛。音乐岛最多一个 512 样本 Visualizer、一个 AudioPlaybackCallback、一个合并变化通道和现有 scope 内的资源 job；最多 20 Hz，复用五柱缓冲，有限 attack / release。只有首帧等待包含一次 1 秒 deadline，没有轮询。可见播放、当前用户与 Context 身份可确认、唯一 UID 的媒体会话和唯一活动本地媒体音轨均满足才采集。媒体与音频 route 分别有失效代次，旧采集回调不可刷新新柱；同一 Mutex 串行释放 / 建立资源。
+
+SystemUI 必须已有 RECORD_AUDIO / MODIFY_AUDIO_ROUTING 且 ROM / AppOps / 路由实际支持。没有新增模块录音权限、录音服务、全局 mix session 0、音频日志、上传或持久化。权限失败、匿名配置、多个候选、远程会话、无数据 / 错误格式均回退轻量。正常 FFT 和资源释放由替身覆盖；**HyperOS 原生采集保持实验性，未作兼容或功耗承诺**。实际附加 CPU / GPU / PSS 及音频指示器 / 路由限制需设备测量。
+
+本环境未暴露 DexSQL MCP / CLI，未提供 CN / TW 样本原件；复用第 11 节和音乐手势页已有哈希与取证结果，不将旧查询描述为本次重跑。新隐藏 API 的定义只核对 AOSP A14 MediaSession.Token.getUid、AudioPlaybackConfiguration.getClientUid / getSessionId / isActive；需在同哈希 CN / TW framework / SystemUI 再确认权限、匿名化与实际调用行为。
+
+### D. 最终验证与设备交接
+
+使用 JDK 25.0.4.1、仓库既定 Gradle 9.8.1 / AGP 9.4.1 / Kotlin 2.4.21；没有降低 JVM / SDK / 依赖门禁。未签名构建只验证产物，不作为正式 Release。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| `python tools/verify.py fast --changed` | 退出 0；与最终 full 相同源码，复用已有编译 / 测试输入结果 |
+| `python tools/verify.py full` | 退出 0；Kotlin / Java 编译、完整 JVM / Robolectric 和 Lint 通过 |
+| JVM / Robolectric | 342 suite，3206 tests，0 failure / error，2 skipped |
+| Lint Debug | 0 error / fatal；保留 398 条 warning，未压制检测。含程序构造、不会从 XML inflate 的 IslandTouchWindow 缺工具构造器提示；不能将通过表述为零警告 |
+| `python -m unittest discover -s tools/tests -p "test_*.py"` | 592 tests，0 failure / error，5 skipped；包含真实 Gradle provenance 变体测试 |
+| `assembleDevelop` | 退出 0；未签名 Develop APK，R8 / D8、资源收缩与 lintVitalDevelop 通过 |
+| 布局 / 导航 | 原生图形模式检查子页、搜索直达、动作摘要和依赖；70 张设置页面渲染，抽查动态岛首页、十反馈及五手势子页 |
+| 源码规则 / `git diff --check` | 无违规；没有新增 Hook 热路径 PrefMap / 分配预算命中，没有加入签名、APK 或 ROM 文件 |
+| 设备 / ROM | ADB 无连接设备；无 DexSQL 连接与 CN / TW 原件，未执行 ROM 重取证或实机验收 |
+
+实际设备交接：
+
+1. 同哈希 CN / TW SystemUI / framework 的 Context 用户、Token UID 与音频配置隐藏 API；核对 SystemUI 声明 / 授予权限、AppOps、配置匿名化及多个音轨的拒绝行为。
+2. 真实物理开孔、左中右边缘、±80 dp、手动长短宽度、38–44 dp、字体 / 密度变化及横竖屏；确认动画、文字、状态栏逐图标避让与窗口触摸区域一致。
+3. 从胶囊及外扩边缘起手的慢短上滑、快速上滑、稀疏 MOVE、斜向、多指、取消、入场 / 退场与连续点击；确认窗口外的通知栏 / 控制中心下拉仍交给原生。
+4. 实际播放器有 / 无 / 取消 PendingIntent、包入口不存在、快速换播放器、锁屏、用户切换与工作资料；确认没有旧播放器或额外启动请求。
+5. 实时采集正常 / 权限失败、蓝牙 / 耳机 / 远程路由 / offload、暂停、息屏、遮挡、模式关闭、音轨及媒体会话替换、SystemUI 重建后的完整释放。
+6. 默认轻量与实验实时模式的 CPU / GPU / PSS、帧时间和耗电对照；检查音频指示器及各 ROM 路由限制。继续核验原生 StrongToast 互斥，不把主机采样当作硬件性能结论。
+
+回退单位是本次独立分支提交；没有改动长期 main、版本号、签名流程、Dock / Launcher Hook 或发布配置。

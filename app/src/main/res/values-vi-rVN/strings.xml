@@ -1193,7 +1193,7 @@
     <string name="system_island_simplified_title">Hoạt ảnh đơn giản</string>
     <string name="system_island_simplified_summ">Giảm chuyển cảnh và giữ sóng đứng yên.</string>
     <string name="system_island_excluded_apps_title">Ứng dụng loại trừ</string>
-    <string name="system_island_excluded_apps_summ">Giữ Toast thông thường và không hiện nhạc trên đảo. Bộ lọc Toast thông thường vẫn nằm ở trang Toast.</string>
+    <string name="system_island_excluded_apps_summ">Các ứng dụng này giữ Toast và thông báo gốc; nhạc không lên đảo. Loại trừ được ưu tiên hơn danh sách cho phép thông báo.</string>
     <string name="system_island_playing">Đang phát</string>
     <string name="system_island_paused">Tạm dừng</string>
     <string name="system_island_connecting">Đang kết nối</string>
@@ -1211,11 +1211,11 @@
     <string name="system_island_height_title">Chiều cao đảo</string>
     <string name="system_island_height_summ">Đảo ngắn và đảo dài dùng cùng một chiều cao cố định.</string>
     <string name="system_island_width_auto_title">Tự động chỉnh chiều rộng thu gọn</string>
-    <string name="system_island_width_auto_summ">Chọn chiều rộng đảo ngắn và dài theo nội dung và khoảng trống trên thanh trạng thái. Tắt để điều chỉnh riêng.</string>
+    <string name="system_island_width_auto_summ">Chọn chiều rộng theo nội dung, chiều cao và vùng an toàn. Tắt để đặt riêng đảo ngắn và dài.</string>
     <string name="system_island_width_short_title">Chiều rộng đảo ngắn</string>
-    <string name="system_island_width_short_summ">Dùng cho ảnh bìa, sóng và trạng thái ngắn. Chừa chỗ cho camera, giờ và pin.</string>
+    <string name="system_island_width_short_summ">Chiều rộng ưu tiên của đảo ngắn. Lỗ camera và vùng an toàn được ưu tiên.</string>
     <string name="system_island_width_medium_title">Chiều rộng đảo dài</string>
-    <string name="system_island_width_medium_summ">Dùng cho văn bản dài hơn. Không hẹp hơn đảo ngắn và giới hạn theo khoảng trống.</string>
+    <string name="system_island_width_medium_summ">Chiều rộng ưu tiên của đảo dài, không hẹp hơn đảo ngắn. Vùng an toàn được ưu tiên.</string>
     <string name="system_island_chat_excluded_apps_title">Ứng dụng giữ thông báo nổi</string>
     <string name="system_island_chat_excluded_apps_summ">Các ứng dụng được chọn giữ thông báo nổi của hệ thống. Không ảnh hưởng đến Toast và nhạc.</string>
     <string name="system_island_gesture_left">Vuốt sang trái</string>
@@ -1231,10 +1231,20 @@
     <string name="system_island_horizontal_offset_title">Độ lệch ngang</string>
     <string name="system_island_feedback_title">Phản hồi hệ thống</string>
     <string name="system_island_notification_apps_title">Ứng dụng được phép hiển thị thông báo</string>
-    <string name="system_island_notification_apps_summ">Chỉ ứng dụng đã chọn dùng đảo. Ứng dụng bị loại trừ giữ thông báo gốc.</string>
+    <string name="system_island_notification_apps_summ">Chỉ áp dụng cho ứng dụng đã chọn. Loại trừ ứng dụng và giữ thông báo nổi gốc được ưu tiên.</string>
     <string name="system_island_action_play">Phát</string>
     <string name="system_island_action_pause">Tạm dừng</string>
     <string name="system_island_action_player">Mở trình phát</string>
     <string name="system_island_music_group">Nhạc và đa phương tiện</string>
     <string name="system_island_feedback_ringer_title">Chế độ chuông</string>
+    <string name="system_island_basic_group">Cài đặt cơ bản</string>
+    <string name="system_island_geometry_group">Vị trí và kích thước</string>
+    <string name="system_island_appearance_group">Giao diện và hoạt ảnh</string>
+    <string name="system_island_feedback_group">Phản hồi và thông báo</string>
+    <string name="system_island_interaction_group">Nhạc và tương tác</string>
+    <string name="system_island_gestures_title">Cử chỉ âm nhạc</string>
+    <string name="system_island_waveform_off">Tắt</string>
+    <string name="system_island_waveform_light">Hoạt ảnh nhẹ</string>
+    <string name="system_island_waveform_real">Dạng sóng trực tiếp (thử nghiệm)</string>
+    <string name="system_island_waveform_mode_summ">Chỉ thu năm dải tần khi đảo hiển thị và đang phát. Chuyển về hoạt ảnh nhẹ nếu quyền, tuyến âm thanh hoặc phiên không được hỗ trợ.</string>
 </resources>

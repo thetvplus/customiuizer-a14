@@ -154,7 +154,27 @@ class System : SubFragment() {
             }
             "pref_key_system_cat_toasts" -> findPreference<Preference>("pref_key_system_blocktoasts_apps")?.setOnPreferenceClickListener(openAppsEdit)
 
+            "pref_key_system_island_feedback_cat", "pref_key_system_island_music_cat" -> {
+                val enabled = StrongToastPresentationMode.fromPreference(
+                    AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
+                ) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                val media = AppHelper.appPrefs?.getBoolean("pref_key_system_island_media", false) == true
+                for (key in tv.withaibuild.customiuizer.utils.IslandPreferenceDefaults.feedbackKeys)
+                    findPreference<Preference>(key)?.isEnabled = enabled
+                for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries) {
+                    findPreference<Preference>("pref_key_${gesture.key}")?.apply {
+                        isEnabled = enabled && media
+                        onPreferenceClickListener = openMusicActions
+                    }
+                }
+            }
             "pref_key_system_cat_island" -> {
+                findPreference<Preference>("pref_key_system_island_feedback_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.xml.prefs_system_island_feedback); true
+                }
+                findPreference<Preference>("pref_key_system_island_music_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.xml.prefs_system_island_music); true
+                }
                 val strongToastMode = findPreference<ListPreferenceEx>("pref_key_system_strong_toast_mode")
                 val islandOffset = findPreference<Preference>("pref_key_system_strong_toast_island_offset")
                 fun showIslandOffset(mode: Any?) {
@@ -163,7 +183,7 @@ class System : SubFragment() {
                     )
                     val enabled = presentation == StrongToastPresentationMode.DYNAMIC_ISLAND
                     islandOffset?.isVisible = enabled
-                    for (key in listOf("media", "media_swipe", "waveform", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps", "position", "horizontal_offset", "notification_apps")) {
+                    for (key in listOf("media", "media_swipe", "waveform_mode", "feedback_cat", "music_cat", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps", "position", "horizontal_offset", "notification_apps")) {
                         findPreference<Preference>("pref_key_system_island_$key")?.isEnabled = enabled
                     }
                     for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
@@ -369,7 +389,7 @@ class System : SubFragment() {
 
     override fun onResume() {
         super.onResume()
-        if (sub != "pref_key_system_cat_island") return
+        if (sub != "pref_key_system_island_music_cat") return
         val values = resources.getIntArray(R.array.global_actions_island_music_val)
         val labels = resources.getStringArray(R.array.global_actions_island_music)
         for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries) {

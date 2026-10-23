@@ -21,8 +21,8 @@ Installer 按进程与开关选择 Feature。`FeatureInstallRegistry` 使用进�
 
 - API 102 是最低基线；`HookInstallation` 统一原生安装策略，`XposedServiceManager` 管理 Service 与动态作用域。保留设置进程与 compileOnly Hook API 的类加载边界。
 - 宿主 SystemUI 与动态插件使用各自的 ClassLoader；安装时解析 ROM 类、方法、资源及签名，缺失时停止对应功能或保留原生行为。
-- 系统默认与匹配高度模式由 ROM StrongToast 管理原生窗口；动态岛在其统一入口抑制原生额头，使用 `mods/island` 内单一 Controller / View。短时活动、媒体、系统终态与通知共享展示门控和身份租约，避免双窗口、旧回调复活与隐私泄漏。
-- 动态岛尺寸、运动、遮挡、暂停退场及输入规则统一见 [当前行为](docs/features/island/README.md)。当前只有短岛 / 长岛；音乐左右切歌开关已实现，五手势独立配置仍是 [候选方案](docs/features/island/MUSIC_GESTURES.md)。主线程 owner、session epoch、generation、容量一状态和有界图像归对应控制器，重建、解绑、切用户和关闭均释放。
+- 系统默认与匹配高度模式由 ROM StrongToast 管理原生窗口；动态岛在其统一入口抑制原生额头，使用 `mods/island` 内单一 Controller / View；同一窗口的有界输入容器只负责实际 touchableRegion，不拥有媒体状态或新增窗口。短时活动、媒体、系统终态与通知共享展示门控和身份租约，避免双窗口、旧回调复活与隐私泄漏。
+- 动态岛尺寸、运动、遮挡、暂停退场及输入规则统一见 [当前行为](docs/features/island/README.md)。当前只有短岛 / 长岛；音乐左右切歌开关与五手势独立配置已实现，具体行为见 [音乐交互](docs/features/island/MUSIC_GESTURES.md)。主线程 owner、session epoch、generation、容量一状态和有界图像归对应控制器，重建、解绑、切用户和关闭均释放。实验性实时波形复用共享 FFT 数学，只在目标会话可确认且可见播放时按需持有一个 Visualizer；默认轻量动画。
 - 公共 StrongToast 快照、通用 Hook / 偏好 / 安全边界继续在共享层；动态岛功能包通过明确导入调用，不复制这些状态或另建轮询服务。
 - Dock 默认背景继续归属原生 HotSeats；「全宽底栏」独立装饰挂在窗口根布局底层，以弱引用跟随 HotSeats 的布局、可见性、原生动画透明度和解绑。它不松开原生祖先裁切、不移动图标、不接受触摸；关闭该选项即可回到原有背景合同。
 - 反射缓存按 ClassLoader 隔离且有界；成熟 Hook 基础设施的修改按 [AGENTS.md](AGENTS.md) 提供相应契约与回归证据，ROM 行为另需目标样本与实机验证。

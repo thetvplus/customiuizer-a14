@@ -1193,7 +1193,7 @@
     <string name="system_island_simplified_title">Animação simplificada</string>
     <string name="system_island_simplified_summ">Reduz transições e mantém a onda parada.</string>
     <string name="system_island_excluded_apps_title">Apps excluídos</string>
-    <string name="system_island_excluded_apps_summ">Mantêm os Toasts comuns e não mostram mídia na ilha. O filtro de Toasts comuns permanece na página Toast.</string>
+    <string name="system_island_excluded_apps_summ">Estes apps mantêm Toasts e notificações nativas; a música fica fora da ilha. Exclusões têm prioridade sobre a lista de notificações permitidas.</string>
     <string name="system_island_playing">Reproduzindo</string>
     <string name="system_island_paused">Em pausa</string>
     <string name="system_island_connecting">Conectando</string>
@@ -1211,11 +1211,11 @@
     <string name="system_island_height_title">Altura da ilha</string>
     <string name="system_island_height_summ">As ilhas curta e longa usam a mesma altura fixa.</string>
     <string name="system_island_width_auto_title">Largura recolhida automática</string>
-    <string name="system_island_width_auto_summ">Ajusta as ilhas curta e longa ao conteúdo e ao espaço da barra de status. Desative para ajustar separadamente.</string>
+    <string name="system_island_width_auto_summ">Escolhe a largura pelo conteúdo, altura e área segura. Desative para ajustar as ilhas curta e longa separadamente.</string>
     <string name="system_island_width_short_title">Largura da ilha curta</string>
-    <string name="system_island_width_short_summ">Para capa, onda e estados breves. Respeita o espaço da câmera, hora e bateria.</string>
+    <string name="system_island_width_short_summ">Largura preferida da ilha curta. Recortes e área segura da tela têm prioridade.</string>
     <string name="system_island_width_medium_title">Largura da ilha longa</string>
-    <string name="system_island_width_medium_summ">Para textos maiores. Nunca menor que a ilha curta e limitada ao espaço disponível.</string>
+    <string name="system_island_width_medium_summ">Largura preferida da ilha longa, nunca menor que a curta. A área segura tem prioridade.</string>
     <string name="system_island_chat_excluded_apps_title">Apps com avisos flutuantes</string>
     <string name="system_island_chat_excluded_apps_summ">Os apps selecionados mantêm os avisos flutuantes do sistema. Toasts e música não são afetados.</string>
     <string name="system_island_gesture_left">Deslizar para a esquerda</string>
@@ -1231,10 +1231,20 @@
     <string name="system_island_horizontal_offset_title">Deslocamento horizontal</string>
     <string name="system_island_feedback_title">Avisos do sistema</string>
     <string name="system_island_notification_apps_title">Apps de notificações permitidos</string>
-    <string name="system_island_notification_apps_summ">Só os apps selecionados usam a ilha. Apps excluídos mantêm as notificações nativas.</string>
+    <string name="system_island_notification_apps_summ">Somente os apps selecionados. Exclusões e notificações flutuantes nativas têm prioridade.</string>
     <string name="system_island_action_play">Reproduzir</string>
     <string name="system_island_action_pause">Pausar</string>
     <string name="system_island_action_player">Abrir player</string>
     <string name="system_island_music_group">Música e mídia</string>
     <string name="system_island_feedback_ringer_title">Modo de toque</string>
+    <string name="system_island_basic_group">Configurações básicas</string>
+    <string name="system_island_geometry_group">Posição e tamanho</string>
+    <string name="system_island_appearance_group">Aparência e animação</string>
+    <string name="system_island_feedback_group">Respostas e notificações</string>
+    <string name="system_island_interaction_group">Música e interação</string>
+    <string name="system_island_gestures_title">Gestos de música</string>
+    <string name="system_island_waveform_off">Desativado</string>
+    <string name="system_island_waveform_light">Animação leve</string>
+    <string name="system_island_waveform_real">Forma de onda ao vivo (experimental)</string>
+    <string name="system_island_waveform_mode_summ">Cinco faixas de frequência são capturadas apenas com a ilha visível e a reprodução ativa. Permissões, rotas ou sessões incompatíveis usam a animação leve.</string>
 </resources>

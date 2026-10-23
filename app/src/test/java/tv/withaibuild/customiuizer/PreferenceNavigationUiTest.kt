@@ -126,7 +126,7 @@ class PreferenceNavigationUiTest {
     fun everyHomeCategoryAndAllItsSettingsPagesAreVisible() {
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries must be indexed", 25, standaloneKeys.size)
+        assertEquals("All standalone page entries must be indexed", 27, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -145,6 +145,12 @@ class PreferenceNavigationUiTest {
                 assertTrue("$settingKey must open a fresh settings page", currentPage() !== selector)
                 assertPreferencePageVisible(currentPage())
                 capturePage(settingKey)
+                if (settingKey == "pref_key_system_cat_island") {
+                    val island = currentPage() as SubFragment
+                    val mode = requireNotNull(island.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+                    assertTrue(mode.callChangeListener("3")); mode.value = "3"
+                    requireNotNull(island.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+                }
                 for (entryKey in standaloneKeys) {
                     val parent = currentPage() as SubFragment
                     val entry = parent.findPreference<Preference>(entryKey) ?: continue
@@ -171,7 +177,8 @@ class PreferenceNavigationUiTest {
     fun searchOpensMovedAndDeepSettingsAndReturnsHome() {
         Helpers.getAllMods(activity, true)
         for (key in arrayOf("pref_key_system_volumeblur_collapsed", "pref_key_system_statusbaricons_wifi",
-            "pref_key_system_autobrightness_limitmin", "pref_key_various_disable_miui_daemon")) {
+            "pref_key_system_autobrightness_limitmin", "pref_key_various_disable_miui_daemon",
+            "pref_key_system_island_feedback_wifi", "pref_key_system_island_music_down")) {
             val result = Helpers.allModsList.single { it.key == key }
             val home = currentPage() as MainFragment
             assertTrue(ReflectionHelpers.callInstanceMethod<Boolean>(home, "openSearchResult",
@@ -271,8 +278,10 @@ class PreferenceNavigationUiTest {
         val mode=requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
         assertTrue(mode.callChangeListener("3")); mode.value="3"
         requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked=true
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
+        val musicPage = currentPage() as SubFragment
         val key="pref_key_system_island_music_left"
-        val left=requireNotNull(page.findPreference<Preference>(key))
+        val left=requireNotNull(musicPage.findPreference<Preference>(key))
         assertTrue(left.isEnabled)
         left.performClick(); settleNavigation()
         val editor=currentPage() as SubFragment
@@ -283,12 +292,18 @@ class PreferenceNavigationUiTest {
         val menu=PopupMenu(activity,editor.requireView()).menu
         editor.onCreateOptionsMenu(menu,activity.menuInflater)
         assertTrue(editor.onOptionsItemSelected(menu.findItem(R.id.edit_confirm))); settleNavigation()
-        assertSame(page,currentPage())
+        assertSame(musicPage,currentPage())
         assertEquals(18,requireNotNull(AppHelper.appPrefs).getInt(key+"_action",-1))
         assertEquals(activity.getString(R.string.array_global_actions_volume_up),left.summary.toString())
+        pressToolbarBack()
+        assertSame(page, currentPage())
         requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe")).isChecked=false
-        assertTrue(left.isEnabled)
-        assertFalse(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
+        assertTrue(requireNotNull((currentPage() as SubFragment).findPreference<Preference>(key)).isEnabled)
+        pressToolbarBack()
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()
+        assertFalse(requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
+        pressToolbarBack()
         val chat=requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_chat"))
         val allowed=requireNotNull(page.findPreference<Preference>("pref_key_system_island_notification_apps"))
         assertFalse(allowed.isEnabled); chat.isChecked=true; assertTrue(allowed.isEnabled)

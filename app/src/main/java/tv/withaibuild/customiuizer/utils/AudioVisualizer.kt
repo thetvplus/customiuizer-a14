@@ -326,8 +326,6 @@ class AudioVisualizer @JvmOverloads constructor(
     }
 
     private val mVisualizerListener = object : Visualizer.OnDataCaptureListener {
-        private var real: Byte = 0
-        private var imaginary: Byte = 0
         private var dbValue = 0
         private var magnitude = 0f
 
@@ -351,14 +349,8 @@ class AudioVisualizer @JvmOverloads constructor(
                 val maxHeight = min(0.85f * maxDp * mDensity, mHeight / 2.0f)
 
                 while (band < mBandsNum && i < mFftSize / 2) {
-                    magnitude = 0f
-
-                    while (i < mBandBinLimits[band]) {
-                        real = fft[i * 2]
-                        imaginary = fft[i * 2 + 1]
-                        magnitude = max(magnitude, (real * real + imaginary * imaginary).toFloat())
-                        i++
-                    }
+                    magnitude = AudioFftBands.peakPower(fft, i, mBandBinLimits[band])
+                    i = maxOf(i, mBandBinLimits[band])
 
                     dbValue = if (magnitude > 0) (10 * log10(magnitude)).toInt() else 0
                     maxDb = max(maxDb, dbValue.toFloat())
