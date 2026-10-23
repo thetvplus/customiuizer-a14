@@ -26,7 +26,12 @@ internal object AudioFftBands {
             val power = peakPower(fft, start, end)
             // Preserve amplitude changes: logarithmic compression held normal music near
             // full height. Signed 8-bit complex components have at most 32768 power.
-            val energy = sqrt(power / 32768f)
+            // Fixed display compensation makes weak treble visible in a five-bar,
+            // small-height view. Keep one-bit complex quantization noise at rest;
+            // never auto-normalize a quiet band to full height.
+            val gain = when (index) { 3 -> 3f; 4 -> 8f; else -> 1f }
+            val energy = if (index >= 3 && power <= 2f) 0f
+                else (sqrt(power / 32768f) * gain).coerceAtMost(1f)
             // At 20 Hz a quiet interval falls below 10% in four frames (200 ms).
             // Only five values survive a frame; raw FFT never does.
             val previous = output[index]

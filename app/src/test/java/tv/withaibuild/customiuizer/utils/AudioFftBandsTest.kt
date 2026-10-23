@@ -47,6 +47,36 @@ class AudioFftBandsTest {
         assertTrue("A new beat must respond in the first capture frame", levels[0] >= peak * .8f)
     }
 
+    @Test fun upperBandsKeepWeakMeasuredTransientsVisibleAtTheSmallDisplaySize() {
+        val fft = ByteArray(512)
+        val levels = FloatArray(5)
+        // Equal physical amplitudes at 93.75, 3750 and 9375 Hz. The last two
+        // receive fixed display compensation; this is not independent auto-gain.
+        fft[2] = 8
+        fft[80] = 8
+        fft[200] = 8
+        AudioFftBands.five(fft, 48_000_000, levels)
+        assertEquals(levels[0] * 3f, levels[3], .0001f)
+        assertEquals(levels[0] * 8f, levels[4], .0001f)
+        assertEquals(0f, levels[1], 0f)
+        assertEquals(0f, levels[2], 0f)
+    }
+
+    @Test fun upperBandCompensationDoesNotAnimateQuantizationNoiseOrOverflow() {
+        val fft = ByteArray(512)
+        val levels = FloatArray(5)
+        fft[80] = 1; fft[81] = -1
+        fft[200] = -1; fft[201] = 1
+        repeat(20) { AudioFftBands.five(fft, 48_000_000, levels) }
+        assertArrayEquals(FloatArray(5), levels, 0f)
+        fft[80] = -128; fft[81] = -128
+        fft[200] = -128; fft[201] = -128
+        repeat(20) { AudioFftBands.five(fft, 48_000_000, levels) }
+        assertEquals(1f, levels[3], .0001f)
+        assertEquals(1f, levels[4], .0001f)
+        assertTrue(levels.all { it.isFinite() && it in 0f..1f })
+    }
+
     @Test fun invalidDataIsRejectedAndSilenceRemainsMeasuredSilence() {
         val levels = FloatArray(5)
         assertFalse(AudioFftBands.five(ByteArray(7), 48_000_000, levels))
