@@ -85,7 +85,9 @@ def capture(adb: str, serial: str, folder: Path, stage: str) -> dict:
 def exercise(args, folder: Path) -> dict:
     report = {"status": "UNAVAILABLE", "scenario": args.scenario, "seed": args.seed,
               "accepted_navigation_commands": 0, "crash_anr_events": None,
+              "screen_locked": None,
               "limits": "Command acceptance is not UI/Hook acceptance; snapshots are not a performance benchmark."}
+    adb, serial = None, None
     try:
         adb = args.adb or shutil.which("adb")
         if not adb:
@@ -107,14 +109,28 @@ def exercise(args, folder: Path) -> dict:
             raise RuntimeError("Device disconnected during capture")
         report["after"] = capture(adb, serial, folder, "after")
         log = adb_command(adb, serial, "logcat", "-b", "crash", "-b", "events", "-d", "-v", "threadtime", "-T", since)
-        (folder / "crash-events.log").write_text(log, encoding="utf-8")
         # Events are observations in the retained buffer, never a proof that no crash/ANR occurred.
         report["crash_anr_events"] = [line for line in log.splitlines()
                                       if re.search(r"\bam_(?:crash|anr)\b", line)
                                       and any(target in line for target in TARGETS)]
+        (folder / "crash-events.log").write_text("\n".join(report["crash_anr_events"]), encoding="utf-8")
         report["status"] = "COLLECTED"
     except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as error:
         report["error"] = str(error)
+    finally:
+        if adb and serial:
+            try:
+                adb_command(adb, serial, "shell", "input", "keyevent", "223")
+                power = adb_command(adb, serial, "shell", "dumpsys", "power")
+                policy = adb_command(adb, serial, "shell", "dumpsys", "window", "policy")
+                report["screen_locked"] = bool(re.search(r"\bmWakefulness=(?:Asleep|Dozing)\b", power)
+                                               and re.search(r"\b(?:showing|mIsShowing)=true\b", policy))
+                if not report["screen_locked"]:
+                    raise RuntimeError("Sleep/lock state could not be confirmed")
+            except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as error:
+                report["status"] = "UNAVAILABLE"
+                report["screen_locked"] = False
+                report["cleanup_error"] = str(error)
     return report
 
 

@@ -77,6 +77,39 @@ class PrepareReleaseTest(unittest.TestCase):
                 self.assertNotIn(b"\r\n",content,filename)
                 self.assertIn(b"r14.26.1",content,filename)
 
+    def test_explicit_consolidation_removes_only_current_section_and_uses_retained_baseline(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            for filename, user, engineering in (("CHANGELOG.md", "User changes", "Engineering notes"),
+                                                 ("CHANGELOG_CN.md", "用户变化", "工程说明")):
+                path = root / filename
+                text = path.read_text(encoding="utf-8").replace("- Reviewed change.",
+                    f"### {user}\n\n- Reviewed cumulative change.\n\n### {engineering}\n\n- Retained technical facts.")
+                path.write_text(text + "\n## r14.24.1\n\nversionCode 245.\n\n- Older retained release.\n", encoding="utf-8")
+            changes = prepare_release.plan(root, "r14.25.3", 248, date(2026, 10, 23),
+                                           supersede="r14.25.1", base_version="r14.24.1")
+            for path, text in changes.items():
+                if path.name.startswith("CHANGELOG"):
+                    self.assertNotIn("## r14.25.1", text)
+                    self.assertIn("r14.24.1", text.split("###", 1)[0])
+                    self.assertIn("Reviewed cumulative change.", text)
+                    self.assertIn("Retained technical facts.", text)
+                    self.assertEqual(path.read_text(encoding="utf-8").split("## r14.24.1", 1)[1],
+                                     text.split("## r14.24.1", 1)[1])
+
+    def test_consolidation_refuses_partial_flags_wrong_release_or_missing_baseline(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            for options in ({"supersede": "r14.25.1"}, {"base_version": "r14.24.1"},
+                            {"supersede": "r14.24.1", "base_version": "r14.23.5"},
+                            {"supersede": "r14.25.1", "base_version": "r14.24.1"}):
+                with self.subTest(options=options), self.assertRaises(ValueError):
+                    prepare_release.plan(root, "r14.25.3", 248, date(2026, 10, 23), **options)
+            self.assertEqual(before, {path: path.read_bytes() for path in before})
+
 
 if __name__ == "__main__":
     unittest.main()
