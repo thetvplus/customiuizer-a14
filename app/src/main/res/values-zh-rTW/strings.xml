@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">上次維護操作需要復原。關閉此開關可還原已儲存的原始狀態。</string>
     <string name="app_name">米客 A14</string>
     <string name="settings_title">設定</string>
     <string name="app_about">關於</string>

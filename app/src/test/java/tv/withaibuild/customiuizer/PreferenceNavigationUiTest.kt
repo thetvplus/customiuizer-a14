@@ -561,6 +561,26 @@ class PreferenceNavigationUiTest {
     }
 
     @Test
+    fun interruptedRestrictionRemainsRecoverableAfterReopeningTheSettingsPage() {
+        installSystemPackage("com.miui.daemon")
+        val journal = tv.withaibuild.customiuizer.utils.MaintenanceJournal.open(activity)
+        val intent = Intent(GlobalActions.SET_MIUI_DAEMON_STATE_ACTION)
+            .putExtra(GlobalActions.EXTRA_APPLICATION_STATE, 3)
+        journal.prepare("pref_key_various_disable_miui_daemon", intent, true)
+        activity.packageManager.setApplicationEnabledSetting("com.miui.daemon", 3, 0)
+        installMaintenanceBridge()
+        val toggle = requireNotNull(openExclusivePage().findPreference<CheckBoxPreferenceEx>("pref_key_various_disable_miui_daemon"))
+        assertTrue(toggle.isChecked)
+        assertFalse(requireNotNull(AppHelper.appPrefs).getBoolean(toggle.key, false))
+        assertEquals(activity.getString(R.string.various_maintenance_recovery), toggle.summary)
+        toggle.callChangeListener(false)
+        settleNavigation()
+        assertEquals(0, activity.packageManager.getApplicationEnabledSetting("com.miui.daemon"))
+        assertFalse(toggle.isChecked)
+        assertFalse(journal.contains(toggle.key))
+    }
+
+    @Test
     fun daemonRestoreThenDisableAgainCapturesTheNewOriginalState() {
         installSystemPackage("com.miui.daemon")
         activity.packageManager.setApplicationEnabledSetting("com.miui.daemon", 3, 0)
@@ -676,6 +696,7 @@ class PreferenceNavigationUiTest {
         shadowOf(activity.packageManager).installPackage(PackageInfo().apply {
             packageName = packageId
             applicationInfo = app
+            signatures = arrayOf(android.content.pm.Signature(byteArrayOf(1, 2, 3)))
             if (service != null) services = arrayOf(ServiceInfo().apply {
                 packageName = packageId
                 name = service
@@ -710,6 +731,11 @@ class PreferenceNavigationUiTest {
         ReflectionHelpers.setField(activity, "mBase", transport)
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action != GlobalActions.CLEAR_UPDATER_STATE_ACTION &&
+                    !tv.withaibuild.customiuizer.utils.MaintenanceJournal.matches(context, intent)) {
+                    resultCode = GlobalActions.ACTION_FAILED
+                    return
+                }
                 when (intent.action) {
                     GlobalActions.SET_MIUI_DAEMON_STATE_ACTION -> context.packageManager.setApplicationEnabledSetting(
                         "com.miui.daemon", intent.getIntExtra(GlobalActions.EXTRA_APPLICATION_STATE, -1), 0,

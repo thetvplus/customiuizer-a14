@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
+import android.os.UserHandle
 import android.provider.Settings
 import android.widget.Toast
 import io.github.libxposed.api.XposedInterface
@@ -32,6 +33,7 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.mods.utils.hasConfiguredActionCode
 import tv.withaibuild.customiuizer.mods.utils.hasConfiguredToggle
 import tv.withaibuild.customiuizer.utils.Helpers
+import tv.withaibuild.customiuizer.utils.MaintenanceJournal
 
 object GlobalActionSystemServerHooks {
 
@@ -176,6 +178,9 @@ object GlobalActionSystemServerHooks {
                                             rejectionResultCode = GlobalActions.ACTION_FAILED
                                         )
                                     ) return@guarded
+                                    val scoped = maintenanceContext(context, getSentFromUid()) ?: return@guarded
+                                    if (intent.action != GlobalActions.CLEAR_UPDATER_STATE_ACTION &&
+                                        !MaintenanceJournal.matches(scoped, intent)) return@guarded
                                     handled = when (intent.action) {
                                         GlobalActions.SET_UPDATER_SERVICES_ACTION -> {
                                             val names = intent.getStringArrayExtra(
@@ -184,13 +189,13 @@ object GlobalActionSystemServerHooks {
                                             val states = intent.getIntArrayExtra(
                                                 GlobalActions.EXTRA_UPDATER_SERVICE_STATES
                                             ) ?: return@guarded
-                                            applyUpdaterServiceStates(context, names, states)
+                                            applyUpdaterServiceStates(scoped, names, states)
                                         }
                                         GlobalActions.CLEAR_UPDATER_STATE_ACTION ->
-                                            clearUpdaterState(context)
+                                            clearUpdaterState(scoped)
                                         GlobalActions.SET_MIUI_DAEMON_STATE_ACTION ->
                                             applyMiuiDaemonState(
-                                                context,
+                                                scoped,
                                                 intent.getIntExtra(
                                                     GlobalActions.EXTRA_APPLICATION_STATE,
                                                     -1
@@ -206,7 +211,7 @@ object GlobalActionSystemServerHooks {
                                             val states = intent.getIntArrayExtra(
                                                 GlobalActions.EXTRA_COMPONENT_STATES
                                             ) ?: return@guarded
-                                            applyXiaomiComponentStates(context, packages, names, states)
+                                            applyXiaomiComponentStates(scoped, packages, names, states)
                                         }
                                         GlobalActions.SET_XIAOMI_PACKAGES_ACTION -> {
                                             val packages = intent.getStringArrayExtra(
@@ -215,7 +220,7 @@ object GlobalActionSystemServerHooks {
                                             val states = intent.getIntArrayExtra(
                                                 GlobalActions.EXTRA_COMPONENT_STATES
                                             ) ?: return@guarded
-                                            applyXiaomiPackageStates(context, packages, states)
+                                            applyXiaomiPackageStates(scoped, packages, states)
                                         }
                                         else -> false
                                     }
@@ -344,6 +349,14 @@ object GlobalActionSystemServerHooks {
         }
     }
 
+    private fun maintenanceContext(context: Context, callerUid: Int): Context? {
+        if (callerUid < 0) return null
+        val requested = UserHandle.getUserHandleForUid(callerUid)
+        val current = XposedHelpers.callStaticMethod(ActivityManager::class.java, "getCurrentUser") as? Int ?: return null
+        if (UserHandle.getUserHandleForUid(current * 100000) != requested) return null
+        return XposedHelpers.callMethod(context, "createContextAsUser", requested, 0) as? Context
+    }
+
     @Suppress("DEPRECATION")
     private fun applyXiaomiComponentStates(
         context: Context,
@@ -412,8 +425,8 @@ object GlobalActionSystemServerHooks {
         var changed = 0
         return try {
             for (index in packageNames.indices) {
-                packageManager.setApplicationEnabledSetting(packageNames[index], states[index], 0)
                 changed++
+                packageManager.setApplicationEnabledSetting(packageNames[index], states[index], 0)
                 if (packageManager.getApplicationEnabledSetting(packageNames[index]) !=
                     states[index]
                 ) error("Package state was not applied")
@@ -422,13 +435,14 @@ object GlobalActionSystemServerHooks {
         } catch (t: Throwable) {
             tv.withaibuild.customiuizer.mods.utils.FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
-            for (index in 0 until changed) {
+            for (index in changed - 1 downTo 0) {
                 try {
                     packageManager.setApplicationEnabledSetting(
                         packageNames[index],
                         original[index],
                         0
                     )
+                    check(packageManager.getApplicationEnabledSetting(packageNames[index]) == original[index])
                 } catch (rollback: Throwable) {
                     tv.withaibuild.customiuizer.mods.utils.FatalErrors.unwrapAndRethrowIfFatal(
                         rollback
@@ -445,7 +459,7 @@ object GlobalActionSystemServerHooks {
             ActivityManager::class.java,
             "getService"
         ) ?: return
-        val userId = XposedHelpers.callStaticMethod(ActivityManager::class.java, "getCurrentUser") as? Int
+        val userId = XposedHelpers.callMethod(context, "getUserId") as? Int
             ?: return
         XposedHelpers.callMethod(
             activityManagerService,
@@ -519,12 +533,12 @@ object GlobalActionSystemServerHooks {
         var changed = 0
         return try {
             for (index in components.indices) {
+                changed++ // A setter may mutate state before reporting a Binder failure.
                 packageManager.setComponentEnabledSetting(
                     components[index],
                     states[index],
                     PackageManager.DONT_KILL_APP
                 )
-                changed++
                 if (packageManager.getComponentEnabledSetting(components[index]) != states[index]) {
                     error("Component state was not applied")
                 }
@@ -533,13 +547,14 @@ object GlobalActionSystemServerHooks {
         } catch (t: Throwable) {
             tv.withaibuild.customiuizer.mods.utils.FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
-            for (index in 0 until changed) {
+            for (index in changed - 1 downTo 0) {
                 try {
                     packageManager.setComponentEnabledSetting(
                         components[index],
                         original[index],
                         PackageManager.DONT_KILL_APP
                     )
+                    check(packageManager.getComponentEnabledSetting(components[index]) == original[index])
                 } catch (rollback: Throwable) {
                     tv.withaibuild.customiuizer.mods.utils.FatalErrors.unwrapAndRethrowIfFatal(rollback)
                     XposedHelpers.log(rollback)

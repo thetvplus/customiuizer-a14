@@ -1,4 +1,5 @@
 <resources>
+    <string name="various_maintenance_recovery">A previous maintenance operation needs recovery. Turn this switch off to restore its saved states.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_name_full" translatable="false">@string/app_name</string>
     <string name="settings_title">Settings</string>
