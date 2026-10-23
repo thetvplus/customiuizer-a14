@@ -50,7 +50,7 @@ $releaseRevision = git rev-parse --short=8 HEAD
 1. 在工作分支提交，PR 到 main 自动运行无密钥的 A14 CI；未开 PR 时可手动选择该分支运行 A14 CI。合并前检查最终 head 的结果与 diff，不能复用旧提交的绿灯。
 2. 核验通过后合并 main。main 的代码推送再次运行 A14 CI，检查实际合并提交和配置；直接提交 main 也走同一入口。纯 Markdown 推送沿用现有跳过策略，不产生新 APK。
 3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。自动或手动入口发现版本已发布即正常跳过，不初始化 JDK / SDK，也不重新签名；只有版本递增、元数据与双语发行条目齐备时才请求发布确认。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
-4. 维护者在 **release-signing → Review deployments → Approve** 确认该版本、完整 SHA 和双语说明。拒绝或取消即可保持未发布；这是自动路径唯一必需的人工确认。
+4. 维护者在 **release-signing → Review deployments → Approve** 确认该版本、完整 SHA 和双语说明。拒绝或取消即可保持未发布；这是签名阶段必需的确认。发布环境若配置了设备验收检查点，则在同一正式候选完成验收后另行确认公开；Agent 只有获本轮用户明确委托时才能代为调用审核接口。
 5. 确认后重查 main 和 CI，使用历史证书只构建一次正式 Release，核验 APK、R8、fatal lint 与 GitHub 来源证明。复用同 SHA 的 main CI，不再重复 JVM、lint 或 develop 构建。
 6. 默认先发布源码仓库，核对公开资产、标签和 Latest，再发布 Xposed 仓库。两端保持完全相同的 APK、摘要、构建元数据和 Sigstore bundle；不重建、不重签。任一检查失败即停止后续写入。
 
@@ -86,7 +86,7 @@ gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 | Environment | 配置 |
 | --- | --- |
 | `release-signing` | 至少一个 Required reviewer；四个签名 Secrets：`A14_KEYSTORE_BASE64`、`A14_STORE_PASSWORD`、`A14_KEY_ALIAS`、`A14_KEY_PASSWORD` |
-| `release-publishing` | `A14_XPOSED_RELEASE_TOKEN`；推荐不重复设置 Required reviewer，沿用前一阶段的确认。若保留第二次审核，流程会尊重该保护 |
+| `release-publishing` | `A14_XPOSED_RELEASE_TOKEN`；需要正式 APK 本地验收时设置 Required reviewer，在同一运行的签名候选通过设备 smoke 后批准公开；不需本地验收时可沿用前一阶段的确认 |
 
 自动路径会先检查 release-signing 确实有审核人及显式分支限制，配置缺失则停止，不把空 Environment 当作确认。单维护者仓库可允许本人审批自己触发的运行。工作流不代改管理员保护设置；本任务 GitHub 插件也不提供 Environment / Secrets 管理能力，不能声称远端设置已配置或凭据已验证。
 
