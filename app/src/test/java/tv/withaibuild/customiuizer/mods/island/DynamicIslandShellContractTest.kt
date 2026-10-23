@@ -9,11 +9,14 @@ class DynamicIslandShellContractTest {
         var root = File(java.lang.System.getProperty("user.dir")!!).absoluteFile
         while (!File(root, "app/src/main").exists()) root = root.parentFile
         val base = File(root, "app/src/main/java/tv/withaibuild/customiuizer/mods")
-        val controller = File(base, "IslandActivityController.kt").readText()
+        val island = File(base, "island")
+        val controller = File(island, "IslandActivityController.kt").readText()
         assertTrue(controller.contains("IslandActivityView(context)"))
         assertTrue(controller.contains("window!!.addView(shell, params)"))
-        for (name in listOf("IslandNativeLayout.kt", "IslandNativeMotion.kt", "IslandNativeModeFeedback.kt"))
+        for (name in listOf("IslandNativeLayout.kt", "IslandNativeMotion.kt", "IslandNativeModeFeedback.kt")) {
             assertFalse(File(base, name).exists())
+            assertFalse(File(island, name).exists())
+        }
         val hooks = File(base, "SystemUIStrongToastHooks.kt").readText()
         assertFalse(hooks.contains("setValue"))
         assertFalse(hooks.contains("AnimatorSet"))
