@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Thao tác bảo trì trước đó cần được khôi phục. Tắt công tắc này để khôi phục các trạng thái ban đầu đã lưu.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">Giới thiệu</string>
     <string name="about_version">Phiên bản %1$s</string>

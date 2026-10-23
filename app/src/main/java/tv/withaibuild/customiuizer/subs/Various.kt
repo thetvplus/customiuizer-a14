@@ -588,6 +588,8 @@ class Various : SubFragment() {
             Toast.makeText(context, failedMessage, Toast.LENGTH_LONG).show()
             return
         }
+        val request = intent
+        val requestContext = context
         preference.isEnabled = false
         val resultReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
@@ -598,19 +600,17 @@ class Various : SubFragment() {
                     attempt?.finish()
                     true
                 }
-                if (preference is CheckBoxPreferenceEx) configureMaintenancePreference(preference)
                 if (verified) {
+                    if (preference is CheckBoxPreferenceEx) configureMaintenancePreference(preference)
                     if (successMessage != 0) Toast.makeText(context, successMessage, Toast.LENGTH_LONG).show()
                     return
                 }
-                ModuleHelper.guarded { attempt?.failed() }
-                if (preference is CheckBoxPreferenceEx) configureMaintenancePreference(preference)
                 val message = if (resultCode == GlobalActions.ACTION_UNHANDLED) {
                     R.string.various_disable_update_services_bridge_unavailable
                 } else {
                     failedMessage
                 }
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                recoverMaintenanceFailure(requestContext, preference, request, attempt, message)
             }
         }
         try {
@@ -625,10 +625,36 @@ class Various : SubFragment() {
         } catch (t: Throwable) {
             preference.isEnabled = true
             FatalErrors.unwrapAndRethrowIfFatal(t)
-            ModuleHelper.guarded { attempt?.failed() }
-            if (preference is CheckBoxPreferenceEx) configureMaintenancePreference(preference)
             AppHelper.log("SystemMaintenance", t)
-            Toast.makeText(context, failedMessage, Toast.LENGTH_LONG).show()
+            recoverMaintenanceFailure(requestContext, preference, request, attempt, failedMessage)
+        }
+    }
+
+    private fun recoverMaintenanceFailure(context: Context, preference: Preference, request: Intent,
+        attempt: MaintenanceJournal.Attempt?, message: Int) {
+        val complete = {
+            ModuleHelper.guarded {
+                if (attempt?.restored() == true) {
+                    check(AppHelper.appPrefs?.edit()?.putBoolean(preference.key, false)?.commit() == true)
+                    attempt.recovered()
+                }
+                if (preference is CheckBoxPreferenceEx) configureMaintenancePreference(preference)
+            }
+            preference.isEnabled = true
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+        val rollback = ModuleHelper.guarded<Intent?>(null) { attempt?.rollbackIntent(request) }
+        if (rollback == null) { complete(); return }
+        preference.isEnabled = false
+        try {
+            // One bounded compensation request; an unsuccessful rollback keeps recovery on disk.
+            ModuleHelper.sendOrderedBroadcastWithIdentity(context, rollback, null,
+                object : BroadcastReceiver() {
+                    override fun onReceive(context: Context, intent: Intent?) = ModuleHelper.guarded { complete() }
+                }, Handler(Looper.getMainLooper()), GlobalActions.ACTION_UNHANDLED)
+        } catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            complete()
         }
     }
 

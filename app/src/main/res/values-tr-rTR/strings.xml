@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Önceki bakım işlemi kurtarma gerektiriyor. Kaydedilen önceki durumları geri yüklemek için bu anahtarı kapatın.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">Hakkında</string>
     <string name="about_version">Versiyon %1$s</string>

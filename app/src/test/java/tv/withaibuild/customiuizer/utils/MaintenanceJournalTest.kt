@@ -75,6 +75,18 @@ class MaintenanceJournalTest {
         assertFalse(journal.contains(profile))
     }
 
+    @Test fun compensationUsesExactOriginalStatesAndNeverRetriesAfterAStaleResult() {
+        val request = intent()
+        val attempt = journal.prepare(profile, request, true)
+        backend.states[first] = 2
+        assertArrayEquals(intArrayOf(1, 0), attempt.rollbackIntent(request)!!.getIntArrayExtra(GlobalActions.EXTRA_COMPONENT_STATES))
+        backend.states[first] = 1
+        assertNull(attempt.rollbackIntent(request))
+        assertTrue(attempt.restored())
+        attempt.recovered()
+        assertNull(attempt.rollbackIntent(request))
+    }
+
     @Test fun lateResultCannotCommitOrDeleteANewerRecoveryOperation() {
         val stale = journal.prepare(profile, intent(), true)
         val recovery = journal.prepare(profile, intent(intArrayOf(1, 0)), false)

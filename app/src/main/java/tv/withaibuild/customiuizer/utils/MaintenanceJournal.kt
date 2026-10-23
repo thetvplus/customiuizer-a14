@@ -83,10 +83,26 @@ internal class MaintenanceJournal(private val storage: SharedPreferences, privat
             if (enable) editor.putString(key, json.toString()) else editor.remove(key)
             check(editor.commit()) { "Recovery completion was not saved" }
         }
+        fun restored(): Boolean = current() && targets.indices.all {
+            backend.identity(targets[it].packageName) == json.getJSONObject("identity").getString(targets[it].packageName) &&
+                backend.state(targets[it]) == originals[it]
+        }
+        fun rollbackIntent(request: Intent): Intent? {
+            if (!enable || !current() || restored()) return null
+            return Intent(request).apply {
+                when (action) {
+                    GlobalActions.SET_MIUI_DAEMON_STATE_ACTION -> putExtra(GlobalActions.EXTRA_APPLICATION_STATE, originals.single())
+                    GlobalActions.SET_UPDATER_SERVICES_ACTION -> putExtra(GlobalActions.EXTRA_UPDATER_SERVICE_STATES, originals)
+                    else -> putExtra(GlobalActions.EXTRA_COMPONENT_STATES, originals)
+                }
+            }
+        }
+        fun recovered() {
+            check(restored())
+            check(storage.edit().remove(key).commit()) { "Recovery record was not cleared" }
+        }
         fun failed() {
-            if (current() && enable && targets.indices.all {
-                    backend.identity(targets[it].packageName) == json.getJSONObject("identity").getString(targets[it].packageName) &&
-                        backend.state(targets[it]) == originals[it] }) {
+            if (enable && restored()) {
                 check(storage.edit().remove(key).commit()) { "Recovery record was not cleared" }
             }
         }

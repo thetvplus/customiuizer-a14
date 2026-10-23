@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Uma operação de manutenção anterior precisa ser recuperada. Desative esta opção para restaurar os estados originais salvos.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">Sobre</string>
     <string name="about_version">Versão %1$s</string>

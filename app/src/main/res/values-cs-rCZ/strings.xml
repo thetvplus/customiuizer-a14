@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Předchozí údržbu je nutné obnovit. Vypnutím tohoto přepínače obnovíte uložené původní stavy.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">O modulu</string>
     <string name="about_version">Verze %1$s</string>

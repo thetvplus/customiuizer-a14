@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Una operación de mantenimiento anterior requiere recuperación. Desactiva este interruptor para restaurar los estados guardados.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">Acerca de</string>
     <string name="about_version">Versión %1$s</string>

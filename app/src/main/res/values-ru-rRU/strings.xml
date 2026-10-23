@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Требуется восстановление после предыдущего обслуживания. Выключите этот переключатель, чтобы вернуть сохранённые исходные состояния.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">О приложении</string>
     <string name="about_version">Версия %1$s</string>

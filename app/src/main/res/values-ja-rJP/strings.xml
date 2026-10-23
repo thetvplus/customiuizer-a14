@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">前回のメンテナンス操作の復元が必要です。このスイッチをオフにすると、保存済みの元の状態に戻ります。</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">このアプリについて</string>
     <string name="about_version">バージョン %1$s</string>

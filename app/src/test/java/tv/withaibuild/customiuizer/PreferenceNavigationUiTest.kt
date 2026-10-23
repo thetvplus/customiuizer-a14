@@ -561,6 +561,35 @@ class PreferenceNavigationUiTest {
     }
 
     @Test
+    fun configurationCommitFailureCompensatesTheSuccessfulSystemMutationOnce() {
+        installSystemPackage("com.miui.daemon")
+        val transport = installMaintenanceBridge()
+        val toggle = requireNotNull(openExclusivePage().findPreference<CheckBoxPreferenceEx>("pref_key_various_disable_miui_daemon"))
+        val originalPrefs = requireNotNull(AppHelper.appPrefs)
+        var failNext = true
+        AppHelper.appPrefs = object : android.content.SharedPreferences by originalPrefs {
+            override fun edit(): android.content.SharedPreferences.Editor {
+                val editor = originalPrefs.edit()
+                return object : android.content.SharedPreferences.Editor by editor {
+                    override fun commit(): Boolean {
+                        if (failNext) { failNext = false; return false }
+                        return editor.commit()
+                    }
+                    override fun putBoolean(key: String, value: Boolean): android.content.SharedPreferences.Editor {
+                        editor.putBoolean(key, value); return this
+                    }
+                }
+            }
+        }
+        toggle.callChangeListener(true)
+        confirmLatestDialog()
+        assertEquals(0, activity.packageManager.getApplicationEnabledSetting("com.miui.daemon"))
+        assertEquals(2, transport.sends)
+        assertFalse(toggle.isChecked)
+        assertFalse(tv.withaibuild.customiuizer.utils.MaintenanceJournal.open(activity).contains(toggle.key))
+    }
+
+    @Test
     fun interruptedRestrictionRemainsRecoverableAfterReopeningTheSettingsPage() {
         installSystemPackage("com.miui.daemon")
         val journal = tv.withaibuild.customiuizer.utils.MaintenanceJournal.open(activity)

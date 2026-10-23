@@ -295,7 +295,7 @@ object GlobalActionSystemServerHooks {
         return try {
             val activityManager = XposedHelpers.callStaticMethod(ActivityManager::class.java, "getService")
                 ?: return false
-            val userId = XposedHelpers.callStaticMethod(ActivityManager::class.java, "getCurrentUser") as? Int
+            val userId = XposedHelpers.callMethod(context, "getUserId") as? Int
                 ?: return false
             val accepted = XposedHelpers.callMethod(
                 activityManager,
@@ -353,7 +353,7 @@ object GlobalActionSystemServerHooks {
         if (callerUid < 0) return null
         val requested = UserHandle.getUserHandleForUid(callerUid)
         val current = XposedHelpers.callStaticMethod(ActivityManager::class.java, "getCurrentUser") as? Int ?: return null
-        if (UserHandle.getUserHandleForUid(current * 100000) != requested) return null
+        if (current < 0 || UserHandle.getUserHandleForUid(Math.multiplyExact(current, 100000)) != requested) return null
         return XposedHelpers.callMethod(context, "createContextAsUser", requested, 0) as? Context
     }
 
