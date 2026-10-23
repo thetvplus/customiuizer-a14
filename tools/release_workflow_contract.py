@@ -8,11 +8,10 @@ from __future__ import annotations
 import copy
 import json
 
-VALIDATE_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_sha == github.sha && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))"
+VALIDATE_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_sha == github.sha && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))"
 SIGN_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run') && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'"
 PUBLISH_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'actions-only' && inputs.authorization != ''"
 AUTO_PUBLISH_IF = SIGN_IF + " && needs.validate.outputs.destination != 'actions-only'"
-BOOTSTRAP_BRANCH = "codex/a14-release-automation-20261023"
 KEYS = ("A14_KEYSTORE_BASE64", "A14_STORE_PASSWORD", "A14_KEY_ALIAS", "A14_KEY_PASSWORD")
 BUILD_COMMAND = ('trap \'rm -rf -- "$RUNNER_TEMP/a14-signing"\' EXIT\n'
                  'python tools/signed_release.py prepare-signing\n'
@@ -38,12 +37,10 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
     need(workflow.get("name") == ("A14 Signed Build" if signed else "A14 Promote Release"), "wrong workflow identity")
     if not isinstance(events, dict):
         return errors, json.dumps(sanitized)
-    need(set(events) <= ({"workflow_dispatch", "push", "workflow_run"} if signed else {"workflow_dispatch", "push"}), "untrusted triggers are forbidden")
+    need(set(events) <= ({"workflow_dispatch", "workflow_run"} if signed else {"workflow_dispatch"}), "untrusted triggers are forbidden")
     if signed:
         need(events.get("workflow_run") == {"workflows": ["A14 CI"], "types": ["completed"], "branches": ["main"]},
              "automatic release may follow only completed main CI")
-    if "push" in events:
-        need(events["push"] == {"branches": [BOOTSTRAP_BRANCH], "paths": [f".github/workflows/{filename}"]}, "bootstrap push must target only this exact branch/workflow")
     dispatch = events.get("workflow_dispatch") or {}
     need(isinstance(dispatch, dict), "invalid dispatch configuration")
     if signed:
@@ -63,9 +60,9 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
         need(validate.get("outputs") == {"authorized": "${{ steps.source.outputs.authorized }}", "ready": "${{ steps.plan.outputs.ready }}",
                                          "destination": "${{ steps.plan.outputs.destination }}"}, "authorization and release options must come from native source policy/plan")
         need(any(step.get("id") == "source" and step.get("run") == "python tools/signed_release.py source-policy"
-                 and step.get("if") == "github.event_name != 'push'" for step in validate.get("steps", [])), "native source policy validation is required")
+                 and "if" not in step for step in validate.get("steps", [])), "native source policy validation is required")
         need(any(step.get("run") == "python tools/signed_release.py release-plan"
-                 and step.get("id") == "plan" and step.get("if") == "github.event_name != 'push' && steps.source.outputs.authorized == 'true'"
+                 and step.get("id") == "plan" and step.get("if") == "steps.source.outputs.authorized == 'true'"
                  for step in validate.get("steps", [])), "release version must be checked before signing")
         receipt = {key: "${{ steps.candidate.outputs." + key + " }}" for key in ("source_sha", "apk_sha256", "run_attempt")}
         receipt["artifact_id"] = "${{ steps.artifact.outputs.artifact-id }}"
@@ -121,7 +118,7 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
         need(jobs.get("verify", {}).get("permissions") == {"contents": "read", "actions": "read", "attestations": "read"}, "candidate verification must be read-only")
         receipt = {key: "${{ steps.candidate.outputs." + key + " }}" for key in ("source_sha", "apk_sha256", "run_attempt", "artifact_id")}
         need(jobs.get("verify", {}).get("outputs") == receipt, "verification must pin the original artifact identity")
-        need(jobs.get("verify", {}).get("if") == "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch'", "promotion bootstrap must skip every executable job")
+        need(jobs.get("verify", {}).get("if") == "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch'", "promotion must require native manual dispatch")
         need("gradlew" not in json.dumps(workflow) and "prepare-signing" not in json.dumps(workflow), "promotion cannot rebuild or resign")
         for index, step in enumerate(job.get("steps", [])):
             if "signed_release.py publish " in step.get("run", "") and not errors:

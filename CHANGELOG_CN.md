@@ -1,4 +1,4 @@
-# 米客 A14｜CustoMIUIzer A14 — Changelog
+# 米客 A14 — 更新记录
 
 [English](CHANGELOG.md) | 简体中文
 

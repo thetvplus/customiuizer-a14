@@ -12,9 +12,9 @@ class CurrentPreferenceContractTest {
             CurrentPreferenceContract.classify("pref_key_system_island_expanded_width"))
         assertFalse(CurrentPreferenceContract.isExportable("system_island_expanded_width"))
         val preferences = PrefMap().apply { put("system_island_expanded_width", 600) }
-        val previous = tv.withaibuild.customiuizer.mods.IslandOptions.read(preferences)
+        val previous = tv.withaibuild.customiuizer.mods.island.IslandOptions.read(preferences)
         preferences.put("system_island_expanded_width", 240)
-        assertEquals(previous, tv.withaibuild.customiuizer.mods.IslandOptions.read(preferences))
+        assertEquals(previous, tv.withaibuild.customiuizer.mods.island.IslandOptions.read(preferences))
     }
 
     @Test

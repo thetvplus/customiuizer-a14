@@ -607,7 +607,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         existing[repository] = record
         if record is not None:
             check_release_identity(record, record["id"], tag, sha)
-            require(record.get("name") == f"米客 A14｜CustoMIUIzer A14 · {name}"
+            require(record.get("name") == f"CustoMIUIzer A14 · {name}"
                     and record.get("body", "").strip() == notes.read_text(encoding="utf-8").strip(),
                     "Existing release notes/title differ from the verified original candidate")
             check_release_assets(record, folder, filenames, draft=record["draft"], prerelease=prerelease, partial=record["draft"])
@@ -639,7 +639,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         # with repositories that enable immutable releases; never patch binaries.
         if record is None:
             request = folder / "release-request.json"
-            write_json(request, {"tag_name": tag, "target_commitish": sha, "name": f"米客 A14｜CustoMIUIzer A14 · {name}",
+            write_json(request, {"tag_name": tag, "target_commitish": sha, "name": f"CustoMIUIzer A14 · {name}",
                                  "body": notes.read_text(encoding="utf-8"), "draft": True, "prerelease": prerelease})
             created = json.loads(run("gh", "api", f"repos/{repository}/releases", "--method", "POST", "--input", str(request), env=env))
         else:
@@ -655,7 +655,10 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         draft = json.loads(run("gh", "api", f"repos/{repository}/releases/{created['id']}", env=env))
         check_release_identity(draft, created["id"], tag, sha)
         check_release_assets(draft, folder, filenames, draft=True, prerelease=prerelease)
-        if source is None or source["draft"]:
+        # Before the first publication, current main must still be the approved
+        # source. Once that exact source release is publicly verified, syncing
+        # its unchanged binary must not be invalidated by later main commits.
+        if repository == REPO:
             require_current_main(sha)
         check_tag(repository, tag, sha, env=env)
         run("gh", "release", "edit", tag, "--repo", repository, "--draft=false",

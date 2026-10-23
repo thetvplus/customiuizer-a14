@@ -3,7 +3,7 @@ package tv.withaibuild.customiuizer.mods.utils.feature
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.Controls
 import tv.withaibuild.customiuizer.mods.GlobalActions
-import tv.withaibuild.customiuizer.mods.IslandEntranceStyle
+import tv.withaibuild.customiuizer.mods.island.IslandEntranceStyle
 import java.util.concurrent.atomic.AtomicReference
 import tv.withaibuild.customiuizer.mods.System as ModsSystem
 import tv.withaibuild.customiuizer.mods.SystemAudioHooks
@@ -981,7 +981,7 @@ internal class StrongToastPresentationFeature(
     override fun installHook() {
         val runtimeState = StrongToastRuntimeState.install(mPrefs)
         SystemUIStrongToastHooks.install(lpparam, runtimeState.snapshotRef)
-        tv.withaibuild.customiuizer.mods.DynamicIslandActivities.install(lpparam, mPrefs)
+        tv.withaibuild.customiuizer.mods.island.DynamicIslandActivities.install(lpparam, mPrefs)
     }
 }
 

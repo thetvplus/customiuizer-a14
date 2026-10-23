@@ -612,6 +612,30 @@ class DualPublicationTest(unittest.TestCase):
             self.assertNotIn(server.download, server.records)
             self.assertFalse(any(event[0] == "git" for event in server.events))
 
+    def test_main_may_advance_after_source_verification_without_invalidating_xposed_sync(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            def current_main(sha):
+                self.assertEqual(COMMIT, sha)
+                if release.REPO in server.records and not server.records[release.REPO]["draft"]:
+                    raise ValueError("main moved after source publication")
+            with self.context(server), patch.object(release, "require_current_main", side_effect=current_main):
+                release.publish_verified(root, "42", "both", metadata)
+            self.assertFalse(server.records[server.download]["draft"])
+
+    def test_main_moving_before_source_publication_stops_both_destinations(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server), patch.object(release, "require_current_main", side_effect=ValueError("main moved")):
+                with self.assertRaisesRegex(ValueError, "main moved"):
+                    release.publish_verified(root, "42", "both", metadata)
+            self.assertTrue(server.records[release.REPO]["draft"])
+            self.assertNotIn(server.download, server.records)
+
     def test_partial_xposed_failure_resumes_only_missing_assets_without_changing_source(self):
         for prerelease in (False, True):
             with self.subTest(prerelease=prerelease), tempfile.TemporaryDirectory() as temp:
@@ -706,8 +730,10 @@ class ProtectedWorkflowTest(unittest.TestCase):
             self.assertTrue(any("CI_SIGNING" in item for item in self.scan(text)))
 
     def test_push_can_never_sign_and_untrusted_triggers_are_rejected(self):
-        text = self.workflow().replace("  workflow_dispatch:", "  pull_request:")
-        self.assertTrue(self.scan(text))
+        for event in ("pull_request", "push"):
+            text = self.workflow().replace("  workflow_dispatch:", f"  {event}:")
+            with self.subTest(event=event):
+                self.assertTrue(self.scan(text))
 
     def test_main_ci_success_sha_and_post_approval_preflight_guards_are_required(self):
         for original, changed in (("branches: [main]", "branches: ['*']"),

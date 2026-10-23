@@ -1,4 +1,4 @@
-# 米客 A14｜CustoMIUIzer A14 — Changelog
+# CustoMIUIzer A14 — Changelog
 
 English | [简体中文](CHANGELOG_CN.md)
 

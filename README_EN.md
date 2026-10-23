@@ -11,7 +11,7 @@ A system UI and interaction customization module maintained for **HyperOS 1 / An
 
 This release rebuilds settings pages and navigation, adds Dynamic Island, Toast positioning and direct slider-value entry, expands full-width Dock and glass controls, and refines audio, vibration, System UI and maintenance recovery. Updates preserve the signing identity and app data.
 
-The full repository and source name is 米客 A14｜CustoMIUIzer A14. The app and About page use 米客 A14 or CustoMIUIzer A14 according to the selected language.
+The English app name is CustoMIUIzer A14; the Chinese app name is 米客 A14. App screens, the in-app About page and documentation use the name for their language. The combined name 米客 A14｜CustoMIUIzer A14 is used for bilingual display on the repository homepage and GitHub About.
 
 ## Features
 
@@ -34,11 +34,11 @@ The full repository and source name is 米客 A14｜CustoMIUIzer A14. The app an
 
 Install the official APK, enable the module and required scopes in your framework, then restart the affected process or device. Settings indicate which changes require a restart. Hooks selected at installation time require restarting their target process after changing the switch.
 
-Open System → Dynamic Island for app feedback and media integrations, disabled by default. Restart System UI after enabling. See the [Dynamic Island guide](docs/DYNAMIC_ISLAND.md) for behavior and pending device checks.
+Open System → Dynamic Island for app feedback and media integrations, disabled by default. Restart System UI after enabling. See the [Dynamic Island guide](docs/features/island/README.md) for behavior and pending device checks.
 
 The working branch also adds a track-swipe switch enabled by default, prevents hidden paused music from flashing when returning Home, and refines settings wording and grouping. These changes are not yet part of the official release above. See the [release guide](docs/RELEASE.md) for the automated build and publication entry point.
 
-Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/DUO_STATUS_BAR.md) for sizing, signal and hint behavior.
+Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/features/duo-status-bar.md) for sizing, signal and hint behavior.
 
 Dock background is disabled by default. Open Home screen → Dock, then restart the launcher after changes. Background shrink adjusts all four edges: positive values contract, negative values expand, with a +1 dp default. Icon space and host clipping bound the effective adjustment; icons retain their native positions and sizes.
 
@@ -62,4 +62,4 @@ Support continued maintenance via WeChat or [PayPal](https://paypal.me/Jinjitv).
 
 <img src="app/src/main/res/drawable-nodpi/wechat_donation_code.webp" alt="WeChat donation code" width="320">
 
-Distributed under [GPL-3.0](LICENSE). Derived from [Mikanoshi/CustoMIUIzer](https://github.com/Mikanoshi/CustoMIUIzer), with Android 14 work referenced from [MonwF/customiuizer](https://github.com/MonwF/customiuizer). Duo references and bundled licenses are listed in the [Duo notes](docs/DUO_STATUS_BAR.md).
+Distributed under [GPL-3.0](LICENSE). Derived from [Mikanoshi/CustoMIUIzer](https://github.com/Mikanoshi/CustoMIUIzer), with Android 14 work referenced from [MonwF/customiuizer](https://github.com/MonwF/customiuizer). Duo references and bundled licenses are listed in the [Duo notes](docs/features/duo-status-bar.md).

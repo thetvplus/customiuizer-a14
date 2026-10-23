@@ -112,7 +112,7 @@ Release Notes 自动取候选 exact SHA 的本版中英文节，不另维护第�
 
 | 对象 | 格式 |
 | --- | --- |
-| Release 标题 | `米客 A14｜CustoMIUIzer A14 · <versionName>` |
+| Release 标题 | `CustoMIUIzer A14 · <versionName>`（两仓库统一使用英文软件名） |
 | 源码 tag | `<versionName>` |
 | Xposed tag | `<versionCode>-<versionName>` |
 | APK（候选及两端发布同名） | `CustoMIUIzer-A14-<versionName>-<sha6>.apk` |
@@ -132,7 +132,7 @@ gh attestation verify candidate/<apk> --repo thetvplus/customiuizer-a14 --signer
 
 Agent 完成实现、分支核验、按任务授权合并及 main 核验后，记录 exact SHA 和 Actions 链接即可结束，不创建定时轮询。后续确认、签名、按序发布、资产读回和失败状态由 Actions 自行管理；只有失败或用户要求时再介入。用户明确只要触发签名试用且自行查看时，传 actions-only，确认 run 绑定 SHA 后即可结束，标明“已触发，尚未确认成功”。不能用“已触发”冒充“已成功”，也不能保证远端权限、网络和实机永不出错。
 
-本工作分支 `codex/a14-release-automation-20261023` 没有新增正式签名授权。其窄 push 仅注册和核验工作流，绝不签名或发布；main 合并和真实发版各按当前任务授权处理。
+签名受信分支仍由 release-policy 与 Environment 同时限制；普通工作分支不因整理、PR 或文档变更取得正式签名权限。临时分支注册触发已移除，正式入口仅保留 main CI 后续事件和手动操作。
 
 ### GitHub 认证标记
 

@@ -2,11 +2,6 @@ name: A14 Promote Release
 run-name: A14 Promote Release / build ${{ inputs.build_run_id }} / ${{ inputs.destination }}
 
 on:
-  # Register on the authorized branch without merging main. Every job below
-  # requires manual dispatch, so this event never downloads or publishes an APK.
-  push:
-    branches: [codex/a14-release-automation-20261023]
-    paths: [.github/workflows/a14-promote-release.yml]
   workflow_dispatch:
     inputs:
       build_run_id:

@@ -1,5 +1,8 @@
 package tv.withaibuild.customiuizer.mods
 
+import tv.withaibuild.customiuizer.mods.island.DynamicIslandActivities
+import tv.withaibuild.customiuizer.mods.island.DynamicIslandStatusBarFade
+
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
