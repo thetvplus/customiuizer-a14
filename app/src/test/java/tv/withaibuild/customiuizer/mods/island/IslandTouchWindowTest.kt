@@ -17,6 +17,25 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], qualifiers = "mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandTouchWindowTest {
+    @Test fun unchangedGeometryRetainsLayoutObjectsAndDoesNotRequestLayout() {
+        val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        try {
+            val shell = IslandActivityView(host)
+            val root = IslandTouchWindow(shell)
+            host.setContentView(root)
+            shell.geometry(240, 40, 40)
+            root.geometry(240, 40)
+            layout(root, 240 + 2 * root.margin, 40 + 2 * root.margin)
+            val params = shell.layoutParams
+            val children = (0 until shell.childCount).map { shell.getChildAt(it).layoutParams }
+            repeat(10) { shell.geometry(240, 40, 40); root.geometry(240, 40) }
+            assertSame(params, shell.layoutParams)
+            children.forEachIndexed { index, item -> assertSame(item, shell.getChildAt(index).layoutParams) }
+            assertFalse(root.isLayoutRequested)
+            assertFalse(shell.isLayoutRequested)
+        } finally { host.finish() }
+    }
+
     @Test fun boundedWindowAcceptsRealEdgeStartsAndReleaseWithoutAnyMove() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         try {

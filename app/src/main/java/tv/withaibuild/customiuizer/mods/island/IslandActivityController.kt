@@ -267,6 +267,7 @@ internal class IslandActivityController(
     }
 
     init {
+        touchWindow.onUnavailable = { handler.post { ModuleHelper.guarded { if (!disposed) render() } } }
         shell.onDismiss = { state.dismiss(); render() }
         shell.onOpen = { openPlayer() }
         shell.onGesture = { executeGesture(it) }
@@ -729,6 +730,7 @@ internal class IslandActivityController(
     }
 
     private fun geometry(label: String? = null): Geometry? {
+        if (!touchWindow.inputRegionAvailable) return null
         val bounds = screen ?: return null
         // Landscape cutouts are at a side; keep that layout entirely native.
         if (bounds.width >= bounds.height) return null
@@ -829,6 +831,10 @@ internal class IslandActivityController(
         val outsetsChanged = windowOutsets.left != outset
         windowOutsets.set(outset, outset, outset, outset)
         touchWindow.geometry(geometry.width, geometry.height)
+        val windowGeometryChanged = params.width != geometry.width + 2 * touchWindow.margin ||
+            params.height != geometry.height + 2 * touchWindow.margin ||
+            params.y != geometry.top - touchWindow.margin ||
+            params.x != geometry.left - touchWindow.margin - ((screen?.width ?: geometry.width) - (geometry.width + 2 * touchWindow.margin)) / 2
         params.width = geometry.width + 2 * touchWindow.margin
         params.height = geometry.height + 2 * touchWindow.margin
         params.y = geometry.top - touchWindow.margin
@@ -840,8 +846,9 @@ internal class IslandActivityController(
                 // after a native activity or a notification-panel transition.
                 shell.prepareEntry()
                 window!!.addView(touchWindow, params); attached = true
+                if (!touchWindow.inputRegionAvailable) { hide(); return false }
             }
-            else if (outsetsChanged || lastWidth != geometry.width || lastHeight != geometry.height || lastTop != geometry.top || lastLeft != geometry.left) window!!.updateViewLayout(touchWindow, params)
+            else if (outsetsChanged || windowGeometryChanged) window!!.updateViewLayout(touchWindow, params)
             if (entering || resumingExit || secondary || lastWidth != geometry.width || lastHeight != geometry.height) {
                 shell.transition(lastWidth, lastHeight, geometry.width, geometry.height, entering, secondary)
             }

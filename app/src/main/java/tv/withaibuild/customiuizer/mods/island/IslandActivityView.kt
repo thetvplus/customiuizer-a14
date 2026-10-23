@@ -241,18 +241,29 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         iconSize = (dp(24) * (1f + (height.toFloat() / dp(40).coerceAtLeast(1) - 1f) / 3f)).toInt()
         val half = (if (cameraGap > 0) (width - cameraGap) / 2
             else dp(IslandSizing.EDGE_DP) + iconSize + dp(8)).coerceAtLeast(1)
-        icon.layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+        val iconParams = icon.layoutParams
+        if (iconParams.width != iconSize || iconParams.height != iconSize) {
+            iconParams.width = iconSize; iconParams.height = iconSize
+            icon.layoutParams = iconParams
+        }
         iconMask.cornerRadius = dp(7).toFloat()
         iconMask.shape = if (avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
         left.setPadding(dp(IslandSizing.EDGE_DP), 0, 0, 0)
-        left.layoutParams = LayoutParams(half, height, Gravity.TOP or Gravity.START)
-        text.layoutParams = LayoutParams(captionRoom(width, cameraGap), height, Gravity.TOP or Gravity.END).apply {
-            marginEnd = dp(IslandSizing.EDGE_DP)
-        }
-        wave.layoutParams = LayoutParams(dp(24), dp(20), Gravity.TOP or Gravity.END).apply {
-            topMargin = (height - dp(20)) / 2; marginEnd = dp(IslandSizing.EDGE_DP)
-        }
+        layoutChild(left, half, height, Gravity.TOP or Gravity.START)
+        layoutChild(text, captionRoom(width, cameraGap), height, Gravity.TOP or Gravity.END,
+            end = dp(IslandSizing.EDGE_DP))
+        layoutChild(wave, dp(24), dp(20), Gravity.TOP or Gravity.END,
+            top = (height - dp(20)) / 2, end = dp(IslandSizing.EDGE_DP))
         updateContour()
+    }
+
+    private fun layoutChild(child: View, width: Int, height: Int, gravity: Int, top: Int = 0, end: Int = 0) {
+        val params = child.layoutParams as LayoutParams
+        if (params.width == width && params.height == height && params.gravity == gravity &&
+            params.topMargin == top && params.marginEnd == end) return
+        params.width = width; params.height = height; params.gravity = gravity
+        params.topMargin = top; params.marginEnd = end
+        child.layoutParams = params
     }
 
     fun cameraAnchor(centerY: Float, diameter: Float) {

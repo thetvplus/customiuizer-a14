@@ -8,7 +8,8 @@ import android.view.ViewConfiguration
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
-import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import java.lang.ref.WeakReference
+import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -22,27 +23,53 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
     private val inverse = Matrix()
     private var tracking = false
     private var observer: ViewTreeObserver? = null
-    private val listenerType = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-    private val listener = Proxy.newProxyInstance(listenerType.classLoader, arrayOf(listenerType)) { proxy, method, args ->
-        when (method.name) {
-            "onComputeInternalInsets" -> {
-                ModuleHelper.guarded {
-                    val info = args!![0]
-                    XposedHelpers.callMethod(info, "setTouchableInsets", 3) // TOUCHABLE_INSETS_REGION
-                    val region = XposedHelpers.getObjectField(info, "touchableRegion") as Region
-                    if (shell.alpha <= .01f || shell.visibility != VISIBLE) region.setEmpty()
-                    else {
-                        val box = hitBounds()
-                        region.set(box.left, box.top, box.right, box.bottom)
+    private class Insets(val listener: Any, val add: Method, val remove: Method)
+    private val insets: Insets? = ModuleHelper.guarded<Insets?>(null) {
+        val listenerType = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+        val infoType = Class.forName("android.view.ViewTreeObserver\$InternalInsetsInfo")
+        val setMode = infoType.getMethod("setTouchableInsets", Int::class.javaPrimitiveType)
+        val regionField = infoType.getField("touchableRegion")
+        val owner = WeakReference(this)
+        val listener = Proxy.newProxyInstance(listenerType.classLoader, arrayOf(listenerType)) { proxy, method, args ->
+            when (method.name) {
+                "onComputeInternalInsets" -> {
+                    val root = owner.get()
+                    if (root != null) {
+                        val success = ModuleHelper.guarded(false) {
+                            val info = args!![0]
+                            val region = regionField.get(info) as Region
+                            region.setEmpty()
+                            setMode.invoke(info, 3) // TOUCHABLE_INSETS_REGION
+                            if (root.inputRegionAvailable && root.observer != null &&
+                                root.shell.alpha > .01f && root.shell.visibility == VISIBLE) {
+                                val box = root.hitBounds()
+                                region.set(box.left, box.top, box.right, box.bottom)
+                            }
+                            true
+                        }
+                        if (!success) root.unavailable()
                     }
+                    null
                 }
-                null
+                "hashCode" -> System.identityHashCode(proxy)
+                "equals" -> proxy === args?.get(0)
+                "toString" -> "IslandInputRegion"
+                else -> null
             }
-            "hashCode" -> System.identityHashCode(proxy)
-            "equals" -> proxy === args?.get(0)
-            "toString" -> "IslandInputRegion"
-            else -> null
         }
+        Insets(listener, ViewTreeObserver::class.java.getMethod("addOnComputeInternalInsetsListener", listenerType),
+            ViewTreeObserver::class.java.getMethod("removeOnComputeInternalInsetsListener", listenerType))
+    }
+    var inputRegionAvailable: Boolean = insets != null
+        private set
+    var onUnavailable: (() -> Unit)? = null
+
+    private fun unavailable() {
+        if (!inputRegionAvailable) return
+        inputRegionAvailable = false
+        tracking = false
+        shell.cancelInputs()
+        onUnavailable?.invoke()
     }
 
     init {
@@ -60,7 +87,12 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
     }
 
     fun geometry(width: Int, height: Int) {
-        shell.layoutParams = LayoutParams(width, height).apply { leftMargin = margin; topMargin = margin }
+        val params = shell.layoutParams as? LayoutParams
+        if (params != null && params.width == width && params.height == height &&
+            params.leftMargin == margin && params.topMargin == margin) return
+        shell.layoutParams = (params ?: LayoutParams(width, height)).apply {
+            this.width = width; this.height = height; leftMargin = margin; topMargin = margin
+        }
     }
 
     internal fun hitBounds(): IslandRecallHit.Box {
@@ -74,7 +106,7 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             val box = hitBounds()
-            tracking = shell.alpha > .01f && event.x >= box.left && event.x < box.right &&
+            tracking = inputRegionAvailable && shell.visibility == VISIBLE && shell.alpha > .01f && event.x >= box.left && event.x < box.right &&
                 event.y >= box.top && event.y < box.bottom
         }
         if (!tracking) return false
@@ -92,14 +124,25 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        observer = viewTreeObserver.also { XposedHelpers.callMethod(it, "addOnComputeInternalInsetsListener", listener) }
+        val bridge = insets ?: return
+        if (!inputRegionAvailable || observer != null) return
+        observer = viewTreeObserver
+        if (!ModuleHelper.guarded(false) { bridge.add.invoke(observer, bridge.listener); true }) unavailable()
     }
 
     override fun onDetachedFromWindow() {
-        observer?.takeIf { it.isAlive }?.let { XposedHelpers.callMethod(it, "removeOnComputeInternalInsetsListener", listener) }
-        observer = null
-        tracking = false
-        shell.cancelInputs()
-        super.onDetachedFromWindow()
+        val previous = observer
+        observer = null // Any retained callback becomes inert before reflection or cleanup.
+        try {
+            val removed = ModuleHelper.guarded(false) {
+                if (previous?.isAlive == true) insets?.let { it.remove.invoke(previous, it.listener) }
+                true
+            }
+            if (!removed) inputRegionAvailable = false
+        } finally {
+            tracking = false
+            shell.cancelInputs()
+            super.onDetachedFromWindow()
+        }
     }
 }
