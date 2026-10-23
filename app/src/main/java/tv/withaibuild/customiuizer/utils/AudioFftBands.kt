@@ -1,6 +1,6 @@
 package tv.withaibuild.customiuizer.utils
 
-import kotlin.math.log10
+import kotlin.math.sqrt
 
 /** Shared FFT math. Signed complex bins, no retained audio or callback-time allocation. */
 internal object AudioFftBands {
@@ -24,10 +24,13 @@ internal object AudioFftBands {
             val frequency = when (index) { 0 -> 200f; 1 -> 600f; 2 -> 1800f; 3 -> 6000f; else -> hertz * .5f }
             val end = ((frequency * fft.size / hertz).toInt() + 1).coerceIn(start, fft.size / 2)
             val power = peakPower(fft, start, end)
-            val energy = if (power > 0f) (10f * log10(power) / 45.16f).coerceIn(0f, 1f) else 0f
-            // Bounded attack/release. Only five values survive a frame; raw FFT never does.
+            // Preserve amplitude changes: logarithmic compression held normal music near
+            // full height. Signed 8-bit complex components have at most 32768 power.
+            val energy = sqrt(power / 32768f)
+            // At 20 Hz a quiet interval falls below 10% in four frames (200 ms).
+            // Only five values survive a frame; raw FFT never does.
             val previous = output[index]
-            output[index] = (previous + (energy - previous) * if (energy > previous) .65f else .25f).coerceIn(0f, 1f)
+            output[index] = (previous + (energy - previous) * if (energy > previous) .8f else .45f).coerceIn(0f, 1f)
             start = end
         }
         return true
