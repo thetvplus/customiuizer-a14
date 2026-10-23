@@ -128,10 +128,12 @@ class GestureMachine(
         snapshots[ownerId] = next
 
         val allowed = gate.filter(event.entry, ownerId, event, commands)
-        effectExecutor.execute(allowed, deps, config, context)
-
-        if (arbiter != null && (GestureCommand.Reset in allowed || event.actionMasked == GestureAction.UP || event.actionMasked == GestureAction.CANCEL)) {
-            arbiter.release(ownerId, event)
+        try {
+            effectExecutor.execute(allowed, deps, config, context)
+        } finally {
+            if (arbiter != null && (GestureCommand.Reset in allowed || event.actionMasked == GestureAction.UP || event.actionMasked == GestureAction.CANCEL)) {
+                arbiter.release(ownerId, event)
+            }
         }
     }
 
@@ -203,12 +205,16 @@ class GestureMachine(
         arbiter?.releaseOwner(ownerId)
     }
 
-    /** Reset the whole machine, e.g. when the ClassLoader is torn down. */
+    /** Reset this machine without cancelling gestures owned by another runtime. */
     fun clear() {
+        // Only prepared owners can acquire tokens. The arbiter is shared with the
+        // status bar, whose in-flight gestures must survive plugin replacement.
+        for (ownerId in dependencies.keys) {
+            arbiter?.releaseOwner(ownerId)
+        }
         snapshots.clear()
         dependencies.clear()
         configs.clear()
         gate.clear()
-        arbiter?.releaseAll()
     }
 }

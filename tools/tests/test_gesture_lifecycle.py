@@ -95,7 +95,7 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
         self.assertIn("activeRuntime = null", unbind_body)
 
     def test_control_center_plugin_runtime_bind_has_clear(self) -> None:
-        """ControlCenterPluginRuntime.bind has a symmetric clear() that releases all state."""
+        """Plugin cleanup releases its runtime while preserving the shared status-bar arbiter."""
         text = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/ControlCenterPluginRuntime.kt")
 
         self.assertRegex(text, r"fun\s+bind\s*\(\s*loader:\s*ClassLoader\s*\)", "bind(loader) missing")
@@ -106,12 +106,12 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
         self.assertIn("clearInternal()", text)
         self.assertIn("runtimeHolder.bind(loader)", text)
 
-        # clearInternal() tears down the current runtime and arbiter state.
+        # The runtime owns token cleanup; the arbiter also serves the status bar.
         clear_internal = re.search(r"private\s+fun\s+clearInternal\s*\(\s*\).*?(?=private\s+|fun\s+|\Z)", text, re.DOTALL)
         self.assertIsNotNone(clear_internal, "clearInternal missing")
         ci_body = clear_internal.group(0)
         self.assertIn("runtimeHolder.unbind()", ci_body)
-        self.assertIn("arbiter.releaseAll()", ci_body)
+        self.assertNotIn("arbiter.releaseAll()", text)
         self.assertIn("activeLoader = null", ci_body)
 
     def test_control_center_machine_prepare_has_corresponding_clear(self) -> None:
@@ -200,7 +200,7 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
         self.assertIn("seen.removeIf { it.ownerId == ownerId }", body)
 
     def test_classloader_replacement_cleans_old_runtime(self) -> None:
-        """Binding a new ClassLoader invalidates the old lease and clears the old machine/arbiter."""
+        """A new ClassLoader clears old plugin owners without cancelling other runtimes."""
         holder = source(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/gesture/ControlCenterGestureRuntimeHolder.kt"
         )
@@ -218,7 +218,7 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
         self.assertIn("clearInternal()", bind_body)
         self.assertIn("runtimeHolder.bind(loader)", bind_body)
 
-        # Whole-machine clear releases all owner state.
+        # Whole-machine clear releases its prepared owners before dropping their IDs.
         machine = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/gesture/GestureMachine.kt")
         whole_clear = re.search(r"fun\s+clear\s*\(\s*\).*?(?=fun\s+|class\s+|\Z)", machine, re.DOTALL)
         self.assertIsNotNone(whole_clear, "GestureMachine.clear() missing")
@@ -227,7 +227,10 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
         self.assertIn("dependencies.clear()", whole_body)
         self.assertIn("configs.clear()", whole_body)
         self.assertIn("gate.clear()", whole_body)
-        self.assertIn("arbiter?.releaseAll()", whole_body)
+        self.assertIn("for (ownerId in dependencies.keys)", whole_body)
+        self.assertIn("arbiter?.releaseOwner(ownerId)", whole_body)
+        self.assertLess(whole_body.index("arbiter?.releaseOwner(ownerId)"), whole_body.index("dependencies.clear()"))
+        self.assertNotIn("releaseAll()", whole_body)
 
     def test_stale_old_loader_detach_does_not_clear_new_runtime(self) -> None:
         """A detach callback from an old ClassLoader cannot wipe the new runtime."""

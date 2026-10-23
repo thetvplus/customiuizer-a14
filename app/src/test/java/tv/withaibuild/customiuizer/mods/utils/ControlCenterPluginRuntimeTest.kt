@@ -83,6 +83,34 @@ class ControlCenterPluginRuntimeTest {
     }
 
     @Test
+    fun pluginLifecycleDoesNotCancelStatusBarGesture() {
+        val statusBar = newPreparedGestureMachine(engine.arbiter())
+        val event = down(1, 1000L).copy(entry = GestureEntry.STATUS_BAR_TOUCH)
+        statusBar.prepare(1, Any())
+        statusBar.dispatch(event, Any())
+        val before = statusBar.snapshot(1)
+
+        fun assertStatusBarStillOwnsGesture() {
+            assertEquals(1, engine.arbiter().tokensForOwner(1))
+            assertEquals(before, statusBar.snapshot(1))
+        }
+
+        engine.bind(newIsolatedClassLoader())
+        assertStatusBarStillOwnsGesture()
+        engine.bind(newIsolatedClassLoader())
+        assertStatusBarStillOwnsGesture()
+        engine.installPluginHooksFailure = IllegalStateException("partial replacement")
+        assertTrue(engine.bind(newIsolatedClassLoader()) is ControlCenterBindResult.Failed)
+        assertStatusBarStillOwnsGesture()
+        engine.clear()
+        assertStatusBarStillOwnsGesture()
+
+        statusBar.dispatch(event.copy(actionMasked = GestureAction.UP, eventTime = 1100L), Any())
+        assertEquals(GestureState.IDLE, statusBar.snapshot(1).state)
+        assertEquals(0, engine.arbiter().heldTokenCount())
+    }
+
+    @Test
     fun explicitClearNullsAllReferences() {
         val loader = testLoader
 
