@@ -1908,6 +1908,8 @@ object SystemUIControlCenterHooks {
                         }
                         val bIntent = Intent(GlobalActions.ACTION_PREFIX + "SetFreeFormPackage")
                         bIntent.putExtra("package", longClickIntent.component!!.packageName)
+                        bIntent.putExtra("user", ModuleHelper.getUserId())
+                        bIntent.putExtra("component", longClickIntent.component!!.flattenToString())
                         bIntent.setPackage("android")
                         val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
                         mContext.sendBroadcast(bIntent)

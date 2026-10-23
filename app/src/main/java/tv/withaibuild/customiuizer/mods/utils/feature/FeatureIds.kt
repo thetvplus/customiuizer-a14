@@ -163,10 +163,7 @@ data object AppsDisableServiceFeatureId : FeatureId {
     override val id = 37
     override val name = "apps_disable_service"
 }
-data object DisableAnyNotificationBlockFeatureId : FeatureId {
-    override val id = 38
-    override val name = "disable_any_notification_block"
-}
+// 38 retired: global NotificationChannel policy overrides. Do not reuse this identity.
 data object AllRotationsFeatureId : FeatureId {
     override val id = 39
     override val name = "all_rotations"

@@ -71,11 +71,11 @@ internal class OpenAppInFreeFormFeature(
     lpparam,
     OpenAppInFreeFormFeatureId,
     "Open App In Free Form",
-    "system_notify_openinfw"
+    "system_fw_forcein_actionsend"
 ) {
     companion object {
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_notify_openinfw") || prefs.getBoolean("system_fw_forcein_actionsend") || prefs.getBoolean("system_betterpopups_allowfloat") || prefs.getBoolean("system_cc_freeform_when_longclick")
+        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_fw_forcein_actionsend") || prefs.getBoolean("system_cc_freeform_when_longclick")
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
@@ -680,23 +680,6 @@ internal class AppsDisableServiceFeature(
     override fun installHook() = Various.AppsDisableServiceHook(lpparam)
 }
 
-internal class DisableAnyNotificationBlockFeature(
-    lpparam: XposedModuleInterface.SystemServerStartingParam
-) : BaseSystemServerFeature(
-    lpparam,
-    DisableAnyNotificationBlockFeatureId,
-    "Disable Any Notification Block",
-    "system_disableanynotif"
-) {
-    companion object {
-        @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_disableanynotif")
-    }
-
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = SystemNotificationHooks.DisableAnyNotificationBlockHook(lpparam)
-}
-
 internal class AllRotationsFeature(
     lpparam: XposedModuleInterface.SystemServerStartingParam
 ) : BaseSystemServerFeature(
@@ -961,7 +944,7 @@ object SystemServerFeatures {
         LazyFeatureSpec(
             id = OpenAppInFreeFormFeatureId,
             name = "Open App In Free Form",
-            preferenceKey = "system_notify_openinfw",
+            preferenceKey = "system_fw_forcein_actionsend",
             target = FeatureTarget.SYSTEM_SERVER,
             phase = InstallPhase.SYSTEM_SERVER_STARTING,
             enabled = { prefs -> OpenAppInFreeFormFeature.evaluateEnabled(prefs) },
@@ -1281,15 +1264,6 @@ object SystemServerFeatures {
             phase = InstallPhase.SYSTEM_SERVER_STARTING,
             enabled = { prefs -> AppsDisableServiceFeature.evaluateEnabled(prefs) },
             factory = { AppsDisableServiceFeature(lpparam) },
-        ),
-        LazyFeatureSpec(
-            id = DisableAnyNotificationBlockFeatureId,
-            name = "Disable Any Notification Block",
-            preferenceKey = "system_disableanynotif",
-            target = FeatureTarget.SYSTEM_SERVER,
-            phase = InstallPhase.SYSTEM_SERVER_STARTING,
-            enabled = { prefs -> DisableAnyNotificationBlockFeature.evaluateEnabled(prefs) },
-            factory = { DisableAnyNotificationBlockFeature(lpparam) },
         ),
         LazyFeatureSpec(
             id = AllRotationsFeatureId,

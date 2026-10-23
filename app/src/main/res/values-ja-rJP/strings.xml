@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">前回のメンテナンス操作の復元が必要です。このスイッチをオフにすると、保存済みの元の状態に戻ります。</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">このアプリについて</string>
     <string name="about_version">バージョン %1$s</string>
@@ -167,8 +168,8 @@
     <string name="system_notifrowmenu_appinfo">アプリ情報</string>
     <string name="system_notifrowmenu_openinfw">フローティングウィンドウ</string>
     <string name="system_notifrowmenu_forceclose">強制的に閉じる</string>
-    <string name="system_disableanynotif_title">すべての通知を無効化可能にする</string>
-    <string name="system_disableanynotif_summ">システム通知も無効化可能にします</string>
+    <string name="system_disableanynotif_title">アプリの通知を管理</string>
+    <string name="system_disableanynotif_summ">一般アプリの設定を有効にし、システム・チャンネル・管理者の保護を維持します</string>
     <string name="system_expandnotifs_title">通知を拡張した状態で表示する</string>
     <string name="system_expandnotifs_summ">通知を展開した状態で表示します</string>
     <string name="system_expandnotifs_apps_title">ブラック/ホワイトリスト</string>
@@ -1193,7 +1194,7 @@
     <string name="system_island_simplified_title">アニメーションを簡略化</string>
     <string name="system_island_simplified_summ">画面切り替えを抑え、波形を静止します。</string>
     <string name="system_island_excluded_apps_title">除外するアプリ</string>
-    <string name="system_island_excluded_apps_summ">これらのアプリは通常のToastを使用し、メディアを表示しません。通常のToastのフィルターはToastページで設定します。</string>
+    <string name="system_island_excluded_apps_summ">これらのアプリは標準のToastと通知を維持し、音楽を島に表示しません。除外は通知の許可リストより優先されます。</string>
     <string name="system_island_playing">再生中</string>
     <string name="system_island_paused">一時停止</string>
     <string name="system_island_connecting">接続中</string>
@@ -1211,11 +1212,11 @@
     <string name="system_island_height_title">アイランドの高さ</string>
     <string name="system_island_height_summ">短いアイランドと長いアイランドは同じ固定高さを使用します。</string>
     <string name="system_island_width_auto_title">収納時の幅を自動調整</string>
-    <string name="system_island_width_auto_summ">内容とステータスバーの空きに合わせて、短いアイランドと長いアイランドの幅を決めます。オフにすると個別に調整できます。</string>
+    <string name="system_island_width_auto_summ">内容、高さ、画面の安全領域に合わせて幅を選択します。オフにすると短い島と長い島を個別に設定できます。</string>
     <string name="system_island_width_short_title">短いアイランドの幅</string>
-    <string name="system_island_width_short_summ">アートワーク、波形、短い状態に使用します。カメラ、時刻、電池の領域を優先します。</string>
+    <string name="system_island_width_short_summ">短い島の希望幅。カメラの切り欠きと画面の安全領域を優先します。</string>
     <string name="system_island_width_medium_title">長いアイランドの幅</string>
-    <string name="system_island_width_medium_summ">長いテキストに使用します。短いアイランド以上の幅で、ステータスバーの空きに収めます。</string>
+    <string name="system_island_width_medium_summ">長い島の希望幅。短い島以上とし、画面の安全領域を優先します。</string>
     <string name="system_island_chat_excluded_apps_title">標準通知を使うアプリ</string>
     <string name="system_island_chat_excluded_apps_summ">選択したアプリはシステムのフローティング通知を使用します。Toast と音楽には影響しません。</string>
     <string name="system_island_gesture_left">左スワイプ</string>
@@ -1231,10 +1232,20 @@
     <string name="system_island_horizontal_offset_title">横方向のオフセット</string>
     <string name="system_island_feedback_title">システムのフィードバック</string>
     <string name="system_island_notification_apps_title">通知を許可するアプリ</string>
-    <string name="system_island_notification_apps_summ">選択したアプリの通知のみ表示します。除外したアプリは標準の通知を使用します。</string>
+    <string name="system_island_notification_apps_summ">選択したアプリのみ対象です。除外と標準のポップアップ通知の維持が優先されます。</string>
     <string name="system_island_action_play">再生</string>
     <string name="system_island_action_pause">一時停止</string>
     <string name="system_island_action_player">プレーヤーを開く</string>
     <string name="system_island_music_group">音楽とメディア</string>
     <string name="system_island_feedback_ringer_title">着信音モード</string>
+    <string name="system_island_basic_group">基本設定</string>
+    <string name="system_island_geometry_group">位置とサイズ</string>
+    <string name="system_island_appearance_group">外観とアニメーション</string>
+    <string name="system_island_feedback_group">フィードバックと通知</string>
+    <string name="system_island_interaction_group">音楽と操作</string>
+    <string name="system_island_gestures_title">音楽ジェスチャー</string>
+    <string name="system_island_waveform_off">オフ</string>
+    <string name="system_island_waveform_light">軽量アニメーション</string>
+    <string name="system_island_waveform_real">リアルタイム波形（試験的）</string>
+    <string name="system_island_waveform_mode_summ">表示中かつ再生中のみ5つの周波数帯域を取得します。権限、経路、セッションが非対応の場合は軽量アニメーションに戻ります。</string>
 </resources>

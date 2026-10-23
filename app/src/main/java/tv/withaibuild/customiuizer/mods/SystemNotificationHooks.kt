@@ -1,14 +1,13 @@
 package tv.withaibuild.customiuizer.mods
 
 import android.app.ActivityManager
+import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import android.os.Handler
-import android.os.PowerManager
 import android.os.UserHandle
 import android.provider.Settings
 import android.service.notification.StatusBarNotification
@@ -19,10 +18,8 @@ import android.widget.TextView
 import android.widget.Toast
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
-import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.R
-import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
@@ -88,47 +85,27 @@ object SystemNotificationHooks {
     @JvmStatic
     fun ExpandHeadsUpHook(lpparam: PackageReadyParam) {
         installNotificationSnapshot()
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow", lpparam.classLoader, "setHeadsUp", object : MethodHook() {
+        val row = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow", lpparam.classLoader)
+        val expansion = HeadsUpExpansion(row) { pkg ->
+            val snapshot = notificationConfig
+            (snapshot.expandHeadsUp == 2 && pkg !in snapshot.expandHeadsUpApps) ||
+                (snapshot.expandHeadsUp == 3 && pkg in snapshot.expandHeadsUpApps)
+        }
+        ModuleHelper.findAndHookMethod(row, "setHeadsUp", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val mOnKeyguard = XposedHelpers.getBooleanField(thisObject, "mOnKeyguard")
-                    val showHeadsUp = chain.getArg(0) as Boolean
-                    if (!mOnKeyguard && showHeadsUp) {
-                        val notifyRow = thisObject as View
-                        val notification = XposedHelpers.getObjectField(XposedHelpers.callMethod(thisObject, "getEntry"), "mSbn")
-                        val pkgName = XposedHelpers.callMethod(notification, "getPackageName") as String
-                        val opt = notificationConfig.expandHeadsUp
-                        val isSelected = pkgName in notificationConfig.expandHeadsUpApps
-                        if ((opt == 2 && !isSelected) || (opt == 3 && isSelected)) {
-                            val oldExpandNotify = XposedHelpers.getAdditionalInstanceField(thisObject, "expandNotifyRunnable") as Runnable?
-                            if (oldExpandNotify != null) notifyRow.removeCallbacks(oldExpandNotify)
-                            val expandNotify = Runnable {
-                                ModuleHelper.guarded {
-                                    val mExpandClickListener = XposedHelpers.getObjectField(thisObject, "mExpandClickListener") as View.OnClickListener
-                                    mExpandClickListener.onClick(notifyRow)
-                                }
-                            }
-                            XposedHelpers.setAdditionalInstanceField(thisObject, "expandNotifyRunnable", expandNotify)
-                            notifyRow.postDelayed(expandNotify, 60)
-                        }
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                val result = chain.proceed()
+                ModuleHelper.guarded { expansion.update(chain.thisObject as View) }
+                return result
             }
         })
+        val cancel = object : MethodHook() {
+            override fun before(param: tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback) {
+                expansion.cancel(param.getThisObject() as View)
+            }
+        }
+        ModuleHelper.findAndHookMethod(row, "setEntry",
+            XposedHelpers.findClass("com.android.systemui.statusbar.notification.collection.NotificationEntry", lpparam.classLoader), cancel)
+        ModuleHelper.findAndHookMethod(row, "setRemoved", cancel)
     }
 
     @JvmStatic
@@ -187,6 +164,9 @@ object SystemNotificationHooks {
                     val itemClick = View.OnClickListener { view ->
                         try {
                             if (view == null) return@OnClickListener
+                            // A modal may outlive its binding. Never act on its old notification.
+                            if (XposedHelpers.getObjectField(thisObject, "mSbn") !== notification ||
+                                XposedHelpers.getObjectField(XposedHelpers.callMethod(expandNotifyRow, "getEntry"), "mSbn") !== notification) return@OnClickListener
                             val uid = XposedHelpers.getIntField(notification, "mAppUid")
 
                             if (view == mInfoBtn || view == mForceCloseBtn) {
@@ -210,11 +190,18 @@ object SystemNotificationHooks {
                             } else if (view == mOpenFwBtn) {
                                 val miniWindowPkg = XposedHelpers.callMethod(expandNotifyRow, "getMiniWindowTargetPkg") as String
                                 val notifyIntent = XposedHelpers.callMethod(expandNotifyRow, "getPendingIntent") as PendingIntent
+                                val keyguard = mContext.getSystemService(KeyguardManager::class.java)
+                                val user = uid / 100000
+                                if (!view.isEnabled || keyguard == null || keyguard.isKeyguardLocked || !notifyIntent.isActivity ||
+                                    user != ModuleHelper.getUserId() || notifyIntent.creatorUid / 100000 != user) return@OnClickListener
                                 try {
                                     val options = ModuleHelper.getFreeformOptions(mContext, miniWindowPkg, notifyIntent, true)
+                                        ?: return@OnClickListener
+                                    view.isEnabled = false
                                     notifyIntent.send(mContext, 0, ModuleHelper.getFreeformIntent(miniWindowPkg), null, null, null, options)
                                 } catch (e: PendingIntent.CanceledException) {
-                                    throw RuntimeException(e)
+                                    view.isEnabled = true
+                                    throw e
                                 }
                             }
                             val ModalControllerForDep = "com.android.systemui.statusbar.notification.modal.ModalController"
@@ -274,119 +261,33 @@ object SystemNotificationHooks {
         }
     }
 
-    @JvmStatic
-    fun DisableAnyNotificationBlockHook(lpparam: SystemServerStartingParam) {
-        ModuleHelper.findAndHookMethod("android.app.NotificationChannel", lpparam.classLoader, "isBlockable", HookerClassHelper.returnConstant(true))
-        ModuleHelper.findAndHookMethod("android.app.NotificationChannel", lpparam.classLoader, "setBlockable", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
-                try {
+    /** UI-only MIUI restrictions, only for an ordinary app in the current user. */
+    internal fun ordinaryNotificationTarget(uid: Int, flags: Int, user: Int): Boolean =
+        uid % 100000 in 10000..19999 && uid / 100000 == user &&
+            flags and (android.content.pm.ApplicationInfo.FLAG_SYSTEM or android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0
 
-                    args[0] = true
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-    }
-
-    @JvmStatic
-    fun DisableAnyNotificationBlockHook(lpparam: PackageReadyParam) {
-        ModuleHelper.findAndHookMethod("android.app.NotificationChannel", lpparam.classLoader, "isBlockable", HookerClassHelper.returnConstant(true))
-        ModuleHelper.findAndHookMethod("android.app.NotificationChannel", lpparam.classLoader, "setBlockable", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
-                try {
-
-                    args[0] = true
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+    internal fun ordinaryNotificationTarget(context: Context, pkg: String?): Boolean {
+        if (pkg.isNullOrBlank()) return false
+        return ModuleHelper.guarded(false) {
+            val info = context.packageManager.getApplicationInfo(pkg, 0)
+            ordinaryNotificationTarget(info.uid, info.flags, ModuleHelper.getUserId())
+        }
     }
 
     @JvmStatic
     fun DisableAnyNotificationHook(lpparam: PackageReadyParam) {
-        if (lpparam.packageName.contains("systemui")) {
-            val NotifyManagerCls = XposedHelpers.findClass("com.android.systemui.statusbar.notification.NotificationSettingsManager", lpparam.classLoader)
-            XposedHelpers.setStaticBooleanField(NotifyManagerCls, "USE_WHITE_LISTS", false)
-        }
-        ModuleHelper.hookAllMethods("miui.util.NotificationFilterHelper", lpparam.classLoader, "isNotificationForcedEnabled", HookerClassHelper.returnConstant(false))
-        ModuleHelper.findAndHookMethod("miui.util.NotificationFilterHelper", lpparam.classLoader, "isNotificationForcedFor", Context::class.java, String::class.java, HookerClassHelper.returnConstant(false))
-        ModuleHelper.findAndHookMethod("miui.util.NotificationFilterHelper", lpparam.classLoader, "canSystemNotificationBeBlocked", String::class.java, HookerClassHelper.returnConstant(true))
-        ModuleHelper.findAndHookMethod("miui.util.NotificationFilterHelper", lpparam.classLoader, "containNonBlockableChannel", String::class.java, HookerClassHelper.returnConstant(false))
-        ModuleHelper.findAndHookMethod("miui.util.NotificationFilterHelper", lpparam.classLoader, "getNotificationForcedEnabledList", object : MethodHook() {
+        // Never mutate NotificationChannel, forced-enabled lists, USE_WHITE_LISTS or NMS policy.
+        val filter = XposedHelpers.findClass("miui.util.NotificationFilterHelper", lpparam.classLoader)
+        val uiDecision = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-
-                    skipped = true
-                    result = HashSet<String>()
-                    throwable = null
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                val original = chain.proceed()
+                val context = chain.getArg(0) as? Context ?: return original
+                return if (ordinaryNotificationTarget(context, chain.getArg(1) as? String)) false else original
             }
-        })
-    }
-
-    /**
-     * Android 14 Settings disables its master switch in BlockPreferenceController by calling
-     * these four local policy methods. HyperOS' NotificationFilterHelper hooks alone therefore
-     * cannot unlock the visible switch for a system app. Keep the override inside Settings and
-     * behind the existing "disable any notification" preference.
-     */
-    @JvmStatic
-    fun UnlockSettingsNotificationControlsHook(lpparam: PackageReadyParam) {
-        val controller = XposedHelpers.findClassIfExists(
-            "com.android.settings.notification.app.NotificationPreferenceController",
-            lpparam.classLoader
-        ) ?: return
-        val allow = HookerClassHelper.returnConstant(true)
-        ModuleHelper.hookAllMethods(controller, "isAppBlockable", allow)
-        ModuleHelper.hookAllMethods(controller, "isChannelBlockable", allow)
-        ModuleHelper.hookAllMethods(controller, "isChannelConfigurable", allow)
-        ModuleHelper.hookAllMethods(controller, "isChannelGroupBlockable", allow)
-
-        ModuleHelper.hookAllMethods(
-            "com.android.settings.notification.app.AppNotificationSettings",
-            lpparam.classLoader,
-            "setupBlock",
-            object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    try {
-                        val settings = callback.getThisObject() ?: return
-                        val block = XposedHelpers.getObjectField(settings, "mBlock") ?: return
-                        // Settings owns its own androidx.preference classes. Never cast that
-                        // object to the module APK's same-named class across ClassLoaders.
-                        XposedHelpers.callMethod(block, "setEnabled", true)
-                    } catch (t: Throwable) {
-                        FatalErrors.unwrapAndRethrowIfFatal(t)
-                        XposedHelpers.log("UnlockSettingsNotificationControls", t)
-                    }
-                }
-            }
-        )
+        }
+        ModuleHelper.findAndHookMethod(filter, "isNotificationForcedEnabled", Context::class.java, String::class.java, uiDecision)
+        ModuleHelper.findAndHookMethod(filter, "isNotificationForcedEnabled", Context::class.java, String::class.java, String::class.java, uiDecision)
+        ModuleHelper.findAndHookMethod(filter, "isNotificationForcedFor", Context::class.java, String::class.java, uiDecision)
     }
 
     @JvmStatic
@@ -408,6 +309,7 @@ object SystemNotificationHooks {
         val findIndex = XposedHelpers.findMethodExact(importanceField.type, "findSpinnerIndexOfValue", String::class.java)
         val setIndex = XposedHelpers.findMethodExact(importanceField.type, "setValueIndex", Int::class.javaPrimitiveType!!)
         val lockFields = XposedHelpers.findMethodExact(NotificationChannel::class.java, "lockFields", Int::class.javaPrimitiveType!!)
+        val critical = XposedHelpers.findMethodExact(NotificationChannel::class.java, "isImportanceLockedByCriticalDeviceFunction", *emptyArray<Any>())
         val updateChannel = XposedHelpers.findMethodBestMatch(
             backendField.type, "updateChannel", String::class.java, Int::class.javaPrimitiveType!!, NotificationChannel::class.java,
         )
@@ -445,6 +347,8 @@ object SystemNotificationHooks {
                     val result = chain.proceed()
                     try {
                         val owner = chain.thisObject
+                        val initialChannel = channelField.get(owner) as? NotificationChannel ?: return result
+                        if (critical.invoke(initialChannel) == true) return result
                         val pref = findPreference.invoke(owner, "importance") ?: return result
                         importanceField.set(owner, pref)
                         val importance = backupImportanceField.getInt(owner)
@@ -453,6 +357,8 @@ object SystemNotificationHooks {
                         if (index >= 0) setIndex.invoke(pref, index)
                         val handler = ImportanceChangeHandler { value ->
                             val channel = channelField.get(owner) as NotificationChannel
+                            check(critical.invoke(channel) != true) { "Critical notification channel remains protected" }
+                            check(uidField.getInt(owner) / 100000 == ModuleHelper.getUserId()) { "Notification user changed" }
                             val previous = channel.importance
                             try {
                                 channel.importance = value
@@ -534,78 +440,53 @@ object SystemNotificationHooks {
         })
     }
 
+    internal fun expandedPopupMayAutoDismiss(expanded: Boolean, pinned: Boolean,
+        remoteInput: Boolean, fullScreen: Boolean, guts: Boolean): Boolean =
+        expanded && pinned && !remoteInput && !fullScreen && !guts
+
     @JvmStatic
     fun AutoDismissExpandedPopupsHook(lpparam: PackageReadyParam) {
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.HeadsUpManagerPhone\$HeadsUpEntryPhone", lpparam.classLoader, "updateEntry", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
+        val loader = lpparam.classLoader
+        val entryClass = XposedHelpers.findClass("com.android.systemui.statusbar.phone.HeadsUpManagerPhone\$HeadsUpEntryPhone", loader)
+        val expanded = XposedHelpers.findField(entryClass, "expanded")
+        val remoteInput = XposedHelpers.findField(entryClass, "remoteInputActive")
+        val guts = XposedHelpers.findField(entryClass, "mGutsShownPinned")
+        val entry = XposedHelpers.findField(entryClass, "mEntry")
+        val sbn = XposedHelpers.findField(entry.type, "mSbn")
+        val pinned = XposedHelpers.findMethodExact(entry.type, "isRowPinned", *emptyArray<Any>())
+        val update = XposedHelpers.findMethodExact(entryClass, "updateEntry", Boolean::class.javaPrimitiveType!!)
+        fun mayDismiss(owner: Any): Boolean {
+            val current = entry.get(owner) ?: return false
+            val notification = sbn.get(current) as? StatusBarNotification ?: return false
+            return expandedPopupMayAutoDismiss(expanded.getBoolean(owner), pinned.invoke(current) == true,
+                remoteInput.getBoolean(owner), notification.notification.fullScreenIntent != null, guts.getBoolean(owner))
+        }
+        ModuleHelper.findAndHookMethod(entryClass, "isSticky", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                val original = chain.proceed()
+                return ModuleHelper.guarded(original) {
+                    if (original == true && mayDismiss(chain.thisObject!!)) false else original
                 }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val headsUpEntry = thisObject
-                    val expanded = XposedHelpers.getBooleanField(headsUpEntry, "expanded")
-                    val remoteInputActive = XposedHelpers.getBooleanField(headsUpEntry, "remoteInputActive")
-                    val mEntry = XposedHelpers.getObjectField(headsUpEntry, "mEntry")
-                    val rowPinned = XposedHelpers.callMethod(mEntry, "isRowPinned") as Boolean
-                    if (expanded && rowPinned && !remoteInputActive) {
-                        val headsUpManagerPhone = XposedHelpers.getSurroundingThis(headsUpEntry)
-                        val mHandler = XposedHelpers.getObjectField(headsUpManagerPhone, "mHandler") as Handler
-                        val mRemoveAlertRunnable = XposedHelpers.getObjectField(headsUpEntry, "mRemoveAlertRunnable") as Runnable
-                        val extended = XposedHelpers.getBooleanField(headsUpEntry, "extended")
-                        mHandler.removeCallbacks(mRemoveAlertRunnable)
-                        mHandler.postDelayed(mRemoveAlertRunnable, if (extended) 10000L else 4500L)
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarNotificationPresenter", lpparam.classLoader, "onExpandClicked", object : MethodHook() {
+        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarNotificationPresenter", loader, "onExpandClicked", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    if (chain.getArg(1) != true) return@guarded
+                    val owner = chain.thisObject
+                    val keyguard = XposedHelpers.getObjectField(owner, "mKeyguardStateController")
+                    if (XposedHelpers.getBooleanField(keyguard, "mShowing")) return@guarded
+                    val notification = chain.getArg(0) ?: return@guarded
+                    val manager = XposedHelpers.getObjectField(owner, "mHeadsUpManager")
+                    val alert = XposedHelpers.callMethod(manager, "getHeadsUpEntry", XposedHelpers.getObjectField(notification, "mKey"))
+                        ?: return@guarded
+                    if (entry.get(alert) === notification && mayDismiss(alert)) update.invoke(alert, false)
                 }
-                try {
-                    val thisObject = chain.thisObject
-                    val args = chain.args
-
-                    val expanded = args[1] as Boolean
-                    val mKeyguardStateController = XposedHelpers.getObjectField(thisObject, "mKeyguardStateController")
-                    val mShowing = XposedHelpers.getBooleanField(mKeyguardStateController, "mShowing")
-                    if (expanded && !mShowing) {
-                        val headsUpManagerPhone = XposedHelpers.getObjectField(thisObject, "mHeadsUpManager")
-                        val headsUpEntry = XposedHelpers.callMethod(headsUpManagerPhone, "getHeadsUpEntry", XposedHelpers.getObjectField(args[0], "mKey"))
-                        if (headsUpEntry != null) {
-                            val isRowPinned = XposedHelpers.callMethod(args[0], "isRowPinned") as Boolean
-                            if (isRowPinned) {
-                                val mHandler = XposedHelpers.getObjectField(headsUpManagerPhone, "mHandler") as Handler
-                                val mRemoveAlertRunnable = XposedHelpers.getObjectField(headsUpEntry, "mRemoveAlertRunnable") as Runnable
-                                mHandler.removeCallbacks(mRemoveAlertRunnable)
-                                mHandler.postDelayed(mRemoveAlertRunnable, 4500L)
-                            }
-                        }
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return result
             }
         })
+        // Native updateEntry/reset/remote-input paths own the sole removal runnable and timeout.
     }
 
     internal fun shouldOpenNotificationChannel(channelId: String?, hybrid: Boolean): Boolean =
@@ -692,29 +573,7 @@ object SystemNotificationHooks {
 
     @JvmStatic
     fun MuteVisibleNotificationsHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.notification.policy.MiuiAlertManager", lpparam.classLoader, "buzzBeepBlink", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
-
-                    val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    val powerMgr = mContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-                    if (powerMgr.isInteractive) {
-                        skipped = true; result = null; throwable = null
-                    }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+        NotificationAlertHook.install(lpparam.classLoader)
     }
 
     @JvmStatic
@@ -722,6 +581,7 @@ object SystemNotificationHooks {
         val coreUnhooker = ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.policy.HeadsUpManagerInjector", lpparam.classLoader, "miuiHeadsUpInset", Context::class.java, object : MethodHook() {
             private var mHeadsUpPaddingTop = 0
             private var mHeadsUpHeight = 0
+            private var dimensionsConfiguration: Configuration? = null
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
                 var throwable: Throwable? = null
@@ -735,10 +595,11 @@ object SystemNotificationHooks {
 
                     val context = chain.getArg(0) as Context
                     val resources = context.resources
-                    if (mHeadsUpPaddingTop == 0) {
+                    if (dimensionsConfiguration != resources.configuration) {
                         val dimId = HookUtils.getResId(resources, "heads_up_status_bar_padding", "dimen", "com.android.systemui")
                         mHeadsUpPaddingTop = resources.getDimensionPixelSize(dimId)
                         mHeadsUpHeight = resources.getDimensionPixelSize(HookUtils.getResId(resources, "notification_max_heads_up_height", "dimen", "com.android.systemui"))
+                        dimensionsConfiguration = Configuration(resources.configuration)
                     }
                     if (resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) {
                         val mHeadsUpInset = result as Int

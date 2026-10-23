@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">上次維護操作需要復原。關閉此開關可還原已儲存的原始狀態。</string>
     <string name="app_name">米客 A14</string>
     <string name="settings_title">設定</string>
     <string name="app_about">關於</string>
@@ -156,8 +157,8 @@
     <string name="system_notifrowmenu_appinfo">應用訊息</string>
     <string name="system_notifrowmenu_openinfw">浮窗</string>
     <string name="system_notifrowmenu_forceclose">強制關閉</string>
-    <string name="system_disableanynotif_title">禁用任何通知</string>
-    <string name="system_disableanynotif_summ">同時允許禁用系統通知</string>
+    <string name="system_disableanynotif_title">管理應用程式通知</string>
+    <string name="system_disableanynotif_summ">開放一般應用程式的控制入口，保留系統、頻道和管理員保護</string>
     <string name="system_expandnotifs_title">展開通知</string>
     <string name="system_expandnotifs_summ">顯示完整展開的通知</string>
     <string name="system_expandnotifs_apps_title">黑&amp;白名單</string>
@@ -1193,7 +1194,7 @@
     <string name="system_island_simplified_title">簡化動畫</string>
     <string name="system_island_simplified_summ">減少過渡效果，音樂波形保持靜止。</string>
     <string name="system_island_excluded_apps_title">排除的應用程式</string>
-    <string name="system_island_excluded_apps_summ">這些應用程式保留普通 Toast，媒體不接入動態島。普通 Toast 的應用程式篩選仍在 Toast 頁面設定。</string>
+    <string name="system_island_excluded_apps_summ">這些應用程式保留一般 Toast 與原生通知，媒體不接入動態島；排除優先於通知允許清單。</string>
     <string name="system_island_playing">播放中</string>
     <string name="system_island_paused">已暫停</string>
     <string name="system_island_connecting">正在連線</string>
@@ -1211,11 +1212,11 @@
     <string name="system_island_height_title">動態島高度</string>
     <string name="system_island_height_summ">短島與長島使用相同的固定高度。</string>
     <string name="system_island_width_auto_title">自動調整收起寬度</string>
-    <string name="system_island_width_auto_summ">依內容和狀態列空間決定短島、長島寬度。關閉後可分別調整。</string>
+    <string name="system_island_width_auto_summ">依內容、高度與實體安全區域選擇寬度，關閉後可分別設定短島與長島。</string>
     <string name="system_island_width_short_title">短島寬度</string>
-    <string name="system_island_width_short_summ">用於封面、波形和簡短狀態，實際寬度受攝影機及時間、電量空間限制。</string>
+    <string name="system_island_width_short_summ">短島的偏好寬度。開孔與螢幕安全區域優先，必要時縮窄或下移。</string>
     <string name="system_island_width_medium_title">長島寬度</string>
-    <string name="system_island_width_medium_summ">用於較多文字，實際寬度不會小於短島，並受狀態列空間限制。</string>
+    <string name="system_island_width_medium_summ">長島的偏好寬度，不窄於短島。開孔與螢幕安全區域優先。</string>
     <string name="system_island_chat_excluded_apps_title">保留懸浮的應用</string>
     <string name="system_island_chat_excluded_apps_summ">所選應用保留系統懸浮通知，不影響 Toast 和音樂。</string>
     <string name="system_island_gesture_left">左滑動作</string>
@@ -1231,10 +1232,20 @@
     <string name="system_island_horizontal_offset_title">水平偏移</string>
     <string name="system_island_feedback_title">系統回饋</string>
     <string name="system_island_notification_apps_title">允許接管通知的應用程式</string>
-    <string name="system_island_notification_apps_summ">只接管所選應用程式的通知；排除名單優先，其他通知維持原生行為。</string>
+    <string name="system_island_notification_apps_summ">僅接管所選應用程式；應用程式排除與保留原生懸浮優先於允許清單。</string>
     <string name="system_island_action_play">播放</string>
     <string name="system_island_action_pause">暫停</string>
     <string name="system_island_action_player">開啟播放器</string>
     <string name="system_island_music_group">音樂與媒體</string>
     <string name="system_island_feedback_ringer_title">鈴聲模式</string>
+    <string name="system_island_basic_group">基礎設定</string>
+    <string name="system_island_geometry_group">位置與尺寸</string>
+    <string name="system_island_appearance_group">外觀與動畫</string>
+    <string name="system_island_feedback_group">回饋與通知</string>
+    <string name="system_island_interaction_group">音樂與互動</string>
+    <string name="system_island_gestures_title">音樂手勢</string>
+    <string name="system_island_waveform_off">關閉</string>
+    <string name="system_island_waveform_light">輕量動畫</string>
+    <string name="system_island_waveform_real">即時波形（實驗性）</string>
+    <string name="system_island_waveform_mode_summ">即時模式僅在可見且播放時擷取五個音訊頻段。權限、路由或工作階段不支援時回復輕量動畫。</string>
 </resources>

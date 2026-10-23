@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Требуется восстановление после предыдущего обслуживания. Выключите этот переключатель, чтобы вернуть сохранённые исходные состояния.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">О приложении</string>
     <string name="about_version">Версия %1$s</string>
@@ -163,8 +164,8 @@
     <string name="system_notifrowmenu_appinfo">О приложении</string>
     <string name="system_notifrowmenu_openinfw">Плавающее окно</string>
     <string name="system_notifrowmenu_forceclose">Закрыть принудительно</string>
-    <string name="system_disableanynotif_title">Отключение любых уведомлений</string>
-    <string name="system_disableanynotif_summ">Разрешает отключать даже системные уведомления</string>
+    <string name="system_disableanynotif_title">Управление уведомлениями приложений</string>
+    <string name="system_disableanynotif_summ">Открывает настройки обычных приложений; сохраняет защиту системы, каналов и администратора</string>
     <string name="system_expandnotifs_title">Разворачивать уведомления</string>
     <string name="system_expandnotifs_summ">Показывать уведомления в полностью развёрнутом виде</string>
     <string name="system_expandnotifs_apps_title">Чёрно-белый список</string>
@@ -1192,7 +1193,7 @@
     <string name="system_island_simplified_title">Упрощённая анимация</string>
     <string name="system_island_simplified_summ">Сокращает переходы и останавливает движение волны.</string>
     <string name="system_island_excluded_apps_title">Исключённые приложения</string>
-    <string name="system_island_excluded_apps_summ">Используют обычные Toast и не показывают медиа на острове. Фильтрация обычных Toast остаётся на странице Toast.</string>
+    <string name="system_island_excluded_apps_summ">Эти приложения сохраняют штатные Toast и уведомления; музыка не появляется на острове. Исключения важнее списка разрешённых уведомлений.</string>
     <string name="system_island_playing">Воспроизведение</string>
     <string name="system_island_paused">Пауза</string>
     <string name="system_island_connecting">Подключение</string>
@@ -1210,11 +1211,11 @@
     <string name="system_island_height_title">Высота острова</string>
     <string name="system_island_height_summ">Короткий и длинный остров используют одинаковую фиксированную высоту.</string>
     <string name="system_island_width_auto_title">Автоматическая ширина острова</string>
-    <string name="system_island_width_auto_summ">Ширина короткого и длинного острова зависит от содержимого и места в строке состояния. Отключите для раздельной настройки.</string>
+    <string name="system_island_width_auto_summ">Ширина зависит от содержимого, высоты и безопасной области экрана. Отключите для раздельной настройки.</string>
     <string name="system_island_width_short_title">Ширина короткого острова</string>
-    <string name="system_island_width_short_summ">Для обложки, волны и краткого статуса. Сохраняется место для камеры, часов и батареи.</string>
+    <string name="system_island_width_short_summ">Предпочтительная ширина короткого острова. Вырезы и безопасная область имеют приоритет.</string>
     <string name="system_island_width_medium_title">Ширина длинного острова</string>
-    <string name="system_island_width_medium_summ">Для длинного текста. Не уже короткого острова и ограничена местом в строке состояния.</string>
+    <string name="system_island_width_medium_summ">Предпочтительная ширина длинного острова, не уже короткого. Безопасная область имеет приоритет.</string>
     <string name="system_island_chat_excluded_apps_title">Приложения с обычными уведомлениями</string>
     <string name="system_island_chat_excluded_apps_summ">Выбранные приложения сохраняют системные всплывающие уведомления. Toast и музыка не меняются.</string>
     <string name="system_island_gesture_left">Смахивание влево</string>
@@ -1230,10 +1231,20 @@
     <string name="system_island_horizontal_offset_title">Горизонтальное смещение</string>
     <string name="system_island_feedback_title">Системные отклики</string>
     <string name="system_island_notification_apps_title">Разрешённые приложения уведомлений</string>
-    <string name="system_island_notification_apps_summ">Остров показывает уведомления только выбранных приложений. Исключённые приложения сохраняют обычные уведомления.</string>
+    <string name="system_island_notification_apps_summ">Только выбранные приложения. Исключения и сохранение штатных всплывающих уведомлений имеют приоритет.</string>
     <string name="system_island_action_play">Воспроизвести</string>
     <string name="system_island_action_pause">Пауза</string>
     <string name="system_island_action_player">Открыть плеер</string>
     <string name="system_island_music_group">Музыка и медиа</string>
     <string name="system_island_feedback_ringer_title">Режим звонка</string>
+    <string name="system_island_basic_group">Основные настройки</string>
+    <string name="system_island_geometry_group">Положение и размер</string>
+    <string name="system_island_appearance_group">Вид и анимация</string>
+    <string name="system_island_feedback_group">Отклики и уведомления</string>
+    <string name="system_island_interaction_group">Музыка и управление</string>
+    <string name="system_island_gestures_title">Музыкальные жесты</string>
+    <string name="system_island_waveform_off">Выключено</string>
+    <string name="system_island_waveform_light">Лёгкая анимация</string>
+    <string name="system_island_waveform_real">Живой спектр (эксперимент)</string>
+    <string name="system_island_waveform_mode_summ">Пять частотных полос считываются только при видимом острове и воспроизведении. Если права, маршрут или сеанс не поддерживаются, используется лёгкая анимация.</string>
 </resources>

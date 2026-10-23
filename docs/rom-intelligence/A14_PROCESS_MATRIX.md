@@ -62,7 +62,7 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | ID | Feature | Pref key | Target | Phase | Installer | Install hook | Allowed process | Denied process |
 |---|---|---|---|---|---|---|---|---|
 | 1 | Temp Hide Overlay App | `system_screenshot_overlay` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemWindowHooks.TempHideOverlayAppHook(lpparam)` | system_server |  |
-| 2 | Open App In Free Form | `system_notify_openinfw` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemWindowHooks.OpenAppInFreeFormHook(lpparam)` | system_server |  |
+| 2 | Open App In Free Form | `system_fw_forcein_actionsend` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemWindowHooks.OpenAppInFreeFormHook(lpparam)` | system_server |  |
 | 3 | Nav Bar Actions | `controls_backlong_action` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `Controls.NavBarActionsHook(lpparam)` | system_server |  |
 | 4 | Power Double Tap Action | `controls_powerdt_action` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `Controls.PowerDoubleTapActionHook(lpparam)` | system_server |  |
 | 5 | Screen Anim | `system_screenanim_duration` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemDisplayHooks.ScreenAnimHook(lpparam)` | system_server |  |
@@ -98,7 +98,6 @@ This matrix is generated from source (`tools/extract_process_matrix.py`). It rec
 | 35 | Fingerprint Screen On | `controls_fingerprintscreen` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `Controls.FingerprintScreenOnHook(lpparam)` | system_server |  |
 | 36 | No Fingerprint Wake | `controls_fingerprintwake` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `Controls.NoFingerprintWakeHook(lpparam)` | system_server |  |
 | 37 | Apps Disable Service | `various_disableapp` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `Various.AppsDisableServiceHook(lpparam)` | system_server |  |
-| 38 | Disable Any Notification Block | `system_disableanynotif` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemNotificationHooks.DisableAnyNotificationBlockHook...` | system_server |  |
 | 39 | All Rotations | `system_allrotations2` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemWindowHooks.AllRotationsHook(lpparam)` | system_server |  |
 | 40 | No Light Up On Charge | `system_nolightuponcharges` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemDisplayHooks.NoLightUpOnChargeHook(lpparam)` | system_server |  |
 | 41 | Selective Vibration | `system_vibration` | SYSTEM_SERVER | SYSTEM_SERVER_STARTING | SystemServerFeatures | `SystemAudioHooks.SelectiveVibrationHook(lpparam)` | system_server |  |

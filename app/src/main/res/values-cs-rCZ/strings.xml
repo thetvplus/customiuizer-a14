@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Předchozí údržbu je nutné obnovit. Vypnutím tohoto přepínače obnovíte uložené původní stavy.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">O modulu</string>
     <string name="about_version">Verze %1$s</string>
@@ -164,8 +165,8 @@
     <string name="system_notifrowmenu_appinfo">O aplikaci</string>
     <string name="system_notifrowmenu_openinfw">Plovoucí okno</string>
     <string name="system_notifrowmenu_forceclose">Vynutit ukončení</string>
-    <string name="system_disableanynotif_title">Zakázat jakékoliv oznámení</string>
-    <string name="system_disableanynotif_summ">Umožnit zakázat také systémová oznámení</string>
+    <string name="system_disableanynotif_title">Správa oznámení aplikací</string>
+    <string name="system_disableanynotif_summ">Zpřístupní ovládání běžných aplikací; zachová ochranu systému, kanálů a správce</string>
     <string name="system_expandnotifs_title">Rozbalit oznámení</string>
     <string name="system_expandnotifs_summ">Zobrazit oznámení plně rozbalená</string>
     <string name="system_expandnotifs_apps_title">Černý &amp; bílý seznam</string>
@@ -1200,7 +1201,7 @@
     <string name="system_island_simplified_title">Zjednodušená animace</string>
     <string name="system_island_simplified_summ">Omezí přechody a zastaví pohyb vlny.</string>
     <string name="system_island_excluded_apps_title">Vyloučené aplikace</string>
-    <string name="system_island_excluded_apps_summ">Zachovají běžné Toasty a nezobrazí média na ostrově. Filtr běžných Toastů zůstává na stránce Toast.</string>
+    <string name="system_island_excluded_apps_summ">Aplikace si ponechají původní Toasty a oznámení; hudba nebude na ostrově. Vyloučení mají přednost před seznamem povolených oznámení.</string>
     <string name="system_island_playing">Přehrávání</string>
     <string name="system_island_paused">Pozastaveno</string>
     <string name="system_island_connecting">Připojování</string>
@@ -1218,11 +1219,11 @@
     <string name="system_island_height_title">Výška ostrova</string>
     <string name="system_island_height_summ">Krátký i dlouhý ostrov používají stejnou pevnou výšku.</string>
     <string name="system_island_width_auto_title">Automatická šířka sbaleného ostrova</string>
-    <string name="system_island_width_auto_summ">Šířku krátkého a dlouhého ostrova určí obsah a dostupné místo ve stavovém řádku. Vypnutím umožníte samostatné nastavení.</string>
+    <string name="system_island_width_auto_summ">Šířka podle obsahu, výšky a bezpečné oblasti. Vypněte pro samostatné nastavení krátkého a dlouhého ostrova.</string>
     <string name="system_island_width_short_title">Šířka krátkého ostrova</string>
-    <string name="system_island_width_short_summ">Pro obal, vlnu a krátký stav. Omezeno místem pro kameru, čas a baterii.</string>
+    <string name="system_island_width_short_summ">Preferovaná šířka krátkého ostrova. Výřez a bezpečná oblast mají přednost.</string>
     <string name="system_island_width_medium_title">Šířka dlouhého ostrůvku</string>
-    <string name="system_island_width_medium_summ">Pro delší text. Není užší než krátký ostrov a respektuje místo ve stavovém řádku.</string>
+    <string name="system_island_width_medium_summ">Preferovaná šířka dlouhého ostrova, alespoň jako krátký. Bezpečná oblast má přednost.</string>
     <string name="system_island_chat_excluded_apps_title">Aplikace s původními oznámeními</string>
     <string name="system_island_chat_excluded_apps_summ">Vybrané aplikace si ponechají systémová plovoucí oznámení. Toasty a hudba se nemění.</string>
     <string name="system_island_gesture_left">Přejetí vlevo</string>
@@ -1238,10 +1239,20 @@
     <string name="system_island_horizontal_offset_title">Vodorovný posun</string>
     <string name="system_island_feedback_title">Systémová odezva</string>
     <string name="system_island_notification_apps_title">Povolené aplikace oznámení</string>
-    <string name="system_island_notification_apps_summ">Ostrov přebírá jen vybrané aplikace. Vyloučené aplikace zachovají původní oznámení.</string>
+    <string name="system_island_notification_apps_summ">Pouze vybrané aplikace. Vyloučení a zachování původních plovoucích oznámení mají přednost.</string>
     <string name="system_island_action_play">Přehrát</string>
     <string name="system_island_action_pause">Pozastavit</string>
     <string name="system_island_action_player">Otevřít přehrávač</string>
     <string name="system_island_music_group">Hudba a média</string>
     <string name="system_island_feedback_ringer_title">Režim vyzvánění</string>
+    <string name="system_island_basic_group">Základní nastavení</string>
+    <string name="system_island_geometry_group">Poloha a velikost</string>
+    <string name="system_island_appearance_group">Vzhled a animace</string>
+    <string name="system_island_feedback_group">Odezva a oznámení</string>
+    <string name="system_island_interaction_group">Hudba a ovládání</string>
+    <string name="system_island_gestures_title">Hudební gesta</string>
+    <string name="system_island_waveform_off">Vypnuto</string>
+    <string name="system_island_waveform_light">Lehká animace</string>
+    <string name="system_island_waveform_real">Živý průběh (experimentální)</string>
+    <string name="system_island_waveform_mode_summ">Pět frekvenčních pásem se snímá pouze při viditelném ostrově a přehrávání. Nepodporovaná oprávnění, trasa nebo relace použijí lehkou animaci.</string>
 </resources>

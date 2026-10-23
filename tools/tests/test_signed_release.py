@@ -131,6 +131,7 @@ class AutomaticReleaseTest(unittest.TestCase):
             stack.enter_context(patch.object(release, "require_main_ci"))
             stack.enter_context(patch.object(release, "check_new_release"))
             stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed"]))
+            stack.enter_context(patch.object(release, "optional_api", return_value=None))
             approval = stack.enter_context(patch.object(release, "confirmation_policy", side_effect=ValueError("Missing reviewer")))
             output = stack.enter_context(patch.object(release, "output"))
             with self.assertRaisesRegex(ValueError,"Missing reviewer"):
@@ -139,6 +140,47 @@ class AutomaticReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"Missing reviewer"):
                 release.signing_preflight()
             self.assertEqual(2, approval.call_count)
+
+    def test_manual_already_published_version_skips_before_ci_or_approval(self):
+        with patch.dict(os.environ, ENV), ExitStack() as stack:
+            stack.enter_context(patch.object(release, "dispatch_options", return_value=("both", False)))
+            stack.enter_context(patch.object(release, "optional_api", return_value={"draft": False}))
+            ci = stack.enter_context(patch.object(release, "require_main_ci"))
+            approval = stack.enter_context(patch.object(release, "confirmation_policy"))
+            output = stack.enter_context(patch.object(release, "output"))
+            release.release_plan()
+            self.assertEqual("false", output.call_args.kwargs["ready"])
+            ci.assert_not_called()
+            approval.assert_not_called()
+
+    def test_candidate_only_cannot_use_an_unprotected_environment(self):
+        with patch.dict(os.environ, ENV), patch.object(release, "dispatch_options", return_value=("actions-only", False)):
+            with patch.object(release, "confirmation_policy", side_effect=ValueError("Missing reviewer")):
+                with self.assertRaisesRegex(ValueError, "Missing reviewer"):
+                    release.release_plan()
+                with self.assertRaisesRegex(ValueError, "Missing reviewer"):
+                    release.signing_preflight()
+
+    def test_public_notes_hide_engineering_without_losing_the_cumulative_baseline(self):
+        for filename, user, engineering in (("CHANGELOG_CN.md", "用户变化", "工程说明"),
+                                             ("CHANGELOG.md", "User changes", "Engineering notes")):
+            text = (f"## r14.25.3\n\nversionCode 248. Changes since r14.25.1:\n\n### {user}\n\nA concise overview.\n\n"
+                    + "\n".join(f"- User change {i}." for i in range(5))
+                    + f"\n\n### {engineering}\n\n- InternalHook details.\n")
+            notes = release.public_release_notes_section(text, "r14.25.3", 248, filename)
+            self.assertIn("Changes since r14.25.1:", notes)
+            self.assertIn("A concise overview.", notes)
+            self.assertEqual(5, notes.count("- User change"))
+            self.assertNotIn("InternalHook", notes)
+            self.assertNotIn("versionCode", notes)
+            self.assertNotIn("r14.25.2", notes)
+            with self.assertRaisesRegex(ValueError, "section pair"):
+                release.public_release_notes_section(text.replace(f"### {engineering}", f"### {user}"), "r14.25.3", 248, filename)
+            with self.assertRaisesRegex(ValueError, "4–6"):
+                release.public_release_notes_section(text.replace("- User change", "User change"), "r14.25.3", 248, filename)
+        legacy = "## r14.25.2\n\nversionCode 247.\n\n- Original release note.\n"
+        self.assertEqual(release.release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG.md"),
+                         release.public_release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG.md"))
 
     def test_changelog_release_notes_cannot_be_empty_ambiguous_or_wrong_version(self):
         for text in ("## r14.26.1\n\nversionCode 247.\n", "## r14.26.1\n\nversionCode 246.\n- Change\n",

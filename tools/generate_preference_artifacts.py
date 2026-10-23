@@ -48,6 +48,8 @@ CATEGORY_SOURCES = (
 # controller as normal navigation so dependent controls keep their behavior.
 # (entry key, XML resource, controller, dynamic title marker)
 STANDALONE_PAGES = (
+    ("pref_key_system_island_feedback_cat", "prefs_system_island_feedback", "System", False),
+    ("pref_key_system_island_music_cat", "prefs_system_island_music", "System", False),
     ("pref_key_system_autobrightness_cat", "prefs_system_autobrightness", "System_AutoBrightness", False),
     ("pref_key_system_visualizer_cat", "prefs_system_visualizer", "System_Visualizer", False),
     ("pref_key_system_vibration_amp_cat", "prefs_system_vibration_amp", "System_VibrationAmp", False),

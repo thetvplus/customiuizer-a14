@@ -37,7 +37,7 @@ object SystemServerFirstEnableContract {
         infra("animation_scale_bridge", null, "GlobalActionSystemServerHooks.setupAnimationScaleBridge", "n/a"),
         infra("updater_services_bridge", null, "GlobalActionSystemServerHooks.setupUpdaterServicesBridge", "n/a"),
         lazyB("temp_hide_overlay_app", "system_screenshot_overlay", "SystemWindowHooks.TempHideOverlayAppHook", "prefs_system_screenshot", "NONE"),
-        lazyB("open_app_in_free_form", "system_notify_openinfw", "SystemWindowHooks.OpenAppInFreeFormHook", "prefs_system_floatingwindows", "LAUNCHER|SYSTEMUI"),
+        lazyB("open_app_in_free_form", "system_fw_forcein_actionsend", "SystemWindowHooks.OpenAppInFreeFormHook", "prefs_system_floatingwindows", "LAUNCHER|SYSTEMUI"),
         SystemServerFirstEnableRow(
             featureIdName = "nav_bar_actions",
             preferenceKey = "controls_backlong_action",
@@ -84,7 +84,6 @@ object SystemServerFirstEnableContract {
         lazyB("fingerprint_screen_on", "controls_fingerprintscreen", "Controls.FingerprintScreenOnHook", "prefs_controls_fingerprint", "NONE"),
         lazyB("no_fingerprint_wake", "controls_fingerprintwake", "Controls.NoFingerprintWakeHook", "prefs_controls_fingerprint", "NONE"),
         lazyB("apps_disable_service", "various_disableapp", "Various.AppsDisableServiceHook", "prefs_various_general", "NONE"),
-        lazyB("disable_any_notification_block", "system_disableanynotif", "SystemNotificationHooks.DisableAnyNotificationBlockHook", "prefs_system_notifications", "SYSTEMUI"),
         lazyB("all_rotations", "system_allrotations2", "SystemDisplayHooks.AllRotationsHook", "prefs_system_screen", "SYSTEMUI"),
         lazyB("no_light_up_on_charge", "system_nolightuponcharges", "SystemDisplayHooks.NoLightUpOnChargeHook", "prefs_system_other", "SYSTEMUI|SECURITY_CENTER"),
         lazyB("selective_vibration", "system_vibration", "SystemAudioHooks.SelectiveVibrationHook", "prefs_system_vibration", "SYSTEMUI"),

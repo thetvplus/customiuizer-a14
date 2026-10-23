@@ -20,10 +20,28 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 import tv.withaibuild.customiuizer.prefs.PreferenceEx
 import tv.withaibuild.customiuizer.utils.AppHelper
+import tv.withaibuild.customiuizer.utils.MaintenanceJournal
 import tv.withaibuild.customiuizer.utils.parseMaintenanceStates
 import tv.withaibuild.customiuizer.utils.XposedServiceManager
 
 class Various : SubFragment() {
+    private val maintenanceContext by lazy { requireContext().applicationContext }
+    private val maintenanceJournal get() = MaintenanceJournal.open(maintenanceContext)
+
+    private fun recoverySnapshot(key: String) = ModuleHelper.guarded<MaintenanceJournal.Snapshot?>(null) {
+        maintenanceJournal.snapshot(key)
+    }
+
+    private fun configureMaintenancePreference(preference: CheckBoxPreferenceEx) {
+        if (!preference.extras.containsKey("maintenance_summary"))
+            preference.extras.putCharSequence("maintenance_summary", preference.summary)
+        preference.isPersistent = false
+        val configured = AppHelper.appPrefs?.getBoolean(preference.key, false) == true
+        val retained = maintenanceJournal.contains(preference.key)
+        preference.isChecked = configured || retained
+        preference.summary = if (retained && !configured) maintenanceContext.getString(R.string.various_maintenance_recovery)
+            else preference.extras.getCharSequence("maintenance_summary")
+    }
 
     private companion object {
         const val UPDATER_PACKAGE = "com.android.updater"
@@ -244,6 +262,7 @@ class Various : SubFragment() {
     @Suppress("DEPRECATION")
     private fun setupMiuiDaemonControl() {
         val preference = findPreference<CheckBoxPreferenceEx>(MIUI_DAEMON_PREF) ?: return
+        configureMaintenancePreference(preference)
         val context = context ?: return
         try {
             val info = context.packageManager.getApplicationInfo(
@@ -261,12 +280,14 @@ class Various : SubFragment() {
         }
         preference.setOnPreferenceChangeListener { _, value ->
             val disable = value == true
+            if (disable == preference.isChecked) return@setOnPreferenceChangeListener false
             // Capture each operation, not the state from when this page was opened.
             val originalState = context.packageManager.getApplicationEnabledSetting(MIUI_DAEMON_PACKAGE)
             val targetState = if (disable) {
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
             } else {
-                AppHelper.appPrefs?.getInt(MIUI_DAEMON_STATE_SNAPSHOT, Int.MIN_VALUE)
+                recoverySnapshot(MIUI_DAEMON_PREF)?.original?.singleOrNull()
+                    ?: AppHelper.appPrefs?.getInt(MIUI_DAEMON_STATE_SNAPSHOT, Int.MIN_VALUE)
                     ?.takeIf { it != Int.MIN_VALUE }
                     ?: return@setOnPreferenceChangeListener false
             }
@@ -279,16 +300,17 @@ class Various : SubFragment() {
                     preference,
                     intent,
                     R.string.various_disable_miui_daemon_success,
-                    R.string.various_disable_miui_daemon_failed
+                    R.string.various_disable_miui_daemon_failed,
+                    profileEnabled = disable
                 ) {
                     AppHelper.appPrefs?.edit()?.apply {
                         putBoolean(MIUI_DAEMON_PREF, disable)
                         if (disable) {
-                            putInt(MIUI_DAEMON_STATE_SNAPSHOT, originalState)
+                            putInt(MIUI_DAEMON_STATE_SNAPSHOT, recoverySnapshot(MIUI_DAEMON_PREF)?.original?.singleOrNull() ?: originalState)
                         } else {
                             remove(MIUI_DAEMON_STATE_SNAPSHOT)
                         }
-                    }?.apply()
+                    }?.let { check(it.commit()) }
                     preference.isChecked = disable
                 }
             }
@@ -314,6 +336,7 @@ class Various : SubFragment() {
         confirmation: Int
     ) {
         val preference = findPreference<CheckBoxPreferenceEx>(preferenceKey) ?: return
+        configureMaintenancePreference(preference)
         val packageManager = context?.packageManager ?: return
         val declared = HashSet<String>()
         for (packageName in knownComponents.map { it.packageName }.toSet()) {
@@ -343,6 +366,7 @@ class Various : SubFragment() {
         }
         preference.setOnPreferenceChangeListener { _, value ->
             val enable = value == true
+            if (enable == preference.isChecked) return@setOnPreferenceChangeListener false
             val snapshot = if (enable) {
                 available to IntArray(available.size) { index ->
                     packageManager.getComponentEnabledSetting(available[index])
@@ -373,7 +397,8 @@ class Various : SubFragment() {
                     preference,
                     intent,
                     R.string.various_xiaomi_trim_success,
-                    R.string.various_xiaomi_trim_failed
+                    R.string.various_xiaomi_trim_failed,
+                    profileEnabled = enable
                 ) {
                     persistComponentProfileSnapshot(
                         preferenceKey,
@@ -397,6 +422,7 @@ class Various : SubFragment() {
         confirmation: Int
     ) {
         val preference = findPreference<CheckBoxPreferenceEx>(preferenceKey) ?: return
+        configureMaintenancePreference(preference)
         val packageManager = context?.packageManager ?: return
         val installed = knownPackages.filter { packageName ->
             try {
@@ -418,6 +444,7 @@ class Various : SubFragment() {
         }
         preference.setOnPreferenceChangeListener { _, value ->
             val enable = value == true
+            if (enable == preference.isChecked) return@setOnPreferenceChangeListener false
             val snapshot = if (enable) {
                 installed to IntArray(installed.size) { index ->
                     packageManager.getApplicationEnabledSetting(installed[index])
@@ -443,7 +470,8 @@ class Various : SubFragment() {
                     preference,
                     intent,
                     R.string.various_xiaomi_trim_success,
-                    R.string.various_xiaomi_trim_failed
+                    R.string.various_xiaomi_trim_failed,
+                    profileEnabled = enable
                 ) {
                     persistPackageProfileSnapshot(
                         preferenceKey,
@@ -487,18 +515,22 @@ class Various : SubFragment() {
                     key + PROFILE_COMPONENTS_SUFFIX,
                     components.joinToString("\n") { it.className }
                 )
-                putString(key + PROFILE_STATES_SUFFIX, states.joinToString(","))
+                putString(key + PROFILE_STATES_SUFFIX, (recoverySnapshot(key)?.original ?: states).joinToString(","))
             } else {
                 remove(key + PROFILE_PACKAGES_SUFFIX)
                 remove(key + PROFILE_COMPONENTS_SUFFIX)
                 remove(key + PROFILE_STATES_SUFFIX)
             }
-        }?.apply()
+        }?.let { check(it.commit()) }
     }
 
     private fun readComponentProfileSnapshot(
         key: String
     ): Pair<List<ComponentName>, IntArray>? {
+        recoverySnapshot(key)?.let { saved ->
+            return saved.targets.map { ComponentName(it.packageName, it.component ?: return null) } to saved.original
+        }
+        if (maintenanceJournal.contains(key)) return null
         val prefs = AppHelper.appPrefs ?: return null
         val packages = prefs.getString(key + PROFILE_PACKAGES_SUFFIX, null)
             ?.split('\n') ?: return null
@@ -519,15 +551,17 @@ class Various : SubFragment() {
             putBoolean(key, enabled)
             if (enabled) {
                 putString(key + PROFILE_PACKAGES_SUFFIX, packages.joinToString("\n"))
-                putString(key + PROFILE_STATES_SUFFIX, states.joinToString(","))
+                putString(key + PROFILE_STATES_SUFFIX, (recoverySnapshot(key)?.original ?: states).joinToString(","))
             } else {
                 remove(key + PROFILE_PACKAGES_SUFFIX)
                 remove(key + PROFILE_STATES_SUFFIX)
             }
-        }?.apply()
+        }?.let { check(it.commit()) }
     }
 
     private fun readPackageProfileSnapshot(key: String): Pair<List<String>, IntArray>? {
+        recoverySnapshot(key)?.let { saved -> return saved.targets.map { it.packageName } to saved.original }
+        if (maintenanceJournal.contains(key)) return null
         val packages = AppHelper.appPrefs?.getString(key + PROFILE_PACKAGES_SUFFIX, null)
             ?.split('\n') ?: return null
         val states = readProfileStates(key) ?: return null
@@ -542,15 +576,32 @@ class Various : SubFragment() {
         intent: Intent,
         successMessage: Int,
         failedMessage: Int,
+        profileEnabled: Boolean? = null,
         onSuccess: (() -> Unit)? = null
     ) {
         val context = context ?: return
+        val journal = maintenanceJournal
+        val attempt = if (profileEnabled == null) null else ModuleHelper.guarded<MaintenanceJournal.Attempt?>(null) {
+            journal.prepare(preference.key, intent, profileEnabled)
+        }
+        if (profileEnabled != null && attempt == null) {
+            Toast.makeText(context, failedMessage, Toast.LENGTH_LONG).show()
+            return
+        }
+        val request = intent
+        val requestContext = context
         preference.isEnabled = false
         val resultReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
                 preference.isEnabled = true
-                if (resultCode == GlobalActions.ACTION_HANDLED) {
+                val verified = ModuleHelper.guarded(false) {
+                    if (resultCode != GlobalActions.ACTION_HANDLED || attempt?.verify() == false) return@guarded false
                     onSuccess?.invoke()
+                    attempt?.finish()
+                    true
+                }
+                if (verified) {
+                    if (preference is CheckBoxPreferenceEx) configureMaintenancePreference(preference)
                     if (successMessage != 0) Toast.makeText(context, successMessage, Toast.LENGTH_LONG).show()
                     return
                 }
@@ -559,7 +610,7 @@ class Various : SubFragment() {
                 } else {
                     failedMessage
                 }
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                recoverMaintenanceFailure(requestContext, preference, request, attempt, message)
             }
         }
         try {
@@ -575,7 +626,35 @@ class Various : SubFragment() {
             preference.isEnabled = true
             FatalErrors.unwrapAndRethrowIfFatal(t)
             AppHelper.log("SystemMaintenance", t)
-            Toast.makeText(context, failedMessage, Toast.LENGTH_LONG).show()
+            recoverMaintenanceFailure(requestContext, preference, request, attempt, failedMessage)
+        }
+    }
+
+    private fun recoverMaintenanceFailure(context: Context, preference: Preference, request: Intent,
+        attempt: MaintenanceJournal.Attempt?, message: Int) {
+        val complete = {
+            ModuleHelper.guarded {
+                if (attempt?.restored() == true) {
+                    check(AppHelper.appPrefs?.edit()?.putBoolean(preference.key, false)?.commit() == true)
+                    attempt.recovered()
+                }
+                if (preference is CheckBoxPreferenceEx) configureMaintenancePreference(preference)
+            }
+            preference.isEnabled = true
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+        val rollback = ModuleHelper.guarded<Intent?>(null) { attempt?.rollbackIntent(request) }
+        if (rollback == null) { complete(); return }
+        preference.isEnabled = false
+        try {
+            // One bounded compensation request; an unsuccessful rollback keeps recovery on disk.
+            ModuleHelper.sendOrderedBroadcastWithIdentity(context, rollback, null,
+                object : BroadcastReceiver() {
+                    override fun onReceive(context: Context, intent: Intent?) = ModuleHelper.guarded { complete() }
+                }, Handler(Looper.getMainLooper()), GlobalActions.ACTION_UNHANDLED)
+        } catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            complete()
         }
     }
 
@@ -606,6 +685,7 @@ class Various : SubFragment() {
 
     private fun setupUpdaterServiceControl() {
         val preference = findPreference<CheckBoxPreferenceEx>(UPDATE_SERVICES_PREF) ?: return
+        configureMaintenancePreference(preference)
         val current = declaredUpdaterServices()
         if (current == null) {
             preference.isChecked = false
@@ -614,6 +694,7 @@ class Various : SubFragment() {
             return
         }
         preference.setOnPreferenceChangeListener { _, value ->
+            if ((value == true) == preference.isChecked) return@setOnPreferenceChangeListener false
             if (value == true) {
                 val activity = activity ?: return@setOnPreferenceChangeListener false
                 AlertDialog.Builder(activity)
@@ -660,6 +741,10 @@ class Various : SubFragment() {
     }
 
     private fun readUpdaterServiceSnapshot(): Pair<Array<String>, IntArray>? {
+        recoverySnapshot(UPDATE_SERVICES_PREF)?.let { saved ->
+            return saved.targets.map { it.component ?: return null }.toTypedArray() to saved.original
+        }
+        if (maintenanceJournal.contains(UPDATE_SERVICES_PREF)) return null
         val prefs = AppHelper.appPrefs ?: return null
         val names = prefs.getString(UPDATE_SERVICE_NAMES_SNAPSHOT, null)
             ?.split('\n')
@@ -682,17 +767,17 @@ class Various : SubFragment() {
             putExtra(GlobalActions.EXTRA_UPDATER_SERVICE_NAMES, names)
             putExtra(GlobalActions.EXTRA_UPDATER_SERVICE_STATES, requestedStates)
         }
-        requestMaintenanceAction(preference, intent, 0, R.string.various_disable_update_services_failed) {
+        requestMaintenanceAction(preference, intent, 0, R.string.various_disable_update_services_failed, profileEnabled = enabled) {
             AppHelper.appPrefs?.edit()?.apply {
                 putBoolean(UPDATE_SERVICES_PREF, enabled)
                 if (enabled && snapshotStates != null) {
                     putString(UPDATE_SERVICE_NAMES_SNAPSHOT, names.joinToString("\n"))
-                    putString(UPDATE_SERVICE_STATES_SNAPSHOT, snapshotStates.joinToString(","))
+                    putString(UPDATE_SERVICE_STATES_SNAPSHOT, (recoverySnapshot(UPDATE_SERVICES_PREF)?.original ?: snapshotStates).joinToString(","))
                 } else if (!enabled) {
                     remove(UPDATE_SERVICE_NAMES_SNAPSHOT)
                     remove(UPDATE_SERVICE_STATES_SNAPSHOT)
                 }
-            }?.apply()
+            }?.let { check(it.commit()) }
             preference.isChecked = enabled
         }
     }

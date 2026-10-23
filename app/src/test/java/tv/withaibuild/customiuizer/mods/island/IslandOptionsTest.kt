@@ -16,6 +16,21 @@ class IslandOptionsTest {
         assertTrue(IslandOptions.read(prefs).mediaSwipe)
     }
 
+    @Test fun waveformModeRetainsOldOffValuesAndNeverPromotesInvalidImportsToRealCapture() {
+        val prefs = PrefMap()
+        assertEquals(1, IslandOptions.read(prefs).waveformMode)
+        prefs.put("system_island_waveform", false)
+        assertEquals(0, IslandOptions.read(prefs).waveformMode)
+        prefs.put("system_island_waveform_mode", "2")
+        assertEquals(2, IslandOptions.read(prefs).waveformMode)
+        assertTrue(IslandOptions.read(prefs).waveform)
+        for (stored in listOf("-1", "99", "invalid")) {
+            prefs.put("system_island_waveform_mode", stored)
+            assertEquals(1, IslandOptions.read(prefs).waveformMode)
+        }
+        assertEquals(false, prefs.getBoolean("system_island_waveform", true))
+    }
+
     @Test fun entranceStyleDefaultsSafelyAndRetainsItsChoiceWithSimplifiedAnimation() {
         val prefs = PrefMap()
         assertEquals(IslandEntranceStyle.TOP, IslandOptions.read(prefs).entranceStyle)

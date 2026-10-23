@@ -1,5 +1,19 @@
 # A14 架构
 
+## 产品方向与取舍
+
+米客 A14 是原生融合、响应迅速、低额外开销且动画可靠的 HyperOS 1 增强工具。范围保持 Android 14 / SDK 34、arm64-v8a 和 libxposed API 102；不以增加功能数量为目标。原生能力拥有行为和生命周期，模块只改变用户明确选择的部分。
+
+| 级别 | 当前范围 | 长期投入 |
+| --- | --- | --- |
+| CORE | 通知交互、动态岛、Dock、状态栏与手势 | 精修触摸准确性、状态切换、动画、原生恢复与资源释放；保留既有视觉合同 |
+| MAINTAIN | 声音 / 振动、Toast、控制中心辅助项、设置 / 搜索 / 备份、有限维护工具 | 稳定与安全优先；安装条件明确，恢复记录可靠，不扩张系统停用范围 |
+| RETIRE_CANDIDATE | 有目标 ROM 失效证据、重复原生能力或所有权成本无法闭合的具体实现 | 逐项登记于[现有退役页](docs/maintenance/A14_FEATURE_RETIREMENTS.md)，先停无效运行再评估删除；静态引用计数不构成删除依据 |
+
+关闭功能不安装业务 Hook、监听或任务；启用后的状态与资源须有所有者、容量、失效和释放路径。禁止以降低动画质量宣称优化，不凭静态扫描宣称功耗或帧率收益。新能力、依赖和抽象须对应实际用途及可回退收益，避免为形式统一搬迁文件。源码、Host JVM、ROM 静态证据、最终 APK 和真机测量分别验收。
+
+工作顺序和设备证据继续归[精修路线图](docs/maintenance/A14_REFINEMENT_ROADMAP.md)，发布门禁归[发布文档](docs/RELEASE.md)，不建立平行管理体系。
+
 ## 入口与路由
 
 | 层 | 主要职责 |
@@ -21,8 +35,8 @@ Installer 按进程与开关选择 Feature。`FeatureInstallRegistry` 使用进�
 
 - API 102 是最低基线；`HookInstallation` 统一原生安装策略，`XposedServiceManager` 管理 Service 与动态作用域。保留设置进程与 compileOnly Hook API 的类加载边界。
 - 宿主 SystemUI 与动态插件使用各自的 ClassLoader；安装时解析 ROM 类、方法、资源及签名，缺失时停止对应功能或保留原生行为。
-- 系统默认与匹配高度模式由 ROM StrongToast 管理原生窗口；动态岛在其统一入口抑制原生额头，使用 `mods/island` 内单一 Controller / View。短时活动、媒体、系统终态与通知共享展示门控和身份租约，避免双窗口、旧回调复活与隐私泄漏。
-- 动态岛尺寸、运动、遮挡、暂停退场及输入规则统一见 [当前行为](docs/features/island/README.md)。当前只有短岛 / 长岛；音乐左右切歌开关已实现，五手势独立配置仍是 [候选方案](docs/features/island/MUSIC_GESTURES.md)。主线程 owner、session epoch、generation、容量一状态和有界图像归对应控制器，重建、解绑、切用户和关闭均释放。
+- 系统默认与匹配高度模式由 ROM StrongToast 管理原生窗口；动态岛在其统一入口抑制原生额头，使用 `mods/island` 内单一 Controller / View；同一窗口的有界输入容器只负责实际 touchableRegion，不拥有媒体状态或新增窗口。短时活动、媒体、系统终态与通知共享展示门控和身份租约，避免双窗口、旧回调复活与隐私泄漏。
+- 动态岛尺寸、运动、遮挡、暂停退场及输入规则统一见 [当前行为](docs/features/island/README.md)。当前只有短岛 / 长岛；音乐左右切歌开关与五手势独立配置已实现，具体行为见 [音乐交互](docs/features/island/MUSIC_GESTURES.md)。主线程 owner、session epoch、generation、容量一状态和有界图像归对应控制器，重建、解绑、切用户和关闭均释放。实验性实时波形复用共享 FFT 数学，只在目标会话可确认且可见播放时按需持有一个 Visualizer；默认轻量动画。
 - 公共 StrongToast 快照、通用 Hook / 偏好 / 安全边界继续在共享层；动态岛功能包通过明确导入调用，不复制这些状态或另建轮询服务。
 - Dock 默认背景继续归属原生 HotSeats；「全宽底栏」独立装饰挂在窗口根布局底层，以弱引用跟随 HotSeats 的布局、可见性、原生动画透明度和解绑。它不松开原生祖先裁切、不移动图标、不接受触摸；关闭该选项即可回到原有背景合同。
 - 反射缓存按 ClassLoader 隔离且有界；成熟 Hook 基础设施的修改按 [AGENTS.md](AGENTS.md) 提供相应契约与回归证据，ROM 行为另需目标样本与实机验证。

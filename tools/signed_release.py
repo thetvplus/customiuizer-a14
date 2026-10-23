@@ -259,22 +259,22 @@ def release_plan() -> None:
         automatic_ci()
         require_current_main(sha)
     if destination == "actions-only":
+        confirmation_policy()
         output(ready="true", destination=destination, prerelease=str(prerelease).lower())
         print("Build a signed candidate only; no Release or tag will be created")
         return
     require(os.environ["GITHUB_REF"] == "refs/heads/main", "Publish from main after CI; use actions-only on a trusted test branch")
+    name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
+    existing = optional_api(f"repos/{REPO}/releases/tags/{name}")
+    if existing is not None and existing.get("draft") is False:
+        output(ready="false", destination=destination, prerelease="false")
+        print(f"{name} is already published; no signing or publication was started")
+        if os.environ.get("GITHUB_STEP_SUMMARY"):
+            with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+                summary.write(f"### No new release requested\n\n{name} is already published. No signing or publication was started. Use Promote Release with the original candidate for incomplete publication.\n")
+        return
     if not automatic:
         require_main_ci(sha)
-    name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
-    if automatic:
-        existing = optional_api(f"repos/{REPO}/releases/tags/{name}")
-        if existing is not None and existing.get("draft") is False:
-            output(ready="false", destination=destination, prerelease="false")
-            print(f"{name} is already published; ordinary main changes do not request another release")
-            if os.environ.get("GITHUB_STEP_SUMMARY"):
-                with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
-                    summary.write(f"### No new release requested\n\n{name} is already published. Main CI passed; no signing or publication was started.\n")
-            return
     check_new_release(name, code, sha)
     local_release_notes(name, code)
     confirmation_policy()
@@ -307,19 +307,36 @@ def local_release_notes(name: str, code: int) -> list[str]:
         from check_release_metadata import check
     errors = check()
     require(not errors, "Release metadata is not aligned: " + "; ".join(errors))
-    return [f"## {language}\n\n" + release_notes_section((ROOT / filename).read_text(encoding="utf-8"), name, code, filename)
+    return [f"## {language}\n\n" + public_release_notes_section((ROOT / filename).read_text(encoding="utf-8"), name, code, filename)
             for filename, language in (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English"))]
+
+
+def public_release_notes_section(text: str, name: str, code: int, filename: str) -> str:
+    """Render reviewed user changes; legacy releases retain their original format."""
+    body = release_notes_section(text, name, code, filename)
+    user = "用户变化" if filename.endswith("_CN.md") else "User changes"
+    engineering = "工程说明" if filename.endswith("_CN.md") else "Engineering notes"
+    headings = list(re.finditer(r"^### (.+?)\s*$", body, re.M))
+    reserved = {"用户变化", "User changes", "工程说明", "Engineering notes"}
+    if not any(item[1] in reserved for item in headings):
+        return body
+    require([item[1] for item in headings] == [user, engineering],
+            f"{filename} needs one ordered user/engineering section pair")
+    changes = body[headings[0].end():headings[1].start()].strip()
+    count = len(re.findall(r"^[-*] \S", changes, re.M))
+    require(4 <= count <= 6, f"{filename} public notes need 4–6 reviewed user changes")
+    intro = re.sub(r"^versionCode\s+\d+[。.]\s*", "", body[:headings[0].start()].strip())
+    return f"{intro}\n\n{changes}".strip()
 
 
 def signing_preflight() -> None:
     """Recheck after the human approval, before any signing secret is exposed."""
     destination, _ = dispatch_options()
     _, sha = event_source()
+    confirmation_policy()
     if os.environ["GITHUB_EVENT_NAME"] == "workflow_run":
         automatic_ci()
-        confirmation_policy()
     if destination != "actions-only":
-        confirmation_policy()
         require_main_ci(sha)
         name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
         check_new_release(name, code, sha)
@@ -585,7 +602,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
     sections = []
     for filename, language in (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English")):
         changelog = api(f"repos/{REPO}/contents/{filename}?ref={sha}")
-        body = release_notes_section(base64.b64decode(changelog["content"]).decode("utf-8"), name, code, filename)
+        body = public_release_notes_section(base64.b64decode(changelog["content"]).decode("utf-8"), name, code, filename)
         sections.append(f"## {language}\n\n{body}")
     notes = folder / "release-notes.md"
     notes.write_text("\n\n".join(sections) + f"\n\n## APK / Provenance\n\nSource: `{sha}`\n\n"

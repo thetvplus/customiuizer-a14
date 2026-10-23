@@ -51,7 +51,7 @@ class IslandMusicActionsTest {
         assertEquals(108, IslandPosition.left(184, 12, 388, 1, 0, 40))
         assertEquals(204, IslandPosition.left(184, 12, 388, 2, 0, 40))
         assertEquals(204, IslandPosition.left(184, 12, 388, 1, Int.MAX_VALUE, 40))
-        assertEquals(108, IslandPosition.left(184, 12, 388, 0, 0, 40, 192, 208, true))
+        assertNull(IslandPosition.left(184, 12, 388, 0, 0, 40, 192, 208, true))
         assertNull(IslandPosition.left(500, 12, 388, 0, 0, 40))
         for (density in listOf(.75f, 1f, 2.75f, 4f)) for (height in listOf(38, 40, 44)) {
             val auto = IslandSizing.collapsed(density, (400*density).toInt(), (300*density).toInt(), (40*density).toInt(), heightDp = height)

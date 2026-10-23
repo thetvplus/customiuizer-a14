@@ -981,27 +981,28 @@ object Controls {
     @JvmStatic
     fun BackGestureAreaHeightHook(lpparam: PackageReadyParam) {
         installControlsSnapshot()
-        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "getGestureStubWindowParam", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val lp = result as WindowManager.LayoutParams
-                    val pct = controlsConfig.fsgCoverage
-                    lp.height = Math.round(lp.height / 60.0f * pct)
-                    result = lp; throwable = null
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "getGestureStubWindowParam", backGestureHeightHook())
+    }
+
+    internal fun backGestureHeightHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            ModuleHelper.guarded {
+                val pct = controlsConfig.fsgCoverage
+                if (pct == 60) return@guarded
+                val lp = result as? WindowManager.LayoutParams ?: return@guarded
+                val owner = chain.thisObject
+                if (XposedHelpers.getIntField(owner, "mGestureStubPos") == 2) return@guarded
+                val rotation = XposedHelpers.getIntField(owner, "mRotation")
+                // Native portrait split screen uses 100%; other side windows use 60%.
+                val fullHeight = (rotation == 0 || rotation == 2) &&
+                    XposedHelpers.getBooleanField(owner, "mIsInMultiWindowMode") &&
+                    !XposedHelpers.getBooleanField(owner, "mIsInMinimizedMultiWindowMode")
+                val nativePercent = if (fullHeight) 100f else 60f
+                lp.height = Math.round(lp.height / nativePercent * pct)
             }
-        })
+            return result
+        }
     }
 
     @JvmStatic

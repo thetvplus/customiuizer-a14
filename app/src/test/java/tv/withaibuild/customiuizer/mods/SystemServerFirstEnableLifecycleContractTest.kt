@@ -15,7 +15,8 @@ class SystemServerFirstEnableLifecycleContractTest {
     @Test
     fun everySystemServerFeatureIsClassified() {
         val features = SystemServerFeatures.all(fakeSystemServerStartingParam())
-        assertEquals(54, features.size)
+        assertEquals(53, features.size)
+        assertFalse("Retired global channel policy has no lifecycle entry", features.any { it.id.id == 38 })
         assertEquals(features.map { it.id.name }.toSet(), SystemServerFirstEnableContract.names())
     }
 

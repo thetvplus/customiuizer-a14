@@ -11,9 +11,9 @@ class IslandRecallHitTest {
         val slop = 16
         val mdpi = IslandRecallHit.extraMarginPx(1f, slop)
         val xxhdpi = IslandRecallHit.extraMarginPx(2.75f, slop)
-        assertEquals(32, mdpi)
+        assertEquals(16, mdpi)
         assertTrue(xxhdpi > mdpi)
-        assertTrue(xxhdpi <= (36f * 2.75f + 0.5f).toInt())
+        assertTrue(xxhdpi <= (16f * 2.75f + 0.5f).toInt())
     }
 
     @Test

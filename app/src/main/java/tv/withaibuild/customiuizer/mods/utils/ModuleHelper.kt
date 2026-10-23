@@ -851,10 +851,7 @@ class ModuleHelper private constructor() {
                 }
             }
             if (!pendingIntent.isActivity) {
-                val bIntent = Intent(tv.withaibuild.customiuizer.mods.GlobalActions.ACTION_PREFIX + "SetFreeFormPackage")
-                bIntent.putExtra("package", pkgName)
-                bIntent.setPackage("android")
-                mContext.sendBroadcast(bIntent)
+                return null // A trampoline cannot carry this launch's ActivityOptions safely.
             }
             val options: ActivityOptions? = MiuiMultiWindowUtils.getActivityOptions(mContext, pkgName, true, false)
             if (options != null) {

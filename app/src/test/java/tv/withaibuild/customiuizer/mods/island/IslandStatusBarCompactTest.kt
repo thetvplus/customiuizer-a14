@@ -58,6 +58,34 @@ class IslandStatusBarCompactTest {
         activity.finish()
     }
 
+    @Test fun movingBetweenSafeEdgesHidesOnlyPhysicalIntersectionsAndVerticalAvoidanceRestoresThem() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        try {
+            val root = FrameLayout(activity)
+            val clock = View(activity); val battery = View(activity)
+            val leftIcon = View(activity).apply { alpha = .7f }
+            val rightIcon = View(activity).apply { alpha = .8f }
+            listOf(clock, battery, leftIcon, rightIcon).forEach(root::addView)
+            activity.setContentView(root)
+            root.layout(0, 0, 400, 50)
+            clock.layout(12, 0, 70, 50); battery.layout(340, 0, 388, 50)
+            leftIcon.layout(90, 0, 110, 50); rightIcon.layout(285, 0, 315, 50)
+            val compact = IslandStatusBarCompact(root, clock, battery, animationsEnabled = { false })
+            val origin = IntArray(2); root.getLocationOnScreen(origin)
+            fun bounds(left: Int, top: Int, right: Int, bottom: Int) =
+                Rect(left + origin[0], top + origin[1], right + origin[0], bottom + origin[1])
+            compact.show(bounds(0, 0, 160, 40))
+            assertEquals(0f, clock.alpha); assertEquals(0f, leftIcon.alpha)
+            assertEquals(1f, battery.alpha); assertEquals(.8f, rightIcon.alpha)
+            compact.show(bounds(240, 0, 400, 40))
+            assertEquals(1f, clock.alpha); assertEquals(.7f, leftIcon.alpha)
+            assertEquals(0f, battery.alpha); assertEquals(0f, rightIcon.alpha)
+            compact.show(bounds(240, 60, 400, 100))
+            assertEquals(1f, battery.alpha); assertEquals(.8f, rightIcon.alpha)
+            compact.restore()
+        } finally { activity.finish() }
+    }
+
     @Test fun contentReplacementAndLateBranchesDoNotLeaveHiddenIconsOrDetachedListeners() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val root = FrameLayout(activity)

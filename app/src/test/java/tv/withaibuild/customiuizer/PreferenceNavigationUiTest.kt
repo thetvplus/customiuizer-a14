@@ -126,7 +126,7 @@ class PreferenceNavigationUiTest {
     fun everyHomeCategoryAndAllItsSettingsPagesAreVisible() {
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries must be indexed", 25, standaloneKeys.size)
+        assertEquals("All standalone page entries must be indexed", 27, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -145,6 +145,12 @@ class PreferenceNavigationUiTest {
                 assertTrue("$settingKey must open a fresh settings page", currentPage() !== selector)
                 assertPreferencePageVisible(currentPage())
                 capturePage(settingKey)
+                if (settingKey == "pref_key_system_cat_island") {
+                    val island = currentPage() as SubFragment
+                    val mode = requireNotNull(island.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+                    assertTrue(mode.callChangeListener("3")); mode.value = "3"
+                    requireNotNull(island.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+                }
                 for (entryKey in standaloneKeys) {
                     val parent = currentPage() as SubFragment
                     val entry = parent.findPreference<Preference>(entryKey) ?: continue
@@ -171,7 +177,8 @@ class PreferenceNavigationUiTest {
     fun searchOpensMovedAndDeepSettingsAndReturnsHome() {
         Helpers.getAllMods(activity, true)
         for (key in arrayOf("pref_key_system_volumeblur_collapsed", "pref_key_system_statusbaricons_wifi",
-            "pref_key_system_autobrightness_limitmin", "pref_key_various_disable_miui_daemon")) {
+            "pref_key_system_autobrightness_limitmin", "pref_key_various_disable_miui_daemon",
+            "pref_key_system_island_feedback_wifi", "pref_key_system_island_music_down")) {
             val result = Helpers.allModsList.single { it.key == key }
             val home = currentPage() as MainFragment
             assertTrue(ReflectionHelpers.callInstanceMethod<Boolean>(home, "openSearchResult",
@@ -262,6 +269,41 @@ class PreferenceNavigationUiTest {
         assertFalse(swipe.isEnabled)
     }
 
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "zh-rCN-w320dp-h640dp")
+    fun waveformModeKeepsItsCurrentValueAndAVisibleFallbackExplanation() {
+        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
+        val page = currentPage() as SubFragment
+        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        assertTrue(mode.callChangeListener("3")); mode.value = "3"
+        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        val wave = requireNotNull(page.findPreference<ListPreference>("pref_key_system_island_waveform_mode"))
+        assertEquals("1", wave.value)
+        wave.value = "2"
+        val waveRow = LayoutInflater.from(activity).inflate(wave.layoutResource, null)
+        wave.onBindViewHolder(PreferenceViewHolder.createInstanceForTests(waveRow))
+        assertEquals(activity.getString(R.string.system_island_waveform_real),
+            waveRow.findViewById<TextView>(android.R.id.hint).text.toString())
+        val expected = activity.getString(R.string.system_island_waveform_mode_summ)
+        fun explanation(group: PreferenceGroup): Preference? {
+            for (index in 0 until group.preferenceCount) {
+                val preference = group.getPreference(index)
+                if (!preference.isSelectable && preference.summary?.toString() == expected) return preference
+                if (preference is PreferenceGroup) explanation(preference)?.let { return it }
+            }
+            return null
+        }
+        val detail = requireNotNull(explanation(page.preferenceScreen))
+        val detailRow = LayoutInflater.from(activity).inflate(detail.layoutResource, null)
+        detail.onBindViewHolder(PreferenceViewHolder.createInstanceForTests(detailRow))
+        assertEquals(View.VISIBLE, detailRow.findViewById<TextView>(android.R.id.summary).visibility)
+        assertEquals(expected, detailRow.findViewById<TextView>(android.R.id.summary).text.toString())
+        val adapter = page.listView.adapter as androidx.preference.PreferenceGroupAdapter
+        page.listView.scrollToPosition(adapter.getPreferenceAdapterPosition(wave))
+        settleNavigation()
+        capturePage("island-waveform-320-zh")
+    }
+
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")
@@ -271,8 +313,10 @@ class PreferenceNavigationUiTest {
         val mode=requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
         assertTrue(mode.callChangeListener("3")); mode.value="3"
         requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked=true
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
+        val musicPage = currentPage() as SubFragment
         val key="pref_key_system_island_music_left"
-        val left=requireNotNull(page.findPreference<Preference>(key))
+        val left=requireNotNull(musicPage.findPreference<Preference>(key))
         assertTrue(left.isEnabled)
         left.performClick(); settleNavigation()
         val editor=currentPage() as SubFragment
@@ -283,12 +327,18 @@ class PreferenceNavigationUiTest {
         val menu=PopupMenu(activity,editor.requireView()).menu
         editor.onCreateOptionsMenu(menu,activity.menuInflater)
         assertTrue(editor.onOptionsItemSelected(menu.findItem(R.id.edit_confirm))); settleNavigation()
-        assertSame(page,currentPage())
+        assertSame(musicPage,currentPage())
         assertEquals(18,requireNotNull(AppHelper.appPrefs).getInt(key+"_action",-1))
         assertEquals(activity.getString(R.string.array_global_actions_volume_up),left.summary.toString())
+        pressToolbarBack()
+        assertSame(page, currentPage())
         requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe")).isChecked=false
-        assertTrue(left.isEnabled)
-        assertFalse(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
+        assertTrue(requireNotNull((currentPage() as SubFragment).findPreference<Preference>(key)).isEnabled)
+        pressToolbarBack()
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()
+        assertFalse(requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
+        pressToolbarBack()
         val chat=requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_chat"))
         val allowed=requireNotNull(page.findPreference<Preference>("pref_key_system_island_notification_apps"))
         assertFalse(allowed.isEnabled); chat.isChecked=true; assertTrue(allowed.isEnabled)
@@ -511,6 +561,55 @@ class PreferenceNavigationUiTest {
     }
 
     @Test
+    fun configurationCommitFailureCompensatesTheSuccessfulSystemMutationOnce() {
+        installSystemPackage("com.miui.daemon")
+        val transport = installMaintenanceBridge()
+        val toggle = requireNotNull(openExclusivePage().findPreference<CheckBoxPreferenceEx>("pref_key_various_disable_miui_daemon"))
+        val originalPrefs = requireNotNull(AppHelper.appPrefs)
+        var failNext = true
+        AppHelper.appPrefs = object : android.content.SharedPreferences by originalPrefs {
+            override fun edit(): android.content.SharedPreferences.Editor {
+                val editor = originalPrefs.edit()
+                return object : android.content.SharedPreferences.Editor by editor {
+                    override fun commit(): Boolean {
+                        if (failNext) { failNext = false; return false }
+                        return editor.commit()
+                    }
+                    override fun putBoolean(key: String, value: Boolean): android.content.SharedPreferences.Editor {
+                        editor.putBoolean(key, value); return this
+                    }
+                }
+            }
+        }
+        toggle.callChangeListener(true)
+        confirmLatestDialog()
+        assertEquals(0, activity.packageManager.getApplicationEnabledSetting("com.miui.daemon"))
+        assertEquals(2, transport.sends)
+        assertFalse(toggle.isChecked)
+        assertFalse(tv.withaibuild.customiuizer.utils.MaintenanceJournal.open(activity).contains(toggle.key))
+    }
+
+    @Test
+    fun interruptedRestrictionRemainsRecoverableAfterReopeningTheSettingsPage() {
+        installSystemPackage("com.miui.daemon")
+        val journal = tv.withaibuild.customiuizer.utils.MaintenanceJournal.open(activity)
+        val intent = Intent(GlobalActions.SET_MIUI_DAEMON_STATE_ACTION)
+            .putExtra(GlobalActions.EXTRA_APPLICATION_STATE, 3)
+        journal.prepare("pref_key_various_disable_miui_daemon", intent, true)
+        activity.packageManager.setApplicationEnabledSetting("com.miui.daemon", 3, 0)
+        installMaintenanceBridge()
+        val toggle = requireNotNull(openExclusivePage().findPreference<CheckBoxPreferenceEx>("pref_key_various_disable_miui_daemon"))
+        assertTrue(toggle.isChecked)
+        assertFalse(requireNotNull(AppHelper.appPrefs).getBoolean(toggle.key, false))
+        assertEquals(activity.getString(R.string.various_maintenance_recovery), toggle.summary)
+        toggle.callChangeListener(false)
+        settleNavigation()
+        assertEquals(0, activity.packageManager.getApplicationEnabledSetting("com.miui.daemon"))
+        assertFalse(toggle.isChecked)
+        assertFalse(journal.contains(toggle.key))
+    }
+
+    @Test
     fun daemonRestoreThenDisableAgainCapturesTheNewOriginalState() {
         installSystemPackage("com.miui.daemon")
         activity.packageManager.setApplicationEnabledSetting("com.miui.daemon", 3, 0)
@@ -626,6 +725,7 @@ class PreferenceNavigationUiTest {
         shadowOf(activity.packageManager).installPackage(PackageInfo().apply {
             packageName = packageId
             applicationInfo = app
+            signatures = arrayOf(android.content.pm.Signature(byteArrayOf(1, 2, 3)))
             if (service != null) services = arrayOf(ServiceInfo().apply {
                 packageName = packageId
                 name = service
@@ -660,6 +760,11 @@ class PreferenceNavigationUiTest {
         ReflectionHelpers.setField(activity, "mBase", transport)
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action != GlobalActions.CLEAR_UPDATER_STATE_ACTION &&
+                    !tv.withaibuild.customiuizer.utils.MaintenanceJournal.matches(context, intent)) {
+                    resultCode = GlobalActions.ACTION_FAILED
+                    return
+                }
                 when (intent.action) {
                     GlobalActions.SET_MIUI_DAEMON_STATE_ACTION -> context.packageManager.setApplicationEnabledSetting(
                         "com.miui.daemon", intent.getIntExtra(GlobalActions.EXTRA_APPLICATION_STATE, -1), 0,

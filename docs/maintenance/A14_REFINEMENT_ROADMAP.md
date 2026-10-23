@@ -1,5 +1,7 @@
 # A14 全量功能地图与分批精修
 
+2026-10-23 产品与发布收口：本机已完成一组有边界的 ADB 验收，见第 15 节；此前各批的“待实机”不能整体升级为通过。
+
 这是 A14 功能精修、DexSQL 取证、页面调整和安全退役的长期工作入口，[工程规则](../../AGENTS.md) 统一链接到本页。方案起点为本地提交 `3981f85`，日期为 2026-10-19。后续直接更新本页的任务与结论，不按轮次新增审计报告。源码变化后先校准地图，历史勾选不能作为新代码的验收结果。
 
 当前状态：**M01.01–M01.08 / M02.01–M02.08、M06.01–M06.05 Dock、M05.01 Toast、M05.02 动态岛与 M10.02–M10.03 公共滑杆 已完成本地验证，均待实机。** Dock 已按图标中心对称限幅，新增有壁纸合成层采样依据的 SDF 透镜；实际捕获与光学效果仍待目标设备确认。振动强度已接入 A14 原生缩放链，高音量警告已按每次原生确认修复；下一批按风险优先推进维护与隐私恢复事务。音量面板超时、百分比与材质恢复成果继续复用，记录见第 8 节。按共享状态闭环合批，M01 随实际修复同步校准，不再逐条偏好或小分支单独收口。全量设置界面与信息架构调整见第 9 节；不据此批量修改 Hook。此前各批按当时授权提交工作分支；2026-10-22 当前任务另获明确授权：完成 M05.04 后将版本提升为 r14.25.1 / 246，推送开发分支、合并 main，使用 Actions 正式候选的同一 APK 发布双仓库。实施、主机 / ROM / APK 与设备验收仍分别记录。
@@ -175,7 +177,7 @@ M01 建立的追踪关系为：**页面 / 偏好键 → Feature ID 或设置端�
 | M00 既有修复 | 本地完成，待实机 | 声音通话回调、标题创建重载、桌面双击、侧边栏和温度生命周期、键盘设置联动 | 声音 / 导航栏 / 标题 / 手势 / 启动器其他分组；手机管家顺序整理 |
 | M01 目录校准 | 八批校准；后续随闭环合批 | 复用 M01.01–M01.08；目录、重启及关闭语义随所属修复批一次校准，不单独遍历目录 | 固定当前页与拟调整页的键映射；不先批量搬页面 |
 | M02 声音与振动 | 焦点、计时、面板、振动与高音量警告八批收口 | 复用 M02.01–M02.08；可视化单独处理；预制效果与硬件能力保留实机边界 | 行为、音量面板、可视化各自连续，名单与开关相邻 |
-| M03 通知链路 | 待核查 | 通知限制与权限；通知中心时钟 / 日期 / 模糊；浮动通知和展开 / 小窗；逐批检查相互干扰 | 通知规则、外观、交互分组，清除重复入口说明 |
+| M03 通知链路 | 源码精修、回归与双区域静态取证已推进；设备待验 | 通知点击事务、Heads-up、权限 / 频道、Count/Fold、着色和时钟；详见本页 M03 专项及 ROM 交接 | 保留设置键；系统保护边界收口，十种维护语言同步说明 |
 | M04 锁屏与应用锁 | 待核查 | 认证与解锁策略；应用锁超时与名单；锁屏媒体 / 充电 / 闹钟；安全相关回退优先 | 显示与交互、安全、媒体与数据分开，限制条件明确 |
 | M05 状态栏与控制中心 | 部分静态复核 | 复用 `8c922a5` 的有效结论；后续分为信号与双卡、时钟与图标、Duo、电池与温度、磁贴与插件生命周期等小批 | 主开关、尺寸与外观、附加行为分层；保留 Duo 不含下载进度的边界 |
 | M06 启动器 | M06.05 图标中心、对称尺寸与采样透镜已本地验证 | 复用 Dock 和 `3981f85`；待实机确认采样 / 材质 / 导航区与动画同一闭环，再按实际共享 owner 合并布局、小部件和动画交接 | 保留原生图标、拖拽与动画坐标 |
@@ -416,3 +418,273 @@ MiuiHome Manifest 为 `com.miui.home` / `RELEASE-4.39.30.8604-08262248` / 439308
 本地收口：`verify.py fast --changed`（含 66 项 Dock / 手势专项）、`verify.py full`（编译、全套 JVM / Robolectric 与 Lint，2m16s）、591 项 Python 工具测试（5 skipped）以及 `git diff --check` 均退出 0。补看 ROM setSize Smali 后，测试替身同步写两个真实字段，追加相关两项行为回归退出 0；生产源码未变，复用完整门禁。exact main CI、最终 APK 和双仓库结果另以相应运行 / 发行记录读回。本地历史签名配置预检有效；正式 APK 仍须在干净 main 上构建并核验证书与来源。
 
 ADB 当前无设备；所有实机功能和 CPU / GPU / PSS / 帧时间仍未验证。回退单位为 Dock 原生动画接入（含全宽容器）与返回区域初始化，未改变 PrefMap、FeatureRegistry、ResourceHooks、ProcessRouter 或 PreferenceBootstrap。
+
+## 12. 2026-10-23：r14.25.2 后续动态岛专项（独立分支）
+
+起点为最新 main / PR #46 合并提交 `d6f47fd64ff76af2391bdcab14bc56535d93b56a`，工作分支 `codex/a14-island-refinement-20261023`。本次合同只授权动态岛审查与专项修复，不预设新版本号，不合并 main，不创建 tag 或发布 Release。此前版本发布授权不延续到本任务。
+
+### A. 最新提交质量与复现
+
+PR #46 已具备单窗口、状态租约、有限动画时钟、媒体 epoch、原生额头互斥及真实相交避让；已有五项音乐动作、暂停可见性和分类反馈保持。本次没有重复开发这些功能。主要不足在跨层契约：左右仍借用中央留白与时钟限宽，触摸辅助只存在于数学 / 单测，播放器打开仅信任快照入口，以及设置恢复没有完成迁移闭环。
+
+| 确认问题 | 原基线的可复核失败 | 修复单位 |
+| --- | --- | --- |
+| 左侧与摄像头冲突回中 | 400 px 场景：旧 `IslandPosition.left(184,12,388,0,0,40,192,208,true)` 返回 `108`，位置成为中央 | `IslandPosition.layout` 同侧缩宽或下移；Controller 使用物理安全边界，侧边不保留中央 gap / 时钟限宽，View 按选定边展开 |
+| 上滑缺少 MOVE 不收起 | DOWN → 500 ms → UP，向上 1.8×slop；旧实现提交 0 次 | 按高度 / DPI 约束短滑阈值，UP 完整位移补判，保留锁轴、取消、多指与一次提交；原窗口接入 12–16 dp 有界实际触摸区 |
+| 当前播放器缺少入口 | 原 Controller 的实际单击 / 下滑测试在 `sessionActivity=null` 时没有启动 | 执行时读取当前 Controller；首选同 UID / 包的 Activity PendingIntent，明确失败后使用同用户的包 IntentSender；成功只提交一次 |
+| 旧模式 `4` 关闭反馈 | 原 `IslandPreferenceDefaults.migrate` 只识别 `3` | 复用 StrongToastPresentationMode 的兼容解析 |
+| 旧备份恢复丢失反馈 | 原 performRestore 成功后立即读取，十分类全部未迁移 | 原子提交前迁移；保留部分新配置、旧键与值，失败沿用已有回滚 |
+
+`IslandRegressionReproductionTest` 同一份文件在原 SHA 四项均失败，在修复源码通过。播放器端到端测试另在原 SHA 确认缺少入口的失败。证据保留于本地忽略目录 `.di-evidence/island-refinement/`，原基线替身工作树没有修改本分支历史。具体测试结果见下文最终验证记录。
+
+### B. 布局、动作与所有权
+
+左右以安全区域真实边界为锚；偏移先作用于选定边，随后根据物理挖孔与内容最小空间缩宽。缩宽保留选定边；不足时向孔下方避让，不跨侧跳跃。左右连续内容布局、摄像头居中融合和中心扩展 pivot 分开。横屏沿用原有隐藏策略，转向后重新取得 metrics / Insets。状态栏的相交对象来自内层胶囊，触摸外扩不参与图标淡出。
+
+只在既有窗口加入 `IslandTouchWindow`：负责有界 padding、动画矩阵对应的 touchableRegion 和事件转发，不含第二 Controller 或媒体状态。Surface 仍采用对称 80 dp 绘制外扩。UP 补判与 MOVE 共用锁轴；点击 / 双击 / 长按 / 横向动作继续使用原 GestureDetector 和单次提交规则。仅几何变化不修改 action epoch；动作重映射、排除、来源、替换和隐私失效仍取消旧操作。
+
+打开播放器同时复核当前 UID、前台用户、Controller 身份、epoch、协程取消与锁屏。缺失或取消入口才进入包级 IntentSender，拒绝跨用户 Context、工作资料、不匹配 UID、失效包及不受控 Intent；没有媒体键 / 广播回退。固定诊断原因每个 owner 最多八类，无包名、标题、Intent 或音频内容。主机包 IntentSender Binder 使用 Robolectric 4.17 缺失 API 的测试替身；不把该替身等同于设备后台启动验收。
+
+### C. 实时波形的实现和限制
+
+保留轻量动画，模式为 `0/1/2`（关闭 / 轻量 / 实时），默认 `1`。旧布尔键保持原值，只在新键不存在时映射；新键明确优先，以字符串 0/1/2 保存；数字导入值先规范为字符串，未知值回退轻量，避免 ListPreference 类型错误。十种维护语言、搜索、默认摘要和备份规则同步。反馈十项、音乐五手势分入两个子页；首页五组为基础、位置尺寸、外观动画、反馈通知、音乐交互。通知允许名单、保留原生与应用排除相邻，后两者优先。
+
+原 AudioVisualizer 会尝试多个媒体 / 游戏会话并可回退全局混音，不适合作为当前播放器的身份来源；保留它原有选择策略，仅共享 `AudioFftBands` 的复数峰值能力，同时服务原可视化与音乐岛。音乐岛最多一个 512 样本 Visualizer、一个 AudioPlaybackCallback、一个合并变化通道和现有 scope 内的资源 job；最多 20 Hz，复用五柱缓冲，有限 attack / release。只有首帧等待包含一次 1 秒 deadline，没有轮询。可见播放、当前用户与 Context 身份可确认、唯一 UID 的媒体会话和唯一活动本地媒体音轨均满足才采集。媒体与音频 route 分别有失效代次，旧采集回调不可刷新新柱；同一 Mutex 串行释放 / 建立资源。
+
+SystemUI 必须已有 RECORD_AUDIO / MODIFY_AUDIO_ROUTING 且 ROM / AppOps / 路由实际支持。没有新增模块录音权限、录音服务、全局 mix session 0、音频日志、上传或持久化。权限失败、匿名配置、多个候选、远程会话、无数据 / 错误格式均回退轻量。正常 FFT 和资源释放由替身覆盖；**HyperOS 原生采集保持实验性，未作兼容或功耗承诺**。实际附加 CPU / GPU / PSS 及音频指示器 / 路由限制需设备测量。
+
+本环境未暴露 DexSQL MCP / CLI，未提供 CN / TW 样本原件；复用第 11 节和音乐手势页已有哈希与取证结果，不将旧查询描述为本次重跑。新隐藏 API 的定义只核对 AOSP A14 MediaSession.Token.getUid、AudioPlaybackConfiguration.getClientUid / getSessionId / isActive；需在同哈希 CN / TW framework / SystemUI 再确认权限、匿名化与实际调用行为。
+
+### D. 最终验证与设备交接
+
+使用 JDK 25.0.4.1、仓库既定 Gradle 9.8.1 / AGP 9.4.1 / Kotlin 2.4.21；没有降低 JVM / SDK / 依赖门禁。未签名构建只验证产物，不作为正式 Release。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| `python tools/verify.py fast --changed` | 退出 0；与最终 full 相同源码，复用已有编译 / 测试输入结果 |
+| `python tools/verify.py full` | 退出 0；Kotlin / Java 编译、完整 JVM / Robolectric 和 Lint 通过 |
+| JVM / Robolectric | 342 suite，3207 tests，0 failure / error，2 skipped |
+| Lint Debug | 0 error / fatal；保留 398 条 warning，未压制检测。含程序构造、不会从 XML inflate 的 IslandTouchWindow 缺工具构造器提示；不能将通过表述为零警告 |
+| `python -m unittest discover -s tools/tests -p "test_*.py"` | 592 tests，0 failure / error，5 skipped；包含真实 Gradle provenance 变体测试 |
+| `assembleDevelop` | 退出 0；未签名 Develop APK，R8 / D8、资源收缩与 lintVitalDevelop 通过 |
+| 布局 / 导航 | 原生图形模式检查子页、搜索直达、动作摘要和依赖；71 张设置页面渲染，抽查动态岛首页、十反馈及五手势子页 |
+| 源码规则 / `git diff --check` | 无违规；没有新增 Hook 热路径 PrefMap / 分配预算命中，没有加入签名、APK 或 ROM 文件 |
+| 设备 / ROM | ADB 无连接设备；无 DexSQL 连接与 CN / TW 原件，未执行 ROM 重取证或实机验收 |
+
+实际设备交接：
+
+1. 同哈希 CN / TW SystemUI / framework 的 Context 用户、Token UID 与音频配置隐藏 API；核对 SystemUI 声明 / 授予权限、AppOps、配置匿名化及多个音轨的拒绝行为。
+2. 真实物理开孔、左中右边缘、±80 dp、手动长短宽度、38–44 dp、字体 / 密度变化及横竖屏；确认动画、文字、状态栏逐图标避让与窗口触摸区域一致。
+3. 从胶囊及外扩边缘起手的慢短上滑、快速上滑、稀疏 MOVE、斜向、多指、取消、入场 / 退场与连续点击；确认窗口外的通知栏 / 控制中心下拉仍交给原生。
+4. 实际播放器有 / 无 / 取消 PendingIntent、包入口不存在、快速换播放器、锁屏、用户切换与工作资料；确认没有旧播放器或额外启动请求。
+5. 实时采集正常 / 权限失败、蓝牙 / 耳机 / 远程路由 / offload、暂停、息屏、遮挡、模式关闭、音轨及媒体会话替换、SystemUI 重建后的完整释放。
+6. 默认轻量与实验实时模式的 CPU / GPU / PSS、帧时间和耗电对照；检查音频指示器及各 ROM 路由限制。继续核验原生 StrongToast 互斥，不把主机采样当作硬件性能结论。
+
+回退单位是本次独立分支提交；没有改动长期 main、版本号、签名流程、Dock / Launcher Hook 或发布配置。
+
+## 13. 2026-10-23：云端动态岛质量收口及 M05 / M07 / M08–M09
+
+本批从指定云端 exact head `a6247d414dd61de7db20ac0241d4f6cc8c3efa01` 创建 `codex/a14-quality-rom-refinement-20261023`；其 main 基线仍为 `d6f47fd64ff76af2391bdcab14bc56535d93b56a`。复用第 11 节及原本地分支的两个已确认修复，分别以 `48b4a2a`、`33116af` 纳入动作 Context 与导航高度，不带入无关发布流程变更。不预设版本，不合并 main，不创建 tag / Release。
+
+### A. 云端分支评价与已修复问题
+
+云端实现保留单窗口、媒体 epoch、原生反馈交接和默认轻量波形，新增测试覆盖具体的旧行为失败，整体边界合理；但未经保护的内部 Insets 安装 / 释放与重复几何更新仍需修复。`a6247d4` 的独立分支 CI [39949420229](https://github.com/thetvplus/customiuizer-a14/actions/runs/39949420229) 已实际成功，包含 Full、Python / source contracts、工具 mutation gates 及未签名 Develop / fatal lint；它不是 main CI，也不证明以下新增修复或设备通过。
+
+| 核查项 | 源码 / 故障路径 | 本批处理与验证边界 |
+| --- | --- | --- |
+| Insets 兼容与释放 | 原构造直接 Class.forName / Proxy，attach / detach 的反射异常可逃逸框架回调；移除失败可跳过后续清理 | 冷路径解析完整接口、方法和字段；缺失即不接管。attach / 计算失败后停用该 owner、撤回既有窗口并保留原生提示，不增加窗口或反复重试。detach 先清 owner，普通失败隔离，finally 取消输入并调用父类；代理仅弱引用窗口，避免失效 observer 留住 View。故障注入覆盖安装失败、移除失败、坏回调与致命错误传播 |
+| 几何与布局 | 原 `geometry` 每次替换外层、图标及三个子布局的 LayoutParams；密度导致 padding 改变不在旧窗口更新判据内 | 复用所属 View 的参数，仅字段变化才重新设置；窗口更新比较实际宽高 / x / y，包含触摸边距。连续十次同几何保留全部参数对象且不 requestLayout；矩阵变换、边缘命中与原视觉保持。不把减少确定的重复操作换算成设备性能比例 |
+| 实时波形 | 一个选中 UID / user / token、一个本地唯一 MEDIA session；权限缺失、匿名 / 共享 UID、远程播放或会话歧义拒绝采集 | 默认模式 1 不创建采集对象。复用一个 Visualizer、一个播放回调、512 样本、五柱缓冲及现有 scope；20 Hz 上限、一次首帧期限、generation 使旧回调失效。停用 / 隐藏 / 暂停 / 替换释放回归通过。真实 AppOps、音频指示器、offload、权限撤销及路由仍须设备；没有新增权限绕过或系统采集 Hook |
+| 播放器启动 | 当前 Controller / epoch / token、同用户和 creator UID / 包；首选 Activity PendingIntent，明确取消才回退包入口 | 复用现有实现和单次启动测试；不增加媒体键、旧通知或跨用户回退。执行中的实际后台启动限制、用户切换竞争仍待设备 |
+| 设置与恢复 | 新键优先，旧布尔波形保留；模式 0/1/2，非法导入规范回轻量；旧反馈与部分新备份不互相覆盖 | 复用已实现迁移、当前模式摘要和备份回归；本批不改旧键含义、默认值或版本号 |
+
+### B. M05 / M07 功能边界
+
+| 功能 / 宿主 | 本批结论 |
+| --- | --- |
+| 状态栏图标、时钟、网速、电池、温度 / SystemUI | 保留快照、原生 Insets 缓存、网络订阅 / 电池回调、温度监测的既有 owner。复用 `SystemUIStatusBarHotPathTest` 的 100 次相同样式零重复 setter、网速文本继续更新，以及 DisplayRegistry 代际替换 / detach 回归；不新增轮询。真实每次状态变化的刷新次数、熄屏工作量、Bitmap / 帧时间尚未测量 |
+| 双卡、默认数据卡、Duo / SystemUI | 重跑既有网络状态、Duo 几何与过渡回归；既有 Host JVM 分配测试只约束准备后的百万次状态计算，不证明 ART 或 GPU。目标订阅切换、锁屏重建、旋转 / 字体 / 密度和多显示器仍待设备计数；没有根据“可缓存”改成熟基础设施 |
+| 控制中心 / SystemUI + 插件 loader | 复用同 loader 幂等、替换清旧机器 / loader、部分安装失败、显式 clear 与计步生命周期回归。原生面板关闭不必销毁仍存活的插件 owner；是否持续收到无用事件须实际 owner / 回调计数，未直接把面板不可见认作泄漏 |
+| 状态栏 / 控制中心动作 | 原 GestureMachine 错把 GestureEvent 传给执行器，View 也未转成 Context，已识别动作可能不发广播。复用原修复，转交真实 owner，由执行器使用其 Context；不在执行器保存 View。集成回归覆盖双击 / 长按、左右中、CANCEL、重复 UP、detach 和按 DOWN 捕获的配置 |
+| Launcher 返回区域高度 | 原 Hook 所有窗口一律除 60，80% 分屏可把 2400px 原生窗口换成 3200px，并误改底条。已按原生 100% / 60% 侧边分支换算，底部 position=2 不改，默认 60 保留原生；原链仍一次，配置重算不累乘 |
+| Launcher 快切、Home / 最近任务、桌面手势 | 保留原生识别 / 动画与已有取消、动作矩阵、owner 生命周期。当前样本 getNextTask 固定 null，onSwipeStop 仍有失败振动；是否与自定义动作重复必须确认 ReadyState / supportNextTask / 实际轨迹，不据此增加全局振动或输入 Hook |
+| system_server / Input、导航、按键与动作接收 | 沿用既有受信广播、动作去重与输入取消边界。本批未全面验证 native InputDispatcher / system_server 的真实并发时序，相关结论为 PENDING_ROM_EVIDENCE / 待设备，不以 Launcher 或 Host 测试代替 |
+
+### C. M08 / M09 维护事务与后台证据
+
+确认的事务缺口是原状态在操作成功后才 `apply()` 保存；设置进程中断会丢失恢复依据，setter 先改变状态再抛异常时，旧 `changed++` 位置也会漏回滚该项。现有六种维护配置接入独立 `maintenance_recovery` 日志，最多六个 profile、每项最多 32 个目标，不随偏好备份复制；无新增 Hook、线程、周期任务或组件目标。
+
+先读取目标原状态、系统包 UID / 签名 SHA-256 / versionCode / ROM fingerprint / SDK 34，再同步保存恢复记录，失败不发送命令。受信系统桥限定请求者当前用户的 Context，操作前重新核对身份，沿用声明 / allowlist / 有限目标检查，逐项读回。确认后才提交开关；写配置失败或部分失败最多发送一次精确原状态补偿，失败仍保留日志。恢复重开入口不覆盖原状态；操作 ID 拒绝旧回执覆盖新恢复。实际 setter 失败按逆序回滚，包括抛异常的那一项，并读回回滚状态。致命错误继续传播，日志为中断恢复保留。
+
+历史偏好中的原状态仍可由用户显式恢复，不伪造缺失值为 DEFAULT；这些旧快照没有历史签名 / ROM 身份，不能补造当时 provenance。新日志优先，和备份不一致、包身份 / 版本 / 用户 / ROM 改变、组件消失或日志损坏时保留记录并拒绝覆盖；ROM 升级后的恢复须重新取证，不强行“全部启用”。卸载模块或清除其数据也会删除本机恢复日志，故不作为恢复步骤。
+
+本次在 DexSQL 0.1.1 实际打开 CN / TW 共十个后台 APK，17 份 DEX；完整分页读取 Manifest 组件。`background_services_contract.sql` 返回 161 个声明和 288 条去重调度 / WakeLock 调用，续页也已读取；这些是定位集合，不是 288 次实际唤醒。原始 JSON / Smali 与完整哈希保留于忽略的 `.di-evidence/quality-20261023/`，不提交厂商样本。样本来源为本机已解包的 fuxi HyperOS 1 镜像，2026-10-23 重新测哈希；不能据此宣称它等于当前设备已安装版本。
+
+| 包与 ROM 版本 | APK SHA-256（CN / TW） | 已确认行为及分类 |
+| --- | --- | --- |
+| SecurityCenter：CN 8.8.3-240129.0.1 / 40000883；TW 8.9.6-241105.1.1 / 40000896 | `284a4929cbee030a9addb37c21b5d7221b7d9ab986f3085d001409ec0c739a38` / `d42e36c0a0a8224dc7c8e03759d54f01c8b92ea56ec97b62ff0fa6860ce38824` | CN 63 Service / 20 Receiver / 38 Provider，TW 59 / 19 / 39；包括 BIND_JOB_SERVICE、Boot、云数据、病毒更新、扫描和推送。TW 有额外广告 / Metrica Provider 和 Job，CN 营销清单主要匹配 RemoteAnalyticsReceiver。ConnectivityChangeJobService2 调用多个子模块，不将整个网络 / 云服务归为营销。扫描、防护与系统调度属于必要或需独立确认的任务；子模块网络、开关覆盖与重试链尚属 PENDING_ROM_EVIDENCE |
+| PowerKeeper 4.2.00 / 40200 | `e45e97d5162056d1eb1750bdfdce3e0540dac1de4d070f345d4ba725287526bb` / `e7292bc29b034cdd49af598724713e95f0c3fcee76b3220183b9c34839083ba0` | 两区均 20 Service / 7 Receiver / 2 Provider。CloudUpdateReceiver 与任务完成调用 scheduleCloudUpdateJob；OTA 随机延迟，首次未成功同步延迟 2h，成功后 24h；固定 job ID 取消再注册、persisted、已有成功缓存时限非计费网络。它是续调度延迟，不是保证每天实际执行。现有 AppsRestrictPower / PersistBatteryOptimization 修改白名单，不等于停云更新；没有扩大全局省电调度 |
+| GuardProvider：CN 2.1.5-20240906.0 / 215；TW 1.8.4-20231108.1 / 184 | `4426f56af7c0bc0af27468fa622aa55a5f348b7c5fb207b1801c92d21b078e46` / `1b767096d88e61b51e1f5db928eb963071ba851f47da0f20965ce262e31edeb6` | CN 有 WorkManager / ReportWorker，特定报告类型才 enqueue，Worker 有成功 / 重试 / 失败分支；约束的混淆实现、是否涉及安全报告及完整网络链仍待精校。现有反诈 DexKit 条件仅 CN 唯一命中 `LX/c;->h(Context)List`，TW 零，保持国际版不安装。TW CacheBuildJobService 为 7 天 periodic、device idle、persisted，并检查 job 是否已存在；不能把缓存构建等同统计上传或无用任务 |
+| MiuiDaemon 2.0 / 30（两区同 binary） | 两区均 `01ab439bac5ee8a9144ec1b97fdbbb8b53a0654169caf9498b6c13f8013d7f00` | persistent=true，20 Service / 2 Receiver / 2 Provider；包含性能、内存整理、诊断与上传，不能整包归为广告。JobDispatcher 已有去重：Event 常规 24h（地区网络约束不同），File 常规 24h、充电且非计费网络，Heartbeat 正式机 6h / 未发布设备 2h；调试路径不同。isUploadEnabled 先看 device_provisioned，再看日志上传选择，国际版另看 Privacy；有测试 / root debug 分支，均是静态条件。CloudControlSyncService 默认延迟 8h，首次调用还直接启线程应用配置并注册云 ContentObserver，因此只停用该 JobService 不等于撤销已经注册的 observer / 所有云控 |
+| AnalyticsCore versionCode 2023091300（版本名为资源引用，两区同 binary） | 两区均 `983b288b4330167ddc4925bb17b46c94b967aad19fb489a056317a5c17f5fa9a` | 9 Service / 2 Receiver / 2 Provider。AnalyticsApp 注册固定 job 1，要求网络、10 分钟 override deadline，并设置原生退避；这是单次调度约束，不能解释成每十分钟上传。是否执行、发送内容、真实重试频率和关闭后的残留均未测量 |
+
+Manifest 中 exported / permission / process 已逐页读取：Daemon 云 Job 由 BIND_JOB_SERVICE 保护，上传 Job 不 exported；SecurityCenter 主要落 `com.miui.securitycenter.remote`，国际 Metrica 另有独立进程。GuardProvider 的系统 JobService 也有 BIND_JOB_SERVICE，不能仅因 exported=true 判为公开无权限入口。网络权限或 URL 字符串不能证明通信，本批未做抓包、TLS 解密或安装监控。
+
+当前 ADB 设备列表为空。jobscheduler / alarm 执行次数、WakeLock 时长、后台 CPU / 线程 / PSS、网络发送接收及持续时间，在亮屏、锁屏待机、Doze、充电 / 非充电下均为 **未测量**；没有重置电池统计，也没有依据常驻进程或任务名称宣称耗电。
+
+### D. 限制功能候选与后续精校输入
+
+| 候选 | 收益依据、风险与默认状态 | 恢复 / 准入决定 |
+| --- | --- | --- |
+| 手机管家营销组件 | CN / TW 实际声明差异可查；可减少广告 SDK 初始化入口，实际资源收益未量化。现有可选项默认关闭，保持与病毒防护分离 | 已有功能先用事务日志恢复原状态，不新增泛化列表；按各区安装版本验证入口不影响功能 |
+| Daemon Event / File / Heartbeat 上传 | 有实际调度和日志上传门禁，部分场景用户可选择关闭；可能损失故障上报。现有选择项默认关闭 | 精确恢复原启用状态；先验证原生用户开关、已运行任务与云 observer 残留。现有“联网组件”开关不宣称封锁全部云控 |
+| GuardProvider 单独 ReportWorker 限制 | 存在按报告类型入队与重试，尚不能确认非必要。若有价值也必须默认关闭 | **PENDING_ROM_EVIDENCE**：先完成报告类型 → 网络 → 用户同意 / 取消链及安全影响；目前不添加，不关闭病毒引擎 |
+| PowerKeeper 可选云同步限制 | 固定 ID 与续调度已存在，不能把正常续调度认作重复任务；可能影响省电策略更新，收益未测 | **PENDING_ROM_EVIDENCE / 待实机**；不改全局 JobScheduler / 白名单 / 温控。若后续证明可限制，须保留缓存、原始开关及真实恢复状态 |
+| AnalyticsCore 指定任务、Daemon 云观察者的按需限制 | 有具体入口，仍缺关闭后行为与运行成本；现有整包 analytics 可选项不代表新细粒度限制已获准入 | 保持默认关闭候选；先诊断固定任务与 owner，无默认常驻观察模式。用户同意、安全防护、温控和必要系统功能不捆绑 |
+
+以下沿用现有查询目录和本页，不另建审计体系。ClassLoader 列为定义来源对应的候选装载域，实际 loader 命中仍须设备记录。
+
+| 顺序 / 功能 / 宿主 | 目标与 ClassLoader | 待查询 / 调用链、当前 Hook、方案与风险 |
+| --- | --- | --- |
+| 1 双卡 / 信号 / Duo，SystemUI | 同版本 CN / TW MiuiSystemUI.apk，宿主 PathClassLoader | 已跑 statusbar_layout_refresh：32 声明，NetworkControllerImpl.doUpdateMobileControllers、MiuiPhoneStatusBarView attach / detach、Battery 回调、Insets 失效已定位。接下来追默认卡 → Subscription → icon group → Duo / 重建；当前 SystemUIStatusBarHooks / Duo 快照不改。需要 SIM 轨迹与次数计数，风险是旧订阅 / 跨显示 owner |
+| 1 控制中心插件 / 触摸 / 占用 | MiuiSystemUI + MIUISystemUIPlugin，插件独立 loader | 已跑 statusbar_gestures：16 声明 / 10 invoke；PluginInstance load / unload 有唯一对应定义。当前 ControlCenterPluginRuntime、GestureMachine、DynamicIslandStatusBarFade 保留。后续追插件替换 → tile / 计步 owner → close / unload；无调用证据的子链标 PENDING_ROM_EVIDENCE，避免把面板 close 误当 loader 销毁 |
+| 1 动态岛 Insets / 音频，SystemUI | SystemUI + boot framework.jar，宿主 / boot loader | 两区 Insets add / remove、InternalInsetsInfo、Token.getUid 和 AudioPlaybackConfiguration 的 UID / session / active 共 14 声明，已 decode UID、session、监听增删；两区完整 Manifest 均声明四种相关音频 / 媒体权限。当前 IslandTouchWindow / NativeBackend 失败关闭；需要实际授予、AppOps、权限撤销、offload、会话与用户日志，声明不等于允许采集 |
+| 2 Launcher 返回 / 快切 | MiuiHome.apk，Launcher PathClassLoader | navigation 查询 12 声明 / 4 调用 / 8 字段；getGestureStubWindowParam、onSwipeStop、getNextTask 完整 decode 到末尾。当前 Controls 高度 / 无参宽度 Hook 与原生 GestureStub 状态机；后续补 ReadyState → finish / cancel / quick switch / 振动。需要同 binary Launcher 和系统导航轨迹，不用全局输入 Hook 代替 |
+| 2 状态栏 / 系统动作、Input | SystemUI、services.jar、对应 Input / Navigation 组件；宿主 / system_server loader | 当前按 DOWN 快照、INTERCEPT 观察与 TOUCH 执行分离；Context 修复已带集成回归。原生面板、Home / 最近任务、快速配置变化与 CANCEL 的跨宿主实际链仍 PENDING_ROM_EVIDENCE；补 services / Input 精确样本，不凭 Launcher 的取消路径推断 system_server |
+| 3 SecurityCenter 主进程 / remote / SDK | 两区各自 SecurityCenter APK，应用 loader / 实际 SDK loader 待记录 | 当前营销与独立安全项的有限组件 allowlist；ConnectivityChangeJobService2 → 各混淆子模块、CloudDataUpdateService → 云解析 / 用户开关须继续 decode。需逐区签名 / 版本匹配，风险为把安全配置和营销一起停用 |
+| 3 PowerKeeper | 两区 PowerKeeper APK，应用 loader | CloudUpdateReceiver → CloudUpdateJobService → LocalUpdateUtils / 缓存 → 续调度已部分取证，网络解析和用户开关覆盖仍 PENDING_ROM_EVIDENCE。当前 AppsRestrictPower / PersistBatteryOptimization 不扩展；风险为误改系统省电 / Doze / 热管理 |
+| 3 GuardProvider | 两区 GuardProvider APK，应用 loader；WorkManager / SDK 定义同 APK | CN `LX/c.h` 是现有反诈 Hook 候选；ReportWorker 的 `Ld0/C.h` 入队、混淆约束 → `ReportWorker.r/w` → 网络待精校。TW CacheBuildJobService 已读调度；不得跨地区复用混淆名。需要报告语义 / 权限 / 同意门禁，风险为拦安全结果 |
+| 3 Daemon / Analytics | MiuiDaemon / AnalyticsCore APK，应用 loader；必要时 services / native 库 | 已读 JobDispatcher、isUploadEnabled / isReportEnabled、CloudControlSyncService.schedule、AnalyticsApp.startJobScheduler。当前有限组件 / 包停用桥及冷路径 persistent-start blocker 沿用；继续审查 observer 云更新、已运行 worker、native 协作与跨用户启动，缺少部分为 PENDING_ROM_EVIDENCE。风险为损失诊断或性能配置，不能整体归类广告 |
+
+Android 备份按[官方数据提取规则](https://developer.android.com/identity/data/autobackup#IncludingFilesAndroid12)单独排除 `maintenance_recovery.xml` 的云备份与设备迁移；其他偏好保持既有备份资格。模块自己的导出仍只处理偏好文件。测试同时检查 Manifest 关联、两种 transport 的有限排除及未全局禁用备份；厂商迁移工具是否遵守该规则仍须目标设备验证。
+
+本批独立回退单位为动态岛安全边界 / 几何、状态栏动作 Context、导航高度、维护事务，以及取证 SQL / 文档。资源成本是有界恢复数据与用户主动维护时的身份 / 状态查询；没有修改 PrefMap、ResourceHooks、FeatureRegistry、ProcessRouter、PreferenceBootstrap，也没有测量依据可宣称确定节电、CPU / GPU 或内存改善比例。
+
+<a id="m03-notifications-20261023"></a>
+
+## M03 通知链路专项（2026-10-23）
+
+### 范围、继承和完成边界
+
+从远端已核实的 `2936d4f6cb896cffc7b9abe9de82185fb5a9a374` 建立 `codex/a14-m03-notification-refinement-20261023`，继承 `06ab217` 之后的维护日志备份排除等成果。main 为 `d6f47fd64ff76af2391bdcab14bc56535d93b56a`，任务中再次核实两条远端均未变化；没有回到旧 main 重做，没有覆盖云端工作。保留 r14.25.2 / versionCode 247，未合并、签名或发布。
+
+实现提交为 `a01976a`（M03.01–.04 及动态岛点击失效）、`1656892`（着色与时钟）、`b72cad0`（退役身份及安装范围契约收口）。共享通知文件和回归存在依赖，回退核心批次须同时回退其身份 / 契约变化；这些不是可随意 cherry-pick 的独立私有方法补丁。实现和本页、[ROM 交接](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)共同构成审查范围，不新建功能管理框架。
+
+| 闭环 | 本轮源码决定 | 验证边界 / 状态 |
+| --- | --- | --- |
+| M03.01 点击 / 小窗 | 进程级 `clickNotifyOptions` 退役；在原生 deferred starter 的两参选项入口传递单次事务。system_server caller 改为调用作用域，移除 SecurityManager 方法 Hook；磁贴请求限定 component / 用户 / caller / 期限。菜单与动态岛拒绝失效 Row | 状态、并发、重入、异常、用户和 PendingIntent 类型回归通过；CN/TW 原生链已取证，真实启动与资料认证待设备 |
+| M03.02 Heads-up | Row 拥有至多一个 60ms 展开任务，身份 / 状态重核且取消有闭环；自动收起使用原生 timer；静音只抑制对应 Heads-up / 声音振动，不连带 bubble / 灯光；居中尺寸随 Configuration 失效 | 过期 / 复用 / 输入等 Host JVM / Robolectric 回归与 Native Smali；时序、无障碍、锁屏和原生展示数量待设备 |
+| M03.03 权限 / 频道 | 退役全局 NotificationChannel、forced-enabled 集合、USE_WHITE_LISTS 与 Settings blanket overrides，退役 ID 38 不复用。保留旧键，限定普通当前用户应用的 MIUI UI 控制；关键频道 / NMS 原判断保留 | 安装与范围契约、目标 UID / flags 和后端失败回归；两区 Settings / NMS 定义和调用证据。历史持久化状态及实际权限待设备读回 |
+| M03.04 数量 / 折叠 | 恢复两个 Coordinator 的 attach；只停数量淘汰、fold filter 和历史折叠调度，用原生 setFold 同步新增 entry / extra | 有 attach / listener / update / remove / 调度的完整静态链和安装范围回归；Pipeline 重建、地区和重新开启仍待设备 |
+| M03.05 着色 / 刷新 | 保留原生 View / RemoteViews / 布局；移除全局 Tint(0) 与摘要背景绕过。冷路径句柄、每通知单槽调色缓存，图标 generation / 身份 / UID / 主题失效 | 缓存命中 / 失效 / 失败和原生边界回归；设备绘制、主题交叉和实际 CPU / 帧时间尚未测量 |
+| M03.06 时钟 / 模糊 | 保留已正确快照 / ClockEffect / 字体语言与 DrawerBlurScope；只修复秒针熄屏创建后仍启动的边界 | 原时钟 / 模糊回归加 OFF→ON→OFF 用例；实际设备屏幕、字体语言和控制中心切换待验 |
+
+### 旧实现缺陷与新旧契约交叉
+
+1. 小窗 Bundle 等待下一次任何 PendingIntent 发送，没有通知、线程或事务所有权；异步解锁、取消、无发送、重入和普通发送可混用。新实现不发送第二次 intent；仅覆盖原生选项获取阶段，原生已有小窗选项继续使用。非 Activity / 全屏 / 工作资料 / 其他用户保留原生，不能用跨进程“下一包名”补猜 trampoline。
+2. `freeformCallingPackage` 可遗留上一次启动的 caller；`nextFreeformPackage` 无用户、component、消费期限，SecurityManager 的返回值还在整个服务范围被覆盖。现在只修改 ActivityStarter 的本次布局判断，原服务检查保持；原广播为一个有期限的有限目标槽，没有新增计时任务。
+3. 延迟展开捕获旧 Row / listener，只在重新安排时取消，Heads-up 退出、移除、换绑和 detach 没有完整释放；已展开再点击可切回收起。现在读取当前身份和原生展开 / 输入 / 手势状态，弱引用不把 additional-instance-field 的 key 反向保活。近期 NotificationAutoExpand 保留，只做展开状态交叉，不重写其 resolver / effect。
+4. 自动收起直接搬动原生移除 Runnable，Presenter 分支没有远程输入判断，且固定时长绕过无障碍 / 原生扩展。现在保持原生 entry / reset / remote-input 计时所有权，只放宽预期 stickiness。时间依原生 postTime / 推荐超时，不承诺固定“展开后 4.5 秒”。
+5. 禁用静音 Heads-up 原先拦共同 awake 判断，ROM 证实 bubble 也调用它；亮屏静音原先跳整个提醒任务，连 LED 一起失去。现在分别缩小到 Heads-up 通道和本次原生提醒的声音 / 振动位。动态岛接受 / 拒绝接管及普通通知中心保留已有实现和回归，新增撤回 Row / 替换 entry 点击失效检查。
+6. 通知权限旧实现同时改 Settings 界面、boot framework 对象和 system_server 判断。ROM 中 PreferencesHelper 创建 / 更新频道直接读取 isBlockable / critical lock，不能称为纯 UI。保守收口保留 key、默认关闭和普通应用能力，不再承诺禁用受保护系统通知；十种维护语言同步准确说明。**升级首次需重启设备清除旧 system_server Hook；此前保存的频道 / 授权数据不按猜测自动重置。**
+7. 跳过 Count/Fold.attach 丢掉 Pipeline 和原生监听初始化。只改 shouldSuppressFold 也不够：onEntryUpdated 仍调 scheduleHistoryNotification，新增时还可能保留旧 fold extra。现在保留初始化 / 移除 / 重建链，仅关闭目标规则并用原生 setter 清理新增 fold 状态。
+8. 图标重要性过滤把 controller 的 canonical list 永久替换，影响后续刷新输入；改为本次调用内使用，正常、异常、重入后恢复，并不覆盖原生新发布的列表。全部条目保留时直接沿用原 list。
+9. 着色比较的是不带 alpha 的背景与已带 alpha 的当前 tint，造成重复反射 / dispatch；原生 setter 本身已做相等保护，**不能据此宣称减少了等量重绘**。同时全局拒绝 Tint(0)、绕过摘要规则、对非选中通知也禁用模糊会干扰 native 恢复，现已缩小 / 移除。
+10. 时钟第一次或已有监听时注册屏幕状态，OFF 结果之后旧 start 仍设置 running；新增屏幕状态检查。其余秒针复用、弱 owner、dispose、日期格式快照、配置失效、帧内模糊目标缓存与 finally 清理直接保留。
+
+### 功能来源、所有权与证据登记
+
+下表“最近”指本轮之前基线的可追溯源码提交，不把整份文件最后一次提交当作所有方法修改日期。`3ce4b3b` 是历史整理导入的 **r14.20.9 源码快照**，`ddcd889` 是 **r14.21.9 快照**；它们的 2026-10-17 导入日期不是实际编写日期，整理前未保留的作者时间为 UNKNOWN。动态岛列出当前仓库整合提交 `2b321c6`，相关行的来源还可追到 `3e8683d`，不把整合日期当首次实现日期。
+
+`SUI` = SystemUI feature / `lpparam.classLoader`（boot MIUI 类经父 loader）；`SS` = system_server feature loader；`SET` = Settings main-process loader。以下是源码安装入口及定义归属，非运行时 ClassLoader 采样。除菜单 / 频道路由的历史观察外，旧 Hook 没有本轮版本的设备验收，均视为长期待验，不能继承旧 PASS。
+
+| 功能 / 安装入口 | 最近 / 最早可追溯版本 | 路径、状态所有者和保留对象 | 专项测试 / ROM / 当前结论 |
+| --- | --- | --- | --- |
+| OpenNotifyInFloatingWindowHook → NotificationClickOptionsHook | 最近 / 最早均 `3ce4b3b` r14.20.9 | SUI；点击冷路径；临时 launch 只存线程调用栈，finally 清除 | LaunchScope / ClickEligibility；CN/TW deferred starter + MIUI options；确认全局状态污染，已修 |
+| OpenAppInFreeFormHook | `3ce4b3b` / r14.20.9 | SS；ActivityStarter 调用；一个不持有 host 的 5s 请求槽及原非导出 receiver | LaunchScope、FirstEnable / Wiring 全组合；miui-services；确认 caller / 包名污染和过宽安装，已修 |
+| NotificationRowMenuHook | `ddcd889` r14.21.9 / `3ce4b3b` r14.20.9 | SUI；菜单构建 / 点击；View 自有 listener，无静态 Row | 原 NotificationReview / Hooks；菜单 ABI 保留；新增旧身份 / 用户 / 重复按钮防护，设备六按钮布局待验 |
+| IslandNotificationAccess / 原生点击 | 整合 `2b321c6`，行来源 `3e8683d` / 当前通知接管版本 | SUI；最终 bind / 点击；原 weak Row + 新 weak entry、removed 检查 | IslandNotificationTakeover / Chat；原 bind ABI；旧撤回判断不足已补，接管状态机未重构 |
+| ExpandHeadsUpHook → HeadsUpExpansion | `3ce4b3b` / r14.20.9 | SUI；heads-up 状态更新；每 Row 一个弱 owner 任务 / detach listener，取消闭环 | HeadsUpExpansion、AutoExpandEffect；Row 字段 / setEntry / setRemoved；确认过期点击风险，已修 |
+| AutoDismissExpandedPopupsHook | `3ce4b3b` / r14.20.9 | SUI；alert / Presenter 更新；模块无移除计时器 | LaunchScope 保护条件矩阵；HeadsUpEntry / Presenter / finishTime；确认输入和时序旁路，已修 |
+| BetterPopupsCenteredHook | `3ce4b3b` / r14.20.9 | SUI；原生位置计算；一份 Configuration / 两个尺寸，变化才重算 | 原 Hooks 安装失败边界保留；定位函数沿用；确认配置后尺寸过期，已修，视觉待验 |
+| DisableHeadsUpWhenMuteHook | `3ce4b3b` / r14.20.9 | SUI；高频决策仅读静音 / enabled 状态；沿用原 volume-zen owner | BoundaryContract；awake / bubble 直接调用；确认抑制范围过大，已修 |
+| MuteVisibleNotificationsHook → NotificationAlertHook | `3ce4b3b` / r14.20.9 | SUI；原生后台提醒事务；仅同 proxy / key，退出清理，无模块队列 | 提醒位全组合；原生 run 和 proxy；确认连带灯光，已修 |
+| DisableAnyNotification[Block] / UnlockSettingsNotificationControls | `3ce4b3b` / r14.20.9 | 旧 SS / SET / SUI → 现在仅 SET / SUI；普通应用 UI 冷判断，无全局频道状态 | SettingsControlsContract、目标 UID / flags、ID 可达性；Settings / framework / PreferencesHelper；确认安全边界不可保留，保守退役全局路径 |
+| Settings NotificationImportanceHook | `ddcd889` / r14.20.9 | SET；配置 / 选择冷路径；原生页面 listener 所有权 | NotificationReview 1..4 / 后端失败 / fatal；两种 Settings 类；保留成熟保存逻辑，补关键锁和用户检查，读回仍待设备 |
+| SystemUI NotificationImportanceHook → NotificationIconImportance | `3ce4b3b` / r14.20.9 | SUI；高频图标刷新；调用内替换，finally 恢复，字段句柄冷解析 | IconImportance 正常 / fatal / 新 native list / 重入；native updateStatusBarIcons；确认 canonical list 被污染，已修 |
+| RemovePackageNotificationsLimitHook | `3ce4b3b` / r14.20.9 | SUI；只停 Count 淘汰 listener，原 Pipeline / BindEventManager 自有 | BoundaryContract；attach / onViewBound / dismiss 全链；确认跳过初始化，已修，数量压力待设备 |
+| DisableFoldNotificationsHook | `3ce4b3b` / r14.20.9 | SUI；规则更新；原 listener / observer / alarm 仍由 native owner 管理 | BoundaryContract；attach / filter / added / updated / removed / schedule；确认跳过初始化及残余调度，已修，双区域重建待设备 |
+| ColorizeNotificationCardHook | `3ce4b3b` / r14.20.9 | SUI；Builder→Row→Tint→RemoteViews 高频更新；每 Notification 一槽，弱图标，无静态 View | PaletteCache / BoundaryContract；builder / palette / native tint / summary；确认重复计算及范围问题，已修 |
+| StatusBarClockTweakHook / CCClockTweakHook / SecondTicker | `3ce4b3b` / r14.20.9 | SUI；样式快照、线程内 formatter、弱 controller 秒针 / 屏幕 listener；原 dispose 保留 | ClockHotPath / ClockEffect 全组；本轮未重新 decode 时钟私有 ABI；只确认并修复熄屏创建启动边界 |
+| DrawerBlurRatioHook | `3ce4b3b` / r14.20.9 | SUI；帧路径只读快照、缓存弱目标，作用域 finally 清除；无新监听 | DrawerBlurScope / SteadyState 原回归；本轮无新增帧方法 ROM 取证、无确认缺陷，明确保留 |
+| ExpandNotificationsHook / NotificationAutoExpand | wrapper 与现有架构可追到 `3ce4b3b` 快照 | SUI；已冻结 resolver / effect / snapshot，按原设置工作 | AutoExpand Hook / Resolver / Effect / RuntimeState 全组复用；与 Heads-up / island 只做契约交叉，明确保留 |
+
+### 性能、资源与本地精校交接
+
+已确认并消除的重复工作包括：普通 PendingIntent 的全局拦截；非目标通知点击的额外小窗准备；相同 Row 更新反复创建延迟任务；固定延迟重复摆放原生移除 Runnable；每次 createRemoteViews 的 ClassLoader / Field 查找和临时三项列表；相同通知图标的 WallpaperColors / ColorScheme 重算；不变图标列表仍分配过滤列表；每次 server 判断重建三项黑名单。图标 / method 句柄在安装冷路径解析，布局仍交由 native。
+
+Host 回归对同一图标 / UID / 包 / 主题连续解析 50 次，调色 producer 执行 **1 次**；图标 generation、替换、用户、包或深浅主题变化会失效，失败不发布部分颜色。这是缓存算法证据，不是 WallpaperColors 在真实设备上的耗时基准。每条活通知只保留一个 palette cache、每个待展开 Row 至多一个短任务；无全局 Bitmap / View 缓存、新 CoroutineScope、轮询或业务线程。恢复 Coordinator 初始化会恢复必要原生监听及其开销，不能用代码减少或缓存命中宣称 PSS / CPU / GPU / 耗电下降。
+
+M03.01–.04 的宿主、完整描述符、调用者、owner、确切旧问题、地区差异、查询方法和设备矩阵统一见 [M03 ROM 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)。本地新脚本只在既有 tools/dexsql 查询目录，不进入 APK / 默认 CI。没有凭缺少工具添加新 ROM fallback；没有把静态样本、Host JVM、ART、最终 APK 和实机结果混为一项 PASS。
+
+### 收口验证
+
+验证源码为 **`b72cad0acb2819d7fab44877670d2fca9a389c77`**；之后只更新取证 SQL 和文档，复用相同生产源码结果。专项 fast 和受影响测试已通过。完整门禁首次发现退役身份 / 安装条件的三处旧测试与一处 ID 可达性不一致，已删除退役声明、保留 ID 空位，并强化 16 种设置组合和反向安装断言；未删除测试或降低保护条件。
+
+| 门禁 | 最终结果 |
+| --- | --- |
+| `python tools/verify.py full` | **退出 0**；353 个 JVM / Robolectric suite，3259 tests，0 failures / errors，2 skipped；compileDebug Kotlin / Java 与 lintDebug 完成 |
+| `python -m unittest discover -s tools/tests -p "test_*.py"` | **退出 0**；593 tests，0 failures，5 skipped；不把 fixture 打印的示例发布 URL 当作实际发布 |
+| 无签名 `assembleRelease` / `lintVitalRelease` | **退出 0**；JDK / Kotlin 输出 25，检查到 class major 69；最终 DEX 039，min / target 34，原 applicationId / arm64-v8a 保留 |
+| 产物身份 / 对齐 | provenance 验证 revision `b72cad0a`、version r14.25.2 / 247 / release source SHA 正确；zipalign 退出 0；签名检查按预期退出 1、Missing META-INF/MANIFEST.MF，明确为本地无签名验证产物 |
+| 最终 APK / R8 mapping | APK 4,043,565 bytes，SHA-256 `899e6e9ce0105988731a23852045b9b2c2d4ff40e16fcc719b6799587599598f`；mapping 20,650,716 bytes，SHA-256 `894ceaf8a2b34aeee6695e923cd503d6cbce09bdf27082a4bf44495d5a65e0c3` |
+| DexSQL 最终 APK | compileOnly Hook API 定义 0；Manifest 设置入口直接 Hook API 引用 0；setId / getId 各一个静态 invoke，replaceHook 0；三个固定 ID 使用点保留。完整 decode + 同产物成员 mapping 确认 `Lnf1;->y` 属 HookInstallation.intercept / confirmStableHookId，不能仅按合并容器 TypeIntrinsics 判断归属；不代表实际安装次数 / 设备 readback |
+| 差异 / 生成物 | `git diff --check` 通过；process matrix 重新生成无漂移，250 个在用 feature；ID 38 留空且无孤立注册 |
+
+基线远端 CI：[main / d6f47fd 成功](https://github.com/thetvplus/customiuizer-a14/actions/runs/39905838791)，[继承分支 / 2936d4f 成功](https://github.com/thetvplus/customiuizer-a14/actions/runs/39954356188)。用户后续授权推送本轮 M03 开发分支；推送后按 exact head 执行 A14 CI，运行链接和最终结果作为本任务交付回执，以上基线结果不冒充本分支 CI。main 合并与版本发布仍不在本任务范围内。
+
+ADB 当前无设备，未安装本批 APK。锁屏 / 资料挑战 / 多用户、连续真实点击、原生 Heads-up / 动态岛互斥、权限与频道实际读回、旋转 / 主题 / 字体、SystemUI 重建和全关闭恢复，均仍按 [ROM 设备矩阵](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md#设备与性能验收清单)待验。没有 ART / 设备 CPU、GPU、帧率、PSS 或功耗测量；源码优化和 Host 回归不升级为真实性能结论。
+
+## 15. 2026-10-23：产品收敛、ADB 与 r14.25.3
+
+### 产品与来源
+
+CORE / MAINTAIN / RETIRE_CANDIDATE 的长期原则归 [ARCHITECTURE](../../ARCHITECTURE.md#产品方向与取舍)，具体退役证据继续归[原退役页](A14_FEATURE_RETIREMENTS.md)。复用岛 → 质量 → M03 的完整提交链：起点 `fa44133211f0046ee2648b9f79af898d0baf89c8` 已包含 `a6247d4` 与 `2936d4f`，M03 exact-head [CI 成功](https://github.com/thetvplus/customiuizer-a14/actions/runs/39969624529)，开始时无 M03 PR，main 为 `d6f47fd`。本批不重写通知系统，不扩大系统限制清单、不按引用计数删除代码。
+
+版本准备为 r14.25.3 / 248；两仓库此前最高为 r14.25.2 / 247。双语 Changelog 将有效变化累计到 r14.25.3，对比保留的 r14.25.1，公开六条用户变化，工程事实保留在同一章节和已有历史。旧版 Release / tag 只在两仓库新版资产验收全部成功后清理。
+
+### 真实设备与验收边界
+
+目标固定为 `74b02de3`，Xiaomi 13 / fuxi，`Xiaomi/fuxi_global/fuxi:14/UKQ1.230804.001/V816.0.7.0.UMCTWXM:user/release-keys`；Android 14 / SDK 34，1080×2400，物理密度 440、当前 464。Root 实际有效；按本轮单独授权在无通话时完整重启，之后重复确认 ADB 在线与 boot_completed。原 APK / 原配置已备份，设备统计与日志未清零。
+
+安装基线是 r14.25.2 / 247。候选实测使用明确标注 Develop 的 r14.25.3 / 248、revision `f6f373dd`，SHA-256 `5b66a0a19bed889087f9a84b0a70a7a3cb931390d3d7a676154a0e7b33d79035`，沿用历史证书；它不是正式发行 APK。正式候选另经 main CI、受保护签名、来源 / 摘要验证和同产物设备 smoke 后才公开。
+
+实机包：SystemUI `20230316.0 / 202303160`，Launcher `RELEASE-4.39.30.8604-08262248 / 439308604`，SecurityCenter Global `8.9.5-240801.1.1 / 40000895`，PowerKeeper `4.2.00 / 40200`；GuardProvider Global `1.8.4-20231108.1 / 184` 在 user 0 未安装，不改变其状态。实机 SystemUI SHA-256 `5d8f2fe0b65d8a1a947b4280f8053b524f8c5de73f48a74f8792d415ae76e513`、Launcher `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`，与先前参考文件哈希不同，故直接取样核对，不推断 binary 相同。
+
+已读取当前 DexSQL 文档和 schema，复用既有查询：实机 SystemUI 的 M03 32 项方法定义、bootstrap 2 项定义；Launcher 解锁 10 项定义 / 18 项直接调用，导航 12 项定义 / 4 项直接调用 / 8 项字段。Count attach 与 Fold 更新的完整 Smali 再次确认原 Pipeline / listener 初始化及历史调度边界。仅为当前样本的兼容证据，不替代全部地区或行为验收。
+
+| 范围 | 本轮实际结果 | 仍未验证 |
+| --- | --- | --- |
+| M03 通知 | 临时、无网络 / Service 的测试应用：普通点击实际进入目标 Activity，回调恰一次；更新、撤回、重发后删除正常。折叠开关沿用当前配置 | 真实第三方消息、小窗并发、Heads-up 延迟 / 无障碍、数量压力、工作资料 / 多用户、历史权限与关键频道读回、不同主题着色 |
+| 动态岛 | 左 / 中 / 右切换与状态栏实际显示；左右切歌各一回调，上滑收回，点击打开当前测试播放器；暂停约两秒后窗口移除；跟随系统时不创建岛窗口，恢复原模式 | 自定义下滑动作、真实播放器的取消 PendingIntent、蓝牙 / 远程 / offload、全部开孔 / 字体 / 密度 / 旋转组合；ADB 注入不等于真实手指验收 |
+| 实时波形 | 权限声明与授予已读回；选择实验模式后播放 / 暂停，暂停后岛窗口移除，恢复轻量模式 | AudioFlinger 的 Visualizer 库条目一直存在，不能证明已成功采集或释放某个 effect；本轮不标记实时采集通过，也不推断 CPU / 功耗收益 |
+| Dock | 关闭背景、开启全宽分别重启 Launcher 后检查；全宽确实铺至底边，最近任务 / 返回 / Home 命令及显示正常；恢复原背景与全宽开关并再次重启 | 文件夹编辑、四向极值、全部解锁 / 中断动画帧时间及壁纸采样光学效果 |
+| 状态栏 / 导航 | 当前时钟、图标与岛实际相交避让；设置导航和原生返回正常；目标崩溃 / ANR 事件缓冲中未观察到本轮事件 | 双卡切换、Duo 重建、温度 / 网速更新次数、Launcher 上下滑、控制中心仲裁、安全磁贴与锁屏挑战 |
+| 安全交接 | 各批结束停止临时应用，移除临时 UI XML，KEYCODE_SLEEP 后同时读回 Dozing/Asleep 与 keyguard showing；所有改动选项恢复 | 正式 APK 最终设备交接以本轮发布回执为准；不把 Develop smoke 描述为正式包验收 |
+
+短暂交叉执行的第一次息屏采样影响了一个尚未改设置的 Dock 操作，已排除该组测试结果；后续设备操作串行执行。锁屏读回曾过早观察到动画中间态，验收工具现改为一次 Sleep 输入、至多六次短读回，同时验证电源与 keyguard；回归覆盖异步切换和清理失败，失败不会报通过。
+
+### 资源与工程验证
+
+有效的末尾八秒息屏观察：SystemUI PSS 212088 → 203269 KiB、146 线程；Launcher 255358 → 205239 KiB、71 线程；目标事件缓冲未观察到 crash / ANR。只是同一已安装候选的短窗口快照，不能归因于模块，不能解释为泄漏证明或性能改善。Dock 冷启动关闭 / 全宽快照为 440581 / 308893 KiB，因启动、缓存与采样时机不匹配，明确排除为性能对照。尚无可信的 A / B / C 同负载比较、CPU / GPU 帧时间、耗电或 Binder 次数结论；没有降低动画质量或宣称百分比收益。Jobs / Alarm / procstats 仅作有界取证，不用文本提及次数冒充模块任务数量。
+
+- JDK 25.0.4.1；Fast / Full 退出 0，353 suite / 3259 JVM 与 Android 模型测试，0 failure / error、2 skipped；Lint 0 Error / Fatal、407 Warning。
+- 最终 Python 工具测试 600 项，0 failure / error、5 skipped；确定性四项输出一致，11/11 必需独立 mutation 被识别。新增锁屏工具修正只影响主机，复用未改变 Android 源码的 Full / Develop 构建结果。
+- 同证书 Develop 构建、R8 / D8、lintVitalDevelop、嵌入 revision / 类型 / 版本、差异空白检查均通过；主机、ROM、Develop 与正式产物证据各自独立。
+- 原始 APK、ROM、映射、截图与有界读数均在忽略的 `.di-evidence/product-quality-20261023/`，不提交个人内容、凭据或厂商样本。
+
+### 发布与下一批
+
+`39906924894` 在 05:39 UTC 因 release-signing 缺 Required reviewer 停止；旧版在 05:40 UTC 才由本地正式程序发布，不能把原失败归因为“版本已经发布”。原自动入口已经有跳过已发布版本的路径，本轮补齐手动入口的预期跳过；草稿 / 冲突仍失败。受信签名范围收敛为 main，保留 exact SHA / main CI、历史证书、APK digest、来源证明、先源码后 Xposed、幂等恢复及失败停止。双环境仅允许 main，由本轮明确授权的账号审核；正式候选先在发布环境检查点完成实机 smoke，再批准公开，无须重建或手动重复 CI。该授权不等于永久取消审核。
+
+后续先做 M05 的真实通知与 Duo / 双卡 / 息屏状态、控制中心 owner / 仲裁的受控轨迹，再按缺陷证据进入 M07。M04 需要可用工作资料 / 多用户的真实认证场景；M08 保持恢复事务和既有有限清单，不扩大停用。实时波形继续保留为维护成本 / 使用收益待评估候选，不据一次静态引用或库列表删除功能。

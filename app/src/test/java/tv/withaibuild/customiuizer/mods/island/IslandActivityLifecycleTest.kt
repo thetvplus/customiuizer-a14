@@ -34,7 +34,7 @@ import java.lang.reflect.Proxy
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], shadows = [IslandLaunchPackageManagerShadow::class])
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class IslandActivityLifecycleTest {
     private var owner: IslandActivityController? = null
@@ -50,13 +50,16 @@ class IslandActivityLifecycleTest {
     private lateinit var host: Activity
     private lateinit var frame: FrameLayout
     private var drawFrames = true
+    private var metricsWidth = 1080
+    private var metricsHeight = 2400
+    private var metricsInsets = WindowInsets.Builder().build()
     private val window = Proxy.newProxyInstance(WindowManager::class.java.classLoader,
         arrayOf(WindowManager::class.java)) { _, method, args ->
         when (method.name) {
-            "getCurrentWindowMetrics" -> WindowMetrics(Rect(0, 0, 1080, 2400), WindowInsets.Builder().build())
-            "addView" -> { if (reject) throw WindowManager.BadTokenException("injected"); shell = args!![0] as IslandActivityView; latestParams = args[1] as WindowManager.LayoutParams; firstAlpha = shell!!.alpha; adds++;
+            "getCurrentWindowMetrics" -> WindowMetrics(Rect(0, 0, metricsWidth, metricsHeight), metricsInsets)
+            "addView" -> { if (reject) throw WindowManager.BadTokenException("injected"); shell = (args!![0] as IslandTouchWindow).shell; latestParams = args[1] as WindowManager.LayoutParams; firstAlpha = shell!!.alpha; adds++;
                 if (!drawFrames) shell!!.visibility = View.INVISIBLE
-                frame.addView(shell, FrameLayout.LayoutParams(latestParams!!.width, latestParams!!.height)); null }
+                frame.addView(args[0] as View, FrameLayout.LayoutParams(latestParams!!.width, latestParams!!.height)); null }
             "removeViewImmediate" -> { frame.removeView(args!![0] as View); removes++; null }
             "updateViewLayout" -> { val params = args!![1] as WindowManager.LayoutParams
                 (args[0] as View).layoutParams = FrameLayout.LayoutParams(params.width, params.height); null }
@@ -78,7 +81,8 @@ class IslandActivityLifecycleTest {
 
     private fun controller(media: Boolean = false, width: Int = 328, simplified: Boolean = false,
         chat: Boolean = false, chatExcluded: Set<String> = emptySet(),
-        notificationApps: Set<String> = setOf(context.packageName)): IslandActivityController {
+        notificationApps: Set<String> = setOf(context.packageName),
+        waveformMode: Int = 1, spectrumBackend: IslandAudioSpectrum.Backend? = null): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
@@ -87,8 +91,9 @@ class IslandActivityLifecycleTest {
             put("system_island_chat", chat)
             put("system_island_chat_excluded_apps", chatExcluded)
             put("system_island_notification_apps", notificationApps)
+            put("system_island_waveform_mode", waveformMode.toString())
         }
-        return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, dispatcher).also {
+        return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, dispatcher, spectrumBackend = spectrumBackend).also {
             owner = it
             it.connectSafety(Any())
             drain()
@@ -875,7 +880,7 @@ class IslandActivityLifecycleTest {
         assertFalse(shell!!.isLongClickable)
         val density = context.resources.displayMetrics.density
         val expectedWidth = IslandSizing.collapsed(density,1080,(184*density).toInt(),(40*density).toInt(),(24*density),0f)
-        assertEquals(expectedWidth, latestParams!!.width)
+        assertEquals(expectedWidth + 2 * (shell!!.parent as IslandTouchWindow).margin, latestParams!!.width)
         val insets = org.robolectric.util.ReflectionHelpers.getField<Rect>(latestParams, "surfaceInsets")
         // InputMonitor exports one surfaceInset scalar, chosen from the left edge.
         // Asymmetric values render correctly but move or collapse the real touch frame.
@@ -884,6 +889,152 @@ class IslandActivityLifecycleTest {
         assertEquals(insets.left, insets.bottom)
         assertTrue(insets.left >= (expectedWidth - 184 * density) / 2)
         assertTrue(org.robolectric.util.ReflectionHelpers.getField<Boolean>(latestParams, "hasManualSurfaceInsets"))
+    }
+
+    @Test @Config(qualifiers = "xxhdpi")
+    fun physicalCutoutSafeEdgesAndRotationReachTheActualSingleWindow() {
+        val camera = Rect(492, 0, 588, 120)
+        metricsInsets = WindowInsets.Builder().setDisplayCutout(android.view.DisplayCutout(
+            android.graphics.Insets.of(0, 120, 0, 0), null, camera, null, null)).build()
+        val controller = controller(media = true, simplified = true)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        native.player = launchablePlayer("physical-camera")
+        controller.updateFromNative(native); drain(); revealMedia()
+        for (alignment in listOf(0, 2)) {
+            prefs.put("system_island_position", alignment.toString())
+            observer.onChange("system_island_position"); drain()
+            val root = shell!!.parent as IslandTouchWindow
+            val visualLeft = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + root.margin
+            if (alignment == 0) assertEquals(0, visualLeft)
+            else assertEquals(metricsWidth, visualLeft + shell!!.width)
+            assertEquals(0, org.robolectric.util.ReflectionHelpers.getField<Int>(shell, "cameraGap"))
+            assertTrue(if (alignment == 0) visualLeft + shell!!.width <= camera.left else visualLeft >= camera.right)
+        }
+        val config = org.robolectric.util.ReflectionHelpers.getField<android.content.ComponentCallbacks>(controller, "configuration")
+        metricsWidth = 2400; metricsHeight = 1080
+        config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        assertNull((shell!!.parent as IslandTouchWindow).parent)
+        metricsWidth = 1080; metricsHeight = 2400
+        config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain(); revealMedia()
+        assertNotNull(shell!!.parent)
+        assertEquals(1, (shell!!.parent as IslandTouchWindow).childCount)
+    }
+
+    private fun launchablePlayer(tag: String, activity: android.app.PendingIntent? = null): MediaController {
+        val session = MediaSession(context, tag)
+        org.robolectric.util.ReflectionHelpers.setField(session.sessionToken, "mUid", context.applicationInfo.uid)
+        return MediaController(context, session.sessionToken).also {
+            shadowOf(it).setPackageName(context.packageName)
+            shadowOf(it).setSessionActivity(activity)
+            shadowOf(it).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f)
+                .setActions(PlaybackState.ACTION_SKIP_TO_NEXT).build())
+        }
+    }
+
+    @Test fun downMappingAndSingleTapOpenOnlyTheCurrentPlayerWithAbsentOrCanceledSessionActivity() {
+        val controller = controller(media = true, simplified = true)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        prefs.put("system_island_music_down_action", IslandMusicActions.OPEN_PLAYER)
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        observer.onChange("system_island_music_down_action"); drain()
+        val application = shadowOf(org.robolectric.RuntimeEnvironment.getApplication())
+        for (entry in listOf("missing", "cancelled", "valid")) {
+            val intent = android.content.Intent("island.player.$entry").setPackage(context.packageName)
+                .setClassName(context.packageName, "tv.withaibuild.customiuizer.MainActivity")
+            val pending = if (entry == "missing") null else android.app.PendingIntent.getActivity(context, 701,
+                intent, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_CANCEL_CURRENT)
+            if (entry == "cancelled") pending!!.cancel()
+            native.player = launchablePlayer(entry, pending)
+            controller.updateFromNative(native); drain(); revealMedia()
+            for (gesture in listOf(false, true)) {
+                if (gesture) {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    for ((action, y) in listOf(android.view.MotionEvent.ACTION_DOWN to 20f,
+                        android.view.MotionEvent.ACTION_MOVE to 100f, android.view.MotionEvent.ACTION_UP to 100f)) {
+                        val event = android.view.MotionEvent.obtain(now, now + 80, action, shell!!.width / 2f, y, 0)
+                        try { shell!!.dispatchTouchEvent(event) } finally { event.recycle() }
+                    }
+                } else shell!!.performClick()
+                drain()
+                val started = application.nextStartedActivity
+                assertNotNull("$entry / down=$gesture; uid=${context.applicationInfo.uid}; " +
+                    "user=${org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "foregroundUser")}; " +
+                    "diagnostics=${org.robolectric.util.ReflectionHelpers.getField<Any>(org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "diagnostics"), "emitted")}; " +
+                    "launch=${context.packageManager.getLaunchIntentForPackage(context.packageName)}", started)
+                assertEquals(context.packageName, started!!.component!!.packageName)
+                assertNull(application.nextStartedActivity)
+            }
+        }
+    }
+
+    @Test fun aMissingPackageAndAWorkProfileTokenCannotOpenTheOwnersPlayer() {
+        val controller = controller(media = true, simplified = true)
+        for (profile in listOf(false, true)) {
+            val player = launchablePlayer("restricted-$profile")
+            if (profile) org.robolectric.util.ReflectionHelpers.setField(player.sessionToken, "mUid", context.applicationInfo.uid + 1_000_000)
+            else shadowOf(player).setPackageName("uninstalled.player.example")
+            native.player = player; controller.updateFromNative(native); drain(); revealMedia()
+            if (profile) { assertNotNull(shell); shell!!.performClick(); drain() }
+            else assertNull(shell) // The existing snapshot policy already rejects an uninstalled source.
+            assertNull(shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).nextStartedActivity)
+        }
+    }
+
+    @Test fun changingGeometryKeepsQueuedMusicActionsWhileSwitchingPlayersInvalidatesOldLaunches() {
+        val controller = controller(media = true, simplified = true)
+        val first = launchablePlayer("old")
+        native.player = first; controller.updateFromNative(native); drain(); revealMedia()
+        shell!!.onGesture(IslandMusicGesture.LEFT)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        prefs.put("system_island_horizontal_offset", 90)
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        observer.onChange("system_island_horizontal_offset"); drain()
+        assertEquals(PlaybackState.ACTION_SKIP_TO_NEXT, shadowOf(first.transportControls).lastPerformedAction)
+        shell!!.performClick()
+        native.player = launchablePlayer("replacement")
+        controller.updateFromNative(native); drain()
+        assertNull(shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).nextStartedActivity)
+    }
+
+    @Test fun realCaptureFollowsActualVisibilityPauseShadeScreenOffAndDisposal() {
+        var acquired = 0; var released = 0; var subscribed = 0
+        val backend = object : IslandAudioSpectrum.Backend {
+            override fun permitted() = true
+            override fun session(player: MediaController, user: android.os.UserHandle?) = 42
+            override fun subscribe(changed: () -> Unit): AutoCloseable { subscribed++; return AutoCloseable { subscribed-- } }
+            override fun capture(session: Int, fft: (ByteArray, Int) -> Unit): AutoCloseable {
+                acquired++; fft(ByteArray(512) { 64 }, 48_000_000)
+                return AutoCloseable { released++ }
+            }
+        }
+        val controller = controller(media = true, waveformMode = 2, spectrumBackend = backend)
+        val player = launchablePlayer("wave-owner")
+        native.player = player; controller.updateFromNative(native); drain()
+        assertEquals(0, acquired)
+        revealMedia(); drain()
+        assertEquals(1, acquired); assertEquals(1, subscribed)
+        val paused = PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build()
+        shadowOf(player).setPlaybackState(paused); shadowOf(player).executeOnPlaybackStateChanged(paused)
+        controller.updateFromNative(native); drain()
+        assertEquals(acquired, released); assertEquals(0, subscribed)
+        val playing = PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build()
+        shadowOf(player).setPlaybackState(playing); shadowOf(player).executeOnPlaybackStateChanged(playing)
+        controller.updateFromNative(native); drain(); revealMedia(); drain()
+        assertTrue(acquired > released)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        prefs.put("system_island_waveform_mode", "0"); observer.onChange("system_island_waveform_mode"); drain()
+        assertEquals(acquired, released); assertEquals(0, subscribed)
+        assertEquals(View.GONE, shell!!.getChildAt(2).visibility)
+        prefs.put("system_island_waveform_mode", "2"); observer.onChange("system_island_waveform_mode"); drain()
+        assertEquals(acquired - 1, released); assertEquals(1, subscribed)
+        native.shade = true; native.allowed = false; native.changed!!(); drain()
+        assertEquals(acquired, released); assertEquals(0, subscribed)
+        native.shade = false; controller.onScreenStateChanged(false); drain()
+        controller.dispose(); drain()
+        assertEquals(acquired, released); assertEquals(0, subscribed)
     }
 
     private class Native : IslandNativePort {
@@ -900,5 +1051,16 @@ class IslandActivityLifecycleTest {
         override fun trust(params: WindowManager.LayoutParams) = Unit
         override fun listen(owner: Any, changed: () -> Unit): Any { this.changed = changed; listeners++; return Any() }
         override fun unlisten(owner: Any, listener: Any) { listeners-- }
+    }
+}
+
+/** Robolectric 4.17 lacks the API 33 package-launch IntentSender Binder implementation. */
+@org.robolectric.annotation.Implements(className = "android.app.ApplicationPackageManager", isInAndroidSdk = false)
+class IslandLaunchPackageManagerShadow : org.robolectric.shadows.ShadowApplicationPackageManager() {
+    @org.robolectric.annotation.Implementation(minSdk = 33)
+    protected fun getLaunchIntentSenderForPackage(packageName: String): android.content.IntentSender {
+        val intent = getLaunchIntentForPackage(packageName) ?: throw android.content.pm.PackageManager.NameNotFoundException(packageName)
+        return android.app.PendingIntent.getActivity(org.robolectric.RuntimeEnvironment.getApplication(), 0,
+            intent, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT).intentSender
     }
 }

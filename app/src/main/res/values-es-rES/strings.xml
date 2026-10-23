@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="various_maintenance_recovery">Una operación de mantenimiento anterior requiere recuperación. Desactiva este interruptor para restaurar los estados guardados.</string>
     <string name="app_name">CustoMIUIzer A14</string>
     <string name="app_about">Acerca de</string>
     <string name="about_version">Versión %1$s</string>
@@ -155,8 +156,8 @@
     <string name="system_notifrowmenu_appinfo">Información de la app</string>
     <string name="system_notifrowmenu_openinfw">Ventana flotante</string>
     <string name="system_notifrowmenu_forceclose">Forzar cierre</string>
-    <string name="system_disableanynotif_title">Desactivar cualquier notificación</string>
-    <string name="system_disableanynotif_summ">Permitir desactivar notificaciones de sistema</string>
+    <string name="system_disableanynotif_title">Gestionar notificaciones de aplicaciones</string>
+    <string name="system_disableanynotif_summ">Habilita controles de aplicaciones normales; mantiene las protecciones del sistema, los canales y el administrador</string>
     <string name="system_expandnotifs_title">Expandir notificaciones</string>
     <string name="system_expandnotifs_summ">Mostrar notificaciones totalmente expandidas</string>
     <string name="system_expandnotifs_apps_title">Listas blanca &amp; negra</string>
@@ -1192,7 +1193,7 @@
     <string name="system_island_simplified_title">Animación simplificada</string>
     <string name="system_island_simplified_summ">Reduce las transiciones y mantiene la onda estática.</string>
     <string name="system_island_excluded_apps_title">Aplicaciones excluidas</string>
-    <string name="system_island_excluded_apps_summ">Conservan los Toast normales y no muestran multimedia en la isla. El filtro de Toast normales sigue en la página Toast.</string>
+    <string name="system_island_excluded_apps_summ">Estas apps mantienen Toasts y notificaciones nativas; su música no usa la isla. Las exclusiones tienen prioridad sobre la lista de notificaciones permitidas.</string>
     <string name="system_island_playing">Reproduciendo</string>
     <string name="system_island_paused">En pausa</string>
     <string name="system_island_connecting">Conectando</string>
@@ -1210,11 +1211,11 @@
     <string name="system_island_height_title">Altura de la isla</string>
     <string name="system_island_height_summ">Las islas corta y larga usan la misma altura fija.</string>
     <string name="system_island_width_auto_title">Ancho contraído automático</string>
-    <string name="system_island_width_auto_summ">Ajusta las islas corta y larga al contenido y al espacio de la barra de estado. Desactiva para ajustarlas por separado.</string>
+    <string name="system_island_width_auto_summ">Elige la anchura según el contenido, la altura y el área segura. Desactívalo para ajustar las islas corta y larga por separado.</string>
     <string name="system_island_width_short_title">Ancho de la isla corta</string>
-    <string name="system_island_width_short_summ">Para carátula, onda y estados breves. Respeta el espacio de cámara, hora y batería.</string>
+    <string name="system_island_width_short_summ">Anchura preferida de la isla corta. Los recortes y el área segura tienen prioridad.</string>
     <string name="system_island_width_medium_title">Ancho de la isla larga</string>
-    <string name="system_island_width_medium_summ">Para textos largos. Nunca menor que la isla corta y limitado por el espacio disponible.</string>
+    <string name="system_island_width_medium_summ">Anchura preferida de la isla larga, nunca menor que la corta. El área segura tiene prioridad.</string>
     <string name="system_island_chat_excluded_apps_title">Apps con avisos flotantes</string>
     <string name="system_island_chat_excluded_apps_summ">Las apps seleccionadas conservan los avisos flotantes del sistema. No afecta a los Toast ni a la música.</string>
     <string name="system_island_gesture_left">Deslizar a la izquierda</string>
@@ -1230,10 +1231,20 @@
     <string name="system_island_horizontal_offset_title">Desplazamiento horizontal</string>
     <string name="system_island_feedback_title">Avisos del sistema</string>
     <string name="system_island_notification_apps_title">Aplicaciones de notificaciones permitidas</string>
-    <string name="system_island_notification_apps_summ">Solo las aplicaciones seleccionadas usan la isla. Las excluidas conservan sus notificaciones nativas.</string>
+    <string name="system_island_notification_apps_summ">Solo las apps seleccionadas. Las exclusiones y conservar las notificaciones flotantes nativas tienen prioridad.</string>
     <string name="system_island_action_play">Reproducir</string>
     <string name="system_island_action_pause">Pausar</string>
     <string name="system_island_action_player">Abrir reproductor</string>
     <string name="system_island_music_group">Música y multimedia</string>
     <string name="system_island_feedback_ringer_title">Modo de sonido</string>
+    <string name="system_island_basic_group">Ajustes básicos</string>
+    <string name="system_island_geometry_group">Posición y tamaño</string>
+    <string name="system_island_appearance_group">Apariencia y animación</string>
+    <string name="system_island_feedback_group">Respuestas y notificaciones</string>
+    <string name="system_island_interaction_group">Música e interacción</string>
+    <string name="system_island_gestures_title">Gestos de música</string>
+    <string name="system_island_waveform_off">Desactivado</string>
+    <string name="system_island_waveform_light">Animación ligera</string>
+    <string name="system_island_waveform_real">Onda en directo (experimental)</string>
+    <string name="system_island_waveform_mode_summ">Solo se capturan cinco bandas de frecuencia con la isla visible y la reproducción activa. Si los permisos, la ruta o la sesión no son compatibles, se usa la animación ligera.</string>
 </resources>

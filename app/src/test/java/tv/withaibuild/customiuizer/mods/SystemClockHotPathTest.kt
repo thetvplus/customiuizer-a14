@@ -1274,6 +1274,33 @@ class SystemClockHotPathTest {
     }
 
     @Test
+    fun secondTicker_createdWhileScreenIsOffWaitsForScreenOn() {
+        // Existing listeners make addListener deliver the current OFF state synchronously.
+        val sentinel = object : ScreenStateController.ScreenStateListener {
+            override fun onScreenStateChanged(isOn: Boolean) = Unit
+        }
+        ScreenStateController.addListener(FakeContext(), sentinel)
+        val screen = ScreenStateController::class.java.getDeclaredField("screenOn").apply { isAccessible = true }
+        screen.setBoolean(ScreenStateController, false)
+        setCurrentSnapshot(makeSnapshotWithSeconds(statusBar = true, cc = true))
+        val controller = makeControllerWithClock()
+        SystemClockHooks.initSecondTicker(controller, true, true, makePublication())
+        val ticker = SystemClockHooks.activeSecondTicker(controller)!!
+        val running = ticker.javaClass.getDeclaredField("running").apply { isAccessible = true }
+        try {
+            assertFalse("Initial OFF callback must not be followed by starting the ticker", running.getBoolean(ticker))
+            screen.setBoolean(ScreenStateController, true)
+            (ticker as ScreenStateController.ScreenStateListener).onScreenStateChanged(true)
+            assertTrue(running.getBoolean(ticker))
+            SystemClockHooks.initSecondTicker(controller, true, true, makePublication())
+            assertSame(ticker, SystemClockHooks.activeSecondTicker(controller))
+            screen.setBoolean(ScreenStateController, false)
+            ticker.onScreenStateChanged(false)
+            assertFalse(running.getBoolean(ticker))
+        } finally { disposeTicker(ticker) }
+    }
+
+    @Test
     fun secondTicker_repeatedSameSeconds_doesNotRestartTicker() {
         val snapshot = makeSnapshotWithSeconds(statusBar = true, cc = false)
         setCurrentSnapshot(snapshot)

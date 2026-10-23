@@ -95,7 +95,7 @@ class StatusBarGestureEffectExecutor(
                             DoubleTapPosition.CENTER -> "system_statusbarcontrols_dt"
                             DoubleTapPosition.RIGHT -> "system_statusbarcontrols_dt_right"
                         }
-                        actionLauncher.launch(context, key, actionId, false)
+                        actionLauncher.launch(ctx, key, actionId, false)
                     }
                 }
                 is GestureCommand.TriggerLongPress -> {
@@ -104,7 +104,7 @@ class StatusBarGestureEffectExecutor(
                     }
                     val actionId = command.actionId
                     if (actionId > 1) {
-                        actionLauncher.launch(context, "system_statusbarcontrols_longpress", actionId, false)
+                        actionLauncher.launch(ctx, "system_statusbarcontrols_longpress", actionId, false)
                     }
                 }
                 GestureCommand.Reset,

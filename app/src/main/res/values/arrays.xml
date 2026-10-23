@@ -800,4 +800,12 @@
         <item>@string/system_island_position_right</item>
     </string-array>
     <string-array name="island_positions_val"><item>0</item><item>1</item><item>2</item></string-array>
+    <string-array name="island_waveform_modes">
+        <item>@string/system_island_waveform_off</item>
+        <item>@string/system_island_waveform_light</item>
+        <item>@string/system_island_waveform_real</item>
+    </string-array>
+    <string-array name="island_waveform_modes_val" translatable="false">
+        <item>0</item><item>1</item><item>2</item>
+    </string-array>
 </resources>

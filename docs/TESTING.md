@@ -98,3 +98,9 @@ python tools/adb_stress.py --scenario navigation --seed 0xA14 --steps 24
 五项音乐映射、单击 / 双击、长按 / 拖动、多指 / CANCEL、无障碍及配置失效使用 `IslandMusicGestureTest` 的实际 View；动作能力、音量与位置使用 `IslandMusicActionsTest`。`IslandActivityLifecycleTest` 的窗口替身会将 View 真正附着至 Android 14 模型并触发预绘制，区分 PREPARED / VISIBLE；未显示的暂停、停止及延迟时序逐帧检查无意外窗口与状态栏占用。真实布局推进模型帧时钟，期限测试锚定原事件 deadline，不把布局耗时另算新保留期。
 
 设置动作编辑、默认摘要、320dp 中文布局、分类监听和通知允许名单分别由导航、偏好、系统活动和 Controller 回归覆盖。此范围没有真实 HyperOS Hook、蓝牙 / 投放硬件或功耗测量；设备待验项见[音乐手势](features/island/MUSIC_GESTURES.md)。
+
+## 动态岛后续专项回归
+
+`IslandRegressionReproductionTest` 原样在 d6f47fd 基线复现四项失败，在修复分支验证：错误回中、缺 MOVE 的短上滑、模式 4 反馈迁移与旧备份恢复。播放器缺失入口另在原基线 Controller 复现。`IslandEdgeGeometryTest` 覆盖实际摄像头宽度、密度、长短 / 手动宽度、偏移与纵向避让；`IslandTouchWindowTest` 使用真实边缘起点和不同 DPI，并通过 A14 内部 Insets 回调验证生产窗口收到的触摸区域。状态栏回归使用屏幕坐标核对左右及下移后的逐图标恢复。
+
+`IslandPlayerLaunchTest` 覆盖成功一次、缺失 / 取消入口、旧会话、无应用及安全失败；Controller 实际 View 端到端覆盖单击和下滑映射。`IslandAudioSpectrumTest` 与 `AudioFftBandsTest` 分离验证真实 FFT 数学和受控 Backend 生命周期；Controller 测试验证可见性、暂停、遮挡、关闭及释放。正常采集测试使用注入的音频替身，不证明 HyperOS 的权限、驱动或蓝牙 / 远程路由已通过。配置生成工具检查五组、十反馈、五手势、真实搜索目标和模式单选；升级 / 备份测试保留旧键和值。

@@ -797,6 +797,7 @@ object SystemClockHooks {
                 ScreenStateController.addListener(context, this)
                 if (running) return
             }
+            if (!ScreenStateController.isScreenOn()) return
             running = true
             scheduleNextTick()
         }

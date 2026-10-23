@@ -33,6 +33,7 @@
     <uses-permission android:name="tv.withaibuild.customiuizer.r14.permission.BROADCAST" />
 
     <application
+        android:dataExtractionRules="@xml/maintenance_backup_rules"
         android:hasFragileUserData="true"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"

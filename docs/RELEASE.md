@@ -49,8 +49,8 @@ $releaseRevision = git rev-parse --short=8 HEAD
 
 1. 在工作分支提交，PR 到 main 自动运行无密钥的 A14 CI；未开 PR 时可手动选择该分支运行 A14 CI。合并前检查最终 head 的结果与 diff，不能复用旧提交的绿灯。
 2. 核验通过后合并 main。main 的代码推送再次运行 A14 CI，检查实际合并提交和配置；直接提交 main 也走同一入口。纯 Markdown 推送沿用现有跳过策略，不产生新 APK。
-3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。普通版本已发布则结束；只有版本递增、元数据与双语发行条目齐备时才请求发布确认。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
-4. 维护者在 **release-signing → Review deployments → Approve** 确认该版本、完整 SHA 和双语说明。拒绝或取消即可保持未发布；这是自动路径唯一必需的人工确认。
+3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。自动或手动入口发现版本已发布即正常跳过，不初始化 JDK / SDK，也不重新签名；只有版本递增、元数据与双语发行条目齐备时才请求发布确认。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
+4. 维护者在 **release-signing → Review deployments → Approve** 确认该版本、完整 SHA 和双语说明。拒绝或取消即可保持未发布；这是签名阶段必需的确认。发布环境若配置了设备验收检查点，则在同一正式候选完成验收后另行确认公开；Agent 只有获本轮用户明确委托时才能代为调用审核接口。
 5. 确认后重查 main 和 CI，使用历史证书只构建一次正式 Release，核验 APK、R8、fatal lint 与 GitHub 来源证明。复用同 SHA 的 main CI，不再重复 JVM、lint 或 develop 构建。
 6. 默认先发布源码仓库，核对公开资产、标签和 Latest，再发布 Xposed 仓库。两端保持完全相同的 APK、摘要、构建元数据和 Sigstore bundle；不重建、不重签。任一检查失败即停止后续写入。
 
@@ -73,20 +73,20 @@ gh workflow run a14-signed-build.yml --ref main
 # 只发布源码仓库 / 预发行。
 gh workflow run a14-signed-build.yml --ref main -f destination=source
 gh workflow run a14-signed-build.yml --ref main -f prerelease=true
-# 试用明确选择 actions-only；可使用已授权的受信分支。
+# 试用明确选择 actions-only；正式签名只信任 main。
 gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 ```
 
-仅候选在没有可复用 CI 时会补齐源码、工具、JVM、lint、develop 与 R8 门禁。未授权分支只做无密钥核验。新发布一律要求同 SHA 的 main CI 成功；分支候选晋升时，该 SHA 必须已通过 main CI。普通 CI 不接触正式密钥，develop 产物保留 unsigned / develop 标识。
+仅候选同样要求 release-signing 的审核配置及审核；没有可复用 CI 时补齐源码、工具、JVM、lint、develop 与 R8 门禁。未授权分支只做无密钥核验。新发布一律要求同 SHA 的 main CI 成功；分支候选晋升时，该 SHA 必须已通过 main CI。普通 CI 不接触正式密钥，develop 产物保留 unsigned / develop 标识。
 
 ### 一次性配置
 
-在源码仓库配置两个 Environment，均选择 **Selected branches and tags**，逐一添加 `tools/release-policy.json` 中授权的 branch，不添加通配符或 tag。新增受信任分支必须先审查其工作流、工具和 Gradle，再同步更新策略及 Environment。
+在源码仓库配置两个 Environment，均选择 **Selected branches and tags**，只添加 `tools/release-policy.json` 中的 `main` branch，不添加临时分支、通配符或 tag。
 
 | Environment | 配置 |
 | --- | --- |
 | `release-signing` | 至少一个 Required reviewer；四个签名 Secrets：`A14_KEYSTORE_BASE64`、`A14_STORE_PASSWORD`、`A14_KEY_ALIAS`、`A14_KEY_PASSWORD` |
-| `release-publishing` | `A14_XPOSED_RELEASE_TOKEN`；推荐不重复设置 Required reviewer，沿用前一阶段的确认。若保留第二次审核，流程会尊重该保护 |
+| `release-publishing` | `A14_XPOSED_RELEASE_TOKEN`；需要正式 APK 本地验收时设置 Required reviewer，在同一运行的签名候选通过设备 smoke 后批准公开；不需本地验收时可沿用前一阶段的确认 |
 
 自动路径会先检查 release-signing 确实有审核人及显式分支限制，配置缺失则停止，不把空 Environment 当作确认。单维护者仓库可允许本人审批自己触发的运行。工作流不代改管理员保护设置；本任务 GitHub 插件也不提供 Environment / Secrets 管理能力，不能声称远端设置已配置或凭据已验证。
 
@@ -101,14 +101,22 @@ gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 日常只在 `CHANGELOG_CN.md` 的“未发布”和 `CHANGELOG.md` 的“Unreleased”写已确认的用户变化。准备发版时执行一次：
 
 ```sh
-python tools/prepare_release.py --version r14.26.1 --code 248 --date 2026-10-23
+python tools/prepare_release.py --version r14.26.1 --code 249 --date 2026-10-23
 # 仅预览涉及文件，可追加 --dry-run。
 python tools/check_release_metadata.py
 ```
 
 上例是下一版本的示范，不代表已决定或发布该版本。工具先验证全部输入，再同步 Gradle、双语 README 与两个 Changelog，将已审核条目移入带日期的新版本节，保留历史并清空未发布节。空翻译、版本重复、版本倒退均拒绝；工具不提交、不推送、不打 tag，也不凭提交消息编造更新内容。README 标明源码版本；是否已经正式发行以 Release 为准，等待确认时不会把新源码误称为已发布正式版。将这五个文件与代码一并审查、提交到分支，然后走上述合并和发布流程。
 
-Release Notes 自动取候选 exact SHA 的本版中英文节，不另维护第三份说明；附源码 SHA、原始构建链接、APK 哈希、证书、GitHub Attestations 入口和精确验证命令。两端 Notes 相同，Summary 给出发布链接与核验结果。
+累计替代当前发行时，先把仍有效的旧版变化与本轮成果去重写入双语 Unreleased，分别组织用户与工程内容，再显式运行：
+
+```sh
+python tools/prepare_release.py --version r14.25.3 --code 248 --date 2026-10-23 --supersede r14.25.2 --base-version r14.25.1
+```
+
+两个参数必须一起给出；只能替代当前版本章节，基线必须是紧邻的上一保留发行版，两个语言必须具备结构化的累计内容。默认模式仍保留所有历史。该操作只准备源码，不删除 GitHub Release / tag；旧版工程证据仍在 Git 历史与既有路线图中。发布后的清理必须先重新确认两仓库资产一致且旧 Release 非 immutable，失败保留旧版。
+
+新版本的双语 Changelog 依次使用“用户变化 / User changes”和“工程说明 / Engineering notes”两节：用户节包含简短概述和 4～6 项变化，工程节保留方法、限制与技术记录。Release Notes 自动取候选 exact SHA 的用户节及对比基线，旧版无结构化小节时保持原格式，不另维护第三份说明；附源码 SHA、原始构建链接、APK 哈希、证书、GitHub Attestations 入口和精确验证命令。两端 Notes 相同，Summary 给出发布链接与核验结果。
 
 | 对象 | 格式 |
 | --- | --- |
@@ -118,7 +126,7 @@ Release Notes 自动取候选 exact SHA 的本版中英文节，不另维护第�
 | APK（候选及两端发布同名） | `CustoMIUIzer-A14-<versionName>-<sha6>.apk` |
 | 其余三个资产 | `SHA256SUMS`、`build-metadata.json`、`attestation.sigstore.json` |
 
-版本必须高于所有已发布版本（包含预发行）；两端均不能回退 Latest。当前已发布 `r14.25.1` / `246` 保留，本次流程修改归入 Unreleased，不重发旧版。旧无 SHA 文件名候选继续按原证明验证，不改名、不重建。
+版本必须高于所有已发布版本（包含预发行）；两端均不能回退 Latest。当前源码准备 `r14.25.3` / `248`，累计对比 `r14.25.1` / `246`；只有新版本两端验收成功后才清理被替代的 `r14.25.2` / `247`，实际是否发布以实时 Release 为准。旧无 SHA 文件名候选继续按原证明验证，不改名、不重建。
 
 正式 APK 检查包名、版本、SDK 34、arm64-v8a、不可调试、16 KB zipalign、V2 签名、历史证书及内嵌完整 sourceCommit。固定 SHA 的官方 actions/attest 证明 APK 和元数据，独立核验仓库、workflow、commit、ref、run / attempt 和摘要。产物 `a14-signed-<run-id>-<attempt>` 保留 30 天。
 
