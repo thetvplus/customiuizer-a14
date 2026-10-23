@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.widget.LinearLayout
+import android.view.View
 import android.widget.RemoteViews
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
@@ -19,338 +19,195 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.HookUtils
 
 object SystemColorizeNotificationHooks {
+    private data class Snapshot(val mode: Int = 1, val apps: Set<String> = emptySet()) {
+        fun includes(pkg: String) = (mode == 2 && pkg !in apps) || (mode == 3 && pkg in apps)
+    }
+    @Volatile private var snapshot = Snapshot()
+    private var observerRegistered = false
+    private const val PALETTE = "a14NotificationPalette"
 
-    @Volatile
-    private var colorizeMode = 1
-
-    @Volatile
-    private var colorizeApps: Set<String> = emptySet()
-
-    private var colorizeObserverRegistered = false
-
-    private fun refreshColorizeSnapshot() {
+    private fun refresh() {
         val prefs = MainModule.mPrefs
-        colorizeMode = prefs.getStringAsInt("system_colorizenotifs", 1)
-        colorizeApps = HashSet(prefs.getStringSet("system_colorizenotifs_apps"))
+        snapshot = Snapshot(prefs.getStringAsInt("system_colorizenotifs", 1), HashSet(prefs.getStringSet("system_colorizenotifs_apps")))
     }
 
-    private fun installColorizeSnapshot() {
-        refreshColorizeSnapshot()
-        if (colorizeObserverRegistered) return
-        colorizeObserverRegistered = true
+    private fun installSnapshot() {
+        refresh()
+        if (observerRegistered) return
+        observerRegistered = true
         ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
             override fun onChange(key: String?) = ModuleHelper.guarded {
-                if (key == null || key == "system_colorizenotifs" || key == "system_colorizenotifs_apps") {
-                    refreshColorizeSnapshot()
-                }
+                if (key == null || key == "system_colorizenotifs" || key == "system_colorizenotifs_apps") refresh()
             }
         })
+    }
+
+    private fun palette(n: Notification, context: Context): NotificationPalette? {
+        val info = n.extras.getParcelable("android.appInfo", ApplicationInfo::class.java) ?: return null
+        if (!snapshot.includes(info.packageName)) return null
+        return (XposedHelpers.getAdditionalInstanceField(n, PALETTE) as? NotificationPaletteCache)
+            ?.current(info.uid, info.packageName, context.resources.configuration.isNightModeActive)
     }
 
     @JvmStatic
     fun ColorizeNotificationCardHook(lpparam: PackageReadyParam) {
-        installColorizeSnapshot()
-        val ColorScheme = XposedHelpers.findClassIfExists("com.android.systemui.monet.ColorScheme", lpparam.classLoader)
-        var contentStyle: Any? = null
-        val MonetStyle = XposedHelpers.findClassIfExists("com.android.systemui.monet.Style", lpparam.classLoader)
-        val styles = MonetStyle?.enumConstants
-        if (styles != null) {
-            for (o in styles) {
-                if (o.toString().contains("CONTENT")) {
-                    contentStyle = o
-                    break
-                }
-            }
+        installSnapshot()
+        val loader = lpparam.classLoader
+        val scheme = XposedHelpers.findClass("com.android.systemui.monet.ColorScheme", loader)
+        val style = XposedHelpers.findClass("com.android.systemui.monet.Style", loader)
+        val contentStyle = style.enumConstants!!.single { it.toString() == "CONTENT" }
+        val schemeConstructor = XposedHelpers.findConstructorExact(scheme, Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, style)
+        val accent = XposedHelpers.findField(scheme, "accent1")
+        val neutral1 = XposedHelpers.findField(scheme, "neutral1")
+        val neutral2 = XposedHelpers.findField(scheme, "neutral2")
+        val shades = XposedHelpers.findField(accent.type, "allShades")
+        val builderClass = Notification.Builder::class.java
+        val builderNotification = XposedHelpers.findField(builderClass, "mN")
+        val params = XposedHelpers.findField(builderClass, "mParams")
+        val colors = XposedHelpers.findField(builderClass, "mColors")
+        val getColors = XposedHelpers.findMethodExact(builderClass, "getColors", params.type)
+        val reset = XposedHelpers.findMethodExact(params.type, "reset", *emptyArray<Any>())
+        val protection = XposedHelpers.findField(colors.type, "mProtectionColor")
+        val primary = XposedHelpers.findField(colors.type, "mPrimaryTextColor")
+        val secondary = XposedHelpers.findField(colors.type, "mSecondaryTextColor")
+        val colorized = XposedHelpers.findMethodExact(Notification::class.java, "isColorized", *emptyArray<Any>())
+        val media = XposedHelpers.findMethodExact(Notification::class.java, "isMediaNotification", *emptyArray<Any>())
+        val helper = XposedHelpers.findClass("com.android.systemui.statusbar.notification.NotificationSettingsHelper", loader)
+        val miuiStyle = XposedHelpers.findMethodExact(helper, "showMiuiStyle", *emptyArray<Any>())
+        val rowClass = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow", loader)
+        val rowEntry = XposedHelpers.findField(rowClass, "mEntry")
+        val sbn = XposedHelpers.findField(rowEntry.type, "mSbn")
+        val notificationColor = XposedHelpers.findField(rowClass, "mNotificationColor")
+        val tint = XposedHelpers.findField(rowClass, "mCurrentBackgroundTint")
+        val setTint = XposedHelpers.findMethodExact(XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.ActivatableNotificationView", loader), "setBackgroundTintColor", Int::class.javaPrimitiveType!!)
+        fun rowPalette(row: View): NotificationPalette? {
+            val entry = rowEntry.get(row) ?: return null
+            val posted = sbn.get(entry) as? android.service.notification.StatusBarNotification ?: return null
+            return palette(posted.notification, row.context)
         }
-        val finalContentStyle = contentStyle
-
-        ModuleHelper.findAndHookConstructor("android.app.Notification\$Builder", lpparam.classLoader, Context::class.java, Notification::class.java, object : MethodHook() {
+        fun apply(builder: Any, palette: NotificationPalette) {
+            val p = params.get(builder)
+            getColors.invoke(builder, p)
+            val target = colors.get(builder)
+            protection.setInt(target, palette.protection)
+            primary.setInt(target, palette.primary)
+            secondary.setInt(target, palette.secondary)
+        }
+        ModuleHelper.findAndHookConstructor("android.app.Notification\$Builder", loader, Context::class.java, Notification::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val n = chain.getArg(1) as? Notification ?: return@guarded
+                    palette(n, chain.getArg(0) as Context)?.let { apply(chain.thisObject!!, it) }
                 }
-                try {
-                    val thisObject = chain.thisObject
-
-                    if (chain.getArg(1) != null) {
-                        val mN = chain.getArg(1) as Notification
-                        if (XposedHelpers.getAdditionalInstanceField(mN, "mPrimaryTextColor") != null) {
-                            val builder = thisObject
-                            val mParams = XposedHelpers.getObjectField(builder, "mParams")
-                            XposedHelpers.callMethod(builder, "getColors", mParams)
-                            val mColors = XposedHelpers.getObjectField(builder, "mColors")
-                            XposedHelpers.setObjectField(mColors, "mProtectionColor", XposedHelpers.getAdditionalInstanceField(mN, "mProtectionColor"))
-                            XposedHelpers.setObjectField(mColors, "mPrimaryTextColor", XposedHelpers.getAdditionalInstanceField(mN, "mPrimaryTextColor"))
-                            XposedHelpers.setObjectField(mColors, "mSecondaryTextColor", XposedHelpers.getAdditionalInstanceField(mN, "mSecondaryTextColor"))
-                        }
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return result
             }
         })
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiExpandableNotificationRow", lpparam.classLoader, "updateBlurBg", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
-                try {
-
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiExpandableNotificationRow", loader,
+            "updateBlurBg", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val custom = ModuleHelper.guarded(false) { rowPalette(chain.thisObject as View) != null }
+                    if (!custom) return chain.proceed()
+                    val args = XposedHelpers.getArgsArray(chain)
                     args[2] = false
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                    return chain.proceed(args)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+            })
+        ModuleHelper.findAndHookMethod(rowClass, "onNotificationUpdated", object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val row = chain.thisObject as View
+                    val palette = rowPalette(row) ?: return@guarded
+                    notificationColor.setInt(row, palette.secondary)
+                    if (tint.getInt(row) != palette.tint) setTint.invoke(row, palette.tint)
+                }
+                return result
             }
         })
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow", lpparam.classLoader, "onNotificationUpdated", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val mEntry = XposedHelpers.getObjectField(thisObject, "mEntry")
-                    if (mEntry != null) {
-                        val mSbn = XposedHelpers.getObjectField(mEntry, "mSbn")
-                        val notify = XposedHelpers.callMethod(mSbn, "getNotification") as Notification
-                        val overflowColor = XposedHelpers.getAdditionalInstanceField(notify, "mSecondaryTextColor")
-                        if (overflowColor != null) {
-                            XposedHelpers.setObjectField(thisObject, "mNotificationColor", overflowColor)
-                        }
-                        val mNotifyBackgroundColor = XposedHelpers.getAdditionalInstanceField(notify, "mNotifyBackgroundColor")
-                        if (mNotifyBackgroundColor != null) {
-                            var bgColor = mNotifyBackgroundColor as Int
-                            val mCurrentBackgroundTint = XposedHelpers.getIntField(thisObject, "mCurrentBackgroundTint")
-                            if (mCurrentBackgroundTint != bgColor) {
-                                bgColor = Color.argb(158, Color.red(bgColor), Color.green(bgColor), Color.blue(bgColor))
-                                XposedHelpers.callMethod(thisObject, "setBackgroundTintColor", bgColor)
-                            }
-                        }
+        // Native setTint(0) and wrapper summary-background rules must remain active on Row reuse.
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.NotificationContentView", loader,
+            "updateAllSingleLineViews", object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val result = chain.proceed()
+                    ModuleHelper.guarded {
+                        val content = chain.thisObject as View
+                        val entry = XposedHelpers.getObjectField(content, "mNotificationEntry") ?: return@guarded
+                        val notification = (sbn.get(entry) as android.service.notification.StatusBarNotification).notification
+                        val palette = palette(notification, content.context) ?: return@guarded
+                        val singleLine = XposedHelpers.getObjectField(content, "mSingleLineView") ?: return@guarded
+                        (XposedHelpers.getObjectField(singleLine, "mTitleView") as TextView).setTextColor(palette.primary)
+                        (XposedHelpers.getObjectField(singleLine, "mTextView") as TextView).setTextColor(palette.secondary)
                     }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    return result
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.NotificationBackgroundView", lpparam.classLoader, "setTint", Int::class.javaPrimitiveType!!, object : MethodHook() {
+            })
+        val inflater = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.NotificationContentInflaterInjector", loader)
+        var icons: Any? = null // Native process-scoped manager, never a View or short-lived controller.
+        ModuleHelper.findAndHookMethod(inflater, "handle3thThemeColor", builderClass, Context::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-
-                    if ((chain.getArg(0) as Int) == 0) {
-                        skipped = true; result = null; throwable = null
+                val handled = ModuleHelper.guarded(false) {
+                    val builder = chain.getArg(0) as Notification.Builder
+                    val n = builderNotification.get(builder) as Notification
+                    val info = n.extras.getParcelable("android.appInfo", ApplicationInfo::class.java)
+                    if (info == null || !snapshot.includes(info.packageName) || colorized.invoke(n) == true || media.invoke(n) == true) {
+                        XposedHelpers.removeAdditionalInstanceField(n, PALETTE)
+                        return@guarded false
                     }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.wrapper.NotificationViewWrapper", lpparam.classLoader, "getCustomBackgroundColor", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
-
-                    skipped = true; result = XposedHelpers.getObjectField(thisObject, "mBackgroundColor"); throwable = null
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.NotificationContentView", lpparam.classLoader, "updateAllSingleLineViews", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val mEntry = XposedHelpers.getObjectField(thisObject, "mNotificationEntry")
-                    val singleLineView = XposedHelpers.getObjectField(thisObject, "mSingleLineView")
-                    if (mEntry != null && singleLineView != null) {
-                        val mSbn = XposedHelpers.getObjectField(mEntry, "mSbn")
-                        val mN = XposedHelpers.callMethod(mSbn, "getNotification") as Notification
-                        if (XposedHelpers.getAdditionalInstanceField(mN, "mSecondaryTextColor") != null) {
-                            val hybridNotificationView = singleLineView as LinearLayout
-                            val mTitleView = XposedHelpers.getObjectField(hybridNotificationView, "mTitleView") as TextView
-                            val mTextView = XposedHelpers.getObjectField(hybridNotificationView, "mTextView") as TextView
-                            mTitleView.setTextColor(XposedHelpers.getAdditionalInstanceField(mN, "mPrimaryTextColor") as Int)
-                            mTextView.setTextColor(XposedHelpers.getAdditionalInstanceField(mN, "mSecondaryTextColor") as Int)
-                        }
+                    val context = chain.getArg(1) as Context
+                    val iconManager = icons ?: ModuleHelper.getDepInstance(loader, "com.miui.systemui.graphics.AppIconsManager").also { icons = it }
+                    val bitmap = XposedHelpers.callMethod(iconManager, "getAppIconBitmap", info.uid / 100000, info.packageName) as Bitmap
+                    val dark = context.resources.configuration.isNightModeActive
+                    val cache = XposedHelpers.getAdditionalInstanceField(n, PALETTE) as? NotificationPaletteCache ?: NotificationPaletteCache()
+                    val palette = cache.resolve(bitmap, info.uid, info.packageName, dark) {
+                        val wallpaper = WallpaperColors.fromBitmap(bitmap)
+                        var seed = wallpaper.primaryColor.toArgb()
+                        if (Color.luminance(seed) > 0.9) seed = wallpaper.secondaryColor?.toArgb() ?: seed
+                        val cs = schemeConstructor.newInstance(seed, dark, contentStyle)
+                        @Suppress("UNCHECKED_CAST") val a = shades.get(accent.get(cs)) as List<Int>
+                        @Suppress("UNCHECKED_CAST") val n1 = shades.get(neutral1.get(cs)) as List<Int>
+                        @Suppress("UNCHECKED_CAST") val n2 = shades.get(neutral2.get(cs)) as List<Int>
+                        val background = a[if (dark) 5 else 6]
+                        NotificationPalette(ColorUtils.blendARGB(n1[1], background, 0.7f), n1[if (dark) 1 else 10], n2[if (dark) 3 else 8], background)
                     }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    reset.invoke(params.get(builder))
+                    apply(builder, palette)
+                    XposedHelpers.setAdditionalInstanceField(n, PALETTE, cache)
+                    true
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return if (handled) null else chain.proceed()
             }
         })
-
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.notification.row.NotificationContentInflaterInjector", lpparam.classLoader, "handle3thThemeColor", object : MethodHook() {
-            private var sAppIconManager: Any? = null
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                try {
-
-                    val builder = args[0] as Notification.Builder
-                    val mN = XposedHelpers.getObjectField(builder, "mN") as Notification
-                    if (XposedHelpers.callMethod(mN, "isColorized") as Boolean) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (XposedHelpers.callMethod(mN, "isMediaNotification") as Boolean) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val applicationInfo = mN.extras.getParcelable("android.appInfo") as ApplicationInfo?
-                    if (applicationInfo == null) {
-                        return XposedHelpers.proceedOrThrow(chain, throwable)
-                    }
-                    val mContext = args[1] as Context
-                    val pkgName = applicationInfo.packageName
-                    val opt = colorizeMode
-                    val isSelected = pkgName in colorizeApps
-                    if ((opt == 2 && !isSelected) || (opt == 3 && isSelected)) {
-                        XposedHelpers.callMethod(builder, "makeNotificationGroupHeader")
-                        if (sAppIconManager == null) {
-                            sAppIconManager = ModuleHelper.getDepInstance(lpparam.classLoader, "com.miui.systemui.graphics.AppIconsManager")
-                        }
-                        val userId = ModuleHelper.getUserId()
-                        val notifyIcon = XposedHelpers.callMethod(sAppIconManager, "getAppIconBitmap", userId, pkgName) as Bitmap
-                        val wc = WallpaperColors.fromBitmap(notifyIcon)
-                        var primaryColor = wc.primaryColor.toArgb()
-                        val lux = Color.luminance(primaryColor)
-                        if (lux > 0.9) {
-                            val secColor = wc.secondaryColor
-                            if (secColor != null) {
-                                primaryColor = secColor.toArgb()
-                            }
-                        }
-                        val dark = mContext.resources.configuration.isNightModeActive
-                        val cs = XposedHelpers.newInstance(ColorScheme, primaryColor, dark, finalContentStyle)
-                        val paletteAccent1 = XposedHelpers.getObjectField(cs, "accent1")
-                        val accent1 = XposedHelpers.getObjectField(paletteAccent1, "allShades") as List<Int>
-                        val paletteN1 = XposedHelpers.getObjectField(cs, "neutral1")
-                        val n1 = XposedHelpers.getObjectField(paletteN1, "allShades") as List<Int>
-                        val paletteN2 = XposedHelpers.getObjectField(cs, "neutral2")
-                        val n2 = XposedHelpers.getObjectField(paletteN2, "allShades") as List<Int>
-
-                        val bgColor = accent1[if (dark) 5 else 6]
-                        val mParams = XposedHelpers.getObjectField(builder, "mParams")
-                        XposedHelpers.callMethod(mParams, "reset")
-                        XposedHelpers.callMethod(builder, "getColors", mParams)
-                        val mColors = XposedHelpers.getObjectField(builder, "mColors")
-                        val mProtectionColor = ColorUtils.blendARGB(n1[1], bgColor, 0.7f)
-                        val mPrimaryTextColor = n1[if (dark) 1 else 10]
-                        val mSecondaryTextColor = n2[if (dark) 3 else 8]
-                        XposedHelpers.setObjectField(mColors, "mProtectionColor", mProtectionColor)
-                        XposedHelpers.setAdditionalInstanceField(mN, "mProtectionColor", mProtectionColor)
-                        XposedHelpers.setObjectField(mColors, "mPrimaryTextColor", mPrimaryTextColor)
-                        XposedHelpers.setAdditionalInstanceField(mN, "mPrimaryTextColor", mPrimaryTextColor)
-                        XposedHelpers.setObjectField(mColors, "mSecondaryTextColor", mSecondaryTextColor)
-                        XposedHelpers.setAdditionalInstanceField(mN, "mSecondaryTextColor", mSecondaryTextColor)
-                        XposedHelpers.setAdditionalInstanceField(mN, "mNotifyBackgroundColor", bgColor)
-                        skipped = true; result = null; throwable = null
-                    }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.notification.row.NotificationContentInflaterInjector", lpparam.classLoader, "createRemoteViews", object : MethodHook() {
-            private var titleResId = 0
-            private var subTextResId = 0
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val args = chain.args
-
-                    val NotificationHelper = XposedHelpers.findClass("com.android.systemui.statusbar.notification.NotificationSettingsHelper", lpparam.classLoader)
-                    var miuiStyle = false
-                    val builder = args[1] as Notification.Builder
-                    val notification = builder.notification
-                    if (XposedHelpers.callMethod(notification, "isMediaNotification") as Boolean) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val isFoldEntrance = notification.extras.getBoolean("miui_unimportant", false)
-                    val showMiuiStyle = XposedHelpers.callStaticMethod(NotificationHelper, "showMiuiStyle") as Boolean
-                    if (showMiuiStyle || isFoldEntrance) {
+        val progress = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.NotificationContentInflater\$InflationProgress", loader)
+        val remoteFields = arrayOf("newPublicView", "newContentView", "newExpandedView").map { XposedHelpers.findField(progress, it) }
+        var titleId = 0
+        var textId = 0
+        ModuleHelper.findAndHookMethod(inflater, "createRemoteViews", Int::class.javaPrimitiveType!!, builderClass,
+            Boolean::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, Context::class.java, Context::class.java, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val result = chain.proceed()
+                    ModuleHelper.guarded {
+                        if (result == null) return@guarded
+                        val builder = chain.getArg(1) as Notification.Builder
+                        val n = builderNotification.get(builder) as Notification
+                        val context = chain.getArg(6) as Context
+                        val palette = palette(n, context) ?: return@guarded
+                        if (media.invoke(n) == true) return@guarded
+                        if (miuiStyle.invoke(null) != true && !n.extras.getBoolean("miui_unimportant", false)) return@guarded
                         val style = builder.style
-                        miuiStyle = style == null || (style is Notification.BigPictureStyle) || (style is Notification.BigTextStyle) || (style is Notification.InboxStyle)
-                    }
-                    if (miuiStyle) {
-                        val inflationProgress = result
-                        val mContext = args[args.size - 1] as Context
-                        if (titleResId == 0) {
-                            titleResId = HookUtils.getResId(mContext.resources, "title", "id", "com.android.systemui")
-                            subTextResId = HookUtils.getResId(mContext.resources, "text", "id", "com.android.systemui")
+                        if (style != null && style !is Notification.BigPictureStyle && style !is Notification.BigTextStyle && style !is Notification.InboxStyle) return@guarded
+                        if (titleId == 0 || textId == 0) {
+                            titleId = HookUtils.getResId(context.resources, "title", "id", "com.android.systemui")
+                            textId = HookUtils.getResId(context.resources, "text", "id", "com.android.systemui")
                         }
-                        val contents = listOf("newPublicView", "newContentView", "newExpandedView")
-                        for (contentType in contents) {
-                            val baseContent = XposedHelpers.getObjectField(inflationProgress, contentType) as RemoteViews?
-                            if (baseContent != null && XposedHelpers.getAdditionalInstanceField(notification, "mPrimaryTextColor") != null) {
-                                baseContent.setTextColor(titleResId, XposedHelpers.getAdditionalInstanceField(notification, "mPrimaryTextColor") as Int)
-                                baseContent.setTextColor(subTextResId, XposedHelpers.getAdditionalInstanceField(notification, "mSecondaryTextColor") as Int)
-                            }
+                        if (titleId == 0 || textId == 0) return@guarded
+                        for (field in remoteFields) (field.get(result) as? RemoteViews)?.let {
+                            it.setTextColor(titleId, palette.primary)
+                            it.setTextColor(textId, palette.secondary)
                         }
                     }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    return result
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+            })
     }
 }

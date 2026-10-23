@@ -6,6 +6,8 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+- Scope notification freeform options to the native launch transaction; reject stale menu/island rows and retain lockscreen/profile gates. Bind heads-up expansion to notification identity, use native auto-removal, preserve lights when muting sound/vibration, and keep count/fold pipeline initialization. Retire global channel-policy overrides while retaining preference keys and protected notifications.
+- Reuse one invalidatable palette per notification, preserve native background resets/group summaries, refresh centered heads-up dimensions after configuration changes, and keep a newly created seconds ticker stopped while the screen is off. Device performance and ROM behavior still require acceptance.
 - Restore status-bar gesture action contexts and respect the native side/bottom back-gesture height branches. Save bounded maintenance recovery records before changes, validate package/user identity, verify actual state, and retain or compensate failed operations without adding restriction targets.
 - Contain Dynamic Island internal-insets failures, release input owners on detach, and retain unchanged layout parameters; refresh the window when display-density padding changes.
 - Refine Dynamic Island safe-edge layout, bounded input regions and upward recall; add a guarded current-player launch fallback. Add an experimental live waveform while keeping lightweight animation as default, regroup settings and preserve legacy feedback and backup choices.
