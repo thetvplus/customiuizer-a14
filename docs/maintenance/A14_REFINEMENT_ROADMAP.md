@@ -479,3 +479,79 @@ SystemUI 必须已有 RECORD_AUDIO / MODIFY_AUDIO_ROUTING 且 ROM / AppOps / 路
 6. 默认轻量与实验实时模式的 CPU / GPU / PSS、帧时间和耗电对照；检查音频指示器及各 ROM 路由限制。继续核验原生 StrongToast 互斥，不把主机采样当作硬件性能结论。
 
 回退单位是本次独立分支提交；没有改动长期 main、版本号、签名流程、Dock / Launcher Hook 或发布配置。
+
+## 13. 2026-10-23：云端动态岛质量收口及 M05 / M07 / M08–M09
+
+本批从指定云端 exact head `a6247d414dd61de7db20ac0241d4f6cc8c3efa01` 创建 `codex/a14-quality-rom-refinement-20261023`；其 main 基线仍为 `d6f47fd64ff76af2391bdcab14bc56535d93b56a`。复用第 11 节及原本地分支的两个已确认修复，分别以 `48b4a2a`、`33116af` 纳入动作 Context 与导航高度，不带入无关发布流程变更。不预设版本，不合并 main，不创建 tag / Release。
+
+### A. 云端分支评价与已修复问题
+
+云端实现保留单窗口、媒体 epoch、原生反馈交接和默认轻量波形，新增测试覆盖具体的旧行为失败，整体边界合理；但未经保护的内部 Insets 安装 / 释放与重复几何更新仍需修复。`a6247d4` 的独立分支 CI [39949420229](https://github.com/thetvplus/customiuizer-a14/actions/runs/39949420229) 已实际成功，包含 Full、Python / source contracts、工具 mutation gates 及未签名 Develop / fatal lint；它不是 main CI，也不证明以下新增修复或设备通过。
+
+| 核查项 | 源码 / 故障路径 | 本批处理与验证边界 |
+| --- | --- | --- |
+| Insets 兼容与释放 | 原构造直接 Class.forName / Proxy，attach / detach 的反射异常可逃逸框架回调；移除失败可跳过后续清理 | 冷路径解析完整接口、方法和字段；缺失即不接管。attach / 计算失败后停用该 owner、撤回既有窗口并保留原生提示，不增加窗口或反复重试。detach 先清 owner，普通失败隔离，finally 取消输入并调用父类；代理仅弱引用窗口，避免失效 observer 留住 View。故障注入覆盖安装失败、移除失败、坏回调与致命错误传播 |
+| 几何与布局 | 原 `geometry` 每次替换外层、图标及三个子布局的 LayoutParams；密度导致 padding 改变不在旧窗口更新判据内 | 复用所属 View 的参数，仅字段变化才重新设置；窗口更新比较实际宽高 / x / y，包含触摸边距。连续十次同几何保留全部参数对象且不 requestLayout；矩阵变换、边缘命中与原视觉保持。不把减少确定的重复操作换算成设备性能比例 |
+| 实时波形 | 一个选中 UID / user / token、一个本地唯一 MEDIA session；权限缺失、匿名 / 共享 UID、远程播放或会话歧义拒绝采集 | 默认模式 1 不创建采集对象。复用一个 Visualizer、一个播放回调、512 样本、五柱缓冲及现有 scope；20 Hz 上限、一次首帧期限、generation 使旧回调失效。停用 / 隐藏 / 暂停 / 替换释放回归通过。真实 AppOps、音频指示器、offload、权限撤销及路由仍须设备；没有新增权限绕过或系统采集 Hook |
+| 播放器启动 | 当前 Controller / epoch / token、同用户和 creator UID / 包；首选 Activity PendingIntent，明确取消才回退包入口 | 复用现有实现和单次启动测试；不增加媒体键、旧通知或跨用户回退。执行中的实际后台启动限制、用户切换竞争仍待设备 |
+| 设置与恢复 | 新键优先，旧布尔波形保留；模式 0/1/2，非法导入规范回轻量；旧反馈与部分新备份不互相覆盖 | 复用已实现迁移、当前模式摘要和备份回归；本批不改旧键含义、默认值或版本号 |
+
+### B. M05 / M07 功能边界
+
+| 功能 / 宿主 | 本批结论 |
+| --- | --- |
+| 状态栏图标、时钟、网速、电池、温度 / SystemUI | 保留快照、原生 Insets 缓存、网络订阅 / 电池回调、温度监测的既有 owner。复用 `SystemUIStatusBarHotPathTest` 的 100 次相同样式零重复 setter、网速文本继续更新，以及 DisplayRegistry 代际替换 / detach 回归；不新增轮询。真实每次状态变化的刷新次数、熄屏工作量、Bitmap / 帧时间尚未测量 |
+| 双卡、默认数据卡、Duo / SystemUI | 重跑既有网络状态、Duo 几何与过渡回归；既有 Host JVM 分配测试只约束准备后的百万次状态计算，不证明 ART 或 GPU。目标订阅切换、锁屏重建、旋转 / 字体 / 密度和多显示器仍待设备计数；没有根据“可缓存”改成熟基础设施 |
+| 控制中心 / SystemUI + 插件 loader | 复用同 loader 幂等、替换清旧机器 / loader、部分安装失败、显式 clear 与计步生命周期回归。原生面板关闭不必销毁仍存活的插件 owner；是否持续收到无用事件须实际 owner / 回调计数，未直接把面板不可见认作泄漏 |
+| 状态栏 / 控制中心动作 | 原 GestureMachine 错把 GestureEvent 传给执行器，View 也未转成 Context，已识别动作可能不发广播。复用原修复，转交真实 owner，由执行器使用其 Context；不在执行器保存 View。集成回归覆盖双击 / 长按、左右中、CANCEL、重复 UP、detach 和按 DOWN 捕获的配置 |
+| Launcher 返回区域高度 | 原 Hook 所有窗口一律除 60，80% 分屏可把 2400px 原生窗口换成 3200px，并误改底条。已按原生 100% / 60% 侧边分支换算，底部 position=2 不改，默认 60 保留原生；原链仍一次，配置重算不累乘 |
+| Launcher 快切、Home / 最近任务、桌面手势 | 保留原生识别 / 动画与已有取消、动作矩阵、owner 生命周期。当前样本 getNextTask 固定 null，onSwipeStop 仍有失败振动；是否与自定义动作重复必须确认 ReadyState / supportNextTask / 实际轨迹，不据此增加全局振动或输入 Hook |
+| system_server / Input、导航、按键与动作接收 | 沿用既有受信广播、动作去重与输入取消边界。本批未全面验证 native InputDispatcher / system_server 的真实并发时序，相关结论为 PENDING_ROM_EVIDENCE / 待设备，不以 Launcher 或 Host 测试代替 |
+
+### C. M08 / M09 维护事务与后台证据
+
+确认的事务缺口是原状态在操作成功后才 `apply()` 保存；设置进程中断会丢失恢复依据，setter 先改变状态再抛异常时，旧 `changed++` 位置也会漏回滚该项。现有六种维护配置接入独立 `maintenance_recovery` 日志，最多六个 profile、每项最多 32 个目标，不随偏好备份复制；无新增 Hook、线程、周期任务或组件目标。
+
+先读取目标原状态、系统包 UID / 签名 SHA-256 / versionCode / ROM fingerprint / SDK 34，再同步保存恢复记录，失败不发送命令。受信系统桥限定请求者当前用户的 Context，操作前重新核对身份，沿用声明 / allowlist / 有限目标检查，逐项读回。确认后才提交开关；写配置失败或部分失败最多发送一次精确原状态补偿，失败仍保留日志。恢复重开入口不覆盖原状态；操作 ID 拒绝旧回执覆盖新恢复。实际 setter 失败按逆序回滚，包括抛异常的那一项，并读回回滚状态。致命错误继续传播，日志为中断恢复保留。
+
+历史偏好中的原状态仍可由用户显式恢复，不伪造缺失值为 DEFAULT；这些旧快照没有历史签名 / ROM 身份，不能补造当时 provenance。新日志优先，和备份不一致、包身份 / 版本 / 用户 / ROM 改变、组件消失或日志损坏时保留记录并拒绝覆盖；ROM 升级后的恢复须重新取证，不强行“全部启用”。卸载模块或清除其数据也会删除本机恢复日志，故不作为恢复步骤。
+
+本次在 DexSQL 0.1.1 实际打开 CN / TW 共十个后台 APK，17 份 DEX；完整分页读取 Manifest 组件。`background_services_contract.sql` 返回 161 个声明和 288 条去重调度 / WakeLock 调用，续页也已读取；这些是定位集合，不是 288 次实际唤醒。原始 JSON / Smali 与完整哈希保留于忽略的 `.di-evidence/quality-20261023/`，不提交厂商样本。样本来源为本机已解包的 fuxi HyperOS 1 镜像，2026-10-23 重新测哈希；不能据此宣称它等于当前设备已安装版本。
+
+| 包与 ROM 版本 | APK SHA-256（CN / TW） | 已确认行为及分类 |
+| --- | --- | --- |
+| SecurityCenter：CN 8.8.3-240129.0.1 / 40000883；TW 8.9.6-241105.1.1 / 40000896 | `284a4929cbee030a9addb37c21b5d7221b7d9ab986f3085d001409ec0c739a38` / `d42e36c0a0a8224dc7c8e03759d54f01c8b92ea56ec97b62ff0fa6860ce38824` | CN 63 Service / 20 Receiver / 38 Provider，TW 59 / 19 / 39；包括 BIND_JOB_SERVICE、Boot、云数据、病毒更新、扫描和推送。TW 有额外广告 / Metrica Provider 和 Job，CN 营销清单主要匹配 RemoteAnalyticsReceiver。ConnectivityChangeJobService2 调用多个子模块，不将整个网络 / 云服务归为营销。扫描、防护与系统调度属于必要或需独立确认的任务；子模块网络、开关覆盖与重试链尚属 PENDING_ROM_EVIDENCE |
+| PowerKeeper 4.2.00 / 40200 | `e45e97d5162056d1eb1750bdfdce3e0540dac1de4d070f345d4ba725287526bb` / `e7292bc29b034cdd49af598724713e95f0c3fcee76b3220183b9c34839083ba0` | 两区均 20 Service / 7 Receiver / 2 Provider。CloudUpdateReceiver 与任务完成调用 scheduleCloudUpdateJob；OTA 随机延迟，首次未成功同步延迟 2h，成功后 24h；固定 job ID 取消再注册、persisted、已有成功缓存时限非计费网络。它是续调度延迟，不是保证每天实际执行。现有 AppsRestrictPower / PersistBatteryOptimization 修改白名单，不等于停云更新；没有扩大全局省电调度 |
+| GuardProvider：CN 2.1.5-20240906.0 / 215；TW 1.8.4-20231108.1 / 184 | `4426f56af7c0bc0af27468fa622aa55a5f348b7c5fb207b1801c92d21b078e46` / `1b767096d88e61b51e1f5db928eb963071ba851f47da0f20965ce262e31edeb6` | CN 有 WorkManager / ReportWorker，特定报告类型才 enqueue，Worker 有成功 / 重试 / 失败分支；约束的混淆实现、是否涉及安全报告及完整网络链仍待精校。现有反诈 DexKit 条件仅 CN 唯一命中 `LX/c;->h(Context)List`，TW 零，保持国际版不安装。TW CacheBuildJobService 为 7 天 periodic、device idle、persisted，并检查 job 是否已存在；不能把缓存构建等同统计上传或无用任务 |
+| MiuiDaemon 2.0 / 30（两区同 binary） | 两区均 `01ab439bac5ee8a9144ec1b97fdbbb8b53a0654169caf9498b6c13f8013d7f00` | persistent=true，20 Service / 2 Receiver / 2 Provider；包含性能、内存整理、诊断与上传，不能整包归为广告。JobDispatcher 已有去重：Event 常规 24h（地区网络约束不同），File 常规 24h、充电且非计费网络，Heartbeat 正式机 6h / 未发布设备 2h；调试路径不同。isUploadEnabled 先看 device_provisioned，再看日志上传选择，国际版另看 Privacy；有测试 / root debug 分支，均是静态条件。CloudControlSyncService 默认延迟 8h，首次调用还直接启线程应用配置并注册云 ContentObserver，因此只停用该 JobService 不等于撤销已经注册的 observer / 所有云控 |
+| AnalyticsCore versionCode 2023091300（版本名为资源引用，两区同 binary） | 两区均 `983b288b4330167ddc4925bb17b46c94b967aad19fb489a056317a5c17f5fa9a` | 9 Service / 2 Receiver / 2 Provider。AnalyticsApp 注册固定 job 1，要求网络、10 分钟 override deadline，并设置原生退避；这是单次调度约束，不能解释成每十分钟上传。是否执行、发送内容、真实重试频率和关闭后的残留均未测量 |
+
+Manifest 中 exported / permission / process 已逐页读取：Daemon 云 Job 由 BIND_JOB_SERVICE 保护，上传 Job 不 exported；SecurityCenter 主要落 `com.miui.securitycenter.remote`，国际 Metrica 另有独立进程。GuardProvider 的系统 JobService 也有 BIND_JOB_SERVICE，不能仅因 exported=true 判为公开无权限入口。网络权限或 URL 字符串不能证明通信，本批未做抓包、TLS 解密或安装监控。
+
+当前 ADB 设备列表为空。jobscheduler / alarm 执行次数、WakeLock 时长、后台 CPU / 线程 / PSS、网络发送接收及持续时间，在亮屏、锁屏待机、Doze、充电 / 非充电下均为 **未测量**；没有重置电池统计，也没有依据常驻进程或任务名称宣称耗电。
+
+### D. 限制功能候选与后续精校输入
+
+| 候选 | 收益依据、风险与默认状态 | 恢复 / 准入决定 |
+| --- | --- | --- |
+| 手机管家营销组件 | CN / TW 实际声明差异可查；可减少广告 SDK 初始化入口，实际资源收益未量化。现有可选项默认关闭，保持与病毒防护分离 | 已有功能先用事务日志恢复原状态，不新增泛化列表；按各区安装版本验证入口不影响功能 |
+| Daemon Event / File / Heartbeat 上传 | 有实际调度和日志上传门禁，部分场景用户可选择关闭；可能损失故障上报。现有选择项默认关闭 | 精确恢复原启用状态；先验证原生用户开关、已运行任务与云 observer 残留。现有“联网组件”开关不宣称封锁全部云控 |
+| GuardProvider 单独 ReportWorker 限制 | 存在按报告类型入队与重试，尚不能确认非必要。若有价值也必须默认关闭 | **PENDING_ROM_EVIDENCE**：先完成报告类型 → 网络 → 用户同意 / 取消链及安全影响；目前不添加，不关闭病毒引擎 |
+| PowerKeeper 可选云同步限制 | 固定 ID 与续调度已存在，不能把正常续调度认作重复任务；可能影响省电策略更新，收益未测 | **PENDING_ROM_EVIDENCE / 待实机**；不改全局 JobScheduler / 白名单 / 温控。若后续证明可限制，须保留缓存、原始开关及真实恢复状态 |
+| AnalyticsCore 指定任务、Daemon 云观察者的按需限制 | 有具体入口，仍缺关闭后行为与运行成本；现有整包 analytics 可选项不代表新细粒度限制已获准入 | 保持默认关闭候选；先诊断固定任务与 owner，无默认常驻观察模式。用户同意、安全防护、温控和必要系统功能不捆绑 |
+
+以下沿用现有查询目录和本页，不另建审计体系。ClassLoader 列为定义来源对应的候选装载域，实际 loader 命中仍须设备记录。
+
+| 顺序 / 功能 / 宿主 | 目标与 ClassLoader | 待查询 / 调用链、当前 Hook、方案与风险 |
+| --- | --- | --- |
+| 1 双卡 / 信号 / Duo，SystemUI | 同版本 CN / TW MiuiSystemUI.apk，宿主 PathClassLoader | 已跑 statusbar_layout_refresh：32 声明，NetworkControllerImpl.doUpdateMobileControllers、MiuiPhoneStatusBarView attach / detach、Battery 回调、Insets 失效已定位。接下来追默认卡 → Subscription → icon group → Duo / 重建；当前 SystemUIStatusBarHooks / Duo 快照不改。需要 SIM 轨迹与次数计数，风险是旧订阅 / 跨显示 owner |
+| 1 控制中心插件 / 触摸 / 占用 | MiuiSystemUI + MIUISystemUIPlugin，插件独立 loader | 已跑 statusbar_gestures：16 声明 / 10 invoke；PluginInstance load / unload 有唯一对应定义。当前 ControlCenterPluginRuntime、GestureMachine、DynamicIslandStatusBarFade 保留。后续追插件替换 → tile / 计步 owner → close / unload；无调用证据的子链标 PENDING_ROM_EVIDENCE，避免把面板 close 误当 loader 销毁 |
+| 1 动态岛 Insets / 音频，SystemUI | SystemUI + boot framework.jar，宿主 / boot loader | 两区 Insets add / remove、InternalInsetsInfo、Token.getUid 和 AudioPlaybackConfiguration 的 UID / session / active 共 14 声明，已 decode UID、session、监听增删；两区完整 Manifest 均声明四种相关音频 / 媒体权限。当前 IslandTouchWindow / NativeBackend 失败关闭；需要实际授予、AppOps、权限撤销、offload、会话与用户日志，声明不等于允许采集 |
+| 2 Launcher 返回 / 快切 | MiuiHome.apk，Launcher PathClassLoader | navigation 查询 12 声明 / 4 调用 / 8 字段；getGestureStubWindowParam、onSwipeStop、getNextTask 完整 decode 到末尾。当前 Controls 高度 / 无参宽度 Hook 与原生 GestureStub 状态机；后续补 ReadyState → finish / cancel / quick switch / 振动。需要同 binary Launcher 和系统导航轨迹，不用全局输入 Hook 代替 |
+| 2 状态栏 / 系统动作、Input | SystemUI、services.jar、对应 Input / Navigation 组件；宿主 / system_server loader | 当前按 DOWN 快照、INTERCEPT 观察与 TOUCH 执行分离；Context 修复已带集成回归。原生面板、Home / 最近任务、快速配置变化与 CANCEL 的跨宿主实际链仍 PENDING_ROM_EVIDENCE；补 services / Input 精确样本，不凭 Launcher 的取消路径推断 system_server |
+| 3 SecurityCenter 主进程 / remote / SDK | 两区各自 SecurityCenter APK，应用 loader / 实际 SDK loader 待记录 | 当前营销与独立安全项的有限组件 allowlist；ConnectivityChangeJobService2 → 各混淆子模块、CloudDataUpdateService → 云解析 / 用户开关须继续 decode。需逐区签名 / 版本匹配，风险为把安全配置和营销一起停用 |
+| 3 PowerKeeper | 两区 PowerKeeper APK，应用 loader | CloudUpdateReceiver → CloudUpdateJobService → LocalUpdateUtils / 缓存 → 续调度已部分取证，网络解析和用户开关覆盖仍 PENDING_ROM_EVIDENCE。当前 AppsRestrictPower / PersistBatteryOptimization 不扩展；风险为误改系统省电 / Doze / 热管理 |
+| 3 GuardProvider | 两区 GuardProvider APK，应用 loader；WorkManager / SDK 定义同 APK | CN `LX/c.h` 是现有反诈 Hook 候选；ReportWorker 的 `Ld0/C.h` 入队、混淆约束 → `ReportWorker.r/w` → 网络待精校。TW CacheBuildJobService 已读调度；不得跨地区复用混淆名。需要报告语义 / 权限 / 同意门禁，风险为拦安全结果 |
+| 3 Daemon / Analytics | MiuiDaemon / AnalyticsCore APK，应用 loader；必要时 services / native 库 | 已读 JobDispatcher、isUploadEnabled / isReportEnabled、CloudControlSyncService.schedule、AnalyticsApp.startJobScheduler。当前有限组件 / 包停用桥及冷路径 persistent-start blocker 沿用；继续审查 observer 云更新、已运行 worker、native 协作与跨用户启动，缺少部分为 PENDING_ROM_EVIDENCE。风险为损失诊断或性能配置，不能整体归类广告 |
+
+本批独立回退单位为动态岛安全边界 / 几何、状态栏动作 Context、导航高度、维护事务，以及取证 SQL / 文档。资源成本是有界恢复数据与用户主动维护时的身份 / 状态查询；没有修改 PrefMap、ResourceHooks、FeatureRegistry、ProcessRouter、PreferenceBootstrap，也没有测量依据可宣称确定节电、CPU / GPU 或内存改善比例。
