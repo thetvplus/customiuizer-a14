@@ -101,11 +101,6 @@ internal class MaintenanceJournal(private val storage: SharedPreferences, privat
             check(restored())
             check(storage.edit().remove(key).commit()) { "Recovery record was not cleared" }
         }
-        fun failed() {
-            if (enable && restored()) {
-                check(storage.edit().remove(key).commit()) { "Recovery record was not cleared" }
-            }
-        }
     }
 
     companion object {

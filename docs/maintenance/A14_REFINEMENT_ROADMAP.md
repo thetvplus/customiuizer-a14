@@ -554,4 +554,6 @@ Manifest 中 exported / permission / process 已逐页读取：Daemon 云 Job �
 | 3 GuardProvider | 两区 GuardProvider APK，应用 loader；WorkManager / SDK 定义同 APK | CN `LX/c.h` 是现有反诈 Hook 候选；ReportWorker 的 `Ld0/C.h` 入队、混淆约束 → `ReportWorker.r/w` → 网络待精校。TW CacheBuildJobService 已读调度；不得跨地区复用混淆名。需要报告语义 / 权限 / 同意门禁，风险为拦安全结果 |
 | 3 Daemon / Analytics | MiuiDaemon / AnalyticsCore APK，应用 loader；必要时 services / native 库 | 已读 JobDispatcher、isUploadEnabled / isReportEnabled、CloudControlSyncService.schedule、AnalyticsApp.startJobScheduler。当前有限组件 / 包停用桥及冷路径 persistent-start blocker 沿用；继续审查 observer 云更新、已运行 worker、native 协作与跨用户启动，缺少部分为 PENDING_ROM_EVIDENCE。风险为损失诊断或性能配置，不能整体归类广告 |
 
+Android 备份按[官方数据提取规则](https://developer.android.com/identity/data/autobackup#IncludingFilesAndroid12)单独排除 `maintenance_recovery.xml` 的云备份与设备迁移；其他偏好保持既有备份资格。模块自己的导出仍只处理偏好文件。测试同时检查 Manifest 关联、两种 transport 的有限排除及未全局禁用备份；厂商迁移工具是否遵守该规则仍须目标设备验证。
+
 本批独立回退单位为动态岛安全边界 / 几何、状态栏动作 Context、导航高度、维护事务，以及取证 SQL / 文档。资源成本是有界恢复数据与用户主动维护时的身份 / 状态查询；没有修改 PrefMap、ResourceHooks、FeatureRegistry、ProcessRouter、PreferenceBootstrap，也没有测量依据可宣称确定节电、CPU / GPU 或内存改善比例。

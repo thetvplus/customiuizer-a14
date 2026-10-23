@@ -66,12 +66,13 @@ class MaintenanceJournalTest {
         journal = MaintenanceJournal(storage, backend)
         assertThrows(IllegalArgumentException::class.java) { journal.prepare(profile, intent(), true) }
         val restore = journal.prepare(profile, intent(intArrayOf(1, 0)), false)
-        assertFalse(restore.verify()); restore.failed()
+        assertFalse(restore.verify())
+        assertThrows(IllegalStateException::class.java) { restore.recovered() }
         assertArrayEquals(intArrayOf(1, 0), journal.snapshot(profile)!!.original)
     }
 
     @Test fun completeRollbackClearsOnlyTheUnusedNewRestrictionRecord() {
-        journal.prepare(profile, intent(), true).failed()
+        journal.prepare(profile, intent(), true).recovered()
         assertFalse(journal.contains(profile))
     }
 
@@ -92,7 +93,7 @@ class MaintenanceJournalTest {
         val recovery = journal.prepare(profile, intent(intArrayOf(1, 0)), false)
         assertFalse(stale.verify())
         assertThrows(IllegalStateException::class.java) { stale.finish() }
-        stale.failed()
+        assertThrows(IllegalStateException::class.java) { stale.recovered() }
         assertTrue(journal.contains(profile))
         assertTrue(recovery.verify())
         recovery.finish()
