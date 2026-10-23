@@ -64,12 +64,13 @@ class SystemServerFeaturesWiringTest {
         val features = SystemServerFeatures.all(fakeSystemServerStartingParam())
 
         assertEquals(
-            "All 54 system_server features should be present",
-            54,
+            "All 53 supported system_server features should be present",
+            53,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
         assertEquals("Every feature must have a unique FeatureId", features.size, uniqueIds.size)
+        assertFalse("Global notification policy feature 38 is retired", features.any { it.id.id == 38 })
 
         for (feature in features) {
             assertEquals(FeatureTarget.SYSTEM_SERVER, feature.target)
@@ -98,7 +99,7 @@ class SystemServerFeaturesWiringTest {
         val feature = OpenAppInFreeFormFeature(fakeSystemServerStartingParam())
 
         assertEquals(OpenAppInFreeFormFeatureId, feature.id)
-        assertEquals("system_notify_openinfw", feature.preferenceKey)
+        assertEquals("system_fw_forcein_actionsend", feature.preferenceKey)
         assertEquals(FeatureTarget.SYSTEM_SERVER, feature.target)
 
         val off = PrefMap()
@@ -106,6 +107,11 @@ class SystemServerFeaturesWiringTest {
 
         val on = PrefMap().apply { put("system_fw_forcein_actionsend", true) }
         assertTrue(feature.isEnabled(on))
+        val keys = listOf("system_fw_forcein_actionsend", "system_cc_freeform_when_longclick", "system_notify_openinfw", "system_betterpopups_allowfloat")
+        for (mask in 0..15) {
+            val prefs = PrefMap().apply { keys.forEachIndexed { index, key -> put(key, mask and (1 shl index) != 0) } }
+            assertEquals("Only share/tile rules need system_server: $mask", mask and 3 != 0, feature.isEnabled(prefs))
+        }
     }
 
     @Test
