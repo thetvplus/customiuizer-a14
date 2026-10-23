@@ -11,11 +11,11 @@ from tools import prepare_release, check_release_metadata
 class PrepareReleaseTest(unittest.TestCase):
     def fixture(self, root: Path) -> None:
         (root / "app").mkdir()
-        (root / "app/build.gradle.kts").write_text('val lastVersion = 246\nval lastVersionName = "r14.25.1"\n')
+        (root / "app/build.gradle.kts").write_text('val lastVersion = 246\nval lastVersionName = "r14.25.1"\n', encoding="utf-8")
         for filename in ("README.md", "README_EN.md"):
-            (root / filename).write_text("Current: `r14.25.1` (versionCode 246).\n")
+            (root / filename).write_text("Current: `r14.25.1` (versionCode 246).\n", encoding="utf-8")
         for filename, heading in (("CHANGELOG.md", "Unreleased"), ("CHANGELOG_CN.md", "未发布")):
-            (root / filename).write_text(f"# Changelog\n\n## {heading}\n\n- Reviewed change.\n\n## r14.25.1 — 2026-10-22\n\nversionCode 246.\n\n- Historical change.\n")
+            (root / filename).write_text(f"# Changelog\n\n## {heading}\n\n- Reviewed change.\n\n## r14.25.1 — 2026-10-22\n\nversionCode 246.\n\n- Historical change.\n", encoding="utf-8")
 
     def test_one_plan_aligns_five_files_and_preserves_the_historical_section(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -28,9 +28,9 @@ class PrepareReleaseTest(unittest.TestCase):
                 self.assertIn("247", text)
                 if path.name.startswith("CHANGELOG"):
                     self.assertIn("## r14.26.1 — 2026-10-23", text)
-                    history = path.read_text().split("## r14.25.1", 1)[1]
+                    history = path.read_text(encoding="utf-8").split("## r14.25.1", 1)[1]
                     self.assertEqual(history, text.split("## r14.25.1", 1)[1])
-                path.write_text(text)
+                path.write_text(text, encoding="utf-8")
             with patch.object(check_release_metadata, "REPO_ROOT", root), patch.object(check_release_metadata, "GRADLE", root / "app/build.gradle.kts"):
                 self.assertEqual([], check_release_metadata.check())
 
@@ -39,11 +39,11 @@ class PrepareReleaseTest(unittest.TestCase):
             root = Path(temp)
             self.fixture(root)
             cn = root / "CHANGELOG_CN.md"
-            cn.write_text(cn.read_text().replace("- Reviewed change.", ""))
-            before = {path: path.read_text() for path in root.rglob("*") if path.is_file()}
+            cn.write_text(cn.read_text(encoding="utf-8").replace("- Reviewed change.", ""), encoding="utf-8")
+            before = {path: path.read_text(encoding="utf-8") for path in root.rglob("*") if path.is_file()}
             with self.assertRaisesRegex(ValueError, "reviewed change entries"):
                 prepare_release.plan(root, "r14.26.1", 247, date(2026, 10, 23))
-            self.assertEqual(before, {path: path.read_text() for path in before})
+            self.assertEqual(before, {path: path.read_text(encoding="utf-8") for path in before})
 
     def test_duplicate_or_decreasing_versions_are_not_prepared(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -53,7 +53,7 @@ class PrepareReleaseTest(unittest.TestCase):
                 with self.subTest(version=version, code=code), self.assertRaises(ValueError):
                     prepare_release.plan(root, version, code, date(2026, 10, 23))
             path = root / "CHANGELOG.md"
-            path.write_text(path.read_text() + "\n## r14.26.1\n\n- Already prepared.\n")
+            path.write_text(path.read_text(encoding="utf-8") + "\n## r14.26.1\n\n- Already prepared.\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "already contains"):
                 prepare_release.plan(root, "r14.26.1", 247, date(2026, 10, 23))
 
@@ -61,10 +61,10 @@ class PrepareReleaseTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.fixture(root)
-            before = {path: path.read_text() for path in root.rglob("*") if path.is_file()}
+            before = {path: path.read_text(encoding="utf-8") for path in root.rglob("*") if path.is_file()}
             with patch.object(prepare_release, "ROOT", root), patch("sys.argv", ["prepare_release.py", "--version", "r14.26.1", "--code", "247", "--dry-run"]):
                 self.assertEqual(0, prepare_release.main())
-            self.assertEqual(before, {path: path.read_text() for path in before})
+            self.assertEqual(before, {path: path.read_text(encoding="utf-8") for path in before})
 
     def test_preparation_writes_repository_lf_on_windows_too(self):
         with tempfile.TemporaryDirectory() as temp:
