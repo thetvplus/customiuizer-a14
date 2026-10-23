@@ -311,7 +311,7 @@ M01 建立的追踪关系为：**页面 / 偏好键 → Feature ID 或设置端�
 - **H / 发行与回退**：公开提交只包含最终结果，既有稳定历史保留。原始开发历史与未提交补丁保存在本地，不进入发行记录。回退使用正式发行 tag 或对最终提交执行 revert，不移动历史 tag。同一已核验 Actions APK 发布双仓库，versionCode 不复用不同 binary。
 
 
-## 9. 2026-10-23 工作分支校准（未发布）
+## 9. 2026-10-23 工作分支校准（历史阶段）
 
 - 自动发布：工作分支与合并后的 main 分别核验；main CI 成功且新版本 / 双语记录齐备后请求一次确认，默认先发布源码仓库、验收后同步同一 APK 到 Xposed。支持手动触发、仅候选、预发行和同源失败恢复；Changelog 与版本准备、命名、权限和验收规则统一到 [发布流程](../RELEASE.md)。普通 CI / PR 不签名、不发布。
 - 音乐：新增默认开启的 `system_island_media_swipe`；关闭立即禁用两方向切歌并取消待执行操作，点击打开与上滑隐藏保持。暂停保留期只由实际显示的音乐岛建立；播放器内暂停、延迟入场与 Toast 占窗后返回桌面均不新建暂停岛，重复快照不续期。
@@ -323,13 +323,13 @@ M01 建立的追踪关系为：**页面 / 偏好键 → Feature ID 或设置端�
 
 ## 10. 交接与下一步
 
-当前代码和设置说明以 [功能目录](../features/README.md) 为入口，运行结构见 [架构](../../ARCHITECTURE.md)。动态岛 20 个实现文件及 28 个对应测试已按 island 包归档；稳定 Feature ID、偏好键与 Hook 行为沿用。发布的支持场景、确认点及恢复规则统一维护在 [RELEASE](../RELEASE.md)，不另建第二套流程文档。
+当前代码和设置说明以 [功能目录](../features/README.md) 为入口，运行结构见 [架构](../../ARCHITECTURE.md)。动态岛实现与测试已按 island 包归档；稳定 Feature ID 和历史偏好编码沿用。第 9 节记录的是五手势实施之前的历史阶段，不能作为当前功能缺失结论；当前结果见下表和第 11 节。发布的支持场景、确认点及恢复规则统一维护在 [RELEASE](../RELEASE.md)，不另建第二套流程文档。
 
 | 待完成部分 | 所需条件 | 继续入口与验收 |
 | --- | --- | --- |
 | 远端发布环境 | 仓库管理员配置 Required reviewer、显式分支限制、历史签名 Secrets，以及限定 Xposed 仓库 Contents / Workflows write 的现有凭据 | [一次性配置](../RELEASE.md#一次性配置)；代码 / 模拟测试不能证明远端配置有效 |
-| 下一正式版 | 明确版本决策，补全已审核的双语未发布条目 | `prepare_release.py` 对齐五文件；main CI 成功后确认，按序验收双仓库；本次仍为 r14.25.1 / 246 |
-| 音乐手势独立配置 | 桌面环境的 DexSQL CLI / MCP、带哈希的 SystemUI / 插件 / boot framework 样本 | [方案与动作矩阵](../features/island/MUSIC_GESTURES.md)及 [只读查询](../../tools/dexsql/island_music_gestures.sql)；尚未实现，先核对 schema 和当前会话 / 音量能力 |
+| r14.25.2 / 247 | 本轮用户已明确授权完成后正式发布；仍需最终源码门禁和有效签名 / 发布入口 | 不重复准备旧版本；核验 exact main CI、签名和双仓库同一资产，实际发行状态单独读回 |
+| 音乐手势独立配置 | 已在 `56619f9` 实现，并有 CN / TW 静态证据与主机测试 | [方案与动作矩阵](../features/island/MUSIC_GESTURES.md)；下一步是目标 ROM 的当前播放器、蓝牙 / 投放音量和取消交互验收 |
 | 目标 ROM 实机 | 明确 ROM 版本、同一 APK、安装权限及日志 | 验收首次启用、切歌开关、播放器内暂停快速回桌面、Toast 抢占、恢复播放、重建 / 锁屏；Dock / Duo 沿用各自待验收范围 |
 | GitHub 绿色 Verified 标签 | 已登记且由维护者持有的可验证 Git 签名身份 | [认证区别](../RELEASE.md#github-认证标记)；APK 来源证明已接通，不能当作标签签名，不能改写历史 tag |
 
@@ -337,7 +337,7 @@ M01 建立的追踪关系为：**页面 / 偏好键 → Feature ID 或设置端�
 
 ### r14.25.2：音乐活动、配置与显示证据闭环
 
-从实时远端 main `2b321c6a27e16538cb983d3cedc5c36da33f5eda` 创建 `codex/r14.25.2-refinement`，复用 M05.04 的单窗口、StrongToast 统一抑制及状态栏相交避让。2026-10-23 用户收口要求改为完成实现与验证，暂不发布；签名 / tag / 双仓库发行留待后续明确授权。
+从实时远端 main `2b321c6a27e16538cb983d3cedc5c36da33f5eda` 创建 `codex/r14.25.2-refinement`，复用 M05.04 的单窗口、StrongToast 统一抑制及状态栏相交避让。上一轮只授权本地实现；本轮用户已明确要求完成独立复核和专项修复后发布 r14.25.2，不重发 r14.25.1。
 
 - 暂停资格改用现有 presentation 的实际预绘制证据，未显示窗口不执行退出动画；离开播放器先取新快照。控制中心内新播放再暂停不能借用旧活动的历史展示证据。同身份退场重入重新取得可见性与避让所有权。
 - 五项音乐手势复用 MultiAction，追加 MUSIC 枚举及独立播放 / 暂停 / 打开播放器编号，不改旧动作；统一解析与 TransportControls 执行、能力位、当前会话和 action epoch。关闭横向切歌仍允许音量等明确配置；输入与任务随配置、抢占、前台 / 隐私及释放失效。平台单击 / 双击 / 长按与无障碍共用入口。
@@ -345,8 +345,74 @@ M01 建立的追踪关系为：**页面 / 偏好键 → Feature ID 或设置端�
 - 十类系统反馈按需注册并在关闭时清除旧事件；新安装默认静默，原来已启用岛的用户迁移保留旧反馈。既有 AudioManager / 磁贴因果标记也改由窗口所有者按需租用，仅相关类别同时启用时安装，最多六个句柄，关闭 / 替换 / detach 释放，弱引用及 live 门禁隔离旧回调。通知接管增加默认空允许名单，排除名单优先；未接管通知、原通知中心条目、排序与原生清除行为维持。
 - 设置保持显示、动画、显示内容、音乐与媒体、应用五组，十种维护语言补齐新资源。扫描设置源 XML 与动作 / 备份契约；现有 Hook 的安装重启边界保留，分类、定位和手势在已安装接入内即时更新。复核 Dock 单张采样 / 单次在途 / 隐藏释放及 Duo 订阅身份校验，未发现本批必须改写的成熟路径，没有宣称设备节电或帧率收益。
 - DexSQL 0.1.1 对 CN V816.0.19.0.UMCCNXM、TW V816.0.8.0.UMCTWXM 的 SystemUI、插件、framework 实际查询与 Smali 复核；样本摘要、定义来源、匹配数及待取证能力见[音乐手势](../features/island/MUSIC_GESTURES.md)。不新增未知 ROM Hook，不以静态证据代替运行时结论。
-- 发布审计发现服务器 release-signing 当前缺少 Required reviewer。新发布的自动 / 手动入口均要求审核保护，签名前重查；没有调整服务器保护、Secrets、分支策略或发布资产。正式发布仍被该保护配置缺口阻断。
+- 发布审计发现服务器 release-signing 当前缺少 Required reviewer。Actions 的自动 / 手动入口均要求审核保护，签名前重查；本轮未调整服务器保护、Secrets 或分支策略。该缺口仍阻挡 Actions 正式签名；本次另有明确发行授权，使用仓库保留的本地正式构建 / 双仓库验收入口，不伪称具有 GitHub 构建来源证明。
 
 回退单位：媒体可见性与 presentation 重入；音乐动作与 View / 编辑器；位置与尺寸；分类监听及迁移；通知允许名单；发布审核门禁。没有新增依赖、线程池、全局输入监听或第二套窗口。每个检测器 / Job / 注册由现有 View 或 Controller 持有，关闭 / 替换 / detach 取消，反馈为容量一，图片和 Dock 既有上限不变。
 
 验证使用既有 fast / full、Python 工具、Android JVM / Robolectric、Lint、资源及 R8 / D8 构建门禁。具体执行输出保留在忽略的 `.di-evidence/r14.25.2/`；最终结果以本次验证命令退出状态为准。目标 HyperOS 的实机触摸、暂停回桌面、DND 收起控制中心、充电动画、开孔位置、通知工作资料、蓝牙 / 远程音量、Dock / Duo 连续使用与 CPU / GPU / PSS / 帧时间仍待设备验收。
+
+## 11. 2026-10-23 独立复核、Dock 动画与 M05 / M07
+
+### A. 上一轮实际成果复核
+
+审查基线为本地 `56619f9a63249303b5726393fdeb3e31934c0879`，相对实时 `origin/main = 2b321c6a27e16538cb983d3cedc5c36da33f5eda` 的一个未推送提交（56 文件，1951 行新增 / 181 行删除）。开始时工作区干净；PR #45 已整合至该 main，其 main CI `39878924053` 成功，但不覆盖本地新提交。上一轮未签名 APK 的摘要为 `135b62f0d722963325de933313f3ea00676600f1484c5b3c89c0233e18789d5f`，仅是旧候选证据，本轮不作为正式资产使用。
+
+以下 VERIFIED 仅指主机 / 静态范围。旧日志报告 3167 项 JVM、591 项 Python 工具测试及未签名 R8 构建；本轮最终门禁重新执行，不以该汇总自证通过。没有发现该 diff 引入的已确认 P0–P2 运行缺陷；第 10 节把已完成五手势写作未实现是已确认文档失配，现已校准。Dock 与返回区域宽度是本轮独立范围内确认的既有缺陷。
+
+| 审查项 | 结论 | 可复核实现与边界 |
+| --- | --- | --- |
+| 1 原生额头互斥 | IMPLEMENTED / 主机覆盖 | StrongToast 统一抑制与单一 IslandActivityController 窗口；不是第二套额头叠加 |
+| 2 暂停快速回桌面 | IMPLEMENTED / 主机覆盖 | presentation 预绘制证据、foregroundBaseline 和原事件暂停期限；实际 View attach，区分未显示与已显示 |
+| 3 左右切歌开关 | IMPLEMENTED / 主机覆盖 | 关闭时解析器阻止横向切歌，Controller epoch 与 View cancelInputs 同步取消旧动作 |
+| 4 五项独立音乐动作 | IMPLEMENTED / 主机覆盖 | IslandMusicActions、MultiAction.MUSIC、TransportControls / 会话音量；历史整数编码未重排 |
+| 5 输入仲裁 | IMPLEMENTED / 主机覆盖 | GestureDetector 与锁定滑动、多指 / CANCEL、长按后 UP、无障碍共用动作入口 |
+| 6 会话与旧动作取消 | IMPLEMENTED / 主机覆盖 | 选中控制器身份、sessionEpoch、readGeneration、actionEpoch、单一 actionJob / Mutex |
+| 7 高宽与字体 | IMPLEMENTED / 主机覆盖 | IslandSizing 与 View.contentHeight；38–44 dp，自动宽度温和联动，字体 / 图标分开缩放 |
+| 8 三向定位与偏移 | IMPLEMENTED / 主机覆盖 | IslandPosition 物理安全区和开孔间隙；空间不够时不强行展示 |
+| 9 状态栏避让 | IMPLEMENTED / 主机覆盖 | 实际预绘制矩阵相交图标，令牌成对释放；未知布局不隐藏整条状态栏 |
+| 10 逐类系统反馈 | IMPLEMENTED / 主机覆盖 | 十类独立键、初次采样不提示、容量一终态；升级迁移不重启已关闭类别 |
+| 11 按需监听 | IMPLEMENTED / 主机覆盖 | enabledKinds 限定 Receiver / Observer / Camera；最多六个因果标记句柄，关闭 / 替换释放 |
+| 12 通知允许名单 | IMPLEMENTED / 主机覆盖 | 默认空允许名单、排除优先、前台 / 用户过滤；沿用原生 row 点击与清除语义 |
+| 13 充电与勿扰 | PARTIAL / DEFERRED | StrongToast 充电素材继续抑制，独立系统充电动画由 ROM 管理；勿扰级联与控制中心暂存有主机覆盖，真实收起时序待设备 |
+| 14 设置 / 默认 / 恢复 | IMPLEMENTED / 主机覆盖 | 五组设置、默认左右动作与反馈迁移、部分新备份不自动补开类别，既有备份键保留 |
+| 15 多语言与说明 | IMPLEMENTED / 静态覆盖 | 十种维护语言新增资源已补齐；中文布局、摘要和导航测试；人工语言审校不等于 XML / Lint 检查 |
+| 16 双仓库与签名 | 上一版 VERIFIED；本版发行单列 | r14.25.1 两端公开且 APK 均为 3962521 bytes、SHA-256 `bfd3c6b08d709071edee0cafbdfb53d77db8dbfd2e2003cf6eac659956f35092`；两 tag 同指 `3e8683daa70f6849674e0864ee8edd9fe9d3b3fe`。本轮开始时 r14.25.2 无远端 tag / Release |
+
+所有权维持一个窗口 Controller、一个选中媒体会话和有界任务；旧会话、配置与隐私变化均失效旧工作。没有新增无界缓存、第二个全局输入监听、线程池或重复窗口。动作中的 Binder 在现有 IO 调度执行，致命错误由既有边界传播；不能据主机测试宣称 ART、CPU、GPU、PSS 或功耗改善。
+
+### B. Dock 已确认根因与修复
+
+- **P2 / 原生解锁参与者遗漏**：ROM 的 `HotSeats.getUserPresentAnimationChildList()Ljava/util/List;` 只转交 `mContent` 子项。`UserPresentAnimationCompatComplex.operateAllPresentAnimationRelatedViews` 对其执行准备、展示与重置，V12 使用原生 SpringAnimator 更新 alpha / translation / scale；HotSeats 同级的普通背景和根容器全宽背景都未参与。现仅复制原列表并附加当前背景，由同一个 ROM 控制器驱动；不改图标列表原件、事件或监听器。
+- **P2 / 全宽跨层级只同步 alpha**：原 `onPreDraw` 忽略 HotSeats 与中间父级的 matrix，并把父级 alpha 写在背景本身，可能覆盖原生解锁属性。现由 `DockFullWidthContainer` 承担继承变换，背景自身保留原生属性；普通模式直接继承原 HotSeats。几何取消只重置确由宽度缓动持有的 scale，避免覆盖解锁帧。
+- 以根容器布局坐标为目标，`C = hostToRoot × inverse(hostLayoutToRoot)`；逐级组合 layout、scroll、既有 View matrix，编辑时插入原生已计算的 legacy matrix。共享 root 不重复计算，无求逆抵消误差；背景本地解锁变换仍由原生持有。View 坐标 helper 不包含独立 RenderNode animation matrix，因此该容器为壁纸采样补全实际 global matrix。Android 14 的 [RenderNode JNI](https://android.googlesource.com/platform/frameworks/base/+/android-14.0.0_r1/libs/hwui/jni/android_graphics_RenderNode.cpp) 区分这两项；目标 framework 的 View / RenderNode 声明与 Smali 已复核。
+- `AnimationSet.getTransformation()` 原 Hook 仍只调用一次原链，读取返回的 Transformation，不求第二次进度。相同矩阵不重复设置；不新增定时器、延时补丁、常驻帧循环或反复重建。全宽增加一个无交互 owner 容器和固定矩阵；HotSeats detach 时移除容器并释放背景原有采样 / 材质 / observer。
+- 回归在 `DockNativeAnimationTest` 逐进度检查 0 → 0.2 → 0.65 → 0.4 → 1 → 0 → 1 的 alpha / 位移 / 缩放，覆盖普通 / 全宽、几何刷新、父级变换、legacy 矩阵中断、Google 模糊区域关闭和恢复；复用 DockBackground / FullWidth / GlassBackdrop / Geometry 等材质、编辑、拖拽与释放回归。这是主机模型证据，不能称为真实 ROM 逐帧验收。
+
+### C. M05 / M07 的实际 DexSQL 结果
+
+工具实测为 DexSQL 0.1.1；先读取已安装文档与 schema，再复用三个数据集。只使用 definition 视图确认声明，调用关系按同数据集的 file_id 连接。原始查询、分页 Smali 和输入记录保存在忽略的 `.di-evidence/r14.25.2-review/`。来源均为本机 `forA14-ROM-ext` 的 fuxi HyperOS 1 / SDK 34 样本；静态定义来源不能证明实际 ClassLoader 或 Hook 命中。
+
+| 输入 | TW V816.0.8.0.UMCTWXM SHA-256 | CN V816.0.19.0.UMCCNXM SHA-256 |
+| --- | --- | --- |
+| product/priv-app/MiuiHome/MiuiHome.apk | `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b` | 同一 binary；不是独立适配证据 |
+| system_ext/priv-app/MiuiSystemUI/MiuiSystemUI.apk | `66386ad63878da129041fab7ae334d313257703515e4c9a179cb092292b32dc1` | `2bf4f7e56eeda694e8f7de71c0acda2cae892f9847c6d6a747a52cfe5381e42b` |
+| system/system/framework/framework.jar | `8586618b92c2892a9c6be1cfd28871d9b39655162ff97a4b12f8d966d14895e9` | `cdfca3dd220865fc5252e3af938c1fb4254c840678e386ce8216a2f41a9aaeb5` |
+| system/system/framework/services.jar | `9341c22bf12f98d12607af3b93ef7c597931309a32e388c3bdc394854840db75` | `e9552126b93b1b8e5931e0fdac8ab166ca1c98c29d877fde6ac23773cba78dd0` |
+
+MiuiHome Manifest 为 `com.miui.home` / `RELEASE-4.39.30.8604-08262248` / 439308604。下表 file_id 仅在本批相应数据集有效：Launcher 的 TW / CN classes2 为 1 / 3；SystemUI classes 为 0 / 4；framework 中 View / InsetsSource 为 3 / 8，services 的 DisplayPolicy 为 12 / 15。样本不同则重新查询，不能跨数据集拼接索引。
+
+| 专项与查询 | 实际数量和关键证据 | 决策 |
+| --- | --- | --- |
+| Dock 原链与 `launcher_unlock_contract.sql` | 20 个声明 / 36 条去重 invoke；每份 Launcher 唯一 HotSeats / HotSeatsScreenViewContent 返回列表，V12 setViewPrepareInfo 对 View 写 alpha / scale / translation；resetView 恢复五项属性 | 按 B 接入原生参与者，保留原有编辑链；复用 launcher_dock_contract 的 72 条定义结果 |
+| M07 `navigation_gestures_contract.sql` | 24 个声明、4 条初始化调用、4 个字段；每份唯一 `GestureStubView.initScreenSizeAndDensity()V`，`(I)V` 为零。Smali 写 mGestureStubSize / mGestureStubDefaultSize；调用者 initGestureStubSize 与 onConfigurationChanged | **P2 已修复** Controls 的错误整数参数注册。原调用成功后缩放新原生字段；测试重复三次不累乘、setSize 默认不二次缩放、100% 恢复、普通 / 致命原生失败不吞掉 |
+| M05 `statusbar_layout_refresh.sql` | 32 个声明；InsetsProvider 当前旋转方法返回 `android.util.Pair`，由 DisplayCutout / MaxBounds / rotation 和原生有界 Insets 缓存计算；Miui 状态栏 attach / detach、cutout / 图标容器、网络订阅与电池回调均有唯一声明 | 保留已完成高度、Insets、Duo、网络快照与温度 owner；未确认需要新增的 Hook，不改原生缓存或绕开开孔 |
+| M05 `statusbar_gestures_contract.sql` | 16 个声明 / 10 条去重 invoke；PhoneStatusBarView.onTouchEvent 依次 updateBarInteracting、handleEvent，再按结果交 Gefingerpoken；拦截路径独立 | 模块仅 TOUCH 派发 GestureMachine，attach prepare / detach clear；原生面板分发保持。CANCEL、仲裁与 EffectExecutor 复用现有回归，不与 Launcher 导航合并 |
+| M05 既有 `statusbar_height_contract.sql` / definition_sources | 30 个声明 / 22 条去重 invoke；framework 和 services 各自保留定义来源，Insets 合并链与 DecorInsets 失效分开 | 沿用先前有证据的架构 C；本批不扩大应用 / framework 全局 Hook |
+
+桌面单双指滑动、双击、长按与侧滑停顿继续沿用现有 detector / owner 和动作矩阵；当前没有足够证据改写原生快速切换、Home 长按或振动链。导航区域宽度初始化发生在冷路径，本次没有新增高频反射。状态栏与动态岛分属独立触摸窗口；真实开孔触摸边缘、通知栏 / 控制中心竞争、远程过渡和 Launcher 取消时序仍为 **UNVERIFIABLE / DEVICE**，不以声明存在标为兼容通过。
+
+下一批优先：目标 fuxi 的 Dock 锁屏 / 快速解锁 / 中断与关闭开关对照，然后 M05 双卡默认数据切换、锁屏状态栏重建和字体 / 密度变化，最后 M07 返回区域宽高、侧滑停顿 / 快切取消、底部上滑与原生面板冲突。先取同 APK 的 Hook 日志与逐帧 / owner 证据，再决定候选修复，不继续堆叠猜测性 Hook。
+
+本地收口：`verify.py fast --changed`（含 66 项 Dock / 手势专项）、`verify.py full`（编译、全套 JVM / Robolectric 与 Lint，2m16s）、591 项 Python 工具测试（5 skipped）以及 `git diff --check` 均退出 0。补看 ROM setSize Smali 后，测试替身同步写两个真实字段，追加相关两项行为回归退出 0；生产源码未变，复用完整门禁。exact main CI、最终 APK 和双仓库结果另以相应运行 / 发行记录读回。本地历史签名配置预检有效；正式 APK 仍须在干净 main 上构建并核验证书与来源。
+
+ADB 当前无设备；所有实机功能和 CPU / GPU / PSS / 帧时间仍未验证。回退单位为 Dock 原生动画接入（含全宽容器）与返回区域初始化，未改变 PrefMap、FeatureRegistry、ResourceHooks、ProcessRouter 或 PreferenceBootstrap。

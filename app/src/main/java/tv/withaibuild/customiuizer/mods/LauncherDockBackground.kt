@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Insets
+import android.graphics.Matrix
 import android.graphics.LinearGradient
 import android.graphics.Outline
 import android.graphics.Paint
@@ -91,7 +92,15 @@ object LauncherDockBackground {
                 findBackground(callback.getThisObject() as FrameLayout)?.refreshAppearance()
             }
         })
-        if ((material == null && wallpaper == null) || config.opacity == 0) return
+        ModuleHelper.findAndHookMethod(hotseats, "getUserPresentAnimationChildList", object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val children = callback.getResult() as? List<*> ?: return
+                val background = findBackground(callback.getThisObject() as FrameLayout) ?: return
+                callback.setResult(userPresentChildren(children, background))
+            }
+        })
+        if (config.opacity == 0) return
         // Only the two native editing AnimationSets receive an owner. Read their already-computed
         // transformation; do not invoke getTransformation again or replace a native listener.
         ModuleHelper.findAndHookMethod(AnimationSet::class.java, "getTransformation",
@@ -150,7 +159,10 @@ object LauncherDockBackground {
         val decoration = DockBackgroundView(host.context, if (full) config else config.copy(fullWidth = false),
             material, content, wallpaper, if (full) host else null)
         val inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
-        container.addView(decoration, 0, FrameLayout.LayoutParams(-1, -1).apply {
+        val layer = if (full) DockFullWidthContainer(host.context).also {
+            container.addView(it, 0, FrameLayout.LayoutParams(-1, -1))
+        } else container
+        layer.addView(decoration, 0, FrameLayout.LayoutParams(-1, -1).apply {
             leftMargin = if (full) 0 else inset
             rightMargin = if (full) 0 else inset
         })
@@ -161,10 +173,19 @@ object LauncherDockBackground {
                 override fun onViewDetachedFromWindow(v: View) {
                     XposedHelpers.removeAdditionalInstanceField(v, FULL_WIDTH_OWNER)
                     (decoration.parent as? ViewGroup)?.removeView(decoration)
+                    (layer.parent as? ViewGroup)?.removeView(layer)
                     v.removeOnAttachStateChangeListener(this)
                 }
             })
         }
+    }
+
+    internal fun userPresentChildren(children: List<*>, background: DockBackgroundView): List<*> {
+        if (!background.isAttachedToWindow || background in children) return children
+        // The ROM prepares, animates and resets arbitrary Views from this list. Keep native
+        // icon owners untouched and let that same controller own the decoration's springs.
+        background.prepareNativeAnimation()
+        return ArrayList<Any?>(children.size + 1).apply { addAll(children); add(background) }
     }
 
     private fun findBackground(host: FrameLayout): DockBackgroundView? {
@@ -303,6 +324,7 @@ internal class DockBackgroundView(
     private var googleBlur = false
     private var editingAnimation: AnimationSet? = null
     private var editingAlpha = 1f
+    private val editingMatrix = Matrix()
     private var screenRadius = 0f
     private var panelRadius = 20f * resources.displayMetrics.density
     private val contentBounds = Rect()
@@ -487,7 +509,7 @@ internal class DockBackgroundView(
 
     internal fun bindEditingAnimation(animation: AnimationSet, showing: Boolean) {
         cancelWidthAnimation()
-        if ((!googleBlur && glassBackdrop == null) || !isAttachedToWindow) return
+        if ((!config.fullWidth && !googleBlur && glassBackdrop == null) || !isAttachedToWindow) return
         if (editingAnimation === animation && animation.startTime != -1L) return
         clearEditingAnimation()
         editingAnimation = animation
@@ -503,7 +525,9 @@ internal class DockBackgroundView(
     ) {
         if (editingAnimation !== animation || !isAttachedToWindow) return
         editingAlpha = alpha.coerceIn(0f, 1f)
+        if (matrix == null) editingMatrix.reset() else editingMatrix.set(matrix)
         if (!config.fullWidth) glassBackdrop?.setLegacyTransform(matrix)
+        syncFullWidthHost()
         syncNativeOpacity()
         if (!running) finishEditingAnimation()
     }
@@ -512,11 +536,13 @@ internal class DockBackgroundView(
         editingAnimation?.let { LauncherDockBackground.clearEditingOwner(it, this) }
         editingAnimation = null
         editingAlpha = 1f
+        editingMatrix.reset()
         glassBackdrop?.setLegacyTransform(null)
     }
 
     private fun finishEditingAnimation() {
         clearEditingAnimation()
+        syncFullWidthHost()
         nativeMaterial?.onVisibilityAggregated(isShown)
         syncNativeMaterialVisibility(isShown)
     }
@@ -573,9 +599,17 @@ internal class DockBackgroundView(
     }
 
     private fun cancelWidthAnimation() {
+        val ownsScale = pendingVisualWidth > 0f || widthAnimation?.isStarted == true
         pendingVisualWidth = 0f
         widthAnimation?.cancel()
-        scaleX = 1f
+        if (ownsScale) scaleX = 1f
+    }
+
+    internal fun prepareNativeAnimation() { cancelWidthAnimation() }
+
+    private fun syncFullWidthHost() {
+        val layer = parent as? DockFullWidthContainer ?: return
+        fullWidthHost.get()?.let { layer.sync(it, editingMatrix, editingAlpha, editingAnimation != null) }
     }
 
     private fun animatePendingWidth() {
@@ -632,28 +666,23 @@ internal class DockBackgroundView(
         ModuleHelper.guarded {
             if (editingAnimation != null && (fullWidthHost.get() ?: parent as? View)?.animation !== editingAnimation)
                 finishEditingAnimation()
+            syncFullWidthHost()
             // Google blur regions have their own compositor opacity. Follow native rendered frames;
             // never start a frame loop, animate separately or traverse icon bounds on idle frames.
             syncNativeOpacity()
             glassBackdrop?.onFrame((isShown || editingAnimation != null) && nativeBlurAlpha() > 0)
             val host = fullWidthHost.get() ?: parent as? FrameLayout ?: return@guarded
             if (config.fullWidth) {
-                var opacity = 1f
-                var owner: View? = host
-                while (owner != null && owner !== rootView) {
-                    if (owner.visibility != VISIBLE) opacity = 0f
-                    opacity *= owner.alpha
-                    owner = owner.parent as? View
-                }
-                alpha = opacity * editingAlpha
-                syncNativeMaterialVisibility(isShown && opacity > 0f)
+                syncNativeMaterialVisibility(isShown && nativeBlurAlpha() > 0)
                 syncNativeOpacity()
             }
             if (!geometryPending) return@guarded
             geometryPending = false
             if (!isShown || host.height <= 0) return@guarded
             val dragging = contentAccess?.isDragging(host) == true
-            val sceneActive = editingAnimation != null || host.animation?.hasEnded() == false
+            val sceneActive = editingAnimation != null || host.animation?.hasEnded() == false ||
+                widthAnimation?.isStarted != true && (alpha != 1f || scaleX != 1f || scaleY != 1f ||
+                    translationX != 0f || translationY != 0f)
             val sameHostSize = host.width == lastHostWidth && host.height == lastHostHeight
             if (dragging || sceneActive || !sameHostSize) cancelWidthAnimation()
             contentBounds.setEmpty()
@@ -749,7 +778,7 @@ internal class DockBackgroundView(
             if (!dragging) lastIconCount = iconCount
             lastHostWidth = host.width
             lastHostHeight = host.height
-            if (ready) {
+            if (ready && !sceneActive) {
                 pivotX = width * 0.5f
                 pivotY = height * 0.5f
                 if (!dragging && !sceneActive) animatePendingWidth()

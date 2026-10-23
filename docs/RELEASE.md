@@ -101,7 +101,7 @@ gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 日常只在 `CHANGELOG_CN.md` 的“未发布”和 `CHANGELOG.md` 的“Unreleased”写已确认的用户变化。准备发版时执行一次：
 
 ```sh
-python tools/prepare_release.py --version r14.26.1 --code 247 --date 2026-10-23
+python tools/prepare_release.py --version r14.26.1 --code 248 --date 2026-10-23
 # 仅预览涉及文件，可追加 --dry-run。
 python tools/check_release_metadata.py
 ```

@@ -15,8 +15,10 @@ versionCode 247. Changes since r14.25.1:
 - Prevent paused music from flashing after returning Home, during an unfinished entrance or after a hidden playback activation. Only an actually displayed activity retains its two-second pause exit; repeated states and old snapshots cannot extend it. Fix prepared-window cancellation, session changes and re-entry during exit.
 - Add left, center and right placement with a safe horizontal offset. Coordinate automatic width, text and icons with height, preserve actual status-bar overlap handling and keep the native StrongToast forehead suppressed.
 - Select ten system feedback categories independently with resources registered on demand. New installs stay silent and upgrades retain previously enabled feedback. Notification takeover requires an explicit, initially empty app allowlist; exclusions take priority and other notifications remain native.
+- Include Dock backgrounds in the native unlock animation and preserve movement, scale, opacity and interruption recovery in normal and full-width modes. Keep geometry updates from overwriting native animation properties and align full-width wallpaper sampling with rendered coordinates.
+- Fix the ROM method signature used to initialize the back-gesture area width. Scale fresh native dimensions after configuration changes and preserve defaults and native failure behavior.
 - Refine five settings groups and action summaries, complete ten maintained languages and backup contracts, and align feature documents, page maps and CN/TW ROM static evidence. Device behavior, audio routing and power measurements remain separate validation work.
-- Require the protected reviewer for both automatic and manual publication, recheck before signing, and stop when review protection is missing.
+- Require the protected reviewer for automatic and manual Actions publication, recheck before signing, and stop when review protection is missing.
 
 ## r14.25.1 — 2026-10-22
 

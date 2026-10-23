@@ -15,6 +15,10 @@
 | `guardprovider_candidates.sql` | GuardProvider APK | 同一 DEX、同一方法同时使用两个子串；零结果只约束输入样本。 |
 | `volume_contract.sql` | SystemUI 宿主 + plugin APK | 查询按钮、计时器、超时 / 无障碍、窗口模糊及百分比 owner 声明；宿主亮度与插件音量分别确认来源。宽度资源 ID、默认材质和关闭时序须结合 Smali。 |
 | `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 原生显示、透明度、编辑动画、拖拽提交 / 取消、子布局重排、设备圆角、材质 / Drawable 和导航取样声明；decode 核对实际 Transformation、手势反向及边界刷新，不另行推进动画或等待结束才恢复。 |
+| `launcher_unlock_contract.sql` | Launcher | HotSeats 解锁参与者、V12 原生准备 / 弹簧 / 重置与属性更新；背景交由同一原生控制器，不能把编辑 AnimationSet 当作解锁链。 |
+| `navigation_gestures_contract.sql` | Launcher | 返回区域初始化 / setSize、侧滑停顿、快速切换和输入声明；核对无参初始化、字段重置及配置变化调用者。 |
+| `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明；保留各 owner 的失效与刷新边界。 |
+| `statusbar_gestures_contract.sql` | SystemUI | PhoneStatusBarView 的拦截、触摸、handleEvent 与原生通知栏分发；独立于 Launcher 导航链。 |
 | `toast_presentation_contract.sql` | SystemUI 与 boot framework.jar | 普通 Toast 的窗口插入 / 回收、旋转重排、安全区与原生 StrongToast 文本模型；decode 核对 text_bitmap 分支、展示门禁、队列和 finishToken，不能只凭方法存在判定兼容。 |
 | `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器选择、媒体 / 状态栏回调、Toast 来源与 StrongToast 生命周期；decode 复核状态分发和窗口类型，保留 ROM 锁屏门禁。 |
 | `island_music_gestures.sql` | 双区域 SystemUI、plugin 与 boot framework.jar | 待实现音乐手势的 TransportControls / 音量能力和既有音量面板声明、选中会话回调；当前未执行，不据候选查询自动增加 Hook。 |
