@@ -1,11 +1,13 @@
 """Release trust boundaries, APK validation and workflow regression tests."""
 import base64
+import copy
 import hashlib
 import json
 import os
 import tempfile
 import unittest
 import zipfile
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
 
@@ -37,6 +39,97 @@ def attestation():
             "externalParameters": {"workflow": {"repository": f"https://github.com/{release.REPO}", "path": release.WORKFLOW, "ref": REF}},
             "resolvedDependencies": [{"digest": {"gitCommit": COMMIT}}]},
             "runDetails": {"metadata": {"invocationId": f"https://github.com/{release.REPO}/actions/runs/42/attempts/1"}}}}}}]
+
+
+def ci_run():
+    return dict(build_run(), id=100, workflow_id=8, name="A14 CI", path=".github/workflows/a14-ci.yml", event="push")
+
+
+class AutomaticReleaseTest(unittest.TestCase):
+    def environment(self, path, record=None):
+        path.write_text(json.dumps({"action": "completed", "workflow_run": record or ci_run()}))
+        return dict(ENV, GITHUB_EVENT_NAME="workflow_run", GITHUB_EVENT_PATH=str(path),
+                    GITHUB_WORKFLOW_REF=f"{release.REPO}/{release.WORKFLOW}@{REF}", GITHUB_WORKFLOW_SHA=COMMIT)
+
+    def test_main_ci_event_has_native_source_and_default_dual_publication(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(Path(temp) / "event.json", dict(ci_run(), name="A14 CI / main"))
+            self.assertEqual((REF, COMMIT), release.event_source(env))
+            with patch.dict(os.environ, env):
+                self.assertEqual(("both", False), release.dispatch_options())
+                with patch.object(release, "api", side_effect=[{"id": 8}, ci_run()]):
+                    self.assertEqual(100, release.automatic_ci()["id"])
+
+    def test_failed_pr_fork_branch_and_stale_ci_cannot_reach_signing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "event.json"
+            for key, value in (("event", "pull_request"), ("head_branch", "other"), ("head_sha", "b" * 40),
+                               ("head_repository", {"full_name": "attacker/fork"}), ("conclusion", "failure"), ("path", ".github/workflows/untrusted.yml")):
+                env = self.environment(path, dict(ci_run(), **{key: value}))
+                with self.subTest(key=key), self.assertRaisesRegex(ValueError, "upstream main CI"):
+                    release.event_source(env)
+
+    def test_upstream_ci_rerun_after_trigger_requires_a_fresh_confirmation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(Path(temp) / "event.json")
+            with patch.dict(os.environ, env), patch.object(release, "api", side_effect=[{"id": 8}, dict(ci_run(), run_attempt=2)]):
+                with self.assertRaisesRegex(ValueError, "attempt/source changed"):
+                    release.automatic_ci()
+
+    def test_unprotected_environment_is_never_treated_as_human_confirmation(self):
+        protected = {"protection_rules": [{"type": "required_reviewers", "reviewers": [{"reviewer": {"login": "maintainer"}}]}],
+                     "deployment_branch_policy": {"custom_branch_policies": True, "protected_branches": False}}
+        with patch.object(release, "api", return_value=protected):
+            release.confirmation_policy()
+        for environment in ({}, dict(protected, protection_rules=[]), dict(protected, deployment_branch_policy=None)):
+            with self.subTest(environment=environment), patch.object(release, "api", return_value=environment):
+                with self.assertRaises(ValueError):
+                    release.confirmation_policy()
+
+    def test_already_published_main_only_skips_without_signing_or_requesting_approval(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(Path(temp) / "event.json")
+            with patch.dict(os.environ, env), patch.object(release, "automatic_ci"), patch.object(release, "require_current_main"):
+                with patch.object(release, "optional_api", return_value={"draft": False}), patch.object(release, "output") as output:
+                    with patch.object(release, "confirmation_policy") as approval, patch.object(release, "check_new_release") as version:
+                        release.release_plan()
+                        self.assertEqual("false", output.call_args.kwargs["ready"])
+                        approval.assert_not_called()
+                        version.assert_not_called()
+
+    def test_new_release_requests_approval_only_after_version_and_notes_pass(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(Path(temp) / "event.json")
+            with ExitStack() as stack:
+                stack.enter_context(patch.dict(os.environ, env))
+                for name in ("automatic_ci", "require_current_main", "check_new_release"):
+                    stack.enter_context(patch.object(release, name))
+                stack.enter_context(patch.object(release, "optional_api", return_value=None))
+                notes = stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed changes"]))
+                approval = stack.enter_context(patch.object(release, "confirmation_policy"))
+                output = stack.enter_context(patch.object(release, "output"))
+                release.release_plan()
+                self.assertEqual(("true", "both"), (output.call_args.kwargs["ready"], output.call_args.kwargs["destination"]))
+                approval.assert_called_once()
+                approval.reset_mock()
+                notes.side_effect = ValueError("Missing translation")
+                with self.assertRaisesRegex(ValueError, "Missing translation"):
+                    release.release_plan()
+                approval.assert_not_called()
+
+    def test_moved_main_and_pr_only_ci_are_rejected(self):
+        with patch.object(release, "api", return_value={"object": {"sha": "b" * 40}}):
+            with self.assertRaisesRegex(ValueError, "main moved"):
+                release.require_current_main(COMMIT)
+        with patch.object(release, "api", side_effect=[{"id": 8}, {"workflow_runs": [dict(ci_run(), event="pull_request")]}]):
+            with self.assertRaisesRegex(ValueError, "successful A14 CI"):
+                release.require_main_ci(COMMIT, current=False)
+
+    def test_changelog_release_notes_cannot_be_empty_ambiguous_or_wrong_version(self):
+        for text in ("## r14.26.1\n\nversionCode 247.\n", "## r14.26.1\n\nversionCode 246.\n- Change\n",
+                     "## r14.26.1\n\nversionCode 247.\n- Change\n\n## r14.26.1\n- Duplicate\n"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                release.release_notes_section(text, "r14.26.1", 247, "CHANGELOG.md")
 
 
 class SourceTrustTest(unittest.TestCase):
@@ -174,6 +267,74 @@ class ApkTrustTest(unittest.TestCase):
 
 
 class PromotionTrustTest(unittest.TestCase):
+    def test_only_a_failed_publisher_after_successful_signing_may_recover_its_original_artifact(self):
+        record = dict(build_run(), conclusion="failure")
+        valid = {"total_count": 3, "jobs": [{"name": name, "status": "completed", "conclusion": conclusion}
+                 for name, conclusion in (("Validate exact source", "success"), ("Build, sign and verify Release", "success"),
+                                          ("Publish verified APK to Release", "failure"))]}
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.object(release, "api", side_effect=[{"id": 7}, record, valid, {"artifacts": []}]):
+                with self.assertRaisesRegex(ValueError, "missing, expired"):
+                    release.fetch_candidate("42", Path(temp) / "candidate")
+            for index in (0, 1, 2):
+                jobs = copy.deepcopy(valid)
+                jobs["jobs"][index]["conclusion"] = "failure" if index < 2 else "cancelled"
+                with patch.object(release, "api", side_effect=[{"id": 7}, record, jobs]) as api:
+                    with self.subTest(index=index), self.assertRaisesRegex(ValueError, "did not finish successfully"):
+                        release.fetch_candidate("42", Path(temp) / "candidate")
+                    self.assertEqual(3, api.call_count)
+
+    def test_completed_automatic_candidates_are_allowed_only_from_main(self):
+        record = dict(build_run(), event="workflow_run")
+        release.check_run(record, 7)
+        with self.assertRaisesRegex(ValueError, "main CI release"):
+            release.check_run(dict(record, head_branch="codex/a14-feature-refinement-20261019"), 7)
+
+    def test_current_run_is_allowed_only_with_exact_native_run_attempt_and_source(self):
+        record = dict(build_run(), status="in_progress", conclusion=None)
+        with patch.dict(os.environ, ENV):
+            release.check_run(record, 7, current_run=True)
+            with self.assertRaisesRegex(ValueError, "did not finish"):
+                release.check_run(record, 7)
+            for field, value in (("id", 43), ("run_attempt", 2), ("head_sha", "b" * 40), ("head_branch", "other")):
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, "another run"):
+                    release.check_run(dict(record, **{field: value}), 7, current_run=True)
+
+    def test_native_dispatch_options_cannot_come_from_another_workflow(self):
+        with tempfile.TemporaryDirectory() as temp:
+            event = Path(temp) / "event.json"
+            event.write_text(json.dumps({"inputs": {"destination": "source", "prerelease": "false"}}))
+            env = dict(ENV, GITHUB_EVENT_PATH=str(event), GITHUB_WORKFLOW_REF=f"{release.REPO}/{release.WORKFLOW}@{REF}", GITHUB_WORKFLOW_SHA=COMMIT)
+            with patch.dict(os.environ, env):
+                self.assertEqual(("source", False), release.dispatch_options())
+                with patch.dict(os.environ, GITHUB_WORKFLOW_SHA="b" * 40), self.assertRaisesRegex(ValueError, "native signed-build"):
+                    release.dispatch_options()
+                event.write_text(json.dumps({"inputs": {"destination": "source", "prerelease": "invalid"}}))
+                with self.assertRaisesRegex(ValueError, "pre-release"):
+                    release.dispatch_options()
+
+    def test_actions_only_never_fetches_or_publishes(self):
+        with patch.object(release, "dispatch_options", return_value=("actions-only", False)):
+            with patch.object(release, "fetch_candidate") as fetch, patch.object(release, "publish_verified") as publish:
+                with self.assertRaisesRegex(ValueError, "did not authorize"):
+                    release.publish_current(Path("candidate"))
+                fetch.assert_not_called()
+                publish.assert_not_called()
+
+    def test_automatic_publication_binds_sign_receipt_without_selecting_another_run(self):
+        metadata = {"source_sha": COMMIT, "apk_sha256": "c" * 64, "run_attempt": 1, "artifact_id": 123}
+        env = dict(ENV, GITHUB_JOB="publish", **{"VERIFIED_" + key.upper(): str(value) for key, value in metadata.items()})
+        for prerelease in (False, True):
+            with patch.dict(os.environ, env), patch.object(release, "dispatch_options", return_value=("source", prerelease)):
+                with patch.object(release, "fetch_candidate", return_value=metadata) as fetch, patch.object(release, "publish_verified") as publish:
+                    release.publish_current(Path("candidate"))
+                    fetch.assert_called_once_with("42", Path("candidate"), current_run=True)
+                    publish.assert_called_once_with(Path("candidate"), "42", "source", metadata, prerelease=prerelease)
+                    publish.reset_mock()
+                    with patch.dict(os.environ, VERIFIED_ARTIFACT_ID="124"), self.assertRaisesRegex(ValueError, "artifact changed"):
+                        release.publish_current(Path("candidate"))
+                    publish.assert_not_called()
+
     def test_source_workflow_and_failed_build_are_rejected(self):
         release.check_run(build_run(), 7)
         for field, value in (("path", ".github/workflows/a14-ci.yml"), ("workflow_id", 8), ("status", "in_progress"),
@@ -229,6 +390,314 @@ class PromotionTrustTest(unittest.TestCase):
             command.assert_not_called()
 
 
+class PublicationTest(unittest.TestCase):
+    def test_version_code_and_name_must_exceed_published_prereleases_too(self):
+        content = {"content": base64.b64encode(b'val lastVersionName = "r14.25.2"\nval lastVersion = 247\n').decode()}
+        with patch.object(release, "check_tag"), patch.object(release, "optional_api", return_value=None):
+            for name, code in (("r14.25.3", 247), ("r14.25.1", 248)):
+                with patch.object(release, "api", side_effect=[[{"draft": False, "prerelease": True, "tag_name": "r14.25.2"}], content]):
+                    with self.assertRaisesRegex(ValueError, "must exceed"):
+                        release.check_new_release(name, code, COMMIT)
+
+    def test_version_check_pages_through_releases_and_rejects_existing_drafts(self):
+        older = [{"draft": False, "tag_name": "r14.24.1"}] * 100
+        draft = {"draft": True, "tag_name": "r14.25.2"}
+        with patch.object(release, "check_tag"), patch.object(release, "optional_api", return_value=None):
+            with patch.object(release, "api", side_effect=[older, [draft]]) as api:
+                with self.assertRaisesRegex(ValueError, "draft.*already exists"):
+                    release.check_new_release("r14.25.2", 247, COMMIT)
+                self.assertIn("page=2", api.call_args.args[0])
+
+    def test_draft_assets_are_verified_before_publication_and_prereleases_never_become_latest(self):
+        for prerelease, tamper in ((False, False), (True, False), (False, True)):
+            with self.subTest(prerelease=prerelease, tamper=tamper), tempfile.TemporaryDirectory() as temp:
+                folder = Path(temp)
+                apk = release.candidate_filename("r14.25.2", COMMIT)
+                filenames = (apk, "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json")
+                for filename in filenames:
+                    (folder / filename).write_bytes(filename.encode())
+                metadata = {"version_name": "r14.25.2", "version_code": 247, "source_sha": COMMIT,
+                            "source_ref": REF, "apk": apk, "apk_sha256": release.digest(folder / apk)}
+                assets = [{"name": filename, "digest": "sha256:" + release.digest(folder / filename), "size": (folder / filename).stat().st_size} for filename in filenames]
+                if tamper:
+                    assets[-1]["digest"] = "sha256:" + "a" * 64
+                records = {"id": 99, "tag_name": "r14.25.2", "target_commitish": COMMIT, "draft": True, "prerelease": prerelease, "assets": assets,
+                           "html_url": "https://github.com/example/release"}
+                writes = []
+                def command(*args, **kwargs):
+                    if args[:3] == ("gh", "release", "upload"):
+                        writes.append("upload")
+                        return ""
+                    if args[:3] == ("gh", "release", "edit"):
+                        self.assertEqual(["create", "upload", "check-draft"], writes)
+                        self.assertIn(f"--latest={str(not prerelease).lower()}", args)
+                        writes.append("publish")
+                        return ""
+                    self.assertEqual(("gh", "api"), args[:2])
+                    if "POST" in args:
+                        request = json.loads((folder / "release-request.json").read_text())
+                        self.assertEqual((True, prerelease, COMMIT), (request["draft"], request["prerelease"], request["target_commitish"]))
+                        self.assertIn("CustoMIUIzer A14 · r14.25.2", request["name"])
+                        self.assertIn("## English", request["body"])
+                        self.assertIn("gh attestation verify", request["body"])
+                        writes.append("create")
+                        return json.dumps(dict(records, assets=[]))
+                    if args[2].endswith("/99"):
+                        writes.append("check-draft")
+                        return json.dumps(records)
+                    if args[2].endswith("/releases/latest"):
+                        self.assertFalse(prerelease)
+                        return json.dumps({"id": 99})
+                    self.assertIn("publish", writes)
+                    return json.dumps(dict(records, draft=False))
+                notes = {"content": base64.b64encode(b"## r14.25.2\n\nversionCode 247.\n\n- Changes.\n").decode()}
+                with patch.object(release, "check_new_release"), patch.object(release, "check_tag") as tag:
+                    with patch.object(release, "find_release", return_value=None), patch.object(release, "api", return_value=notes):
+                        with patch.object(release, "run", side_effect=command), patch.object(release, "require_main_ci"), patch.object(release, "require_current_main"):
+                            if tamper:
+                                with self.assertRaisesRegex(ValueError, "digest/size differs"):
+                                    release.publish_verified(folder, "42", "source", metadata)
+                                self.assertNotIn("publish", writes)
+                            else:
+                                release.publish_verified(folder, "42", "source", metadata, prerelease=prerelease)
+                                self.assertEqual(["create", "upload", "check-draft", "publish"], writes)
+                                self.assertTrue(tag.call_args.kwargs["must_exist"])
+
+    def test_release_assets_must_include_one_exact_set_of_four_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            (folder / "test.apk").write_bytes(b"original")
+            asset = {"name": "test.apk", "size": 8, "digest": "sha256:" + release.digest(folder / "test.apk")}
+            record = {"draft": True, "prerelease": False, "assets": [asset]}
+            release.check_release_assets(record, folder, ("test.apk",), draft=True, prerelease=False)
+            with self.assertRaisesRegex(ValueError, "exactly"):
+                release.check_release_assets(dict(record, assets=[asset, asset]), folder, ("test.apk",), draft=True, prerelease=False)
+            with self.assertRaisesRegex(ValueError, "missing"):
+                with patch.object(release, "optional_api", return_value=None):
+                    release.check_tag(release.REPO, "r14.25.2", COMMIT, must_exist=True)
+
+    def test_draft_source_cannot_be_changed_before_publication(self):
+        record = {"id": 99, "tag_name": "r14.25.2", "target_commitish": COMMIT}
+        release.check_release_identity(record, 99, "r14.25.2", COMMIT)
+        for key, value in (("id", 100), ("tag_name", "r14.25.3"), ("target_commitish", "b" * 40)):
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "source identity changed"):
+                release.check_release_identity(dict(record, **{key: value}), 99, "r14.25.2", COMMIT)
+
+
+class ReleaseServer:
+    """Small stateful GitHub double: release writes, partial upload and readback."""
+    download = release.POLICY["download_repository"]
+
+    def __init__(self, folder):
+        self.folder = folder
+        self.records = {}
+        self.events = []
+        self.fail_download_upload = False
+        self.tamper_source_readback = False
+        self.notes = {"content": base64.b64encode(b"## r14.26.1\n\nversionCode 247.\n\n- Reviewed change.\n").decode()}
+
+    def token(self, repository, env):
+        if repository == self.download:
+            if not env or env.get("GH_TOKEN") != "test-xposed-token":
+                raise AssertionError("Every Xposed read/write must use the separate token")
+
+    def api(self, endpoint, *, env=None, **fields):
+        if "/contents/" in endpoint:
+            return self.notes
+        if "/releases?" in endpoint:
+            repository = endpoint.split("/releases?", 1)[0].removeprefix("repos/")
+            self.token(repository, env)
+            if repository in self.records and not self.records[repository]["draft"]:
+                self.events.append(("existing-readback", repository))
+            return [copy.deepcopy(self.records[repository])] if repository in self.records else []
+        if endpoint.endswith("/releases/latest"):
+            repository = endpoint.removesuffix("/releases/latest").removeprefix("repos/")
+            self.token(repository, env)
+            self.events.append(("latest", repository))
+            return copy.deepcopy(self.records[repository])
+        raise AssertionError(endpoint)
+
+    def command(self, *args, env=None):
+        if args[:3] == ("gh", "api", f"repos/{self.download}"):
+            self.token(self.download, env)
+            return json.dumps({"permissions": {"push": True}})
+        if args[0] == "git":
+            self.events.append(("git", self.download))
+            if not any((kind, release.REPO) in self.events for kind in ("published-readback", "existing-readback")):
+                raise AssertionError("Xposed tag write occurred before source verification")
+            return ""
+        if args[:2] == ("gh", "api"):
+            endpoint = args[2]
+            repository = endpoint.split("/releases", 1)[0].removeprefix("repos/")
+            self.token(repository, env)
+            if "POST" in args:
+                record = json.loads((self.folder / "release-request.json").read_text())
+                record.update(id=100 if repository == self.download else 99, assets=[], html_url=f"https://github.com/{repository}/releases/tag/{record['tag_name']}")
+                self.records[repository] = record
+                self.events.append(("create", repository))
+                return json.dumps(record)
+            record = copy.deepcopy(self.records[repository])
+            if endpoint.endswith("/latest"):
+                self.events.append(("latest", repository))
+            elif "/tags/" in endpoint:
+                self.events.append(("published-readback", repository))
+            else:
+                self.events.append(("draft-readback", repository))
+                if self.tamper_source_readback and repository == release.REPO:
+                    record["assets"][0]["digest"] = "sha256:" + "b" * 64
+            return json.dumps(record)
+        if args[:2] == ("gh", "release"):
+            repository = args[args.index("--repo") + 1]
+            self.token(repository, env)
+            record = self.records[repository]
+            if args[2] == "upload":
+                paths = args[4:args.index("--repo")]
+                self.events.append(("upload", repository, *(Path(path).name for path in paths)))
+                for path in paths:
+                    path = Path(path)
+                    record["assets"].append({"name": path.name, "digest": "sha256:" + release.digest(path), "size": path.stat().st_size})
+                    if repository == self.download and self.fail_download_upload:
+                        raise RuntimeError("Simulated Xposed network failure")
+                return ""
+            if args[2] == "edit":
+                if ("draft-readback", repository) not in self.events:
+                    raise AssertionError("Draft was published before readback")
+                record["draft"] = False
+                self.events.append(("publish", repository))
+                return ""
+        raise AssertionError(args)
+
+
+class DualPublicationTest(unittest.TestCase):
+    def fixture(self, root):
+        apk = release.candidate_filename("r14.26.1", COMMIT)
+        for filename in (apk, "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json"):
+            (root / filename).write_bytes(filename.encode())
+        return {"version_name": "r14.26.1", "version_code": 247, "source_sha": COMMIT,
+                "source_ref": REF, "apk": apk, "apk_sha256": release.digest(root / apk)}
+
+    def context(self, server):
+        stack = ExitStack()
+        stack.enter_context(patch.dict(os.environ, A14_XPOSED_RELEASE_TOKEN="test-xposed-token"))
+        stack.enter_context(patch.object(release, "api", side_effect=server.api))
+        stack.enter_context(patch.object(release, "run", side_effect=server.command))
+        for name in ("check_tag", "check_new_release", "require_main_ci", "require_current_main"):
+            stack.enter_context(patch.object(release, name))
+        return stack
+
+    def test_source_is_published_and_read_back_before_any_xposed_write(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server):
+                release.publish_verified(root, "42", "both", metadata)
+            self.assertEqual([release.REPO, server.download], [event[1] for event in server.events if event[0] == "publish"])
+            self.assertLess(server.events.index(("latest", release.REPO)), server.events.index(("git", server.download)))
+            source, download = server.records[release.REPO], server.records[server.download]
+            self.assertEqual("r14.26.1", source["tag_name"])
+            self.assertEqual("247-r14.26.1", download["tag_name"])
+            self.assertEqual(source["assets"], download["assets"])
+            self.assertEqual(source["body"], download["body"])
+
+    def test_failed_source_verification_prevents_xposed_tags_or_releases(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            server.tamper_source_readback = True
+            with self.context(server), self.assertRaisesRegex(ValueError, "digest/size differs"):
+                release.publish_verified(root, "42", "both", metadata)
+            self.assertTrue(server.records[release.REPO]["draft"])
+            self.assertNotIn(server.download, server.records)
+            self.assertFalse(any(event[0] == "git" for event in server.events))
+
+    def test_main_may_advance_after_source_verification_without_invalidating_xposed_sync(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            def current_main(sha):
+                self.assertEqual(COMMIT, sha)
+                if release.REPO in server.records and not server.records[release.REPO]["draft"]:
+                    raise ValueError("main moved after source publication")
+            with self.context(server), patch.object(release, "require_current_main", side_effect=current_main):
+                release.publish_verified(root, "42", "both", metadata)
+            self.assertFalse(server.records[server.download]["draft"])
+
+    def test_main_moving_before_source_publication_stops_both_destinations(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server), patch.object(release, "require_current_main", side_effect=ValueError("main moved")):
+                with self.assertRaisesRegex(ValueError, "main moved"):
+                    release.publish_verified(root, "42", "both", metadata)
+            self.assertTrue(server.records[release.REPO]["draft"])
+            self.assertNotIn(server.download, server.records)
+
+    def test_partial_xposed_failure_resumes_only_missing_assets_without_changing_source(self):
+        for prerelease in (False, True):
+            with self.subTest(prerelease=prerelease), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                metadata = self.fixture(root)
+                server = ReleaseServer(root)
+                server.fail_download_upload = True
+                with self.context(server):
+                    with self.assertRaisesRegex(RuntimeError, "Xposed network failure"):
+                        release.publish_verified(root, "42", "both", metadata, prerelease=prerelease)
+                    original = copy.deepcopy(server.records[release.REPO])
+                    self.assertFalse(original["draft"])
+                    self.assertTrue(server.records[server.download]["draft"])
+                    self.assertEqual(1, len(server.records[server.download]["assets"]))
+                    server.events.clear()
+                    server.fail_download_upload = False
+                    release.publish_verified(root, "42", "both", metadata, prerelease=prerelease)
+                self.assertEqual(original, server.records[release.REPO])
+                self.assertFalse(any(event[0] in {"create", "upload", "publish"} and event[1] == release.REPO for event in server.events))
+                uploads = [event for event in server.events if event[0] == "upload"]
+                self.assertEqual(1, len(uploads))
+                self.assertEqual({"SHA256SUMS", "build-metadata.json", "attestation.sigstore.json"}, set(uploads[0][2:]))
+                self.assertEqual(4, len(server.records[server.download]["assets"]))
+                self.assertFalse(server.records[server.download]["draft"])
+
+    def test_recovery_refuses_asset_or_note_changes_before_any_write(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server):
+                release.publish_verified(root, "42", "both", metadata)
+                original = copy.deepcopy(server.records)
+                for field in ("assets", "body"):
+                    server.records = copy.deepcopy(original)
+                    if field == "assets":
+                        server.records[release.REPO]["assets"][0]["digest"] = "sha256:" + "c" * 64
+                    else:
+                        server.records[release.REPO]["body"] += "\nUnexpected note"
+                    server.events.clear()
+                    with self.subTest(field=field), self.assertRaises(ValueError):
+                        release.publish_verified(root, "42", "both", metadata)
+                    self.assertFalse(any(event[0] in {"git", "create", "upload", "publish"} for event in server.events))
+
+    def test_missing_cross_repo_permission_cannot_partially_publish_source(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            with patch.dict(os.environ, A14_XPOSED_RELEASE_TOKEN="test-token"), patch.object(release, "run", return_value='{"permissions":{"push":false}}'):
+                with patch.object(release, "api") as api, self.assertRaisesRegex(ValueError, "contents:write"):
+                    release.publish_verified(root, "42", "both", metadata)
+                api.assert_not_called()
+
+    def test_xposed_newer_version_on_a_later_page_blocks_downgrade(self):
+        repository = release.POLICY["download_repository"]
+        records = [{"tag_name": "247-r14.26.1", "draft": False}] + [{"tag_name": "246-r14.25.1", "draft": False}] * 99
+        with patch.object(release, "api", side_effect=[records, [{"tag_name": "248-r14.26.2", "draft": False}]]) as api:
+            with self.assertRaisesRegex(ValueError, "equal or newer versionCode"):
+                release.find_release(repository, "247-r14.26.1", {"GH_TOKEN": "test-token"})
+            self.assertEqual(2, api.call_count)
+
+
 class ProtectedWorkflowTest(unittest.TestCase):
     def scan(self, text, filename="a14-signed-build.yml"):
         with tempfile.TemporaryDirectory() as temp:
@@ -261,8 +730,28 @@ class ProtectedWorkflowTest(unittest.TestCase):
             self.assertTrue(any("CI_SIGNING" in item for item in self.scan(text)))
 
     def test_push_can_never_sign_and_untrusted_triggers_are_rejected(self):
-        text = self.workflow().replace("  workflow_dispatch:", "  pull_request:")
-        self.assertTrue(self.scan(text))
+        for event in ("pull_request", "push"):
+            text = self.workflow().replace("  workflow_dispatch:", f"  {event}:")
+            with self.subTest(event=event):
+                self.assertTrue(self.scan(text))
+
+    def test_main_ci_success_sha_and_post_approval_preflight_guards_are_required(self):
+        for original, changed in (("branches: [main]", "branches: ['*']"),
+                                  ("github.event.workflow_run.head_sha == github.sha", "true"),
+                                  ("github.event.workflow_run.conclusion == 'success'", "true"),
+                                  ("signed_release.py signing-preflight", "signed_release.py ci-status"),
+                                  ("needs.validate.outputs.ready == 'true'", "true")):
+            with self.subTest(changed=changed):
+                self.assertTrue(self.scan(self.workflow().replace(original, changed)))
+
+    def test_automatic_publication_cannot_drop_receipt_guard_or_its_environment(self):
+        for original, changed in (("needs: [validate, sign]", "needs: [validate]"),
+                                  ("environment: release-publishing", "environment: release-signing"),
+                                  ("${{ needs.sign.outputs.artifact_id }}", "${{ github.run_id }}"),
+                                  ("group: a14-release-publish", "group: unrelated"),
+                                  (" && needs.validate.outputs.destination != 'actions-only'", "")):
+            with self.subTest(changed=changed):
+                self.assertTrue(self.scan(self.workflow().replace(original, changed)))
 
     def test_promotion_bootstrap_cannot_execute_a_job(self):
         filename = "a14-promote-release.yml"

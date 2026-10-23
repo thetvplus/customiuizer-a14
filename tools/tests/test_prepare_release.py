@@ -1,0 +1,71 @@
+"""Release preparation preserves history and refuses incomplete bilingual notes."""
+from datetime import date
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from tools import prepare_release, check_release_metadata
+
+
+class PrepareReleaseTest(unittest.TestCase):
+    def fixture(self, root: Path) -> None:
+        (root / "app").mkdir()
+        (root / "app/build.gradle.kts").write_text('val lastVersion = 246\nval lastVersionName = "r14.25.1"\n')
+        for filename in ("README.md", "README_EN.md"):
+            (root / filename).write_text("Current: `r14.25.1` (versionCode 246).\n")
+        for filename, heading in (("CHANGELOG.md", "Unreleased"), ("CHANGELOG_CN.md", "未发布")):
+            (root / filename).write_text(f"# Changelog\n\n## {heading}\n\n- Reviewed change.\n\n## r14.25.1 — 2026-10-22\n\nversionCode 246.\n\n- Historical change.\n")
+
+    def test_one_plan_aligns_five_files_and_preserves_the_historical_section(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            changes = prepare_release.plan(root, "r14.26.1", 247, date(2026, 10, 23))
+            self.assertEqual(5, len(changes))
+            for path, text in changes.items():
+                self.assertIn("r14.26.1", text)
+                self.assertIn("247", text)
+                if path.name.startswith("CHANGELOG"):
+                    self.assertIn("## r14.26.1 — 2026-10-23", text)
+                    history = path.read_text().split("## r14.25.1", 1)[1]
+                    self.assertEqual(history, text.split("## r14.25.1", 1)[1])
+                path.write_text(text)
+            with patch.object(check_release_metadata, "REPO_ROOT", root), patch.object(check_release_metadata, "GRADLE", root / "app/build.gradle.kts"):
+                self.assertEqual([], check_release_metadata.check())
+
+    def test_missing_one_translation_never_writes_a_partial_release(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            cn = root / "CHANGELOG_CN.md"
+            cn.write_text(cn.read_text().replace("- Reviewed change.", ""))
+            before = {path: path.read_text() for path in root.rglob("*") if path.is_file()}
+            with self.assertRaisesRegex(ValueError, "reviewed change entries"):
+                prepare_release.plan(root, "r14.26.1", 247, date(2026, 10, 23))
+            self.assertEqual(before, {path: path.read_text() for path in before})
+
+    def test_duplicate_or_decreasing_versions_are_not_prepared(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            for version, code in (("r14.25.1", 247), ("r14.24.9", 247), ("r14.26.1", 246), ("r15.1.1", 247)):
+                with self.subTest(version=version, code=code), self.assertRaises(ValueError):
+                    prepare_release.plan(root, version, code, date(2026, 10, 23))
+            path = root / "CHANGELOG.md"
+            path.write_text(path.read_text() + "\n## r14.26.1\n\n- Already prepared.\n")
+            with self.assertRaisesRegex(ValueError, "already contains"):
+                prepare_release.plan(root, "r14.26.1", 247, date(2026, 10, 23))
+
+    def test_dry_run_keeps_every_file_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            before = {path: path.read_text() for path in root.rglob("*") if path.is_file()}
+            with patch.object(prepare_release, "ROOT", root), patch("sys.argv", ["prepare_release.py", "--version", "r14.26.1", "--code", "247", "--dry-run"]):
+                self.assertEqual(0, prepare_release.main())
+            self.assertEqual(before, {path: path.read_text() for path in before})
+
+
+if __name__ == "__main__":
+    unittest.main()

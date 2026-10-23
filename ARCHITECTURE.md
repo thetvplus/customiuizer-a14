@@ -2,13 +2,14 @@
 
 ## 入口与路由
 
-```text
-libxposed → MainModule
-  → PreferenceBootstrap：远程偏好 → 进程内快照
-  → ProcessRouter：包名 / 进程名 → ProcessScope
-  → Installer → FeatureSpec / LazyFeatureSpec
-  → FeatureInstallRegistry → ROM resolver → Hook / Controller
-```
+| 层 | 主要职责 |
+| --- | --- |
+| libxposed / MainModule | 进程生命周期、偏好来源及模块入口 |
+| PreferenceBootstrap / ProcessRouter | 发布进程快照，按包名和进程选择 scope |
+| Installer / FeatureSpec | 按进程和偏好选择功能 |
+| FeatureInstallRegistry | 稳定 Feature ID、单次安装及所有权 |
+| ROM resolver / Hook / Controller | 冷路径解析、宿主调用与可释放的运行状态 |
+
 
 `MainModule.onModuleLoaded` 初始化偏好来源，记录版本、versionCode 与 Git revision。`onSystemServerStarting` 和首个包的 `onPackageReady` 分别安装对应入口；SDK 不等于 34 时不进入业务安装路径。
 
@@ -20,11 +21,9 @@ Installer 按进程与开关选择 Feature。`FeatureInstallRegistry` 使用进�
 
 - API 102 是最低基线；`HookInstallation` 统一原生安装策略，`XposedServiceManager` 管理 Service 与动态作用域。保留设置进程与 compileOnly Hook API 的类加载边界。
 - 宿主 SystemUI 与动态插件使用各自的 ClassLoader；安装时解析 ROM 类、方法、资源及签名，缺失时停止对应功能或保留原生行为。
-- 原生系统提示继续由 ROM StrongToast 原地调整并管理窗口、动画与安全门禁；动态岛的 Toast / 聊天 / 媒体使用一个按需显示的 SystemUI 状态栏子面板，复用 `DynamicIslandStatusBarFade`。`IslandActivityState` 只有一个短时槽与一个原生选定的媒体槽；owner 分离、身份释放与过期时间防止旧回调关闭新活动。主线程容量一的会话隐藏身份可跨状态栏 View 重建保留，不持有 View / Activity / MediaController；新会话、销毁、用户切换或显式重启接入使其失效。封面与头像分别限定为一张 128 px 图像，媒体读取与通知头像读取分别串行；关闭和重建取消工作并释放窗口、监听与展示状态，不修改原生 Keyguard 状态。
-- 短 / 中 / 展开三种岛共用 `IslandSizing`、摄像头安全区和内容分区规则。短 / 中态的 `IslandStatusBarCompact` 只保留原生 clock / battery 分支，按测量避让；弱引用、有限分支与监听均归当前展示 owner，解绑恢复，不重建时钟、电量或图标排序。展开态使用连续四角及用户宽度。原生 StrongToast 在 setValue / updateStrongToast 之后复核排布，事件 baseline 保留在该 root 上并在解绑恢复；不提前假设 getWindowParam 时文本已经存在。模块壳层的弹性、内容比例补偿与摄像头收缩退出共用单个属性 Animator；可见轮廓按物理尺寸构造后逆向补偿父级缩放，保持端帽曲率，不逐帧修改窗口或执行 Binder。两种进出场预设使用冻结设置；原生退出沿用原 AnimatorSet 与完成监听，只在启动前的有界 ThreadLocal 调用域内适配已证实的动画，不取消或重启原生集合，解绑停止模块属性写入。
-- 展开态是同一短 / 中岛的详情层，上滑或展开完成后 4.5 秒无岛内操作回到收起形态。圆角在配置准备时读取公开 `WindowInsets.getRoundedCorner`，取 ROM 与 48 dp 的较大值、上限短边 48%。收起高度可微调 38–44 dp，自动 / 手动短中宽度共用原生和模块快照，安全区始终优先。手势总开关及左右 / 上下方向分别控制。选中媒体的真实暂停 / 恢复边沿可撤销隐藏，回调先在 Main 记录边沿再合并 IO 快照，旧代回调以 session epoch 失效；播放等待 750 ms，暂停总退场 2 秒，重复快照不续时。通知中心临时遮挡保留选中回调并记录真实边沿，有限动画可中断；锁屏等隐私遮挡释放会话，不把旧暂停快照当成新活动。应用通知采用标准消息 / 图片内容契约，不限制包名，也不扫描内部数据库；详情与头像标记归原有有期限的单槽持有。
-- 前台包名从 ROM `MiuiTopActivityObserver` 的现有更新 / 通知方法和构造后读取已缓存字段，过程只保留包名与反射元数据，不持有 observer、不增加轮询或 Binder 查询；媒体及通知来源处于前台时隐藏对应活动，即时操作反馈除外。系统开关反馈由当前状态栏 owner 持有的 `IslandSystemActivities` 监听精确 Settings URI、受保护广播与背面闪光灯回调，先种基线再报告终态边沿；移动数据默认 SIM observer 仅保留一个，IO 串行、主线程提交、重建 / 用户切换 / 关闭均失效释放。至多十个按类别合并的待展示系统事件（30 秒有效）、一个当前展示租约与有限类别去重数组，ROM 原生勿扰 / 静音事件优先，未改变其队列或调用链。
-- 状态栏非必要分支采用系统 `ValueAnimator` 过渡；模糊仅作用于模块自有 `ViewOverlay`，不覆盖原生 `RenderEffect`。每次硬件过渡临时图像上限 1 MiB、六级效果，无逐帧截图；不支持或模块模糊关闭时使用 alpha，简化 / 系统动画关闭时即时完成。正常退出保留弱 helper 以支持快速反向，所有动画、图像与监听在完成 / 解绑 / 替换后释放。
+- 系统默认与匹配高度模式由 ROM StrongToast 管理原生窗口；动态岛在其统一入口抑制原生额头，使用 `mods/island` 内单一 Controller / View。短时活动、媒体、系统终态与通知共享展示门控和身份租约，避免双窗口、旧回调复活与隐私泄漏。
+- 动态岛尺寸、运动、遮挡、暂停退场及输入规则统一见 [当前行为](docs/features/island/README.md)。当前只有短岛 / 长岛；音乐左右切歌开关已实现，五手势独立配置仍是 [候选方案](docs/features/island/MUSIC_GESTURES.md)。主线程 owner、session epoch、generation、容量一状态和有界图像归对应控制器，重建、解绑、切用户和关闭均释放。
+- 公共 StrongToast 快照、通用 Hook / 偏好 / 安全边界继续在共享层；动态岛功能包通过明确导入调用，不复制这些状态或另建轮询服务。
 - Dock 默认背景继续归属原生 HotSeats；「全宽底栏」独立装饰挂在窗口根布局底层，以弱引用跟随 HotSeats 的布局、可见性、原生动画透明度和解绑。它不松开原生祖先裁切、不移动图标、不接受触摸；关闭该选项即可回到原有背景合同。
 - 反射缓存按 ClassLoader 隔离且有界；成熟 Hook 基础设施的修改按 [AGENTS.md](AGENTS.md) 提供相应契约与回归证据，ROM 行为另需目标样本与实机验证。
 
@@ -47,6 +46,23 @@ ID 由模块和 executable 隔离，同 ID 可用于不同重载，不能代替�
 `XposedServiceManager` 每次选择只读一次 scope Binder 快照，仅请求尚未授权的包；批准由框架决定。读取或请求的普通异常返回不可用，不自动重试，致命错误传播。异步失败提示只持有 Application Context。Service Binder 交付入口受模块签名权限保护。偏好镜像核对真实提交结果，保留每个连接的一次重试预算。
 
 R8 保留 Hooker、入口、JNI 与设置进程的 compileOnly 类加载边界。最终 APK 核查 setId/getId、禁用热重载与替换、ServiceLoader 和入口；[DexSQL](docs/rom-intelligence/DEXSQL.md) 产物检查不能代替框架安装日志与设备验收。
+
+## 源码与文档布局
+
+| 位置 | 维护内容 |
+| --- | --- |
+| `MainModule`、`installers` | 入口与进程路由 |
+| `mods/island` | 动态岛 ROM 接入、Controller、View、状态、运动和专用手势 |
+| `mods/duostatusbar`、`clock`、`battery` 等 | 已拆分的独立功能单元 |
+| `mods/utils`、`mods/utils/feature` | 跨功能的 Hook、安全边界、生命周期与 Feature 目录 |
+| `utils`、`prefs`、`subs` | 设置进程、持久化与界面控制器 |
+| `app/src/test/.../mods/island` 等 | 与功能包对应的 JVM / Android 模型回归 |
+| [docs/features](docs/features/README.md) | 当前功能说明及明确标注的后续方案 |
+| [docs/rom-intelligence](docs/rom-intelligence/README.md) | 生成矩阵、样本与 ROM 取证 |
+| [docs/maintenance](docs/maintenance/A14_REFINEMENT_ROADMAP.md) | 精修状态、退役证据与交接 |
+| `.github/workflows`、`tools` | 固定身份的 CI / 发布入口与可复用工具，见 [工具索引](docs/TOOLS.md) |
+
+目录按所有权和调用关系拆分。Dock 仍由 Launcher Hook、装饰、采样、材质等协作，现有公共模糊状态由共享层维护；不把跨功能基础设施归入单个功能。路径调整须同步 import、测试、语义目录和生成矩阵，不能改变偏好键或稳定 Feature ID。
 
 ## 设置与持久化
 

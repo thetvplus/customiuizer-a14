@@ -1179,9 +1179,11 @@
     <string name="seekbar_value_error">Введите число в указанном диапазоне с указанным шагом.</string>
     <string name="restart_settings_sync_failed">Не удалось синхронизировать настройки. Дождитесь подключения модуля и повторите попытку.</string>
     <string name="system_island_title">Динамический остров</string>
-    <string name="system_island_intro">Выберите режим острова и включите интеграции, затем перезапустите System UI. Остров скрыт на экране блокировки, при выключенном экране, в альбомной ориентации и при открытой шторке. Системные подсказки имеют приоритет.</string>
+    <string name="system_island_intro">Перезапустите системный интерфейс после первого выбора Dynamic Island или включения интеграции. Остров скрыт на экране блокировки, при выключенном экране, в альбомной ориентации и при открытой шторке.</string>
     <string name="system_island_media_title">Музыка и медиа</string>
-    <string name="system_island_media_summ">Используется выбранный системой плеер. Смахните в сторону для смены трека, вверх — чтобы скрыть. Выполняются только поддерживаемые действия. При паузе закрывается через 2 секунды.</string>
+    <string name="system_island_media_summ">Используется выбранный системой плеер. Смахните вверх, чтобы скрыть. Видимый остров закрывается через 2 секунды после паузы; скрытая музыка на паузе не появляется.</string>
+    <string name="system_island_media_swipe_title">Смена трека смахиванием</string>
+    <string name="system_island_media_swipe_summ">Влево — следующий трек, вправо — предыдущий, если плеер поддерживает действие. Отключение не влияет на открытие плеера нажатием и скрытие смахиванием вверх.</string>
     <string name="system_island_waveform_title">Лёгкая звуковая волна</string>
     <string name="system_island_waveform_summ">Анимация зависит от состояния воспроизведения, без записи звука. Останавливается на паузе, при скрытии и выключенном экране.</string>
     <string name="system_island_entrance_style_title">Анимация появления</string>
@@ -1208,7 +1210,7 @@
     <string name="system_island_height_title">Высота острова</string>
     <string name="system_island_height_summ">Короткий и длинный остров используют одинаковую фиксированную высоту.</string>
     <string name="system_island_width_auto_title">Автоматическая ширина острова</string>
-    <string name="system_island_width_auto_summ">Ширина короткого и среднего острова зависит от содержимого и места в строке состояния.</string>
+    <string name="system_island_width_auto_summ">Ширина короткого и длинного острова зависит от содержимого и места в строке состояния. Отключите для раздельной настройки.</string>
     <string name="system_island_width_short_title">Ширина короткого острова</string>
     <string name="system_island_width_short_summ">Для обложки, волны и краткого статуса. Сохраняется место для камеры, часов и батареи.</string>
     <string name="system_island_width_medium_title">Ширина длинного острова</string>

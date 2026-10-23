@@ -239,6 +239,29 @@ class PreferenceNavigationUiTest {
 
     private fun resourcesDensity() = activity.resources.displayMetrics.density
 
+    @Test
+    fun musicSwipeSettingFollowsTheIslandModeAndMediaIntegration() {
+        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
+        val page = currentPage() as SubFragment
+        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        val media = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media"))
+        val swipe = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe"))
+        assertTrue(swipe.isChecked)
+        assertFalse(swipe.isEnabled)
+        assertTrue(mode.callChangeListener("3"))
+        mode.value = "3"
+        assertTrue(media.isEnabled)
+        assertFalse(swipe.isEnabled)
+        media.isChecked = true
+        assertTrue(swipe.isEnabled)
+        media.isChecked = false
+        assertFalse(swipe.isEnabled)
+        assertTrue(mode.callChangeListener("0"))
+        mode.value = "0"
+        assertFalse(media.isEnabled)
+        assertFalse(swipe.isEnabled)
+    }
+
     private fun openSettingsPage(categoryKey: String, pageKey: String) {
         val home = currentPage() as MainFragment
         assertTrue(home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>(categoryKey))))

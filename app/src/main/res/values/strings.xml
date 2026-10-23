@@ -1213,9 +1213,11 @@
     <string name="seekbar_value_error">Enter a number within the range and step shown above.</string>
     <string name="restart_settings_sync_failed">Settings could not be synchronized. Wait for the module connection, then try again.</string>
     <string name="system_island_title">Dynamic Island</string>
-    <string name="system_island_intro">Select Dynamic Island mode to enable app feedback and media. Restart System UI after enabling an integration. Hidden on the lock screen, screen off, landscape or an open shade. Native system prompts take priority.</string>
+    <string name="system_island_intro">Restart System UI after first selecting Dynamic Island or enabling an integration. Hidden on the lock screen, with the screen off, in landscape or while the notification shade is open.</string>
     <string name="system_island_media_title">Music and media</string>
-    <string name="system_island_media_summ">Uses the player selected by System UI. Swipe left/right to change tracks and up to hide; only supported player actions run. Paused activity closes after 2 seconds.</string>
+    <string name="system_island_media_summ">Uses the player selected by System UI. Swipe up to hide. Visible music closes 2 seconds after pausing; hidden paused music stays hidden.</string>
+    <string name="system_island_media_swipe_title">Swipe to change tracks</string>
+    <string name="system_island_media_swipe_summ">Swipe left for the next track and right for the previous track. Only supported player actions run. Turning this off keeps tap-to-open and swipe-up-to-hide.</string>
     <string name="system_island_waveform_title">Lightweight waveform</string>
     <string name="system_island_waveform_summ">Animation follows playback state without recording audio. Stops when paused, hidden or the screen is off.</string>
     <string name="system_island_entrance_style_title">In/out animation</string>
@@ -1242,7 +1244,7 @@
     <string name="system_island_height_title">Island height</string>
     <string name="system_island_height_summ">Short and long islands use the same fixed height.</string>
     <string name="system_island_width_auto_title">Automatic collapsed width</string>
-    <string name="system_island_width_auto_summ">Choose short and medium widths from content and available status bar space.</string>
+    <string name="system_island_width_auto_summ">Choose short and long widths from content and available status bar space. Turn off to adjust them separately.</string>
     <string name="system_island_width_short_title">Short island width</string>
     <string name="system_island_width_short_summ">Used for artwork, waveform and brief status. Limited by the camera and time/battery space.</string>
     <string name="system_island_width_medium_title">Long island width</string>

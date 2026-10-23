@@ -1,6 +1,6 @@
 # 开发与诊断工具
 
-日常入口见 [开发说明](DEVELOPMENT.md)，验证职责见 [TESTING.md](TESTING.md)。Python 工具集中在 `tools/`，回归在 `tools/tests/`；Windows 外部签名预检及其回归保留在 `scripts/`。各 CLI 的参数以 `--help` 为准。
+日常入口见 [开发说明](DEVELOPMENT.md)，验证职责见 [TESTING.md](TESTING.md)。Python 工具集中在 `tools/`，回归在 `tools/tests/`；Windows 外部签名预检及其回归保留在 `scripts/`。有参数的 CLI 以其 `--help` 为准；`extract_process_matrix.py` 直接运行即可生成矩阵。
 
 | 用途 | 入口 |
 | --- | --- |
@@ -12,6 +12,7 @@
 | 独立缺陷注入、确定性及无写入检查 | `brutal_test_runner.py`、`brutal_test_config.json`；同前缀的 policy / protocol / mutator / apply-check 模块由 runner 使用 |
 | Feature 路由、语义与所有权 | `catalog_contract_probe.py`、`audit-feature-semantics.py`、`audit_hook_ownership.py` |
 | 当前源码进程矩阵 | `extract_process_matrix.py`，生成 [rom-intelligence](rom-intelligence/README.md) 下的矩阵及例外表 |
+| 发版准备与同一 APK 发布 / 恢复 | `prepare_release.py`、`signed_release.py`、`release_workflow_contract.py`，见 [发布流程](RELEASE.md) |
 | 诊断构建及产物来源 | `build_debug_apk.py`、`build_revision.py`、`verify_apk_provenance.py` |
 | APK 归因与预算比较 | `apk_size_report.py`；需要多变体、显式源码来源及 Markdown 报告时用 `apk_size_delta.py` |
 | APK 内容与 R8 可重复性 | `apk_semantic_diff.py`，用于 Full CI 双构建 |

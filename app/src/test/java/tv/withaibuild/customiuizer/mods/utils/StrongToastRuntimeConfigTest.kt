@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tv.withaibuild.customiuizer.mods.IslandEntranceStyle
+import tv.withaibuild.customiuizer.mods.island.IslandEntranceStyle
 import tv.withaibuild.customiuizer.mods.SystemUIStrongToastHooks
 import tv.withaibuild.customiuizer.mods.utils.feature.StrongToastPresentationFeature
 import tv.withaibuild.customiuizer.mods.utils.feature.StrongToastRuntimeSnapshot
@@ -67,7 +67,7 @@ class StrongToastRuntimeConfigTest {
             val prefs = PrefMap().apply { put("system_island_entrance_style", stored) }
             val native = StrongToastRuntimeState.buildSnapshot(prefs.getAll())
             assertEquals(expected, native.entranceStyle)
-            assertEquals(tv.withaibuild.customiuizer.mods.IslandOptions.read(prefs).entranceStyle,
+            assertEquals(tv.withaibuild.customiuizer.mods.island.IslandOptions.read(prefs).entranceStyle,
                 native.entranceStyle)
         }
     }

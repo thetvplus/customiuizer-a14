@@ -1180,9 +1180,11 @@
     <string name="seekbar_value_error">Insira um número dentro do intervalo e do passo indicados.</string>
     <string name="restart_settings_sync_failed">Não foi possível sincronizar as configurações. Aguarde a conexão do módulo e tente novamente.</string>
     <string name="system_island_title">Ilha Dinâmica</string>
-    <string name="system_island_intro">Selecione o modo Ilha Dinâmica e ative as integrações. Reinicie a interface do sistema. Oculta na tela bloqueada ou desligada, na horizontal e com o painel aberto. Avisos nativos têm prioridade.</string>
+    <string name="system_island_intro">Reinicie a interface do sistema após selecionar Dynamic Island pela primeira vez ou ativar uma integração. Oculto na tela de bloqueio, com a tela desligada, no modo paisagem ou com o painel de notificações aberto.</string>
     <string name="system_island_media_title">Música e mídia</string>
-    <string name="system_island_media_summ">Usa o player selecionado pelo sistema. Deslize para os lados para trocar de faixa e para cima para ocultar. Executa apenas ações compatíveis. Fecha após 2 segundos em pausa.</string>
+    <string name="system_island_media_summ">Usa o player selecionado pelo sistema. Deslize para cima para ocultar. A música visível fecha 2 segundos após pausar; a música pausada e oculta continua oculta.</string>
+    <string name="system_island_media_swipe_title">Deslizar para trocar de faixa</string>
+    <string name="system_island_media_swipe_summ">Deslize à esquerda para a próxima faixa e à direita para a anterior, se o player permitir. Ao desativar, o toque para abrir e o deslize para cima para ocultar continuam disponíveis.</string>
     <string name="system_island_waveform_title">Onda musical leve</string>
     <string name="system_island_waveform_summ">Segue o estado da reprodução sem capturar áudio. Para em pausa, oculta ou com a tela desligada.</string>
     <string name="system_island_entrance_style_title">Animação de entrada e saída</string>
@@ -1209,7 +1211,7 @@
     <string name="system_island_height_title">Altura da ilha</string>
     <string name="system_island_height_summ">As ilhas curta e longa usam a mesma altura fixa.</string>
     <string name="system_island_width_auto_title">Largura recolhida automática</string>
-    <string name="system_island_width_auto_summ">Ajusta as ilhas curta e média ao conteúdo e ao espaço da barra de status.</string>
+    <string name="system_island_width_auto_summ">Ajusta as ilhas curta e longa ao conteúdo e ao espaço da barra de status. Desative para ajustar separadamente.</string>
     <string name="system_island_width_short_title">Largura da ilha curta</string>
     <string name="system_island_width_short_summ">Para capa, onda e estados breves. Respeita o espaço da câmera, hora e bateria.</string>
     <string name="system_island_width_medium_title">Largura da ilha longa</string>

@@ -15,9 +15,9 @@ from pathlib import Path
 import yaml
 
 try:
-    from tools.release_workflow_contract import check as check_protected_release, BOOTSTRAP_BRANCH
+    from tools.release_workflow_contract import check as check_protected_release
 except ModuleNotFoundError:
-    from release_workflow_contract import check as check_protected_release, BOOTSTRAP_BRANCH
+    from release_workflow_contract import check as check_protected_release
 
 
 class WorkflowLoader(yaml.BaseLoader):
@@ -106,7 +106,7 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
                 if action_input(action, "persist-credentials") not in ("false", "False", "FALSE"):
                     add("CI_CHECKOUT_CREDENTIALS", "checkout must set persist-credentials: false")
                 permissions = job.get("permissions", workflow.get("permissions", {}))
-                publisher = (path.name == "a14-promote-release.yml" and not protected_errors
+                publisher = (path.name in {"a14-promote-release.yml", "a14-signed-build.yml"} and not protected_errors
                              and job is workflow["jobs"].get("publish"))
                 if not isinstance(permissions, dict) or permissions.get("contents") != ("write" if publisher else "read"):
                     add("CI_PERMISSIONS", "set permissions.contents: read")
@@ -160,8 +160,7 @@ def scan_workflow(path: Path, expected_branch: str, default_branch: str) -> list
     events = workflow.get("on", {})
     if isinstance(events, dict):
         push = events.get("push")
-        push_branch = BOOTSTRAP_BRANCH if path.name in {"a14-signed-build.yml", "a14-promote-release.yml"} else expected_branch
-        if "push" in events and (not isinstance(push, dict) or push.get("branches", []) != [push_branch]):
+        if "push" in events and (not isinstance(push, dict) or push.get("branches", []) != [expected_branch]):
             add("CI_EXACT_BRANCH", f"push must target only {expected_branch!r}")
         if "full" in path.name.lower() and expected_branch != default_branch and "push" not in events:
             if "schedule" in events or "workflow_dispatch" in events:

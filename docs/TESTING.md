@@ -41,7 +41,9 @@ Python 套件验证工具、生成器、资源及必要的源码边界；Kotlin 
 - 所有成功的普通 CI 都保留唯一 develop APK 与 mapping；不再按 scope 隐藏下载产物，也不追加第二次构建。R8 输出始终检查。专门排查构建可重复性时可手动运行两次隔离构建及 `apk_semantic_diff.py`；不加入日常 CI。
 - main / PR 新提交取消同一分支的旧执行，tag 验证正常完成。诊断保留 7 天，检查产物保留 30 天；清理历史运行时保留正式发行的成功验证记录。
 
-独立 [正式构建与晋升](RELEASE.md#actions-正式候选) 通过 Environment 隔离密钥，原生 ref 固定 exact SHA；同 SHA 可信 CI 已成功则复用，否则只补一次源码门禁。正式流程只构建一次 Release，不先构建 develop。晋升只验证和上传原文件，不构建。回归覆盖未授权来源、缺失 Secrets、错误证书、APK / provenance 篡改、失败构建和错误发布来源；普通 CI 的签名泄漏 mutation 必须继续被拦截。
+独立 [正式构建与自动发布](RELEASE.md#actions-构建与自动发布) 在 main 的 A14 CI 成功后检查新版本和双语记录，进入 release-signing 的一次人工确认；同 SHA 的完整 CI 直接复用。手动入口默认 both，也可选择 source、actions-only 或预发行。正式发布要求 main 的成功 CI，普通 PR 或旧 SHA 的绿灯不能替代。主仓库公开资产核验通过后，才用同一 APK 顺序发布 Xposed；两个入口共用发布锁。
+
+发布回归覆盖上游 workflow / event / repository / attempt / SHA、审核配置缺失、确认期间 main 前进、缺失凭据、错误证书、APK / provenance 篡改、版本与 Changelog 准备、草稿资产错误和预发行不设 Latest。第二端失败的恢复仅接受同一候选，核验并跳过已成功版本、只补同源草稿的缺失资产。失败 run 只有 Validate / Sign 已成功而 Publish 失败时才允许恢复；签名失败、取消和变更后的 attempt 仍拒绝。测试模拟 GitHub 服务器与部分上传故障，不等于已验证远端 Secrets / Environment 或真实发布权限。普通 CI 的签名泄漏 mutation 继续保留。
 
 Dock 定向回归覆盖 4 → 5 → 4、1 / 3–6 个图标、容器边界不变的子布局、拖拽结束 / 取消、文件夹与占位、空 Dock 和重新填充、空闲帧不读图标，以及高度 / 间距 / 圆角独立。使用原生事件顺序和 Android 14 渲染模型；目标 ROM 上还需连续拖拽、重排与动画验收。
 

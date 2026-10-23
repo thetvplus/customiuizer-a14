@@ -570,6 +570,8 @@
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_width_auto" android:title="@string/system_island_width_auto_title" android:summary="@string/system_island_width_auto_summ" android:defaultValue="true" android:disableDependentsState="true" />
 				<tv.withaibuild.customiuizer.prefs.SeekBarPreference android:key="pref_key_system_island_width_short" android:title="@string/system_island_width_short_title" android:summary="@string/system_island_width_short_summ" android:defaultValue="184" android:dependency="pref_key_system_island_width_auto" miuizer:maxValue="224" miuizer:minValue="160" miuizer:format="%d dp" miuizer:indentLevel="1" />
 				<tv.withaibuild.customiuizer.prefs.SeekBarPreference android:key="pref_key_system_island_width_medium" android:title="@string/system_island_width_medium_title" android:summary="@string/system_island_width_medium_summ" android:defaultValue="240" android:dependency="pref_key_system_island_width_auto" miuizer:maxValue="280" miuizer:minValue="184" miuizer:format="%d dp" miuizer:indentLevel="1" />
+			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/prefs_group_animation">
 				<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
 					android:key="pref_key_system_island_entrance_style"
 					android:title="@string/system_island_entrance_style_title"
@@ -579,7 +581,7 @@
 					miuizer:valueAsSummary="true" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_simplified" android:title="@string/system_island_simplified_title" android:defaultValue="false" android:summary="@string/system_island_simplified_summ" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
-			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/prefs_group_feedback">
+			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/prefs_group_content">
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 					android:key="pref_key_system_toast_capsule"
 					android:title="@string/system_toast_capsule_title"
@@ -590,6 +592,7 @@
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_media_title">
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media" android:title="@string/system_island_media_title" android:defaultValue="false" android:summary="@string/system_island_media_summ" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media_swipe" android:title="@string/system_island_media_swipe_title" android:defaultValue="true" android:summary="@string/system_island_media_swipe_summ" android:dependency="pref_key_system_island_media" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_waveform" android:title="@string/system_island_waveform_title" android:defaultValue="true" android:summary="@string/system_island_waveform_summ" android:dependency="pref_key_system_island_media" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/prefs_group_apps">

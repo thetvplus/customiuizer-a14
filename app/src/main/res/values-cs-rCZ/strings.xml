@@ -1187,9 +1187,11 @@
     <string name="seekbar_value_error">Zadejte číslo v uvedeném rozsahu a kroku.</string>
     <string name="restart_settings_sync_failed">Nastavení se nepodařilo synchronizovat. Počkejte na připojení modulu a zkuste to znovu.</string>
     <string name="system_island_title">Dynamický ostrov</string>
-    <string name="system_island_intro">Vyberte režim ostrova a zapněte integrace, poté restartujte systémové rozhraní. Skryje se na zamčené či vypnuté obrazovce, na šířku a při otevřeném panelu. Nativní systémové zprávy mají přednost.</string>
+    <string name="system_island_intro">Po prvním výběru Dynamic Island nebo zapnutí integrace restartujte systémové rozhraní. Ostrov je skrytý na zamykací obrazovce, při vypnutém displeji, na šířku nebo při otevřeném panelu oznámení.</string>
     <string name="system_island_media_title">Hudba a média</string>
-    <string name="system_island_media_summ">Používá přehrávač vybraný systémem. Tažením do stran přepnete skladbu, nahoru skryjete ostrov. Provádí jen podporované akce. Po pozastavení se skryje za 2 sekundy.</string>
+    <string name="system_island_media_summ">Používá přehrávač vybraný systémem. Tažením nahoru ostrov skryjete. Viditelná hudba se skryje 2 sekundy po pozastavení; skrytá pozastavená hudba se neobjeví.</string>
+    <string name="system_island_media_swipe_title">Přepínat skladby tažením</string>
+    <string name="system_island_media_swipe_summ">Tažením doleva přejdete na další skladbu, doprava na předchozí, pokud to přehrávač podporuje. Vypnutí zachová otevření klepnutím a skrytí tažením nahoru.</string>
     <string name="system_island_waveform_title">Lehká hudební vlna</string>
     <string name="system_island_waveform_summ">Řídí se stavem přehrávání bez záznamu zvuku. Zastaví se při pozastavení, skrytí a vypnutí obrazovky.</string>
     <string name="system_island_entrance_style_title">Animace zobrazení</string>
@@ -1216,7 +1218,7 @@
     <string name="system_island_height_title">Výška ostrova</string>
     <string name="system_island_height_summ">Krátký i dlouhý ostrov používají stejnou pevnou výšku.</string>
     <string name="system_island_width_auto_title">Automatická šířka sbaleného ostrova</string>
-    <string name="system_island_width_auto_summ">Šířku krátkého a středního ostrova určí obsah a dostupné místo ve stavovém řádku.</string>
+    <string name="system_island_width_auto_summ">Šířku krátkého a dlouhého ostrova určí obsah a dostupné místo ve stavovém řádku. Vypnutím umožníte samostatné nastavení.</string>
     <string name="system_island_width_short_title">Šířka krátkého ostrova</string>
     <string name="system_island_width_short_summ">Pro obal, vlnu a krátký stav. Omezeno místem pro kameru, čas a baterii.</string>
     <string name="system_island_width_medium_title">Šířka dlouhého ostrůvku</string>
