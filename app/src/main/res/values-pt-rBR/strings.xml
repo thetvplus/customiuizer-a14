@@ -1184,7 +1184,7 @@
     <string name="system_island_media_title">Música e mídia</string>
     <string name="system_island_media_summ">Usa o player selecionado pelo sistema. Deslize para cima para ocultar. A música visível fecha 2 segundos após pausar; a música pausada e oculta continua oculta.</string>
     <string name="system_island_media_swipe_title">Deslizar para trocar de faixa</string>
-    <string name="system_island_media_swipe_summ">Deslize à esquerda para a próxima faixa e à direita para a anterior, se o player permitir. Ao desativar, o toque para abrir e o deslize para cima para ocultar continuam disponíveis.</string>
+    <string name="system_island_media_swipe_summ">Desativar bloqueia a troca de faixa ao deslizar na horizontal. Outras ações configuradas continuam disponíveis.</string>
     <string name="system_island_waveform_title">Onda musical leve</string>
     <string name="system_island_waveform_summ">Segue o estado da reprodução sem capturar áudio. Para em pausa, oculta ou com a tela desligada.</string>
     <string name="system_island_entrance_style_title">Animação de entrada e saída</string>
@@ -1218,4 +1218,23 @@
     <string name="system_island_width_medium_summ">Para textos maiores. Nunca menor que a ilha curta e limitada ao espaço disponível.</string>
     <string name="system_island_chat_excluded_apps_title">Apps com avisos flutuantes</string>
     <string name="system_island_chat_excluded_apps_summ">Os apps selecionados mantêm os avisos flutuantes do sistema. Toasts e música não são afetados.</string>
+    <string name="system_island_gesture_left">Deslizar para a esquerda</string>
+    <string name="system_island_gesture_right">Deslizar para a direita</string>
+    <string name="system_island_gesture_down">Deslizar para baixo</string>
+    <string name="system_island_gesture_double">Toque duplo</string>
+    <string name="system_island_gesture_long">Toque longo</string>
+    <string name="system_island_gesture_up_summary">Deslize para cima para ocultar a ilha atual.</string>
+    <string name="system_island_position_title">Posição horizontal</string>
+    <string name="system_island_position_left">Esquerda</string>
+    <string name="system_island_position_center">Centro</string>
+    <string name="system_island_position_right">Direita</string>
+    <string name="system_island_horizontal_offset_title">Deslocamento horizontal</string>
+    <string name="system_island_feedback_title">Avisos do sistema</string>
+    <string name="system_island_notification_apps_title">Apps de notificações permitidos</string>
+    <string name="system_island_notification_apps_summ">Só os apps selecionados usam a ilha. Apps excluídos mantêm as notificações nativas.</string>
+    <string name="system_island_action_play">Reproduzir</string>
+    <string name="system_island_action_pause">Pausar</string>
+    <string name="system_island_action_player">Abrir player</string>
+    <string name="system_island_music_group">Música e mídia</string>
+    <string name="system_island_feedback_ringer_title">Modo de toque</string>
 </resources>

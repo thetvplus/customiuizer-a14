@@ -89,7 +89,7 @@ class IslandPolishTest {
         shell.bind("Track",null,null,true,true,true,PlaybackState.ACTION_SKIP_TO_NEXT,true)
         shell.geometry(280,40,40); layout(shell,280,40)
         var skips=0;var dismissals=0
-        shell.onControl={skips++};shell.onDismiss={dismissals++}
+        shell.onGesture={skips++};shell.onDismiss={dismissals++}
         fun swipe(x:Float,y:Float) {
             touch(shell,MotionEvent.ACTION_DOWN,140f,20f)
             touch(shell,MotionEvent.ACTION_MOVE,x,y); touch(shell,MotionEvent.ACTION_UP,x,y)

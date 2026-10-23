@@ -29,7 +29,8 @@ class DockFullWidthTest {
         }
         layout()
         LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true), null)
-        val strip = (0 until windowRoot.childCount).map { windowRoot.getChildAt(it) }.filterIsInstance<DockBackgroundView>().single()
+        val layer = (0 until windowRoot.childCount).map { windowRoot.getChildAt(it) }.filterIsInstance<DockFullWidthContainer>().single()
+        val strip = layer.getChildAt(0) as DockBackgroundView
         strip.onPreDraw(); layout(); strip.onPreDraw(); layout()
         val params = strip.layoutParams as FrameLayout.LayoutParams
         assertEquals(windowRoot.width, params.width)
@@ -39,11 +40,13 @@ class DockFullWidthTest {
         assertEquals(20, icon.left); assertEquals(10, icon.top)
         assertFalse(strip.isClickable); assertFalse(strip.isFocusable)
         host.alpha = 0.4f; strip.onPreDraw()
-        assertEquals(0.4f, strip.alpha, 0.001f)
+        assertEquals(0.4f, layer.alpha, 0.001f)
+        assertEquals(1f, strip.alpha, 0.001f)
         host.visibility = View.INVISIBLE; strip.onPreDraw()
-        assertEquals(0f, strip.alpha, 0.001f)
+        assertEquals(0f, layer.alpha, 0.001f)
         root.removeView(host)
         assertNull(strip.parent)
+        assertNull(layer.parent)
         activity.pause().stop().destroy()
     }
 }

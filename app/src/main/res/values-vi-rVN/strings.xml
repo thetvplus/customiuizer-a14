@@ -1184,7 +1184,7 @@
     <string name="system_island_media_title">Nhạc và phương tiện</string>
     <string name="system_island_media_summ">Dùng trình phát do hệ thống chọn. Vuốt lên để ẩn. Đảo đang hiển thị sẽ đóng sau 2 giây tạm dừng; nhạc tạm dừng đang ẩn sẽ không hiện lại.</string>
     <string name="system_island_media_swipe_title">Vuốt ngang để chuyển bài</string>
-    <string name="system_island_media_swipe_summ">Vuốt trái để chuyển bài tiếp theo, vuốt phải để về bài trước nếu trình phát hỗ trợ. Khi tắt vẫn có thể chạm để mở và vuốt lên để ẩn.</string>
+    <string name="system_island_media_swipe_summ">Tắt sẽ chặn chuyển bài khi vuốt ngang. Các thao tác khác đã cấu hình vẫn khả dụng.</string>
     <string name="system_island_waveform_title">Sóng nhạc nhẹ</string>
     <string name="system_island_waveform_summ">Chuyển động theo trạng thái phát, không thu âm. Dừng khi tạm dừng, bị ẩn hoặc tắt màn hình.</string>
     <string name="system_island_entrance_style_title">Hiệu ứng hiện và ẩn</string>
@@ -1218,4 +1218,23 @@
     <string name="system_island_width_medium_summ">Dùng cho văn bản dài hơn. Không hẹp hơn đảo ngắn và giới hạn theo khoảng trống.</string>
     <string name="system_island_chat_excluded_apps_title">Ứng dụng giữ thông báo nổi</string>
     <string name="system_island_chat_excluded_apps_summ">Các ứng dụng được chọn giữ thông báo nổi của hệ thống. Không ảnh hưởng đến Toast và nhạc.</string>
+    <string name="system_island_gesture_left">Vuốt sang trái</string>
+    <string name="system_island_gesture_right">Vuốt sang phải</string>
+    <string name="system_island_gesture_down">Vuốt xuống</string>
+    <string name="system_island_gesture_double">Nhấn đúp</string>
+    <string name="system_island_gesture_long">Nhấn giữ</string>
+    <string name="system_island_gesture_up_summary">Vuốt lên để ẩn đảo hiện tại.</string>
+    <string name="system_island_position_title">Vị trí ngang</string>
+    <string name="system_island_position_left">Trái</string>
+    <string name="system_island_position_center">Giữa</string>
+    <string name="system_island_position_right">Phải</string>
+    <string name="system_island_horizontal_offset_title">Độ lệch ngang</string>
+    <string name="system_island_feedback_title">Phản hồi hệ thống</string>
+    <string name="system_island_notification_apps_title">Ứng dụng được phép hiển thị thông báo</string>
+    <string name="system_island_notification_apps_summ">Chỉ ứng dụng đã chọn dùng đảo. Ứng dụng bị loại trừ giữ thông báo gốc.</string>
+    <string name="system_island_action_play">Phát</string>
+    <string name="system_island_action_pause">Tạm dừng</string>
+    <string name="system_island_action_player">Mở trình phát</string>
+    <string name="system_island_music_group">Nhạc và đa phương tiện</string>
+    <string name="system_island_feedback_ringer_title">Chế độ chuông</string>
 </resources>

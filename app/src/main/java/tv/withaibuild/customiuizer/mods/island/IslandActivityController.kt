@@ -17,6 +17,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.media.MediaMetadata
+import android.media.AudioManager
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
@@ -43,6 +44,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
+import tv.withaibuild.customiuizer.mods.GlobalActions
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ScreenStateController
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
@@ -78,14 +80,20 @@ internal class IslandActivityController(
     private val access: IslandNativePort,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     dismissal: IslandActivityState.MediaDismissal = IslandActivityState.MediaDismissal(),
+    markerLoader: ClassLoader? = null,
 ) : ScreenStateController.ScreenStateListener {
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
     private val state = IslandActivityState<IslandToastContent, IslandMediaContent>(dismissal)
     private val shell = IslandActivityView(context)
+    private var displayedMedia: MediaSession.Token? = null
     private val presentation = IslandWindowPresentation(shell,
         eligible = { !disposed && attached && state.allowed &&
-            (lastContent != null || exiting) })
+            (lastContent != null || exiting) },
+        shown = { event ->
+            (lastContent as? IslandMediaContent)?.takeIf { it.token == event && it.playing && !exiting }
+                ?.let { displayedMedia = it.token }
+        })
     private val window = context.getSystemService(WindowManager::class.java)
     private var attached = false
     private var exiting = false
@@ -118,12 +126,14 @@ internal class IslandActivityController(
     private var geometryJob: Job? = null
     private var geometryGeneration = 0L
     private data class Screen(val width: Int, val height: Int, val holeWidth: Int, val holeTop: Int,
-        val holeCenter: Float)
+        val holeCenter: Float, val safeLeft: Int, val safeRight: Int, val holeLeft: Int, val holeRight: Int,
+        val holeBottom: Int)
     private var screen: Screen? = null
     @Volatile private var actionEpoch = 0L
     private var readGeneration = 0L
     private var media: IslandMediaContent? = null
     private var foregroundPackage: String? = null
+    private var foregroundBaseline = false
     private data class AppIcon(val token: MediaSession.Token, val epoch: Long,
         val label: String, val drawable: Drawable?)
     private val iconCacheLock = Any()
@@ -142,8 +152,10 @@ internal class IslandActivityController(
     private var lastWidth = 0
     private var lastHeight = 0
     private var lastTop = 0
+    private var lastLeft = 0
     private var lastContent: Any? = null
     private var systemActivities: IslandSystemActivities? = null
+    private val actionMarkers = markerLoader?.let { IslandSystemActionMarkers.native(it, WeakReference(this)) }
     private val systemFeedbackSlot = IslandSystemFeedback()
     private data class SystemPresentation(val lease: IslandActivityState.Lease, val activity: IslandSystemActivity)
     private var systemPresentation: SystemPresentation? = null
@@ -178,16 +190,24 @@ internal class IslandActivityController(
             onMain {
                 val previousOptions = options
                 options = IslandOptions.read(prefs)
-                if (previousOptions.mediaSwipe && !options.mediaSwipe) {
-                    actionEpoch++
-                    actionJob?.cancel(); actionJob = null
-                }
+                invalidateActions()
+                if (previousOptions.position != options.position || previousOptions.horizontalOffset != options.horizontalOffset ||
+                    previousOptions.height != options.height || previousOptions.shortWidth != options.shortWidth ||
+                    previousOptions.longWidth != options.longWidth || previousOptions.automaticWidth != options.automaticWidth)
+                    presentation.cancel()
                 if (!options.enabled) dispose()
                 else {
                     if (!options.toast && state.toast(SystemClock.uptimeMillis())?.let {
                             !it.status && it.notificationKey == null } == true) state.clearToast()
                     if (!options.media) { clearMedia(); state.allowMediaAgain() }
-                    if (!options.chat || state.toast(SystemClock.uptimeMillis())?.packageName in options.chatExcludedApps) clearChat()
+                    if (!options.chat || state.toast(SystemClock.uptimeMillis())?.packageName.let {
+                            it in options.chatExcludedApps || it !in options.notificationApps }) clearChat()
+                    if (previousOptions.feedback != options.feedback) {
+                        clearSystemActivity()
+                        systemActivities?.dispose()
+                        systemActivities = createSystemActivities()
+                        actionMarkers?.update(options.feedback)
+                    }
                     nativeManager.get()?.let { updateFromNative(it) }
                     render()
                 }
@@ -237,7 +257,7 @@ internal class IslandActivityController(
     init {
         shell.onDismiss = { state.dismiss(); render() }
         shell.onOpen = { openPlayer() }
-        shell.onControl = { control(it) }
+        shell.onGesture = { executeGesture(it) }
         state.allowed = false
         try {
             ModuleHelper.observePreferenceChange(preferenceObserver, this)
@@ -247,8 +267,8 @@ internal class IslandActivityController(
             context.registerComponentCallbacks(configuration)
             configurationRegistered = true
             refreshGeometry()
-            if (options.enabled) systemActivities = IslandSystemActivities(context, scope, ioDispatcher, ::systemActivity)
-                .also { it.start() }
+            if (options.enabled) systemActivities = createSystemActivities()
+            actionMarkers?.update(options.feedback)
         } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
             dispose()
@@ -296,8 +316,10 @@ internal class IslandActivityController(
         if (foregroundPackage == packageName) return@onMain
         val previous = foregroundPackage
         foregroundPackage = packageName
+        invalidateActions()
         media?.let {
             if (packageName == it.packageName) {
+                displayedMedia = null
                 mediaRevealAt = null
                 if (it.playbackState == PlaybackState.STATE_PAUSED) {
                     pauseDeadline = null
@@ -305,13 +327,17 @@ internal class IslandActivityController(
                 }
             }
             else if (previous == it.packageName && it.playbackState != PlaybackState.STATE_PAUSED)
+            {
                 mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
+                foregroundBaseline = true
+                nativeManager.get()?.let { manager -> updateFromNative(manager) }
+            }
         }
         render()
     }
 
     fun systemActivity(activity: IslandSystemActivity) = onMain {
-        if (disposed || !options.enabled || (!state.allowed && !shadeBlocked)) return@onMain
+        if (disposed || !options.enabled || activity.kind !in options.feedback || (!state.allowed && !shadeBlocked)) return@onMain
         val now = SystemClock.uptimeMillis()
         systemFeedbackSlot.offer(activity, now)?.takeIf { state.allowed }
             ?.let { presentSystemEntry(it, now) }
@@ -397,6 +423,7 @@ internal class IslandActivityController(
     fun takeNotification(bound: IslandNotificationAccess.Bound): Boolean {
         val sbn = bound.notification
         if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.chat || !state.allowed ||
+            sbn.packageName !in options.notificationApps ||
             sbn.packageName in options.excludedApps ||
             sbn.packageName in options.chatExcludedApps || sbn.packageName == foregroundPackage ||
             sbn.user != foregroundUser || sbn.notification.contentIntent == null) return false
@@ -445,7 +472,7 @@ internal class IslandActivityController(
             render()
             return
         }
-        if (selected?.sessionToken != controller.sessionToken) {
+        if (selected !== controller) {
             clearMedia()
             selected = controller
         }
@@ -461,6 +488,7 @@ internal class IslandActivityController(
             if (disposed || !state.allowed || generation != readGeneration ||
                 selected?.sessionToken != controller.sessionToken) return@launch
             val now = SystemClock.uptimeMillis()
+            foregroundBaseline = false
             if (prepared == null) {
                 clearMedia()
             } else {
@@ -478,7 +506,7 @@ internal class IslandActivityController(
                 // changed snapshot after a hidden period is insufficient to invent activity.
                 if (fromShade && paused && (previous != PlaybackState.STATE_PAUSED ||
                         shadePlaybackReactivated && shadePlaybackState == PlaybackState.STATE_PAUSED)) {
-                    val remaining = if (shadePlaybackReactivated && shadePlaybackState == PlaybackState.STATE_PAUSED)
+                    val remaining = if (displayedMedia == prepared.token && shadePlaybackReactivated && shadePlaybackState == PlaybackState.STATE_PAUSED)
                         shadePlaybackAt + IslandMotion.PAUSE_LIFETIME - now else 0L
                     if (remaining <= 0L) {
                         media = prepared; pauseDeadline = null; mediaRevealAt = null
@@ -499,13 +527,15 @@ internal class IslandActivityController(
                 // Pause grace belongs to music already on screen. A retained PLAYING
                 // snapshot inside the player, a pending entrance or an unrelated Toast
                 // is not visible music and must not create a new paused island on Home.
-                val visibleMedia = attached && !exiting && prepared.packageName != foregroundPackage &&
+                val visibleMedia = presentation.phase == IslandWindowPresentation.Phase.VISIBLE &&
+                    displayedMedia == prepared.token && attached && !exiting && prepared.packageName != foregroundPackage &&
                     (lastContent as? IslandMediaContent)?.token == prepared.token
                 if (paused && !fromShade && previous != PlaybackState.STATE_PAUSED && !visibleMedia) {
                     mediaRevealAt = null; pauseDeadline = null; media = prepared
                     state.setMedia(prepared.token, null); render(); return@launch
                 }
                 if (!paused) {
+                    if (previous == PlaybackState.STATE_PAUSED && !visibleMedia) displayedMedia = null
                     pauseDeadline = null
                     if (!attached && mediaRevealAt == null &&
                         (media == null || previous == PlaybackState.STATE_PAUSED))
@@ -537,6 +567,10 @@ internal class IslandActivityController(
                             ?: media?.playbackState else observedPlaybackState ?: media?.playbackState
                         if (state != null && IslandMediaPolicy.pauseResume(previous, state.state)) {
                             this@IslandActivityController.state.allowMediaAgain()
+                            if (state.state != PlaybackState.STATE_PAUSED &&
+                                (!this@IslandActivityController.state.allowed || exiting ||
+                                    presentation.phase != IslandWindowPresentation.Phase.VISIBLE ||
+                                    (lastContent as? IslandMediaContent)?.token != controller.sessionToken)) displayedMedia = null
                             if (observingShade) shadePlaybackReactivated = true
                             if (state.state != PlaybackState.STATE_PAUSED && (!attached || exiting))
                                 mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
@@ -643,6 +677,8 @@ internal class IslandActivityController(
         actionJob?.cancel(); actionJob = null
         selected = null
         media = null
+        displayedMedia = null
+        foregroundBaseline = false
         pauseDeadline = null
         observedPlaybackState = null
         mediaRevealAt = null
@@ -655,7 +691,7 @@ internal class IslandActivityController(
         shadePlaybackState = null; shadePlaybackAt = 0; shadePlaybackReactivated = false
     }
 
-    private data class Geometry(val width: Int, val height: Int, val top: Int, val gap: Int, val maximumWidth: Int)
+    private data class Geometry(val width: Int, val height: Int, val top: Int, val gap: Int, val maximumWidth: Int, val left: Int)
     private fun refreshGeometry() {
         val manager = window ?: return
         val generation = ++geometryGeneration
@@ -666,9 +702,13 @@ internal class IslandActivityController(
                     ensureActive()
                     val metrics = manager.currentWindowMetrics
                     val hole = metrics.windowInsets.displayCutout?.boundingRectTop
+                    val safe = metrics.windowInsets.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.systemBars() or
+                        android.view.WindowInsets.Type.displayCutout())
                     Screen(metrics.bounds.width(), metrics.bounds.height(), hole?.width() ?: 0,
                         if (hole != null && !hole.isEmpty) hole.bottom - minOf(hole.width(), hole.height()) else -1,
-                        if (hole != null && !hole.isEmpty) hole.bottom - minOf(hole.width(), hole.height()) * .5f else -1f)
+                        if (hole != null && !hole.isEmpty) hole.bottom - minOf(hole.width(), hole.height()) * .5f else -1f,
+                        safe.left + dp(12), metrics.bounds.width() - safe.right - dp(12),
+                        hole?.left ?: 0, hole?.right ?: 0, hole?.bottom ?: 0)
                 }
             }
             if (!disposed && generation == geometryGeneration) { screen = measured; render() }
@@ -681,21 +721,26 @@ internal class IslandActivityController(
         if (bounds.width >= bounds.height) return null
         val now = SystemClock.uptimeMillis()
         val feedback = state.toast(now)?.takeIf { label == null }
+        shell.contentHeight(options.height)
         val caption = label ?: feedback?.text
         val gap = maxOf(dp(40), bounds.holeWidth + dp(16))
         val clearance = DynamicIslandStatusBarFade.compactClearance(bounds.width, dp(IslandSizing.SHORT_DP))
         val maximumWidth = IslandSizing.maximumWidth(context.resources.displayMetrics.density, bounds.width,
-            clearance, shortDp = options.shortWidth, longDp = options.longWidth, manual = !options.automaticWidth)
+            clearance, shortDp = options.shortWidth, longDp = options.longWidth, manual = !options.automaticWidth, heightDp = options.height)
         val width = IslandSizing.collapsed(context.resources.displayMetrics.density, bounds.width,
             clearance, gap, dp(24).toFloat(), caption?.let {
                 if (feedback?.status == true) shell.statusWidth(it) else shell.textWidth(it)
-            } ?: 0f, shortDp = options.shortWidth, longDp = options.longWidth, manual = !options.automaticWidth)
+            } ?: 0f, shortDp = options.shortWidth, longDp = options.longWidth, manual = !options.automaticWidth, heightDp = options.height)
         if (width - gap < dp(100)) return null
         val offset = dp(SystemUIStrongToastHooks.currentSnapshot()?.islandOffsetDp ?: 0)
         val anchor = if (bounds.holeTop >= 0) bounds.holeTop else dp(8)
         val height = if (feedback?.status == true)
             shell.statusHeight(feedback.text, width, gap, dp(options.height)) ?: return null else dp(options.height)
-        return Geometry(width, height, (anchor + offset).coerceAtLeast(0), gap, maximumWidth)
+        val top = (anchor + offset).coerceAtLeast(0)
+        val left = IslandPosition.left(width, bounds.safeLeft, bounds.safeRight, options.position,
+            dp(options.horizontalOffset), gap, bounds.holeLeft, bounds.holeRight,
+            top < bounds.holeBottom && top + height > bounds.holeTop) ?: return null
+        return Geometry(width, height, top, gap, maximumWidth, left)
     }
 
     private fun render(): Boolean {
@@ -720,7 +765,7 @@ internal class IslandActivityController(
         val toast = state.toast(now)
         // Returning from a shade needs one current snapshot before the retained slot can
         // draw: it may still contain PLAYING although a real pause expired while hidden.
-        val current = if (mediaRevealAt == null && !shadeBaseline) state.media(now)?.takeUnless {
+        val current = if (mediaRevealAt == null && !shadeBaseline && !foregroundBaseline) state.media(now)?.takeUnless {
             it.packageName == foregroundPackage } else null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null)) geometry() else null
         val nextExpiry = listOfNotNull(state.deadline(), pauseDeadline?.takeIf { it > now },
@@ -737,6 +782,9 @@ internal class IslandActivityController(
         shell.entranceStyle = options.entranceStyle
         shell.windowTop = geometry.top
         val showingMedia = toast == null && current != null
+        if (showingMedia != (lastContent is IslandMediaContent) ||
+            showingMedia && (lastContent as? IslandMediaContent)?.token != current?.token ||
+            !showingMedia && lastContent !== toast) invalidateActions()
         val secondary = attached && lastContent != null &&
             ((lastContent is IslandToastContent) != (toast != null) || toast != null && lastContent !== toast)
         shell.bind(toast?.text ?: current!!.title, if (showingMedia) current?.artist else toast?.detail,
@@ -744,6 +792,7 @@ internal class IslandActivityController(
             showingMedia && current?.playing == true,
             showingMedia, options.waveform, if (showingMedia) current?.actions ?: 0L else 0L, showingMedia && options.mediaSwipe,
             current?.playbackState ?: PlaybackState.STATE_NONE, toast?.avatar == true, toast?.status == true)
+        shell.configureGestures(if (showingMedia) selected else state.identity(now), options.musicActions, showingMedia && options.mediaSwipe)
         shell.geometry(geometry.width, geometry.height, geometry.gap, geometry.maximumWidth)
         screen?.let { bounds ->
             shell.cameraAnchor(if (bounds.holeCenter >= 0f) bounds.holeCenter - geometry.top else dp(20).toFloat(),
@@ -758,6 +807,7 @@ internal class IslandActivityController(
         params.width = geometry.width
         params.height = geometry.height
         params.y = geometry.top
+        params.x = geometry.left - ((screen?.width ?: geometry.width) - geometry.width) / 2
         return try {
             val entering = !attached
             if (entering) {
@@ -766,12 +816,13 @@ internal class IslandActivityController(
                 shell.prepareEntry()
                 window!!.addView(shell, params); attached = true
             }
-            else if (outsetsChanged || lastWidth != params.width || lastHeight != params.height || lastTop != params.y) window!!.updateViewLayout(shell, params)
+            else if (outsetsChanged || lastWidth != params.width || lastHeight != params.height || lastTop != params.y || lastLeft != params.x) window!!.updateViewLayout(shell, params)
             if (entering || resumingExit || secondary || lastWidth != params.width || lastHeight != params.height) {
                 shell.transition(lastWidth, lastHeight, params.width, params.height, entering, secondary)
             }
             lastWidth = params.width; lastHeight = params.height
             lastTop = params.y
+            lastLeft = params.x
             lastContent = toast ?: current
             state.identity(now)?.let { presentation.prepare(it, geometry.width) }
             true
@@ -784,7 +835,9 @@ internal class IslandActivityController(
     }
 
     private fun hide(animate: Boolean = false) {
-        if (animate && attached) {
+        invalidateActions()
+        if (animate && attached && (presentation.phase == IslandWindowPresentation.Phase.VISIBLE ||
+                presentation.phase == IslandWindowPresentation.Phase.EXITING)) {
             if (!exiting) {
                 exiting = true
                 presentation.exiting()
@@ -830,9 +883,25 @@ internal class IslandActivityController(
             }
         }
 
-        private fun control(requested: Long) {
-            if (!options.mediaSwipe || !state.allowed || state.media(SystemClock.uptimeMillis()) == null) return
+    private fun createSystemActivities(): IslandSystemActivities? = options.feedback.takeIf { it.isNotEmpty() }?.let {
+        IslandSystemActivities(context, scope, ioDispatcher, it, ::systemActivity).also { source -> source.start() }
+    }
+
+    private fun invalidateActions() {
+        actionEpoch++
+        actionJob?.cancel(); actionJob = null
+        shell.cancelInputs()
+    }
+
+    private fun executeGesture(gesture: IslandMusicGesture) {
+            val action = options.musicActions.resolve(gesture, options.mediaSwipe)
+            val current = state.media(SystemClock.uptimeMillis()) ?: return
+            if (action == 1 || disposed || exiting || !attached || !state.allowed || !options.media ||
+                current.packageName == foregroundPackage || current.token != (lastContent as? IslandMediaContent)?.token ||
+                presentation.phase != IslandWindowPresentation.Phase.VISIBLE) return
+            if (action == IslandMusicActions.OPEN_PLAYER) { openPlayer(); return }
             val controller = selected ?: return
+            if (controller.sessionToken != current.token) return
             val epoch = actionEpoch
             actionJob?.cancel()
             actionJob = scope.launch(ioDispatcher) {
@@ -841,11 +910,30 @@ internal class IslandActivityController(
                     val playback = controller.playbackState ?: return@guarded
                     ensureActive()
                     if (epoch != actionEpoch) return@guarded
-                    if (!IslandMediaPolicy.canSkip(requested, playback.actions)) return@guarded
-                    val transport = controller.transportControls
-                    when (requested) {
-                        PlaybackState.ACTION_SKIP_TO_NEXT -> transport.skipToNext()
-                        PlaybackState.ACTION_SKIP_TO_PREVIOUS -> transport.skipToPrevious()
+                    if (!IslandMediaPolicy.active(playback.state)) return@guarded
+                    when (action) {
+                        85, 87, 88, IslandMusicActions.PLAY, IslandMusicActions.PAUSE -> {
+                            val request = IslandTransportAction.resolve(action, playback.state, playback.actions) ?: return@guarded
+                            val transport = controller.transportControls
+                            ensureActive()
+                            if (epoch != actionEpoch) return@guarded
+                            when (request) {
+                                PlaybackState.ACTION_PLAY -> transport.play()
+                                PlaybackState.ACTION_PAUSE -> transport.pause()
+                                PlaybackState.ACTION_SKIP_TO_NEXT -> transport.skipToNext()
+                                PlaybackState.ACTION_SKIP_TO_PREVIOUS -> transport.skipToPrevious()
+                            }
+                        }
+                        18, 19 -> {
+                            val info = controller.playbackInfo
+                            val fixed = info.playbackType == MediaController.PlaybackInfo.PLAYBACK_TYPE_LOCAL &&
+                                context.getSystemService(AudioManager::class.java)?.isVolumeFixed != false
+                            if (!IslandVolumePolicy.adjustable(info.playbackType,info.volumeControl,info.audioAttributes.usage,fixed)) return@guarded
+                            ensureActive()
+                            if (epoch == actionEpoch) controller.adjustVolume(
+                                if (action == 18) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER, 0)
+                        }
+                        else -> if (epoch == actionEpoch) GlobalActions.handleResolvedAction(context, gesture.key, action)
                     }
                 }
             }
@@ -859,6 +947,7 @@ internal class IslandActivityController(
         handler.removeCallbacks(nativeRefresh)
         clearSystemActivity()
         systemActivities?.dispose(); systemActivities = null
+        actionMarkers?.close()
         geometryGeneration++
         geometryJob?.cancel()
         geometryJob = null
@@ -878,7 +967,7 @@ internal class IslandActivityController(
         clearChat()
         state.clear(preserveDismissal = true)
         hide()
-        shell.onDismiss = {}; shell.onOpen = {}; shell.onControl = {}
+        shell.onDismiss = {}; shell.onOpen = {}; shell.onGesture = {}
         scope.cancel()
     }
 

@@ -92,3 +92,9 @@ python tools/adb_stress.py --scenario navigation --seed 0xA14 --steps 24
 ```
 
 多设备用 `--serial` 指定；工具先确认稳定连接，不安装 APK、不清理数据或日志、不使用 root。输出默认在忽略目录 `.di-evidence/adb-stress/`：操作接受数、前后 PID / PSS / 线程、原始帧与 CPU 快照、从设备起始时间筛选的 crash / events 日志。未知指标为 null，保留真实 0；断连或无设备为 `UNAVAILABLE`，退出 2，不算通过。`COLLECTED` 仅表示采集完成，不能证明操作体验、性能或没有崩溃 / ANR；日志缓冲区、权限和 ROM 支持仍有限制。原始日志可能含个人信息，不提交入库。2026-10-21 本机无设备，真实 ADB 操作及性能尚未验证。
+
+## r14.25.2 动态岛回归范围
+
+五项音乐映射、单击 / 双击、长按 / 拖动、多指 / CANCEL、无障碍及配置失效使用 `IslandMusicGestureTest` 的实际 View；动作能力、音量与位置使用 `IslandMusicActionsTest`。`IslandActivityLifecycleTest` 的窗口替身会将 View 真正附着至 Android 14 模型并触发预绘制，区分 PREPARED / VISIBLE；未显示的暂停、停止及延迟时序逐帧检查无意外窗口与状态栏占用。真实布局推进模型帧时钟，期限测试锚定原事件 deadline，不把布局耗时另算新保留期。
+
+设置动作编辑、默认摘要、320dp 中文布局、分类监听和通知允许名单分别由导航、偏好、系统活动和 Controller 回归覆盖。此范围没有真实 HyperOS Hook、蓝牙 / 投放硬件或功耗测量；设备待验项见[音乐手势](features/island/MUSIC_GESTURES.md)。

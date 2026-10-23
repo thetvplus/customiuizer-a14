@@ -163,9 +163,13 @@ class System : SubFragment() {
                     )
                     val enabled = presentation == StrongToastPresentationMode.DYNAMIC_ISLAND
                     islandOffset?.isVisible = enabled
-                    for (key in listOf("media", "media_swipe", "waveform", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps")) {
+                    for (key in listOf("media", "media_swipe", "waveform", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps", "position", "horizontal_offset", "notification_apps")) {
                         findPreference<Preference>("pref_key_system_island_$key")?.isEnabled = enabled
                     }
+                    for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
+                        findPreference<Preference>("pref_key_${gesture.key}")?.isEnabled = enabled
+                    for (key in tv.withaibuild.customiuizer.utils.IslandPreferenceDefaults.feedbackKeys)
+                        findPreference<Preference>(key)?.isEnabled = enabled
                     findPreference<Preference>("pref_key_system_toast_capsule")?.isEnabled =
                         enabled || presentation == StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT
                 }
@@ -177,6 +181,9 @@ class System : SubFragment() {
                 showIslandOffset(strongToastMode?.value)
                 findPreference<Preference>("pref_key_system_island_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_island_chat_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
+                findPreference<Preference>("pref_key_system_island_notification_apps")?.setOnPreferenceClickListener(openAppsEdit)
+                for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
+                    findPreference<Preference>("pref_key_${gesture.key}")?.setOnPreferenceClickListener(openMusicActions)
             }
             "pref_key_system_cat_statusbar" -> {
                 findPreference<Preference>("pref_key_system_statusbarcolor_apps")?.setOnPreferenceClickListener(openAppsEdit)
@@ -357,6 +364,22 @@ class System : SubFragment() {
                 findPreference<Preference>("pref_key_system_statusbarcontrols_dt_right")?.setOnPreferenceClickListener(openStatusbarActions)
                 findPreference<Preference>("pref_key_system_statusbarcontrols_longpress")?.setOnPreferenceClickListener(openStatusbarActions)
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (sub != "pref_key_system_cat_island") return
+        val values = resources.getIntArray(R.array.global_actions_island_music_val)
+        val labels = resources.getStringArray(R.array.global_actions_island_music)
+        for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries) {
+            val key = "pref_key_${gesture.key}"
+            val action = AppHelper.getIntOfAppPrefs(key + "_action", gesture.defaultAction)
+            val index = values.indexOf(action).coerceAtLeast(0)
+            val label = if (action == 8 || action == 9 || action == 20)
+                AppHelper.getActionNameLocal(requireContext(), key)?.let { listOf(it.first, it.second).filter(String::isNotBlank).joinToString(": ") }
+                    ?: labels[index] else labels[index]
+            findPreference<Preference>(key)?.summary = label
         }
     }
 

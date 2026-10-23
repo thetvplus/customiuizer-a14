@@ -12,23 +12,26 @@ internal object IslandSizing {
 
     fun maximumWidth(density: Float, screen: Int, clearance: Int,
         romMaximum: Int = Int.MAX_VALUE, shortDp: Int = SHORT_DP,
-        longDp: Int = LONG_MAX_DP, manual: Boolean = false): Int {
-        val short = if (manual) shortDp.coerceIn(160, 224) else SHORT_DP
-        val long = if (manual) maxOf(short, longDp.coerceIn(184, 280)) else LONG_MAX_DP
+        longDp: Int = LONG_MAX_DP, manual: Boolean = false, heightDp: Int = COLLAPSED_HEIGHT_DP): Int {
+        val short = if (manual) shortDp.coerceIn(160, 224) else automatic(SHORT_DP, heightDp)
+        val long = if (manual) maxOf(short, longDp.coerceIn(184, 280)) else automatic(LONG_MAX_DP, heightDp)
         return minOf((long * density).roundToInt(), screen - (24 * density).roundToInt(),
             clearance, romMaximum).coerceAtLeast(0)
     }
 
     fun collapsed(density: Float, screen: Int, clearance: Int, gap: Int,
         leftContent: Float = 0f, rightContent: Float = 0f, romMaximum: Int = Int.MAX_VALUE,
-        shortDp: Int = SHORT_DP, longDp: Int = LONG_MAX_DP, manual: Boolean = false): Int {
-        val short = if (manual) shortDp.coerceIn(160, 224) else SHORT_DP
-        val long = if (manual) maxOf(short, longDp.coerceIn(184, 280)) else LONG_MAX_DP
+        shortDp: Int = SHORT_DP, longDp: Int = LONG_MAX_DP, manual: Boolean = false,
+        heightDp: Int = COLLAPSED_HEIGHT_DP): Int {
+        val short = if (manual) shortDp.coerceIn(160, 224) else automatic(SHORT_DP, heightDp)
+        val long = if (manual) maxOf(short, longDp.coerceIn(184, 280)) else automatic(LONG_MAX_DP, heightDp)
         val shortWidth = (short * density).roundToInt()
         val longWidth = (long * density).roundToInt()
         val content = ceil(gap + 2 * (maxOf(leftContent, rightContent) + EDGE_DP * density)).toInt()
         val preferred = if (manual && content > shortWidth) longWidth else maxOf(shortWidth, content)
-        val ceiling = maximumWidth(density, screen, clearance, romMaximum, shortDp, longDp, manual)
+        val ceiling = maximumWidth(density, screen, clearance, romMaximum, shortDp, longDp, manual, heightDp)
         return minOf(preferred, ceiling)
     }
+
+    private fun automatic(base: Int, height: Int) = (base * (1f + (height.coerceIn(38, 44) - 40) / 80f)).roundToInt()
 }

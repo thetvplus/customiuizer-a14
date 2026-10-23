@@ -1190,7 +1190,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_media_title">Müzik ve medya</string>
     <string name="system_island_media_summ">Sistemin seçtiği oynatıcıyı kullanır. Gizlemek için yukarı kaydırın. Görünen müzik duraklatılınca 2 saniye sonra kapanır; gizli ve duraklatılmış müzik görünmez.</string>
     <string name="system_island_media_swipe_title">Kaydırarak parça değiştir</string>
-    <string name="system_island_media_swipe_summ">Oynatıcı destekliyorsa sonraki parça için sola, önceki parça için sağa kaydırın. Kapatıldığında dokunarak açma ve yukarı kaydırarak gizleme kullanılabilir.</string>
+    <string name="system_island_media_swipe_summ">Kapatıldığında yatay kaydırma ile parça değiştirme engellenir. Yapılandırılan diğer işlemler kullanılabilir.</string>
     <string name="system_island_waveform_title">Hafif müzik dalgası</string>
     <string name="system_island_waveform_summ">Ses kaydetmeden oynatma durumuyla hareket eder. Duraklatıldığında, gizliyken ve ekran kapalıyken durur.</string>
     <string name="system_island_entrance_style_title">Giriş ve çıkış animasyonu</string>
@@ -1224,4 +1224,23 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_width_medium_summ">Uzun metinler için. Kısa adadan dar olmaz ve durum çubuğu alanıyla sınırlıdır.</string>
     <string name="system_island_chat_excluded_apps_title">Sistem bildirimi kullanan uygulamalar</string>
     <string name="system_island_chat_excluded_apps_summ">Seçilen uygulamalar sistemin kayan bildirimlerini korur. Toast ve müzik etkilenmez.</string>
+    <string name="system_island_gesture_left">Sola kaydırma</string>
+    <string name="system_island_gesture_right">Sağa kaydırma</string>
+    <string name="system_island_gesture_down">Aşağı kaydırma</string>
+    <string name="system_island_gesture_double">Çift dokunma</string>
+    <string name="system_island_gesture_long">Uzun basma</string>
+    <string name="system_island_gesture_up_summary">Geçerli adayı gizlemek için yukarı kaydırın.</string>
+    <string name="system_island_position_title">Yatay konum</string>
+    <string name="system_island_position_left">Sol</string>
+    <string name="system_island_position_center">Orta</string>
+    <string name="system_island_position_right">Sağ</string>
+    <string name="system_island_horizontal_offset_title">Yatay kaydırma</string>
+    <string name="system_island_feedback_title">Sistem geri bildirimi</string>
+    <string name="system_island_notification_apps_title">Bildirimlerine izin verilen uygulamalar</string>
+    <string name="system_island_notification_apps_summ">Yalnızca seçilen uygulamalar adayı kullanır. Hariç tutulan uygulamalar yerel bildirimleri korur.</string>
+    <string name="system_island_action_play">Oynat</string>
+    <string name="system_island_action_pause">Duraklat</string>
+    <string name="system_island_action_player">Oynatıcıyı aç</string>
+    <string name="system_island_music_group">Müzik ve medya</string>
+    <string name="system_island_feedback_ringer_title">Zil modu</string>
 </resources>

@@ -1217,7 +1217,7 @@
     <string name="system_island_media_title">Music and media</string>
     <string name="system_island_media_summ">Uses the player selected by System UI. Swipe up to hide. Visible music closes 2 seconds after pausing; hidden paused music stays hidden.</string>
     <string name="system_island_media_swipe_title">Swipe to change tracks</string>
-    <string name="system_island_media_swipe_summ">Swipe left for the next track and right for the previous track. Only supported player actions run. Turning this off keeps tap-to-open and swipe-up-to-hide.</string>
+    <string name="system_island_media_swipe_summ">Turning this off blocks previous/next track on horizontal swipes. Other configured actions remain available.</string>
     <string name="system_island_waveform_title">Lightweight waveform</string>
     <string name="system_island_waveform_summ">Animation follows playback state without recording audio. Stops when paused, hidden or the screen is off.</string>
     <string name="system_island_entrance_style_title">In/out animation</string>
@@ -1251,4 +1251,23 @@
     <string name="system_island_width_medium_summ">Used for longer text. Never narrower than the short island and limited by status bar space.</string>
     <string name="system_island_chat_excluded_apps_title">Native notification apps</string>
     <string name="system_island_chat_excluded_apps_summ">Selected apps keep native heads-up notifications. Toasts and media are unaffected.</string>
+    <string name="system_island_gesture_left">Swipe left</string>
+    <string name="system_island_gesture_right">Swipe right</string>
+    <string name="system_island_gesture_down">Swipe down</string>
+    <string name="system_island_gesture_double">Double tap</string>
+    <string name="system_island_gesture_long">Long press</string>
+    <string name="system_island_gesture_up_summary">Swipe up to dismiss the current island.</string>
+    <string name="system_island_position_title">Horizontal position</string>
+    <string name="system_island_position_left">Left</string>
+    <string name="system_island_position_center">Center</string>
+    <string name="system_island_position_right">Right</string>
+    <string name="system_island_horizontal_offset_title">Horizontal offset</string>
+    <string name="system_island_feedback_title">System feedback</string>
+    <string name="system_island_notification_apps_title">Allowed notification apps</string>
+    <string name="system_island_notification_apps_summ">Only selected apps can use the island. Excluded apps keep their native notifications.</string>
+    <string name="system_island_action_play">Play</string>
+    <string name="system_island_action_pause">Pause</string>
+    <string name="system_island_action_player">Open player</string>
+    <string name="system_island_music_group">Music and media</string>
+    <string name="system_island_feedback_ringer_title">Ringer mode</string>
 </resources>

@@ -1183,7 +1183,7 @@
     <string name="system_island_media_title">Музыка и медиа</string>
     <string name="system_island_media_summ">Используется выбранный системой плеер. Смахните вверх, чтобы скрыть. Видимый остров закрывается через 2 секунды после паузы; скрытая музыка на паузе не появляется.</string>
     <string name="system_island_media_swipe_title">Смена трека смахиванием</string>
-    <string name="system_island_media_swipe_summ">Влево — следующий трек, вправо — предыдущий, если плеер поддерживает действие. Отключение не влияет на открытие плеера нажатием и скрытие смахиванием вверх.</string>
+    <string name="system_island_media_swipe_summ">Отключение запрещает переключение треков горизонтальным смахиванием. Другие настроенные действия остаются доступны.</string>
     <string name="system_island_waveform_title">Лёгкая звуковая волна</string>
     <string name="system_island_waveform_summ">Анимация зависит от состояния воспроизведения, без записи звука. Останавливается на паузе, при скрытии и выключенном экране.</string>
     <string name="system_island_entrance_style_title">Анимация появления</string>
@@ -1217,4 +1217,23 @@
     <string name="system_island_width_medium_summ">Для длинного текста. Не уже короткого острова и ограничена местом в строке состояния.</string>
     <string name="system_island_chat_excluded_apps_title">Приложения с обычными уведомлениями</string>
     <string name="system_island_chat_excluded_apps_summ">Выбранные приложения сохраняют системные всплывающие уведомления. Toast и музыка не меняются.</string>
+    <string name="system_island_gesture_left">Смахивание влево</string>
+    <string name="system_island_gesture_right">Смахивание вправо</string>
+    <string name="system_island_gesture_down">Смахивание вниз</string>
+    <string name="system_island_gesture_double">Двойное касание</string>
+    <string name="system_island_gesture_long">Долгое нажатие</string>
+    <string name="system_island_gesture_up_summary">Смахните вверх, чтобы скрыть текущий остров.</string>
+    <string name="system_island_position_title">Положение по горизонтали</string>
+    <string name="system_island_position_left">Слева</string>
+    <string name="system_island_position_center">По центру</string>
+    <string name="system_island_position_right">Справа</string>
+    <string name="system_island_horizontal_offset_title">Горизонтальное смещение</string>
+    <string name="system_island_feedback_title">Системные отклики</string>
+    <string name="system_island_notification_apps_title">Разрешённые приложения уведомлений</string>
+    <string name="system_island_notification_apps_summ">Остров показывает уведомления только выбранных приложений. Исключённые приложения сохраняют обычные уведомления.</string>
+    <string name="system_island_action_play">Воспроизвести</string>
+    <string name="system_island_action_pause">Пауза</string>
+    <string name="system_island_action_player">Открыть плеер</string>
+    <string name="system_island_music_group">Музыка и медиа</string>
+    <string name="system_island_feedback_ringer_title">Режим звонка</string>
 </resources>

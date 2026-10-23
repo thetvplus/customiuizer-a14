@@ -146,11 +146,11 @@ def require_main_ci(sha: str, *, current: bool = True) -> None:
 
 
 def confirmation_policy() -> None:
-    """Automatic triggers cannot interpret an unprotected Environment as approval."""
+    """Publication cannot interpret an unprotected Environment as approval."""
     environment = api(f"repos/{REPO}/environments/release-signing")
     rules = environment.get("protection_rules", [])
     require(any(rule.get("type") == "required_reviewers" and rule.get("reviewers") for rule in rules),
-            "Automatic release requires a required reviewer on release-signing; configure it once or use manual dispatch")
+            "Publication requires a required reviewer on release-signing; configure the protected Environment before retrying")
     policy = environment.get("deployment_branch_policy") or {}
     require(policy.get("custom_branch_policies") is True and policy.get("protected_branches") is False,
             "release-signing must restrict deployment to explicitly selected trusted branches")
@@ -277,8 +277,7 @@ def release_plan() -> None:
             return
     check_new_release(name, code, sha)
     local_release_notes(name, code)
-    if automatic:
-        confirmation_policy()
+    confirmation_policy()
     output(ready="true", destination=destination, prerelease=str(prerelease).lower())
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
@@ -320,6 +319,7 @@ def signing_preflight() -> None:
         automatic_ci()
         confirmation_policy()
     if destination != "actions-only":
+        confirmation_policy()
         require_main_ci(sha)
         name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
         check_new_release(name, code, sha)

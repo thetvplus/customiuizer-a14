@@ -43,7 +43,13 @@ import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 
-internal enum class IslandSystemKind { DND, RINGER, DARK, AIRPLANE, NFC, HOTSPOT, TORCH, WIFI, DATA, BLUETOOTH }
+internal enum class IslandSystemKind(val preferenceKey: String) {
+    DND("system_island_feedback_dnd"), RINGER("system_island_feedback_ringer"),
+    DARK("system_island_feedback_dark"), AIRPLANE("system_island_feedback_airplane"),
+    NFC("system_island_feedback_nfc"), HOTSPOT("system_island_feedback_hotspot"),
+    TORCH("system_island_feedback_torch"), WIFI("system_island_feedback_wifi"),
+    DATA("system_island_feedback_data"), BLUETOOTH("system_island_feedback_bluetooth")
+}
 
 internal data class IslandSystemActivity(val kind: IslandSystemKind, val value: Int) {
     fun content(context: Context): IslandToastContent {
@@ -93,6 +99,7 @@ internal class IslandSystemActivities(
     private val context: Context,
     private val scope: CoroutineScope,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val enabledKinds: Set<IslandSystemKind> = IslandSystemKind.entries.toSet(),
     private val onEvent: (IslandSystemActivity) -> Unit,
 ) {
     private val handler = Handler(Looper.getMainLooper())
@@ -112,7 +119,7 @@ internal class IslandSystemActivities(
     fun current(kind: IslandSystemKind): Int? = edges.current(kind)
 
     fun start() {
-        if (disposed || registration != null) return
+        if (disposed || registration != null || enabledKinds.isEmpty()) return
         val epoch = generation
         registration = scope.launch(ioDispatcher) {
             var receiverRegistered = false
@@ -127,26 +134,33 @@ internal class IslandSystemActivities(
                 ensureActive()
                 readMutex.withLock {
                     ModuleHelper.guarded {
-                        for (key in arrayOf("zen_mode", "mobile_data", "multi_sim_data_call")) {
+                        val keys = buildList {
+                            if (IslandSystemKind.DND in enabledKinds) add("zen_mode")
+                            if (IslandSystemKind.DATA in enabledKinds) { add("mobile_data"); add("multi_sim_data_call") }
+                        }
+                        for (key in keys) {
                             resolver.registerContentObserver(Settings.Global.getUriFor(key), false, observer)
                             observerRegistered = true
                         }
                         observersActive = true
-                        observeDataSubscription(SubscriptionManager.getDefaultDataSubscriptionId())
+                        if (IslandSystemKind.DATA in enabledKinds) observeDataSubscription(SubscriptionManager.getDefaultDataSubscriptionId())
                     }
                 }
                 ModuleHelper.guarded {
-                    context.registerReceiver(receiver, IntentFilter().apply {
-                        addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
-                        addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
-                        addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
-                        addAction(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED)
-                        addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
-                        addAction(HOTSPOT_ACTION)
-                    }, null, handler, Context.RECEIVER_EXPORTED)
-                    receiverRegistered = true
+                    val filter = IntentFilter().apply {
+                        if (IslandSystemKind.RINGER in enabledKinds) addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
+                        if (IslandSystemKind.AIRPLANE in enabledKinds) addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
+                        if (IslandSystemKind.WIFI in enabledKinds) addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+                        if (IslandSystemKind.NFC in enabledKinds) addAction(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED)
+                        if (IslandSystemKind.BLUETOOTH in enabledKinds) addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+                        if (IslandSystemKind.HOTSPOT in enabledKinds) addAction(HOTSPOT_ACTION)
+                    }
+                    if (filter.countActions() > 0) {
+                        context.registerReceiver(receiver, filter, null, handler, Context.RECEIVER_EXPORTED)
+                        receiverRegistered = true
+                    }
                 }
-                ModuleHelper.guarded {
+                if (IslandSystemKind.TORCH in enabledKinds) ModuleHelper.guarded {
                     camera = context.getSystemService(CameraManager::class.java)
                     val id = camera?.cameraIdList?.take(32)?.firstOrNull { id ->
                         val info = camera!!.getCameraCharacteristics(id)
@@ -175,7 +189,7 @@ internal class IslandSystemActivities(
     }
 
     fun configurationChanged(configuration: Configuration) {
-        if (disposed) return
+        if (disposed || IslandSystemKind.DARK !in enabledKinds) return
         when (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
             Configuration.UI_MODE_NIGHT_YES -> changed(IslandSystemKind.DARK, 1)
             Configuration.UI_MODE_NIGHT_NO -> changed(IslandSystemKind.DARK, 0)
@@ -206,7 +220,7 @@ internal class IslandSystemActivities(
     }
 
     private fun changed(kind: IslandSystemKind, value: Int) {
-        if (!disposed) edges.observe(kind, value)?.let(onEvent)
+        if (!disposed && kind in enabledKinds) edges.observe(kind, value)?.let(onEvent)
     }
 
     private val receiver = object : BroadcastReceiver() {
@@ -254,8 +268,8 @@ internal class IslandSystemActivities(
     }
 
     private fun readSettingsSnapshot(): Map<IslandSystemKind, Int> = buildMap {
-        ModuleHelper.guarded { put(IslandSystemKind.DND, if (Settings.Global.getInt(resolver, "zen_mode", 0) == 0) 0 else 1) }
-        ModuleHelper.guarded {
+        if (IslandSystemKind.DND in enabledKinds) ModuleHelper.guarded { put(IslandSystemKind.DND, if (Settings.Global.getInt(resolver, "zen_mode", 0) == 0) 0 else 1) }
+        if (IslandSystemKind.DATA in enabledKinds) ModuleHelper.guarded {
             val subscription = SubscriptionManager.getDefaultDataSubscriptionId()
             observeDataSubscription(subscription)
             val manager = context.getSystemService(TelephonyManager::class.java)
@@ -286,10 +300,10 @@ internal class IslandSystemActivities(
 
     private fun readInitial(): Map<IslandSystemKind, Int> = buildMap {
         putAll(readSettingsSnapshot())
-        ModuleHelper.guarded { context.getSystemService(AudioManager::class.java)?.ringerMode?.let { put(IslandSystemKind.RINGER, it) } }
-        ModuleHelper.guarded { put(IslandSystemKind.AIRPLANE, if (Settings.Global.getInt(resolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0) 1 else 0) }
-        ModuleHelper.guarded { context.getSystemService(WifiManager::class.java)?.wifiState?.let { binary(it, 1, 3)?.let { value -> put(IslandSystemKind.WIFI, value) } } }
-        ModuleHelper.guarded {
+        if (IslandSystemKind.RINGER in enabledKinds) ModuleHelper.guarded { context.getSystemService(AudioManager::class.java)?.ringerMode?.let { put(IslandSystemKind.RINGER, it) } }
+        if (IslandSystemKind.AIRPLANE in enabledKinds) ModuleHelper.guarded { put(IslandSystemKind.AIRPLANE, if (Settings.Global.getInt(resolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0) 1 else 0) }
+        if (IslandSystemKind.WIFI in enabledKinds) ModuleHelper.guarded { context.getSystemService(WifiManager::class.java)?.wifiState?.let { binary(it, 1, 3)?.let { value -> put(IslandSystemKind.WIFI, value) } } }
+        if (IslandSystemKind.HOTSPOT in enabledKinds) ModuleHelper.guarded {
             // On A14 the hotspot broadcast is no longer sticky. This runtime SystemApi is
             // verified in the target Wi-Fi module and read only while preparing a baseline.
             context.getSystemService(WifiManager::class.java)?.let { manager ->
@@ -297,9 +311,9 @@ internal class IslandSystemActivities(
                 value?.let { binary(it, 11, 13)?.let { state -> put(IslandSystemKind.HOTSPOT, state) } }
             }
         }
-        ModuleHelper.guarded { NfcAdapter.getDefaultAdapter(context)?.let { put(IslandSystemKind.NFC, if (it.isEnabled) 1 else 0) } }
-        ModuleHelper.guarded { context.getSystemService(BluetoothManager::class.java)?.adapter?.state?.let { binary(it, 10, 12)?.let { value -> put(IslandSystemKind.BLUETOOTH, value) } } }
-        when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
+        if (IslandSystemKind.NFC in enabledKinds) ModuleHelper.guarded { NfcAdapter.getDefaultAdapter(context)?.let { put(IslandSystemKind.NFC, if (it.isEnabled) 1 else 0) } }
+        if (IslandSystemKind.BLUETOOTH in enabledKinds) ModuleHelper.guarded { context.getSystemService(BluetoothManager::class.java)?.adapter?.state?.let { binary(it, 10, 12)?.let { value -> put(IslandSystemKind.BLUETOOTH, value) } } }
+        if (IslandSystemKind.DARK in enabledKinds) when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
             Configuration.UI_MODE_NIGHT_YES -> put(IslandSystemKind.DARK, 1)
             Configuration.UI_MODE_NIGHT_NO -> put(IslandSystemKind.DARK, 0)
         }

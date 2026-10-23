@@ -1007,35 +1007,28 @@ object Controls {
     @JvmStatic
     fun BackGestureAreaWidthHook(lpparam: PackageReadyParam) {
         installControlsSnapshot()
-        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "initScreenSizeAndDensity", Int::class.javaPrimitiveType, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
+        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "initScreenSizeAndDensity", backGestureWidthInitHook())
 
-                    val pct = controlsConfig.fsgWidth
-                    if (pct == 100) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    var mGestureStubDefaultSize = XposedHelpers.getIntField(thisObject, "mGestureStubDefaultSize")
-                    var mGestureStubSize = XposedHelpers.getIntField(thisObject, "mGestureStubSize")
-                    mGestureStubDefaultSize = Math.round(mGestureStubDefaultSize * pct / 100f)
-                    mGestureStubSize = Math.round(mGestureStubSize * pct / 100f)
-                    XposedHelpers.setIntField(thisObject, "mGestureStubDefaultSize", mGestureStubDefaultSize)
-                    XposedHelpers.setIntField(thisObject, "mGestureStubSize", mGestureStubSize)
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "setSize", Int::class.javaPrimitiveType, backGestureSetSizeHook())
+    }
+
+    internal fun backGestureWidthInitHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            ModuleHelper.guarded {
+                val pct = controlsConfig.fsgWidth
+                if (pct == 100) return@guarded
+                val owner = chain.thisObject
+                val defaultSize = XposedHelpers.getIntField(owner, "mGestureStubDefaultSize")
+                val size = XposedHelpers.getIntField(owner, "mGestureStubSize")
+                XposedHelpers.setIntField(owner, "mGestureStubDefaultSize", Math.round(defaultSize * pct / 100f))
+                XposedHelpers.setIntField(owner, "mGestureStubSize", Math.round(size * pct / 100f))
             }
-        })
+            return result
+        }
+    }
 
-        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "setSize", Int::class.javaPrimitiveType, object : MethodHook() {
+    internal fun backGestureSetSizeHook() = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
@@ -1052,13 +1045,13 @@ object Controls {
 
                     result = chain.proceed(args)
                 } catch (t: Throwable) {
+                    FatalErrors.rethrowIfFatal(t)
                     throwable = t
                     result = null
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
-        })
-    }
+        }
 
     @JvmStatic
     fun HideNavBarHook(lpparam: PackageReadyParam) {

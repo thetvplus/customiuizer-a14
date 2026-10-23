@@ -1191,7 +1191,7 @@
     <string name="system_island_media_title">Hudba a média</string>
     <string name="system_island_media_summ">Používá přehrávač vybraný systémem. Tažením nahoru ostrov skryjete. Viditelná hudba se skryje 2 sekundy po pozastavení; skrytá pozastavená hudba se neobjeví.</string>
     <string name="system_island_media_swipe_title">Přepínat skladby tažením</string>
-    <string name="system_island_media_swipe_summ">Tažením doleva přejdete na další skladbu, doprava na předchozí, pokud to přehrávač podporuje. Vypnutí zachová otevření klepnutím a skrytí tažením nahoru.</string>
+    <string name="system_island_media_swipe_summ">Vypnutí blokuje změnu skladby vodorovným přejetím. Ostatní nastavené akce zůstávají dostupné.</string>
     <string name="system_island_waveform_title">Lehká hudební vlna</string>
     <string name="system_island_waveform_summ">Řídí se stavem přehrávání bez záznamu zvuku. Zastaví se při pozastavení, skrytí a vypnutí obrazovky.</string>
     <string name="system_island_entrance_style_title">Animace zobrazení</string>
@@ -1225,4 +1225,23 @@
     <string name="system_island_width_medium_summ">Pro delší text. Není užší než krátký ostrov a respektuje místo ve stavovém řádku.</string>
     <string name="system_island_chat_excluded_apps_title">Aplikace s původními oznámeními</string>
     <string name="system_island_chat_excluded_apps_summ">Vybrané aplikace si ponechají systémová plovoucí oznámení. Toasty a hudba se nemění.</string>
+    <string name="system_island_gesture_left">Přejetí vlevo</string>
+    <string name="system_island_gesture_right">Přejetí vpravo</string>
+    <string name="system_island_gesture_down">Přejetí dolů</string>
+    <string name="system_island_gesture_double">Dvojité klepnutí</string>
+    <string name="system_island_gesture_long">Dlouhé stisknutí</string>
+    <string name="system_island_gesture_up_summary">Přejetím nahoru skryjete aktuální ostrov.</string>
+    <string name="system_island_position_title">Vodorovná poloha</string>
+    <string name="system_island_position_left">Vlevo</string>
+    <string name="system_island_position_center">Uprostřed</string>
+    <string name="system_island_position_right">Vpravo</string>
+    <string name="system_island_horizontal_offset_title">Vodorovný posun</string>
+    <string name="system_island_feedback_title">Systémová odezva</string>
+    <string name="system_island_notification_apps_title">Povolené aplikace oznámení</string>
+    <string name="system_island_notification_apps_summ">Ostrov přebírá jen vybrané aplikace. Vyloučené aplikace zachovají původní oznámení.</string>
+    <string name="system_island_action_play">Přehrát</string>
+    <string name="system_island_action_pause">Pozastavit</string>
+    <string name="system_island_action_player">Otevřít přehrávač</string>
+    <string name="system_island_music_group">Hudba a média</string>
+    <string name="system_island_feedback_ringer_title">Režim vyzvánění</string>
 </resources>

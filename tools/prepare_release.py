@@ -74,7 +74,7 @@ def main() -> int:
         # Validate every input before writing any of the five files.
         for path, text in changes.items():
             if not args.dry_run:
-                path.write_text(text, encoding="utf-8")
+                path.write_text(text, encoding="utf-8", newline="\n")
             print(("Would update " if args.dry_run else "Updated ") + path.relative_to(ROOT).as_posix())
     except (OSError, ValueError) as error:
         print(f"prepare_release: {error}", file=sys.stderr)

@@ -31,7 +31,7 @@ internal class IslandWindowPresentation(
     private val transformedOrigin = FloatArray(2)
 
     fun prepare(event: Any, compactWidth: Int) {
-        if (identity !== event) {
+        if (identity !== event || phase == Phase.EXITING) {
             release()
             identity = event
             phase = Phase.PREPARED

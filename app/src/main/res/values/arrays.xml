@@ -759,4 +759,45 @@
         <item>2</item>
         <item>3</item>
     </string-array>
+
+    <string-array name="global_actions_island_music">
+        <item>@string/array_global_actions_none</item>
+        <item>@string/array_media_playpause</item>
+        <item>@string/system_island_action_play</item>
+        <item>@string/system_island_action_pause</item>
+        <item>@string/array_media_prev</item>
+        <item>@string/array_media_next</item>
+        <item>@string/array_global_actions_volume_up</item>
+        <item>@string/array_global_actions_volume_down</item>
+        <item>@string/array_global_actions_volume</item>
+        <item>@string/system_island_action_player</item>
+        <item>@string/array_global_actions_launch</item>
+        <item>@string/array_global_actions_shortcut</item>
+        <item>@string/array_global_actions_activity</item>
+        <item>@string/array_global_actions_notif</item>
+        <item>@string/array_global_actions_eqs</item>
+    </string-array>
+    <integer-array name="global_actions_island_music_val">
+        <item>1</item>
+        <item>85</item>
+        <item>30</item>
+        <item>31</item>
+        <item>88</item>
+        <item>87</item>
+        <item>18</item>
+        <item>19</item>
+        <item>17</item>
+        <item>32</item>
+        <item>8</item>
+        <item>9</item>
+        <item>20</item>
+        <item>2</item>
+        <item>3</item>
+    </integer-array>
+    <string-array name="island_positions">
+        <item>@string/system_island_position_left</item>
+        <item>@string/system_island_position_center</item>
+        <item>@string/system_island_position_right</item>
+    </string-array>
+    <string-array name="island_positions_val"><item>0</item><item>1</item><item>2</item></string-array>
 </resources>

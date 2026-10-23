@@ -4,7 +4,7 @@
 
 | 功能 | 当前说明 | 后续方案 |
 | --- | --- | --- |
-| 动态岛 | [行为、呈现、媒体与通知](island/README.md) | [音乐手势配置](island/MUSIC_GESTURES.md)，尚未实现 |
+| 动态岛 | [行为、呈现、媒体与通知](island/README.md) | [音乐手势与操作](island/MUSIC_GESTURES.md)，含 CN / TW 静态证据与设备待验项 |
 | Dock | [背景、材质与模糊边界](dock/README.md) | 实机项目见精修路线图 |
 | Duo 三合一图标 | [电量、网络与耳机提示](duo-status-bar.md) | ROM / 设备验收见精修路线图 |
 
