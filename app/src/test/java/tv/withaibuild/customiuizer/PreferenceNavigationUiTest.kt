@@ -269,6 +269,41 @@ class PreferenceNavigationUiTest {
         assertFalse(swipe.isEnabled)
     }
 
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "zh-rCN-w320dp-h640dp")
+    fun waveformModeKeepsItsCurrentValueAndAVisibleFallbackExplanation() {
+        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
+        val page = currentPage() as SubFragment
+        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        assertTrue(mode.callChangeListener("3")); mode.value = "3"
+        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        val wave = requireNotNull(page.findPreference<ListPreference>("pref_key_system_island_waveform_mode"))
+        assertEquals("1", wave.value)
+        wave.value = "2"
+        val waveRow = LayoutInflater.from(activity).inflate(wave.layoutResource, null)
+        wave.onBindViewHolder(PreferenceViewHolder.createInstanceForTests(waveRow))
+        assertEquals(activity.getString(R.string.system_island_waveform_real),
+            waveRow.findViewById<TextView>(android.R.id.hint).text.toString())
+        val expected = activity.getString(R.string.system_island_waveform_mode_summ)
+        fun explanation(group: PreferenceGroup): Preference? {
+            for (index in 0 until group.preferenceCount) {
+                val preference = group.getPreference(index)
+                if (!preference.isSelectable && preference.summary?.toString() == expected) return preference
+                if (preference is PreferenceGroup) explanation(preference)?.let { return it }
+            }
+            return null
+        }
+        val detail = requireNotNull(explanation(page.preferenceScreen))
+        val detailRow = LayoutInflater.from(activity).inflate(detail.layoutResource, null)
+        detail.onBindViewHolder(PreferenceViewHolder.createInstanceForTests(detailRow))
+        assertEquals(View.VISIBLE, detailRow.findViewById<TextView>(android.R.id.summary).visibility)
+        assertEquals(expected, detailRow.findViewById<TextView>(android.R.id.summary).text.toString())
+        val adapter = page.listView.adapter as androidx.preference.PreferenceGroupAdapter
+        page.listView.scrollToPosition(adapter.getPreferenceAdapterPosition(wave))
+        settleNavigation()
+        capturePage("island-waveform-320-zh")
+    }
+
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")

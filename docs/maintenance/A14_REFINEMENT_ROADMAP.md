@@ -461,11 +461,11 @@ SystemUI 必须已有 RECORD_AUDIO / MODIFY_AUDIO_ROUTING 且 ROM / AppOps / 路
 | --- | --- |
 | `python tools/verify.py fast --changed` | 退出 0；与最终 full 相同源码，复用已有编译 / 测试输入结果 |
 | `python tools/verify.py full` | 退出 0；Kotlin / Java 编译、完整 JVM / Robolectric 和 Lint 通过 |
-| JVM / Robolectric | 342 suite，3206 tests，0 failure / error，2 skipped |
+| JVM / Robolectric | 342 suite，3207 tests，0 failure / error，2 skipped |
 | Lint Debug | 0 error / fatal；保留 398 条 warning，未压制检测。含程序构造、不会从 XML inflate 的 IslandTouchWindow 缺工具构造器提示；不能将通过表述为零警告 |
 | `python -m unittest discover -s tools/tests -p "test_*.py"` | 592 tests，0 failure / error，5 skipped；包含真实 Gradle provenance 变体测试 |
 | `assembleDevelop` | 退出 0；未签名 Develop APK，R8 / D8、资源收缩与 lintVitalDevelop 通过 |
-| 布局 / 导航 | 原生图形模式检查子页、搜索直达、动作摘要和依赖；70 张设置页面渲染，抽查动态岛首页、十反馈及五手势子页 |
+| 布局 / 导航 | 原生图形模式检查子页、搜索直达、动作摘要和依赖；71 张设置页面渲染，抽查动态岛首页、十反馈及五手势子页 |
 | 源码规则 / `git diff --check` | 无违规；没有新增 Hook 热路径 PrefMap / 分配预算命中，没有加入签名、APK 或 ROM 文件 |
 | 设备 / ROM | ADB 无连接设备；无 DexSQL 连接与 CN / TW 原件，未执行 ROM 重取证或实机验收 |
 
