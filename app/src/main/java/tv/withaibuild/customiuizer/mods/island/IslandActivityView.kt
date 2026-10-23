@@ -7,6 +7,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -105,6 +106,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var layerReveal = 1f
     private var entryCameraAnchor = false
     private var motion: ValueAnimator? = null
+    private var mediaReturnProgress = 1f
+    private var mediaReturnClip: Path? = null
     private val breadth = IslandMotion.Spring()
     private val depth = IslandMotion.Spring()
     private val shiftX = IslandMotion.Spring()
@@ -287,13 +290,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (statusPaint.textSize != size) { statusPaint.textSize = size; statusFit = null }
     }
 
-    fun prepareEntry() {
+    fun prepareEntry(mediaReturn: Boolean = false) {
         motion?.cancel(); motion = null
         disposed = false; leaving = false
+        mediaReturnProgress = if (mediaReturn && isMedia && icon.drawable != null &&
+            !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
+        if (mediaReturnProgress == 0f && mediaReturnClip == null) mediaReturnClip = Path()
         if (simplified || !ValueAnimator.areAnimatorsEnabled()) resetTransform()
         else {
             alpha = 0f
-            entryCameraAnchor = entranceStyle == IslandEntranceStyle.CENTER
+            entryCameraAnchor = mediaReturnProgress == 0f || entranceStyle == IslandEntranceStyle.CENTER
             pivotY = if (entryCameraAnchor) cameraY else 0f
             // Establish the final height before anything becomes visible, then grow
             // only the middle. The first shape is a full-height camera-centred circle.
@@ -317,11 +323,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
         if (secondary) { layerReveal = 0f; textReveal = 0f }
         animateTo(1f, 1f, 0f, 0f, 1f,
-            if (entering) IslandMotion.ENTER else if (secondary) IslandMotion.SECONDARY else IslandMotion.MORPH,
-            layered = secondary)
+            if (mediaReturnProgress == 0f) IslandMotion.MEDIA_RETURN else if (entering) IslandMotion.ENTER
+                else if (secondary) IslandMotion.SECONDARY else IslandMotion.MORPH,
+            layered = secondary, returning = mediaReturnProgress == 0f)
     }
 
     fun exit(onEnd: () -> Unit) {
+        cancelMediaReturn()
         leaving = true
         cancelInputs()
         isPressed = false; cancelLongPress()
@@ -432,11 +440,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
-        onEnd: (() -> Unit)? = null, layered: Boolean = false) {
+        onEnd: (() -> Unit)? = null, layered: Boolean = false, returning: Boolean = false) {
+        if (!returning) cancelMediaReturn()
         val carry = motion != null
         motion?.cancel(); motion = null
         if (disposed) return
         if (simplified || !ValueAnimator.areAnimatorsEnabled()) {
+            cancelMediaReturn()
             scaleX = x; scaleY = y; translationX = tx; translationY = ty; alpha = opacity
             layerReveal = 1f
             updateContour(); onEnd?.invoke()
@@ -462,6 +472,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 val time = it.currentPlayTime / 1000f
                 scaleX = breadth.sample(time, compactWidth(), maximumWidth) / geometryWidth.coerceAtLeast(1)
                 scaleY = depth.sample(time, cameraDiameter, maximumHeight) / geometryHeight.coerceAtLeast(1)
+                if (returning && mediaReturnProgress < 1f) {
+                    mediaReturnProgress = (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                    scaleY += .045f * IslandMotion.mediaReturnCatch(mediaReturnProgress)
+                    (parent as? View)?.invalidate()
+                }
                 translationX = shiftX.sample(time); translationY = shiftY.sample(time)
                 if (opacity > 0f) layerReveal = layerFrom + (1f - layerFrom) *
                     ((it.currentPlayTime - if (layered) 60L else 0L) / 160f).coerceIn(0f, 1f)
@@ -484,6 +499,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         scaleX = x; scaleY = y; translationX = tx; translationY = ty; alpha = opacity
                         textReveal = 1f
                         layerReveal = 1f
+                        cancelMediaReturn()
                         updateContour(); onEnd?.invoke()
                     }
                 }
@@ -494,6 +510,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     private fun resetTransform() {
+        cancelMediaReturn()
         scaleX = 1f; scaleY = 1f; translationX = 0f; translationY = 0f; alpha = 1f
         textReveal = 1f
         layerReveal = 1f
@@ -517,10 +534,55 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val reveal = ((alpha - .12f) / .88f).coerceIn(0f, 1f) * layerReveal
         val iconRoom = geometryWidth * sx >= cameraGap + 2 * (edge + iconSize)
         left.alpha = if (iconRoom && geometryHeight * sy >= iconSize) reveal else 0f
+        if (mediaReturnProgress < 1f) left.alpha *= ((mediaReturnProgress - .72f) / .28f).coerceIn(0f, 1f)
         text.alpha = if (contentFits()) reveal * textReveal else 0f
         wave.alpha = if (iconRoom && geometryHeight * sy >= dp(20)) reveal else 0f
         shape.resize(geometryWidth, geometryHeight, sx, sy)
         invalidateOutline()
+    }
+
+    fun cancelMediaReturn() {
+        if (mediaReturnProgress >= 1f) return
+        mediaReturnProgress = 1f
+        (parent as? View)?.invalidate()
+        updateContour()
+    }
+
+    /** Drawn by the existing root, within its 80dp Surface outsets, outside the input region.
+     * Reuses the prepared artwork and one Path; no additional window, timer or bitmap. */
+    fun drawMediaReturn(canvas: Canvas) {
+        if (mediaReturnProgress >= 1f || disposed || leaving || !isMedia || simplified ||
+            !ValueAnimator.areAnimatorsEnabled() || icon.width <= 0) return
+        val drawable = icon.drawable ?: return
+        val clip = mediaReturnClip ?: return
+        val progress = mediaReturnProgress
+        val travel = IslandMotion.mediaReturnTravel(progress)
+        val targetX = getLeft().toFloat() + translationX + pivotX * (1f - scaleX) + dp(IslandSizing.EDGE_DP) + iconSize * .5f
+        val targetY = top.toFloat() + translationY + pivotY * (1f - scaleY) + geometryHeight * scaleY * .5f
+        val startX = getLeft() + geometryWidth * .5f
+        val startY = top + geometryHeight + dp(44).toFloat()
+        val x = startX + (targetX - startX) * travel + dp(12) * sin(Math.PI * travel).toFloat()
+        val y = startY + (targetY - startY) * travel
+        val size = dp(40) + (iconSize - dp(40)) * travel
+        val previousAlpha = drawable.alpha
+        val backgroundAlpha = iconMask.alpha
+        val fade = (1f - ((progress - .72f) / .28f).coerceIn(0f, 1f)) *
+            (progress / .12f).coerceIn(0f, 1f)
+        val save = canvas.save()
+        try {
+            canvas.translate(x - size * .5f, y - size * .5f)
+            canvas.scale(size / icon.width, size / icon.height)
+            clip.reset()
+            clip.addRoundRect(0f, 0f, icon.width.toFloat(), icon.height.toFloat(), dp(7).toFloat(), dp(7).toFloat(), Path.Direction.CW)
+            canvas.clipPath(clip)
+            drawable.alpha = (previousAlpha * fade).toInt()
+            iconMask.alpha = (backgroundAlpha * fade).toInt()
+            icon.draw(canvas)
+        } finally {
+            drawable.alpha = previousAlpha
+            iconMask.alpha = backgroundAlpha
+            canvas.restoreToCount(save)
+        }
     }
 
     private fun contentFits(): Boolean {

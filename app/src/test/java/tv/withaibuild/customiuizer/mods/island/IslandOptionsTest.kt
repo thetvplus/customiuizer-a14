@@ -5,6 +5,22 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun musicReturnIsOptInAndNeverTreatsAnEmptySelectionAsAllApps() {
+        val prefs = PrefMap()
+        assertFalse(IslandOptions.read(prefs).mediaReturn)
+        assertTrue(IslandOptions.read(prefs).mediaReturnApps.isEmpty())
+        prefs.put("system_island_media_return", true)
+        assertTrue(IslandOptions.read(prefs).mediaReturnApps.isEmpty())
+        val selected = mutableSetOf("music.selected")
+        prefs.put("system_island_media_return_apps", selected)
+        val options = IslandOptions.read(prefs)
+        selected.add("music.other")
+        assertEquals(setOf("music.selected"), options.mediaReturnApps)
+        prefs.put("system_island_media_return", false)
+        assertFalse(IslandOptions.read(prefs).mediaReturn)
+        assertEquals(selected, IslandOptions.read(prefs).mediaReturnApps)
+    }
+
     @Test fun musicSwipeDefaultsOnAndIsIndependentOfRetiredGesturePreferences() {
         val prefs = PrefMap()
         assertTrue(IslandOptions.read(prefs).mediaSwipe)

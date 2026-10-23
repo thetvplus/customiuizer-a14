@@ -17842,6 +17842,52 @@
       "notes": "Media alone performs no audio capture. Experimental waveform mode can acquire only an attributed local session while visibly playing; all audio resources are released on pause, hiding or replacement."
     },
     {
+      "featureId": "system_island_media_return",
+      "featureName": "system_island_media_return",
+      "preferenceKeys": [
+        "system_island_media_return",
+        "pref_key_system_island_media_return"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Animate the selected playing cover into the island only when leaving an explicitly selected app",
+      "disableEffect": "Cancel a pending or running cover return; keep the existing music island policy",
+      "valueChangeEffect": "Owner reads the immutable app set on Main; empty selection never matches any app",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandOptionsTest; IslandActivityLifecycleTest; IslandTouchWindowTest; PreferenceNavigationUiTest; BackupRestoreTest",
+      "notes": "Off by default with an empty app set; finite existing animation clock and Surface outsets, no additional Hook, receiver, timer or window"
+    },
+    {
+      "featureId": "system_island_media_return_apps",
+      "featureName": "system_island_media_return_apps",
+      "preferenceKeys": [
+        "system_island_media_return_apps",
+        "pref_key_system_island_media_return_apps"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Animate the selected playing cover into the island only when leaving an explicitly selected app",
+      "disableEffect": "Cancel a pending or running cover return; keep the existing music island policy",
+      "valueChangeEffect": "Owner reads the immutable app set on Main; empty selection never matches any app",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandOptionsTest; IslandActivityLifecycleTest; IslandTouchWindowTest; PreferenceNavigationUiTest; BackupRestoreTest",
+      "notes": "Off by default with an empty app set; finite existing animation clock and Surface outsets, no additional Hook, receiver, timer or window"
+    },
+    {
       "featureId": "system_island_media_swipe",
       "featureName": "system_island_media_swipe",
       "preferenceKeys": [

@@ -1182,6 +1182,10 @@
     <string name="system_island_title">Isla dinámica</string>
     <string name="system_island_intro">Reinicia la interfaz del sistema tras seleccionar Dynamic Island por primera vez o activar una integración. Se oculta en la pantalla de bloqueo, con la pantalla apagada, en horizontal o con el panel de notificaciones abierto.</string>
     <string name="system_island_media_title">Música y multimedia</string>
+    <string name="system_island_media_return_title">Música a la isla</string>
+    <string name="system_island_media_return_summ">Al salir de una app seleccionada mientras suena música, la portada entra en la isla con un rebote suave. Solo se aplica a las apps seleccionadas.</string>
+    <string name="system_island_media_return_apps_title">Seleccionar apps de música</string>
+    <string name="system_island_media_return_apps_summ">Selecciona las apps manualmente. Si no seleccionas ninguna, se mantiene la animación habitual.</string>
     <string name="system_island_media_summ">Usa el reproductor seleccionado por el sistema. Desliza hacia arriba para ocultar. La música visible se cierra 2 segundos después de pausar; la música pausada y oculta permanece oculta.</string>
     <string name="system_island_media_swipe_title">Deslizar para cambiar de pista</string>
     <string name="system_island_media_swipe_summ">Al desactivarlo se bloquea el cambio de pista al deslizar horizontalmente. Las demás acciones configuradas siguen disponibles.</string>

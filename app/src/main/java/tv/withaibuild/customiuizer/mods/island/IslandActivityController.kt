@@ -152,6 +152,8 @@ internal class IslandActivityController(
     private var pauseDeadline: Long? = null
     private var observedPlaybackState: Int? = null
     private var mediaRevealAt: Long? = null
+    private data class MediaReturn(val token: MediaSession.Token, val expiresAt: Long)
+    private var mediaReturn: MediaReturn? = null
     private var shadeBlocked = false
     private var shadeBaseline = false
     private var shadePlaybackState: Int? = null
@@ -198,6 +200,10 @@ internal class IslandActivityController(
             onMain {
                 val previousOptions = options
                 options = IslandOptions.read(prefs)
+                if (previousOptions.mediaReturn != options.mediaReturn ||
+                    previousOptions.mediaReturnApps != options.mediaReturnApps) {
+                    cancelMediaReturn()
+                }
                 if (previousOptions.musicActions != options.musicActions || previousOptions.mediaSwipe != options.mediaSwipe ||
                     previousOptions.media != options.media || previousOptions.enabled != options.enabled ||
                     previousOptions.excludedApps != options.excludedApps || key == null ||
@@ -329,6 +335,7 @@ internal class IslandActivityController(
         if (foregroundPackage == packageName) return@onMain
         val previous = foregroundPackage
         foregroundPackage = packageName
+        cancelMediaReturn()
         invalidateActions()
         media?.let {
             if (packageName == it.packageName) {
@@ -341,7 +348,12 @@ internal class IslandActivityController(
             }
             else if (previous == it.packageName && it.playbackState != PlaybackState.STATE_PAUSED)
             {
-                mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
+                val now = SystemClock.uptimeMillis()
+                val returning = packageName != null && state.allowed && options.mediaReturn &&
+                    it.packageName in options.mediaReturnApps && it.playing &&
+                    !options.simplified && ValueAnimator.areAnimatorsEnabled()
+                if (returning) mediaReturn = MediaReturn(it.token, now + IslandMotion.MEDIA_DELAY)
+                mediaRevealAt = now + if (returning) IslandMotion.MEDIA_RETURN_DELAY else IslandMotion.MEDIA_DELAY
                 foregroundBaseline = true
                 nativeManager.get()?.let { manager -> updateFromNative(manager) }
             }
@@ -509,6 +521,9 @@ internal class IslandActivityController(
                 observedPlaybackState = prepared.playbackState
                 if (mediaRevealAt?.let { now >= it } == true) mediaRevealAt = null
                 val paused = prepared.playbackState == PlaybackState.STATE_PAUSED
+                if (!prepared.playing || mediaReturn?.token?.let { it != prepared.token } == true) {
+                    cancelMediaReturn()
+                }
                 // Repeated native snapshots are not new activity. A real pause/resume edge
                 // of the selected session may re-open an explicitly dismissed island.
                 val previous = media?.takeIf { it.token == prepared.token }?.playbackState
@@ -680,6 +695,15 @@ internal class IslandActivityController(
         return prepared.drawable
     }
 
+    private fun cancelMediaReturn() {
+        mediaReturn?.let { pending ->
+            // Revoking the opt-in before entry restores the ordinary entrance deadline.
+            mediaRevealAt?.let { mediaRevealAt = maxOf(it, pending.expiresAt) }
+        }
+        mediaReturn = null
+        shell.cancelMediaReturn()
+    }
+
     private fun clearMedia() {
         spectrum?.stop()
         sessionEpoch++
@@ -696,6 +720,7 @@ internal class IslandActivityController(
         pauseDeadline = null
         observedPlaybackState = null
         mediaRevealAt = null
+        cancelMediaReturn()
         shadeBaseline = false
         clearShadePlayback()
         state.setMedia(null, null)
@@ -772,6 +797,10 @@ internal class IslandActivityController(
     private fun render(): Boolean {
         handler.removeCallbacks(expiry)
         val now = SystemClock.uptimeMillis()
+        if (mediaReturn?.let { now >= it.expiresAt } == true || !state.allowed ||
+            !options.mediaReturn || options.simplified || !ValueAnimator.areAnimatorsEnabled()) {
+            cancelMediaReturn()
+        }
         if (chatLease?.let { !state.owns(it, now) } == true) clearChat()
         if (systemPresentation?.let { state.owns(it.lease, now) } != true) systemPresentation = null
         scheduleSystemFeedback()
@@ -789,6 +818,7 @@ internal class IslandActivityController(
             clearChat(); state.clearToast()
         }
         val toast = state.toast(now)
+        if (toast != null) cancelMediaReturn()
         // Returning from a shade needs one current snapshot before the retained slot can
         // draw: it may still contain PLAYING although a real pause expired while hidden.
         val current = if (mediaRevealAt == null && !shadeBaseline && !foregroundBaseline) state.media(now)?.takeUnless {
@@ -841,10 +871,14 @@ internal class IslandActivityController(
         params.x = geometry.left - touchWindow.margin - ((screen?.width ?: geometry.width) - params.width) / 2
         return try {
             val entering = !attached
+            val returning = (entering || resumingExit) && showingMedia && current?.playing == true &&
+                current.packageName in options.mediaReturnApps && mediaReturn?.token == current.token
+            if (showingMedia) mediaReturn = null // One foreground edge can animate only once.
+            if (returning) shell.prepareEntry(mediaReturn = true)
             if (entering) {
                 // Prepare alpha/scale BEFORE the first Surface can be drawn, including re-entry
                 // after a native activity or a notification-panel transition.
-                shell.prepareEntry()
+                if (!returning) shell.prepareEntry()
                 window!!.addView(touchWindow, params); attached = true
                 if (!touchWindow.inputRegionAvailable) { hide(); return false }
             }

@@ -269,6 +269,30 @@ class PreferenceNavigationUiTest {
         assertFalse(swipe.isEnabled)
     }
 
+    @Test fun musicReturnRequiresTheModeMediaSwitchAndManualAppSelection() {
+        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
+        val page = currentPage() as SubFragment
+        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        val media = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media"))
+        val returning = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
+        val apps = requireNotNull(page.findPreference<Preference>("pref_key_system_island_media_return_apps"))
+        assertFalse(returning.isChecked); assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
+        assertTrue(mode.callChangeListener("3")); mode.value = "3"
+        assertFalse(returning.isEnabled); media.isChecked = true
+        assertTrue(returning.isEnabled); assertFalse(apps.isEnabled)
+        returning.isChecked = true; assertTrue(apps.isEnabled)
+        assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(apps.key, emptySet())!!.isEmpty())
+        apps.performClick(); settleNavigation()
+        assertTrue(currentPage() is tv.withaibuild.customiuizer.subs.AppSelector)
+        assertEquals(apps.key, currentPage().arguments?.getString("key"))
+        assertTrue(currentPage().arguments?.getBoolean("multi") == true)
+        pressToolbarBack()
+        media.isChecked = false
+        assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
+        assertTrue(mode.callChangeListener("0")); mode.value = "0"
+        assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
+    }
+
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")
     fun waveformModeKeepsItsCurrentValueAndAVisibleFallbackExplanation() {

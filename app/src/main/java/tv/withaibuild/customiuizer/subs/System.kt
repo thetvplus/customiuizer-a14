@@ -183,7 +183,7 @@ class System : SubFragment() {
                     )
                     val enabled = presentation == StrongToastPresentationMode.DYNAMIC_ISLAND
                     islandOffset?.isVisible = enabled
-                    for (key in listOf("media", "media_swipe", "waveform_mode", "feedback_cat", "music_cat", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps", "position", "horizontal_offset", "notification_apps")) {
+                    for (key in listOf("media", "media_return", "media_return_apps", "media_swipe", "waveform_mode", "feedback_cat", "music_cat", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps", "position", "horizontal_offset", "notification_apps")) {
                         findPreference<Preference>("pref_key_system_island_$key")?.isEnabled = enabled
                     }
                     for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
@@ -202,6 +202,7 @@ class System : SubFragment() {
                 findPreference<Preference>("pref_key_system_island_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_island_chat_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_island_notification_apps")?.setOnPreferenceClickListener(openAppsEdit)
+                findPreference<Preference>("pref_key_system_island_media_return_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
                     findPreference<Preference>("pref_key_${gesture.key}")?.setOnPreferenceClickListener(openMusicActions)
             }

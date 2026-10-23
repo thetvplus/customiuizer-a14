@@ -4,6 +4,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandMotionTest {
+    @Test fun musicReturnArrivesBeforeOneSmallCatchAndHasExactEndpoints() {
+        assertEquals(0f, IslandMotion.mediaReturnTravel(0f), 0f)
+        assertEquals(1f, IslandMotion.mediaReturnTravel(1f), 0f)
+        assertEquals(0f, IslandMotion.mediaReturnCatch(0f), 0f)
+        assertEquals(0f, IslandMotion.mediaReturnCatch(1f), 0f)
+        var previous = 0f
+        for (i in 0..1000) {
+            val p = i / 1000f
+            val travel = IslandMotion.mediaReturnTravel(p)
+            assertTrue(travel.isFinite() && travel in previous..1f)
+            assertTrue(IslandMotion.mediaReturnCatch(p) in 0f.. .6f)
+            previous = travel
+        }
+        assertEquals(1f, IslandMotion.mediaReturnTravel(.72f), 0f)
+        assertTrue(IslandMotion.mediaReturnCatch(.72f) > 0f)
+        assertTrue(IslandMotion.MEDIA_RETURN_DELAY < IslandMotion.MEDIA_DELAY)
+        assertTrue(IslandMotion.MEDIA_RETURN < 1000)
+    }
+
     @Test fun dampedTravelArrivesPromptlyAndSettlesWithOnlyOneSmallOvershoot() {
         assertEquals(0f, IslandMotion.progress(0f), .0001f)
         assertEquals(1f, IslandMotion.progress(1f), .0001f)

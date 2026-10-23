@@ -1183,6 +1183,10 @@
     <string name="system_island_title">ダイナミックアイランド</string>
     <string name="system_island_intro">初めてこのモードを選ぶか、連携を有効にした後はシステムUIを再起動してください。ロック画面、画面オフ、横向き、通知パネル展開中は非表示になります。</string>
     <string name="system_island_media_title">音楽とメディア</string>
+    <string name="system_island_media_return_title">音楽をアイランドへ</string>
+    <string name="system_island_media_return_summ">音楽の再生中に選択したアプリから離れると、カバーがアイランドに収まり、軽く弾みます。選択したアプリにのみ適用されます。</string>
+    <string name="system_island_media_return_apps_title">音楽アプリを選択</string>
+    <string name="system_island_media_return_apps_summ">アプリを手動で選択してください。未選択の場合は通常のアニメーションを使用します。</string>
     <string name="system_island_media_summ">システムが選択したプレーヤーを使用します。上スワイプで非表示にできます。表示中の音楽は一時停止から2秒後に閉じ、非表示の音楽はそのまま表示しません。</string>
     <string name="system_island_media_swipe_title">左右スワイプで曲を切り替え</string>
     <string name="system_island_media_swipe_summ">オフにすると左右スワイプで曲を変更できません。設定した他の操作は引き続き使用できます。</string>

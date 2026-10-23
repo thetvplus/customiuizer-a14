@@ -77,12 +77,16 @@ class IslandActivityLifecycleTest {
         frame = FrameLayout(host)
         host.setContentView(frame)
     }
-    @After fun cleanup() { owner?.dispose(); scheduler.runCurrent(); host.finish(); Dispatchers.resetMain() }
+    @After fun cleanup() {
+        owner?.dispose(); scheduler.runCurrent(); host.finish(); Dispatchers.resetMain()
+        org.robolectric.shadows.ShadowChoreographer.setPaused(false)
+    }
 
     private fun controller(media: Boolean = false, width: Int = 328, simplified: Boolean = false,
         chat: Boolean = false, chatExcluded: Set<String> = emptySet(),
         notificationApps: Set<String> = setOf(context.packageName),
-        waveformMode: Int = 1, spectrumBackend: IslandAudioSpectrum.Backend? = null): IslandActivityController {
+        waveformMode: Int = 1, spectrumBackend: IslandAudioSpectrum.Backend? = null,
+        mediaReturn: Boolean = false, mediaReturnApps: Set<String> = emptySet()): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
@@ -92,6 +96,8 @@ class IslandActivityLifecycleTest {
             put("system_island_chat_excluded_apps", chatExcluded)
             put("system_island_notification_apps", notificationApps)
             put("system_island_waveform_mode", waveformMode.toString())
+            put("system_island_media_return", mediaReturn)
+            put("system_island_media_return_apps", mediaReturnApps)
         }
         return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, dispatcher, spectrumBackend = spectrumBackend).also {
             owner = it
@@ -336,6 +342,97 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
         assertEquals(2, adds)
+    }
+
+    @Test fun selectedPlayingAppReturnsPromptlyOnceAndChangingSelectionCancelsTheCover() {
+        val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
+        val player = launchablePlayer("selected-return")
+        controller.foregroundChanged(context.packageName)
+        native.player = player; controller.updateFromNative(native); revealMedia()
+        assertEquals(0, adds)
+        val prepared = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent?>(controller, "media")
+        assertNotNull("Foreground playback must be prepared", prepared)
+        assertTrue(prepared!!.playing)
+        assertTrue(android.animation.ValueAnimator.areAnimatorsEnabled())
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        controller.foregroundChanged("com.miui.home")
+        assertNotNull("Foreground edge must create a return", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        drain()
+        assertNotNull("Selected playback must retain one pending return", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertEquals(android.os.SystemClock.uptimeMillis() + IslandMotion.MEDIA_RETURN_DELAY,
+            org.robolectric.util.ReflectionHelpers.getField<Long?>(controller, "mediaRevealAt"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY - 1))
+        assertEquals(0, adds)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        assertEquals(1, adds)
+        val motion = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        assertEquals(IslandMotion.MEDIA_RETURN, motion.duration)
+        motion.currentPlayTime = 140
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress") < 1f)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        prefs.put("system_island_media_return_apps", emptySet<String>())
+        observer.onChange("system_island_media_return_apps"); drain()
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
+        motion.currentPlayTime = 280 // An old clock cannot resume the canceled cover.
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
+        motion.end()
+        repeat(3) { controller.updateFromNative(native); drain() }
+        assertEquals(1, adds)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+    }
+
+    @Test fun returnSwitchRequiresAnExplicitAppAndKeepsTheUsualDelayOtherwise() {
+        for ((enabled, apps) in listOf(false to setOf(context.packageName), true to emptySet(), true to setOf("other.music"))) {
+            val before = adds
+            val controller = controller(media = true, mediaReturn = enabled, mediaReturnApps = apps)
+            val player = launchablePlayer("unselected-return-$before")
+            controller.foregroundChanged(context.packageName)
+            native.player = player; controller.updateFromNative(native); revealMedia()
+            controller.foregroundChanged("com.miui.home"); drain()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(749)); drain()
+            assertEquals(before, adds)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+            assertEquals(before + 1, adds)
+            assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
+            controller.dispose(); drain()
+        }
+    }
+
+    @Test fun revokingTheSelectionBeforeEntryRestoresTheOrdinaryDeadline() {
+        val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
+        val player = launchablePlayer("revoke-return")
+        controller.foregroundChanged(context.packageName)
+        native.player = player; controller.updateFromNative(native); revealMedia()
+        controller.foregroundChanged("com.miui.home"); drain()
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        prefs.put("system_island_media_return", false)
+        observer.onChange("system_island_media_return"); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(749)); drain()
+        assertEquals(0, adds)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        assertEquals(1, adds)
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
+    }
+
+    @Test fun aPauseInTheFreshReturnSnapshotAndPrivacyChangesCannotAnimateOldMusic() {
+        val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
+        val player = launchablePlayer("return-pause-race")
+        controller.foregroundChanged(context.packageName)
+        native.player = player; controller.updateFromNative(native); revealMedia()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.foregroundChanged("com.miui.home"); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(750)); drain()
+        assertEquals(0, adds)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        controller.foregroundChanged(context.packageName); controller.updateFromNative(native); drain()
+        controller.foregroundChanged("com.miui.home")
+        native.allowed = false; native.changed!!(); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(750)); drain()
+        assertEquals(0, adds)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
     }
 
     @Test fun foregroundPlayerSuppressesOnlyMediaAndReturningHomeDoesNotReviveAnExpiredPause() {

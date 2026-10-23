@@ -220,6 +220,16 @@ class BackupRestoreTest {
         assertNull(prefs.getString("pref_key_removed_old_feature", null))
     }
 
+    @Test fun musicReturnBackupKeepsItsExplicitAppSetAndOffSwitch() {
+        val input = ByteArrayInputStream(serialize(hashMapOf<String, Any?>(
+            "pref_key_system_island_media_return" to false,
+            "pref_key_system_island_media_return_apps" to hashSetOf("chosen.music"))))
+        val prefs = FakeSharedPreferences()
+        assertTrue(BackupRestore.performRestore(input, prefs, emptySet(), { true }).commitSucceeded)
+        assertFalse(prefs.getBoolean("pref_key_system_island_media_return", true))
+        assertEquals(setOf("chosen.music"), prefs.getStringSet("pref_key_system_island_media_return_apps", emptySet()))
+    }
+
     @Test fun numericModeImportsAndStartupAreCanonicalBeforeTheStringPreferenceIsRead() {
         val input = ByteArrayInputStream(serialize(hashMapOf<String, Any?>(
             "pref_key_system_island_waveform_mode" to 2, "pref_key_system_island_waveform" to false)))
