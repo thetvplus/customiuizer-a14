@@ -82,6 +82,20 @@ def capture(adb: str, serial: str, folder: Path, stage: str) -> dict:
     return values
 
 
+def sleep_and_lock(adb: str, serial: str) -> None:
+    """KEYCODE_SLEEP is asynchronous; wait briefly for both power and keyguard."""
+    adb_command(adb, serial, "shell", "input", "keyevent", "223")
+    for attempt in range(6):
+        power = adb_command(adb, serial, "shell", "dumpsys", "power")
+        policy = adb_command(adb, serial, "shell", "dumpsys", "window", "policy")
+        if (re.search(r"\bmWakefulness=(?:Asleep|Dozing)\b", power)
+                and re.search(r"\b(?:showing|mIsShowing)=true\b", policy)):
+            return
+        if attempt < 5:
+            time.sleep(0.25)
+    raise RuntimeError("Sleep/lock state could not be confirmed")
+
+
 def exercise(args, folder: Path) -> dict:
     report = {"status": "UNAVAILABLE", "scenario": args.scenario, "seed": args.seed,
               "accepted_navigation_commands": 0, "crash_anr_events": None,
@@ -120,13 +134,8 @@ def exercise(args, folder: Path) -> dict:
     finally:
         if adb and serial:
             try:
-                adb_command(adb, serial, "shell", "input", "keyevent", "223")
-                power = adb_command(adb, serial, "shell", "dumpsys", "power")
-                policy = adb_command(adb, serial, "shell", "dumpsys", "window", "policy")
-                report["screen_locked"] = bool(re.search(r"\bmWakefulness=(?:Asleep|Dozing)\b", power)
-                                               and re.search(r"\b(?:showing|mIsShowing)=true\b", policy))
-                if not report["screen_locked"]:
-                    raise RuntimeError("Sleep/lock state could not be confirmed")
+                sleep_and_lock(adb, serial)
+                report["screen_locked"] = True
             except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as error:
                 report["status"] = "UNAVAILABLE"
                 report["screen_locked"] = False

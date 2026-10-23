@@ -83,3 +83,13 @@ class AdbStressTest(unittest.TestCase):
         self.assertFalse(result["screen_locked"])
         self.assertIn("could not be confirmed", result["cleanup_error"])
 
+    def test_lock_readback_waits_for_asynchronous_keyguard_without_repeating_input(self):
+        with patch.object(stress, "adb_command", side_effect=["", "mWakefulness=Awake", "showing=false",
+                                                            "mWakefulness=Dozing", "showing=true"]) as commands, \
+                patch.object(stress.time, "sleep") as wait:
+            stress.sleep_and_lock("adb", "device")
+        self.assertEqual(5, commands.call_count)
+        self.assertEqual(1, sum(call.args[2:] == ("shell", "input", "keyevent", "223")
+                                for call in commands.call_args_list))
+        wait.assert_called_once_with(0.25)
+
