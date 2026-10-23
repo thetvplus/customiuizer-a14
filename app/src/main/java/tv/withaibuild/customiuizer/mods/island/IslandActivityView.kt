@@ -15,6 +15,7 @@ import android.text.TextUtils
 import android.text.TextPaint
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -45,6 +46,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private val left = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL or Gravity.START }
     private val text = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
     private var controlActions = 0L
+    private var controlPlayback = PlaybackState.STATE_NONE
+    private var baseTextSize = title.textSize
+    private var iconSize = dp(24)
     private var controlsEnabled = false
     private var avatar = false
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
@@ -54,6 +58,40 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var dragging = false
     private var multiTouch = false
     private var dragAxis = 0
+    private var longConsumed = false
+    private var doubleCandidate = false
+    private var inputCancelled = false
+    private var tapsCancelled = false
+    private var gestureIdentity: Any? = null
+    private var musicActions = IslandMusicActions()
+    private val tapListener = object : GestureDetector.SimpleOnGestureListener() {
+        override fun onDown(e: MotionEvent) = true
+        override fun onSingleTapUp(e: MotionEvent): Boolean {
+            if (!doubleEnabled() && !longConsumed && !inputCancelled) performClick()
+            return true
+        }
+        override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+            if (doubleEnabled() && !longConsumed && !inputCancelled && !leaving && !disposed) performClick()
+            return true
+        }
+        override fun onDoubleTap(e: MotionEvent): Boolean {
+            doubleCandidate = doubleEnabled()
+            return doubleCandidate
+        }
+        override fun onDoubleTapEvent(e: MotionEvent): Boolean {
+            if (e.actionMasked == MotionEvent.ACTION_UP && doubleCandidate && !inputCancelled && !dragging && !multiTouch)
+                submit(IslandMusicGesture.DOUBLE_TAP)
+            return true
+        }
+        override fun onLongPress(e: MotionEvent) {
+            if (!inputCancelled && !dragging && !multiTouch && !leaving && !disposed && isMedia &&
+                musicActions.resolve(IslandMusicGesture.LONG_PRESS, controlsEnabled) != 1) {
+                longConsumed = true
+                submit(IslandMusicGesture.LONG_PRESS)
+            }
+        }
+    }
+    private val taps = GestureDetector(context, tapListener)
     private var cameraY = 0f
     private var cameraDiameter = dp(16).toFloat()
     private var geometryWidth = 1
@@ -81,7 +119,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         private set
     var onDismiss: () -> Unit = {}
     var onOpen: () -> Unit = {}
-    var onControl: (Long) -> Unit = {}
+    var onGesture: (IslandMusicGesture) -> Unit = {}
 
     init {
         background = ColorDrawable(Color.BLACK)
@@ -97,18 +135,61 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         text.addView(title, LinearLayout.LayoutParams(-1, -2))
         addView(left); addView(text); addView(wave)
         setOnClickListener { ModuleHelper.guarded { onOpen() } }
+        taps.setIsLongpressEnabled(false)
+        taps.setOnDoubleTapListener(null)
+    }
+
+    private fun doubleEnabled() = isMedia && musicActions.doubleTap != 1
+
+    fun configureGestures(identity: Any?, actions: IslandMusicActions, trackSwipes: Boolean) {
+        if (gestureIdentity != identity || musicActions != actions || controlsEnabled != trackSwipes) cancelInputs()
+        gestureIdentity = identity
+        musicActions = actions
+        controlsEnabled = trackSwipes
+        taps.setIsLongpressEnabled(isMedia && actions.longPress != 1)
+        taps.setOnDoubleTapListener(if (doubleEnabled()) tapListener else null)
+    }
+
+    /** Cancels the platform detector's pending single tap/long press as well as a drag. */
+    fun cancelInputs(cancelDrag: Boolean = true) {
+        inputCancelled = true
+        if (!tapsCancelled) {
+            val cancel = MotionEvent.obtain(0, 0, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+            try { taps.onTouchEvent(cancel) } finally { cancel.recycle() }
+            tapsCancelled = true
+        }
+        isPressed = false
+        cancelLongPress()
+        if (cancelDrag) recall = IslandRecallGesture.onCancel()
+        doubleCandidate = false
+    }
+
+    private fun submit(gesture: IslandMusicGesture) {
+        val action = musicActions.resolve(gesture, controlsEnabled)
+        // Snapshot admission avoids advertising unavailable controls; the owner rechecks
+        // the actual session immediately before execution using the same resolver.
+        if (action in 87..88 && !IslandMediaPolicy.canSkip(
+                if (action == 87) PlaybackState.ACTION_SKIP_TO_NEXT else PlaybackState.ACTION_SKIP_TO_PREVIOUS, controlActions)) return
+        if ((action == 85 || action == IslandMusicActions.PLAY || action == IslandMusicActions.PAUSE) &&
+            IslandTransportAction.resolve(action, controlPlayback, controlActions) == null) return
+        if (!disposed && !leaving && isMedia && musicActions.resolve(gesture, controlsEnabled) != 1)
+            ModuleHelper.guarded { onGesture(gesture) }
     }
 
     fun bind(label: String, detail: String?, drawable: Drawable?, playing: Boolean,
         media: Boolean, waveform: Boolean, actions: Long, showControls: Boolean,
         playbackState: Int = PlaybackState.STATE_NONE, avatar: Boolean = false, status: Boolean = false) {
+        if (isMedia != media) cancelInputs()
         isMedia = media
+        taps.setIsLongpressEnabled(media && musicActions.longPress != 1)
+        taps.setOnDoubleTapListener(if (doubleEnabled()) tapListener else null)
         this.avatar = avatar
         controlsEnabled = showControls
         controlActions = actions
+        controlPlayback = playbackState
         title.ellipsize = if (status) null else TextUtils.TruncateAt.END
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (status) statusFit?.size
-            ?: 13f * resources.displayMetrics.scaledDensity else 13f * resources.displayMetrics.scaledDensity)
+            ?: baseTextSize else baseTextSize)
         // Updates retain the same measured line and visibility; no delayed replacement can
         // publish an old label after a successor or blink during repeated state changes.
         title.text = label
@@ -135,14 +216,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     fun textWidth(value: String): Float = statusPaint.measureText(value)
 
     fun statusWidth(label: String): Float {
-        statusPaint.textSize = 13f * resources.displayMetrics.scaledDensity
+        statusPaint.textSize = baseTextSize
         return statusPaint.measureText(label)
     }
 
     fun statusHeight(label: String, width: Int, gap: Int, height: Int): Int? {
         val density = resources.displayMetrics.scaledDensity
         statusFit = IslandStatusLayout.fit(label, statusPaint,
-            (width - gap) / 2 - dp(IslandSizing.EDGE_DP), 13f * density, 11f * density, height)
+            (width - gap) / 2 - dp(IslandSizing.EDGE_DP), baseTextSize, 11f * density, height)
         return statusFit?.let { height }
     }
 
@@ -152,7 +233,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         this.maximumWidth = maximumWidth.coerceAtLeast(width).toFloat()
         this.cameraGap = cameraGap
         val half = ((width - cameraGap) / 2).coerceAtLeast(1)
-        icon.layoutParams = LinearLayout.LayoutParams(dp(24), dp(24))
+        iconSize = (dp(24) * (1f + (height.toFloat() / dp(40).coerceAtLeast(1) - 1f) / 3f)).toInt()
+        icon.layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
         iconMask.cornerRadius = dp(7).toFloat()
         iconMask.shape = if (avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
         left.setPadding(dp(IslandSizing.EDGE_DP), 0, 0, 0)
@@ -176,7 +258,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     fun refreshConfiguration() {
         title.textSize = 13f
+        baseTextSize = title.textSize
         statusPaint.set(title.paint); statusFit = null
+    }
+
+    fun contentHeight(heightDp: Int) {
+        val size = (13f + (heightDp.coerceIn(38, 44) - 40) * .1f) * resources.displayMetrics.scaledDensity
+        baseTextSize = size
+        if (statusPaint.textSize != size) { statusPaint.textSize = size; statusFit = null }
     }
 
     fun prepareEntry() {
@@ -215,6 +304,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     fun exit(onEnd: () -> Unit) {
         leaving = true
+        cancelInputs()
         isPressed = false; cancelLongPress()
         wave.playing = false
         recall = IslandRecallGesture.onCancel()
@@ -252,6 +342,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (motion == null) { entryCameraAnchor = false; resetTransform(); pivotY = 0f }
         downX = event.rawX; downY = event.rawY
         dragging = false; multiTouch = false; dragAxis = 0
+        longConsumed = false; inputCancelled = false; tapsCancelled = false
         recall = IslandRecallGesture.onDown(event.getPointerId(0), event.rawX, event.rawY)
     }
 
@@ -260,10 +351,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN && !shape.contains(event.x, event.y)) return false
         if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_UP) {
             multiTouch = true; recall = IslandRecallGesture.onCancel()
-            isPressed = false; cancelLongPress()
+            cancelInputs()
         }
         val result = super.dispatchTouchEvent(event)
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            if (longConsumed) cancelInputs()
             recall = IslandRecallGesture.onCancel()
             if (!leaving && motion == null && (dragging || multiTouch) && (scaleX != 1f || scaleY != 1f))
                 animateTo(1f, 1f, 0f, 0f, 1f, IslandMotion.REBOUND)
@@ -273,7 +365,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (multiTouch) { isPressed = false; cancelLongPress(); return true }
+        if (multiTouch || inputCancelled) return true
+        if (longConsumed) return true
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.rawX - downX; val dy = event.rawY - downY
@@ -285,7 +378,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 if (dragAxis == 2) recall = IslandRecallGesture.onMove(recall,
                     event.getPointerId(0), event.rawX, event.rawY, IslandRecallGesture.configFromSlop(slop))
                 if (dragging) {
-                    isPressed = false; cancelLongPress()
+                    cancelInputs(cancelDrag = false)
+                    // The detector is canceled, but this pointer still owns the locked drag.
+                    inputCancelled = false
                     if (motion != null) return true
                     translationX = 0f; translationY = 0f
                     scaleX = if (dragAxis == 1)
@@ -298,17 +393,19 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             MotionEvent.ACTION_UP -> if (dragging) {
                 val dx = event.rawX - downX; val dy = event.rawY - downY
                 if (dragAxis == 2 && dy <= -slop * 2.5f && abs(dy) > abs(dx) && IslandRecallGesture.isTriggered(recall)) onDismiss()
-                else if (dragAxis == 1 && isMedia && controlsEnabled &&
+                else if (dragAxis == 1 && isMedia &&
                     abs(dx) >= maxOf(dp(32).toFloat(), slop * 3f) && abs(dx) > abs(dy) * 1.2f) {
-                    val action = if (dx < 0) PlaybackState.ACTION_SKIP_TO_NEXT else PlaybackState.ACTION_SKIP_TO_PREVIOUS
-                    if (IslandMediaPolicy.canSkip(action, controlActions)) onControl(action)
+                    submit(if (dx < 0) IslandMusicGesture.LEFT else IslandMusicGesture.RIGHT)
                 }
+                else if (dragAxis == 2 && dy >= maxOf(dp(32).toFloat(), slop * 3f) && abs(dy) > abs(dx) * 1.2f)
+                    submit(IslandMusicGesture.DOWN)
                 isPressed = false
                 return true
             }
-            MotionEvent.ACTION_CANCEL -> { isPressed = false; cancelLongPress(); return true }
+            MotionEvent.ACTION_CANCEL -> { cancelInputs(); return true }
         }
-        return super.onTouchEvent(event)
+        taps.onTouchEvent(event)
+        return true
     }
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
@@ -390,13 +487,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Keep a physical 16dp margin instead of stretching target-layout coordinates.
         // Counter-scaling alone pushes the text into an end cap while lengthening.
         val edge = dp(IslandSizing.EDGE_DP)
-        icon.translationX = dp(28) * (1f / sx - 1f)
+        icon.translationX = (edge + iconSize * .5f) * (1f / sx - 1f)
         wave.translationX = -dp(28) * (1f / sx - 1f)
         val labelRoom = ((geometryWidth - cameraGap) / 2 - edge).coerceAtLeast(0)
         text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f)
         val reveal = ((alpha - .12f) / .88f).coerceIn(0f, 1f) * layerReveal
-        val iconRoom = geometryWidth * sx >= cameraGap + 2 * (edge + dp(24))
-        left.alpha = if (iconRoom && geometryHeight * sy >= dp(24)) reveal else 0f
+        val iconRoom = geometryWidth * sx >= cameraGap + 2 * (edge + iconSize)
+        left.alpha = if (iconRoom && geometryHeight * sy >= iconSize) reveal else 0f
         text.alpha = if (contentFits()) reveal * textReveal else 0f
         wave.alpha = if (iconRoom && geometryHeight * sy >= dp(20)) reveal else 0f
         shape.resize(geometryWidth, geometryHeight, sx, sy)
@@ -414,6 +511,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     override fun onAttachedToWindow() { disposed = false; super.onAttachedToWindow() }
     override fun onDetachedFromWindow() {
         disposed = true
+        cancelInputs()
         motion?.cancel(); motion = null
         recall = IslandRecallGesture.onCancel()
         dragging = false; multiTouch = false; dragAxis = 0
@@ -421,6 +519,35 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         resetTransform()
         super.onDetachedFromWindow()
     }
+
+    override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_DISMISS)
+        if (isMedia) {
+            val res = ModuleHelper.getModuleRes(context)
+            val labels = intArrayOf(R.string.system_island_gesture_left, R.string.system_island_gesture_right,
+                R.string.system_island_gesture_down, R.string.system_island_gesture_double, R.string.system_island_gesture_long)
+            for (gesture in IslandMusicGesture.entries) if (musicActions.resolve(gesture, controlsEnabled) != 1)
+                info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction(
+                    accessibilityActions[gesture.ordinal], res.getString(labels[gesture.ordinal])))
+        }
+    }
+
+    override fun performAccessibilityAction(action: Int, arguments: android.os.Bundle?): Boolean {
+        if (disposed || leaving) return false
+        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS) {
+            ModuleHelper.guarded { onDismiss() }; return true
+        }
+        val index = accessibilityActions.indexOf(action)
+        if (index >= 0) {
+            val gesture = IslandMusicGesture.entries[index]
+            if (!isMedia || musicActions.resolve(gesture, controlsEnabled) == 1) return false
+            submit(gesture); return true
+        }
+        return super.performAccessibilityAction(action, arguments)
+    }
+
+    private companion object { val accessibilityActions = IntArray(5) { View.generateViewId() } }
     private fun dp(value: Int) = (value * resources.displayMetrics.density + .5f).toInt()
 }
 

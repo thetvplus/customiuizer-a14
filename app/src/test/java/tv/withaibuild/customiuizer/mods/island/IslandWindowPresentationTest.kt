@@ -119,6 +119,19 @@ class IslandWindowPresentationTest {
         assertEquals(1, hides)
     }
 
+    @Test fun resumingTheSameIdentityAfterExitRequiresANewVisibleFrame() {
+        val event=Any()
+        lease.prepare(event,184); lease.onPreDraw()
+        assertEquals(1,shows)
+        lease.exiting()
+        lease.prepare(event,184)
+        assertEquals(IslandWindowPresentation.Phase.PREPARED,lease.phase)
+        assertNull(DynamicIslandStatusBarFade.ownerRef?.get())
+        lease.onPreDraw()
+        assertEquals(IslandWindowPresentation.Phase.VISIBLE,lease.phase)
+        assertEquals(2,shows); assertEquals(1,hides)
+    }
+
     @Test fun visibleLeaseUsesPhysicalScreenCoordinatesAcrossWindowOffsets() {
         val attach = org.robolectric.util.ReflectionHelpers.getField<Any>(pill, "mAttachInfo")
         org.robolectric.util.ReflectionHelpers.setField(attach, "mWindowLeft", 37)

@@ -45,13 +45,24 @@ class MultiActionArrayContractTest {
 
     @Test
     fun actionArraysHaveMatchingEntryAndValueCounts() {
-        for (name in actionArrays) {
+        for (name in actionArrays + "global_actions_island_music") {
             assertEquals(
                 name,
                 stringItemCount(name),
                 integerItems("${name}_val").size,
             )
         }
+    }
+
+    @Test fun musicMatrixUsesOnlyImplementedSessionActionsAndRestrictedCustomActions() {
+        val values = integerItems("global_actions_island_music_val")
+        assertEquals(listOf(1,85,30,31,88,87,18,19,17,32,8,9,20,2,3),values)
+        val existing = handledActionIds()
+        for(id in values) assertTrue("Music action $id is not implemented",id == 1 || id in existing || id in 30..32)
+        assertTrue(multiAction.contains("STATUSBAR, MUSIC"))
+        assertTrue(multiAction.contains("Actions.MUSIC -> R.array.global_actions_island_music"))
+        // Existing editor ordinals are an upgrade contract.
+        assertTrue(multiAction.contains("NAVBAR, LAUNCHER, CONTROLS, LOCKSCREEN, LAUNCH, STATUSBAR, MUSIC"))
     }
 
     @Test

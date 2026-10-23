@@ -566,6 +566,8 @@
 					miuizer:negativeShift="24"
 					miuizer:showplus="true"
 					miuizer:format="%d dp" />
+				<tv.withaibuild.customiuizer.prefs.ListPreferenceEx android:key="pref_key_system_island_position" android:title="@string/system_island_position_title" android:entries="@array/island_positions" android:entryValues="@array/island_positions_val" android:defaultValue="1" miuizer:valueAsSummary="true" />
+				<tv.withaibuild.customiuizer.prefs.SeekBarPreference android:key="pref_key_system_island_horizontal_offset" android:title="@string/system_island_horizontal_offset_title" android:defaultValue="80" miuizer:minValue="0" miuizer:maxValue="160" miuizer:negativeShift="80" miuizer:showplus="true" miuizer:format="%d dp" />
 				<tv.withaibuild.customiuizer.prefs.SeekBarPreference android:key="pref_key_system_island_height" android:title="@string/system_island_height_title" android:summary="@string/system_island_height_summ" android:defaultValue="40" miuizer:maxValue="44" miuizer:minValue="38" miuizer:stepValue="1" miuizer:format="%d dp" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_width_auto" android:title="@string/system_island_width_auto_title" android:summary="@string/system_island_width_auto_summ" android:defaultValue="true" android:disableDependentsState="true" />
 				<tv.withaibuild.customiuizer.prefs.SeekBarPreference android:key="pref_key_system_island_width_short" android:title="@string/system_island_width_short_title" android:summary="@string/system_island_width_short_summ" android:defaultValue="184" android:dependency="pref_key_system_island_width_auto" miuizer:maxValue="224" miuizer:minValue="160" miuizer:format="%d dp" miuizer:indentLevel="1" />
@@ -587,13 +589,31 @@
 					android:title="@string/system_toast_capsule_title"
 					android:summary="@string/system_toast_capsule_summ"
 					android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:title="@string/system_island_feedback_title" android:selectable="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_dnd" android:title="@string/system_statusbaricons_dnd_title" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_ringer" android:title="@string/system_island_feedback_ringer_title" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_dark" android:title="@string/system_island_mode_dark" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_airplane" android:title="@string/system_secureqs_airplane_title" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_nfc" android:title="@string/array_global_toggle_nfc" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_hotspot" android:title="@string/system_statusbaricons_hotspot_title" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_torch" android:title="@string/array_global_toggle_torch" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_wifi" android:title="@string/array_global_toggle_wifi" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_data" android:title="@string/array_global_toggle_mobiledata" android:defaultValue="false" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_bluetooth" android:title="@string/array_global_toggle_bt" android:defaultValue="false" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_chat" android:title="@string/system_island_chat_title" android:defaultValue="false" android:summary="@string/system_island_chat_summ" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_notification_apps" android:title="@string/system_island_notification_apps_title" android:summary="@string/system_island_notification_apps_summ" android:dependency="pref_key_system_island_chat" miuizer:countAsSummary="true" />
 				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_chat_excluded_apps" android:title="@string/system_island_chat_excluded_apps_title" android:summary="@string/system_island_chat_excluded_apps_summ" android:dependency="pref_key_system_island_chat" miuizer:countAsSummary="true" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
-			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_media_title">
+			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_music_group">
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media" android:title="@string/system_island_media_title" android:defaultValue="false" android:summary="@string/system_island_media_summ" />
-				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media_swipe" android:title="@string/system_island_media_swipe_title" android:defaultValue="true" android:summary="@string/system_island_media_swipe_summ" android:dependency="pref_key_system_island_media" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_waveform" android:title="@string/system_island_waveform_title" android:defaultValue="true" android:summary="@string/system_island_waveform_summ" android:dependency="pref_key_system_island_media" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media_swipe" android:title="@string/system_island_media_swipe_title" android:defaultValue="true" android:summary="@string/system_island_media_swipe_summ" android:dependency="pref_key_system_island_media" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_left" android:title="@string/system_island_gesture_left" android:dependency="pref_key_system_island_media" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_right" android:title="@string/system_island_gesture_right" android:dependency="pref_key_system_island_media" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_down" android:title="@string/system_island_gesture_down" android:dependency="pref_key_system_island_media" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_double" android:title="@string/system_island_gesture_double" android:dependency="pref_key_system_island_media" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_long" android:title="@string/system_island_gesture_long" android:dependency="pref_key_system_island_media" />
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:summary="@string/system_island_gesture_up_summary" android:selectable="false" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/prefs_group_apps">
 				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_excluded_apps" android:title="@string/system_island_excluded_apps_title" android:summary="@string/system_island_excluded_apps_summ" miuizer:countAsSummary="true" />

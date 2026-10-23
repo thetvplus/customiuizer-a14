@@ -58,7 +58,7 @@ $releaseRevision = git rev-parse --short=8 HEAD
 
 ### 手动入口
 
-也可在 main CI 通过后，手动运行 A14 Signed Build。手动选择是本次操作授权；已配置的 Environment 审核仍会生效。预发行和仅候选通过此入口选择。
+也可在 main CI 通过后，手动运行 A14 Signed Build。手动选择表达操作意图；实际发布仍须配置并经过 release-signing 的 Required reviewer，不能以手动入口绕过。缺少审核保护时在签名前失败。预发行和仅候选通过此入口选择。
 
 | 选项 | 默认值 | 结果 |
 | --- | --- | --- |

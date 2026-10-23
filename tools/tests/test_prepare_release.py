@@ -66,6 +66,17 @@ class PrepareReleaseTest(unittest.TestCase):
                 self.assertEqual(0, prepare_release.main())
             self.assertEqual(before, {path: path.read_text() for path in before})
 
+    def test_preparation_writes_repository_lf_on_windows_too(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            self.fixture(root)
+            with patch.object(prepare_release,"ROOT",root), patch("sys.argv",["prepare_release.py","--version","r14.26.1","--code","247"]):
+                self.assertEqual(0,prepare_release.main())
+            for filename in ("app/build.gradle.kts","README.md","README_EN.md","CHANGELOG.md","CHANGELOG_CN.md"):
+                content=(root/filename).read_bytes()
+                self.assertNotIn(b"\r\n",content,filename)
+                self.assertIn(b"r14.26.1",content,filename)
+
 
 if __name__ == "__main__":
     unittest.main()

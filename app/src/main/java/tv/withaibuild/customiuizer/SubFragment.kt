@@ -106,6 +106,11 @@ open class SubFragment : PreferenceFragmentBase() {
         true
     }
 
+    val openMusicActions = Preference.OnPreferenceClickListener { preference ->
+        openMultiAction(preference, MultiAction.Actions.MUSIC)
+        true
+    }
+
     @JvmField
     var openActivitiesList = Preference.OnPreferenceClickListener { preference ->
         openActivitiesItemList(preference)

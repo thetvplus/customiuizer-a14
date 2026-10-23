@@ -104,7 +104,7 @@ class IslandGestureRecoveryTest {
         val actions = PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS
         val controls = mutableListOf<Long>()
         var opened = 0; var dismissed = 0
-        shell.onControl = { controls.add(it) }
+        shell.onGesture = { controls.add(if (it == IslandMusicGesture.LEFT) PlaybackState.ACTION_SKIP_TO_NEXT else PlaybackState.ACTION_SKIP_TO_PREVIOUS) }
         shell.onOpen = { opened++ }
         shell.onDismiss = { dismissed++ }
         fun bind(enabled: Boolean) {

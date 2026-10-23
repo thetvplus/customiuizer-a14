@@ -6,9 +6,17 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+## r14.25.2 — 2026-10-23
+
+versionCode 247. Changes since r14.25.1:
+
 - Validate the work branch and merged main before release confirmation, then verify the source release before syncing the same APK to Xposed. Support manual runs, pre-releases and recovery; align bilingual changelogs and versions with one preparation command, and generate consistent release notes and provenance.
-- Add a track-swipe switch, enabled by default. Keep hidden paused music from appearing when returning Home while preserving pause exit behavior for visible music.
-- Refine Dynamic Island sizing, animation, content and music groups, unify short/long terminology and settings wording, and align the current page map and architecture guide.
+- Add configurable left, right, down, double-tap and long-press music gestures for the selected player, session volume and configured apps, shortcuts or activities. Keep tap-to-open and upward dismissal. The default-on track-swipe switch blocks only horizontal track changes when disabled.
+- Prevent paused music from flashing after returning Home, during an unfinished entrance or after a hidden playback activation. Only an actually displayed activity retains its two-second pause exit; repeated states and old snapshots cannot extend it. Fix prepared-window cancellation, session changes and re-entry during exit.
+- Add left, center and right placement with a safe horizontal offset. Coordinate automatic width, text and icons with height, preserve actual status-bar overlap handling and keep the native StrongToast forehead suppressed.
+- Select ten system feedback categories independently with resources registered on demand. New installs stay silent and upgrades retain previously enabled feedback. Notification takeover requires an explicit, initially empty app allowlist; exclusions take priority and other notifications remain native.
+- Refine five settings groups and action summaries, complete ten maintained languages and backup contracts, and align feature documents, page maps and CN/TW ROM static evidence. Device behavior, audio routing and power measurements remain separate validation work.
+- Require the protected reviewer for both automatic and manual publication, recheck before signing, and stop when review protection is missing.
 
 ## r14.25.1 — 2026-10-22
 

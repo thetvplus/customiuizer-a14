@@ -125,6 +125,21 @@ class AutomaticReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "successful A14 CI"):
                 release.require_main_ci(COMMIT, current=False)
 
+    def test_manual_publication_also_requires_the_protected_reviewer_before_signing(self):
+        with patch.dict(os.environ, ENV), ExitStack() as stack:
+            stack.enter_context(patch.object(release, "dispatch_options", return_value=("both", False)))
+            stack.enter_context(patch.object(release, "require_main_ci"))
+            stack.enter_context(patch.object(release, "check_new_release"))
+            stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed"]))
+            approval = stack.enter_context(patch.object(release, "confirmation_policy", side_effect=ValueError("Missing reviewer")))
+            output = stack.enter_context(patch.object(release, "output"))
+            with self.assertRaisesRegex(ValueError,"Missing reviewer"):
+                release.release_plan()
+            output.assert_not_called()
+            with self.assertRaisesRegex(ValueError,"Missing reviewer"):
+                release.signing_preflight()
+            self.assertEqual(2, approval.call_count)
+
     def test_changelog_release_notes_cannot_be_empty_ambiguous_or_wrong_version(self):
         for text in ("## r14.26.1\n\nversionCode 247.\n", "## r14.26.1\n\nversionCode 246.\n- Change\n",
                      "## r14.26.1\n\nversionCode 247.\n- Change\n\n## r14.26.1\n- Duplicate\n"):

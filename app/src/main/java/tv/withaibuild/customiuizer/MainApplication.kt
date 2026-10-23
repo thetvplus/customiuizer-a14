@@ -33,6 +33,7 @@ class MainApplication : Application() {
         // Pass the Application context: without it the locale is applied through
         // AppCompat, which silently does nothing this early. See AppLocaleController.
         AppHelper.appPrefs?.let { prefs ->
+            tv.withaibuild.customiuizer.utils.IslandPreferenceDefaults.initialize(prefs)
             CurrentPreferenceContract.pruneOrphanPreferences(prefs)
             AppLocaleController.apply(prefs, this)
         }

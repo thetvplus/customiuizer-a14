@@ -43,6 +43,41 @@ import org.robolectric.util.ReflectionHelpers
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandSystemActivitiesTest {
+    @Test fun onlySelectedCategoriesOwnSourcesAndDisposalReleasesThem() {
+        val scheduler = TestCoroutineScheduler()
+        val dispatcher = StandardTestDispatcher(scheduler)
+        Dispatchers.setMain(dispatcher)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        var receivers = 0
+        var services = 0
+        val context = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
+            override fun getSystemService(name: String): Any? { services++; return super.getSystemService(name) }
+            override fun registerReceiver(receiver: BroadcastReceiver?, filter: IntentFilter, permission: String?,
+                handler: Handler?, flags: Int): Intent? { receivers++; return null }
+        }
+        val events = mutableListOf<IslandSystemActivity>()
+        Settings.Global.putInt(context.contentResolver,"zen_mode",0)
+        val source = IslandSystemActivities(context,scope,dispatcher,setOf(IslandSystemKind.DND)) { events.add(it) }
+        fun drain() { scheduler.runCurrent(); shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent() }
+        try {
+            source.start(); drain()
+            assertEquals(0,receivers); assertEquals(0,services)
+            val resolver = shadowOf(context.contentResolver)
+            assertEquals(1,resolver.getContentObservers(Settings.Global.getUriFor("zen_mode")).size)
+            assertTrue(resolver.getContentObservers(Settings.Global.getUriFor("mobile_data")).isEmpty())
+            Settings.Global.putInt(context.contentResolver,"zen_mode",1); drain()
+            assertEquals(listOf(IslandSystemActivity(IslandSystemKind.DND,1)),events)
+            source.dispose(); drain()
+            assertTrue(resolver.getContentObservers(Settings.Global.getUriFor("zen_mode")).isEmpty())
+            Settings.Global.putInt(context.contentResolver,"zen_mode",0); drain()
+            assertEquals(1,events.size)
+            val empty = IslandSystemActivities(context,scope,dispatcher,emptySet()) { events.add(it) }
+            empty.start(); drain(); assertEquals(0,receivers); assertEquals(0,services)
+            assertTrue(resolver.getContentObservers(Settings.Global.getUriFor("zen_mode")).isEmpty())
+            empty.dispose()
+        } finally { source.dispose(); scope.cancel(); scheduler.runCurrent(); Dispatchers.resetMain() }
+    }
+
     @Test fun firstSamplesRepeatsAndResetsNeverReplayOldActivities() {
         val edges = IslandSystemEdges()
         for (kind in IslandSystemKind.entries) {

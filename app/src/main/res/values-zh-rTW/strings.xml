@@ -1184,7 +1184,7 @@
     <string name="system_island_media_title">音樂與媒體</string>
     <string name="system_island_media_summ">沿用系統選中的主要播放器，上滑可隱藏。已顯示的音樂島暫停 2 秒後收起；未顯示時保持隱藏。</string>
     <string name="system_island_media_swipe_title">左右滑動切歌</string>
-    <string name="system_island_media_swipe_summ">左滑下一首，右滑上一首，僅執行播放器支援的操作。關閉後仍可點按開啟播放器、上滑隱藏。</string>
+    <string name="system_island_media_swipe_summ">關閉後，左右滑動無法切歌；已設定的音量等其他動作仍然有效。</string>
     <string name="system_island_waveform_title">輕量音樂波形</string>
     <string name="system_island_waveform_summ">隨播放狀態變化，不擷取音訊。暫停、不可見或熄屏時停止更新。</string>
     <string name="system_island_entrance_style_title">進出動畫</string>
@@ -1218,4 +1218,23 @@
     <string name="system_island_width_medium_summ">用於較多文字，實際寬度不會小於短島，並受狀態列空間限制。</string>
     <string name="system_island_chat_excluded_apps_title">保留懸浮的應用</string>
     <string name="system_island_chat_excluded_apps_summ">所選應用保留系統懸浮通知，不影響 Toast 和音樂。</string>
+    <string name="system_island_gesture_left">左滑動作</string>
+    <string name="system_island_gesture_right">右滑動作</string>
+    <string name="system_island_gesture_down">下滑動作</string>
+    <string name="system_island_gesture_double">點兩下動作</string>
+    <string name="system_island_gesture_long">長按動作</string>
+    <string name="system_island_gesture_up_summary">上滑固定為收起目前動態島。</string>
+    <string name="system_island_position_title">水平位置</string>
+    <string name="system_island_position_left">左</string>
+    <string name="system_island_position_center">中</string>
+    <string name="system_island_position_right">右</string>
+    <string name="system_island_horizontal_offset_title">水平偏移</string>
+    <string name="system_island_feedback_title">系統回饋</string>
+    <string name="system_island_notification_apps_title">允許接管通知的應用程式</string>
+    <string name="system_island_notification_apps_summ">只接管所選應用程式的通知；排除名單優先，其他通知維持原生行為。</string>
+    <string name="system_island_action_play">播放</string>
+    <string name="system_island_action_pause">暫停</string>
+    <string name="system_island_action_player">開啟播放器</string>
+    <string name="system_island_music_group">音樂與媒體</string>
+    <string name="system_island_feedback_ringer_title">鈴聲模式</string>
 </resources>

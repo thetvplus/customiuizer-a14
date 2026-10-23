@@ -243,7 +243,7 @@ class IslandPresentationTest {
             PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS, true, PlaybackState.STATE_PLAYING)
         shell.geometry(288, 44, 40); shell.layout(0, 0, 288, 44)
         val actions = mutableListOf<Long>()
-        shell.onControl = { actions.add(it) }
+        shell.onGesture = { actions.add(if (it == IslandMusicGesture.LEFT) PlaybackState.ACTION_SKIP_TO_NEXT else PlaybackState.ACTION_SKIP_TO_PREVIOUS) }
         fun swipe(from: Float, to: Float) {
             for ((action, x) in listOf(MotionEvent.ACTION_DOWN to from,
                 MotionEvent.ACTION_MOVE to to, MotionEvent.ACTION_UP to to)) {

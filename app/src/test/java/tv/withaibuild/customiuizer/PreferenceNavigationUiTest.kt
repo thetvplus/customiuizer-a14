@@ -262,6 +262,39 @@ class PreferenceNavigationUiTest {
         assertFalse(swipe.isEnabled)
     }
 
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "zh-rCN-w320dp-h640dp")
+    fun musicEditorUsesCurrentDefaultsAndKeepsIndependentActionsWhenTrackSwipesAreOff() {
+        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
+        val page=currentPage() as SubFragment
+        val mode=requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        assertTrue(mode.callChangeListener("3")); mode.value="3"
+        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked=true
+        val key="pref_key_system_island_music_left"
+        val left=requireNotNull(page.findPreference<Preference>(key))
+        assertTrue(left.isEnabled)
+        left.performClick(); settleNavigation()
+        val editor=currentPage() as SubFragment
+        val spinner=editor.requireView().findViewById<tv.withaibuild.customiuizer.prefs.SpinnerEx>(R.id.action)
+        assertEquals(87,spinner.getSelectedArrayValue())
+        spinner.setSelection(requireNotNull(spinner.entryValues).indexOf(18)); settleNavigation()
+        capturePage("music-action-320-zh")
+        val menu=PopupMenu(activity,editor.requireView()).menu
+        editor.onCreateOptionsMenu(menu,activity.menuInflater)
+        assertTrue(editor.onOptionsItemSelected(menu.findItem(R.id.edit_confirm))); settleNavigation()
+        assertSame(page,currentPage())
+        assertEquals(18,requireNotNull(AppHelper.appPrefs).getInt(key+"_action",-1))
+        assertEquals(activity.getString(R.string.array_global_actions_volume_up),left.summary.toString())
+        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe")).isChecked=false
+        assertTrue(left.isEnabled)
+        assertFalse(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
+        val chat=requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_chat"))
+        val allowed=requireNotNull(page.findPreference<Preference>("pref_key_system_island_notification_apps"))
+        assertFalse(allowed.isEnabled); chat.isChecked=true; assertTrue(allowed.isEnabled)
+        assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(allowed.key,emptySet())!!.isEmpty())
+    }
+
     private fun openSettingsPage(categoryKey: String, pageKey: String) {
         val home = currentPage() as MainFragment
         assertTrue(home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>(categoryKey))))

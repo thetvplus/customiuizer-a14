@@ -12,7 +12,6 @@ import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
-import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
@@ -35,11 +34,18 @@ internal data class IslandOptions(
     val entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
     val chatExcludedApps: Set<String> = emptySet(),
     val mediaSwipe: Boolean = true,
+    val musicActions: IslandMusicActions = IslandMusicActions(),
+    val position: Int = 1,
+    val horizontalOffset: Int = 0,
+    val feedback: Set<IslandSystemKind> = emptySet(),
+    val notificationApps: Set<String> = emptySet(),
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
             val mode = StrongToastPresentationMode.fromPreference(prefs.getStringAsInt("system_strong_toast_mode", 0))
             val shortWidth = prefs.getInt("system_island_width_short", 184).coerceIn(160, 224)
+            val legacyFeedback = mode == StrongToastPresentationMode.DYNAMIC_ISLAND &&
+                IslandSystemKind.entries.none { prefs.containsKey(it.preferenceKey) }
             return IslandOptions(mode == StrongToastPresentationMode.DYNAMIC_ISLAND,
                 prefs.getBoolean("system_toast_capsule"), prefs.getBoolean("system_island_media"),
                 prefs.getBoolean("system_island_waveform", true),
@@ -52,7 +58,14 @@ internal data class IslandOptions(
                 prefs.getInt("system_island_width_medium", 240).coerceIn(184, 280).coerceAtLeast(shortWidth),
                 IslandEntranceStyle.fromPreference(prefs.getStringAsInt("system_island_entrance_style", 1)),
                 prefs.getStringSet("system_island_chat_excluded_apps"),
-                prefs.getBoolean("system_island_media_swipe", true))
+                prefs.getBoolean("system_island_media_swipe", true),
+                IslandMusicActions.read(prefs),
+                prefs.getStringAsInt("system_island_position", 1).coerceIn(0, 2),
+                prefs.getInt("system_island_horizontal_offset", 80).coerceIn(0, 160) - 80,
+                IslandSystemKind.entries.filterTo(linkedSetOf()) {
+                    prefs.getBoolean(it.preferenceKey, legacyFeedback)
+                },
+                prefs.getStringSet("system_island_notification_apps"))
         }
     }
 }
@@ -203,26 +216,7 @@ internal object DynamicIslandActivities {
                     }
                 })
         }
-        // A local AudioManager command is an explicit operation; system_server's DND
-        // consequences arrive only as state broadcasts. Do not swallow the former.
-        for (name in arrayOf("setRingerMode", "setRingerModeInternal")) ModuleHelper.guarded {
-            ModuleHelper.findAndHookMethod(android.media.AudioManager::class.java, name,
-                Int::class.javaPrimitiveType, object : MethodHook() {
-                    override fun before(callback: BeforeHookCallback) {
-                        active.get()?.independentSystemAction(IslandSystemKind.RINGER)
-                    }
-                })
-        }
-        // Native tiles mark explicit radio changes too; an intentional OFF immediately
-        // after airplane mode must not be mistaken for the airplane broadcast cascade.
-        for ((tile, kind) in arrayOf("MuteTile" to IslandSystemKind.RINGER,
-            "MiuiWifiTile" to IslandSystemKind.WIFI, "BluetoothTile" to IslandSystemKind.BLUETOOTH,
-            "MiuiCellularTile" to IslandSystemKind.DATA)) ModuleHelper.guarded {
-            ModuleHelper.findAndHookMethod("com.android.systemui.qs.tiles.$tile", param.classLoader,
-                "handleClick", View::class.java, object : MethodHook() {
-                    override fun before(callback: BeforeHookCallback) { active.get()?.independentSystemAction(kind) }
-                })
-        }
+        // Causal command markers are leased by the attached owner for selected categories.
     }
 
     private fun captureMedia(owner: Any?, replacing: Boolean = false) {
@@ -241,7 +235,7 @@ internal object DynamicIslandActivities {
         if (!options.enabled || statusBar.display?.displayId != 0) return
         active.get()?.dispose()
         val controller = IslandActivityController(statusBar.context, source, options, resolved,
-            dismissal = mediaDismissal)
+            dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader)
         XposedHelpers.setAdditionalInstanceField(statusBar, OWNER, controller)
         active = WeakReference(controller)
         controller.foregroundChanged(foregroundPackage)

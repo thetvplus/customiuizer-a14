@@ -1194,7 +1194,7 @@
     <string name="system_island_media_title">音乐与媒体</string>
     <string name="system_island_media_summ">沿用系统选中的主播放器，上滑可隐藏。已显示的音乐岛暂停 2 秒后收起；未显示时保持隐藏。</string>
     <string name="system_island_media_swipe_title">左右滑动切歌</string>
-    <string name="system_island_media_swipe_summ">左滑下一曲，右滑上一曲，仅执行播放器支持的操作。关闭后仍可点击打开播放器、上滑隐藏。</string>
+    <string name="system_island_media_swipe_summ">关闭后，左右滑动不能切歌；已配置的音量等其他动作仍然有效。</string>
     <string name="system_island_waveform_title">轻量音乐波形</string>
     <string name="system_island_waveform_summ">随播放状态变化，不采集音频。暂停、不可见或息屏时停止刷新。</string>
     <string name="system_island_entrance_style_title">进出动画</string>
@@ -1228,4 +1228,23 @@
     <string name="system_island_width_medium_summ">用于较多文字，实际宽度不会小于短岛，并受状态栏空间限制。</string>
     <string name="system_island_chat_excluded_apps_title">保留悬浮的应用</string>
     <string name="system_island_chat_excluded_apps_summ">所选应用保留系统悬浮通知，不影响 Toast 和音乐。</string>
+    <string name="system_island_gesture_left">左滑动作</string>
+    <string name="system_island_gesture_right">右滑动作</string>
+    <string name="system_island_gesture_down">下滑动作</string>
+    <string name="system_island_gesture_double">双击动作</string>
+    <string name="system_island_gesture_long">长按动作</string>
+    <string name="system_island_gesture_up_summary">上滑固定为收起当前动态岛。</string>
+    <string name="system_island_position_title">横向位置</string>
+    <string name="system_island_position_left">左</string>
+    <string name="system_island_position_center">中</string>
+    <string name="system_island_position_right">右</string>
+    <string name="system_island_horizontal_offset_title">横向偏移</string>
+    <string name="system_island_feedback_title">系统反馈</string>
+    <string name="system_island_notification_apps_title">允许接管通知的应用</string>
+    <string name="system_island_notification_apps_summ">仅接管所选应用的通知；排除名单优先，其他通知保持原生行为。</string>
+    <string name="system_island_action_play">播放</string>
+    <string name="system_island_action_pause">暂停</string>
+    <string name="system_island_action_player">打开播放器</string>
+    <string name="system_island_music_group">音乐与媒体</string>
+    <string name="system_island_feedback_ringer_title">铃声模式</string>
 </resources>

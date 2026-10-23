@@ -37,7 +37,7 @@ class MultiAction : SubFragment() {
     private var shortcutIntent: Intent? = null
 
     enum class Actions {
-        NAVBAR, LAUNCHER, CONTROLS, LOCKSCREEN, LAUNCH, STATUSBAR
+        NAVBAR, LAUNCHER, CONTROLS, LOCKSCREEN, LAUNCH, STATUSBAR, MUSIC
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,13 +62,17 @@ class MultiAction : SubFragment() {
             Actions.STATUSBAR -> R.array.global_actions_statusbar to R.array.global_actions_statusbar_val
             Actions.LOCKSCREEN -> R.array.global_lockscreen_actions to R.array.global_lockscreen_actions_val
             Actions.LAUNCH -> R.array.global_launch_actions to R.array.global_launch_actions_val
+            Actions.MUSIC -> R.array.global_actions_island_music to R.array.global_actions_island_music_val
         }
 
         val actionSpinner = v.findViewById<SpinnerEx>(R.id.action)
         actionSpinner.entries = resources.getTextArray(entriesResId)
         actionSpinner.entryValues = resources.getIntArray(entryValuesResId)
         actionSpinner.tag = mKey + "_action"
-        val savedAction = AppHelper.getIntOfAppPrefs(mKey + "_action", 1)
+        val defaultAction = if (actions == Actions.MUSIC)
+            tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries.firstOrNull {
+                "pref_key_${it.key}" == mKey }?.defaultAction ?: 1 else 1
+        val savedAction = AppHelper.getIntOfAppPrefs(mKey + "_action", defaultAction)
         actionSpinner.init(if (savedAction <= 0) 1 else savedAction)
         actionSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {

@@ -50,6 +50,7 @@ object GlobalActionsIntentHelper {
 
             intent
         } catch (t: Throwable) {
+            tv.withaibuild.customiuizer.mods.utils.FatalErrors.unwrapAndRethrowIfFatal(t)
             tv.withaibuild.customiuizer.mods.utils.XposedHelpers.log(t)
             null
         }
