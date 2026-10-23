@@ -68,8 +68,8 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
         if (!inputRegionAvailable) return
         inputRegionAvailable = false
         tracking = false
-        shell.cancelInputs()
-        onUnavailable?.invoke()
+        ModuleHelper.guarded { shell.cancelInputs() }
+        ModuleHelper.guarded { onUnavailable?.invoke() }
     }
 
     init {
@@ -141,8 +141,7 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
             if (!removed) inputRegionAvailable = false
         } finally {
             tracking = false
-            shell.cancelInputs()
-            super.onDetachedFromWindow()
+            try { shell.cancelInputs() } finally { super.onDetachedFromWindow() }
         }
     }
 }
