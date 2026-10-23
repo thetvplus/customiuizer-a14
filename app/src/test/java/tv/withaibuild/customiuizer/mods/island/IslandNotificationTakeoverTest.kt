@@ -62,7 +62,24 @@ class IslandNotificationTakeoverTest {
         assertNotNull(entry.mSbn.notification) // The original notification is retained.
     }
 
-    class Row(context: Context) : FrameLayout(context) { @JvmField var mEntry: Entry? = null }
+    @Test fun removedRowsAndReplacementEntriesCannotLaunchAnOldAcceptedActivity() {
+        val port = access
+        val entry = Entry(context, notification(1))
+        var clicks = 0
+        entry.row.setOnClickListener { clicks++ }
+        val bound = port.read(entry)!!
+        entry.row.mRemoved = true
+        assertFalse(bound.open())
+        entry.row.mRemoved = false
+        entry.row.mEntry = Entry(context, entry.mSbn)
+        assertFalse(bound.open())
+        assertEquals(0, clicks)
+    }
+
+    class Row(context: Context) : FrameLayout(context) {
+        @JvmField var mEntry: Entry? = null
+        @JvmField var mRemoved = false
+    }
     class Icons(context: Context) { @JvmField val mStatusBarIcon = ImageView(context) }
     class Entry(context: Context, notification: StatusBarNotification) {
         @JvmField var mSbn = notification

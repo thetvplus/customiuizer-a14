@@ -184,8 +184,8 @@
     <string name="system_showpct_top_title">百分比面板的上边距</string>
     <string name="system_notifrowmenu_title">扩展通知菜单</string>
     <string name="system_notifrowmenu_summ">从通知菜单打开应用信息、强制关闭应用和浮窗打开(向左滑动通知将其打开)</string>
-    <string name="system_disableanynotif_title">允许修改任何应用的通知</string>
-    <string name="system_disableanynotif_summ">同样也允许禁用系统通知</string>
+    <string name="system_disableanynotif_title">管理应用通知</string>
+    <string name="system_disableanynotif_summ">开放普通应用的控制入口，保留系统、频道和管理员保护</string>
     <string name="system_expandnotifs_title">展开通知</string>
     <string name="system_expandnotifs_summ">显示完整展开的通知</string>
     <string name="system_expandnotifs_apps_title">黑白名单</string>

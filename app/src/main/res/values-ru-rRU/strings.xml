@@ -164,8 +164,8 @@
     <string name="system_notifrowmenu_appinfo">О приложении</string>
     <string name="system_notifrowmenu_openinfw">Плавающее окно</string>
     <string name="system_notifrowmenu_forceclose">Закрыть принудительно</string>
-    <string name="system_disableanynotif_title">Отключение любых уведомлений</string>
-    <string name="system_disableanynotif_summ">Разрешает отключать даже системные уведомления</string>
+    <string name="system_disableanynotif_title">Управление уведомлениями приложений</string>
+    <string name="system_disableanynotif_summ">Открывает настройки обычных приложений; сохраняет защиту системы, каналов и администратора</string>
     <string name="system_expandnotifs_title">Разворачивать уведомления</string>
     <string name="system_expandnotifs_summ">Показывать уведомления в полностью развёрнутом виде</string>
     <string name="system_expandnotifs_apps_title">Чёрно-белый список</string>

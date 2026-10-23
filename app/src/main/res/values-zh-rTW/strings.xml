@@ -157,8 +157,8 @@
     <string name="system_notifrowmenu_appinfo">應用訊息</string>
     <string name="system_notifrowmenu_openinfw">浮窗</string>
     <string name="system_notifrowmenu_forceclose">強制關閉</string>
-    <string name="system_disableanynotif_title">禁用任何通知</string>
-    <string name="system_disableanynotif_summ">同時允許禁用系統通知</string>
+    <string name="system_disableanynotif_title">管理應用程式通知</string>
+    <string name="system_disableanynotif_summ">開放一般應用程式的控制入口，保留系統、頻道和管理員保護</string>
     <string name="system_expandnotifs_title">展開通知</string>
     <string name="system_expandnotifs_summ">顯示完整展開的通知</string>
     <string name="system_expandnotifs_apps_title">黑&amp;白名單</string>

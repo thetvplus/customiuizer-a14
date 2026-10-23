@@ -168,8 +168,8 @@
     <string name="system_notifrowmenu_appinfo">アプリ情報</string>
     <string name="system_notifrowmenu_openinfw">フローティングウィンドウ</string>
     <string name="system_notifrowmenu_forceclose">強制的に閉じる</string>
-    <string name="system_disableanynotif_title">すべての通知を無効化可能にする</string>
-    <string name="system_disableanynotif_summ">システム通知も無効化可能にします</string>
+    <string name="system_disableanynotif_title">アプリの通知を管理</string>
+    <string name="system_disableanynotif_summ">一般アプリの設定を有効にし、システム・チャンネル・管理者の保護を維持します</string>
     <string name="system_expandnotifs_title">通知を拡張した状態で表示する</string>
     <string name="system_expandnotifs_summ">通知を展開した状態で表示します</string>
     <string name="system_expandnotifs_apps_title">ブラック/ホワイトリスト</string>

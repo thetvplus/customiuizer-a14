@@ -168,8 +168,8 @@
     <string name="system_notifrowmenu_appinfo">Thông tin ứng dụng</string>
     <string name="system_notifrowmenu_openinfw">Cửa sổ nổi</string>
     <string name="system_notifrowmenu_forceclose">Buộc dừng</string>
-    <string name="system_disableanynotif_title">Cho phép vô hiệu hóa bất kì thông báo nào</string>
-    <string name="system_disableanynotif_summ">Cho phép tắt thông báo hệ thống</string>
+    <string name="system_disableanynotif_title">Quản lý thông báo ứng dụng</string>
+    <string name="system_disableanynotif_summ">Mở điều khiển ứng dụng thông thường; giữ bảo vệ hệ thống, kênh và quản trị viên</string>
     <string name="system_expandnotifs_title">Mở rộng thanh thông báo</string>
     <string name="system_expandnotifs_summ">Hiển thị thông báo mở rộng đầy đủ</string>
     <string name="system_expandnotifs_apps_title">Danh sách đen &amp; trắng</string>

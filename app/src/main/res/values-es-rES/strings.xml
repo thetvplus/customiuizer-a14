@@ -156,8 +156,8 @@
     <string name="system_notifrowmenu_appinfo">Información de la app</string>
     <string name="system_notifrowmenu_openinfw">Ventana flotante</string>
     <string name="system_notifrowmenu_forceclose">Forzar cierre</string>
-    <string name="system_disableanynotif_title">Desactivar cualquier notificación</string>
-    <string name="system_disableanynotif_summ">Permitir desactivar notificaciones de sistema</string>
+    <string name="system_disableanynotif_title">Gestionar notificaciones de aplicaciones</string>
+    <string name="system_disableanynotif_summ">Habilita controles de aplicaciones normales; mantiene las protecciones del sistema, los canales y el administrador</string>
     <string name="system_expandnotifs_title">Expandir notificaciones</string>
     <string name="system_expandnotifs_summ">Mostrar notificaciones totalmente expandidas</string>
     <string name="system_expandnotifs_apps_title">Listas blanca &amp; negra</string>

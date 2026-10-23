@@ -165,8 +165,8 @@
     <string name="system_notifrowmenu_appinfo">O aplikaci</string>
     <string name="system_notifrowmenu_openinfw">Plovoucí okno</string>
     <string name="system_notifrowmenu_forceclose">Vynutit ukončení</string>
-    <string name="system_disableanynotif_title">Zakázat jakékoliv oznámení</string>
-    <string name="system_disableanynotif_summ">Umožnit zakázat také systémová oznámení</string>
+    <string name="system_disableanynotif_title">Správa oznámení aplikací</string>
+    <string name="system_disableanynotif_summ">Zpřístupní ovládání běžných aplikací; zachová ochranu systému, kanálů a správce</string>
     <string name="system_expandnotifs_title">Rozbalit oznámení</string>
     <string name="system_expandnotifs_summ">Zobrazit oznámení plně rozbalená</string>
     <string name="system_expandnotifs_apps_title">Černý &amp; bílý seznam</string>

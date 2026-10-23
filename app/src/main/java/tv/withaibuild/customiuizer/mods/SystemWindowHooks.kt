@@ -5,6 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ActivityInfo
+import android.os.SystemClock
+import android.os.UserHandle
 import android.os.Handler
 import android.view.View
 import android.view.WindowManager
@@ -359,18 +362,14 @@ object SystemWindowHooks {
         ModuleHelper.findAndHookMethod("com.android.server.wm.MiuiFreeformUtilImpl", lpparam.classLoader, "supportsFreeform", HookerClassHelper.returnConstant(true))
     }
 
-    private var freeformCallingPackage: String? = "SkipCheck"
-
-    private var nextFreeformPackage: String? = ModuleHelper.NOT_EXIST_SYMBOL
+    private data class FreeformCall(val caller: String?, val info: ActivityInfo, val intent: Intent)
+    private val freeformCalls = NotificationLaunchScope<FreeformCall>()
+    private val nextFreeform = FreeformRequest(SystemClock::elapsedRealtime)
 
     private fun shouldOpenInFreeForm(intent: Intent?, callingPackage: String?): Boolean {
         if (intent == null || intent.component == null) return false
-        val fwBlackList = ArrayList<String>()
-        fwBlackList.add("com.miui.home")
-        fwBlackList.add("com.android.camera")
-        fwBlackList.add("com.android.systemui")
         val pkgName = intent.component!!.packageName
-        if (fwBlackList.contains(pkgName)) return false
+        if (pkgName == "com.miui.home" || pkgName == "com.android.camera" || pkgName == "com.android.systemui") return false
         var openInFw = false
         val openFwWhenShare = MainModule.mPrefs.getBoolean("system_fw_forcein_actionsend")
         val compClassName = intent.component!!.className
@@ -403,9 +402,6 @@ object SystemWindowHooks {
         ) {
             openInFw = true
         }
-        if (!openInFw) {
-            openInFw = pkgName == nextFreeformPackage
-        }
         return openInFw
     }
 
@@ -413,100 +409,53 @@ object SystemWindowHooks {
     fun OpenAppInFreeFormHook(lpparam: SystemServerStartingParam) {
         ModuleHelper.findAndHookMethod("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader, "onSystemReady", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    val intentFilter = IntentFilter()
-                    intentFilter.addAction(GlobalActions.ACTION_PREFIX + "SetFreeFormPackage")
-                    val mReceiver = object : BroadcastReceiver() {
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val context = XposedHelpers.getObjectField(chain.thisObject, "mContext") as Context
+                    val receiver = object : BroadcastReceiver() {
                         override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
-                            val action = intent.action
-                            if (action == null) return@guarded
-
-                            if (action == GlobalActions.ACTION_PREFIX + "SetFreeFormPackage") {
-                                nextFreeformPackage = intent.getStringExtra("package") ?: ModuleHelper.NOT_EXIST_SYMBOL
+                            if (intent.action == GlobalActions.ACTION_PREFIX + "SetFreeFormPackage") {
+                                nextFreeform.replace(intent.getStringExtra("package"), intent.getIntExtra("user", -1), intent.getStringExtra("component"))
                             }
                         }
                     }
-                    ModuleHelper.registerModuleReceiver(mContext, "setFreeFormPackageReceiver", mReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+                    ModuleHelper.registerModuleReceiver(context, "setFreeFormPackageReceiver", receiver,
+                        IntentFilter(GlobalActions.ACTION_PREFIX + "SetFreeFormPackage"), Context.RECEIVER_NOT_EXPORTED)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return result
             }
         })
 
-        ModuleHelper.findAndHookMethod("com.miui.server.SecurityManagerService\$LocalService", lpparam.classLoader, "checkGameBoosterPayPassAsUser", String::class.java, Intent::class.java, Int::class.javaPrimitiveType!!, object : MethodHook() {
+        val starter = XposedHelpers.findClass("com.android.server.wm.ActivityStarterImpl", lpparam.classLoader)
+        // Preserve SecurityManagerService: this private decision has one verified layout caller.
+        ModuleHelper.findAndHookMethod(starter, "startActivityByFreeForm", ActivityInfo::class.java, Intent::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                val original = chain.proceed()
+                val call = freeformCalls.consumeIf { it.info === chain.getArg(0) && it.intent === chain.getArg(1) }
+                    ?: return original
+                return ModuleHelper.guarded(original) {
+                    val pkg = call.info.packageName ?: return@guarded original
+                    val user = call.info.applicationInfo.uid / 100000
+                    val requested = nextFreeform.consume(pkg, user, call.intent.component?.flattenToString(), call.caller)
+                    if (original == true || call.caller == null || (call.caller == pkg && call.caller != "com.miui.packageinstaller")) original
+                    else requested || shouldOpenInFreeForm(call.intent, call.caller)
                 }
-                try {
-                    val args = chain.args
-
-                    if (freeformCallingPackage == null || "SkipCheck" == freeformCallingPackage) {
-                        return XposedHelpers.throwOrReturn(throwable, result)
-                    }
-                    if ("com.miui.packageinstaller" != freeformCallingPackage && freeformCallingPackage == args[0]) {
-                        return XposedHelpers.throwOrReturn(throwable, result)
-                    }
-                    var openInFw = result as Boolean
-                    if (!openInFw) {
-                        val intent = args[1] as Intent
-                        openInFw = shouldOpenInFreeForm(intent, freeformCallingPackage)
-                    }
-                    if (openInFw) {
-                        nextFreeformPackage = ModuleHelper.NOT_EXIST_SYMBOL
-                    }
-                    result = openInFw; throwable = null
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
-
-        ModuleHelper.hookAllMethods("com.android.server.wm.ActivityStarterImpl", lpparam.classLoader, "checkStartActivityByFreeForm", object : MethodHook() {
+        ModuleHelper.findAndHookMethod(starter, "checkStartActivityByFreeForm",
+            XposedHelpers.findClass("android.app.IApplicationThread", lpparam.classLoader), ActivityInfo::class.java,
+            Intent::class.java, String::class.java, Boolean::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
+            String::class.java, XposedHelpers.findClass("com.android.server.wm.SafeActivityOptions", lpparam.classLoader), object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                try {
-
-                    if (args[1] != null) {
-                        val safeOptions = args[7]
-                        if (safeOptions != null) {
-                            val ao = XposedHelpers.getObjectField(safeOptions, "mOriginalOptions") as ActivityOptions?
-                            if (ao != null && XposedHelpers.getIntField(ao, "mLaunchWindowingMode") == 5) {
-                                freeformCallingPackage = "SkipCheck"
-                                return XposedHelpers.proceedOrThrow(chain, throwable)
-                            }
-                        }
-                        freeformCallingPackage = args[6] as String
-                    }
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                val call = ModuleHelper.guarded<FreeformCall?>(null) {
+                    val info = chain.getArg(1) as? ActivityInfo ?: return@guarded null
+                    val intent = chain.getArg(2) as? Intent ?: return@guarded null
+                    val safeOptions = chain.getArg(7)
+                    val options = safeOptions?.let { XposedHelpers.getObjectField(it, "mOriginalOptions") as? ActivityOptions }
+                    if (options != null && XposedHelpers.getIntField(options, "mLaunchWindowingMode") == 5) null
+                    else FreeformCall(chain.getArg(6) as? String, info, intent)
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return freeformCalls.within(call) { chain.proceed() }
             }
         })
     }

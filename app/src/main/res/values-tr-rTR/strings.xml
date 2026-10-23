@@ -142,8 +142,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_notifrowmenu_appinfo">Uygulama bilgisi</string>
     <string name="system_notifrowmenu_openinfw">Yüzen pencere</string>
     <string name="system_notifrowmenu_forceclose">Kapatmaya zorla</string>
-    <string name="system_disableanynotif_title">Herhangi bir bildirimi devre dışı bırakmaya izin ver</string>
-    <string name="system_disableanynotif_summ">Sistem bildirimlerini de devre dışı bırakmaya izin ver</string>
+    <string name="system_disableanynotif_title">Uygulama bildirimlerini yönet</string>
+    <string name="system_disableanynotif_summ">Normal uygulama denetimlerini açar; sistem, kanal ve yönetici korumalarını korur</string>
     <string name="system_expandnotifs_title">Bildirimleri genişlet</string>
     <string name="system_expandnotifs_summ">Bildirimleri tamamen genişletilmiş olarak göster</string>
     <string name="system_expandnotifs_apps_title">Siyah &amp; beyaz liste</string>

@@ -168,8 +168,8 @@
     <string name="system_notifrowmenu_appinfo">Informações do app</string>
     <string name="system_notifrowmenu_openinfw">Janela flutuante</string>
     <string name="system_notifrowmenu_forceclose">Forçar parada</string>
-    <string name="system_disableanynotif_title">Permitir desativar qualquer notificação</string>
-    <string name="system_disableanynotif_summ">Permite desativar as notificações do sistema também</string>
+    <string name="system_disableanynotif_title">Gerenciar notificações de aplicativos</string>
+    <string name="system_disableanynotif_summ">Libera controles de aplicativos comuns; mantém as proteções do sistema, dos canais e do administrador</string>
     <string name="system_expandnotifs_title">Expandir notificações</string>
     <string name="system_expandnotifs_summ">Mostre as notificações totalmente expandidas</string>
     <string name="system_expandnotifs_apps_title">Lista negra</string>

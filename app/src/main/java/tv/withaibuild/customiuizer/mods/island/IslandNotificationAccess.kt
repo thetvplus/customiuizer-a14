@@ -22,6 +22,7 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
     private val ranking = XposedHelpers.findField(entryClass, "mRanking")
     private val row = XposedHelpers.findField(entryClass, "row")
     private val rowEntry = XposedHelpers.findField(row.type, "mEntry")
+    private val rowRemoved = XposedHelpers.findField(row.type, "mRemoved")
     private val sensitive = XposedHelpers.findField(entryClass, "mSensitive")
     private val appLocked = XposedHelpers.findField(entryClass, "hideSensitiveByAppLock")
     private val interrupted = XposedHelpers.findField(entryClass, "interruption")
@@ -40,11 +41,13 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
         val rank = ranking.get(entry) as? Ranking ?: return null
         val icon = icons.get(entry)?.let { statusIcon.get(it) as? ImageView }?.drawable
         val weakRow = WeakReference(nativeRow)
+        val weakEntry = WeakReference(entry)
         // No strong row/controller escapes the call. Rebinding/removal invalidates the click.
         val open = {
             val current = weakRow.get()
             val currentEntry = current?.let(rowEntry::get)
-            if (current == null || currentEntry == null || sbn.get(currentEntry) !== notification) false
+            if (current == null || currentEntry == null || currentEntry !== weakEntry.get() ||
+                rowRemoved.getBoolean(current) || sbn.get(currentEntry) !== notification) false
             else current.performClick()
         }
         return Bound(notification, rank, icon, open)

@@ -7,21 +7,26 @@ import java.io.File
 
 class SettingsNotificationControlsContractTest {
     @Test
-    fun settingsFeatureOverridesAllAndroid14BlockDecisions() {
+    fun settingsFeaturePreservesAndroid14ChannelAndAdministratorDecisions() {
         val hooks = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemNotificationHooks.kt")
         val feature = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SettingsFeatures.kt")
-        assertTrue(hooks.contains("com.android.settings.notification.app.NotificationPreferenceController"))
-        assertTrue(hooks.contains("\"isAppBlockable\""))
-        assertTrue(hooks.contains("\"isChannelBlockable\""))
-        assertTrue(hooks.contains("\"isChannelConfigurable\""))
-        assertTrue(hooks.contains("\"isChannelGroupBlockable\""))
-        assertTrue(hooks.contains("com.android.settings.notification.app.AppNotificationSettings"))
-        assertTrue(hooks.contains("\"setupBlock\""))
+        assertFalse(hooks.contains("\"isAppBlockable\""))
+        assertFalse(hooks.contains("\"isChannelBlockable\""))
+        assertFalse(hooks.contains("\"isChannelConfigurable\""))
+        assertFalse(hooks.contains("\"isChannelGroupBlockable\""))
+        assertFalse(hooks.contains("\"setupBlock\""))
         assertFalse(hooks.contains("mHasNotifPermission"))
-        assertTrue(hooks.contains("XposedHelpers.callMethod(block, \"setEnabled\", true)"))
+        assertFalse(hooks.contains("XposedHelpers.callMethod(block, \"setEnabled\", true)"))
         assertFalse(hooks.contains("as? Preference"))
-        assertTrue(hooks.contains("skipped = true\n                    result = HashSet<String>()"))
-        assertTrue(feature.contains("UnlockSettingsNotificationControlsHook(lpparam)"))
+        assertFalse(hooks.contains("result = HashSet<String>()"))
+        assertFalse(hooks.contains("\"isBlockable\""))
+        assertFalse(hooks.contains("\"setBlockable\""))
+        assertFalse(hooks.contains("setStaticBooleanField(NotifyManagerCls"))
+        assertFalse(feature.contains("UnlockSettingsNotificationControlsHook(lpparam)"))
+        assertTrue(feature.contains("DisableAnyNotificationHook(lpparam)"))
+        assertTrue(hooks.contains("ordinaryNotificationTarget(context, chain.getArg(1) as? String)"))
+        val server = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt")
+        assertFalse(server.contains("DisableAnyNotificationBlockFeatureId"))
     }
 
     private fun source(path: String): String {
