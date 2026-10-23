@@ -1,7 +1,6 @@
 package tv.withaibuild.customiuizer.mods.island
 
 import android.graphics.Matrix
-import android.graphics.Canvas
 import android.graphics.RectF
 import android.graphics.Region
 import android.view.MotionEvent
@@ -102,11 +101,6 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
         bounds.offset(shell.left.toFloat(), shell.top.toFloat())
         return IslandRecallHit.delegateRect(width, height, floor(bounds.left).toInt(), floor(bounds.top).toInt(),
             ceil(bounds.width()).toInt(), ceil(bounds.height()).toInt(), margin)
-    }
-
-    override fun dispatchDraw(canvas: Canvas) {
-        super.dispatchDraw(canvas)
-        ModuleHelper.guarded { shell.drawMediaReturn(canvas) }
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {

@@ -7,7 +7,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -107,7 +106,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var entryCameraAnchor = false
     private var motion: ValueAnimator? = null
     private var mediaReturnProgress = 1f
-    private var mediaReturnClip: Path? = null
     private val breadth = IslandMotion.Spring()
     private val depth = IslandMotion.Spring()
     private val shiftX = IslandMotion.Spring()
@@ -295,7 +293,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         disposed = false; leaving = false
         mediaReturnProgress = if (mediaReturn && isMedia && icon.drawable != null &&
             !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
-        if (mediaReturnProgress == 0f && mediaReturnClip == null) mediaReturnClip = Path()
         if (simplified || !ValueAnimator.areAnimatorsEnabled()) resetTransform()
         else {
             alpha = 0f
@@ -546,43 +543,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         mediaReturnProgress = 1f
         (parent as? View)?.invalidate()
         updateContour()
-    }
-
-    /** Drawn by the existing root, within its 80dp Surface outsets, outside the input region.
-     * Reuses the prepared artwork and one Path; no additional window, timer or bitmap. */
-    fun drawMediaReturn(canvas: Canvas) {
-        if (mediaReturnProgress >= 1f || disposed || leaving || !isMedia || simplified ||
-            !ValueAnimator.areAnimatorsEnabled() || icon.width <= 0) return
-        val drawable = icon.drawable ?: return
-        val clip = mediaReturnClip ?: return
-        val progress = mediaReturnProgress
-        val travel = IslandMotion.mediaReturnTravel(progress)
-        val targetX = getLeft().toFloat() + translationX + pivotX * (1f - scaleX) + dp(IslandSizing.EDGE_DP) + iconSize * .5f
-        val targetY = top.toFloat() + translationY + pivotY * (1f - scaleY) + geometryHeight * scaleY * .5f
-        val startX = getLeft() + geometryWidth * .5f
-        val startY = top + geometryHeight + dp(44).toFloat()
-        val x = startX + (targetX - startX) * travel + dp(12) * sin(Math.PI * travel).toFloat()
-        val y = startY + (targetY - startY) * travel
-        val size = dp(40) + (iconSize - dp(40)) * travel
-        val previousAlpha = drawable.alpha
-        val backgroundAlpha = iconMask.alpha
-        val fade = (1f - ((progress - .72f) / .28f).coerceIn(0f, 1f)) *
-            (progress / .12f).coerceIn(0f, 1f)
-        val save = canvas.save()
-        try {
-            canvas.translate(x - size * .5f, y - size * .5f)
-            canvas.scale(size / icon.width, size / icon.height)
-            clip.reset()
-            clip.addRoundRect(0f, 0f, icon.width.toFloat(), icon.height.toFloat(), dp(7).toFloat(), dp(7).toFloat(), Path.Direction.CW)
-            canvas.clipPath(clip)
-            drawable.alpha = (previousAlpha * fade).toInt()
-            iconMask.alpha = (backgroundAlpha * fade).toInt()
-            icon.draw(canvas)
-        } finally {
-            drawable.alpha = previousAlpha
-            iconMask.alpha = backgroundAlpha
-            canvas.restoreToCount(save)
-        }
     }
 
     private fun contentFits(): Boolean {

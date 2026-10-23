@@ -17,7 +17,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], qualifiers = "mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandTouchWindowTest {
-    @Test fun coverReturnDrawsOutsideTheCapsuleWithoutEnlargingInputAndLeavesNoGhost() {
+    @Test fun musicCatchUsesTheExistingClockAndInputBoundsWithOneCoverHandoff() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         org.robolectric.shadows.ShadowChoreographer.setPaused(true)
         try {
@@ -34,25 +34,15 @@ class IslandTouchWindowTest {
             val motion = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
             assertEquals(IslandMotion.MEDIA_RETURN, motion.duration)
             motion.currentPlayTime = 112
-            val path = org.robolectric.util.ReflectionHelpers.getField<android.graphics.Path>(shell, "mediaReturnClip")
-            fun outsidePixels(): Int {
-                val bitmap = android.graphics.Bitmap.createBitmap(root.width + 160, root.height + 160, android.graphics.Bitmap.Config.ARGB_8888)
-                root.draw(android.graphics.Canvas(bitmap).apply { translate(80f, 80f) })
-                var red = 0
-                for (y in 80 + root.height until bitmap.height) for (x in 0 until bitmap.width) {
-                    val pixel = bitmap.getPixel(x, y)
-                    if (android.graphics.Color.red(pixel) > 80 && android.graphics.Color.green(pixel) < 30) red++
-                }
-                bitmap.recycle()
-                return red
-            }
-            assertTrue(outsidePixels() > 0)
-            assertSame(path, org.robolectric.util.ReflectionHelpers.getField<android.graphics.Path>(shell, "mediaReturnClip"))
+            val cover = org.robolectric.util.ReflectionHelpers.getField<View>(shell, "left")
+            assertEquals(0f, cover.alpha, 0f)
             assertEquals(240 + 2 * root.margin, root.width)
             assertEquals(40 + 2 * root.margin, root.height)
             assertFalse(touch(root, MotionEvent.ACTION_DOWN, root.width * .5f, root.height + 25f, 0))
+            motion.currentPlayTime = 450
+            assertTrue(cover.alpha > 0f)
             motion.end()
-            assertEquals(0, outsidePixels())
+            assertEquals(1f, cover.alpha, 0f)
             assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         } finally {
             host.finish()
@@ -60,7 +50,7 @@ class IslandTouchWindowTest {
         }
     }
 
-    @Test fun simplifiedMotionNeverAllocatesOrStartsTheCoverReturn() {
+    @Test fun simplifiedMotionNeverStartsTheMusicCatch() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         try {
             val shell = IslandActivityView(host).apply { simplified = true }
@@ -69,7 +59,6 @@ class IslandTouchWindowTest {
             shell.geometry(240, 40, 40)
             shell.prepareEntry(mediaReturn = true)
             shell.transition(240, 40, 240, 40, true)
-            assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "mediaReturnClip"))
             assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
             assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         } finally { host.finish() }

@@ -55,6 +55,7 @@ internal data class IslandMediaContent(
     val token: MediaSession.Token, val packageName: String, val title: String, val artist: String?,
     val icon: Drawable?, val playing: Boolean, val actions: Long,
     val playbackState: Int,
+    val user: UserHandle? = null,
 )
 
 internal object IslandMediaPolicy {
@@ -141,6 +142,8 @@ internal class IslandActivityController(
     private var readGeneration = 0L
     private var media: IslandMediaContent? = null
     private var foregroundPackage: String? = null
+    private var previousForegroundPackage: String? = null
+    private var foregroundChangedAt = 0L
     private var foregroundBaseline = false
     private data class AppIcon(val token: MediaSession.Token, val epoch: Long,
         val label: String, val drawable: Drawable?)
@@ -154,6 +157,7 @@ internal class IslandActivityController(
     private var mediaRevealAt: Long? = null
     private data class MediaReturn(val token: MediaSession.Token, val expiresAt: Long)
     private var mediaReturn: MediaReturn? = null
+    private var musicReturnPublisher: IslandMusicReturnSignal.Publisher? = null
     private var shadeBlocked = false
     private var shadeBaseline = false
     private var shadePlaybackState: Int? = null
@@ -334,8 +338,14 @@ internal class IslandActivityController(
     fun foregroundChanged(packageName: String?) = onMain {
         if (foregroundPackage == packageName) return@onMain
         val previous = foregroundPackage
+        previousForegroundPackage = previous
         foregroundPackage = packageName
-        cancelMediaReturn()
+        foregroundChangedAt = SystemClock.uptimeMillis()
+        val committed = mediaReturn?.takeIf { pending ->
+            packageName != null && previous == media?.packageName && packageName != previous &&
+                pending.token == media?.token && SystemClock.uptimeMillis() < pending.expiresAt
+        }
+        if (committed == null) cancelMediaReturn() else shell.cancelMediaReturn()
         invalidateActions()
         media?.let {
             if (packageName == it.packageName) {
@@ -349,7 +359,7 @@ internal class IslandActivityController(
             else if (previous == it.packageName && it.playbackState != PlaybackState.STATE_PAUSED)
             {
                 val now = SystemClock.uptimeMillis()
-                val returning = packageName != null && state.allowed && options.mediaReturn &&
+                val returning = committed != null && state.allowed && options.mediaReturn &&
                     it.packageName in options.mediaReturnApps && it.playing &&
                     !options.simplified && ValueAnimator.areAnimatorsEnabled()
                 if (returning) mediaReturn = MediaReturn(it.token, now + IslandMotion.MEDIA_DELAY)
@@ -358,6 +368,22 @@ internal class IslandActivityController(
                 nativeManager.get()?.let { manager -> updateFromNative(manager) }
             }
         }
+        render()
+    }
+
+    internal fun nativeMusicReturn(frame: IslandMusicReturnSignal.Frame, committedAt: Long = SystemClock.uptimeMillis()) = onMain {
+        val current = media ?: return@onMain
+        if (disposed || !state.allowed || !options.mediaReturn || options.simplified || !frame.valid() ||
+            !ValueAnimator.areAnimatorsEnabled() || !current.playing || frame.packageName != current.packageName ||
+            frame.user != foregroundUser || frame.user != current.user || current.packageName !in options.mediaReturnApps ||
+            foregroundPackage != current.packageName &&
+                (foregroundPackage != IslandMusicReturnSignal.LAUNCHER || previousForegroundPackage != current.packageName) ||
+            foregroundPackage == current.packageName && foregroundChangedAt > committedAt) return@onMain
+        val now = SystemClock.uptimeMillis()
+        mediaReturn = MediaReturn(current.token, now + IslandMotion.MEDIA_DELAY)
+        mediaRevealAt = now + IslandMotion.MEDIA_RETURN_DELAY
+        foregroundBaseline = true
+        nativeManager.get()?.let { updateFromNative(it) }
         render()
     }
 
@@ -664,7 +690,9 @@ internal class IslandActivityController(
             IslandMediaContent(controller.sessionToken, pkg, title,
                 metadata?.getText(MediaMetadata.METADATA_KEY_ARTIST)?.toString()?.take(160),
                 prepareArtwork(metadata, epoch) ?: icon.drawable,
-                IslandMediaPolicy.playing(playback.state), playback.actions, playback.state)
+                IslandMediaPolicy.playing(playback.state), playback.actions, playback.state,
+                if (options.mediaReturn && pkg in options.mediaReturnApps)
+                    IslandMediaIdentity.uid(controller)?.let { UserHandle.getUserHandleForUid(it) } else null)
         }
     } catch (error: Throwable) {
         FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -754,13 +782,13 @@ internal class IslandActivityController(
         }
     }
 
-    private fun geometry(label: String? = null): Geometry? {
+    private fun geometry(label: String? = null, mediaOnly: Boolean = false): Geometry? {
         if (!touchWindow.inputRegionAvailable) return null
         val bounds = screen ?: return null
         // Landscape cutouts are at a side; keep that layout entirely native.
         if (bounds.width >= bounds.height) return null
         val now = SystemClock.uptimeMillis()
-        val feedback = state.toast(now)?.takeIf { label == null }
+        val feedback = state.toast(now)?.takeIf { label == null && !mediaOnly }
         shell.contentHeight(options.height)
         val caption = label ?: feedback?.text
         val centered = options.position == 1
@@ -794,8 +822,34 @@ internal class IslandActivityController(
             if (centered) maximumWidth else placement.width, placement.left)
     }
 
+    private fun publishMusicReturn() {
+        val enabled = !disposed && options.enabled && options.media && options.mediaReturn &&
+            options.mediaReturnApps.isNotEmpty() && !options.simplified && ValueAnimator.areAnimatorsEnabled()
+        if (!enabled) {
+            val old = musicReturnPublisher
+            musicReturnPublisher = null
+            old?.let { ModuleHelper.guarded { it.close() } }
+            return
+        }
+        val publisher = musicReturnPublisher ?: IslandMusicReturnSignal.Publisher(context.applicationContext,
+            handler, scope, ioDispatcher, onCommit = ::nativeMusicReturn) {
+            val current = state.media(SystemClock.uptimeMillis())
+            val bounds = screen
+            if (!state.allowed || current?.playing != true || current.user == null ||
+                current.user != foregroundUser || current.packageName !in options.mediaReturnApps ||
+                state.toast(SystemClock.uptimeMillis()) != null || bounds == null) null
+            else geometry(mediaOnly = true)?.let { geometry ->
+                IslandMusicReturnSignal.Frame(current.packageName, current.user,
+                    geometry.left.toFloat(), geometry.top.toFloat(), (geometry.left + geometry.width).toFloat(),
+                    (geometry.top + geometry.height).toFloat(), bounds.width, bounds.height)
+            }
+        }.also { musicReturnPublisher = it }
+        publisher.publish()
+    }
+
     private fun render(): Boolean {
         handler.removeCallbacks(expiry)
+        publishMusicReturn()
         val now = SystemClock.uptimeMillis()
         if (mediaReturn?.let { now >= it.expiresAt } == true || !state.allowed ||
             !options.mediaReturn || options.simplified || !ValueAnimator.areAnimatorsEnabled()) {
@@ -807,7 +861,8 @@ internal class IslandActivityController(
         if (mediaRevealAt?.let { now >= it } == true) mediaRevealAt = null
         if (pauseDeadline?.let { now >= it } == true) state.setMedia(null, null)
         if (shadeBlocked && !state.allowed) {
-            val deadline = listOfNotNull(pauseDeadline?.takeIf { it > now }, mediaRevealAt?.takeIf { it > now }).minOrNull()
+            val deadline = listOfNotNull(pauseDeadline?.takeIf { it > now }, mediaRevealAt?.takeIf { it > now },
+                mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()
             if (!disposed && deadline != null) handler.postAtTime(expiry, deadline)
             hide(animate = true)
             return false
@@ -825,7 +880,7 @@ internal class IslandActivityController(
             it.packageName == foregroundPackage } else null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null)) geometry() else null
         val nextExpiry = listOfNotNull(state.deadline(), pauseDeadline?.takeIf { it > now },
-            mediaRevealAt?.takeIf { it > now }).minOrNull()
+            mediaRevealAt?.takeIf { it > now }, mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()
         if (!disposed && nextExpiry != null) handler.postAtTime(expiry, nextExpiry)
         if (geometry == null) {
             hide(animate = !disposed && state.allowed && toast == null && current == null)
@@ -1063,6 +1118,7 @@ internal class IslandActivityController(
     fun dispose() {
         if (disposed) return
         disposed = true
+        publishMusicReturn()
         handler.removeCallbacks(expiry)
         handler.removeCallbacks(nativeRefresh)
         clearSystemActivity()

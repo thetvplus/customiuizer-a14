@@ -1190,7 +1190,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_intro">Dynamic Island ilk kez seçildiğinde veya bir entegrasyon açıldığında sistem arayüzünü yeniden başlatın. Kilit ekranında, ekran kapalıyken, yatay modda ve bildirim paneli açıkken gizlenir.</string>
     <string name="system_island_media_title">Müzik ve medya</string>
     <string name="system_island_media_return_title">Müziği adaya taşı</string>
-    <string name="system_island_media_return_summ">Müzik çalarken seçili uygulamadan çıktığınızda kapak hafifçe sekerek adaya yerleşir. Yalnızca seçilen uygulamalarda kullanılır.</string>
+    <string name="system_island_media_return_summ">Müzik çalarken seçili uygulamadan yukarı kaydırarak çıkın; pencere hafifçe sekerek adaya yerleşir. Yalnızca elle seçilen uygulamalarda geçerlidir. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>
     <string name="system_island_media_return_apps_title">Müzik uygulamalarını seç</string>
     <string name="system_island_media_return_apps_summ">Uygulamaları elle seçin. Seçim boşsa normal animasyon korunur.</string>
     <string name="system_island_media_summ">Sistemin seçtiği oynatıcıyı kullanır. Gizlemek için yukarı kaydırın. Görünen müzik duraklatılınca 2 saniye sonra kapanır; gizli ve duraklatılmış müzik görünmez.</string>

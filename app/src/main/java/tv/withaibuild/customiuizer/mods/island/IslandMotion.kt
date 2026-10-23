@@ -19,12 +19,7 @@ internal object IslandMotion {
     val relaxed = TimeInterpolator { progress(it) }
     /** Committed collapse/exit and canceled drags settle without crossing their endpoint. */
     val settle = TimeInterpolator { val t = 1f - it.coerceIn(0f, 1f); 1f - t * t * t }
-    /** Cover arrives before the small catch settles; both share the shell's finite clock. */
-    fun mediaReturnTravel(progress: Float): Float {
-        val t = (progress / .72f).coerceIn(0f, 1f)
-        return t * t * (3f - 2f * t)
-    }
-
+    /** The native window arrives while the shell's one finite clock makes a small catch. */
     fun mediaReturnCatch(progress: Float): Float {
         val t = ((progress - .55f) / .45f).coerceIn(0f, 1f)
         return (sin(Math.PI * t) * (1f - t)).toFloat()

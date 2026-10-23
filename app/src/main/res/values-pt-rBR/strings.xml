@@ -1184,7 +1184,7 @@
     <string name="system_island_intro">Reinicie a interface do sistema após selecionar Dynamic Island pela primeira vez ou ativar uma integração. Oculto na tela de bloqueio, com a tela desligada, no modo paisagem ou com o painel de notificações aberto.</string>
     <string name="system_island_media_title">Música e mídia</string>
     <string name="system_island_media_return_title">Música para a ilha</string>
-    <string name="system_island_media_return_summ">Ao sair de um app selecionado durante a reprodução, a capa entra na ilha com um leve balanço. A animação vale apenas para os apps selecionados.</string>
+    <string name="system_island_media_return_summ">Durante a reprodução, deslize para cima para sair de um app selecionado. A janela entra na ilha com um leve balanço. Apenas para apps escolhidos manualmente. Reinicie o launcher após a primeira ativação.</string>
     <string name="system_island_media_return_apps_title">Selecionar apps de música</string>
     <string name="system_island_media_return_apps_summ">Selecione os apps manualmente. Sem seleção, a animação habitual é mantida.</string>
     <string name="system_island_media_summ">Usa o player selecionado pelo sistema. Deslize para cima para ocultar. A música visível fecha 2 segundos após pausar; a música pausada e oculta continua oculta.</string>

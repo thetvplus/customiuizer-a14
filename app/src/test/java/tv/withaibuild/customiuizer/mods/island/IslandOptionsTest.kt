@@ -5,6 +5,22 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun nativeWindowHookRequiresTheIslandMediaOptInAndAnExplicitApp() {
+        val prefs = PrefMap()
+        fun active() = tv.withaibuild.customiuizer.mods.utils.feature.LauncherMusicReturnFeature.evaluateEnabled(prefs)
+        assertFalse(active())
+        prefs.put("system_strong_toast_mode", "3")
+        prefs.put("system_island_media_return", true)
+        prefs.put("system_island_media_return_apps", setOf("chosen.music"))
+        assertFalse(active())
+        prefs.put("system_island_media", true); assertTrue(active())
+        prefs.put("system_island_media_return_apps", emptySet<String>()); assertFalse(active())
+        prefs.put("system_island_media_return_apps", setOf("chosen.music"))
+        prefs.put("system_island_simplified", true); assertFalse(active())
+        prefs.put("system_island_simplified", false); assertTrue(active())
+        prefs.put("system_strong_toast_mode", "0"); assertFalse(active())
+    }
+
     @Test fun musicReturnIsOptInAndNeverTreatsAnEmptySelectionAsAllApps() {
         val prefs = PrefMap()
         assertFalse(IslandOptions.read(prefs).mediaReturn)

@@ -1057,3 +1057,8 @@ data object ToastPresentationFeatureId : FeatureId {
     override val id = 256
     override val name = "systemui_toast_presentation"
 }
+
+data object LauncherMusicReturnFeatureId : FeatureId {
+    override val id = 257
+    override val name = "launcher_music_island_return"
+}

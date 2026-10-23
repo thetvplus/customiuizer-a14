@@ -738,7 +738,7 @@ CORE / MAINTAIN / RETIRE_CANDIDATE 的长期原则归 [ARCHITECTURE](../../ARCHI
 
 源码提交为 `7bb9a0b55857912ebb88077cf8fca08822f6114d`，包含本批手势与波形两个独立回退单位。修改映射前，四项 FFT 回归中三项失败，确认振幅减半仍接近原高度、200 ms 静音残留过大及旧 release 合同；修复后 FFT、采集生命周期与岛窗口专项 fast 退出 0。新增两项用例检查幅度比例、频段隔离和鼓点间隙，原合法输入、静音与边界保护继续保留。
 
-最终 `python tools/verify.py full` 退出 0：354 suites / **3265 tests**，0 failures / errors、2 skipped，包含 Kotlin / Java 编译与 lintDebug。工具源码与测试自 `447aeb17` 未再修改，复用已通过的 600 项 Python 工具测试结果，不重复跑相同范围。
+该阶段 `python tools/verify.py full` 退出 0：354 suites / **3265 tests**，0 failures / errors、2 skipped，包含 Kotlin / Java 编译与 lintDebug。工具源码与测试自 `447aeb17` 未再修改，复用已通过的 600 项 Python 工具测试结果，不重复跑相同范围。
 
 - 同证书 `assembleDevelop` / `lintVitalDevelop` 退出 0；仍为 r14.25.3 / 248，明确标记 **Develop**，不作为正式发行。APK 为 4,064,090 bytes、SHA-256 `56f3c41d63c9ca3a3074c3329ac53a0601243fd61fcc7d714680ef455e00f2b4`；mapping SHA-256 `e402cceb51367ea89ba3da20694c9547824951ca5c006ffe438ba32beff8fa73`。provenance 的 revision `7bb9a0b5` / buildType develop、历史证书 `c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70` 与 zipalign 均核对通过。
 - DexSQL 复核同一产物的 DEX **039**、compileOnly Hook API 定义 **0**、Manifest 设置入口直接 Hook API 引用 **0**；setId / getId 各一处，replaceHook **0**，三个固定 ID 使用点保留。同产物成员 mapping 将合并后的 `Llm1;->t` 归属到 HookInstallation.intercept / confirmStableHookId；`Lzu;->a` 保留逐 owner 释放，dispatch 的正常与 catchall 路径均保留按令牌归属释放并重新抛错。未把静态 invoke 次数作为运行安装次数。
@@ -747,3 +747,45 @@ CORE / MAINTAIN / RETIRE_CANDIDATE 的长期原则归 [ARCHITECTURE](../../ARCHI
 - 初次显示探针使用了错误的窗口标题，后又在原生两秒暂停展示期限前检查窗口消失；已改为源代码中的实际标题、仅匹配活动 Window 条目，并按既有期限有界等待。修正后整组探针退出 **0**，没有为满足探针修改产品时序。临时设备 probe / UI XML 已移除，测试结束恢复暂停，读回锁屏；设备保留上述同版本 Develop 测试包。
 
 远端 exact-head A14 CI 以本次交付回执登记，不把先前 main 或中间源码结果当成本分支通过。当前授权仍为推送开发分支，不发布新版本。其他播放器、蓝牙 / 远程 / offload、匿名或多会话、权限撤销与全部字体 / 旋转组合仍待对应场景验收；本批没有扩大采集边界。
+
+### 末端两柱的高频显示
+
+用户继续指出末尾两点几乎不动。五柱分别表示低到高的频段，末两柱为 1.8–6 kHz、6 kHz 以上至 Nyquist；设备聚合样本中最高频段峰值功率仅 1–73，线性显示时自然很矮。`4f3ef7060ca1934029b074eb3e06ef085690c694` 为末两段分别增加固定 3 / 8 倍显示增益，并抑制功率不超过 2 的一位量化底噪，仍在平滑前钳制至 1。没有按各段自身峰值归一化，不把弱高频伪造成始终满幅；前三段保持实测振幅比例与原频段隔离。
+
+同一批聚合数据回放后，低频仍为 0.6170–0.8635，末两段分别为 0.1352–0.4772、0.0270–0.2325；这是算法回放，不作为同步设备 A/B。新增回归在修改前 6 项 FFT 测试中 2 项失败，确认弱高频映射与量化噪声边界；修复后该阶段 Full 为 354 suites / 3267 tests，0 failures / errors、2 skipped。连同后续音乐收拢的最终产物与实机结果见第 18 节。
+
+## 18. 2026-10-24：手动选择应用的音乐窗口飞入
+
+用户要求“退出音乐 App 时，封面收进岛内，带一点接住的回弹”，需要开关和手动应用选择，不能全局生效。早期提交 `1688e7ad6a99add005689c56b36b4724b2ebf66b` 仅实现岛附近的封面收拢；用户实机指出原窗口仍返回桌面图标，不能作为窗口飞入通过。当前接入桌面原生 CLOSE_TO_HOME 窗口动画，删除额外封面轨迹层，保持现有岛布局与常规动画。沿用本批分支、版本和不发布合同；高频波形调整仍是独立回退单位。
+
+### 行为与所有权
+
+“音乐直接上岛” `system_island_media_return` 默认关闭，`system_island_media_return_apps` 默认空，使用既有多选应用页、设置搜索和备份。首次启用需要重启桌面。仅对手动选中、正在播放的系统主播放器来源应用生效，空集合永不代表全部应用。
+
+Launcher 在 NavStubView 附着时创建 owner，解除附着时释放；新的 Feature ID 257 仅在 LAUNCHER / APPLICATION_ATTACHED、岛与音乐开启、开关打开、名单非空且非简化模式时安装。原安装点只安装一次，偏好变化不会重装 Hook。已安装 owner 关闭时保留既有偏好观察通道，移除业务 Receiver / ScreenState listener、取消 Scope / 待发送工作并清空状态。
+
+SystemUI controller 仅在该功能有效时拥有一份 Publisher。双方使用显式包名、Android 14 shareIdentity 和项目既有发送者校验，消息只包含选中包名、用户、岛几何、时间与单调序列，不包含标题、封面、音频或窗口内容。桌面缓存容量一、有效期 5 秒；按下手势时异步请求刷新，没有 MOVE / 逐帧 IPC 或轮询。岛几何变化与安全状态变化使旧状态失效；关闭 / 销毁发送一次最终失效并注销。Handler 只移除自己的重配置 Runnable，保留框架已排队广播的完成路径，避免 owner 清理吞掉广播交付。
+
+原生动画提交后仅在原调用成功时异步回传一次确认。SystemUI 校验当前几何、应用、用户、手势序列及不超过 1 秒的提交时间，再复核原串行会话快照，等待 80 ms 后启动 560 ms 的有限接入与轻微回弹。最多保留一个按 token 绑定、750 ms 失效的候选。未收到原生确认时保持原 750 ms 音乐入场；晚到确认不能跨过第二次应用切换或重新进入播放器。关闭 / 撤销选择、暂停、会话替换、隐私状态、通知抢占和 owner 失效均取消；尚未入场的快路径取消时恢复原截止时间。简化模式和系统动画关闭时保留原生行为。
+
+### 原生窗口合同与 ROM 证据
+
+从实际连接的设备读取 Launcher 路径 `/product/priv-app/MiuiHome/MiuiHome.apk`，版本 `RELEASE-4.39.30.8604-08262248` / `439308604`；APK SHA-256 为 `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`，与 TW 目标样本一致。包含两个 DEX 039，定义类数为 7480 / 7880。新查询 `tools/dexsql/island_launcher_return.sql` 返回 19 个声明、35 个字段与 11 条相关调用；结果及完整相关 smali 保存在忽略的现场证据目录，数据集均已关闭，不提交 ROM 样本。
+
+已顺序复核 WindowElement.animTo → updateCurrentDisplayRotation / animClear → animResetReady 或 runningAnimUpdate → 原生 Spring 启动与 updateCurrentRect，以及空 targetView、浮动图标恢复和 finish / cancel 路径。RectFParams 的 21 参数构造、默认参数、各字段的真实类型均来自定义；NavStubView.onTouchEvent 会内部改写 MOVE 为 DOWN，因此模块在原调用前只检查原始 DOWN。TW `framework.jar` SHA-256 `8586618b92c2892a9c6be1cfd28871d9b39655162ff97a4b12f8d966d14895e9` 中确认 RunningTaskInfo 继承 TaskInfo，公开 getWindowingMode 仅读取 configuration，不发 Binder；这是样本静态证据，不能代替目标 ART 调用和实机动画验收。
+
+所有反射元数据在安装冷路径解析。只接管竖屏、标准全屏、单个 closing 目标且包名 / taskId / 用户与当前选中播放器完全一致的 CLOSE_TO_HOME；横屏、分屏、小窗、快速切换、最近任务及不确定身份均保留原生路径。复制原 RectFParams，仅改变 targetRect、endRadius、ignoreIcon 和 targetView；原参数、窗口 leash、速度、listener、clear / finish / cancel 策略均保留，chain.proceed 恰好一次。空 targetView 使用 ROM 自有 resetFloatingIcon(false) 恢复桌面图标，不直接隐藏 / 删除图标。
+
+没有自建窗口截图、封面飞行 Path、额外 Bitmap、周期任务或动画依赖。桌面继续拥有原生窗口动画，岛继续使用原单窗口与有限时钟；原 SHORT / LONG 尺寸、相机留白、封面比例、16 dp 物理边距与输入区域不变。新增跨进程状态和有限异步工作均有 owner、容量和释放路径；未测 CPU / GPU / 功耗，不宣称性能收益。
+
+### 参考与取舍
+
+实际读取 [Apple Live Activities HIG](https://developer.apple.com/design/human-interface-guidelines/live-activities) 官方 Markdown，采纳信息简洁、图形比例、布局连续、避免碰撞、短时过渡与相关内容直达；保留隐私和减少动画门禁，不新增展开面板或控制按钮。
+
+[Cabel 示例](https://x.com/cabel/status/1571205306180571136) 通过发布方 oEmbed 读到整窗最小化和接住回弹的原文；本批以岛为返回终点，未实现其反向投掷侧鼓起的全部物理效果。[DynamicIslandDemoProject](https://github.com/App-Development-Academy/DynamicIslandDemoProject/tree/7cbbb320174072672e1554f287ce802bb6cc8e37) 核对至 exact SHA；相关 SwiftUI / ActivityKit 外卖视图没有可直接移植的自定义运动曲线，未复制源码或素材，也未引入 ActivityKit。时长和弹幅仍为本项目候选值。
+
+### 验证边界
+
+早期 1688e7ad 的 Full 为 354 suites / 3277 tests、0 failures / errors、2 skipped，同证书 Develop 测试包安装成功且原设置键变化为 0；该产物没有真正的整窗飞入，不能作为本次原生路径通过。此前 b8d40fa 的 [A14 CI 40033942984](https://github.com/thetvplus/customiuizer-a14/actions/runs/40033942984) 同样只代表中间提交。
+
+本次新增回归检查原参数不变且仅四个字段改变、回调身份保留、任务 / 包名 / 用户 / 窗口模式隔离、状态编码与时效、单份异步发送、关闭 / 重新启用 / detach 释放、框架广播完成保留、确认前后时序及迟到确认取消。最终源码、APK、远端 exact-head 与目标设备结果在本节收口；静态和 Host 通过不登记为实机通过。

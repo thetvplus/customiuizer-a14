@@ -126,6 +126,12 @@ class IslandActivityLifecycleTest {
         drain()
     }
 
+    private fun nativeReturn(controller: IslandActivityController, committedAt: Long = android.os.SystemClock.uptimeMillis()) {
+        val media = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "media")
+        controller.nativeMusicReturn(IslandMusicReturnSignal.Frame(media.packageName, requireNotNull(media.user),
+            280f, 15f, 800f, 125f, 1080, 2400), committedAt)
+    }
+
     private fun message(id: Int, time: Long = 1L, open: () -> Boolean = { true }): IslandNotificationAccess.Bound {
         val intent = android.app.PendingIntent.getActivity(context, id, android.content.Intent("island.message.$id"), android.app.PendingIntent.FLAG_IMMUTABLE)
         val notification = android.app.Notification.Builder(context, "chat")
@@ -355,6 +361,7 @@ class IslandActivityLifecycleTest {
         assertTrue(prepared!!.playing)
         assertTrue(android.animation.ValueAnimator.areAnimatorsEnabled())
         org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        nativeReturn(controller)
         controller.foregroundChanged("com.miui.home")
         assertNotNull("Foreground edge must create a return", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         drain()
@@ -383,7 +390,8 @@ class IslandActivityLifecycleTest {
     }
 
     @Test fun returnSwitchRequiresAnExplicitAppAndKeepsTheUsualDelayOtherwise() {
-        for ((enabled, apps) in listOf(false to setOf(context.packageName), true to emptySet(), true to setOf("other.music"))) {
+        for ((enabled, apps) in listOf(false to setOf(context.packageName), true to emptySet(),
+            true to setOf("other.music"), true to setOf(context.packageName))) {
             val before = adds
             val controller = controller(media = true, mediaReturn = enabled, mediaReturnApps = apps)
             val player = launchablePlayer("unselected-return-$before")
@@ -399,11 +407,46 @@ class IslandActivityLifecycleTest {
         }
     }
 
+    @Test fun nativeCommitCanArriveAfterTheFirstHomeEdge() {
+        val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("commit-after-home"); controller.updateFromNative(native); revealMedia()
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        val committedAt = android.os.SystemClock.uptimeMillis()
+        controller.foregroundChanged("com.miui.home"); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(10))
+        nativeReturn(controller, committedAt); drain()
+        assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
+        assertEquals(1, adds)
+        assertEquals(IslandMotion.MEDIA_RETURN,
+            org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion").duration)
+    }
+
+    @Test fun lateNativeCommitsCannotCrossAnotherAppSwitchOrReenterThePlayer() {
+        for (destinations in listOf(listOf("other.app"), listOf("other.app", "com.miui.home"), listOf(context.packageName))) {
+            val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
+            controller.foregroundChanged(context.packageName)
+            native.player = launchablePlayer("late-native-${destinations.last()}")
+            controller.updateFromNative(native); revealMedia()
+            val committedAt = android.os.SystemClock.uptimeMillis()
+            controller.foregroundChanged("com.miui.home"); drain()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1))
+            destinations.forEach(controller::foregroundChanged); drain()
+            nativeReturn(controller, committedAt); drain()
+            assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+            val currentShell = org.robolectric.util.ReflectionHelpers.getField<IslandActivityView>(controller, "shell")
+            assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(currentShell, "mediaReturnProgress"), 0f)
+            controller.dispose(); drain()
+        }
+    }
+
     @Test fun revokingTheSelectionBeforeEntryRestoresTheOrdinaryDeadline() {
         val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
         val player = launchablePlayer("revoke-return")
         controller.foregroundChanged(context.packageName)
         native.player = player; controller.updateFromNative(native); revealMedia()
+        nativeReturn(controller)
         controller.foregroundChanged("com.miui.home"); drain()
         val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
         val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
@@ -421,6 +464,7 @@ class IslandActivityLifecycleTest {
         val player = launchablePlayer("return-pause-race")
         controller.foregroundChanged(context.packageName)
         native.player = player; controller.updateFromNative(native); revealMedia()
+        nativeReturn(controller)
         shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
         controller.foregroundChanged("com.miui.home"); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(750)); drain()

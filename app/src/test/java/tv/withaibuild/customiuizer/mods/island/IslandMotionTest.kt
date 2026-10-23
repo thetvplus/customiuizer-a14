@@ -4,20 +4,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandMotionTest {
-    @Test fun musicReturnArrivesBeforeOneSmallCatchAndHasExactEndpoints() {
-        assertEquals(0f, IslandMotion.mediaReturnTravel(0f), 0f)
-        assertEquals(1f, IslandMotion.mediaReturnTravel(1f), 0f)
+    @Test fun musicReturnMakesOneBoundedCatchAndHasExactEndpoints() {
         assertEquals(0f, IslandMotion.mediaReturnCatch(0f), 0f)
         assertEquals(0f, IslandMotion.mediaReturnCatch(1f), 0f)
         var previous = 0f
+        var descending = false
         for (i in 0..1000) {
             val p = i / 1000f
-            val travel = IslandMotion.mediaReturnTravel(p)
-            assertTrue(travel.isFinite() && travel in previous..1f)
-            assertTrue(IslandMotion.mediaReturnCatch(p) in 0f.. .6f)
-            previous = travel
+            val catchValue = IslandMotion.mediaReturnCatch(p)
+            assertTrue(catchValue.isFinite() && catchValue in 0f.. .6f)
+            if (catchValue < previous) descending = true
+            if (descending) assertTrue(catchValue <= previous)
+            previous = catchValue
         }
-        assertEquals(1f, IslandMotion.mediaReturnTravel(.72f), 0f)
+        assertTrue(descending)
+        assertEquals(0f, IslandMotion.mediaReturnCatch(.55f), 0f)
         assertTrue(IslandMotion.mediaReturnCatch(.72f) > 0f)
         assertTrue(IslandMotion.MEDIA_RETURN_DELAY < IslandMotion.MEDIA_DELAY)
         assertTrue(IslandMotion.MEDIA_RETURN < 1000)

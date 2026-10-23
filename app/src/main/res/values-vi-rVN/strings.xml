@@ -1184,7 +1184,7 @@
     <string name="system_island_intro">Khởi động lại giao diện hệ thống sau khi chọn Dynamic Island lần đầu hoặc bật tích hợp. Ẩn trên màn hình khóa, khi tắt màn hình, ở chế độ ngang hoặc khi mở bảng thông báo.</string>
     <string name="system_island_media_title">Nhạc và phương tiện</string>
     <string name="system_island_media_return_title">Đưa nhạc vào đảo</string>
-    <string name="system_island_media_return_summ">Khi rời ứng dụng đã chọn trong lúc phát nhạc, ảnh bìa thu vào đảo và nảy nhẹ. Chỉ áp dụng cho ứng dụng được chọn.</string>
+    <string name="system_island_media_return_summ">Khi đang phát nhạc, vuốt lên để rời ứng dụng đã chọn; cửa sổ thu vào đảo và nảy nhẹ. Chỉ áp dụng cho ứng dụng được chọn thủ công. Khởi động lại trình khởi chạy sau lần bật đầu tiên.</string>
     <string name="system_island_media_return_apps_title">Chọn ứng dụng nhạc</string>
     <string name="system_island_media_return_apps_summ">Chọn ứng dụng thủ công. Không chọn ứng dụng nào sẽ giữ hiệu ứng thông thường.</string>
     <string name="system_island_media_summ">Dùng trình phát do hệ thống chọn. Vuốt lên để ẩn. Đảo đang hiển thị sẽ đóng sau 2 giây tạm dừng; nhạc tạm dừng đang ẩn sẽ không hiện lại.</string>
