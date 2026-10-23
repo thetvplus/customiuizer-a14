@@ -6,25 +6,31 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
-- Scope notification freeform options to the native launch transaction; reject stale menu/island rows and retain lockscreen/profile gates. Bind heads-up expansion to notification identity, use native auto-removal, preserve lights when muting sound/vibration, and keep count/fold pipeline initialization. Retire global channel-policy overrides while retaining preference keys and protected notifications.
-- Reuse one invalidatable palette per notification, preserve native background resets/group summaries, refresh centered heads-up dimensions after configuration changes, and keep a newly created seconds ticker stopped while the screen is off. Device performance and ROM behavior still require acceptance.
-- Restore status-bar gesture action contexts and respect the native side/bottom back-gesture height branches. Save bounded maintenance recovery records before changes, validate package/user identity, verify actual state, and retain or compensate failed operations without adding restriction targets.
-- Contain Dynamic Island internal-insets failures, release input owners on detach, and retain unchanged layout parameters; refresh the window when display-density padding changes.
-- Refine Dynamic Island safe-edge layout, bounded input regions and upward recall; add a guarded current-player launch fallback. Add an experimental live waveform while keeping lightweight animation as default, regroup settings and preserve legacy feedback and backup choices.
+## r14.25.3 — 2026-10-23
 
-## r14.25.2 — 2026-10-23
+versionCode 248. Changes since r14.25.1:
 
-versionCode 247. Changes since r14.25.1:
+### User changes
 
-- Validate the work branch and merged main before release confirmation, then verify the source release before syncing the same APK to Xposed. Support manual runs, pre-releases and recovery; align bilingual changelogs and versions with one preparation command, and generate consistent release notes and provenance.
-- Add configurable left, right, down, double-tap and long-press music gestures for the selected player, session volume and configured apps, shortcuts or activities. Keep tap-to-open and upward dismissal. The default-on track-swipe switch blocks only horizontal track changes when disabled.
-- Prevent paused music from flashing after returning Home, during an unfinished entrance or after a hidden playback activation. Only an actually displayed activity retains its two-second pause exit; repeated states and old snapshots cannot extend it. Fix prepared-window cancellation, session changes and re-entry during exit.
-- Add left, center and right placement with a safe horizontal offset. Coordinate automatic width, text and icons with height, preserve actual status-bar overlap handling and keep the native StrongToast forehead suppressed.
-- Select ten system feedback categories independently with resources registered on demand. New installs stay silent and upgrades retain previously enabled feedback. Notification takeover requires an explicit, initially empty app allowlist; exclusions take priority and other notifications remain native.
-- Include Dock backgrounds in the native unlock animation and preserve movement, scale, opacity and interruption recovery in normal and full-width modes. Keep geometry updates from overwriting native animation properties and align full-width wallpaper sampling with rendered coordinates.
-- Fix the ROM method signature used to initialize the back-gesture area width. Scale fresh native dimensions after configuration changes and preserve defaults and native failure behavior.
-- Refine five settings groups and action summaries, complete ten maintained languages and backup contracts, and align feature documents, page maps and CN/TW ROM static evidence. Device behavior, audio routing and power measurements remain separate validation work.
-- Require the protected reviewer for automatic and manual Actions publication, recheck before signing, and stop when review protection is missing.
+Refine Dynamic Island, Dock and notification interactions while preserving native animations and system security boundaries.
+
+- Add five customizable music gestures for track controls, volume and shortcuts. Fix unwanted appearances after pausing and refine opening the current player and upward dismissal.
+- Add left, center and right placement with safe horizontal adjustment, better cutout avoidance and touch edges. Select system feedback by category and notification takeover by app allowlist; keep lightweight waves by default with an experimental live mode.
+- Synchronize Dock backgrounds with native unlock animations, improving movement, scale, opacity and wallpaper-sampling transitions in normal and full-width modes.
+- Refine normal and floating-window notification clicks, expansion and auto-removal, withdrawal and rebinding, folding and colors. Preserve native lockscreen, user and critical-channel protections.
+- Fix back-gesture area compatibility and status-bar gesture actions; refine dimension changes, screen-off seconds updates and state recovery.
+- Refine island settings, configuration migration and backups. Save original system states before maintenance changes, verify results and retain recovery records on failure.
+
+### Engineering notes
+
+- Consolidate r14.25.2 and the subsequent island, quality and M03 branches against retained r14.25.1. Preserve Git history and the existing engineering roadmap without rewriting older provenance or validation facts.
+- Retain five music actions, the track-swipe switch, pause-visibility leases, ten on-demand feedback categories, silent new installs, upgrade migration and allowlist/exclusion precedence. Align ten maintained languages, backups and settings subpages. Lightweight waves remain default; experimental capture requires the current user, confirmed media identity and one active audio track, releasing resources on failure.
+- Contain island insets failures, release input owners, reuse unchanged layouts and invalidate density changes. Reliably journal maintenance recovery before system operations, validate package/user identity and actual state, strictly decode records and compensate failures without adding restriction targets.
+- M03 retains native notification views, pipeline attachment, timers and refresh boundaries. Scope floating-window options to one launch and validate delayed callback identity. Retire global channel-protection overrides and the system_server feature identity while retaining legacy keys and backups. Keep one invalidatable palette per notification.
+- Preserve native Dock geometry, animated opacity and interruption recovery in both modes. Fix no-argument back-width resolution and native side/bottom height branches; reuse the host Context for status-bar actions.
+- Trust only main for signing and require protected review for candidates and publication. End automatic/manual requests cheaply for published versions; reuse exact main CI while retaining signatures, digests, provenance, sequential dual publication and recovery from the original candidate.
+- Generate public notes from this User changes section and retain engineering details here. Cumulative preparation explicitly selects the superseded section and previous retained release. The ADB driver attempts and verifies locking on success, failure and interruption, retaining only relevant crash events.
+- Keep host, static ROM and device conclusions separate in the existing roadmap. Claim no unmeasured performance or battery gains. First acceptance after removing old system_server hooks requires a full reboot; do not guess or reset historical notification permissions.
 
 ## r14.25.1 — 2026-10-22
 
