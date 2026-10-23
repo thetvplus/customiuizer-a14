@@ -14,6 +14,7 @@
 | `screenshot_callers.sql` | MIUIScreenshot APK | 字符串目标的直接调用者；仍需用 candidates 查询筛选、用 decode 复核。 |
 | `guardprovider_candidates.sql` | GuardProvider APK | 同一 DEX、同一方法同时使用两个子串；零结果只约束输入样本。 |
 | `background_services_contract.sql` | SecurityCenter / PowerKeeper / GuardProvider / MiuiDaemon / AnalyticsCore | 任务入口与 Job / Alarm / WakeLock 调用；需完整读取 Manifest、decode 分支 / 周期 / 用户开关，调用存在不证明执行或耗电。 |
+| `notification_m03_contract.sql` | CN/TW SystemUI、Settings、framework / services 及 miui-framework / miui-services | 通知启动事务、Heads-up、频道 / NMS 与 Count/Fold 的定义、调用和 owner 字段；须完整 decode，交接目标和实机矩阵见 [M03 精校](../../docs/rom-intelligence/M03_NOTIFICATION_CONTRACT.md)。 |
 | `island_input_audio_contract.sql` | SystemUI 与 boot framework.jar | 动态岛内部 Insets 监听、Token UID 与音轨会话接口声明；授予权限、AppOps、路由与隐藏 API 实际可用性仍须实机。 |
 | `volume_contract.sql` | SystemUI 宿主 + plugin APK | 查询按钮、计时器、超时 / 无障碍、窗口模糊及百分比 owner 声明；宿主亮度与插件音量分别确认来源。宽度资源 ID、默认材质和关闭时序须结合 Smali。 |
 | `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 原生显示、透明度、编辑动画、拖拽提交 / 取消、子布局重排、设备圆角、材质 / Drawable 和导航取样声明；decode 核对实际 Transformation、手势反向及边界刷新，不另行推进动画或等待结束才恢复。 |

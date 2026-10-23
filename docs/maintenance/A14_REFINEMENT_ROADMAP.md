@@ -175,7 +175,7 @@ M01 建立的追踪关系为：**页面 / 偏好键 → Feature ID 或设置端�
 | M00 既有修复 | 本地完成，待实机 | 声音通话回调、标题创建重载、桌面双击、侧边栏和温度生命周期、键盘设置联动 | 声音 / 导航栏 / 标题 / 手势 / 启动器其他分组；手机管家顺序整理 |
 | M01 目录校准 | 八批校准；后续随闭环合批 | 复用 M01.01–M01.08；目录、重启及关闭语义随所属修复批一次校准，不单独遍历目录 | 固定当前页与拟调整页的键映射；不先批量搬页面 |
 | M02 声音与振动 | 焦点、计时、面板、振动与高音量警告八批收口 | 复用 M02.01–M02.08；可视化单独处理；预制效果与硬件能力保留实机边界 | 行为、音量面板、可视化各自连续，名单与开关相邻 |
-| M03 通知链路 | 待核查 | 通知限制与权限；通知中心时钟 / 日期 / 模糊；浮动通知和展开 / 小窗；逐批检查相互干扰 | 通知规则、外观、交互分组，清除重复入口说明 |
+| M03 通知链路 | 源码精修、回归与双区域静态取证已推进；设备待验 | 通知点击事务、Heads-up、权限 / 频道、Count/Fold、着色和时钟；详见本页 M03 专项及 ROM 交接 | 保留设置键；系统保护边界收口，十种维护语言同步说明 |
 | M04 锁屏与应用锁 | 待核查 | 认证与解锁策略；应用锁超时与名单；锁屏媒体 / 充电 / 闹钟；安全相关回退优先 | 显示与交互、安全、媒体与数据分开，限制条件明确 |
 | M05 状态栏与控制中心 | 部分静态复核 | 复用 `8c922a5` 的有效结论；后续分为信号与双卡、时钟与图标、Duo、电池与温度、磁贴与插件生命周期等小批 | 主开关、尺寸与外观、附加行为分层；保留 Duo 不含下载进度的边界 |
 | M06 启动器 | M06.05 图标中心、对称尺寸与采样透镜已本地验证 | 复用 Dock 和 `3981f85`；待实机确认采样 / 材质 / 导航区与动画同一闭环，再按实际共享 owner 合并布局、小部件和动画交接 | 保留原生图标、拖拽与动画坐标 |
@@ -557,3 +557,88 @@ Manifest 中 exported / permission / process 已逐页读取：Daemon 云 Job �
 Android 备份按[官方数据提取规则](https://developer.android.com/identity/data/autobackup#IncludingFilesAndroid12)单独排除 `maintenance_recovery.xml` 的云备份与设备迁移；其他偏好保持既有备份资格。模块自己的导出仍只处理偏好文件。测试同时检查 Manifest 关联、两种 transport 的有限排除及未全局禁用备份；厂商迁移工具是否遵守该规则仍须目标设备验证。
 
 本批独立回退单位为动态岛安全边界 / 几何、状态栏动作 Context、导航高度、维护事务，以及取证 SQL / 文档。资源成本是有界恢复数据与用户主动维护时的身份 / 状态查询；没有修改 PrefMap、ResourceHooks、FeatureRegistry、ProcessRouter、PreferenceBootstrap，也没有测量依据可宣称确定节电、CPU / GPU 或内存改善比例。
+
+<a id="m03-notifications-20261023"></a>
+
+## M03 通知链路专项（2026-10-23）
+
+### 范围、继承和完成边界
+
+从远端已核实的 `2936d4f6cb896cffc7b9abe9de82185fb5a9a374` 建立 `codex/a14-m03-notification-refinement-20261023`，继承 `06ab217` 之后的维护日志备份排除等成果。main 为 `d6f47fd64ff76af2391bdcab14bc56535d93b56a`，任务中再次核实两条远端均未变化；没有回到旧 main 重做，没有覆盖云端工作。保留 r14.25.2 / versionCode 247，未合并、签名或发布。
+
+实现提交为 `a01976a`（M03.01–.04 及动态岛点击失效）、`1656892`（着色与时钟）、`b72cad0`（退役身份及安装范围契约收口）。共享通知文件和回归存在依赖，回退核心批次须同时回退其身份 / 契约变化；这些不是可随意 cherry-pick 的独立私有方法补丁。实现和本页、[ROM 交接](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)共同构成审查范围，不新建功能管理框架。
+
+| 闭环 | 本轮源码决定 | 验证边界 / 状态 |
+| --- | --- | --- |
+| M03.01 点击 / 小窗 | 进程级 `clickNotifyOptions` 退役；在原生 deferred starter 的两参选项入口传递单次事务。system_server caller 改为调用作用域，移除 SecurityManager 方法 Hook；磁贴请求限定 component / 用户 / caller / 期限。菜单与动态岛拒绝失效 Row | 状态、并发、重入、异常、用户和 PendingIntent 类型回归通过；CN/TW 原生链已取证，真实启动与资料认证待设备 |
+| M03.02 Heads-up | Row 拥有至多一个 60ms 展开任务，身份 / 状态重核且取消有闭环；自动收起使用原生 timer；静音只抑制对应 Heads-up / 声音振动，不连带 bubble / 灯光；居中尺寸随 Configuration 失效 | 过期 / 复用 / 输入等 Host JVM / Robolectric 回归与 Native Smali；时序、无障碍、锁屏和原生展示数量待设备 |
+| M03.03 权限 / 频道 | 退役全局 NotificationChannel、forced-enabled 集合、USE_WHITE_LISTS 与 Settings blanket overrides，退役 ID 38 不复用。保留旧键，限定普通当前用户应用的 MIUI UI 控制；关键频道 / NMS 原判断保留 | 安装与范围契约、目标 UID / flags 和后端失败回归；两区 Settings / NMS 定义和调用证据。历史持久化状态及实际权限待设备读回 |
+| M03.04 数量 / 折叠 | 恢复两个 Coordinator 的 attach；只停数量淘汰、fold filter 和历史折叠调度，用原生 setFold 同步新增 entry / extra | 有 attach / listener / update / remove / 调度的完整静态链和安装范围回归；Pipeline 重建、地区和重新开启仍待设备 |
+| M03.05 着色 / 刷新 | 保留原生 View / RemoteViews / 布局；移除全局 Tint(0) 与摘要背景绕过。冷路径句柄、每通知单槽调色缓存，图标 generation / 身份 / UID / 主题失效 | 缓存命中 / 失效 / 失败和原生边界回归；设备绘制、主题交叉和实际 CPU / 帧时间尚未测量 |
+| M03.06 时钟 / 模糊 | 保留已正确快照 / ClockEffect / 字体语言与 DrawerBlurScope；只修复秒针熄屏创建后仍启动的边界 | 原时钟 / 模糊回归加 OFF→ON→OFF 用例；实际设备屏幕、字体语言和控制中心切换待验 |
+
+### 旧实现缺陷与新旧契约交叉
+
+1. 小窗 Bundle 等待下一次任何 PendingIntent 发送，没有通知、线程或事务所有权；异步解锁、取消、无发送、重入和普通发送可混用。新实现不发送第二次 intent；仅覆盖原生选项获取阶段，原生已有小窗选项继续使用。非 Activity / 全屏 / 工作资料 / 其他用户保留原生，不能用跨进程“下一包名”补猜 trampoline。
+2. `freeformCallingPackage` 可遗留上一次启动的 caller；`nextFreeformPackage` 无用户、component、消费期限，SecurityManager 的返回值还在整个服务范围被覆盖。现在只修改 ActivityStarter 的本次布局判断，原服务检查保持；原广播为一个有期限的有限目标槽，没有新增计时任务。
+3. 延迟展开捕获旧 Row / listener，只在重新安排时取消，Heads-up 退出、移除、换绑和 detach 没有完整释放；已展开再点击可切回收起。现在读取当前身份和原生展开 / 输入 / 手势状态，弱引用不把 additional-instance-field 的 key 反向保活。近期 NotificationAutoExpand 保留，只做展开状态交叉，不重写其 resolver / effect。
+4. 自动收起直接搬动原生移除 Runnable，Presenter 分支没有远程输入判断，且固定时长绕过无障碍 / 原生扩展。现在保持原生 entry / reset / remote-input 计时所有权，只放宽预期 stickiness。时间依原生 postTime / 推荐超时，不承诺固定“展开后 4.5 秒”。
+5. 禁用静音 Heads-up 原先拦共同 awake 判断，ROM 证实 bubble 也调用它；亮屏静音原先跳整个提醒任务，连 LED 一起失去。现在分别缩小到 Heads-up 通道和本次原生提醒的声音 / 振动位。动态岛接受 / 拒绝接管及普通通知中心保留已有实现和回归，新增撤回 Row / 替换 entry 点击失效检查。
+6. 通知权限旧实现同时改 Settings 界面、boot framework 对象和 system_server 判断。ROM 中 PreferencesHelper 创建 / 更新频道直接读取 isBlockable / critical lock，不能称为纯 UI。保守收口保留 key、默认关闭和普通应用能力，不再承诺禁用受保护系统通知；十种维护语言同步准确说明。**升级首次需重启设备清除旧 system_server Hook；此前保存的频道 / 授权数据不按猜测自动重置。**
+7. 跳过 Count/Fold.attach 丢掉 Pipeline 和原生监听初始化。只改 shouldSuppressFold 也不够：onEntryUpdated 仍调 scheduleHistoryNotification，新增时还可能保留旧 fold extra。现在保留初始化 / 移除 / 重建链，仅关闭目标规则并用原生 setter 清理新增 fold 状态。
+8. 图标重要性过滤把 controller 的 canonical list 永久替换，影响后续刷新输入；改为本次调用内使用，正常、异常、重入后恢复，并不覆盖原生新发布的列表。全部条目保留时直接沿用原 list。
+9. 着色比较的是不带 alpha 的背景与已带 alpha 的当前 tint，造成重复反射 / dispatch；原生 setter 本身已做相等保护，**不能据此宣称减少了等量重绘**。同时全局拒绝 Tint(0)、绕过摘要规则、对非选中通知也禁用模糊会干扰 native 恢复，现已缩小 / 移除。
+10. 时钟第一次或已有监听时注册屏幕状态，OFF 结果之后旧 start 仍设置 running；新增屏幕状态检查。其余秒针复用、弱 owner、dispose、日期格式快照、配置失效、帧内模糊目标缓存与 finally 清理直接保留。
+
+### 功能来源、所有权与证据登记
+
+下表“最近”指本轮之前基线的可追溯源码提交，不把整份文件最后一次提交当作所有方法修改日期。`3ce4b3b` 是历史整理导入的 **r14.20.9 源码快照**，`ddcd889` 是 **r14.21.9 快照**；它们的 2026-10-17 导入日期不是实际编写日期，整理前未保留的作者时间为 UNKNOWN。动态岛列出当前仓库整合提交 `2b321c6`，相关行的来源还可追到 `3e8683d`，不把整合日期当首次实现日期。
+
+`SUI` = SystemUI feature / `lpparam.classLoader`（boot MIUI 类经父 loader）；`SS` = system_server feature loader；`SET` = Settings main-process loader。以下是源码安装入口及定义归属，非运行时 ClassLoader 采样。除菜单 / 频道路由的历史观察外，旧 Hook 没有本轮版本的设备验收，均视为长期待验，不能继承旧 PASS。
+
+| 功能 / 安装入口 | 最近 / 最早可追溯版本 | 路径、状态所有者和保留对象 | 专项测试 / ROM / 当前结论 |
+| --- | --- | --- | --- |
+| OpenNotifyInFloatingWindowHook → NotificationClickOptionsHook | 最近 / 最早均 `3ce4b3b` r14.20.9 | SUI；点击冷路径；临时 launch 只存线程调用栈，finally 清除 | LaunchScope / ClickEligibility；CN/TW deferred starter + MIUI options；确认全局状态污染，已修 |
+| OpenAppInFreeFormHook | `3ce4b3b` / r14.20.9 | SS；ActivityStarter 调用；一个不持有 host 的 5s 请求槽及原非导出 receiver | LaunchScope、FirstEnable / Wiring 全组合；miui-services；确认 caller / 包名污染和过宽安装，已修 |
+| NotificationRowMenuHook | `ddcd889` r14.21.9 / `3ce4b3b` r14.20.9 | SUI；菜单构建 / 点击；View 自有 listener，无静态 Row | 原 NotificationReview / Hooks；菜单 ABI 保留；新增旧身份 / 用户 / 重复按钮防护，设备六按钮布局待验 |
+| IslandNotificationAccess / 原生点击 | 整合 `2b321c6`，行来源 `3e8683d` / 当前通知接管版本 | SUI；最终 bind / 点击；原 weak Row + 新 weak entry、removed 检查 | IslandNotificationTakeover / Chat；原 bind ABI；旧撤回判断不足已补，接管状态机未重构 |
+| ExpandHeadsUpHook → HeadsUpExpansion | `3ce4b3b` / r14.20.9 | SUI；heads-up 状态更新；每 Row 一个弱 owner 任务 / detach listener，取消闭环 | HeadsUpExpansion、AutoExpandEffect；Row 字段 / setEntry / setRemoved；确认过期点击风险，已修 |
+| AutoDismissExpandedPopupsHook | `3ce4b3b` / r14.20.9 | SUI；alert / Presenter 更新；模块无移除计时器 | LaunchScope 保护条件矩阵；HeadsUpEntry / Presenter / finishTime；确认输入和时序旁路，已修 |
+| BetterPopupsCenteredHook | `3ce4b3b` / r14.20.9 | SUI；原生位置计算；一份 Configuration / 两个尺寸，变化才重算 | 原 Hooks 安装失败边界保留；定位函数沿用；确认配置后尺寸过期，已修，视觉待验 |
+| DisableHeadsUpWhenMuteHook | `3ce4b3b` / r14.20.9 | SUI；高频决策仅读静音 / enabled 状态；沿用原 volume-zen owner | BoundaryContract；awake / bubble 直接调用；确认抑制范围过大，已修 |
+| MuteVisibleNotificationsHook → NotificationAlertHook | `3ce4b3b` / r14.20.9 | SUI；原生后台提醒事务；仅同 proxy / key，退出清理，无模块队列 | 提醒位全组合；原生 run 和 proxy；确认连带灯光，已修 |
+| DisableAnyNotification[Block] / UnlockSettingsNotificationControls | `3ce4b3b` / r14.20.9 | 旧 SS / SET / SUI → 现在仅 SET / SUI；普通应用 UI 冷判断，无全局频道状态 | SettingsControlsContract、目标 UID / flags、ID 可达性；Settings / framework / PreferencesHelper；确认安全边界不可保留，保守退役全局路径 |
+| Settings NotificationImportanceHook | `ddcd889` / r14.20.9 | SET；配置 / 选择冷路径；原生页面 listener 所有权 | NotificationReview 1..4 / 后端失败 / fatal；两种 Settings 类；保留成熟保存逻辑，补关键锁和用户检查，读回仍待设备 |
+| SystemUI NotificationImportanceHook → NotificationIconImportance | `3ce4b3b` / r14.20.9 | SUI；高频图标刷新；调用内替换，finally 恢复，字段句柄冷解析 | IconImportance 正常 / fatal / 新 native list / 重入；native updateStatusBarIcons；确认 canonical list 被污染，已修 |
+| RemovePackageNotificationsLimitHook | `3ce4b3b` / r14.20.9 | SUI；只停 Count 淘汰 listener，原 Pipeline / BindEventManager 自有 | BoundaryContract；attach / onViewBound / dismiss 全链；确认跳过初始化，已修，数量压力待设备 |
+| DisableFoldNotificationsHook | `3ce4b3b` / r14.20.9 | SUI；规则更新；原 listener / observer / alarm 仍由 native owner 管理 | BoundaryContract；attach / filter / added / updated / removed / schedule；确认跳过初始化及残余调度，已修，双区域重建待设备 |
+| ColorizeNotificationCardHook | `3ce4b3b` / r14.20.9 | SUI；Builder→Row→Tint→RemoteViews 高频更新；每 Notification 一槽，弱图标，无静态 View | PaletteCache / BoundaryContract；builder / palette / native tint / summary；确认重复计算及范围问题，已修 |
+| StatusBarClockTweakHook / CCClockTweakHook / SecondTicker | `3ce4b3b` / r14.20.9 | SUI；样式快照、线程内 formatter、弱 controller 秒针 / 屏幕 listener；原 dispose 保留 | ClockHotPath / ClockEffect 全组；本轮未重新 decode 时钟私有 ABI；只确认并修复熄屏创建启动边界 |
+| DrawerBlurRatioHook | `3ce4b3b` / r14.20.9 | SUI；帧路径只读快照、缓存弱目标，作用域 finally 清除；无新监听 | DrawerBlurScope / SteadyState 原回归；本轮无新增帧方法 ROM 取证、无确认缺陷，明确保留 |
+| ExpandNotificationsHook / NotificationAutoExpand | wrapper 与现有架构可追到 `3ce4b3b` 快照 | SUI；已冻结 resolver / effect / snapshot，按原设置工作 | AutoExpand Hook / Resolver / Effect / RuntimeState 全组复用；与 Heads-up / island 只做契约交叉，明确保留 |
+
+### 性能、资源与本地精校交接
+
+已确认并消除的重复工作包括：普通 PendingIntent 的全局拦截；非目标通知点击的额外小窗准备；相同 Row 更新反复创建延迟任务；固定延迟重复摆放原生移除 Runnable；每次 createRemoteViews 的 ClassLoader / Field 查找和临时三项列表；相同通知图标的 WallpaperColors / ColorScheme 重算；不变图标列表仍分配过滤列表；每次 server 判断重建三项黑名单。图标 / method 句柄在安装冷路径解析，布局仍交由 native。
+
+Host 回归对同一图标 / UID / 包 / 主题连续解析 50 次，调色 producer 执行 **1 次**；图标 generation、替换、用户、包或深浅主题变化会失效，失败不发布部分颜色。这是缓存算法证据，不是 WallpaperColors 在真实设备上的耗时基准。每条活通知只保留一个 palette cache、每个待展开 Row 至多一个短任务；无全局 Bitmap / View 缓存、新 CoroutineScope、轮询或业务线程。恢复 Coordinator 初始化会恢复必要原生监听及其开销，不能用代码减少或缓存命中宣称 PSS / CPU / GPU / 耗电下降。
+
+M03.01–.04 的宿主、完整描述符、调用者、owner、确切旧问题、地区差异、查询方法和设备矩阵统一见 [M03 ROM 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)。本地新脚本只在既有 tools/dexsql 查询目录，不进入 APK / 默认 CI。没有凭缺少工具添加新 ROM fallback；没有把静态样本、Host JVM、ART、最终 APK 和实机结果混为一项 PASS。
+
+### 收口验证
+
+验证源码为 **`b72cad0acb2819d7fab44877670d2fca9a389c77`**；之后只更新取证 SQL 和文档，复用相同生产源码结果。专项 fast 和受影响测试已通过。完整门禁首次发现退役身份 / 安装条件的三处旧测试与一处 ID 可达性不一致，已删除退役声明、保留 ID 空位，并强化 16 种设置组合和反向安装断言；未删除测试或降低保护条件。
+
+| 门禁 | 最终结果 |
+| --- | --- |
+| `python tools/verify.py full` | **退出 0**；353 个 JVM / Robolectric suite，3259 tests，0 failures / errors，2 skipped；compileDebug Kotlin / Java 与 lintDebug 完成 |
+| `python -m unittest discover -s tools/tests -p "test_*.py"` | **退出 0**；593 tests，0 failures，5 skipped；不把 fixture 打印的示例发布 URL 当作实际发布 |
+| 无签名 `assembleRelease` / `lintVitalRelease` | **退出 0**；JDK / Kotlin 输出 25，检查到 class major 69；最终 DEX 039，min / target 34，原 applicationId / arm64-v8a 保留 |
+| 产物身份 / 对齐 | provenance 验证 revision `b72cad0a`、version r14.25.2 / 247 / release source SHA 正确；zipalign 退出 0；签名检查按预期退出 1、Missing META-INF/MANIFEST.MF，明确为本地无签名验证产物 |
+| 最终 APK / R8 mapping | APK 4,043,565 bytes，SHA-256 `899e6e9ce0105988731a23852045b9b2c2d4ff40e16fcc719b6799587599598f`；mapping 20,650,716 bytes，SHA-256 `894ceaf8a2b34aeee6695e923cd503d6cbce09bdf27082a4bf44495d5a65e0c3` |
+| DexSQL 最终 APK | compileOnly Hook API 定义 0；Manifest 设置入口直接 Hook API 引用 0；setId / getId 各一个静态 invoke，replaceHook 0；三个固定 ID 使用点保留。完整 decode + 同产物成员 mapping 确认 `Lnf1;->y` 属 HookInstallation.intercept / confirmStableHookId，不能仅按合并容器 TypeIntrinsics 判断归属；不代表实际安装次数 / 设备 readback |
+| 差异 / 生成物 | `git diff --check` 通过；process matrix 重新生成无漂移，250 个在用 feature；ID 38 留空且无孤立注册 |
+
+基线远端 CI：[main / d6f47fd 成功](https://github.com/thetvplus/customiuizer-a14/actions/runs/39905838791)，[继承分支 / 2936d4f 成功](https://github.com/thetvplus/customiuizer-a14/actions/runs/39954356188)。用户后续授权推送本轮 M03 开发分支；推送后按 exact head 执行 A14 CI，运行链接和最终结果作为本任务交付回执，以上基线结果不冒充本分支 CI。main 合并与版本发布仍不在本任务范围内。
+
+ADB 当前无设备，未安装本批 APK。锁屏 / 资料挑战 / 多用户、连续真实点击、原生 Heads-up / 动态岛互斥、权限与频道实际读回、旋转 / 主题 / 字体、SystemUI 重建和全关闭恢复，均仍按 [ROM 设备矩阵](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md#设备与性能验收清单)待验。没有 ART / 设备 CPU、GPU、帧率、PSS 或功耗测量；源码优化和 Host 回归不升级为真实性能结论。
