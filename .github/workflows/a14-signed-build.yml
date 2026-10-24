@@ -184,13 +184,26 @@ jobs:
       - name: Verify APK and record candidate metadata
         id: candidate
         run: python tools/signed_release.py candidate --directory "$RUNNER_TEMP/candidate"
-      - name: Attest the final signed APK and its metadata
+      - name: Attest the final signed APK
+        id: apk-provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ runner.temp }}/candidate/*.apk
+          github-token: ${{ github.token }}
+          create-storage-record: false
+      - name: Verify APK attestation and finalize metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTESTATION_BUNDLE: ${{ steps.apk-provenance.outputs.bundle-path }}
+        run: |
+          cp "$ATTESTATION_BUNDLE" "$RUNNER_TEMP/candidate/apk-attestation.sigstore.json"
+          python tools/signed_release.py attest-apk --directory "$RUNNER_TEMP/candidate"
+      - name: Attest the finalized build metadata
         id: provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: |
-            ${{ runner.temp }}/candidate/*.apk
-            ${{ runner.temp }}/candidate/build-metadata.json
+          subject-path: ${{ runner.temp }}/candidate/build-metadata.json
+          github-token: ${{ github.token }}
           create-storage-record: false
       - name: Verify GitHub attestation
         env:

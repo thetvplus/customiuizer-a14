@@ -52,7 +52,7 @@ $releaseRevision = git rev-parse --short=8 HEAD
 3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。自动或手动入口发现版本已发布即正常跳过，不初始化 JDK / SDK，也不重新签名；只有版本递增、元数据与双语发行条目齐备时才请求发布确认。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
 4. 维护者在 **release-signing → Review deployments → Approve** 确认该版本、完整 SHA 和双语说明。拒绝或取消即可保持未发布；这是签名阶段必需的确认。发布环境若配置了设备验收检查点，则在同一正式候选完成验收后另行确认公开；Agent 只有获本轮用户明确委托时才能代为调用审核接口。
 5. 确认后重查 main 和 CI，使用历史证书只构建一次正式 Release，核验 APK、R8、fatal lint 与 GitHub 来源证明。复用同 SHA 的 main CI，不再重复 JVM、lint 或 develop 构建。
-6. 默认先发布源码仓库，核对公开资产、标签和 Latest，再发布 Xposed 仓库。两端保持完全相同的 APK、摘要、构建元数据和 Sigstore bundle；不重建、不重签。任一检查失败即停止后续写入。
+6. 默认先发布源码仓库，核对公开资产、标签和 Latest，再发布 Xposed 仓库。两端保持完全相同的 APK、摘要和构建元数据；校验文件、Sigstore bundle 和验证报告留在内部 Actions Artifact，不重建、不重签。任一检查失败即停止后续写入。
 
 工作流不自动合并 PR、不变更分支保护，也不因每次合并都发布。分支保护建议只要求现有 **Fast CI**，保留一个明确合并动作，避免新增一套自动合并机器人。`workflow_run` 仅监听 `A14 CI` 的 main 完成事件，并复核 API 中的 workflow ID、原始 attempt、仓库、事件、SHA 与当前 main；不下载 PR 产物执行代码，也不接收任意 ref 输入。
 
@@ -120,21 +120,26 @@ python tools/prepare_release.py --version r14.25.3 --code 248 --date 2026-10-23 
 
 | 对象 | 格式 |
 | --- | --- |
-| Release 标题 | `CustoMIUIzer A14 · <versionName>`（两仓库统一使用英文软件名） |
+| Release 标题（两仓库） | `<versionName>` |
 | 源码 tag | `<versionName>` |
 | Xposed tag | `<versionCode>-<versionName>` |
-| APK（候选及两端发布同名） | `CustoMIUIzer-A14-<versionName>-<sha6>.apk` |
-| 其余三个资产 | `SHA256SUMS`、`build-metadata.json`、`attestation.sigstore.json` |
+| APK（候选及两端发布同名） | `CustoMIUIzer-A14-<versionName>.apk`，不追加 SHA、Run ID 或日期 |
+| 其余公开附件 | `build-metadata.json` |
+| 内部 Actions Artifact | `a14-signed-<run-id>-<attempt>`，可保留校验文件、证明 bundle 和验证报告 |
 
-版本必须高于所有已发布版本（包含预发行）；两端均不能回退 Latest。当前源码准备 `r14.25.3` / `248`，累计对比 `r14.25.1` / `246`；只有新版本两端验收成功后才清理被替代的 `r14.25.2` / `247`，实际是否发布以实时 Release 为准。旧无 SHA 文件名候选继续按原证明验证，不改名、不重建。
+版本必须高于所有已发布版本（包含预发行）；两端均不能回退 Latest。当前源码为 `r14.25.3` / `248`，累计对比 `r14.25.1` / `246`，实际是否发布以实时 Release 为准。新生成的候选在认证之前即使用最终 APK 文件名；历史带 SHA 或无 SHA 候选继续按原文件名、元数据和证明验证，不改名、不重建。纯发布工程维护不升级应用版本号；已发布版本在构建前跳过。
 
-正式 APK 检查包名、版本、SDK 34、arm64-v8a、不可调试、16 KB zipalign、V2 签名、历史证书及内嵌完整 sourceCommit。固定 SHA 的官方 actions/attest 证明 APK 和元数据，独立核验仓库、workflow、commit、ref、run / attempt 和摘要。产物 `a14-signed-<run-id>-<attempt>` 保留 30 天。
+正式 APK 检查包名、版本、SDK 34、arm64-v8a、不可调试、16 KB zipalign、V2 签名、历史证书及内嵌完整 sourceCommit。固定 SHA 的官方 actions/attest 先为最终 APK 生成在线证明；APK 在线核验通过后才在 `build-metadata.json` 写入实际认证状态，再为定稿元数据生成证明，最后重新在线核验两个文件。核验仓库、workflow、commit、ref、run / attempt、认证主体文件名与摘要，任何一步失败均不能上传候选或发布。
+
+`build-metadata.json` 沿用原字段，记录包名、版本、SDK / ABI、APK 名称 / SHA-256 / 大小、历史签名证书、已通过的构建检查、完整源码 SHA、源码仓库 / workflow / run / attempt 及链接。新增 `recorded_at` 是生成候选记录的 UTC 时间，`release_assets` 明确公开附件契约；`attestation.apk_verified` 仅在 APK 已通过在线验证后写入。它不自称已验证自身，元数据自身的核验结果留在内部 `attestation-verification.json` 和 Actions 日志中，定稿后不再修改元数据。产物保留 30 天，无 Secret、私钥或本地签名配置。
+
+公开附件只有 APK 和上述元数据，GitHub 自动生成的源码 ZIP / TAR.GZ 不受影响。内部仍计算并校验 `SHA256SUMS`，Release Notes 仍包含 APK SHA-256 和双语更新内容；不公开校验文件或独立 Sigstore bundle，不影响 GitHub 官方在线证明的生成和查询。在线验证按摘要取回证明，无需下载独立 bundle，参见 [GitHub 官方认证与 CLI 验证](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)。
 
 ```sh
 gh attestation verify candidate/<apk> --repo thetvplus/customiuizer-a14 --signer-workflow thetvplus/customiuizer-a14/.github/workflows/a14-signed-build.yml --source-digest <full-sha> --signer-digest <full-sha> --source-ref refs/heads/<branch> --deny-self-hosted-runners
 ```
 
-也可传 `--bundle candidate/attestation.sigstore.json`；GitHub 来源证明不能替代 Android 签名和设备验收。
+内部离线核验可对 APK 传 `--bundle candidate/apk-attestation.sigstore.json`，对元数据传 `--bundle candidate/attestation.sigstore.json`；旧候选的同一 bundle 可含两个主体。GitHub 来源证明不能替代 Android 签名和设备验收。
 
 ### 结束与监控
 
@@ -145,8 +150,12 @@ Agent 完成实现、分支核验、按任务授权合并及 main 核验后，�
 ### GitHub 认证标记
 
 - **APK 来源证明**：使用官方 `actions/attest`，以 OIDC 身份生成、保存并验证。证明对应 APK 摘要与构建身份，可在 [Attestations](https://github.com/thetvplus/customiuizer-a14/attestations) 查看；此能力已在流程中接通。
+- **Android APK 签名**：验证 APK 内容完整性与历史签名证书一致性，维持安装更新身份；它不代表代码安全审计通过，也不等同于 GitHub commit/tag 的 Verified。
 - **绿色 Verified**：这是 Git commit / tag 的签名验证标记，与 APK 来源证明不同。需要 GitHub 可验证的 GPG / SSH / S/MIME 签名；工作流不生成替代签名身份、不改写历史标签，也不伪造徽标。若要让新发行的 tag 自身显示 Verified，应先用已登记公钥签署指向 exact candidate SHA 的新 tag；已有同名 tag 仅在指向同一 SHA 时允许发布，原签名得以保留。参见 [GitHub 签名标签说明](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-tags)。
 - **Immutable**：仓库设置中开启 release immutability 后，新发行的 tag 和资产锁定，GitHub 自动生成 release attestation；与绿色 Verified 也不同。本流程使用“草稿→上传→校验→发布”，可兼容不可变发行；本次代码修改不变更仓库全局设置。参见 [GitHub 不可变发行](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)。
+- **GitHub 资产 SHA-256**：Release Asset API 的 `digest` 是上传文件的官方摘要；发布前逐项比对大小和本地 SHA-256，不把摘要本身称为签名或安全审计。参见 [Release Assets API](https://docs.github.com/en/rest/releases/assets)。
+
+整理既有 Release 时先核对两端 tag、immutable、原始资产、元数据及在线证明。只编辑标题不会更改 APK 或证明；[GitHub 允许不可变 Release 编辑标题和说明](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#editing-a-release)，但不可变资产和 tag 不得改动。若旧元数据及证明已绑定带 SHA 文件名，保留原 APK 与元数据，统一命名从下一次新构建开始。非 immutable Release 的多余校验 / bundle 附件仅在在线核验实际下载的 APK 与元数据成功后按明确授权移除，并读回验证；不重签、替换 APK、移动 tag 或改写发布源码。
 
 ## 同一 APK 按需晋升与故障恢复
 
@@ -158,8 +167,10 @@ Agent 完成实现、分支核验、按任务授权合并及 main 核验后，�
 gh workflow run a14-promote-release.yml --ref main -f build_run_id=<original-run-id> -f destination=both -f 'authorization=publish <versionName> from <original-run-id>'
 ```
 
-两条发布入口共用 a14-release-publish 锁。默认顺序严格为“源码草稿 → 四资产校验 → 源码公开与读回 → Xposed tag / 草稿 → 同四资产校验 → Xposed 公开与读回”。不并行跨仓库发布。
+两条发布入口共用 a14-release-publish 锁。默认顺序严格为“源码草稿 → APK 与元数据两资产校验 → 源码公开与读回 → Xposed tag / 草稿 → 同两资产校验 → Xposed 公开与读回”。不并行跨仓库发布，已有 immutable Release 只读验收，异常 immutable 草稿拒绝任何资产写入。
 
 若 Xposed 失败，保留主仓库已成功版本；使用原 run ID 晋升恢复，不重跑整条构建。恢复先比对已发布版本的 title、notes、target SHA、tag、预发行状态及全部资产哈希 / 大小，完全匹配则只读跳过。归属同一候选的草稿仅补缺失资产，已有资产必须逐项一致；不覆盖、不删除、不静默接受篡改。主仓库已公开并核验的同一候选可以在 main 后续前进后补发 Xposed，但必须仍有原 SHA 的成功 main CI，且两端不存在更高已发布版本。尚未公开的源码草稿仍要求当前 main 未变。
+
+历史候选保留原始内部四文件结构及校验门禁；已存在的历史四资产 Release 或含旧 sidecar 的部分草稿按原四资产逐项验收和补齐。历史候选新建 Release 默认只上传 APK 与原始元数据；已精简为两资产的历史版本也可只读验收。历史标题可为旧格式或已修正的版本名，发布旧草稿时统一为版本名；新候选严格执行两资产和版本名标题。自动恢复不整理已发布版本的附件，也不改写其元数据来迁就新格式。
 
 跨仓库没有原子事务，网络中断时可能出现主仓库成功、Xposed 待恢复；流程明确失败并保留证据，不为伪装成功回删主仓库。最终成功要求两个目标均完成公开资产和标签 / Latest 核验。不存在既有候选且版本未递增时不能覆盖 r14.25.1。

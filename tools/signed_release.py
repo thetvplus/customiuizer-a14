@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -376,7 +377,7 @@ def verify_apk(apk: Path, sha: str, name: str, code: int) -> dict:
 def candidate_filename(version: str, sha: str) -> str:
     require(isinstance(version, str) and re.fullmatch(r"r14\.\d+\.\d+", version) is not None, "Invalid candidate version")
     require(bool(SHA.fullmatch(sha)), "Invalid candidate source SHA")
-    return f"CustoMIUIzer-A14-{version}-{sha[:6]}.apk"
+    return f"CustoMIUIzer-A14-{version}.apk"
 
 
 def candidate(folder: Path) -> None:
@@ -392,7 +393,12 @@ def candidate(folder: Path) -> None:
     shutil.copyfile(apks[0], apk)
     metadata = verify_apk(apk, sha, name, code)
     metadata.update(repository=REPO, source_sha=sha, source_ref=ref, workflow=WORKFLOW,
-                    run_id=int(os.environ["GITHUB_RUN_ID"]), run_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]))
+                    run_id=int(os.environ["GITHUB_RUN_ID"]), run_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]),
+                    repository_url=f"https://github.com/{REPO}",
+                    workflow_url=f"https://github.com/{REPO}/blob/{sha}/{WORKFLOW}",
+                    run_url=f"https://github.com/{REPO}/actions/runs/{os.environ['GITHUB_RUN_ID']}/attempts/{os.environ['GITHUB_RUN_ATTEMPT']}",
+                    recorded_at=datetime.now(timezone.utc).isoformat(),
+                    release_assets=[apk.name, "build-metadata.json"])
     write_json(folder / "build-metadata.json", metadata)
     (folder / "SHA256SUMS").write_text(f"{metadata['apk_sha256']}  {metadata['apk']}\n", encoding="ascii")
     output(source_sha=sha, apk_sha256=metadata["apk_sha256"], run_attempt=metadata["run_attempt"])
@@ -430,12 +436,16 @@ def check_metadata(metadata: dict, record: dict) -> None:
     require(all(metadata.get(key) == value for key, value in expected.items()), "Artifact metadata differs from the selected workflow run")
     version = metadata.get("version_name", "")
     # Existing attested candidates retain their original names and exact binary identity.
-    names = {candidate_filename(version, record["head_sha"]), f"CustoMIUIzer-A14-{version}.apk"}
+    names = {candidate_filename(version, record["head_sha"]), f"CustoMIUIzer-A14-{version}-{record['head_sha'][:6]}.apk"}
     filename = metadata.get("apk")
     require(isinstance(filename, str) and filename in names, "Invalid APK filename or version/source suffix")
+    if "release_assets" in metadata:
+        require(filename == candidate_filename(version, record["head_sha"])
+                and metadata["release_assets"] == [filename, "build-metadata.json"], "Invalid public release asset contract")
 
 
-def check_attestation(results: list, sha: str, ref: str, run_id: int, attempt: int) -> None:
+def check_attestation(results: list, sha: str, ref: str, run_id: int, attempt: int,
+                      *, filename: str | None = None, sha256: str | None = None) -> None:
     invocation = f"https://github.com/{REPO}/actions/runs/{run_id}/attempts/{attempt}"
     for result in results:
         statement = result.get("verificationResult", {}).get("statement", {})
@@ -446,20 +456,42 @@ def check_attestation(results: list, sha: str, ref: str, run_id: int, attempt: i
         if (statement.get("predicateType") == "https://slsa.dev/provenance/v1"
                 and predicate.get("runDetails", {}).get("metadata", {}).get("invocationId") == invocation
                 and workflow == {"repository": f"https://github.com/{REPO}", "path": WORKFLOW, "ref": ref}
-                and any(item.get("digest", {}).get("gitCommit") == sha for item in dependencies)):
+                and any(item.get("digest", {}).get("gitCommit") == sha for item in dependencies)
+                and (filename is None or any(item.get("name") == filename and item.get("digest", {}).get("sha256") == sha256
+                                             for item in statement.get("subject", [])))):
             return
     raise ValueError("Verified attestation does not match the original workflow run/source")
 
 
-def attest(folder: Path, metadata: dict) -> None:
+def verify_attestations(folder: Path, metadata: dict, filenames: tuple[str, ...]) -> dict:
     reports = {}
-    for filename in (metadata["apk"], "build-metadata.json"):
+    for filename in filenames:
         result = json.loads(run("gh", "attestation", "verify", str(folder / filename), "--repo", REPO,
                                 "--signer-workflow", f"{REPO}/{WORKFLOW}", "--signer-digest", metadata["source_sha"],
                                 "--source-digest", metadata["source_sha"], "--source-ref", metadata["source_ref"],
                                 "--deny-self-hosted-runners", "--format", "json"))
-        check_attestation(result, metadata["source_sha"], metadata["source_ref"], metadata["run_id"], metadata["run_attempt"])
+        check_attestation(result, metadata["source_sha"], metadata["source_ref"], metadata["run_id"], metadata["run_attempt"],
+                          filename=filename, sha256=digest(folder / filename))
         reports[filename] = result
+    return reports
+
+
+def attest_apk(folder: Path, metadata: dict) -> None:
+    """Finalize the manifest only after the APK's online proof actually passes."""
+    require("attestation" not in metadata, "Candidate metadata has already been finalized; do not rewrite attested evidence")
+    require(digest(folder / metadata["apk"]) == metadata["apk_sha256"], "APK digest differs from candidate metadata")
+    verify_attestations(folder, metadata, (metadata["apk"],))
+    metadata["attestation"] = {"apk_verified": True, "method": "github-online",
+                               "verified_at": datetime.now(timezone.utc).isoformat(),
+                               "url": f"https://github.com/{REPO}/attestations"}
+    write_json(folder / "build-metadata.json", metadata)
+
+
+def attest(folder: Path, metadata: dict) -> None:
+    if "release_assets" in metadata:
+        require(metadata.get("attestation", {}).get("apk_verified") is True
+                and metadata["attestation"].get("method") == "github-online", "APK online attestation must pass before metadata attestation")
+    reports = verify_attestations(folder, metadata, (metadata["apk"], "build-metadata.json"))
     write_json(folder / "attestation-verification.json", reports)
     print("GitHub provenance verified: repository, workflow, commit, ref, run and file digests")
 
@@ -554,14 +586,25 @@ def publish_current(folder: Path) -> None:
 
 def check_release_assets(record: dict, folder: Path, filenames: tuple[str, ...], *, draft: bool, prerelease: bool, partial: bool = False) -> None:
     require(record["draft"] is draft and record["prerelease"] is prerelease, "Release draft/pre-release state differs")
+    require(not draft or record.get("immutable") is not True, "Immutable release cannot be modified")
     assets = record["assets"]
     names = {item["name"] for item in assets}
     require(len(assets) == len(names) and (names <= set(filenames) if partial else names == set(filenames)),
-            "Release must contain exactly the verified APK, checksums, metadata and attestation")
+            "Release must contain exactly the expected verified public assets")
     for asset in assets:
         path = folder / asset["name"]
         require(asset.get("digest") == "sha256:" + digest(path) and asset["size"] == path.stat().st_size,
                 f"Published asset digest/size differs: {path.name}")
+
+
+def release_assets(metadata: dict, record: dict | None = None) -> tuple[str, ...]:
+    public = (metadata["apk"], "build-metadata.json")
+    if "release_assets" in metadata:
+        require(metadata["release_assets"] == list(public), "Invalid public release asset contract")
+    elif record is not None and any(asset["name"] in {"SHA256SUMS", "attestation.sigstore.json"} for asset in record["assets"]):
+        # Preserve an old published release or partially uploaded draft verbatim.
+        return (metadata["apk"], "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json")
+    return public
 
 
 def check_release_identity(record: dict, release_id: int, tag: str, sha: str) -> None:
@@ -613,7 +656,6 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
                      f"```sh\ngh attestation verify {metadata['apk']} --repo {REPO} "
                      f"--signer-workflow {REPO}/{WORKFLOW} --source-digest {sha} --signer-digest {sha} "
                      f"--source-ref {metadata['source_ref']} --deny-self-hosted-runners\n```\n", encoding="utf-8")
-    filenames = (metadata["apk"], "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json")
     existing = {}
     # All existing destinations must belong to this exact verified candidate.
     # A matching published source is read-only; a matching draft may be completed
@@ -624,15 +666,17 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         existing[repository] = record
         if record is not None:
             check_release_identity(record, record["id"], tag, sha)
-            require(record.get("name") == f"CustoMIUIzer A14 · {name}"
+            titles = {name} if "release_assets" in metadata else {name, f"CustoMIUIzer A14 · {name}"}
+            require(record.get("name") in titles
                     and record.get("body", "").strip() == notes.read_text(encoding="utf-8").strip(),
                     "Existing release notes/title differ from the verified original candidate")
-            check_release_assets(record, folder, filenames, draft=record["draft"], prerelease=prerelease, partial=record["draft"])
+            check_release_assets(record, folder, release_assets(metadata, record), draft=record["draft"], prerelease=prerelease, partial=record["draft"])
     source = existing[REPO]
     require_main_ci(sha, current=source is None or source["draft"])
     check_new_release(name, code, sha, resume=source is not None)
     for repository, tag, env in repositories:
         record = existing[repository]
+        filenames = release_assets(metadata, record)
         if record is not None and not record["draft"]:
             check_tag(repository, tag, sha, must_exist=True, env=env)
             if not prerelease:
@@ -656,12 +700,13 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         # with repositories that enable immutable releases; never patch binaries.
         if record is None:
             request = folder / "release-request.json"
-            write_json(request, {"tag_name": tag, "target_commitish": sha, "name": f"CustoMIUIzer A14 · {name}",
+            write_json(request, {"tag_name": tag, "target_commitish": sha, "name": name,
                                  "body": notes.read_text(encoding="utf-8"), "draft": True, "prerelease": prerelease})
             created = json.loads(run("gh", "api", f"repos/{repository}/releases", "--method", "POST", "--input", str(request), env=env))
         else:
             created = record
         require(created["draft"] is True and created["tag_name"] == tag, "Draft creation returned another release")
+        require(created.get("immutable") is not True, "Immutable release cannot be modified")
         check_release_identity(created, created["id"], tag, sha)
         present = {asset["name"] for asset in created.get("assets", [])}
         missing = [str(folder / filename) for filename in filenames if filename not in present]
@@ -679,9 +724,12 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
             require_current_main(sha)
         check_tag(repository, tag, sha, env=env)
         run("gh", "release", "edit", tag, "--repo", repository, "--draft=false",
+            "--title", name,
             f"--prerelease={str(prerelease).lower()}", f"--latest={str(not prerelease).lower()}", env=env)
         release = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}", env=env))
         check_release_identity(release, created["id"], tag, sha)
+        require(release.get("name") == name and release.get("body", "").strip() == notes.read_text(encoding="utf-8").strip(),
+                "Published release notes/title differ from the verified candidate")
         check_release_assets(release, folder, filenames, draft=False, prerelease=prerelease)
         check_tag(repository, tag, sha, must_exist=True, env=env)
         if not prerelease:
@@ -697,7 +745,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "signing-preflight", "prepare-signing", "candidate", "attest", "fetch", "publish", "publish-current"])
+    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "signing-preflight", "prepare-signing", "candidate", "attest-apk", "attest", "fetch", "publish", "publish-current"])
     parser.add_argument("--directory", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--destination", choices=["source", "both"], default="source")
@@ -709,6 +757,7 @@ def main() -> int:
         elif args.command == "signing-preflight": signing_preflight()
         elif args.command == "prepare-signing": prepare_signing()
         elif args.command == "candidate": candidate(args.directory)
+        elif args.command == "attest-apk": attest_apk(args.directory, json.loads((args.directory / "build-metadata.json").read_text(encoding="utf-8")))
         elif args.command == "attest": attest(args.directory, json.loads((args.directory / "build-metadata.json").read_text(encoding="utf-8")))
         elif args.command == "fetch": fetch_candidate(args.run_id or "", args.directory)
         elif args.command == "publish":
