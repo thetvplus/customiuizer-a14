@@ -13,6 +13,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import java.lang.ref.WeakReference
 
 /**
  * Hooks that hide UI while a screenshot is being captured.
@@ -28,30 +29,38 @@ object SystemUIScreenshotHooks {
     @JvmStatic
     fun TempHideOverlaySystemUIHook(lpparam: PackageReadyParam) {
         ModuleHelper.hookAllMethods("com.android.wm.shell.pip.PipTaskOrganizer", lpparam.classLoader, "onTaskAppeared", object : MethodHook() {
-            private var isActListened = false
+            @Volatile private var owner = WeakReference<Any>(null)
+            private var receiverContext = WeakReference<Context>(null)
             override fun after(param: AfterHookCallback) {
-                val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
-                if (!isActListened) {
+                if (param.getThrowable() != null) return
+                val native = param.getThisObject() ?: return
+                owner = WeakReference(native)
+                val mContext = XposedHelpers.getObjectField(native, "mContext") as Context
+                if (receiverContext.get() !== mContext) {
                     val intentFilter = IntentFilter()
                     intentFilter.addAction("miui.intent.TAKE_SCREENSHOT")
-                    val thisObject = param.getThisObject()
-                    isActListened = ModuleHelper.registerModuleReceiver(mContext, "pipScreenshotReceiver", object : BroadcastReceiver() {
+                    val registered = ModuleHelper.registerModuleReceiver(mContext, "pipScreenshotReceiver", object : BroadcastReceiver() {
                         override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
                             val action = intent.action ?: return@guarded
                             if (action == "miui.intent.TAKE_SCREENSHOT") {
+                                val thisObject = owner.get() ?: return@guarded
                                 val state = intent.getBooleanExtra("IsFinished", true)
+                                val shown = SystemPipActions.screenshotVisibility(thisObject, state)
                                 val mState = XposedHelpers.getObjectField(thisObject, "mPipTransitionState")
                                 val isPip = XposedHelpers.callMethod(mState, "isInPip") as Boolean
                                 if (isPip) {
                                     val mSurfaceControlTransactionFactory = XposedHelpers.getObjectField(thisObject, "mSurfaceControlTransactionFactory")
                                     val transaction = XposedHelpers.callMethod(mSurfaceControlTransactionFactory, "getTransaction") as SurfaceControl.Transaction
                                     val mLeash = XposedHelpers.getObjectField(thisObject, "mLeash") as SurfaceControl
-                                    transaction.setVisibility(mLeash, state)
-                                    transaction.apply()
+                                    transaction.use {
+                                        it.setVisibility(mLeash, shown)
+                                        it.apply()
+                                    }
                                 }
                             }
                         }
                     }, intentFilter, Context.RECEIVER_EXPORTED)
+                    if (registered) receiverContext = WeakReference(mContext)
                 }
             }
         })

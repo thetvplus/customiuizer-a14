@@ -14,6 +14,8 @@ import java.lang.reflect.Proxy
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -126,7 +128,7 @@ class ScreenshotVisibilityLifecycleTest {
         }
         SystemUIScreenshotHooks.TempHideOverlaySystemUIHook(ready)
         assertNotNull(installed)
-        val owner = PipTaskOrganizer(context)
+        var owner = PipTaskOrganizer(context)
         val chain = proxy(XposedInterface.Chain::class.java) { name, _ ->
             check(name == "getThisObject") { name }
             owner
@@ -140,6 +142,16 @@ class ScreenshotVisibilityLifecycleTest {
         appeared()
         assertEquals("one failed attempt followed by exactly one successful registration", 2, context.registerCalls)
         assertEquals(1, context.receivers.size)
+        val previous = owner
+        owner = PipTaskOrganizer(context)
+        appeared()
+        assertEquals("replacement borrows the same single receiver", 2, context.registerCalls)
+        val reference = org.robolectric.util.ReflectionHelpers.getField<java.lang.ref.WeakReference<Any>>(installed, "owner")
+        assertSame(owner, reference.get())
+        assertFalse(installed!!.javaClass.declaredFields.any { field ->
+            field.isAccessible = true
+            field.get(installed) === previous || field.get(installed) === owner
+        })
     }
 
     private fun bind(view: View, restorePrevious: Boolean = true): BroadcastReceiver {

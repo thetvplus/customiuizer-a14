@@ -584,6 +584,7 @@
 					android:defaultValue="1"
 					miuizer:valueAsSummary="true" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_simplified" android:title="@string/system_island_simplified_title" android:defaultValue="false" android:summary="@string/system_island_simplified_summ" />
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_hide_in_floating_window" android:title="@string/system_island_hide_in_floating_window_title" android:defaultValue="false" android:summary="@string/system_island_hide_in_floating_window_summ" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_feedback_group">
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx

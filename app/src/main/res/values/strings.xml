@@ -1285,4 +1285,9 @@
     <string name="system_island_waveform_light">Lightweight animation</string>
     <string name="system_island_waveform_real">Live waveform (experimental)</string>
     <string name="system_island_waveform_mode_summ">Live mode uses five measured audio bands only while visible and playing. Unsupported permissions, routes or sessions fall back to lightweight animation.</string>
+    <string name="system_island_hide_in_floating_window_title">Hide Dynamic Island while floating windows exist</string>
+    <string name="system_island_hide_in_floating_window_summ">Hide all Dynamic Island content while picture-in-picture or system floating windows exist. Restart System UI after changing this option.</string>
+    <string name="array_global_actions_pip_hide">Hide / restore picture-in-picture</string>
+    <string name="array_global_actions_pip_stash">Stash / restore picture-in-picture</string>
+    <string name="pip_action_hint">Control the current picture-in-picture window without pausing playback. Restart System UI after first configuration. Full hiding ends when the system starts a window transition. Use a global gesture to restore PiP if Dynamic Island is hidden.</string>
 </resources>

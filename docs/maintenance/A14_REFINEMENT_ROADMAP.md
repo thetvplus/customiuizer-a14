@@ -28,6 +28,8 @@
 | 音乐直接上岛 | `1688e7a`、`dbefba6`、`5a1d1d4`：显式选中 App、标准全屏 CLOSE_TO_HOME、native 实际采用且运行时才确认 | 默认关闭；原生窗口轨迹、图标恢复及 ART 私有接口待验 |
 | 通知与媒体安全 | `0ab7a975`：独立 Keyguard 门禁、Row / Sbn / binding 事务、首份在途媒体读取失效；普通媒体返回保留 750 ms | 复现与修复回归已纳入；本批设备未验收 |
 | 状态栏 / Insets | `0a872d9` 静态证据，`451dd52` 修复父窗口尺寸更新、最新原生基线、属性所有权、detach / 重附着和退化 frame | Host 缺陷已修复；不能据此宣称微信实机回弹已消失 |
+| 模糊 / 系统栏颜色 | 保留窗口半透明请求、清除失效 ActionBar 色；可选元数据失败仍执行原方法；Dock 采样异常按 generation 失效 | CONFIRMED 源码 / Host 缺陷已修复；相机 / 图库发灰待设备关联 |
+| PiP / 小窗 / 手势 | 原生 PiP 状态和身份约束媒体岛；可选整岛隐藏；全局 / 音乐手势增加完整隐藏和原生边缘收起 | CN / TW / 历史实机原件静态合同与 Host 状态回归；真实窗口 / 输入 / 播放待验 |
 | Launcher 图标 | `5f9845c` 保存 native 隐藏 / 恢复机制和查询；未增加推测性恢复 Hook | 持续消失仍是 P1 待实机问题，见下文 |
 | Dock / 发布 | Dock 合同保持；在 `3e0709f` 两公开资产、签名 / 证明及历史恢复上，补入 `0bbc1b6` 的创建 / 上传后草稿标题与说明核验 | 篡改须在公开前失败；历史标题只在原候选恢复时接受，此次不发布 |
 
@@ -45,6 +47,57 @@
 父窗口监听随实际 attach 绑定，失效 / 换窗口先释放旧 owner。位移合并原生与用户值后统一裁定，不累加；默认配置不清空未持有的 translationY / gravity。`InsetsSource.setFrame` 两个重载的非正宽高原样 proceed，有效 client-hidden frame 仍按原合同调整。H2 / H3 / DecorInsets 缓存、FeatureRegistry 与动态岛所有权不变。
 
 Host 观测确认父窗口 129→60、原生高度 80→模块 129→ROM 96、位移 7 加用户 ±5 / 0、退化 frame 等缺陷；测试驱动完整布局及真实父事件，另核对相同输入不重复写 LP。这些是模型输入与写入计数，不是设备轨迹或性能收益。
+
+### 模糊、系统栏颜色与 PiP
+
+**CONFIRMED：** `PhoneWindow.setStatusBarColor` 原 Hook 把半透明色清为透明，或用该 Window 缓存的 ActionBar 色覆盖它。TW A14 `DecorView.calculateBarColor(IIIIIIZ)I` 表明：透明色和半透明色走不同的原生 Contrast Scrim 分支；Host 实际调用同名平台方法也复现该差异。现在布局完成、显式颜色请求和 Toolbar 背景更新均保留窗口的透明 / 半透明颜色；非纯色背景移除旧缓存，普通不透明色仍按原功能匹配。可选 Toolbar 字段异常经既有安全边界隔离，原方法恰好执行一次。不改导航栏、Contrast、Dim、Appearance、Insets 或应用名单。
+
+此缺陷只作用于已启用 `system_statusbarcolor` 且在 `system_statusbarcolor_apps` 中的应用，不能据此归因全部上下栏发灰。TW 图库 `PhotoPageFragment` 自行切换系统栏、导航颜色、夜间 / 多窗口状态；相机入口的实际窗口与转场配置仍须设备关联。窗口模糊原生禁用后的应用回退、原生遮罩与模块冲突分别记录，不能全局强制透明或绕过原生对比度保护。
+
+| 检查范围 | 当前源码结论 |
+| --- | --- |
+| Window Blur / Blur Behind | 模块只向 native disabled 原因做 OR；不改系统设置、窗口 blur radius 或原生节能 / 温控 / tunnel 状态。Host 覆盖开关恢复、最新系统设置及 Controller 替换；保留既有安装状态 |
+| 通知中心 / 控制中心 | 偏好快照、目标弱引用与 ThreadLocal scope 保持；finally 退出作用域，不把局部倍率扩成全局窗口策略 |
+| 音量面板 | 原方法先恢复 native Dim / focus；关闭时仅释放模块持有的 collapsed blur，沿用单份配置快照和插件生命周期 |
+| 文件夹 / 最近任务 | Folder owner 与 recents session 分流，默认值返回 native；会话结束清除一次性比例，不写全局 blur setting |
+| Dock 磨砂 / 玻璃 | 单 owner、单在途采样、单 texture / shader；隐藏与 detach 停止调度，HardwareBuffer 关闭，旧 Bitmap 回收。迟到异常与迟到帧同样按 epoch 失效，不让旧壁纸失败永久退役新 lens |
+| 动态岛局部模糊 / 避让 | RenderEffect 仅作用于模块 snapshot；至多 1 MiB 图像、6 个效果级别，取消 / detach 清理；不逐帧创建效果或改原生 View 的 RenderEffect |
+| 锁屏封面 / 通知着色 / 隐私缩略图 | 保留现有串行封面处理、generation 拒旧、按字节缓存、原图所有权及停止释放；通知 Row 颜色与隐私缩略图策略独立于窗口模糊 |
+
+**CONFIRMED（源码 / Host）：** `foregroundChanged()` 的包名与 MediaSession 不能区分普通 Home 与 PiP。CN / TW / 历史实机 SystemUI 原件的相关方法体一致：swipe-PiP 先进入 `PipTransitionState` 3，再由 `PipBoundsState.setBoundsStateForEntry` 提供组件 / UID，Pinned task 出现为 1、完成为 4、退出为 5、取消 / 退出结束为 0；退出后 `mTaskInfo` 仍可能保留旧任务。现在通过同一 native organizer 的事件发布有 generation 的标量身份，状态 3 不复用旧任务；同包 / 用户 / 默认屏幕的进入和可见 PiP 阻止媒体岛准备 / 入场。渲染提交前读取已发布快照，覆盖 Shell 事件已发生、Main 回调尚未到达的间隙。取消或退出恢复原有 750 ms 规则，不增加延迟、轮询或播放器包名特判。Host 覆盖准备后取消、重建、快速前台切换、旧 generation、不同用户 / 播放器及普通 Home。
+
+默认关闭的 `system_island_hide_in_floating_window` 是安装快照，重启 SystemUI 后生效；普通偏好刷新和 View 重建不会提前应用。打开后只要默认屏幕存在 PiP 或当前用户的系统小窗就隐藏整岛，包含已收起 / 完整隐藏的 PiP；后台事件不重复排队，通知 / Toast 保留原生回退。系统小窗在 attach 和 native 模式事件时串行查询一次，迟到结果按用户 / generation 作废，无持续轮询。音乐直接上岛发布器随抑制关闭，旧提交失效，恢复后新事件仍可使用。未打开整岛开关时，同一 PiP 完整隐藏或边缘收起后可恢复后台媒体岛；展开后再次抑制同一视频，其他后台音乐不受该 PiP 身份影响。
+
+**DEVICE_REQUIRED：** 用户观察的半次入场与真实 Shell / 前台 / 首帧时间线尚未实机关联。静态与 Host 已证明原判断不足并验证修复，但不宣称实际 YouTube 动画问题已验收。
+
+### 全局动作与 PiP 控制
+
+已有动作编号、配置和默认手势保持。新增 33（完整隐藏 / 恢复）与 34（边缘收起 / 恢复），接入全局动作和音乐岛五项手势，未加入锁屏动作。仅配置相应动作时安装 native 合同，首次配置需重启 SystemUI；关闭音乐岛不影响全局入口。
+
+| 路径 | 已核实的合同与边界 |
+| --- | --- |
+| 原生边缘收起 | 调用 ROM PiP accessibility 中按名称解析的 stash / unstash 动作；沿用原生 bounds、动画、协调器和 stashed 状态，不模拟手势或复制坐标 |
+| 完整隐藏 | 当前任务 token / Surface、稳定状态、解锁和默认屏幕约束；原生菜单以类型 0 关闭，单事务更新 native leash 的 alpha 与 Surface hidden policy，同时销毁 input consumer / dispose receiver。恢复走原生注册并检查 input token；释放自身 hidden flag 时仍保留原生锁屏 alpha，失败补偿，原生动画第一笔事务 / 生命周期变化前归还控制 |
+| 任务 / owner 变化 | 单个 lease、单份在途命令；Shell executor 执行前重验 owner / 任务 / Surface，旧 owner 不能修改新任务；无媒体 transport、移除任务、常驻服务或轮询 |
+| 截图临时隐藏 | 截图结束不会揭开手势持有的隐藏；截图期间拒绝新的窗口动作。既有截图 receiver 改为借用最新 organizer 弱引用，不滞留首次 owner；交易及时关闭，重复出现不重复注册 |
+| 全局动作审查 | 确认 SystemUI / system_server 路由、发送者边界、启动快照、动作矩阵与 ROM 原生入口；模块资源只在需要提示时读取。小窗贴边的既有 200 ms 组合和滚动到顶的合成输入仍需目标操作时间线，未据猜测改写 |
+
+完整隐藏、触摸穿透、锁屏、旋转、退出、快速替换、与音乐直接上岛 / 整岛开关的组合均需设备验收。代码不发送暂停命令，不能仅凭此保证播放器自身策略永不改变播放。不能将静态合同命中称为“完美贴合 ROM”。
+
+输入依据分层：目标 ROM `InputMonitor` 将 PiP input consumer 放在独立 display-area 层，不能只靠 task alpha 隐藏；A14 [SurfaceFlinger Layer](https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r1/services/surfaceflinger/Layer.cpp) 的 inherited hidden policy / input visibility 说明为何还需隐藏父 Surface。DEX / AOSP 源码不是目标 ROM native 二进制或设备触摸验收。
+
+### AyuGram 算法参考
+
+DexSQL 输入为用户提供的 `vanilla-AyuGram-full-20261005.apk`，包 `com.radolyn.ayugram`，12.10.6 / 71129，target 36；SHA-256 `2ce48d69be32a6374c0168b27a0f063612ce82be0c5f9ebb7a31c5952d12f883`。仅分析相关 DEX 与资源，不把 APK 文件名视为源码版本证明。公开 [AyuGram 源码](https://github.com/AyuGram/AyuGram4A)声明 GPL-2.0；未建立该样本的逐文件来源 / commit 对应，本轮不复制其代码或 shader。
+
+| 取证入口 | 可借鉴性与当前决定 |
+| --- | --- |
+| `LiquidGlassEffect.update`、`raw/liquid_glass_shader` | 圆角 SDF、差分法线和折射背景像素，使用单个 RuntimeShader；模糊由独立来源提供。Dock 已有真实壁纸采样和折射，保留现有效果 / 裁切 / 材质；不引入其参数或更换 shader |
+| `LiquidGlassEffect.update` 参数缓存 | 借鉴未变参数跳过写入的思路，Dock 自有实现使用精确值比较，保留亚像素变化；每 owner 两份固定 13 浮点缓冲，shader 清除即失效，无全局缓存。Host 统计重复绘制的 7 次 uniform 写入降到 0，重建重新写入 |
+| `RenderNodeWithHash.updateDisplayListIfNeeded`、`BitmapChangeTracker.generationOf` | 尺寸 / 内容 hash / Bitmap generation 联合拒绝重录；适合可准确获知源变化的同进程 View。壁纸是跨进程合成来源，Bitmap generation 不能证明壁纸没变；不据此停采样或增加全树 hash |
+| `AnimatedFloat.set/getValue` | 目标不变不重启动画，有限时钟只在转场中请求重绘。岛已有携带速度的临界阻尼、generation 和停止释放，保留既有机制，不替换成会丢速度的通用插值器 |
+
+可量化的 Host 改进包括未改色时参数副本由每次 1 份降为 0，改色时才复制；相同 Toolbar 颜色不再重复写，以及上述 Dock uniform 写入计数。没有 CPU / GPU、PSS、帧率或耗电结论。ADB 只检查一次：`SKIPPED: no available ADB device`。
 
 ### Launcher 图标所有权
 
@@ -72,6 +125,9 @@ Host 观测确认父窗口 129→60、原生高度 80→模块 129→ROM 96、�
 | 优先级 / 范围 | 最小验收闭环 |
 | --- | --- |
 | P0 通知 | 接管开 / 关：完全解锁、锁屏、AOD、接管中锁屏与立即解锁；敏感 / 应用锁、DND、更新撤回重发；分别读 NMS、Entry / Row 和绘制；列表点击 / 挑战 / 展开 / 清除 |
+| P0 模糊 / 系统栏颜色 | 相机→预览与图库直开预览分别对照窗口模糊、状态栏着色及名单；关联 native blur enabled、窗口 / Decor、上下栏原色、Contrast / Dim / Appearance / Insets 与进退转场，核对无模块覆盖及原生状态恢复 |
+| P1 PiP / 媒体岛 | 播放→上滑 PiP、取消、展开退出、关闭及普通 Home；关联 task / pinned / Shell 状态、前台包名、会话 token、reveal deadline、窗口准备 / 取消 / 首帧，确认一次入场且未误抑制其他播放 |
+| PiP 动作 / 整岛开关 | 全局 / 音乐手势各自完整隐藏与边缘收起→恢复；点击原位置应落到背后窗口；菜单显示、锁屏、旋转、退出 / 换任务、快速连续手势；整岛开 / 关和音乐直接上岛组合，保持播放且全局恢复入口可用 |
 | P1 Launcher 图标 | Workspace 直开播放器→Home，岛关 / 开、播放 / 暂停、正常 / 快速返回；消失后持续留 Home 再自然移除岛；随后才扩到入口、旧动画、FixAnim、缩放、Dock 和文件夹 |
 | P1 状态栏 / Insets | 微信图片 / 视频全屏进退，补相册、网页 / 视频、旋转、导航与岛展示；T0–T5 记录 server frame、client Insets、native 高度和实际内容位置，不以 Host 修复直接归因微信 |
 | 原生音乐返回 | 选中 / 未选中播放器、关闭 / 简化、手势中断、快速切换、横屏 / 分屏 / 小窗、会话 / 用户替换；实际终点、浮动图标恢复及一次确认；普通路径继续 750 ms |
@@ -92,4 +148,4 @@ Host 观测确认父窗口 129→60、原生高度 80→模块 129→ROM 96、�
 
 [整合检查点的完整记录](https://github.com/thetvplus/customiuizer-a14/blob/c9843589416efdbeba2d0f6d651c1c9e136e9fef/docs/maintenance/A14_REFINEMENT_ROADMAP.md)保留历史 ROM / 安全合同、完整目标描述符、模型失败、样本身份、既有设备边界和各批回退提交。需要原文时用 `git show c9843589416efdbeba2d0f6d651c1c9e136e9fef:docs/maintenance/A14_REFINEMENT_ROADMAP.md`；不把它重新复制成阶段文档。
 
-原始 ROM / 查询 / decode / 日志 / mapping 仍在本机忽略的 `.di-evidence/` 或仓库外，包括 `m03-20261023`、`island-native-compat-20261024`、`launcher-icon-ownership-20261024`、`statusbar-fullscreen-20261024` 和状态栏工作树的 `statusbar-fullscreen-fix-20261024`。它们未上传，重做结论时须重新核对工具、样本和安装状态；公共定位合同继续维护在 M03 文档及现有 SQL。
+原始 ROM / 查询 / decode / 日志 / mapping 仍在本机忽略的 `.di-evidence/` 或仓库外，包括 `m03-20261023`、`island-native-compat-20261024`、`launcher-icon-ownership-20261024`、`statusbar-fullscreen-20261024`、`blur-system-20261024` 和状态栏工作树的 `statusbar-fullscreen-fix-20261024`。它们未上传，重做结论时须重新核对工具、样本和安装状态；公共定位合同继续维护在 M03 文档及现有 SQL。

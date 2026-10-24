@@ -24,6 +24,17 @@
 		miuizer:entryValues="@array/placeholder_array_val"
 		android:spinnerMode="dropdown" />
 
+	<TextView
+		android:id="@+id/pip_action_hint"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:paddingTop="8dp"
+		android:paddingBottom="8dp"
+		android:textAppearance="?android:attr/textAppearanceSmall"
+		android:textColor="?android:attr/textColorSecondary"
+		android:text="@string/pip_action_hint"
+		android:visibility="gone" />
+
 	<LinearLayout
 		android:id="@+id/apps_group"
 		android:orientation="vertical"

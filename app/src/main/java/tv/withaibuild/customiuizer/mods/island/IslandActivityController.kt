@@ -83,6 +83,8 @@ internal class IslandActivityController(
     dismissal: IslandActivityState.MediaDismissal = IslandActivityState.MediaDismissal(),
     markerLoader: ClassLoader? = null,
     private val spectrumBackend: IslandAudioSpectrum.Backend? = null,
+    private val freeform: IslandFreeformPort? = null,
+    private val pipStateReader: (() -> IslandPipSnapshot?)? = null,
 ) : ScreenStateController.ScreenStateListener {
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
@@ -154,8 +156,18 @@ internal class IslandActivityController(
     private var pauseDeadline: Long? = null
     private var observedPlaybackState: Int? = null
     private var mediaRevealAt: Long? = null
+    private var pipSnapshot = IslandPipSnapshot(0, 0)
+    // Installation-time option: changing the switch requires the same SystemUI restart as
+    // installing its native event hooks. Other preference refreshes cannot change this snapshot.
+    private val hideInFloatingWindow = options.hideInFloatingWindow
+    private var freeformKnown = !hideInFloatingWindow || freeform == null
+    private var freeformPresent = false
+    private val freeformMutex = Mutex()
+    private var freeformJob: Job? = null
+    private var freeformGeneration = 0L
     private data class MediaReturn(val token: MediaSession.Token, val expiresAt: Long)
     private var mediaReturn: MediaReturn? = null
+    private var mediaReturnInvalidatedAt = -1L
     private var musicReturnPublisher: IslandMusicReturnSignal.Publisher? = null
     private var shadeBlocked = false
     private var shadeBaseline = false
@@ -202,7 +214,7 @@ internal class IslandActivityController(
                 !key.startsWith("system_island_")) return
             onMain {
                 val previousOptions = options
-                options = IslandOptions.read(prefs)
+                options = IslandOptions.read(prefs).copy(hideInFloatingWindow = hideInFloatingWindow)
                 if (previousOptions.mediaReturn != options.mediaReturn ||
                     previousOptions.mediaReturnApps != options.mediaReturnApps) {
                     cancelMediaReturn()
@@ -259,6 +271,9 @@ internal class IslandActivityController(
             if (intent.action == USER_SWITCHED) {
                 val userId = intent.getIntExtra("android.intent.extra.user_handle", -1)
                 foregroundUser = if (userId < 0) null else UserHandle.getUserHandleForUid(Math.multiplyExact(userId, 100000))
+                freeformKnown = !hideInFloatingWindow || freeform == null
+                freeformPresent = false
+                refreshFloatingWindows()
                 destroyedToken = selected?.sessionToken
                     ?: nativeManager.get()?.let { access.controller(it)?.sessionToken }
                 readGeneration++
@@ -336,6 +351,64 @@ internal class IslandActivityController(
 
     override fun onScreenStateChanged(isOn: Boolean) = onMain { refreshSafety() }
 
+    internal fun pipChanged(snapshot: IslandPipSnapshot) = onMain {
+        if (applyPipSnapshot(snapshot)) render()
+    }
+
+    private fun applyPipSnapshot(snapshot: IslandPipSnapshot): Boolean {
+        if (snapshot.generation <= pipSnapshot.generation) return false
+        val wasHidden = floatingWindowBlocked()
+        val wasBlocked = media?.let(pipSnapshot::blocks) == true
+        pipSnapshot = snapshot
+        val blocked = media?.let(snapshot::blocks) == true
+        if (blocked || wasBlocked || wasHidden || floatingWindowBlocked())
+            mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
+        if (blocked) {
+            cancelMediaReturn()
+            mediaRevealAt = null
+            // A prepared/visible media window must not finish a now-invalid entrance.
+            if (lastContent is IslandMediaContent) hide()
+        } else if ((wasBlocked || wasHidden && !floatingWindowBlocked()) && media?.packageName != foregroundPackage) {
+            mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
+            nativeManager.get()?.let { updateFromNative(it) }
+        }
+        return true
+    }
+
+    private fun floatingWindowBlocked(): Boolean = hideInFloatingWindow &&
+        (!freeformKnown || freeformPresent || pipSnapshot.state in 1..5 && pipSnapshot.displayId == 0)
+
+    internal fun refreshFloatingWindows() = onMain {
+        val reader = freeform ?: return@onMain
+        if (!hideInFloatingWindow) return@onMain
+        val user = foregroundUser ?: run { freeformKnown = true; render(); return@onMain }
+        val generation = ++freeformGeneration
+        freeformJob?.cancel()
+        freeformJob = scope.launch {
+            freeformMutex.withLock {
+                val present = withContext(ioDispatcher) {
+                    try { reader.hasWindow(user) }
+                    catch (error: Throwable) {
+                        FatalErrors.unwrapAndRethrowIfFatal(error)
+                        if (error is CancellationException) throw error
+                        diagnostics.report("floating-window-state-unavailable")
+                        null
+                    }
+                }
+                if (disposed || generation != freeformGeneration || user != foregroundUser) return@withLock
+                val wasHidden = floatingWindowBlocked()
+                freeformKnown = true
+                if (present != null) freeformPresent = present
+                if (wasHidden || floatingWindowBlocked()) mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
+                if (wasHidden && !floatingWindowBlocked() && media?.packageName != foregroundPackage) {
+                    mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
+                    nativeManager.get()?.let { updateFromNative(it) }
+                }
+                render()
+            }
+        }
+    }
+
     fun foregroundChanged(packageName: String?) = onMain {
         if (foregroundPackage == packageName) return@onMain
         val previous = foregroundPackage
@@ -383,7 +456,9 @@ internal class IslandActivityController(
     }
 
     internal fun nativeMusicReturn(frame: IslandMusicReturnSignal.Frame, committedAt: Long = SystemClock.uptimeMillis()) = onMain {
+        pipStateReader?.invoke()?.let(::applyPipSnapshot)
         val current = media ?: return@onMain
+        if (pipSnapshot.blocks(current) || floatingWindowBlocked() || committedAt <= mediaReturnInvalidatedAt) return@onMain
         if (disposed || !state.allowed || !options.mediaReturn || options.simplified || !frame.valid() ||
             !ValueAnimator.areAnimatorsEnabled() || !current.playing || frame.packageName != current.packageName ||
             frame.user != foregroundUser || frame.user != current.user || current.packageName !in options.mediaReturnApps ||
@@ -399,7 +474,7 @@ internal class IslandActivityController(
     }
 
     fun systemActivity(activity: IslandSystemActivity) = onMain {
-        if (disposed || !options.enabled || activity.kind !in options.feedback || (!state.allowed && !shadeBlocked)) return@onMain
+        if (disposed || !options.enabled || floatingWindowBlocked() || activity.kind !in options.feedback || (!state.allowed && !shadeBlocked)) return@onMain
         val now = SystemClock.uptimeMillis()
         systemFeedbackSlot.offer(activity, now)?.takeIf { state.allowed }
             ?.let { presentSystemEntry(it, now) }
@@ -428,14 +503,14 @@ internal class IslandActivityController(
     /** At most one pending feedback, with its original deadline even while the shade is open. */
     private fun scheduleSystemFeedback() {
         handler.removeCallbacks(systemFeedback)
-        if (disposed || !options.enabled || !state.allowed) return
+        if (disposed || !options.enabled || !state.allowed || floatingWindowBlocked()) return
         val now = SystemClock.uptimeMillis()
         val ready = systemFeedbackSlot.readyAt(now) ?: return
         handler.postAtTime(systemFeedback, ready)
     }
 
     private fun presentSystemFeedback() {
-        if (disposed || !options.enabled || !state.allowed) return
+        if (disposed || !options.enabled || !state.allowed || floatingWindowBlocked()) return
         val now = SystemClock.uptimeMillis()
         val ready = systemFeedbackSlot.readyAt(now) ?: return
         if (ready > now) {
@@ -459,7 +534,7 @@ internal class IslandActivityController(
 
     fun showToast(content: IslandToastContent, duration: Long): IslandActivityState.Lease? {
         if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled || !options.toast ||
-            !state.allowed || content.packageName in options.excludedApps ||
+            !state.allowed || floatingWindowBlocked() || content.packageName in options.excludedApps ||
             content.packageName == "com.android.systemui") return null
         if (systemPresentation?.let { state.owns(it.lease, SystemClock.uptimeMillis()) } == true) return null
         val text = IslandToastText.resolve(content.text, true) ?: return null
@@ -484,7 +559,7 @@ internal class IslandActivityController(
     /** Synchronous transaction on the final native heads-up bind; false always retains native UI. */
     fun takeNotification(bound: IslandNotificationAccess.Bound): Boolean {
         val sbn = bound.notification
-        if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled || !options.chat) return false
+        if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled || !options.chat || floatingWindowBlocked()) return false
         // The native keyguard can lead the status-bar callback. Read it at the
         // takeover boundary, before any notification lease or native mutation.
         refreshSafety()
@@ -715,8 +790,7 @@ internal class IslandActivityController(
                 metadata?.getText(MediaMetadata.METADATA_KEY_ARTIST)?.toString()?.take(160),
                 prepareArtwork(metadata, epoch) ?: icon.drawable,
                 IslandMediaPolicy.playing(playback.state), playback.actions, playback.state,
-                if (options.mediaReturn && pkg in options.mediaReturnApps)
-                    IslandMediaIdentity.uid(controller)?.let { UserHandle.getUserHandleForUid(it) } else null)
+                IslandMediaIdentity.uid(controller)?.let { UserHandle.getUserHandleForUid(it) })
         }
     } catch (error: Throwable) {
         FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -848,7 +922,7 @@ internal class IslandActivityController(
 
     private fun publishMusicReturn() {
         val enabled = !disposed && options.enabled && options.media && options.mediaReturn &&
-            options.mediaReturnApps.isNotEmpty() && !options.simplified && ValueAnimator.areAnimatorsEnabled()
+            options.mediaReturnApps.isNotEmpty() && !options.simplified && !floatingWindowBlocked() && ValueAnimator.areAnimatorsEnabled()
         if (!enabled) {
             val old = musicReturnPublisher
             musicReturnPublisher = null
@@ -857,9 +931,10 @@ internal class IslandActivityController(
         }
         val publisher = musicReturnPublisher ?: IslandMusicReturnSignal.Publisher(context.applicationContext,
             handler, scope, ioDispatcher, onCommit = ::nativeMusicReturn) {
+            pipStateReader?.invoke()?.let(::applyPipSnapshot)
             val current = state.media(SystemClock.uptimeMillis())
             val bounds = screen
-            if (!state.allowed || current?.playing != true || current.user == null ||
+            if (!state.allowed || current?.playing != true || current.user == null || pipSnapshot.blocks(current) ||
                 current.user != foregroundUser || current.packageName !in options.mediaReturnApps ||
                 state.toast(SystemClock.uptimeMillis()) != null || bounds == null) null
             else geometry(mediaOnly = true)?.let { geometry ->
@@ -872,7 +947,22 @@ internal class IslandActivityController(
     }
 
     private fun render(): Boolean {
+        // A Shell-thread event may precede its queued Main delivery. Read its already-published
+        // scalar snapshot at the commit boundary; this performs no native query or polling.
+        pipStateReader?.invoke()?.let(::applyPipSnapshot)
         handler.removeCallbacks(expiry)
+        if (floatingWindowBlocked()) {
+            cancelMediaReturn()
+            publishMusicReturn()
+            clearChat(); state.clearToast(); clearSystemActivity()
+            mediaRevealAt = null
+            hide()
+            return false
+        }
+        if (media?.let(pipSnapshot::blocks) == true) {
+            mediaRevealAt = null
+            cancelMediaReturn()
+        }
         publishMusicReturn()
         val now = SystemClock.uptimeMillis()
         if (mediaReturn?.let { now >= it.expiresAt } == true || !state.allowed ||
@@ -901,7 +991,7 @@ internal class IslandActivityController(
         // Returning from a shade needs one current snapshot before the retained slot can
         // draw: it may still contain PLAYING although a real pause expired while hidden.
         val current = if (mediaRevealAt == null && !shadeBaseline && !foregroundBaseline) state.media(now)?.takeUnless {
-            it.packageName == foregroundPackage } else null
+            it.packageName == foregroundPackage || pipSnapshot.blocks(it) } else null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null)) geometry() else null
         val nextExpiry = listOfNotNull(state.deadline(), pauseDeadline?.takeIf { it > now },
             mediaRevealAt?.takeIf { it > now }, mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()
@@ -1145,6 +1235,8 @@ internal class IslandActivityController(
         publishMusicReturn()
         handler.removeCallbacks(expiry)
         handler.removeCallbacks(nativeRefresh)
+        freeformGeneration++
+        freeformJob?.cancel(); freeformJob = null
         clearSystemActivity()
         systemActivities?.dispose(); systemActivities = null
         actionMarkers?.close()

@@ -1252,4 +1252,9 @@
     <string name="system_island_waveform_light">Animação leve</string>
     <string name="system_island_waveform_real">Forma de onda ao vivo (experimental)</string>
     <string name="system_island_waveform_mode_summ">Cinco faixas de frequência são capturadas apenas com a ilha visível e a reprodução ativa. Permissões, rotas ou sessões incompatíveis usam a animação leve.</string>
+    <string name="system_island_hide_in_floating_window_title">Ocultar Dynamic Island com janelas flutuantes</string>
+    <string name="system_island_hide_in_floating_window_summ">Oculta toda a Dynamic Island enquanto houver picture-in-picture ou janelas flutuantes do sistema. Reinicie a interface do sistema após alterar esta opção.</string>
+    <string name="array_global_actions_pip_hide">Ocultar / restaurar picture-in-picture</string>
+    <string name="array_global_actions_pip_stash">Recolher / restaurar picture-in-picture</string>
+    <string name="pip_action_hint">Controla a janela picture-in-picture atual sem pausar a reprodução. Reinicie a interface do sistema após a primeira configuração. Transições do sistema encerram a ocultação completa. Se a Dynamic Island estiver oculta, restaure o PiP com um gesto global.</string>
 </resources>

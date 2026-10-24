@@ -79,7 +79,7 @@ class FastRebootContractTest {
     }
 
     @Test
-    fun customActionFilterSequenceIsUnchangedApartFromFastReboot() {
+    fun customActionFilterSequencePreservesExistingActionsAndIncludesPip() {
         val customSetup = hooks.section(
             "fun setupStatusBar(lpparam: PackageReadyParam)",
             "if (hasConfiguredActionCode(28))"
@@ -90,6 +90,7 @@ class FastRebootContractTest {
             .toList()
         val expected = listOf(
             "ExpandNotifications", "ExpandSettings", "OpenRecents", "OpenVolumeDialog",
+            "TogglePipVisibility", "TogglePipStash",
             "ToggleGPS", "ToggleHotspot", "ToggleZenMode", "ToggleFlashlight",
             "ToggleNightMode", "ToggleWiFi", "ToggleBluetooth", "ToggleNFC",
             "ToggleSoundProfile", "ToggleAutoRotation", "ToggleMobileData",

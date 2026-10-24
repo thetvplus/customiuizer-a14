@@ -37,6 +37,8 @@ object GlobalActionPresentation {
         27 to R.string.array_global_actions_floatingwindow,
         28 to R.string.array_global_actions_pinningwindow,
         29 to R.string.array_global_actions_splitscreen,
+        33 to R.string.array_global_actions_pip_hide,
+        34 to R.string.array_global_actions_pip_stash,
         30 to R.string.system_island_action_play,
         31 to R.string.system_island_action_pause,
         32 to R.string.system_island_action_player,

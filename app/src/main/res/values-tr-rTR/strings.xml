@@ -1258,4 +1258,9 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_waveform_light">Hafif animasyon</string>
     <string name="system_island_waveform_real">Canlı dalga biçimi (deneysel)</string>
     <string name="system_island_waveform_mode_summ">Beş frekans bandı yalnızca ada görünürken ve müzik çalarken alınır. İzin, ses yolu veya oturum desteklenmiyorsa hafif animasyona dönülür.</string>
+    <string name="system_island_hide_in_floating_window_title">Kayan pencereler varken Dynamic Island gizlensin</string>
+    <string name="system_island_hide_in_floating_window_summ">Resim içinde resim veya sistem kayan pencereleri varken Dynamic Island tamamen gizlenir. Bu seçeneği değiştirdikten sonra sistem arayüzünü yeniden başlatın.</string>
+    <string name="array_global_actions_pip_hide">Resim içinde resmi gizle / geri getir</string>
+    <string name="array_global_actions_pip_stash">Resim içinde resmi kenara al / geri getir</string>
+    <string name="pip_action_hint">Oynatmayı duraklatmadan mevcut resim içinde resim penceresini kontrol eder. İlk ayardan sonra sistem arayüzünü yeniden başlatın. Sistem pencere geçişi tam gizlemeyi sonlandırır. Dynamic Island gizliyse PiP penceresini genel bir hareketle geri getirin.</string>
 </resources>

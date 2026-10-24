@@ -769,6 +769,7 @@ object GlobalActionSystemServerHooks {
 
     @JvmStatic
     fun setupStatusBar(lpparam: PackageReadyParam) {
+        SystemPipActions.install(lpparam.classLoader, MainModule.mPrefs)
         val statusBarClass = XposedHelpers.findClassIfExists("com.android.systemui.statusbar.phone.CentralSurfacesImpl", lpparam.classLoader)
         if (statusBarClass == null) return
         ModuleHelper.findAndHookMethod(statusBarClass, "start", object : MethodHook() {
@@ -782,6 +783,8 @@ object GlobalActionSystemServerHooks {
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "ExpandSettings")
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "OpenRecents")
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "OpenVolumeDialog")
+                intentfilter.addAction(GlobalActions.ACTION_PREFIX + "TogglePipVisibility")
+                intentfilter.addAction(GlobalActions.ACTION_PREFIX + "TogglePipStash")
 
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "ToggleGPS")
                 intentfilter.addAction(GlobalActions.ACTION_PREFIX + "ToggleHotspot")

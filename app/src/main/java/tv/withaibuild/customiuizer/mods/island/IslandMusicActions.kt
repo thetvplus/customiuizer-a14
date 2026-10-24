@@ -30,8 +30,10 @@ internal data class IslandMusicActions(
         const val PLAY = 30
         const val PAUSE = 31
         const val OPEN_PLAYER = 32
+        const val PIP_HIDE = 33
+        const val PIP_STASH = 34
         fun supported(action: Int): Boolean = action in 1..3 || action in 8..9 || action in 17..20 ||
-            action in PLAY..OPEN_PLAYER || action == 85 || action in 87..88
+            action in PLAY..PIP_STASH || action == 85 || action in 87..88
 
         fun read(prefs: PrefMap): IslandMusicActions {
             fun action(gesture: IslandMusicGesture) = prefs.getInt(gesture.key + "_action", gesture.defaultAction)

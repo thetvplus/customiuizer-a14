@@ -188,6 +188,8 @@ object GlobalActions {
             27 -> commonSendAction(context, "FloatingWindow")
             28 -> commonSendAction(context, "PinningWindow")
             29 -> commonSendAction(context, "SplitScreen")
+            33 -> commonSendAction(context, "TogglePipVisibility")
+            34 -> commonSendAction(context, "TogglePipStash")
             else -> false
         }
     }
@@ -200,7 +202,6 @@ object GlobalActions {
         @SuppressLint("WrongConstant", "MissingPermission")
         override fun onReceive(context: Context, intent: Intent) {
             ModuleHelper.guarded {
-                val modRes = ModuleHelper.getModuleRes(context)
                 val action = intent.action
                 if (action == null) return
                 if (!ModuleHelper.isTrustedBroadcast(
@@ -214,6 +215,12 @@ object GlobalActions {
                 ) return
 
                 when (action) {
+                    ACTION_PREFIX + "TogglePipVisibility", ACTION_PREFIX + "TogglePipStash" -> {
+                        val code = if (action.endsWith("Visibility")) SystemPipActions.HIDE else SystemPipActions.STASH
+                        val accepted = SystemPipActions.request(code)
+                        if (isOrderedBroadcast) resultCode = if (accepted) ACTION_HANDLED else ACTION_FAILED
+                        return
+                    }
                     ACTION_PREFIX + "RestartSystemUI" -> Process.killProcess(Process.myPid())
                     ACTION_PREFIX + "ClearNotifications" -> {
                         val nms = XposedHelpers.callStaticMethod(NotificationManager::class.java, "getService")
@@ -345,9 +352,9 @@ object GlobalActions {
                         if (!mHotspotSupported) return
                         val mHotspotEnabled = XposedHelpers.callMethod(mHotspotController, "isHotspotEnabled") as Boolean
                         if (mHotspotEnabled) {
-                            Toast.makeText(context, modRes.getString(R.string.toggle_hotspot_off), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_hotspot_off), Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, modRes.getString(R.string.toggle_hotspot_on), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_hotspot_on), Toast.LENGTH_SHORT).show()
                         }
                         XposedHelpers.callMethod(mHotspotController, "setHotspotEnabled", !mHotspotEnabled)
                     }
@@ -367,9 +374,9 @@ object GlobalActions {
                         val locationController = ModuleHelper.getDepInstance(context.classLoader, "com.android.systemui.statusbar.policy.LocationController")
                         val mGpsEnable = XposedHelpers.callMethod(locationController, "isLocationEnabled") as Boolean
                         if (mGpsEnable) {
-                            Toast.makeText(context, modRes.getString(R.string.toggle_gps_off), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_gps_off), Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, modRes.getString(R.string.toggle_gps_on), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_gps_on), Toast.LENGTH_SHORT).show()
                         }
                         XposedHelpers.callMethod(locationController, "setLocationEnabled", !mGpsEnable)
                     }
@@ -383,20 +390,20 @@ object GlobalActions {
                         val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
                         if (wifiManager.isWifiEnabled) {
                             wifiManager.setWifiEnabled(false)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_wifi_off), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_wifi_off), Toast.LENGTH_SHORT).show()
                         } else {
                             wifiManager.setWifiEnabled(true)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_wifi_on), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_wifi_on), Toast.LENGTH_SHORT).show()
                         }
                     }
                     ACTION_PREFIX + "ToggleBluetooth" -> {
                         val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
                         if (mBluetoothAdapter.isEnabled) {
                             mBluetoothAdapter.disable()
-                            Toast.makeText(context, modRes.getString(R.string.toggle_bt_off), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_bt_off), Toast.LENGTH_SHORT).show()
                         } else {
                             mBluetoothAdapter.enable()
-                            Toast.makeText(context, modRes.getString(R.string.toggle_bt_on), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_bt_on), Toast.LENGTH_SHORT).show()
                         }
                     }
                     ACTION_PREFIX + "ToggleNFC" -> {
@@ -411,10 +418,10 @@ object GlobalActions {
 
                         if (mNfcAdapter.isEnabled) {
                             disableNFC.invoke(mNfcAdapter)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_nfc_off), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_nfc_off), Toast.LENGTH_SHORT).show()
                         } else {
                             enableNFC.invoke(mNfcAdapter)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_nfc_on), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_nfc_on), Toast.LENGTH_SHORT).show()
                         }
                     }
                     ACTION_PREFIX + "ToggleSoundProfile" -> {
@@ -423,37 +430,37 @@ object GlobalActions {
                         when (currentMode) {
                             0 -> {
                                 am.setRingerMode(AudioManager.RINGER_MODE_VIBRATE)
-                                Toast.makeText(context, modRes.getString(R.string.toggle_sound_vibrate), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_sound_vibrate), Toast.LENGTH_SHORT).show()
                             }
                             1 -> {
                                 am.setRingerMode(AudioManager.RINGER_MODE_NORMAL)
-                                Toast.makeText(context, modRes.getString(R.string.toggle_sound_normal), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_sound_normal), Toast.LENGTH_SHORT).show()
                             }
                             2 -> {
                                 am.setRingerMode(AudioManager.RINGER_MODE_SILENT)
-                                Toast.makeText(context, modRes.getString(R.string.toggle_sound_silent), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_sound_silent), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                     ACTION_PREFIX + "ToggleAutoRotation" -> {
                         if (Settings.System.getInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 0) {
                             Settings.System.putInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 1)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_autorotate_on), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_autorotate_on), Toast.LENGTH_SHORT).show()
                         } else {
                             val rotation = (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
                             Settings.System.putInt(context.contentResolver, Settings.System.USER_ROTATION, rotation)
                             Settings.System.putInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_autorotate_off), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_autorotate_off), Toast.LENGTH_SHORT).show()
                         }
                     }
                     ACTION_PREFIX + "ToggleMobileData" -> {
                         val telManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
                         if (telManager.isDataEnabled) {
                             telManager.setDataEnabledForReason(0, false)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_mobiledata_off), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_mobiledata_off), Toast.LENGTH_SHORT).show()
                         } else {
                             telManager.setDataEnabledForReason(0, true)
-                            Toast.makeText(context, modRes.getString(R.string.toggle_mobiledata_on), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_mobiledata_on), Toast.LENGTH_SHORT).show()
                         }
                     }
                     ACTION_PREFIX + "WakeUp" -> {

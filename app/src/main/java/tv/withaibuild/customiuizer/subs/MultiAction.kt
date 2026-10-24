@@ -216,7 +216,10 @@ class MultiAction : SubFragment() {
         activities.visibility = View.GONE
         toggles.visibility = View.GONE
 
-        when (spinner.entryValues?.get(position) ?: -1) {
+        val action = spinner.entryValues?.getOrNull(position) ?: -1
+        v.findViewById<View>(R.id.pip_action_hint).visibility = if (action == 33 || action == 34) View.VISIBLE else View.GONE
+
+        when (action) {
             8 -> apps.visibility = View.VISIBLE
             9 -> shortcuts.visibility = View.VISIBLE
             10 -> toggles.visibility = View.VISIBLE

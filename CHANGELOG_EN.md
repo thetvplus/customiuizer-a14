@@ -6,6 +6,13 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+- Track native PiP entry, cancellation, exit and task identity before revealing a media island. Ordinary background music keeps its existing timing. Add an opt-in switch to hide the entire island while PiP or a system freeform window exists, including Music direct-to-island coordination.
+- Add full PiP hide / restore and native edge stash / restore to global actions and island music gestures. No pause command is sent; full hiding releases input and returns ownership before native window transitions. Restart SystemUI after first configuring these actions.
+- Avoid resource reads for unrelated global actions and repeated Dock glass shader uniform writes. Preserve subpixel changes and initialization after shader replacement.
+
+- Preserve preview windows' translucent status-bar colors, clear stale ActionBar colors and let native background updates continue when optional Toolbar metadata is unavailable. Keep native contrast protection and navigation-bar behavior.
+- Prevent late failures from obsolete wallpaper captures from permanently retiring the Dock liquid-glass background. Wallpaper replacement, hiding and release invalidate stale results.
+
 ## r14.25.3 — 2026-10-23
 
 versionCode 248. Changes since r14.25.1:

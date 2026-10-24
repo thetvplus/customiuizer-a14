@@ -5,6 +5,18 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun hidingWithFloatingWindowsIsIndependentAndDefaultsOff() {
+        val prefs = PrefMap()
+        assertFalse(IslandOptions.read(prefs).hideInFloatingWindow)
+        prefs.put("system_island_hide_in_floating_window", true)
+        assertTrue(IslandOptions.read(prefs).hideInFloatingWindow)
+        assertFalse(IslandOptions.read(prefs).media)
+        assertFalse(IslandOptions.read(prefs).mediaReturn)
+        prefs.put("system_island_media_return", true)
+        prefs.put("system_island_media_return_apps", setOf("music.app"))
+        assertTrue(IslandOptions.read(prefs).hideInFloatingWindow)
+    }
+
     @Test fun nativeWindowHookRequiresTheIslandMediaOptInAndAnExplicitApp() {
         val prefs = PrefMap()
         fun active() = tv.withaibuild.customiuizer.mods.utils.feature.LauncherMusicReturnFeature.evaluateEnabled(prefs)

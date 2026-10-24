@@ -22,6 +22,8 @@
 		<item>@string/array_global_actions_sleep</item>
 		<item>@string/array_global_actions_screenshot</item>
 		<item>@string/array_global_actions_recents</item>
+		<item>@string/array_global_actions_pip_hide</item>
+		<item>@string/array_global_actions_pip_stash</item>
 		<item>@string/array_global_actions_volume</item>
 		<item>@string/array_global_actions_powermenu</item>
 		<item>@string/array_global_actions_expandsidebar</item>
@@ -42,6 +44,8 @@
 		<item>5</item>
 		<item>6</item>
 		<item>7</item>
+		<item>33</item>
+		<item>34</item>
 		<item>17</item>
 		<item>12</item>
 		<item>26</item>
@@ -67,6 +71,8 @@
 		<item>@string/array_global_actions_floatingwindow</item>
 		<item>@string/array_global_actions_pinningwindow</item>
 		<item>@string/array_global_actions_splitscreen</item>
+		<item>@string/array_global_actions_pip_hide</item>
+		<item>@string/array_global_actions_pip_stash</item>
 		<item>@string/array_global_actions_volume</item>
 		<item>@string/array_global_actions_volume_up</item>
 		<item>@string/array_global_actions_volume_down</item>
@@ -99,6 +105,8 @@
 		<item>27</item>
 		<item>28</item>
 		<item>29</item>
+		<item>33</item>
+		<item>34</item>
 		<item>17</item>
 		<item>18</item>
 		<item>19</item>
@@ -128,6 +136,8 @@
 		<item>@string/array_global_actions_sleep</item>
 		<item>@string/array_global_actions_screenshot</item>
 		<item>@string/array_global_actions_recents</item>
+		<item>@string/array_global_actions_pip_hide</item>
+		<item>@string/array_global_actions_pip_stash</item>
 		<item>@string/array_global_actions_volume</item>
 		<item>@string/array_global_actions_menu</item>
 		<item>@string/array_global_actions_goback</item>
@@ -151,6 +161,8 @@
 		<item>5</item>
 		<item>6</item>
 		<item>7</item>
+		<item>33</item>
+		<item>34</item>
 		<item>17</item>
 		<item>16</item>
 		<item>15</item>
@@ -173,6 +185,8 @@
 		<item>@string/array_global_actions_sleep</item>
 		<item>@string/array_global_actions_screenshot</item>
 		<item>@string/array_global_actions_recents</item>
+		<item>@string/array_global_actions_pip_hide</item>
+		<item>@string/array_global_actions_pip_stash</item>
 		<item>@string/array_global_actions_volume</item>
 		<item>@string/array_global_actions_volume_up</item>
 		<item>@string/array_global_actions_volume_down</item>
@@ -200,6 +214,8 @@
 		<item>5</item>
 		<item>6</item>
 		<item>7</item>
+		<item>33</item>
+		<item>34</item>
 		<item>17</item>
 		<item>18</item>
 		<item>19</item>
@@ -771,6 +787,8 @@
         <item>@string/array_global_actions_volume_down</item>
         <item>@string/array_global_actions_volume</item>
         <item>@string/system_island_action_player</item>
+        <item>@string/array_global_actions_pip_hide</item>
+        <item>@string/array_global_actions_pip_stash</item>
         <item>@string/array_global_actions_launch</item>
         <item>@string/array_global_actions_shortcut</item>
         <item>@string/array_global_actions_activity</item>
@@ -788,6 +806,8 @@
         <item>19</item>
         <item>17</item>
         <item>32</item>
+        <item>33</item>
+        <item>34</item>
         <item>8</item>
         <item>9</item>
         <item>20</item>

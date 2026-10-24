@@ -1252,4 +1252,9 @@
     <string name="system_island_waveform_light">軽量アニメーション</string>
     <string name="system_island_waveform_real">リアルタイム波形（試験的）</string>
     <string name="system_island_waveform_mode_summ">表示中かつ再生中のみ5つの周波数帯域を取得します。権限、経路、セッションが非対応の場合は軽量アニメーションに戻ります。</string>
+    <string name="system_island_hide_in_floating_window_title">小窓の表示中はダイナミックアイランドを非表示</string>
+    <string name="system_island_hide_in_floating_window_summ">ピクチャーインピクチャーやシステムの小窓がある間、ダイナミックアイランド全体を非表示にします。変更後はシステム UI を再起動してください。</string>
+    <string name="array_global_actions_pip_hide">ピクチャーインピクチャーを非表示／復元</string>
+    <string name="array_global_actions_pip_stash">ピクチャーインピクチャーを端に収納／復元</string>
+    <string name="pip_action_hint">再生を一時停止せず、現在のピクチャーインピクチャーを操作します。初回設定後はシステム UI を再起動してください。システムのウィンドウ遷移で完全非表示は解除されます。ダイナミックアイランドが非表示の場合は全体ジェスチャーで復元してください。</string>
 </resources>

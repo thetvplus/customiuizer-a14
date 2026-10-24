@@ -56,7 +56,7 @@ class MultiActionArrayContractTest {
 
     @Test fun musicMatrixUsesOnlyImplementedSessionActionsAndRestrictedCustomActions() {
         val values = integerItems("global_actions_island_music_val")
-        assertEquals(listOf(1,85,30,31,88,87,18,19,17,32,8,9,20,2,3),values)
+        assertEquals(listOf(1,85,30,31,88,87,18,19,17,32,33,34,8,9,20,2,3),values)
         val existing = handledActionIds()
         for(id in values) assertTrue("Music action $id is not implemented",id == 1 || id in existing || id in 30..32)
         assertTrue(multiAction.contains("STATUSBAR, MUSIC"))
@@ -79,7 +79,7 @@ class MultiActionArrayContractTest {
     @Test
     fun launcherAdvertisesTheExpectedActionMatrix() {
         assertEquals(
-            listOf(1, 2, 3, 4, 5, 6, 7, 17, 12, 26, 8, 9, 20, 10, 13, 14, 22, 23),
+            listOf(1, 2, 3, 4, 5, 6, 7, 33, 34, 17, 12, 26, 8, 9, 20, 10, 13, 14, 22, 23),
             integerItems("global_actions_launcher_val"),
         )
     }

@@ -17,6 +17,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ReflectionCache
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import tv.withaibuild.customiuizer.mods.SystemPipActions
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
@@ -43,6 +44,7 @@ internal data class IslandOptions(
     val waveformMode: Int = if (waveform) 1 else 0,
     val mediaReturn: Boolean = false,
     val mediaReturnApps: Set<String> = emptySet(),
+    val hideInFloatingWindow: Boolean = false,
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
@@ -74,7 +76,8 @@ internal data class IslandOptions(
                 },
                 prefs.getStringSet("system_island_notification_apps"), waveformMode,
                 prefs.getBoolean("system_island_media_return"),
-                prefs.getStringSet("system_island_media_return_apps").toSet())
+                prefs.getStringSet("system_island_media_return_apps").toSet(),
+                prefs.getBoolean("system_island_hide_in_floating_window"))
         }
     }
 }
@@ -135,11 +138,15 @@ internal object DynamicIslandActivities {
     private var safety = WeakReference<Any>(null)
     private val mediaDismissal = IslandActivityState.MediaDismissal()
     @Volatile private var foregroundPackage: String? = null
+    private var pipObserver: IslandPipObserver? = null
+    private var freeformAccess: IslandFreeformAccess? = null
+    private var installedFloatingWindowPolicy = false
 
     fun install(param: PackageReadyParam, source: PrefMap) {
         if (access != null) return
         val options = IslandOptions.read(source)
         if (!options.enabled) return
+        installedFloatingWindowPolicy = options.hideInFloatingWindow
         val resolved = try { IslandNativeAccess(param.classLoader) } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
             XposedHelpers.log("Dynamic Island: native activity contract unavailable", error)
@@ -173,6 +180,28 @@ internal object DynamicIslandActivities {
                 active.get()?.connectSafety(owner)
             }
         })
+        if (options.media || options.hideInFloatingWindow) {
+            ModuleHelper.guarded {
+                val observer = IslandPipObserver(IslandPipAccess(param.classLoader)) { snapshot ->
+                    active.get()?.pipChanged(snapshot)
+                }
+                if (observer.install()) {
+                    pipObserver = observer
+                    SystemPipActions.visibilityObserver = observer::visibilityChanged
+                }
+            }
+        }
+        if (options.hideInFloatingWindow) {
+            ModuleHelper.guarded {
+                val floating = IslandFreeformAccess(param.classLoader)
+                val installed = ModuleHelper.hookMethod(floating.changed, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) {
+                        if (callback.getThrowable() == null) active.get()?.refreshFloatingWindows()
+                    }
+                })
+                if (installed != null) freeformAccess = floating
+            }
+        }
         if (options.media) {
             ModuleHelper.hookAllConstructors(resolved.mediaClass, object : MethodHook() {
                 override fun after(callback: AfterHookCallback) { captureMedia(callback.getThisObject(), replacing = true) }
@@ -232,13 +261,15 @@ internal object DynamicIslandActivities {
         val source = prefs ?: return
         if (!statusBar.isAttachedToWindow) return
         if (XposedHelpers.getAdditionalInstanceField(statusBar, OWNER) != null) return
-        val options = IslandOptions.read(source)
+        val options = IslandOptions.read(source).copy(hideInFloatingWindow = installedFloatingWindowPolicy)
         if (!options.enabled || statusBar.display?.displayId != 0) return
         active.get()?.dispose()
         val controller = IslandActivityController(statusBar.context, source, options, resolved,
-            dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader)
+            dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader,
+            freeform = freeformAccess, pipStateReader = { pipObserver?.snapshot })
         XposedHelpers.setAdditionalInstanceField(statusBar, OWNER, controller)
         active = WeakReference(controller)
+        pipObserver?.snapshot?.let(controller::pipChanged)
         controller.foregroundChanged(foregroundPackage)
         statusBar.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) = Unit
@@ -250,6 +281,7 @@ internal object DynamicIslandActivities {
         })
         safety.get()?.let { controller.connectSafety(it) }
         manager.get()?.let { controller.updateFromNative(it) }
+        controller.refreshFloatingWindows()
     }
 
     fun showToast(content: IslandToastContent, duration: Long, displayId: Int): IslandActivityState.Lease? =

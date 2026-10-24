@@ -1251,4 +1251,9 @@
     <string name="system_island_waveform_light">Лёгкая анимация</string>
     <string name="system_island_waveform_real">Живой спектр (эксперимент)</string>
     <string name="system_island_waveform_mode_summ">Пять частотных полос считываются только при видимом острове и воспроизведении. Если права, маршрут или сеанс не поддерживаются, используется лёгкая анимация.</string>
+    <string name="system_island_hide_in_floating_window_title">Скрывать Dynamic Island при плавающих окнах</string>
+    <string name="system_island_hide_in_floating_window_summ">Скрывает весь Dynamic Island, пока есть окно «Картинка в картинке» или системное плавающее окно. После изменения перезапустите интерфейс системы.</string>
+    <string name="array_global_actions_pip_hide">Скрыть / восстановить «Картинка в картинке»</string>
+    <string name="array_global_actions_pip_stash">Убрать к краю / восстановить PiP</string>
+    <string name="pip_action_hint">Управляет текущим PiP без паузы воспроизведения. После первой настройки перезапустите интерфейс системы. Переход окна завершает полное скрытие. Если Dynamic Island скрыт, восстановите PiP глобальным жестом.</string>
 </resources>

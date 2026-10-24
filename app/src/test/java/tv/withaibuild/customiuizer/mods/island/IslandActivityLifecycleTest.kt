@@ -88,6 +88,8 @@ class IslandActivityLifecycleTest {
         notificationApps: Set<String> = setOf(context.packageName),
         waveformMode: Int = 1, spectrumBackend: IslandAudioSpectrum.Backend? = null,
         mediaReturn: Boolean = false, mediaReturnApps: Set<String> = emptySet(),
+        hideFloating: Boolean = false, freeform: IslandFreeformPort? = null,
+        pipStateReader: (() -> IslandPipSnapshot?)? = null,
         io: kotlinx.coroutines.CoroutineDispatcher = dispatcher,
         entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP): IslandActivityController {
         val prefs = PrefMap().apply {
@@ -101,11 +103,14 @@ class IslandActivityLifecycleTest {
             put("system_island_waveform_mode", waveformMode.toString())
             put("system_island_media_return", mediaReturn)
             put("system_island_media_return_apps", mediaReturnApps)
+            put("system_island_hide_in_floating_window", hideFloating)
             put("system_island_entrance_style", entranceStyle.ordinal.toString())
         }
-        return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, io, spectrumBackend = spectrumBackend).also {
+        return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, io, spectrumBackend = spectrumBackend,
+            freeform = freeform, pipStateReader = pipStateReader).also {
             owner = it
             it.connectSafety(Any())
+            it.refreshFloatingWindows()
             drain()
         }
     }
@@ -648,6 +653,308 @@ class IslandActivityLifecycleTest {
         controller.foregroundChanged(context.packageName)
         controller.foregroundChanged("com.miui.home"); revealMedia()
         assertEquals(3, adds)
+    }
+
+    private fun pip(controller: IslandActivityController, generation: Long, phase: Int,
+        packageName: String = context.packageName, user: android.os.UserHandle = android.os.Process.myUserHandle(),
+        taskId: Int? = 17, display: Int = 0, visible: Boolean = true, stashed: Boolean = false) {
+        controller.pipChanged(IslandPipSnapshot(generation, phase,
+            android.content.ComponentName(packageName, "$packageName.Player"), user, taskId, display, visible, stashed))
+        drain()
+    }
+
+    @Test fun enteringAndPinnedPipNeverRevealTheSamePlayingSessionAcrossForegroundBounces() {
+        val controller = controller(media = true)
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("pip-enter")
+        controller.updateFromNative(native); drain()
+        pip(controller, 1, 3, taskId = null) // Native swipe entry precedes onTaskAppeared.
+        controller.foregroundChanged("com.miui.home"); revealMedia()
+        assertEquals(0, adds)
+        pip(controller, 2, 1)
+        pip(controller, 3, 3)
+        pip(controller, 4, 4)
+        repeat(3) {
+            controller.foregroundChanged(context.packageName)
+            controller.foregroundChanged("com.miui.home")
+            controller.updateFromNative(native); revealMedia()
+            assertEquals(0, adds)
+        }
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Long?>(controller, "mediaRevealAt"))
+    }
+
+    @Test fun cancelingPipAtHomeRestartsOnlyTheOrdinaryDeadlineAndIgnoresStaleEvents() {
+        val controller = controller(media = true, simplified = true)
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("pip-cancel-home")
+        controller.updateFromNative(native); drain()
+        pip(controller, 1, 3, taskId = null)
+        controller.foregroundChanged("com.miui.home"); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
+        val canceledAt = android.os.SystemClock.uptimeMillis()
+        pip(controller, 2, 0)
+        val deadline = org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt")
+        assertEquals(canceledAt + IslandMotion.MEDIA_DELAY, deadline)
+        pip(controller, 1, 3) // A queued callback from the canceled entry must not suppress music.
+        repeat(3) { controller.updateFromNative(native); drain() }
+        assertEquals(deadline, org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(749)); drain()
+        assertEquals(0, adds)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        assertEquals(1, adds)
+    }
+
+    @Test fun hiddenOrStashedPipRestoresMusicUnlessTheWholeIslandSwitchIsEnabled() {
+        for (hideAll in listOf(false, true)) {
+            val before = adds
+            val controller = controller(media = true, simplified = true, hideFloating = hideAll)
+            controller.foregroundChanged(context.packageName)
+            native.player = launchablePlayer("pip-window-visibility-$hideAll")
+            controller.updateFromNative(native); drain()
+            pip(controller, 1, 4)
+            controller.foregroundChanged("com.miui.home"); revealMedia()
+            assertEquals(before, adds)
+            pip(controller, 2, 4, visible = false); revealMedia()
+            assertEquals(before + if (hideAll) 0 else 1, adds)
+            repeat(3) { pip(controller, 2, 4, visible = false); controller.updateFromNative(native); revealMedia() }
+            assertEquals(before + if (hideAll) 0 else 1, adds)
+            pip(controller, 3, 4); revealMedia()
+            pip(controller, 4, 4, stashed = true); revealMedia()
+            assertEquals(before + if (hideAll) 0 else 2, adds)
+            pip(controller, 5, 4); revealMedia()
+            pip(controller, 6, 0); revealMedia()
+            assertEquals(before + if (hideAll) 1 else 3, adds)
+            controller.dispose(); drain()
+        }
+    }
+
+    @Test fun pipExitOrCancelInsideThePlayerStillAllowsTheNextOrdinaryHome() {
+        for (entered in listOf(false, true)) {
+            val before = adds
+            val controller = controller(media = true, simplified = true)
+            controller.foregroundChanged(context.packageName)
+            native.player = launchablePlayer("pip-exit-$entered")
+            controller.updateFromNative(native); drain()
+            pip(controller, 1, 3)
+            if (entered) { pip(controller, 2, 4); pip(controller, 3, 5) }
+            pip(controller, 4, 0)
+            revealMedia()
+            assertEquals(before, adds)
+            controller.foregroundChanged("com.miui.home"); revealMedia()
+            assertEquals(before + 1, adds)
+            controller.dispose(); drain()
+        }
+    }
+
+    @Test fun unrelatedPipPackageUserOrDisplayCannotSuppressBackgroundMusic() {
+        for (kind in 0..2) {
+            val before = adds
+            val controller = controller(media = true, simplified = true)
+            controller.foregroundChanged(context.packageName)
+            native.player = launchablePlayer("unrelated-pip-$kind")
+            controller.updateFromNative(native); drain()
+            pip(controller, 1, 4,
+                packageName = if (kind == 0) "other.video" else context.packageName,
+                user = if (kind == 1) android.os.UserHandle.getUserHandleForUid(1000000) else android.os.Process.myUserHandle(),
+                display = if (kind == 2) 1 else 0)
+            controller.foregroundChanged("com.miui.home"); revealMedia()
+            assertEquals(before + 1, adds)
+            controller.dispose(); drain()
+        }
+    }
+
+    @Test fun pipCancelsAPreparedWindowBeforeItsFirstDrawAndDoesNotReenterWhenPinned() {
+        val controller = controller(media = true)
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("pip-before-draw")
+        controller.updateFromNative(native); drain()
+        drawFrames = false
+        controller.foregroundChanged("com.miui.home")
+        revealMedia()
+        assertEquals(1, adds)
+        val presentation = org.robolectric.util.ReflectionHelpers.getField<IslandWindowPresentation>(controller, "presentation")
+        assertEquals(IslandWindowPresentation.Phase.PREPARED, presentation.phase)
+        pip(controller, 1, 3)
+        assertEquals(1, removes)
+        assertEquals(IslandWindowPresentation.Phase.IDLE, presentation.phase)
+        pip(controller, 2, 4)
+        drawFrames = true
+        controller.updateFromNative(native); revealMedia()
+        assertEquals(1, adds)
+    }
+
+    @Test fun pipAlreadyPinnedBeforeTheFirstMediaSnapshotCannotFlashOnRecreation() {
+        val controller = controller(media = true, simplified = true)
+        pip(controller, 7, 4)
+        controller.foregroundChanged("com.miui.home")
+        native.player = launchablePlayer("pip-recreate")
+        controller.updateFromNative(native); revealMedia()
+        assertEquals(0, adds)
+        pip(controller, 8, 0)
+        revealMedia()
+        assertEquals(1, adds)
+    }
+
+    @Test fun aPublishedShellSnapshotBlocksEntryBeforeItsQueuedMainCallbackArrives() {
+        var latest: IslandPipSnapshot? = null
+        val controller = controller(media = true, simplified = true, pipStateReader = { latest })
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("shell-main-race")
+        controller.updateFromNative(native); drain()
+        controller.foregroundChanged("com.miui.home"); drain()
+        latest = IslandPipSnapshot(1, 3, android.content.ComponentName(context.packageName, "Player"), android.os.Process.myUserHandle())
+        revealMedia() // The expiry/render path sees the already-published native state.
+        assertEquals(0, adds)
+        latest = IslandPipSnapshot(2, 0)
+        controller.pipChanged(latest!!); revealMedia()
+        assertEquals(1, adds)
+    }
+
+    @Test fun hidingTheEntireIslandRetainsNativeToastAndHeadsUpAndDropsOldFeedback() {
+        val controller = controller(chat = true, hideFloating = true)
+        controller.foregroundChanged("com.miui.home")
+        assertTrue(controller.takeNotification(message(801)))
+        assertEquals(1, adds)
+        pip(controller, 1, 4, packageName = "other.video")
+        assertEquals(1, removes)
+        assertFalse(controller.takeNotification(message(802)))
+        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        controller.systemActivity(IslandSystemActivity(IslandSystemKind.DND, 1))
+        pip(controller, 2, 0)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(3000)); drain()
+        assertEquals(1, adds)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        assertEquals(2, adds)
+    }
+
+    @Test fun floatingWindowSuppressionInvalidatesMusicReturnAndRejectsAnOldCommitAfterRecovery() {
+        val controller = controller(media = true, mediaReturn = true,
+            mediaReturnApps = setOf(context.packageName), hideFloating = true)
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("floating-music-return")
+        controller.updateFromNative(native); drain()
+        val committedAt = android.os.SystemClock.uptimeMillis()
+        nativeReturn(controller, committedAt)
+        assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        val publisher = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "musicReturnPublisher")
+        pip(controller, 1, 3, packageName = "other.video")
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "musicReturnPublisher"))
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Boolean>(publisher, "closed"))
+        controller.foregroundChanged("com.miui.home"); drain()
+        pip(controller, 2, 0)
+        val ordinary = org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt")
+        nativeReturn(controller, committedAt); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertEquals(ordinary, org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1))
+        nativeReturn(controller); drain()
+        assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        revealMedia()
+        assertEquals(1, adds)
+    }
+
+    @Test fun theFloatingWindowSwitchRemainsAnInstallationSnapshotAcrossPreferenceRefreshes() {
+        for (installed in listOf(false, true)) {
+            val controller = controller(hideFloating = installed)
+            pip(controller, 1, 4, packageName = "other.video")
+            val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+            val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+            prefs.put("system_island_hide_in_floating_window", !installed)
+            observer.onChange("system_island_hide_in_floating_window")
+            observer.onChange("system_island_height"); observer.onChange(null); drain()
+            val current = org.robolectric.util.ReflectionHelpers.getField<IslandOptions>(controller, "options")
+            assertEquals(installed, current.hideInFloatingWindow)
+            val lease = controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000)
+            assertEquals(installed, lease == null)
+            controller.dispose(); drain()
+        }
+    }
+
+    @Test fun freeformInventoryIsEventDrivenAndDisabledPolicyPerformsNoQueries() {
+        var reads = 0
+        var windows = true
+        val source = IslandFreeformPort { reads++; windows }
+        val disabled = controller(freeform = source)
+        repeat(10) { disabled.refreshFloatingWindows(); drain() }
+        assertEquals(0, reads)
+        disabled.dispose(); drain()
+        val controller = controller(hideFloating = true, freeform = source)
+        assertEquals(1, reads)
+        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(3000)); drain()
+        assertEquals(1, reads)
+        windows = false
+        controller.refreshFloatingWindows(); drain()
+        assertEquals(2, reads)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        controller.dispose()
+        repeat(10) { controller.refreshFloatingWindows(); drain() }
+        assertEquals(2, reads)
+    }
+
+    @Test fun aSupersededFreeformReadCannotHideTheNewStateOrResurrectADisposedOwner() {
+        var reads = 0
+        var replaceOnRead = false
+        var current: IslandActivityController? = null
+        val source = IslandFreeformPort {
+            reads++
+            if (replaceOnRead) {
+                replaceOnRead = false
+                current!!.refreshFloatingWindows()
+                true // This generation was canceled while the native query was in flight.
+            } else false
+        }
+        val controller = controller(hideFloating = true, freeform = source)
+        current = controller
+        replaceOnRead = true
+        controller.refreshFloatingWindows(); drain()
+        assertEquals(3, reads)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        controller.dispose(); drain()
+        assertEquals(adds, removes)
+    }
+
+    @Test fun duplicateForegroundAndMediaCallbacksDoNotRestartAnOrdinaryHomeEntrance() {
+        val controller = controller(media = true)
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("duplicate-home")
+        controller.updateFromNative(native); drain()
+        controller.foregroundChanged("com.miui.home"); drain()
+        val deadline = org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt")
+        repeat(3) {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
+            controller.foregroundChanged("com.miui.home")
+            controller.updateFromNative(native); drain()
+            assertEquals(deadline, org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt"))
+            assertEquals(0, adds)
+        }
+        val remaining = deadline - android.os.SystemClock.uptimeMillis()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(remaining)); drain()
+        assertEquals(1, adds)
+        val entrance = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")
+        repeat(8) {
+            controller.foregroundChanged("com.miui.home")
+            controller.updateFromNative(native); drain()
+            assertEquals(1, adds)
+            assertEquals(0, removes)
+            assertSame(entrance, org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion"))
+        }
+    }
+
+    @Test fun canceledHomeReturnCannotRevealOldMusicAndTheNextRealHomeStillWorks() {
+        val controller = controller(media = true, simplified = true)
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("cancel-home")
+        controller.updateFromNative(native); drain()
+        controller.foregroundChanged("com.miui.home"); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
+        controller.foregroundChanged(context.packageName); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000)); drain()
+        assertEquals(0, adds)
+        controller.foregroundChanged("com.miui.home"); revealMedia()
+        assertEquals(1, adds)
+        assertEquals(0, removes)
     }
 
     @Test fun pausingInsideThePlayerThenReturningImmediatelyNeverCreatesAPausedIsland() {

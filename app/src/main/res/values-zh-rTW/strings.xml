@@ -1252,4 +1252,9 @@
     <string name="system_island_waveform_light">輕量動畫</string>
     <string name="system_island_waveform_real">即時波形（實驗性）</string>
     <string name="system_island_waveform_mode_summ">即時模式僅在可見且播放時擷取五個音訊頻段。權限、路由或工作階段不支援時回復輕量動畫。</string>
+    <string name="system_island_hide_in_floating_window_title">有小窗時隱藏動態島</string>
+    <string name="system_island_hide_in_floating_window_summ">存在子母畫面或系統小窗時隱藏整個動態島。變更後重新啟動系統介面生效。</string>
+    <string name="array_global_actions_pip_hide">隱藏/恢復子母畫面</string>
+    <string name="array_global_actions_pip_stash">邊緣收起/恢復子母畫面</string>
+    <string name="pip_action_hint">控制目前的子母畫面，不暫停播放。首次設定後重新啟動系統介面生效；原生視窗轉場會結束完整隱藏。若動態島已隱藏，請用全域手勢恢復子母畫面。</string>
 </resources>

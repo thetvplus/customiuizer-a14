@@ -17911,6 +17911,29 @@
       "notes": "Default enabled; independent of retired gesture preference keys"
     },
     {
+      "featureId": "system_island_hide_in_floating_window",
+      "featureName": "system_island_hide_in_floating_window",
+      "preferenceKeys": [
+        "system_island_hide_in_floating_window",
+        "pref_key_system_island_hide_in_floating_window"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "INSTALL_TIME_SNAPSHOT",
+      "enableEffect": "Hide all Dynamic Island content while native PiP or current-user default-display freeform windows exist; keep native heads-up and Toast fallback and invalidate Music direct-to-island targets",
+      "disableEffect": "Do not install the optional freeform observer or query inventory; native PiP media deduplication remains independent",
+      "valueChangeEffect": "Restart SystemUI to install or remove native window observers; ordinary preference refresh and status-bar recreation retain the installation snapshot",
+      "restartTarget": "SYSTEMUI",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandOptionsTest, IslandActivityLifecycleTest, IslandPipAccessTest, IslandFreeformAccessTest; CN/TW and saved live native PiP contracts",
+      "notes": "Default off; event-driven worker inventory reads, one in-flight query, generation rejection and owner disposal; no polling"
+    },
+    {
       "featureId": "system_island_simplified",
       "featureName": "system_island_simplified",
       "preferenceKeys": [
