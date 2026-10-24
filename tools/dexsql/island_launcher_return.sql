@@ -5,11 +5,13 @@ FROM class_methods
 WHERE (class_descriptor = 'Lcom/miui/home/recents/NavStubView;'
        AND method_name IN ('onAttachedToWindow', 'onDetachedFromWindow', 'onTouchEvent'))
    OR (class_descriptor = 'Lcom/miui/home/recents/anim/WindowElement;'
-       AND method_name IN ('animTo', 'animClear', 'animResetReady', 'runningAnimUpdate',
+       AND method_name IN ('animTo', 'checkTypeValid', 'isRunning', 'animClear', 'animResetReady', 'runningAnimUpdate',
            'updateCurrentRect', 'updateCurrentDisplayRotation', 'initTargetView',
            'updateFloatingIconView', 'handleFloatingIconViewWhenNewTargetViewNull',
            'resetFloatingIcon', 'onFinishCompleted', 'cancelAnimWithoutEndListener'))
    OR (class_descriptor = 'Lcom/miui/home/recents/anim/RectFParams;' AND method_name = '<init>')
+   OR (class_descriptor = 'Lcom/miui/home/recents/util/RectFSpringAnim;'
+       AND method_name IN ('getTargetRect', 'isRunning'))
 ORDER BY file_id, class_descriptor, method_idx;
 
 SELECT file_id, field_descriptor
@@ -18,7 +20,7 @@ WHERE class_descriptor = 'Lcom/miui/home/recents/anim/RectFParams;'
    OR (class_descriptor = 'Lcom/miui/home/recents/NavStubView;'
        AND field_name IN ('mRunningTaskId', 'mRunningTaskUserId', 'mRunningTaskComponentName', 'mRunningTaskInfo'))
    OR (class_descriptor = 'Lcom/miui/home/recents/anim/WindowElement;'
-       AND field_name IN ('remoteAnimationTargetSet', 'launcherTargetView', 'mAnim'))
+       AND field_name IN ('remoteAnimationTargetSet', 'launcherTargetView', 'currentRectFParams', 'mAnim'))
    OR (class_descriptor = 'Lcom/miui/home/recents/util/RemoteAnimationTargetSet;' AND field_name = 'apps')
    OR (class_descriptor = 'Lcom/android/systemui/shared/recents/system/RemoteAnimationTargetCompat;'
        AND field_name IN ('packageName', 'taskId', 'mode', 'activityType', 'MODE_CLOSING', 'ACTIVITY_TYPE_STANDARD'))

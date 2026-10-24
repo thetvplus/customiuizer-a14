@@ -26,6 +26,10 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     private val taskInfo = nav.getDeclaredField("mRunningTaskInfo").apply { isAccessible = true }
     private val windowingMode = taskInfo.type.getMethod("getWindowingMode")
     private val retainedTargets = element.getDeclaredField("remoteAnimationTargetSet").apply { isAccessible = true }
+    private val currentParams = element.getDeclaredField("currentRectFParams").apply { isAccessible = true }
+    private val animation = element.getDeclaredField("mAnim").apply { isAccessible = true }
+    private val animationTarget = animation.type.getMethod("getTargetRect")
+    private val running = element.getMethod("isRunning")
     private val apps = targets.getDeclaredField("apps").apply { isAccessible = true }
     private val remotePackage = remote.getDeclaredField("packageName").apply { isAccessible = true }
     private val remoteTask = remote.getDeclaredField("taskId").apply { isAccessible = true }
@@ -43,6 +47,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     init {
         require(attached.returnType == Void.TYPE && detached.returnType == Void.TYPE && touch.returnType == Boolean::class.javaPrimitiveType)
         require(animate.returnType == Void.TYPE && fields[2].type == RectF::class.java)
+        require(animationTarget.returnType == RectF::class.java && running.returnType == Boolean::class.javaPrimitiveType)
         require(component.type == ComponentName::class.java && taskId.type == Int::class.javaPrimitiveType &&
             taskUser.type == Int::class.javaPrimitiveType && fields[7].type.isEnum)
     }
@@ -72,4 +77,9 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         values[11] = null
         return constructor.newInstance(*values)
     }
+
+    /** animTo may return without starting a transition; only acknowledge the adopted,
+     * running native target. This is one submission-time read, never a frame callback. */
+    fun accepted(copy: Any, owner: Any): Boolean = currentParams.get(owner) === copy &&
+        running.invoke(owner) == true && animationTarget.invoke(animation.get(owner)) == fields[2].get(copy)
 }

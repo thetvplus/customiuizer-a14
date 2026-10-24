@@ -33,7 +33,14 @@ class LauncherMusicReturnAccessTest {
         @JvmField var activityType = ACTIVITY_TYPE_STANDARD
     }
     class Targets(@JvmField val apps: Array<Remote>)
-    class Element(@JvmField var remoteAnimationTargetSet: Targets? = null) { fun animTo(value: Any) {} }
+    class Animation(var targetRect: RectF = RectF())
+    class Element(@JvmField var remoteAnimationTargetSet: Targets? = null) {
+        @JvmField var currentRectFParams: Any? = null
+        @JvmField val mAnim = Animation()
+        var running = false
+        fun isRunning() = running
+        fun animTo(value: Any) {}
+    }
     class Params(val targetApps: Targets?, val startRect: RectF?, val targetRect: RectF,
         val startRadius: Float, val endRadius: Float, val startAlpha: Float, val endAlpha: Float,
         val animType: Type, val ignoreIcon: Boolean, val showTask: Boolean, val isQuickSwitchMode: Boolean,
@@ -99,5 +106,21 @@ class LauncherMusicReturnAccessTest {
         assertNotNull(access.retarget(source, owner, Nav(), frame))
         owner.remoteAnimationTargetSet = Targets(arrayOf(Remote().apply { taskId = 40 }))
         assertNull(access.retarget(source, owner, Nav(), frame))
+    }
+
+    @Test fun acknowledgingRequiresTheSameAdoptedCopyAndARunningNativeTarget() {
+        val owner = Element()
+        val copy = access.retarget(params(), owner, Nav(), frame) as Params
+        assertFalse(access.accepted(copy, owner))
+        owner.currentRectFParams = copy
+        owner.mAnim.targetRect = RectF(copy.targetRect)
+        assertFalse(access.accepted(copy, owner)) // canPlayingTransition=false does not start the native animation.
+        owner.running = true
+        assertTrue(access.accepted(copy, owner))
+        owner.mAnim.targetRect.offset(1f, 0f)
+        assertFalse(access.accepted(copy, owner))
+        owner.mAnim.targetRect.set(copy.targetRect)
+        owner.currentRectFParams = params()
+        assertFalse(access.accepted(copy, owner))
     }
 }

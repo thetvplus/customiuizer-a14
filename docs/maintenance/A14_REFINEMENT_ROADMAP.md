@@ -766,11 +766,11 @@ Launcher 在 NavStubView 附着时创建 owner，解除附着时释放；新的 
 
 SystemUI controller 仅在该功能有效时拥有一份 Publisher。双方使用显式包名、Android 14 shareIdentity 和项目既有发送者校验，消息只包含选中包名、用户、岛几何、时间与单调序列，不包含标题、封面、音频或窗口内容。桌面缓存容量一、有效期 5 秒；按下手势时异步请求刷新，没有 MOVE / 逐帧 IPC 或轮询。岛几何变化与安全状态变化使旧状态失效；关闭 / 销毁发送一次最终失效并注销。Handler 只移除自己的重配置 Runnable，保留框架已排队广播的完成路径，避免 owner 清理吞掉广播交付。
 
-原生动画提交后仅在原调用成功时异步回传一次确认。SystemUI 校验当前几何、应用、用户、手势序列及不超过 1 秒的提交时间，再复核原串行会话快照，等待 80 ms 后启动 560 ms 的有限接入与轻微回弹。最多保留一个按 token 绑定、750 ms 失效的候选。未收到原生确认时保持原 750 ms 音乐入场；晚到确认不能跨过第二次应用切换或重新进入播放器。关闭 / 撤销选择、暂停、会话替换、隐私状态、通知抢占和 owner 失效均取消；尚未入场的快路径取消时恢复原截止时间。简化模式和系统动画关闭时保留原生行为。
+原生动画提交后，仅在原调用成功、currentRectFParams 持有本次副本、原生动画正在运行且真实 Spring 终点与岛一致时，异步回传一次确认。ROM 的 animTo 即使没有启动 transition 也可能正常返回，不能仅凭未抛异常让岛回弹。SystemUI 校验当前几何、应用、用户、手势序列及不超过 1 秒的提交时间，再复核原串行会话快照，等待 80 ms 后启动 560 ms 的有限接入与轻微回弹。最多保留一个按 token 绑定、750 ms 失效的候选。未收到原生确认时保持原 750 ms 音乐入场；晚到确认不能跨过第二次应用切换或重新进入播放器。关闭 / 撤销选择、暂停、会话替换、隐私状态、通知抢占和 owner 失效均取消；尚未入场的快路径取消时恢复原截止时间。简化模式和系统动画关闭时保留原生行为。
 
 ### 原生窗口合同与 ROM 证据
 
-从实际连接的设备读取 Launcher 路径 `/product/priv-app/MiuiHome/MiuiHome.apk`，版本 `RELEASE-4.39.30.8604-08262248` / `439308604`；APK SHA-256 为 `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`，与 TW 目标样本一致。包含两个 DEX 039，定义类数为 7480 / 7880。新查询 `tools/dexsql/island_launcher_return.sql` 返回 19 个声明、35 个字段与 11 条相关调用；结果及完整相关 smali 保存在忽略的现场证据目录，数据集均已关闭，不提交 ROM 样本。
+从实际连接的设备读取 Launcher 路径 `/product/priv-app/MiuiHome/MiuiHome.apk`，版本 `RELEASE-4.39.30.8604-08262248` / `439308604`；APK SHA-256 为 `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`，与 TW 目标样本一致。包含两个 DEX 039，定义类数为 7480 / 7880。新查询 `tools/dexsql/island_launcher_return.sql` 返回 23 个声明、36 个字段与 11 条相关调用；结果及完整相关 smali 保存在忽略的现场证据目录，数据集均已关闭，不提交 ROM 样本。
 
 已顺序复核 WindowElement.animTo → updateCurrentDisplayRotation / animClear → animResetReady 或 runningAnimUpdate → 原生 Spring 启动与 updateCurrentRect，以及空 targetView、浮动图标恢复和 finish / cancel 路径。RectFParams 的 21 参数构造、默认参数、各字段的真实类型均来自定义；NavStubView.onTouchEvent 会内部改写 MOVE 为 DOWN，因此模块在原调用前只检查原始 DOWN。TW `framework.jar` SHA-256 `8586618b92c2892a9c6be1cfd28871d9b39655162ff97a4b12f8d966d14895e9` 中确认 RunningTaskInfo 继承 TaskInfo，公开 getWindowingMode 仅读取 configuration，不发 Binder；这是样本静态证据，不能代替目标 ART 调用和实机动画验收。
 

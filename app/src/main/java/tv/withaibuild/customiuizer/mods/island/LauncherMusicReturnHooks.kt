@@ -68,7 +68,7 @@ internal object LauncherMusicReturnHooks {
                 val attempt = ModuleHelper.guarded<Attempt?>(null) { owner?.retarget(original, chain.thisObject!!) }
                 if (attempt == null) return chain.proceed()
                 val result = chain.proceed(arrayOf(attempt.params))
-                ModuleHelper.guarded { owner?.committed(attempt) }
+                ModuleHelper.guarded { owner?.committed(attempt, chain.thisObject!!) }
                 return result
             }
         })
@@ -159,9 +159,13 @@ internal object LauncherMusicReturnHooks {
             val result = access.retarget(original, element, nav, frame) ?: return null
             return Attempt(result, current, gesture.get())
         }
-        fun committed(attempt: Attempt) {
+        fun committed(attempt: Attempt, element: Any) {
             val tasks = scope ?: return
             if (!enabled() || attempt.gesture == committedGesture) return
+            if (!access.accepted(attempt.params, element)) {
+                diagnostics.report("music-return-native-not-running")
+                return
+            }
             committedGesture = attempt.gesture
             val current = attempt.snapshot
             val message = IslandMusicReturnSignal.encode(current.frame, current.issuedAt, current.sequence)
