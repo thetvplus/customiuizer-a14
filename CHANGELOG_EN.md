@@ -6,6 +6,10 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+- Fix recycled settings rows occasionally showing another row's description when their own summary is empty.
+- Include all three status bar double tap entries in action initialization so independently configured PiP hide / stash actions work. Music returns to the island retain native icon initialization and finish / cancel restoration, preventing missing desktop icons.
+- Fix the island retaining portrait geometry after an actual window rotation without a resource configuration callback. The window owner releases its layout listener; no polling is added.
+
 ## r14.25.4 — 2026-10-24
 
 versionCode 249. Changes since r14.25.3:
