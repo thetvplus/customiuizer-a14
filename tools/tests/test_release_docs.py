@@ -190,6 +190,52 @@ class DownloadDocumentsTest(unittest.TestCase):
 
 
 class BaselineReviewTest(unittest.TestCase):
+    def test_explicit_cumulative_review_requires_both_published_ancestors_and_matching_sections(self):
+        server = Server()
+        retained = {"metadata": server.metadata, "source": server.source}
+        latest = copy.deepcopy(retained)
+        latest["metadata"].update(version_name="r14.25.4", version_code=249, source_sha="b" * 40)
+        latest["source"].update(tag_name="r14.25.4")
+        policy = {"r14.25.5": {"version_code": 250, "supersedes": "r14.25.4", "base": VERSION}}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for filename, language in release.CURRENT_CHANGELOGS:
+                marker = "自 r14.25.3 起的变更：" if language == "简体中文" else "Changes since r14.25.3:"
+                (root / filename).write_text(f"## r14.25.5\n\nversionCode 250. {marker}\n\n- Reviewed.\n\n## r14.25.3\n\nversionCode 248.\n", encoding="utf-8")
+            with patch.object(release, "ROOT", root), patch.dict(release.POLICY, cumulative_releases=policy), \
+                    patch.object(docs, "published_version", side_effect=[latest, retained]) as read, \
+                    patch.object(release, "run", return_value="M\tapp/Actual.kt") as command:
+                summary = docs.review_candidate("r14.25.5", 250, "f" * 40)
+                self.assertIn("Supersedes [r14.25.4]", summary)
+                self.assertIn("Keep it published until both", summary)
+                self.assertEqual(((VERSION,), {"require_download": False, "latest_only": False}), read.call_args)
+                self.assertIn((("git", "merge-base", "--is-ancestor", SHA, "b" * 40),), command.call_args_list)
+                self.assertIn((("git", "merge-base", "--is-ancestor", "b" * 40, "f" * 40),), command.call_args_list)
+                self.assertEqual(("git", "diff", "--name-status", SHA, "f" * 40, "--"), command.call_args.args)
+            for wrong in ({**policy["r14.25.5"], "version_code": 251},
+                          {**policy["r14.25.5"], "supersedes": "r14.25.2"}):
+                with patch.object(release, "ROOT", root), patch.dict(release.POLICY, cumulative_releases={"r14.25.5": wrong}), \
+                        patch.object(docs, "published_version", return_value=latest), self.assertRaisesRegex(ValueError, "authorization"):
+                    docs.review_candidate("r14.25.5", 250, "f" * 40)
+            for filename, _ in release.CURRENT_CHANGELOGS:
+                path = root / filename
+                path.write_text(path.read_text(encoding="utf-8") + "\n## r14.25.4\n\nversionCode 249.\n", encoding="utf-8")
+            with patch.object(release, "ROOT", root), patch.dict(release.POLICY, cumulative_releases=policy), \
+                    patch.object(docs, "published_version", return_value=latest), self.assertRaisesRegex(ValueError, "replace only"):
+                docs.review_candidate("r14.25.5", 250, "f" * 40)
+
+    def test_historical_baseline_is_source_only_and_does_not_change_latest_document_gate(self):
+        server = Server()
+        def endpoint(path, **kwargs):
+            if path == f"repos/{release.REPO}/releases/tags/{VERSION}": return server.source
+            return server.api(path, **kwargs)
+        with DownloadDocumentsTest().context(server), patch.object(release, "api", side_effect=endpoint):
+            self.assertEqual(VERSION, docs.published_version(VERSION, require_download=False, latest_only=False)["metadata"]["version_name"])
+            with self.assertRaisesRegex(ValueError, "explicit source"):
+                docs.published_version(VERSION, latest_only=False)
+            with self.assertRaisesRegex(ValueError, "latest published"):
+                docs.published_version("r14.25.1")
+
     def test_complete_diff_uses_the_actual_published_sha_and_rejects_stale_wording(self):
         server = Server()
         published = {"metadata": server.metadata, "source": server.source}

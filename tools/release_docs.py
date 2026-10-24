@@ -42,9 +42,12 @@ def metadata_bytes(asset_id: int) -> bytes:
 
 
 def published_version(version: str | None = None, *, download_env: dict | None = None,
-                      require_download: bool = True) -> dict:
+                      require_download: bool = True, latest_only: bool = True) -> dict:
     """Read current stable releases and independently match public asset digests and tags."""
-    source = release.api(f"repos/{release.REPO}/releases/latest")
+    release.require(latest_only or (version is not None and not require_download),
+                    "Historical inspection requires an explicit source release")
+    endpoint = "latest" if latest_only else "tags/" + quote(version, safe="")
+    source = release.api(f"repos/{release.REPO}/releases/{endpoint}")
     name = source["tag_name"]
     release.require(re.fullmatch(r"r14\.\d+\.\d+", name) is not None and
                     (version is None or name == version), "Only the latest published stable version may update documents")
@@ -208,6 +211,26 @@ def review_candidate(name: str, code: int, sha: str) -> str:
     # Source-only publication is an existing authorized mode. Its successful stable
     # release becomes the source baseline even if download synchronization is deferred.
     baseline = published_version(require_download=False)
+    latest = baseline
+    superseded = ""
+    cumulative = release.POLICY.get("cumulative_releases", {}).get(name)
+    if cumulative is not None:
+        release.require(set(cumulative) == {"version_code", "supersedes", "base"} and
+                        cumulative["version_code"] == code and
+                        cumulative["supersedes"] == latest["metadata"]["version_name"],
+                        "Cumulative release authorization does not match this candidate and current stable release")
+        for filename, _ in release.CURRENT_CHANGELOGS:
+            sections = changelog_sections((release.ROOT / filename).read_text(encoding="utf-8"))
+            release.require([version for version, _ in sections[:2]] == [name, cumulative["base"]] and
+                            all(version != cumulative["supersedes"] for version, _ in sections),
+                            "Cumulative changelog must retain the explicit base and replace only the superseded section")
+        baseline = published_version(cumulative["base"], require_download=False, latest_only=False)
+        release.require(baseline["metadata"]["version_code"] < latest["metadata"]["version_code"] < code,
+                        "Cumulative release versions must advance monotonically")
+        release.run("git", "merge-base", "--is-ancestor", baseline["metadata"]["source_sha"], latest["metadata"]["source_sha"])
+        release.run("git", "merge-base", "--is-ancestor", latest["metadata"]["source_sha"], sha)
+        superseded = (f"Supersedes [{cumulative['supersedes']}]({latest['source']['html_url']}) "
+                      f"· `{latest['metadata']['source_sha']}`. Keep it published until both replacement releases pass acceptance.\n\n")
     meta = baseline["metadata"]
     release.run("git", "merge-base", "--is-ancestor", meta["source_sha"], sha)
     changes = release.run("git", "diff", "--name-status", meta["source_sha"], sha, "--").strip()
@@ -215,9 +238,9 @@ def review_candidate(name: str, code: int, sha: str) -> str:
     for filename, language in release.CURRENT_CHANGELOGS:
         body = release.release_notes_section((release.ROOT / filename).read_text(encoding="utf-8"), name, code, filename)
         marker = f"自 {meta['version_name']} 起的变更：" if language == "简体中文" else f"Changes since {meta['version_name']}:"
-        release.require(marker in body.split("###", 1)[0], "Changelog baseline must be the last successfully published stable release")
+        release.require(marker in body.split("###", 1)[0], "Changelog baseline must be the last successfully published stable release or its explicitly authorized retained base")
     return (f"### Published baseline and complete change review\n\nBaseline: [{meta['version_name']}]({baseline['source']['html_url']}) "
-            f"· `{meta['source_sha']}`\n\nCandidate: `{sha}`\n\n"
+            f"· `{meta['source_sha']}`\n\n{superseded}Candidate: `{sha}`\n\n"
             f"[Exact source comparison](https://github.com/{release.REPO}/compare/{meta['source_sha']}...{sha})\n\n"
             "Review the complete Git diff, actual implementation and verification evidence against the bilingual user/engineering changes below. "
             "Do not approve based on commit titles or treat this generated inventory as semantic review or device acceptance.\n\n"

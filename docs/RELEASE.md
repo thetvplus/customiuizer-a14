@@ -143,6 +143,8 @@ python tools/check_release_metadata.py
 python tools/prepare_release.py --version r14.25.3 --code 248 --date 2026-10-23 --supersede r14.25.2 --base-version r14.25.1
 ```
 
+累计替代发行还须在 `tools/release-policy.json` 的 `cumulative_releases` 中明确本次版本、versionCode、被替代版和保留基线。审核仍校验两版实际公开资产、标签、签名身份及“保留基线 → 当前正式版 → 候选”的 Git 祖先关系；两份 Changelog 必须移除被替代节并紧接保留基线。此授权不改变 main、CI、签名和发布审批门禁，也不自动删除旧 Release。仅在新版双仓验收后按授权清理旧版。
+
 两个参数必须一起给出；只能替代当前版本章节，基线必须是紧邻的上一保留发行版，两个语言必须具备结构化的累计内容。默认模式仍保留所有历史。该操作只准备源码，不删除 GitHub Release / tag；旧版工程证据仍在 Git 历史与既有路线图中。发布后的清理必须先重新确认两仓库资产一致且旧 Release 非 immutable，失败保留旧版。
 
 新版本的双语 Changelog 依次使用“用户变化 / User changes”和“工程说明 / Engineering notes”两节：用户节包含简短概述和 4～6 项变化，工程节保留方法、限制与技术记录。Release Notes 自动取候选 exact SHA 的用户节及对比基线，旧版无结构化小节时保持原格式，不另维护第三份说明；附源码 SHA、原始构建链接、APK 哈希、证书、GitHub Attestations 入口和精确验证命令。两端 Notes 相同，Summary 给出发布链接与核验结果。

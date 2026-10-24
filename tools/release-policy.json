@@ -2,5 +2,12 @@
   "repository": "thetvplus/customiuizer-a14",
   "trusted_branches": ["main"],
   "certificate_sha256": "c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70",
-  "download_repository": "Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14"
+  "download_repository": "Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14",
+  "cumulative_releases": {
+    "r14.25.5": {
+      "version_code": 250,
+      "supersedes": "r14.25.4",
+      "base": "r14.25.3"
+    }
+  }
 }
