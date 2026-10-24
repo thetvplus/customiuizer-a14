@@ -173,7 +173,7 @@ class SystemUiStateLifecycleTest {
             val expected = XposedHelpers.callMethod(SystemStatusBarBackgroundHooks,
                 "getActionBarColor", secondWindow, Color.BLUE)
             assertNotEquals(Color.RED, expected)
-            XposedHelpers.callMethod(SystemStatusBarBackgroundHooks, "hookWindowDecor",
+            SystemStatusBarBackgroundHooks.hookWindowDecor(
                 WindowDecor(first.get()), ColorDrawable(Color.RED))
             assertEquals(Color.RED, XposedHelpers.callMethod(SystemStatusBarBackgroundHooks,
                 "getActionBarColor", firstWindow, Color.BLUE))
