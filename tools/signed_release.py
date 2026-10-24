@@ -76,6 +76,12 @@ def event_source(env: dict = os.environ) -> tuple[str, str]:
     ref, sha = env.get("GITHUB_REF", ""), env.get("GITHUB_SHA", "")
     require(ref.startswith("refs/heads/"), "Select an existing branch, not a tag or pull request")
     require(bool(SHA.fullmatch(sha)), "A full triggering commit SHA is required")
+    if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and env.get("GITHUB_EVENT_PATH"):
+        event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+        inputs = event.get("inputs") or {}
+        if inputs.get("display_sha") or inputs.get("source_sha"):
+            require(inputs.get("source_sha") == sha and inputs.get("display_sha") == sha[:8],
+                    "Display and full source SHA must match the native triggering commit")
     if env.get("GITHUB_EVENT_NAME") == "workflow_run":
         event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
         record = event.get("workflow_run") or {}
@@ -226,6 +232,23 @@ def dispatch_options() -> tuple[str, bool]:
     require(destination in {"source", "both", "actions-only"}, "Select a release destination explicitly")
     require(prerelease in {"true", "false"}, "Invalid pre-release selection")
     return destination, prerelease == "true"
+
+
+def dispatch_build() -> None:
+    """Resolve a display-only SHA before GitHub evaluates the child run title."""
+    destination, prerelease = dispatch_options()
+    ref, sha = event_source()
+    require(ref == "refs/heads/main" and run("git", "rev-parse", "HEAD").strip() == sha,
+            "Signing requests require the native exact main checkout")
+    if os.environ["GITHUB_EVENT_NAME"] == "workflow_run":
+        automatic_ci()
+    require_main_ci(sha)
+    # source_sha is an equality guard against a main update between this check
+    # and dispatch. It never selects a ref, checkout, artifact or signing source.
+    run("gh", "api", "--method", "POST", f"repos/{REPO}/actions/workflows/a14-signed-build.yml/dispatches",
+        "-f", "ref=main", "-f", f"inputs[display_sha]={sha[:8]}", "-f", f"inputs[source_sha]={sha}",
+        "-f", f"inputs[destination]={destination}", "-f", f"inputs[prerelease]={str(prerelease).lower()}")
+    print(f"Requested signed build for {sha[:8]}; full source identity remains {sha}")
 
 
 def check_new_release(name: str, code: int, sha: str, *, resume: bool = False) -> None:
@@ -527,6 +550,8 @@ def fetch_candidate(run_id: str, folder: Path, *, current_run: bool = False) -> 
         jobs = api(f"repos/{REPO}/actions/runs/{run_id}/attempts/{int(record['run_attempt'])}/jobs?per_page=100")
         expected = {"Validate exact source": "success", "Build, sign and verify Release": "success",
                     "Publish verified APK to Release": "failure"}
+        if any(job["name"] == "Resolve short SHA and request signing" for job in jobs["jobs"]):
+            expected["Resolve short SHA and request signing"] = "skipped"
         publication_failed = (jobs.get("total_count") == len(expected) and len(jobs["jobs"]) == len(expected)
                               and {job["name"]: job["conclusion"] for job in jobs["jobs"]} == expected
                               and all(job["status"] == "completed" for job in jobs["jobs"]))
@@ -784,7 +809,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "signing-preflight", "prepare-signing", "candidate", "attest-apk", "attest", "fetch", "publish", "publish-current", "sync-docs"])
+    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "dispatch-build", "signing-preflight", "prepare-signing", "candidate", "attest-apk", "attest", "fetch", "publish", "publish-current", "sync-docs"])
     parser.add_argument("--directory", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--destination", choices=["source", "both"], default="source")
@@ -795,6 +820,7 @@ def main() -> int:
         if args.command == "source-policy": source_policy()
         elif args.command == "ci-status": ci_status()
         elif args.command == "release-plan": release_plan()
+        elif args.command == "dispatch-build": dispatch_build()
         elif args.command == "signing-preflight": signing_preflight()
         elif args.command == "prepare-signing": prepare_signing()
         elif args.command == "candidate": candidate(args.directory)

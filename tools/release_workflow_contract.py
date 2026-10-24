@@ -9,7 +9,8 @@ import copy
 import json
 
 VALIDATE_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_sha == github.sha && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))"
-SIGN_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run') && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'"
+SIGN_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.display_sha != '' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'"
+REQUEST_IF = "github.repository == 'thetvplus/customiuizer-a14' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && inputs.display_sha == ''"
 PUBLISH_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && (inputs.destination == 'source' || inputs.destination == 'both') && inputs.authorization != ''"
 DOCS_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination == 'docs-only' && inputs.authorization != ''"
 AUTO_PUBLISH_IF = SIGN_IF + " && needs.validate.outputs.destination != 'actions-only'"
@@ -46,11 +47,23 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
     need(isinstance(dispatch, dict), "invalid dispatch configuration")
     if signed:
         inputs = dispatch.get("inputs", {}) if isinstance(dispatch, dict) else {}
-        need(set(inputs) == {"destination", "prerelease"}, "signing accepts only destination and pre-release selection, never a ref input")
+        need(set(inputs) == {"destination", "prerelease", "display_sha", "source_sha"}, "signing accepts release options and native-SHA equality guards, never a ref input")
+        need(workflow.get("run-name") == "A14 Signed Build / ${{ github.ref_name }} / ${{ inputs.display_sha || 'request' }}",
+             "run titles must use the verified short display SHA, never the full source SHA")
+        need(all(inputs.get(key, {}).get("type") == "string" and inputs[key].get("required") == "false"
+                 for key in ("display_sha", "source_sha")), "SHA guards must be optional strings resolved from the native commit")
         need(inputs.get("destination", {}).get("type") == "choice" and inputs.get("destination", {}).get("default") == "both"
              and inputs.get("destination", {}).get("options") == ["both", "source", "actions-only"], "native dispatch must preselect sequential dual publication and allow candidate-only builds")
         need(inputs.get("prerelease", {}).get("type") == "boolean" and inputs.get("prerelease", {}).get("default") == "false", "pre-release must be explicit")
-        need(set(jobs) == {"validate", "sign", "publish"}, "validation, protected signing and protected publication must stay separate")
+        need(set(jobs) == {"validate", "request", "sign", "publish"}, "validation, title resolution, protected signing and protected publication must stay separate")
+        request = jobs.get("request", {})
+        need(request.get("if") == REQUEST_IF and request.get("needs") == "validate"
+             and "environment" not in request and request.get("permissions") == {"contents": "read", "actions": "write"},
+             "title resolution requires successful authorized validation and only native dispatch permission")
+        request_steps = request.get("steps", [])
+        need(len(request_steps) == 3 and request_steps[-1].get("run") == "python tools/signed_release.py dispatch-build"
+             and request_steps[-1].get("env") == {"GH_TOKEN": "${{ github.token }}"}
+             and "secrets." not in json.dumps(request), "title resolution must only dispatch the verified native main source")
         job = jobs.get("sign", {})
         need(job.get("environment") == "release-signing", "signing requires release-signing Environment")
         need(job.get("if") == SIGN_IF and job.get("needs") == "validate", "signing must require successful authorized release validation")

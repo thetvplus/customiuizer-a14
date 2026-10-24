@@ -1,9 +1,17 @@
 name: A14 Signed Build
-run-name: A14 Signed Build / ${{ github.ref_name }} / ${{ github.sha }}
+run-name: A14 Signed Build / ${{ github.ref_name }} / ${{ inputs.display_sha || 'request' }}
 
 on:
   workflow_dispatch:
     inputs:
+      display_sha:
+        description: '自动解析的 8 位显示 SHA；手动触发时留空'
+        required: false
+        type: string
+      source_sha:
+        description: '自动解析的完整 SHA，仅用于核对原生提交；手动触发时留空'
+        required: false
+        type: string
       destination:
         description: '确认本次操作：构建后自动发布，或仅生成签名 APK'
         required: true
@@ -117,10 +125,35 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  request:
+    name: Resolve short SHA and request signing
+    needs: validate
+    if: github.repository == 'thetvplus/customiuizer-a14' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && inputs.display_sha == ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout native commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Dispatch with verified full and display SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/signed_release.py dispatch-build
+
   sign:
     name: Build, sign and verify Release
     needs: validate
-    if: github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run') && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.display_sha != '' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'
     environment: release-signing
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -236,7 +269,7 @@ jobs:
   publish:
     name: Publish verified APK to Release
     needs: [validate, sign]
-    if: github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run') && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && needs.validate.outputs.destination != 'actions-only'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.display_sha != '' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && needs.validate.outputs.destination != 'actions-only'
     environment: release-publishing
     concurrency:
       group: a14-release-publish

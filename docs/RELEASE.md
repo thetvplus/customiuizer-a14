@@ -49,7 +49,7 @@ $releaseRevision = git rev-parse --short=8 HEAD
 
 1. 在工作分支提交，PR 到 main 自动运行无密钥的 A14 CI；未开 PR 时可手动选择该分支运行 A14 CI。合并前检查最终 head 的结果与 diff，不能复用旧提交的绿灯。
 2. 核验通过后合并 main。main 的代码推送再次运行 A14 CI，检查实际合并提交和配置；直接提交 main 也走同一入口。纯 Markdown 推送沿用现有跳过策略，不产生新 APK。
-3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。自动或手动入口发现版本已发布即正常跳过，不初始化 JDK / SDK，也不重新签名；只有版本递增、元数据与双语发行条目齐备时才进入发布审核阶段。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
+3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。自动或手动入口发现版本已发布即正常跳过，不初始化 JDK / SDK，也不重新签名；只有版本递增、元数据与双语发行条目齐备时才进入发布审核阶段。入口先完成原生来源、版本和 CI 核验，再请求同一 main 上的实际签名运行：标题显示 8 位 SHA，完整 SHA 作为原生提交相等校验，不能选择其他 ref；两次核验之间 main 前进即拒绝。解析标题的 request 作业仅有 Actions 调度写权限，不使用任何 Environment 或 Secret。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
 4. 用户在当前任务明确要求“发布新版本”，即同时授权 Agent 代为审批该版本的签名和公开发布，无需用户再次点击。Agent 先核对版本、完整 main SHA、双语说明及运行身份，再用现有账号提交匹配运行的 `release-signing` / `release-publishing` 审批。保留 Required reviewer 和 main 限制，不批量批准其他运行；若另有用户指定的设备验收检查点，先完成该检查点。
 5. 确认后重查 main 和 CI，使用历史证书只构建一次正式 Release，核验 APK、R8、fatal lint 与 GitHub 来源证明。复用同 SHA 的 main CI，不再重复 JVM、lint 或 develop 构建。
 6. 默认先发布源码仓库，核对公开资产、标签和 Latest，再发布 Xposed 仓库。两端保持完全相同的 APK、摘要和构建元数据；校验文件、Sigstore bundle 和验证报告留在内部 Actions Artifact，不重建、不重签。任一检查失败即停止后续写入。
@@ -58,7 +58,7 @@ $releaseRevision = git rev-parse --short=8 HEAD
 
 ### 手动入口
 
-也可在 main CI 通过后，手动运行 A14 Signed Build。手动选择表达操作意图；实际发布仍须配置并经过 release-signing 的 Required reviewer，不能以手动入口绕过。缺少审核保护时在签名前失败。预发行和仅候选通过此入口选择。
+也可在 main CI 通过后，手动运行 A14 Signed Build。手动选择表达操作意图；实际发布仍须配置并经过 release-signing 的 Required reviewer，不能以手动入口绕过。缺少审核保护时在签名前失败。预发行和仅候选通过此入口选择。手动入口的 display_sha / source_sha 留空，由原生提交自动解析；它们只用于显示和相等核对，不是源码输入。
 
 | 选项 | 默认值 | 结果 |
 | --- | --- | --- |
@@ -189,6 +189,8 @@ gh attestation verify candidate/<apk> --repo thetvplus/customiuizer-a14 --signer
 ## 同一 APK 按需晋升与故障恢复
 
 [A14 Promote Release](../.github/workflows/a14-promote-release.yml) 保留为候选验收、延后发布和失败恢复入口，默认 actions-only。正常接受已完成成功的 A14 Signed Build；唯一失败例外是同一次 attempt 中 Validate / Sign 都成功、只有 Publish 失败，仍重新验证原 artifact、Android 签名与 GitHub 来源证明。验证或签名失败、取消、过期、重跑后身份变化的候选不能借此发布。
+
+缺少 A14_XPOSED_RELEASE_TOKEN 时，在 release-publishing 补齐凭据后用原 run ID 晋升，不重跑签名。清理运行记录须保留当前候选原构建、其 exact main CI 和恢复运行；删除这些记录或原 Artifact 会破坏后续恢复所需证据。历史运行标题不能修改，8 位 SHA 命名从新流程生效。
 
 实际发布选择 source / both，输入 `publish <versionName> from <run-id>`；预发行还要选择与原版本一致的 prerelease。固定 source SHA、run / attempt、artifact ID 和 APK 哈希，发布步骤再次核验收据。
 

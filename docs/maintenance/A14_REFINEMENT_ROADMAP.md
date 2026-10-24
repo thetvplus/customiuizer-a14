@@ -13,9 +13,9 @@
 | ROM / DEX | [DexSQL](../rom-intelligence/DEXSQL.md)、[SQL 查询集](../../tools/dexsql/README.md)、[M03 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |
 | 发布 | [RELEASE](../RELEASE.md)、实际 GitHub Release；Changelog 保存发行事实 |
 
-生产 main 基线为 `3e0709f3234ed942d906487370547ec0136c7531`，源码版本保持 r14.25.3 / 248；同名正式版已发布。2026-10-24 的后续成果统一在 `codex/a14-consolidated-20261024`，尚未合并 main 或形成新发行。
+正式基线为 r14.25.4 / 249，源码 SHA `3d7ef018d54307db5d22b3abf5bccde2396b4bcf`；2026-10-24 的集成成果已纳入 main 并完成双仓公开验收。[恢复运行 40084806529](https://github.com/thetvplus/customiuizer-a14/actions/runs/40084806529) 复用原签名运行 40083490295 / attempt 1 的同一 APK，修复缺少跨仓凭据导致的发布失败；两端 APK SHA-256 均为 `c8233f891cb0f4904c5f354981bc9153d73c85bbf94fcabbc2642b79b6e5a793`，标签、Latest 与两项公开资产一致，下载文档同步通过。本批设备验收仍待完成。
 
-后续成果以当前集成分支为准；最终 HEAD / CI 从 Git / GitHub 读取。初次整合检查点及验证记录见页末[证据恢复](#证据恢复)，不在这里持续追加提交流水。
+后续 main HEAD / CI 从 Git / GitHub 读取。发布工程维护不递增应用版本、不重建已发布 APK；新签名运行的标题使用已核对的 8 位显示 SHA，完整身份核验及受保护签名 / 发布保持。初次整合检查点及验证记录见页末[证据恢复](#证据恢复)，不在这里持续追加提交流水。
 
 ## 已整合的当前工作
 

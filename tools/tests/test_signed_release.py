@@ -17,7 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 COMMIT = "12345678" + "a" * 32
 REF = "refs/heads/main"
 ENV = {"GITHUB_REPOSITORY": release.REPO, "GITHUB_EVENT_NAME": "workflow_dispatch",
-       "GITHUB_REF": REF, "GITHUB_SHA": COMMIT, "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1"}
+       "GITHUB_REF": REF, "GITHUB_SHA": COMMIT, "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
+       "GITHUB_EVENT_PATH": ""}
 BADGING = """package: name='tv.withaibuild.customiuizer.r14' versionCode='245' versionName='r14.24.1' platformBuildVersionName='x'
 sdkVersion:'34'
 targetSdkVersion:'34'
@@ -199,6 +200,51 @@ class AutomaticReleaseTest(unittest.TestCase):
 class SourceTrustTest(unittest.TestCase):
     def test_native_branch_and_exact_sha_are_accepted(self):
         self.assertEqual((REF, COMMIT), release.event_source(ENV))
+
+    def test_display_sha_cannot_select_or_mislabel_a_different_native_source(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "event.json"
+            env = dict(ENV, GITHUB_EVENT_PATH=str(path))
+            for inputs in ({}, {"display_sha": COMMIT[:8], "source_sha": COMMIT}):
+                path.write_text(json.dumps({"inputs": inputs}))
+                self.assertEqual((REF, COMMIT), release.event_source(env))
+            for inputs in ({"display_sha": COMMIT[:8]}, {"source_sha": COMMIT},
+                           {"display_sha": COMMIT, "source_sha": COMMIT},
+                           {"display_sha": COMMIT[:8], "source_sha": COMMIT[:8] + "b" * 32}):
+                path.write_text(json.dumps({"inputs": inputs}))
+                with self.subTest(inputs=inputs), self.assertRaisesRegex(ValueError, "native triggering commit"):
+                    release.event_source(env)
+
+    def test_title_request_pins_full_source_and_preserves_release_options(self):
+        with patch.dict(os.environ, ENV), ExitStack() as stack:
+            stack.enter_context(patch.object(release, "dispatch_options", return_value=("source", True)))
+            ci = stack.enter_context(patch.object(release, "require_main_ci"))
+            command = stack.enter_context(patch.object(release, "run", return_value=COMMIT + "\n"))
+            release.dispatch_build()
+            ci.assert_called_once_with(COMMIT)
+            args = command.call_args.args
+            self.assertIn(f"inputs[display_sha]={COMMIT[:8]}", args)
+            self.assertIn(f"inputs[source_sha]={COMMIT}", args)
+            self.assertIn("inputs[destination]=source", args)
+            self.assertIn("inputs[prerelease]=true", args)
+            self.assertIn("ref=main", args)
+            ci.side_effect = ValueError("main moved")
+            command.reset_mock()
+            with self.assertRaisesRegex(ValueError, "main moved"):
+                release.dispatch_build()
+            self.assertEqual([("git", "rev-parse", "HEAD")], [call.args for call in command.call_args_list])
+
+    def test_automatic_title_request_rechecks_the_original_ci_attempt(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = AutomaticReleaseTest().environment(Path(temp) / "event.json")
+            with patch.dict(os.environ, env), ExitStack() as stack:
+                stack.enter_context(patch.object(release, "run", return_value=COMMIT))
+                automatic = stack.enter_context(patch.object(release, "automatic_ci", side_effect=ValueError("attempt/source changed")))
+                ci = stack.enter_context(patch.object(release, "require_main_ci"))
+                with self.assertRaisesRegex(ValueError, "attempt/source changed"):
+                    release.dispatch_build()
+                automatic.assert_called_once()
+                ci.assert_not_called()
 
     def test_pr_fork_tag_and_partial_sha_are_rejected(self):
         for field, value in (("GITHUB_EVENT_NAME", "pull_request"), ("GITHUB_REPOSITORY", "attacker/fork"),
@@ -445,8 +491,16 @@ class PromotionTrustTest(unittest.TestCase):
                  for name, conclusion in (("Validate exact source", "success"), ("Build, sign and verify Release", "success"),
                                           ("Publish verified APK to Release", "failure"))]}
         with tempfile.TemporaryDirectory() as temp:
-            with patch.object(release, "api", side_effect=[{"id": 7}, record, valid, {"artifacts": []}]):
-                with self.assertRaisesRegex(ValueError, "missing, expired"):
+            with_request = copy.deepcopy(valid)
+            with_request["total_count"] += 1
+            with_request["jobs"].append({"name": "Resolve short SHA and request signing", "status": "completed", "conclusion": "skipped"})
+            for jobs in (valid, with_request):
+                with patch.object(release, "api", side_effect=[{"id": 7}, record, jobs, {"artifacts": []}]):
+                    with self.assertRaisesRegex(ValueError, "missing, expired"):
+                        release.fetch_candidate("42", Path(temp) / "candidate")
+            with_request["jobs"][-1]["conclusion"] = "success"
+            with patch.object(release, "api", side_effect=[{"id": 7}, record, with_request]):
+                with self.assertRaisesRegex(ValueError, "did not finish successfully"):
                     release.fetch_candidate("42", Path(temp) / "candidate")
             for index in (0, 1, 2):
                 jobs = copy.deepcopy(valid)
@@ -1113,6 +1167,15 @@ class ProtectedWorkflowTest(unittest.TestCase):
     def test_real_protected_workflows_pass(self):
         for filename in ("a14-signed-build.yml", "a14-promote-release.yml"):
             self.assertEqual([], self.scan(self.workflow(filename), filename))
+
+    def test_short_title_resolution_cannot_gain_secrets_or_bypass_validation(self):
+        for original, changed in (("inputs.display_sha || 'request'", "github.sha"),
+                                  ("actions: write", "contents: write"),
+                                  ("inputs.display_sha == ''", "true"),
+                                  ("inputs.display_sha != ''", "true"),
+                                  ("signed_release.py dispatch-build", "signed_release.py prepare-signing")):
+            with self.subTest(changed=changed):
+                self.assertTrue(self.scan(self.workflow().replace(original, changed)))
 
     def test_filename_alone_cannot_exempt_signing(self):
         text = self.workflow().replace("environment: release-signing", "environment: unprotected")
