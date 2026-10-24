@@ -797,3 +797,193 @@ SystemUI controller 仅在该功能有效时拥有一份 Publisher。双方使�
 - 对这个 APK 重开 DexSQL：DEX **039**、**2588** 个定义类；compileOnly Hook API 定义 **0**、Manifest 设置入口直接 Hook API 指令引用 **0**，setId / getId 各 **1** 处、replaceHook **0**，三个固定 ID 使用点仍存在。同产物 mapping 将 `Lbn1;->t` 归属到 HookInstallation.intercept / confirmStableHookId，未复用旧产物的混淆名；这不构成完整传递类加载或实际安装次数证明。Manifest 仍为 min / target 34，无新增录音权限、Service 或静态 Receiver；新消息接收器由运行时 owner 注册。数据集均已关闭，ROM / APK / mapping / 现场数据未入库。
 - 用户在 ADB 断开后明确选择“接不了了，不实机”，本批据此停止设备操作。最近一次由本任务安装的是中间 Develop `1688e7ad`，本次 **未安装** `5a1d1d48`。真正窗口轨迹、接住时机、桌面图标恢复、手势中断 / 连续切换、不同播放器及 ART 私有方法调用均保留为待实机项；没有登记设备 PASS 或 CPU / GPU / 帧时间收益。第 17 节先前 7bb9a0b5 的波形现场记录不能替代这些新路径验收。
 - 本批只推送 `codex/a14-m05-owner-refinement-20261024` 开发分支；远端最终 exact-head A14 CI 以交付回执登记。未合并 main，未创建 tag 或 GitHub Release，未发布新版本。以后推进此候选时继续在本节补充目标设备证据。
+
+## 16. 2026-10-24：动态岛锁屏通知与前后台所有权专项
+
+### 范围与证据边界
+
+执行起点与已 fetch 的最新 `origin/main` 均为 `3e0709f3234ed942d906487370547ec0136c7531`，工作区干净；在 `codex/island-native-compat-20261024` 实施。优先 P0 通知可靠性，其次 P1 直接打开播放器 / 返回和 Launcher 图标所有权。用户随后明确选择**本次先完成代码与静态验证**；ADB 未发现设备，没有更改手机设置、安装、重启或实机验收。版本维持 r14.25.3 / 248，不发布、不修改既有 Release。
+
+复用 DexSQL 0.1.1，核对内嵌文档、schema 和定义来源。历史实机样本来自第 15 节，**不是本次设备读回**：SystemUI `5d8f2fe0b65d8a1a947b4280f8053b524f8c5de73f48a74f8792d415ae76e513`；Launcher `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`。CN/TW SystemUI 哈希沿用 M03 合同表；两区参考 Launcher 与历史实机 Launcher 的 APK 哈希相同。没有依据目录名推断二进制相同。原始 SQL / 全页 decode、输入哈希、基线失败及验证日志保存在忽略的 `.di-evidence/island-native-compat-20261024/`；复用查询补充到 `island_activity_contract.sql` 和 `launcher_dock_contract.sql`，不建立第二套精修管理页。
+
+### 已确认源码问题与修复
+
+1. **P0 接管安全条件滞后。** `IslandNativeAccess.isAllowed()` 原先只看状态栏的 `mState=0`、Dozing / Expanded；`takeNotification()` 只检查缓存的 `state.allowed`。原生 `KeyguardNotificationVisibilityProviderImpl.isLockedOrLocking()` 实际分别读取 `KeyguardStateControllerImpl.mShowing` 和 `mUpcomingState`。在 Keyguard 已改变、状态栏回调尚未送达时，旧代码仍可能接管再隐藏窗口。新增测试在旧源码稳定失败。现在复用 `Dependency.get(KeyguardStateController.class)`，读取 showing、going / fading away、bouncer、launch fading 及现有 requested / upcoming / dreaming 状态；未知或读取异常拒绝呈现。在窗口插入前后重新校验，锁屏 / AOD / 解锁挑战保留原生。只注册一份 native Keyguard Callback，与原 status-bar owner 同时连接、失败回收和释放；不订阅每帧 dismiss amount。
+2. **P0 Row / binding 接管所有权不完整。** 旧 `read()` 只在后续点击时检查 Row 是否移除 / 换绑，bind 接管本身可接受已失效的 Row；测试在旧源码失败。现在接管前、窗口插入后均核对 Sbn / Row / entry 身份、removed / 敏感 / 应用锁及本次 binding Map 和值。只有展示准备成功、仍拥有本次 binding 才设置 interruption、移除自己的 bind key；未提交失败释放自己的通知 lease，Map 移除中途异常恢复原 bit / binding。提交后的 native unbind 清理失败不执行第二次原生提醒。回滚按 Sbn 实例匹配，旧回调不能清除同 key 的新通知；同毫秒的新 Sbn 更新也立即失效旧点击。没有通知缓存 / 重放队列。
+3. **P1 直接 App/Home 没有失效在途首份媒体读取。** `foregroundChanged()` 原先仅在已有 `media`、且从来源 App 离开时触发新 read；首份 PLAYING 快照已在 IO 读完但 Main 尚未接收时，直接打开 App、真实暂停、返回 Home，可以应用旧 PLAYING 结果并误入场。双调度器测试在旧源码稳定失败。现在来源 App 进入 / 离开及在途 read 的前台变化复用现有 `readGeneration`、取消与单个合并任务，要求新的快照后才显示；native owner 丢失时释放媒体状态，避免留下无人完成的 foreground baseline。保留真实暂停不闪岛、同一 session 的 dismissal 和唯一媒体 callback。
+
+原生 `HeadsUpCoordinator$bindForAsyncHeadsUp$1.onBindFinished(NotificationEntry)` 负责 Heads-up / alert 状态、interruption 和绑定尾部。`HeadsUpViewBinder.unbindHeadsUpView()` 只将 **content flag 4** 标为 freeable，再请求 Row rebind。普通 / 锁屏列表仍由 `KeyguardCoordinator`、原生隐私 / 用户 / 静默过滤负责；静态证据**没有证明** flag 4 或 interruption 会删除锁屏列表 Row。本次确认并修复的是不安全的接管路径；用户反馈的列表缺失、弹出缺失、原生过滤仍须用三层实机证据区分，不能宣称锁屏列表已实机修复。
+
+### Launcher 图标取证与历史归属
+
+在实际 Launcher 定义中：`LaunchAppAndBackHomeAnimTarget.onLaunchAppAnimStart()` 将目标 `getIconImageView().alpha` 设为 0；`onLaunchAppWindowAlphaChange(F)` 写入 `1-windowAlpha`。`ItemIcon.setIconVisibility(I)` 另可设置其 `mIconImageView.visibility`。恢复由 `WindowElement.onFinishCompleted()` → `resetFloatingIcon(false)` → Main executor 的 `resetFloatingIcon$lambda-7()` 对当前 `launcherTargetView.showIcon()` 后调用 floating icon `recycle()`；`FloatingIconView2.finishImmediately()` 也先调用当前 anim target 的 `showIcon()`。`showIcon()` 恢复 VISIBLE / alpha=1 并 invalidate。
+
+`FloatingIconView2.onAnimationCancel()` 调用其 `onAnimationEnd()`，但后者提交的 `onAnimationEnd$lambda-3()` **是空方法**；不能把“收到 spring end”当作已恢复原图标的证据。缺少新 target 时 `WindowElement.handleFloatingIconViewWhenNewTargetViewNull()` 进入原生 reset，具体页面 / 文件夹 / Dock 的 target 选择仍需事件日志。Remote Transition 的 stop-runnable 会设置 `setSkipCallExecuteFinish(true)` 后 cancel 当前动画；它与岛窗口 attach / detach 是否在同一异常会话冲突，当前只有候选路径，没有实机时间线，**不新增 Launcher Hook 或强制恢复兜底**。
+
+| 历史提交 | 本次核对的实际影响 | 根因判断 |
+| --- | --- | --- |
+| `2b321c6` / PR #45 / r14.25.1 后续 | 动态岛移入 island 包，暂停 / 返回快照、交互和发布规则变化；首份媒体 read 的前台失效缺口仍存在 | 不据包移动或版本号判断 Launcher 根因 |
+| `d6f47fd` / PR #46 / r14.25.2 | Dock 装饰加入原生解锁参与列表、全宽继承父变换；动态岛增加真实已显示媒体的判断 | 背景没有取得原图标恢复所有权 |
+| `eae2529` / PR #47 / r14.25.3 | 通知 native 点击、Row 弱引用 / removed、媒体 / 输入精修；removed 校验只保护点击，接管前仍有缺口 | 上述 P0 / P1 缺口在最新 main 仍可复现；无 Launcher 实机根因证明 |
+| `7eeccb7`、`51eef52`、`3dcf8e4` | Dock 几何、材质 / 最近任务生命周期和原生坐标保护；读取临时隐藏的 icon bounds，不重写其 alpha / visibility | 不回退已完成批次；保留原生图标 / 装饰边界 |
+| 早期 `LauncherAnimationHooks.UseOldLaunchAnimationHook()` | `launcher_oldlaunchanim` 单独开启时把 remote-transition 权限结果改为 false；FixAnim 另由自己的开关安装 | 本次未改变开关或原生动画选择；须在实机 F 场景隔离 |
+
+“同屏有对应图标”符合原生 target / 源图标参与过渡的机制；“没有对应图标”可能进入无 target 分支。它们解释测试隔离方向，**不能替代导致持续隐藏的事件因果证据**。现有 Dock 模型测试补查临时隐藏与原生恢复均不被装饰重写；普通 / 全宽、文件夹和最近任务继续使用既有回归。
+
+### 回归、资源与后续验收
+
+首轮 64 项专项通过，含 TOP / CENTER 各 50 轮 App/Home、0 / 749 / 750ms 边界、25% / 50% / 75% 入场中断、旧 exit 完成、最新窗口 alpha / scale / translation 和唯一 callback；另覆盖 Keyguard 各门禁、缺失 owner、注册失败清理、插窗期间锁屏、失效 Row、同 key 更新 / 撤回、提交前异常和提交后清理失败。旧源码运行其中新增三项时 **44 tests / 3 failures**，修复后通过。末尾 diff 复核补获“同一 Sbn 换 Row 仍沿用旧点击 / 旧回滚清除新绑定”，补测 **55 tests / 2 failures** 后收紧：旧点击反向验证 entry.row，重复绑定只替换点击而不续期，回滚同时匹配 Sbn 和当前点击身份；复用已有字段，不增加绑定缓存。Host Robolectric 不是 ART 或真实输入验收。
+
+最终源码收口：JDK 25.0.4.1，Fast / Full 退出 0；联合专项 **122 tests / 0 failures / 0 errors**，Full **354 suites / 3276 tests / 0 failures / 0 errors / 2 skipped**；Lint **0 errors / 407 warnings**。工具测试 **609 tests / 0 failures / 0 errors / 5 skipped**，差异空白与本页 / M03 / DexSQL README 的本地文档链接检查通过。两个扩展查询在 CN/TW 与历史实机数据集的 14 条 SELECT 均完整读取至 `next_offset=null`；五对原生 Keyguard 生命周期方法完整 decode、两区文本相同。Develop / R8 同产物 mapping 与 DEX 回执独立保存在上述本地证据目录，不等同实机验收。
+
+动画时长、750ms 入场延迟、TOP / CENTER 几何、临界阻尼与速度继承未改。没有增加常驻线程、窗口、轮询、缓存或跨进程协调；新增成本为一个随 owner 释放的 native Keyguard listener、事件边界的固定字段读取，以及前台切换期间合并的媒体快照。没有 CPU / GPU 帧时间、主线程或分配的同设备 A/B 数据，不宣称性能收益或无性能退化。
+
+本批设备矩阵全部 **NOT RUN**：通知接管开 / 关对照下的完全解锁、锁屏、息屏点亮、AOD、接管中锁屏、立即解锁、连续切换、非白名单、应用锁 / 敏感、DND / 静默 / 低重要性、更新撤回重发，以及列表点击 / 挑战 / 展开 / 清除；须分别确认 NMS 记录、Pipeline Entry / Row 和真正绘制。Launcher A–F 对照及普通桌面 / Dock / 文件夹、直接入口 / 最近任务 / 导航、动画中翻页、锁屏解锁和岛持续展示期间图标恢复，同样待验收。使用手机时先备份设置，结束恢复并锁屏读回；本批未接触手机。
+
+源码修复可进入下一轮评审和 Develop 实机候选验证；**整个专项尚不具备宣称可正式发布的验收条件**。尤其 Launcher 图标持续消失仍是待实机确认的 P1，不以静态测试或历史 smoke 报通过。单个提交为本批回退单位，正式发布另需授权及现有 release 门禁。
+
+## 17. 2026-10-24：Launcher 原始图标所有权深查（P1，静态取证）
+
+**结论：确认原生隐藏与恢复机制，尚未确认持续消失异常的根因；本轮没有生产修复。**
+8:44 岛显示且原图标消失、8:45 岛消失且图标恢复是用户观察，缺少同一过渡的 View / 动画身份与回调时间线。
+不能据此认定 FloatingIconView2 清理遗漏、动态岛因果关系，或已排除裁切、Drawable、绑定和其他模块。
+用户在本轮明确选择“本轮只能做静态取证”，全部设备实验均为 NOT RUN。
+
+### 本地基线与样本
+
+开始时工作树干净，但实际 HEAD 是 `0a872d9415badc74ba6b852aefafb402ffb767c8`，
+位于 `codex/statusbar-fullscreen-20261024`。核对本地 refs、worktree 与提交差异后，
+切回已有 `codex/island-native-compat-20261024`，以 `0ab7a975428811dc58f4b41a04b31b6207e08605` 为基线。
+前一状态栏取证提交留在原分支；没有从远端覆盖、reset、cherry-pick 或回退修复。
+通知门禁、失效 Row、媒体快照与 `IslandMotion.MEDIA_DELAY = 750L` 均未修改。
+
+| 输入 | 本轮重新核验的身份 / 边界 |
+| --- | --- |
+| 历史实机 Launcher | 第 15 节保存的 `product-quality-20261023/live-rom/Launcher.apk`，24897517 bytes；`com.miui.home`，`RELEASE-4.39.30.8604-08262248` / 439308604；minSdk 30 / targetSdk 33，不代表手机系统版本 |
+| Launcher SHA-256 | `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`；CN / TW 解包目录的 MiuiHome.apk 本轮重算后与历史实机样本相同，因此只分析一次相同二进制 |
+| DEX / split | `classes.dex` 8706792 bytes、`classes2.dex` 8320204 bytes，均 DEX 039；主要动画类定义在后者，ItemIcon / ShortcutIcon / Workspace 在前者。输入 Manifest 未声明 split，样本内无嵌套 APK；当前手机已安装路径、更新 APK 与 split 仍 UNKNOWN，不能称为本轮从设备提取 |
+| 历史实机 SystemUI | 54423617 bytes；SHA-256 `5d8f2fe0b65d8a1a947b4280f8053b524f8c5de73f48a74f8792d415ae76e513`；四个 DEX，仅补查原生焦点通知的 OverviewProxy 发送端 |
+| 工具 / 原始证据 | DexSQL CLI 0.1.1 与当前 MCP 内嵌文档、schema；输入哈希、原始 SQL、完整 decode 分页、独立 DEX 复核与工具测试日志在忽略的 `.di-evidence/launcher-icon-ownership-20261024/`，不提交 ROM / APK / 私有日志 |
+
+以下描述符均以 `Lcom/miui/home/` 为根；共享 Shell 桥接类以 `Lcom/android/systemui/shared/recents/` 为根。
+定义来源经 `class_methods`、`dex_files` 与项目 `rom_inventory.parse_dex()` 独立核对；不把外部方法引用当作声明。
+
+### 谁隐藏原图标
+
+| 路径 | 精确入口与操作 |
+| --- | --- |
+| 从桌面打开应用 | `recents/anim/WindowAnimParamsProvider$getOpeningWindowsAnimParams$animListener$1;->onAnimationStart(RectFSpringAnim)V`（非 ignore-icon 分支）与 `$getQuickOpeningWindowsAnimParams$animListener$1` 调用 `launcher/anim/LaunchAppAndBackHomeAnimTarget;->onLaunchAppAnimStart()V`；后者把 `getIconImageView().alpha` 设为 0 |
+| 应用返回桌面 | `recents/anim/WindowAnimParamsProvider$getClosingWindowAnimParams$animListener$1;->onAnimationStart(RectFSpringAnim)V` 先调用目标 `onEnterHomeAnimStart()`，再**直接**把目标 `getIconImageView().alpha` 设为 0。ShortcutIcon 的 `onEnterHomeAnimStart()` 本身只隐藏角标 mMessage，不能误认为它隐藏了整个图标 |
+| 打开过程的透明度 | `recents/anim/WindowElement;->updateLauncherTargetView(F)V` 在 `OPEN_FROM_HOME` 且 `needChangeIconAlpha()` 时调用 `LaunchAppAndBackHomeAnimTarget;->onLaunchAppWindowAlphaChange(F)V`，图像 alpha 写为 `1 - windowAlpha` |
+| 另一条原生 Back 图标表现 | `launcher/Launcher$67;->run()V` → `IBackAnimView.onBackAnimStart()` → `launcher/ShortcutIcon;->onBackAnimStart()V` → `ItemIcon;->setIconVisibility(I)V`，把 **mIconImageView** 设为 INVISIBLE；`Launcher$1.run()` 的合法 stop 分支 → `ShortcutIcon.onBackAnimStop()` 写回 VISIBLE。这与 alpha 路径分开采样 |
+
+因此“图标不见”可能是 ItemIcon 仍在、内部图像 alpha=0，或图像 INVISIBLE；
+不能根据屏幕外观推断 ItemIcon 被删除、数据丢失或 Drawable 无效。
+
+### 完成、取消、合并与换目标的恢复
+
+1. **正常完成有两层清理。** `WindowElement$mRectFSpringAnimListener$1.onAnimationEnd(RectFSpringAnim)`
+   在非 `CLOSE_TO_DRAG`、`allowEndListener=true`、非 merge 时，先交 Shell / user listener，再调用 `resetFloatingIcon(false)`。
+   Shell finish 经 `WindowTransitionCompat.finishTransition(Z)` → `WindowTransitionCallbackHelper.executeFinishCallback(...)`
+   → 事务回调 `WindowTransitionCompat$1.onFinish()` → `WindowElement$init$1.onFinishCompleted()`
+   → `WindowElement.onFinishCompleted()`，也会 `resetFloatingIcon(false)`。
+   主 / merge callback、Recents-only 完成以及等待事务提交的分支均已追踪；不能把 Shell finish 的异步等待当作已丢失清理。
+2. **实际恢复原语。** `WindowElement.resetFloatingIcon$lambda-7(WindowElement,Z)` 在 floating 已 init 时对当前
+   `launcherTargetView.showIcon()`，随后调用 `FloatingIconInterface.recycle(Z)`。
+   普通 ItemIcon 目标的 `FloatingIconView2.recycle(Z)` → `finishImmediately(Z)` 再对其弱引用目标 `showIcon()`，
+   然后 `recycleView(Z)` 清空目标、hasInit、变换和 drawable 层状态；false 分支移除临时 View，true 可保留 View 供复用。
+   `LaunchAppAndBackHomeAnimTarget.showIcon()V` 恢复图像 VISIBLE / alpha=1，并 invalidate Drawable。
+3. **普通取消不依赖 FloatingIcon 自己的空 end。** `RectFSpringAnim.cancelDirectly()` 遍历 listener 调用 cancel；
+   `WindowElement$mRectFSpringAnimListener$1.onAnimationCancel()` 会 `floatingIcon.recycle(false)`，因而普通目标有恢复。
+   `cancelWithoutEnd()` 仍走 `cancelDirectly()`；`allowEndListener=false` 不会自动跳过上述 cancel listener。
+   FloatingIconView2 自己的 `onAnimationCancel(RectFSpringAnim)` → `onAnimationEnd(RectFSpringAnim)` → 空 `onAnimationEnd$lambda-3()`
+   只说明该 listener 不负责最后清理，不能据此宣判 ROM Bug。
+4. **Shell 取消与合并有后续所有者。** `WindowTransitionCompat.cancelAnimAndFinishMain(Transaction,Z,String)`
+   → `WindowElement$init$1.onAnimCancelByShellFinished(Z)` → `onAnimCancelByShellFinishedExecute(Z)`
+   → Main 上 `forceStop(...)` / `cancelAnim(...)` → native finish。
+   `onTransitionMerged(ZZ)` 更新 `isDuringMerge`；其 `$lambda-1(Z,WindowElement)` 只在“没有新动画且原动画不再 running”时补调外层 end。
+   有新动画时保留原生交接，不能提早显示源图标。
+5. **换目标先处理旧目标。** `WindowElement.initTargetView(Launcher,RectFParams)` 先 `updateFloatingIconView(...)`，
+   后写 `launcherTargetView`。相同目标直接复用；目标为空或不再是 Home anim target 时进入 reset；
+   `replaceFloatingIconViewContent(...)` 先 reset 旧目标，再按需 init 新目标。
+   `LooperExecutor.execute(Runnable)` 在所属 Looper 上**立即执行**，跨 Looper 才 post；
+   所以不能仅看到 lambda 就断言此顺序必然存在异步竞态。
+
+相邻旧 `FloatingIconView` 也已核对：cancel 会转 end；`finishImmediately()` 先 `resetShortcutIcon()` 后 recycle，
+并受 `isNeedRecycle / isNeedResetShortcutIcon` 控制。`QuickstepAppTransitionManagerImpl.resetShortcutIconAlpha(target)`
+使用 `mOpeningAnimTargetRef` 的**对象相同**与 `mIsOpenAnimRunning` 判断：同一图标仍在打开时不抢回 alpha。
+这些都是反对无条件恢复 / 全局扫描的具体原生证据。
+
+### 异步、重绑定与尚未证实的缺口
+
+- `FloatingIconView2.init()` 直接取得目标现有 `getContentDrawable()`；`setIcon()` 同步拆分 / 准备 drawable，
+  所查链没有“异步图片加载完成后再隐藏源 ItemIcon”的回调。原生另有 BACKGROUND_EXECUTOR 的 `prepareBackAnim$lambda-1()`
+  与 ShortcutIcon 的延后 back-drawable reset；它们不是同一类异步加载，不能混为一谈。
+- FloatingIconView2 的目标是 `mAnimTargetRef` 弱引用；WindowElement 则持有当前 `launcherTargetView / floatingIcon`。
+  `resetFloatingIcon$lambda-7` 在执行时读取这些当前字段，没有捕获本次目标或绑定 generation。
+  **跨 Looper 排队期间换目标 / 同 View 换绑**是需要实测身份的候选条件；尚未证明它在此次症状发生，
+  也未证明临时 View 已 recycle 后还有迟到隐藏。没有因此添加 generation 层或恢复 Hook。
+- `QuickstepAppTransitionManagerImpl.lambda$registerRemoteTransitions$3()` 确有 setSkipCallExecuteFinish(true) 后 cancel，
+  但本样本的 `mSkipCallExecuteFinish` 字段交叉引用只有 setter 写入，未找到读取；`cancelDirectly()` 仍分发 cancel listener。
+  因此第 16 节所列 stop-runnable 只是候选入口，不能由这个 setter 名称推导“跳过原图标恢复”。
+- `Workspace.getCurrentShowShortcutIcons()` 从当前屏的 CellLayout 收集 ShortcutIcon；原生 Workspace / CellLayout
+  另有拖拽、编辑、页面可见性与裁切写入。DragLayer / 父级、实际 drawable、图标对象及 binding 是否改变，均缺少本轮运行读数。
+  View alpha=1 本身也不能排除父级 alpha / clip；不得使用 showIcon 强行越过这些合法状态。
+
+### A14 Hook 的实际边界
+
+| 检查项 | 已确认源码 / ROM 关系 | 本轮判断 |
+| --- | --- | --- |
+| `UseOldLaunchAnimationHook()` | 仅 `launcher_oldlaunchanim=true` 安装，把 native permission 方法固定为 false；该 ROM 的原方法常量 true。其调用者是 registerRemoteAnimations / registerRemoteTransitions / unregisterRemoteTransitions，影响原生注册选择；stop-runnable 设置发生在 registerRemoteTransitions 的 permission 检查之前 | 确实改变动画路径，未发现 A14 逐次截断完成回调；当前设备是否启用 UNKNOWN，保留优先 A/B |
+| `FixAnimHook()` | 仅 `launcher_fixanim=true` 安装；duration scale=1 原样，0 按 0.01 处理，其余只改 `SpringAnimator.getSpringForce(FFF)` 第三个参数 stiffness，原函数第二参数为 damping。直接调用来自 ScreenView、SpringAnimator.setDampingResponse、解锁 V11、FolderAnimHelper；窗口过渡另用 RectFSpringAnim / HyperSpringAnimation | 不改 listener / finish / cancel，不据此排除间接时序影响，也不把改 stiffness 宣称为隐藏缺陷 |
+| `IconScaleHook()` | 偏好 45 为“不启用”哨兵，`>45` 才安装；内部图像 scale=sqrt(pref/100)，getIconLocation 只扩 right / bottom。该 ROM 的 FloatingIconView2.Companion.getLocationBoundsForView 对 Launcher target 读取原图像布局尺寸，调用 `getDescendantCoordRelativeToAncestor(...,false,false)`，不调用 getIconLocation；options / FastLaunchData 等另消费 getIconLocation | 确认存在不同坐标口径，native helper 对特定父容器还有 translationY 修正；缩放 / 父变换须实测比较，未把几何差异等同于持续隐藏，也未修改正常落点 |
+| `LauncherDockBackground` | 仅对应开关安装；最近 `d6f47fd` 加入的是原生 HotSeats 解锁参与列表及装饰容器变换。编辑 AnimationSet Hook 先 proceed 一次，只读取已有 transformation，按附加弱 owner 更新装饰；没有替换 native listener / 控制器，也不写 Workspace 源图标 alpha / visibility | 复用既有临时隐藏 / 恢复与父裁切回归；不能先验归因普通 Workspace 图标，也不能宣称设备上完全排除 |
+| 动态岛 | `BaseSystemUiFeature` 限 SystemUI；岛窗口、状态栏相交避让和播放器入口都未取得 Launcher View / FloatingIcon 所有权。播放器入口发送选中 session PendingIntent 或系统 IntentSender，未发送自定义 Launcher 可见性协议 | 无直接改图标或接管 Launcher 回调的源码证据；没有新增跨进程协调。窗口 / 布局事件的间接影响仍 UNKNOWN |
+
+还核对了容易混淆的**原生焦点通知通道**：SystemUI 的 `FocusedNotifPromptController.notifyNotifBeanChanged(...)`
+→ `OverviewProxyService.onFocusedNotifUpdate(String,Icon,Rect)` → IOverviewProxy；Launcher 的
+`TouchInteractionService$1.onFocusedNotifUpdate(...)` → `StatusBarIconTypeAnimHelper`，可使
+`NavStubView.findClosingShortcutIcon(ClosingAppInfo)` 选择合成的 `StatusBarIconTypeAnimTarget`，而非 Workspace ItemIcon。
+它的 `getIconImageView()` 返回合成 View 自己；旧 FloatingIconView 的此分支可等待 native focus-finish / 2 秒超时。
+A14 源码未调用这些 focus 协议。此通道只能指导后续采样真实目标类，不能证明音乐岛走过它或应接管它。
+
+### 恢复所有权与后续最小判别实验
+
+恢复条件是：Launcher 已稳定 Home，目标仍是当前可见 Workspace 的同一 ItemIcon / 同一绑定，
+且无仍合法拥有该图像的 native floating / back / drag / folder / edit 过渡。
+若将来证明需要保护，必须依托 native 实例、动画及绑定身份，使旧 callback 在交接后失效；
+不能全局扫描、固定延迟、周期性刷新或提前恢复新动画仍拥有的图标。
+
+先保留当前配置并记录 ROM fingerprint、Launcher APK / split、A14 安装 revision 与其他模块；
+本轮没有手机配置读回，不用历史备份填“当前配置”。按以下顺序串行测试，发生差异才扩展下一维：
+
+| 顺序 | 单变量实验 | 判别目的 |
+| --- | --- | --- |
+| 1 | 当前配置下 Workspace 直开 YouTube Music → 前台 → Home；岛关 / 开各做正常返回与快速往返；播放 / 暂停分别记录 | 先区分纯 native、媒体状态和岛窗口参与，所有构建保持已有 750 ms |
+| 2 | **消失后持续停留 Home**，不再打开 App；让岛自然移除，或以正常媒体操作移除 | 同步记录 native callback、focus IPC、布局 / rebind；图标随岛恢复只能先记相关性，不能直接认定因果 |
+| 3 | 直开 / 最近任务 / 岛点击分别进入，其他选项固定；补动画中断、反向、同目标与换目标 | 对应不同 options / RemoteTransition、对象复用及 cancel / merge 清理 |
+| 4 | 旧启动动画关 / 开，再以 FixAnim 关 / 开配合系统动画 scale=1 / 当前值；每次只换一项，按安装型 Hook 要求重启 Launcher | 确认真实注册路径与 spring 影响；不把当前值假定为默认 |
+| 5 | 图标缩放不启用 / 当前值；Dock 背景关 / 开；最后补文件夹、Dock、Workspace、最近任务切换 | 比较原图像、floating 目标矩形、scale / parent translation / clip，检查无重影与布局回归 |
+
+优先使用目标 ROM 实际支持的原生调试 / 既有 View 检查接口；本轮没有连接，未声称这些接口已可用。
+至少同时采集目标 ItemIcon 是否仍在、对象与绑定身份、visibility / alpha / isShown、mIconImageView 的对应状态与 Drawable，
+父链可见性 / alpha / 裁切，以及 floating / WindowElement / mAnim 身份、当前 target、isRunning / merge / finish 状态。
+若确需临时诊断，只在 Debug、指定 YouTube Music 目标和离散事件启用：
+`original-hide / floating-created / animation-start / animation-cancel / animation-end / original-restore / floating-recycle / workspace-rebind`，
+使用单调时间和有界事件编号关联；不输出全桌面 / 私有标题，不每帧记录，取证后移除。本轮未添加任何诊断 Hook。
+
+### 验证与交付边界
+
+- 扩展现有 [launcher_dock_contract.sql](../../tools/dexsql/launcher_dock_contract.sql)，复用原入口，未创建第二套审计体系。
+  最终六条 SELECT 在 Launcher 的行数为 **36 / 66 / 27 / 51 / 26 / 8**，在 SystemUI 为 **5 / 0 / 0 / 0 / 0 / 2**，
+  各页 `next_offset=null`；空行只约束输入来源，不代表整个系统缺失相应能力。
+- Launcher **110 个不同方法**、SystemUI **2 个方法**完整 decode；包含全部 66 个 Launcher 所有权声明目标。
+  分页偏移连续至 total_bytes，并用项目独立 DEX 解析器复核定义，缺失为零；静态方法数量不是运行调用次数。
+- Android 生产源码和测试与 `0ab7a975` 相同，复用第 16 节已保存的 **122 项专项、3276 项 Full（2 skipped）**，
+  不重复媒体测试，不把旧日志改称本轮运行。没有已证实需修改的所有权算法，未添加只模拟设想的新状态机测试。
+- 本轮 Fast --changed 退出 0：无 Android 源码或构建输入变化，Gradle 按规则跳过；Python 工具测试
+  **609 tests / 0 failures / 0 errors / 5 skipped**；git diff --check 与本地文档引用检查通过。
+  没有新 APK、R8 / ART、性能或设备验收；普通 / 快速往返、不持续消失、取消恢复、无双图标、文件夹 / Dock /
+  Workspace / 最近任务、缩放落点和音乐岛关 / 开矩阵全部 NOT RUN。
+- 没有增加常驻任务、每帧工作、生产对象或跨进程消息，生产开销增量为零；没有同设备 CPU / GPU / 分配测量，
+  不宣称性能改善。所有现有通知与媒体修复保留，不推送、不合并、不升版、不发布。

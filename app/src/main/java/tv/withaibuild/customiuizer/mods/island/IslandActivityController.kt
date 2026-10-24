@@ -113,7 +113,6 @@ internal class IslandActivityController(
     private var actionJob: Job? = null
     private var chatLease: IslandActivityState.Lease? = null
     private var chatKey: String? = null
-    private var chatPostTime = 0L
     private var chatNotification: StatusBarNotification? = null
     private var chatOpen: (() -> Boolean)? = null
     private var foregroundUser: UserHandle? = ModuleHelper.guarded(null) {
@@ -308,10 +307,9 @@ internal class IslandActivityController(
     }
 
     private fun refreshSafety() {
-        val allowed = !disposed && options.enabled && ScreenStateController.isScreenOn() &&
-            safetyOwner?.let { access.isAllowed(it) } == true
+        val allowed = presentationAllowed()
         val shade = !disposed && options.enabled && ScreenStateController.isScreenOn() &&
-            safetyOwner?.let { access.isShadeBlocked(it) } == true
+            safetyOwner?.let { ModuleHelper.guarded(false) { access.isShadeBlocked(it) } } == true
         if (state.allowed == allowed && shadeBlocked == shade) return
         val wasShade = shadeBlocked
         if (!allowed && shade) pauseSystemFeedback()
@@ -333,6 +331,9 @@ internal class IslandActivityController(
         render()
     }
 
+    private fun presentationAllowed(): Boolean = !disposed && options.enabled && ScreenStateController.isScreenOn() &&
+        safetyOwner?.let { ModuleHelper.guarded(false) { access.isAllowed(it) } } == true
+
     override fun onScreenStateChanged(isOn: Boolean) = onMain { refreshSafety() }
 
     fun foregroundChanged(packageName: String?) = onMain {
@@ -347,6 +348,10 @@ internal class IslandActivityController(
         }
         if (committed == null) cancelMediaReturn() else shell.cancelMediaReturn()
         invalidateActions()
+        // A snapshot can already be on its way back to Main before the first media
+        // value exists. Direct App/Home launches must invalidate that result too.
+        val pendingRead = readJob?.isActive == true
+        val sourceChanged = media?.let { packageName == it.packageName || previous == it.packageName } == true
         media?.let {
             if (packageName == it.packageName) {
                 displayedMedia = null
@@ -364,8 +369,14 @@ internal class IslandActivityController(
                     !options.simplified && ValueAnimator.areAnimatorsEnabled()
                 if (returning) mediaReturn = MediaReturn(it.token, now + IslandMotion.MEDIA_DELAY)
                 mediaRevealAt = now + if (returning) IslandMotion.MEDIA_RETURN_DELAY else IslandMotion.MEDIA_DELAY
+            }
+        }
+        if (pendingRead || sourceChanged) {
+            val manager = nativeManager.get()
+            if (manager == null) clearMedia()
+            else if (options.media && state.allowed) {
                 foregroundBaseline = true
-                nativeManager.get()?.let { manager -> updateFromNative(manager) }
+                updateFromNative(manager)
             }
         }
         render()
@@ -467,20 +478,27 @@ internal class IslandActivityController(
     fun notificationPosted(sbn: StatusBarNotification) = onMain {
         // Posting never suppresses anything. Updates invalidate the old click before a new
         // native-approved bind, including updates that are no longer allowed to alert.
-        if (chatKey == sbn.key && chatPostTime != sbn.postTime) { clearChat(); render() }
+        if (chatKey == sbn.key && chatNotification !== sbn) { clearChat(); render() }
     }
 
     /** Synchronous transaction on the final native heads-up bind; false always retains native UI. */
     fun takeNotification(bound: IslandNotificationAccess.Bound): Boolean {
         val sbn = bound.notification
-        if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.chat || !state.allowed ||
+        if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled || !options.chat) return false
+        // The native keyguard can lead the status-bar callback. Read it at the
+        // takeover boundary, before any notification lease or native mutation.
+        refreshSafety()
+        if (!state.allowed ||
             sbn.packageName !in options.notificationApps ||
             sbn.packageName in options.excludedApps ||
             sbn.packageName in options.chatExcludedApps || sbn.packageName == foregroundPackage ||
             sbn.user != foregroundUser || sbn.notification.contentIntent == null) return false
         val now = SystemClock.uptimeMillis()
-        if (chatNotification === sbn)
-            return chatLease?.let { attached && !exiting && state.owns(it, now) } == true
+        if (chatNotification === sbn) {
+            val current = chatLease?.let { attached && !exiting && state.owns(it, now) } == true
+            if (current) chatOpen = bound.open // A new native Row may keep the same Sbn and lease.
+            return current
+        }
         // Native system feedback and an already accepted ordinary Toast keep their lease.
         if (state.toast(now)?.let { it.notificationKey == null } == true) return false
         val rank = bound.ranking
@@ -488,9 +506,10 @@ internal class IslandActivityController(
             rank.matchesInterruptionFilter(), rank.suppressedVisualEffects,
             nativeIcon = bound.icon) ?: return false
         clearChat()
-        chatKey = sbn.key; chatPostTime = sbn.postTime; chatNotification = sbn; chatOpen = bound.open
+        chatKey = sbn.key; chatNotification = sbn; chatOpen = bound.open
         chatLease = state.offer(prepared, now, 4000)
         if (!render()) { clearChat(); return false }
+        if (!presentationAllowed()) { refreshSafety(); return false }
         ModuleHelper.guarded { shell.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) }
         return true
     }
@@ -499,9 +518,14 @@ internal class IslandActivityController(
         if (chatKey == key) { clearChat(); render() }
     }
 
+    fun cancelNotificationTakeover(bound: IslandNotificationAccess.Bound) = onMain {
+        // A failed old bind must not clear a newer update with the same key.
+        if (chatNotification === bound.notification && chatOpen === bound.open) { clearChat(); render() }
+    }
+
     private fun clearChat() {
         chatLease?.let { state.release(it) }; chatLease = null
-        chatKey = null; chatPostTime = 0
+        chatKey = null
         chatNotification = null
         chatOpen = null
     }

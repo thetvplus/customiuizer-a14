@@ -50,6 +50,7 @@ class IslandActivityLifecycleTest {
     private lateinit var host: Activity
     private lateinit var frame: FrameLayout
     private var drawFrames = true
+    private var onAdd: (() -> Unit)? = null
     private var metricsWidth = 1080
     private var metricsHeight = 2400
     private var metricsInsets = WindowInsets.Builder().build()
@@ -59,7 +60,7 @@ class IslandActivityLifecycleTest {
             "getCurrentWindowMetrics" -> WindowMetrics(Rect(0, 0, metricsWidth, metricsHeight), metricsInsets)
             "addView" -> { if (reject) throw WindowManager.BadTokenException("injected"); shell = (args!![0] as IslandTouchWindow).shell; latestParams = args[1] as WindowManager.LayoutParams; firstAlpha = shell!!.alpha; adds++;
                 if (!drawFrames) shell!!.visibility = View.INVISIBLE
-                frame.addView(args[0] as View, FrameLayout.LayoutParams(latestParams!!.width, latestParams!!.height)); null }
+                frame.addView(args[0] as View, FrameLayout.LayoutParams(latestParams!!.width, latestParams!!.height)); onAdd?.invoke(); null }
             "removeViewImmediate" -> { frame.removeView(args!![0] as View); removes++; null }
             "updateViewLayout" -> { val params = args!![1] as WindowManager.LayoutParams
                 (args[0] as View).layoutParams = FrameLayout.LayoutParams(params.width, params.height); null }
@@ -86,7 +87,9 @@ class IslandActivityLifecycleTest {
         chat: Boolean = false, chatExcluded: Set<String> = emptySet(),
         notificationApps: Set<String> = setOf(context.packageName),
         waveformMode: Int = 1, spectrumBackend: IslandAudioSpectrum.Backend? = null,
-        mediaReturn: Boolean = false, mediaReturnApps: Set<String> = emptySet()): IslandActivityController {
+        mediaReturn: Boolean = false, mediaReturnApps: Set<String> = emptySet(),
+        io: kotlinx.coroutines.CoroutineDispatcher = dispatcher,
+        entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
@@ -98,8 +101,9 @@ class IslandActivityLifecycleTest {
             put("system_island_waveform_mode", waveformMode.toString())
             put("system_island_media_return", mediaReturn)
             put("system_island_media_return_apps", mediaReturnApps)
+            put("system_island_entrance_style", entranceStyle.ordinal.toString())
         }
-        return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, dispatcher, spectrumBackend = spectrumBackend).also {
+        return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, io, spectrumBackend = spectrumBackend).also {
             owner = it
             it.connectSafety(Any())
             drain()
@@ -167,6 +171,143 @@ class IslandActivityLifecycleTest {
         assertFalse(controller.takeNotification(message(50)))
         assertEquals(0, adds)
         assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+    }
+
+    @Test fun notificationBindRechecksSafetyBeforeTheStatusBarCallbackArrives() {
+        val controller = controller(chat = true, simplified = true)
+        native.allowed = false // Keyguard changed; the cached status-bar callback has not run.
+        assertFalse(controller.takeNotification(message(60)))
+        assertEquals(0, adds)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        native.changed!!(); drain()
+        native.allowed = true; native.changed!!(); drain()
+        assertTrue(controller.takeNotification(message(61)))
+    }
+
+    @Test fun aSnapshotFromBeforeDirectPlayerLaunchCannotRevealPausedMusicOnHome() {
+        val ioScheduler = TestCoroutineScheduler()
+        val controller = controller(media = true, simplified = true, io = StandardTestDispatcher(ioScheduler))
+        ioScheduler.runCurrent(); drain() // Geometry is prepared by the same owned IO dispatcher.
+        val session = MediaSession(context, "direct-player-pending-read")
+        try {
+            val player = MediaController(context, session.sessionToken)
+            shadowOf(player).setPackageName(context.packageName)
+            shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+            native.player = player; controller.updateFromNative(native); drain()
+            ioScheduler.runCurrent() // PLAYING has been read; its Main continuation is still queued.
+            controller.foregroundChanged(context.packageName)
+            shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+            controller.foregroundChanged("com.miui.home")
+            drain(); ioScheduler.runCurrent(); drain(); revealMedia()
+            assertEquals("An old snapshot must not invent playback after a direct App/Home switch", 0, adds)
+            shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+            controller.updateFromNative(native); drain(); ioScheduler.runCurrent(); drain(); revealMedia()
+            assertEquals(1, adds)
+        } finally { session.release() }
+    }
+
+    @Test fun keyguardChangesDuringWindowInsertionAbortBeforeNativeConsumption() {
+        val controller = controller(chat = true, simplified = true)
+        onAdd = { native.allowed = false }
+        assertFalse(controller.takeNotification(message(62)))
+        assertEquals(adds, removes)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        assertNull(DynamicIslandStatusBarFade.ownerRef?.get())
+        onAdd = null
+    }
+
+    @Test fun unknownSafetyFailsClosedAndOldSameKeyRollbackCannotRemoveANewerNotification() {
+        val controller = controller(chat = true, simplified = true)
+        native.failSafety = true
+        assertFalse(controller.takeNotification(message(63)))
+        assertEquals(0, adds)
+        native.failSafety = false; native.changed!!(); drain()
+        val old = message(64, time = 1L)
+        val update = message(64, time = 1L) // Same key and millisecond, a different native notification.
+        assertTrue(controller.takeNotification(old))
+        controller.notificationPosted(update.notification)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        assertTrue(controller.takeNotification(update))
+        controller.cancelNotificationTakeover(old)
+        assertSame(update.notification, org.robolectric.util.ReflectionHelpers.getField(controller, "chatNotification"))
+        assertTrue(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun fiftyDirectAppHomeSwitchesRecoverTopEntry() = exerciseDirectAppHomeSwitches(IslandEntranceStyle.TOP)
+    @Test fun fiftyDirectAppHomeSwitchesRecoverCenterEntry() = exerciseDirectAppHomeSwitches(IslandEntranceStyle.CENTER)
+
+    @Test fun sameNotificationRebindingRefreshesItsClickWithoutRenewingTheLeaseOrAllowingOldRollback() {
+        val controller = controller(chat = true, simplified = true)
+        var oldClicks = 0; var newClicks = 0
+        val old = message(65) { oldClicks++; true }
+        val rebound = old.copy(open = { newClicks++; true })
+        assertTrue(controller.takeNotification(old))
+        val lease = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "chatLease")
+        assertTrue(controller.takeNotification(rebound))
+        assertSame(rebound.open, org.robolectric.util.ReflectionHelpers.getField(controller, "chatOpen"))
+        assertSame(lease, org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        controller.cancelNotificationTakeover(old)
+        assertSame(lease, org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        assertTrue(shell!!.performClick())
+        drain()
+        assertEquals(0, oldClicks)
+        assertEquals(1, newClicks)
+    }
+
+    @Test fun losingTheNativeMediaOwnerCannotLeaveAForegroundBaselineOrCallbackBehind() {
+        val controller = controller(media = true, simplified = true)
+        val session = MediaSession(context, "lost-native-media-owner")
+        try {
+            val player = MediaController(context, session.sessionToken)
+            shadowOf(player).setPackageName(context.packageName)
+            shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+            native.player = player; controller.updateFromNative(native); drain(); revealMedia()
+            org.robolectric.util.ReflectionHelpers.getField<java.lang.ref.WeakReference<Any>>(controller, "nativeManager").clear()
+            controller.foregroundChanged(context.packageName); drain()
+            controller.foregroundChanged("com.miui.home"); revealMedia()
+            assertEquals(adds, removes)
+            assertTrue(shadowOf(player).callbacks.isEmpty())
+            assertFalse(org.robolectric.util.ReflectionHelpers.getField(controller, "foregroundBaseline"))
+            controller.updateFromNative(native); drain(); revealMedia()
+            assertEquals(1, adds - removes)
+        } finally { session.release() }
+    }
+
+    private fun exerciseDirectAppHomeSwitches(style: IslandEntranceStyle) {
+        val controller = controller(media = true, entranceStyle = style)
+        val session = MediaSession(context, "direct-player-$style")
+        try {
+            val player = MediaController(context, session.sessionToken)
+            shadowOf(player).setPackageName(context.packageName)
+            shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+            controller.foregroundChanged(context.packageName)
+            native.player = player; controller.updateFromNative(native); drain()
+            repeat(50) { turn ->
+                controller.foregroundChanged("com.miui.home"); drain()
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(listOf(0L, 749L, 750L)[turn % 3])); drain()
+                val entering = shell?.let { org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(it, "motion") }
+                entering?.currentPlayTime = (entering.duration * listOf(.25f, .5f, .75f)[turn % 3]).toLong()
+                drain()
+                controller.foregroundChanged(context.packageName); drain()
+                val oldExit = shell?.let { org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(it, "motion") }
+                controller.foregroundChanged("com.miui.home"); revealMedia()
+                oldExit?.end(); drain() // Late old completion must not detach the latest window.
+                assertTrue("$style switch $turn", shell!!.isAttachedToWindow)
+                assertEquals(1f, shell!!.alpha, .001f)
+                assertEquals(1f, shell!!.scaleX, .001f)
+                assertEquals(1f, shell!!.scaleY, .001f)
+                assertEquals(0f, shell!!.translationY, .001f)
+                assertEquals(1, adds - removes)
+                assertEquals(IslandWindowPresentation.Phase.VISIBLE,
+                    org.robolectric.util.ReflectionHelpers.getField<IslandWindowPresentation>(controller, "presentation").phase)
+                assertFalse(org.robolectric.util.ReflectionHelpers.getField(controller, "foregroundBaseline"))
+                assertEquals(1, shadowOf(player).callbacks.size)
+            }
+            controller.dispose(); drain()
+            assertEquals(adds, removes)
+            assertEquals(0, native.listeners)
+            assertTrue(shadowOf(player).callbacks.isEmpty())
+        } finally { session.release() }
     }
 
     @Test fun aMediaRefreshCannotCancelAnUnchangedNotificationsClick() {
@@ -1180,6 +1321,7 @@ class IslandActivityLifecycleTest {
 
     private class Native : IslandNativePort {
         var allowed = true
+        var failSafety = false
         var shade = false
         var listeners = 0
         var changed: (() -> Unit)? = null
@@ -1187,7 +1329,7 @@ class IslandActivityLifecycleTest {
         var track: MediaMetadata? = null
         override fun controller(owner: Any) = player
         override fun metadata(owner: Any) = track
-        override fun isAllowed(owner: Any) = allowed
+        override fun isAllowed(owner: Any): Boolean { check(!failSafety); return allowed }
         override fun isShadeBlocked(owner: Any) = shade
         override fun trust(params: WindowManager.LayoutParams) = Unit
         override fun listen(owner: Any, changed: () -> Unit): Any { this.changed = changed; listeners++; return Any() }

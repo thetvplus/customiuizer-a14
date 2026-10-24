@@ -17,13 +17,13 @@
 | `notification_m03_contract.sql` | CN/TW SystemUI、Settings、framework / services 及 miui-framework / miui-services | 通知启动事务、Heads-up、频道 / NMS 与 Count/Fold 的定义、调用和 owner 字段；须完整 decode，交接目标和实机矩阵见 [M03 精校](../../docs/rom-intelligence/M03_NOTIFICATION_CONTRACT.md)。 |
 | `island_input_audio_contract.sql` | SystemUI 与 boot framework.jar | 动态岛内部 Insets 监听、Token UID 与音轨会话接口声明；授予权限、AppOps、路由与隐藏 API 实际可用性仍须实机。 |
 | `volume_contract.sql` | SystemUI 宿主 + plugin APK | 查询按钮、计时器、超时 / 无障碍、窗口模糊及百分比 owner 声明；宿主亮度与插件音量分别确认来源。宽度资源 ID、默认材质和关闭时序须结合 Smali。 |
-| `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 原生显示、透明度、编辑动画、拖拽提交 / 取消、子布局重排、设备圆角、材质 / Drawable 和导航取样声明；decode 核对实际 Transformation、手势反向及边界刷新，不另行推进动画或等待结束才恢复。 |
+| `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 显示、编辑 / 拖拽、几何与材质；原图标 / FloatingIconView2 的隐藏、取消 / merge / 换目标清理、实例字段读写与坐标消费者，以及原生焦点通知 IPC。结合完整 decode 确认 owner，不由异步 lambda 或 skip 标志名称推断竞态，不推进动画或强制显示图标。 |
 | `launcher_unlock_contract.sql` | Launcher | HotSeats 解锁参与者、V12 原生准备 / 弹簧 / 重置与属性更新；背景交由同一原生控制器，不能把编辑 AnimationSet 当作解锁链。 |
 | `navigation_gestures_contract.sql` | Launcher | 返回区域初始化 / setSize、侧滑停顿、快速切换和输入声明；核对无参初始化、字段重置及配置变化调用者。 |
 | `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明；保留各 owner 的失效与刷新边界。 |
 | `statusbar_gestures_contract.sql` | SystemUI + 控制中心 plugin | 状态栏拦截 / 触摸分发、插件 owner 的 attach / destroy 与 external 标志调用；独立于 Launcher 导航链。 |
 | `toast_presentation_contract.sql` | SystemUI 与 boot framework.jar | 普通 Toast 的窗口插入 / 回收、旋转重排、安全区与原生 StrongToast 文本模型；decode 核对 text_bitmap 分支、展示门禁、队列和 finishToken，不能只凭方法存在判定兼容。 |
-| `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器选择、媒体 / 状态栏回调、Toast 来源与 StrongToast 生命周期；decode 复核状态分发和窗口类型，保留 ROM 锁屏门禁。 |
+| `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器、媒体 / 状态栏 / Keyguard 回调及通知接管字段；decode 复核独立锁屏门禁、bind 提交、Heads-up 内容释放与列表可见性的边界。 |
 | `island_launcher_return.sql` | 实际 HyperOS 1 Launcher APK | 音乐窗口回桌面的 WindowElement / RectFParams、任务身份及原生图标复位链；仅限选中且正在播放的任务，不改最近任务、分屏或通用弹簧。 |
 | `island_music_gestures.sql` | 双区域 SystemUI、plugin 与 boot framework.jar | 待实现音乐手势的 TransportControls / 音量能力和既有音量面板声明、选中会话回调；当前未执行，不据候选查询自动增加 Hook。 |
 | `statusbar_height_contract.sql` | 双区域 services.jar 与 framework.jar | InsetsSource、WindowState、DecorInsets 缓存及应用 Insets 消费链；区分挖孔安全区、旧 API 与应用缓存，不据此扩大全局 Hook。 |
