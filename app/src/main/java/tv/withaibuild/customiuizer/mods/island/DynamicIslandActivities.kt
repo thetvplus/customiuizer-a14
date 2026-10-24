@@ -266,7 +266,7 @@ internal object DynamicIslandActivities {
         active.get()?.dispose()
         val controller = IslandActivityController(statusBar.context, source, options, resolved,
             dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader,
-            freeform = freeformAccess, pipStateReader = { pipObserver?.snapshot })
+            freeform = freeformAccess, pipStateReader = { pipObserver?.snapshot }, geometryHost = statusBar.rootView)
         XposedHelpers.setAdditionalInstanceField(statusBar, OWNER, controller)
         active = WeakReference(controller)
         pipObserver?.snapshot?.let(controller::pipChanged)

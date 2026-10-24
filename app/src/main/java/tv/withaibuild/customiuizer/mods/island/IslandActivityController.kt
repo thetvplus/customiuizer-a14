@@ -27,6 +27,7 @@ import android.os.SystemClock
 import android.os.UserHandle
 import android.view.Gravity
 import android.view.View
+import android.view.Surface
 import android.view.WindowManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -85,6 +86,7 @@ internal class IslandActivityController(
     private val spectrumBackend: IslandAudioSpectrum.Backend? = null,
     private val freeform: IslandFreeformPort? = null,
     private val pipStateReader: (() -> IslandPipSnapshot?)? = null,
+    geometryHost: View? = null,
 ) : ScreenStateController.ScreenStateListener {
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
@@ -187,6 +189,16 @@ internal class IslandActivityController(
     private val systemFeedback = Runnable { ModuleHelper.guarded { presentSystemFeedback() } }
     private var userReceiverRegistered = false
     private var configurationRegistered = false
+    private val geometryView = WeakReference(geometryHost)
+    private val hasGeometryHost = geometryHost != null
+    private var portraitDisplay = !hasGeometryHost || ModuleHelper.guarded(false) {
+        geometryHost?.display?.rotation.let { it == Surface.ROTATION_0 || it == Surface.ROTATION_180 }
+    }
+    private val geometryLayout = View.OnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+        // StatusBar's actual window can rotate without a resource Configuration callback.
+        // Only width changes do work; ordinary layout/animation frames do not query native state.
+        if (right - left != oldRight - oldLeft) onMain { refreshWindowGeometry() }
+    }
     private val params = WindowManager.LayoutParams(1, 1, 2017,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -250,17 +262,7 @@ internal class IslandActivityController(
         override fun onConfigurationChanged(newConfig: Configuration) = ModuleHelper.guarded {
             onMain {
                 systemActivities?.configurationChanged(newConfig)
-                readGeneration++
-                invalidateIcon()
-                media = null
-                state.setMedia(null, null)
-                hide()
-                shell.refreshConfiguration()
-                touchWindow.refreshConfiguration()
-                screen = null
-                refreshGeometry()
-                nativeManager.get()?.let { updateFromNative(it) }
-                render()
+                refreshWindowGeometry()
             }
         }
         override fun onLowMemory() = Unit
@@ -303,6 +305,7 @@ internal class IslandActivityController(
             userReceiverRegistered = true
             context.registerComponentCallbacks(configuration)
             configurationRegistered = true
+            geometryView.get()?.addOnLayoutChangeListener(geometryLayout)
             refreshGeometry()
             if (options.enabled) systemActivities = createSystemActivities()
             actionMarkers?.update(options.feedback)
@@ -347,7 +350,26 @@ internal class IslandActivityController(
     }
 
     private fun presentationAllowed(): Boolean = !disposed && options.enabled && ScreenStateController.isScreenOn() &&
+        portraitDisplay &&
         safetyOwner?.let { ModuleHelper.guarded(false) { access.isAllowed(it) } } == true
+
+    private fun refreshWindowGeometry() {
+        if (hasGeometryHost) portraitDisplay = ModuleHelper.guarded(false) {
+            geometryView.get()?.display?.rotation.let { it == Surface.ROTATION_0 || it == Surface.ROTATION_180 }
+        }
+        readGeneration++
+        invalidateIcon()
+        media = null
+        state.setMedia(null, null)
+        hide()
+        shell.refreshConfiguration()
+        touchWindow.refreshConfiguration()
+        screen = null
+        refreshSafety()
+        refreshGeometry()
+        nativeManager.get()?.let { updateFromNative(it) }
+        render()
+    }
 
     override fun onScreenStateChanged(isOn: Boolean) = onMain { refreshSafety() }
 
@@ -1244,6 +1266,7 @@ internal class IslandActivityController(
         geometryJob?.cancel()
         geometryJob = null
         screen = null
+        geometryView.get()?.removeOnLayoutChangeListener(geometryLayout)
         ModuleHelper.unregisterPreferenceObserver(this)
         ScreenStateController.removeListener(this)
         if (userReceiverRegistered) {

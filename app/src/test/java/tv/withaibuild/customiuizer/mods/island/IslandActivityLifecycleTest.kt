@@ -11,6 +11,7 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Looper
 import android.view.View
+import android.view.Surface
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.WindowMetrics
@@ -53,11 +54,12 @@ class IslandActivityLifecycleTest {
     private var onAdd: (() -> Unit)? = null
     private var metricsWidth = 1080
     private var metricsHeight = 2400
+    private var metricsReads = 0
     private var metricsInsets = WindowInsets.Builder().build()
     private val window = Proxy.newProxyInstance(WindowManager::class.java.classLoader,
         arrayOf(WindowManager::class.java)) { _, method, args ->
         when (method.name) {
-            "getCurrentWindowMetrics" -> WindowMetrics(Rect(0, 0, metricsWidth, metricsHeight), metricsInsets)
+            "getCurrentWindowMetrics" -> { metricsReads++; WindowMetrics(Rect(0, 0, metricsWidth, metricsHeight), metricsInsets) }
             "addView" -> { if (reject) throw WindowManager.BadTokenException("injected"); shell = (args!![0] as IslandTouchWindow).shell; latestParams = args[1] as WindowManager.LayoutParams; firstAlpha = shell!!.alpha; adds++;
                 if (!drawFrames) shell!!.visibility = View.INVISIBLE
                 frame.addView(args[0] as View, FrameLayout.LayoutParams(latestParams!!.width, latestParams!!.height)); onAdd?.invoke(); null }
@@ -91,7 +93,8 @@ class IslandActivityLifecycleTest {
         hideFloating: Boolean = false, freeform: IslandFreeformPort? = null,
         pipStateReader: (() -> IslandPipSnapshot?)? = null,
         io: kotlinx.coroutines.CoroutineDispatcher = dispatcher,
-        entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP): IslandActivityController {
+        entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
+        geometryHost: View? = null): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
@@ -107,7 +110,7 @@ class IslandActivityLifecycleTest {
             put("system_island_entrance_style", entranceStyle.ordinal.toString())
         }
         return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, io, spectrumBackend = spectrumBackend,
-            freeform = freeform, pipStateReader = pipStateReader).also {
+            freeform = freeform, pipStateReader = pipStateReader, geometryHost = geometryHost).also {
             owner = it
             it.connectSafety(Any())
             it.refreshFloatingWindows()
@@ -127,6 +130,53 @@ class IslandActivityLifecycleTest {
                 it.viewTreeObserver.dispatchOnPreDraw()
             }
         }
+    }
+
+    @Test fun actualWindowRotationWithoutResourceConfigurationHidesAndRestoresTheIsland() {
+        val geometry = View(host)
+        frame.addView(geometry, FrameLayout.LayoutParams(1080, 133))
+        geometry.layout(0, 0, 1080, 133)
+        val display = shadowOf(geometry.display)
+        val orientation = context.resources.configuration.orientation
+        val controller = controller(geometryHost = geometry)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 5000))
+        drain()
+        assertTrue(shell!!.isAttachedToWindow)
+        try {
+            display.setRotation(Surface.ROTATION_90)
+            geometry.layoutParams.width = 2400
+            geometry.layout(0, 0, 2400, 133)
+            shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+            assertEquals("This path must not depend on a resource callback", orientation, context.resources.configuration.orientation)
+            assertFalse(shell!!.isAttachedToWindow)
+            assertNull(controller.showToast(IslandToastContent("Landscape", context.packageName, null), 1000))
+            display.setRotation(Surface.ROTATION_0)
+            geometry.layoutParams.width = 1080
+            geometry.layout(0, 0, 1080, 133)
+            shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+            assertNotNull(controller.showToast(IslandToastContent("Portrait", context.packageName, null), 1000))
+            drain()
+            assertTrue(shell!!.isAttachedToWindow)
+        } finally { display.setRotation(Surface.ROTATION_0) }
+    }
+
+    @Test fun disposalRemovesWindowGeometryListenerAndUnchangedLayoutsDoNotReadMetrics() {
+        val geometry = View(host)
+        frame.addView(geometry, FrameLayout.LayoutParams(1080, 133))
+        geometry.layout(0, 0, 1080, 133)
+        val controller = controller(geometryHost = geometry)
+        val listeners = org.robolectric.util.ReflectionHelpers.getField<ArrayList<View.OnLayoutChangeListener>>(
+            org.robolectric.util.ReflectionHelpers.getField<Any>(geometry, "mListenerInfo"), "mOnLayoutChangeListeners")
+        assertEquals(1, listeners.size)
+        val before = metricsReads
+        geometry.layout(0, 1, 1080, 134)
+        shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+        assertEquals(before, metricsReads)
+        controller.dispose(); scheduler.runCurrent()
+        assertTrue("The native View must release the owner's listener", listeners.isEmpty())
+        geometry.layout(0, 0, 2400, 133)
+        shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+        assertEquals("Disposed owner must not start another geometry read", before, metricsReads)
     }
     private fun revealMedia() {
         drain()
