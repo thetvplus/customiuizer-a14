@@ -1,6 +1,7 @@
 """Tests for tools/brutal_test_runner.py hermeticity checks."""
 
 import io
+import json
 import os
 import subprocess
 import sys
@@ -224,6 +225,47 @@ class HermeticityTest(unittest.TestCase):
             self.assertEqual(0, code, output)
             self.assertEqual(1, output.splitlines().count("actual test result"))
             self.assertIn("exit=0", output)
+
+    def test_inherited_actions_file_commands_cannot_escape_read_only_commands(self):
+        with tempfile.TemporaryDirectory() as td:
+            parent = Path(td)
+            root = self._make_repo(parent)
+            keys = ("GITHUB_STEP_SUMMARY", "GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE")
+            destinations = {key: str(parent / key) for key in keys}
+            for path in destinations.values():
+                Path(path).write_text("original runner metadata", encoding="utf-8")
+            command = [sys.executable, "-c", "import os; from pathlib import Path; "
+                       f"keys={keys!r}; "
+                       "[Path(os.environ[k]).write_text('simulated release') for k in keys if os.environ.get(k)]; "
+                       "assert all(not os.environ.get(k) for k in keys); print('isolated file commands')"]
+            with patch.dict(os.environ, destinations):
+                code, output = self._run_hermeticity(root, command=command)
+            self.assertEqual(0, code, output)
+            for path in destinations.values():
+                self.assertEqual("original runner metadata", Path(path).read_text(encoding="utf-8"))
+
+
+class CiOutputTest(unittest.TestCase):
+    def test_successful_test_output_is_buffered_but_failure_diagnostics_remain_visible(self):
+        config = json.loads((Path(__file__).resolve().parents[1] / "brutal_test_config.json").read_text(encoding="utf-8"))
+        command = next(list(item) for item in config["hermetic_commands"] if "unittest" in item)
+        self.assertIn("-b", command)
+        command[0] = sys.executable
+        with tempfile.TemporaryDirectory() as temp:
+            command[command.index("-s") + 1] = temp
+            command[command.index("-p") + 1] = "test_output_fixture.py"
+            test = Path(temp) / "test_output_fixture.py"
+            for failing in (False, True):
+                test.write_text("import unittest\nclass OutputTest(unittest.TestCase):\n"
+                                "    def test_output(self):\n        print('fixture-release-output')\n"
+                                + ("        self.fail('specific failure detail')\n" if failing else ""), encoding="utf-8")
+                result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
+                output = result.stdout + result.stderr
+                self.assertEqual(1 if failing else 0, result.returncode, output)
+                self.assertIn("Ran 1 test", output)
+                self.assertEqual(failing, "fixture-release-output" in output)
+                if failing:
+                    self.assertIn("specific failure detail", output)
 
 
 if __name__ == "__main__":

@@ -868,10 +868,17 @@ def hermeticity(
             return 1
 
     before = tracked_hashes(root)
+    # Tests may exercise release summaries / workflow outputs. Never let inherited
+    # runner file commands turn a simulated publication into real job metadata.
+    command_env = dict(os.environ)
+    for key in ("GITHUB_STEP_SUMMARY", "GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE"):
+        # run_command merges overrides with the parent environment; an explicit empty
+        # destination disables these channels instead of inheriting the removed key.
+        command_env[key] = ""
     for command in cfg["hermetic_commands"]:
         print(f"Hermeticity command: {' '.join(command)}", flush=True)
         started = time.monotonic()
-        code, output = run(command, root, timeout)
+        code, output = run(command, root, timeout, env=command_env)
         if output.strip():
             print(output.rstrip())
         print(f"Hermeticity command finished: exit={code}, seconds={time.monotonic() - started:.1f}")

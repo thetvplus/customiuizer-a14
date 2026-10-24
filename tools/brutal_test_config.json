@@ -38,7 +38,8 @@
       "-s",
       "tools/tests",
       "-p",
-      "test_*.py"
+      "test_*.py",
+      "-b"
     ],
     [
       "python",

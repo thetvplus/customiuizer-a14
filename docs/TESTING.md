@@ -35,6 +35,8 @@
 
 main / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment 审核、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
 
+Python 的 CI 命令使用 unittest buffer：成功测试的模拟发布 / 故障输出被收起，测试数量、跳过和失败摘要保留；失败时仍显示该测试的 stdout / stderr。Hermetic 命令还清空继承的 Actions 摘要 / 输出 / 环境 / 路径 / 状态文件位置，避免模拟发布污染真实工作流；测试可显式设置自己的临时输出文件。日志中的模拟发布链接不代表真实发行。
+
 ## 独立故障验证
 
 [brutal_test_config.json](../tools/brutal_test_config.json)维护 mutation 清单、独立门禁及生成输出。`ACTIVE_INDEPENDENT`、`BLOCKED_NO_INDEPENDENT_GATE`、`MUTATOR_STALE` 分开报告；self-detection 与缺口不算独立检出。
