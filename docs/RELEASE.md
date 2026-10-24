@@ -49,8 +49,8 @@ $releaseRevision = git rev-parse --short=8 HEAD
 
 1. 在工作分支提交，PR 到 main 自动运行无密钥的 A14 CI；未开 PR 时可手动选择该分支运行 A14 CI。合并前检查最终 head 的结果与 diff，不能复用旧提交的绿灯。
 2. 核验通过后合并 main。main 的代码推送再次运行 A14 CI，检查实际合并提交和配置；直接提交 main 也走同一入口。纯 Markdown 推送沿用现有跳过策略，不产生新 APK。
-3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。自动或手动入口发现版本已发布即正常跳过，不初始化 JDK / SDK，也不重新签名；只有版本递增、元数据与双语发行条目齐备时才请求发布确认。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
-4. 维护者在 **release-signing → Review deployments → Approve** 确认该版本、完整 SHA 和双语说明。拒绝或取消即可保持未发布；这是签名阶段必需的确认。发布环境若配置了设备验收检查点，则在同一正式候选完成验收后另行确认公开；Agent 只有获本轮用户明确委托时才能代为调用审核接口。
+3. main CI 成功后自动唤起 [A14 Signed Build](../.github/workflows/a14-signed-build.yml)。自动或手动入口发现版本已发布即正常跳过，不初始化 JDK / SDK，也不重新签名；只有版本递增、元数据与双语发行条目齐备时才进入发布审核阶段。失败 / PR / fork / 非 main / 过期 SHA 的 CI 不进入正式签名。
+4. 用户在当前任务明确要求“发布新版本”，即同时授权 Agent 代为审批该版本的签名和公开发布，无需用户再次点击。Agent 先核对版本、完整 main SHA、双语说明及运行身份，再用现有账号提交匹配运行的 `release-signing` / `release-publishing` 审批。保留 Required reviewer 和 main 限制，不批量批准其他运行；若另有用户指定的设备验收检查点，先完成该检查点。
 5. 确认后重查 main 和 CI，使用历史证书只构建一次正式 Release，核验 APK、R8、fatal lint 与 GitHub 来源证明。复用同 SHA 的 main CI，不再重复 JVM、lint 或 develop 构建。
 6. 默认先发布源码仓库，核对公开资产、标签和 Latest，再发布 Xposed 仓库。两端保持完全相同的 APK、摘要和构建元数据；校验文件、Sigstore bundle 和验证报告留在内部 Actions Artifact，不重建、不重签。任一检查失败即停止后续写入。
 
@@ -143,7 +143,7 @@ gh attestation verify candidate/<apk> --repo thetvplus/customiuizer-a14 --signer
 
 ### 结束与监控
 
-Agent 完成实现、分支核验、按任务授权合并及 main 核验后，记录 exact SHA 和 Actions 链接即可结束，不创建定时轮询。后续确认、签名、按序发布、资产读回和失败状态由 Actions 自行管理；只有失败或用户要求时再介入。用户明确只要触发签名试用且自行查看时，传 actions-only，确认 run 绑定 SHA 后即可结束，标明“已触发，尚未确认成功”。不能用“已触发”冒充“已成功”，也不能保证远端权限、网络和实机永不出错。
+普通实现或合并任务按授权完成分支 / main 核验后，记录 exact SHA 和 Actions 链接即可结束。明确的发布任务由 Agent 接续上述审批，等待签名、按序发布和资产读回完成后再报告成功，不把待审核运行交回用户点击，也不创建定时轮询。用户明确只要触发签名试用且自行查看时，传 actions-only，确认 run 绑定 SHA 后即可结束，标明“已触发，尚未确认成功”。不能用“已触发”冒充“已成功”。
 
 签名受信分支仍由 release-policy 与 Environment 同时限制；普通工作分支不因整理、PR 或文档变更取得正式签名权限。临时分支注册触发已移除，正式入口仅保留 main CI 后续事件和手动操作。
 

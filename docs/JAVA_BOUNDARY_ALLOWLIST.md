@@ -22,4 +22,18 @@
 
 ## Kotlin Installer 的 Java 入口
 
-当前 [Installer](../app/src/main/java/tv/withaibuild/customiuizer/installers/) 使用 Kotlin `object`；`MainModule.java` 的既有静态调用依靠 `@JvmStatic` 保持 ABI。具体成员以源码为准，不另复制易过期的 Installer 文件清单。
+当前 Installer 使用 Kotlin `object`；`MainModule.java` 的既有静态调用依靠 `@JvmStatic` 保持 ABI。以下清单由[安装器测试](../app/src/test/java/tv/withaibuild/customiuizer/installers/)中的 `InstallerJvmAbiTest` 直接消费，必须保留；文件集合变化需同步复核允许清单和 ABI 测试，方法签名以测试中的 `EXPECTED_ABIS` 为准。
+
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/AndroidPackageInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/GenericAppInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/GuardProviderInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/InputMethodInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/LauncherInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/MediaInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/PackageInstallerRouter.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/PermissionControllerInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/PhoneInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/PowerKeeperInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/SecurityCenterInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/SettingsInstaller.kt`
+- `app/src/main/java/tv/withaibuild/customiuizer/installers/SystemUiInstaller.kt`
