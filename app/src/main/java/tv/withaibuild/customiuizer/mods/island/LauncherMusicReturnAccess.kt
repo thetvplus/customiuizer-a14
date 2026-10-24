@@ -73,8 +73,9 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         val values = fields.map { it.get(original) }.toTypedArray()
         values[2] = frame.rectangle()
         values[4] = (frame.bottom - frame.top) * .5f
-        values[8] = true // Native null-target cleanup restores the desktop icon and skips its floating copy.
-        values[11] = null
+        // isUpdate(params) skips the floating copy when ignoreIcon is true.
+        // Keep targetView: initTargetView stores it for native finish/cancel icon restoration.
+        values[8] = true
         return constructor.newInstance(*values)
     }
 

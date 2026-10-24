@@ -14,6 +14,7 @@ internal val customActionKeys = arrayOf(
     "launcher_swipeleft", "launcher_swiperight",
     "launcher_doubletap", "launcher_pinch", "launcher_shake", "launcher_spread",
     "system_statusbarcontrols", "system_statusbarcontrols_longpress",
+    "system_statusbarcontrols_dt", "system_statusbarcontrols_dt_left", "system_statusbarcontrols_dt_right",
     "system_lockscreenshortcuts_left", "system_lockscreenshortcuts_right"
 )
 

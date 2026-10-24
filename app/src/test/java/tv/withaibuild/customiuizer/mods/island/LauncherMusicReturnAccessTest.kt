@@ -9,6 +9,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -52,9 +53,10 @@ class LauncherMusicReturnAccessTest {
     private val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
         280f, 15f, 800f, 125f, 1080, 2400)
     private fun params(type: Type = Type.CLOSE_TO_HOME, quick: Boolean = false, split: Boolean = false,
-        rotation: Int = 0, targets: Targets? = Targets(arrayOf(Remote()))) = Params(targets,
+        rotation: Int = 0, targets: Targets? = Targets(arrayOf(Remote())),
+        targetView: View? = View(RuntimeEnvironment.getApplication())) = Params(targets,
         RectF(0f, 0f, 1080f, 2400f), RectF(200f, 1800f, 300f, 1900f), 32f, 20f, 1f, 0f,
-        type, false, true, quick, null, Any(), Any(), true, rotation, 0, true, 0, split, false)
+        type, false, true, quick, targetView, Any(), Any(), true, rotation, 0, true, 0, split, false)
 
     @Test fun onlyTheClosingWindowDestinationAndIconHandoffChangeInANativeCopy() {
         val source = params()
@@ -64,15 +66,22 @@ class LauncherMusicReturnAccessTest {
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
         assertEquals(55f, result.endRadius, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)
-        assertNull(result.targetView)
+        assertSame("Native finish/cancel must retain the desktop icon owner", source.targetView, result.targetView)
         for (field in Params::class.java.declaredFields) {
-            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView")) continue
+            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon")) continue
             field.isAccessible = true
             assertEquals("Preserve native ${field.name}", field.get(source), field.get(result))
         }
         assertSame(source.animListener, result.animListener)
         assertSame(source.clipAnimationHelper, result.clipAnimationHelper)
         assertSame(source.targetApps, result.targetApps)
+    }
+
+    @Test fun returnFromAnotherPageKeepsTheNativeAbsentIconTarget() {
+        val source = params(targetView = null)
+        val result = access.retarget(source, Element(), Nav(), frame) as Params
+        assertNull(result.targetView)
+        assertTrue(result.ignoreIcon)
     }
 
     @Test fun recentsOpeningDragSplitQuickSwitchAndRotationRemainNative() {
