@@ -692,7 +692,9 @@ CORE / MAINTAIN / RETIRE_CANDIDATE 的长期原则归 [ARCHITECTURE](../../ARCHI
 
 ## 状态栏全屏与 WindowInsets 静态取证（2026-10-24）
 
-### 范围、基线与设备边界
+本节前半保留 0a872d9 的取证快照；实际生产修复、正式回归与最新收口见本节末尾“生产修复与生命周期精校”。
+
+### 静态取证阶段的范围、基线与设备边界（0a872d9）
 
 本批按用户后续选择“暂时无法连接，先完成静态取证”收口。基线为执行时 fetch 后的
 `origin/main = 3e0709f3234ed942d906487370547ec0136c7531`，
@@ -840,7 +842,9 @@ H2 / H3 使用已有弱 owner 身份与密度快照，DecorInsets 属于配置�
 | APK / R8 / ART | 本批没有构建新 APK，也没有 ART 验收；不借用别批 APK / mapping |
 | 真实场景 | 微信图片 / 视频、系统相册、浏览器 / YouTube / Bilibili 全屏、横竖屏、手势导航、快速往返、岛显示期间切换全部 NOT RUN |
 
-### 最小后续批次与合并判断
+### 静态取证阶段的后续判断（0a872d9，实施前）
+
+以下保留取证阶段的判断；本轮生产修复与新验证结果见后面的实施记录。
 
 当前可交付并评审的是本页静态取证；**不建议把本分支作为“已修复微信回弹”合并或发布**。
 本批没有改生产代码，因而没有功能修复 SHA 或修复后的通过宣称。
@@ -853,3 +857,100 @@ H2 / H3 使用已有弱 owner 身份与密度快照，DecorInsets 属于配置�
 或保留原生空 / 特殊 frame；不全局固定高度、不强制显示系统栏，不添加微信包名监听。
 将探针改为真实问题的修复回归，补重挂载 / 配置 / 父子不同布局周期 / hidden 恢复及双排场景，
 完成同设备 A/B 后再作合并判断。设备阶段结束恢复原配置并锁屏读回。
+
+
+### 生产修复与生命周期精校（2026-10-24，基线 0a872d9）
+
+本阶段按用户新增授权实施上述 Host 确定性缺陷，设备连接不是前置条件。
+从 `0a872d9415badc74ba6b852aefafb402ffb767c8` 的既有状态栏分支继续；
+主目录当时处于另一条 `0ab7a975` 动态岛分支且有未提交改动，故在独立工作目录检出
+`codex/statusbar-fullscreen-20261024`，未覆盖、回退或混入那边的工作。
+本批生产代码、测试和本页作为一个逻辑提交回退；不改版本、不推送、不合并、不发布。
+新的 Host 与门禁回执在工作目录的忽略路径 `.di-evidence/statusbar-fullscreen-fix-20261024/`；
+沿用上一阶段 ROM / Smali 证据，不重新解析微信或新增适配框架。
+
+**修复机制**
+
+1. `StatusBarContentGeometryHooks.kt` 将首次快照替换为每个状态栏 View 一份私有 Binding：
+   保留子 View 尺寸监听，增加实际 StatusBarWindowView 的定向宽高监听及 View attach 状态监听。
+   普通 rootView 不作为窗口证据。未测量 / 临时零高窗口不写布局，首个真实窗口尺寸事件再计算。
+   父尺寸变化立即更新 owner 与 contents 的目标 LayoutParams，之后由原生测量 / 布局完成；
+   不等待子高度先变化，不 post 布局、不加延时。重复输入只比较已算目标，不重复写入。
+2. Binding 只跟踪本组件实际改写的 owner height、contents height / gravity、父容器 gravity
+   及 contents translationY。每项保留最新观察到的原生基线和模块最后实际写入值；
+   当前值不同于模块最后写入时即视为外部新写入，释放时不覆盖。
+   另在已取证的 `PhoneStatusBarView.updateStatusBarHeight()V` 原方法之后捕获原生新高度，
+   解决“ROM 新高度恰好等于模块上次写入整数”时单靠值比较无法区分的配置边界。
+   仅接纳成功且未跳过的原生执行；普通异常不被吞掉，失败 / 跳过不把模块旧值当原生基线。
+   不修改该 ROM 方法的参数、原生执行或 proceed 次数。其他属性按当前值与最后写入值比较判定，
+   不给通用 View setter 新增 Hook 来追踪同值写入意图。
+3. 默认偏移不再清零未持有的 translationY。非零偏移先合并原生位移与用户偏移，
+   再统一交给 `StatusBarSafeGeometry` 预留高度并裁定可用位移；正负切换不在上一次结果上累加。
+   原生位移与自定义偏移恰好抵消时仍采用自定义的居中布局；默认关闭后恢复原生定位。
+   gravity 保留 START / END 等水平标志，默认配置不再强制父容器 TOP。
+   高度 11 与显式 27 仍分别走原生 / 启用分支，小高度仅调整模块持有的子布局，不改窗口可见性。
+4. detach 先停止该 Binding，解除旧窗口监听并移出既有弱注册表，然后仅恢复仍由模块持有的值，
+   丢弃基线、旧 contents / container 引用及单项几何缓存。同一 View 的 attach 会重新登记；
+   换窗口 / 换 contents 先释放旧对象，新 View 使用独立记录。迟到的旧窗口事件有身份与 active 门禁。
+   View 自己持有的子尺寸 / attach 两个监听可以复用；旧 Window 不强持有子 View。
+   contents 改用不支持的 LayoutParams 时也先释放仍持有的位移，并废弃旧几何记录，
+   不触碰原生替换的参数；恢复支持的布局类型后重新捕获基线。
+5. `SystemStatusBarInsetsHooks.SetFrameCallback.adjustArgs()` 仅增加原始宽 / 高有效性检查。
+   Rect 与四整数重载均在宽或高非正时原样 proceed；不看 mVisible 来清空几何。
+   合法 client-hidden 矩形仍可缩放为用户高度，其他 source 不进入新判断。
+   原 Rect 不变，proceed 恰好一次，既有异常 / fatal 传播边界不变。
+   H2、H3、DecorInsets、FeatureRegistry 与动态岛生产代码均未调整。
+
+**修复前后 Host 结果**
+
+正式回归首先在旧生产代码运行：22 tests / 15 failures / 0 errors，
+包括旧快照、默认位移、父窗口失效、重挂载和两个退化 frame 重载。
+修复后同批 22 项全过，再补配置同值写入、密度变化、contents / Window / View 替换、
+gravity 所有权、不可见 / 零高窗口、双排、快速尺寸往返与写入次数回归。
+末尾复核的五项边界测试又复现三处失败（原生失败 / 跳过、contents 参数类型替换）；
+补齐接纳条件与释放路径后，最终三套专项 53 tests / 0 failures / 0 errors / 0 skipped。
+夹具显式驱动 ViewRootImpl 下面的完整测量 / 布局周期，父事件后的 LP 立即更新另有断言，
+不依赖测试主动调用 apply 来补救父窗口失效。下面数值仍是 Host 输入，非实机窗口轨迹。
+
+| 输入 / 操作 | 旧实现观测 | 修复后正式断言 |
+| --- | --- | --- |
+| parent 129 → 60，子旧高 129 | owner 仍 129，contents 仍 80 | 父事件立即令 owner LP=60；有效布局后 owner=60，contents=50（偏移 5px），可见边界在 0..60 |
+| 原生 80 → 模块 129 → ROM 96 → 默认偏移 | 写回过期 80 | 保留 / 恢复最新 96；无中间 layout 的直接关闭也覆盖 |
+| ROM 配置重写 129，恰等于模块最后值 | 仅旧初始 80 可恢复 | 原生高度回调捕获 129，默认后仍 129 |
+| 原生 translationY=7，默认偏移 | 归零 | 保留 7；无需模块曾经取得所有权 |
+| 原生 7，用户偏移 +5 / -5 / 0 | 不维护原生基线 | 12 → 2 → 7；不累加 |
+| 原生改写位移为 11 / contents 高 64 / gravity=BOTTOM | 旧快照可能覆盖 | 关闭保持新值；重新应用后再关闭也使用新基线 |
+| server-hidden (0,0,0,0) / 满宽零高 (0,0,1080,0) | bottom 被扩成配置值 | 两个重载均不改写；退化 / 反向宽高一起覆盖 |
+| client-hidden、有效 1080×104，用户高度 40 | 调整至 40 | 仍调整至 40；11 默认、显式 27、较小 / 较大值和无关 source 均有回归 |
+
+**生命周期与静态开销**
+
+| 项目 | 变化及验证口径 |
+| --- | --- |
+| 活跃 View 的布局监听 | 子 View 1 个保留；实际父窗口增加 1 个；另有 View 自身 attach 监听 1 个。重复 bind 不增加，detach 后旧窗口为 0 |
+| 129 → 60 父事件 | 旧实现无有效修正；新实现 owner / contents 各写一次 LP；后续 12 次相同输入均为 0 / 0 次写入 |
+| 中间父容器 / 默认布局 | 仅在双排 / 自定义偏移需要时接管 TOP；默认和关闭只释放自己持有的 gravity |
+| 局部状态 | 固定一份 Binding、四个整数所有权记录、弱 View 引用、至多一份纯几何计算结果；随 owner 失效，不是全局按键缓存 |
+| 事件成本 | 现有偏好观察与主线程投递保持一份；增加一个配置 / cutout 冷路径原生高度回调。相同几何复用单项结果，不在每次 layout 查找反射成员 |
+| system_server 快路 | disabled / 非 status source 路径不变；仅已确认 status source 多两次几何比较。有效 frame 的反射、分配与日志策略不变；退化 frame 不再分配改写 Rect / 参数数组 |
+| 异常与隔离 | 复用 ModuleHelper.guarded 最外层安全边界；fatal 仍传播；不触碰已成熟 WM 布局 Hook 或动态岛租约 |
+| 性能结论 | 以上是源码结构与 Host 写入计数；没有设备 CPU / GPU / PSS / 帧时间数据，不宣称性能改善或实机无退化 |
+
+**本阶段收口**
+
+- 新增 `StatusBarContentGeometryLifecycleTest`、`StatusBarInsetsFrameLifecycleTest`，
+  扩展 `StatusBarSafeGeometryTest`；当前三套专项合计 53 项，包含真实问题断言而非旧异常行为的 PASS。
+- 最终 Fast --changed 已退出 0，执行完整 JVM 测试任务，355 suites / 3302 tests，
+  0 failures / 0 errors / 2 skipped；最终 Full 同样退出 0，复用相同源码的测试任务，
+  Lint 0 errors / 406 warnings。六份生产 / 回归源码 SHA-256 与最终回执一并保存在忽略目录，
+  提交后再核对 Git 内容一致，不把构建 revision 标签当成未提交源码的身份凭据。
+- Python 工具测试已通过：609 tests / 0 failures / 0 errors / 5 skipped；工具源码未改动。
+- git diff --check、新增文档 UTF-8 / LF / 本地引用检查通过；H2 / H3 / DecorInsets 原文、版本、
+  依赖、历史 Changelog、动态岛以及基础设施源码均保持基线内容。
+- 本轮未构建 APK / R8，也没有 ART 或实机验收。微信图片 / 视频、相册、网页 / YouTube / Bilibili
+  全屏、旋转、手势导航和动态岛展示期间切换的实际表现仍待设备验证；设备配置未改动。
+
+本批结论是 **A14 通用几何与生命周期缺陷已静态修复并通过主机回归**。
+这不等于“微信实机回弹已彻底消除”。完成本阶段收口后可作为源码修复进入评审，
+实机体验、目标 APK / ROM 配置与 T0–T5 A/B 按前述矩阵补验；不恢复静态取证阶段的“设备阻止实施”前置条件，
+也不把设备待验写成生产修复没有完成。
