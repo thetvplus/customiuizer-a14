@@ -20,6 +20,9 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     val detached = nav.getDeclaredMethod("onDetachedFromWindow")
     val touch = nav.getDeclaredMethod("onTouchEvent", MotionEvent::class.java)
     val animate = element.getDeclaredMethod("animTo", Any::class.java)
+    val prepareIcon = element.declaredMethods.single {
+        it.name == "updateFloatingIconView" && it.parameterTypes.size == 2 && it.parameterTypes[1] == params
+    }
     private val taskId = nav.getDeclaredField("mRunningTaskId").apply { isAccessible = true }
     private val taskUser = nav.getDeclaredField("mRunningTaskUserId").apply { isAccessible = true }
     private val component = nav.getDeclaredField("mRunningTaskComponentName").apply { isAccessible = true }
@@ -47,6 +50,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     init {
         require(attached.returnType == Void.TYPE && detached.returnType == Void.TYPE && touch.returnType == Boolean::class.javaPrimitiveType)
         require(animate.returnType == Void.TYPE && fields[2].type == RectF::class.java)
+        require(prepareIcon.returnType == Void.TYPE && !prepareIcon.parameterTypes[0].isPrimitive)
         require(animationTarget.returnType == RectF::class.java && running.returnType == Boolean::class.javaPrimitiveType)
         require(component.type == ComponentName::class.java && taskId.type == Int::class.javaPrimitiveType &&
             taskUser.type == Int::class.javaPrimitiveType && fields[7].type.isEnum)

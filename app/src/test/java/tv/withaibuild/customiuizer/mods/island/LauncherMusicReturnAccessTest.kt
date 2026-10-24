@@ -41,6 +41,7 @@ class LauncherMusicReturnAccessTest {
         var running = false
         fun isRunning() = running
         fun animTo(value: Any) {}
+        fun updateFloatingIconView(launcher: Any, params: Params) {}
     }
     class Params(val targetApps: Targets?, val startRect: RectF?, val targetRect: RectF,
         val startRadius: Float, val endRadius: Float, val startAlpha: Float, val endAlpha: Float,
