@@ -100,15 +100,21 @@ class AutomaticReleaseTest(unittest.TestCase):
     def test_new_release_requests_approval_only_after_version_and_notes_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(Path(temp) / "event.json")
+            env["GITHUB_STEP_SUMMARY"] = str(Path(temp) / "summary.md")
             with ExitStack() as stack:
                 stack.enter_context(patch.dict(os.environ, env))
                 for name in ("automatic_ci", "require_current_main", "check_new_release"):
                     stack.enter_context(patch.object(release, name))
+                review = stack.enter_context(patch.object(release, "release_review", return_value="Published baseline and complete source comparison\n\n"))
                 stack.enter_context(patch.object(release, "optional_api", return_value=None))
                 notes = stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed changes"]))
                 approval = stack.enter_context(patch.object(release, "confirmation_policy"))
                 output = stack.enter_context(patch.object(release, "output"))
                 release.release_plan()
+                summary = Path(env["GITHUB_STEP_SUMMARY"]).read_text(encoding="utf-8")
+                self.assertIn("Published baseline and complete source comparison", summary)
+                self.assertIn("Reviewed changes", summary)
+                review.assert_called_once()
                 self.assertEqual(("true", "both"), (output.call_args.kwargs["ready"], output.call_args.kwargs["destination"]))
                 approval.assert_called_once()
                 approval.reset_mock()
@@ -131,6 +137,7 @@ class AutomaticReleaseTest(unittest.TestCase):
             stack.enter_context(patch.object(release, "require_main_ci"))
             stack.enter_context(patch.object(release, "check_new_release"))
             stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed"]))
+            stack.enter_context(patch.object(release, "release_review", return_value="Baseline review"))
             stack.enter_context(patch.object(release, "optional_api", return_value=None))
             approval = stack.enter_context(patch.object(release, "confirmation_policy", side_effect=ValueError("Missing reviewer")))
             output = stack.enter_context(patch.object(release, "output"))
@@ -627,7 +634,7 @@ class PublicationTest(unittest.TestCase):
                 notes = {"content": base64.b64encode(b"## r14.25.2\n\nversionCode 247.\n\n- Changes.\n").decode()}
                 with patch.object(release, "check_new_release"), patch.object(release, "check_tag") as tag:
                     with patch.object(release, "find_release", return_value=None), patch.object(release, "api", side_effect=lambda endpoint, **_: [{"name": filename, "type": "file"} for filename, _ in release.CURRENT_CHANGELOGS] if "/contents?ref=" in endpoint else notes):
-                        with patch.object(release, "run", side_effect=command), patch.object(release, "require_main_ci"), patch.object(release, "require_current_main"):
+                        with patch.object(release, "run", side_effect=command), patch.object(release, "require_main_ci"), patch.object(release, "require_current_main"), patch.object(release, "release_review"):
                             if tamper:
                                 with self.assertRaisesRegex(ValueError, "digest/size differs"):
                                     release.publish_verified(folder, "42", "source", metadata)
@@ -782,9 +789,34 @@ class DualPublicationTest(unittest.TestCase):
         stack.enter_context(patch.dict(os.environ, A14_XPOSED_RELEASE_TOKEN="test-xposed-token"))
         stack.enter_context(patch.object(release, "api", side_effect=server.api))
         stack.enter_context(patch.object(release, "run", side_effect=server.command))
-        for name in ("check_tag", "check_new_release", "require_main_ci", "require_current_main"):
+        for name in ("check_tag", "check_new_release", "require_main_ci", "require_current_main", "release_review", "sync_release_documents"):
             stack.enter_context(patch.object(release, name))
         return stack
+
+    def test_document_failure_is_retried_after_both_public_releases_without_asset_writes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server), patch.object(release, "sync_release_documents", side_effect=[RuntimeError("docs only"), None]) as sync:
+                with self.assertRaisesRegex(RuntimeError, "docs only"):
+                    release.publish_verified(root, "42", "both", metadata)
+                self.assertFalse(server.records[release.REPO]["draft"])
+                self.assertFalse(server.records[server.download]["draft"])
+                server.events.clear()
+                release.publish_verified(root, "42", "both", metadata)
+                self.assertEqual(2, sync.call_count)
+                self.assertFalse(any(event[0] in {"git", "create", "upload", "publish"} for event in server.events))
+
+    def test_source_only_and_prereleases_cannot_update_stable_download_documents(self):
+        for destination, prerelease in (("source", False), ("both", True)):
+            with self.subTest(destination=destination), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                metadata = self.fixture(root)
+                server = ReleaseServer(root)
+                with self.context(server), patch.object(release, "sync_release_documents") as sync:
+                    release.publish_verified(root, "42", destination, metadata, prerelease=prerelease)
+                    sync.assert_not_called()
 
     def test_current_and_historical_changelogs_render_identical_language_roles_at_exact_sha(self):
         for layout in ((("CHANGELOG.md", "简体中文"), ("CHANGELOG_EN.md", "English")),
@@ -1134,7 +1166,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
 
     def test_promotion_bootstrap_cannot_execute_a_job(self):
         filename = "a14-promote-release.yml"
-        text = self.workflow(filename).replace("    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch'\n", "    if: always()\n")
+        text = self.workflow(filename).replace("    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'docs-only'\n", "    if: always()\n")
         self.assertTrue(self.scan(text, filename))
 
     def test_promotion_cannot_rebuild_or_publish_by_default(self):
@@ -1144,6 +1176,15 @@ class ProtectedWorkflowTest(unittest.TestCase):
                                   ("needs: verify", "needs: missing"),
                                   ("run: python tools/signed_release.py publish", "run: ./gradlew :app:assembleRelease\n          python tools/signed_release.py publish")):
             self.assertTrue(self.scan(self.workflow(filename).replace(original, changed), filename))
+
+    def test_document_recovery_cannot_lose_its_guard_or_gain_signing_permissions(self):
+        filename = "a14-promote-release.yml"
+        for original, changed in (("github.ref == 'refs/heads/main'", "true"),
+                                  ("inputs.destination == 'docs-only'", "true"),
+                                  ("signed_release.py sync-docs", "signed_release.py publish"),
+                                  ("RELEASE_DOC_VERSION: ${{ inputs.version }}", "RELEASE_DOC_VERSION: latest")):
+            with self.subTest(changed=changed):
+                self.assertTrue(self.scan(self.workflow(filename).replace(original, changed), filename))
 
 
 if __name__ == "__main__":

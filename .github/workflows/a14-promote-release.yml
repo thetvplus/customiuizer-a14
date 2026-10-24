@@ -6,16 +6,20 @@ on:
     inputs:
       build_run_id:
         description: Successful A14 Signed Build run ID
-        required: true
+        required: false
         type: string
       destination:
         description: Keep in Actions, publish source, or explicitly publish both repositories
         required: true
         default: actions-only
         type: choice
-        options: [actions-only, source, both]
+        options: [actions-only, source, both, docs-only]
+      version:
+        description: 'Published version for docs-only, for example r14.25.3'
+        required: false
+        type: string
       authorization:
-        description: 'To publish, type: publish <versionName> from <build_run_id>'
+        description: 'publish <versionName> from <build_run_id>, or sync docs <versionName>'
         required: false
         type: string
       prerelease:
@@ -34,7 +38,7 @@ concurrency:
 jobs:
   verify:
     name: Verify original candidate
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'docs-only'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -72,7 +76,7 @@ jobs:
   publish:
     name: Publish the exact verified binary
     needs: verify
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'actions-only' && inputs.authorization != ''
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && (inputs.destination == 'source' || inputs.destination == 'both') && inputs.authorization != ''
     environment: release-publishing
     concurrency:
       group: a14-release-publish
@@ -110,3 +114,29 @@ jobs:
           VERIFIED_RUN_ATTEMPT: ${{ needs.verify.outputs.run_attempt }}
           VERIFIED_ARTIFACT_ID: ${{ needs.verify.outputs.artifact_id }}
         run: python tools/signed_release.py publish --run-id "$BUILD_RUN_ID" --destination "$RELEASE_DESTINATION" --directory "$RUNNER_TEMP/original-candidate"
+
+  docs:
+    name: Retry published download documents only
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination == 'docs-only' && inputs.authorization != ''
+    environment: release-publishing
+    concurrency:
+      group: a14-release-publish
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout trusted synchronization tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Synchronize already published documents
+        env:
+          GH_TOKEN: ${{ github.token }}
+          A14_XPOSED_RELEASE_TOKEN: ${{ secrets.A14_XPOSED_RELEASE_TOKEN }}
+          RELEASE_DOC_VERSION: ${{ inputs.version }}
+          RELEASE_AUTHORIZATION: ${{ inputs.authorization }}
+        run: python tools/signed_release.py sync-docs --version "$RELEASE_DOC_VERSION" --apply

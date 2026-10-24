@@ -13,7 +13,7 @@
 | 独立缺陷注入、确定性及无写入检查 | `brutal_test_runner.py`、`brutal_test_config.json`；同前缀的 policy / protocol / mutator / apply-check 模块由 runner 使用 |
 | Feature 路由、语义与所有权 | `catalog_contract_probe.py`、`audit-feature-semantics.py`、`audit_hook_ownership.py` |
 | 当前源码进程矩阵 | `extract_process_matrix.py`，生成 [rom-intelligence](rom-intelligence/README.md) 下的 JSON / CSV 矩阵 |
-| 发版准备与同一 APK 发布 / 恢复 | `prepare_release.py`、`signed_release.py`、`release_workflow_contract.py`，见 [发布流程](RELEASE.md) |
+| 发版准备、正式基线审查、同一 APK 发布 / 文档恢复 | `prepare_release.py`、`signed_release.py`、`release_docs.py`、`release_workflow_contract.py`，见 [发布流程](RELEASE.md) |
 | 诊断构建及产物来源 | `build_debug_apk.py`、`build_revision.py`、`verify_apk_provenance.py` |
 | APK 归因与预算比较 | `apk_size_report.py`；需要多变体、显式源码来源及 Markdown 报告时用 `apk_size_delta.py` |
 | APK 内容与 R8 可重复性 | `apk_semantic_diff.py`，用于按需隔离双构建比较 |

@@ -10,7 +10,8 @@ import json
 
 VALIDATE_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_sha == github.sha && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))"
 SIGN_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run') && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'"
-PUBLISH_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'actions-only' && inputs.authorization != ''"
+PUBLISH_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && (inputs.destination == 'source' || inputs.destination == 'both') && inputs.authorization != ''"
+DOCS_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination == 'docs-only' && inputs.authorization != ''"
 AUTO_PUBLISH_IF = SIGN_IF + " && needs.validate.outputs.destination != 'actions-only'"
 KEYS = ("A14_KEYSTORE_BASE64", "A14_STORE_PASSWORD", "A14_KEY_ALIAS", "A14_KEY_PASSWORD")
 BUILD_COMMAND = ('trap \'rm -rf -- "$RUNNER_TEMP/a14-signing"\' EXIT\n'
@@ -118,10 +119,10 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
                 sanitized["jobs"]["publish"]["steps"][publications[0][0]]["run"] = "confirmed protected publication"
     else:
         inputs = dispatch.get("inputs", {}) if isinstance(dispatch, dict) else {}
-        need(set(inputs) == {"build_run_id", "destination", "authorization", "prerelease"}, "promotion inputs must identify the original build and explicit authorization/pre-release selection")
+        need(set(inputs) == {"build_run_id", "destination", "authorization", "prerelease", "version"}, "promotion inputs must identify the original build or published document version and explicit authorization")
         need(inputs.get("prerelease", {}).get("type") == "boolean" and inputs.get("prerelease", {}).get("default") == "false", "promotion pre-release must be explicit")
-        need(inputs.get("destination", {}).get("default") == "actions-only" and inputs.get("destination", {}).get("options") == ["actions-only", "source", "both"], "publication must be opt-in")
-        need(set(jobs) == {"verify", "publish"}, "promotion must isolate verification from writes")
+        need(inputs.get("destination", {}).get("default") == "actions-only" and inputs.get("destination", {}).get("options") == ["actions-only", "source", "both", "docs-only"], "publication must be opt-in")
+        need(set(jobs) == {"verify", "publish", "docs"}, "promotion must isolate candidate verification, publication and document-only recovery")
         job = jobs.get("publish", {})
         need(job.get("environment") == "release-publishing", "publication requires its own protected Environment")
         need(job.get("if") == PUBLISH_IF and job.get("needs") == "verify", "publication must require verification and explicit opt-in")
@@ -130,7 +131,17 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
         need(jobs.get("verify", {}).get("permissions") == {"contents": "read", "actions": "read", "attestations": "read"}, "candidate verification must be read-only")
         receipt = {key: "${{ steps.candidate.outputs." + key + " }}" for key in ("source_sha", "apk_sha256", "run_attempt", "artifact_id")}
         need(jobs.get("verify", {}).get("outputs") == receipt, "verification must pin the original artifact identity")
-        need(jobs.get("verify", {}).get("if") == "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch'", "promotion must require native manual dispatch")
+        need(jobs.get("verify", {}).get("if") == "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'docs-only'", "promotion must require native manual dispatch and bypass artifacts only for document recovery")
+        docs = jobs.get("docs", {})
+        need(docs.get("if") == DOCS_IF and docs.get("environment") == "release-publishing"
+             and docs.get("permissions") == {"contents": "read"} and "needs" not in docs,
+             "document recovery requires trusted main, explicit opt-in and the publishing Environment, without candidate or signing access")
+        need(docs.get("concurrency") == {"group": "a14-release-publish", "cancel-in-progress": "false"}, "document recovery must serialize with publication")
+        docs_steps = docs.get("steps", [])
+        need(len(docs_steps) == 2 and docs_steps[-1].get("run") == 'python tools/signed_release.py sync-docs --version "$RELEASE_DOC_VERSION" --apply'
+             and docs_steps[-1].get("env") == {"GH_TOKEN": "${{ github.token }}", "A14_XPOSED_RELEASE_TOKEN": "${{ secrets.A14_XPOSED_RELEASE_TOKEN }}",
+                     "RELEASE_DOC_VERSION": "${{ inputs.version }}", "RELEASE_AUTHORIZATION": "${{ inputs.authorization }}"},
+             "document retry must only synchronize the explicitly selected published version")
         need("gradlew" not in json.dumps(workflow) and "prepare-signing" not in json.dumps(workflow), "promotion cannot rebuild or resign")
         for index, step in enumerate(job.get("steps", [])):
             if "signed_release.py publish " in step.get("run", "") and not errors:

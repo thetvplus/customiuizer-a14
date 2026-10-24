@@ -280,14 +280,31 @@ def release_plan() -> None:
         require_main_ci(sha)
     check_new_release(name, code, sha)
     local_release_notes(name, code)
+    review = release_review(name, code, sha)
     confirmation_policy()
     output(ready="true", destination=destination, prerelease=str(prerelease).lower())
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
-            summary.write(f"### Release confirmation\n\n{name} ({code}) · `{sha}`\n\n"
+            summary.write(review + f"### Release confirmation\n\n{name} ({code}) · `{sha}`\n\n"
                           "Approve **release-signing** to build and publish this exact version. Reject/cancel to keep it unpublished.\n\n"
                           + "\n\n".join(local_release_notes(name, code)) + "\n")
     print(f"Prepared release request: {name} ({code}), destination={destination}, prerelease={prerelease}")
+
+
+def release_review(name: str, code: int, sha: str) -> str:
+    try:
+        from tools.release_docs import review_candidate
+    except ModuleNotFoundError:
+        from release_docs import review_candidate
+    return review_candidate(name, code, sha)
+
+
+def sync_release_documents(name: str, env: dict) -> None:
+    try:
+        from tools.release_docs import sync_published
+    except ModuleNotFoundError:
+        from release_docs import sync_published
+    sync_published(name, apply=True, env=env)
 
 
 def release_notes_section(text: str, name: str, code: int, filename: str) -> str:
@@ -346,6 +363,7 @@ def signing_preflight() -> None:
         name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
         check_new_release(name, code, sha)
         local_release_notes(name, code)
+        release_review(name, code, sha)
 
 
 def check_badging(badging: str, name: str, code: int) -> None:
@@ -684,6 +702,8 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
                     "Existing release notes/title differ from the verified original candidate")
             check_release_assets(record, folder, release_assets(metadata, record), draft=record["draft"], prerelease=prerelease, partial=record["draft"])
     source = existing[REPO]
+    if source is None or source["draft"]:
+        release_review(name, code, sha)
     require_main_ci(sha, current=source is None or source["draft"])
     check_new_release(name, code, sha, resume=source is not None)
     for repository, tag, env in repositories:
@@ -756,13 +776,20 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
                               "Android signature, GitHub provenance, source tag and all asset digests verified.\n")
         print(release["html_url"])
 
+    if destination == "both" and not prerelease:
+        # Both public releases are already verified. A document failure is independently
+        # retryable and must never rebuild, resign, replace assets or move a release tag.
+        sync_release_documents(name, token_env)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "signing-preflight", "prepare-signing", "candidate", "attest-apk", "attest", "fetch", "publish", "publish-current"])
+    parser.add_argument("command", choices=["source-policy", "ci-status", "release-plan", "signing-preflight", "prepare-signing", "candidate", "attest-apk", "attest", "fetch", "publish", "publish-current", "sync-docs"])
     parser.add_argument("--directory", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--destination", choices=["source", "both"], default="source")
+    parser.add_argument("--version")
+    parser.add_argument("--apply", action="store_true", help="Commit verified download documents; otherwise preview changes")
     args = parser.parse_args()
     try:
         if args.command == "source-policy": source_policy()
@@ -779,6 +806,20 @@ def main() -> int:
             require(prerelease in {"true", "false"}, "Invalid promotion pre-release selection")
             publish(args.directory, args.run_id or "", args.destination, os.environ.get("RELEASE_AUTHORIZATION", ""), prerelease=prerelease == "true")
         elif args.command == "publish-current": publish_current(args.directory)
+        elif args.command == "sync-docs":
+            require(args.version is not None and re.fullmatch(r"r14\.\d+\.\d+", args.version), "Select the published version explicitly")
+            if os.environ.get("GITHUB_ACTIONS") == "true":
+                ref, _ = event_source()
+                require(ref == "refs/heads/main" and os.environ.get("RELEASE_AUTHORIZATION") == f"sync docs {args.version}",
+                        "Document retry requires trusted main and matching explicit authorization")
+            try:
+                from tools.release_docs import sync_published
+            except ModuleNotFoundError:
+                from release_docs import sync_published
+            env = dict(os.environ)
+            if env.get("A14_XPOSED_RELEASE_TOKEN"):
+                env["GH_TOKEN"] = env["A14_XPOSED_RELEASE_TOKEN"]
+            sync_published(args.version, apply=args.apply, env=env)
     except (ValueError, RuntimeError, OSError, KeyError) as error:
         print(f"signed_release: {error}", file=sys.stderr)
         return 1

@@ -94,7 +94,36 @@ gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 
 跨仓库凭据仅放在 release-publishing，使用现有、限定到 `Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14` 的凭据。细粒度 PAT / GitHub App 需要 **Contents: write 和 Workflows: write**：新 tag 携带源码提交，其 `.github/workflows/` 与下载仓库 metadata main 不同；经典 PAT 对应 `repo` / `public_repo` 和 `workflow`。组织要求审批时先完成审批，并留意凭据到期。参见 [GitHub Release 权限说明](https://docs.github.com/en/rest/releases/releases#create-a-release)。源码发布使用本仓库 GITHUB_TOKEN 的 contents:write；不扩大普通 CI 权限。
 
-发布前检查跨仓库凭据存在、仓库写权限、两端既有版本 / 草稿 / tag / 资产冲突；权限不足不先发布主仓库。账号 push 权限检查不能证明细粒度 token 的全部权限或未来网络可用性，实际服务器拒绝会停止并保留可恢复状态。Xposed 仅增加新源码 tag 和 Release，metadata main 独立维护。
+发布前检查跨仓库凭据存在、仓库写权限、两端既有版本 / 草稿 / tag / 资产冲突；权限不足不先发布主仓库。账号 push 权限检查不能证明细粒度 token 的全部权限或未来网络可用性，实际服务器拒绝会停止并保留可恢复状态。Xposed 新源码 tag / Release 与 metadata main 分开：正式资产验收后再同步下载文档，不移动发行标签。
+
+### 正式发行基线与内容审查
+
+正式发布前以主仓库最近实际公开成功的稳定版为基线，不能用 Gradle 当前版本、近期提交标题或旧文案代替。`release-plan` 核对 Latest、正式状态、tag / source SHA、APK 与元数据摘要及 A14 平台合同；从该 SHA 到候选完整 SHA 执行 Git ancestry / diff 检查。新版本双语 Changelog 的“自…起的变更 / Changes since…”必须匹配该正式基线，否则不进入签名。审核后、暴露密钥前及首次公开前重查；已公开的历史候选恢复保留原说明。既有 source-only 发行也可成为正式源码基线，不要求已延后同步的下载仓库先追平；更新 Xposed 稳定文档时才要求两端共同的最新稳定版与资产一致。
+
+现有审核摘要给出正式基线、候选、精确比较链接、完整变更文件清单和双语用户说明。审核者必须结合完整 diff、实际实现 / 生命周期、功能与配置变化及同 SHA 验证，独立判断新增、修改、修复、优化和移除，再精修文案并进入既有 `release-signing` 审核。自动清单提供证据入口，不能证明语义审查已完成或保证文案质量；不从 Commit Message 拼接，不将待确认内容写成正式验收成果。
+
+Changelog 用户节说明结果和兼容事项，工程节保存必要方法、验证层级及剩余边界；Release Notes 从 exact candidate SHA 的已审核用户节提炼。README 分别描述源码与正式 APK 状态。准备工具仅整理已审核的双语内容，不能用模板生成代替独立审查。
+
+### 下载文档同步与单独恢复
+
+主仓库 `tools/release_docs.py` 负责生成和核验。两端稳定 Release 公开并读回验收后，`publish_verified` 才同步 Xposed `main` 的双语 README、`CHANGELOG.md`（下载仓库沿用英文历史文件名）、`CHANGELOG_CN.md`、`SUMMARY`、`SCOPE` 与 `SOURCE_URL`。预发行、仅源码发布和候选不更新稳定说明。
+
+版本、APK 文件名 / 大小 / 摘要、source SHA 取已公开元数据；作用域和双语更新记录取该正式 SHA，支持历史文件布局，只保留实际正式章节的用户内容。README 保持简洁的下载、安装、兼容及精确链接，不复制开发文档，其他文件保留。相同内容不提交；变化一次提交全部文档。写入前重查 Latest 和 metadata main，非强制更新防止覆盖并发修改，再按 Git blob 摘要读回。
+
+文档失败使流程报告失败，但不回删成功的发行。未知写入结果、并发推进均可独立重试，不重签、重建、替换资产或移动标签。CLI 默认只预览，明确应用已授权的正式说明：
+
+```sh
+python tools/signed_release.py sync-docs --version r14.25.3
+python tools/signed_release.py sync-docs --version r14.25.3 --apply
+```
+
+既有 A14 Promote Release 增加 `docs-only`，不需原 Artifact / Run ID，不安装 Android SDK、不签名；使用 native main、`release-publishing` 和与发行共用的写入锁：
+
+```sh
+gh workflow run a14-promote-release.yml --ref main -f destination=docs-only -f version=r14.25.3 -f 'authorization=sync docs r14.25.3'
+```
+
+只接受两端共同的最新稳定版，旧版本不能覆盖新说明。跨仓库 token 仍只在 publishing Environment；源码 GITHUB_TOKEN 只读来源，Xposed 文档使用既有跨仓库 Contents:write，不放宽签名或资产恢复合同。
 
 ### 更新记录、说明与命名
 
