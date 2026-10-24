@@ -4,6 +4,22 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class StatusBarHeightResourcesTest {
+    @Test fun retirementNeverTouchesOtherDefinitionsOrReferencedResources() {
+        val own = "/data/resource-cache/android-${StatusBarHeightResources.overlayName}-AB12.frro"
+        for ((path, refs) in listOf("/data/resource-cache/other.frro" to emptySet<String>(), own to setOf(own))) {
+            assertTrue(StatusBarHeightResources.retireOwnedPath(path, refs,
+                { error("must not remove idmap") }, { error("must not inspect idmap") },
+                { error("must not delete") }, { error("must not inspect file") }))
+        }
+    }
+
+    @Test fun failedIdmapRetirementKeepsTheFileAndAlreadyDeletedFilesAreSuccessful() {
+        val own = "/data/resource-cache/android-${StatusBarHeightResources.overlayName}-AB12.frro"
+        assertFalse(StatusBarHeightResources.retireOwnedPath(own, emptySet<String>(), { false }, { true },
+            { error("still has idmap") }, { true }))
+        assertTrue(StatusBarHeightResources.retireOwnedPath(own, emptySet<String>(), { false }, { false }, { false }, { false }))
+        assertFalse(StatusBarHeightResources.retireOwnedPath(own, emptySet<String>(), { true }, { false }, { false }, { true }))
+    }
     @Test fun enabledRuntimeNeverPersistsAnEnabledPreferenceAndStockRebootRestoresDisabledState() {
         var desired = true // An external tool attempted to enable our ID.
         var state = 3

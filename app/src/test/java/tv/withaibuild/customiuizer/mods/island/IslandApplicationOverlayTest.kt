@@ -24,6 +24,8 @@ class IslandApplicationOverlayTest {
         wms.mSessions.addAll(listOf(first, otherUser, Session(wms, 1000, mutableSetOf(Surface(0))),
             Session(wms, 10318, mutableSetOf(Surface(1)))))
         assertEquals(setOf(0, 10), access.snapshot(wms).users)
+        first.mAppOverlaySurfaces.remove(first.mAppOverlaySurfaces.first())
+        assertEquals(setOf(0, 10), access.snapshot(wms).users)
         first.mAppOverlaySurfaces.clear()
         assertEquals(setOf(10), access.snapshot(wms).users)
         wms.mSessions.remove(otherUser)

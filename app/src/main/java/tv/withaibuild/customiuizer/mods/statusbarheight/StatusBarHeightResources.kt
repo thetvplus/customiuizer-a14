@@ -18,6 +18,7 @@ import tv.withaibuild.customiuizer.mods.utils.StatusBarHeightConfig
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.Helpers
 import java.lang.ref.WeakReference
+import java.io.File
 
 /** One platform-owned definition. Desired enabled is ALWAYS false, including on disk.
  * Native updateState validates target/idmap before this module changes only runtime state 2 -> 3.
@@ -100,6 +101,14 @@ internal object StatusBarHeightResources {
             original == true || cleared || changed
         }
     }
+
+    internal fun retireOwnedPath(path: String, referenced: Set<*>, removeIdmap: () -> Boolean,
+        idmapExists: () -> Boolean, delete: () -> Boolean, exists: () -> Boolean): Boolean {
+        if (!path.startsWith("/data/resource-cache/android-$overlayName-") || !path.endsWith(".frro") ||
+            path in referenced) return true
+        if (!removeIdmap() && idmapExists()) return false
+        return delete() || !exists()
+    }
     private fun activeHeight(): Int? = MainModule.mPrefs.getInt(StatusBarHeightConfig.PREF_KEY,
         StatusBarHeightConfig.DEFAULT_SENTINEL).takeIf { it > StatusBarHeightConfig.DEFAULT_SENTINEL }
 
@@ -118,6 +127,9 @@ internal object StatusBarHeightResources {
         private var closed = false
         private var registered = false
         private var applied: Int? = null
+        // Normally one old record + one active definition. Revocation may retire both records.
+        private val retired = ArrayList<Any>(2)
+        private var creationFailed = false
         private val observer = object : ModuleHelper.PreferenceObserver {
             override fun onChange(key: String?) {
                 if (key == null || key == StatusBarHeightConfig.PREF_KEY) schedule()
@@ -138,17 +150,42 @@ internal object StatusBarHeightResources {
             if (closed) return@guarded
             val service = owner.get() ?: return@guarded
             val height = if (removed) null else activeHeight()
-            if (applied == height && registered) return@guarded
+            if (applied == height && registered && retired.isEmpty()) return@guarded
             val token = android.os.Binder.clearCallingIdentity()
             try {
                 synchronized(abi.lock.get(service)) {
                     val impl = abi.impl.get(service)
-                    val targets = if (height != null) abi.register.invoke(impl, abi.fabricate(height))
-                        else abi.unregister.invoke(impl, abi.id)
-                    abi.updateTargets.invoke(service, targets)
+                    val settings = abi.settings.get(service)
+                    // Failed native retirement must not let preference changes accumulate files.
+                    val iterator = retired.iterator()
+                    while (iterator.hasNext()) {
+                        val old = iterator.next()
+                        if (ModuleHelper.guarded(false) { abi.retire(impl, settings, old) }) iterator.remove()
+                    }
+                    if (height != null && retired.isNotEmpty()) return@guarded
+                    if (applied == height && registered) return@guarded
+                    if (height != null && creationFailed) return@guarded
+                    val previous = abi.getNullableInfo.invoke(settings, abi.id, 0)
+                    val targets = if (height != null) try {
+                        abi.register.invoke(impl, abi.fabricate(height))
+                    } catch (error: Throwable) {
+                        creationFailed = true // No unbounded retries/orphans after an uncertain native failure.
+                        throw error
+                    } else abi.unregister.invoke(impl, abi.id)
+                    try { abi.updateTargets.invoke(service, targets) }
+                    catch (error: Throwable) { creationFailed = true; throw error }
+                    applied = height
+                    registered = true
+                    if (previous != null) {
+                        check(retired.size < 2)
+                        retired.add(previous)
+                    }
+                    val cleanup = retired.iterator()
+                    while (cleanup.hasNext()) {
+                        val old = cleanup.next()
+                        if (ModuleHelper.guarded(false) { abi.retire(impl, settings, old) }) cleanup.remove()
+                    }
                 }
-                applied = height
-                registered = true
                 XposedHelpers.log("[StatusBarResources] heightDp=$height desiredEnabled=false")
             } finally { android.os.Binder.restoreCallingIdentity(token) }
         } }
@@ -181,6 +218,8 @@ internal object StatusBarHeightResources {
         private val service = type("com.android.server.om.OverlayManagerService")
         private val implementation = type("com.android.server.om.OverlayManagerServiceImpl")
         private val settingType = type("com.android.server.om.OverlayManagerSettings")
+        private val infoType = type("android.content.om.OverlayInfo")
+        private val idmaps = type("com.android.server.om.IdmapManager")
         private val identifierType = type("android.content.om.OverlayIdentifier")
         private val critical = type("android.content.om.CriticalOverlayInfo")
         private val internal = type("android.os.FabricatedOverlayInternal")
@@ -196,6 +235,12 @@ internal object StatusBarHeightResources {
         val impl = XposedHelpers.findField(service, "mImpl")
         val settings = XposedHelpers.findField(service, "mSettings")
         val implSettings = XposedHelpers.findField(implementation, "mSettings")
+        private val idmapManager = XposedHelpers.findField(implementation, "mIdmapManager")
+        private val basePath = XposedHelpers.findField(infoType, "baseCodePath")
+        private val removeIdmap = method(idmaps, "removeIdmap", infoType, int)
+        private val idmapExists = method(idmaps, "idmapExists", infoType)
+        private val deleteFabricated = method(idmaps, "deleteFabricatedOverlay", String::class.java)
+        private val usedPaths = method(settingType, "getAllBaseCodePaths")
         val lock = XposedHelpers.findField(service, "mLock")
         val updateState = method(implementation, "updateState", critical, int, int)
         val onStart = method(service, "onStart")
@@ -218,6 +263,16 @@ internal object StatusBarHeightResources {
         private val dataType = XposedHelpers.findField(entry, "dataType")
 
         fun isOurs(value: Any) = packageName.invoke(value) == "android" && name.invoke(value) == overlayName
+        fun retire(impl: Any, settings: Any, previous: Any): Boolean {
+            val path = basePath.get(previous) as String
+            // Mirror native stale-cache retirement, restricted to this definition's old path.
+            // Never remove a referenced path, another overlay, or a caller-supplied filename.
+            val manager = idmapManager.get(impl)
+            return retireOwnedPath(path, usedPaths.invoke(settings) as Set<*>,
+                removeIdmap = { removeIdmap.invoke(manager, previous, 0) == true },
+                idmapExists = { idmapExists.invoke(manager, previous) == true },
+                delete = { deleteFabricated.invoke(manager, path) == true }, exists = { File(path).exists() })
+        }
         fun fabricate(dp: Int): Any {
             val instance = constructor.newInstance("android", overlayName, "android")
             require(dp in 1..0x7fffff)
