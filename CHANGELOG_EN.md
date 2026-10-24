@@ -6,6 +6,10 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+## r14.25.4 — 2026-10-24
+
+versionCode 249. Changes since r14.25.3:
+
 ### User changes
 
 Refine media, window transitions and official download instructions while preserving native animations and system security boundaries.
@@ -24,6 +28,7 @@ Refine media, window transitions and official download instructions while preser
 - Keep current native values and module writes per View / Window, bind geometry listeners to the actual parent and release them on detach. Preserve empty native Insets frames. Plugin replacement releases only its own gesture tokens, including when terminal effects fail.
 - Reject stale Dock frames and capture failures by generation. Two fixed scalar buffers cache only the current lens parameters and invalidate with shader replacement. AyuGram DexSQL analysis informed duplicate-update elimination; no code or shader was copied. Keep the existing velocity-carrying island animation and real wallpaper sampling.
 - Establish the release-review baseline from real stable releases, both asset digests and the exact source SHA; inspect the complete Git diff and bilingual content. Generated inventories do not replace semantic review. Download documents read only the published source, update in one non-forced commit and verify readback, with independent recovery. Buffer successful CI test fixtures while preserving failure diagnostics.
+- Consolidate current development code and documentation while retaining obsolete-entry deletions. Keep feature maps and process matrices generated from their existing sources. Add read-only summaries, filters and pagination for auxiliary data; repair version / field validation, ROM coverage counts and temporary test cleanup. Extraction cannot overwrite manual calibration, baseline refreshes cannot accept new fingerprints, and auxiliary-contract / schema changes use the existing tool gates.
 - Source / Host regressions, tool tests and Android builds are covered. No ADB device is available. Camera / Gallery gray bars, PiP visual continuity, input pass-through, continuous playback, native music return and ROM performance still require device acceptance; no blanket device-fix claim is made.
 
 ## r14.25.3 — 2026-10-23
