@@ -1216,6 +1216,10 @@
     <string name="system_island_title">Dynamic Island</string>
     <string name="system_island_intro">Restart System UI after first selecting Dynamic Island or enabling an integration. Hidden on the lock screen, with the screen off, in landscape or while the notification shade is open.</string>
     <string name="system_island_media_title">Music and media</string>
+    <string name="system_island_media_return_title">Music into the island</string>
+    <string name="system_island_media_return_summ">While music plays, swipe up to leave a selected app and its window settles into the island with a gentle bounce. Only manually selected apps use this effect. Restart the launcher after first enabling it.</string>
+    <string name="system_island_media_return_apps_title">Select music apps</string>
+    <string name="system_island_media_return_apps_summ">Choose apps manually. An empty selection keeps the usual animation.</string>
     <string name="system_island_media_summ">Uses the player selected by System UI. Swipe up to hide. Visible music closes 2 seconds after pausing; hidden paused music stays hidden.</string>
     <string name="system_island_media_swipe_title">Swipe to change tracks</string>
     <string name="system_island_media_swipe_summ">Turning this off blocks previous/next track on horizontal swipes. Other configured actions remain available.</string>

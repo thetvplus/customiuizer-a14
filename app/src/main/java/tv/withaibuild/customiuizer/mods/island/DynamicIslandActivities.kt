@@ -40,6 +40,8 @@ internal data class IslandOptions(
     val feedback: Set<IslandSystemKind> = emptySet(),
     val notificationApps: Set<String> = emptySet(),
     val waveformMode: Int = if (waveform) 1 else 0,
+    val mediaReturn: Boolean = false,
+    val mediaReturnApps: Set<String> = emptySet(),
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
@@ -69,7 +71,9 @@ internal data class IslandOptions(
                 IslandSystemKind.entries.filterTo(linkedSetOf()) {
                     prefs.getBoolean(it.preferenceKey, legacyFeedback)
                 },
-                prefs.getStringSet("system_island_notification_apps"), waveformMode)
+                prefs.getStringSet("system_island_notification_apps"), waveformMode,
+                prefs.getBoolean("system_island_media_return"),
+                prefs.getStringSet("system_island_media_return_apps").toSet())
         }
     }
 }

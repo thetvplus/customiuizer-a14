@@ -1,6 +1,6 @@
 # A14 全量功能地图与分批精修
 
-2026-10-23 产品与发布收口：本机已完成一组有边界的 ADB 验收，见第 15 节；此前各批的“待实机”不能整体升级为通过。
+2026-10-24 继续 M05：共享手势的 owner 清理及异常释放见第 16 节；用户补充的实验音乐波形实测与映射修正见第 17 节。2026-10-23 有边界的 ADB 验收仍见第 15 节；此前各批的“待实机”不能整体升级为通过。
 
 这是 A14 功能精修、DexSQL 取证、页面调整和安全退役的长期工作入口，[工程规则](../../AGENTS.md) 统一链接到本页。方案起点为本地提交 `3981f85`，日期为 2026-10-19。后续直接更新本页的任务与结论，不按轮次新增审计报告。源码变化后先校准地图，历史勾选不能作为新代码的验收结果。
 
@@ -179,7 +179,7 @@ M01 建立的追踪关系为：**页面 / 偏好键 → Feature ID 或设置端�
 | M02 声音与振动 | 焦点、计时、面板、振动与高音量警告八批收口 | 复用 M02.01–M02.08；可视化单独处理；预制效果与硬件能力保留实机边界 | 行为、音量面板、可视化各自连续，名单与开关相邻 |
 | M03 通知链路 | 源码精修、回归与双区域静态取证已推进；设备待验 | 通知点击事务、Heads-up、权限 / 频道、Count/Fold、着色和时钟；详见本页 M03 专项及 ROM 交接 | 保留设置键；系统保护边界收口，十种维护语言同步说明 |
 | M04 锁屏与应用锁 | 待核查 | 认证与解锁策略；应用锁超时与名单；锁屏媒体 / 充电 / 闹钟；安全相关回退优先 | 显示与交互、安全、媒体与数据分开，限制条件明确 |
-| M05 状态栏与控制中心 | 部分静态复核 | 复用 `8c922a5` 的有效结论；后续分为信号与双卡、时钟与图标、Duo、电池与温度、磁贴与插件生命周期等小批 | 主开关、尺寸与外观、附加行为分层；保留 Duo 不含下载进度的边界 |
+| M05 状态栏与控制中心 | 共享手势 owner 清理已修；其余部分静态复核 | 复用既有快照、Duo、温度与插件生命周期；本次先修复跨 runtime 清令牌和结束事件异常残留，见第 16 节；双卡 / 息屏 / 重建继续待验 | 主开关、尺寸与外观、附加行为分层；保留 Duo 不含下载进度的边界 |
 | M06 启动器 | M06.05 图标中心、对称尺寸与采样透镜已本地验证 | 复用 Dock 和 `3981f85`；待实机确认采样 / 材质 / 导航区与动画同一闭环，再按实际共享 owner 合并布局、小部件和动画交接 | 保留原生图标、拖拽与动画坐标 |
 | M07 按键与导航 | 部分静态复核 | 返回 / Home / 菜单长按；电源与音量键；手势区域和动作；系统与输入法两侧的配合 | 显示、键盘、动作分组；作用域和重启条件不含糊 |
 | M08 手机管家与维护 | 部分静态复核 | 权限倒计时 / 默认打开；侧边栏与推荐；安全扫描 / 温度 / 预览隐私；维护组件停用与恢复分别核查 | 维护工具与常用手机管家设置分离；国行 / 国际差异按证据处理 |
@@ -688,3 +688,112 @@ CORE / MAINTAIN / RETIRE_CANDIDATE 的长期原则归 [ARCHITECTURE](../../ARCHI
 `39906924894` 在 05:39 UTC 因 release-signing 缺 Required reviewer 停止；旧版在 05:40 UTC 才由本地正式程序发布，不能把原失败归因为“版本已经发布”。原自动入口已经有跳过已发布版本的路径，本轮补齐手动入口的预期跳过；草稿 / 冲突仍失败。受信签名范围收敛为 main，保留 exact SHA / main CI、历史证书、APK digest、来源证明、先源码后 Xposed、幂等恢复及失败停止。双环境仅允许 main，由本轮明确授权的账号审核；正式候选先在发布环境检查点完成实机 smoke，再批准公开，无须重建或手动重复 CI。该授权不等于永久取消审核。
 
 后续先做 M05 的真实通知与 Duo / 双卡 / 息屏状态、控制中心 owner / 仲裁的受控轨迹，再按缺陷证据进入 M07。M04 需要可用工作资料 / 多用户的真实认证场景；M08 保持恢复事务和既有有限清单，不扩大停用。实时波形继续保留为维护成本 / 使用收益待评估候选，不据一次静态引用或库列表删除功能。
+
+## 16. 2026-10-24：M05 共享手势的所有权与异常释放
+
+本批从远端 main 的 exact SHA `eae2529d1af5e513c8a58c8ce1d198d371e63516` 创建 `codex/a14-m05-owner-refinement-20261024`，生产源码与回归提交为 `447aeb175f18745ae7cddd05c89af66ec0dd510d`。当前授权为完成精修后推送远端；不合并 main，不修改 r14.25.3 / 248，不创建 tag 或 Release。
+
+### 确认缺陷与修复范围
+
+状态栏和控制中心分别持有 `GestureMachine`，共用一个 `PhysicalGestureArbiter`。原插件首次 bind、loader 替换、部分安装失败及显式 clear 都会进入 `clearInternal()`，其中的 `releaseAll()` 会撤销仍存活的状态栏 owner。旧插件的整机 `GestureMachine.clear()` 也有同样问题。状态栏先 DOWN / MOVE 调整临时亮度、再遇到插件绑定 / 清理时，其后 UP 不再持有令牌，因而不会提交最后亮度；这一调用顺序已由 Host 回归复现，不声称设备上已观察到插件替换与手势同时发生。
+
+现在插件清理由其 runtime 负责；整机 clear 先遍历本机已准备的 owner，逐个释放所属令牌，再清除快照、依赖、配置和去重记录。只有已准备依赖的 owner 能取得令牌，因此无需新增集合或全局归属表。两个插件 owner 都会被释放，独立状态栏 owner 仍可完成 UP；旧插件后续 UP 不产生动作。
+
+另一条故障路径是结束事件已将状态置为 IDLE，但执行器抛异常会跳过后续令牌释放。现在把原来的释放条件放入 `finally`；UP、CANCEL 或发出 Reset 的路径均能释放当前令牌，异常继续原样抛出，不吞掉致命错误。普通成功路径的命令、执行顺序、DOWN 配置快照、原生触摸分发、Hook 安装目标与 `chain.proceed()` 次数不变。
+
+回退单位为 `GestureMachine`、插件清理入口及对应 JVM / Python 回归。无新依赖、线程、任务、监听、缓存或保留容量；新增清理遍历仅在 runtime 销毁 / 替换的冷路径执行，令牌仍受既有 16 项上限约束。未测量真实 CPU、GPU、帧时间、PSS 或功耗，不宣称性能提升。
+
+### ROM 与定义来源
+
+使用已安装 DexSQL **0.1.1** 的 MCP 文档及实际 `class_methods` / `dex_files` schema，重新测量两个输入的 SHA-256。复用昨日设备采样的 TW SystemUI `5d8f2fe0b65d8a1a947b4280f8053b524f8c5de73f48a74f8792d415ae76e513`；参考镜像的 CN / TW 插件本轮哈希均为 `3dafd9e068ebee7e88344ae1c7d146c7e2d41e79b5c52b7736cd3e58be0cc999`，只加载一份相同 binary。四份宿主 DEX 和三份插件 DEX 的来源分别保留；参考插件不自动视为当前设备所装版本。
+
+扩展既有 [statusbar_gestures_contract.sql](../../tools/dexsql/statusbar_gestures_contract.sql)，完整读取四组结果：宿主 8 个声明 / 5 条去重调用，插件 5 个声明 / 3 条去重调用。唯一的插件声明分别为 `onAttachedToWindow()V`、`destroy()V`、`handleMotionEvent(MotionEvent,Z)Z`、`onTouchEvent(MotionEvent)Z` 与 `onInterceptTouchEvent(MotionEvent)Z`，未声明独立 `onDetachedFromWindow()`。完整 Smali 确认 attach 调用 FrameLayout 后隐藏窗口，destroy 发布 DESTROYED；onTouchEvent 传入 `external=false`，第二参数不能解释为 intercept。宿主仍依次 updateBarInteracting → handleEvent → 条件性 Gefingerpoken 分发。保留原安装与原生门禁，本批没有依据静态结果增加 Hook。
+
+原始查询、完整分页 Smali、基线失败和构建日志保存于忽略的 `.di-evidence/m05-owner-20261024/`，数据集已关闭；不提交 ROM、APK、mapping 或设备内容。
+
+### 验证与设备交接
+
+- 修改生产代码前，两组专项共 25 tests、4 failures；均为本批新增回归，分别确认整机清理、空机器清理、插件生命周期跨 owner 撤权，以及异常结束后的令牌残留。
+- 修复后 `python tools/verify.py fast --changed --tests '*Gesture*Test' '*ControlCenterPluginRuntimeTest'` 退出 0。手势修复源码的首次 `python tools/verify.py full` 退出 0：354 suites / 3263 tests，0 failures / errors、2 skipped，包含 Kotlin / Java 编译及 lintDebug；追加音乐波形后的最终源码另见第 17 节。
+- `python -m unittest discover -s tools/tests -p "test_*.py"` 退出 0：600 tests，0 failures / errors、5 skipped。两处旧静态断言原先要求全局 releaseAll，现改为禁止跨 runtime 清理，同时检查本机 owner 释放先于依赖清空；没有删除原租约、释放和有界状态检查。
+- 提交 `447aeb17` 的未签名 `assembleDevelop` / `lintVitalDevelop` 退出 0；provenance、zipalign、SDK 34 / 原 applicationId / arm64-v8a 核对通过。该中间产物为 4,059,994 bytes、SHA-256 `ef8182cfd704cc0e9e4e52025be213a8b7f1b374e9cc43514b9b7c4c8c226101`，没有安装它；追加波形后的最终验收产物另见第 17 节。构建首次把完整 SHA 误传给只接收 8 位值的 buildRevision，在配置阶段被拒绝，修正参数后成功，不改变构建校验。
+
+本批开始 ADB 无设备，用户后续接入相同 fuxi 并授权指令验收，音乐波形的实际结果见第 17 节。共享手势仍须覆盖状态栏亮度滑动期间插件首次加载 / 替换 / 部分失败、控制中心 owner destroy / 重建、CANCEL 和双入口同一物理事件只执行一次；不能为覆盖失败分支而在生产 SystemUI 主动注入致命错误。双卡、Duo、息屏更新次数、锁屏安全磁贴及 M07 原待验场景继续保留，不把本批 Host / ROM 结果升级为整项 M05 的设备通过。
+
+## 17. 2026-10-24：实验音乐波形的真实振幅与鼓点响应
+
+用户在同一任务中补充“实验波形与实际音乐不太合、形状相似”，并接入设备。以 `74b02de3` 连续三次在线、boot_completed=1、原 fuxi / HyperOS 1 / Android 14 fingerprint 和 Root 实际输出为边界；每组短操作使用 `try/finally` 收尾，恢复原播放器的暂停或停止状态，并通过现有 `sleep_and_lock` 同时确认 Dozing / Asleep 与 keyguard showing。原安装 APK 与偏好在本机忽略目录备份，不保存 PIN。
+
+### 复现与取舍
+
+当前设置读回为实验模式 `2`，播放器为本地 MEDIA 音轨。原已安装正式 APK 的 provenance 为 main `eae2529d`，r14.25.3 / 248；当前设备插件实际拉取的哈希也为 `3dafd9e068ebee7e88344ae1c7d146c7e2d41e79b5c52b7736cd3e58be0cc999`，与第 16 节所用 binary 一致。播放时 AudioFlinger 的具体 effect 为 **Visualizer / ID 99 / session 57 / client SystemUI PID 5851 / Enabled=y / Suspended=n**，明确区别于只枚举 Visualizer 库。三个截图的五柱像素高度分别为 `[50,50,42,30,12]`、`[48,52,44,32,22]`、`[50,48,42,44,16]`；确有真实频段变化，低频却长期偏高。
+
+随后在设备上用临时、选定非零 session 的独立 ART probe 读取同一既有 Visualizer 的 FFT；不改 capture size、scaling 或启用状态，不访问全局输出混音。30 次 `getFft` 均返回 SUCCESS，512 点、48 kHz、NORMALIZED 模式。probe 仅输出每帧五个频段的峰值功率，不落盘原始 FFT / 音频；退出释放句柄，全部测试恢复播放状态并读回锁屏。主机使用同一批聚合数据，按旧 / 新映射逐次回放并丢弃前五份预热，剩余 25 份低频值的范围为旧 **0.9181–0.9675**、新 **0.6170–0.8635**。这些是相同实测输入的算法对照，采样间隔约 100 ms，不能当作真实 20 Hz 帧时间或同步观感的 A/B 测量。
+
+根因是旧 `10*log10(power)/45.16` 把常见幅度压到接近满高，再叠加 `.25` 的慢衰减，使相邻鼓点之间保留较高底座。`AudioFftBands.five` 现在按有符号 8-bit 复数幅值的理论上界计算 `sqrt(power/32768)`，保持实测振幅比例；attack / release 改为 `.8 / .45`，20 Hz 下四次静音回调后低于上一峰值的 10%。五个频段边界、柱形尺寸、原生采集、20 Hz 上限、选定 UID / user / token、失效与释放路径全部沿用。`peakPower` 及锁屏音乐可视化的独立 dB 映射不变。
+
+继续使用 Android [Visualizer 的 NORMALIZED 模式](https://developer.android.com/reference/android/media/audiofx/Visualizer#SCALING_MODE_NORMALIZED)，符合其音乐可视化用途；没有增加每帧 RMS 查询、Binder、音频权限或全局混音 fallback。仍仅保留所属 capture 的五个平滑值，无新对象、缓存、任务或常驻日志；未据此宣称 CPU / PSS / 功耗改善。
+
+### 验证与交接
+
+源码提交为 `7bb9a0b55857912ebb88077cf8fca08822f6114d`，包含本批手势与波形两个独立回退单位。修改映射前，四项 FFT 回归中三项失败，确认振幅减半仍接近原高度、200 ms 静音残留过大及旧 release 合同；修复后 FFT、采集生命周期与岛窗口专项 fast 退出 0。新增两项用例检查幅度比例、频段隔离和鼓点间隙，原合法输入、静音与边界保护继续保留。
+
+该阶段 `python tools/verify.py full` 退出 0：354 suites / **3265 tests**，0 failures / errors、2 skipped，包含 Kotlin / Java 编译与 lintDebug。工具源码与测试自 `447aeb17` 未再修改，复用已通过的 600 项 Python 工具测试结果，不重复跑相同范围。
+
+- 同证书 `assembleDevelop` / `lintVitalDevelop` 退出 0；仍为 r14.25.3 / 248，明确标记 **Develop**，不作为正式发行。APK 为 4,064,090 bytes、SHA-256 `56f3c41d63c9ca3a3074c3329ac53a0601243fd61fcc7d714680ef455e00f2b4`；mapping SHA-256 `e402cceb51367ea89ba3da20694c9547824951ca5c006ffe438ba32beff8fa73`。provenance 的 revision `7bb9a0b5` / buildType develop、历史证书 `c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70` 与 zipalign 均核对通过。
+- DexSQL 复核同一产物的 DEX **039**、compileOnly Hook API 定义 **0**、Manifest 设置入口直接 Hook API 引用 **0**；setId / getId 各一处，replaceHook **0**，三个固定 ID 使用点保留。同产物成员 mapping 将合并后的 `Llm1;->t` 归属到 HookInstallation.intercept / confirmStableHookId；`Lzu;->a` 保留逐 owner 释放，dispatch 的正常与 catchall 路径均保留按令牌归属释放并重新抛错。未把静态 invoke 次数作为运行安装次数。
+- 实机 `install -r` 成功，设置读回与备份相比 **0 个键变化**。无通话时重启一次 SystemUI，PID **5851 → 20012**，主机日志实际读到 `[7bb9a0b5] loaded in com.android.systemui`，验收期间 PID 稳定。
+- 当前真实播放器的八帧截图中，第一频段高度为 **34–50 px**、第三频段 **12–36 px**；这是不同播放位置的现场显示记录，不作为同曲同位置的数值 A/B。播放时岛窗口存在，具体 Visualizer **ID 251 / session 65 / Enabled=y / Suspended=n**；暂停一秒时 native effect 已释放，按原有 2000 ms 暂停展示合同等待，轮询在 **2.37 s** 确认窗口移除。恢复播放产生新 effect **ID 275**；息屏时播放器仍为 PLAYING，SystemUI 的 Visualizer effect 已释放。期间 spectrum 错误 **0**，有界目标事件日志未观察到 crash / ANR；不清零原日志，不推断长期性能或全部播放器通过。
+- 初次显示探针使用了错误的窗口标题，后又在原生两秒暂停展示期限前检查窗口消失；已改为源代码中的实际标题、仅匹配活动 Window 条目，并按既有期限有界等待。修正后整组探针退出 **0**，没有为满足探针修改产品时序。临时设备 probe / UI XML 已移除，测试结束恢复暂停，读回锁屏；设备保留上述同版本 Develop 测试包。
+
+远端 exact-head A14 CI 以本次交付回执登记，不把先前 main 或中间源码结果当成本分支通过。当前授权仍为推送开发分支，不发布新版本。其他播放器、蓝牙 / 远程 / offload、匿名或多会话、权限撤销与全部字体 / 旋转组合仍待对应场景验收；本批没有扩大采集边界。
+
+### 末端两柱的高频显示
+
+用户继续指出末尾两点几乎不动。五柱分别表示低到高的频段，末两柱为 1.8–6 kHz、6 kHz 以上至 Nyquist；设备聚合样本中最高频段峰值功率仅 1–73，线性显示时自然很矮。`4f3ef7060ca1934029b074eb3e06ef085690c694` 为末两段分别增加固定 3 / 8 倍显示增益，并抑制功率不超过 2 的一位量化底噪，仍在平滑前钳制至 1。没有按各段自身峰值归一化，不把弱高频伪造成始终满幅；前三段保持实测振幅比例与原频段隔离。
+
+同一批聚合数据回放后，低频仍为 0.6170–0.8635，末两段分别为 0.1352–0.4772、0.0270–0.2325；这是算法回放，不作为同步设备 A/B。新增回归在修改前 6 项 FFT 测试中 2 项失败，确认弱高频映射与量化噪声边界；修复后该阶段 Full 为 354 suites / 3267 tests，0 failures / errors、2 skipped。连同后续音乐收拢的最终产物与实机结果见第 18 节。
+
+## 18. 2026-10-24：手动选择应用的音乐窗口飞入
+
+用户要求“退出音乐 App 时，封面收进岛内，带一点接住的回弹”，需要开关和手动应用选择，不能全局生效。早期提交 `1688e7ad6a99add005689c56b36b4724b2ebf66b` 仅实现岛附近的封面收拢；用户实机指出原窗口仍返回桌面图标，不能作为窗口飞入通过。当前接入桌面原生 CLOSE_TO_HOME 窗口动画，删除额外封面轨迹层，保持现有岛布局与常规动画。沿用本批分支、版本和不发布合同；高频波形调整仍是独立回退单位。
+
+### 行为与所有权
+
+“音乐直接上岛” `system_island_media_return` 默认关闭，`system_island_media_return_apps` 默认空，使用既有多选应用页、设置搜索和备份。首次启用需要重启桌面。仅对手动选中、正在播放的系统主播放器来源应用生效，空集合永不代表全部应用。
+
+Launcher 在 NavStubView 附着时创建 owner，解除附着时释放；新的 Feature ID 257 仅在 LAUNCHER / APPLICATION_ATTACHED、岛与音乐开启、开关打开、名单非空且非简化模式时安装。原安装点只安装一次，偏好变化不会重装 Hook。已安装 owner 关闭时保留既有偏好观察通道，移除业务 Receiver / ScreenState listener、取消 Scope / 待发送工作并清空状态。
+
+SystemUI controller 仅在该功能有效时拥有一份 Publisher。双方使用显式包名、Android 14 shareIdentity 和项目既有发送者校验，消息只包含选中包名、用户、岛几何、时间与单调序列，不包含标题、封面、音频或窗口内容。桌面缓存容量一、有效期 5 秒；按下手势时异步请求刷新，没有 MOVE / 逐帧 IPC 或轮询。岛几何变化与安全状态变化使旧状态失效；关闭 / 销毁发送一次最终失效并注销。Handler 只移除自己的重配置 Runnable，保留框架已排队广播的完成路径，避免 owner 清理吞掉广播交付。
+
+原生动画提交后，仅在原调用成功、currentRectFParams 持有本次副本、原生动画正在运行且真实 Spring 终点与岛一致时，异步回传一次确认。ROM 的 animTo 即使没有启动 transition 也可能正常返回，不能仅凭未抛异常让岛回弹。SystemUI 校验当前几何、应用、用户、手势序列及不超过 1 秒的提交时间，再复核原串行会话快照，等待 80 ms 后启动 560 ms 的有限接入与轻微回弹。最多保留一个按 token 绑定、750 ms 失效的候选。未收到原生确认时保持原 750 ms 音乐入场；晚到确认不能跨过第二次应用切换或重新进入播放器。关闭 / 撤销选择、暂停、会话替换、隐私状态、通知抢占和 owner 失效均取消；尚未入场的快路径取消时恢复原截止时间。简化模式和系统动画关闭时保留原生行为。
+
+### 原生窗口合同与 ROM 证据
+
+从实际连接的设备读取 Launcher 路径 `/product/priv-app/MiuiHome/MiuiHome.apk`，版本 `RELEASE-4.39.30.8604-08262248` / `439308604`；APK SHA-256 为 `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`，与 TW 目标样本一致。包含两个 DEX 039，定义类数为 7480 / 7880。新查询 `tools/dexsql/island_launcher_return.sql` 返回 23 个声明、36 个字段与 11 条相关调用；结果及完整相关 smali 保存在忽略的现场证据目录，数据集均已关闭，不提交 ROM 样本。
+
+已顺序复核 WindowElement.animTo → updateCurrentDisplayRotation / animClear → animResetReady 或 runningAnimUpdate → 原生 Spring 启动与 updateCurrentRect，以及空 targetView、浮动图标恢复和 finish / cancel 路径。RectFParams 的 21 参数构造、默认参数、各字段的真实类型均来自定义；NavStubView.onTouchEvent 会内部改写 MOVE 为 DOWN，因此模块在原调用前只检查原始 DOWN。TW `framework.jar` SHA-256 `8586618b92c2892a9c6be1cfd28871d9b39655162ff97a4b12f8d966d14895e9` 中确认 RunningTaskInfo 继承 TaskInfo，公开 getWindowingMode 仅读取 configuration，不发 Binder；这是样本静态证据，不能代替目标 ART 调用和实机动画验收。
+
+所有反射元数据在安装冷路径解析。只接管竖屏、标准全屏、单个 closing 目标且包名 / taskId / 用户与当前选中播放器完全一致的 CLOSE_TO_HOME；横屏、分屏、小窗、快速切换、最近任务及不确定身份均保留原生路径。复制原 RectFParams，仅改变 targetRect、endRadius、ignoreIcon 和 targetView；原参数、窗口 leash、速度、listener、clear / finish / cancel 策略均保留，chain.proceed 恰好一次。空 targetView 使用 ROM 自有 resetFloatingIcon(false) 恢复桌面图标，不直接隐藏 / 删除图标。
+
+没有自建窗口截图、封面飞行 Path、额外 Bitmap、周期任务或动画依赖。桌面继续拥有原生窗口动画，岛继续使用原单窗口与有限时钟；原 SHORT / LONG 尺寸、相机留白、封面比例、16 dp 物理边距与输入区域不变。新增跨进程状态和有限异步工作均有 owner、容量和释放路径；未测 CPU / GPU / 功耗，不宣称性能收益。
+
+### 参考与取舍
+
+实际读取 [Apple Live Activities HIG](https://developer.apple.com/design/human-interface-guidelines/live-activities) 官方 Markdown，采纳信息简洁、图形比例、布局连续、避免碰撞、短时过渡与相关内容直达；保留隐私和减少动画门禁，不新增展开面板或控制按钮。
+
+[Cabel 示例](https://x.com/cabel/status/1571205306180571136) 通过发布方 oEmbed 读到整窗最小化和接住回弹的原文；本批以岛为返回终点，未实现其反向投掷侧鼓起的全部物理效果。[DynamicIslandDemoProject](https://github.com/App-Development-Academy/DynamicIslandDemoProject/tree/7cbbb320174072672e1554f287ce802bb6cc8e37) 核对至 exact SHA；相关 SwiftUI / ActivityKit 外卖视图没有可直接移植的自定义运动曲线，未复制源码或素材，也未引入 ActivityKit。时长和弹幅仍为本项目候选值。
+
+### 验证边界
+
+早期 1688e7ad 的 Full 为 354 suites / 3277 tests、0 failures / errors、2 skipped，同证书 Develop 测试包安装成功且原设置键变化为 0；该产物没有真正的整窗飞入，不能作为本次原生路径通过。此前 b8d40fa 的 [A14 CI 40033942984](https://github.com/thetvplus/customiuizer-a14/actions/runs/40033942984) 同样只代表中间提交。
+
+本次新增回归检查原参数不变且仅四个字段改变、回调身份保留、任务 / 包名 / 用户 / 窗口模式隔离、状态编码与时效、单份异步发送、关闭 / 重新启用 / detach 释放、框架广播完成保留、确认前后时序、迟到确认取消，以及仅对实际采用且运行中的原生终点确认。静态和 Host 通过不登记为实机通过。
+
+### 本批收口
+
+- 最终功能源码为 `5a1d1d485049ec077a810bd9484e86b63e99f80c`，原生接入与运行确认分为两个可独立审查的提交，波形增益和手势 owner 修复保持各自回退边界。最后一轮 Fast 与 Full 通过；Full 为 **357 suites / 3290 tests，0 failures / errors、2 skipped**，Kotlin / Java 编译、lintDebug 通过，Lint **0 Error / Fatal、407 Warning**。Python 工具测试 **600 tests，0 failures / errors、5 skipped**。JDK / Java / Kotlin 输出目标均为 25，未降级工具链。最终 diff / EOL 检查通过。
+- 同证书 `assembleDevelop` / `lintVitalDevelop` 通过。仍为 **Develop r14.25.3 / 248 / revision 5a1d1d48**，APK **4,085,226 bytes**，SHA-256 `afa9e9e2acdc3baac4d06284c90348e1059fb1729c14fcc694aa38b9ba008648`；同产物 mapping SHA-256 `c273f0062e4172b2f6e2303c2e0d76c343bd15ba7d6f7ee0e4ad3caa7f3df8e1`。Develop provenance 的 revision / 类型 / 版本、历史签名证书和 16 KiB zipalign 校验通过；没有构建正式 Release，没有修改版本或 Changelog。
+- 对这个 APK 重开 DexSQL：DEX **039**、**2588** 个定义类；compileOnly Hook API 定义 **0**、Manifest 设置入口直接 Hook API 指令引用 **0**，setId / getId 各 **1** 处、replaceHook **0**，三个固定 ID 使用点仍存在。同产物 mapping 将 `Lbn1;->t` 归属到 HookInstallation.intercept / confirmStableHookId，未复用旧产物的混淆名；这不构成完整传递类加载或实际安装次数证明。Manifest 仍为 min / target 34，无新增录音权限、Service 或静态 Receiver；新消息接收器由运行时 owner 注册。数据集均已关闭，ROM / APK / mapping / 现场数据未入库。
+- 用户在 ADB 断开后明确选择“接不了了，不实机”，本批据此停止设备操作。最近一次由本任务安装的是中间 Develop `1688e7ad`，本次 **未安装** `5a1d1d48`。真正窗口轨迹、接住时机、桌面图标恢复、手势中断 / 连续切换、不同播放器及 ART 私有方法调用均保留为待实机项；没有登记设备 PASS 或 CPU / GPU / 帧时间收益。第 17 节先前 7bb9a0b5 的波形现场记录不能替代这些新路径验收。
+- 本批只推送 `codex/a14-m05-owner-refinement-20261024` 开发分支；远端最终 exact-head A14 CI 以交付回执登记。未合并 main，未创建 tag 或 GitHub Release，未发布新版本。以后推进此候选时继续在本节补充目标设备证据。

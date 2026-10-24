@@ -5,6 +5,38 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun nativeWindowHookRequiresTheIslandMediaOptInAndAnExplicitApp() {
+        val prefs = PrefMap()
+        fun active() = tv.withaibuild.customiuizer.mods.utils.feature.LauncherMusicReturnFeature.evaluateEnabled(prefs)
+        assertFalse(active())
+        prefs.put("system_strong_toast_mode", "3")
+        prefs.put("system_island_media_return", true)
+        prefs.put("system_island_media_return_apps", setOf("chosen.music"))
+        assertFalse(active())
+        prefs.put("system_island_media", true); assertTrue(active())
+        prefs.put("system_island_media_return_apps", emptySet<String>()); assertFalse(active())
+        prefs.put("system_island_media_return_apps", setOf("chosen.music"))
+        prefs.put("system_island_simplified", true); assertFalse(active())
+        prefs.put("system_island_simplified", false); assertTrue(active())
+        prefs.put("system_strong_toast_mode", "0"); assertFalse(active())
+    }
+
+    @Test fun musicReturnIsOptInAndNeverTreatsAnEmptySelectionAsAllApps() {
+        val prefs = PrefMap()
+        assertFalse(IslandOptions.read(prefs).mediaReturn)
+        assertTrue(IslandOptions.read(prefs).mediaReturnApps.isEmpty())
+        prefs.put("system_island_media_return", true)
+        assertTrue(IslandOptions.read(prefs).mediaReturnApps.isEmpty())
+        val selected = mutableSetOf("music.selected")
+        prefs.put("system_island_media_return_apps", selected)
+        val options = IslandOptions.read(prefs)
+        selected.add("music.other")
+        assertEquals(setOf("music.selected"), options.mediaReturnApps)
+        prefs.put("system_island_media_return", false)
+        assertFalse(IslandOptions.read(prefs).mediaReturn)
+        assertEquals(selected, IslandOptions.read(prefs).mediaReturnApps)
+    }
+
     @Test fun musicSwipeDefaultsOnAndIsIndependentOfRetiredGesturePreferences() {
         val prefs = PrefMap()
         assertTrue(IslandOptions.read(prefs).mediaSwipe)

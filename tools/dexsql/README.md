@@ -21,9 +21,10 @@
 | `launcher_unlock_contract.sql` | Launcher | HotSeats 解锁参与者、V12 原生准备 / 弹簧 / 重置与属性更新；背景交由同一原生控制器，不能把编辑 AnimationSet 当作解锁链。 |
 | `navigation_gestures_contract.sql` | Launcher | 返回区域初始化 / setSize、侧滑停顿、快速切换和输入声明；核对无参初始化、字段重置及配置变化调用者。 |
 | `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明；保留各 owner 的失效与刷新边界。 |
-| `statusbar_gestures_contract.sql` | SystemUI | PhoneStatusBarView 的拦截、触摸、handleEvent 与原生通知栏分发；独立于 Launcher 导航链。 |
+| `statusbar_gestures_contract.sql` | SystemUI + 控制中心 plugin | 状态栏拦截 / 触摸分发、插件 owner 的 attach / destroy 与 external 标志调用；独立于 Launcher 导航链。 |
 | `toast_presentation_contract.sql` | SystemUI 与 boot framework.jar | 普通 Toast 的窗口插入 / 回收、旋转重排、安全区与原生 StrongToast 文本模型；decode 核对 text_bitmap 分支、展示门禁、队列和 finishToken，不能只凭方法存在判定兼容。 |
 | `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器选择、媒体 / 状态栏回调、Toast 来源与 StrongToast 生命周期；decode 复核状态分发和窗口类型，保留 ROM 锁屏门禁。 |
+| `island_launcher_return.sql` | 实际 HyperOS 1 Launcher APK | 音乐窗口回桌面的 WindowElement / RectFParams、任务身份及原生图标复位链；仅限选中且正在播放的任务，不改最近任务、分屏或通用弹簧。 |
 | `island_music_gestures.sql` | 双区域 SystemUI、plugin 与 boot framework.jar | 待实现音乐手势的 TransportControls / 音量能力和既有音量面板声明、选中会话回调；当前未执行，不据候选查询自动增加 Hook。 |
 | `statusbar_height_contract.sql` | 双区域 services.jar 与 framework.jar | InsetsSource、WindowState、DecorInsets 缓存及应用 Insets 消费链；区分挖孔安全区、旧 API 与应用缓存，不据此扩大全局 Hook。 |
 | `audio_focus_contract.sql` | 两份适用 ROM 的 services.jar | 声音页焦点 / 首次音量按键的精确声明、状态字段和定义来源；结合 decode 核对语义。 |

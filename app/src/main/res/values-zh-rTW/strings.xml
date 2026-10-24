@@ -1183,6 +1183,10 @@
     <string name="system_island_title">動態島</string>
     <string name="system_island_intro">首次選擇動態島模式，或啟用應用程式回饋、媒體與通知接管後，請重新啟動系統介面。鎖定畫面、熄屏、橫向或展開通知欄時隱藏。</string>
     <string name="system_island_media_title">音樂與媒體</string>
+    <string name="system_island_media_return_title">音樂直接上島</string>
+    <string name="system_island_media_return_summ">音樂播放時上滑離開所選應用程式，視窗收進島內並輕輕回彈。僅對手動選擇的應用程式生效；首次啟用需重新啟動桌面。</string>
+    <string name="system_island_media_return_apps_title">選擇音樂應用程式</string>
+    <string name="system_island_media_return_apps_summ">請手動選擇應用程式；未選擇時保留原有動畫。</string>
     <string name="system_island_media_summ">沿用系統選中的主要播放器，上滑可隱藏。已顯示的音樂島暫停 2 秒後收起；未顯示時保持隱藏。</string>
     <string name="system_island_media_swipe_title">左右滑動切歌</string>
     <string name="system_island_media_swipe_summ">關閉後，左右滑動無法切歌；已設定的音量等其他動作仍然有效。</string>

@@ -1190,6 +1190,10 @@
     <string name="system_island_title">Dynamický ostrov</string>
     <string name="system_island_intro">Po prvním výběru Dynamic Island nebo zapnutí integrace restartujte systémové rozhraní. Ostrov je skrytý na zamykací obrazovce, při vypnutém displeji, na šířku nebo při otevřeném panelu oznámení.</string>
     <string name="system_island_media_title">Hudba a média</string>
+    <string name="system_island_media_return_title">Hudba do ostrůvku</string>
+    <string name="system_island_media_return_summ">Při přehrávání opusťte vybranou aplikaci tahem nahoru. Její okno se přesune do ostrůvku s jemným odrazem. Pouze pro ručně vybrané aplikace. Po prvním zapnutí restartujte launcher.</string>
+    <string name="system_island_media_return_apps_title">Vybrat hudební aplikace</string>
+    <string name="system_island_media_return_apps_summ">Aplikace vyberte ručně. Prázdný výběr zachová běžnou animaci.</string>
     <string name="system_island_media_summ">Používá přehrávač vybraný systémem. Tažením nahoru ostrov skryjete. Viditelná hudba se skryje 2 sekundy po pozastavení; skrytá pozastavená hudba se neobjeví.</string>
     <string name="system_island_media_swipe_title">Přepínat skladby tažením</string>
     <string name="system_island_media_swipe_summ">Vypnutí blokuje změnu skladby vodorovným přejetím. Ostatní nastavené akce zůstávají dostupné.</string>

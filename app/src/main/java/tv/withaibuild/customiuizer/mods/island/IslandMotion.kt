@@ -13,10 +13,17 @@ internal object IslandMotion {
     const val EXIT = 300L
     const val SECONDARY = 440L
     const val MEDIA_DELAY = 750L
+    const val MEDIA_RETURN_DELAY = 80L
+    const val MEDIA_RETURN = 560L
     const val PAUSE_LIFETIME = 2000L
     val relaxed = TimeInterpolator { progress(it) }
     /** Committed collapse/exit and canceled drags settle without crossing their endpoint. */
     val settle = TimeInterpolator { val t = 1f - it.coerceIn(0f, 1f); 1f - t * t * t }
+    /** The native window arrives while the shell's one finite clock makes a small catch. */
+    fun mediaReturnCatch(progress: Float): Float {
+        val t = ((progress - .55f) / .45f).coerceIn(0f, 1f)
+        return (sin(Math.PI * t) * (1f - t)).toFloat()
+    }
     private const val DECAY = 7.04
     private const val FREQUENCY = 5.28
     private const val PHASE = 4.0 / 3.0

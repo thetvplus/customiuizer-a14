@@ -21,6 +21,15 @@ object LauncherPostAttachFeatures {
     @JvmStatic
     fun all(lpparam: PackageReadyParam, mPrefs: PrefMap): List<FeatureSpec> = listOf(
         LazyFeatureSpec(
+            id = LauncherMusicReturnFeatureId,
+            name = "Launcher Music Island Return",
+            preferenceKey = "system_island_media_return",
+            target = FeatureTarget.LAUNCHER,
+            phase = InstallPhase.APPLICATION_ATTACHED,
+            enabled = { prefs -> LauncherMusicReturnFeature.evaluateEnabled(prefs) },
+            factory = { LauncherMusicReturnFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
             id = LauncherHomescreenSwipesFeatureId,
             name = "Launcher Homescreen Swipes",
             preferenceKey = "launcher_swipedown_action",
@@ -969,6 +978,20 @@ internal class LauncherRecentsCardStyleFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = Launcher.RecentsHideAppNameHook(lpparam)
+}
+
+internal class LauncherMusicReturnFeature(lpparam: PackageReadyParam, mPrefs: PrefMap) : BaseApplicationAttachedFeature(
+    lpparam, mPrefs, LauncherMusicReturnFeatureId, "Launcher Music Island Return",
+    "system_island_media_return", FeatureTarget.LAUNCHER,
+) {
+    companion object {
+        @JvmStatic fun evaluateEnabled(prefs: PrefMap): Boolean {
+            val options = tv.withaibuild.customiuizer.mods.island.IslandOptions.read(prefs)
+            return options.enabled && options.media && options.mediaReturn && options.mediaReturnApps.isNotEmpty() && !options.simplified
+        }
+    }
+    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
+    override fun installHook() = tv.withaibuild.customiuizer.mods.island.LauncherMusicReturnHooks.install(lpparam, mPrefs)
 }
 
 internal class LauncherMultiWindowPlusFeature(

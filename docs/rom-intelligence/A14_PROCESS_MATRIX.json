@@ -3249,6 +3249,19 @@
       "enableCondition": "ToastPresentationConfig.read(prefs).enabled",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 257,
+      "featureIdName": "launcher_music_island_return",
+      "name": "Launcher Music Island Return",
+      "preferenceKey": "system_island_media_return",
+      "target": "LAUNCHER",
+      "phase": "APPLICATION_ATTACHED",
+      "installer": "LauncherPostAttachFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.island.LauncherMusicReturnHooks.install(lpparam, mPrefs)",
+      "enableCondition": "{ prefs -> LauncherMusicReturnFeature.evaluateEnabled(prefs) }",
+      "allowedProcess": "com.miui.home",
+      "deniedProcess": "third-party launchers (unless selected app sets)"
     }
   ],
   "scope": [
