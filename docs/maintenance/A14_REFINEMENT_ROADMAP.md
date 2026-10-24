@@ -788,4 +788,12 @@ SystemUI controller 仅在该功能有效时拥有一份 Publisher。双方使�
 
 早期 1688e7ad 的 Full 为 354 suites / 3277 tests、0 failures / errors、2 skipped，同证书 Develop 测试包安装成功且原设置键变化为 0；该产物没有真正的整窗飞入，不能作为本次原生路径通过。此前 b8d40fa 的 [A14 CI 40033942984](https://github.com/thetvplus/customiuizer-a14/actions/runs/40033942984) 同样只代表中间提交。
 
-本次新增回归检查原参数不变且仅四个字段改变、回调身份保留、任务 / 包名 / 用户 / 窗口模式隔离、状态编码与时效、单份异步发送、关闭 / 重新启用 / detach 释放、框架广播完成保留、确认前后时序及迟到确认取消。最终源码、APK、远端 exact-head 与目标设备结果在本节收口；静态和 Host 通过不登记为实机通过。
+本次新增回归检查原参数不变且仅四个字段改变、回调身份保留、任务 / 包名 / 用户 / 窗口模式隔离、状态编码与时效、单份异步发送、关闭 / 重新启用 / detach 释放、框架广播完成保留、确认前后时序、迟到确认取消，以及仅对实际采用且运行中的原生终点确认。静态和 Host 通过不登记为实机通过。
+
+### 本批收口
+
+- 最终功能源码为 `5a1d1d485049ec077a810bd9484e86b63e99f80c`，原生接入与运行确认分为两个可独立审查的提交，波形增益和手势 owner 修复保持各自回退边界。最后一轮 Fast 与 Full 通过；Full 为 **357 suites / 3290 tests，0 failures / errors、2 skipped**，Kotlin / Java 编译、lintDebug 通过，Lint **0 Error / Fatal、407 Warning**。Python 工具测试 **600 tests，0 failures / errors、5 skipped**。JDK / Java / Kotlin 输出目标均为 25，未降级工具链。最终 diff / EOL 检查通过。
+- 同证书 `assembleDevelop` / `lintVitalDevelop` 通过。仍为 **Develop r14.25.3 / 248 / revision 5a1d1d48**，APK **4,085,226 bytes**，SHA-256 `afa9e9e2acdc3baac4d06284c90348e1059fb1729c14fcc694aa38b9ba008648`；同产物 mapping SHA-256 `c273f0062e4172b2f6e2303c2e0d76c343bd15ba7d6f7ee0e4ad3caa7f3df8e1`。Develop provenance 的 revision / 类型 / 版本、历史签名证书和 16 KiB zipalign 校验通过；没有构建正式 Release，没有修改版本或 Changelog。
+- 对这个 APK 重开 DexSQL：DEX **039**、**2588** 个定义类；compileOnly Hook API 定义 **0**、Manifest 设置入口直接 Hook API 指令引用 **0**，setId / getId 各 **1** 处、replaceHook **0**，三个固定 ID 使用点仍存在。同产物 mapping 将 `Lbn1;->t` 归属到 HookInstallation.intercept / confirmStableHookId，未复用旧产物的混淆名；这不构成完整传递类加载或实际安装次数证明。Manifest 仍为 min / target 34，无新增录音权限、Service 或静态 Receiver；新消息接收器由运行时 owner 注册。数据集均已关闭，ROM / APK / mapping / 现场数据未入库。
+- 用户在 ADB 断开后明确选择“接不了了，不实机”，本批据此停止设备操作。最近一次由本任务安装的是中间 Develop `1688e7ad`，本次 **未安装** `5a1d1d48`。真正窗口轨迹、接住时机、桌面图标恢复、手势中断 / 连续切换、不同播放器及 ART 私有方法调用均保留为待实机项；没有登记设备 PASS 或 CPU / GPU / 帧时间收益。第 17 节先前 7bb9a0b5 的波形现场记录不能替代这些新路径验收。
+- 本批只推送 `codex/a14-m05-owner-refinement-20261024` 开发分支；远端最终 exact-head A14 CI 以交付回执登记。未合并 main，未创建 tag 或 GitHub Release，未发布新版本。以后推进此候选时继续在本节补充目标设备证据。
