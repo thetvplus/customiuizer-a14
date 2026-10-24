@@ -45,6 +45,10 @@ class IslandApplicationOverlayTest {
         val now = SystemClock.uptimeMillis()
         val parsed = IslandApplicationOverlaySignal.decode(message, now)!!
         assertEquals(91L, parsed.nonce)
+        assertTrue(parsed.acceptedBy(91L, 32))
+        assertFalse(parsed.acceptedBy(92L, 32))
+        assertFalse(parsed.acceptedBy(91L, 33))
+        assertTrue(parsed.copy(nonce = 0).acceptedBy(92L, -1))
         assertTrue(parsed.state.hasWindow(UserHandle.getUserHandleForUid(1010318)))
         assertFalse(parsed.state.hasWindow(UserHandle.getUserHandleForUid(1110318)))
         assertNull(IslandApplicationOverlaySignal.decode(message, now + 5001))

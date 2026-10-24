@@ -30,6 +30,7 @@ internal object StatusBarHeightResources {
     internal val dimensions = listOf("status_bar_height", "status_bar_height_default",
         "status_bar_height_portrait", "status_bar_height_landscape")
     private var controller: Controller? = null
+    @Volatile private var ready = false
 
     /** Called only after the existing invalidation receiver authenticates the module sender.
      * Capacity one integer, owned by this SS feature. A failed IPC retains the last known value.
@@ -59,14 +60,14 @@ internal object StatusBarHeightResources {
                     ?: return chain.proceed()
                 val user = chain.getArg(1) as Int
                 return updateState(clearDesired = { abi.setEnabled.invoke(settings, id, user, false) == true },
-                    proceed = { chain.proceed() }, enabled = { activeHeight() != null && !removed },
+                    proceed = { chain.proceed() }, enabled = { ready && activeHeight() != null && !removed },
                     readState = { abi.getState.invoke(settings, id, user) as Int },
                     enableRuntime = { abi.setState.invoke(settings, id, user, 3) == true })
             }
         }) != null)
         // Theme changes can move another android overlay above ours. Reorder only this ID,
         // while OMS already owns its lock, before native persistence and PM asset updates.
-        ModuleHelper.hookMethod(abi.updateTargets, object : MethodHook() {
+        check(ModuleHelper.hookMethod(abi.updateTargets, object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
                 if (activeHeight() == null || removed) return
                 val owner = callback.getThisObject() ?: return
@@ -78,12 +79,13 @@ internal object StatusBarHeightResources {
                         abi.highest.invoke(settings, abi.id, user)
                 }
             }
-        })
-        ModuleHelper.hookMethod(abi.onStart, object : MethodHook() {
+        }) != null)
+        check(ModuleHelper.hookMethod(abi.onStart, object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() == null) callback.getThisObject()?.let { attach(it, abi) }
             }
-        })
+        }) != null)
+        ready = true
         // Preference bootstrap may finish after OMS.onStart. ServiceManager is local in SS.
         val binder = XposedHelpers.callStaticMethod(abi.serviceManager, "getService", "overlay")
         if (binder != null) ModuleHelper.guarded {

@@ -26,7 +26,11 @@ internal object IslandApplicationOverlaySignal {
         fun hasWindow(user: UserHandle): Boolean = known &&
             users.any { UserHandle.getUserHandleForUid(it * 100000) == user }
     }
-    data class Packet(val state: Snapshot, val sequence: Long, val nonce: Long)
+    data class Packet(val state: Snapshot, val sequence: Long, val nonce: Long) {
+        // A fresh full-state event can initialize a new owner if the request response was
+        // delayed or lost. Replies addressed to another owner must never initialize it.
+        fun acceptedBy(ownerNonce: Long, previous: Long) = sequence > previous && (nonce == 0L || nonce == ownerNonce)
+    }
 
     fun encode(state: Snapshot, sequence: Long, nonce: Long = 0): Intent = Intent(STATE)
         .setPackage(SYSTEM_UI).putExtra("at", SystemClock.uptimeMillis())
@@ -50,14 +54,12 @@ internal object IslandApplicationOverlaySignal {
         private var closed = false
         private var sequence = -1L
         private val nonce = nextSequence()
-        private var initialized = false
         private var state = Snapshot(emptySet(), false)
         private val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
                 if (closed || getSentFromUid() != 1000 || !ModuleHelper.isTrustedBroadcast(this, SYSTEM)) return@guarded
                 val packet = decode(intent, SystemClock.uptimeMillis()) ?: return@guarded
-                if (packet.nonce != nonce && !(initialized && packet.nonce == 0L) || packet.sequence <= sequence) return@guarded
-                initialized = true
+                if (!packet.acceptedBy(nonce, sequence)) return@guarded
                 sequence = packet.sequence
                 if (packet.state != state) { state = packet.state; changed() }
             }
