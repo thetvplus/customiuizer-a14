@@ -6,34 +6,32 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
-- Fix recycled settings rows occasionally showing another row's description when their own summary is empty.
-- Include all three status bar double tap entries in action initialization so independently configured PiP hide / stash actions work. Music returns to the island retain native icon initialization and finish / cancel restoration, preventing missing desktop icons.
-- Fix the island retaining portrait geometry after an actual window rotation without a resource configuration callback. The window owner releases its layout listener; no polling is added.
+## r14.25.5 — 2026-10-25
 
-## r14.25.4 — 2026-10-24
-
-versionCode 249. Changes since r14.25.3:
+versionCode 250. Changes since r14.25.3:
 
 ### User changes
 
-Refine media, window transitions and official download instructions while preserving native animations and system security boundaries.
+Refine Dynamic Island, status-bar dimensions and native window interactions, consolidating r14.25.4 and the current fixes.
 
-- Add opt-in Music direct-to-island for explicitly selected players during supported native fullscreen returns to Home. Refine amplitude response, weak high frequencies and silence decay in the experimental live waveform.
-- Track PiP entry, cancellation and exit before revealing the same video's media island. Add an option to hide the entire island while a floating window exists, plus full PiP hide / restore and native edge stash / restore in global and island music gestures. These actions send no pause command.
-- Strengthen notification-island keyguard checks, update and click identity, and native-alert fallback when takeover fails. Stale media reads and old window-return confirmations cannot revive content.
-- Fix stale native status-bar size and translation baselines after layout updates or window recreation. Preserve preview-window color alpha and native contrast protection.
-- Fix obsolete wallpaper-capture failures permanently retiring a replacement Dock glass backdrop. Skip unchanged shader uniform writes while preserving the existing effect, subpixel motion and hidden-owner cleanup.
-- Synchronize Xposed download instructions and bilingual changelogs after stable release verification. Retry documentation independently without resigning APKs, replacing release assets or moving tags.
+- Add opt-in Music direct-to-island for explicitly selected players during supported native fullscreen returns. Preserve native icon preparation and finish / cancel restoration, fixing missing desktop icons after returning Home.
+- Avoid revealing the media island during PiP entry, cancellation and exit. Support full hide / restore and native edge stash / restore in global and music gestures without pausing playback. Fix independent center, left and right status-bar double tap actions missing initialization.
+- Hide the entire island for native PiP, system floating windows and visible application overlay windows. Verify Bilibili-owned window suppression and restoration after closing it. This option now requires a full device reboot after changes; ordinary Views inside an activity are not separate overlay windows.
+- Synchronize fixed status-bar height with system dimension resources, correcting stale-height layouts in apps such as Pinduoduo and DingTalk without expanding module scope. Keep the existing full-reboot requirement, application fullscreen visibility and native contrast protection.
+- Fix missing or recycled settings descriptions, and stale portrait geometry or a visible landscape island when actual window rotation has no resource configuration callback.
+- Strengthen notification-island keyguard, update and click identity checks while retaining native alerts on failed takeover. Stale media reads and old return confirmations cannot revive content.
+- Refine experimental live-waveform amplitude, weak high frequencies and silence decay while keeping lightweight mode as the default. Fix obsolete wallpaper-capture failures retiring a replacement Dock glass backdrop, skip unchanged parameter writes and preserve the effect, motion and hidden-owner cleanup.
+- Synchronize Xposed download instructions and bilingual records after stable release verification. Retry documentation independently without resigning APKs, replacing assets or moving historical tags.
 
 ### Engineering notes
 
-- PiP contracts use native state, task / user identity and the Shell executor verified in CN, TW and saved device SystemUI samples. Freeze floating-window suppression at installation and coordinate it with Music direct-to-island, native notification / Toast fallback and screenshot hiding. Full hiding pairs Surface hidden policy with input release / restoration and returns ownership before native animations. Install gesture hooks only when configured; add no poller or service.
-- Notification takeover validates the same Row, Sbn and binding. Roll back before commit; never replay an alert because native post-commit cleanup failed. Unknown or failing keyguard state blocks presentation. Ordinary Home returns retain the existing media timing.
-- Keep current native values and module writes per View / Window, bind geometry listeners to the actual parent and release them on detach. Preserve empty native Insets frames. Plugin replacement releases only its own gesture tokens, including when terminal effects fail.
-- Reject stale Dock frames and capture failures by generation. Two fixed scalar buffers cache only the current lens parameters and invalidate with shader replacement. AyuGram DexSQL analysis informed duplicate-update elimination; no code or shader was copied. Keep the existing velocity-carrying island animation and real wallpaper sampling.
-- Establish the release-review baseline from real stable releases, both asset digests and the exact source SHA; inspect the complete Git diff and bilingual content. Generated inventories do not replace semantic review. Download documents read only the published source, update in one non-forced commit and verify readback, with independent recovery. Buffer successful CI test fixtures while preserving failure diagnostics.
-- Consolidate current development code and documentation while retaining obsolete-entry deletions. Keep feature maps and process matrices generated from their existing sources. Add read-only summaries, filters and pagination for auxiliary data; repair version / field validation, ROM coverage counts and temporary test cleanup. Extraction cannot overwrite manual calibration, baseline refreshes cannot accept new fingerprints, and auxiliary-contract / schema changes use the existing tool gates.
-- Source / Host regressions, tool tests and Android builds are covered. No ADB device is available. Camera / Gallery gray bars, PiP visual continuity, input pass-through, continuous playback, native music return and ROM performance still require device acceptance; no blanket device-fix claim is made.
+- Manage one fixed overlay identity and four dimensions in system_server. The persisted enabled flag always remains false; only the running module enables its runtime state. Native state calculation restores stock dimensions on a full boot without the module. Replacement / removal retires only unreferenced module-owned files, with bounded retries and retirement records to prevent accumulation.
+- Work around the confirmed stale system_server preference cache by retaining the existing authenticated, value-free invalidation. Read one acknowledged height through the non-exported, system-UID-only endpoint and include it in the same atomic preference publication. Do not mutate framework caches or recreate client listeners.
+- Read native Session surface inventories only after visibility changes, session cleanup or an island-owner reconnect. Filter by user and default display, bound scans and snapshots, retain no windows, inject into no additional apps and add no poller. Preserve native PiP Surface, input, Shell-executor and task / user identity contracts.
+- Keep Row / Sbn / binding transactions, pre-commit compensation and no alert replay after failed post-commit cleanup. Unknown or failing keyguard state blocks presentation. Bind geometry and gesture listeners to their real window / plugin owner, preserve empty native Insets frames and retain ordinary Home media timing.
+- Reject stale Dock frames and failures by generation. Two fixed scalar buffers retain only current lens parameters and invalidate with shader replacement. Keep real wallpaper sampling and existing island animation. AyuGram informed duplicate-update elimination; no code or shader was copied.
+- Base release review on stable asset digests, the exact source SHA, complete Git diff and bilingual content. Download documents read only published source, update in one non-forced commit and verify readback. Feature maps, process matrices and auxiliary summaries, filters, pagination and Schema / version checks retain existing generation and tool gates; do not restore deleted entries or automatically accept new risk fingerprints.
+- Inherit valid device and performance evidence, target affected shared paths and validate source, Host, tools and APKs separately. Xiaomi 13 results do not establish all-ROM coverage. Fresh notification end-to-end events, Camera / Gallery preview appearance, Bluetooth, dual SIM, multiple users and long-term power remain separate checks; short-term PSS variation proves neither a leak nor memory savings.
 
 ## r14.25.3 — 2026-10-23
 
