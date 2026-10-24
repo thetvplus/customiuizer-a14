@@ -1253,7 +1253,7 @@
     <string name="system_island_waveform_real">Dạng sóng trực tiếp (thử nghiệm)</string>
     <string name="system_island_waveform_mode_summ">Chỉ thu năm dải tần khi đảo hiển thị và đang phát. Chuyển về hoạt ảnh nhẹ nếu quyền, tuyến âm thanh hoặc phiên không được hỗ trợ.</string>
     <string name="system_island_hide_in_floating_window_title">Ẩn Dynamic Island khi có cửa sổ nổi</string>
-    <string name="system_island_hide_in_floating_window_summ">Ẩn toàn bộ Dynamic Island khi có cửa sổ hình trong hình hoặc cửa sổ nổi của hệ thống. Khởi động lại giao diện hệ thống sau khi thay đổi tùy chọn này.</string>
+    <string name="system_island_hide_in_floating_window_summ">Ẩn toàn bộ Dynamic Island khi có cửa sổ hình trong hình, cửa sổ nổi hệ thống hoặc cửa sổ phủ của ứng dụng đang hiển thị. Khởi động lại thiết bị sau khi thay đổi.</string>
     <string name="array_global_actions_pip_hide">Ẩn / khôi phục hình trong hình</string>
     <string name="array_global_actions_pip_stash">Thu gọn ra cạnh / khôi phục hình trong hình</string>
     <string name="pip_action_hint">Điều khiển cửa sổ hình trong hình hiện tại mà không tạm dừng phát. Khởi động lại giao diện hệ thống sau lần thiết lập đầu tiên. Chuyển cảnh cửa sổ của hệ thống sẽ kết thúc chế độ ẩn hoàn toàn. Nếu Dynamic Island đang ẩn, hãy dùng cử chỉ toàn cục để khôi phục PiP.</string>

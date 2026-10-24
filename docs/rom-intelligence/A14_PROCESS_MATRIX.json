@@ -3102,7 +3102,7 @@
       "target": "SYSTEM_SERVER",
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
-      "installHook": "SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook(lpparam)",
+      "installHook": "(default base install)",
       "enableCondition": "StatusBarHeightConfig.isEnabled(prefs)",
       "allowedProcess": "system_server",
       "deniedProcess": ""
@@ -3262,6 +3262,19 @@
       "enableCondition": "{ prefs -> LauncherMusicReturnFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "com.miui.home",
       "deniedProcess": "third-party launchers (unless selected app sets)"
+    },
+    {
+      "featureIdInt": 258,
+      "featureIdName": "system_island_application_overlays",
+      "name": "Island Application Overlays",
+      "preferenceKey": "system_island_hide_in_floating_window",
+      "target": "SYSTEM_SERVER",
+      "phase": "SYSTEM_SERVER_STARTING",
+      "installer": "SystemServerFeatures",
+      "installHook": "(default base install)",
+      "enableCondition": "{ prefs -> IslandApplicationOverlayFeature.evaluateEnabled(prefs) }",
+      "allowedProcess": "system_server",
+      "deniedProcess": ""
     }
   ],
   "scope": [

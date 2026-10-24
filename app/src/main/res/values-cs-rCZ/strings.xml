@@ -1260,7 +1260,7 @@
     <string name="system_island_waveform_real">Živý průběh (experimentální)</string>
     <string name="system_island_waveform_mode_summ">Pět frekvenčních pásem se snímá pouze při viditelném ostrově a přehrávání. Nepodporovaná oprávnění, trasa nebo relace použijí lehkou animaci.</string>
     <string name="system_island_hide_in_floating_window_title">Skrýt Dynamic Island při plovoucích oknech</string>
-    <string name="system_island_hide_in_floating_window_summ">Skryje celý Dynamic Island, pokud existuje obraz v obraze nebo systémové plovoucí okno. Po změně restartujte systémové rozhraní.</string>
+    <string name="system_island_hide_in_floating_window_summ">Skryje celý Dynamic Island při obrazu v obraze, systémovém plovoucím okně nebo viditelném překryvném okně aplikace. Po změně restartujte zařízení.</string>
     <string name="array_global_actions_pip_hide">Skrýt / obnovit obraz v obraze</string>
     <string name="array_global_actions_pip_stash">Zasunout / obnovit obraz v obraze</string>
     <string name="pip_action_hint">Ovládá aktuální obraz v obraze bez pozastavení přehrávání. Po prvním nastavení restartujte systémové rozhraní. Systémový přechod okna ukončí úplné skrytí. Pokud je Dynamic Island skrytý, obnovte PiP globálním gestem.</string>

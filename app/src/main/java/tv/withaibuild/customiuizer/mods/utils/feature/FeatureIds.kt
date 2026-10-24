@@ -1062,3 +1062,8 @@ data object LauncherMusicReturnFeatureId : FeatureId {
     override val id = 257
     override val name = "launcher_music_island_return"
 }
+
+data object IslandApplicationOverlayFeatureId : FeatureId {
+    override val id = 258
+    override val name = "system_island_application_overlays"
+}

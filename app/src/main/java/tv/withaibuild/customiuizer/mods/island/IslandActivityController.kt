@@ -87,6 +87,7 @@ internal class IslandActivityController(
     private val freeform: IslandFreeformPort? = null,
     private val pipStateReader: (() -> IslandPipSnapshot?)? = null,
     geometryHost: View? = null,
+    trackApplicationOverlays: Boolean = false,
 ) : ScreenStateController.ScreenStateListener {
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
@@ -106,6 +107,7 @@ internal class IslandActivityController(
     private var exiting = false
     private var exitGeneration = 0L
     private var disposed = false
+    private var applicationOverlays: IslandApplicationOverlaySignal.Subscriber? = null
     private var safetyOwner: Any? = null
     private var safetyListener: Any? = null
     private var nativeManager = WeakReference<Any>(null)
@@ -309,6 +311,21 @@ internal class IslandActivityController(
             refreshGeometry()
             if (options.enabled) systemActivities = createSystemActivities()
             actionMarkers?.update(options.feedback)
+            if (hideInFloatingWindow && trackApplicationOverlays) ModuleHelper.guarded {
+                applicationOverlays = IslandApplicationOverlaySignal.Subscriber(context, handler,
+                    send = { message -> scope.launch(ioDispatcher) {
+                        ModuleHelper.guarded { ModuleHelper.sendBroadcastWithIdentity(context, message) }
+                    } }, changed = { onMain {
+                        val wasPresented = lastContent != null
+                        mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
+                        if (floatingWindowBlocked()) { cancelMediaReturn(); hide() }
+                        else if (!wasPresented && media?.packageName != foregroundPackage) {
+                            mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
+                            nativeManager.get()?.let { updateFromNative(it) }
+                        }
+                        render()
+                    } })
+            }
         } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
             dispose()
@@ -398,7 +415,8 @@ internal class IslandActivityController(
     }
 
     private fun floatingWindowBlocked(): Boolean = hideInFloatingWindow &&
-        (!freeformKnown || freeformPresent || pipSnapshot.state in 1..5 && pipSnapshot.displayId == 0)
+        (!freeformKnown || freeformPresent || pipSnapshot.state in 1..5 && pipSnapshot.displayId == 0 ||
+            foregroundUser?.let { applicationOverlays?.hasWindow(it) } == true)
 
     internal fun refreshFloatingWindows() = onMain {
         val reader = freeform ?: return@onMain
@@ -1259,6 +1277,7 @@ internal class IslandActivityController(
         handler.removeCallbacks(nativeRefresh)
         freeformGeneration++
         freeformJob?.cancel(); freeformJob = null
+        applicationOverlays?.close(); applicationOverlays = null
         clearSystemActivity()
         systemActivities?.dispose(); systemActivities = null
         actionMarkers?.close()

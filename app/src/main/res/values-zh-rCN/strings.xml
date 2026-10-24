@@ -1263,7 +1263,7 @@
     <string name="system_island_waveform_real">实时波形（实验性）</string>
     <string name="system_island_waveform_mode_summ">实时模式仅在可见且播放时采集五个音频频段。权限、路由或会话不支持时回退轻量动画。</string>
     <string name="system_island_hide_in_floating_window_title">有小窗时隐藏动态岛</string>
-    <string name="system_island_hide_in_floating_window_summ">存在画中画或系统小窗时隐藏整个动态岛。更改后重启系统界面生效。</string>
+    <string name="system_island_hide_in_floating_window_summ">存在画中画、系统小窗或应用的可见悬浮窗时隐藏整个动态岛。更改后重启手机生效。</string>
     <string name="array_global_actions_pip_hide">隐藏/恢复画中画</string>
     <string name="array_global_actions_pip_stash">边缘收起/恢复画中画</string>
     <string name="pip_action_hint">控制当前画中画，不暂停播放。首次配置后重启系统界面生效；原生窗口转场会结束完整隐藏。若动态岛已隐藏，请用全局手势恢复画中画。</string>
