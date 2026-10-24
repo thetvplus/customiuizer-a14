@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import tv.withaibuild.customiuizer.utils.Helpers
+import tv.withaibuild.customiuizer.mods.statusbarheight.StatusBarHeightResources
 
 /**
  * Bridges preference change notifications from the module app to system_server.
@@ -18,7 +19,9 @@ import tv.withaibuild.customiuizer.utils.Helpers
  * - Single-key: Intent carries the changed storage key only, never a value.
  * - Bulk: Intent carries no values, only a bulk marker.
  * - Only trusted sender (module app) is accepted.
- * - system_server reads current values from its own RemotePreferences instance.
+ * - system_server reads its RemotePreferences; installed height resources can additionally
+ *   read one confirmed scalar from the non-exported, system-only settings provider. This
+ *   avoids frameworks that acknowledge changes but retain a stale hook-side cache.
  * - system_server never writes back to RemotePreferences (one-way, no feedback loop).
  * - Installed once per process lifetime; no polling and no timers.
  */
@@ -56,14 +59,16 @@ object SystemServerPreferenceInvalidation {
                 if (!ModuleHelper.isTrustedBroadcast(this, Helpers.modulePkg)) return@guarded
 
                 if (intent.getBooleanExtra(EXTRA_BULK, false)) {
-                    bootstrap.refreshRemoteKey(null)
+                    bootstrap.refreshRemoteKey(null, StatusBarHeightResources.committedPreference(context))
                     SystemServerInstaller.scheduleCatchUp(context)
                     return@guarded
                 }
 
                 val key = intent.getStringExtra(EXTRA_KEY)
                 if (key == null || !isValidKey(key)) return@guarded
-                bootstrap.refreshRemoteKey(key)
+                val height = if (key == "pref_key_" + StatusBarHeightConfig.PREF_KEY)
+                    StatusBarHeightResources.committedPreference(context) else emptyMap()
+                bootstrap.refreshRemoteKey(key, height)
                 SystemServerInstaller.scheduleCatchUp(context)
             }
         }

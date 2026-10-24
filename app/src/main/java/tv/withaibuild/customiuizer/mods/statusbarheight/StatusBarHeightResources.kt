@@ -5,9 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
+import android.net.Uri
 import android.util.TypedValue
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.PrefsProvider
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
@@ -27,6 +29,23 @@ internal object StatusBarHeightResources {
     internal val dimensions = listOf("status_bar_height", "status_bar_height_default",
         "status_bar_height_portrait", "status_bar_height_landscape")
     private var controller: Controller? = null
+
+    /** Called only after the existing invalidation receiver authenticates the module sender.
+     * Capacity one integer, owned by this SS feature. A failed IPC retains the last known value.
+     */
+    fun committedPreference(context: Context): Map<String, Any> {
+        val current = controller ?: return emptyMap()
+        val token = android.os.Binder.clearCallingIdentity()
+        try {
+            ModuleHelper.guarded {
+                val result = context.contentResolver.call(Uri.parse("content://" + PrefsProvider.AUTHORITY),
+                    PrefsProvider.COMMITTED_HEIGHT, null, null)
+                val value = result?.takeIf { it.containsKey(PrefsProvider.HEIGHT_DP) }?.getInt(PrefsProvider.HEIGHT_DP)
+                if (value != null && value in StatusBarHeightConfig.DEFAULT_SENTINEL..80) current.committedHeight = value
+            }
+        } finally { android.os.Binder.restoreCallingIdentity(token) }
+        return mapOf("pref_key_" + StatusBarHeightConfig.PREF_KEY to current.committedHeight)
+    }
 
     fun install(loader: ClassLoader) = ModuleHelper.guarded {
         val abi = Access(loader)
@@ -91,6 +110,8 @@ internal object StatusBarHeightResources {
     }
 
     private class Controller(serviceOwner: Any, private val abi: Access) : AutoCloseable {
+        @Volatile var committedHeight = MainModule.mPrefs.getInt(StatusBarHeightConfig.PREF_KEY,
+            StatusBarHeightConfig.DEFAULT_SENTINEL)
         private val owner = WeakReference(serviceOwner)
         private val context = XposedHelpers.callMethod(serviceOwner, "getContext") as Context
         private val handler = XposedHelpers.callStaticMethod(abi.ioThread, "getHandler") as Handler

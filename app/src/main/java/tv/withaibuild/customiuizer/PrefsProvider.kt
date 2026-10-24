@@ -6,6 +6,10 @@ import android.content.UriMatcher
 import android.content.res.AssetFileDescriptor
 import android.database.Cursor
 import android.net.Uri
+import android.os.Binder
+import android.os.Bundle
+import tv.withaibuild.customiuizer.mods.utils.StatusBarHeightConfig
+import tv.withaibuild.customiuizer.utils.AppHelper
 import java.io.FileNotFoundException
 import java.io.IOException
 
@@ -13,6 +17,8 @@ class PrefsProvider : ContentProvider() {
 
     companion object {
         const val AUTHORITY = BuildConfig.APPLICATION_ID + ".provider.sharedprefs"
+        const val COMMITTED_HEIGHT = "committed_statusbar_height"
+        const val HEIGHT_DP = "height_dp"
     }
 
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
@@ -20,6 +26,19 @@ class PrefsProvider : ContentProvider() {
     }
 
     override fun onCreate(): Boolean = true
+
+    /** Cold, system-only fallback for frameworks whose hook-side preference cache stays stale.
+     * Read the acknowledged remote mirror, never an uncommitted UI value or an Intent payload.
+     * This provider stays non-exported and exposes no complete preference map.
+     */
+    override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
+        if (method != COMMITTED_HEIGHT) return super.call(method, arg, extras)
+        if (Binder.getCallingUid() != 1000) throw SecurityException("System UID required")
+        val remote = AppHelper.remotePrefs ?: return null
+        val dp = remote.getInt("pref_key_" + StatusBarHeightConfig.PREF_KEY, StatusBarHeightConfig.DEFAULT_SENTINEL)
+        if (dp !in StatusBarHeightConfig.DEFAULT_SENTINEL..80) return null
+        return Bundle().apply { putInt(HEIGHT_DP, dp) }
+    }
 
     override fun query(
         uri: Uri,

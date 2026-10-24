@@ -278,20 +278,23 @@ class PreferenceBootstrap private constructor(
      * (which works in app processes) and the explicit system_server invalidation bridge.
      *
      * @param key the storage key to refresh, or null for a bulk/full refresh.
+     * @param authoritativeValues caller-validated cold reads for a stale framework cache.
+     * They join the same atomic publication before dispatch; ordinary callbacks use no overrides.
      */
-    fun refreshRemoteKey(key: String?) {
+    @JvmOverloads
+    fun refreshRemoteKey(key: String?, authoritativeValues: Map<String, Any> = emptyMap()) {
         if (key == null) {
-            doRefreshBulk()
+            doRefreshBulk(authoritativeValues)
         } else {
-            doRefreshRemoteKey(key)
+            doRefreshRemoteKey(key, authoritativeValues)
         }
     }
 
-    private fun doRefreshRemoteKey(key: String) {
+    private fun doRefreshRemoteKey(key: String, authoritativeValues: Map<String, Any> = emptyMap()) {
         try {
             val remote = remotePrefs ?: return
 
-            val rawValue = if (remote.contains(key)) {
+            val rawValue = if (authoritativeValues.containsKey(key)) authoritativeValues[key] else if (remote.contains(key)) {
                 readChangedValue(remote, key)
             } else {
                 null
@@ -315,11 +318,11 @@ class PreferenceBootstrap private constructor(
         }
     }
 
-    private fun doRefreshBulk() {
+    private fun doRefreshBulk(authoritativeValues: Map<String, Any> = emptyMap()) {
         try {
             val remote = remotePrefs ?: return
             val snapshot = remote.all ?: return
-            prefs.replaceSnapshot(snapshot)
+            prefs.replaceSnapshot(if (authoritativeValues.isEmpty()) snapshot else snapshot + authoritativeValues)
             synchronizeState()
             changeDispatcher(null)
         } catch (t: Throwable) {

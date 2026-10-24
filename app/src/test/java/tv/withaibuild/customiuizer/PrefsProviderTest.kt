@@ -7,6 +7,9 @@ import java.io.FileNotFoundException
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertNull
+import org.robolectric.shadows.ShadowBinder
+import tv.withaibuild.customiuizer.utils.AppHelper
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -17,6 +20,19 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class PrefsProviderTest {
+
+    @Test fun committedHeightIsRestrictedToSystemUidAndDoesNotInventAMissingMirror() {
+        ShadowBinder.setCallingUid(10381)
+        try {
+            assertThrows(SecurityException::class.java) { provider.call(PrefsProvider.COMMITTED_HEIGHT, null, null) }
+            ShadowBinder.setCallingUid(1000)
+            val previous = AppHelper.remotePrefs
+            try {
+                AppHelper.remotePrefs = null
+                assertNull(provider.call(PrefsProvider.COMMITTED_HEIGHT, null, null))
+            } finally { AppHelper.remotePrefs = previous }
+        } finally { ShadowBinder.reset() }
+    }
 
     private val provider = Robolectric.buildContentProvider(PrefsProvider::class.java).create().get()
     private fun uri(path: String) = Uri.parse("content://${PrefsProvider.AUTHORITY}/$path")

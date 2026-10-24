@@ -8,6 +8,35 @@ import tv.withaibuild.customiuizer.utils.PrefMap
 
 class SystemServerPreferenceInvalidationTest {
 
+    @Test fun authoritativeHeightReplacesAStaleBulkCacheBeforeTheSingleObserverDispatch() {
+        val key = "pref_key_system_statusbarheight"
+        val remote = primed(key, 46)
+        remote.put("pref_key_other", "retained")
+        val prefs = PrefMap()
+        val observations = mutableListOf<Int>()
+        val bootstrap = PreferenceBootstrap.create(prefs, { remote }) {
+            observations.add(prefs.getInt("system_statusbarheight", 11))
+        }
+        bootstrap.bootstrap()
+        bootstrap.refreshRemoteKey(null, mapOf(key to 43))
+        assertEquals(listOf(43), observations)
+        assertEquals("retained", prefs.getString("other", ""))
+        assertEquals(46, remote.getInt(key, 11)) // No write back and no mutation of the cached map.
+    }
+
+    @Test fun authoritativeSingleHeightCanDisableWithoutCopyingTheCachedMap() {
+        val key = "pref_key_system_statusbarheight"
+        val remote = primed(key, 46)
+        val prefs = PrefMap()
+        val bootstrap = PreferenceBootstrap.create(prefs, { remote }) {}
+        bootstrap.bootstrap()
+        val reads = remote.getAllCount
+        bootstrap.refreshRemoteKey(key, mapOf(key to 11))
+        assertEquals(11, prefs.getInt("system_statusbarheight", 46))
+        assertEquals(reads, remote.getAllCount)
+        assertEquals(46, remote.getInt(key, 11))
+    }
+
     @Test
     fun `refreshRemoteKey single key updates PrefMap and dispatches canonical key`() {
         val prefs = PrefMap()
