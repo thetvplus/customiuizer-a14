@@ -12,16 +12,14 @@ versionCode 250. Changes since r14.25.3:
 
 ### User changes
 
-Refine Dynamic Island, status-bar dimensions and native window interactions, consolidating r14.25.4 and the current fixes.
+Refine Dynamic Island, status-bar dimensions and native window interactions, consolidating r14.25.4 and the current fixes. Synchronize Xposed download instructions and bilingual records after stable release verification; retry documentation independently without resigning APKs, replacing assets or moving historical tags.
 
 - Add opt-in Music direct-to-island for explicitly selected players during supported native fullscreen returns. Preserve native icon preparation and finish / cancel restoration, fixing missing desktop icons after returning Home.
-- Avoid revealing the media island during PiP entry, cancellation and exit. Support full hide / restore and native edge stash / restore in global and music gestures without pausing playback. Fix independent center, left and right status-bar double tap actions missing initialization.
-- Hide the entire island for native PiP, system floating windows and visible application overlay windows. Verify Bilibili-owned window suppression and restoration after closing it. This option now requires a full device reboot after changes; ordinary Views inside an activity are not separate overlay windows.
+- Avoid revealing the media island during PiP entry, cancellation and exit. Support full hide / restore and native edge stash / restore in global and music gestures without pausing playback, and fix independent center, left and right double tap actions missing initialization. Hide the entire island for native PiP, system floating windows and visible application overlay windows, including verified Bilibili window suppression and restoration after close. This option requires a full device reboot after changes; ordinary Views inside an activity are not separate overlay windows.
 - Synchronize fixed status-bar height with system dimension resources, correcting stale-height layouts in apps such as Pinduoduo and DingTalk without expanding module scope. Keep the existing full-reboot requirement, application fullscreen visibility and native contrast protection.
 - Fix missing or recycled settings descriptions, and stale portrait geometry or a visible landscape island when actual window rotation has no resource configuration callback.
 - Strengthen notification-island keyguard, update and click identity checks while retaining native alerts on failed takeover. Stale media reads and old return confirmations cannot revive content.
 - Refine experimental live-waveform amplitude, weak high frequencies and silence decay while keeping lightweight mode as the default. Fix obsolete wallpaper-capture failures retiring a replacement Dock glass backdrop, skip unchanged parameter writes and preserve the effect, motion and hidden-owner cleanup.
-- Synchronize Xposed download instructions and bilingual records after stable release verification. Retry documentation independently without resigning APKs, replacing assets or moving historical tags.
 
 ### Engineering notes
 
