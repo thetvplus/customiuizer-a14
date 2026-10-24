@@ -17,7 +17,7 @@
 | `notification_m03_contract.sql` | CN/TW SystemUI、Settings、framework / services 及 miui-framework / miui-services | 通知启动事务、Heads-up、频道 / NMS 与 Count/Fold 的定义、调用和 owner 字段；须完整 decode，交接目标和实机矩阵见 [M03 精校](../../docs/rom-intelligence/M03_NOTIFICATION_CONTRACT.md)。 |
 | `island_input_audio_contract.sql` | SystemUI 与 boot framework.jar | 动态岛内部 Insets 监听、Token UID 与音轨会话接口声明；授予权限、AppOps、路由与隐藏 API 实际可用性仍须实机。 |
 | `volume_contract.sql` | SystemUI 宿主 + plugin APK | 查询按钮、计时器、超时 / 无障碍、窗口模糊及百分比 owner 声明；宿主亮度与插件音量分别确认来源。宽度资源 ID、默认材质和关闭时序须结合 Smali。 |
-| `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 显示、编辑 / 拖拽、几何与材质，以及原图标 / FloatingIconView2 / Remote Transition 的声明和调用；decode 核对实际状态 owner、完成 / 取消与恢复，不另行推进动画或强制显示图标。 |
+| `launcher_dock_contract.sql` | Launcher、必要时加入 SystemUI / framework | Dock 显示、编辑 / 拖拽、几何与材质；原图标 / FloatingIconView2 的隐藏、取消 / merge / 换目标清理、实例字段读写与坐标消费者，以及原生焦点通知 IPC。结合完整 decode 确认 owner，不由异步 lambda 或 skip 标志名称推断竞态，不推进动画或强制显示图标。 |
 | `launcher_unlock_contract.sql` | Launcher | HotSeats 解锁参与者、V12 原生准备 / 弹簧 / 重置与属性更新；背景交由同一原生控制器，不能把编辑 AnimationSet 当作解锁链。 |
 | `navigation_gestures_contract.sql` | Launcher | 返回区域初始化 / setSize、侧滑停顿、快速切换和输入声明；核对无参初始化、字段重置及配置变化调用者。 |
 | `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明；保留各 owner 的失效与刷新边界。 |
