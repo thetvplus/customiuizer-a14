@@ -241,7 +241,7 @@ class SourceTrustTest(unittest.TestCase):
 
 
 class ApkTrustTest(unittest.TestCase):
-    def test_candidate_uses_source_version_and_sha_without_altering_the_binary(self):
+    def test_candidate_uses_final_version_filename_before_attestation_without_altering_binary(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, ENV):
             root = Path(temp)
             output = root / "app/build/outputs"
@@ -259,12 +259,16 @@ class ApkTrustTest(unittest.TestCase):
                 return {"apk": staged.name, "apk_sha256": release.digest(staged)}
             with patch.object(release, "ROOT", root), patch.object(release, "verify_apk", side_effect=verify):
                 release.candidate(folder)
-            name = f"CustoMIUIzer-A14-r14.25.2-{COMMIT[:6]}.apk"
+            name = "CustoMIUIzer-A14-r14.25.2.apk"
             self.assertEqual([folder / name], list(folder.glob("*.apk")))
             self.assertEqual(apk.read_bytes(), (folder / name).read_bytes())
             metadata = json.loads((folder / "build-metadata.json").read_text())
             self.assertEqual(name, metadata["apk"])
             self.assertEqual(COMMIT, metadata["source_sha"])
+            self.assertEqual([name, "build-metadata.json"], metadata["release_assets"])
+            self.assertEqual(f"https://github.com/{release.REPO}/actions/runs/42/attempts/1", metadata["run_url"])
+            self.assertIn(COMMIT, metadata["workflow_url"])
+            self.assertNotIn("attestation", metadata)
             self.assertEqual(f"{release.digest(apk)}  {name}\n", (folder / "SHA256SUMS").read_text())
 
     def test_correct_manifest_and_historical_signature(self):
@@ -321,6 +325,110 @@ class ApkTrustTest(unittest.TestCase):
             with patch.object(release, "api", side_effect=[{"id": 7}, record, {"artifacts": [{"name": "a14-signed-42-1", "expired": False}]}]):
                 with patch.object(release, "run", side_effect=download), self.assertRaisesRegex(ValueError, "digest differs"):
                     release.fetch_candidate("42", folder)
+
+
+class OnlineAttestationTest(unittest.TestCase):
+    def fixture(self, folder, *, legacy=None):
+        name = "CustoMIUIzer-A14-r14.24.1.apk"
+        if legacy == "sha":
+            name = f"CustoMIUIzer-A14-r14.24.1-{COMMIT[:6]}.apk"
+        (folder / name).write_bytes(b"original signed APK bytes")
+        metadata = {"repository": release.REPO, "workflow": release.WORKFLOW, "source_sha": COMMIT,
+                    "source_ref": REF, "run_id": 42, "run_attempt": 1, "version_name": "r14.24.1",
+                    "version_code": 245, "apk": name, "apk_sha256": release.digest(folder / name)}
+        if legacy is None:
+            metadata["release_assets"] = [name, "build-metadata.json"]
+        release.write_json(folder / "build-metadata.json", metadata)
+        (folder / "SHA256SUMS").write_text(f"{metadata['apk_sha256']}  {name}\n", encoding="ascii")
+        (folder / "attestation.sigstore.json").write_text("original internal proof")
+        return metadata
+
+    def online(self, *args, **kwargs):
+        self.assertEqual(("gh", "attestation", "verify"), args[:3])
+        self.assertNotIn("--bundle", args)
+        self.assertIn("--deny-self-hosted-runners", args)
+        self.assertEqual(COMMIT, args[args.index("--signer-digest") + 1])
+        self.assertEqual(COMMIT, args[args.index("--source-digest") + 1])
+        path = Path(args[3])
+        proof = attestation()
+        proof[0]["verificationResult"]["statement"]["subject"] = [{"name": path.name, "digest": {"sha256": release.digest(path)}}]
+        return json.dumps(proof)
+
+    def test_metadata_records_actual_apk_verification_then_stays_unchanged_during_final_checks(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            metadata = self.fixture(folder)
+            before = (folder / "build-metadata.json").read_bytes()
+            with patch.object(release, "run", side_effect=self.online) as verify:
+                release.attest_apk(folder, metadata)
+                self.assertEqual(1, verify.call_count)
+                self.assertTrue(metadata["attestation"]["apk_verified"])
+                self.assertEqual("github-online", metadata["attestation"]["method"])
+                finalized = (folder / "build-metadata.json").read_bytes()
+                self.assertNotEqual(before, finalized)
+                release.attest(folder, metadata)
+                self.assertEqual(3, verify.call_count)
+                self.assertEqual(finalized, (folder / "build-metadata.json").read_bytes())
+                report = json.loads((folder / "attestation-verification.json").read_text())
+                self.assertEqual({metadata["apk"], "build-metadata.json"}, set(report))
+                with self.assertRaisesRegex(ValueError, "already been finalized"):
+                    release.attest_apk(folder, metadata)
+                self.assertEqual(finalized, (folder / "build-metadata.json").read_bytes())
+
+    def test_failed_online_verification_cannot_write_a_success_status(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            metadata = self.fixture(folder)
+            before = (folder / "build-metadata.json").read_bytes()
+            with patch.object(release, "run", side_effect=RuntimeError("Online proof not found")):
+                with self.assertRaises(RuntimeError):
+                    release.attest_apk(folder, metadata)
+            self.assertNotIn("attestation", metadata)
+            self.assertEqual(before, (folder / "build-metadata.json").read_bytes())
+            with patch.object(release, "run") as command:
+                with self.assertRaisesRegex(ValueError, "must pass before"):
+                    release.attest(folder, metadata)
+                command.assert_not_called()
+
+    def test_attestation_subject_must_match_the_original_filename_and_bytes(self):
+        proof = attestation()
+        subject = {"name": "original.apk", "digest": {"sha256": "a" * 64}}
+        proof[0]["verificationResult"]["statement"]["subject"] = [subject]
+        release.check_attestation(proof, COMMIT, REF, 42, 1, filename="original.apk", sha256="a" * 64)
+        for name, digest in (("renamed.apk", "a" * 64), ("original.apk", "b" * 64)):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                release.check_attestation(proof, COMMIT, REF, 42, 1, filename=name, sha256=digest)
+
+    def test_old_and_new_candidate_formats_are_fetched_and_verified_without_rewriting_evidence(self):
+        for legacy in (None, "sha", "plain"):
+            with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                original = root / "original"
+                original.mkdir()
+                metadata = self.fixture(original, legacy=legacy)
+                if legacy is None:
+                    metadata["attestation"] = {"apk_verified": True, "method": "github-online"}
+                    release.write_json(original / "build-metadata.json", metadata)
+                expected = {path.name: path.read_bytes() for path in original.iterdir()}
+                target = root / "download"
+                def command(*args, **kwargs):
+                    if args[:3] == ("gh", "run", "download"):
+                        target.mkdir()
+                        for name, data in expected.items():
+                            (target / name).write_bytes(data)
+                        return ""
+                    return self.online(*args, **kwargs)
+                source = {"content": base64.b64encode(b'val lastVersionName = "r14.24.1"\nval lastVersion = 245\n').decode()}
+                records = [{"id": 7}, build_run(), {"artifacts": [{"id": 123, "name": "a14-signed-42-1", "expired": False}]}, source]
+                checked = {"apk": metadata["apk"], "apk_sha256": metadata["apk_sha256"]}
+                with patch.object(release, "api", side_effect=records), patch.object(release, "run", side_effect=command):
+                    with patch.object(release, "verify_apk", return_value=checked) as apk_check:
+                        fetched = release.fetch_candidate("42", target)
+                        apk_check.assert_called_once_with(target / metadata["apk"], COMMIT, "r14.24.1", 245)
+                self.assertEqual(123, fetched["artifact_id"])
+                self.assertNotIn("artifact_id", json.loads((target / "build-metadata.json").read_text()))
+                for name, data in expected.items():
+                    self.assertEqual(data, (target / name).read_bytes())
 
 
 class PromotionTrustTest(unittest.TestCase):
@@ -417,6 +525,13 @@ class PromotionTrustTest(unittest.TestCase):
                 "run_id": 42, "run_attempt": 1, "version_name": "r14.24.1", "apk": "CustoMIUIzer-A14-r14.24.1.apk"}
         release.check_metadata(meta, build_run())
         release.check_metadata(dict(meta, apk=f"CustoMIUIzer-A14-r14.24.1-{COMMIT[:6]}.apk"), build_run())
+        new = dict(meta, release_assets=[meta["apk"], "build-metadata.json"])
+        release.check_metadata(new, build_run())
+        for changed in (dict(new, apk=f"CustoMIUIzer-A14-r14.24.1-{COMMIT[:6]}.apk"),
+                        dict(new, release_assets=[meta["apk"], "build-metadata.json", "SHA256SUMS"]),
+                        dict(new, release_assets=["other.apk", "build-metadata.json"])):
+            with self.assertRaisesRegex(ValueError, "public release asset contract"):
+                release.check_metadata(changed, build_run())
         for field, value in (("apk", "../unexpected.apk"), ("run_id", 43), ("source_sha", "b" * 40)):
             with self.assertRaises(ValueError):
                 release.check_metadata(dict(meta, **{field: value}), build_run())
@@ -470,7 +585,7 @@ class PublicationTest(unittest.TestCase):
             with self.subTest(prerelease=prerelease, tamper=tamper), tempfile.TemporaryDirectory() as temp:
                 folder = Path(temp)
                 apk = release.candidate_filename("r14.25.2", COMMIT)
-                filenames = (apk, "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json")
+                filenames = (apk, "build-metadata.json")
                 for filename in filenames:
                     (folder / filename).write_bytes(filename.encode())
                 metadata = {"version_name": "r14.25.2", "version_code": 247, "source_sha": COMMIT,
@@ -479,7 +594,7 @@ class PublicationTest(unittest.TestCase):
                 if tamper:
                     assets[-1]["digest"] = "sha256:" + "a" * 64
                 records = {"id": 99, "tag_name": "r14.25.2", "target_commitish": COMMIT, "draft": True, "prerelease": prerelease, "assets": assets,
-                           "html_url": "https://github.com/example/release"}
+                           "html_url": "https://github.com/example/release", "name": "r14.25.2"}
                 writes = []
                 def command(*args, **kwargs):
                     if args[:3] == ("gh", "release", "upload"):
@@ -494,9 +609,11 @@ class PublicationTest(unittest.TestCase):
                     if "POST" in args:
                         request = json.loads((folder / "release-request.json").read_text())
                         self.assertEqual((True, prerelease, COMMIT), (request["draft"], request["prerelease"], request["target_commitish"]))
-                        self.assertIn("CustoMIUIzer A14 · r14.25.2", request["name"])
+                        self.assertEqual("r14.25.2", request["name"])
                         self.assertIn("## English", request["body"])
                         self.assertIn("gh attestation verify", request["body"])
+                        self.assertIn(metadata["apk_sha256"], request["body"])
+                        records["body"] = request["body"]
                         writes.append("create")
                         return json.dumps(dict(records, assets=[]))
                     if args[2].endswith("/99"):
@@ -520,7 +637,7 @@ class PublicationTest(unittest.TestCase):
                                 self.assertEqual(["create", "upload", "check-draft", "publish"], writes)
                                 self.assertTrue(tag.call_args.kwargs["must_exist"])
 
-    def test_release_assets_must_include_one_exact_set_of_four_files(self):
+    def test_release_assets_must_include_exactly_the_declared_files_without_duplicates(self):
         with tempfile.TemporaryDirectory() as temp:
             folder = Path(temp)
             (folder / "test.apk").write_bytes(b"original")
@@ -551,7 +668,14 @@ class ReleaseServer:
         self.events = []
         self.fail_download_upload = False
         self.tamper_source_readback = False
+        self.fail_event = None
         self.notes = {"content": base64.b64encode(b"## r14.26.1\n\nversionCode 247.\n\n- Reviewed change.\n").decode()}
+
+    def event(self, *event):
+        self.events.append(event)
+        if event[:2] == self.fail_event:
+            self.fail_event = None
+            raise RuntimeError("Simulated publication interruption")
 
     def token(self, repository, env):
         if repository == self.download:
@@ -565,12 +689,12 @@ class ReleaseServer:
             repository = endpoint.split("/releases?", 1)[0].removeprefix("repos/")
             self.token(repository, env)
             if repository in self.records and not self.records[repository]["draft"]:
-                self.events.append(("existing-readback", repository))
+                self.event("existing-readback", repository)
             return [copy.deepcopy(self.records[repository])] if repository in self.records else []
         if endpoint.endswith("/releases/latest"):
             repository = endpoint.removesuffix("/releases/latest").removeprefix("repos/")
             self.token(repository, env)
-            self.events.append(("latest", repository))
+            self.event("latest", repository)
             return copy.deepcopy(self.records[repository])
         raise AssertionError(endpoint)
 
@@ -579,7 +703,7 @@ class ReleaseServer:
             self.token(self.download, env)
             return json.dumps({"permissions": {"push": True}})
         if args[0] == "git":
-            self.events.append(("git", self.download))
+            self.event("git", self.download)
             if not any((kind, release.REPO) in self.events for kind in ("published-readback", "existing-readback")):
                 raise AssertionError("Xposed tag write occurred before source verification")
             return ""
@@ -591,15 +715,15 @@ class ReleaseServer:
                 record = json.loads((self.folder / "release-request.json").read_text())
                 record.update(id=100 if repository == self.download else 99, assets=[], html_url=f"https://github.com/{repository}/releases/tag/{record['tag_name']}")
                 self.records[repository] = record
-                self.events.append(("create", repository))
+                self.event("create", repository)
                 return json.dumps(record)
             record = copy.deepcopy(self.records[repository])
             if endpoint.endswith("/latest"):
-                self.events.append(("latest", repository))
+                self.event("latest", repository)
             elif "/tags/" in endpoint:
-                self.events.append(("published-readback", repository))
+                self.event("published-readback", repository)
             else:
-                self.events.append(("draft-readback", repository))
+                self.event("draft-readback", repository)
                 if self.tamper_source_readback and repository == release.REPO:
                     record["assets"][0]["digest"] = "sha256:" + "b" * 64
             return json.dumps(record)
@@ -609,7 +733,7 @@ class ReleaseServer:
             record = self.records[repository]
             if args[2] == "upload":
                 paths = args[4:args.index("--repo")]
-                self.events.append(("upload", repository, *(Path(path).name for path in paths)))
+                self.event("upload", repository, *(Path(path).name for path in paths))
                 for path in paths:
                     path = Path(path)
                     record["assets"].append({"name": path.name, "digest": "sha256:" + release.digest(path), "size": path.stat().st_size})
@@ -620,18 +744,22 @@ class ReleaseServer:
                 if ("draft-readback", repository) not in self.events:
                     raise AssertionError("Draft was published before readback")
                 record["draft"] = False
-                self.events.append(("publish", repository))
+                record["name"] = args[args.index("--title") + 1]
+                self.event("publish", repository)
                 return ""
         raise AssertionError(args)
 
 
 class DualPublicationTest(unittest.TestCase):
-    def fixture(self, root):
-        apk = release.candidate_filename("r14.26.1", COMMIT)
+    def fixture(self, root, *, legacy=False):
+        apk = f"CustoMIUIzer-A14-r14.26.1-{COMMIT[:6]}.apk" if legacy else release.candidate_filename("r14.26.1", COMMIT)
         for filename in (apk, "SHA256SUMS", "build-metadata.json", "attestation.sigstore.json"):
             (root / filename).write_bytes(filename.encode())
-        return {"version_name": "r14.26.1", "version_code": 247, "source_sha": COMMIT,
-                "source_ref": REF, "apk": apk, "apk_sha256": release.digest(root / apk)}
+        metadata = {"version_name": "r14.26.1", "version_code": 247, "source_sha": COMMIT,
+                    "source_ref": REF, "apk": apk, "apk_sha256": release.digest(root / apk)}
+        if not legacy:
+            metadata["release_assets"] = [apk, "build-metadata.json"]
+        return metadata
 
     def context(self, server):
         stack = ExitStack()
@@ -656,6 +784,9 @@ class DualPublicationTest(unittest.TestCase):
             self.assertEqual("247-r14.26.1", download["tag_name"])
             self.assertEqual(source["assets"], download["assets"])
             self.assertEqual(source["body"], download["body"])
+            self.assertEqual("r14.26.1", source["name"])
+            self.assertEqual(source["name"], download["name"])
+            self.assertEqual({metadata["apk"], "build-metadata.json"}, {asset["name"] for asset in source["assets"]})
 
     def test_failed_source_verification_prevents_xposed_tags_or_releases(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -714,8 +845,8 @@ class DualPublicationTest(unittest.TestCase):
                 self.assertFalse(any(event[0] in {"create", "upload", "publish"} and event[1] == release.REPO for event in server.events))
                 uploads = [event for event in server.events if event[0] == "upload"]
                 self.assertEqual(1, len(uploads))
-                self.assertEqual({"SHA256SUMS", "build-metadata.json", "attestation.sigstore.json"}, set(uploads[0][2:]))
-                self.assertEqual(4, len(server.records[server.download]["assets"]))
+                self.assertEqual({"build-metadata.json"}, set(uploads[0][2:]))
+                self.assertEqual(2, len(server.records[server.download]["assets"]))
                 self.assertFalse(server.records[server.download]["draft"])
 
     def test_recovery_refuses_asset_or_note_changes_before_any_write(self):
@@ -726,16 +857,99 @@ class DualPublicationTest(unittest.TestCase):
             with self.context(server):
                 release.publish_verified(root, "42", "both", metadata)
                 original = copy.deepcopy(server.records)
-                for field in ("assets", "body"):
+                for field in ("assets", "body", "name"):
                     server.records = copy.deepcopy(original)
                     if field == "assets":
                         server.records[release.REPO]["assets"][0]["digest"] = "sha256:" + "c" * 64
-                    else:
+                    elif field == "body":
                         server.records[release.REPO]["body"] += "\nUnexpected note"
+                    else:
+                        server.records[release.REPO]["name"] = "CustoMIUIzer A14 · r14.26.1"
                     server.events.clear()
                     with self.subTest(field=field), self.assertRaises(ValueError):
                         release.publish_verified(root, "42", "both", metadata)
                     self.assertFalse(any(event[0] in {"git", "create", "upload", "publish"} for event in server.events))
+
+    def test_repeated_published_immutable_releases_are_verified_without_any_write(self):
+        for legacy in (False, True):
+            with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                metadata = self.fixture(root, legacy=legacy)
+                server = ReleaseServer(root)
+                with self.context(server):
+                    release.publish_verified(root, "42", "both", metadata)
+                    for record in server.records.values():
+                        record["immutable"] = True
+                    original = copy.deepcopy(server.records)
+                    server.events.clear()
+                    release.publish_verified(root, "42", "both", metadata)
+                self.assertEqual(original, server.records)
+                self.assertFalse(any(event[0] in {"git", "create", "upload", "publish"} for event in server.events))
+
+    def test_legacy_four_asset_source_and_partial_draft_recover_with_original_names_and_evidence(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root, legacy=True)
+            server = ReleaseServer(root)
+            with self.context(server):
+                release.publish_verified(root, "42", "both", metadata)
+                for record in server.records.values():
+                    record["name"] = "CustoMIUIzer A14 · r14.26.1"
+                    for filename in ("SHA256SUMS", "attestation.sigstore.json"):
+                        path = root / filename
+                        record["assets"].append({"name": filename, "digest": "sha256:" + release.digest(path), "size": path.stat().st_size})
+                server.records[release.REPO]["immutable"] = True
+                original = copy.deepcopy(server.records[release.REPO])
+                draft = server.records[server.download]
+                draft["draft"] = True
+                draft["assets"] = [asset for asset in draft["assets"] if asset["name"] in {metadata["apk"], "SHA256SUMS"}]
+                server.events.clear()
+                release.publish_verified(root, "42", "both", metadata)
+            self.assertEqual(original, server.records[release.REPO])
+            self.assertEqual("r14.26.1", server.records[server.download]["name"])
+            uploads = [event for event in server.events if event[0] == "upload"]
+            self.assertEqual([("upload", server.download, "build-metadata.json", "attestation.sigstore.json")], uploads)
+            self.assertEqual(4, len(server.records[server.download]["assets"]))
+
+    def test_immutable_draft_or_unexpected_new_sidecars_stop_before_any_mutation(self):
+        for mutation in ("immutable", "sidecar"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                metadata = self.fixture(root)
+                server = ReleaseServer(root)
+                with self.context(server):
+                    release.publish_verified(root, "42", "both", metadata)
+                    record = server.records[release.REPO]
+                    if mutation == "immutable":
+                        record.update(draft=True, immutable=True)
+                    else:
+                        path = root / "SHA256SUMS"
+                        record["assets"].append({"name": path.name, "size": path.stat().st_size, "digest": "sha256:" + release.digest(path)})
+                    server.events.clear()
+                    with self.assertRaises(ValueError):
+                        release.publish_verified(root, "42", "both", metadata)
+                self.assertFalse(any(event[0] in {"git", "create", "upload", "publish"} for event in server.events))
+
+    def test_every_publication_stage_can_resume_without_rebuilding_or_replacing_verified_assets(self):
+        stages = ["create", "upload", "draft-readback", "publish", "published-readback", "latest"]
+        for repository in (release.REPO, ReleaseServer.download):
+            for stage in stages + (["git"] if repository == ReleaseServer.download else []):
+                with self.subTest(repository=repository, stage=stage), tempfile.TemporaryDirectory() as temp:
+                    root = Path(temp)
+                    metadata = self.fixture(root)
+                    original = {path.name: path.read_bytes() for path in root.iterdir()}
+                    server = ReleaseServer(root)
+                    server.fail_event = (stage, repository)
+                    with self.context(server):
+                        with self.assertRaisesRegex(RuntimeError, "publication interruption"):
+                            release.publish_verified(root, "42", "both", metadata)
+                        release.publish_verified(root, "42", "both", metadata)
+                    source, download = server.records[release.REPO], server.records[server.download]
+                    self.assertFalse(source["draft"] or download["draft"])
+                    self.assertEqual(source["assets"], download["assets"])
+                    self.assertEqual(2, len(source["assets"]))
+                    for name, data in original.items():
+                        self.assertEqual(data, (root / name).read_bytes())
 
     def test_missing_cross_repo_permission_cannot_partially_publish_source(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -785,6 +999,15 @@ class ProtectedWorkflowTest(unittest.TestCase):
         for expression in ("secrets.A14_KEYSTORE_BASE64", "secrets['A14_KEYSTORE_BASE64']", 'secrets["A14_KEYSTORE_BASE64"]'):
             text = self.workflow() + "\n      - run: echo unexpected\n        env:\n          LEAK: ${{ " + expression + " }}\n"
             self.assertTrue(any("CI_SIGNING" in item for item in self.scan(text)))
+
+    def test_online_subjects_and_metadata_finalization_order_cannot_be_weakened(self):
+        for original, changed in (("github-token: ${{ github.token }}", "github-token: invalid"),
+                                  ("candidate/*.apk", "candidate/*"),
+                                  ("subject-path: ${{ runner.temp }}/candidate/build-metadata.json", "subject-path: ${{ runner.temp }}/candidate/*.apk"),
+                                  ("signed_release.py attest-apk", "signed_release.py source-policy"),
+                                  ("id: apk-provenance", "id: apk-provenance\n        if: false")):
+            with self.subTest(changed=changed):
+                self.assertTrue(self.scan(self.workflow().replace(original, changed)))
 
     def test_push_can_never_sign_and_untrusted_triggers_are_rejected(self):
         for event in ("pull_request", "push"):

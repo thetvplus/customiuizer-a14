@@ -81,7 +81,9 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
             env.update(GH_TOKEN="${{ github.token }}", A14_XPOSED_RELEASE_TOKEN="${{ secrets.A14_XPOSED_RELEASE_TOKEN }}")
             need(publication.get("env") == env and publication.get("run") == 'python tools/signed_release.py publish-current --directory "$RUNNER_TEMP/original-candidate"', "automatic publisher must consume the signing receipt and native dispatch")
         steps = job.get("steps", [])
-        need(any(step.get("id") == "candidate" and step.get("run") == 'python tools/signed_release.py candidate --directory "$RUNNER_TEMP/candidate"' for step in steps), "candidate outputs must come from APK verification")
+        candidates = [i for i, step in enumerate(steps) if step.get("id") == "candidate"
+                      and step.get("run") == 'python tools/signed_release.py candidate --directory "$RUNNER_TEMP/candidate"']
+        need(len(candidates) == 1, "candidate outputs must come from APK verification")
         builds = [(index, step) for index, step in enumerate(steps) if "-PofficialRelease=true" in step.get("run", "")]
         need(len(builds) == 1, "exactly one official APK build is required")
         if len(builds) == 1:
@@ -93,12 +95,22 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
             need(len(preflight) == 1 and preflight[0] < index, "source, completed main CI and confirmation policy must be rechecked before exposing keys")
             cleanup = [i for i, step in enumerate(steps) if step.get("if") == "always()" and step.get("run") == 'rm -rf -- "$RUNNER_TEMP/a14-signing"']
             attest = [i for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/attest@")]
+            finalize = [i for i, step in enumerate(steps) if 'signed_release.py attest-apk --directory "$RUNNER_TEMP/candidate"' in step.get("run", "")]
             verify = [i for i, step in enumerate(steps) if 'signed_release.py attest --directory "$RUNNER_TEMP/candidate"' in step.get("run", "")]
             uploads = [(i, step) for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/upload-artifact@")]
-            need(len(cleanup) == len(attest) == len(verify) == len(uploads) == 1, "one cleanup, attestation, verification and candidate upload are required")
-            if len(cleanup) == len(attest) == len(verify) == len(uploads) == 1:
+            need(len(cleanup) == len(finalize) == len(verify) == len(uploads) == 1 and len(attest) == 2,
+                 "APK and finalized metadata need separate online attestations and verification before upload")
+            if len(cleanup) == len(candidates) == len(finalize) == len(verify) == len(uploads) == 1 and len(attest) == 2:
                 upload_index, upload = uploads[0]
-                need(index < cleanup[0] < attest[0] < verify[0] < upload_index, "verify before uploading, remove keys before attesting")
+                need(index < cleanup[0] < candidates[0] < attest[0] < finalize[0] < attest[1] < verify[0] < upload_index,
+                     "name/verify APK before its proof, verify APK proof before finalizing/attesting metadata, then verify both before upload")
+                for attestation, subject in zip(attest, ("*.apk", "build-metadata.json")):
+                    need(steps[attestation].get("with") == {"subject-path": "${{ runner.temp }}/candidate/" + subject,
+                                                           "github-token": "${{ github.token }}", "create-storage-record": "false"}
+                         and "if" not in steps[attestation], "final subjects must be uploaded to GitHub online attestations")
+                for verification in (finalize[0], verify[0]):
+                    need(steps[verification].get("env", {}).get("GH_TOKEN") == "${{ github.token }}"
+                         and "if" not in steps[verification], "online provenance verification cannot be skipped")
                 need("if" not in upload and upload.get("with", {}).get("path") == "${{ runner.temp }}/candidate/" and upload["with"].get("if-no-files-found") == "error", "only a successfully verified candidate may be uploaded")
             if not errors:
                 sanitized["jobs"]["sign"]["steps"][index]["env"] = {}
