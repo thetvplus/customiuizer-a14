@@ -82,9 +82,7 @@
   ],
   "determinism_outputs": [
     "docs/rom-intelligence/A14_PROCESS_MATRIX.json",
-    "docs/rom-intelligence/A14_PROCESS_MATRIX.csv",
-    "docs/rom-intelligence/A14_PROCESS_MATRIX.md",
-    "docs/rom-intelligence/A14_PROCESS_EXCEPTIONS_GENERATED.md"
+    "docs/rom-intelligence/A14_PROCESS_MATRIX.csv"
   ],
   "apply_checks": {
     "a14_contract": [

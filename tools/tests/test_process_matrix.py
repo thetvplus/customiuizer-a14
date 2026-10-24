@@ -1,14 +1,38 @@
 """Compare documented process eligibility with the current production source."""
+import csv
+import io
 import json
 import re
+import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
+from tools import extract_process_matrix
 from tools.extract_process_matrix import FEATURE_DIR, extract_class_body
 from tools.catalog_contract_probe import balanced_blocks, parse_feature_ids, parse_lazy_spec
 
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX = ROOT / "docs/rom-intelligence/A14_PROCESS_MATRIX.json"
+
+
+class ProcessMatrixGenerationTest(unittest.TestCase):
+    def test_machine_outputs_preserve_all_features_scope_and_routing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary)
+            with patch.object(extract_process_matrix, "REPO_ROOT", output_root), redirect_stdout(io.StringIO()):
+                self.assertEqual(0, extract_process_matrix.main())
+            output = output_root / "docs" / "rom-intelligence"
+            self.assertEqual({"A14_PROCESS_MATRIX.json", "A14_PROCESS_MATRIX.csv"},
+                             {path.name for path in output.iterdir()})
+            generated = json.loads((output / "A14_PROCESS_MATRIX.json").read_text(encoding="utf-8"))
+            self.assertEqual(json.loads(MATRIX.read_text(encoding="utf-8")), generated)
+            with (output / "A14_PROCESS_MATRIX.csv").open(encoding="utf-8", newline="") as handle:
+                rows = list(csv.DictReader(handle))
+            for row in rows:
+                row["featureIdInt"] = int(row["featureIdInt"])
+            self.assertEqual(generated["features"], rows)
 
 
 class ProcessMatrixEligibilityTest(unittest.TestCase):

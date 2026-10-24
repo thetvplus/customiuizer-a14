@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Extract the A14 process/feature matrix from Kotlin source files.
 
-This is an offline, read-only source scanner. It does not build the project or
-access a device. Output is written to docs/rom-intelligence/.
+This offline scanner does not modify source, build the project or access a device.
+Complete JSON and CSV output is written to docs/rom-intelligence/.
 """
 
 from __future__ import annotations
@@ -309,84 +309,7 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
 
-    md = ["# A14 Process Matrix\n\n"]
-    md.append(
-        "This matrix is generated from source (`tools/extract_process_matrix.py`). "
-        "It records every `FeatureSpec` discovered in `mods/utils/feature/`.\n\n"
-    )
-
-    md.append("## LSPosed scope list\n\n")
-    for pkg in sorted(scope):
-        md.append(f"- `{pkg}`\n")
-    md.append("\n")
-
-    md.append("## Package -> Installer routing (MainModule.java)\n\n")
-    md.append("| Package | Installer | Notes |\n")
-    md.append("|---|---|---|\n")
-    notes = {
-        "com.android.systemui": "ReflectionCache + SystemUIInitializer hook; post-init prefs",
-        "com.miui.home": "ReflectionCache; may also trigger GenericAppInstaller post-attach",
-        "com.android.settings": "Explicitly denies `com.android.settings:remote`",
-        "com.miui.securitycenter": "Explicitly denies `com.miui.securitycenter.bootaware`",
-        "com.miui.packageinstaller": "PackageInstallerRouter handles the scoped MIUI installer",
-    }
-    for pkg, inst in sorted(routing.items()):
-        md.append(f"| `{pkg}` | `{inst}` | {notes.get(pkg, '')} |\n")
-    md.append("\n")
-
-    md.append("## Feature matrix (CSV: `A14_PROCESS_MATRIX.csv`)\n\n")
-    md.append(
-        "| ID | Feature | Pref key | Target | Phase | Installer | Install hook | Allowed process | Denied process |\n"
-    )
-    md.append("|---|---|---|---|---|---|---|---|---|\n")
-    for r in rows:
-        hook = r["installHook"][:55] + "..." if len(r["installHook"]) > 55 else r["installHook"]
-        hook = hook.replace("|", "\\|")
-        name = r["name"].replace("|", "\\|")
-        md.append(
-            f"| {r['featureIdInt']} | {name} | `{r['preferenceKey']}` | {r['target']} | {r['phase']} | "
-            f"{r['installer']} | `{hook}` | {r['allowedProcess']} | {r['deniedProcess']} |\n"
-        )
-
-    (out_dir / "A14_PROCESS_MATRIX.md").write_text("".join(md), encoding="utf-8", newline="\n")
-
-    exceptions = [
-        "# A14 Process Exceptions (generated)\n\n",
-        "This file captures process-routing gaps, package/process mismatches, and targeted verification notes.\n\n",
-        "## Scope vs code\n\n",
-        "- Recognized input method packages are routed through `ProcessRouter` to `InputMethodInstaller`; "
-        "the supported keyboard packages are listed in `scope.list`. Packages outside the static scope receive no callbacks.\n",
-        "  - Verification: optional per-keyboard smoke on target ROM; not a default release gate.\n",
-        "- `miui.systemui.plugin` is not in `scope.list`; the module stays in `com.android.systemui` and extracts the plugin "
-        "`ClassLoader` from `PluginInstance$PluginFactory.createPlugin` at runtime.\n",
-        "  - Evidence: `ControlCenterPluginHook` and `SystemUIControlCenterHooks.pluginLoader`.\n\n",
-        "## Package / process confusion\n\n",
-        "- `MainModule.onPackageReady` first requires `lpparam.isFirstPackage()`, then resolves package and process "
-        "through `ProcessRouter`. `ProcessScope.isInstallable` rejects unsupported scopes before preference or feature initialization.\n",
-        "- SystemUI, Settings and PermissionController allow their main processes; their secondary processes are refused.\n",
-        "- SecurityCenter allows its main process; `bootaware` and other secondary processes are refused.\n",
-        "- `com.android.location.fused` and packages starting with `com.android.networkstack` are refused unconditionally.\n",
-        "- SystemUI uses `SystemUiBootstrapCoordinator` for its `SystemUIInitializer.init` hook; "
-        "both SystemUI and Launcher call `ReflectionCache.onSafeLifecycle` before feature installer dispatch.\n",
-        "- `com.miui.home` triggers `LauncherInstaller` and, when selected, `GenericAppInstaller.installPostAttach`.\n\n",
-        "## Feature target `ANY`\n\n",
-        "- `StatusBarHeightFeature` and `AlarmCompatFeature` in `CommonPackageFeatures` use `FeatureTarget.ANY`.\n",
-        "- `StatusBarHeightFeature` requires `system_statusbarheight > 11` and a package in its `RESOURCE_PACKAGES` set "
-        "(`android`, SystemUI or Launcher). Window geometry is owned by system_server's `StatusBarHeightInsetsFeature`.\n",
-        "- `AlarmCompatFeature` is additionally gated by `various_alarmcompat_apps`, so it only installs in the selected packages.\n\n",
-        "## ClassLoader and DexKit\n\n",
-        "- Most package-ready features use `lpparam.classLoader`.\n",
-        "- `GuardProviderInstaller` and `MediaInstaller` call `MainModule.loadDexKit()` on demand.\n",
-        "- `ControlCenterPluginHook` extracts the `miui.systemui.plugin` `ClassLoader` and caches it in `SystemUIControlCenterHooks.pluginLoader`.\n",
-        "- `ReflectionCache.onSafeLifecycle` is called by `SystemUiBootstrapCoordinator` and the Launcher branch of `MainModule`.\n\n",
-        "## API 102 lifecycle\n\n",
-        "- `MainModule` requires libxposed API 102; metadata declares minApiVersion=102.\n",
-        "- `HookInstallation` shares native installation policy; fixed IDs do not replace one-time installation or owner-bound cleanup.\n",
-        "- `tools/check-invariants.py` blocks explicit `replaceHook` and hot reload, and keeps API version queries off callbacks.\n\n",
-    ]
-    (out_dir / "A14_PROCESS_EXCEPTIONS_GENERATED.md").write_text("".join(exceptions), encoding="utf-8", newline="\n")
-
-    print(f"Wrote {len(rows)} features to {out_dir}/A14_PROCESS_MATRIX.*")
+    print(f"Wrote {len(rows)} features to {out_dir}/A14_PROCESS_MATRIX.json and .csv")
     return 0
 
 
