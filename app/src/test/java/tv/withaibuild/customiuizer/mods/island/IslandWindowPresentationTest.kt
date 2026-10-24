@@ -55,6 +55,44 @@ class IslandWindowPresentationTest {
         root.layout(0, 0, 400, 100)
     }
 
+    @Test fun shellStateChangingAfterPrepareVetoesTheFirstFrameWithoutShowingOrReservingSpace() {
+        lease.cancel()
+        var canDraw = true
+        var rejected = 0
+        lease = IslandWindowPresentation(root, { pill }, { allowed }, { shows++ }, { hides++ },
+            frameAllowed = { canDraw }, rejected = { rejected++ })
+        val event = Any()
+        lease.prepare(event, 184)
+        canDraw = false // Shell published PiP after render but before this traversal.
+        assertFalse(lease.onPreDraw())
+        assertEquals(1, rejected)
+        assertEquals(0, shows)
+        assertNull(DynamicIslandStatusBarFade.ownerRef?.get())
+        assertEquals(IslandWindowPresentation.Phase.PREPARED, lease.phase)
+        lease.cancel()
+        canDraw = true
+        assertTrue(lease.onPreDraw())
+        assertEquals("A rejected old identity must not reappear", 0, shows)
+    }
+
+    @Test fun aVisibleFrameCanBeVetoedBeforeItsControlledExitWithoutReacquiringAnOldLease() {
+        lease.cancel()
+        var canDraw = true
+        lease = IslandWindowPresentation(root, { pill }, { allowed }, { shows++ }, { hides++ },
+            frameAllowed = { canDraw })
+        lease.prepare(Any(), 184); assertTrue(lease.onPreDraw())
+        assertEquals(1, shows)
+        canDraw = false
+        assertFalse(lease.onPreDraw())
+        assertEquals(1, hides)
+        assertNull(DynamicIslandStatusBarFade.ownerRef?.get())
+        assertEquals(IslandWindowPresentation.Phase.VISIBLE, lease.phase)
+        lease.exiting()
+        assertEquals(IslandWindowPresentation.Phase.EXITING, lease.phase)
+        lease.cancel()
+        assertNull(DynamicIslandStatusBarFade.ownerRef?.get())
+    }
+
     @Test fun preparationAndAnAttachedButTransparentWindowCannotReserveTheStatusBar() {
         val event = Any()
         pill.alpha = 0f

@@ -6,16 +6,16 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
-## r14.25.5 — 2026-10-25
+## r14.25.6 — 2026-10-25
 
-versionCode 250. Changes since r14.25.3:
+versionCode 251. Changes since r14.25.3:
 
 ### User changes
 
-Refine Dynamic Island, status-bar dimensions and native window interactions, consolidating r14.25.4 and the current fixes. Synchronize Xposed download instructions and bilingual records after stable release verification; retry documentation independently without resigning APKs, replacing assets or moving historical tags.
+This version is for locally installed, officially signed trials only and has not been published. It refines Dynamic Island, status-bar dimensions and native window interactions, combining valid changes from r14.25.4, the withdrawn r14.25.5 and this fix while preserving historical commits and binaries.
 
-- Add opt-in Music direct-to-island for explicitly selected players during supported native fullscreen returns. Preserve native icon preparation and finish / cancel restoration, fixing missing desktop icons after returning Home.
-- Avoid revealing the media island during PiP entry, cancellation and exit. Support full hide / restore and native edge stash / restore in global and music gestures without pausing playback, and fix independent center, left and right double tap actions missing initialization. Hide the entire island for native PiP, system floating windows and visible application overlay windows, including verified Bilibili window suppression and restoration after close. This option requires a full device reboot after changes; ordinary Views inside an activity are not separate overlay windows.
+- Music direct-to-island now selects the native window-only return before desktop-icon lookup, then directs the validated app window to the island. Do not borrow or compress the desktop icon, or restore it only at the end. Keep the opt-in switch and explicit player selection.
+- Reject premature media-return confirmation during PiP entry, cancellation and exit. Retain full hide / restore, edge stash / restore and independent center, left and right double tap actions. Recheck current PiP state before the first draw, cancel an unshown entrance and animate an already-visible island out. Whole-island suppression covers native PiP, system and application overlay windows; its switch requires a full device reboot.
 - Synchronize fixed status-bar height with system dimension resources, correcting stale-height layouts in apps such as Pinduoduo and DingTalk without expanding module scope. Keep the existing full-reboot requirement, application fullscreen visibility and native contrast protection.
 - Fix missing or recycled settings descriptions, and stale portrait geometry or a visible landscape island when actual window rotation has no resource configuration callback.
 - Strengthen notification-island keyguard, update and click identity checks while retaining native alerts on failed takeover. Stale media reads and old return confirmations cannot revive content.
@@ -23,6 +23,8 @@ Refine Dynamic Island, status-bar dimensions and native window interactions, con
 
 ### Engineering notes
 
+- Use NavStubView's native no-icon branch without desktop-icon lookup, snapshots or hiding. Retain the task Surface, native spring, callbacks and cancellation; never hijack a desktop icon already chosen by a late path. Tasks declaring auto-PiP stay native and cannot confirm an early island entrance.
+- Read only the published Shell scalar snapshot before drawing; coalesce rejected-frame handling into one controller-owned Main task and release it on disposal. Visible content follows the existing exit animation, while keyguard keeps immediate cleanup. Add no per-frame reflection, Binder, I/O or poller.
 - Manage one fixed overlay identity and four dimensions in system_server. The persisted enabled flag always remains false; only the running module enables its runtime state. Native state calculation restores stock dimensions on a full boot without the module. Replacement / removal retires only unreferenced module-owned files, with bounded retries and retirement records to prevent accumulation.
 - Work around the confirmed stale system_server preference cache by retaining the existing authenticated, value-free invalidation. Read one acknowledged height through the non-exported, system-UID-only endpoint and include it in the same atomic preference publication. Do not mutate framework caches or recreate client listeners.
 - Read native Session surface inventories only after visibility changes, session cleanup or an island-owner reconnect. Filter by user and default display, bound scans and snapshots, retain no windows, inject into no additional apps and add no poller. Preserve native PiP Surface, input, Shell-executor and task / user identity contracts.

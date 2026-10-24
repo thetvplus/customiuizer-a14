@@ -37,16 +37,14 @@ internal object LauncherMusicReturnHooks {
 
     fun install(param: PackageReadyParam, prefs: PrefMap) {
         val access = LauncherMusicReturnAccess(param.classLoader)
-        val iconHandoff = LauncherMusicReturnIconHandoff()
-        val iconSetup = ModuleHelper.hookMethod(access.prepareIcon, object : MethodHook() {
+        val targetHook = ModuleHelper.hookMethod(access.closingTarget, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                val submitted = chain.getArg(1) ?: return chain.proceed()
-                val native = iconHandoff.nativeParams(chain.thisObject, submitted)
-                return if (native === submitted) chain.proceed()
-                else chain.proceed(arrayOf(chain.getArg(0), native))
+                val nav = chain.thisObject ?: return chain.proceed()
+                val selected = ModuleHelper.guarded(false) { active.get()?.selectWindowTarget(nav) == true }
+                return if (selected) null else chain.proceed()
             }
         })
-        if (iconSetup == null) return // Retargeting requires native icon restoration to be available.
+        if (targetHook == null) return
         ModuleHelper.hookMethod(access.attached, object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 val view = callback.getThisObject() as? View ?: return@guarded
@@ -77,12 +75,9 @@ internal object LauncherMusicReturnHooks {
                 val owner = active.get()
                 val attempt = ModuleHelper.guarded<Attempt?>(null) { owner?.retarget(original, chain.thisObject!!) }
                 if (attempt == null) return chain.proceed()
-                // Native isUpdate(ignoreIcon=true) skips both floating drawing AND initialization.
-                // Let icon setup see the original params so finish/cancel can restore its icon;
-                // animation frames still use the retargeted copy with ignoreIcon=true.
-                val result = iconHandoff.during(chain.thisObject!!, attempt.params, original) {
-                    chain.proceed(arrayOf(attempt.params))
-                }
+                // Native null-target cleanup retires the floating icon before the spring.
+                // Keep its task leash, listeners, velocity and cancellation policy intact.
+                val result = chain.proceed(arrayOf(attempt.params))
                 ModuleHelper.guarded { owner?.committed(attempt, chain.thisObject!!) }
                 return result
             }
@@ -174,6 +169,14 @@ internal object LauncherMusicReturnHooks {
             val result = access.retarget(original, element, nav, frame) ?: return null
             return Attempt(result, current, gesture.get())
         }
+        fun selectWindowTarget(native: Any): Boolean {
+            val nav = view.get()?.takeIf { it === native && it.isAttachedToWindow } ?: return false
+            if (!enabled() || !ScreenStateController.isScreenOn() || nav.display?.rotation != android.view.Surface.ROTATION_0) return false
+            val current = snapshot ?: return false
+            val frame = current.frame ?: return false
+            if (!current.fresh(SystemClock.uptimeMillis()) || frame.packageName !in options.mediaReturnApps) return false
+            return access.selectWindowTarget(nav, frame)
+        }
         fun committed(attempt: Attempt, element: Any) {
             val tasks = scope ?: return
             if (!enabled() || attempt.gesture == committedGesture) return
@@ -197,7 +200,7 @@ internal object LauncherMusicReturnHooks {
             }
         }
         override fun onScreenStateChanged(isOn: Boolean) {
-            if (!isOn) snapshot = null
+            if (!isOn) snapshot = null else request()
         }
         private fun stop() {
             snapshot = null

@@ -101,7 +101,8 @@ internal class IslandActivityController(
         shown = { event ->
             (lastContent as? IslandMediaContent)?.takeIf { it.token == event && it.playing && !exiting }
                 ?.let { displayedMedia = it.token; updateSpectrum(visible = true) }
-        }, hidden = { spectrum?.stop() })
+        }, hidden = { spectrum?.stop() }, frameAllowed = ::frameAllowed,
+        rejected = ::queueFrameRecheck)
     private val window = context.getSystemService(WindowManager::class.java)
     private var attached = false
     private var exiting = false
@@ -318,7 +319,7 @@ internal class IslandActivityController(
                     } }, changed = { onMain {
                         val wasPresented = lastContent != null
                         mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
-                        if (floatingWindowBlocked()) { cancelMediaReturn(); hide() }
+                        if (floatingWindowBlocked()) { cancelMediaReturn() }
                         else if (!wasPresented && media?.packageName != foregroundPackage) {
                             mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
                             nativeManager.get()?.let { updateFromNative(it) }
@@ -406,7 +407,7 @@ internal class IslandActivityController(
             cancelMediaReturn()
             mediaRevealAt = null
             // A prepared/visible media window must not finish a now-invalid entrance.
-            if (lastContent is IslandMediaContent) hide()
+            if (lastContent is IslandMediaContent) hide(animate = state.allowed)
         } else if ((wasBlocked || wasHidden && !floatingWindowBlocked()) && media?.packageName != foregroundPackage) {
             mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
             nativeManager.get()?.let { updateFromNative(it) }
@@ -414,9 +415,32 @@ internal class IslandActivityController(
         return true
     }
 
-    private fun floatingWindowBlocked(): Boolean = hideInFloatingWindow &&
-        (!freeformKnown || freeformPresent || pipSnapshot.state in 1..5 && pipSnapshot.displayId == 0 ||
+    private fun floatingWindowBlocked(pip: IslandPipSnapshot = pipSnapshot): Boolean = hideInFloatingWindow &&
+        (!freeformKnown || freeformPresent || pip.state in 1..5 && pip.displayId == 0 ||
             foregroundUser?.let { applicationOverlays?.hasWindow(it) } == true)
+
+    /** Read only the already-published Shell snapshot; no native query or frame work queue. */
+    private fun frameAllowed(): Boolean {
+        if (disposed || !options.enabled) return false
+        // Safety/panel removal is owned by refreshSafety/render. This additional
+        // fence must not stall their existing exit animation on an old Surface buffer.
+        if (exiting || !state.allowed) return true
+        val pip = pipStateReader?.invoke()?.takeIf { it.generation >= pipSnapshot.generation } ?: pipSnapshot
+        val content = lastContent as? IslandMediaContent
+        return !floatingWindowBlocked(pip) && (content == null || !pip.blocks(content))
+    }
+
+    private var frameRecheckQueued = false
+    private val frameRecheck = Runnable {
+        frameRecheckQueued = false
+        ModuleHelper.guarded { if (!disposed) render() }
+    }
+    private fun queueFrameRecheck() {
+        if (!disposed && !frameRecheckQueued) {
+            frameRecheckQueued = true
+            handler.post(frameRecheck)
+        }
+    }
 
     internal fun refreshFloatingWindows() = onMain {
         val reader = freeform ?: return@onMain
@@ -996,7 +1020,7 @@ internal class IslandActivityController(
             publishMusicReturn()
             clearChat(); state.clearToast(); clearSystemActivity()
             mediaRevealAt = null
-            hide()
+            hide(animate = state.allowed)
             return false
         }
         if (media?.let(pipSnapshot::blocks) == true) {
@@ -1275,6 +1299,8 @@ internal class IslandActivityController(
         publishMusicReturn()
         handler.removeCallbacks(expiry)
         handler.removeCallbacks(nativeRefresh)
+        handler.removeCallbacks(frameRecheck)
+        frameRecheckQueued = false
         freeformGeneration++
         freeformJob?.cancel(); freeformJob = null
         applicationOverlays?.close(); applicationOverlays = null

@@ -860,6 +860,51 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds)
     }
 
+    @Test fun aShellChangeBetweenRenderAndFirstDrawVetoesAndCoalescesCleanup() {
+        var latest: IslandPipSnapshot? = null
+        val controller = controller(media = true, hideFloating = true, pipStateReader = { latest })
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("shell-first-frame-race")
+        controller.updateFromNative(native); drain()
+        drawFrames = false
+        controller.foregroundChanged("com.miui.home"); revealMedia()
+        assertEquals(1, adds)
+        val presentation = org.robolectric.util.ReflectionHelpers.getField<IslandWindowPresentation>(controller, "presentation")
+        latest = IslandPipSnapshot(1, 3, android.content.ComponentName(context.packageName, "Player"), android.os.Process.myUserHandle())
+        assertFalse(presentation.onPreDraw())
+        assertFalse(presentation.onPreDraw())
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField(controller, "frameRecheckQueued"))
+        drain()
+        assertEquals("One rejected prepared window is removed once", 1, removes)
+        assertEquals(IslandWindowPresentation.Phase.IDLE, presentation.phase)
+        assertFalse(org.robolectric.util.ReflectionHelpers.getField(controller, "frameRecheckQueued"))
+        latest = IslandPipSnapshot(2, 0)
+        controller.pipChanged(latest!!)
+        drawFrames = true; revealMedia()
+        assertEquals(2, adds)
+    }
+
+    @Test fun anAlreadyVisibleIslandExitsSmoothlyForPipWhileLockStillRemovesItImmediately() {
+        val controller = controller(media = true, hideFloating = true)
+        native.player = launchablePlayer("pip-visible-exit")
+        controller.updateFromNative(native); revealMedia()
+        val presentation = org.robolectric.util.ReflectionHelpers.getField<IslandWindowPresentation>(controller, "presentation")
+        assertEquals(IslandWindowPresentation.Phase.VISIBLE, presentation.phase)
+        assertTrue(shell!!.isAttachedToWindow)
+        assertFalse(shell!!.simplified)
+        assertTrue(android.animation.ValueAnimator.areAnimatorsEnabled())
+        controller.pipChanged(IslandPipSnapshot(1, 3,
+            android.content.ComponentName(context.packageName, "Player"), android.os.Process.myUserHandle(), 17))
+        assertEquals(0, removes)
+        assertEquals(IslandWindowPresentation.Phase.EXITING, presentation.phase)
+        assertTrue(presentation.onPreDraw())
+        native.allowed = false; native.changed!!(); drain()
+        assertEquals("Keyguard must not wait for the soft PiP exit", 1, removes)
+        assertEquals(IslandWindowPresentation.Phase.IDLE, presentation.phase)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.EXIT + 50)); drain()
+        assertEquals(1, removes)
+    }
+
     @Test fun hidingTheEntireIslandRetainsNativeToastAndHeadsUpAndDropsOldFeedback() {
         val controller = controller(chat = true, hideFloating = true)
         controller.foregroundChanged("com.miui.home")

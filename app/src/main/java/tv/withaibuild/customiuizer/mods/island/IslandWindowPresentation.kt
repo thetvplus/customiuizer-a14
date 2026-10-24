@@ -16,6 +16,8 @@ internal class IslandWindowPresentation(
     private val eligible: () -> Boolean,
     private val shown: (Any) -> Unit = {},
     private val hidden: (Any) -> Unit = {},
+    private val frameAllowed: () -> Boolean = { true },
+    private val rejected: () -> Unit = {},
 ) : ViewTreeObserver.OnPreDrawListener, View.OnAttachStateChangeListener {
     enum class Phase { IDLE, PREPARED, VISIBLE, EXITING }
     var phase = Phase.IDLE
@@ -121,8 +123,21 @@ internal class IslandWindowPresentation(
     }
 
     override fun onPreDraw(): Boolean {
-        refresh()
-        return true
+        return try {
+            if (!frameAllowed()) {
+                release()
+                rejected()
+                false
+            } else {
+                refresh()
+                true
+            }
+        } catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            cancel()
+            XposedHelpers.log("Dynamic Island frame admission", error)
+            false
+        }
     }
     override fun onViewAttachedToWindow(v: View) = observe()
     override fun onViewDetachedFromWindow(v: View) = cancel()

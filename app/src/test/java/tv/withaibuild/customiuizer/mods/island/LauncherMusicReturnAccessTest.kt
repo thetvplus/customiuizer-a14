@@ -1,7 +1,9 @@
 package tv.withaibuild.customiuizer.mods.island
 
 import android.content.ComponentName
+import android.app.PictureInPictureParams
 import android.graphics.RectF
+import android.graphics.Rect
 import android.os.UserHandle
 import android.view.MotionEvent
 import android.view.View
@@ -16,15 +18,24 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class LauncherMusicReturnAccessTest {
     enum class Type { CLOSE_TO_HOME, CLOSE_TO_RECENTS, OPEN_FROM_HOME, CLOSE_TO_DRAG }
-    class TaskInfo(var mode: Int = 1) { fun getWindowingMode() = mode }
+    class TaskInfo(var mode: Int = 1) {
+        @JvmField var pictureInPictureParams: PictureInPictureParams? = null
+        fun getWindowingMode() = mode
+    }
     class Nav {
         @JvmField var mRunningTaskId = 42
         @JvmField var mRunningTaskUserId = 0
         @JvmField var mRunningTaskComponentName = ComponentName("chosen.music", "Player")
         @JvmField var mRunningTaskInfo: TaskInfo? = TaskInfo()
+        @JvmField var mAppToHomeTargetRect = Rect()
+        @JvmField var mTouchRange = 1
         fun onAttachedToWindow() {}
         fun onDetachedFromWindow() {}
         fun onTouchEvent(event: MotionEvent): Boolean = false
+        fun findClosingAnimTarget(force: Boolean): View? = null
+    }
+    class DeviceConfig {
+        companion object { @JvmStatic fun getClosingAppDefaultDisappearRect(range: Int) = Rect(100, 200, 180, 280) }
     }
     class Remote {
         companion object { const val MODE_CLOSING = 1; const val ACTIVITY_TYPE_STANDARD = 1 }
@@ -50,16 +61,16 @@ class LauncherMusicReturnAccessTest {
         val currentDisplayRotation: Int, val homeRotation: Int, val needFinishOnAnimEnd: Boolean,
         val currentTaskIndex: Int, val isSplitModeBack: Boolean, val isUseTranslucentAnim: Boolean)
     private val access = LauncherMusicReturnAccess(Nav::class.java, Element::class.java, Params::class.java,
-        Targets::class.java, Remote::class.java)
+        Targets::class.java, Remote::class.java, DeviceConfig::class.java)
     private val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
         280f, 15f, 800f, 125f, 1080, 2400)
     private fun params(type: Type = Type.CLOSE_TO_HOME, quick: Boolean = false, split: Boolean = false,
         rotation: Int = 0, targets: Targets? = Targets(arrayOf(Remote())),
-        targetView: View? = View(RuntimeEnvironment.getApplication())) = Params(targets,
+        targetView: View? = null) = Params(targets,
         RectF(0f, 0f, 1080f, 2400f), RectF(200f, 1800f, 300f, 1900f), 32f, 20f, 1f, 0f,
         type, false, true, quick, targetView, Any(), Any(), true, rotation, 0, true, 0, split, false)
 
-    @Test fun onlyTheClosingWindowDestinationAndIconHandoffChangeInANativeCopy() {
+    @Test fun closingWindowUsesNativeNoIconTargetWithoutChangingTheOriginal() {
         val source = params()
         val result = access.retarget(source, Element(), Nav(), frame) as Params
         assertNotSame(source, result)
@@ -67,9 +78,10 @@ class LauncherMusicReturnAccessTest {
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
         assertEquals(55f, result.endRadius, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)
-        assertSame("Native finish/cancel must retain the desktop icon owner", source.targetView, result.targetView)
+        assertNull("The window return must not borrow or animate the desktop icon", result.targetView)
+        assertNull(source.targetView)
         for (field in Params::class.java.declaredFields) {
-            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon")) continue
+            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView")) continue
             field.isAccessible = true
             assertEquals("Preserve native ${field.name}", field.get(source), field.get(result))
         }
@@ -85,6 +97,24 @@ class LauncherMusicReturnAccessTest {
         assertTrue(result.ignoreIcon)
     }
 
+    @Test fun aDesktopIconAlreadyChosenByNativeCodeCannotBeHijackedLate() {
+        val icon = View(RuntimeEnvironment.getApplication())
+        val source = params(targetView = icon)
+        assertNull(access.retarget(source, Element(), Nav(), frame))
+        assertSame(icon, source.targetView)
+        assertFalse(source.ignoreIcon)
+    }
+
+    @Test fun earlySelectionUsesTheNativeNoIconFallbackAndLeavesOtherTasksUntouched() {
+        val nav = Nav()
+        assertTrue(access.selectWindowTarget(nav, frame))
+        assertEquals(Rect(100, 200, 180, 280), nav.mAppToHomeTargetRect)
+        nav.mRunningTaskComponentName = ComponentName("other.app", "Player")
+        nav.mAppToHomeTargetRect.set(1, 2, 3, 4)
+        assertFalse(access.selectWindowTarget(nav, frame))
+        assertEquals(Rect(1, 2, 3, 4), nav.mAppToHomeTargetRect)
+    }
+
     @Test fun recentsOpeningDragSplitQuickSwitchAndRotationRemainNative() {
         val candidates = Type.entries.filter { it != Type.CLOSE_TO_HOME }.map { params(type = it) } +
             listOf(params(quick = true), params(split = true), params(rotation = 1))
@@ -92,6 +122,17 @@ class LauncherMusicReturnAccessTest {
             assertNull(access.retarget(source, Element(), Nav(), frame))
             assertFalse(source.ignoreIcon)
         }
+    }
+
+    @Test fun declaredAutoPipKeepsTheNativeReturnInsteadOfAcknowledgingAnEarlyIslandEntrance() {
+        val nav = Nav()
+        nav.mRunningTaskInfo!!.pictureInPictureParams = PictureInPictureParams.Builder().setAutoEnterEnabled(true).build()
+        val original = params()
+        assertNull(access.retarget(original, Element(), nav, frame))
+        assertNull(original.targetView)
+        assertFalse(original.ignoreIcon)
+        nav.mRunningTaskInfo!!.pictureInPictureParams = PictureInPictureParams.Builder().setAutoEnterEnabled(false).build()
+        assertNotNull(access.retarget(original, Element(), nav, frame))
     }
 
     @Test fun packageTaskUserAndSingleClosingTargetMustAllMatch() {

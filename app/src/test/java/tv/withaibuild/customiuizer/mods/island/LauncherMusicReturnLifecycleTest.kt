@@ -40,7 +40,8 @@ class LauncherMusicReturnLifecycleTest {
     private fun owner(context: Context, prefs: PrefMap): Any {
         val access = LauncherMusicReturnAccess(LauncherMusicReturnAccessTest.Nav::class.java,
             LauncherMusicReturnAccessTest.Element::class.java, LauncherMusicReturnAccessTest.Params::class.java,
-            LauncherMusicReturnAccessTest.Targets::class.java, LauncherMusicReturnAccessTest.Remote::class.java)
+            LauncherMusicReturnAccessTest.Targets::class.java, LauncherMusicReturnAccessTest.Remote::class.java,
+            LauncherMusicReturnAccessTest.DeviceConfig::class.java)
         val type = Class.forName("${LauncherMusicReturnHooks::class.java.name}\$Owner")
         return type.declaredConstructors.single().apply { isAccessible = true }.newInstance(View(context), prefs, access)
     }

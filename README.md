@@ -27,7 +27,7 @@
 
 [文档目录](docs/README.md)提供开发、测试、发布和专项说明；参与维护先读[共同工程规则](AGENTS.md)。
 
-当前源码版本：`r14.25.5`（versionCode 250）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
+当前源码版本：`r14.25.6`（versionCode 251）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
 
 源码分支的后续修改不一定包含在同版本正式 APK 中；未发行改动与待实机事项见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
 
