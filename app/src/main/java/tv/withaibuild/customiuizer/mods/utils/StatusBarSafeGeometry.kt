@@ -27,12 +27,14 @@ object StatusBarSafeGeometry {
      * @param windowHeightPx StatusBarWindowView height; <= 0 means unmeasured (fail-open).
      * @param naturalContentHeightPx Intrinsic content height before offset reservation.
      * @param requestedOffsetPx User global offset in px. Near-zero keeps native top alignment.
+     * @param nativeTranslationPx Latest native translation, combined before reserving/clamping.
      */
     @JvmStatic
     fun resolve(
         windowHeightPx: Int,
         naturalContentHeightPx: Int,
         requestedOffsetPx: Float,
+        nativeTranslationPx: Float = 0f,
     ): Layout {
         if (windowHeightPx <= 0) {
             val height = naturalContentHeightPx.coerceAtLeast(0)
@@ -41,17 +43,18 @@ object StatusBarSafeGeometry {
         val natural = if (naturalContentHeightPx > 0) naturalContentHeightPx else windowHeightPx
         val maxNatural = if (natural > windowHeightPx) windowHeightPx else natural
         if (abs(requestedOffsetPx) < 0.5f) {
-            return Layout(maxNatural, 0f, 0f, maxNatural.toFloat())
+            return Layout(maxNatural, nativeTranslationPx, nativeTranslationPx, nativeTranslationPx + maxNatural)
         }
-        val reserved = (2f * abs(requestedOffsetPx)).roundToInt().coerceAtLeast(0)
+        val combinedOffset = nativeTranslationPx + requestedOffsetPx
+        val reserved = (2f * abs(combinedOffset)).roundToInt().coerceAtLeast(0)
         var safe = windowHeightPx - reserved
         if (safe < 1) {
             safe = maxNatural.coerceAtLeast(1).coerceAtMost(windowHeightPx)
-            return centered(windowHeightPx, safe, requestedOffsetPx)
+            return centered(windowHeightPx, safe, combinedOffset)
         }
         if (safe > maxNatural) safe = maxNatural
         if (safe < 1) safe = 1
-        return centered(windowHeightPx, safe, requestedOffsetPx)
+        return centered(windowHeightPx, safe, combinedOffset)
     }
 
     private fun centered(windowHeightPx: Int, safeHeightPx: Int, requestedOffsetPx: Float): Layout {

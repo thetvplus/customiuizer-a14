@@ -96,4 +96,38 @@ class StatusBarSafeGeometryTest {
         assertTrue(layout.staysInsideWindow(40))
         assertFalse(layout.safeContentHeightPx == 40 && layout.effectiveOffsetPx != 0f)
     }
+
+    @Test
+    fun nativeAndCustomTranslationsShareTheSameSafetyReservation() {
+        val layout = StatusBarSafeGeometry.resolve(60, 80, 5f, 7f)
+        assertEquals(36, layout.safeContentHeightPx)
+        assertEquals(12f, layout.effectiveOffsetPx, .001f)
+        assertTrue(layout.staysInsideWindow(60))
+    }
+
+    @Test
+    fun cancellingTranslationsStillUseTheCustomCenteredLayout() {
+        val layout = StatusBarSafeGeometry.resolve(129, 80, 5f, -5f)
+        assertEquals(0f, layout.effectiveOffsetPx, .001f)
+        assertEquals(24.5f, layout.contentTopPx, .001f)
+        assertTrue(layout.staysInsideWindow(129))
+    }
+
+    @Test
+    fun combinedOffsetStaysSafeAcrossSignsAndShortWindows() {
+        for (height in listOf(1, 40, 60, 129)) {
+            for (native in listOf(-100f, -7f, 0f, 7f, 100f)) {
+                for (custom in listOf(-20f, -5f, 5f, 20f)) {
+                    assertTrue(StatusBarSafeGeometry.resolve(height, 80, custom, native).staysInsideWindow(height))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun zeroCustomOffsetKeepsTheNativeTranslationWithoutClaimingIt() {
+        val layout = StatusBarSafeGeometry.resolve(129, 80, 0f, 7f)
+        assertEquals(7f, layout.effectiveOffsetPx, .001f)
+        assertEquals(7f, layout.contentTopPx, .001f)
+    }
 }

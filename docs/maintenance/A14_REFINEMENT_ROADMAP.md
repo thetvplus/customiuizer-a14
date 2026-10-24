@@ -987,3 +987,269 @@ A14 源码未调用这些 focus 协议。此通道只能指导后续采样真实
   Workspace / 最近任务、缩放落点和音乐岛关 / 开矩阵全部 NOT RUN。
 - 没有增加常驻任务、每帧工作、生产对象或跨进程消息，生产开销增量为零；没有同设备 CPU / GPU / 分配测量，
   不宣称性能改善。所有现有通知与媒体修复保留，不推送、不合并、不升版、不发布。
+
+
+## 状态栏全屏与 WindowInsets 静态取证（2026-10-24）
+
+本节前半保留 0a872d9 的取证快照；实际生产修复、正式回归与最新收口见本节末尾“生产修复与生命周期精校”。
+
+### 静态取证阶段的范围、基线与设备边界（0a872d9）
+
+本批按用户后续选择“暂时无法连接，先完成静态取证”收口。基线为执行时 fetch 后的
+`origin/main = 3e0709f3234ed942d906487370547ec0136c7531`，
+工作分支 `codex/statusbar-fullscreen-20261024`。源版本仍为 r14.25.3 / versionCode 248；
+没有修改生产代码、版本、历史 Changelog，也没有推送、合并或发布。
+另一条已提交的动态岛工作分支保留，不带入本批比较。
+
+`adb devices -l` 为空。因此当前手机的 ROM / 区域、Display Metrics、分辨率、densityDpi、
+已安装 A14 APK / SHA、微信版本、实际前台 Activity / Window、其他模块、状态栏高度 / 内容偏移 /
+双排 / Padding / 图标尺寸，以及动态岛是否实际显示，均为 **UNKNOWN / DEVICE**。
+源码与本机 ROM 样本的版本不能代填这些字段。配置语义已核实：高度 `11` 关闭，显式 `27` 仍启用；
+内容偏移 `20` 为 0dp。没有读取聊天内容、账号、个人图片或设备日志，没有改动设备配置。
+设备未连接，恢复配置不适用，锁屏状态也无法读回，不能记为已锁定。
+
+本地材料统一留在忽略目录 `.di-evidence/statusbar-fullscreen-20261024/`：
+`session.json`、两份输入清单、`dexsql-evidence.json`、可重放 SQL、完整关键 Smali 分页、
+Host 探针源码 / init 脚本 / XML、专项 / Full / Python 日志与 JUnit。它们不进入 Git。
+本页只登记结论和描述符，不提交 APK、反编译产物、ROM 或私有日志。
+
+### APK 与解析完整性（ARTIFACT）
+
+| 项目 | 本批实际结果 |
+| --- | --- |
+| 文件 | `weixin8079android3200_0x28004f30_arm64_1.apk` |
+| 大小 / SHA-256 | 285284760 bytes / `f2a725bc04302ad218a563533ae79356e66b64aa711b275bc919a8d432f7e15d` |
+| Manifest | `com.tencent.mm`；8.0.79 / 3200；minSdk 24 / targetSdk 34；compileSdk 36 |
+| APK 内 DEX | `classes.dex` 到 `classes18.dex`，18 个，DEX 037；逐项大小见 `wechat-inventory.json` |
+| DexSQL | 已配置 MCP，CLI 自报 0.1.1；支持本地 DEX / APK / JAR / ZIP，本批直接打开 APK |
+| Dataset | 微信 18 个 DEX；CN / TW 各 12 个 DEX（framework 5、services 3、SystemUI 4）；三者 `has_dex=true`、`archive_inputs` 完整 |
+| Diagnostics | 本批查询没有解析错误；出现的是 SQL 优化重写提示。18 个 APK 内 DEX 的成功索引不等于运行时全部代码已覆盖 |
+| 额外输入边界 | 本 APK 没有声明 split 名称；设备已安装 split 未核实。含 209 个 `lib/` 文件项，并存在 DexClassLoader / InMemoryDexClassLoader / PathClassLoader 构造引用；未解析 native 或运行时加载内容 |
+
+重复查询复用同一 Dataset；查询使用 WHERE、LIMIT 和确定排序，decode 的文本续页完整读取。
+`wechat-repro.sql` 七条查询分别返回 18 / 5 / 11 / 11 / 30 / 16 / 7 行，
+各自 `next_offset=null`。ROM 重放查询 CN / TW 均为 12 / 13 / 9 行。
+方法索引只在 Dataset / DEX 内有效，结论使用完整描述符与输入哈希。
+Manifest 权限只取了首个有界页，组件只读取到相关声明所在页，不宣称完成无关权限或全部 2099 个 Activity 审计。
+
+### 微信进入、退出与布局责任（ARTIFACT，非运行轨迹）
+
+聊天图片入口已定位到 `Loo/q;->onClick(Landroid/view/View;)V`；
+字符串标识为 ChattingImgView 的点击 lambda。它在消息标识为正的分支中，
+设置 `com.tencent.mm.ui.chatting.gallery.ImageGalleryUI` 并调用 `Context.startActivity(Intent)`；
+另一分支打开 `ShowImageUI`。聊天视频 `Loo/y;->onClick(Landroid/view/View;)V` 有对应
+ImageGalleryUI / ShowVideoUI 分支。媒体历史页的 adapter/x 也是入口，但不把它冒称聊天缩略图入口。
+**实际手机走哪一支仍须 dumpsys 确认。**
+
+`ImageGalleryUI` 在 Manifest 中为 singleTop、非 exported、无独立 process，
+处理 screenSize / orientation / keyboardHidden，主题为 `0x7f1202b0`。
+定义在 `classes4.dex`，继承 BaseMvvmActivity → VASActivity → VASActivityJava → MMActivity。
+VAS 的 `getWindow()` 可返回自身原生 Window、VAS Window 或宿主 Activity 的 Window；
+因此“声明了 Activity”不足以证明本次一定新建独立 Window。
+
+| 问题 | 完整入口与本批可确认行为 |
+| --- | --- |
+| 是否主动全屏 | `Lcom/tencent/mm/ui/chatting/gallery/ImageGalleryUI;->onCreate(Landroid/os/Bundle;)V` 在非 `msg_type=2` 等分支设置 `0x400`（FLAG_FULLSCREEN），其他组合为 `0x8000400` / `0xc000400`；VAS 分支还调用 `setSystemUiVisibility(0x404)`（LAYOUT_FULLSCREEN + FULLSCREEN） |
+| 导航栏 | 同方法调用 `Lcom/tencent/mm/ui/MMActivity;->setLightNavigationbarIcon()V`，该方法只清 UI 可见性中的 `0x10` 外观位；不能解读为隐藏导航栏。已检查的预览范围未发现直接 setDecorFitsSystemWindows / InsetsController.hide/show 调用，不能推广为整个 APK 没有这些 API |
+| 暂停 / 恢复 | `ImageGalleryUI;->onPause()V` 在 `U8()==false` 时设置 `0x800`（FLAG_FORCE_NOT_FULLSCREEN）；`onResume()V` 清除此位。`U8()Z` 实际检查 Intent 的 `msg_type==2` |
+| 退出 | `ImageGalleryUI;->onBackPressed()V` → `F9()V` → `Lcom/tencent/mm/ui/tools/f4;->b(Landroid/view/View;Landroid/view/View;Lcom/tencent/mm/ui/tools/v3;Landroid/view/View;Lcom/tencent/mm/ui/tools/u3;)V`；结束回调 `Lcom/tencent/mm/ui/chatting/gallery/u6;->onAnimationEnd()V` post `Lcom/tencent/mm/ui/chatting/gallery/t6;->run()V`，再调用 `ImageGalleryUI;->finish()V` → VAS finish |
+| 顶部几何来源 | `ImageGalleryUI;->initView()V` 使用 `Lcom/tencent/mm/ui/ol;->i(Landroid/content/Context;I)I` 为一个内部 View 添加 topMargin。该 helper 可读取 Insets 兼容结果、`status_bar_height` 资源或 visible display frame；`ol;->k(Landroid/content/Context;I)I` 每次读资源，本批未在此 helper 中发现长期高度缓存 |
+| 底部几何来源 | initView 为内部图片按钮的 bottomMargin 加上 `ol;->c(Landroid/content/Context;)I` 的导航栏高度。x8 / w8 布局回调在入口先移除自己；不能把它们描述为持续 Insets 轮询或已证明的重复叠加 |
+
+这条代码链能证明微信主动请求系统栏过渡，不能证明微信有缺陷。图标上收可能属于正常动画；
+暂停时请求非全屏、退出动画完成后才 finish 的顺序，也不能单凭静态代码认定“Insets 晚恢复”。
+已检查 helper 的资源 / 屏幕几何读取与 A14 改变系统几何存在潜在差异，但没有采样到本次缓存旧 Insets、
+重复应用旧高度或产生底部位移的运行证据，不新增微信私有类 Hook。
+
+### HyperOS 与 A14 的三方边界
+
+样本分别为 fuxi CN `V816.0.19.0.UMCCNXM`、TW `V816.0.8.0.UMCTWXM`，均 SDK 34。
+来自现有仓库外 ROM 解包目录；六个输入文件的完整大小 / SHA-256 在 `rom-inventory.json`。
+它们不是本轮从手机提取的样本，不能替代目标手机身份或原生运行基线。
+
+- ROM `Lcom/android/server/wm/DisplayPolicy;->layoutWindowLw(Lcom/android/server/wm/WindowState;Lcom/android/server/wm/WindowState;Lcom/android/server/wm/DisplayFrames;)V`
+  选择旋转对应的 LayoutParams、读取 requested visible types，调用 WindowLayout.computeFrames，再调用
+  `Lcom/android/server/wm/WindowState;->setFrames(Landroid/window/ClientWindowFrames;II)V`。
+  后者复制 display / parent / actual frame，派生 compat / relative frame，最后更新 source frame。
+  A14 的 H2 在前置改状态栏窗口 attrs.height，H3 在 setFrames 前只改 ClientWindowFrames.frame.bottom；
+  不等于冻结 display / parent / compat frame，也不等于禁止全屏。
+- ROM `Lcom/android/server/wm/InsetsSourceProvider;->setServerVisible(Z)V` →
+  `updateSourceFrameForServerVisibility()V` 在 server visible 为 false 时调用 InsetsSource.setFrame(0,0,0,0)，随后更新 visibility。
+  客户端隐藏与 server visible 不能混同。源几何、可见性、可见 Insets 和 ignoring-visibility Insets 分属不同状态。
+- `Landroid/view/InsetsSource;->calculateInsets(Landroid/graphics/Rect;Landroid/graphics/Rect;Z)Landroid/graphics/Insets;`
+  在不忽略可见性且 mVisible=false 时返回 NONE；忽略可见性仍需真实 frame 与目标 rect 相交。
+  因此不能只凭 statusBars 类型把任意空 / 退化 frame 变为固定高度，也不能因隐藏就抹掉合法稳定几何。
+- `Lcom/android/server/wm/DisplayPolicy$DecorInsets$Info;->update(Lcom/android/server/wm/DisplayContent;III)V`
+  调用 simulateLayoutDisplay；DECOR_TYPES 是 displayCutout | navigationBars，statusBars 另算，
+  均使用忽略可见性口径；mNonDecorFrame 从 display frame inset 得到，mConfigInsets / Frame 再计入 statusBars。
+  这是按旋转 / 配置的稳定缓存，不是某个应用当前 visible Insets。A14 在原计算后抬高 nonDecor.top 并同步 frame.top，
+  保留原挖孔 / 导航结果作为下界；尚无证据表明它在微信退出瞬间错误失效，不修改这条缓存机制。
+- SystemUI `PhoneStatusBarView.onConfigurationChanged(Configuration)` → updateResources() → updateStatusBarHeight()；
+  onApplyWindowInsets 在 display parameters 变化时也更新 cutout 布局并 requestLayout。
+  `updateStatusBarHeight()V` 从 SystemBarUtils 获取原生高度，减 waterfall.top，写回当前 LayoutParams.height。
+  SystemBarUtils 仍取 cutout.safeInsetTop 与资源 + waterfall 的最大值。native 后续写入是合法的新基线，
+  A14 不应永远把第一次捕获值当作最新原生值。
+
+CN / TW 的上述 **server-hidden、DecorInsets.Info.update、PhoneStatusBarView.updateStatusBarHeight**
+三个关键方法完整 decode 后文本一致；未把其他未比较的方法宣称为两区全部一致。
+从 r14.25.1 到本批 main，所列 SystemStatusBarInsetsHooks、statusbarheight 包、内容布局 Hook /
+纯几何和 HeightConfig 没有 diff，不能仅据反馈发生于 r14.25.3 就认定这些实现是该版新增回归。
+
+### Host JVM 数值探针：实现问题与症状归因分开
+
+通过独立的忽略目录 init 脚本把五个诊断探针加入本次 testDebugUnitTest；
+没有修改正式测试源集或生产代码。探针的断言记录 **旧实现实际行为**，
+不是修复后的通过门禁。SDK 34 Robolectric、JDK 25.0.4.1，5 项全部符合观测。
+下面的 px 是主机夹具输入，不是手机 Display Metrics 或 T0–T5 采样。
+
+| 候选 / 触发 | 原生或输入 | A14 主机观测 | 判断与最小方向 |
+| --- | --- | --- | --- |
+| 父窗口改变，子 View 尺寸不变 | parent 129 → 60；offset 非零；子 LayoutParams 129 | owner.height / LP 仍为 129，contents.height 仍为 80 | **已复现通用失效触发缺口**。现监听仅关注子高度，却读取父高度；应先修已有布局生命周期，输入变化才重算，attach / detach 管理 owner，禁止每帧 / 延时刷新 |
+| 原生在配置变化后重写高度 | 初次 80；模块暂用 129；ROM 新写 96；offset 恢复 0 | owner LP 写回旧 80 | **已复现旧快照覆盖新原生值**。需要区分模块最后写入与 ROM 最新写入，仅恢复自己持有的改动；配置 / 换窗重新建基线 |
+| 默认偏移与外部 translation | 模块未持有内容 translationY，夹具先设 7 | bind 后归零 | **已复现无所有权恢复**。仅回收模块确实写入的临时呈现状态；是否与该 ROM 原生动画相交仍待设备 |
+| ROM server-hidden 空 frame | (0,0,0,0)，配置 40px | 四参数被改为 (0,0,0,40)，proceed=1 | 空坐标语义被改写，但宽仍 0、仍无占用面积；**不能因此宣称产生 40px Insets 或证明回弹** |
+| 合成的满宽零高 source | Rect(0,0,1080,0)，配置 40px | Rect(0,0,1080,40)，原 Rect 未改，proceed=1 | 可把空 source 变为非空，属于防御候选；未捕获到 ROM 在相关过渡实际发送这种 frame，不推广修复 |
+
+原生 LayoutParams 与 A14 快照冲突可由源码和主机探针独立确认，但“微信回弹的真实根因”仍是 **UNRESOLVED / DEVICE**。
+没有修复前后真实窗口几何差异，不以主机值冒充原生 ROM / 模块 A/B，也不声称底部 Insets 已修复。
+
+额外静态生命周期候选：attachedBars 在偏好刷新时移除 detached View，但同一 View 再 bind 时因 BIND_FIELD 已存在而不重新 register；
+原始 contents height / gravity 也只捕获一次。尚未做该重挂载路径的专门故障注入，保留为下一轮同一布局修复的回归输入。
+
+### 动态岛、开销与验证结果
+
+DynamicIslandStatusBarFade / IslandStatusBarCompact 只持有相交图标的临时 alpha、横向 translation、
+裁切和临时呈现；IslandWindowPresentation 在窗口 / event lease 不可显示或释放时撤销占位，
+IslandActivityController 的几何写入属于自己的岛窗口。已检查的这条链没有改整条 StatusBarWindowView 的高度。
+这不是“已排除用户设备上的岛与原生动画竞争”，本轮不修改动态岛代码。
+
+SetFrame 正常路径的 disabled 快返、非 status source 零改写、单次 proceed、原参数不污染及 fatal 传播由现有专项覆盖。
+静态上它仍使用冷路径冻结的 type 读取成员，实际改 Rect 时分配副本与参数数组，首条日志按 generation 有界；
+H2 / H3 使用已有弱 owner 身份与密度快照，DecorInsets 属于配置更新路径。
+没有新增 Hook、监听、任务、轮询、缓存或反射；本批生产运行开销增量为零。
+既有 WM 异常分支的重入、实际锁竞争、relayout / Binder / 反射次数、分配、CPU / GPU 帧时间没有设备测量，
+不据正常路径测试宣称所有异常分支、系统开销或动画性能已经通过。
+
+| 门禁 / 范围 | 本批结果 |
+| --- | --- |
+| Fast --changed | 退出 0；无 Android 源码改动，按工具规则跳过 Gradle |
+| 状态栏 / Insets / 高度 / 双排契约 / 岛呈现现有专项 | 20 suites / 267 tests；0 failures / errors / skipped |
+| 诊断探针 | 5 tests；0 failures / errors；用于记录基线实现行为，单独保存，不计入 Full |
+| Full | 退出 0；353 suites / 3259 tests；0 failures / errors / 2 skipped；Lint 0 errors / 407 warnings |
+| Python 工具测试 | 609 tests；0 failures / errors / 5 skipped |
+| Diff / 文档检查 | git diff --check 与新增文档引用检查通过 |
+| APK / R8 / ART | 本批没有构建新 APK，也没有 ART 验收；不借用别批 APK / mapping |
+| 真实场景 | 微信图片 / 视频、系统相册、浏览器 / YouTube / Bilibili 全屏、横竖屏、手势导航、快速往返、岛显示期间切换全部 NOT RUN |
+
+### 静态取证阶段的后续判断（0a872d9，实施前）
+
+以下保留取证阶段的判断；本轮生产修复与新验证结果见后面的实施记录。
+
+当前可交付并评审的是本页静态取证；**不建议把本分支作为“已修复微信回弹”合并或发布**。
+本批没有改生产代码，因而没有功能修复 SHA 或修复后的通过宣称。
+
+下一步先记录实际设备配置和 APK 身份，备份原配置，用不含私有内容的测试图在 T0–T5 串行采样：
+当前窗口 / flags、statusBars visible / frame / ignoringVisibility、cutout safeInsets、StatusBar WindowState /
+子 View / 图标容器 height 与 translationY、微信 frame / DecorInsets、独立 navigationBars / IME 及 relayout。
+先用用户完整配置和“高度 11 / 原生作用域排除”对照，再按实际差异选择 offset / 双排 / 岛隔离；
+涉及安装时开关时完整重启。只在定位到模块增量后，优先按上表修布局所有权与合法失效触发，
+或保留原生空 / 特殊 frame；不全局固定高度、不强制显示系统栏，不添加微信包名监听。
+将探针改为真实问题的修复回归，补重挂载 / 配置 / 父子不同布局周期 / hidden 恢复及双排场景，
+完成同设备 A/B 后再作合并判断。设备阶段结束恢复原配置并锁屏读回。
+
+
+### 生产修复与生命周期精校（2026-10-24，基线 0a872d9）
+
+本阶段按用户新增授权实施上述 Host 确定性缺陷，设备连接不是前置条件。
+从 `0a872d9415badc74ba6b852aefafb402ffb767c8` 的既有状态栏分支继续；
+主目录当时处于另一条 `0ab7a975` 动态岛分支且有未提交改动，故在独立工作目录检出
+`codex/statusbar-fullscreen-20261024`，未覆盖、回退或混入那边的工作。
+本批生产代码、测试和本页作为一个逻辑提交回退；不改版本、不推送、不合并、不发布。
+新的 Host 与门禁回执在工作目录的忽略路径 `.di-evidence/statusbar-fullscreen-fix-20261024/`；
+沿用上一阶段 ROM / Smali 证据，不重新解析微信或新增适配框架。
+
+**修复机制**
+
+1. `StatusBarContentGeometryHooks.kt` 将首次快照替换为每个状态栏 View 一份私有 Binding：
+   保留子 View 尺寸监听，增加实际 StatusBarWindowView 的定向宽高监听及 View attach 状态监听。
+   普通 rootView 不作为窗口证据。未测量 / 临时零高窗口不写布局，首个真实窗口尺寸事件再计算。
+   父尺寸变化立即更新 owner 与 contents 的目标 LayoutParams，之后由原生测量 / 布局完成；
+   不等待子高度先变化，不 post 布局、不加延时。重复输入只比较已算目标，不重复写入。
+2. Binding 只跟踪本组件实际改写的 owner height、contents height / gravity、父容器 gravity
+   及 contents translationY。每项保留最新观察到的原生基线和模块最后实际写入值；
+   当前值不同于模块最后写入时即视为外部新写入，释放时不覆盖。
+   另在已取证的 `PhoneStatusBarView.updateStatusBarHeight()V` 原方法之后捕获原生新高度，
+   解决“ROM 新高度恰好等于模块上次写入整数”时单靠值比较无法区分的配置边界。
+   仅接纳成功且未跳过的原生执行；普通异常不被吞掉，失败 / 跳过不把模块旧值当原生基线。
+   不修改该 ROM 方法的参数、原生执行或 proceed 次数。其他属性按当前值与最后写入值比较判定，
+   不给通用 View setter 新增 Hook 来追踪同值写入意图。
+3. 默认偏移不再清零未持有的 translationY。非零偏移先合并原生位移与用户偏移，
+   再统一交给 `StatusBarSafeGeometry` 预留高度并裁定可用位移；正负切换不在上一次结果上累加。
+   原生位移与自定义偏移恰好抵消时仍采用自定义的居中布局；默认关闭后恢复原生定位。
+   gravity 保留 START / END 等水平标志，默认配置不再强制父容器 TOP。
+   高度 11 与显式 27 仍分别走原生 / 启用分支，小高度仅调整模块持有的子布局，不改窗口可见性。
+4. detach 先停止该 Binding，解除旧窗口监听并移出既有弱注册表，然后仅恢复仍由模块持有的值，
+   丢弃基线、旧 contents / container 引用及单项几何缓存。同一 View 的 attach 会重新登记；
+   换窗口 / 换 contents 先释放旧对象，新 View 使用独立记录。迟到的旧窗口事件有身份与 active 门禁。
+   View 自己持有的子尺寸 / attach 两个监听可以复用；旧 Window 不强持有子 View。
+   contents 改用不支持的 LayoutParams 时也先释放仍持有的位移，并废弃旧几何记录，
+   不触碰原生替换的参数；恢复支持的布局类型后重新捕获基线。
+5. `SystemStatusBarInsetsHooks.SetFrameCallback.adjustArgs()` 仅增加原始宽 / 高有效性检查。
+   Rect 与四整数重载均在宽或高非正时原样 proceed；不看 mVisible 来清空几何。
+   合法 client-hidden 矩形仍可缩放为用户高度，其他 source 不进入新判断。
+   原 Rect 不变，proceed 恰好一次，既有异常 / fatal 传播边界不变。
+   H2、H3、DecorInsets、FeatureRegistry 与动态岛生产代码均未调整。
+
+**修复前后 Host 结果**
+
+正式回归首先在旧生产代码运行：22 tests / 15 failures / 0 errors，
+包括旧快照、默认位移、父窗口失效、重挂载和两个退化 frame 重载。
+修复后同批 22 项全过，再补配置同值写入、密度变化、contents / Window / View 替换、
+gravity 所有权、不可见 / 零高窗口、双排、快速尺寸往返与写入次数回归。
+末尾复核的五项边界测试又复现三处失败（原生失败 / 跳过、contents 参数类型替换）；
+补齐接纳条件与释放路径后，最终三套专项 53 tests / 0 failures / 0 errors / 0 skipped。
+夹具显式驱动 ViewRootImpl 下面的完整测量 / 布局周期，父事件后的 LP 立即更新另有断言，
+不依赖测试主动调用 apply 来补救父窗口失效。下面数值仍是 Host 输入，非实机窗口轨迹。
+
+| 输入 / 操作 | 旧实现观测 | 修复后正式断言 |
+| --- | --- | --- |
+| parent 129 → 60，子旧高 129 | owner 仍 129，contents 仍 80 | 父事件立即令 owner LP=60；有效布局后 owner=60，contents=50（偏移 5px），可见边界在 0..60 |
+| 原生 80 → 模块 129 → ROM 96 → 默认偏移 | 写回过期 80 | 保留 / 恢复最新 96；无中间 layout 的直接关闭也覆盖 |
+| ROM 配置重写 129，恰等于模块最后值 | 仅旧初始 80 可恢复 | 原生高度回调捕获 129，默认后仍 129 |
+| 原生 translationY=7，默认偏移 | 归零 | 保留 7；无需模块曾经取得所有权 |
+| 原生 7，用户偏移 +5 / -5 / 0 | 不维护原生基线 | 12 → 2 → 7；不累加 |
+| 原生改写位移为 11 / contents 高 64 / gravity=BOTTOM | 旧快照可能覆盖 | 关闭保持新值；重新应用后再关闭也使用新基线 |
+| server-hidden (0,0,0,0) / 满宽零高 (0,0,1080,0) | bottom 被扩成配置值 | 两个重载均不改写；退化 / 反向宽高一起覆盖 |
+| client-hidden、有效 1080×104，用户高度 40 | 调整至 40 | 仍调整至 40；11 默认、显式 27、较小 / 较大值和无关 source 均有回归 |
+
+**生命周期与静态开销**
+
+| 项目 | 变化及验证口径 |
+| --- | --- |
+| 活跃 View 的布局监听 | 子 View 1 个保留；实际父窗口增加 1 个；另有 View 自身 attach 监听 1 个。重复 bind 不增加，detach 后旧窗口为 0 |
+| 129 → 60 父事件 | 旧实现无有效修正；新实现 owner / contents 各写一次 LP；后续 12 次相同输入均为 0 / 0 次写入 |
+| 中间父容器 / 默认布局 | 仅在双排 / 自定义偏移需要时接管 TOP；默认和关闭只释放自己持有的 gravity |
+| 局部状态 | 固定一份 Binding、四个整数所有权记录、弱 View 引用、至多一份纯几何计算结果；随 owner 失效，不是全局按键缓存 |
+| 事件成本 | 现有偏好观察与主线程投递保持一份；增加一个配置 / cutout 冷路径原生高度回调。相同几何复用单项结果，不在每次 layout 查找反射成员 |
+| system_server 快路 | disabled / 非 status source 路径不变；仅已确认 status source 多两次几何比较。有效 frame 的反射、分配与日志策略不变；退化 frame 不再分配改写 Rect / 参数数组 |
+| 异常与隔离 | 复用 ModuleHelper.guarded 最外层安全边界；fatal 仍传播；不触碰已成熟 WM 布局 Hook 或动态岛租约 |
+| 性能结论 | 以上是源码结构与 Host 写入计数；没有设备 CPU / GPU / PSS / 帧时间数据，不宣称性能改善或实机无退化 |
+
+**本阶段收口**
+
+- 新增 `StatusBarContentGeometryLifecycleTest`、`StatusBarInsetsFrameLifecycleTest`，
+  扩展 `StatusBarSafeGeometryTest`；当前三套专项合计 53 项，包含真实问题断言而非旧异常行为的 PASS。
+- 最终 Fast --changed 已退出 0，执行完整 JVM 测试任务，355 suites / 3302 tests，
+  0 failures / 0 errors / 2 skipped；最终 Full 同样退出 0，复用相同源码的测试任务，
+  Lint 0 errors / 406 warnings。六份生产 / 回归源码 SHA-256 与最终回执一并保存在忽略目录，
+  提交后再核对 Git 内容一致，不把构建 revision 标签当成未提交源码的身份凭据。
+- Python 工具测试已通过：609 tests / 0 failures / 0 errors / 5 skipped；工具源码未改动。
+- git diff --check、新增文档 UTF-8 / LF / 本地引用检查通过；H2 / H3 / DecorInsets 原文、版本、
+  依赖、历史 Changelog、动态岛以及基础设施源码均保持基线内容。
+- 本轮未构建 APK / R8，也没有 ART 或实机验收。微信图片 / 视频、相册、网页 / YouTube / Bilibili
+  全屏、旋转、手势导航和动态岛展示期间切换的实际表现仍待设备验证；设备配置未改动。
+
+本批结论是 **A14 通用几何与生命周期缺陷已静态修复并通过主机回归**。
+这不等于“微信实机回弹已彻底消除”。完成本阶段收口后可作为源码修复进入评审，
+实机体验、目标 APK / ROM 配置与 T0–T5 A/B 按前述矩阵补验；不恢复静态取证阶段的“设备阻止实施”前置条件，
+也不把设备待验写成生产修复没有完成。

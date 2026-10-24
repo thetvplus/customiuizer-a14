@@ -840,6 +840,9 @@ object SystemStatusBarInsetsHooks {
         ): Array<Any>? {
             when (val firstArg = chain.getArg(0)) {
                 is Rect -> {
+                    // Server-hidden/initialization frames carry native empty geometry.
+                    // Client visibility alone does not invalidate a nonempty stable frame.
+                    if (firstArg.right <= firstArg.left || firstArg.bottom <= firstArg.top) return null
                     val newBottom = computeStatusBarFrameBottom(firstArg.top, firstArg.bottom, configuredPx, true)
                     logStatusSource(source, type, OVERLOAD_RECT, firstArg.top, firstArg.bottom, newBottom, config)
                     if (newBottom == firstArg.bottom) return null
@@ -855,6 +858,7 @@ object SystemStatusBarInsetsHooks {
                         logRejection(REASON_INVALID_SHAPE, invalidShapeLogStamp, config)
                         return null
                     }
+                    if (right <= firstArg || bottom <= top) return null
                     val newBottom = computeStatusBarFrameBottom(top, bottom, configuredPx, true)
                     logStatusSource(source, type, OVERLOAD_INTS, top, bottom, newBottom, config)
                     if (newBottom == bottom) return null

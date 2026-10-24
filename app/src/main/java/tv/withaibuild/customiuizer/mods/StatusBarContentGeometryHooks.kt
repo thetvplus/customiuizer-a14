@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.MainModule
-import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -19,38 +18,21 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.ref.WeakReference
 import kotlin.math.abs
 
-/**
- * SystemUI view-layer vertical geometry for the status bar.
- *
- * Dual-row may size [MiuiPhoneStatusBarView] to the window. Single-row keeps the
- * inflated height unless a non-zero global offset needs window-space room.
- * [status_bar_contents] is the safe content block: reserved height, then
- * CENTER_VERTICAL, then translationY. No wrapper, no optical scan.
- */
+/** View-layer geometry only. Native window visibility, Insets and animations keep their owners. */
 object StatusBarContentGeometryHooks {
-
     private const val CONTENTS_ID = "status_bar_contents"
     private const val BIND_FIELD = "customiuizer_sb_content_geometry"
-    private const val ORIGINAL_HEIGHT_FIELD = "customiuizer_sb_owner_orig_h"
-    private const val CONTENTS_ORIG_HEIGHT_FIELD = "customiuizer_sb_contents_orig_h"
-    private const val CONTENTS_ORIG_GRAVITY_FIELD = "customiuizer_sb_contents_orig_g"
-    private const val SKIP_CONTENTS_FIELD = "customiuizer_sb_contents_skip"
     private const val PACKAGE_SYSTEMUI = "com.android.systemui"
 
-    private val mainHandler by lazy(LazyThreadSafetyMode.NONE) {
-        Handler(Looper.getMainLooper())
-    }
+    private val mainHandler by lazy(LazyThreadSafetyMode.NONE) { Handler(Looper.getMainLooper()) }
     private val attachedBars = ArrayList<WeakReference<View>>(2)
-
     private val preferenceObserver = object : ModuleHelper.PreferenceObserver {
         override fun onChange(key: String?) {
             if (key != null &&
                 key != StatusBarContentGeometry.PREF_KEY &&
                 key != StatusBarHeightConfig.PREF_KEY &&
                 key != StatusBarContentGeometry.DUAL_ROWS_PREF
-            ) {
-                return
-            }
+            ) return
             mainHandler.post { applyToAttached() }
         }
     }
@@ -60,210 +42,367 @@ object StatusBarContentGeometryHooks {
         ModuleHelper.observePreferenceChange(preferenceObserver, this)
         val afterBind = object : MethodHook() {
             override fun after(param: AfterHookCallback) {
-                val sbView = param.getThisObject() as? View ?: return
-                bind(sbView)
+                (param.getThisObject() as? View)?.let { bind(it) }
             }
         }
+        for (method in arrayOf("onFinishInflate", "onAttachedToWindow")) {
+            ModuleHelper.findAndHookMethod(
+                "com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView",
+                lpparam.classLoader, method, afterBind,
+            )
+        }
+        // The ROM writes height here on configuration/cutout updates, even if it happens
+        // to equal our last value. Capture this native write before applying our layout.
         ModuleHelper.findAndHookMethod(
-            "com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView",
-            lpparam.classLoader,
-            "onFinishInflate",
-            afterBind,
-        )
-        ModuleHelper.findAndHookMethod(
-            "com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView",
-            lpparam.classLoader,
-            "onAttachedToWindow",
-            afterBind,
+            "com.android.systemui.statusbar.phone.PhoneStatusBarView",
+            lpparam.classLoader, "updateStatusBarHeight", NativeHeightCallback(),
         )
     }
 
-    internal fun bind(statusBarView: View) {
-        if (XposedHelpers.getAdditionalInstanceField(statusBarView, BIND_FIELD) == null) {
-            XposedHelpers.setAdditionalInstanceField(statusBarView, BIND_FIELD, true)
-            statusBarView.addOnLayoutChangeListener { v, _, top, _, bottom, _, oldTop, _, oldBottom ->
-                if (bottom - top == oldBottom - oldTop && (bottom - top) > 0) return@addOnLayoutChangeListener
-                applyToView(v)
-            }
-            register(statusBarView)
+    internal class NativeHeightCallback : MethodHook() {
+        override fun after(param: AfterHookCallback) {
+            if (param.isSkipped || param.getThrowable() != null) return
+            (param.getThisObject() as? View)?.let { nativeHeightChanged(it) }
         }
-        applyToView(statusBarView)
     }
 
-    internal fun applyToView(statusBarView: View) {
-        try {
-            val window = findStatusBarWindowView(statusBarView)
-            val windowHeight = window?.height ?: 0
-            val heightMutated = applyOwnerHeight(statusBarView, window, windowHeight)
-            if (!heightMutated) {
-                applySafeContents(statusBarView, windowHeight)
-            }
-        } catch (oom: OutOfMemoryError) {
-            throw oom
-        } catch (td: ThreadDeath) {
-            throw td
-        } catch (vme: VirtualMachineError) {
-            throw vme
-        } catch (t: Throwable) {
-            FatalErrors.unwrapAndRethrowIfFatal(t)
-            XposedHelpers.log("StatusBarContentGeometry: apply failed: ${t.javaClass.simpleName}")
+    internal fun bind(statusBarView: View) = ModuleHelper.guarded {
+        val binding = binding(statusBarView) ?: Binding(statusBarView).also {
+            XposedHelpers.setAdditionalInstanceField(statusBarView, BIND_FIELD, it)
+            statusBarView.addOnLayoutChangeListener(it)
+            statusBarView.addOnAttachStateChangeListener(it)
         }
+        binding.refresh()
     }
+
+    internal fun applyToView(statusBarView: View) = ModuleHelper.guarded {
+        binding(statusBarView)?.refresh()
+    }
+
+    internal fun nativeHeightChanged(statusBarView: View) = ModuleHelper.guarded {
+        binding(statusBarView)?.nativeHeightChanged(statusBarView)
+    }
+
+    private fun binding(view: View): Binding? =
+        XposedHelpers.getAdditionalInstanceField(view, BIND_FIELD) as? Binding
 
     /**
-     * @return true when owner height changed and a later layout pass must apply contents.
+     * One record per status-bar View. Parent listeners retain only this record, whose View
+     * references are weak. Detach restores still-owned values and discards all baselines.
+     * No draw listener, posted layout task or delayed correction is needed.
      */
-    internal fun applyOwnerHeight(statusBarView: View, window: View?, windowHeight: Int): Boolean {
-        val lp = statusBarView.layoutParams ?: return false
-        captureOriginalHeight(statusBarView, lp.height)
-        val dualRows = MainModule.mPrefs.getBoolean(StatusBarContentGeometry.DUAL_ROWS_PREF)
-        val offsetPx = currentOffsetPx(statusBarView)
-        val targetHeight = StatusBarContentGeometry.ownerTargetHeightPx(
-            originalHeight(statusBarView, lp.height),
-            windowHeight,
-            dualRows,
-            offsetPx,
-        )
-        var heightMutated = false
-        if (lp.height != targetHeight) {
-            lp.height = targetHeight
-            statusBarView.layoutParams = lp
-            heightMutated = true
-        }
-        restoreContainerTopGravity(statusBarView, window)
-        return heightMutated
-    }
+    private class Binding(statusBarView: View) :
+        View.OnLayoutChangeListener, View.OnAttachStateChangeListener {
+        private val owner = WeakReference(statusBarView)
+        private var window: WeakReference<View>? = null
+        private var content: WeakReference<View>? = null
+        private var container: WeakReference<View>? = null
+        private var active = false
+        private var applying = false
+        private var contentsId = 0
+        private var contentsIdResolved = false
+        private val ownerHeight = NativeLayoutValue()
+        private val contentsHeight = NativeLayoutValue()
+        private val contentsGravity = NativeLayoutValue()
+        private val containerGravity = NativeLayoutValue()
+        private var nativeTranslation = 0f
+        private var writtenTranslation = 0f
+        private var ownsTranslation = false
+        private var cachedLayout: StatusBarSafeGeometry.Layout? = null
+        private var cachedWindowHeight = 0
+        private var cachedNaturalHeight = 0
+        private var cachedOffset = 0f
+        private var cachedTranslation = 0f
 
-    internal fun applySafeContents(statusBarView: View, windowHeight: Int) {
-        if (windowHeight <= 0) return
-        val contents = findContents(statusBarView) ?: return
-        if (XposedHelpers.getAdditionalInstanceField(contents, SKIP_CONTENTS_FIELD) != null) {
-            return
+        override fun onLayoutChange(
+            v: View, left: Int, top: Int, right: Int, bottom: Int,
+            oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
+        ) {
+            if (!active || (v !== owner.get() && v !== window?.get())) return
+            if (right - left == oldRight - oldLeft && bottom - top == oldBottom - oldTop) return
+            ModuleHelper.guarded { refresh() }
         }
-        val flp = contents.layoutParams as? FrameLayout.LayoutParams
-        if (flp == null) {
-            if (XposedHelpers.getAdditionalInstanceField(contents, SKIP_CONTENTS_FIELD) == null) {
-                XposedHelpers.setAdditionalInstanceField(contents, SKIP_CONTENTS_FIELD, true)
-                XposedHelpers.log("StatusBarContentGeometry: skip contents, LayoutParams not FrameLayout")
+
+        override fun onViewAttachedToWindow(v: View) {
+            if (v === owner.get()) ModuleHelper.guarded { refresh() }
+        }
+
+        override fun onViewDetachedFromWindow(v: View) {
+            if (v !== owner.get()) return
+            ModuleHelper.guarded {
+                active = false
+                disconnectWindow()
+                unregister(v)
+                release(v)
             }
-            return
         }
-        captureContentsOriginal(contents, flp)
-        val dualRows = MainModule.mPrefs.getBoolean(StatusBarContentGeometry.DUAL_ROWS_PREF)
-        val offsetPx = currentOffsetPx(contents)
-        val natural = StatusBarContentGeometry.naturalContentHeightPx(
-            originalHeight(statusBarView, statusBarView.layoutParams?.height ?: 0),
-            windowHeight,
-            dualRows,
-        )
-        val layout = StatusBarSafeGeometry.resolve(windowHeight, natural, offsetPx)
-        val nativePath = abs(offsetPx) < 0.5f
-        if (nativePath) {
-            restoreContentsOriginal(contents, flp)
-            if (contents.translationY != 0f) contents.translationY = 0f
-            return
+
+        fun nativeHeightChanged(view: View) {
+            if (!active || owner.get() !== view) return
+            view.layoutParams?.let { ownerHeight.nativeWrite(it.height) }
+            refresh()
         }
-        val horizontal = flp.gravity and Gravity.HORIZONTAL_GRAVITY_MASK
-        val gravity = Gravity.CENTER_VERTICAL or horizontal
-        var mutated = false
-        if (flp.height != layout.safeContentHeightPx) {
-            flp.height = layout.safeContentHeightPx
-            mutated = true
+
+        fun refresh() {
+            if (applying) return
+            val view = owner.get() ?: run { disconnectWindow(); return }
+            if (!view.isAttachedToWindow) return
+            applying = true
+            try {
+                if (!active) {
+                    active = true
+                    register(view)
+                }
+                val nextWindow = findStatusBarWindowView(view)
+                if (window?.get() !== nextWindow) {
+                    disconnectWindow()
+                    release(view)
+                    window = nextWindow?.let { WeakReference(it) }
+                    nextWindow?.addOnLayoutChangeListener(this)
+                }
+                // Unknown ancestors and unmeasured/temporarily empty windows fail open.
+                val windowHeight = nextWindow?.height ?: return
+                if (windowHeight <= 0) return
+                val lp = view.layoutParams ?: return
+                val offset = currentOffsetPx(view)
+                val dualRows = MainModule.mPrefs.getBoolean(StatusBarContentGeometry.DUAL_ROWS_PREF)
+                val customLayout = dualRows || abs(offset) >= .5f
+                val customHeight = MainModule.mPrefs.getInt(
+                    StatusBarHeightConfig.PREF_KEY, StatusBarHeightConfig.DEFAULT_SENTINEL,
+                ) > StatusBarHeightConfig.DEFAULT_SENTINEL
+                val nativeHeight = ownerHeight.read(lp.height)
+                val targetHeight = if (customLayout || customHeight) {
+                    ownerHeight.write(lp.height, StatusBarContentGeometry.ownerTargetHeightPx(
+                        nativeHeight, windowHeight, dualRows, offset,
+                    ))
+                } else ownerHeight.restore(lp.height)
+                if (lp.height != targetHeight) {
+                    lp.height = targetHeight
+                    view.layoutParams = lp
+                }
+                applyContainer(view, nextWindow, customLayout)
+                // Use the new window input now; waiting for a child-height callback can
+                // miss updates when the child's frame remains unchanged in this pass.
+                applyContents(view, windowHeight, nativeHeight, dualRows, offset)
+            } finally {
+                applying = false
+            }
         }
-        if (flp.gravity != gravity) {
-            flp.gravity = gravity
-            mutated = true
+
+        private fun applyContainer(view: View, windowView: View, customLayout: Boolean) {
+            val next = (view.parent as? View)?.takeUnless { it === windowView }
+            if (container?.get() !== next) {
+                releaseContainer()
+                container = next?.let { WeakReference(it) }
+            }
+            val parent = next ?: return
+            val lp = parent.layoutParams as? FrameLayout.LayoutParams ?: run {
+                containerGravity.clear()
+                return
+            }
+            val nativeGravity = containerGravity.read(lp.gravity)
+            val target = if (customLayout) containerGravity.write(lp.gravity,
+                verticalGravity(nativeGravity, Gravity.TOP)) else containerGravity.restore(lp.gravity)
+            if (lp.gravity != target) {
+                lp.gravity = target
+                parent.layoutParams = lp
+            }
         }
-        if (mutated) contents.layoutParams = flp
-        if (contents.translationY != layout.effectiveOffsetPx) {
-            contents.translationY = layout.effectiveOffsetPx
+
+        private fun applyContents(
+            view: View, windowHeight: Int, nativeOwnerHeight: Int, dualRows: Boolean, offset: Float,
+        ) {
+            if (!contentsIdResolved) {
+                contentsId = view.resources.getIdentifier(CONTENTS_ID, "id", PACKAGE_SYSTEMUI)
+                contentsIdResolved = true
+            }
+            val next = if (contentsId != 0) view.findViewById<View>(contentsId)
+                else (view as? ViewGroup)?.getChildAt(0)
+            if (content?.get() !== next) {
+                releaseContents()
+                content = next?.let { WeakReference(it) }
+            }
+            val contents = next ?: return
+            val lp = contents.layoutParams as? FrameLayout.LayoutParams ?: run {
+                // A new native layout kind ends our old geometry ownership. Translation
+                // can still be released without touching the replacement LayoutParams.
+                releaseContents()
+                return
+            }
+            val nativeHeight = contentsHeight.read(lp.height)
+            val nativeGravity = contentsGravity.read(lp.gravity)
+            val translation = contents.translationY
+            if (!ownsTranslation || translation != writtenTranslation) {
+                nativeTranslation = translation
+                ownsTranslation = false
+            }
+            if (abs(offset) < .5f) {
+                val height = contentsHeight.restore(lp.height)
+                val gravity = contentsGravity.restore(lp.gravity)
+                if (height != lp.height || gravity != lp.gravity) {
+                    lp.height = height
+                    lp.gravity = gravity
+                    contents.layoutParams = lp
+                }
+                restoreTranslation(contents)
+                cachedLayout = null
+                return
+            }
+            val intrinsic = StatusBarContentGeometry.naturalContentHeightPx(
+                nativeOwnerHeight, windowHeight, dualRows,
+            )
+            val natural = if (nativeHeight > 0) minOf(intrinsic, nativeHeight) else intrinsic
+            val layout = resolve(windowHeight, natural, offset)
+            val height = contentsHeight.write(lp.height, layout.safeContentHeightPx)
+            val gravity = contentsGravity.write(lp.gravity, verticalGravity(nativeGravity, Gravity.CENTER_VERTICAL))
+            if (height != lp.height || gravity != lp.gravity) {
+                lp.height = height
+                lp.gravity = gravity
+                contents.layoutParams = lp
+            }
+            if (contents.translationY != layout.effectiveOffsetPx) {
+                writtenTranslation = layout.effectiveOffsetPx
+                ownsTranslation = true
+                contents.translationY = writtenTranslation
+            }
+        }
+
+        private fun resolve(windowHeight: Int, natural: Int, offset: Float): StatusBarSafeGeometry.Layout {
+            val previous = cachedLayout
+            if (previous != null && cachedWindowHeight == windowHeight && cachedNaturalHeight == natural &&
+                cachedOffset == offset && cachedTranslation == nativeTranslation) return previous
+            return StatusBarSafeGeometry.resolve(windowHeight, natural, offset, nativeTranslation).also {
+                cachedLayout = it
+                cachedWindowHeight = windowHeight
+                cachedNaturalHeight = natural
+                cachedOffset = offset
+                cachedTranslation = nativeTranslation
+            }
+        }
+
+        private fun restoreTranslation(contents: View) {
+            if (ownsTranslation && contents.translationY == writtenTranslation &&
+                contents.translationY != nativeTranslation) contents.translationY = nativeTranslation
+            ownsTranslation = false
+        }
+
+        private fun releaseContents() {
+            content?.get()?.let { contents ->
+                (contents.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+                    val height = contentsHeight.restore(lp.height)
+                    val gravity = contentsGravity.restore(lp.gravity)
+                    if (height != lp.height || gravity != lp.gravity) {
+                        lp.height = height
+                        lp.gravity = gravity
+                        contents.layoutParams = lp
+                    }
+                }
+                restoreTranslation(contents)
+            }
+            contentsHeight.clear()
+            contentsGravity.clear()
+            ownsTranslation = false
+            content = null
+            cachedLayout = null
+        }
+
+        private fun releaseContainer() {
+            container?.get()?.let { view ->
+                (view.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+                    val gravity = containerGravity.restore(lp.gravity)
+                    if (gravity != lp.gravity) {
+                        lp.gravity = gravity
+                        view.layoutParams = lp
+                    }
+                }
+            }
+            containerGravity.clear()
+            container = null
+        }
+
+        private fun release(view: View) {
+            releaseContents()
+            releaseContainer()
+            view.layoutParams?.let { lp ->
+                val height = ownerHeight.restore(lp.height)
+                if (height != lp.height) {
+                    lp.height = height
+                    view.layoutParams = lp
+                }
+            }
+            ownerHeight.clear()
+        }
+
+        private fun disconnectWindow() {
+            window?.get()?.removeOnLayoutChangeListener(this)
+            window = null
         }
     }
 
-    private fun currentOffsetPx(view: View): Float {
-        val density = view.resources.displayMetrics.density
-        val raw = MainModule.mPrefs.getInt(
-            StatusBarContentGeometry.PREF_KEY,
-            StatusBarContentGeometry.RAW_DEFAULT,
-        )
-        return StatusBarContentGeometry.resolveOffsetPx(raw, density)
-    }
+    /** Only the four integer layout properties above use this local ownership record. */
+    private class NativeLayoutValue {
+        private var initialized = false
+        private var owns = false
+        private var native = 0
+        private var written = 0
 
-    private fun restoreContainerTopGravity(statusBarView: View, window: View?) {
-        val container = statusBarView.parent as? View ?: return
-        if (container === window) return
-        val plp = container.layoutParams as? FrameLayout.LayoutParams ?: return
-        val horizontal = plp.gravity and Gravity.HORIZONTAL_GRAVITY_MASK
-        val gravity = Gravity.TOP or horizontal
-        if (plp.gravity == gravity) return
-        plp.gravity = gravity
-        container.layoutParams = plp
-    }
-
-    private fun captureOriginalHeight(statusBarView: View, currentLpHeight: Int) {
-        if (XposedHelpers.getAdditionalInstanceField(statusBarView, ORIGINAL_HEIGHT_FIELD) != null) return
-        XposedHelpers.setAdditionalInstanceField(statusBarView, ORIGINAL_HEIGHT_FIELD, currentLpHeight)
-    }
-
-    private fun originalHeight(statusBarView: View, fallback: Int): Int {
-        return XposedHelpers.getAdditionalInstanceField(statusBarView, ORIGINAL_HEIGHT_FIELD) as? Int ?: fallback
-    }
-
-    private fun captureContentsOriginal(contents: View, flp: FrameLayout.LayoutParams) {
-        if (XposedHelpers.getAdditionalInstanceField(contents, CONTENTS_ORIG_HEIGHT_FIELD) != null) return
-        XposedHelpers.setAdditionalInstanceField(contents, CONTENTS_ORIG_HEIGHT_FIELD, flp.height)
-        XposedHelpers.setAdditionalInstanceField(contents, CONTENTS_ORIG_GRAVITY_FIELD, flp.gravity)
-    }
-
-    private fun restoreContentsOriginal(contents: View, flp: FrameLayout.LayoutParams) {
-        val origH = XposedHelpers.getAdditionalInstanceField(contents, CONTENTS_ORIG_HEIGHT_FIELD) as? Int ?: return
-        val origG = XposedHelpers.getAdditionalInstanceField(contents, CONTENTS_ORIG_GRAVITY_FIELD) as? Int ?: 0
-        var mutated = false
-        if (flp.height != origH) {
-            flp.height = origH
-            mutated = true
+        fun read(current: Int): Int {
+            if (!initialized || !owns || current != written) nativeWrite(current)
+            return native
         }
-        if (flp.gravity != origG) {
-            flp.gravity = origG
-            mutated = true
+        fun nativeWrite(current: Int) { native = current; initialized = true; owns = false }
+        fun write(current: Int, target: Int): Int {
+            if (current != target) { written = target; owns = true }
+            return target
         }
-        if (mutated) contents.layoutParams = flp
+        fun restore(current: Int): Int {
+            val result = if (owns && current == written) native else current
+            clear()
+            return result
+        }
+        fun clear() { initialized = false; owns = false }
     }
+
+    private fun verticalGravity(native: Int, vertical: Int): Int =
+        (if (native < 0) 0 else native and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
+
+    private fun currentOffsetPx(view: View): Float = StatusBarContentGeometry.resolveOffsetPx(
+        MainModule.mPrefs.getInt(StatusBarContentGeometry.PREF_KEY, StatusBarContentGeometry.RAW_DEFAULT),
+        view.resources.displayMetrics.density,
+    )
 
     private fun applyToAttached() {
         for (i in attachedBars.indices.reversed()) {
             val view = attachedBars[i].get()
-            if (view == null || !view.isAttachedToWindow) {
-                attachedBars.removeAt(i)
-                continue
-            }
-            applyToView(view)
+            if (view == null || !view.isAttachedToWindow) attachedBars.removeAt(i)
+            else applyToView(view)
         }
     }
 
-    private fun register(statusBarView: View) {
+    private fun register(view: View) {
+        var found = false
         for (i in attachedBars.indices.reversed()) {
             val existing = attachedBars[i].get()
-            if (existing == null || existing === statusBarView) attachedBars.removeAt(i)
+            if (existing == null) attachedBars.removeAt(i)
+            else if (existing === view) found = true
         }
-        attachedBars.add(WeakReference(statusBarView))
+        if (!found) attachedBars.add(WeakReference(view))
     }
 
-    private fun findContents(statusBarView: View): View? {
-        val id = statusBarView.resources.getIdentifier(CONTENTS_ID, "id", PACKAGE_SYSTEMUI)
-        if (id != 0) {
-            val found = statusBarView.findViewById<View>(id)
-            if (found != null) return found
+    private fun unregister(view: View) {
+        for (i in attachedBars.indices.reversed()) {
+            val existing = attachedBars[i].get()
+            if (existing == null || existing === view) attachedBars.removeAt(i)
         }
-        return (statusBarView as? ViewGroup)?.getChildAt(0)
     }
 
     private fun findStatusBarWindowView(start: View): View? {
-        var current: View? = start
+        var current = start.parent as? View
         while (current != null) {
             if (current.javaClass.name.endsWith("StatusBarWindowView")) return current
             current = current.parent as? View
         }
-        return start.rootView
+        // A plain rootView is not evidence of a status-bar window owner.
+        return null
     }
 }
