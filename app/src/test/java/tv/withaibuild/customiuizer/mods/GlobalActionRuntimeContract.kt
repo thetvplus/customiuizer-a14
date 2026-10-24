@@ -134,6 +134,9 @@ object GlobalActionRuntimeContract {
         launcherGated("launcher_spread", "LAUNCHER|SYSTEMUI", "LauncherFolderHooks.PrivacyFolderHook"),
         systemUiGated("system_statusbarcontrols", "SYSTEMUI", "SystemUIControlCenterHooks.StatusBarGesturesHook"),
         systemUiGated("system_statusbarcontrols_longpress", "SYSTEMUI", "SystemUIControlCenterHooks.StatusBarGesturesHook"),
+        systemUiGated("system_statusbarcontrols_dt", "SYSTEMUI", "SystemUIControlCenterHooks.StatusBarGesturesHook"),
+        systemUiGated("system_statusbarcontrols_dt_left", "SYSTEMUI", "SystemUIControlCenterHooks.StatusBarGesturesHook"),
+        systemUiGated("system_statusbarcontrols_dt_right", "SYSTEMUI", "SystemUIControlCenterHooks.StatusBarGesturesHook"),
         systemUiGated("system_lockscreenshortcuts_left", "SYSTEMUI", "SystemUILockScreenHooks.LockScreenShortcutHook"),
         systemUiGated("system_lockscreenshortcuts_right", "SYSTEMUI", "SystemUILockScreenHooks.LockScreenShortcutHook"),
     )
