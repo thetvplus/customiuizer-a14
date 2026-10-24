@@ -95,13 +95,21 @@ object SystemServerFirstEnableContract {
         lazyB("no_access_device_logs_request", "various_disable_access_devicelogs", "SystemSecurityHooks.NoAccessDeviceLogsRequestHook", "prefs_various_exclusive", "NONE"),
         lazyB("wallpaper_scale_level", "system_other_wallpaper_scale", "SystemDisplayHooks.WallpaperScaleLevelHook", "prefs_system_other", "SYSTEMUI|SECURITY_CENTER"),
         lazyB("allow_untrusted_touch", "various_allow_untrusted_touch", "SystemWindowHooks.AllowUntrustedTouchHook", "prefs_various_exclusive", "NONE"),
-        lazyB("status_bar_height_insets", "system_statusbarheight", "SystemStatusBarInsetsHooks.StatusBarHeightInsetsHook", "prefs_system_statusbar", "SYSTEMUI"),
+        rebootRequired("status_bar_height_insets", "system_statusbarheight", "SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook / StatusBarHeightResources.install", "prefs_system_statusbar"),
+        rebootRequired("system_island_application_overlays", "system_island_hide_in_floating_window", "IslandApplicationOverlayHooks.install", "prefs_system_island"),
         infra("disable_window_blurs", "system_disable_window_blurs", "SystemDisplayHooks.DisableWindowBlursHook", "prefs_system_other"),
         infra("system_usb_default_function", "system_usb_default_function", "SystemUsbDefaultHooks.hook", "prefs_system_other"),
     )
 
     fun row(featureIdName: String): SystemServerFirstEnableRow? =
         rows.firstOrNull { it.featureIdName == featureIdName }
+
+    private fun rebootRequired(name: String, key: String, hook: String, page: String) = SystemServerFirstEnableRow(
+        featureIdName = name, preferenceKey = key, triggerHook = hook, uiPage = page,
+        uiDynamic = true, restartMask = "REBOOT", installMode = TriggerHookInstallMode.PREF_GATED_AT_START,
+        canEnableAfterBoot = false, firstEnableWorksWithoutReboot = false,
+        classification = FirstEnableClassification.C_REBOOT_REQUIRED,
+    )
 
     fun names(): Set<String> = rows.map { it.featureIdName }.toSet()
 

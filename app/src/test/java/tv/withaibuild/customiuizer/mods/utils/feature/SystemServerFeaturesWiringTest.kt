@@ -64,11 +64,13 @@ class SystemServerFeaturesWiringTest {
         val features = SystemServerFeatures.all(fakeSystemServerStartingParam())
 
         assertEquals(
-            "All 53 supported system_server features should be present",
-            53,
+            "All 54 supported system_server features should be present",
+            54,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
+        assertTrue("Application overlay lifecycle must have its own system_server feature",
+            features.any { it.id == IslandApplicationOverlayFeatureId })
         assertEquals("Every feature must have a unique FeatureId", features.size, uniqueIds.size)
         assertFalse("Global notification policy feature 38 is retired", features.any { it.id.id == 38 })
 

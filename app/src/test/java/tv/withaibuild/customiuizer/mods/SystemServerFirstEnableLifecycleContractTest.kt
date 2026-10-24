@@ -15,7 +15,7 @@ class SystemServerFirstEnableLifecycleContractTest {
     @Test
     fun everySystemServerFeatureIsClassified() {
         val features = SystemServerFeatures.all(fakeSystemServerStartingParam())
-        assertEquals(53, features.size)
+        assertEquals(54, features.size)
         assertFalse("Retired global channel policy has no lifecycle entry", features.any { it.id.id == 38 })
         assertEquals(features.map { it.id.name }.toSet(), SystemServerFirstEnableContract.names())
     }
@@ -49,7 +49,7 @@ class SystemServerFirstEnableLifecycleContractTest {
                 TriggerHookInstallMode.PREF_GATED_AT_START -> {
                     assertFalse(row.featureIdName, row.firstEnableWorksWithoutReboot)
                     if (row.classification == FirstEnableClassification.C_REBOOT_REQUIRED) {
-                        assertEquals("nav_bar_actions", row.featureIdName)
+                        assertTrue(row.featureIdName in setOf("nav_bar_actions", "status_bar_height_insets", "system_island_application_overlays"))
                         assertFalse(row.canEnableAfterBoot)
                         assertEquals("REBOOT", row.restartMask)
                     } else {
@@ -64,7 +64,7 @@ class SystemServerFirstEnableLifecycleContractTest {
             }
         }
         assertEquals(
-            setOf("nav_bar_actions"),
+            setOf("nav_bar_actions", "status_bar_height_insets", "system_island_application_overlays"),
             SystemServerFirstEnableContract.rows.filter {
                 it.classification == FirstEnableClassification.C_REBOOT_REQUIRED
             }.map { it.featureIdName }.toSet(),
