@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Rect
+import android.graphics.RenderNode
 import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
@@ -112,6 +113,57 @@ class DockGlassBackdropTest {
         }
         assertEquals(1, captures)
         assertFalse(controller.draw(Canvas(Bitmap.createBitmap(300, 80, Bitmap.Config.ARGB_8888)), Rect(0, 0, 300, 80), 20f, 1f))
+    }
+
+    @Test
+    fun identicalDrawsSkipUniformWritesButSubpixelChangesAndNewShadersRefreshThem() {
+        val controller = controller()
+        controller.onFrame(true)
+        val node = RenderNode("dock-uniform-cache-test").apply { setPosition(0, 0, 300, 80) }
+        val canvas = node.beginRecording()
+        val bounds = Rect(0, 0, 300, 80)
+        try {
+            DockRuntimeShaderShadow.uniformWrites = 0
+            assertTrue(controller.draw(canvas, bounds, 20f, 1f))
+            assertEquals(7, DockRuntimeShaderShadow.uniformWrites)
+            repeat(12) { assertTrue(controller.draw(canvas, bounds, 20f, 1f)) }
+            assertEquals(7, DockRuntimeShaderShadow.uniformWrites)
+            assertTrue(controller.draw(canvas, bounds, 20.001f, 1f))
+            assertEquals(14, DockRuntimeShaderShadow.uniformWrites)
+            controller.invalidateSource()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+            controller.onFrame(true)
+            DockRuntimeShaderShadow.uniformWrites = 0
+            assertTrue(controller.draw(canvas, bounds, 20.001f, 1f))
+            assertEquals(7, DockRuntimeShaderShadow.uniformWrites)
+            assertTrue(controller.draw(canvas, bounds, 20.001f, 1f))
+            assertEquals(7, DockRuntimeShaderShadow.uniformWrites)
+        } finally { node.endRecording(); node.discardDisplayList() }
+    }
+
+    @Test
+    fun obsoleteCaptureFailureCannotRetireAReplacementWallpaperOrAReshownOwner() {
+        for (hide in listOf(false, true)) {
+            val scheduler = kotlinx.coroutines.test.TestCoroutineScheduler()
+            var attempts = 0
+            val source = DockWallpaperSampler { crop, scale ->
+                if (++attempts == 1) throw IllegalStateException("obsolete wallpaper capture")
+                Bitmap.createBitmap((crop.width() * scale).toInt(), (crop.height() * scale).toInt(), Bitmap.Config.ARGB_8888)
+            }
+            val controller = DockGlassBackdrop(view, source, 90, false,
+                kotlinx.coroutines.test.StandardTestDispatcher(scheduler)).also(controllers::add)
+            controller.onFrame(true)
+            if (hide) controller.onFrame(false) else controller.invalidateSource()
+            scheduler.runCurrent()
+            shadowOf(Looper.getMainLooper()).idle()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+            controller.onFrame(true)
+            scheduler.runCurrent()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals("hide=$hide: the current generation can still capture", 2, attempts)
+            assertNotNull(ReflectionHelpers.getField<Bitmap?>(controller, "bitmap"))
+            controller.release()
+        }
     }
 
     @Test

@@ -52,6 +52,10 @@ internal class DockGlassBackdrop(
     private var hasLegacy = false
     private val values = FloatArray(9)
     private val frameMatrix = FloatArray(9) { Float.NaN }
+    // Two fixed scalar buffers belong to this lens, never to the wallpaper or View tree.
+    private val lensUniforms = FloatArray(13)
+    private val nextLensUniforms = FloatArray(13)
+    private var lensUniformsValid = false
     private val rootValues = FloatArray(9)
     private val points = FloatArray(8)
     private val location = IntArray(2)
@@ -190,7 +194,17 @@ internal class DockGlassBackdrop(
             } catch (error: Throwable) {
                 FatalErrors.unwrapAndRethrowIfFatal(error)
                 if (error is CancellationException) throw error
-                withContext(Dispatchers.Main.immediate) { target.get()?.fail(error) }
+                withContext(Dispatchers.Main.immediate) {
+                    target.get()?.let { current ->
+                        current.busy = false
+                        // A wallpaper replacement, hide or release also invalidates failures.
+                        // Only the current capture may retire this decoration's lens.
+                        if (!current.released && !current.broken && current.visible && current.epoch == requestEpoch)
+                            current.fail(error)
+                        else if (!current.released && !current.broken && current.visible)
+                            current.owner.get()?.postInvalidateOnAnimation()
+                    }
+                }
             } finally {
                 captured?.recycle()
             }
@@ -279,15 +293,7 @@ internal class DockGlassBackdrop(
             val y = values[Matrix.MTRANS_Y]
             motion = if (lastX.isFinite()) (kotlin.math.abs(x - lastX) + kotlin.math.abs(y - lastY)).div(maxOf(density * 24f, 1f)).coerceIn(0f, 1f) else 0f
             lastX = x; lastY = y
-            lens.setFloatUniform("origin", bounds.left.toFloat(), bounds.top.toFloat())
-            lens.setFloatUniform("size", bounds.width().toFloat(), bounds.height().toFloat())
-            lens.setFloatUniform("radius", radius)
-            lens.setFloatUniform("density", density)
-            lens.setFloatUniform("sampleX", values[Matrix.MSCALE_X] * sampleScaleX,
-                values[Matrix.MSKEW_X] * sampleScaleX, (x - crop.left) * sampleScaleX)
-            lens.setFloatUniform("sampleY", values[Matrix.MSKEW_Y] * sampleScaleY,
-                values[Matrix.MSCALE_Y] * sampleScaleY, (y - crop.top) * sampleScaleY)
-            lens.setFloatUniform("motion", motion)
+            updateLensUniforms(lens, bounds, radius, density)
             canvas.drawRect(bounds, paint)
             true
         } catch (error: Throwable) {
@@ -295,6 +301,31 @@ internal class DockGlassBackdrop(
             fail(error)
             false
         }
+    }
+
+    private fun updateLensUniforms(lens: RuntimeShader, bounds: Rect, radius: Float, density: Float) {
+        val next = nextLensUniforms
+        next[0] = bounds.left.toFloat(); next[1] = bounds.top.toFloat()
+        next[2] = bounds.width().toFloat(); next[3] = bounds.height().toFloat()
+        next[4] = radius; next[5] = density
+        next[6] = values[Matrix.MSCALE_X] * sampleScaleX
+        next[7] = values[Matrix.MSKEW_X] * sampleScaleX
+        next[8] = (values[Matrix.MTRANS_X] - crop.left) * sampleScaleX
+        next[9] = values[Matrix.MSKEW_Y] * sampleScaleY
+        next[10] = values[Matrix.MSCALE_Y] * sampleScaleY
+        next[11] = (values[Matrix.MTRANS_Y] - crop.top) * sampleScaleY
+        next[12] = motion
+        // Exact equality preserves subpixel motion. A fresh shader must receive every value.
+        if (lensUniformsValid && next.contentEquals(lensUniforms)) return
+        lens.setFloatUniform("origin", next[0], next[1])
+        lens.setFloatUniform("size", next[2], next[3])
+        lens.setFloatUniform("radius", next[4])
+        lens.setFloatUniform("density", next[5])
+        lens.setFloatUniform("sampleX", next[6], next[7], next[8])
+        lens.setFloatUniform("sampleY", next[9], next[10], next[11])
+        lens.setFloatUniform("motion", next[12])
+        next.copyInto(lensUniforms)
+        lensUniformsValid = true
     }
 
     private fun coveredBy(view: View, area: Rect): Boolean {
@@ -315,6 +346,7 @@ internal class DockGlassBackdrop(
         // A RuntimeShader retains its input shader too. Release it on invalidation; lazily
         // rebuild only when a fresh frame arrives, never leave an old wallpaper referenced.
         shader = null
+        lensUniformsValid = false
     }
 
     fun release() {

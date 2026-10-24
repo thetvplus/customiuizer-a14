@@ -16,6 +16,7 @@ import java.util.Arrays;
  */
 @Implements(value = RuntimeShader.class, minSdk = 33, callNativeMethodsByDefault = true)
 public class DockRuntimeShaderShadow extends ShadowNativeRuntimeShader {
+    public static int uniformWrites;
     @Implementation
     protected static long nativeCreateBuilder(String source) {
         return ShadowNativeRuntimeShader.nativeCreateBuilder(source.replace("content.eval(", "sample(content, "));
@@ -24,6 +25,7 @@ public class DockRuntimeShaderShadow extends ShadowNativeRuntimeShader {
     @Implementation
     protected static void nativeUpdateUniforms(long builder, String name, float x, float y,
             float z, float w, int count) {
+        uniformWrites++;
         RuntimeShaderNatives.nativeUpdateUniforms(builder, name,
                 Arrays.copyOf(new float[] {x, y, z, w}, count));
     }
