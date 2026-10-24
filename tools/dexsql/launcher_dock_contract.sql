@@ -48,3 +48,27 @@ WHERE (class_descriptor = 'Lcom/miui/home/launcher/Launcher;'
    OR (class_descriptor = 'Lcom/miui/home/launcher/Launcher;'
   AND field_name = 'mHotSeats')
 ORDER BY file_id, kind, descriptor;
+
+-- Native icon ownership, independent of Dock decoration. Query declarations first,
+-- then decode actual callers; a floating spring's onAnimationEnd is not its cleanup owner.
+SELECT file_id, method_idx, method_descriptor FROM class_methods
+WHERE (class_descriptor='Lcom/miui/home/launcher/ItemIcon;' AND method_name='setIconVisibility')
+ OR (class_descriptor='Lcom/miui/home/launcher/Workspace;' AND method_name='getCurrentShowShortcutIcons')
+ OR (class_descriptor='Lcom/miui/home/launcher/anim/LaunchAppAndBackHomeAnimTarget;'
+ AND method_name IN ('onLaunchAppAnimStart','onLaunchAppWindowAlphaChange','onEnterHomeAnimFinish','showIcon'))
+ OR (class_descriptor='Lcom/miui/home/recents/views/FloatingIconView2;'
+ AND method_name IN ('init','onAnimationEnd','onAnimationEnd$lambda-3','onAnimationCancel','finishImmediately','recycle','recycleView'))
+ OR (class_descriptor='Lcom/miui/home/recents/anim/WindowElement;'
+ AND method_name IN ('onAnimCancelByShellFinishedExecute','onFinishCompleted','resetFloatingIcon',
+ 'resetFloatingIcon$lambda-7','handleFloatingIconViewWhenNewTargetViewNull','updateLauncherTargetView'))
+ OR (class_descriptor='Lcom/miui/home/recents/QuickstepAppTransitionManagerImpl;'
+ AND method_name IN ('hasControlRemoteAppTransitionPermission','registerRemoteTransitions','resetShortcutIconAlpha'))
+ORDER BY file_id, method_idx;
+
+SELECT file_id, method, callee FROM method_calls
+WHERE (callee_class='Lcom/miui/home/launcher/anim/LaunchAppAndBackHomeAnimTarget;'
+ AND callee_name IN ('onLaunchAppAnimStart','onLaunchAppWindowAlphaChange','showIcon'))
+ OR (callee_class='Lcom/miui/home/recents/FloatingIconInterface;' AND callee_name='recycle')
+ OR (callee_class='Lcom/miui/home/recents/views/FloatingIconView2;' AND callee_name='finishImmediately')
+ OR (method_class='Lcom/miui/home/recents/anim/WindowElement;' AND callee_name='resetFloatingIcon')
+ORDER BY file_id, method_idx, callee_method_idx;

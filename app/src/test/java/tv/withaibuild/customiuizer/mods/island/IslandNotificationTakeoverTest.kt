@@ -76,6 +76,115 @@ class IslandNotificationTakeoverTest {
         assertEquals(0, clicks)
     }
 
+    @Test fun aRemovedOrReboundRowCannotBeAcceptedAtTheBindBoundary() {
+        val port = access
+        val entry = Entry(context, notification(1))
+        entry.row.setOnClickListener { }
+        entry.row.mRemoved = true
+        assertNull(port.read(entry))
+        entry.row.mRemoved = false
+        entry.row.mEntry = Entry(context, entry.mSbn)
+        assertNull(port.read(entry))
+    }
+
+    @Test fun replacingTheEntryRowInvalidatesTheOldClickEvenWhenTheOldRowStillHasItsEntry() {
+        val port = access
+        val entry = Entry(context, notification(1))
+        var oldClicks = 0
+        entry.row.setOnClickListener { oldClicks++ }
+        val old = port.read(entry)!!
+        entry.row = Row(context).also { it.mEntry = entry; it.setOnClickListener { } }
+        assertFalse(old.open())
+        assertEquals(0, oldClicks)
+        assertNotNull(port.read(entry))
+    }
+
+    @Test fun aCommittedBindIsConsumedOnceAndCleanupFailureCannotReplayNativePresentation() {
+        val port = access
+        val entry = Entry(context, notification(1)).apply { row.setOnClickListener { } }
+        val binding = Binding()
+        val map = port.bindingMap(binding)
+        map[entry.mSbn.key] = 100L
+        map["other"] = 200L
+        binding.`$tmp0`.mHeadsUpViewBinder.reject = true
+        var presented = 0
+        var rolledBack = 0
+        assertTrue(port.take(binding, entry, { presented++; true }, { rolledBack++ }))
+        assertTrue(entry.interruption)
+        assertFalse(entry.mIsAlerting)
+        assertEquals(mapOf("other" to 200L), map)
+        assertFalse(port.take(binding, entry, { presented++; true }, { rolledBack++ }))
+        assertEquals(1, presented)
+        assertEquals(0, rolledBack)
+        assertEquals(listOf(entry), binding.`$tmp0`.mHeadsUpViewBinder.unbound)
+    }
+
+    @Test fun rejectionAndPreCommitExceptionsKeepTheNativeTailUntouched() {
+        for (throws in listOf(false, true)) {
+            val port = access
+            val entry = Entry(context, notification(1)).apply { row.setOnClickListener { } }
+            val binding = Binding()
+            val map = port.bindingMap(binding)
+            map[entry.mSbn.key] = 100L
+            var rolledBack: IslandNotificationAccess.Bound? = null
+            try {
+                val taken = port.take(binding, entry, { if (throws) error("injected before commit") else false }, { rolledBack = it })
+                assertFalse(taken)
+                assertFalse(throws)
+            } catch (_: IllegalStateException) { assertTrue(throws) }
+            assertSame(entry.mSbn, rolledBack!!.notification)
+            assertFalse(entry.interruption)
+            assertEquals(mapOf(entry.mSbn.key to 100L), map)
+            assertTrue(binding.`$tmp0`.mHeadsUpViewBinder.unbound.isEmpty())
+        }
+    }
+
+    @Test fun aNativeMapFailureRestoresTheInterruptionBitAndBindingBeforeFallback() {
+        val port = access
+        val entry = Entry(context, notification(1)).apply { row.setOnClickListener { } }
+        val binding = Binding()
+        val values = linkedMapOf<String, Any?>(entry.mSbn.key to 100L)
+        binding.`$tmp0`.mEntriesBindingUntil = object : MutableMap<String, Any?> by values {
+            override fun remove(key: String): Any? { values.remove(key); error("injected during commit") }
+        }
+        var rolledBack = 0
+        assertThrows(IllegalStateException::class.java) {
+            port.take(binding, entry, { true }, { rolledBack++ })
+        }
+        assertFalse(entry.interruption)
+        assertEquals(mapOf(entry.mSbn.key to 100L), values)
+        assertEquals(1, rolledBack)
+        assertTrue(binding.`$tmp0`.mHeadsUpViewBinder.unbound.isEmpty())
+    }
+
+    @Test fun reentrantRemovalUpdateRowReplacementAndNewBindingCannotCommitAnOldTakeover() {
+        for (change in 0..5) {
+            val port = access
+            val entry = Entry(context, notification(1)).apply { row.setOnClickListener { } }
+            val binding = Binding()
+            val map = port.bindingMap(binding)
+            val key = entry.mSbn.key
+            val original = Any()
+            map[key] = original
+            var rolledBack: IslandNotificationAccess.Bound? = null
+            assertFalse(port.take(binding, entry, {
+                when (change) {
+                    0 -> entry.row.mRemoved = true
+                    1 -> entry.mSbn = notification(2)
+                    2 -> entry.row = Row(context).also { it.mEntry = entry; it.setOnClickListener { } }
+                    3 -> map[key] = Any()
+                    4 -> map.remove(key)
+                    5 -> entry.mSensitive = true
+                }
+                true
+            }, { rolledBack = it }))
+            assertNotNull(rolledBack)
+            assertFalse(entry.interruption)
+            assertTrue(binding.`$tmp0`.mHeadsUpViewBinder.unbound.isEmpty())
+            if (change == 3) assertNotSame(original, map[key])
+        }
+    }
+
     class Row(context: Context) : FrameLayout(context) {
         @JvmField var mEntry: Entry? = null
         @JvmField var mRemoved = false
@@ -84,7 +193,7 @@ class IslandNotificationTakeoverTest {
     class Entry(context: Context, notification: StatusBarNotification) {
         @JvmField var mSbn = notification
         @JvmField val mRanking = Ranking()
-        @JvmField val row = Row(context).also { it.mEntry = this }
+        @JvmField var row = Row(context).also { it.mEntry = this }
         @JvmField val mIcons = Icons(context)
         @JvmField var mSensitive = false
         @JvmField var hideSensitiveByAppLock = false
@@ -93,10 +202,11 @@ class IslandNotificationTakeoverTest {
     }
     class Binder {
         val unbound = mutableListOf<Entry>()
-        fun unbindHeadsUpView(entry: Entry) { unbound.add(entry) }
+        var reject = false
+        fun unbindHeadsUpView(entry: Entry) { unbound.add(entry); check(!reject) }
     }
     class Coordinator {
-        @JvmField val mEntriesBindingUntil = android.util.ArrayMap<String, Any?>()
+        @JvmField var mEntriesBindingUntil: MutableMap<String, Any?> = android.util.ArrayMap()
         @JvmField val mHeadsUpViewBinder = Binder()
     }
     class Binding {

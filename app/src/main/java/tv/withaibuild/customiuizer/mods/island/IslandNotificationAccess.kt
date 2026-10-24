@@ -5,6 +5,7 @@ import android.service.notification.NotificationListenerService.Ranking
 import android.service.notification.StatusBarNotification
 import android.view.View
 import android.widget.ImageView
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.ref.WeakReference
@@ -37,7 +38,7 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
         if (sensitive.getBoolean(entry) || appLocked.getBoolean(entry)) return null
         val notification = sbn.get(entry) as? StatusBarNotification ?: return null
         val nativeRow = row.get(entry) as? View ?: return null
-        if (!nativeRow.hasOnClickListeners()) return null
+        if (rowRemoved.getBoolean(nativeRow) || rowEntry.get(nativeRow) !== entry || !nativeRow.hasOnClickListeners()) return null
         val rank = ranking.get(entry) as? Ranking ?: return null
         val icon = icons.get(entry)?.let { statusIcon.get(it) as? ImageView }?.drawable
         val weakRow = WeakReference(nativeRow)
@@ -47,7 +48,7 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
             val current = weakRow.get()
             val currentEntry = current?.let(rowEntry::get)
             if (current == null || currentEntry == null || currentEntry !== weakEntry.get() ||
-                rowRemoved.getBoolean(current) || sbn.get(currentEntry) !== notification) false
+                row.get(currentEntry) !== current || rowRemoved.getBoolean(current) || sbn.get(currentEntry) !== notification) false
             else current.performClick()
         }
         return Bound(notification, rank, icon, open)
@@ -57,12 +58,47 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
     fun bindingMap(callback: Any): MutableMap<String, Any?> =
         bindings.get(coordinator.get(callback)) as MutableMap<String, Any?>
 
+    /** Prepare the shell first; only this still-current bind may commit the native tail. */
+    fun take(callback: Any, entry: Any, present: (Bound) -> Boolean, rollback: (Bound) -> Unit): Boolean {
+        val bound = read(entry) ?: return false
+        val key = bound.notification.key
+        val map = bindingMap(callback)
+        if (!map.containsKey(key)) return false
+        val binding = map[key]
+        val nativeRow = row.get(entry)
+        var committed = false
+        try {
+            if (!present(bound)) return false
+            // Window insertion can synchronously re-enter native code. An update,
+            // removal, Row replacement or newer bind invalidates this transaction.
+            if (bindingMap(callback) !== map || !map.containsKey(key) || map[key] !== binding ||
+                sbn.get(entry) !== bound.notification || row.get(entry) !== nativeRow ||
+                rowEntry.get(nativeRow) !== entry || rowRemoved.getBoolean(nativeRow) ||
+                sensitive.getBoolean(entry) || appLocked.getBoolean(entry)) return false
+            complete(callback, entry, map, key)
+            committed = true
+            return true
+        } finally {
+            if (!committed) rollback(bound)
+        }
+    }
+
     /** The skipped presentation tail owns only this bind key and the native interruption bit. */
     fun complete(callback: Any, entry: Any, map: MutableMap<String, Any?>, key: String) {
+        val nativeBinder = binder.get(coordinator.get(callback))
+        val wasInterrupted = interrupted.getBoolean(entry)
+        val binding = map[key]
         interrupted.setBoolean(entry, true)
-        map.remove(key)
+        try { map.remove(key) }
+        catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            interrupted.setBoolean(entry, wasInterrupted)
+            if (!map.containsKey(key)) map[key] = binding
+            throw error
+        }
         // The binder removes its in-flight callback before calling onBindFinished.
         // Reuse native unbinding to free only the unused heads-up content (flag 4).
-        ModuleHelper.guarded { unbind.invoke(binder.get(coordinator.get(callback)), entry) }
+        // This is after commit: cleanup failure must never replay the native alert.
+        ModuleHelper.guarded { unbind.invoke(nativeBinder, entry) }
     }
 }

@@ -1367,6 +1367,17 @@ class DockBackgroundTest {
         assertEquals(corners, material.cornerCalls)
         assertFalse(native.isLayoutRequested)
         assertEquals(0, row.positionUpdates)
+        assertEquals(View.INVISIBLE, item.visibility)
+        assertEquals(0f, item.mIconImageView.alpha)
+        // Only the native transition owner restores its source. Geometry refresh
+        // must preserve that restoration just as it preserved the temporary hide.
+        item.visibility = View.VISIBLE
+        item.mIconImageView.alpha = 1f
+        decoration.scheduleGeometry()
+        repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
+        assertEquals(View.VISIBLE, item.visibility)
+        assertEquals(1f, item.mIconImageView.alpha)
+        assertEquals(bounds, Rect(decoration.left, decoration.top, decoration.right, decoration.bottom))
     }
 
     @Test

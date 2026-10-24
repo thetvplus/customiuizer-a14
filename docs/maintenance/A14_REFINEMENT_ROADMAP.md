@@ -688,3 +688,47 @@ CORE / MAINTAIN / RETIRE_CANDIDATE 的长期原则归 [ARCHITECTURE](../../ARCHI
 `39906924894` 在 05:39 UTC 因 release-signing 缺 Required reviewer 停止；旧版在 05:40 UTC 才由本地正式程序发布，不能把原失败归因为“版本已经发布”。原自动入口已经有跳过已发布版本的路径，本轮补齐手动入口的预期跳过；草稿 / 冲突仍失败。受信签名范围收敛为 main，保留 exact SHA / main CI、历史证书、APK digest、来源证明、先源码后 Xposed、幂等恢复及失败停止。双环境仅允许 main，由本轮明确授权的账号审核；正式候选先在发布环境检查点完成实机 smoke，再批准公开，无须重建或手动重复 CI。该授权不等于永久取消审核。
 
 后续先做 M05 的真实通知与 Duo / 双卡 / 息屏状态、控制中心 owner / 仲裁的受控轨迹，再按缺陷证据进入 M07。M04 需要可用工作资料 / 多用户的真实认证场景；M08 保持恢复事务和既有有限清单，不扩大停用。实时波形继续保留为维护成本 / 使用收益待评估候选，不据一次静态引用或库列表删除功能。
+
+## 16. 2026-10-24：动态岛锁屏通知与前后台所有权专项
+
+### 范围与证据边界
+
+执行起点与已 fetch 的最新 `origin/main` 均为 `3e0709f3234ed942d906487370547ec0136c7531`，工作区干净；在 `codex/island-native-compat-20261024` 实施。优先 P0 通知可靠性，其次 P1 直接打开播放器 / 返回和 Launcher 图标所有权。用户随后明确选择**本次先完成代码与静态验证**；ADB 未发现设备，没有更改手机设置、安装、重启或实机验收。版本维持 r14.25.3 / 248，不发布、不修改既有 Release。
+
+复用 DexSQL 0.1.1，核对内嵌文档、schema 和定义来源。历史实机样本来自第 15 节，**不是本次设备读回**：SystemUI `5d8f2fe0b65d8a1a947b4280f8053b524f8c5de73f48a74f8792d415ae76e513`；Launcher `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`。CN/TW SystemUI 哈希沿用 M03 合同表；两区参考 Launcher 与历史实机 Launcher 的 APK 哈希相同。没有依据目录名推断二进制相同。原始 SQL / 全页 decode、输入哈希、基线失败及验证日志保存在忽略的 `.di-evidence/island-native-compat-20261024/`；复用查询补充到 `island_activity_contract.sql` 和 `launcher_dock_contract.sql`，不建立第二套精修管理页。
+
+### 已确认源码问题与修复
+
+1. **P0 接管安全条件滞后。** `IslandNativeAccess.isAllowed()` 原先只看状态栏的 `mState=0`、Dozing / Expanded；`takeNotification()` 只检查缓存的 `state.allowed`。原生 `KeyguardNotificationVisibilityProviderImpl.isLockedOrLocking()` 实际分别读取 `KeyguardStateControllerImpl.mShowing` 和 `mUpcomingState`。在 Keyguard 已改变、状态栏回调尚未送达时，旧代码仍可能接管再隐藏窗口。新增测试在旧源码稳定失败。现在复用 `Dependency.get(KeyguardStateController.class)`，读取 showing、going / fading away、bouncer、launch fading 及现有 requested / upcoming / dreaming 状态；未知或读取异常拒绝呈现。在窗口插入前后重新校验，锁屏 / AOD / 解锁挑战保留原生。只注册一份 native Keyguard Callback，与原 status-bar owner 同时连接、失败回收和释放；不订阅每帧 dismiss amount。
+2. **P0 Row / binding 接管所有权不完整。** 旧 `read()` 只在后续点击时检查 Row 是否移除 / 换绑，bind 接管本身可接受已失效的 Row；测试在旧源码失败。现在接管前、窗口插入后均核对 Sbn / Row / entry 身份、removed / 敏感 / 应用锁及本次 binding Map 和值。只有展示准备成功、仍拥有本次 binding 才设置 interruption、移除自己的 bind key；未提交失败释放自己的通知 lease，Map 移除中途异常恢复原 bit / binding。提交后的 native unbind 清理失败不执行第二次原生提醒。回滚按 Sbn 实例匹配，旧回调不能清除同 key 的新通知；同毫秒的新 Sbn 更新也立即失效旧点击。没有通知缓存 / 重放队列。
+3. **P1 直接 App/Home 没有失效在途首份媒体读取。** `foregroundChanged()` 原先仅在已有 `media`、且从来源 App 离开时触发新 read；首份 PLAYING 快照已在 IO 读完但 Main 尚未接收时，直接打开 App、真实暂停、返回 Home，可以应用旧 PLAYING 结果并误入场。双调度器测试在旧源码稳定失败。现在来源 App 进入 / 离开及在途 read 的前台变化复用现有 `readGeneration`、取消与单个合并任务，要求新的快照后才显示；native owner 丢失时释放媒体状态，避免留下无人完成的 foreground baseline。保留真实暂停不闪岛、同一 session 的 dismissal 和唯一媒体 callback。
+
+原生 `HeadsUpCoordinator$bindForAsyncHeadsUp$1.onBindFinished(NotificationEntry)` 负责 Heads-up / alert 状态、interruption 和绑定尾部。`HeadsUpViewBinder.unbindHeadsUpView()` 只将 **content flag 4** 标为 freeable，再请求 Row rebind。普通 / 锁屏列表仍由 `KeyguardCoordinator`、原生隐私 / 用户 / 静默过滤负责；静态证据**没有证明** flag 4 或 interruption 会删除锁屏列表 Row。本次确认并修复的是不安全的接管路径；用户反馈的列表缺失、弹出缺失、原生过滤仍须用三层实机证据区分，不能宣称锁屏列表已实机修复。
+
+### Launcher 图标取证与历史归属
+
+在实际 Launcher 定义中：`LaunchAppAndBackHomeAnimTarget.onLaunchAppAnimStart()` 将目标 `getIconImageView().alpha` 设为 0；`onLaunchAppWindowAlphaChange(F)` 写入 `1-windowAlpha`。`ItemIcon.setIconVisibility(I)` 另可设置其 `mIconImageView.visibility`。恢复由 `WindowElement.onFinishCompleted()` → `resetFloatingIcon(false)` → Main executor 的 `resetFloatingIcon$lambda-7()` 对当前 `launcherTargetView.showIcon()` 后调用 floating icon `recycle()`；`FloatingIconView2.finishImmediately()` 也先调用当前 anim target 的 `showIcon()`。`showIcon()` 恢复 VISIBLE / alpha=1 并 invalidate。
+
+`FloatingIconView2.onAnimationCancel()` 调用其 `onAnimationEnd()`，但后者提交的 `onAnimationEnd$lambda-3()` **是空方法**；不能把“收到 spring end”当作已恢复原图标的证据。缺少新 target 时 `WindowElement.handleFloatingIconViewWhenNewTargetViewNull()` 进入原生 reset，具体页面 / 文件夹 / Dock 的 target 选择仍需事件日志。Remote Transition 的 stop-runnable 会设置 `setSkipCallExecuteFinish(true)` 后 cancel 当前动画；它与岛窗口 attach / detach 是否在同一异常会话冲突，当前只有候选路径，没有实机时间线，**不新增 Launcher Hook 或强制恢复兜底**。
+
+| 历史提交 | 本次核对的实际影响 | 根因判断 |
+| --- | --- | --- |
+| `2b321c6` / PR #45 / r14.25.1 后续 | 动态岛移入 island 包，暂停 / 返回快照、交互和发布规则变化；首份媒体 read 的前台失效缺口仍存在 | 不据包移动或版本号判断 Launcher 根因 |
+| `d6f47fd` / PR #46 / r14.25.2 | Dock 装饰加入原生解锁参与列表、全宽继承父变换；动态岛增加真实已显示媒体的判断 | 背景没有取得原图标恢复所有权 |
+| `eae2529` / PR #47 / r14.25.3 | 通知 native 点击、Row 弱引用 / removed、媒体 / 输入精修；removed 校验只保护点击，接管前仍有缺口 | 上述 P0 / P1 缺口在最新 main 仍可复现；无 Launcher 实机根因证明 |
+| `7eeccb7`、`51eef52`、`3dcf8e4` | Dock 几何、材质 / 最近任务生命周期和原生坐标保护；读取临时隐藏的 icon bounds，不重写其 alpha / visibility | 不回退已完成批次；保留原生图标 / 装饰边界 |
+| 早期 `LauncherAnimationHooks.UseOldLaunchAnimationHook()` | `launcher_oldlaunchanim` 单独开启时把 remote-transition 权限结果改为 false；FixAnim 另由自己的开关安装 | 本次未改变开关或原生动画选择；须在实机 F 场景隔离 |
+
+“同屏有对应图标”符合原生 target / 源图标参与过渡的机制；“没有对应图标”可能进入无 target 分支。它们解释测试隔离方向，**不能替代导致持续隐藏的事件因果证据**。现有 Dock 模型测试补查临时隐藏与原生恢复均不被装饰重写；普通 / 全宽、文件夹和最近任务继续使用既有回归。
+
+### 回归、资源与后续验收
+
+首轮 64 项专项通过，含 TOP / CENTER 各 50 轮 App/Home、0 / 749 / 750ms 边界、25% / 50% / 75% 入场中断、旧 exit 完成、最新窗口 alpha / scale / translation 和唯一 callback；另覆盖 Keyguard 各门禁、缺失 owner、注册失败清理、插窗期间锁屏、失效 Row、同 key 更新 / 撤回、提交前异常和提交后清理失败。旧源码运行其中新增三项时 **44 tests / 3 failures**，修复后通过。末尾 diff 复核补获“同一 Sbn 换 Row 仍沿用旧点击 / 旧回滚清除新绑定”，补测 **55 tests / 2 failures** 后收紧：旧点击反向验证 entry.row，重复绑定只替换点击而不续期，回滚同时匹配 Sbn 和当前点击身份；复用已有字段，不增加绑定缓存。Host Robolectric 不是 ART 或真实输入验收。
+
+最终源码收口：JDK 25.0.4.1，Fast / Full 退出 0；联合专项 **122 tests / 0 failures / 0 errors**，Full **354 suites / 3276 tests / 0 failures / 0 errors / 2 skipped**；Lint **0 errors / 407 warnings**。工具测试 **609 tests / 0 failures / 0 errors / 5 skipped**，差异空白与本页 / M03 / DexSQL README 的本地文档链接检查通过。两个扩展查询在 CN/TW 与历史实机数据集的 14 条 SELECT 均完整读取至 `next_offset=null`；五对原生 Keyguard 生命周期方法完整 decode、两区文本相同。Develop / R8 同产物 mapping 与 DEX 回执独立保存在上述本地证据目录，不等同实机验收。
+
+动画时长、750ms 入场延迟、TOP / CENTER 几何、临界阻尼与速度继承未改。没有增加常驻线程、窗口、轮询、缓存或跨进程协调；新增成本为一个随 owner 释放的 native Keyguard listener、事件边界的固定字段读取，以及前台切换期间合并的媒体快照。没有 CPU / GPU 帧时间、主线程或分配的同设备 A/B 数据，不宣称性能收益或无性能退化。
+
+本批设备矩阵全部 **NOT RUN**：通知接管开 / 关对照下的完全解锁、锁屏、息屏点亮、AOD、接管中锁屏、立即解锁、连续切换、非白名单、应用锁 / 敏感、DND / 静默 / 低重要性、更新撤回重发，以及列表点击 / 挑战 / 展开 / 清除；须分别确认 NMS 记录、Pipeline Entry / Row 和真正绘制。Launcher A–F 对照及普通桌面 / Dock / 文件夹、直接入口 / 最近任务 / 导航、动画中翻页、锁屏解锁和岛持续展示期间图标恢复，同样待验收。使用手机时先备份设置，结束恢复并锁屏读回；本批未接触手机。
+
+源码修复可进入下一轮评审和 Develop 实机候选验证；**整个专项尚不具备宣称可正式发布的验收条件**。尤其 Launcher 图标持续消失仍是待实机确认的 P1，不以静态测试或历史 smoke 报通过。单个提交为本批回退单位，正式发布另需授权及现有 release 门禁。

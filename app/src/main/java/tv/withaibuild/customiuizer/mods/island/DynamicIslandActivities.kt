@@ -14,6 +14,7 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
+import tv.withaibuild.customiuizer.mods.utils.ReflectionCache
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.PrefMap
@@ -184,19 +185,11 @@ internal object DynamicIslandActivities {
                 ModuleHelper.hookMethod(notifications.onBindFinished, object : MethodHook() {
                     override fun intercept(chain: XposedInterface.Chain): Any? {
                         val entry = chain.getArg(0) ?: return chain.proceed()
-                        var acceptedKey: String? = null
+                        val controller = active.get() ?: return chain.proceed()
                         val accepted = try {
-                            val bound = notifications.read(entry)
-                            val map = notifications.bindingMap(chain.thisObject!!)
-                            if (bound == null || active.get()?.takeNotification(bound) != true) false
-                            else {
-                                acceptedKey = bound.notification.key
-                                notifications.complete(chain.thisObject!!, entry, map, bound.notification.key)
-                                true
-                            }
+                            notifications.take(chain.thisObject!!, entry, controller::takeNotification, controller::cancelNotificationTakeover)
                         } catch (error: Throwable) {
                             FatalErrors.unwrapAndRethrowIfFatal(error)
-                            acceptedKey?.let { active.get()?.notificationRemoved(it) }
                             XposedHelpers.log("Dynamic Island: retaining native heads-up", error)
                             false
                         }
@@ -284,34 +277,61 @@ internal class IslandNativeAccess(loader: ClassLoader) : IslandNativePort {
     private val stateField = field(safetyClass, "mState")
     private val dozingField = field(safetyClass, "mIsDozing")
     private val expandedField = field(safetyClass, "mIsExpanded")
+    private val dreamingField = field(safetyClass, "mIsDreaming")
+    private val requestedField = field(safetyClass, "mKeyguardRequested")
+    private val upcomingField = field(safetyClass, "mUpcomingState")
+    private val keyguard = IslandKeyguardAccess(loader)
+    private var keyguardOwner = WeakReference<Any>(null)
+    private data class SafetyListeners(val statusBar: Any, val keyguardOwner: Any?, val keyguardListener: Any?)
     private val addListener = safetyClass.getMethod("addCallback", stateListener)
     private val removeListener = safetyClass.getMethod("removeCallback", stateListener)
     private val trustedOverlay = android.view.WindowManager.LayoutParams::class.java.getMethod("setTrustedOverlay")
 
     override fun controller(owner: Any) = controllerField.get(owner) as? MediaController
     override fun metadata(owner: Any) = metadataField.get(owner) as? MediaMetadata
-    override fun isAllowed(owner: Any): Boolean = stateField.getInt(owner) == 0 &&
-        !dozingField.getBoolean(owner) && !expandedField.getBoolean(owner)
-    // Matches this ROM's MediaHierarchyManager.isHomeScreenShadeVisibleToUser().
-    override fun isShadeBlocked(owner: Any): Boolean = stateField.getInt(owner) == 0 &&
-        !dozingField.getBoolean(owner) && expandedField.getBoolean(owner)
+    private fun unlocked(owner: Any): Boolean = stateField.getInt(owner) == 0 && upcomingField.getInt(owner) == 0 &&
+        !requestedField.getBoolean(owner) && !dozingField.getBoolean(owner) && !dreamingField.getBoolean(owner) &&
+        keyguard.isUnlocked(keyguardOwner.get())
+    override fun isAllowed(owner: Any): Boolean = unlocked(owner) && !expandedField.getBoolean(owner)
+    // Retain shade playback only across an unlocked panel drag.
+    override fun isShadeBlocked(owner: Any): Boolean = unlocked(owner) && expandedField.getBoolean(owner)
     override fun trust(params: android.view.WindowManager.LayoutParams) { trustedOverlay.invoke(params) }
 
     override fun listen(owner: Any, changed: () -> Unit): Any {
+        val nativeKeyguard = ReflectionCache.getDepInstance(safetyClass.classLoader,
+            "com.android.systemui.statusbar.policy.KeyguardStateController")
         val listener = Proxy.newProxyInstance(stateListener.classLoader, arrayOf(stateListener)) { proxy, method, args ->
             when (method.name) {
                 "equals" -> proxy === args?.getOrNull(0)
                 "hashCode" -> java.lang.System.identityHashCode(proxy)
                 "toString" -> "A14IslandStateListener"
-                "onStateChanged", "onDozingChanged", "onExpandedChanged", "onDreamingChanged" -> {
+                "onStateChanged", "onUpcomingStateChanged", "onDozingChanged", "onExpandedChanged", "onDreamingChanged" -> {
                     ModuleHelper.guarded { changed() }; null
                 }
                 else -> null
             }
         }
-        addListener.invoke(owner, listener)
-        return listener
+        val keyguardListener = nativeKeyguard?.let { keyguard.listen(it, changed) }
+        try { addListener.invoke(owner, listener) }
+        catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            ModuleHelper.guarded { removeListener.invoke(owner, listener) }
+            if (nativeKeyguard != null && keyguardListener != null)
+                ModuleHelper.guarded { keyguard.unlisten(nativeKeyguard, keyguardListener) }
+            keyguardOwner.clear()
+            throw error
+        }
+        keyguardOwner = WeakReference(nativeKeyguard)
+        return SafetyListeners(listener, nativeKeyguard, keyguardListener)
     }
-    override fun unlisten(owner: Any, listener: Any) { removeListener.invoke(owner, listener) }
+    override fun unlisten(owner: Any, listener: Any) {
+        val listeners = listener as SafetyListeners
+        try { removeListener.invoke(owner, listeners.statusBar) }
+        finally {
+            if (keyguardOwner.get() === listeners.keyguardOwner) keyguardOwner.clear()
+            if (listeners.keyguardOwner != null && listeners.keyguardListener != null)
+                keyguard.unlisten(listeners.keyguardOwner, listeners.keyguardListener)
+        }
+    }
     private fun field(owner: Class<*>, name: String): Field = XposedHelpers.findField(owner, name)
 }
