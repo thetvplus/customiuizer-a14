@@ -7,6 +7,15 @@ from tools import check_release_metadata as c
 
 
 class ReleaseMetadataTests(unittest.TestCase):
+    def test_source_changelog_layout_keeps_current_and_historical_language_identity(self):
+        self.assertEqual((("CHANGELOG.md", "简体中文"), ("CHANGELOG_EN.md", "English")),
+                         c.source_changelogs({"README.md", "CHANGELOG.md", "CHANGELOG_EN.md"}))
+        self.assertEqual((("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English")),
+                         c.source_changelogs({"CHANGELOG.md", "CHANGELOG_CN.md"}))
+        for paths in (set(), {"CHANGELOG.md"}, {"CHANGELOG.md", "CHANGELOG_EN.md", "CHANGELOG_CN.md"}):
+            with self.subTest(paths=paths), self.assertRaisesRegex(ValueError, "missing or ambiguous"):
+                c.source_changelogs(paths)
+
     def test_current_tree_passes(self):
         errors = c.check(require_tag=False)
         self.assertEqual(errors, [], errors)
@@ -21,7 +30,7 @@ class ReleaseMetadataTests(unittest.TestCase):
             root = Path(td)
             for name in ("README.md", "README_EN.md"):
                 (root / name).write_text("Current release: r14.22.7", encoding="utf-8")
-            for name in ("CHANGELOG.md", "CHANGELOG_CN.md"):
+            for name in ("CHANGELOG_EN.md", "CHANGELOG.md"):
                 (root / name).write_text(changelog, encoding="utf-8")
             with patch.object(c, "REPO_ROOT", root), patch.object(c, "parse_gradle_version", return_value=(230, "r14.22.7")):
                 return c.check()

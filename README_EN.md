@@ -1,52 +1,35 @@
-# 米客 A14｜CustoMIUIzer A14
+# CustoMIUIzer A14
 
 [简体中文](README.md) | English
 
-A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It supports **arm64-v8a / libxposed API 102** and has an independent package, signing identity and release line.
+A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. Supports **arm64-v8a** and requires **libxposed API 102 or later**.
 
-- Current source version: `r14.25.3` (versionCode 248), requiring libxposed API 102. The official version is published; this integration branch also contains later, unreleased changes.
-- Development and maintenance: `thetvplus`
-- Application ID: `tv.withaibuild.customiuizer.r14`
-- [Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Release history](https://github.com/thetvplus/customiuizer-a14/releases) · [Changelog](CHANGELOG.md)
+[Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Changelog](CHANGELOG_EN.md) · [Report an issue](https://github.com/thetvplus/customiuizer-a14/issues)
 
-This release rebuilds settings pages and navigation, adds Dynamic Island, Toast positioning and direct slider-value entry, expands full-width Dock and glass controls, and refines audio, vibration, System UI and maintenance recovery. Updates preserve the signing identity and app data.
+## Main Features
 
-The English app name is CustoMIUIzer A14; the Chinese app name is 米客 A14. App screens, the in-app About page and documentation use the name for their language. The combined name 米客 A14｜CustoMIUIzer A14 is used for bilingual display on the repository homepage and GitHub About.
+- **System**: status bar, Duo icon, Dynamic Island, notifications, Control Center, lock screen, audio and vibration.
+- **Home screen**: Dock backgrounds and materials, layout, folders, app titles and gestures.
+- **Buttons and gestures**: power, volume and fingerprint keys, navigation bar and custom actions.
+- **Apps and maintenance**: installer, app management, permission prompts, and recoverable maintenance and privacy operations.
 
-## Features
+See the [compact feature map](docs/FEATURE_MAP_SIMPLE.md) for all pages. Detailed behavior is documented in the [Dynamic Island](docs/features/island/README.md), [Duo](docs/features/duo-status-bar.md) and [Dock](docs/features/dock/README.md) guides.
 
-- Status bar icons, battery, signal, network speed, date and temperature;
-- Optional Duo status icon: battery ring, Wi-Fi / cellular glyph, default data SIM signal, network type text and brief headphone hints;
-- Dynamic Island app feedback and music activities, USB default purpose, volume and brightness panels;
-- Control center, notifications, lock screen, charging and media UI;
-- Launcher, recents, folders, icons and home-screen gestures;
-- Navigation bar, buttons, custom actions, power menu and system animations;
-- App, permission, installer, sharing, privacy-app and app-lock behavior.
+## Installation
 
-## Installation and Compatibility
+1. Download and install the official APK. Updates signed with the same certificate preserve app data.
+2. Enable the module in your Xposed framework and grant the required scopes.
+3. Restart the affected process or device, then enable the features you need. Hooks selected at installation time require restarting their target process after changing the switch.
 
-| Item | Supported range |
-| --- | --- |
-| System | HyperOS 1 / Android 14, SDK 34 |
-| ABI | `arm64-v8a` |
-| Xposed framework | libxposed API 102 minimum |
-| Module metadata | `minApiVersion=102`, `targetApiVersion=102`, `staticScope=true` |
+Availability depends on the ROM and system-app versions. Do not enable this module together with upstream or another CustoMIUIzer-derived module. Other major Android or HyperOS versions are unsupported; see the [compatibility matrix](COMPATIBILITY.md).
 
-Install the official APK, enable the module and required scopes in your framework, then restart the affected process or device. Settings indicate which changes require a restart. Hooks selected at installation time require restarting their target process after changing the switch.
+## Documentation and Development
 
-Open System → Dynamic Island for app feedback and media integrations, disabled by default. Restart System UI after enabling. See the [Dynamic Island guide](docs/features/island/README.md) for behavior and pending device checks.
+The [documentation index](docs/README.md) covers development, testing, releases and feature contracts. Start with the [shared engineering rules](AGENTS.md) before contributing.
 
-The integration branch adds gesture ownership, waveform and optional native music return, keyguard notification checks, media snapshot and status bar / Insets fixes. Persistent Launcher icon loss still needs device investigation. See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md); an identical version name does not mean the official APK includes these changes. See the [release guide](docs/RELEASE.md) for the automated build and publication entry point.
+Current source version: `r14.25.3` (versionCode 248). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
 
-Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/features/duo-status-bar.md) for sizing, signal and hint behavior.
-
-Dock background is disabled by default. Open Home screen → Dock, then restart the launcher after changes. Background shrink adjusts all four edges: positive values contract, negative values expand, with a +1 dp default. Icon space and host clipping bound the effective adjustment; icons retain their native positions and sizes.
-
-Availability depends on the ROM and system-app versions. Dynamic app-scope requests still require framework approval. Do not enable this module together with upstream or another CustoMIUIzer-derived module. Android 13 / 15 / 16 and other major MIUI / HyperOS versions are unsupported. See [COMPATIBILITY.md](COMPATIBILITY.md).
-
-## Development and Maintenance
-
-Start with [AGENTS.md](AGENTS.md) to identify the task and branch, then use the [documentation index](docs/README.md) as needed. See [DEVELOPMENT](docs/DEVELOPMENT.md) for setup and builds, [TESTING](docs/TESTING.md) for validation, [RELEASE](docs/RELEASE.md) for signing and publication, and [ARCHITECTURE](ARCHITECTURE.md) for routing and ownership.
+Later source-branch changes may be absent from the official APK with the same version name. See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for unreleased changes and pending device checks.
 
 ## Support and License
 

@@ -8,6 +8,7 @@
 | 偏好、致命错误与源码边界 | `check_observer_key_contract.py`、`check_main_source_cleanliness.py`、`source_hazard_scan.py` |
 | Hook 热路径预算 | `hook_body_prefmap_scan.py`、`check_hotpath_alloc_budget.py`，分别读取同目录的预算 JSON |
 | 设置分页、搜索与偏好目录生成 | `generate_preference_artifacts.py`，由 Gradle 调用 |
+| 当前页面功能地图、文档质量 | `generate_feature_map.py` / `--check`（显式运行，不进 APK 构建）、`check_docs.py`（本地链接 / 锚点 / 图片） |
 | CI 范围、安全与发布元数据 | `ci_scope.py`、`ci_contract_scan.py`、`check_ci_portability.py`、`check_release_metadata.py`、`ci_install_android_sdk.sh` |
 | 独立缺陷注入、确定性及无写入检查 | `brutal_test_runner.py`、`brutal_test_config.json`；同前缀的 policy / protocol / mutator / apply-check 模块由 runner 使用 |
 | Feature 路由、语义与所有权 | `catalog_contract_probe.py`、`audit-feature-semantics.py`、`audit_hook_ownership.py` |

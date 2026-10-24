@@ -49,9 +49,9 @@ A14 MediaSession.Token 的 UID 与当前前台用户必须匹配；包入口只�
 
 ## 暂停可见性
 
-Controller 从现有 IslandWindowPresentation 的预绘制取得展示证据；attach / PREPARED 不代表实际显示。未显示窗口直接移除，避免退场动画本身制造闪现。同一身份从 EXITING 重入也重新经过 PREPARED → VISIBLE。已显示活动暂停约两秒退出；重复 PAUSED、metadata、前台变化不续期，进入来源应用消费旧暂停期。
+Controller 从现有 IslandWindowPresentation 的预绘制取得展示证据；attach / PREPARED 不代表实际显示。未显示窗口直接移除，避免退场动画本身制造闪现。同一身份从 EXITING 重入也重新经过 PREPARED → VISIBLE。只有本次真正展示的播放活动才可在暂停后保留约两秒；重复 PAUSED、metadata、前台变化不续期，进入来源应用消费旧暂停期，回 Home 不重开。来源 App 内、入场延迟内、遮挡期间的新播放或其他提示占窗时暂停，均不建立暂停岛；真实恢复沿用普通入场延迟。
 
-离开播放器先读取新快照，避免前台变化先于暂停读取时显示旧 PLAYING。未显示的新播放活动即使沿用旧 session，也不能凭历史展示记录建立暂停岛；停止、失效、替换和关闭媒体清理会话及延迟任务。
+离开播放器先读取新快照，避免前台变化先于暂停读取时显示旧 PLAYING。未显示的新播放活动即使沿用旧 session，也不能凭历史展示记录建立暂停岛；回调绑定当前会话及 controller，停止、隐私遮挡、失效、替换 / 销毁和关闭媒体清理会话及延迟任务。
 
 ## CN / TW 静态取证（2026-10-23）
 
@@ -74,6 +74,6 @@ Controller 从现有 IslandWindowPresentation 的预绘制取得展示证据；a
 
 `IslandMusicActionsTest` 验证默认、开关、能力位、音量策略和几何；`IslandMusicGestureTest` 在 Robolectric SDK 34 执行 View 的单击 / 双击、长按 / 滑动、取消、无操作及无障碍。`IslandActivityLifecycleTest` 检查 PREPARED、入场延迟、暂停 / 停止、来源应用、metadata、旧回调、抢占、会话更换和关闭的完整时序与状态栏占用。`IslandWindowPresentationTest` 覆盖同身份退场重入，设置导航、动作矩阵和备份另有回归。
 
-本次专项保留以上既有 CN / TW 取证，没有取得这些样本原件或 DexSQL 连接，未重跑或扩充 ROM 结论。音频 UID / session 隐藏 API 只由 AOSP A14 源码确认；SystemUI 权限和实际音频路由仍保留实验性状态。
+后续整合仅保留以上 2026-10-23 CN / TW 取证，没有重跑或扩充该批 ROM 结论。音频 UID / session 隐藏 API 只由 AOSP A14 源码确认；SystemUI 权限和实际音频路由仍保留实验性状态。
 
 这些是主机 / Robolectric / 既有 ROM 静态证据。目标 HyperOS 触摸手感、TalkBack、蓝牙 / 远程音量、物理开孔、横竖屏、SystemUI 重建、通知工作资料和帧时间 / 功耗仍待实际设备验证。新增 ROM 专属动作及更多系统开关继续作为候选，需样本哈希、唯一目标、调用 / 字段和 ClassLoader 证据后单独开发；不把本次静态结果标为实机 PASS。

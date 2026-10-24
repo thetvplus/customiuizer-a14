@@ -1,4 +1,4 @@
-# 测试
+# 测试与验证
 
 命令和复用规则以 [AGENTS.md](../AGENTS.md#工具链与验证) 为准；环境与变体见 [DEVELOPMENT](DEVELOPMENT.md)。
 
@@ -8,6 +8,7 @@
 | --- | --- | --- |
 | 静态契约 | `verify.py`、`check-invariants.py` | SDK / API、偏好、Feature、生命周期、热路径及编码规则 |
 | Python | `unittest discover -s tools/tests` | 工具、生成器、资源 / 源码接入、ROM matrix 和 CI 配置 |
+| 文档 | `check_docs.py`、`generate_feature_map.py --check` | 本地链接 / 锚点 / 图片、实际设置源与地图一致；不证明外网或实机通过 |
 | JVM / Robolectric | `testDebugUnitTest` | 实际状态、动作和 Android 14 UI 模型；不运行目标 ROM Hook |
 | 独立缺陷注入 | `brutal_test_runner.py` | 注入缺陷是否被独立门禁检出 |
 | 普通 CI | [a14-ci.yml](../.github/workflows/a14-ci.yml) | 同 SHA 门禁、一次未签名 Develop、R8 和 fatal lint |

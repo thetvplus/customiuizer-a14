@@ -12,6 +12,11 @@ from pathlib import Path
 import re
 import sys
 
+try:
+    from tools.check_release_metadata import CURRENT_CHANGELOGS
+except ModuleNotFoundError:
+    from check_release_metadata import CURRENT_CHANGELOGS
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -49,8 +54,10 @@ def plan(root: Path, version: str, code: int, release_date: date, *,
         require(count == 1, f"{filename} current release declaration must be unique")
         changes[path] = text
     baseline = base_version or previous
-    for filename, heading, intro in (("CHANGELOG.md", "Unreleased", f"Changes since {baseline}:"),
-                                     ("CHANGELOG_CN.md", "未发布", f"自 {baseline} 起的变更：")):
+    for filename, language in CURRENT_CHANGELOGS:
+        chinese = language == "简体中文"
+        heading = "未发布" if chinese else "Unreleased"
+        intro = f"自 {baseline} 起的变更：" if chinese else f"Changes since {baseline}:"
         path = root / filename
         text = path.read_text(encoding="utf-8")
         matches = list(re.finditer(rf"^## {heading}\s*$", text, re.M))
@@ -69,13 +76,13 @@ def plan(root: Path, version: str, code: int, release_date: date, *,
                     f"{filename} base-version must be the immediately preceding retained release")
             require(sum(item[1] == supersede for item in releases) == 1,
                     f"{filename} superseded release must be unique")
-            user_heading = "用户变化" if filename.endswith("_CN.md") else "User changes"
-            engineering_heading = "工程说明" if filename.endswith("_CN.md") else "Engineering notes"
+            user_heading = "用户变化" if chinese else "User changes"
+            engineering_heading = "工程说明" if chinese else "Engineering notes"
             require(f"### {user_heading}\n" in body and f"### {engineering_heading}\n" in body,
                     f"{filename} consolidation needs reviewed cumulative user changes and engineering notes")
             history = history[releases[1].start():]
         section = (f"## {heading}\n\n## {version} — {release_date.isoformat()}\n\n"
-                   f"versionCode {code}{'。' if filename.endswith('_CN.md') else '.'} {intro}\n\n{body}\n\n")
+                   f"versionCode {code}{'。' if chinese else '.'} {intro}\n\n{body}\n\n")
         changes[path] = text[:match.start()] + section + history
     return changes
 

@@ -39,17 +39,12 @@ r14.23.3 起最低要求 API 102，直接使用原生 Hook 安装和 Service 能
 
 ## 当前功能边界
 
-- Dock 背景默认关闭，设置位于桌面的 Dock 页，旧有高度与上下边距键保持兼容。两份 fuxi 样本的
-  `MiuiHome.apk` 相同（`RELEASE-4.39.30.8604-08262248`）；安装点为 `HotSeats.updateContent()`
-  与 `onWallpaperColorChanged()`，装饰由 Hotseat 持有，跟随其原生动画和可见性。
-  自动材质复用宿主 `BackdropBlurRelativeLayout` 的模糊、混色及生命周期；系统模糊仅接受圆角矩形，
-  此时保留原生圆角。轻透材质及缺少原生组件时使用 G4 曲率模型的缓存近似路径。
-  设置更改需要重启桌面；动画、文件夹、最近任务、编辑模式、深色模式和动态壁纸仍须实机验收。
+- Dock 的宿主安装点、两区相同 Launcher 样本与材质限制统一见 [Dock 说明](docs/features/dock/README.md)。这些静态结果不等于动画、编辑或动态壁纸已通过设备验收。
 
-- 已下线缺少有效 A14 安装路径的浮动通知不自动隐藏、自动隐藏延迟、简约折叠视图、桌面去除启动动画及通知中心快捷应用；保留日历 / 时钟替换和其他通知功能。六个已隐藏入口也从配置目录移除，清理范围和升级规则见 [功能退役说明](docs/maintenance/A14_FEATURE_RETIREMENTS.md)。
-- “修复动画”保留 `SpringAnimator.getSpringForce(FFF)` 路径，移除依赖旧 RectFSpringAnim 字段的分支；不猜测新动画 Bundle 的语义。
-- 网速隐藏低速、低速阈值和隐藏 `B/s` 仅用于详细样式 2 / 3。原生样式下设置控件禁用，原值保留；改回详细样式后恢复。切换样式涉及 Hook 的安装 / 退出时仍需重启 SystemUI；已安装详细 Hook 的格式子值通过观察者更新。刷新间隔、文字样式等独立能力保留。
-- 国际版 ROM 隐藏“扫描时禁止应用远程检测”，即使旧备份启用也不安装该 Feature。2026-10-11 对 fuxi / `V816.0.7.0.UMCTWXM` 的 Global GuardProvider APK（SHA-256 `1b767096d88e61b51e1f5db928eb963071ba851f47da0f20965ce262e31edeb6`）重跑生产 DexKit 查询无命中。该结果不证明国内版目标不存在；国内版实现保留，仍需查询命中与行为验证。
+- 已批准的功能减法、旧偏好清理及升级兼容统一见[退役说明](docs/maintenance/A14_FEATURE_RETIREMENTS.md)；不能从单样本目标缺失外推全部 ROM 的系统能力。
+- “修复动画”仅保留有证据的 SpringAnimator 路径，具体取舍见[遗留语义合同](docs/maintenance/LEGACY_SEMANTIC_CALIBRATION.md#需保留的行为)。
+- 详细网速样式与原生样式的可编辑范围、存储保留及重启语义见[遗留语义合同](docs/maintenance/LEGACY_SEMANTIC_CALIBRATION.md#需保留的行为)。
+- 国际版隐藏远程检测拦截且不安装该 Feature；国内版保留。旧 Global GuardProvider 查询与样本哈希见[退役说明](docs/maintenance/A14_FEATURE_RETIREMENTS.md#局部裁剪与-rom-条件)，CN / TW 新样本边界见上文；零命中不能证明其他地区目标不存在。
 
 ## 仍需专项取证
 

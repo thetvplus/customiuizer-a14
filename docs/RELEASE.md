@@ -1,4 +1,4 @@
-# 发布
+# 发布与恢复
 
 正式构建、push / merge main、tag 与发布以当前任务授权为准。debug / develop 的验证结果不等于正式发行。
 
@@ -96,9 +96,9 @@ gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 
 发布前检查跨仓库凭据存在、仓库写权限、两端既有版本 / 草稿 / tag / 资产冲突；权限不足不先发布主仓库。账号 push 权限检查不能证明细粒度 token 的全部权限或未来网络可用性，实际服务器拒绝会停止并保留可恢复状态。Xposed 仅增加新源码 tag 和 Release，metadata main 独立维护。
 
-### Changelog、说明与命名
+### 更新记录、说明与命名
 
-日常只在 `CHANGELOG_CN.md` 的“未发布”和 `CHANGELOG.md` 的“Unreleased”写已确认的用户变化。准备发版时执行一次：
+日常只在 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”写已确认的用户变化。准备发版时执行一次：
 
 ```sh
 python tools/prepare_release.py --version r14.26.1 --code 249 --date 2026-10-23
@@ -172,5 +172,7 @@ gh workflow run a14-promote-release.yml --ref main -f build_run_id=<original-run
 若 Xposed 失败，保留主仓库已成功版本；使用原 run ID 晋升恢复，不重跑整条构建。恢复先比对已发布版本的 title、notes、target SHA、tag、预发行状态及全部资产哈希 / 大小，完全匹配则只读跳过。归属同一候选的草稿仅补缺失资产，已有资产必须逐项一致；不覆盖、不删除、不静默接受篡改。主仓库已公开并核验的同一候选可以在 main 后续前进后补发 Xposed，但必须仍有原 SHA 的成功 main CI，且两端不存在更高已发布版本。尚未公开的源码草稿仍要求当前 main 未变。
 
 历史候选保留原始内部四文件结构及校验门禁；已存在的历史四资产 Release 或含旧 sidecar 的部分草稿按原四资产逐项验收和补齐。历史候选新建 Release 默认只上传 APK 与原始元数据；已精简为两资产的历史版本也可只读验收。历史标题可为旧格式或已修正的版本名，发布旧草稿时统一为版本名；新候选严格执行两资产和版本名标题。自动恢复不整理已发布版本的附件，也不改写其元数据来迁就新格式。
+
+更新记录以默认中文 `CHANGELOG.md`、英文 `CHANGELOG_EN.md` 命名。恢复候选时从原始 source SHA 的根目录识别新旧双语文件布局，按当时的语言归属读取；旧布局仍支持，不改历史记录。布局缺失、冲突或读取失败即停止，不回退到最新分支的说明。
 
 跨仓库没有原子事务，网络中断时可能出现主仓库成功、Xposed 待恢复；流程明确失败并保留证据，不为伪装成功回删主仓库。最终成功要求两个目标均完成公开资产和标签 / Latest 核验。不存在既有候选且版本未递增时不能覆盖任何已发布版本。

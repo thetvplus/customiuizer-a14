@@ -20,8 +20,10 @@ from pathlib import Path
 
 try:
     from tools.verify_apk_provenance import verify_apk_provenance
+    from tools.check_release_metadata import CURRENT_CHANGELOGS, source_changelogs
 except ModuleNotFoundError:
     from verify_apk_provenance import verify_apk_provenance
+    from check_release_metadata import CURRENT_CHANGELOGS, source_changelogs
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = json.loads((ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
@@ -308,15 +310,17 @@ def local_release_notes(name: str, code: int) -> list[str]:
         from check_release_metadata import check
     errors = check()
     require(not errors, "Release metadata is not aligned: " + "; ".join(errors))
-    return [f"## {language}\n\n" + public_release_notes_section((ROOT / filename).read_text(encoding="utf-8"), name, code, filename)
-            for filename, language in (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English"))]
+    return [f"## {language}\n\n" + public_release_notes_section((ROOT / filename).read_text(encoding="utf-8"), name, code, filename, language=language)
+            for filename, language in CURRENT_CHANGELOGS]
 
 
-def public_release_notes_section(text: str, name: str, code: int, filename: str) -> str:
+def public_release_notes_section(text: str, name: str, code: int, filename: str, *, language: str | None = None) -> str:
     """Render reviewed user changes; legacy releases retain their original format."""
     body = release_notes_section(text, name, code, filename)
-    user = "用户变化" if filename.endswith("_CN.md") else "User changes"
-    engineering = "工程说明" if filename.endswith("_CN.md") else "Engineering notes"
+    language = language or ("English" if filename.endswith("_EN.md") else "简体中文")
+    require(language in {"简体中文", "English"}, "Unsupported changelog language")
+    user = "用户变化" if language == "简体中文" else "User changes"
+    engineering = "工程说明" if language == "简体中文" else "Engineering notes"
     headings = list(re.finditer(r"^### (.+?)\s*$", body, re.M))
     reserved = {"用户变化", "User changes", "工程说明", "Engineering notes"}
     if not any(item[1] in reserved for item in headings):
@@ -647,10 +651,13 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         require(access.get("permissions", {}).get("push") is True,
                 "Download repository contents:write permission is required; source tags containing workflows also need Workflows:write")
         repositories.append((POLICY["download_repository"], f"{code}-{name}", token_env))
+    listing = api(f"repos/{REPO}/contents?ref={sha}")
+    require(isinstance(listing, list), "Source root listing is unavailable")
+    changelogs = source_changelogs({item["name"] for item in listing if item.get("type") == "file"})
     sections = []
-    for filename, language in (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English")):
+    for filename, language in changelogs:
         changelog = api(f"repos/{REPO}/contents/{filename}?ref={sha}")
-        body = public_release_notes_section(base64.b64decode(changelog["content"]).decode("utf-8"), name, code, filename)
+        body = public_release_notes_section(base64.b64decode(changelog["content"]).decode("utf-8"), name, code, filename, language=language)
         sections.append(f"## {language}\n\n{body}")
     notes = folder / "release-notes.md"
     notes.write_text("\n\n".join(sections) + f"\n\n## APK / Provenance\n\nSource: `{sha}`\n\n"

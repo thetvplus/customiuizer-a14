@@ -14,7 +14,7 @@ class PrepareReleaseTest(unittest.TestCase):
         (root / "app/build.gradle.kts").write_text('val lastVersion = 246\nval lastVersionName = "r14.25.1"\n', encoding="utf-8")
         for filename in ("README.md", "README_EN.md"):
             (root / filename).write_text("Current: `r14.25.1` (versionCode 246).\n", encoding="utf-8")
-        for filename, heading in (("CHANGELOG.md", "Unreleased"), ("CHANGELOG_CN.md", "未发布")):
+        for filename, heading in (("CHANGELOG_EN.md", "Unreleased"), ("CHANGELOG.md", "未发布")):
             (root / filename).write_text(f"# Changelog\n\n## {heading}\n\n- Reviewed change.\n\n## r14.25.1 — 2026-10-22\n\nversionCode 246.\n\n- Historical change.\n", encoding="utf-8")
 
     def test_one_plan_aligns_five_files_and_preserves_the_historical_section(self):
@@ -38,7 +38,7 @@ class PrepareReleaseTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.fixture(root)
-            cn = root / "CHANGELOG_CN.md"
+            cn = root / "CHANGELOG.md"
             cn.write_text(cn.read_text(encoding="utf-8").replace("- Reviewed change.", ""), encoding="utf-8")
             before = {path: path.read_text(encoding="utf-8") for path in root.rglob("*") if path.is_file()}
             with self.assertRaisesRegex(ValueError, "reviewed change entries"):
@@ -52,7 +52,7 @@ class PrepareReleaseTest(unittest.TestCase):
             for version, code in (("r14.25.1", 247), ("r14.24.9", 247), ("r14.26.1", 246), ("r15.1.1", 247)):
                 with self.subTest(version=version, code=code), self.assertRaises(ValueError):
                     prepare_release.plan(root, version, code, date(2026, 10, 23))
-            path = root / "CHANGELOG.md"
+            path = root / "CHANGELOG_EN.md"
             path.write_text(path.read_text(encoding="utf-8") + "\n## r14.26.1\n\n- Already prepared.\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "already contains"):
                 prepare_release.plan(root, "r14.26.1", 247, date(2026, 10, 23))
@@ -72,7 +72,7 @@ class PrepareReleaseTest(unittest.TestCase):
             self.fixture(root)
             with patch.object(prepare_release,"ROOT",root), patch("sys.argv",["prepare_release.py","--version","r14.26.1","--code","247"]):
                 self.assertEqual(0,prepare_release.main())
-            for filename in ("app/build.gradle.kts","README.md","README_EN.md","CHANGELOG.md","CHANGELOG_CN.md"):
+            for filename in ("app/build.gradle.kts","README.md","README_EN.md","CHANGELOG_EN.md","CHANGELOG.md"):
                 content=(root/filename).read_bytes()
                 self.assertNotIn(b"\r\n",content,filename)
                 self.assertIn(b"r14.26.1",content,filename)
@@ -81,8 +81,8 @@ class PrepareReleaseTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.fixture(root)
-            for filename, user, engineering in (("CHANGELOG.md", "User changes", "Engineering notes"),
-                                                 ("CHANGELOG_CN.md", "用户变化", "工程说明")):
+            for filename, user, engineering in (("CHANGELOG_EN.md", "User changes", "Engineering notes"),
+                                                 ("CHANGELOG.md", "用户变化", "工程说明")):
                 path = root / filename
                 text = path.read_text(encoding="utf-8").replace("- Reviewed change.",
                     f"### {user}\n\n- Reviewed cumulative change.\n\n### {engineering}\n\n- Retained technical facts.")

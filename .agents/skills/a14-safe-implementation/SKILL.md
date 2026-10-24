@@ -3,7 +3,7 @@ name: a14-safe-implementation
 description: Implement and validate code, Hook, UI, build or ROM compatibility changes in thetvplus/customiuizer-a14. Not for review-only or release tasks.
 ---
 
-# A14 Safe Implementation
+# 安全实施
 
 Use root [AGENTS.md](../../../AGENTS.md) for shared policy, task ownership, toolchain and verification. Read linked specialist documents only for the affected contract.
 

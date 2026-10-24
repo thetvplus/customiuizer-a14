@@ -63,7 +63,7 @@ R8 保留入口、Hooker、JNI、ServiceLoader 及设置进程与 compileOnly AP
 | `app/src/test` | 按对应功能包组织 JVM / Android 模型回归 |
 | `tools`、`tools/tests`、`.github/workflows` | 生成器、契约工具及 CI / 发布，见[工具索引](docs/TOOLS.md) |
 
-动态岛只有一个模块窗口，共享短 / 长岛、通知、媒体和系统终态的安全门禁与身份租约；StrongToast 公共快照与通用安全层不复制。已准备内容须真正可见后才取得状态栏占用；旧回调不能释放新事件。具体布局、输入、媒体返回及波形合同以[功能说明](docs/features/island/README.md)为准。
+动态岛的单窗口展示、状态栏占用及新旧事件隔离由上述 owner 负责；通用 StrongToast 快照与安全层不复制。完整布局、输入、租约、媒体返回及波形合同以[功能说明](docs/features/island/README.md)为准。
 
 Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，以弱 owner 跟随其布局、可见性、原生动画与解绑，不松开祖先裁切、不移动图标、不接受触摸。关闭选项回到原背景合同，见 [Dock](docs/features/dock/README.md)。
 
@@ -71,7 +71,7 @@ Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，
 
 ## 设置、生成与持久化
 
-`res/xml/prefs_*.xml` 是页面源；`generatePreferenceArtifacts` 生成分页、搜索和当前偏好目录到 `app/build/generated/`。搜索保留控制器、目标键和导航元数据；恢复按当前偏好契约校准，生成输入与 AGP 依赖见 [DEVELOPMENT](docs/DEVELOPMENT.md#构建与生成物)。
+`res/xml/prefs_*.xml` 是页面源；`generatePreferenceArtifacts` 生成分页、搜索和当前偏好目录到 `app/build/generated/`。搜索保留控制器、目标键和导航元数据；恢复按当前偏好契约校准，生成输入与 AGP 依赖见 [DEVELOPMENT](docs/DEVELOPMENT.md#构建与生成物)。当前页面与稳定键导航见[功能地图](docs/FEATURE_MAP.md)，其独立生成不改变运行时产物。
 
 备份 V2 使用大小限制、严格解码与 CRC；受限旧格式解码保留既有用户兼容。维护恢复记录使用精确原状态和可恢复事务，不进入备份传输。语义约束见[遗留合同](docs/maintenance/LEGACY_SEMANTIC_CALIBRATION.md)。目录重排不能改变偏好键或稳定 Feature ID。
 

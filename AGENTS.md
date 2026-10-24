@@ -1,4 +1,4 @@
-# AGENTS.md — 米客 A14
+# 共同工程规则
 
 所有 Agent 共用本文件。开始只读本文件与任务相关入口，不递归加载全部文档。
 
@@ -59,9 +59,10 @@
 
 | 任务 | 权威入口 |
 | --- | --- |
-| 环境、生成与构建 | [DEVELOPMENT](docs/DEVELOPMENT.md) |
-| 测试职责与 CI | [TESTING](docs/TESTING.md) |
-| 路由、API 与所有权 | [ARCHITECTURE](ARCHITECTURE.md) |
-| 平台与 ROM 边界 | [COMPATIBILITY](COMPATIBILITY.md) |
-| 测量与资源预算 | [OPTIMIZATION_GATES](docs/OPTIMIZATION_GATES.md) |
+| 功能入口 / 文档治理 | [功能结构](docs/FEATURE_MAP_SIMPLE.md) / [设置键](docs/FEATURE_MAP.md) / [文档规范](docs/DOCS_STYLE.md) |
+| 环境、生成与构建 | [开发与构建](docs/DEVELOPMENT.md) |
+| 测试职责与 CI | [测试与验证](docs/TESTING.md) |
+| 路由、API 与所有权 | [架构](ARCHITECTURE.md) |
+| 平台与 ROM 边界 | [兼容矩阵](COMPATIBILITY.md) |
+| 测量与资源预算 | [优化门禁](docs/OPTIMIZATION_GATES.md) |
 | 安全实施 / 只读独立审查 | [.agents/skills](.agents/skills) 中的两个 SKILL.md |

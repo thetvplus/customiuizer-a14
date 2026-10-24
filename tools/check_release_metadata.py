@@ -10,6 +10,17 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GRADLE = REPO_ROOT / "app" / "build.gradle.kts"
+CURRENT_CHANGELOGS = (("CHANGELOG.md", "简体中文"), ("CHANGELOG_EN.md", "English"))
+LEGACY_CHANGELOGS = (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English"))
+
+
+def source_changelogs(paths: set[str]) -> tuple[tuple[str, str], ...]:
+    """Select an unambiguous layout at the candidate's exact source commit."""
+    present = paths & {"CHANGELOG.md", "CHANGELOG_EN.md", "CHANGELOG_CN.md"}
+    for layout in (CURRENT_CHANGELOGS, LEGACY_CHANGELOGS):
+        if present == {filename for filename, _ in layout}:
+            return layout
+    raise ValueError("Source changelog layout is missing or ambiguous")
 
 
 def parse_gradle_version() -> tuple[int, str]:
@@ -42,9 +53,10 @@ def check(require_tag: bool = False) -> list[str]:
     files = {
         "README.md": REPO_ROOT / "README.md",
         "README_EN.md": REPO_ROOT / "README_EN.md",
-        "CHANGELOG.md": REPO_ROOT / "CHANGELOG.md",
-        "CHANGELOG_CN.md": REPO_ROOT / "CHANGELOG_CN.md",
+        **{filename: REPO_ROOT / filename for filename, _ in CURRENT_CHANGELOGS},
     }
+    if (REPO_ROOT / "CHANGELOG_CN.md").exists():
+        errors.append("Current source must use CHANGELOG.md and CHANGELOG_EN.md")
     for label, path in files.items():
         if not path.is_file():
             errors.append(f"{label} missing")
@@ -53,7 +65,7 @@ def check(require_tag: bool = False) -> list[str]:
         if version_name not in text:
             errors.append(f"{label} does not mention {version_name}")
 
-    for changelog in ("CHANGELOG.md", "CHANGELOG_CN.md"):
+    for changelog, _ in CURRENT_CHANGELOGS:
         text = files[changelog].read_text(encoding="utf-8") if files[changelog].is_file() else ""
         sections = changelog_sections(text)
         if not sections or sections[0][0] != version_name:

@@ -1,4 +1,4 @@
-# 开发
+# 开发与构建
 
 任务认领、Git、安全边界和收口命令以 [AGENTS.md](../AGENTS.md) 为准；本页只维护环境、构建及生成输入。
 
@@ -39,3 +39,5 @@
 生成 res / Kotlin 和各变体 provenance assets 用 AGP `addGeneratedSourceDirectory` 声明消费依赖；独立 lint 的 provenance 依赖用公开 PreBuild 生命周期 API 注册，不匹配内部任务名。
 
 Feature / routing 变化后运行 `python tools/extract_process_matrix.py`，检查 JSON / CSV diff 及 [确定性门禁](TESTING.md#独立故障验证)。ROM / APK / mapping / 日志与签名材料按根规则留在忽略目录或仓库外。
+
+页面导航文档按需运行 `python tools/generate_feature_map.py`，过期检查用 `--check`；`python tools/check_docs.py` 检查仓库 Markdown 的本地链接、锚点和图片。两者独立于 Gradle，不改变分页 / 搜索 / 偏好目录生成物。职责与更新标准见 [DOCS_STYLE](DOCS_STYLE.md)。

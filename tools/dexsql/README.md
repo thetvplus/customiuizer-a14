@@ -25,7 +25,7 @@
 | `toast_presentation_contract.sql` | SystemUI 与 boot framework.jar | 普通 Toast 的窗口插入 / 回收、旋转重排、安全区与原生 StrongToast 文本模型；decode 核对 text_bitmap 分支、展示门禁、队列和 finishToken，不能只凭方法存在判定兼容。 |
 | `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器、媒体 / 状态栏 / Keyguard 回调及通知接管字段；decode 复核独立锁屏门禁、bind 提交、Heads-up 内容释放与列表可见性的边界。 |
 | `island_launcher_return.sql` | 实际 HyperOS 1 Launcher APK | 音乐窗口回桌面的 WindowElement / RectFParams、任务身份及原生图标复位链；仅限选中且正在播放的任务，不改最近任务、分屏或通用弹簧。 |
-| `island_music_gestures.sql` | 双区域 SystemUI、plugin 与 boot framework.jar | 待实现音乐手势的 TransportControls / 音量能力和既有音量面板声明、选中会话回调；当前未执行，不据候选查询自动增加 Hook。 |
+| `island_music_gestures.sql` | 双区域 SystemUI、plugin 与 boot framework.jar | 已实现音乐手势的 TransportControls / 音量能力、既有音量面板声明和选中会话回调；2026-10-23 静态取证及哈希见[音乐手势](../../docs/features/island/MUSIC_GESTURES.md#cn--tw-静态取证2026-10-23)，不据静态结果宣称设备通过。 |
 | `statusbar_height_contract.sql` | 双区域 services.jar 与 framework.jar | InsetsSource、WindowState、DecorInsets 缓存及应用 Insets 消费链；区分挖孔安全区、旧 API 与应用缓存，不据此扩大全局 Hook。 |
 | `audio_focus_contract.sql` | 两份适用 ROM 的 services.jar | 声音页焦点 / 首次音量按键的精确声明、状态字段和定义来源；结合 decode 核对语义。 |
 | `audio_focus_calls.sql` | 与上述相同的 Dataset | 焦点失去 / 恢复 / 释放与原生栈操作的直接调用；核对放弃焦点和 Binder 死亡路径。 |

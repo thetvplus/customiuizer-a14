@@ -162,8 +162,8 @@ class AutomaticReleaseTest(unittest.TestCase):
                     release.signing_preflight()
 
     def test_public_notes_hide_engineering_without_losing_the_cumulative_baseline(self):
-        for filename, user, engineering in (("CHANGELOG_CN.md", "用户变化", "工程说明"),
-                                             ("CHANGELOG.md", "User changes", "Engineering notes")):
+        for filename, user, engineering in (("CHANGELOG.md", "用户变化", "工程说明"),
+                                             ("CHANGELOG_EN.md", "User changes", "Engineering notes")):
             text = (f"## r14.25.3\n\nversionCode 248. Changes since r14.25.1:\n\n### {user}\n\nA concise overview.\n\n"
                     + "\n".join(f"- User change {i}." for i in range(5))
                     + f"\n\n### {engineering}\n\n- InternalHook details.\n")
@@ -179,14 +179,14 @@ class AutomaticReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "4–6"):
                 release.public_release_notes_section(text.replace("- User change", "User change"), "r14.25.3", 248, filename)
         legacy = "## r14.25.2\n\nversionCode 247.\n\n- Original release note.\n"
-        self.assertEqual(release.release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG.md"),
-                         release.public_release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG.md"))
+        self.assertEqual(release.release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG_EN.md"),
+                         release.public_release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG_EN.md"))
 
     def test_changelog_release_notes_cannot_be_empty_ambiguous_or_wrong_version(self):
         for text in ("## r14.26.1\n\nversionCode 247.\n", "## r14.26.1\n\nversionCode 246.\n- Change\n",
                      "## r14.26.1\n\nversionCode 247.\n- Change\n\n## r14.26.1\n- Duplicate\n"):
             with self.subTest(text=text), self.assertRaises(ValueError):
-                release.release_notes_section(text, "r14.26.1", 247, "CHANGELOG.md")
+                release.release_notes_section(text, "r14.26.1", 247, "CHANGELOG_EN.md")
 
 
 class SourceTrustTest(unittest.TestCase):
@@ -626,7 +626,7 @@ class PublicationTest(unittest.TestCase):
                     return json.dumps(dict(records, draft=False))
                 notes = {"content": base64.b64encode(b"## r14.25.2\n\nversionCode 247.\n\n- Changes.\n").decode()}
                 with patch.object(release, "check_new_release"), patch.object(release, "check_tag") as tag:
-                    with patch.object(release, "find_release", return_value=None), patch.object(release, "api", return_value=notes):
+                    with patch.object(release, "find_release", return_value=None), patch.object(release, "api", side_effect=lambda endpoint, **_: [{"name": filename, "type": "file"} for filename, _ in release.CURRENT_CHANGELOGS] if "/contents?ref=" in endpoint else notes):
                         with patch.object(release, "run", side_effect=command), patch.object(release, "require_main_ci"), patch.object(release, "require_current_main"):
                             if tamper:
                                 with self.assertRaisesRegex(ValueError, "digest/size differs"):
@@ -671,6 +671,9 @@ class ReleaseServer:
         self.tamper_content_at = None
         self.fail_event = None
         self.notes = {"content": base64.b64encode(b"## r14.26.1\n\nversionCode 247.\n\n- Reviewed change.\n").decode()}
+        self.source_files = ["CHANGELOG.md", "CHANGELOG_EN.md"]
+        self.source_notes = {}
+        self.source_reads = []
 
     def readback(self, record, phase, repository):
         record = copy.deepcopy(record)
@@ -690,8 +693,13 @@ class ReleaseServer:
                 raise AssertionError("Every Xposed read/write must use the separate token")
 
     def api(self, endpoint, *, env=None, **fields):
+        if "/contents?ref=" in endpoint:
+            self.source_reads.append(endpoint)
+            return [{"name": filename, "type": "file"} for filename in self.source_files]
         if "/contents/" in endpoint:
-            return self.notes
+            self.source_reads.append(endpoint)
+            filename = endpoint.split("/contents/", 1)[1].split("?", 1)[0]
+            return self.source_notes.get(filename, self.notes)
         if "/releases?" in endpoint:
             repository = endpoint.split("/releases?", 1)[0].removeprefix("repos/")
             self.token(repository, env)
@@ -777,6 +785,52 @@ class DualPublicationTest(unittest.TestCase):
         for name in ("check_tag", "check_new_release", "require_main_ci", "require_current_main"):
             stack.enter_context(patch.object(release, name))
         return stack
+
+    def test_current_and_historical_changelogs_render_identical_language_roles_at_exact_sha(self):
+        for layout in ((("CHANGELOG.md", "简体中文"), ("CHANGELOG_EN.md", "English")),
+                       (("CHANGELOG_CN.md", "简体中文"), ("CHANGELOG.md", "English"))):
+            with self.subTest(layout=layout), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                metadata = self.fixture(root)
+                server = ReleaseServer(root)
+                server.source_files = [filename for filename, _ in layout]
+                for filename, language in layout:
+                    user, engineering = ("用户变化", "工程说明") if language == "简体中文" else ("User changes", "Engineering notes")
+                    text = f"## r14.26.1\n\nversionCode 247. Changes since r14.25.1:\n\n### {user}\n\n{language} overview.\n\n"
+                    text += "\n".join(f"- {language} change {i}." for i in range(4))
+                    text += f"\n\n### {engineering}\n\n- Internal details.\n"
+                    server.source_notes[filename] = {"content": base64.b64encode(text.encode()).decode()}
+                with self.context(server):
+                    release.publish_verified(root, "42", "both", metadata)
+                notes = server.records[release.REPO]["body"]
+                self.assertIn("简体中文 overview.", notes)
+                self.assertIn("English overview.", notes)
+                self.assertLess(notes.index("## 简体中文"), notes.index("## English"))
+                self.assertNotIn("Internal details", notes)
+                self.assertEqual(notes, server.records[server.download]["body"])
+                expected = [f"repos/{release.REPO}/contents?ref={COMMIT}"]
+                expected += [f"repos/{release.REPO}/contents/{filename}?ref={COMMIT}" for filename, _ in layout]
+                self.assertEqual(expected, server.source_reads)
+
+    def test_missing_ambiguous_or_unavailable_source_layout_stops_before_publication(self):
+        for files in (["CHANGELOG.md"], ["CHANGELOG.md", "CHANGELOG_EN.md", "CHANGELOG_CN.md"]):
+            with self.subTest(files=files), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                metadata = self.fixture(root)
+                server = ReleaseServer(root)
+                server.source_files = files
+                with self.context(server), self.assertRaisesRegex(ValueError, "missing or ambiguous"):
+                    release.publish_verified(root, "42", "both", metadata)
+                self.assertEqual({}, server.records)
+                self.assertEqual([], server.events)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server), patch.object(release, "api", side_effect=RuntimeError("Network unavailable")):
+                with self.assertRaisesRegex(RuntimeError, "Network unavailable"):
+                    release.publish_verified(root, "42", "both", metadata)
+            self.assertEqual({}, server.records)
 
     def test_source_is_published_and_read_back_before_any_xposed_write(self):
         with tempfile.TemporaryDirectory() as temp:

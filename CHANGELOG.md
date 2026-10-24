@@ -1,114 +1,114 @@
-# CustoMIUIzer A14 — Changelog
+# 米客 A14 — 更新记录
 
-English | [简体中文](CHANGELOG_CN.md)
+[English](CHANGELOG_EN.md) | 简体中文
 
-Unreleased changes and retained releases; each release section consolidates changes since the previous retained version. Original source tags and APK provenance are preserved.
+记录未发布变更与保留发行版；正式发行每节合并相较上一保留版本的变化。原始源码标签及 APK 来源证明保持不变。
 
-## Unreleased
+## 未发布
 
 ## r14.25.3 — 2026-10-23
 
-versionCode 248. Changes since r14.25.1:
+versionCode 248。 自 r14.25.1 起的变更：
 
-### User changes
+### 用户变化
 
-Refine Dynamic Island, Dock and notification interactions while preserving native animations and system security boundaries.
+精修动态岛、Dock 与通知交互，保留原生动画和系统安全边界。
 
-- Add five customizable music gestures for track controls, volume and shortcuts. Fix unwanted appearances after pausing and refine opening the current player and upward dismissal.
-- Add left, center and right placement with safe horizontal adjustment, better cutout avoidance and touch edges. Select system feedback by category and notification takeover by app allowlist; keep lightweight waves by default with an experimental live mode.
-- Synchronize Dock backgrounds with native unlock animations, improving movement, scale, opacity and wallpaper-sampling transitions in normal and full-width modes.
-- Refine normal and floating-window notification clicks, expansion and auto-removal, withdrawal and rebinding, folding and colors. Preserve native lockscreen, user and critical-channel protections.
-- Fix back-gesture area compatibility and status-bar gesture actions; refine dimension changes, screen-off seconds updates and state recovery.
-- Refine island settings, configuration migration and backups. Save original system states before maintenance changes, verify results and retain recovery records on failure.
+- 动态岛新增五项音乐手势自定义，支持切歌、音量与快捷操作；修复暂停后误弹，完善当前播放器打开与上滑收回。
+- 动态岛支持左、中、右位置和安全横向微调，改进开孔避让与触摸边缘；系统反馈按类别开启，通知接管使用应用允许名单，波形默认保持轻量并提供实验性实时模式。
+- Dock 背景跟随原生解锁动画，改善普通与全宽模式的位移、缩放、透明度及壁纸采样过渡。
+- 完善通知普通与小窗点击、展开和自动收回、撤回重绑、折叠与着色；保留原生锁屏、用户与关键频道保护。
+- 修复返回手势区域适配和状态栏手势动作，完善尺寸变化、熄屏秒针及状态恢复。
+- 完善动态岛设置、配置迁移与备份；维护操作先保存原状态，再检查执行结果，失败时保留恢复依据。
 
-### Engineering notes
+### 工程说明
 
-- Consolidate r14.25.2 and the subsequent island, quality and M03 branches against retained r14.25.1. Preserve Git history and the existing engineering roadmap without rewriting older provenance or validation facts.
-- Retain five music actions, the track-swipe switch, pause-visibility leases, ten on-demand feedback categories, silent new installs, upgrade migration and allowlist/exclusion precedence. Align ten maintained languages, backups and settings subpages. Lightweight waves remain default; experimental capture requires the current user, confirmed media identity and one active audio track, releasing resources on failure.
-- Contain island insets failures, release input owners, reuse unchanged layouts and invalidate density changes. Reliably journal maintenance recovery before system operations, validate package/user identity and actual state, strictly decode records and compensate failures without adding restriction targets.
-- M03 retains native notification views, pipeline attachment, timers and refresh boundaries. Scope floating-window options to one launch and validate delayed callback identity. Retire global channel-protection overrides and the system_server feature identity while retaining legacy keys and backups. Keep one invalidatable palette per notification.
-- Preserve native Dock geometry, animated opacity and interruption recovery in both modes. Fix no-argument back-width resolution and native side/bottom height branches; reuse the host Context for status-bar actions.
-- Trust only main for signing and require protected review for candidates and publication. End automatic/manual requests cheaply for published versions; reuse exact main CI while retaining signatures, digests, provenance, sequential dual publication and recovery from the original candidate.
-- Generate public notes from this User changes section and retain engineering details here. Cumulative preparation explicitly selects the superseded section and previous retained release. The ADB driver attempts and verifies locking on success, failure and interruption, retaining only relevant crash events.
-- Keep host, static ROM and device conclusions separate in the existing roadmap. Claim no unmeasured performance or battery gains. First acceptance after removing old system_server hooks requires a full reboot; do not guess or reset historical notification permissions.
+- 本节累计整合 r14.25.2 与后续动态岛、质量及 M03 分支成果；对比基线为保留的 r14.25.1。保留原 Git 历史和工程路线图，不重写旧版来源或验证事实。
+- 复用既有五手势动作、左右切歌开关、暂停展示租约、十类反馈按需监听、新安装静默、升级反馈迁移及允许 / 排除名单优先级。十种维护语言、偏好备份和设置子页同步。默认轻量波形，实验采集限定当前用户、可确认媒体身份与唯一活动音轨，失败释放。
+- 动态岛 Insets 失败隔离、触摸所有者释放、未变布局复用与密度失效；维护恢复记录在系统操作前可靠保存，核对包 / 用户身份与实际状态，严格解码并补偿失败，不扩大停用目标。
+- M03 保留原生通知 View、Pipeline attach、计时与刷新边界；小窗参数限于一次启动事务，延迟回调校验身份。退役全局频道保护覆盖及 system_server 功能身份，旧偏好键与备份兼容仍保留。每条通知只保留一份可失效调色结果。
+- Dock 普通 / 全宽模式保留原生几何、动画透明度与中断恢复；返回区域修复无参宽度定位及原生侧边 / 底部高度分支，状态栏动作复用宿主 Context。
+- 正式签名仅信任 main，候选与正式发布都要求受保护审核。已发布版本的自动 / 手动入口低成本结束；同 SHA 的 main CI 复用，签名、摘要、provenance、顺序双仓库发布和原候选故障恢复保持。
+- 公开说明从本节“用户变化”生成，工程内容保留在这里；累计版本准备须显式指定被替代章节和上一保留版本。ADB 驱动在成功、失败和中断时均尝试锁屏并读回，仅保留相关崩溃事件。
+- 主机、ROM 静态证据和真机结论分别记录于现有精修路线图；不宣称未经对照测量的性能或耗电改善。旧 system_server Hook 首次升级需完整重启后再验收，不猜测或重置历史通知权限。
 
 ## r14.25.1 — 2026-10-22
 
-versionCode 246. Changes since r14.24.1:
+versionCode 246。自 r14.24.1 起的变更：
 
-- Rebuild settings pages around System, Home screen, Buttons and gestures, and Apps and maintenance. Unify grouped cards, headings and descriptions, improve search navigation, and collect restart actions on the home page.
-- Add Dynamic Island for music, system states, brief notices and optional message notifications, with short and long forms, secondary activities, Vertical/Center animations, native ROM icons and familiar gestures. Hide status icons only when actually covered.
-- Add full-width Dock backgrounds, symmetric sizing and wallpaper-tinted glass. Refine background transitions for recents and app returns, with native-material and tint fallbacks.
-- Add top, center and bottom Toast positioning, with spacing and vertical offsets constrained to the safe screen area.
-- Allow direct numeric entry by tapping slider values, with range, step and unit validation for precise adjustments.
-- Connect vibration intensity to A14 native scaling. Correct volume timers, panel auto-hide, high-volume confirmation and audio-focus behavior.
-- Improve state recovery for Control Center, the status bar and visualization, plus exception handling, restore records and resource cleanup for maintenance and privacy operations.
+- 重构设置页面，重新组织系统、桌面、按键与手势、应用与维护四大入口，统一分组卡片、标题与说明，完善搜索定位，并将重启操作集中到首页。
+- 新增动态岛，集中展示音乐、系统状态、短时提示和可选消息通知；提供短岛与长岛、第二活动、“上下 / 中心”动画、ROM 原生图标和常用手势，按实际遮挡处理状态栏图标。
+- Dock 增加全宽底栏、对称尺寸调节和壁纸取色玻璃材质，完善最近任务与应用返回时的背景过渡，以及系统材质与着色回退。
+- 新增 Toast 位置调节，支持顶部、居中和底部，可调整安全区域内的间距与垂直偏移。
+- 滑杆支持点击数值直接输入，按范围、步进和单位校验，便于精确调节。
+- 振动强度接入 A14 原生缩放，修正音量计时器、面板自动隐藏、高音量确认和音频焦点行为。
+- 完善控制中心、状态栏与可视化的状态恢复，以及维护与隐私操作的异常处理、恢复记录和资源释放。
 
 ## r14.24.1 — 2026-10-19
 
-versionCode 245. Changes since r14.23.5:
+versionCode 245。自 r14.23.5 起的变更：
 
-- Add an optional background inside the native Launcher Dock, disabled by default. Reuse system glass or Gaussian blur, fit the background to native icon bounds and device corners, and expose opacity, radius, horizontal spacing and signed four-edge shrink controls without moving or resizing icons.
-- Keep Dock background visibility tied to the native recent-tasks state, retire hidden blur regions, and preserve native icon reorder and app-return animation coordinates. Use one shared corner radius for native material and outline; retain cached G4 geometry when native material is unavailable.
-- Fix Dock size adjustment when one edge reaches its limit, and ease background width changes over 180 ms when the icon count changes. Raise common slider number-entry dialogs slightly and fit them above the visible keyboard.
-- Select Duo cellular signal from the active data subscription instead of ambiguous per-controller flags. Preserve all native signal levels, distinguish Wi-Fi levels 3 and 4, and add adjustable horizontal spacing.
-- Coalesce weather refreshes and discard cancelled provider results, recover step-view state after reattachment, and restore screenshot-hidden overlays across repeated events and detachments.
-- Propagate direct and wrapped fatal JVM errors from receiver registration, replacement, cleanup, logging, callbacks and ROM fallbacks. Roll back failed registrations before propagation; release the screen controller's context even if unregister fails, and allow initialization to recover after a failed registration. Preserve ordinary optional-feature fallbacks.
-- Mark the static Duo Bluetooth battery summaries as non-formatted text so literal percentages are not parsed as AAPT format tokens.
-- Detach stale receiver and listener cleanup batches before calling framework or user cleanup. Keep bounded retry queues while avoiding recursive retries and map locks held across cleanup callbacks.
-- Limit preference generation inputs to Kotlin feature declarations and preference XML. Check the generated catalog against a full-source scan so ordinary Hook, Java and UI edits no longer invalidate settings resources without losing preference keys.
-- Include non-ignored untracked inputs in local change-based verification and preserve UTF-8 diagnostics on Windows.
-- Retain the validated Gradle, AGP, JDK 25, Kotlin and DexKit versions, API 102 baseline, runtime behavior and release gates. Device performance and target-ROM acceptance require separate verification.
+- 新增融入原生启动器 Dock 的可选背景，默认关闭。复用系统玻璃或高斯模糊，依据原生图标边界和设备圆角适配背景，提供不透明度、圆角、左右间距及四向正负收缩调节，不移动或缩放图标。
+- Dock 背景跟随原生最近任务状态，隐藏时释放模糊区域，保留图标长按排序和应用返回的原生动画坐标。原生材质与轮廓共用同一圆角，系统材质不可用时保留缓存的 G4 几何路径。
+- 修复某一边达到边界后 Dock 尺寸微调整体失效的问题；图标数量变化时，背景宽度以 180 ms 轻微过渡。公共滑杆精确输入弹窗稍微上移，并避让实际显示的键盘。
+- Duo 蜂窝信号改为跟随活动数据订阅，避免控制器标记不明确时选错 SIM 卡；完整保留原生信号档位，区分 Wi-Fi 第 3、4 档，并增加可调左右间距。
+- 合并天气刷新请求，取消后不再发布过期查询结果；恢复计步视图重新挂接后的状态，修复截图临时隐藏在重复事件及视图分离时的可见性恢复。
+- Receiver 注册、替换、释放、日志、回调及 ROM fallback 统一传播直接或包装的致命 JVM 异常，保留普通异常的可选功能回退；传播前回滚失败注册。屏幕状态控制器注销失败时仍释放 Context，首次注册失败后允许恢复初始化。
+- 将 Duo 蓝牙电量说明标记为静态文本，避免资源打包把字面百分号解析成格式占位符。
+- 重试前先取出失效 Receiver／listener 的清理批次，再调用框架或业务清理；保留有界重试队列，避免清理重入时递归重试以及持有注册表锁调用外部代码。
+- 设置生成任务只跟踪 Kotlin feature 声明和偏好 XML，并与全源码扫描生成的目录比对；普通 Hook、Java、UI 改动不再触发设置资源重生成，偏好键保持完整。
+- 本地按改动验证包含未被忽略的新文件，Windows 诊断输出统一使用 UTF-8。
+- 保留已验证的 Gradle、AGP、JDK 25、Kotlin、DexKit、API 102 单基线、运行行为与发行门禁；设备端性能和目标 ROM 验收仍需独立验证。
 
 ## r14.23.5 — 2026-10-17
 
-versionCode 243. Changes since r14.22.7:
+versionCode 243。合并相较 r14.22.7 的变化：
 
-- Reuse one displayed settings-group snapshot between adapter updates instead of rebuilding it for every row and draw. Release observers and cached page references when replacing the adapter or destroying the page; retain existing cards, dividers, clipping and day/night colours.
-- Restrict the Open With sample provider to explicit temporary read grants. Reject write and unknown URI requests; store the two tiny text/ZIP samples uncompressed so all six choices remain readable through seekable file descriptors. Remove the obsolete Bluetooth permission while retaining Bluetooth Connect.
-- Reject unrelated Tasker actions and unidentified senders before reading extras. Preserve token/host verification, propagate fatal failures and throttle malformed-broadcast logs without exposing payloads.
-- Handle native API 102 scope-read/request failures when the service dies or denies access: report unavailability without crashing settings, retrying or claiming approval; retain fatal-error propagation and one scope snapshot per selection.
-- Protect the native Service Binder provider with the existing signature permission, blocking ordinary apps from replacing the settings connection while retaining privileged-framework access.
-- Make official DexSQL CLI/MCP and shared queries the primary development path for ROM targets and final DEX evidence. Add definition-source and Hook API boundary queries without adding runtime dependencies or default CI work. Retain the validated toolchain, dependencies and compact-resource task.
-- Require libxposed API 102. Share one native hook installation policy and remove API 101 capability flags, fallbacks and isolation bridges. Retain the three infrastructure hook IDs, readback, callback semantics and lifecycle; hot reload and explicit hook replacement remain disabled.
-- Raise Java/Kotlin output to 25 and Kotlin language/API to 2.4; adopt AGP 9.4.1 (bundled R8/D8), Kotlin BOM/stdlib 2.4.21, DexKit 2.3.0 and Fragment 1.9.1. Retain JDK 25, Gradle 9.8.1 and Android SDK 34 runtime support; use public AGP APIs for generated tasks.
-- Propagate wrapped fatal failures from original methods and before/after callbacks while preserving ordinary exception recovery, argument changes and proceed counts. Reuse the empty argument array.
-- Check actual preference-mirror commits; optimistic service caches no longer confirm rejected writes. Preserve one retry per connection and recovery on a fresh connection.
-- Read scope once per selection instead of repeating Binder queries for each app; asynchronous callbacks retain only Application Context. Adopt app-list filter results without a second list copy.
-- Fix blank settings pages and the blank screen on returning from About by preserving page position and alpha while collecting animators; retain back animations and state restoration. Add Android 14 UI-model regression tests for all four categories and their settings pages, return and recreation.
-- Add an independent Duo charging-bolt switch, enabled by default; percentage and charging colour remain independent.
-- Refine silent and DND shortcut colours while preserving the native appearance and animation; restore original colours when custom styling is disabled.
-- Fix navigation long presses, key consumption and Control Center gesture cleanup. Restart the phone when first enabling navigation long presses.
-- Remove ineffective A14 features and old settings, refine native network-speed and international-ROM options, and improve settings-sync error handling with fewer startup-diagnostics objects. Remove obsolete API-specific R8 barriers and scope helpers.
-- Consolidate APK tools and remove test-only production sources and duplicate configuration while retaining resource compression, Hook compatibility boundaries, diagnostics and optional DexSQL tools.
+- 设置页在列表更新之间复用一份显示分组快照，避免逐行、逐次绘制重建；替换适配器或销毁页面时释放观察者和页面引用，保留现有卡片、分割线、裁剪及深浅色。
+- “打开方式”示例 Provider 改为显式临时只读授权，拒绝写入和未知 URI；仅将两个极小文本 / ZIP 示例以未压缩方式打包，恢复全部六项的可定位文件描述符读取。移除过时蓝牙权限，保留 Bluetooth Connect。
+- Tasker 入口先拒绝无关 action 和缺失发送者身份，再读取参数；保留令牌 / 宿主校验，传播致命异常，对畸形广播日志限流且不记录参数内容。
+- 原生 API 102 作用域读取 / 请求遇到服务死亡或拒绝授权时，报告不可用，避免设置进程崩溃、不重试或误报批准；保留致命异常传播及每次选择只读一份作用域快照。
+- 原生 Service Binder Provider 复用现有签名权限，阻止普通应用替换设置进程的连接，保留特权框架接入。
+- ROM 目标及最终 DEX 取证优先复用官方 DexSQL CLI / MCP 和现有查询，补充定义来源及 Hook API 边界查询，不增加运行依赖或默认 CI 工作；保留已验证工具链、依赖和资源表压缩任务。
+- 最低框架基线提升至 libxposed API 102。统一原生 Hook 安装策略，删除 API 101 能力判断、回退和隔离桥；保留三个基础设施 Hook ID、回读、回调语义和生命周期，不启用热重载或显式替换。
+- 将 Java / Kotlin 输出目标提升至 25、Kotlin language/API 提升至 2.4；更新至 AGP 9.4.1（内置 R8/D8）、Kotlin BOM/stdlib 2.4.21、DexKit 2.3.0 与 Fragment 1.9.1，保留 JDK 25、Gradle 9.8.1 和 SDK 34 运行范围；使用 AGP 公开 API 管理生成任务。
+- 修复 Hook 原方法与前后回调的包装致命异常传播，保留普通异常恢复、参数改写与 proceed 次数；共享空参数数组，减少回调临时分配。
+- 配置镜像检查真实提交结果，失败后的服务乐观缓存不再误报送达；保留每次连接的一次重试与新连接恢复。
+- 动态作用域按次读取一次服务快照，避免随所选应用数重复 Binder 查询；异步回调使用 Application Context。应用列表直接采用过滤结果，减少重复列表复制。
+- 修复设置子页与关于页返回白屏，动画创建阶段不再改写页面位移和透明度；保留返回动画与状态恢复行为。新增 Android 14 界面模型回归，覆盖四个分类及其全部设置页、返回和重建。
+- Duo 新增独立充电闪电开关，默认开启；百分比和充电颜色保持独立。
+- 改善静音与勿扰快捷按钮配色，保留原生外观与动画，关闭自定义颜色后恢复原色。
+- 修复导航长按、按键消费与控制中心手势释放。首次启用导航长按需重启手机。
+- 清理 A14 无效功能与旧设置，完善原生网速、国际版选项和设置同步异常处理，减少启动诊断的临时对象；移除旧 API 专用 R8 限制和作用域辅助层。
+- 合并 APK 工具、清理纯测试源码和重复配置，保留资源压缩、Hook 兼容边界、故障诊断及可选 DexSQL 取证工具。
 
 ## r14.22.7 — 2026-10-09
 
-versionCode 230. Changes since r14.21.9:
+versionCode 230。合并相较 r14.21.9 的变化：
 
-- Add optional Duo battery, Wi-Fi and cellular icons, disabled by default, with lock screen, Control Center, double rows and size adjustments; refine network text, headphone hints, automatic sizing, handoffs and signal recovery.
-- Preserve fatal errors in resource hooks, theme merging, logging and settings initialization; let the native Control Center icon manager tint custom text, avoiding conflicting wallpaper callbacks and duplicate listeners.
-- Copy wallpaper and drawer-blur callback arguments only when rewriting is needed, reduce repeated thread-state reads and compute only selected temperatures. Preserve original calls, input ownership and exception propagation.
-- Check backup CRC over the original byte slice; reduce search and locale-list intermediates while preserving backup format, matching and ordering.
-- Use lossless WebP for the bundled QR image and Android 14-compatible compact resource entries; remove unused JVM coroutine-agent payload while retaining dynamic resources and Hook/JNI rules.
-- Pin libxposed 102 to official Maven Central with SHA-256 verification and align Fragment KTX with Fragment 1.5.4; include validated dependency and build-tool security updates, retaining DexKit 2.2.0, the API 101 minimum runtime, JDK 25 and JVM 17 output.
-- Coordinate Fast and Full CI while retaining mutation gates, clean builds without caches, and APK/R8 mapping reproducibility checks; remove unused resources and alias placeholders, obsolete API checks and resource qualifiers; strengthen signing/version checks and consolidate maintenance documentation and release history.
+- 新增默认关闭的 Duo 电量、Wi-Fi、蜂窝信号三合一图标，支持锁屏、控制中心、双排和尺寸微调；完善网络文字、耳机短提示、自动尺寸、交接与信号恢复。
+- 修复资源 Hook、主题合并、日志及设置初始化路径吞掉致命错误的问题；控制中心自定义文字由原生图标管理器统一着色，避免壁纸回调冲突与重复监听。
+- 壁纸和抽屉模糊回调仅在需要改写时复制参数，减少重复线程状态读取；温度仅计算所选项目。保持原方法调用、输入所有权及异常传播。
+- 备份直接校验原始片段 CRC，减少大块复制；精简搜索和语言列表中间对象，保留备份格式、匹配语义与顺序。
+- 内置二维码使用无损 WebP，资源表采用 Android 14 支持的紧凑编码；移除未使用的 JVM 协程调试代理载荷，保留动态资源及 Hook / JNI 规则。
+- 固定 libxposed 102 官方 Maven Central 来源与 SHA-256 校验，Fragment KTX 对齐 Fragment 1.5.4；纳入已验证的依赖和构建工具安全更新，保留 DexKit 2.2.0、API 101 最低运行基线、JDK 25 与 JVM 17 目标。
+- 合并 Fast / Full CI 编排，保留缺陷注入、无缓存双构建和 APK / R8 mapping 可重复性检查；清理未用资源与别名占位类、过期系统判断和资源目录；强化签名与当前版本检查，合并维护文档和发布记录。
 
 ## r14.21.9 — 2026-09-30
 
-versionCode 218. Changes since r14.20.9:
+versionCode 218。合并相较 r14.20.9 的变化：
 
-- Coalesce Control Center step refreshes to prevent slow-query backlogs; cancel obsolete work on screen-off, view removal or controller replacement, preserving serial queries and recovery.
-- Optimize app-lock and privacy-list ordering and search, preserving selected-first order and dual-user identity.
-- Initialize icon cache keys and reuse shortcut metadata, reducing repeated reads and list copies during scrolling, search and result publication.
-- Fix left-side mobile/Wi-Fi icons and add left-icon size and vertical-offset controls.
-- Fix Control Center settings transitions; cover standalone pages, combined route queries, Wi-Fi/WIFI matching and result navigation in search.
-- Remove duplicate whole-row switch feedback and update the About maintainer to thetvplus.
-- Refine settings; fix notification channel navigation, importance settings on both page variants, and clipping of the final extended-menu item.
+- 合并控制中心计步刷新请求，避免慢查询积压；熄屏、界面移除或控制器替换时取消过期刷新，保持查询串行与恢复能力。
+- 优化应用锁、隐私应用列表排序与搜索，保持已选优先、原有顺序和双开用户区分。
+- 修复图标缓存键未初始化的问题；复用快捷方式元数据，减少滚动、搜索和结果更新中的重复读取与列表复制。
+- 修复移动信号与 Wi-Fi 移至左侧，增加左侧大小和垂直偏移调节。
+- 修复控制中心设置页过渡偏移，补齐独立页面搜索、组合路径检索、Wi-Fi/WIFI 匹配和结果定位。
+- 去掉开关整行重复按压背景；关于页维护者更新为 thetvplus。
+- 整理设置界面；修复通知频道设置、通知重要性的新旧页面兼容和扩展菜单最右项裁切。
 
 ## r14.20.9 — 2026-09-05
 
-versionCode 206. Earliest retained release; older history remains in Git.
+versionCode 206。首个保留发行节点；更早历史仍保存在 Git 中。
 
-- Defer system_server business features until the preference snapshot is ready; retain the Hook catalog across rapid SystemUI restarts.
-- Isolate WindowManager argument-type errors and scope status-bar resource overrides to the system, SystemUI and launcher; system_server still owns window geometry.
+- system_server 等待偏好快照后再安装业务功能，SystemUI 快速重启不再跳过 Hook catalog。
+- 隔离 WindowManager 参数类型错误；状态栏高度资源替换限制在系统、系统界面和桌面，窗口几何仍由 system_server 生效。

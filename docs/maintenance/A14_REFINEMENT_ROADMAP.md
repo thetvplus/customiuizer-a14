@@ -9,13 +9,13 @@
 | 平台、API 与运行契约 | [COMPATIBILITY](../../COMPATIBILITY.md)、[ARCHITECTURE](../../ARCHITECTURE.md) |
 | 功能与进程 | [Feature catalog](../../app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature)、[矩阵 JSON](../rom-intelligence/A14_PROCESS_MATRIX.json) / [CSV](../rom-intelligence/A14_PROCESS_MATRIX.csv) |
 | 页面、偏好与搜索 | `app/src/main/res/xml/prefs_*.xml`、构建生成目录、[语义目录](../../feature-semantics/a14.json)；记录数不是已验收功能数 |
-| 当前行为 | [功能目录](../features/README.md)、[遗留语义](LEGACY_SEMANTIC_CALIBRATION.md)、[退役决定](A14_FEATURE_RETIREMENTS.md) |
+| 当前行为 | [页面功能地图](../FEATURE_MAP.md)、[遗留语义](LEGACY_SEMANTIC_CALIBRATION.md)、[退役决定](A14_FEATURE_RETIREMENTS.md) |
 | ROM / DEX | [DexSQL](../rom-intelligence/DEXSQL.md)、[SQL 查询集](../../tools/dexsql/README.md)、[M03 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |
 | 发布 | [RELEASE](../RELEASE.md)、实际 GitHub Release；Changelog 保存发行事实 |
 
 生产 main 基线为 `3e0709f3234ed942d906487370547ec0136c7531`，源码版本保持 r14.25.3 / 248；同名正式版已发布。2026-10-24 的后续成果统一在 `codex/a14-consolidated-20261024`，尚未合并 main 或形成新发行。
 
-初次整合检查点为 `c9843589416efdbeba2d0f6d651c1c9e136e9fef`：已通过 Fast 专项、Full、工具测试及差异检查并保存远端，保留通知、媒体、状态栏及详细取证记录。后续整理和发布保护补全以当前集成分支为准；最终 HEAD / CI 从 Git / GitHub 读取，不另维护副本。
+后续成果以当前集成分支为准；最终 HEAD / CI 从 Git / GitHub 读取。初次整合检查点及验证记录见页末[证据恢复](#证据恢复)，不在这里持续追加提交流水。
 
 ## 已整合的当前工作
 
