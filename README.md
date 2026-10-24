@@ -4,7 +4,7 @@
 
 面向 **HyperOS 1 / Android 14** 的系统界面与交互定制模块，基于 CustoMIUIzer 持续维护。仅支持 **arm64-v8a / libxposed API 102**，使用独立包名、签名和版本线。
 
-- 当前源码版本：`r14.25.3`（versionCode 248），要求 libxposed API 102。本版处于开发分支验证阶段，尚未正式发布。
+- 当前源码版本：`r14.25.3`（versionCode 248），要求 libxposed API 102。同名正式版已发布；当前集成分支另含尚未发行的后续修改。
 - 维护与开发：`thetvplus`
 - 应用 ID：`tv.withaibuild.customiuizer.r14`
 - [下载正式版](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [发行记录](https://github.com/thetvplus/customiuizer-a14/releases) · [更新记录](CHANGELOG_CN.md)
@@ -36,7 +36,7 @@
 
 动态岛入口为「系统 → 动态岛」，应用反馈与媒体接入默认关闭；开启后重启系统界面。行为与待验收项见 [动态岛说明](docs/features/island/README.md)。
 
-当前工作分支还包含默认开启的音乐左右切歌开关、隐藏暂停态不再回桌面闪现，以及文字与分组整理；这些后续修改尚未包含在上述正式版中。自动构建与发布入口见 [发布流程](docs/RELEASE.md)。
+集成分支新增手势所有权、音乐波形与可选原生返回、通知锁屏门禁、媒体快照及状态栏 / Insets 修复；Launcher 图标持续消失仍待实机确认。分支内容及待验项见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)，不能只凭相同版本名判定正式 APK 已包含。自动构建与发布入口见 [发布流程](docs/RELEASE.md)。
 
 Duo 默认关闭，入口为「系统 → 状态栏 → Duo 三合一图标」，修改后重启系统界面。大小、信号及提示规则见 [Duo 使用说明](docs/features/duo-status-bar.md)。
 
@@ -46,15 +46,7 @@ Dock 背景默认关闭，入口为「桌面 → Dock」，修改后重启桌面
 
 ## 开发与维护
 
-构建使用 JDK 25，Java / Kotlin 输出目标同步为 25，Kotlin language/API 为 2.4。构建链与 Android 14 运行边界见 [开发说明](docs/DEVELOPMENT.md#环境)。完整验证入口：
-
-```powershell
-python tools/verify.py full
-python -m unittest discover -s tools/tests -p "test_*.py"
-git diff --check
-```
-
-开始前阅读 [工程规则](AGENTS.md) 和 [文档索引](docs/README.md)。环境配置、构建、测试与发布分别见 [开发说明](docs/DEVELOPMENT.md)、[测试说明](docs/TESTING.md) 和 [发布流程](docs/RELEASE.md)。架构见 [ARCHITECTURE.md](ARCHITECTURE.md)。
+从 [AGENTS.md](AGENTS.md) 核对任务和分支，按需查看[文档索引](docs/README.md)。环境与构建见 [DEVELOPMENT](docs/DEVELOPMENT.md)，测试职责见 [TESTING](docs/TESTING.md)，签名 / 发布见 [RELEASE](docs/RELEASE.md)，路由与所有权见 [ARCHITECTURE](ARCHITECTURE.md)。
 
 ## 支持与许可
 

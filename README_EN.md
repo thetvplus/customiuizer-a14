@@ -4,7 +4,7 @@
 
 A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. It supports **arm64-v8a / libxposed API 102** and has an independent package, signing identity and release line.
 
-- Current source version: `r14.25.3` (versionCode 248), requiring libxposed API 102. This version is under branch validation and has not been published.
+- Current source version: `r14.25.3` (versionCode 248), requiring libxposed API 102. The official version is published; this integration branch also contains later, unreleased changes.
 - Development and maintenance: `thetvplus`
 - Application ID: `tv.withaibuild.customiuizer.r14`
 - [Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Release history](https://github.com/thetvplus/customiuizer-a14/releases) · [Changelog](CHANGELOG.md)
@@ -36,7 +36,7 @@ Install the official APK, enable the module and required scopes in your framewor
 
 Open System → Dynamic Island for app feedback and media integrations, disabled by default. Restart System UI after enabling. See the [Dynamic Island guide](docs/features/island/README.md) for behavior and pending device checks.
 
-The working branch also adds a track-swipe switch enabled by default, prevents hidden paused music from flashing when returning Home, and refines settings wording and grouping. These changes are not yet part of the official release above. See the [release guide](docs/RELEASE.md) for the automated build and publication entry point.
+The integration branch adds gesture ownership, waveform and optional native music return, keyguard notification checks, media snapshot and status bar / Insets fixes. Persistent Launcher icon loss still needs device investigation. See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md); an identical version name does not mean the official APK includes these changes. See the [release guide](docs/RELEASE.md) for the automated build and publication entry point.
 
 Duo is disabled by default. Open System → Status bar → Duo, then restart System UI after changes. See [Duo notes](docs/features/duo-status-bar.md) for sizing, signal and hint behavior.
 
@@ -46,15 +46,7 @@ Availability depends on the ROM and system-app versions. Dynamic app-scope reque
 
 ## Development and Maintenance
 
-Builds use JDK 25, Java/Kotlin output target 25 and Kotlin language/API 2.4. See the [development guide](docs/DEVELOPMENT.md#环境) for the Android 14 runtime boundary. Full local verification:
-
-```powershell
-python tools/verify.py full
-python -m unittest discover -s tools/tests -p "test_*.py"
-git diff --check
-```
-
-Read [AGENTS.md](AGENTS.md) and the [documentation index](docs/README.md) first. Environment setup, builds, tests and releases are documented in [DEVELOPMENT.md](docs/DEVELOPMENT.md), [TESTING.md](docs/TESTING.md) and [RELEASE.md](docs/RELEASE.md). See [ARCHITECTURE.md](ARCHITECTURE.md) for runtime structure.
+Start with [AGENTS.md](AGENTS.md) to identify the task and branch, then use the [documentation index](docs/README.md) as needed. See [DEVELOPMENT](docs/DEVELOPMENT.md) for setup and builds, [TESTING](docs/TESTING.md) for validation, [RELEASE](docs/RELEASE.md) for signing and publication, and [ARCHITECTURE](ARCHITECTURE.md) for routing and ownership.
 
 ## Support and License
 

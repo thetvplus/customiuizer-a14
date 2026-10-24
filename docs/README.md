@@ -21,7 +21,7 @@
 | Java / Kotlin 调用边界 | [JAVA_BOUNDARY_ALLOWLIST.md](JAVA_BOUNDARY_ALLOWLIST.md) |
 | 遗留功能语义契约 | [LEGACY_SEMANTIC_CALIBRATION.md](maintenance/LEGACY_SEMANTIC_CALIBRATION.md) |
 | A14 功能退役与旧偏好清理 | [A14_FEATURE_RETIREMENTS.md](maintenance/A14_FEATURE_RETIREMENTS.md) |
-| 全量功能地图、分批精修与退役任务 | [A14_REFINEMENT_ROADMAP.md](maintenance/A14_REFINEMENT_ROADMAP.md) |
+| 当前精修、未决问题与证据恢复 | [A14_REFINEMENT_ROADMAP.md](maintenance/A14_REFINEMENT_ROADMAP.md) |
 | 生成进程矩阵与 ROM 取证 | [rom-intelligence](rom-intelligence/README.md) |
 
 未发布条目在准备发行时归入对应版本，历史发行记录保留最终变化；中文见 [CHANGELOG_CN.md](../CHANGELOG_CN.md)，英文见 [CHANGELOG.md](../CHANGELOG.md)。过程审计、调试版本与逐次试验保留在 Git 历史或仓库外的本地证据中。

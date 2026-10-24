@@ -88,7 +88,7 @@ gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 | `release-signing` | 至少一个 Required reviewer；四个签名 Secrets：`A14_KEYSTORE_BASE64`、`A14_STORE_PASSWORD`、`A14_KEY_ALIAS`、`A14_KEY_PASSWORD` |
 | `release-publishing` | `A14_XPOSED_RELEASE_TOKEN`；需要正式 APK 本地验收时设置 Required reviewer，在同一运行的签名候选通过设备 smoke 后批准公开；不需本地验收时可沿用前一阶段的确认 |
 
-自动路径会先检查 release-signing 确实有审核人及显式分支限制，配置缺失则停止，不把空 Environment 当作确认。单维护者仓库可允许本人审批自己触发的运行。工作流不代改管理员保护设置；本任务 GitHub 插件也不提供 Environment / Secrets 管理能力，不能声称远端设置已配置或凭据已验证。
+自动路径会先检查 release-signing 确实有审核人及显式分支限制，配置缺失则停止，不把空 Environment 当作确认。单维护者仓库可允许本人审批自己触发的运行。工作流不代改管理员保护设置；远端 Environment / Secrets 配置及凭据必须实际核对，不能由文档推断已有效。
 
 签名 Secret 必须是现有 PKCS#12 `.p12`。证书固定为正式证书 SHA-256 `c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70`，不生成替代密钥。临时签名材料只在受保护构建步骤恢复，先核对证书，结束时清理；证明生成与发布前已移除密钥。
 
@@ -127,7 +127,7 @@ python tools/prepare_release.py --version r14.25.3 --code 248 --date 2026-10-23 
 | 其余公开附件 | `build-metadata.json` |
 | 内部 Actions Artifact | `a14-signed-<run-id>-<attempt>`，可保留校验文件、证明 bundle 和验证报告 |
 
-版本必须高于所有已发布版本（包含预发行）；两端均不能回退 Latest。当前源码为 `r14.25.3` / `248`，累计对比 `r14.25.1` / `246`，实际是否发布以实时 Release 为准。新生成的候选在认证之前即使用最终 APK 文件名；历史带 SHA 或无 SHA 候选继续按原文件名、元数据和证明验证，不改名、不重建。纯发布工程维护不升级应用版本号；已发布版本在构建前跳过。
+版本必须高于所有已发布版本（包含预发行）；两端均不能回退 Latest。当前版本取 Gradle 与双语 Changelog，实际发行状态取 GitHub Release。新生成的候选在认证之前即使用最终 APK 文件名；历史带 SHA 或无 SHA 候选继续按原文件名、元数据和证明验证，不改名、不重建。纯发布工程维护不升级应用版本号；已发布版本在构建前跳过。
 
 正式 APK 检查包名、版本、SDK 34、arm64-v8a、不可调试、16 KB zipalign、V2 签名、历史证书及内嵌完整 sourceCommit。固定 SHA 的官方 actions/attest 先为最终 APK 生成在线证明；APK 在线核验通过后才在 `build-metadata.json` 写入实际认证状态，再为定稿元数据生成证明，最后重新在线核验两个文件。核验仓库、workflow、commit、ref、run / attempt、认证主体文件名与摘要，任何一步失败均不能上传候选或发布。
 
@@ -173,4 +173,4 @@ gh workflow run a14-promote-release.yml --ref main -f build_run_id=<original-run
 
 历史候选保留原始内部四文件结构及校验门禁；已存在的历史四资产 Release 或含旧 sidecar 的部分草稿按原四资产逐项验收和补齐。历史候选新建 Release 默认只上传 APK 与原始元数据；已精简为两资产的历史版本也可只读验收。历史标题可为旧格式或已修正的版本名，发布旧草稿时统一为版本名；新候选严格执行两资产和版本名标题。自动恢复不整理已发布版本的附件，也不改写其元数据来迁就新格式。
 
-跨仓库没有原子事务，网络中断时可能出现主仓库成功、Xposed 待恢复；流程明确失败并保留证据，不为伪装成功回删主仓库。最终成功要求两个目标均完成公开资产和标签 / Latest 核验。不存在既有候选且版本未递增时不能覆盖 r14.25.1。
+跨仓库没有原子事务，网络中断时可能出现主仓库成功、Xposed 待恢复；流程明确失败并保留证据，不为伪装成功回删主仓库。最终成功要求两个目标均完成公开资产和标签 / Latest 核验。不存在既有候选且版本未递增时不能覆盖任何已发布版本。

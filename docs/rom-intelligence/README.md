@@ -6,13 +6,13 @@
 
 ## 当前源码生成物
 
-`A14_PROCESS_MATRIX.json`、`.csv`、`.md` 和 `A14_PROCESS_EXCEPTIONS_GENERATED.md` 由 [extract_process_matrix.py](../../tools/extract_process_matrix.py) 从 Feature catalog、入口和 scope 生成，属于静态调用矩阵，不是 ROM 实机覆盖表。
+[A14_PROCESS_MATRIX.json](A14_PROCESS_MATRIX.json)（完整字段、scope 与 routing）和 [CSV](A14_PROCESS_MATRIX.csv) 由 [extract_process_matrix.py](../../tools/extract_process_matrix.py) 从 Feature catalog、入口和 scope 生成，属于静态调用矩阵，不是 ROM 实机覆盖表。
 
 ```powershell
 python tools/extract_process_matrix.py
 ```
 
-修改 catalog / routing 后核对生成 diff，并运行 Python 工具测试和 CI determinism。不要手动改生成表以掩盖调用关系漂移。
+修改 catalog / routing 后核对生成 diff，并运行 Python 工具测试和 CI determinism。不要手动改生成表。非表格进程 / ClassLoader 合同维护在 [架构](../../ARCHITECTURE.md#入口与进程路由)，不再复制数万字的生成 Markdown。
 
 ## 历史 fuxi 样本
 
