@@ -612,6 +612,11 @@ def check_release_identity(record: dict, release_id: int, tag: str, sha: str) ->
             and record.get("target_commitish") == sha, "Release source identity changed during publication")
 
 
+def check_release_content(record: dict, title: str, notes: str) -> None:
+    require(record.get("name") == title and record.get("body", "").strip() == notes.strip(),
+            "Release notes/title differ from the verified candidate")
+
+
 def find_release(repository: str, tag: str, env: dict) -> dict | None:
     """The by-tag endpoint cannot find drafts; read all pages with the right token."""
     page = 1
@@ -698,6 +703,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
                 raise RuntimeError("Xposed tag push failed; check token Contents/Workflows write, organization approval and connectivity. Recover using the original candidate.") from error
         # Upload and verify every asset while private, then publish. Compatible
         # with repositories that enable immutable releases; never patch binaries.
+        draft_title = record["name"] if record is not None else name
         if record is None:
             request = folder / "release-request.json"
             write_json(request, {"tag_name": tag, "target_commitish": sha, "name": name,
@@ -708,6 +714,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         require(created["draft"] is True and created["tag_name"] == tag, "Draft creation returned another release")
         require(created.get("immutable") is not True, "Immutable release cannot be modified")
         check_release_identity(created, created["id"], tag, sha)
+        check_release_content(created, draft_title, notes.read_text(encoding="utf-8"))
         present = {asset["name"] for asset in created.get("assets", [])}
         missing = [str(folder / filename) for filename in filenames if filename not in present]
         if missing:
@@ -716,6 +723,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         # numeric ID returned by creation, including when its tag is still new.
         draft = json.loads(run("gh", "api", f"repos/{repository}/releases/{created['id']}", env=env))
         check_release_identity(draft, created["id"], tag, sha)
+        check_release_content(draft, draft_title, notes.read_text(encoding="utf-8"))
         check_release_assets(draft, folder, filenames, draft=True, prerelease=prerelease)
         # Before the first publication, current main must still be the approved
         # source. Once that exact source release is publicly verified, syncing
@@ -728,8 +736,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
             f"--prerelease={str(prerelease).lower()}", f"--latest={str(not prerelease).lower()}", env=env)
         release = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}", env=env))
         check_release_identity(release, created["id"], tag, sha)
-        require(release.get("name") == name and release.get("body", "").strip() == notes.read_text(encoding="utf-8").strip(),
-                "Published release notes/title differ from the verified candidate")
+        check_release_content(release, name, notes.read_text(encoding="utf-8"))
         check_release_assets(release, folder, filenames, draft=False, prerelease=prerelease)
         check_tag(repository, tag, sha, must_exist=True, env=env)
         if not prerelease:

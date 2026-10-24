@@ -668,8 +668,15 @@ class ReleaseServer:
         self.events = []
         self.fail_download_upload = False
         self.tamper_source_readback = False
+        self.tamper_content_at = None
         self.fail_event = None
         self.notes = {"content": base64.b64encode(b"## r14.26.1\n\nversionCode 247.\n\n- Reviewed change.\n").decode()}
+
+    def readback(self, record, phase, repository):
+        record = copy.deepcopy(record)
+        if self.tamper_content_at and self.tamper_content_at[:2] == (phase, repository):
+            record[self.tamper_content_at[2]] += " Unexpected edit"
+        return json.dumps(record)
 
     def event(self, *event):
         self.events.append(event)
@@ -716,7 +723,7 @@ class ReleaseServer:
                 record.update(id=100 if repository == self.download else 99, assets=[], html_url=f"https://github.com/{repository}/releases/tag/{record['tag_name']}")
                 self.records[repository] = record
                 self.event("create", repository)
-                return json.dumps(record)
+                return self.readback(record, "create", repository)
             record = copy.deepcopy(self.records[repository])
             if endpoint.endswith("/latest"):
                 self.event("latest", repository)
@@ -726,7 +733,8 @@ class ReleaseServer:
                 self.event("draft-readback", repository)
                 if self.tamper_source_readback and repository == release.REPO:
                     record["assets"][0]["digest"] = "sha256:" + "b" * 64
-            return json.dumps(record)
+            phase = "published-readback" if "/tags/" in endpoint else "draft-readback"
+            return self.readback(record, phase, repository)
         if args[:2] == ("gh", "release"):
             repository = args[args.index("--repo") + 1]
             self.token(repository, env)
@@ -787,6 +795,43 @@ class DualPublicationTest(unittest.TestCase):
             self.assertEqual("r14.26.1", source["name"])
             self.assertEqual(source["name"], download["name"])
             self.assertEqual({metadata["apk"], "build-metadata.json"}, {asset["name"] for asset in source["assets"]})
+
+    def test_changed_title_or_notes_stop_publication_and_cross_repo_sync(self):
+        for phase in ("create", "draft-readback", "published-readback"):
+            for repository in (release.REPO, ReleaseServer.download):
+                for field in ("name", "body"):
+                    with self.subTest(phase=phase, repository=repository, field=field), tempfile.TemporaryDirectory() as temp:
+                        root = Path(temp)
+                        metadata = self.fixture(root)
+                        server = ReleaseServer(root)
+                        server.tamper_content_at = (phase, repository, field)
+                        with self.context(server), self.assertRaisesRegex(ValueError, "notes/title"):
+                            release.publish_verified(root, "42", "both", metadata)
+                        if phase != "published-readback":
+                            self.assertTrue(server.records[repository]["draft"])
+                            self.assertNotIn(("publish", repository), server.events)
+                        if repository == release.REPO:
+                            self.assertNotIn(server.download, server.records)
+                            self.assertFalse(any(event[0] == "git" for event in server.events))
+
+    def test_recovery_keeps_published_legacy_title_and_normalizes_the_remaining_draft(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root, legacy=True)
+            server = ReleaseServer(root)
+            server.fail_download_upload = True
+            with self.context(server):
+                with self.assertRaisesRegex(RuntimeError, "Xposed network failure"):
+                    release.publish_verified(root, "42", "both", metadata)
+                for record in server.records.values():
+                    record["name"] = "CustoMIUIzer A14 · r14.26.1"
+                original_source = copy.deepcopy(server.records[release.REPO])
+                server.fail_download_upload = False
+                server.events.clear()
+                release.publish_verified(root, "42", "both", metadata)
+            self.assertEqual(original_source, server.records[release.REPO])
+            self.assertEqual("r14.26.1", server.records[server.download]["name"])
+            self.assertFalse(server.records[server.download]["draft"])
 
     def test_failed_source_verification_prevents_xposed_tags_or_releases(self):
         with tempfile.TemporaryDirectory() as temp:
