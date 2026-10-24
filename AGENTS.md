@@ -62,6 +62,7 @@
 | 功能入口 / 文档治理 | [功能结构](docs/FEATURE_MAP_SIMPLE.md) / [设置键](docs/FEATURE_MAP.md) / [文档规范](docs/DOCS_STYLE.md) |
 | 环境、生成与构建 | [开发与构建](docs/DEVELOPMENT.md) |
 | 测试职责与 CI | [测试与验证](docs/TESTING.md) |
+| 大型辅助 JSON / 机读数据 | [摘要、筛选与分页](docs/TOOLS.md#辅助数据按需查询)，先查询再按需读原记录 |
 | 路由、API 与所有权 | [架构](ARCHITECTURE.md) |
 | 平台与 ROM 边界 | [兼容矩阵](COMPATIBILITY.md) |
 | 测量与资源预算 | [优化门禁](docs/OPTIMIZATION_GATES.md) |

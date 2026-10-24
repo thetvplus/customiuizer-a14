@@ -36,6 +36,13 @@ class CIScopeTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path])["tools"])
 
+    def test_auxiliary_contract_and_schema_changes_include_tool_gates(self):
+        for path in ("feature-semantics/a14.json", "feature-semantics/schema.json",
+                     "rom-contracts/hyperos1-a14-core.json", "rom-contracts/schema.json"):
+            with self.subTest(path=path):
+                self.assertEqual({"tools": True, "full": True},
+                                 ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path]))
+
     def test_explicit_full_request_does_not_repeat_tool_tests(self):
         event = {"head_commit": {"message": "fix: harden feature [full-ci]"}}
         self.assertEqual({"full": True, "tools": False},

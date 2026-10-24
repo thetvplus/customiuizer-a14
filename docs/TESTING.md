@@ -35,7 +35,11 @@
 
 main / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment 审核、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
 
+清理历史时先核对 Release 元数据、原 run / attempt 及候选资产；签名任务最终失败也可能留下可恢复候选，不能按 conclusion 批量删除。没有过期或确认失效的资产时沿用现有保留期，不新增定时清理工作流。
+
 Python 的 CI 命令使用 unittest buffer：成功测试的模拟发布 / 故障输出被收起，测试数量、跳过和失败摘要保留；失败时仍显示该测试的 stdout / stderr。Hermetic 命令还清空继承的 Actions 摘要 / 输出 / 环境 / 路径 / 状态文件位置，避免模拟发布污染真实工作流；测试可显式设置自己的临时输出文件。日志中的模拟发布链接不代表真实发行。
+
+`tools/tests/fixtures/rom-smali/` 的小型合成样本用于签名、替代类、多 DEX 与目标隔离回归，不是 ROM 原件或实机证据；保留原路径。源码风险、Hook 回调读取与分配预算各有不同门禁，不按数据体积合并或重新采样。`source_hazard_scan.py --write-baseline` 只允许修剪已有指纹并保留 disposition，拒绝创建已接受基线或接纳新指纹；新增风险须单独审查。
 
 ## 独立故障验证
 

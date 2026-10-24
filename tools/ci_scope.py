@@ -11,7 +11,7 @@ from pathlib import Path
 def select_scope(event_name: str, ref: str, event: dict, paths: list[str]) -> dict[str, bool]:
     release_or_manual = event_name == "workflow_dispatch" or ref.startswith("refs/tags/r14.")
     tools_changed = any(path.startswith((
-        "tools/", ".github/",
+        "tools/", ".github/", "feature-semantics/", "rom-contracts/",
         "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/",
         "docs/rom-intelligence/A14_PROCESS_",
     )) for path in paths)

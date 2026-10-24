@@ -29,20 +29,53 @@ def fail(message: str, code: int = 2) -> None:
 
 
 def validate_schema(contract: dict[str, Any], schema: dict[str, Any]) -> None:
-    """Minimal structural validation of the contract against the schema."""
-    if contract.get("schemaVersion") != schema.get("schemaVersion"):
+    """Check the published v1 structure before interpreting or scanning targets."""
+    if not isinstance(contract, dict):
+        fail("contract root must be an object")
+    definition = schema["contractSchema"]
+    for name in definition["required"]:
+        if name not in contract:
+            fail(f"contract missing required field: {name}")
+    for name, prop in definition["properties"].items():
+        value = contract.get(name)
+        if prop["type"] == "string" and not isinstance(value, str):
+            fail(f"{name} must be a string")
+        if prop["type"] == "integer" and type(value) is not int:
+            fail(f"{name} must be an integer")
+    if contract["schemaVersion"] != schema["schemaVersion"]:
         fail(f"unsupported schemaVersion: {contract.get('schemaVersion')!r}")
-    for target in contract.get("targets", []):
+    if not isinstance(contract["targets"], list):
+        fail("targets must be an array")
+    for target in contract["targets"]:
         if not isinstance(target, dict):
             fail("each target must be an object")
-        if not target.get("target"):
-            fail("target name is required")
-        for key in ("classes", "methods", "fields"):
-            for item in target.get(key, []):
+        for kind, items in (("target", [target]), ("method", target.get("methods", [])),
+                            ("field", target.get("fields", []))):
+            if not isinstance(items, list):
+                fail(f"{kind} entries must be an array")
+            spec = definition["definitions"][kind]
+            for item in items:
                 if not isinstance(item, dict):
-                    fail(f"{key} item must be an object in target {target['target']}")
-                if "name" not in item:
-                    fail(f"{key} item missing 'name' in target {target['target']}")
+                    fail(f"{kind} entry must be an object")
+                for key in spec["required"]:
+                    if key not in item:
+                        fail(f"{kind} entry missing '{key}'")
+                for key, prop in spec["properties"].items():
+                    if key not in item:
+                        continue
+                    value = item[key]
+                    if prop["type"] == "string" and not isinstance(value, str):
+                        fail(f"{kind}.{key} must be a string")
+                    if prop["type"] == "boolean" and not isinstance(value, bool):
+                        fail(f"{kind}.{key} must be a boolean")
+                    if prop["type"] == "array":
+                        if not isinstance(value, list):
+                            fail(f"{kind}.{key} must be an array")
+                        if prop["items"].get("type") == "string" and any(not isinstance(v, str) for v in value):
+                            fail(f"{kind}.{key} items must be strings")
+                for key in spec["required"]:
+                    if not item[key]:
+                        fail(f"{kind}.{key} must not be empty")
 
 
 def read_smali_class(path: Path) -> tuple[str | None, set[str], set[str]]:
@@ -154,6 +187,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--contract", required=True, type=Path, help="JSON contract file")
     parser.add_argument("--schema", type=Path, default=REPO_ROOT / "rom-contracts" / "schema.json", help="contract schema file")
+    parser.add_argument("--validate-only", action="store_true", help="validate input structure without loading ROM samples")
     parser.add_argument("--target", action="append", metavar="NAME=PATH", help="smali root for a target, can be given multiple times")
     parser.add_argument("--output-json", type=Path, help="write JSON report to this file")
     parser.add_argument("--output-markdown", type=Path, help="write Markdown report to this file")
@@ -171,6 +205,11 @@ def main() -> int:
         fail(f"JSON parse error: {e}")
 
     validate_schema(contract, schema)
+    if args.validate_only:
+        if args.target or args.output_json or args.output_markdown:
+            parser.error("--validate-only cannot scan targets or write scan reports")
+        print("Contract structure validated; ROM compatibility has not been checked")
+        return 0
 
     targets: dict[str, list[Path]] = {}
     if args.target:

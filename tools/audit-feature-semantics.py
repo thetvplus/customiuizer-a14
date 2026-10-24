@@ -2,9 +2,9 @@
 """Audit feature semantics for CustoMIUIzer A14.
 
 Modes:
-  --init      Build feature-semantics/a14.json from source extraction.
+  --init      Bootstrap a new inventory from source extraction (never overwrite).
   --validate  Validate a14.json against the schema and current source.
-  (no markdown output; feature matrix is now generated on demand)
+  Query existing data with tools/query_aux_data.py instead of regenerating it.
 
 Exit codes:
   0  success / valid
@@ -17,17 +17,12 @@ from __future__ import annotations
 import argparse
 import html
 import json
-import os
 import re
 import sys
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-
-SCHEMA_PATH = REPO_ROOT / "feature-semantics" / "schema.json"
-INVENTORY_PATH = REPO_ROOT / "feature-semantics" / "a14.json"
 
 XML_KEY_RE = re.compile(r'android:key="([^"]+)"')
 XML_DEFAULT_RE = re.compile(r'android:defaultValue="([^"]*)"')
@@ -770,49 +765,59 @@ def _collect_required(schema: dict[str, Any]) -> set[str]:
     return set(entry.get("required", []))
 
 
-def _entry_value_types_ok(entry: dict[str, Any]) -> list[str]:
+def _entry_value_types_ok(entry: dict[str, Any], schema: dict[str, Any]) -> list[str]:
     errors = []
-    if not isinstance(entry.get("featureId"), str):
-        errors.append("featureId must be a string")
-    if not isinstance(entry.get("featureName"), str):
-        errors.append("featureName must be a string")
-    if not isinstance(entry.get("preferenceKeys"), list) or not entry.get("preferenceKeys"):
+    properties = schema["definitions"]["featureEntry"]["properties"]
+    for name, prop in properties.items():
+        if prop.get("type") == "string" and name in entry and not isinstance(entry[name], str):
+            errors.append(f"{name} must be a string")
+    keys = entry.get("preferenceKeys")
+    if not isinstance(keys, list) or not keys:
         errors.append("preferenceKeys must be a non-empty list")
-    if not isinstance(entry.get("sourceFile"), str):
-        errors.append("sourceFile must be a string")
-    if not isinstance(entry.get("installer"), str):
-        errors.append("installer must be a string")
-    if not isinstance(entry.get("targetPackage"), str):
-        errors.append("targetPackage must be a string")
-    if not isinstance(entry.get("installPhase"), str):
-        errors.append("installPhase must be a string")
-    if not isinstance(entry.get("runtimeReadMode"), str):
-        errors.append("runtimeReadMode must be a string")
-    if not isinstance(entry.get("enableEffect"), str):
-        errors.append("enableEffect must be a string")
-    if not isinstance(entry.get("disableEffect"), str):
-        errors.append("disableEffect must be a string")
-    if not isinstance(entry.get("valueChangeEffect"), str):
-        errors.append("valueChangeEffect must be a string")
-    if not isinstance(entry.get("restartTarget"), str):
-        errors.append("restartTarget must be a string")
+    elif any(not isinstance(key, str) for key in keys):
+        errors.append("preferenceKeys items must be strings")
     if not isinstance(entry.get("hotReloadable"), bool):
         errors.append("hotReloadable must be a boolean")
-    if not isinstance(entry.get("confidence"), str):
-        errors.append("confidence must be a string")
-    if not isinstance(entry.get("evidence"), str):
-        errors.append("evidence must be a string")
+    feature_id = entry.get("featureId")
+    if isinstance(feature_id, str) and not re.fullmatch(properties["featureId"]["pattern"], feature_id):
+        errors.append("featureId does not match schema pattern")
+    if "exclusions" in entry:
+        errors.extend(_exclusion_errors(entry["exclusions"]))
     return errors
 
 
-def _validate_schema_shape(schema: dict[str, Any]) -> list[str]:
+def _exclusion_errors(exclusions: Any) -> list[str]:
+    if not isinstance(exclusions, list):
+        return ["exclusions must be a list"]
     errors = []
-    required_root = {"schemaVersion", "contractName", "romFamily", "androidApi", "exclusions", "entries"}
-    for k in required_root:
-        if k not in schema:
+    for i, exclusion in enumerate(exclusions):
+        if not isinstance(exclusion, dict):
+            errors.append(f"exclusion[{i}] must be an object")
+            continue
+        for key in ("preferenceKey", "reason"):
+            if not isinstance(exclusion.get(key), str) or not exclusion[key].strip():
+                errors.append(f"exclusion[{i}] requires a non-empty {key} string")
+    return errors
+
+
+def _validate_schema_shape(inventory: Any, schema: dict[str, Any]) -> list[str]:
+    if not isinstance(inventory, dict):
+        return ["inventory root must be an object"]
+    errors = []
+    for k in sorted(schema["required"]):
+        if k not in inventory:
             errors.append(f"Schema requires root field '{k}'")
-    if not isinstance(schema.get("exclusions"), list):
-        errors.append("root 'exclusions' must be a list")
+    for name, prop in schema["properties"].items():
+        value = inventory.get(name)
+        expected = prop.get("type")
+        if expected == "string" and not isinstance(value, str):
+            errors.append(f"root '{name}' must be a string")
+        elif expected == "integer" and type(value) is not int:
+            errors.append(f"root '{name}' must be an integer")
+        elif expected == "array" and not isinstance(value, list):
+            errors.append(f"root '{name}' must be a list")
+        if "const" in prop and value != prop["const"]:
+            errors.append(f"unsupported {name}: {value!r}")
     return errors
 
 
@@ -828,7 +833,7 @@ def validate_inventory(
     """
     errors: list[str] = []
 
-    shape_errors = _validate_schema_shape(inventory)
+    shape_errors = _validate_schema_shape(inventory, schema)
     if shape_errors:
         # These are schema/input errors (exit 2)
         return 2, shape_errors
@@ -850,10 +855,14 @@ def validate_inventory(
         if not isinstance(entry, dict):
             errors.append(f"entry[{i}] is not an object")
             continue
-        for field in required:
+        entry_errors = []
+        for field in sorted(required):
             if field not in entry:
-                errors.append(f"entry[{i}] missing required field '{field}'")
-        errors.extend(_entry_value_types_ok(entry))
+                entry_errors.append(f"missing required field '{field}'")
+        entry_errors.extend(_entry_value_types_ok(entry, schema))
+        if entry_errors:
+            errors.extend(f"entry[{i}] {error}" for error in entry_errors)
+            continue  # Never hash, iterate or resolve malformed field values.
 
         if entry.get("featureId") in seen_ids:
             errors.append(f"duplicate featureId: {entry.get('featureId')}")
@@ -887,15 +896,12 @@ def validate_inventory(
             if file_part and not (repo_root / file_part).is_file():
                 errors.append(f"entry[{i}] installer file does not exist: {file_part}")
 
-    # exclusions reason check at root
-    for i, ex in enumerate(inventory.get("exclusions", [])):
-        reason = ex.get("reason", "")
-        if not reason or not isinstance(reason, str):
-            errors.append(f"exclusion[{i}] missing a reason")
+    errors.extend(_exclusion_errors(inventory["exclusions"]))
 
     # coverage comparison
     if discovered is not None:
-        excluded_keys = {ex.get("preferenceKey", "") for ex in inventory.get("exclusions", [])}
+        excluded_keys = {ex["preferenceKey"] for ex in inventory["exclusions"]
+                         if isinstance(ex, dict) and isinstance(ex.get("preferenceKey"), str)}
         missing = []
         for key in discovered:
             if key not in seen_keys and key not in excluded_keys:
@@ -911,70 +917,41 @@ def validate_inventory(
     return 0, []
 
 
-def generate_markdown(inventory: dict[str, Any]) -> str:
-    lines: list[str] = []
-    lines.append("# Feature Effect and Restart Matrix")
-    lines.append("")
-    lines.append("Generated from `feature-semantics/a14.json`.")
-    lines.append("")
-
-    # Group by restartTarget, then installPhase
-    grouped: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
-    for entry in inventory.get("entries", []):
-        rt = entry.get("restartTarget", "UNKNOWN")
-        ip = entry.get("installPhase", "UNKNOWN")
-        grouped[rt][ip].append(entry)
-
-    for rt in sorted(grouped):
-        lines.append(f"## restartTarget: {rt}")
-        for ip in sorted(grouped[rt]):
-            lines.append(f"### installPhase: {ip}")
-            lines.append("")
-            lines.append("| Feature | preference key | target package | enable | disable | value-change | evidence | confidence |")
-            lines.append("|--------|----------------|----------------|--------|---------|--------------|----------|------------|")
-            for entry in sorted(grouped[rt][ip], key=lambda e: e.get("featureId", "")):
-                pkeys = ", ".join(entry.get("preferenceKeys", []))
-                ev = entry.get("evidence", "").replace("|", "\\|")
-                lines.append(
-                    f'| {entry.get("featureName", "").replace("|", "\\|")} '
-                    f'| {pkeys.replace("|", "\\|")} '
-                    f'| {entry.get("targetPackage", "")} '
-                    f'| {entry.get("enableEffect", "").replace("|", "\\|")} '
-                    f'| {entry.get("disableEffect", "").replace("|", "\\|")} '
-                    f'| {entry.get("valueChangeEffect", "").replace("|", "\\|")} '
-                    f'| {ev} '
-                    f'| {entry.get("confidence", "")} |'
-                )
-            lines.append("")
-
-    return "\n".join(lines)
-
-
 def cmd_init(args: argparse.Namespace) -> int:
+    output = args.output or args.repo_root / "feature-semantics" / "a14.json"
+    if output.exists():
+        print(f"Refusing to overwrite existing inventory: {output}; use --output for a new candidate and review its diff", file=sys.stderr)
+        return 2
     features = discover_features(args.repo_root)
     inventory = generate_inventory(args.repo_root, features)
-    INVENTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with INVENTORY_PATH.open("w", encoding="utf-8", newline="\n") as f:
-        json.dump(inventory, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    print(f"Wrote {len(inventory['entries'])} entries to {INVENTORY_PATH}")
+    try:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with output.open("x", encoding="utf-8", newline="\n") as f:
+            json.dump(inventory, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    except OSError as error:
+        print(f"Failed to create inventory: {error}", file=sys.stderr)
+        return 2
+    print(f"Wrote {len(inventory['entries'])} candidate entries to {output}; review before merging")
     return 0
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    if not SCHEMA_PATH.is_file():
-        print(f"Schema not found: {SCHEMA_PATH}", file=sys.stderr)
+    schema_path = args.repo_root / "feature-semantics" / "schema.json"
+    inventory_path = args.repo_root / "feature-semantics" / "a14.json"
+    if not schema_path.is_file():
+        print(f"Schema not found: {schema_path}", file=sys.stderr)
         return 2
-    if not INVENTORY_PATH.is_file():
-        print(f"Inventory not found: {INVENTORY_PATH}", file=sys.stderr)
+    if not inventory_path.is_file():
+        print(f"Inventory not found: {inventory_path}", file=sys.stderr)
         return 2
     try:
-        schema = load_schema(SCHEMA_PATH)
+        schema = load_schema(schema_path)
     except (json.JSONDecodeError, OSError) as e:
         print(f"Failed to load schema: {e}", file=sys.stderr)
         return 2
     try:
-        inventory = load_inventory(INVENTORY_PATH)
+        inventory = load_inventory(inventory_path)
     except (json.JSONDecodeError, OSError) as e:
         print(f"Failed to load inventory: {e}", file=sys.stderr)
         return 2
@@ -995,10 +972,13 @@ def cmd_validate(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Feature semantics auditor for CustoMIUIzer A14")
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT, help="repository root (default: parent of tools/)")
+    parser.add_argument("--output", type=Path, help="--init only: new candidate path; existing files are never overwritten")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--init", action="store_true", help="generate feature-semantics/a14.json")
+    group.add_argument("--init", action="store_true", help="bootstrap a new inventory; preserve existing calibration")
     group.add_argument("--validate", action="store_true", help="validate a14.json")
     args = parser.parse_args(argv)
+    if args.output and not args.init:
+        parser.error("--output requires --init")
     if args.init:
         return cmd_init(args)
     if args.validate:

@@ -10,9 +10,12 @@
 
 ```powershell
 python tools/extract_process_matrix.py
+python tools/query_aux_data.py matrix --target SYSTEM_UI --limit 5
 ```
 
 修改 catalog / routing 后核对生成 diff，并运行 Python 工具测试和 CI determinism。不要手动改生成表。非表格进程 / ClassLoader 合同维护在 [架构](../../ARCHITECTURE.md#入口与进程路由)，不再复制数万字的生成 Markdown。
+
+语义、ROM 契约及基线的只读查询、字段选择与证据边界见[工具入口](../TOOLS.md#辅助数据按需查询)。
 
 ## 历史 fuxi 样本
 

@@ -1,5 +1,8 @@
 import importlib.util
+import contextlib
+import io
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -89,15 +92,72 @@ class TestAuditFeatureSemantics(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertTrue(any("reason" in e.lower() for e in errors))
 
-    def test_markdown_generation(self):
-        data = _valid_inventory()
-        md = _audit.generate_markdown(data)
-        self.assertIn("# Feature Effect and Restart Matrix", md)
-        self.assertIn("## restartTarget: UNKNOWN", md)
-        self.assertIn("### installPhase: UNKNOWN", md)
-        self.assertIn("| Feature | preference key | target package | enable | disable | value-change | evidence | confidence |", md)
-        self.assertIn("Test Feature", md)
-        self.assertIn("pref_test", md)
+    def test_root_shape_and_version_are_input_errors(self):
+        for update in ({"schemaVersion": 999}, {"schemaVersion": True}, {"androidApi": "34"},
+                       {"contractName": []}, {"entries": {}}, {"exclusions": {}}):
+            with self.subTest(update=update):
+                data = _valid_inventory()
+                data.update(update)
+                code, errors = _audit.validate_inventory(self.repo_root, data, self.schema)
+                self.assertEqual(2, code)
+                self.assertTrue(errors)
+        self.assertEqual(2, _audit.validate_inventory(self.repo_root, [], self.schema)[0])
+
+    def test_malformed_fields_fail_without_crashing(self):
+        for update in ({"featureId": {}}, {"featureId": "UPPER"}, {"preferenceKeys": [{}]},
+                       {"preferenceKeys": "pref_test"}, {"sourceFile": []}, {"installer": []},
+                       {"confidence": []}, {"xmlSource": 1}, {"notes": None}, {"exclusions": [None]}):
+            with self.subTest(update=update):
+                data = _valid_inventory()
+                data["entries"][0].update(update)
+                code, errors = _audit.validate_inventory(self.repo_root, data, self.schema, {"pref_test"})
+                self.assertEqual(1, code)
+                self.assertTrue(errors)
+
+    def test_malformed_exclusions_fail_without_crashing(self):
+        for exclusion in (None, [], {"preferenceKey": {}, "reason": "test"},
+                          {"preferenceKey": "pref_test", "reason": []}):
+            with self.subTest(exclusion=exclusion):
+                data = _valid_inventory()
+                data["exclusions"] = [exclusion]
+                code, errors = _audit.validate_inventory(self.repo_root, data, self.schema, {"pref_test"})
+                self.assertEqual(1, code)
+                self.assertTrue(any("exclusion[0]" in error for error in errors))
+
+    def test_bootstrap_never_overwrites_calibrated_inventory_or_candidate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            inventory = root / "feature-semantics/a14.json"
+            inventory.parent.mkdir()
+            inventory.write_text("calibrated", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(2, _audit.main(["--repo-root", str(root), "--init"]))
+            self.assertEqual("calibrated", inventory.read_text(encoding="utf-8"))
+            candidate = root / "candidate.json"
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(0, _audit.main(["--repo-root", str(root), "--init", "--output", str(candidate)]))
+            before = candidate.read_bytes()
+            self.assertEqual([], json.loads(before)["entries"])
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(2, _audit.main(["--repo-root", str(root), "--init", "--output", str(candidate)]))
+            self.assertEqual(before, candidate.read_bytes())
+            self.assertEqual("calibrated", inventory.read_text(encoding="utf-8"))
+
+    def test_validation_uses_selected_repository(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            data = _valid_inventory()
+            data["entries"][0]["sourceFile"] = ""
+            directory = root / "feature-semantics"
+            directory.mkdir()
+            (directory / "schema.json").write_text(json.dumps(self.schema), encoding="utf-8")
+            (directory / "a14.json").write_text(json.dumps(data), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(0, _audit.main(["--repo-root", str(root), "--validate"]))
+            data["schemaVersion"] = 999
+            (directory / "a14.json").write_text(json.dumps(data), encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(2, _audit.main(["--repo-root", str(root), "--validate"]))
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -37,13 +36,49 @@ class RomContractScanTest(unittest.TestCase):
                 "fields": [
                     {"name": "mValue", "type": "I", "required": True},
                 ],
+            }, {
+                "target": "launcher",
+                "class": "Lcom/example/Launcher;",
+                "methods": [{"name": "onCreate", "descriptor": "()V", "required": True}],
             }],
         }
-        r = self.run_scan(json.dumps(contract), [
-            "--target", f"systemui={FIXTURES / 'systemui'}",
-            "--output-json", os.path.join(tempfile.mkdtemp(), "out.json"),
-        ])
-        self.assertEqual(r.returncode, 0)
+        with tempfile.TemporaryDirectory() as temporary:
+            report = Path(temporary) / "out.json"
+            r = self.run_scan(json.dumps(contract), [
+                "--target", f"systemui={FIXTURES / 'systemui'}",
+                "--target", f"launcher={FIXTURES / 'launcher'}", "--output-json", str(report),
+            ])
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(0, json.loads(report.read_text(encoding="utf-8"))["exit_code"])
+            missing_launcher = self.run_scan(json.dumps(contract), ["--target", f"systemui={FIXTURES / 'systemui'}"])
+            self.assertEqual(1, missing_launcher.returncode, missing_launcher.stderr)
+
+    def test_validate_only_checks_contract_without_loading_samples(self):
+        contract = json.loads((REPO_ROOT / "rom-contracts/hyperos1-a14-core.json").read_text(encoding="utf-8"))
+        r = self.run_scan(json.dumps(contract), ["--validate-only"])
+        self.assertEqual(0, r.returncode, r.stderr)
+        self.assertIn("ROM compatibility has not been checked", r.stdout)
+        for change in ({"targets": {}}, {"schemaVersion": True}, {"androidApi": "34"},
+                       {"contractName": None}, {"targets": [{"target": "systemui"}]},
+                       {"targets": [{"target": "systemui", "class": "LSample;", "methods": [
+                           {"name": "foo", "required": "false"}]}]},
+                       {"targets": [{"target": "systemui", "class": "LSample;", "fields": [{"name": "a"}]}]}):
+            with self.subTest(change=change):
+                invalid = dict(contract, **change)
+                r = self.run_scan(json.dumps(invalid), ["--validate-only"])
+                self.assertEqual(2, r.returncode, r.stdout + r.stderr)
+        r = self.run_scan(json.dumps(contract), ["--validate-only", "--target", "systemui=missing"])
+        self.assertEqual(2, r.returncode)
+
+    def test_partial_coverage_counts_target_entries_without_promoting_optional_methods(self):
+        contract = json.loads((REPO_ROOT / "rom-contracts/hyperos1-a14-core.json").read_text(encoding="utf-8"))
+        required = sum(any(member.get("required", True) for member in target.get("methods", []) + target.get("fields", []))
+                       for target in contract["targets"])
+        coverage = contract["coverage"]
+        self.assertEqual(len(contract["targets"]), coverage["totalInThisFile"])
+        self.assertEqual(required, coverage["deterministicRequiredCount"])
+        self.assertEqual(len(contract["targets"]) - required, coverage["optionalCount"])
+        self.assertEqual("partial", coverage["status"])
 
     def test_required_method_missing_exits_1(self):
         contract = {

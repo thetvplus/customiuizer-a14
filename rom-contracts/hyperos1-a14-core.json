@@ -7,10 +7,11 @@
     "status": "partial",
     "verifiedBy": "source-reference",
     "deterministicRequiredCount": 15,
-    "optionalCount": 4,
+    "optionalCount": 3,
     "totalPlanned": 30,
-    "totalInThisFile": 19,
+    "totalInThisFile": 18,
     "notes": [
+      "Counts describe target entries (classes), not individual methods or verified ROM support.",
       "All 15 required entries have a full smali descriptor that can be derived from the source call: onFinishInflate()V, a concrete init(Z)V, setVisibility(I)V and the standard onClick(Landroid/view/View;)V callback.",
       "Optional entries are kept when the return type or the exact parameter list could not be confirmed from the repository alone; they must be verified against a real ROM before being promoted to required.",
       "Framework class android/app/Application is a system framework class; it is not part of the Launcher APK and is therefore in an independent framework target even though the hook is installed from com.miui.home.",

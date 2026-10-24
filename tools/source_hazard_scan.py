@@ -434,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
         help="predefined scan scope; ignored if --path is given",
     )
     p.add_argument("--baseline", default="tools/SOURCE_HAZARD_BASELINE.json")
-    p.add_argument("--write-baseline", action="store_true")
+    p.add_argument("--write-baseline", action="store_true", help="prune an existing baseline without accepting new fingerprints")
     p.add_argument("--strict-all", action="store_true")
     p.add_argument("--json-output")
     args = p.parse_args(argv)
@@ -446,18 +446,17 @@ def main(argv: list[str] | None = None) -> int:
     findings = collect(root, paths, baseline=baseline)
 
     if args.write_baseline:
-        baseline_path.parent.mkdir(parents=True, exist_ok=True)
-        accepted = {f.fingerprint for f in findings}
-        # Preserve dispositions from an existing baseline, default new findings to accepted.
-        if baseline_path.exists():
-            old = load_baseline(baseline_path)
-        else:
-            old = {}
+        # A refresh is not a risk review. New or missing baselines require an
+        # explicit reviewed edit; do not silently turn every finding into accepted.
+        if not baseline_path.is_file():
+            print("Refusing to create an accepted baseline without review; use --json-output to inspect findings", file=sys.stderr)
+            return 1
+        added = sorted({f.fingerprint for f in findings} - baseline.keys())
+        if added:
+            print(f"Refusing to accept {len(added)} new fingerprint(s); review the normal scan output before editing the baseline", file=sys.stderr)
+            return 1
         for f in findings:
-            if f.fingerprint in old:
-                f.disposition = old[f.fingerprint]
-            else:
-                f.disposition = "accepted"
+            f.disposition = baseline[f.fingerprint]
         payload = {
             "schema": 3,
             "scope": paths,

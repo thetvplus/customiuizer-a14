@@ -202,6 +202,42 @@ class CIWorkflowRegressionTest(unittest.TestCase):
 
 
 class SourceHazardTest(unittest.TestCase):
+    def test_baseline_refresh_cannot_create_or_accept_new_risk(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "app/src/main/java/Example.kt"
+            source.parent.mkdir(parents=True)
+            source.write_text('fun log() { System.out.println("test") }\n', encoding="utf-8")
+            baseline = root / "baseline.json"
+            args = ["--repo-root", str(root), "--baseline", "baseline.json", "--write-baseline"]
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(1, source_hazard_scan.main(args))
+            self.assertFalse(baseline.exists())
+            baseline.write_text('{"findings": []}\n', encoding="utf-8")
+            before = baseline.read_bytes()
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(1, source_hazard_scan.main(args))
+            self.assertEqual(before, baseline.read_bytes())
+
+    def test_baseline_refresh_only_prunes_and_preserves_review_dispositions(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "app/src/main/java/Example.kt"
+            source.parent.mkdir(parents=True)
+            source.write_text('fun log() { System.out.println("test") }\n', encoding="utf-8")
+            findings = source_hazard_scan.collect(root, ["app/src/main/java"])
+            self.assertTrue(findings)
+            baseline = root / "baseline.json"
+            reviewed = [{"fingerprint": finding.fingerprint, "disposition": "pending"} for finding in findings]
+            reviewed.append({"fingerprint": "obsolete", "disposition": "accepted"})
+            baseline.write_text(json.dumps({"findings": reviewed}), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(0, source_hazard_scan.main([
+                    "--repo-root", str(root), "--baseline", "baseline.json", "--write-baseline"]))
+            result = json.loads(baseline.read_text(encoding="utf-8"))
+            self.assertEqual({finding.fingerprint for finding in findings}, set(result["fingerprints"]))
+            self.assertEqual({"pending"}, {finding["disposition"] for finding in result["findings"]})
+
     def test_finds_swallowed_throwable(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
