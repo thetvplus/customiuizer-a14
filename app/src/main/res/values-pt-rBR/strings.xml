@@ -1218,9 +1218,9 @@
     <string name="system_island_width_auto_title">Largura recolhida automática</string>
     <string name="system_island_width_auto_summ">Escolhe a largura pelo conteúdo, altura e área segura. Desative para ajustar as ilhas curta e longa separadamente.</string>
     <string name="system_island_width_short_title">Largura da ilha curta</string>
-    <string name="system_island_width_short_summ">Largura preferida da ilha curta. Recortes e área segura da tela têm prioridade.</string>
+    <string name="system_island_width_short_summ">Largura preferida da ilha curta. Recortes e área segura da tela têm prioridade. O relógio e a bateria se movem ou se ocultam quando faltar espaço.</string>
     <string name="system_island_width_medium_title">Largura da ilha longa</string>
-    <string name="system_island_width_medium_summ">Largura preferida da ilha longa, nunca menor que a curta. A área segura tem prioridade.</string>
+    <string name="system_island_width_medium_summ">Largura preferida da ilha longa, nunca menor que a curta. A área segura tem prioridade. O relógio e a bateria se movem ou se ocultam quando faltar espaço.</string>
     <string name="system_island_chat_excluded_apps_title">Apps com avisos flutuantes</string>
     <string name="system_island_chat_excluded_apps_summ">Os apps selecionados mantêm os avisos flutuantes do sistema. Toasts e música não são afetados.</string>
     <string name="system_island_gesture_left">Deslizar para a esquerda</string>

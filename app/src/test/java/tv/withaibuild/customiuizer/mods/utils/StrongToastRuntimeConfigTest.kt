@@ -138,7 +138,7 @@ class StrongToastRuntimeConfigTest {
         state.preferenceObserver.onChange("system_island_height")
         assertEquals(44, state.snapshotRef.get().islandHeightDp)
         assertEquals(40, SystemUIStrongToastHooks.resolveSnapshot(event)!!.islandHeightDp)
-        for ((stored, expected) in listOf(-100 to 38, 100 to 44, 41 to 41)) {
+        for ((stored, expected) in listOf(-100 to 32, 32 to 32, 100 to 64, 64 to 64, 41 to 41)) {
             prefs.put("system_island_height", stored)
             state.preferenceObserver.onChange("system_island_height")
             assertEquals(expected, state.snapshotRef.get().islandHeightDp)
@@ -158,10 +158,10 @@ class StrongToastRuntimeConfigTest {
         assertEquals(false, state.snapshotRef.get().automaticWidth)
         prefs.put("system_island_width_short", 1000)
         state.preferenceObserver.onChange("system_island_width_short")
-        assertEquals(224, state.snapshotRef.get().shortWidthDp)
+        assertEquals(320, state.snapshotRef.get().shortWidthDp)
         prefs.put("system_island_width_medium", -1)
         state.preferenceObserver.onChange("system_island_width_medium")
-        assertEquals(224, state.snapshotRef.get().longWidthDp)
+        assertEquals(320, state.snapshotRef.get().longWidthDp)
         assertEquals(184, first.shortWidthDp)
     }
 

@@ -52,7 +52,7 @@ internal data class IslandOptions(
             val waveformMode = if (prefs.containsKey("system_island_waveform_mode"))
                 prefs.getStringAsInt("system_island_waveform_mode", 1).let { if (it in 0..2) it else 1 }
                 else if (prefs.getBoolean("system_island_waveform", true)) 1 else 0
-            val shortWidth = prefs.getInt("system_island_width_short", 184).coerceIn(160, 224)
+            val shortWidth = prefs.getInt("system_island_width_short", 184).coerceIn(IslandSizing.SHORT_MIN_DP, IslandSizing.SHORT_MAX_DP)
             val legacyFeedback = mode == StrongToastPresentationMode.DYNAMIC_ISLAND &&
                 IslandSystemKind.entries.none { prefs.containsKey(it.preferenceKey) }
             return IslandOptions(mode == StrongToastPresentationMode.DYNAMIC_ISLAND,
@@ -61,10 +61,10 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_island_simplified"),
                 prefs.getStringSet("system_island_excluded_apps"),
                 prefs.getBoolean("system_island_chat"),
-                prefs.getInt("system_island_height", 40).coerceIn(38, 44),
+                prefs.getInt("system_island_height", 40).coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP),
                 prefs.getBoolean("system_island_width_auto", true),
                 shortWidth,
-                prefs.getInt("system_island_width_medium", 240).coerceIn(184, 280).coerceAtLeast(shortWidth),
+                prefs.getInt("system_island_width_medium", 240).coerceIn(IslandSizing.LONG_MIN_DP, IslandSizing.LONG_MAX_MANUAL_DP).coerceAtLeast(shortWidth),
                 IslandEntranceStyle.fromPreference(prefs.getStringAsInt("system_island_entrance_style", 1)),
                 prefs.getStringSet("system_island_chat_excluded_apps"),
                 prefs.getBoolean("system_island_media_swipe", true),
@@ -267,7 +267,8 @@ internal object DynamicIslandActivities {
         val controller = IslandActivityController(statusBar.context, source, options, resolved,
             dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader,
             freeform = freeformAccess, pipStateReader = { pipObserver?.snapshot }, geometryHost = statusBar.rootView,
-            trackApplicationOverlays = true)
+            trackApplicationOverlays = true,
+            pipCandidate = if (options.media || options.hideInFloatingWindow) IslandPipCandidateAccess(statusBar.context) else null)
         XposedHelpers.setAdditionalInstanceField(statusBar, OWNER, controller)
         active = WeakReference(controller)
         pipObserver?.snapshot?.let(controller::pipChanged)

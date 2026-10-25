@@ -1228,9 +1228,9 @@
     <string name="system_island_width_auto_title">自动调整收起宽度</string>
     <string name="system_island_width_auto_summ">按内容、高度和物理安全区域选择宽度，关闭后可分别设置短岛和长岛。</string>
     <string name="system_island_width_short_title">短岛宽度</string>
-    <string name="system_island_width_short_summ">短岛的首选宽度。开孔与屏幕安全区域优先，必要时缩宽或下移。</string>
+    <string name="system_island_width_short_summ">短岛的首选宽度。开孔与屏幕安全区域优先，必要时缩宽或下移。 时间和电池会让位，放不下时隐藏。</string>
     <string name="system_island_width_medium_title">长岛宽度</string>
-    <string name="system_island_width_medium_summ">长岛的首选宽度，不窄于短岛。开孔与屏幕安全区域优先。</string>
+    <string name="system_island_width_medium_summ">长岛的首选宽度，不窄于短岛。开孔与屏幕安全区域优先。 时间和电池会让位，放不下时隐藏。</string>
     <string name="system_island_chat_excluded_apps_title">保留悬浮的应用</string>
     <string name="system_island_chat_excluded_apps_summ">所选应用保留系统悬浮通知，不影响 Toast 和音乐。</string>
     <string name="system_island_gesture_left">左滑动作</string>

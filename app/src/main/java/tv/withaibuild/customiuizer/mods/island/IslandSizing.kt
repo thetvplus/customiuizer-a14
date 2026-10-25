@@ -9,12 +9,18 @@ internal object IslandSizing {
     const val LONG_MAX_DP = 240
     const val COLLAPSED_HEIGHT_DP = 40
     const val EDGE_DP = 16
+    const val HEIGHT_MIN_DP = 32
+    const val HEIGHT_MAX_DP = 64
+    const val SHORT_MIN_DP = 96
+    const val SHORT_MAX_DP = 320
+    const val LONG_MIN_DP = 120
+    const val LONG_MAX_MANUAL_DP = 400
 
     fun maximumWidth(density: Float, screen: Int, clearance: Int,
         romMaximum: Int = Int.MAX_VALUE, shortDp: Int = SHORT_DP,
         longDp: Int = LONG_MAX_DP, manual: Boolean = false, heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true): Int {
-        val short = if (manual) shortDp.coerceIn(160, 224) else automatic(SHORT_DP, heightDp)
-        val long = if (manual) maxOf(short, longDp.coerceIn(184, 280)) else automatic(LONG_MAX_DP, heightDp)
+        val short = if (manual) shortDp.coerceIn(SHORT_MIN_DP, SHORT_MAX_DP) else automatic(SHORT_DP, heightDp)
+        val long = if (manual) maxOf(short, longDp.coerceIn(LONG_MIN_DP, LONG_MAX_MANUAL_DP)) else automatic(LONG_MAX_DP, heightDp)
         return minOf((long * density).roundToInt(), screen - (if (centered) (24 * density).roundToInt() else 0),
             clearance, romMaximum).coerceAtLeast(0)
     }
@@ -23,8 +29,8 @@ internal object IslandSizing {
         leftContent: Float = 0f, rightContent: Float = 0f, romMaximum: Int = Int.MAX_VALUE,
         shortDp: Int = SHORT_DP, longDp: Int = LONG_MAX_DP, manual: Boolean = false,
         heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true): Int {
-        val short = if (manual) shortDp.coerceIn(160, 224) else automatic(SHORT_DP, heightDp)
-        val long = if (manual) maxOf(short, longDp.coerceIn(184, 280)) else automatic(LONG_MAX_DP, heightDp)
+        val short = if (manual) shortDp.coerceIn(SHORT_MIN_DP, SHORT_MAX_DP) else automatic(SHORT_DP, heightDp)
+        val long = if (manual) maxOf(short, longDp.coerceIn(LONG_MIN_DP, LONG_MAX_MANUAL_DP)) else automatic(LONG_MAX_DP, heightDp)
         val shortWidth = (short * density).roundToInt()
         val longWidth = (long * density).roundToInt()
         val content = ceil(if (centered) gap + 2 * (maxOf(leftContent, rightContent) + EDGE_DP * density)
@@ -34,5 +40,5 @@ internal object IslandSizing {
         return minOf(preferred, ceiling)
     }
 
-    private fun automatic(base: Int, height: Int) = (base * (1f + (height.coerceIn(38, 44) - 40) / 80f)).roundToInt()
+    private fun automatic(base: Int, height: Int) = (base * (1f + (height.coerceIn(HEIGHT_MIN_DP, HEIGHT_MAX_DP) - 40) / 80f)).roundToInt()
 }

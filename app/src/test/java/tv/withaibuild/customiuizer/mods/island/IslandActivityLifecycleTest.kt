@@ -94,11 +94,14 @@ class IslandActivityLifecycleTest {
         pipStateReader: (() -> IslandPipSnapshot?)? = null,
         io: kotlinx.coroutines.CoroutineDispatcher = dispatcher,
         entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
-        geometryHost: View? = null): IslandActivityController {
+        geometryHost: View? = null, pipCandidate: IslandPipCandidatePort? = null,
+        height: Int = 40, automaticWidth: Boolean = true, shortWidth: Int = 184, longWidth: Int = 240): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
             put("system_island_expanded_width", width)
+            put("system_island_height", height); put("system_island_width_auto", automaticWidth)
+            put("system_island_width_short", shortWidth); put("system_island_width_medium", longWidth)
             put("system_island_simplified", simplified)
             put("system_island_chat", chat)
             put("system_island_chat_excluded_apps", chatExcluded)
@@ -110,7 +113,7 @@ class IslandActivityLifecycleTest {
             put("system_island_entrance_style", entranceStyle.ordinal.toString())
         }
         return IslandActivityController(context, prefs, IslandOptions.read(prefs), native, io, spectrumBackend = spectrumBackend,
-            freeform = freeform, pipStateReader = pipStateReader, geometryHost = geometryHost).also {
+            freeform = freeform, pipStateReader = pipStateReader, geometryHost = geometryHost, pipCandidate = pipCandidate).also {
             owner = it
             it.connectSafety(Any())
             it.refreshFloatingWindows()
@@ -178,6 +181,16 @@ class IslandActivityLifecycleTest {
         shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
         assertEquals("Disposed owner must not start another geometry read", before, metricsReads)
     }
+    @Test fun manualWideGeometryActuallyReachesTheWindowAndRespectsThePhysicalViewport() {
+        val controller = controller(automaticWidth = false, shortWidth = 320, longWidth = 400, height = 64)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 5000))
+        drain()
+        val density = context.resources.displayMetrics.density
+        assertEquals(kotlin.math.round(320 * density).toInt(), shell!!.width)
+        assertEquals(kotlin.math.round(64 * density).toInt(), shell!!.height)
+        assertTrue(shell!!.width <= metricsWidth)
+    }
+
     private fun revealMedia() {
         drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(750)); drain()
@@ -952,6 +965,58 @@ class IslandActivityLifecycleTest {
         drain()
         assertEquals(1, removes)
         assertEquals(IslandWindowPresentation.Phase.IDLE, presentation.phase)
+    }
+
+    @Test fun homeAdmissionWaitsForAutoPipBeforeApplyingEitherFloatingWindowPolicy() {
+        for (hideAll in listOf(false, true)) {
+            val before = adds
+            var queries = 0
+            val probe = IslandPipCandidatePort { pkg, user -> queries++; IslandPipCandidate(pkg, user, 17) }
+            val controller = controller(media = true, hideFloating = hideAll, pipCandidate = probe)
+            controller.foregroundChanged(context.packageName)
+            native.player = launchablePlayer("late-auto-pip-$hideAll")
+            controller.updateFromNative(native); drain()
+            controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); revealMedia()
+            assertEquals("No premature 750ms entrance", before, adds)
+            assertEquals(1, queries)
+            pip(controller, 1, 3)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(150)); drain()
+            assertEquals(before, adds)
+            pip(controller, 2, 4); drain()
+            assertEquals(before + if (hideAll) 0 else 1, adds)
+            repeat(3) { controller.updateFromNative(native); revealMedia() }
+            assertEquals("One settled entrance, no half entrance followed by another", before + if (hideAll) 0 else 1, adds)
+            pip(controller, 3, 0); revealMedia()
+            assertEquals(before + 1, adds)
+            controller.dispose(); drain()
+        }
+    }
+
+    @Test fun delayedFirstMediaAtHomeStillUsesTheOutgoingAutoPipAdmissionGate() {
+        val controller = controller(media = true, pipCandidate = IslandPipCandidatePort { pkg, user ->
+            IslandPipCandidate(pkg, user, 17)
+        })
+        controller.foregroundChanged(context.packageName)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        native.player = launchablePlayer("first-media-after-home-pip")
+        controller.updateFromNative(native); revealMedia()
+        assertEquals(0, adds)
+        pip(controller, 1, 3); pip(controller, 2, 4); drain()
+        assertEquals(1, adds)
+    }
+
+    @Test fun aNegativeAutoPipProbePreservesTheConfirmedMusicWindowReturnDeadline() {
+        var queries = 0
+        val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName),
+            pipCandidate = IslandPipCandidatePort { _, _ -> queries++; null })
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("ordinary-music-fast-gate")
+        controller.updateFromNative(native); drain()
+        nativeReturn(controller)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
+        assertEquals(1, queries)
+        assertEquals(1, adds)
     }
 
     @Test fun hidingTheEntireIslandRetainsNativeToastAndHeadsUpAndDropsOldFeedback() {

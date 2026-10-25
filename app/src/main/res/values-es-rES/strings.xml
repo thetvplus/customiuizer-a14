@@ -1217,9 +1217,9 @@
     <string name="system_island_width_auto_title">Ancho contraído automático</string>
     <string name="system_island_width_auto_summ">Elige la anchura según el contenido, la altura y el área segura. Desactívalo para ajustar las islas corta y larga por separado.</string>
     <string name="system_island_width_short_title">Ancho de la isla corta</string>
-    <string name="system_island_width_short_summ">Anchura preferida de la isla corta. Los recortes y el área segura tienen prioridad.</string>
+    <string name="system_island_width_short_summ">Anchura preferida de la isla corta. Los recortes y el área segura tienen prioridad. La hora y la batería se desplazan o se ocultan si falta espacio.</string>
     <string name="system_island_width_medium_title">Ancho de la isla larga</string>
-    <string name="system_island_width_medium_summ">Anchura preferida de la isla larga, nunca menor que la corta. El área segura tiene prioridad.</string>
+    <string name="system_island_width_medium_summ">Anchura preferida de la isla larga, nunca menor que la corta. El área segura tiene prioridad. La hora y la batería se desplazan o se ocultan si falta espacio.</string>
     <string name="system_island_chat_excluded_apps_title">Apps con avisos flotantes</string>
     <string name="system_island_chat_excluded_apps_summ">Las apps seleccionadas conservan los avisos flotantes del sistema. No afecta a los Toast ni a la música.</string>
     <string name="system_island_gesture_left">Deslizar a la izquierda</string>

@@ -1251,9 +1251,9 @@
     <string name="system_island_width_auto_title">Automatic collapsed width</string>
     <string name="system_island_width_auto_summ">Choose widths from content, height and the physical safe area. Turn off to set short and long widths separately.</string>
     <string name="system_island_width_short_title">Short island width</string>
-    <string name="system_island_width_short_summ">Preferred short-island width. Physical cutouts and screen safety take priority.</string>
+    <string name="system_island_width_short_summ">Preferred short-island width. Physical cutouts and screen safety take priority. Time and battery move aside or hide if needed.</string>
     <string name="system_island_width_medium_title">Long island width</string>
-    <string name="system_island_width_medium_summ">Preferred long-island width, never narrower than the short island. Physical safety takes priority.</string>
+    <string name="system_island_width_medium_summ">Preferred long-island width, never narrower than the short island. Physical safety takes priority. Time and battery move aside or hide if needed.</string>
     <string name="system_island_chat_excluded_apps_title">Native notification apps</string>
     <string name="system_island_chat_excluded_apps_summ">Selected apps keep native heads-up notifications. Toasts and media are unaffected.</string>
     <string name="system_island_gesture_left">Swipe left</string>

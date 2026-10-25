@@ -268,6 +268,46 @@ class IslandStatusBarCompactTest {
         activity.finish()
     }
 
+    @Test fun aWideManualIslandLetsTheClockAndBatteryYieldAndRestoresThemOnShrink() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val root = FrameLayout(activity)
+        val clock = View(activity).apply { alpha = .7f }
+        val battery = View(activity).apply { alpha = .8f }
+        root.addView(clock); root.addView(battery); activity.setContentView(root)
+        root.layout(0, 0, 400, 50); clock.layout(8, 0, 60, 50); battery.layout(340, 0, 392, 50)
+        val compact = IslandStatusBarCompact(root, clock, battery, animationsEnabled = { false })
+        val origin = IntArray(2); root.getLocationOnScreen(origin)
+        compact.show(Rect(origin[0] + 20, origin[1], origin[0] + 380, origin[1] + 50))
+        assertEquals(0f, clock.alpha); assertEquals(0f, battery.alpha)
+        compact.show(Rect(origin[0] + 110, origin[1], origin[0] + 290, origin[1] + 50))
+        assertEquals(.7f, clock.alpha); assertEquals(.8f, battery.alpha)
+        compact.restore(); activity.finish()
+    }
+
+    @Test fun aSmallSafetyMarginHidesNearEdgeIconsWithoutChangingTheIslandOrClearIcons() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val root = FrameLayout(activity)
+        val clock = View(activity); val battery = View(activity)
+        val near = View(activity).apply { alpha = .6f }
+        val far = View(activity).apply { alpha = .8f }
+        root.addView(clock); root.addView(battery); root.addView(near); root.addView(far)
+        activity.setContentView(root)
+        root.layout(0, 0, 400, 50); clock.layout(10, 0, 60, 50); battery.layout(350, 0, 390, 50)
+        val padding = kotlin.math.ceil(4f * root.resources.displayMetrics.density).toInt()
+        near.layout(200 + padding / 2, 0, 220 + padding / 2, 50)
+        far.layout(225 + padding, 0, 245 + padding, 50)
+        val compact = IslandStatusBarCompact(root, clock, battery, animationsEnabled = { false })
+        val origin = IntArray(2); root.getLocationOnScreen(origin)
+        val bounds = Rect(origin[0] + 100, origin[1], origin[0] + 200, origin[1] + 50)
+        compact.show(bounds)
+        assertEquals(0f, near.alpha)
+        assertEquals(.8f, far.alpha)
+        assertEquals(Rect(origin[0] + 100, origin[1], origin[0] + 200, origin[1] + 50), bounds)
+        compact.restore()
+        assertEquals(.6f, near.alpha)
+        activity.finish()
+    }
+
     @Test fun longRunningMusicPrunesReplacedIconsBeforeApplyingTheActiveEntryBound() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val root = FrameLayout(activity)

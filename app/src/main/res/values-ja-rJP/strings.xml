@@ -1218,9 +1218,9 @@
     <string name="system_island_width_auto_title">収納時の幅を自動調整</string>
     <string name="system_island_width_auto_summ">内容、高さ、画面の安全領域に合わせて幅を選択します。オフにすると短い島と長い島を個別に設定できます。</string>
     <string name="system_island_width_short_title">短いアイランドの幅</string>
-    <string name="system_island_width_short_summ">短い島の希望幅。カメラの切り欠きと画面の安全領域を優先します。</string>
+    <string name="system_island_width_short_summ">短い島の希望幅。カメラの切り欠きと画面の安全領域を優先します。 時刻と電池は必要に応じて移動または非表示になります。</string>
     <string name="system_island_width_medium_title">長いアイランドの幅</string>
-    <string name="system_island_width_medium_summ">長い島の希望幅。短い島以上とし、画面の安全領域を優先します。</string>
+    <string name="system_island_width_medium_summ">長い島の希望幅。短い島以上とし、画面の安全領域を優先します。 時刻と電池は必要に応じて移動または非表示になります。</string>
     <string name="system_island_chat_excluded_apps_title">標準通知を使うアプリ</string>
     <string name="system_island_chat_excluded_apps_summ">選択したアプリはシステムのフローティング通知を使用します。Toast と音楽には影響しません。</string>
     <string name="system_island_gesture_left">左スワイプ</string>

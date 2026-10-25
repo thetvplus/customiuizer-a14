@@ -52,6 +52,7 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
     private val position = IntArray(2)
     private val windowPosition = IntArray(2)
     private val island = Rect()
+    private val occlusionBounds = Rect()
     private val visibleBounds = Rect()
     private var active = false
     private var dirty = true
@@ -159,6 +160,9 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
     }
 
     private fun updateOcclusion() {
+        occlusionBounds.set(island)
+        val margin = root.get()?.resources?.displayMetrics?.density?.let { kotlin.math.ceil(4f * it).toInt() } ?: 0
+        occlusionBounds.inset(-margin, -margin)
         var changed = false
         for (entry in hidden) {
             val view = entry.view.get()
@@ -169,7 +173,7 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
                 view.getLocationOnScreen(position)
                 view.getLocationInWindow(windowPosition)
                 visibleBounds.offset(position[0] - windowPosition[0], position[1] - windowPosition[1])
-                overlaps = Rect.intersects(island, visibleBounds)
+                overlaps = Rect.intersects(occlusionBounds, visibleBounds)
             }
             if (entry.occluded != overlaps) { entry.occluded = overlaps; changed = true }
         }

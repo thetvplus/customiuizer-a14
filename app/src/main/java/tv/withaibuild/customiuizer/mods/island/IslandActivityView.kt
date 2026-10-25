@@ -49,6 +49,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var controlPlayback = PlaybackState.STATE_NONE
     private var baseTextSize = title.textSize
     private var iconSize = dp(24)
+    private var waveHeight = dp(20)
     private var controlsEnabled = false
     private var avatar = false
     private var slop = ViewConfiguration.get(context).scaledTouchSlop
@@ -239,7 +240,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         geometryWidth = width; geometryHeight = height
         this.maximumWidth = maximumWidth.coerceAtLeast(width).toFloat()
         this.cameraGap = cameraGap
-        iconSize = (dp(24) * (1f + (height.toFloat() / dp(40).coerceAtLeast(1) - 1f) / 3f)).toInt()
+        iconSize = iconSizeForHeight(height)
         val half = (if (cameraGap > 0) (width - cameraGap) / 2
             else dp(IslandSizing.EDGE_DP) + iconSize + dp(8)).coerceAtLeast(1)
         val iconParams = icon.layoutParams
@@ -247,14 +248,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             iconParams.width = iconSize; iconParams.height = iconSize
             icon.layoutParams = iconParams
         }
-        iconMask.cornerRadius = dp(7).toFloat()
+        val scale = iconSize.toFloat() / dp(24).coerceAtLeast(1)
+        iconMask.cornerRadius = dp(7) * scale
         iconMask.shape = if (avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
         left.setPadding(dp(IslandSizing.EDGE_DP), 0, 0, 0)
         layoutChild(left, half, height, Gravity.TOP or Gravity.START)
         layoutChild(text, captionRoom(width, cameraGap), height, Gravity.TOP or Gravity.END,
             end = dp(IslandSizing.EDGE_DP))
-        layoutChild(wave, dp(24), dp(20), Gravity.TOP or Gravity.END,
-            top = (height - dp(20)) / 2, end = dp(IslandSizing.EDGE_DP))
+        waveHeight = kotlin.math.round(dp(20) * scale).toInt().coerceAtLeast(1)
+        layoutChild(wave, iconSize, waveHeight, Gravity.TOP or Gravity.END,
+            top = (height - waveHeight) / 2, end = dp(IslandSizing.EDGE_DP))
         updateContour()
     }
 
@@ -283,10 +286,17 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     fun contentHeight(heightDp: Int) {
-        val size = (13f + (heightDp.coerceIn(38, 44) - 40) * .1f) * resources.displayMetrics.scaledDensity
+        val height = heightDp.coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP)
+        val size = (13f + (height - 40) * .1f) * resources.displayMetrics.scaledDensity
+        if (abs(title.textSize - size) > .001f) title.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
         baseTextSize = size
+        iconSize = iconSizeForHeight(dp(height))
         if (statusPaint.textSize != size) { statusPaint.textSize = size; statusFit = null }
     }
+
+    private fun iconSizeForHeight(height: Int) =
+        (dp(24) * (1f + (height.toFloat() / dp(40).coerceAtLeast(1) - 1f) / 3f)).toInt()
+            .coerceIn(dp(16).coerceAtLeast(1), maxOf(dp(16), height - dp(8)))
 
     fun prepareEntry(mediaReturn: Boolean = false) {
         motion?.cancel(); motion = null
@@ -533,7 +543,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         left.alpha = if (iconRoom && geometryHeight * sy >= iconSize) reveal else 0f
         if (mediaReturnProgress < 1f) left.alpha *= ((mediaReturnProgress - .72f) / .28f).coerceIn(0f, 1f)
         text.alpha = if (contentFits()) reveal * textReveal else 0f
-        wave.alpha = if (iconRoom && geometryHeight * sy >= dp(20)) reveal else 0f
+        wave.alpha = if (iconRoom && geometryHeight * sy >= waveHeight) reveal else 0f
         shape.resize(geometryWidth, geometryHeight, sx, sy)
         invalidateOutline()
     }

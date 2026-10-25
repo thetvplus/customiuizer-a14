@@ -1218,9 +1218,9 @@
     <string name="system_island_width_auto_title">Tự động chỉnh chiều rộng thu gọn</string>
     <string name="system_island_width_auto_summ">Chọn chiều rộng theo nội dung, chiều cao và vùng an toàn. Tắt để đặt riêng đảo ngắn và dài.</string>
     <string name="system_island_width_short_title">Chiều rộng đảo ngắn</string>
-    <string name="system_island_width_short_summ">Chiều rộng ưu tiên của đảo ngắn. Lỗ camera và vùng an toàn được ưu tiên.</string>
+    <string name="system_island_width_short_summ">Chiều rộng ưu tiên của đảo ngắn. Lỗ camera và vùng an toàn được ưu tiên. Đồng hồ và pin sẽ dịch chuyển hoặc ẩn khi thiếu chỗ.</string>
     <string name="system_island_width_medium_title">Chiều rộng đảo dài</string>
-    <string name="system_island_width_medium_summ">Chiều rộng ưu tiên của đảo dài, không hẹp hơn đảo ngắn. Vùng an toàn được ưu tiên.</string>
+    <string name="system_island_width_medium_summ">Chiều rộng ưu tiên của đảo dài, không hẹp hơn đảo ngắn. Vùng an toàn được ưu tiên. Đồng hồ và pin sẽ dịch chuyển hoặc ẩn khi thiếu chỗ.</string>
     <string name="system_island_chat_excluded_apps_title">Ứng dụng giữ thông báo nổi</string>
     <string name="system_island_chat_excluded_apps_summ">Các ứng dụng được chọn giữ thông báo nổi của hệ thống. Không ảnh hưởng đến Toast và nhạc.</string>
     <string name="system_island_gesture_left">Vuốt sang trái</string>

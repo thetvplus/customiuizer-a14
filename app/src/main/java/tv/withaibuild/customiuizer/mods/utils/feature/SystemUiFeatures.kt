@@ -1,5 +1,6 @@
 package tv.withaibuild.customiuizer.mods.utils.feature
 
+import tv.withaibuild.customiuizer.mods.island.IslandSizing
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.Controls
 import tv.withaibuild.customiuizer.mods.GlobalActions
@@ -886,14 +887,14 @@ internal class StrongToastRuntimeState private constructor(
         @JvmStatic
         internal fun buildSnapshot(source: Map<String, Any>): StrongToastRuntimeSnapshot {
             val mode = StrongToastPresentationMode.fromPreference(parsePreferenceInt(source[MODE_KEY]))
-            val shortWidth = parsePreferenceInt(source[SHORT_WIDTH_KEY], 184).coerceIn(160, 224)
+            val shortWidth = parsePreferenceInt(source[SHORT_WIDTH_KEY], 184).coerceIn(IslandSizing.SHORT_MIN_DP, IslandSizing.SHORT_MAX_DP)
             return StrongToastRuntimeSnapshot(
                 mode,
                 resolveIslandOffsetDp(source[ISLAND_OFFSET_KEY]),
-                parsePreferenceInt(source[ISLAND_HEIGHT_KEY], 40).coerceIn(38, 44),
+                parsePreferenceInt(source[ISLAND_HEIGHT_KEY], 40).coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP),
                 source[AUTO_WIDTH_KEY] as? Boolean ?: true,
                 shortWidth,
-                parsePreferenceInt(source[MEDIUM_WIDTH_KEY], 240).coerceIn(184, 280).coerceAtLeast(shortWidth),
+                parsePreferenceInt(source[MEDIUM_WIDTH_KEY], 240).coerceIn(IslandSizing.LONG_MIN_DP, IslandSizing.LONG_MAX_MANUAL_DP).coerceAtLeast(shortWidth),
                 IslandEntranceStyle.fromPreference(parsePreferenceInt(source[ENTRANCE_STYLE_KEY], 1)),
                 source[SIMPLIFIED_KEY] as? Boolean ?: false,
             )

@@ -111,7 +111,7 @@ class IslandOptionsTest {
     @Test fun compactHeightIsIndependentOfExpandedWidthAndClampsImportedValues() {
         val prefs = PrefMap().apply { put("system_island_expanded_width", 450) }
         assertEquals(40, IslandOptions.read(prefs).height)
-        for ((stored, expected) in listOf(-1 to 38, 38 to 38, 41 to 41, 44 to 44, 1000 to 44)) {
+        for ((stored, expected) in listOf(-1 to 32, 32 to 32, 38 to 38, 41 to 41, 44 to 44, 64 to 64, 1000 to 64)) {
             prefs.put("system_island_height", stored)
             assertEquals(expected, IslandOptions.read(prefs).height)
             assertEquals(450, prefs.getInt("system_island_expanded_width", 0))
@@ -135,7 +135,7 @@ class IslandOptionsTest {
         assertEquals(450, prefs.getInt("system_island_expanded_width", 0))
         prefs.put("system_island_width_short", -100)
         prefs.put("system_island_width_medium", 1000)
-        assertEquals(160, IslandOptions.read(prefs).shortWidth)
-        assertEquals(280, IslandOptions.read(prefs).longWidth)
+        assertEquals(96, IslandOptions.read(prefs).shortWidth)
+        assertEquals(400, IslandOptions.read(prefs).longWidth)
     }
 }

@@ -4,6 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandSizingTest {
+    @Test fun expandedManualRangeCanUseTheViewportWhileAutomaticWidthRetainsItsClearance() {
+        assertEquals(320, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 0f,
+            shortDp = 320, longDp = 400, manual = true))
+        assertEquals(376, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 1000f,
+            shortDp = 320, longDp = 400, manual = true))
+        assertEquals(220, IslandSizing.maximumWidth(1f, 400, 220, heightDp = 64))
+        assertEquals(240, IslandSizing.maximumWidth(1f, 400, 400))
+    }
     @Test fun animationUsesTheSameConfiguredAndNativeSafeLimitAsLayout() {
         assertEquals(240, IslandSizing.maximumWidth(1f, 400, 320))
         assertEquals(280, IslandSizing.maximumWidth(1f, 400, 320, manual = true, longDp = 280))

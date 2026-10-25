@@ -1224,9 +1224,9 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_width_auto_title">Otomatik daraltılmış genişlik</string>
     <string name="system_island_width_auto_summ">İçerik, yükseklik ve güvenli alana göre genişlik seçilir. Kısa ve uzun adayı ayrı ayarlamak için kapatın.</string>
     <string name="system_island_width_short_title">Kısa ada genişliği</string>
-    <string name="system_island_width_short_summ">Kısa ada için tercih edilen genişlik. Kamera deliği ve güvenli ekran alanı önceliklidir.</string>
+    <string name="system_island_width_short_summ">Kısa ada için tercih edilen genişlik. Kamera deliği ve güvenli ekran alanı önceliklidir. Yer kalmazsa saat ve pil kaydırılır veya gizlenir.</string>
     <string name="system_island_width_medium_title">Uzun ada genişliği</string>
-    <string name="system_island_width_medium_summ">Uzun ada için tercih edilen genişlik; kısa adadan dar olmaz. Güvenli alan önceliklidir.</string>
+    <string name="system_island_width_medium_summ">Uzun ada için tercih edilen genişlik; kısa adadan dar olmaz. Güvenli alan önceliklidir. Yer kalmazsa saat ve pil kaydırılır veya gizlenir.</string>
     <string name="system_island_chat_excluded_apps_title">Sistem bildirimi kullanan uygulamalar</string>
     <string name="system_island_chat_excluded_apps_summ">Seçilen uygulamalar sistemin kayan bildirimlerini korur. Toast ve müzik etkilenmez.</string>
     <string name="system_island_gesture_left">Sola kaydırma</string>

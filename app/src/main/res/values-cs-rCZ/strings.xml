@@ -1225,9 +1225,9 @@
     <string name="system_island_width_auto_title">Automatická šířka sbaleného ostrova</string>
     <string name="system_island_width_auto_summ">Šířka podle obsahu, výšky a bezpečné oblasti. Vypněte pro samostatné nastavení krátkého a dlouhého ostrova.</string>
     <string name="system_island_width_short_title">Šířka krátkého ostrova</string>
-    <string name="system_island_width_short_summ">Preferovaná šířka krátkého ostrova. Výřez a bezpečná oblast mají přednost.</string>
+    <string name="system_island_width_short_summ">Preferovaná šířka krátkého ostrova. Výřez a bezpečná oblast mají přednost. Hodiny a baterie se podle potřeby posunou nebo skryjí.</string>
     <string name="system_island_width_medium_title">Šířka dlouhého ostrůvku</string>
-    <string name="system_island_width_medium_summ">Preferovaná šířka dlouhého ostrova, alespoň jako krátký. Bezpečná oblast má přednost.</string>
+    <string name="system_island_width_medium_summ">Preferovaná šířka dlouhého ostrova, alespoň jako krátký. Bezpečná oblast má přednost. Hodiny a baterie se podle potřeby posunou nebo skryjí.</string>
     <string name="system_island_chat_excluded_apps_title">Aplikace s původními oznámeními</string>
     <string name="system_island_chat_excluded_apps_summ">Vybrané aplikace si ponechají systémová plovoucí oznámení. Toasty a hudba se nemění.</string>
     <string name="system_island_gesture_left">Přejetí vlevo</string>

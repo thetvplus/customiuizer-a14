@@ -1217,9 +1217,9 @@
     <string name="system_island_width_auto_title">Автоматическая ширина острова</string>
     <string name="system_island_width_auto_summ">Ширина зависит от содержимого, высоты и безопасной области экрана. Отключите для раздельной настройки.</string>
     <string name="system_island_width_short_title">Ширина короткого острова</string>
-    <string name="system_island_width_short_summ">Предпочтительная ширина короткого острова. Вырезы и безопасная область имеют приоритет.</string>
+    <string name="system_island_width_short_summ">Предпочтительная ширина короткого острова. Вырезы и безопасная область имеют приоритет. Часы и батарея сдвигаются или скрываются, если места недостаточно.</string>
     <string name="system_island_width_medium_title">Ширина длинного острова</string>
-    <string name="system_island_width_medium_summ">Предпочтительная ширина длинного острова, не уже короткого. Безопасная область имеет приоритет.</string>
+    <string name="system_island_width_medium_summ">Предпочтительная ширина длинного острова, не уже короткого. Безопасная область имеет приоритет. Часы и батарея сдвигаются или скрываются, если места недостаточно.</string>
     <string name="system_island_chat_excluded_apps_title">Приложения с обычными уведомлениями</string>
     <string name="system_island_chat_excluded_apps_summ">Выбранные приложения сохраняют системные всплывающие уведомления. Toast и музыка не меняются.</string>
     <string name="system_island_gesture_left">Смахивание влево</string>

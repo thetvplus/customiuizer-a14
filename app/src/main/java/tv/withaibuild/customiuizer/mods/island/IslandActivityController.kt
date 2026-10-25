@@ -88,6 +88,7 @@ internal class IslandActivityController(
     private val pipStateReader: (() -> IslandPipSnapshot?)? = null,
     geometryHost: View? = null,
     trackApplicationOverlays: Boolean = false,
+    pipCandidate: IslandPipCandidatePort? = null,
 ) : ScreenStateController.ScreenStateListener {
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
@@ -162,6 +163,7 @@ internal class IslandActivityController(
     private var observedPlaybackState: Int? = null
     private var mediaRevealAt: Long? = null
     private var pipSnapshot = IslandPipSnapshot(0, 0)
+    private val pipHomeGate = pipCandidate?.let { IslandPipHomeGate(scope, ioDispatcher, it, ::pipHomeGateChanged) }
     // Installation-time option: changing the switch requires the same SystemUI restart as
     // installing its native event hooks. Other preference refreshes cannot change this snapshot.
     private val hideInFloatingWindow = options.hideInFloatingWindow
@@ -274,6 +276,7 @@ internal class IslandActivityController(
         override fun onReceive(ctx: Context, intent: Intent) = ModuleHelper.guarded {
             // System-protected user-switch broadcasts only; discard the old user's feedback and session.
             if (intent.action == USER_SWITCHED) {
+                pipHomeGate?.cancel()
                 val userId = intent.getIntExtra("android.intent.extra.user_handle", -1)
                 foregroundUser = if (userId < 0) null else UserHandle.getUserHandleForUid(Math.multiplyExact(userId, 100000))
                 freeformKnown = !hideInFloatingWindow || freeform == null
@@ -353,6 +356,7 @@ internal class IslandActivityController(
         state.allowed = allowed
         presentation.refresh()
         if (!state.allowed) {
+            pipHomeGate?.cancel()
             clearChat()
             if (!shade) { clearMedia(); clearSystemActivity() }
             else {
@@ -400,6 +404,7 @@ internal class IslandActivityController(
         val wasHidden = floatingWindowBlocked()
         val wasBlocked = media?.let(pipSnapshot::blocks) == true
         pipSnapshot = snapshot
+        pipHomeGate?.nativeChanged(snapshot, renderNow = false)
         val blocked = media?.let(snapshot::blocks) == true
         if (blocked || wasBlocked || wasHidden || floatingWindowBlocked())
             mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
@@ -428,7 +433,8 @@ internal class IslandActivityController(
         // fence must not stall their existing exit animation on an old Surface buffer.
         if (exiting || !state.allowed) return true
         val pip = pipStateReader?.invoke()?.takeIf { it.generation >= pipSnapshot.generation } ?: pipSnapshot
-        return !floatingWindowBlocked(pip)
+        return !floatingWindowBlocked(pip) && !(pipHomeGate?.source != null &&
+            (hideInFloatingWindow || pipHomeGate.matches(lastContent as? IslandMediaContent)))
     }
 
     private var frameRecheckQueued = false
@@ -441,6 +447,22 @@ internal class IslandActivityController(
             frameRecheckQueued = true
             handler.post(frameRecheck)
         }
+    }
+
+    private fun pipHomeGateChanged(update: IslandPipHomeGate.Update) {
+        if (disposed) return
+        val sameMedia = media?.let { it.packageName == update.source.packageName && it.user == update.source.user } == true
+        if (update.confirmed && (hideInFloatingWindow || sameMedia)) {
+            mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
+            cancelMediaReturn()
+        }
+        if (update.refreshMedia && options.media && state.allowed && foregroundPackage == IslandMusicReturnSignal.LAUNCHER &&
+            (media == null || sameMedia)) nativeManager.get()?.let {
+            // PiP can briefly replace native media selection; read once after it settles.
+            foregroundBaseline = true
+            updateFromNative(it)
+        }
+        if (update.renderNow) render()
     }
 
     internal fun refreshFloatingWindows() = onMain {
@@ -477,6 +499,7 @@ internal class IslandActivityController(
     fun foregroundChanged(packageName: String?) = onMain {
         if (foregroundPackage == packageName) return@onMain
         val previous = foregroundPackage
+        pipHomeGate?.cancel()
         previousForegroundPackage = previous
         foregroundPackage = packageName
         foregroundChangedAt = SystemClock.uptimeMillis()
@@ -490,6 +513,10 @@ internal class IslandActivityController(
         // value exists. Direct App/Home launches must invalidate that result too.
         val pendingRead = readJob?.isActive == true
         val sourceChanged = media?.let { packageName == it.packageName || previous == it.packageName } == true
+        if (!disposed && options.enabled && state.allowed && packageName == IslandMusicReturnSignal.LAUNCHER &&
+            previous != null && previous != IslandMusicReturnSignal.LAUNCHER &&
+            (hideInFloatingWindow || options.media && (media == null || media?.packageName == previous)))
+            foregroundUser?.let { pipHomeGate?.begin(previous, it) }
         media?.let {
             if (packageName == it.packageName) {
                 displayedMedia = null
@@ -528,7 +555,8 @@ internal class IslandActivityController(
     internal fun nativeMusicReturn(frame: IslandMusicReturnSignal.Frame, committedAt: Long = SystemClock.uptimeMillis()) = onMain {
         pipStateReader?.invoke()?.let(::applyPipSnapshot)
         val current = media ?: return@onMain
-        if (pipSnapshot.blocks(current) || floatingWindowBlocked() || committedAt <= mediaReturnInvalidatedAt) return@onMain
+        if (pipSnapshot.blocks(current) || floatingWindowBlocked() ||
+            pipHomeGate?.let { it.confirmed && it.matches(current) } == true || committedAt <= mediaReturnInvalidatedAt) return@onMain
         if (disposed || !state.allowed || !options.mediaReturn || options.simplified || !frame.valid() ||
             !ValueAnimator.areAnimatorsEnabled() || !current.playing || frame.packageName != current.packageName ||
             frame.user != foregroundUser || frame.user != current.user || current.packageName !in options.mediaReturnApps ||
@@ -961,7 +989,7 @@ internal class IslandActivityController(
         val caption = label ?: feedback?.text
         val centered = options.position == 1
         val gap = if (centered) maxOf(dp(40), bounds.holeWidth + dp(16)) else 0
-        val clearance = if (centered) DynamicIslandStatusBarFade.compactClearance(bounds.width, dp(IslandSizing.SHORT_DP))
+        val clearance = if (centered && options.automaticWidth) DynamicIslandStatusBarFade.compactClearance(bounds.width, dp(IslandSizing.SHORT_DP))
             else bounds.safeRight - bounds.safeLeft
         val density = context.resources.displayMetrics.density
         val maximumWidth = IslandSizing.maximumWidth(density, bounds.width, clearance,
@@ -1005,6 +1033,7 @@ internal class IslandActivityController(
             val current = state.media(SystemClock.uptimeMillis())
             val bounds = screen
             if (!state.allowed || current?.playing != true || current.user == null || pipSnapshot.blocks(current) ||
+                pipHomeGate?.let { it.confirmed && (hideInFloatingWindow || it.matches(current)) } == true ||
                 current.user != foregroundUser || current.packageName !in options.mediaReturnApps ||
                 state.toast(SystemClock.uptimeMillis()) != null || bounds == null) null
             else geometry(mediaOnly = true)?.let { geometry ->
@@ -1026,6 +1055,13 @@ internal class IslandActivityController(
             publishMusicReturn()
             clearChat(); state.clearToast(); clearSystemActivity()
             mediaRevealAt = null
+            hide(animate = state.allowed)
+            return false
+        }
+        if (pipHomeGate?.source != null && (hideInFloatingWindow ||
+                state.toast(SystemClock.uptimeMillis()) == null && pipHomeGate.matches(media))) {
+            // Hold admission, not the ordinary music-return transaction, during the one query.
+            publishMusicReturn()
             hide(animate = state.allowed)
             return false
         }
@@ -1307,6 +1343,7 @@ internal class IslandActivityController(
         handler.removeCallbacks(nativeRefresh)
         handler.removeCallbacks(frameRecheck)
         frameRecheckQueued = false
+        pipHomeGate?.close()
         freeformGeneration++
         freeformJob?.cancel(); freeformJob = null
         applicationOverlays?.close(); applicationOverlays = null
