@@ -53,7 +53,7 @@ class IslandMotionFramesTest {
             assertEquals(IslandMotion.SECONDARY, entrance.duration)
             assertTrue(entrance.duration > IslandMotion.MORPH)
             entrance.currentPlayTime = 32
-            assertEquals(0f, shell.getChildAt(0).alpha, .001f)
+            assertEquals(1f, shell.getChildAt(0).alpha, .001f)
             entrance.currentPlayTime = 200
             assertTrue(shell.getChildAt(0).alpha > .5f)
             entrance.end()

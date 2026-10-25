@@ -35,7 +35,13 @@ internal object IslandSizing {
         val longWidth = (long * density).roundToInt()
         val content = ceil(if (centered) gap + 2 * (maxOf(leftContent, rightContent) + EDGE_DP * density)
             else leftContent + rightContent + (2 * EDGE_DP + 8) * density).toInt()
-        val preferred = if (manual && content > shortWidth) longWidth else maxOf(shortWidth, content)
+        // Form selection must not depend on the manual size: shrinking the short form
+        // must not promote the same content to a wider long form. Match the natural
+        // short-form threshold at this height, then apply the chosen manual dimension.
+        val shortThreshold = (automatic(SHORT_DP, heightDp) * density).roundToInt()
+        val preferred = if (manual) {
+            if (content > shortThreshold) longWidth else shortWidth
+        } else maxOf(shortWidth, content)
         val ceiling = maximumWidth(density, screen, clearance, romMaximum, shortDp, longDp, manual, heightDp, centered)
         return minOf(preferred, ceiling)
     }

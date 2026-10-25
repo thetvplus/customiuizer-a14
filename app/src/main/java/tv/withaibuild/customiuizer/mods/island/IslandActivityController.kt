@@ -1118,7 +1118,9 @@ internal class IslandActivityController(
             !showingMedia && lastContent !== toast) invalidateActions()
         val secondary = attached && lastContent != null &&
             ((lastContent is IslandToastContent) != (toast != null) || toast != null && lastContent !== toast)
-        shell.bind(toast?.text ?: current!!.title, if (showingMedia) current?.artist else toast?.detail,
+        val visualLeft = shell.pivotX * (1f - shell.scaleX) + shell.translationX
+        val visualTop = shell.pivotY * (1f - shell.scaleY) + shell.translationY
+        val contentChanged = shell.bind(toast?.text ?: current!!.title, if (showingMedia) current?.artist else toast?.detail,
             toast?.icon ?: current?.icon,
             showingMedia && current?.playing == true,
             showingMedia, options.waveform, if (showingMedia) current?.actions ?: 0L else 0L, showingMedia && options.mediaSwipe,
@@ -1130,11 +1132,17 @@ internal class IslandActivityController(
                 if (options.position != 1) 0f else if (bounds.holeWidth > 0) bounds.holeWidth.toFloat() else dp(16).toFloat())
         }
         if (resumingExit) shell.resumeEntry()
-        // Maximum 280 -> 160 dp width travel plus bounded drag. Symmetric Surface
-        // outsets preserve the A14 input frame; the logical touch window stays unchanged.
-        val outset = dp(80)
-        val outsetsChanged = windowOutsets.left != outset
-        windowOutsets.set(outset, outset, outset, outset)
+        // Retain the current shell inside symmetric Surface outsets when a manual
+        // long form shrinks to a short one. No per-frame window/layout update is needed.
+        val previousLeft = lastLeft - geometry.left + visualLeft
+        val previousWidth = lastWidth * shell.scaleX
+        val horizontalOutset = if (!attached) dp(80) else maxOf(dp(80), kotlin.math.ceil(maxOf(-previousLeft,
+            previousLeft + previousWidth - geometry.width) - touchWindow.margin).toInt())
+        val previousTop = lastTop - geometry.top + visualTop
+        val verticalOutset = if (!attached) dp(80) else maxOf(dp(80), kotlin.math.ceil(maxOf(-previousTop,
+            previousTop + lastHeight * shell.scaleY - geometry.height) - touchWindow.margin).toInt())
+        val outsetsChanged = windowOutsets.left != horizontalOutset || windowOutsets.top != verticalOutset
+        windowOutsets.set(horizontalOutset, verticalOutset, horizontalOutset, verticalOutset)
         touchWindow.geometry(geometry.width, geometry.height)
         val windowGeometryChanged = params.width != geometry.width + 2 * touchWindow.margin ||
             params.height != geometry.height + 2 * touchWindow.margin ||
@@ -1158,8 +1166,11 @@ internal class IslandActivityController(
                 if (!touchWindow.inputRegionAvailable) { hide(); return false }
             }
             else if (outsetsChanged || windowGeometryChanged) window!!.updateViewLayout(touchWindow, params)
-            if (entering || resumingExit || secondary || lastWidth != geometry.width || lastHeight != geometry.height) {
-                shell.transition(lastWidth, lastHeight, geometry.width, geometry.height, entering, secondary)
+            if (entering || resumingExit || secondary || contentChanged || lastWidth != geometry.width ||
+                lastHeight != geometry.height || lastLeft != geometry.left || lastTop != geometry.top) {
+                shell.transition(lastWidth, lastHeight, geometry.width, geometry.height, entering, secondary,
+                    if (entering || returning) null else lastLeft - geometry.left + visualLeft,
+                    if (entering || returning) null else lastTop - geometry.top + visualTop)
             }
             lastWidth = geometry.width; lastHeight = geometry.height
             lastTop = geometry.top

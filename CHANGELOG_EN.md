@@ -6,6 +6,7 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+- Smooth island content handoffs, side-aligned shrink transitions and position retargeting. Reducing manual short width no longer switches unchanged content to a wider form.
 - Prevent initial or bulk preference snapshots from overwriting concurrent updates or reporting readiness before publication. Retain the last valid setting after a temporary read failure, preserving acknowledged status-bar height overrides and restart-only switch semantics.
 
 ## r14.25.6 — 2026-10-25
