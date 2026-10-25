@@ -15,6 +15,49 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandBatterySignalsTest {
+    private val markerKey = "customiuizer_island_low_battery_until"
+
+    @Test fun delayedNativePublicationIsObservedDuringOnlyOneBoundedWarningRead() {
+        val resolver = RuntimeEnvironment.getApplication().contentResolver
+        val uri = Settings.Global.getUriFor(markerKey)
+        Settings.Global.putString(resolver, markerKey, null)
+        assertTrue(IslandBatteryWarningMarker.awaitAcknowledged(resolver) { signal, timeout ->
+            assertEquals(64L, timeout)
+            assertEquals(1, org.robolectric.Shadows.shadowOf(resolver).getContentObservers(uri).size)
+            Settings.Global.putString(resolver, markerKey, (SystemClock.elapsedRealtime() + 4000).toString())
+            resolver.notifyChange(uri, null)
+            assertEquals(0L, signal.count)
+        })
+        assertTrue(org.robolectric.Shadows.shadowOf(resolver).getContentObservers(uri).isEmpty())
+    }
+
+    @Test fun aMissingOrRevokedAcknowledgementRetainsNativeWarningAndReleasesItsObserver() {
+        val resolver = RuntimeEnvironment.getApplication().contentResolver
+        val uri = Settings.Global.getUriFor(markerKey)
+        Settings.Global.putString(resolver, markerKey, null)
+        var waits = 0
+        assertFalse(IslandBatteryWarningMarker.awaitAcknowledged(resolver) { _, _ -> waits++ })
+        assertEquals(1, waits)
+        assertTrue(org.robolectric.Shadows.shadowOf(resolver).getContentObservers(uri).isEmpty())
+        assertFalse(IslandBatteryWarningMarker.awaitAcknowledged(resolver) { signal, _ ->
+            Settings.Global.putString(resolver, markerKey, (SystemClock.elapsedRealtime() + 4000).toString())
+            resolver.notifyChange(uri, null)
+            assertEquals(0L, signal.count)
+            Settings.Global.putString(resolver, markerKey, null)
+        })
+        assertTrue(org.robolectric.Shadows.shadowOf(resolver).getContentObservers(uri).isEmpty())
+    }
+
+    @Test fun interruptedWarningWaitFallsBackAndPreservesTheInterruptFlag() {
+        val resolver = RuntimeEnvironment.getApplication().contentResolver
+        Settings.Global.putString(resolver, markerKey, null)
+        try {
+            assertFalse(IslandBatteryWarningMarker.awaitAcknowledged(resolver) { _, _ -> throw InterruptedException() })
+            assertTrue(Thread.currentThread().isInterrupted)
+            assertTrue(org.robolectric.Shadows.shadowOf(resolver).getContentObservers(Settings.Global.getUriFor(markerKey)).isEmpty())
+        } finally { Thread.interrupted() }
+    }
+
     @Test fun initialAndRepeatedBatterySnapshotsDoNotReplayChargingOrLowWarnings() {
         val edges = IslandBatteryEdges()
         assertNull(edges.observe(60, true, true, true))

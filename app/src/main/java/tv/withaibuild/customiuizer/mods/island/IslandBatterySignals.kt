@@ -5,6 +5,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
 import android.os.BatteryManager
 import android.os.Handler
 import android.os.PowerManager
@@ -21,6 +22,8 @@ import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.StrongToastPresentationMode
 import tv.withaibuild.customiuizer.utils.PrefMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /** Only edges survive a broadcast. No samples, history, timer, wakelock or service. */
 internal class IslandBatteryEdges {
@@ -86,7 +89,7 @@ internal class IslandBatterySignals(context: Context, scope: CoroutineScope, io:
 
 /** SecurityCenter consults this only on its existing warning-setting read. A four-second
  * acknowledgement is published only after the replacement is actually visible. Missing,
- * delayed or failed writes retain the native warning. The controller owns one conflated slot. */
+ * failed or late writes retain the native warning. The controller owns one conflated slot. */
 internal class IslandBatteryWarningMarker(private val resolver: ContentResolver, scope: CoroutineScope,
     io: CoroutineDispatcher) : AutoCloseable {
     private val updates = Channel<Long>(Channel.CONFLATED)
@@ -110,6 +113,29 @@ internal class IslandBatteryWarningMarker(private val resolver: ContentResolver,
             val until = Settings.Global.getString(resolver, KEY)?.toLongOrNull() ?: return@guarded false
             until - SystemClock.elapsedRealtime() in 1..4000
         }
+
+        /** The power process may read its setting before SystemUI receives the same battery
+         * edge. Wait once for the visible acknowledgement, not for a speculative preference.
+         * Binder dispatches the handlerless observer while this caller waits. No thread,
+         * polling or subscription survives this rare warning read; SystemUI never waits. */
+        internal fun awaitAcknowledged(resolver: ContentResolver,
+            await: (CountDownLatch, Long) -> Unit = { signal, timeout -> signal.await(timeout, TimeUnit.MILLISECONDS); Unit },
+        ): Boolean = ModuleHelper.guarded(false) {
+            if (acknowledged(resolver)) return@guarded true
+            val signal = CountDownLatch(1)
+            val observer = object : ContentObserver(null) {
+                override fun onChange(selfChange: Boolean) {
+                    if (acknowledged(resolver)) signal.countDown()
+                }
+            }
+            resolver.registerContentObserver(Settings.Global.getUriFor(KEY), false, observer)
+            try {
+                // Close the publication race between the first read and registration.
+                if (!acknowledged(resolver)) try { await(signal, 64) }
+                catch (_: InterruptedException) { Thread.currentThread().interrupt(); return@guarded false }
+                acknowledged(resolver)
+            } finally { resolver.unregisterContentObserver(observer) }
+        }
     }
 }
 
@@ -127,6 +153,10 @@ internal class IslandBatteryWarningPolicy(private val prefs: PrefMap) {
         }
     }
     init { ModuleHelper.observePreferenceChange(observer, this) }
-    fun suppress(resolver: ContentResolver?) = manual || island && resolver != null &&
-        IslandBatteryWarningMarker.acknowledged(resolver)
+    fun suppress(resolver: ContentResolver?): Boolean {
+        if (manual) return true
+        if (!island || resolver == null) return false
+        val shown = IslandBatteryWarningMarker.awaitAcknowledged(resolver)
+        return manual || island && shown // Preferences can change during the bounded wait.
+    }
 }
