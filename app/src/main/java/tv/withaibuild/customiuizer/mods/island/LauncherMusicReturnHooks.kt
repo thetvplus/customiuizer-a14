@@ -198,11 +198,14 @@ internal object LauncherMusicReturnHooks {
             if (frame.packageName !in options.mediaReturnApps) return false
             return access.selectWindowTarget(nav, frame)
         }
-        fun committed(attempt: Attempt, element: Any) {
+        fun committed(attempt: Attempt, element: Any, deferred: Boolean = false) {
             val tasks = scope ?: return
-            if (!enabled() || attempt.gesture == committedGesture) return
+            if (!enabled() || attempt.gesture == committedGesture || attempt.gesture != gesture.get()) return
             if (!access.accepted(attempt.params, element)) {
-                diagnostics.report("music-return-native-not-running")
+                // An interrupted opening can start its replacement spring at the end of
+                // this native dispatch. Recheck once on the existing looper, never poll.
+                if (!deferred) handler.post { committed(attempt, element, deferred = true) }
+                else diagnostics.report("music-return-native-not-running")
                 return
             }
             committedGesture = attempt.gesture

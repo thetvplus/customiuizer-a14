@@ -1190,7 +1190,7 @@
     <string name="seekbar_value_special">%1$s 对应「%2$s」</string>
     <string name="seekbar_value_error">请输入符合上方范围及步进的数值。</string>
     <string name="restart_settings_sync_failed">设置尚未同步成功，请等待模块连接后再重试。</string>
-    <string name="system_island_title">动态岛</string>
+    <string name="system_island_title">系统提示</string>
     <string name="system_island_intro">先在系统页选择动态岛。首次接入新来源需重启系统界面；锁屏、息屏、横屏隐藏。</string>
     <string name="system_island_media_title">显示音乐</string>
     <string name="system_island_media_return_title">上滑回岛</string>
@@ -1250,14 +1250,14 @@
     <string name="system_island_action_play">播放</string>
     <string name="system_island_action_pause">暂停</string>
     <string name="system_island_action_player">打开播放器</string>
-    <string name="system_island_music_group">音乐</string>
+    <string name="system_island_music_group">媒体</string>
     <string name="system_island_feedback_ringer_title">铃声</string>
-    <string name="system_island_basic_group">说明</string>
+    <string name="system_island_basic_group">展示方式</string>
     <string name="system_island_geometry_group">位置尺寸</string>
     <string name="system_island_appearance_group">外观动效</string>
     <string name="system_island_feedback_group">内容</string>
     <string name="system_island_interaction_group">行为</string>
-    <string name="system_island_gestures_title">音乐手势</string>
+    <string name="system_island_gestures_title">手势</string>
     <string name="system_island_waveform_off">关闭</string>
     <string name="system_island_waveform_light">轻量波形</string>
     <string name="system_island_waveform_real">实时波形</string>
@@ -1270,7 +1270,7 @@
     <string name="system_island_height_auto_title">自动高度</string>
     <string name="system_island_height_auto_summ">按挖孔匹配高度。</string>
     <string name="system_island_idle_title">常驻小岛</string>
-    <string name="system_island_idle_summ">空闲和通知栏中保留小岛。下滑打开通知栏，上滑暂时隐藏，点按无动作。</string>
+    <string name="system_island_idle_summ">空闲时保留静止小岛。点按和滑动可在手势中设置，上滑暂时隐藏。</string>
     <string name="system_island_idle_width_auto_title">小岛自动宽度</string>
     <string name="system_island_idle_width_title">小岛宽度</string>
     <string name="system_island_expand_down_title">展开手势</string>
@@ -1281,4 +1281,6 @@
     <string name="system_island_feedback_low_battery_summ">成功显示后接管底部提醒。首次开启后重启系统界面和安全中心。</string>
     <string name="system_island_battery_charging">充电</string>
     <string name="system_island_battery_low">低电量</string>
+    <string name="system_island_gesture_tap">单击</string>
+    <string name="system_island_idle_gestures_summ">仅在小岛显示时生效。播放类动作只控制最近一个有效媒体会话。</string>
 </resources>

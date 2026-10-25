@@ -13,7 +13,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class)
+@Config(sdk = [34], application = android.app.Application::class, shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockNativeAnimationTest {
     @Test fun nativePrepareFramesAndResetOwnThePanelInBothModes() {

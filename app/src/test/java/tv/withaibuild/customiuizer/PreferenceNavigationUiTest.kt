@@ -128,7 +128,7 @@ class PreferenceNavigationUiTest {
             .putBoolean("pref_key_system_island_media", true).apply()
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries must be indexed", 29, standaloneKeys.size)
+        assertEquals("All standalone page entries must be indexed", 30, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -243,13 +243,12 @@ class PreferenceNavigationUiTest {
     private fun resourcesDensity() = activity.resources.displayMetrics.density
 
     private fun openIslandPage(style: String = "3"): SubFragment {
-        openSettingsPage("pref_key_system", "pref_key_system_cat_prompts")
-        val prompts = currentPage() as SubFragment
-        val mode = requireNotNull(prompts.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
-        assertTrue(mode.callChangeListener(style)); mode.value = style
-        pressToolbarBack(); pressToolbarBack()
         openSettingsPage("pref_key_system", "pref_key_system_cat_island")
-        return currentPage() as SubFragment
+        val page = currentPage() as SubFragment
+        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        assertTrue(mode.callChangeListener(style)); mode.value = style
+        assertEquals(style == "3", requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).parent!!.isVisible)
+        return page
     }
 
     private fun openIslandMusic(): SubFragment {
@@ -296,6 +295,40 @@ class PreferenceNavigationUiTest {
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun applicationSearchStaysAboveTheScrollingListWhenTheViewportShrinks() {
+        val page = openIslandMusic()
+        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return")).isChecked = true
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_media_return_apps")).performClick()
+        settleNavigation()
+        val selector = currentPage() as tv.withaibuild.customiuizer.subs.AppSelector
+        val fields = requireNotNull(selector.view).findViewById<View>(R.id.fields)
+        val header = fields.findViewById<View>(R.id.searchView)
+        val list = requireNotNull(selector.listView)
+        list.adapter = android.widget.ArrayAdapter(activity, android.R.layout.simple_list_item_1,
+            (1..120).map { "Application $it" })
+        val originalHeader = android.graphics.Rect()
+        for (height in listOf(640, 310)) {
+            fields.measure(View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            fields.layout(0, 0, 320, height)
+            list.setSelection(80)
+            fields.measure(View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            fields.layout(0, 0, 320, height)
+            val headerBounds = android.graphics.Rect(); header.getGlobalVisibleRect(headerBounds)
+            val listPosition = IntArray(2); list.getLocationOnScreen(listPosition)
+            assertTrue("Rows must stay below the fixed search field", listPosition[1] >= headerBounds.bottom)
+            assertTrue("Only the list viewport shrinks for the keyboard", list.height in 1 until height)
+            assertTrue("The regression must exercise a scrolled list", list.firstVisiblePosition > 0)
+            if (originalHeader.isEmpty) originalHeader.set(headerBounds)
+            else assertEquals("Scrolling and resizing must leave search in place", originalHeader, headerBounds)
+            assertTrue("Overscrolled children must remain inside the list viewport",
+                (list.parent as android.view.ViewGroup).clipChildren)
+        }
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")
     fun waveformModeKeepsItsCurrentValueAndAVisibleFallbackExplanation() {
         val page = openIslandMusic()
@@ -331,8 +364,12 @@ class PreferenceNavigationUiTest {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")
     fun musicEditorUsesCurrentDefaultsAndKeepsIndependentActionsWhenTrackSwipesAreOff() {
-        val musicPage = openIslandMusic()
-        requireNotNull(musicPage.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked=true
+        val mediaPage = openIslandMusic()
+        requireNotNull(mediaPage.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked=true
+        pressToolbarBack()
+        val islandPage = currentPage() as SubFragment
+        requireNotNull(islandPage.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
+        val musicPage = currentPage() as SubFragment
         val key="pref_key_system_island_music_left"
         val left=requireNotNull(musicPage.findPreference<Preference>(key))
         assertTrue(left.isEnabled)
@@ -348,8 +385,10 @@ class PreferenceNavigationUiTest {
         assertSame(musicPage,currentPage())
         assertEquals(18,requireNotNull(AppHelper.appPrefs).getInt(key+"_action",-1))
         assertEquals(activity.getString(R.string.array_global_actions_volume_up),left.summary.toString())
-        requireNotNull(musicPage.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe")).isChecked=false
+        requireNotNull(AppHelper.appPrefs).edit().putBoolean("pref_key_system_island_media_swipe", false).apply()
         assertTrue(left.isEnabled)
+        val idleDown = requireNotNull(musicPage.findPreference<Preference>("pref_key_system_island_idle_down"))
+        assertEquals(activity.resources.getStringArray(R.array.global_actions_island_music)[activity.resources.getIntArray(R.array.global_actions_island_music_val).indexOf(2)], idleDown.summary.toString())
         pressToolbarBack()
         val page = currentPage() as SubFragment
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()

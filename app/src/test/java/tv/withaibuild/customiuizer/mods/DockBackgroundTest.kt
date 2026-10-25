@@ -35,7 +35,8 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w360dp-h800dp")
+@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w360dp-h800dp",
+    shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockBackgroundTest {
     private val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()

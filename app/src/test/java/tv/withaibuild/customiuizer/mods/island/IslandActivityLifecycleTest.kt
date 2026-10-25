@@ -302,6 +302,71 @@ class IslandActivityLifecycleTest {
         assertEquals(0, adds)
     }
 
+    @Test fun mirroredCoversAndHiddenMetadataUpdatesDoNotFadeCompactMedia() {
+        val controller = controller(media = true)
+        val player = launchablePlayer("cover-copies")
+        native.player = player
+        val image = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            eraseColor(android.graphics.Color.BLUE)
+        }
+        fun metadata(title: String, bitmap: android.graphics.Bitmap) = MediaMetadata.Builder()
+            .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+            .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, bitmap).build()
+        native.track = metadata("A", image)
+        controller.updateFromNative(native); revealMedia()
+        val first = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "media").icon
+        native.track = metadata("B", requireNotNull(image.copy(android.graphics.Bitmap.Config.ARGB_8888, false)))
+        controller.updateFromNative(native); drain()
+        val updated = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "media")
+        assertSame(first, updated.icon)
+        assertEquals("B", updated.title)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion"))
+        assertEquals(1f, shell!!.getChildAt(0).alpha, .001f)
+    }
+
+    @Test fun idleResumeResolvesOnlyTheLastVerifiedSessionAfterItsNativeCardDisappears() {
+        val controller = controller(media = true, idle = true, simplified = true)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        prefs.put("system_island_idle_left_action", IslandMusicActions.PLAY)
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        observer.onChange("system_island_idle_left_action"); drain()
+        val player = launchablePlayer("idle-resume")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f)
+            .setActions(PlaybackState.ACTION_PLAY).build())
+        native.player = null
+        controller.updateFromNative(native); drain()
+        assertTrue(shell!!.idle)
+        shell!!.onGesture(IslandMusicGesture.LEFT); drain()
+        assertEquals(PlaybackState.ACTION_PLAY, shadowOf(player.transportControls).lastPerformedAction)
+        val other = launchablePlayer("unrelated-token")
+        val baseline = shadowOf(other.transportControls).lastPerformedAction
+        shadowOf(manager).clearControllers(); shadowOf(manager).addController(other)
+        shell!!.onGesture(IslandMusicGesture.LEFT); drain()
+        assertEquals(baseline, shadowOf(other.transportControls).lastPerformedAction)
+    }
+
+    @Test fun confirmedReturnCanPrecedeTheForegroundAppEdgeOfAnInterruptedOpening() {
+        val controller = controller(media = true, simplified = true, mediaReturn = true,
+            mediaReturnApps = setOf(context.packageName))
+        // Simplified mode intentionally declines flight; enable normal motion for this contract.
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        prefs.put("system_island_simplified", false)
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        observer.onChange("system_island_simplified"); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER)
+        native.player = launchablePlayer("opening-interrupted-before-foreground")
+        controller.updateFromNative(native); drain()
+        assertEquals(0, adds)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        nativeReturn(controller); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
+        assertEquals(1, adds)
+    }
+
     private fun nativeReturn(controller: IslandActivityController, committedAt: Long = android.os.SystemClock.uptimeMillis()) {
         val media = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "media")
         controller.nativeMusicReturn(IslandMusicReturnSignal.Frame(media.packageName, requireNotNull(media.user),

@@ -31,7 +31,7 @@ class FeatureMapTest(unittest.TestCase):
     def test_every_page_and_visible_key_in_real_inputs_is_mapped(self):
         strings = feature_map.load_strings(self.repo)
         pages = feature_map.collect_pages(self.repo, strings)
-        self.assertEqual(35, sum(not p.standalone for p in pages))
+        self.assertEqual(34, sum(not p.standalone for p in pages))
         self.assertEqual({p[0] for p in prefs.STANDALONE_PAGES}, {p.key for p in pages if p.standalone})
         rendered = feature_map.render(self.repo)
         for path in (self.repo / feature_map.RES / "xml").glob("prefs_*.xml"):
@@ -41,9 +41,9 @@ class FeatureMapTest(unittest.TestCase):
                     with self.subTest(path=path.name, key=key):
                         self.assertTrue(f"`{key}`" in rendered, f"map missing {path.name}: {key}")
         self.assertIn("系统 → 状态栏 → Duo 三合一图标", rendered)
-        self.assertIn("系统 → 动态岛 → 音乐", rendered)
-        self.assertIn("系统 → 动态岛 → 位置尺寸", rendered)
-        self.assertIn("系统 → 动态岛 → 消息通知", rendered)
+        self.assertIn("系统 → 系统提示 → 媒体", rendered)
+        self.assertIn("系统 → 系统提示 → 位置尺寸", rendered)
+        self.assertIn("系统 → 系统提示 → 消息通知", rendered)
         self.assertIn("系统 → 系统提示", rendered)
         self.assertIn("桌面 → Dock", rendered)
         self.assertNotIn("system_betterpopups_nohide", rendered)

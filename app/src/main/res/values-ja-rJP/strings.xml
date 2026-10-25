@@ -1180,7 +1180,7 @@
     <string name="seekbar_value_special">%1$s は「%2$s」を表します</string>
     <string name="seekbar_value_error">上記の範囲と刻みに合う数値を入力してください。</string>
     <string name="restart_settings_sync_failed">設定を同期できません。モジュールの接続を待って再試行してください。</string>
-    <string name="system_island_title">ダイナミックアイランド</string>
+    <string name="system_island_title">システムの案内</string>
     <string name="system_island_intro">初めてこのモードを選ぶか、連携を有効にした後はシステムUIを再起動してください。ロック画面、画面オフ、横向き、通知パネル展開中は非表示になります。</string>
     <string name="system_island_media_title">音楽とメディア</string>
     <string name="system_island_media_return_title">音楽をアイランドへ</string>
@@ -1240,14 +1240,14 @@
     <string name="system_island_action_play">再生</string>
     <string name="system_island_action_pause">一時停止</string>
     <string name="system_island_action_player">プレーヤーを開く</string>
-    <string name="system_island_music_group">音楽とメディア</string>
+    <string name="system_island_music_group">メディア</string>
     <string name="system_island_feedback_ringer_title">着信音モード</string>
     <string name="system_island_basic_group">基本設定</string>
     <string name="system_island_geometry_group">位置とサイズ</string>
     <string name="system_island_appearance_group">外観とアニメーション</string>
     <string name="system_island_feedback_group">表示内容</string>
     <string name="system_island_interaction_group">動作</string>
-    <string name="system_island_gestures_title">音楽ジェスチャー</string>
+    <string name="system_island_gestures_title">ジェスチャー</string>
     <string name="system_island_waveform_off">オフ</string>
     <string name="system_island_waveform_light">軽量アニメーション</string>
     <string name="system_island_waveform_real">リアルタイム波形（試験的）</string>
@@ -1260,7 +1260,7 @@
     <string name="system_island_height_auto_title">アイランドの高さを自動調整</string>
     <string name="system_island_height_auto_summ">カメラの切り欠きに合わせて 36–40 dp に調整します。オフにすると手動で設定できます。</string>
     <string name="system_island_idle_title">小さなアイランドを常駐</string>
-    <string name="system_island_idle_summ">アクティビティがないときは静止したカプセルを表示します。タップまたは下スワイプで通知を開き、上スワイプで次のアクティビティか画面点灯まで隠します。</string>
+    <string name="system_island_idle_summ">Keep a still idle island. Configure tap and swipe actions under Gestures.</string>
     <string name="system_island_idle_width_auto_title">小さなアイランドの幅を自動調整</string>
     <string name="system_island_idle_width_title">小さなアイランドの幅</string>
     <string name="system_island_expand_down_title">展開ジェスチャー</string>
@@ -1271,4 +1271,6 @@
     <string name="system_island_feedback_low_battery_summ">代わりの表示が見える場合のみ警告を置き換え、それ以外はシステムの警告を保持します。初回有効化後はシステム UI とセキュリティを再起動してください。</string>
     <string name="system_island_battery_charging">充電</string>
     <string name="system_island_battery_low">バッテリー低下</string>
+    <string name="system_island_gesture_tap">タップ</string>
+    <string name="system_island_idle_gestures_summ">待機中のアイランドのみ。再生操作は直近の有効なメディアセッションに適用します。</string>
 </resources>

@@ -1213,7 +1213,7 @@
     <string name="seekbar_value_special">%1$s represents %2$s</string>
     <string name="seekbar_value_error">Enter a number within the range and step shown above.</string>
     <string name="restart_settings_sync_failed">Settings could not be synchronized. Wait for the module connection, then try again.</string>
-    <string name="system_island_title">Dynamic Island</string>
+    <string name="system_island_title">System prompts</string>
     <string name="system_island_intro">Choose Dynamic Island on the System page. Restart the system interface after adding a source. Hidden when locked, asleep or in landscape.</string>
     <string name="system_island_media_title">Show music</string>
     <string name="system_island_media_return_title">Return to island</string>
@@ -1273,14 +1273,14 @@
     <string name="system_island_action_play">Play</string>
     <string name="system_island_action_pause">Pause</string>
     <string name="system_island_action_player">Open player</string>
-    <string name="system_island_music_group">Music</string>
+    <string name="system_island_music_group">Media</string>
     <string name="system_island_feedback_ringer_title">Ringer</string>
-    <string name="system_island_basic_group">About</string>
+    <string name="system_island_basic_group">Presentation</string>
     <string name="system_island_geometry_group">Size &amp; position</string>
     <string name="system_island_appearance_group">Appearance &amp; motion</string>
     <string name="system_island_feedback_group">Content</string>
     <string name="system_island_interaction_group">Behavior</string>
-    <string name="system_island_gestures_title">Music gestures</string>
+    <string name="system_island_gestures_title">Gestures</string>
     <string name="system_island_waveform_off">Off</string>
     <string name="system_island_waveform_light">Lightweight animation</string>
     <string name="system_island_waveform_real">Measured waveform</string>
@@ -1293,7 +1293,7 @@
     <string name="system_island_height_auto_title">Automatic height</string>
     <string name="system_island_height_auto_summ">Fit the camera cutout with a restrained 36–40 dp height. Turn off for manual height.</string>
     <string name="system_island_idle_title">Persistent idle island</string>
-    <string name="system_island_idle_summ">Keep a still island when idle and in the notification shade. Swipe down for notifications; swipe up to hide temporarily. Tapping has no action.</string>
+    <string name="system_island_idle_summ">Keep a still idle island. Configure tap and swipe actions under Gestures; swipe up to hide temporarily.</string>
     <string name="system_island_idle_width_auto_title">Automatic idle width</string>
     <string name="system_island_idle_width_title">Idle island width</string>
     <string name="system_island_expand_down_title">Expand gestures</string>
@@ -1304,4 +1304,6 @@
     <string name="system_island_feedback_low_battery_summ">Replace low-battery warnings only while the island is visible; otherwise keep the system warning. Restart the system interface and Security Center after first enabling.</string>
     <string name="system_island_battery_charging">Charging</string>
     <string name="system_island_battery_low">Low battery</string>
+    <string name="system_island_gesture_tap">Tap</string>
+    <string name="system_island_idle_gestures_summ">Only applies to the idle island. Playback actions use the most recent valid media session.</string>
 </resources>

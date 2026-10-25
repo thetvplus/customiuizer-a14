@@ -1179,7 +1179,7 @@
     <string name="seekbar_value_special">%1$s означает «%2$s»</string>
     <string name="seekbar_value_error">Введите число в указанном диапазоне с указанным шагом.</string>
     <string name="restart_settings_sync_failed">Не удалось синхронизировать настройки. Дождитесь подключения модуля и повторите попытку.</string>
-    <string name="system_island_title">Динамический остров</string>
+    <string name="system_island_title">Системные подсказки</string>
     <string name="system_island_intro">Перезапустите системный интерфейс после первого выбора Dynamic Island или включения интеграции. Остров скрыт на экране блокировки, при выключенном экране, в альбомной ориентации и при открытой шторке.</string>
     <string name="system_island_media_title">Музыка и медиа</string>
     <string name="system_island_media_return_title">Музыка в островок</string>
@@ -1239,14 +1239,14 @@
     <string name="system_island_action_play">Воспроизвести</string>
     <string name="system_island_action_pause">Пауза</string>
     <string name="system_island_action_player">Открыть плеер</string>
-    <string name="system_island_music_group">Музыка и медиа</string>
+    <string name="system_island_music_group">Медиа</string>
     <string name="system_island_feedback_ringer_title">Режим звонка</string>
     <string name="system_island_basic_group">Основные настройки</string>
     <string name="system_island_geometry_group">Положение и размер</string>
     <string name="system_island_appearance_group">Вид и анимация</string>
     <string name="system_island_feedback_group">Содержимое</string>
     <string name="system_island_interaction_group">Поведение</string>
-    <string name="system_island_gestures_title">Музыкальные жесты</string>
+    <string name="system_island_gestures_title">Жесты</string>
     <string name="system_island_waveform_off">Выключено</string>
     <string name="system_island_waveform_light">Лёгкая анимация</string>
     <string name="system_island_waveform_real">Живой спектр (эксперимент)</string>
@@ -1259,7 +1259,7 @@
     <string name="system_island_height_auto_title">Автоматическая высота острова</string>
     <string name="system_island_height_auto_summ">Компактная высота 36–40 dp с учётом камеры. Отключите для ручной настройки.</string>
     <string name="system_island_idle_title">Постоянный малый остров</string>
-    <string name="system_island_idle_summ">Оставлять неподвижную капсулу без активностей. Нажатие или свайп вниз открывает уведомления; свайп вверх скрывает её до новой активности или пробуждения экрана.</string>
+    <string name="system_island_idle_summ">Keep a still idle island. Configure tap and swipe actions under Gestures.</string>
     <string name="system_island_idle_width_auto_title">Автоматическая ширина малого острова</string>
     <string name="system_island_idle_width_title">Ширина малого острова</string>
     <string name="system_island_expand_down_title">Жесты разворачивания</string>
@@ -1270,4 +1270,6 @@
     <string name="system_island_feedback_low_battery_summ">Заменять предупреждение, только когда остров виден; иначе сохранять системное. При первом включении перезапустите системный интерфейс и Центр безопасности.</string>
     <string name="system_island_battery_charging">Зарядка</string>
     <string name="system_island_battery_low">Низкий заряд</string>
+    <string name="system_island_gesture_tap">Нажатие</string>
+    <string name="system_island_idle_gestures_summ">Только для острова ожидания. Управление последним действующим медиасеансом.</string>
 </resources>

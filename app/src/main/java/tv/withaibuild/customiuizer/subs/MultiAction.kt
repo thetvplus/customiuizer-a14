@@ -69,8 +69,7 @@ class MultiAction : SubFragment() {
         actionSpinner.entryValues = resources.getIntArray(entryValuesResId)
         actionSpinner.tag = mKey + "_action"
         val defaultAction = if (actions == Actions.MUSIC)
-            tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries.firstOrNull {
-                "pref_key_${it.key}" == mKey }?.defaultAction ?: 1 else 1
+            tv.withaibuild.customiuizer.mods.island.IslandIdleActions.defaultForKey(mKey.orEmpty()) else 1
         val savedAction = AppHelper.getIntOfAppPrefs(mKey + "_action", defaultAction)
         actionSpinner.init(if (savedAction <= 0) 1 else savedAction)
         actionSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {

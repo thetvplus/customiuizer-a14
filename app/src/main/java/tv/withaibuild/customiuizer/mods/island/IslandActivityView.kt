@@ -54,6 +54,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var waveHeight = dp(20)
     private var controlsEnabled = false
     private var avatar = false
+    private var opticalX = 0f
+    private var opticalY = 0f
     private var slop = ViewConfiguration.get(context).scaledTouchSlop
     private var recall = IslandRecallGesture.onCancel()
     private var downY = 0f
@@ -90,7 +92,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         override fun onLongPress(e: MotionEvent) {
             if (!inputCancelled && !dragging && !multiTouch && !leaving && !disposed && longEnabled()) {
                 longConsumed = true
-                if (isMedia && musicActions.resolve(IslandMusicGesture.LONG_PRESS, controlsEnabled) != 1)
+                if ((isMedia || idle) && musicActions.resolve(IslandMusicGesture.LONG_PRESS, controlsEnabled) != 1)
                     submit(IslandMusicGesture.LONG_PRESS)
                 else ModuleHelper.guarded { onExpand() }
             }
@@ -110,10 +112,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var textReveal = 1f
     private var layerReveal = 1f
     private class Content(val label: String, val drawable: Drawable?, val media: Boolean,
-        val waveform: Boolean, val avatar: Boolean, val status: Boolean, val expanded: Boolean) {
+        val waveform: Boolean, val avatar: Boolean, val status: Boolean, val expanded: Boolean, val photo: Boolean) {
+        fun sameCompactVisual(other: Content) = media && other.media && !expanded && !other.expanded &&
+            drawable === other.drawable && waveform == other.waveform && avatar == other.avatar &&
+            status == other.status && photo == other.photo
         fun matches(label: String, drawable: Drawable?, media: Boolean, waveform: Boolean,
-            avatar: Boolean, status: Boolean, expanded: Boolean) = this.label == label && this.drawable === drawable &&
-            this.media == media && this.waveform == waveform && this.avatar == avatar && this.status == status && this.expanded == expanded
+            avatar: Boolean, status: Boolean, expanded: Boolean, photo: Boolean) = this.label == label && this.drawable === drawable &&
+            this.media == media && this.waveform == waveform && this.avatar == avatar && this.status == status && this.expanded == expanded && this.photo == photo
     }
     private var displayedContent: Content? = null
     private var pendingContent: Content? = null
@@ -134,7 +139,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var entranceStyle = IslandEntranceStyle.TOP
     var motionScale = 1f
     var idle = false
-        set(value) { field = value; isClickable = !value }
+        set(value) { field = value; isClickable = !value || idleTapAction != 1 }
+    var idleTapAction = 1
+        set(value) { field = value; isClickable = !idle || value != 1 }
     var expanded = false
     var expandOnDown = true
     var shortWidth = Int.MAX_VALUE
@@ -170,13 +177,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         left.addView(icon, LinearLayout.LayoutParams(dp(24), dp(24)))
         text.addView(title, LinearLayout.LayoutParams(-1, -2))
         addView(left); addView(text); addView(wave)
-        setOnClickListener { if (!idle) ModuleHelper.guarded { onOpen() } }
+        setOnClickListener { if (!idle || idleTapAction != 1) ModuleHelper.guarded { onOpen() } }
         taps.setIsLongpressEnabled(false)
         taps.setOnDoubleTapListener(null)
     }
 
-    private fun doubleEnabled() = isMedia && musicActions.doubleTap != 1
-    private fun longEnabled() = isMedia && musicActions.longPress != 1 || expandOnDown && !expanded && !idle
+    private fun doubleEnabled() = (isMedia || idle) && musicActions.doubleTap != 1
+    private fun longEnabled() = (isMedia || idle) && musicActions.longPress != 1 || expandOnDown && !expanded && !idle
 
     fun configureGestures(identity: Any?, actions: IslandMusicActions, trackSwipes: Boolean) {
         if (gestureIdentity != identity || musicActions != actions || controlsEnabled != trackSwipes) cancelInputs()
@@ -205,18 +212,18 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val action = musicActions.resolve(gesture, controlsEnabled)
         // Snapshot admission avoids advertising unavailable controls; the owner rechecks
         // the actual session immediately before execution using the same resolver.
-        if (action in 87..88 && !IslandMediaPolicy.canSkip(
+        if (!idle && action in 87..88 && !IslandMediaPolicy.canSkip(
                 if (action == 87) PlaybackState.ACTION_SKIP_TO_NEXT else PlaybackState.ACTION_SKIP_TO_PREVIOUS, controlActions)) return
-        if ((action == 85 || action == IslandMusicActions.PLAY || action == IslandMusicActions.PAUSE) &&
+        if (!idle && (action == 85 || action == IslandMusicActions.PLAY || action == IslandMusicActions.PAUSE) &&
             IslandTransportAction.resolve(action, controlPlayback, controlActions) == null) return
-        if (!disposed && !leaving && isMedia && musicActions.resolve(gesture, controlsEnabled) != 1)
+        if (!disposed && !leaving && (isMedia || idle) && musicActions.resolve(gesture, controlsEnabled) != 1)
             ModuleHelper.guarded { onGesture(gesture) }
     }
 
     fun bind(label: String, detail: String?, drawable: Drawable?, playing: Boolean,
         media: Boolean, waveform: Boolean, actions: Long, showControls: Boolean,
         playbackState: Int = PlaybackState.STATE_NONE, avatar: Boolean = false, status: Boolean = false,
-        expanded: Boolean = false, loading: Boolean = false): Boolean {
+        expanded: Boolean = false, loading: Boolean = false, photo: Boolean = media || avatar): Boolean {
         if (isMedia != media) cancelInputs()
         isMedia = media
         this.expanded = expanded
@@ -229,14 +236,20 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // handoff is deferred, with one latest value and the shell's existing finite clock.
         val caption = if (expanded && !detail.isNullOrBlank() && !status) "$label\n${detail.take(160)}" else label
         val previous = pendingContent ?: displayedContent
-        val changed = previous?.matches(caption, drawable, media, waveform, avatar, status, expanded) != true
+        val changed = previous?.matches(caption, drawable, media, waveform, avatar, status, expanded, photo) != true
+        var visualChanged = changed
         if (changed) {
-            if (allowTextBlur && !simplified && isHardwareAccelerated) textBlur
-            val content = Content(caption, drawable, media, waveform, avatar, status, expanded)
-            if (isAttachedToWindow && !leaving && !simplified && ValueAnimator.areAnimatorsEnabled() &&
+            val content = Content(caption, drawable, media, waveform, avatar, status, expanded, photo)
+            if (previous != null && content.sameCompactVisual(previous)) {
+                // Compact media has no visible label. Metadata-only updates, including
+                // mirrored Binder copies of the same cover, must not fade its artwork/wave.
+                if (pendingContent != null) pendingContent = content else applyContent(content)
+                visualChanged = false
+            } else if (isAttachedToWindow && !leaving && !simplified && ValueAnimator.areAnimatorsEnabled() &&
                 displayedContent != null && alpha > .01f && layerReveal > .01f) {
-                albumFlip = media && previous?.media == true && previous.label != caption &&
-                    previous.expanded == expanded && previous.drawable != null && drawable != null
+                if (allowTextBlur && !simplified && isHardwareAccelerated && (!media || expanded || text.visibility == VISIBLE)) textBlur
+                albumFlip = media && previous?.media == true && previous.drawable !== drawable &&
+                    previous.expanded == expanded && previous.photo && photo && previous.drawable != null && drawable != null
                 if (pendingContent == null) contentFadeRemaining = if (albumFlip) 140L else 60L
                 pendingContent = content
                 contentMotion = true
@@ -255,7 +268,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             else -> R.string.system_island_connecting
         })
         contentDescription = listOfNotNull(label, playbackDescription, detail).joinToString(", ")
-        return changed
+        return visualChanged
     }
 
     private fun applyContent(content: Content) {
@@ -266,11 +279,15 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         title.gravity = (if (content.expanded) Gravity.START else Gravity.END) or Gravity.CENTER_VERTICAL
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (content.status) statusFit?.size
             ?: baseTextSize else if (content.expanded) baseTextSize * .94f else baseTextSize)
-        title.text = content.label
-        labelWidth = content.label.lineSequence().maxOfOrNull { title.paint.measureText(it) } ?: 0f
+        val visibleLabel = if (content.media && !content.expanded) "" else content.label
+        if (title.text.toString() != visibleLabel) title.text = visibleLabel
+        labelWidth = visibleLabel.lineSequence().maxOfOrNull { title.paint.measureText(it) } ?: 0f
         text.visibility = if (content.media && !content.expanded) GONE else VISIBLE
-        icon.scaleType = if (content.status) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
-        icon.clipToOutline = !content.status
+        icon.scaleType = if (content.photo) ImageView.ScaleType.CENTER_CROP else ImageView.ScaleType.FIT_CENTER
+        icon.clipToOutline = content.photo
+        val insets = if (!content.photo) content.drawable?.opticalInsets else null
+        opticalX = IslandContentLayout.opticalShift(insets?.left ?: 0, insets?.right ?: 0, content.drawable?.intrinsicWidth ?: 0)
+        opticalY = IslandContentLayout.opticalShift(insets?.top ?: 0, insets?.bottom ?: 0, content.drawable?.intrinsicHeight ?: 0)
         icon.setImageDrawable(content.drawable)
         icon.visibility = if (content.drawable == null) GONE else VISIBLE
         wave.visibility = if (content.media && content.waveform && !content.expanded) VISIBLE else GONE
@@ -541,11 +558,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     if (event.actionMasked == MotionEvent.ACTION_UP) {
                         if (dragAxis == 2 && dy < -slop && abs(dx) <= -dy * config.maxHorizontalRatio &&
                             IslandRecallGesture.isTriggered(recall)) requestDismiss()
-                        else if (dragAxis == 1 && isMedia &&
+                        else if (dragAxis == 1 && (isMedia || idle) &&
                             abs(dx) >= maxOf(dp(32).toFloat(), slop * 3f) && abs(dx) > abs(dy) * 1.2f)
                             { flipDirection = if (dx < 0) -1f else 1f; submit(if (dx < 0) IslandMusicGesture.LEFT else IslandMusicGesture.RIGHT) }
                         else if (dragAxis == 2 && dy >= maxOf(dp(24).toFloat(), slop * 3f) && abs(dy) > abs(dx) * 1.2f) {
-                            if (expandOnDown && (idle || !isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1))
+                            if (!idle && expandOnDown && (!isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1))
                                 ModuleHelper.guarded { onExpand() }
                             else submit(IslandMusicGesture.DOWN)
                         }
@@ -689,30 +706,33 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Compensate the drawing transform. The physical shell changes width while text,
         // square artwork and wave bars retain their own aspect ratios, including drags.
         val sx = scaleX.coerceAtLeast(.01f); val sy = scaleY.coerceAtLeast(.01f)
-        val contentScale = if (contentMotion && !simplified) .97f + .03f * layerReveal else 1f
+        val arrival = if (mediaReturnProgress < 1f && !simplified)
+            .92f + .08f * IslandMotion.settle.getInterpolation(((mediaReturnProgress - .5f) / .5f).coerceIn(0f, 1f)) else 1f
+        val contentScale = (if (contentMotion && !simplified) .97f + .03f * layerReveal else 1f) * arrival
         icon.scaleX = contentScale / sx; icon.scaleY = contentScale / sy
         text.scaleX = contentScale / sx; text.scaleY = contentScale / sy
         wave.scaleX = contentScale / sx; wave.scaleY = contentScale / sy
         // Keep a physical 16dp margin instead of stretching target-layout coordinates.
         // Counter-scaling alone pushes the text into an end cap while lengthening.
         val edge = dp(IslandSizing.EDGE_DP)
-        icon.translationX = (edge + iconSize * .5f) * (1f / sx - 1f)
+        icon.translationX = (edge + iconSize * .5f) * (1f / sx - 1f) + opticalX * iconSize / sx
+        icon.translationY = opticalY * iconSize / sy
         wave.translationX = -dp(28) * (1f / sx - 1f)
         val labelRoom = captionRoom(geometryWidth, cameraGap)
         text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f)
         val reveal = ((alpha - .12f) / .88f).coerceIn(0f, 1f) * layerReveal
-        val iconRoom = if (cameraGap > 0) (geometryWidth * sx - cameraGap) / 2f + cameraOffset - translationX >= edge + iconSize
+        val iconRoom = if (cameraGap > 0) IslandContentLayout.leading(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize + maxOf(0f, opticalX * iconSize)
             else geometryWidth * sx >= 2 * (edge + iconSize)
         left.alpha = if (iconRoom && geometryHeight * sy >= iconSize) reveal else 0f
-        if (mediaReturnProgress < 1f) left.alpha *= ((mediaReturnProgress - .72f) / .28f).coerceIn(0f, 1f)
+        if (mediaReturnProgress < 1f) left.alpha *= ((mediaReturnProgress - .64f) / .3f).coerceIn(0f, 1f)
         text.alpha = if (contentFits()) reveal * textReveal else 0f
-        val nextBlur = if (allowTextBlur && !simplified && isHardwareAccelerated && text.alpha in .01f..0.99f)
+        val nextBlur = if (text.visibility == VISIBLE && allowTextBlur && !simplified && isHardwareAccelerated && text.alpha in .01f..0.99f)
             ((1f - layerReveal) * 4).toInt().coerceIn(0, 4) - 1 else -1
         if (nextBlur != blurLevel) {
             blurLevel = nextBlur
             text.setRenderEffect(if (nextBlur >= 0) textBlur[nextBlur] else null)
         }
-        val waveRoom = if (cameraGap > 0) (geometryWidth * sx - cameraGap) / 2f - cameraOffset + translationX >= edge + iconSize else iconRoom
+        val waveRoom = if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize else iconRoom
         wave.alpha = if (waveRoom && geometryHeight * sy >= waveHeight) reveal else 0f
         if (shape.resize(geometryWidth, geometryHeight, sx, sy)) invalidateOutline()
     }
@@ -734,13 +754,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private fun contentFits(): Boolean {
         val edge = dp(IslandSizing.EDGE_DP)
         val targetRoom = captionRoom(geometryWidth, cameraGap)
-        val room = if (cameraGap > 0) (geometryWidth * scaleX - cameraGap) / 2f - cameraOffset + translationX - edge
+        val room = if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * scaleX, cameraGap, cameraOffset, translationX) - edge
             else geometryWidth * scaleX - 2 * edge - iconSize - dp(8)
         return room + .01f >= minOf(labelWidth, targetRoom.toFloat())
     }
 
     private fun captionRoom(width: Int, gap: Int) = (if (gap > 0)
-        ((width - gap) / 2f - cameraOffset).toInt() - dp(IslandSizing.EDGE_DP)
+        IslandContentLayout.trailing(width.toFloat(), gap, cameraOffset, 0f).toInt() - dp(IslandSizing.EDGE_DP)
         else width - 2 * dp(IslandSizing.EDGE_DP) - iconSize - dp(8)).coerceAtLeast(0)
     private fun horizontalPivot(width: Int) = when (alignment) { 0 -> 0f; 2 -> width.toFloat(); else -> width * .5f }
 
@@ -761,9 +781,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)
         info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_DISMISS)
-        if (expandOnDown && !expanded && (!isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1))
+        if (!idle && expandOnDown && !expanded && (!isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1))
             info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_EXPAND)
-        if (isMedia) {
+        if (isMedia || idle) {
             val res = ModuleHelper.getModuleRes(context)
             val labels = intArrayOf(R.string.system_island_gesture_left, R.string.system_island_gesture_right,
                 R.string.system_island_gesture_down, R.string.system_island_gesture_double, R.string.system_island_gesture_long)
@@ -778,14 +798,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS) {
             requestDismiss(); return true
         }
-        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_EXPAND && expandOnDown && !expanded &&
+        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_EXPAND && !idle && expandOnDown && !expanded &&
             (!isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1)) {
             ModuleHelper.guarded { onExpand() }; return true
         }
         val index = accessibilityActions.indexOf(action)
         if (index >= 0) {
             val gesture = IslandMusicGesture.entries[index]
-            if (!isMedia || musicActions.resolve(gesture, controlsEnabled) == 1) return false
+            if ((!isMedia && !idle) || musicActions.resolve(gesture, controlsEnabled) == 1) return false
             submit(gesture); return true
         }
         return super.performAccessibilityAction(action, arguments)

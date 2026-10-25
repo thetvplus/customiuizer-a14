@@ -118,16 +118,21 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
         if (entering || wasRestoring) transition(reveal = false) else applyHiddenAlpha()
     }
 
-    fun maximumWidth(screenWidth: Int): Int? {
+    fun maximumWidth(screenWidth: Int, center: Float = screenWidth * .5f): Int? {
         val host = root.get() ?: return null
         val clock = kept[0].view.get() ?: return null
         val battery = kept[1].view.get() ?: return null
         if (host.width <= 0 || clock.width <= 0 || battery.width <= 0) return null
-        host.getLocationOnScreen(position)
         val gap = (16 * host.resources.displayMetrics.density).roundToInt()
-        val left = position[0] + host.paddingLeft + clock.width + gap
-        val right = screenWidth - (position[0] + host.width - host.paddingRight) + battery.width + gap
-        return (screenWidth - 2 * maxOf(left, right)).coerceAtLeast(0)
+        clock.getLocationOnScreen(position)
+        val clockShift = kept[0].takeIf { abs(clock.translationX - it.baseTranslation - it.shift) < .01f }?.shift ?: 0f
+        val left = position[0] - clockShift + clock.width + gap
+        battery.getLocationOnScreen(position)
+        val batteryShift = kept[1].takeIf { abs(battery.translationX - it.baseTranslation - it.shift) < .01f }?.shift ?: 0f
+        val right = position[0] - batteryShift - gap
+        // Include native layout margins, padding and clock-chip width. Subtract only
+        // our own avoidance shift so it cannot feed back into the next form's width.
+        return (2 * minOf(center - left, right - center)).roundToInt().coerceIn(0, screenWidth)
     }
 
     private fun collectBranches() {

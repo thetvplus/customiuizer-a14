@@ -70,9 +70,12 @@ internal class DockGlassBackdrop(
     private var epoch = 0
     private var busy = false
     private var visible = false
+    private var powerSave = false
     private var released = false
     private var broken = false
     private var sourceDirty = true
+    private var sourceUnavailable = false
+    private var unavailableTries = 0
     private var completionDraw = false
     private var tickRequested = false
     private var lastRequest = Long.MIN_VALUE / 2
@@ -96,10 +99,19 @@ internal class DockGlassBackdrop(
         if (matrix == null) legacy.reset() else legacy.set(matrix)
     }
 
+    fun setPowerSave(enabled: Boolean) {
+        if (powerSave == enabled) return
+        powerSave = enabled
+        invalidateSource()
+        owner.get()?.let { view -> view.removeCallbacks(tick); tickRequested = false; view.invalidate() }
+    }
+
     fun invalidateSource() {
         nativeMotionUntil = SystemClock.uptimeMillis() + 450L
         epoch++
         sourceDirty = true
+        sourceUnavailable = false
+        unavailableTries = 0
         clearTexture()
     }
 
@@ -113,7 +125,7 @@ internal class DockGlassBackdrop(
                 return
             }
         }
-        if (!visible || broken || released || !view.isAttachedToWindow || view.width <= 0 || view.height <= 0) return
+        if (!visible || powerSave || broken || released || !view.isAttachedToWindow || view.width <= 0 || view.height <= 0) return
         // The ROM extension has no display selector. Never substitute default-display pixels on
         // a secondary display. Unknown/non-affine transforms also keep the native material.
         if (view.display?.displayId != Display.DEFAULT_DISPLAY || !prepareMatrix(view)) return
@@ -123,11 +135,14 @@ internal class DockGlassBackdrop(
             lastWidth = view.width
             lastHeight = view.height
             sourceDirty = true
+            sourceUnavailable = false
+            unavailableTries = 0
             view.invalidate() // follow a native transform, including RenderNode-only scaleX
         }
         val ownDraw = completionDraw
         completionDraw = false
         val now = SystemClock.uptimeMillis()
+        if (sourceUnavailable && !sourceDirty && !tickRequested) return
         // Unrelated icon/clock draws do not invalidate a settled static wallpaper. Native
         // transforms and wallpaper changes retain a short bounded compositor catch-up.
         if (sourceDirty || tickRequested || !ownDraw && (liveWallpaper || now < nativeMotionUntil)) {
@@ -189,10 +204,12 @@ internal class DockGlassBackdrop(
         lastRequest = now
         val target = WeakReference(this)
         val captureSource = sampler
+        val viewportWidth = metrics.widthPixels
+        val viewportHeight = metrics.heightPixels
         scope.launch {
             var captured: Bitmap? = null
             try {
-                captured = captureSource.capture(requestCrop, scale)
+                captured = captureSource.capture(requestCrop, scale, viewportWidth, viewportHeight)
                 withContext(Dispatchers.Main.immediate) {
                     val current = target.get()
                     if (current != null) {
@@ -228,7 +245,15 @@ internal class DockGlassBackdrop(
             if (!released && !broken && visible) owner.get()?.postInvalidateOnAnimation()
             return
         }
-        if (frame == null || frame.isRecycled || frame.width > MAX_WIDTH + 1 || frame.height > MAX_HEIGHT + 1 || frameCrop.isEmpty ||
+        if (frame == null) {
+            // Wallpaper may not have a compositor frame on the first Launcher draw.
+            // Try once after presentation; then wait for a real source/visibility event.
+            sourceDirty = false
+            sourceUnavailable = true
+            if (unavailableTries++ == 0) owner.get()?.let { scheduleTick(it, 64L) }
+            return
+        }
+        if (frame.isRecycled || frame.width > MAX_WIDTH + 1 || frame.height > MAX_HEIGHT + 1 || frameCrop.isEmpty ||
             kotlin.math.abs(frame.width - frameCrop.width() * scale) > 1f || kotlin.math.abs(frame.height - frameCrop.height() * scale) > 1f) {
             frame?.recycle()
             fail(IllegalStateException("wallpaper-only capture returned no usable SDR frame"))
@@ -255,6 +280,8 @@ internal class DockGlassBackdrop(
             sampleScaleX = frame.width.toFloat() / crop.width()
             sampleScaleY = frame.height.toFloat() / crop.height()
             sourceDirty = false
+            sourceUnavailable = false
+            unavailableTries = 0
             paint.shader = lens
             // Native RenderThread recordings retain their own image references. The owner no
             // longer reads the previous Java Bitmap after replacing the shader input.

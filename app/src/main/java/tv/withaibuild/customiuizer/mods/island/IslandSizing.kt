@@ -47,7 +47,13 @@ internal object IslandSizing {
         return minOf(preferred, ceiling)
     }
 
-    fun automaticHeight(holeDp: Int): Int = if (holeDp <= 0) 38 else (32f + holeDp * .25f).roundToInt().coerceIn(36, 40)
+    fun automaticHeight(holeDp: Int, statusBarDp: Int = 0): Int {
+        val preferred = if (holeDp <= 0) 38 else (32f + holeDp * .25f).roundToInt().coerceIn(36, 40)
+        if (statusBarDp <= 0) return preferred
+        val ceiling = (statusBarDp - 6).coerceIn(32, 40)
+        val cameraMinimum = (holeDp + 8).coerceIn(32, 40)
+        return minOf(preferred, ceiling).coerceAtLeast(cameraMinimum)
+    }
 
     fun idleWidth(density: Float, height: Int, hole: Int, short: Int, manualDp: Int = 0): Int {
         val preferred = if (manualDp > 0) manualDp.coerceIn(48, 120) * density

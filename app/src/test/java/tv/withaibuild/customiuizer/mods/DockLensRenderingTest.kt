@@ -68,8 +68,8 @@ class DockLensRenderingTest {
             offset(rect.left, rect.top)
         }, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }) }
         assertEquals(0, Color.alpha(result.getPixel(0, 0)))
-        assertTrue("inward lens samples a different stripe, rather than adding a bright rim",
-            Color.red(result.getPixel(1, 50)) < 80)
+        assertTrue("refraction moves real light stripes onto dark source features, beyond a bright rim",
+            (1..24).any { x -> Color.red(source.getPixel(x, 50)) > 240 && Color.red(result.getPixel(x, 50)) < 80 })
         assertTrue(Color.red(source.getPixel(1, 50)) > 240)
         assertTrue("the flat center still transmits its original stripe", Color.red(result.getPixel(160, 50)) > 220)
         val dark = Bitmap.createBitmap(320, 100, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.rgb(18, 22, 26)) }

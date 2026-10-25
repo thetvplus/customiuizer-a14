@@ -48,7 +48,6 @@ EXPECTED_SPLITS = {
     "pref_key_system_cat_toasts": "prefs_system_toasts.xml",
     "pref_key_system_cat_statusbar": "prefs_system_statusbar.xml",
     "pref_key_system_cat_island": "prefs_system_island.xml",
-    "pref_key_system_cat_prompts": "prefs_system_prompts.xml",
     "pref_key_system_cat_drawer": "prefs_system_drawer.xml",
     "pref_key_system_cat_notifications": "prefs_system_notifications.xml",
     "pref_key_system_cat_qs": "prefs_system_qs.xml",
@@ -243,7 +242,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         for suffix, keys in (
             ("feedback", [f"pref_key_system_island_feedback_{kind}" for kind in
                           ("dnd", "ringer", "dark", "airplane", "nfc", "hotspot", "torch", "wifi", "data", "bluetooth")]),
-            ("music", [f"pref_key_system_island_music_{gesture}" for gesture in ("left", "right", "down", "double", "long")]),
+            ("actions", [f"pref_key_system_island_music_{gesture}" for gesture in ("left", "right", "down", "double", "long")]),
         ):
             for key in keys:
                 match = [entry for entry in entries if entry["key"] == key]

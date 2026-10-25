@@ -4,6 +4,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandSizingTest {
+    @Test fun automaticHeightFitsTheNativeRowWithoutPretendingToFillIt() {
+        assertEquals(38, IslandSizing.automaticHeight(24, 46))
+        assertEquals(36, IslandSizing.automaticHeight(24, 42))
+        assertEquals(34, IslandSizing.automaticHeight(26, 40))
+        assertEquals(38, IslandSizing.automaticHeight(24))
+    }
     @Test fun idleAutomaticWidthUsesOneHundredDpAndLeavesRoomForTheShortForm() {
         assertEquals(100, IslandSizing.idleWidth(1f, 38, 20, 164))
         assertEquals(300, IslandSizing.idleWidth(3f, 114, 60, 492))

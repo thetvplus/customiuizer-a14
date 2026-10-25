@@ -51,6 +51,7 @@ internal data class IslandOptions(
     val automaticHeight: Boolean = height == 40,
     val charging: Boolean = false,
     val lowBattery: Boolean = false,
+    val idleActions: IslandIdleActions = IslandIdleActions(),
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
@@ -89,7 +90,7 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_island_expand_down", true),
                 prefs.getBoolean("system_island_height_auto", prefs.getInt("system_island_height", 40) == 40),
                 prefs.getBoolean("system_island_feedback_charging"),
-                prefs.getBoolean("system_island_feedback_low_battery"))
+                prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs))
         }
     }
 }

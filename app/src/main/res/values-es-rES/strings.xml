@@ -1179,7 +1179,7 @@
     <string name="seekbar_value_special">%1$s representa «%2$s»</string>
     <string name="seekbar_value_error">Introduce un número dentro del rango y con el paso indicados.</string>
     <string name="restart_settings_sync_failed">No se pudieron sincronizar los ajustes. Espera a que se conecte el módulo e inténtalo de nuevo.</string>
-    <string name="system_island_title">Isla dinámica</string>
+    <string name="system_island_title">Avisos del sistema</string>
     <string name="system_island_intro">Reinicia la interfaz del sistema tras seleccionar Dynamic Island por primera vez o activar una integración. Se oculta en la pantalla de bloqueo, con la pantalla apagada, en horizontal o con el panel de notificaciones abierto.</string>
     <string name="system_island_media_title">Música y multimedia</string>
     <string name="system_island_media_return_title">Música a la isla</string>
@@ -1239,14 +1239,14 @@
     <string name="system_island_action_play">Reproducir</string>
     <string name="system_island_action_pause">Pausar</string>
     <string name="system_island_action_player">Abrir reproductor</string>
-    <string name="system_island_music_group">Música y multimedia</string>
+    <string name="system_island_music_group">Multimedia</string>
     <string name="system_island_feedback_ringer_title">Modo de sonido</string>
     <string name="system_island_basic_group">Ajustes básicos</string>
     <string name="system_island_geometry_group">Posición y tamaño</string>
     <string name="system_island_appearance_group">Apariencia y animación</string>
     <string name="system_island_feedback_group">Contenido</string>
     <string name="system_island_interaction_group">Comportamiento</string>
-    <string name="system_island_gestures_title">Gestos de música</string>
+    <string name="system_island_gestures_title">Gestos</string>
     <string name="system_island_waveform_off">Desactivado</string>
     <string name="system_island_waveform_light">Animación ligera</string>
     <string name="system_island_waveform_real">Onda en directo (experimental)</string>
@@ -1259,7 +1259,7 @@
     <string name="system_island_height_auto_title">Altura automática de la isla</string>
     <string name="system_island_height_auto_summ">Ajusta la altura a 36–40 dp según la cámara. Desactiva para ajustarla manualmente.</string>
     <string name="system_island_idle_title">Isla pequeña permanente</string>
-    <string name="system_island_idle_summ">Mantiene una cápsula inmóvil sin actividades. Toca o desliza hacia abajo para abrir notificaciones; desliza hacia arriba para ocultarla hasta la próxima actividad o activación de pantalla.</string>
+    <string name="system_island_idle_summ">Keep a still idle island. Configure tap and swipe actions under Gestures.</string>
     <string name="system_island_idle_width_auto_title">Ancho automático de la isla pequeña</string>
     <string name="system_island_idle_width_title">Ancho de la isla pequeña</string>
     <string name="system_island_expand_down_title">Gestos para ampliar</string>
@@ -1270,4 +1270,6 @@
     <string name="system_island_feedback_low_battery_summ">Sustituye el aviso solo cuando la isla está visible; en otro caso conserva el del sistema. Al activarlo por primera vez, reinicia la interfaz del sistema y Seguridad.</string>
     <string name="system_island_battery_charging">Carga</string>
     <string name="system_island_battery_low">Batería baja</string>
+    <string name="system_island_gesture_tap">Toque</string>
+    <string name="system_island_idle_gestures_summ">Solo en la isla inactiva. Los controles usan la última sesión multimedia válida.</string>
 </resources>

@@ -42,7 +42,7 @@ internal object G4Geometry {
 
     // A single immutable unit quarter, first created only by an enabled Dock background.
     private val quarter by lazy {
-        val result = FloatArray(STEPS * 6)
+        val result = DoubleArray(STEPS * 6)
         val step = 1.0 / STEPS
         var x = 0.0
         var y = 0.0
@@ -53,19 +53,22 @@ internal object G4Geometry {
             val nextX = x + step / 6 * (cos(a) + 4 * cos(middle) + cos(b))
             val nextY = y + step / 6 * (sin(a) + 4 * sin(middle) + sin(b))
             val offset = i * 6
-            result[offset] = (x + step / 3 * cos(a)).toFloat()
-            result[offset + 1] = (y + step / 3 * sin(a)).toFloat()
-            result[offset + 2] = (nextX - step / 3 * cos(b)).toFloat()
-            result[offset + 3] = (nextY - step / 3 * sin(b)).toFloat()
-            result[offset + 4] = nextX.toFloat()
-            result[offset + 5] = nextY.toFloat()
+            result[offset] = (x + step / 3 * cos(a))
+            result[offset + 1] = (y + step / 3 * sin(a))
+            result[offset + 2] = (nextX - step / 3 * cos(b))
+            result[offset + 3] = (nextY - step / 3 * sin(b))
+            result[offset + 4] = nextX
+            result[offset + 5] = nextY
             x = nextX
             y = nextY
         }
-        for (i in result.indices) result[i] = (result[i] / x).toFloat().coerceIn(0f, 1f)
-        result[result.lastIndex - 1] = 1f
-        result[result.lastIndex] = 1f
-        result
+        val precise = FloatArray(result.size) { (result[it] / x).toFloat() }
+        // Explicit collinear controls remove finite-cubic curvature at the straight join.
+        precise[1] = 0f; precise[3] = 0f
+        precise[precise.size - 6] = 1f; precise[precise.size - 4] = 1f
+        precise[precise.lastIndex - 1] = 1f
+        precise[precise.lastIndex] = 1f
+        precise
     }
 
     fun build(path: Path, width: Float, height: Float, radius: Float) {

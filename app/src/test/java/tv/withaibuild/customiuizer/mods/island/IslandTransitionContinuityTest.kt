@@ -128,8 +128,16 @@ class IslandTransitionContinuityTest {
         assertEquals("Old", title.text.toString())
         shell.transition(184, 40, 184, 40, false)
         motion().end()
-        assertEquals("Current track", title.text.toString())
+        assertEquals("Hidden compact labels must not schedule text layout", "", title.text.toString())
         assertEquals(View.GONE, shell.getChildAt(1).visibility)
+        assertTrue(shell.contentDescription.toString().contains("Current track"))
+        shell.bind("Current track", null, activity.getDrawable(android.R.drawable.ic_dialog_info),
+            true, true, true, 0, false, expanded = true)
+        shell.expanded = true
+        shell.transition(184, 40, 300, 40, false)
+        motion().end()
+        assertEquals("Current track", title.text.toString())
+        assertEquals(View.VISIBLE, shell.getChildAt(1).visibility)
     }
 
     @Test fun cancellationDiscardsPendingContentAndAStaleCompletionCannotReapplyIt() {

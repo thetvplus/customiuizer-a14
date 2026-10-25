@@ -50,7 +50,13 @@ internal object SystemPipActions {
     internal fun selected(prefs: PrefMap, code: Int): Boolean {
         if (hasConfiguredActionCode(code)) return true
         val island = IslandOptions.read(prefs)
-        if (!island.enabled || !island.media) return false
+        if (!island.enabled) return false
+        if (island.idle) {
+            val idle = island.idleActions
+            if (idle.tap == code || listOf(idle.gestures.left, idle.gestures.right, idle.gestures.down,
+                    idle.gestures.doubleTap, idle.gestures.longPress).any { it == code }) return true
+        }
+        if (!island.media) return false
         val actions = island.musicActions
         return actions.left == code || actions.right == code || actions.down == code ||
             actions.doubleTap == code || actions.longPress == code

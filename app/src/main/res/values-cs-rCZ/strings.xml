@@ -1187,7 +1187,7 @@
     <string name="seekbar_value_special">%1$s znamená „%2$s“</string>
     <string name="seekbar_value_error">Zadejte číslo v uvedeném rozsahu a kroku.</string>
     <string name="restart_settings_sync_failed">Nastavení se nepodařilo synchronizovat. Počkejte na připojení modulu a zkuste to znovu.</string>
-    <string name="system_island_title">Dynamický ostrov</string>
+    <string name="system_island_title">Systémová upozornění</string>
     <string name="system_island_intro">Po prvním výběru Dynamic Island nebo zapnutí integrace restartujte systémové rozhraní. Ostrov je skrytý na zamykací obrazovce, při vypnutém displeji, na šířku nebo při otevřeném panelu oznámení.</string>
     <string name="system_island_media_title">Hudba a média</string>
     <string name="system_island_media_return_title">Hudba do ostrůvku</string>
@@ -1247,14 +1247,14 @@
     <string name="system_island_action_play">Přehrát</string>
     <string name="system_island_action_pause">Pozastavit</string>
     <string name="system_island_action_player">Otevřít přehrávač</string>
-    <string name="system_island_music_group">Hudba a média</string>
+    <string name="system_island_music_group">Média</string>
     <string name="system_island_feedback_ringer_title">Režim vyzvánění</string>
     <string name="system_island_basic_group">Základní nastavení</string>
     <string name="system_island_geometry_group">Poloha a velikost</string>
     <string name="system_island_appearance_group">Vzhled a animace</string>
     <string name="system_island_feedback_group">Obsah</string>
     <string name="system_island_interaction_group">Chování</string>
-    <string name="system_island_gestures_title">Hudební gesta</string>
+    <string name="system_island_gestures_title">Gesta</string>
     <string name="system_island_waveform_off">Vypnuto</string>
     <string name="system_island_waveform_light">Lehká animace</string>
     <string name="system_island_waveform_real">Živý průběh (experimentální)</string>
@@ -1267,7 +1267,7 @@
     <string name="system_island_height_auto_title">Automatická výška ostrova</string>
     <string name="system_island_height_auto_summ">Přizpůsobí výšku 36–40 dp výřezu fotoaparátu. Vypnutím povolíte ruční nastavení.</string>
     <string name="system_island_idle_title">Trvalý malý ostrov</string>
-    <string name="system_island_idle_summ">Bez aktivit ponechá nehybnou kapsli. Klepnutím nebo tahem dolů otevřete oznámení; tahem nahoru ji skryjete do další aktivity nebo probuzení obrazovky.</string>
+    <string name="system_island_idle_summ">Keep a still idle island. Configure tap and swipe actions under Gestures.</string>
     <string name="system_island_idle_width_auto_title">Automatická šířka malého ostrova</string>
     <string name="system_island_idle_width_title">Šířka malého ostrova</string>
     <string name="system_island_expand_down_title">Gesta rozbalení</string>
@@ -1278,4 +1278,6 @@
     <string name="system_island_feedback_low_battery_summ">Nahradí upozornění pouze při viditelném ostrovu; jinak zachová systémové. Po prvním zapnutí restartujte systémové rozhraní a aplikaci Zabezpečení.</string>
     <string name="system_island_battery_charging">Nabíjení</string>
     <string name="system_island_battery_low">Slabá baterie</string>
+    <string name="system_island_gesture_tap">Klepnutí</string>
+    <string name="system_island_idle_gestures_summ">Platí jen pro nečinný ostrůvek. Přehrávání ovládá poslední platnou mediální relaci.</string>
 </resources>

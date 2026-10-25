@@ -3,6 +3,10 @@ package tv.withaibuild.customiuizer.mods
 import android.animation.ValueAnimator
 import android.app.WallpaperManager
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.PowerManager
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
@@ -23,6 +27,7 @@ import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.view.ViewTreeObserver
 import android.view.WindowInsets
+import android.view.WindowManager
 import android.view.animation.AnimationSet
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Transformation
@@ -293,6 +298,7 @@ internal data class DockBackgroundConfig(
     val sideInsetDp: Int = 0,
     val sizeAdjustmentDp: Int = 0,
     val fullWidth: Boolean = false,
+    val blurAllowed: Boolean = true,
 ) {
     companion object {
         fun read(prefs: PrefMap) = DockBackgroundConfig(
@@ -303,6 +309,7 @@ internal data class DockBackgroundConfig(
             // Retain the key and raw encoding. Positive displayed values now expand all four edges.
             sizeAdjustmentDp = prefs.getInt("launcher_dock_background_shrink", 17).coerceIn(0, 34) - 17,
             fullWidth = prefs.getBoolean("launcher_dock_background_full_width"),
+            blurAllowed = !prefs.getBoolean("system_disable_window_blurs"),
         )
     }
 }
@@ -322,6 +329,30 @@ internal class DockBackgroundView(
     private var glassBackdrop: DockGlassBackdrop? = null
     private var materialEnabled = false
     private var googleBlur = false
+    private var powerSave = false
+    private var powerRegistered = false
+    private var blurWindow: WindowManager? = null
+    private var crossWindowBlur = false
+    private val blurListener = java.util.function.Consumer<Boolean> { enabled ->
+        ModuleHelper.guarded {
+            if (crossWindowBlur != enabled) {
+                crossWindowBlur = enabled
+                syncNativeMaterialVisibility(isShown || editingAnimation != null)
+                invalidate()
+            }
+        }
+    }
+    private val powerReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == PowerManager.ACTION_POWER_SAVE_MODE_CHANGED) ModuleHelper.guarded { updatePowerSave() }
+        }
+    }
+
+    private fun updatePowerSave() {
+        powerSave = ModuleHelper.guarded(true) { context.getSystemService(PowerManager::class.java)?.isPowerSaveMode != false }
+        glassBackdrop?.setPowerSave(powerSave)
+        invalidate()
+    }
     private var editingAnimation: AnimationSet? = null
     private var editingAlpha = 1f
     private val editingMatrix = Matrix()
@@ -364,6 +395,18 @@ internal class DockBackgroundView(
             navigationInsets = rootWindowInsets?.getInsets(WindowInsets.Type.navigationBars()) ?: Insets.NONE
             installMaterial()
             installGlass()
+            if (config.material == 3 && (glassBackdrop != null || nativeMaterial != null) && !powerRegistered) {
+                context.registerReceiver(powerReceiver, IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED), Context.RECEIVER_NOT_EXPORTED)
+                powerRegistered = true
+                updatePowerSave()
+            }
+            if (config.material == 3 && googleBlur && blurWindow == null) {
+                context.getSystemService(WindowManager::class.java)?.let { manager ->
+                    crossWindowBlur = manager.isCrossWindowBlurEnabled
+                    manager.addCrossWindowBlurEnabledListener(context.mainExecutor, blurListener)
+                    blurWindow = manager
+                }
+            }
             syncNativeMaterialVisibility(isShown)
             refreshAppearance()
             scheduleGeometry()
@@ -434,6 +477,12 @@ internal class DockBackgroundView(
 
     override fun onDetachedFromWindow() {
         try {
+            blurWindow?.let { manager -> ModuleHelper.guarded { manager.removeCrossWindowBlurEnabledListener(blurListener) } }
+            blurWindow = null
+            if (powerRegistered) {
+                powerRegistered = false
+                ModuleHelper.guarded { context.unregisterReceiver(powerReceiver) }
+            }
             ModuleHelper.guarded {
                 cancelWidthAnimation()
                 widthAnimation?.removeAllUpdateListeners()
@@ -549,8 +598,9 @@ internal class DockBackgroundView(
 
     private fun syncNativeMaterialVisibility(requestedVisible: Boolean) {
         val material = nativeMaterial ?: return
-        val isVisible = requestedVisible && !tint.lensActive
         try {
+            val fallbackAllowed = config.material != 3 || !powerSave && config.blurAllowed && (!googleBlur || crossWindowBlur)
+            val isVisible = requestedVisible && !tint.lensActive && fallbackAllowed
             // Retire the Google region before the SDK clears its background; disable the MIUI binder too.
             if (!isVisible) material.background?.alpha = 0
             if (materialEnabled != isVisible) {
@@ -562,11 +612,14 @@ internal class DockBackgroundView(
                 materialEnabled = isVisible
                 if (isVisible) configureGlassBlend(material)
             }
+            material.visibility = if (isVisible) VISIBLE else INVISIBLE
             if (isVisible) material.background?.let { drawable ->
+                val wasTransparent = drawable.alpha == 0
                 drawable.alpha = if (googleBlur) nativeBlurAlpha() else (config.opacity * 2.55f).roundToInt()
-                // The ROM override rebuilds its path even for unchanged bounds, after restoring alpha.
-                val bounds = drawable.bounds
-                drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+                if (wasTransparent && drawable.alpha > 0) {
+                    val bounds = drawable.bounds
+                    drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+                }
             }
         } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -581,7 +634,9 @@ internal class DockBackgroundView(
         // not blend with a second native blur region using a different corner profile.
         tint.beginFrame(canvas)
         syncNativeMaterialVisibility((isShown || editingAnimation != null) && nativeBlurAlpha() > 0)
-        tint.nativeFallback = nativeMaterial != null && !tint.lensActive
+        tint.nativeFallback = materialEnabled && nativeMaterial?.visibility == VISIBLE && !tint.lensActive
+        tint.solidFallback = !tint.lensActive && !tint.nativeFallback
+        tint.panelAlpha = (config.opacity * 2.3f).roundToInt().coerceIn(0, 255)
         try { super.draw(canvas) } finally { tint.endFrame() }
     }
 
@@ -854,7 +909,7 @@ internal class DockBackgroundView(
         }
         tint.color = if (night || lightWallpaper) Color.rgb(24, 26, 30) else Color.WHITE
         tint.alpha = (config.opacity * if (config.material == 3) 0.2f else 0.85f).roundToInt()
-        tint.rounded = nativeMaterial != null || glassBackdrop != null
+        tint.rounded = config.material != 3 && nativeMaterial != null
         glassBackdrop?.invalidateSource()
         updateGeometry()
         scheduleGeometry()
@@ -880,6 +935,8 @@ internal class DockBackgroundTint(withRim: Boolean = false, private val density:
     var lensActive = false
         private set
     var nativeFallback = false
+    var solidFallback = false
+    var panelAlpha = 216
     private var prepared = false
     fun beginFrame(canvas: Canvas) {
         prepared = true
@@ -956,9 +1013,20 @@ internal class DockBackgroundTint(withRim: Boolean = false, private val density:
 
     override fun draw(canvas: Canvas) {
         if (prepared) {
-            if (lensActive && backdrop?.drawPrepared(canvas) == true) return
+            if (lensActive) {
+                if (backdrop?.drawPrepared(canvas) == true) return
+                lensActive = false
+                nativeFallback = false
+                solidFallback = true
+            }
         } else if (backdrop?.draw(canvas, bounds, radius, density) == true) return
         if (nativeFallback) return
+        if (solidFallback) {
+            val alpha = paint.alpha
+            paint.alpha = panelAlpha
+            try { canvas.drawPath(path, paint) } finally { paint.alpha = alpha }
+            return
+        }
         if (paint.alpha == 0) return
         canvas.drawPath(path, paint)
         depth?.let {

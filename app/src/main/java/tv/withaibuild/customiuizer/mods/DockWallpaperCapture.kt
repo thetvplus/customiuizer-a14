@@ -11,10 +11,29 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** Worker-only contract. The crop is in DEFAULT DISPLAY coordinates, never Launcher pixels. */
 internal fun interface DockWallpaperSampler {
     fun capture(crop: Rect, scale: Float): Bitmap?
+    fun capture(crop: Rect, scale: Float, viewportWidth: Int, viewportHeight: Int): Bitmap? = capture(crop, scale)
+}
+
+/** Some A14 wallpaper extensions ignore sourceCrop and return the whole wallpaper.
+ * Accept that only when its dimensions prove the supplied default-display viewport. */
+internal object DockWallpaperFrame {
+    fun crop(width: Int, height: Int, region: Rect, scale: Float, viewportWidth: Int, viewportHeight: Int): Rect? {
+        if (!scale.isFinite() || scale <= 0f || region.isEmpty) return null
+        if (abs(width - region.width() * scale) <= 1f && abs(height - region.height() * scale) <= 1f)
+            return Rect(0, 0, width, height)
+        if (viewportWidth <= 0 || viewportHeight <= 0 || region.left < 0 || region.top < 0 ||
+            region.right > viewportWidth || region.bottom > viewportHeight ||
+            abs(width - viewportWidth * scale) > 1f || abs(height - viewportHeight * scale) > 1f) return null
+        return Rect((region.left * scale).roundToInt(), (region.top * scale).roundToInt(),
+            (region.right * scale).roundToInt().coerceAtMost(width),
+            (region.bottom * scale).roundToInt().coerceAtMost(height)).takeUnless { it.isEmpty }
+    }
 }
 
 /**
@@ -37,6 +56,10 @@ internal class DockWallpaperCapture private constructor(
     private val hdr: Method,
 ) : DockWallpaperSampler {
     override fun capture(crop: Rect, scale: Float): Bitmap? {
+        return capture(crop, scale, 0, 0)
+    }
+
+    override fun capture(crop: Rect, scale: Float, viewportWidth: Int, viewportHeight: Int): Bitmap? {
         val args = builder.newInstance()
         setCrop.invoke(args, crop)
         setScale.invoke(args, scale)
@@ -46,7 +69,16 @@ internal class DockWallpaperCapture private constructor(
         return try {
             // Do not reinterpret protected or HDR content as an SDR wallpaper texture.
             if (secure.invoke(result) == true || hdr.invoke(result) == true) null
-            else Bitmap.wrapHardwareBuffer(buffer, colorSpace.invoke(result) as? ColorSpace)
+            else {
+                val full = Bitmap.wrapHardwareBuffer(buffer, colorSpace.invoke(result) as? ColorSpace) ?: return null
+                val region = DockWallpaperFrame.crop(full.width, full.height, crop, scale, viewportWidth, viewportHeight)
+                if (region == null) { full.recycle(); return null }
+                if (region.left == 0 && region.top == 0 && region.width() == full.width && region.height() == full.height) full
+                else try {
+                    // API 34 hardware Bitmap subsets stay on the GPU (verified on fuxi).
+                    Bitmap.createBitmap(full, region.left, region.top, region.width(), region.height())
+                } finally { full.recycle() }
+            }
         } finally {
             // wrapHardwareBuffer retains its own native reference; release the capture's handle.
             buffer.close()

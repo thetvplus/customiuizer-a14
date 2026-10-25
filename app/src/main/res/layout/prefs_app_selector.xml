@@ -1,26 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:id="@+id/fields"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
 	android:orientation="vertical"
-	android:paddingTop="@dimen/preference_screen_padding_top"
-	android:animateLayoutChanges="true">
+	android:paddingTop="@dimen/preference_screen_padding_top">
 
 	<include layout="@layout/search_stub" />
 
+	<FrameLayout
+		android:id="@+id/app_list_viewport"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:layout_marginTop="8dp"
+		android:clipChildren="true"
+		android:clipToPadding="true">
 	<ListView
 		android:id="@android:id/list"
 		style="@style/GroupedListView"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:layout_below="@+id/searchView"
+		android:clipToPadding="true"
 		android:scrollbars="vertical" />
 
 	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:layout_centerInParent="true"
 		android:gravity="center"
 		android:orientation="vertical">
 
@@ -31,4 +37,5 @@
 			android:layout_height="wrap_content" />
 
 	</LinearLayout>
-</RelativeLayout>
+	</FrameLayout>
+</LinearLayout>

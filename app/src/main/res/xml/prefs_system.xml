@@ -543,8 +543,9 @@
 
 
 		<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
-			android:key="pref_key_system_cat_prompts"
-			android:title="@string/system_strong_toast_title">
+			android:key="pref_key_system_cat_island"
+			android:title="@string/system_island_title">
+			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_basic_group">
 			<tv.withaibuild.customiuizer.prefs.ListPreferenceEx
 				android:key="pref_key_system_strong_toast_mode"
 				android:title="@string/system_strong_toast_title"
@@ -558,12 +559,7 @@
 				android:title="@string/system_toast_capsule_title"
 				android:summary="@string/system_toast_capsule_summ"
 				android:defaultValue="false" />
-		</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 
-		<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
-			android:key="pref_key_system_cat_island"
-			android:title="@string/system_island_title">
-			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_basic_group">
 				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:summary="@string/system_island_intro" android:selectable="false" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_feedback_group">
@@ -584,6 +580,7 @@
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_simplified" android:title="@string/system_island_simplified_title" android:defaultValue="false" android:summary="@string/system_island_simplified_summ" />
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_interaction_group">
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_actions_cat" android:title="@string/system_island_gestures_title" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_expand_down" android:title="@string/system_island_expand_down_title" android:summary="@string/system_island_expand_down_summ" android:defaultValue="true" />
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_hide_in_floating_window" android:title="@string/system_island_hide_in_floating_window_title" android:defaultValue="false" android:summary="@string/system_island_hide_in_floating_window_summ" />
 				<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_excluded_apps" android:title="@string/system_island_excluded_apps_title" android:summary="@string/system_island_excluded_apps_summ" miuizer:countAsSummary="true" />

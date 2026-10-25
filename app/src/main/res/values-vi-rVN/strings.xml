@@ -1180,7 +1180,7 @@
     <string name="seekbar_value_special">%1$s tương ứng với «%2$s»</string>
     <string name="seekbar_value_error">Nhập số trong phạm vi và đúng bước nêu trên.</string>
     <string name="restart_settings_sync_failed">Không thể đồng bộ cài đặt. Hãy đợi mô-đun kết nối rồi thử lại.</string>
-    <string name="system_island_title">Đảo động</string>
+    <string name="system_island_title">Thông báo hệ thống</string>
     <string name="system_island_intro">Khởi động lại giao diện hệ thống sau khi chọn Dynamic Island lần đầu hoặc bật tích hợp. Ẩn trên màn hình khóa, khi tắt màn hình, ở chế độ ngang hoặc khi mở bảng thông báo.</string>
     <string name="system_island_media_title">Nhạc và phương tiện</string>
     <string name="system_island_media_return_title">Đưa nhạc vào đảo</string>
@@ -1240,14 +1240,14 @@
     <string name="system_island_action_play">Phát</string>
     <string name="system_island_action_pause">Tạm dừng</string>
     <string name="system_island_action_player">Mở trình phát</string>
-    <string name="system_island_music_group">Nhạc và đa phương tiện</string>
+    <string name="system_island_music_group">Phương tiện</string>
     <string name="system_island_feedback_ringer_title">Chế độ chuông</string>
     <string name="system_island_basic_group">Cài đặt cơ bản</string>
     <string name="system_island_geometry_group">Vị trí và kích thước</string>
     <string name="system_island_appearance_group">Giao diện và hoạt ảnh</string>
     <string name="system_island_feedback_group">Nội dung</string>
     <string name="system_island_interaction_group">Hành vi</string>
-    <string name="system_island_gestures_title">Cử chỉ âm nhạc</string>
+    <string name="system_island_gestures_title">Cử chỉ</string>
     <string name="system_island_waveform_off">Tắt</string>
     <string name="system_island_waveform_light">Hoạt ảnh nhẹ</string>
     <string name="system_island_waveform_real">Dạng sóng trực tiếp (thử nghiệm)</string>
@@ -1260,7 +1260,7 @@
     <string name="system_island_height_auto_title">Tự động chỉnh chiều cao đảo</string>
     <string name="system_island_height_auto_summ">Chọn chiều cao 36–40 dp theo phần khoét camera. Tắt để chỉnh thủ công.</string>
     <string name="system_island_idle_title">Đảo nhỏ luôn hiển thị</string>
-    <string name="system_island_idle_summ">Giữ một viên nang tĩnh khi không có hoạt động. Chạm hoặc vuốt xuống để mở thông báo; vuốt lên để ẩn đến hoạt động tiếp theo hoặc khi màn hình sáng.</string>
+    <string name="system_island_idle_summ">Keep a still idle island. Configure tap and swipe actions under Gestures.</string>
     <string name="system_island_idle_width_auto_title">Tự động chỉnh chiều rộng đảo nhỏ</string>
     <string name="system_island_idle_width_title">Chiều rộng đảo nhỏ</string>
     <string name="system_island_expand_down_title">Cử chỉ mở rộng</string>
@@ -1271,4 +1271,6 @@
     <string name="system_island_feedback_low_battery_summ">Chỉ thay cảnh báo khi đảo đang hiển thị; nếu không, giữ cảnh báo hệ thống. Lần đầu bật cần khởi động lại giao diện hệ thống và ứng dụng Bảo mật.</string>
     <string name="system_island_battery_charging">Sạc</string>
     <string name="system_island_battery_low">Pin yếu</string>
+    <string name="system_island_gesture_tap">Chạm</string>
+    <string name="system_island_idle_gestures_summ">Chỉ áp dụng cho đảo chờ. Điều khiển phát dùng phiên phương tiện hợp lệ gần nhất.</string>
 </resources>

@@ -50,6 +50,7 @@ CATEGORY_SOURCES = (
 STANDALONE_PAGES = (
     ("pref_key_system_island_feedback_cat", "prefs_system_island_feedback", "System", False),
     ("pref_key_system_island_music_cat", "prefs_system_island_music", "System", False),
+    ("pref_key_system_island_actions_cat", "prefs_system_island_actions", "System", False),
     ("pref_key_system_island_layout_cat", "prefs_system_island_layout", "System", False),
     ("pref_key_system_island_notifications_cat", "prefs_system_island_notifications", "System", False),
     ("pref_key_system_autobrightness_cat", "prefs_system_autobrightness", "System_AutoBrightness", False),

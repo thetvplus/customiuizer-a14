@@ -41,16 +41,16 @@
       "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
     },
     {
-      "preferenceKey": "system_cat_prompts",
-      "reason": "Navigation-only System prompt style page; no persisted setting or Hook."
-    },
-    {
       "preferenceKey": "system_island_layout_cat",
       "reason": "Navigation-only lazy Dynamic Island settings page; no stored value or Hook."
     },
     {
       "preferenceKey": "system_island_notifications_cat",
       "reason": "Navigation-only lazy Dynamic Island settings page; no stored value or Hook."
+    },
+    {
+      "preferenceKey": "system_island_actions_cat",
+      "reason": "Navigation-only shared media/idle gesture page; action payload keys retain their existing contract."
     }
   ],
   "entries": [
@@ -18481,7 +18481,7 @@
         "system_island_music_left",
         "pref_key_system_island_music_left"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18504,7 +18504,7 @@
         "system_island_music_right",
         "pref_key_system_island_music_right"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18527,7 +18527,7 @@
         "system_island_music_down",
         "pref_key_system_island_music_down"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18550,7 +18550,7 @@
         "system_island_music_double",
         "pref_key_system_island_music_double"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18573,7 +18573,7 @@
         "system_island_music_long",
         "pref_key_system_island_music_long"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18772,6 +18772,144 @@
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
       "notes": "First installation requires SystemUI and SecurityCenter restart. Native warning is suppressed only after a visible replacement acknowledgement; failed or late acknowledgement retains native warning."
+    },
+    {
+      "featureId": "system_island_idle_tap",
+      "featureName": "system_island_idle_tap",
+      "preferenceKeys": [
+        "system_island_idle_tap",
+        "pref_key_system_island_idle_tap"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_left",
+      "featureName": "system_island_idle_left",
+      "preferenceKeys": [
+        "system_island_idle_left",
+        "pref_key_system_island_idle_left"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_right",
+      "featureName": "system_island_idle_right",
+      "preferenceKeys": [
+        "system_island_idle_right",
+        "pref_key_system_island_idle_right"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_down",
+      "featureName": "system_island_idle_down",
+      "preferenceKeys": [
+        "system_island_idle_down",
+        "pref_key_system_island_idle_down"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_double",
+      "featureName": "system_island_idle_double",
+      "preferenceKeys": [
+        "system_island_idle_double",
+        "pref_key_system_island_idle_double"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_long",
+      "featureName": "system_island_idle_long",
+      "preferenceKeys": [
+        "system_island_idle_long",
+        "pref_key_system_island_idle_long"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
     }
   ]
 }

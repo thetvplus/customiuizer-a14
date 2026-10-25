@@ -117,6 +117,21 @@ class IslandMusicGestureTest {
         assertEquals(0, opened)
     }
 
+    @Test fun idleGesturesAreExplicitAndDoNotReuseTheMediaDownAction() {
+        shell.idle = true
+        shell.configureGestures(Any(), IslandMusicActions(left = 30, right = 1, down = 2, longPress = 18), true)
+        swipe(10f)
+        swipe(140f, 100f)
+        touch(MotionEvent.ACTION_DOWN)
+        advance(ViewConfiguration.getLongPressTimeout().toLong() + 100)
+        touch(MotionEvent.ACTION_UP)
+        assertEquals(listOf(IslandMusicGesture.LEFT, IslandMusicGesture.DOWN, IslandMusicGesture.LONG_PRESS), gestures)
+        assertEquals(0, opened)
+        shell.idleTapAction = 2
+        tap()
+        assertEquals(1, opened)
+    }
+
     @Test fun platformDoubleTapExcludesBothSingleClicksButConfirmedSingleStillOpens() {
         shell.configureGestures(identity, IslandMusicActions(doubleTap = 85), true)
         tap(); assertEquals(0, opened)

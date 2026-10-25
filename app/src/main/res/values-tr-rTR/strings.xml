@@ -1186,7 +1186,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="seekbar_value_special">%1$s, «%2$s» anlamına gelir</string>
     <string name="seekbar_value_error">Yukarıdaki aralık ve adıma uygun bir sayı girin.</string>
     <string name="restart_settings_sync_failed">Ayarlar eşitlenemedi. Modül bağlantısını bekleyip tekrar deneyin.</string>
-    <string name="system_island_title">Dinamik Ada</string>
+    <string name="system_island_title">Sistem uyarıları</string>
     <string name="system_island_intro">Dynamic Island ilk kez seçildiğinde veya bir entegrasyon açıldığında sistem arayüzünü yeniden başlatın. Kilit ekranında, ekran kapalıyken, yatay modda ve bildirim paneli açıkken gizlenir.</string>
     <string name="system_island_media_title">Müzik ve medya</string>
     <string name="system_island_media_return_title">Müziği adaya taşı</string>
@@ -1246,14 +1246,14 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_action_play">Oynat</string>
     <string name="system_island_action_pause">Duraklat</string>
     <string name="system_island_action_player">Oynatıcıyı aç</string>
-    <string name="system_island_music_group">Müzik ve medya</string>
+    <string name="system_island_music_group">Medya</string>
     <string name="system_island_feedback_ringer_title">Zil modu</string>
     <string name="system_island_basic_group">Temel ayarlar</string>
     <string name="system_island_geometry_group">Konum ve boyut</string>
     <string name="system_island_appearance_group">Görünüm ve animasyon</string>
     <string name="system_island_feedback_group">İçerik</string>
     <string name="system_island_interaction_group">Davranış</string>
-    <string name="system_island_gestures_title">Müzik hareketleri</string>
+    <string name="system_island_gestures_title">Hareketler</string>
     <string name="system_island_waveform_off">Kapalı</string>
     <string name="system_island_waveform_light">Hafif animasyon</string>
     <string name="system_island_waveform_real">Canlı dalga biçimi (deneysel)</string>
@@ -1266,7 +1266,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_height_auto_title">Otomatik ada yüksekliği</string>
     <string name="system_island_height_auto_summ">Kamera kesitine göre 36–40 dp yükseklik seçer. Elle ayarlamak için kapatın.</string>
     <string name="system_island_idle_title">Kalıcı küçük ada</string>
-    <string name="system_island_idle_summ">Etkinlik yokken sabit bir kapsül gösterir. Bildirimleri açmak için dokunun veya aşağı kaydırın; sonraki etkinliğe ya da ekran uyanana kadar gizlemek için yukarı kaydırın.</string>
+    <string name="system_island_idle_summ">Keep a still idle island. Configure tap and swipe actions under Gestures.</string>
     <string name="system_island_idle_width_auto_title">Otomatik küçük ada genişliği</string>
     <string name="system_island_idle_width_title">Küçük ada genişliği</string>
     <string name="system_island_expand_down_title">Genişletme hareketleri</string>
@@ -1277,4 +1277,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_feedback_low_battery_summ">Uyarıyı yalnızca ada görünürken değiştirir; aksi hâlde sistem uyarısını korur. İlk etkinleştirmede sistem arayüzünü ve Güvenlik uygulamasını yeniden başlatın.</string>
     <string name="system_island_battery_charging">Şarj</string>
     <string name="system_island_battery_low">Düşük pil</string>
+    <string name="system_island_gesture_tap">Dokunma</string>
+    <string name="system_island_idle_gestures_summ">Yalnızca boşta ada için. Oynatma son geçerli medya oturumunu kullanır.</string>
 </resources>

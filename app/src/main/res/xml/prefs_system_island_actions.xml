@@ -1,0 +1,18 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" android:key="pref_key_system_island_actions_cat">
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_music_group">
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_left" android:title="@string/system_island_gesture_left" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_right" android:title="@string/system_island_gesture_right" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_down" android:title="@string/system_island_gesture_down" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_double" android:title="@string/system_island_gesture_double" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_long" android:title="@string/system_island_gesture_long" />
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_idle_title">
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:summary="@string/system_island_idle_gestures_summ" android:selectable="false" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_idle_tap" android:title="@string/system_island_gesture_tap" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_idle_left" android:title="@string/system_island_gesture_left" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_idle_right" android:title="@string/system_island_gesture_right" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_idle_down" android:title="@string/system_island_gesture_down" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_idle_double" android:title="@string/system_island_gesture_double" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_idle_long" android:title="@string/system_island_gesture_long" />
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+</PreferenceScreen>
