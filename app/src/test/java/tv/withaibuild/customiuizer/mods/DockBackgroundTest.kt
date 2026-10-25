@@ -656,10 +656,10 @@ class DockBackgroundTest {
     }
 
     @Test
-    fun automaticCornersUsePanelScaleAndAvoidCapsulesEvenWithLargeDisplayCorners() {
-        assertEquals(28f, DockCornerGeometry.radius(80f, 0f, 28f, 100f), 0f)
-        assertEquals(28f, DockCornerGeometry.radius(80f, 0f, 28f, 140f), 0f)
-        assertEquals(25.6f, DockCornerGeometry.radius(80f, 0f, 28f, 40f), 0.00001f)
+    fun automaticCornersFollowTheDeviceAndKeepAFlatSideOnShallowPanels() {
+        assertEquals(80f, DockCornerGeometry.radius(80f, 0f, 28f, 100f), 0f)
+        assertEquals(80f, DockCornerGeometry.radius(80f, 0f, 28f, 140f), 0f)
+        assertEquals(36.8f, DockCornerGeometry.radius(80f, 0f, 28f, 40f), 0.00001f)
         assertEquals(10f, DockCornerGeometry.radius(10f, 0f, 28f, 40f), 0f)
         assertEquals(24f, DockCornerGeometry.radius(80f, 24f, 28f, 40f), 0f)
         assertEquals(25.6f, DockCornerGeometry.radius(0f, 0f, 28f, 40f), 0.00001f)
@@ -820,7 +820,7 @@ class DockBackgroundTest {
         layout()
         native.viewTreeObserver.dispatchOnPreDraw()
         val radius = (decoration.foreground as DockBackgroundTint).radius
-        assertEquals(minOf(20f * host.resources.displayMetrics.density, minOf(decoration.width, decoration.height) * 0.32f), radius)
+        assertEquals(minOf(100f, minOf(decoration.width, decoration.height) * .46f), radius)
         val material = decoration.getChildAt(0) as NativeMaterial
         val params = decoration.layoutParams as FrameLayout.LayoutParams
         val margin = params.leftMargin
@@ -870,7 +870,7 @@ class DockBackgroundTest {
             native.layout(0, top, 360, top + 80)
             decoration.onApplyWindowInsets(insets)
             native.viewTreeObserver.dispatchOnPreDraw()
-            val expected = minOf(20f * host.resources.displayMetrics.density, minOf(decoration.width, decoration.height) * 0.32f)
+            val expected = minOf(100f, minOf(decoration.width, decoration.height) * .46f)
             assertTrue(expected > 0f)
             assertEquals(expected, (decoration.foreground as DockBackgroundTint).radius, 0f)
             assertEquals(expected, material.appliedCornerRadius, 0f)

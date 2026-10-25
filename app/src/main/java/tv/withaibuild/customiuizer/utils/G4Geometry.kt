@@ -14,10 +14,10 @@ import kotlin.math.sin
 internal object G4Geometry {
     private const val STEPS = 32
 
-    /** Native Launcher panel radius is a scale reference; display corners are only a ceiling. */
+    /** Follow the physical display when available, retaining a short flat side on shallow panels. */
     fun radius(screenRadius: Float, manual: Float, fallback: Float, limit: Float): Float {
-        val automatic = minOf(fallback, limit * 0.64f,
-            if (screenRadius > 0f) screenRadius else fallback)
+        val automatic = if (screenRadius > 0f) minOf(screenRadius, limit * .92f)
+            else minOf(fallback, limit * .64f)
         val radius = if (manual > 0f) manual else automatic
         return radius.coerceIn(0f, limit.coerceAtLeast(0f))
     }
