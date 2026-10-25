@@ -64,6 +64,30 @@ class DockGlassBackdropTest {
         DockGlassBackdrop(view, source, 90, live, Dispatchers.Unconfined).also { controllers.add(it) }
 
     @Test
+    fun appAreaMetricsCannotTruncateTheWallpaperDisplayOrItsLowerDockCrop() {
+        val metrics = view.resources.displayMetrics
+        val original = metrics.heightPixels
+        val full = activity.get().getSystemService(android.view.WindowManager::class.java).maximumWindowMetrics.bounds
+        val viewport = IntArray(2)
+        val source = object : DockWallpaperSampler {
+            override fun capture(crop: Rect, scale: Float): Bitmap? = error("Full-display proof is required")
+            override fun capture(crop: Rect, scale: Float, viewportWidth: Int, viewportHeight: Int): Bitmap? {
+                viewport[0] = viewportWidth; viewport[1] = viewportHeight
+                return sampler.capture(crop, scale)
+            }
+        }
+        try {
+            metrics.heightPixels = 700 // Activity resources can exclude the system bars.
+            val controller = controller(source = source)
+            controller.onFrame(true)
+            assertArrayEquals(intArrayOf(full.width(), full.height()), viewport)
+            assertTrue("The lower dock remains inside its actual wallpaper crop", lastCrop.bottom > 700)
+            assertFalse(lastBitmap!!.isRecycled)
+            controller.release()
+        } finally { metrics.heightPixels = original }
+    }
+
+    @Test
     fun ownCompletionDrawCannotStartAStaticCaptureLoopAndNativeFramesStillRefresh() {
         val controller = controller()
         controller.onFrame(true)

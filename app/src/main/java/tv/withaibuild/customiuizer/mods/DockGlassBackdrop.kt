@@ -12,6 +12,7 @@ import android.graphics.RuntimeShader
 import android.os.SystemClock
 import android.view.Display
 import android.view.View
+import android.view.WindowManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
@@ -74,6 +75,10 @@ internal class DockGlassBackdrop(
     private var released = false
     private var broken = false
     private var sourceDirty = true
+    private var viewportDirty = true
+    private var viewportWidth = 0
+    private var viewportHeight = 0
+    private var reportedTexture = false
     private var sourceUnavailable = false
     private var unavailableTries = 0
     private var completionDraw = false
@@ -110,6 +115,7 @@ internal class DockGlassBackdrop(
         nativeMotionUntil = SystemClock.uptimeMillis() + 450L
         epoch++
         sourceDirty = true
+        viewportDirty = true
         sourceUnavailable = false
         unavailableTries = 0
         clearTexture()
@@ -182,34 +188,43 @@ internal class DockGlassBackdrop(
     }
 
     private fun request(view: View, now: Long): Boolean {
+        if (viewportDirty) {
+            // Resources may describe the app area after system-bar insets. The wallpaper
+            // compositor uses the full default display, including status/navigation bars.
+            val viewport = ModuleHelper.guarded<Rect?>(null) {
+                view.context.getSystemService(WindowManager::class.java)?.maximumWindowMetrics?.bounds
+            } ?: return false
+            if (viewport.left != 0 || viewport.top != 0 || viewport.isEmpty) return false
+            viewportWidth = viewport.width(); viewportHeight = viewport.height()
+            viewportDirty = false
+        }
         points[0] = 0f; points[1] = 0f
         points[2] = view.width.toFloat(); points[3] = 0f
         points[4] = view.width.toFloat(); points[5] = view.height.toFloat()
         points[6] = 0f; points[7] = view.height.toFloat()
         world.mapPoints(points)
         val margin = 32f * view.resources.displayMetrics.density
-        val metrics = view.resources.displayMetrics
         val requestCrop = Rect(
             floor((minOf(points[0], points[2], points[4], points[6]) - margin).coerceAtLeast(0f) / 4f).toInt() * 4,
             floor((minOf(points[1], points[3], points[5], points[7]) - margin).coerceAtLeast(0f) / 4f).toInt() * 4,
-            minOf(metrics.widthPixels, ceil((maxOf(points[0], points[2], points[4], points[6]) + margin) / 4f).toInt() * 4),
-            minOf(metrics.heightPixels, ceil((maxOf(points[1], points[3], points[5], points[7]) + margin) / 4f).toInt() * 4))
+            minOf(viewportWidth, ceil((maxOf(points[0], points[2], points[4], points[6]) + margin) / 4f).toInt() * 4),
+            minOf(viewportHeight, ceil((maxOf(points[1], points[3], points[5], points[7]) + margin) / 4f).toInt() * 4))
         if (requestCrop.isEmpty || maxOf(points[0], points[2], points[4], points[6]) <= 0f ||
-            minOf(points[0], points[2], points[4], points[6]) >= metrics.widthPixels ||
+            minOf(points[0], points[2], points[4], points[6]) >= viewportWidth ||
             maxOf(points[1], points[3], points[5], points[7]) <= 0f ||
-            minOf(points[1], points[3], points[5], points[7]) >= metrics.heightPixels) return false
+            minOf(points[1], points[3], points[5], points[7]) >= viewportHeight) return false
         val scale = minOf(1f, MAX_WIDTH.toFloat() / requestCrop.width(), MAX_HEIGHT.toFloat() / requestCrop.height())
         val requestEpoch = epoch
         busy = true
         lastRequest = now
         val target = WeakReference(this)
         val captureSource = sampler
-        val viewportWidth = metrics.widthPixels
-        val viewportHeight = metrics.heightPixels
+        val captureWidth = viewportWidth
+        val captureHeight = viewportHeight
         scope.launch {
             var captured: Bitmap? = null
             try {
-                captured = captureSource.capture(requestCrop, scale, viewportWidth, viewportHeight)
+                captured = captureSource.capture(requestCrop, scale, captureWidth, captureHeight)
                 withContext(Dispatchers.Main.immediate) {
                     val current = target.get()
                     if (current != null) {
@@ -283,6 +298,10 @@ internal class DockGlassBackdrop(
             sourceUnavailable = false
             unavailableTries = 0
             paint.shader = lens
+            if (!reportedTexture) {
+                reportedTexture = true
+                XposedHelpers.log("Dock lens: wallpaper texture ${frame.width}x${frame.height} from ${viewportWidth}x${viewportHeight}")
+            }
             // Native RenderThread recordings retain their own image references. The owner no
             // longer reads the previous Java Bitmap after replacing the shader input.
             previous?.recycle()
