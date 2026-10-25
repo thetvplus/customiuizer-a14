@@ -68,8 +68,10 @@ internal object LauncherMusicReturnHooks {
                 (callback.getArg(0) as? MotionEvent)?.let { active.get()?.touch(it) }
             }
         })
-        ModuleHelper.hookMethod(access.animate, object : MethodHook() {
+        var fastInstalled = false
+        fun animationHook(method: java.lang.reflect.Method) = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
+                if (access.animationEntry(chain.thisObject, fastInstalled) != method) return chain.proceed()
                 val original = chain.getArg(0) ?: return chain.proceed()
                 val owner = active.get()
                 val attempt = ModuleHelper.guarded<Attempt?>(null) {
@@ -84,7 +86,9 @@ internal object LauncherMusicReturnHooks {
                 ModuleHelper.guarded { owner?.committed(attempt, chain.thisObject!!) }
                 return result
             }
-        })
+        }
+        access.fastAnimate?.let { fastInstalled = ModuleHelper.hookMethod(it, animationHook(it)) != null }
+        ModuleHelper.hookMethod(access.animate, animationHook(access.animate))
     }
 
     private class Owner(host: View, private val prefs: PrefMap, private val access: LauncherMusicReturnAccess) :

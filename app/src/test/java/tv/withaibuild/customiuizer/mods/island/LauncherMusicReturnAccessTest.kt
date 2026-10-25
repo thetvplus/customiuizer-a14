@@ -46,13 +46,18 @@ class LauncherMusicReturnAccessTest {
     }
     class Targets(@JvmField val apps: Array<Remote>)
     class Animation(var targetRect: RectF = RectF())
-    class Element(@JvmField var remoteAnimationTargetSet: Targets? = null) {
+    open class Element(@JvmField var remoteAnimationTargetSet: Targets? = null) {
         @JvmField var currentRectFParams: Any? = null
         @JvmField val mAnim = Animation()
         var running = false
         fun isRunning() = running
-        fun animTo(value: Any) {}
+        open fun animTo(value: Any) {}
         fun updateFloatingIconView(launcher: Any, params: Params) {}
+    }
+    class FastElement : Element() {
+        var packageName = "chosen.music"
+        override fun animTo(value: Any) { super.animTo(value) }
+        fun getFastLaunchRunningTaskPkgName() = packageName
     }
     class Params(val targetApps: Targets?, val startRect: RectF?, val targetRect: RectF,
         val startRadius: Float, val endRadius: Float, val startAlpha: Float, val endAlpha: Float,
@@ -64,6 +69,28 @@ class LauncherMusicReturnAccessTest {
         Targets::class.java, Remote::class.java, DeviceConfig::class.java)
     private val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
         280f, 15f, 800f, 125f, 1080, 2400)
+
+    @Test fun quickOpeningOverrideAndItsSuperDispatchChooseExactlyOneInstalledEntry() {
+        val quick = LauncherMusicReturnAccess(Nav::class.java, Element::class.java, Params::class.java,
+            Targets::class.java, Remote::class.java, DeviceConfig::class.java, FastElement::class.java)
+        assertEquals(Element::class.java, quick.animationEntry(Element(), true).declaringClass)
+        assertEquals(FastElement::class.java, quick.animationEntry(FastElement(), true).declaringClass)
+        assertEquals("A failed optional hook must leave the base path active", Element::class.java,
+            quick.animationEntry(FastElement(), false).declaringClass)
+        val owner = FastElement().apply { remoteAnimationTargetSet = Targets(arrayOf(Remote())) }
+        assertNotNull(quick.retarget(params(targets = null), owner, Nav(), frame))
+    }
+
+    @Test fun quickOpeningCanPrefetchBeforeItsRemoteTargetsArriveWithoutChangingTheWindow() {
+        val quick = LauncherMusicReturnAccess(Nav::class.java, Element::class.java, Params::class.java,
+            Targets::class.java, Remote::class.java, DeviceConfig::class.java, FastElement::class.java)
+        val source = params(type = Type.OPEN_FROM_HOME, targets = null,
+            targetView = View(RuntimeEnvironment.getApplication()))
+        assertEquals("chosen.music", quick.openingPackage(source, FastElement()))
+        assertNotNull(source.targetView)
+        assertFalse(source.ignoreIcon)
+        assertNull(quick.retarget(source, FastElement(), Nav(), frame))
+    }
     private fun params(type: Type = Type.CLOSE_TO_HOME, quick: Boolean = false, split: Boolean = false,
         rotation: Int = 0, targets: Targets? = Targets(arrayOf(Remote())),
         targetView: View? = null) = Params(targets,

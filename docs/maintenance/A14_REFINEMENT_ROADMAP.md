@@ -20,6 +20,8 @@
 
 实机已确认 Telegram / AyuGram 在一条 USAGE_MEDIA 音轨（UID 10321、session 377）上报告三个媒体会话，其中两个同歌 PLAYING；旧唯一媒体会话门禁由此回退，不能归因通知权限。当前 fuxi `framework.jar` 的 `MiuiFreeFormStackInfo` 已证实 `packageName:String`、`userId:Int`、`displayId:Int` 定义。原生 Visualizer 上限已实测为 20 Hz，显示采用约 30 Hz 局部插值且稳定后停钟。原版本播放录屏、播放 / 锁屏各 30 秒采样已保存；旧试用包已实测同 UID AyuGram 的正 session VisualizerEffect 启用，未申请录音权限；暂停后约 6 秒恢复 100 dp 小岛且保留同一窗口。当前新增修正的动画、混合音频 / 小窗 / 通知、省电和正式 APK 设备验收仍待完成。
 
+实机打断补充：当前 Launcher SHA-256 为 `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`。七组录屏 / 原生日志证实，快速启动时 `FastLaunchWindowElement.animTo` 的 override 绕过基础 `WindowElement.animTo`，原目标为默认消失矩形；完全打开后才进入基础路径。新增两入口按实际声明类分派一次，override 调用 super 时不重复改写或确认；保留原有单任务 / 包 / 用户 / 全屏 / 非 PiP 验证。加载实测已确认 BUFFERING 超过 30 秒仍保留同一媒体窗口，后续 PLAYING 才换封面；该记录不证明当前新增快速启动 Hook 已通过实机。
+
 外部参考按 A14 生命周期及单窗口约束筛选；时长 / 弹幅属于本项目参数，未引入完整 UI / 动画库。
 
 | 参考 | 当前采用与边界 |

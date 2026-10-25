@@ -9,19 +9,22 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 
 /** Exact HyperOS 1 WindowElement contract; all reflection is resolved before installation. */
 internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
-    private val params: Class<*>, targets: Class<*>, remote: Class<*>, config: Class<*>) {
+    private val params: Class<*>, targets: Class<*>, remote: Class<*>, config: Class<*>, fastElement: Class<*>? = null) {
     constructor(loader: ClassLoader) : this(
         XposedHelpers.findClass("com.miui.home.recents.NavStubView", loader),
         XposedHelpers.findClass("com.miui.home.recents.anim.WindowElement", loader),
         XposedHelpers.findClass("com.miui.home.recents.anim.RectFParams", loader),
         XposedHelpers.findClass("com.miui.home.recents.util.RemoteAnimationTargetSet", loader),
         XposedHelpers.findClass("com.android.systemui.shared.recents.system.RemoteAnimationTargetCompat", loader),
-        XposedHelpers.findClass("com.miui.home.launcher.DeviceConfig", loader))
+        XposedHelpers.findClass("com.miui.home.launcher.DeviceConfig", loader),
+        XposedHelpers.findClassIfExists("com.miui.home.recents.anim.FastLaunchWindowElement", loader))
 
     val attached = nav.getDeclaredMethod("onAttachedToWindow")
     val detached = nav.getDeclaredMethod("onDetachedFromWindow")
     val touch = nav.getDeclaredMethod("onTouchEvent", MotionEvent::class.java)
     val animate = element.getDeclaredMethod("animTo", Any::class.java)
+    val fastAnimate = fastElement?.getDeclaredMethod("animTo", Any::class.java)
+    private val fastPackage = fastElement?.getDeclaredMethod("getFastLaunchRunningTaskPkgName")
     val closingTarget = nav.getDeclaredMethod("findClosingAnimTarget", Boolean::class.javaPrimitiveType)
     private val closingRect = nav.getDeclaredField("mAppToHomeTargetRect").apply { isAccessible = true }
     private val touchRange = nav.getDeclaredField("mTouchRange").apply { isAccessible = true }
@@ -56,12 +59,19 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     init {
         require(attached.returnType == Void.TYPE && detached.returnType == Void.TYPE && touch.returnType == Boolean::class.javaPrimitiveType)
         require(animate.returnType == Void.TYPE && fields[2].type == RectF::class.java)
+        require(fastAnimate == null || element.isAssignableFrom(fastElement) && fastAnimate.returnType == Void.TYPE &&
+            fastPackage?.returnType == String::class.java)
         require(!closingTarget.returnType.isPrimitive && closingRect.type == Rect::class.java &&
             defaultRect.returnType == Rect::class.java && java.lang.reflect.Modifier.isStatic(defaultRect.modifiers))
         require(animationTarget.returnType == RectF::class.java && running.returnType == Boolean::class.javaPrimitiveType)
         require(component.type == ComponentName::class.java && taskId.type == Int::class.javaPrimitiveType &&
             taskUser.type == Int::class.javaPrimitiveType && fields[7].type.isEnum)
     }
+
+    /** The quick-opening override can bypass WindowElement entirely. If it delegates
+     * to super, process the outer override only; failed optional installation keeps base. */
+    fun animationEntry(owner: Any?, fastInstalled: Boolean) =
+        fastAnimate?.takeIf { fastInstalled && it.declaringClass.isInstance(owner) } ?: animate
 
     private fun eligibleTask(nav: Any, frame: IslandMusicReturnSignal.Frame): Boolean {
         if (!frame.valid()) return false
@@ -86,7 +96,8 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         if (!params.isInstance(original) || (fields[7].get(original) as Enum<*>).name != "OPEN_FROM_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
             fields[15].getInt(original) != 0 || fields[16].getInt(original) != 0) return null
-        val targets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
+        val targets = fields[0].get(original) ?: retainedTargets.get(owner)
+            ?: return if (fastAnimate?.declaringClass?.isInstance(owner) == true) fastPackage?.invoke(owner) as? String else null
         val target = (apps.get(targets) as? Array<*>)?.singleOrNull() ?: return null
         if (remoteMode.getInt(target) != openingMode || remoteType.getInt(target) != standardType) return null
         return remotePackage.get(target) as? String
