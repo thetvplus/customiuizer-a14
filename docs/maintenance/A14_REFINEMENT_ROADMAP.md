@@ -13,7 +13,7 @@
 | ROM / DEX | [DexSQL](../rom-intelligence/DEXSQL.md)、[SQL 查询集](../../tools/dexsql/README.md)、[M03 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |
 | 发布 | [RELEASE](../RELEASE.md)、实际 GitHub Release；Changelog 保存发行事实 |
 
-本轮准备 r14.25.6 / 251，仅供本机正式签名安装与试用，未经授权不推送、合并或发布。r14.25.5 / 250 因用户确认音乐返回动画仍有缺陷，已从双端撤回为草稿，不能作为本轮修复的验收依据。累计变更基线仍为 r14.25.3，保留旧 Git 提交和原二进制；实际公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。后续发布由用户在新聊天决定，[任务 #54](https://github.com/thetvplus/customiuizer-a14/issues/54) 保持开放。
+本轮准备 r14.25.6 / 252，仅供本机正式签名安装与试用，未经授权不推送、合并或发布。r14.25.5 / 250 因用户确认音乐返回动画仍有缺陷，已从双端撤回为草稿，不能作为本轮修复的验收依据。累计变更基线仍为 r14.25.3，保留旧 Git 提交和原二进制；实际公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。后续发布由用户在新聊天决定，[任务 #54](https://github.com/thetvplus/customiuizer-a14/issues/54) 保持开放。
 
 ### 当前实机差异验收
 
@@ -23,8 +23,8 @@
 | --- | --- |
 | 设置说明时有时无 | `81c6be5` 从当前 Preference 绑定 / 清空说明，消除回收行残留；Host 覆盖空值、provider、样式、计数与自定义说明，实机滚动复用通过 |
 | 状态栏双击 PiP 动作未安装 | `81c6be5` 补齐中 / 左 / 右入口。实机中间单独配置收起得到 0→2→0；左右入口完整隐藏 / 恢复、收起 / 恢复通过，隐藏时播放器仍为 PLAYING，触摸窗口撤销 |
-| 音乐返回图标与浮动副本 | 撤回 `f7ec211` 的完整动画通过结论：旧证据只证明结束后恢复，快速上滑录像确认浮动图标被送到顶部且桌面图标延后补回。当前实现从 `findClosingAnimTarget` 的原生无图标分支前移接入，不查找、快照或隐藏桌面图标；保留原生应用窗口弹簧及回调。已选择图标的迟到路径和自动 PiP 不接管；须分别验收当前页有 / 无播放器图标的快速直接 Home、取消及普通应用路径 |
-| PiP 进入期间半次闪现 | 最新 Shell 标量快照增加绘制前门禁，未显示的入场直接取消；已显示的内容沿既有退场动画结束，锁屏保持立即清理。合并拒绝帧处理并随 owner 释放，不增加逐帧 Binder / I/O / 反射或轮询。Host 已补竞态和释放覆盖；实际快速 PiP 的逐帧结果仍以本机正式包验收为准 |
+| 音乐返回图标与浮动副本 | 撤回 `f7ec211` 的完整动画通过结论：旧证据只证明结束后恢复，快速上滑录像确认浮动图标被送到顶部且桌面图标延后补回。当前实现从 `findClosingAnimTarget` 的原生无图标分支前移接入，不查找、快照或隐藏桌面图标；保留原生应用窗口弹簧及回调。已选择图标的迟到路径和自动 PiP 不接管；用户已确认常规返回动画正常，另发现快速打开立即返回偶发漏接；当前在原生打开动画及选中播放器前台边沿预取 / 续发有效快照，不延长五秒有效期、不等待或轮询。当前页有 / 无图标的快速返回和取消由用户核验 |
+| PiP 进入期间半次闪现 | 最新 Shell 标量快照增加绘制前门禁，未显示的入场直接取消；已显示的内容沿既有退场动画结束，锁屏保持立即清理。合并拒绝帧处理并随 owner 释放，不增加逐帧 Binder / I/O / 反射或轮询。用户确认仅靠首帧检查仍会闪现：新增监听原生 TRANSIT_PIP 请求，窗口未创建时即抑制；单个 token / deadline 随 native 状态、取消、owner 替换或五秒兜底释放。关闭开关允许媒体与 PiP 共存，不接管视频窗口；专项 Host 覆盖，等待用户实机验收 |
 | 横屏仍显示动态岛 | `e3659942` 给附着 owner 绑定 root 窗口宽度监听，读取当前旋转门禁并复用有代际 / 取消的几何刷新。真实 2400×1080、资源配置未回调场景从可见变为隐藏，回竖屏恢复；Host 验证无配置回调、相同宽度不查 metrics、dispose 移除监听 |
 | 第三方旧高度资源 | `ebaa031` 的系统原生尺寸覆盖对齐拼多多 / 钉钉 104→133 px，不扩应用作用域；43 / 46 dp 替换保持一组文件，默认值自动撤销且文件为零，模块禁用完整重启回原高度，活动卸载自动删除本模块定义与文件。四项资源共用固定 ID，持久化 enabled 始终 false；原生重启状态计算负责不加载模块后的安全回退 |
 | 高度偏好缓存与回收 | `1983146`：已提交设置通知抵达系统进程但仍读旧缓存，改为身份校验后从非公开、仅系统 UID 可读入口读取一个已确认高度，随同一次原子快照发布；不动框架缓存或重建监听。旧文件只在全局无引用且属于本模块时经原生接口回收，限制不确定失败后的新建和待回收数量 |
@@ -91,9 +91,9 @@ Host 观测确认父窗口 129→60、原生高度 80→模块 129→ROM 96、�
 
 **CONFIRMED（源码 / Host）：** `foregroundChanged()` 的包名与 MediaSession 不能区分普通 Home 与 PiP。CN / TW / 历史实机 SystemUI 原件的相关方法体一致：swipe-PiP 先进入 `PipTransitionState` 3，再由 `PipBoundsState.setBoundsStateForEntry` 提供组件 / UID，Pinned task 出现为 1、完成为 4、退出为 5、取消 / 退出结束为 0；退出后 `mTaskInfo` 仍可能保留旧任务。现在通过同一 native organizer 的事件发布有 generation 的标量身份，状态 3 不复用旧任务；同包 / 用户 / 默认屏幕的进入和可见 PiP 阻止媒体岛准备 / 入场。渲染提交前读取已发布快照，覆盖 Shell 事件已发生、Main 回调尚未到达的间隙。取消或退出恢复原有 750 ms 规则，不增加延迟、轮询或播放器包名特判。Host 覆盖准备后取消、重建、快速前台切换、旧 generation、不同用户 / 播放器及普通 Home。
 
-默认关闭的 `system_island_hide_in_floating_window` 是安装快照，重启 SystemUI 后生效；普通偏好刷新和 View 重建不会提前应用。打开后只要默认屏幕存在 PiP 或当前用户的系统小窗就隐藏整岛，包含已收起 / 完整隐藏的 PiP；后台事件不重复排队，通知 / Toast 保留原生回退。系统小窗在 attach 和 native 模式事件时串行查询一次，迟到结果按用户 / generation 作废，无持续轮询。音乐直接上岛发布器随抑制关闭，旧提交失效，恢复后新事件仍可使用。未打开整岛开关时，同一 PiP 完整隐藏或边缘收起后可恢复后台媒体岛；展开后再次抑制同一视频，其他后台音乐不受该 PiP 身份影响。
+默认关闭的 `system_island_hide_in_floating_window` 是安装快照，完整重启手机后生效；普通偏好刷新和 View 重建不会提前应用。打开后只要默认屏幕存在 PiP 或当前用户的系统小窗就隐藏整岛，包含已收起 / 完整隐藏的 PiP；后台事件不重复排队，通知 / Toast 保留原生回退。系统小窗在 attach 和 native 模式事件时串行查询一次，迟到结果按用户 / generation 作废，无持续轮询。音乐直接上岛发布器随抑制关闭，旧提交失效，恢复后新事件仍可使用。关闭整岛开关后，允许同一视频或其它后台音乐的媒体岛与可见、隐藏、收起的 PiP 共存；自动 PiP 的视频窗口仍保持原生转场，不参与音乐返回窗口收拢。
 
-**DEVICE_REQUIRED：** 用户观察的半次入场与真实 Shell / 前台 / 首帧时间线尚未实机关联。静态与 Host 已证明原判断不足并验证修复，但不宣称实际 YouTube 动画问题已验收。
+**DEVICE_REQUIRED：** 仅检查已发布状态的候选未通过用户的快速 PiP 验收，不能沿用“已修复”的结论。当前 ROM `PipTransition.handleRequest → augmentRequest` 的 type 10 请求先于 organizer 状态，新增的早期抑制及开关两态需由用户在本地正式包上验收；不宣称所有 YouTube 转场已经通过。
 
 ### 全局动作与 PiP 控制
 

@@ -619,6 +619,32 @@ class IslandActivityLifecycleTest {
             org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion").duration)
     }
 
+    @Test fun aPlayerForegroundEdgeRenewsTheExpiredUnchangedReturnTargetBeforeGestureDown() {
+        val application: android.app.Application = RuntimeEnvironment.getApplication()
+        fun packets() = shadowOf(application).broadcastIntents.filter {
+            it.action == IslandMusicReturnSignal.STATE && it.getBooleanExtra("active", false)
+        }
+        val controller = controller(media = true, mediaReturn = true,
+            mediaReturnApps = setOf(context.packageName))
+        native.player = launchablePlayer("rapid-open-return")
+        controller.updateFromNative(native); revealMedia()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        val before = packets().last()
+        val old = IslandMusicReturnSignal.decode(before, android.os.SystemClock.uptimeMillis())!!
+        val count = packets().size
+        org.robolectric.shadows.ShadowSystemClock.advanceBy(Duration.ofMillis(IslandMusicReturnSignal.LIFETIME + 1))
+        assertFalse(old.fresh(android.os.SystemClock.uptimeMillis()))
+        controller.foregroundChanged(context.packageName); drain()
+        val fresh = IslandMusicReturnSignal.decode(packets().last(), android.os.SystemClock.uptimeMillis())!!
+        assertEquals("Same session and geometry, new readiness packet", old.frame, fresh.frame)
+        assertTrue(fresh.issuedAt > old.issuedAt)
+        assertEquals(count + 1, packets().size)
+        controller.foregroundChanged("other.app"); drain()
+        val afterSourceEdge = packets().size
+        controller.foregroundChanged("another.app"); drain()
+        assertEquals("Unrelated foreground changes do not renew the packet", afterSourceEdge, packets().size)
+    }
+
     @Test fun lateNativeCommitsCannotCrossAnotherAppSwitchOrReenterThePlayer() {
         for (destinations in listOf(listOf("other.app"), listOf("other.app", "com.miui.home"), listOf(context.packageName))) {
             val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
@@ -714,7 +740,7 @@ class IslandActivityLifecycleTest {
     }
 
     @Test fun enteringAndPinnedPipNeverRevealTheSamePlayingSessionAcrossForegroundBounces() {
-        val controller = controller(media = true)
+        val controller = controller(media = true, hideFloating = true)
         controller.foregroundChanged(context.packageName)
         native.player = launchablePlayer("pip-enter")
         controller.updateFromNative(native); drain()
@@ -734,7 +760,7 @@ class IslandActivityLifecycleTest {
     }
 
     @Test fun cancelingPipAtHomeRestartsOnlyTheOrdinaryDeadlineAndIgnoresStaleEvents() {
-        val controller = controller(media = true, simplified = true)
+        val controller = controller(media = true, simplified = true, hideFloating = true)
         controller.foregroundChanged(context.packageName)
         native.player = launchablePlayer("pip-cancel-home")
         controller.updateFromNative(native); drain()
@@ -754,7 +780,7 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds)
     }
 
-    @Test fun hiddenOrStashedPipRestoresMusicUnlessTheWholeIslandSwitchIsEnabled() {
+    @Test fun theWholeIslandSwitchControlsCoexistenceAcrossVisibleHiddenAndStashedPip() {
         for (hideAll in listOf(false, true)) {
             val before = adds
             val controller = controller(media = true, simplified = true, hideFloating = hideAll)
@@ -763,17 +789,23 @@ class IslandActivityLifecycleTest {
             controller.updateFromNative(native); drain()
             pip(controller, 1, 4)
             controller.foregroundChanged("com.miui.home"); revealMedia()
-            assertEquals(before, adds)
+            val duringPip = before + if (hideAll) 0 else 1
+            assertEquals(duringPip, adds)
+            if (!hideAll) {
+                nativeReturn(controller)
+                assertNull("Parallel media must not hijack the PiP video window",
+                    org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+            }
             pip(controller, 2, 4, visible = false); revealMedia()
-            assertEquals(before + if (hideAll) 0 else 1, adds)
+            assertEquals(duringPip, adds)
             repeat(3) { pip(controller, 2, 4, visible = false); controller.updateFromNative(native); revealMedia() }
-            assertEquals(before + if (hideAll) 0 else 1, adds)
+            assertEquals(duringPip, adds)
             pip(controller, 3, 4); revealMedia()
             pip(controller, 4, 4, stashed = true); revealMedia()
-            assertEquals(before + if (hideAll) 0 else 2, adds)
+            assertEquals(duringPip, adds)
             pip(controller, 5, 4); revealMedia()
             pip(controller, 6, 0); revealMedia()
-            assertEquals(before + if (hideAll) 1 else 3, adds)
+            assertEquals(before + 1, adds)
             controller.dispose(); drain()
         }
     }
@@ -814,7 +846,7 @@ class IslandActivityLifecycleTest {
     }
 
     @Test fun pipCancelsAPreparedWindowBeforeItsFirstDrawAndDoesNotReenterWhenPinned() {
-        val controller = controller(media = true)
+        val controller = controller(media = true, hideFloating = true)
         controller.foregroundChanged(context.packageName)
         native.player = launchablePlayer("pip-before-draw")
         controller.updateFromNative(native); drain()
@@ -834,7 +866,7 @@ class IslandActivityLifecycleTest {
     }
 
     @Test fun pipAlreadyPinnedBeforeTheFirstMediaSnapshotCannotFlashOnRecreation() {
-        val controller = controller(media = true, simplified = true)
+        val controller = controller(media = true, simplified = true, hideFloating = true)
         pip(controller, 7, 4)
         controller.foregroundChanged("com.miui.home")
         native.player = launchablePlayer("pip-recreate")
@@ -847,7 +879,7 @@ class IslandActivityLifecycleTest {
 
     @Test fun aPublishedShellSnapshotBlocksEntryBeforeItsQueuedMainCallbackArrives() {
         var latest: IslandPipSnapshot? = null
-        val controller = controller(media = true, simplified = true, pipStateReader = { latest })
+        val controller = controller(media = true, simplified = true, hideFloating = true, pipStateReader = { latest })
         controller.foregroundChanged(context.packageName)
         native.player = launchablePlayer("shell-main-race")
         controller.updateFromNative(native); drain()
@@ -903,6 +935,23 @@ class IslandActivityLifecycleTest {
         assertEquals(IslandWindowPresentation.Phase.IDLE, presentation.phase)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.EXIT + 50)); drain()
         assertEquals(1, removes)
+    }
+
+    @Test fun aRealPipRequestDuringPreparationVetoesTheFrameWhileNativeStateIsStillZero() {
+        var latest: IslandPipSnapshot? = null
+        val controller = controller(media = true, hideFloating = true, pipStateReader = { latest })
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("pip-request-before-task")
+        controller.updateFromNative(native); drain()
+        drawFrames = false
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); revealMedia()
+        val presentation = org.robolectric.util.ReflectionHelpers.getField<IslandWindowPresentation>(controller, "presentation")
+        latest = IslandPipSnapshot(1, 0, android.content.ComponentName(context.packageName, "Player"),
+            android.os.Process.myUserHandle(), 17, pendingEntry = true)
+        assertFalse(presentation.onPreDraw())
+        drain()
+        assertEquals(1, removes)
+        assertEquals(IslandWindowPresentation.Phase.IDLE, presentation.phase)
     }
 
     @Test fun hidingTheEntireIslandRetainsNativeToastAndHeadsUpAndDropsOldFeedback() {

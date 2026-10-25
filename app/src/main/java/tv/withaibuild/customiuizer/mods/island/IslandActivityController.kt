@@ -405,10 +405,12 @@ internal class IslandActivityController(
             mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
         if (blocked) {
             cancelMediaReturn()
+        }
+        if (floatingWindowBlocked()) {
             mediaRevealAt = null
             // A prepared/visible media window must not finish a now-invalid entrance.
             if (lastContent is IslandMediaContent) hide(animate = state.allowed)
-        } else if ((wasBlocked || wasHidden && !floatingWindowBlocked()) && media?.packageName != foregroundPackage) {
+        } else if (wasHidden && media?.packageName != foregroundPackage) {
             mediaRevealAt = SystemClock.uptimeMillis() + IslandMotion.MEDIA_DELAY
             nativeManager.get()?.let { updateFromNative(it) }
         }
@@ -416,7 +418,7 @@ internal class IslandActivityController(
     }
 
     private fun floatingWindowBlocked(pip: IslandPipSnapshot = pipSnapshot): Boolean = hideInFloatingWindow &&
-        (!freeformKnown || freeformPresent || pip.state in 1..5 && pip.displayId == 0 ||
+        (!freeformKnown || freeformPresent || (pip.pendingEntry || pip.state in 1..5) && pip.displayId == 0 ||
             foregroundUser?.let { applicationOverlays?.hasWindow(it) } == true)
 
     /** Read only the already-published Shell snapshot; no native query or frame work queue. */
@@ -426,8 +428,7 @@ internal class IslandActivityController(
         // fence must not stall their existing exit animation on an old Surface buffer.
         if (exiting || !state.allowed) return true
         val pip = pipStateReader?.invoke()?.takeIf { it.generation >= pipSnapshot.generation } ?: pipSnapshot
-        val content = lastContent as? IslandMediaContent
-        return !floatingWindowBlocked(pip) && (content == null || !pip.blocks(content))
+        return !floatingWindowBlocked(pip)
     }
 
     private var frameRecheckQueued = false
@@ -517,6 +518,11 @@ internal class IslandActivityController(
             }
         }
         render()
+        // An unchanged playing session otherwise leaves Launcher's five-second packet
+        // expired until a gesture-down round trip completes. Renew on this real edge,
+        // before a rapid opening/closing gesture; no timer or stale lifetime extension.
+        if (sourceChanged && media?.packageName in options.mediaReturnApps)
+            musicReturnPublisher?.publish(force = true)
     }
 
     internal fun nativeMusicReturn(frame: IslandMusicReturnSignal.Frame, committedAt: Long = SystemClock.uptimeMillis()) = onMain {
@@ -1024,7 +1030,7 @@ internal class IslandActivityController(
             return false
         }
         if (media?.let(pipSnapshot::blocks) == true) {
-            mediaRevealAt = null
+            // PiP owns its video window even when a parallel media island is permitted.
             cancelMediaReturn()
         }
         publishMusicReturn()
@@ -1055,7 +1061,7 @@ internal class IslandActivityController(
         // Returning from a shade needs one current snapshot before the retained slot can
         // draw: it may still contain PLAYING although a real pause expired while hidden.
         val current = if (mediaRevealAt == null && !shadeBaseline && !foregroundBaseline) state.media(now)?.takeUnless {
-            it.packageName == foregroundPackage || pipSnapshot.blocks(it) } else null
+            it.packageName == foregroundPackage } else null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null)) geometry() else null
         val nextExpiry = listOfNotNull(state.deadline(), pauseDeadline?.takeIf { it > now },
             mediaRevealAt?.takeIf { it > now }, mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()

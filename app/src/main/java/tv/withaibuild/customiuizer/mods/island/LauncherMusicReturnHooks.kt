@@ -73,7 +73,11 @@ internal object LauncherMusicReturnHooks {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 val original = chain.getArg(0) ?: return chain.proceed()
                 val owner = active.get()
-                val attempt = ModuleHelper.guarded<Attempt?>(null) { owner?.retarget(original, chain.thisObject!!) }
+                val attempt = ModuleHelper.guarded<Attempt?>(null) {
+                    val element = chain.thisObject ?: return@guarded null
+                    owner?.prefetchOpening(original, element)
+                    owner?.retarget(original, element)
+                }
                 if (attempt == null) return chain.proceed()
                 // Native null-target cleanup retires the floating icon before the spring.
                 // Keep its task leash, listeners, velocity and cancellation policy intact.
@@ -169,12 +173,20 @@ internal object LauncherMusicReturnHooks {
             val result = access.retarget(original, element, nav, frame) ?: return null
             return Attempt(result, current, gesture.get())
         }
+        fun prefetchOpening(original: Any, element: Any) {
+            if (!enabled() || !ScreenStateController.isScreenOn()) return
+            val opening = access.openingPackage(original, element) ?: return
+            if (opening in options.mediaReturnApps) request()
+        }
         fun selectWindowTarget(native: Any): Boolean {
             val nav = view.get()?.takeIf { it === native && it.isAttachedToWindow } ?: return false
             if (!enabled() || !ScreenStateController.isScreenOn() || nav.display?.rotation != android.view.Surface.ROTATION_0) return false
-            val current = snapshot ?: return false
-            val frame = current.frame ?: return false
-            if (!current.fresh(SystemClock.uptimeMillis()) || frame.packageName !in options.mediaReturnApps) return false
+            val current = snapshot ?: run { diagnostics.report("music-return-target-not-ready"); return false }
+            val frame = current.frame ?: run { diagnostics.report("music-return-target-inactive"); return false }
+            if (!current.fresh(SystemClock.uptimeMillis())) {
+                diagnostics.report("music-return-target-expired"); return false
+            }
+            if (frame.packageName !in options.mediaReturnApps) return false
             return access.selectWindowTarget(nav, frame)
         }
         fun committed(attempt: Attempt, element: Any) {

@@ -146,6 +146,7 @@ class IslandPipAccessTest {
     }
     class Layout { @JvmField var mDisplayId = 0 }
     class Organizer {
+        @JvmField var mPipTransitionController: Any? = null
         @JvmField val mPipTransitionState = Transition()
         @JvmField val mPipBoundsState = Bounds()
         @JvmField val mPipDisplayLayoutState = Layout()

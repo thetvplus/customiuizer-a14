@@ -38,7 +38,7 @@ class LauncherMusicReturnAccessTest {
         companion object { @JvmStatic fun getClosingAppDefaultDisappearRect(range: Int) = Rect(100, 200, 180, 280) }
     }
     class Remote {
-        companion object { const val MODE_CLOSING = 1; const val ACTIVITY_TYPE_STANDARD = 1 }
+        companion object { const val MODE_OPENING = 0; const val MODE_CLOSING = 1; const val ACTIVITY_TYPE_STANDARD = 1 }
         @JvmField var packageName = "chosen.music"
         @JvmField var taskId = 42
         @JvmField var mode = MODE_CLOSING
@@ -113,6 +113,26 @@ class LauncherMusicReturnAccessTest {
         nav.mAppToHomeTargetRect.set(1, 2, 3, 4)
         assertFalse(access.selectWindowTarget(nav, frame))
         assertEquals(Rect(1, 2, 3, 4), nav.mAppToHomeTargetRect)
+    }
+
+    @Test fun prefetchRecognizesOnlyTheNativeStandardHomeOpeningWithoutChangingItsTarget() {
+        val remote = Remote().apply { mode = Remote.MODE_OPENING }
+        val source = params(type = Type.OPEN_FROM_HOME, targets = Targets(arrayOf(remote)),
+            targetView = View(RuntimeEnvironment.getApplication()))
+        val rectangle = RectF(source.targetRect)
+        assertEquals("chosen.music", access.openingPackage(source, Element()))
+        assertEquals(rectangle, source.targetRect)
+        assertNotNull(source.targetView)
+        assertFalse(source.ignoreIcon)
+        assertNull(access.openingPackage(params(), Element()))
+        assertNull(access.openingPackage(params(type = Type.OPEN_FROM_HOME, quick = true), Element()))
+        assertNull(access.openingPackage(params(type = Type.OPEN_FROM_HOME, split = true), Element()))
+        assertNull(access.openingPackage(params(type = Type.OPEN_FROM_HOME, rotation = 1), Element()))
+        remote.activityType = 2
+        assertNull(access.openingPackage(source, Element()))
+        remote.activityType = Remote.ACTIVITY_TYPE_STANDARD
+        assertNull(access.openingPackage(params(type = Type.OPEN_FROM_HOME,
+            targets = Targets(arrayOf(remote, remote))), Element()))
     }
 
     @Test fun recentsOpeningDragSplitQuickSwitchAndRotationRemainNative() {

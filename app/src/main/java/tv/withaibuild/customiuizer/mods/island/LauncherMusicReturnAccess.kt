@@ -44,6 +44,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     private val remoteMode = remote.getDeclaredField("mode").apply { isAccessible = true }
     private val remoteType = remote.getDeclaredField("activityType").apply { isAccessible = true }
     private val closingMode = remote.getDeclaredField("MODE_CLOSING").getInt(null)
+    private val openingMode = remote.getDeclaredField("MODE_OPENING").getInt(null)
     private val standardType = remote.getDeclaredField("ACTIVITY_TYPE_STANDARD").getInt(null)
     private val fields = listOf("targetApps", "startRect", "targetRect", "startRadius", "endRadius",
         "startAlpha", "endAlpha", "animType", "ignoreIcon", "showTask", "isQuickSwitchMode", "targetView",
@@ -78,6 +79,17 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         val rectangle = defaultRect.invoke(null, touchRange.getInt(nav)) as Rect
         (closingRect.get(nav) as Rect).set(rectangle)
         return true
+    }
+
+    /** Prefetch only: never change the native opening target or wait for another process. */
+    fun openingPackage(original: Any, owner: Any): String? {
+        if (!params.isInstance(original) || (fields[7].get(original) as Enum<*>).name != "OPEN_FROM_HOME" ||
+            fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
+            fields[15].getInt(original) != 0 || fields[16].getInt(original) != 0) return null
+        val targets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
+        val target = (apps.get(targets) as? Array<*>)?.singleOrNull() ?: return null
+        if (remoteMode.getInt(target) != openingMode || remoteType.getInt(target) != standardType) return null
+        return remotePackage.get(target) as? String
     }
 
     /** Called once at committed return, never from an animation update. Preserve the original
