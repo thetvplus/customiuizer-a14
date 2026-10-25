@@ -50,8 +50,8 @@ class IslandMotionFramesTest {
                 false, false, false, 0, false)
             layout(240); shell.transition(184, 40, 240, 40, false, secondary = true)
             val entrance = getField<ValueAnimator>(shell, "motion")
-            assertEquals(IslandMotion.SECONDARY, entrance.duration)
-            assertTrue(entrance.duration > IslandMotion.MORPH)
+            assertTrue(entrance.duration in (IslandMotion.CONTENT + 1)..IslandMotion.SECONDARY)
+            assertTrue(entrance.duration > IslandMotion.morphDuration(184f, 40f, 240f, 40f, false))
             entrance.currentPlayTime = 32
             assertEquals(1f, shell.getChildAt(0).alpha, .001f)
             entrance.currentPlayTime = 200
@@ -61,8 +61,8 @@ class IslandMotionFramesTest {
                 true, true, true, 0, false)
             layout(184); shell.transition(240, 40, 184, 40, false, secondary = true)
             val back = getField<ValueAnimator>(shell, "motion")
-            assertEquals(IslandMotion.SECONDARY, back.duration)
-            for (time in 0L..440L step 8L) {
+            assertEquals(entrance.duration, back.duration)
+            for (time in 0L..back.duration step 8L) {
                 back.currentPlayTime = time
                 assertEquals(40f, shell.height * shell.scaleY, .001f)
                 assertEquals(0f, shell.translationY, 0f)

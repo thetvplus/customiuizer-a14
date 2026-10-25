@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
@@ -107,13 +106,10 @@ class MultiAction : SubFragment() {
 
                 override fun onChildViewRemoved(parent: View, child: View) {}
             })
-            setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_UP) {
+            selectAction = {
                     AppSelector().also { it.setTargetFragment(this@MultiAction, 0) }.let {
                         openSubFragment(it, null, AppHelper.SettingsType.Edit, AppHelper.ActionBarType.HomeUp, R.string.select_app, R.layout.prefs_app_selector)
                     }
-                }
-                false
             }
         }
 
@@ -151,14 +147,11 @@ class MultiAction : SubFragment() {
 
                 override fun onChildViewRemoved(parent: View, child: View) {}
             })
-            setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_UP) {
+            selectAction = {
                     val args = Bundle().apply { putString("key", mKey + "_shortcut") }
                     ShortcutSelector().also { it.setTargetFragment(this@MultiAction, 1) }.let {
                         openSubFragment(it, args, AppHelper.SettingsType.Edit, AppHelper.ActionBarType.HomeUp, R.string.select_shortcut, R.layout.prefs_app_selector)
                     }
-                }
-                false
             }
         }
 
@@ -192,14 +185,11 @@ class MultiAction : SubFragment() {
 
                 override fun onChildViewRemoved(parent: View, child: View) {}
             })
-            setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_UP) {
+            selectAction = {
                     val args = Bundle().apply { putBoolean("activity", true) }
                     AppSelector().also { it.setTargetFragment(this@MultiAction, 2) }.let {
                         openSubFragment(it, args, AppHelper.SettingsType.Edit, AppHelper.ActionBarType.HomeUp, R.string.select_app, R.layout.prefs_app_selector)
                     }
-                }
-                false
             }
         }
     }

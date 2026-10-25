@@ -28,6 +28,7 @@ internal object PreferenceResourceResolver {
         "pref_key_system_cat_toasts" -> R.xml.prefs_system_toasts
         "pref_key_system_cat_statusbar" -> R.xml.prefs_system_statusbar
         "pref_key_system_cat_island" -> R.xml.prefs_system_island
+        "pref_key_system_cat_prompts" -> R.xml.prefs_system_prompts
         "pref_key_system_cat_drawer" -> R.xml.prefs_system_drawer
         "pref_key_system_cat_notifications" -> R.xml.prefs_system_notifications
         "pref_key_system_cat_qs" -> R.xml.prefs_system_qs

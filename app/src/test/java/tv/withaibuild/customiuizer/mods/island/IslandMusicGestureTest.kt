@@ -84,6 +84,39 @@ class IslandMusicGestureTest {
         assertEquals(1, opened)
     }
 
+    @Test fun shortUpwardIntentCancelsClickEvenWithoutMoveAndReboundsBelowRecallDistance() {
+        val distance = ViewConfiguration.get(host).scaledTouchSlop * .75f
+        for (withMove in listOf(false, true)) {
+            touch(MotionEvent.ACTION_DOWN)
+            advance(50)
+            if (withMove) touch(MotionEvent.ACTION_MOVE, y = 20f - distance)
+            touch(MotionEvent.ACTION_UP, y = 20f - distance)
+            advance(400)
+            assertEquals(0, opened)
+            assertEquals(0, dismissed)
+        }
+        tap()
+        assertEquals(1, opened)
+    }
+
+    @Test fun upFlickWithoutMoveDismissesOnceAndNeverOpens() {
+        touch(MotionEvent.ACTION_DOWN)
+        advance(40)
+        touch(MotionEvent.ACTION_UP, y = -30f)
+        advance(400)
+        assertEquals(1, dismissed)
+        assertEquals(0, opened)
+        assertTrue(gestures.isEmpty())
+    }
+
+    @Test fun idleIslandDoesNotAdvertiseOrRunAnImplicitClickAction() {
+        shell.idle = true
+        assertFalse(shell.createAccessibilityNodeInfo().isClickable)
+        tap()
+        shell.performClick()
+        assertEquals(0, opened)
+    }
+
     @Test fun platformDoubleTapExcludesBothSingleClicksButConfirmedSingleStillOpens() {
         shell.configureGestures(identity, IslandMusicActions(doubleTap = 85), true)
         tap(); assertEquals(0, opened)

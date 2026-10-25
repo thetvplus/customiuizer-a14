@@ -66,7 +66,7 @@ class StrongToastPresentationModeTest {
 
     @Test
     fun islandOffsetPreferenceShiftStaysAlignedWithRuntime() {
-        val xml = source("app/src/main/res/xml/prefs_system.xml")
+        val xml = source("app/src/main/res/xml/prefs_system_island_layout.xml")
         val block = xml.substringAfter("pref_key_system_strong_toast_island_offset")
             .substringBefore("pref_key_system_statusbar_iconsize")
         val shift = StrongToastRuntimeState.ISLAND_OFFSET_SHIFT

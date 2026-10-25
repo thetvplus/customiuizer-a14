@@ -23,6 +23,34 @@ import org.robolectric.util.ReflectionHelpers.setField
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandTransitionContinuityTest {
+    @Test fun albumHandoffCompletesOpacityAndRotationBeforeItsFiniteClockEnds() {
+        label("Track A", true)
+        shell.transition(184, 40, 184, 40, false)
+        motion().end()
+        for (scale in listOf(1f, .65f)) {
+            shell.motionScale = scale
+            label("Track $scale", true)
+            shell.transition(184, 40, 184, 40, false)
+            val clock = motion()
+            assertTrue(clock.duration >= (IslandMotion.ALBUM * scale).toLong())
+            clock.currentPlayTime = clock.duration - 1
+            assertTrue(shell.getChildAt(0).alpha > .98f)
+            assertEquals(0f, getField<android.widget.ImageView>(shell, "icon").rotationY, 1f)
+            clock.end()
+        }
+    }
+    @Test fun similarlySizedActivitiesExchangeContentWithoutAnyElasticSizeChange() {
+        label("Copy")
+        shell.transition(184, 40, 184, 40, false, secondary = true)
+        val clock = motion()
+        assertEquals(IslandMotion.CONTENT, clock.duration)
+        for (time in 0..220 step 8) {
+            clock.currentPlayTime = time.toLong()
+            assertEquals(184f, shell.width * shell.scaleX, .001f)
+            assertEquals(0f, shell.translationX, .001f)
+        }
+        clock.end()
+    }
     private lateinit var activity: Activity
     private lateinit var shell: IslandActivityView
     private val title get() = getField<TextView>(shell, "title")

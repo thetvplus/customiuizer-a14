@@ -39,6 +39,18 @@
     {
       "preferenceKey": "system_island_music_cat",
       "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
+    },
+    {
+      "preferenceKey": "system_cat_prompts",
+      "reason": "Navigation-only System prompt style page; no persisted setting or Hook."
+    },
+    {
+      "preferenceKey": "system_island_layout_cat",
+      "reason": "Navigation-only lazy Dynamic Island settings page; no stored value or Hook."
+    },
+    {
+      "preferenceKey": "system_island_notifications_cat",
+      "reason": "Navigation-only lazy Dynamic Island settings page; no stored value or Hook."
     }
   ],
   "entries": [
@@ -14268,7 +14280,7 @@
         "system_strong_toast_island_offset",
         "pref_key_system_strong_toast_island_offset"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "24",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:resolveIslandOffsetDp",
@@ -17825,7 +17837,7 @@
         "system_island_media",
         "pref_key_system_island_media"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -17848,7 +17860,7 @@
         "system_island_media_return",
         "pref_key_system_island_media_return"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/LauncherMusicReturnHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
@@ -17871,7 +17883,7 @@
         "system_island_media_return_apps",
         "pref_key_system_island_media_return_apps"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/LauncherMusicReturnHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
@@ -17894,7 +17906,7 @@
         "system_island_media_swipe",
         "pref_key_system_island_media_swipe"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "true",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -17986,7 +17998,7 @@
         "system_island_chat",
         "pref_key_system_island_chat"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_notifications.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18032,7 +18044,7 @@
         "system_island_height",
         "pref_key_system_island_height"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "40",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18055,7 +18067,7 @@
         "system_island_width_auto",
         "pref_key_system_island_width_auto"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "true",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18078,7 +18090,7 @@
         "system_island_width_short",
         "pref_key_system_island_width_short"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "184",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18101,7 +18113,7 @@
         "system_island_width_medium",
         "pref_key_system_island_width_medium"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "240",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18147,7 +18159,7 @@
         "system_island_chat_excluded_apps",
         "pref_key_system_island_chat_excluded_apps"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_notifications.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18170,7 +18182,7 @@
         "system_island_position",
         "pref_key_system_island_position"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "1",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18193,7 +18205,7 @@
         "system_island_horizontal_offset",
         "pref_key_system_island_horizontal_offset"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "80",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18446,7 +18458,7 @@
         "system_island_notification_apps",
         "pref_key_system_island_notification_apps"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_notifications.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18584,7 +18596,7 @@
         "system_island_waveform_mode",
         "pref_key_system_island_waveform_mode"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "1",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18607,7 +18619,7 @@
         "system_island_height_auto",
         "pref_key_system_island_height_auto"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "true",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18653,7 +18665,7 @@
         "system_island_idle_width_auto",
         "pref_key_system_island_idle_width_auto"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "true",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18676,8 +18688,8 @@
         "system_island_idle_width",
         "pref_key_system_island_idle_width"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
-      "defaultValue": "68",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
+      "defaultValue": "100",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
       "targetPackage": "com.android.systemui",

@@ -16,6 +16,14 @@ import kotlin.math.floor
 
 /** Bounded input padding in the existing single window. Only the shell owns drawing and actions. */
 internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(shell.context) {
+    var inputEnabled = true
+        set(value) {
+            if (field == value) return
+            field = value
+            tracking = false
+            shell.cancelInputs()
+            requestLayout()
+        }
     var margin = IslandRecallHit.extraMarginPx(resources.displayMetrics.density,
         ViewConfiguration.get(context).scaledTouchSlop)
         private set
@@ -40,7 +48,7 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
                             val region = regionField.get(info) as Region
                             region.setEmpty()
                             setMode.invoke(info, 3) // TOUCHABLE_INSETS_REGION
-                            if (root.inputRegionAvailable && root.observer != null &&
+                            if (root.inputEnabled && root.inputRegionAvailable && root.observer != null &&
                                 root.shell.alpha > .01f && root.shell.visibility == VISIBLE) {
                                 val box = root.hitBounds()
                                 region.set(box.left, box.top, box.right, box.bottom)
@@ -86,12 +94,12 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
         shell.touchMargin = margin
     }
 
-    fun geometry(width: Int, height: Int) {
+    fun geometry(width: Int, height: Int, left: Int = margin) {
         val params = shell.layoutParams as? LayoutParams
         if (params != null && params.width == width && params.height == height &&
-            params.leftMargin == margin && params.topMargin == margin) return
+            params.leftMargin == left && params.topMargin == margin) return
         shell.layoutParams = (params ?: LayoutParams(width, height)).apply {
-            this.width = width; this.height = height; leftMargin = margin; topMargin = margin
+            this.width = width; this.height = height; leftMargin = left; topMargin = margin
         }
     }
 
@@ -106,7 +114,7 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             val box = hitBounds()
-            tracking = inputRegionAvailable && shell.visibility == VISIBLE && shell.alpha > .01f && event.x >= box.left && event.x < box.right &&
+            tracking = inputEnabled && inputRegionAvailable && shell.visibility == VISIBLE && shell.alpha > .01f && event.x >= box.left && event.x < box.right &&
                 event.y >= box.top && event.y < box.bottom
         }
         if (!tracking) return false

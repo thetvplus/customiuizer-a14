@@ -547,8 +547,9 @@ internal class DockBackgroundView(
         syncNativeMaterialVisibility(isShown)
     }
 
-    private fun syncNativeMaterialVisibility(isVisible: Boolean) {
+    private fun syncNativeMaterialVisibility(requestedVisible: Boolean) {
         val material = nativeMaterial ?: return
+        val isVisible = requestedVisible && !tint.lensActive
         try {
             // Retire the Google region before the SDK clears its background; disable the MIUI binder too.
             if (!isVisible) material.background?.alpha = 0
@@ -572,6 +573,16 @@ internal class DockBackgroundView(
             retireMaterial()
             XposedHelpers.log("Dock background: native material retired after visibility failure", error)
         }
+    }
+
+    override fun draw(canvas: Canvas) {
+        if (config.material != 3) { super.draw(canvas); return }
+        // Resolve the owner before drawing children: the first usable lens frame must
+        // not blend with a second native blur region using a different corner profile.
+        tint.beginFrame(canvas)
+        syncNativeMaterialVisibility((isShown || editingAnimation != null) && nativeBlurAlpha() > 0)
+        tint.nativeFallback = nativeMaterial != null && !tint.lensActive
+        try { super.draw(canvas) } finally { tint.endFrame() }
     }
 
     fun scheduleGeometry() {
@@ -865,6 +876,16 @@ internal class DockBackgroundView(
 /** Cached geometry; color/alpha changes never rebuild a path. */
 internal class DockBackgroundTint(withRim: Boolean = false, private val density: Float = 1f) : Drawable() {
     var backdrop: DockGlassBackdrop? = null
+        set(value) { field = value; if (value == null) lensActive = false }
+    var lensActive = false
+        private set
+    var nativeFallback = false
+    private var prepared = false
+    fun beginFrame(canvas: Canvas) {
+        prepared = true
+        lensActive = backdrop?.prepare(canvas, bounds, radius, density) == true
+    }
+    fun endFrame() { prepared = false }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.TRANSPARENT }
     private val path = Path()
     private val rim = if (withRim) Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -934,7 +955,10 @@ internal class DockBackgroundTint(withRim: Boolean = false, private val density:
     }
 
     override fun draw(canvas: Canvas) {
-        if (backdrop?.draw(canvas, bounds, radius, density) == true) return
+        if (prepared) {
+            if (lensActive && backdrop?.drawPrepared(canvas) == true) return
+        } else if (backdrop?.draw(canvas, bounds, radius, density) == true) return
+        if (nativeFallback) return
         if (paint.alpha == 0) return
         canvas.drawPath(path, paint)
         depth?.let {

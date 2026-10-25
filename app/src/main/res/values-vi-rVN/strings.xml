@@ -1096,8 +1096,8 @@
     <string name="prefs_group_keyboard">Bàn phím</string>
     <string name="launcher_dock_background_liquid">Kính lỏng</string>
     <string name="system_toast_bottom_title">Khoảng cách phía dưới</string>
-    <string name="system_toast_capsule_title">Toast trong Đảo động</string>
-    <string name="system_toast_capsule_summ">Dùng bảng trên cùng gốc hoặc Đảo động khi đã bật. Toast dài, có định dạng, tùy chỉnh hoặc cửa sổ đang bận sẽ giữ cách hiển thị thông thường. Khởi động lại giao diện hệ thống sau khi đổi.</string>
+    <string name="system_toast_capsule_title">Thông báo ứng dụng</string>
+    <string name="system_toast_capsule_summ">Dùng kiểu đã chọn cho thông báo ngắn.</string>
     <string name="system_toast_position_title">Vị trí Toast</string>
     <string name="system_toast_position_summ">Đặt trong vùng an toàn của màn hình. Khởi động lại giao diện hệ thống sau khi đổi.</string>
     <string name="system_toast_position_top">Trên</string>
@@ -1202,7 +1202,7 @@
     <string name="system_island_playing">Đang phát</string>
     <string name="system_island_paused">Tạm dừng</string>
     <string name="system_island_connecting">Đang kết nối</string>
-    <string name="system_island_chat_title">Tích hợp thông báo ứng dụng</string>
+    <string name="system_island_chat_title">Tin nhắn</string>
     <string name="system_island_chat_summ">Thay thông báo nổi của tin nhắn sau khi đảo hiển thị thành công. Giữ trung tâm thông báo và thao tác chạm của hệ thống. Khởi động lại giao diện hệ thống sau khi bật.</string>
     <string name="launcher_dock_background_full_width_title">Dock toàn chiều rộng</string>
     <string name="launcher_dock_background_full_width_summ">Mở rộng nền hết chiều ngang tới cạnh dưới, giữ vị trí biểu tượng. Khởi động lại trình khởi chạy.</string>
@@ -1245,8 +1245,8 @@
     <string name="system_island_basic_group">Cài đặt cơ bản</string>
     <string name="system_island_geometry_group">Vị trí và kích thước</string>
     <string name="system_island_appearance_group">Giao diện và hoạt ảnh</string>
-    <string name="system_island_feedback_group">Phản hồi và thông báo</string>
-    <string name="system_island_interaction_group">Nhạc và tương tác</string>
+    <string name="system_island_feedback_group">Nội dung</string>
+    <string name="system_island_interaction_group">Hành vi</string>
     <string name="system_island_gestures_title">Cử chỉ âm nhạc</string>
     <string name="system_island_waveform_off">Tắt</string>
     <string name="system_island_waveform_light">Hoạt ảnh nhẹ</string>
@@ -1265,10 +1265,10 @@
     <string name="system_island_idle_width_title">Chiều rộng đảo nhỏ</string>
     <string name="system_island_expand_down_title">Cử chỉ mở rộng</string>
     <string name="system_island_expand_down_summ">Vuốt xuống hoặc nhấn giữ chưa gán thao tác để xem thêm nội dung. Các thao tác nhạc đã cấu hình được ưu tiên.</string>
-    <string name="system_island_feedback_charging_title">Kết nối sạc</string>
+    <string name="system_island_feedback_charging_title">Sạc</string>
     <string name="system_island_feedback_charging_summ">Hiển thị phản hồi ngắn một lần khi bắt đầu sạc. Giữ hoạt ảnh sạc của hệ thống trên màn hình khóa.</string>
     <string name="system_island_feedback_low_battery_title">Pin yếu</string>
     <string name="system_island_feedback_low_battery_summ">Chỉ thay cảnh báo khi đảo đang hiển thị; nếu không, giữ cảnh báo hệ thống. Lần đầu bật cần khởi động lại giao diện hệ thống và ứng dụng Bảo mật.</string>
-    <string name="system_island_battery_charging">Đang sạc</string>
+    <string name="system_island_battery_charging">Sạc</string>
     <string name="system_island_battery_low">Pin yếu</string>
 </resources>

@@ -35,12 +35,13 @@ import java.lang.reflect.Proxy
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], shadows = [IslandLaunchPackageManagerShadow::class])
+@Config(sdk = [34], qualifiers = "w1080dp-h2400dp-mdpi", shadows = [IslandLaunchPackageManagerShadow::class])
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class IslandActivityLifecycleTest {
     private var owner: IslandActivityController? = null
     private var adds = 0
     private var removes = 0
+    private var windowUpdates = 0
     private var reject = false
     private var shell: IslandActivityView? = null
     private var latestParams: WindowManager.LayoutParams? = null
@@ -65,6 +66,7 @@ class IslandActivityLifecycleTest {
                 frame.addView(args[0] as View, FrameLayout.LayoutParams(latestParams!!.width, latestParams!!.height)); onAdd?.invoke(); null }
             "removeViewImmediate" -> { frame.removeView(args!![0] as View); removes++; null }
             "updateViewLayout" -> { val params = args!![1] as WindowManager.LayoutParams
+                windowUpdates++
                 (args[0] as View).layoutParams = FrameLayout.LayoutParams(params.width, params.height); null }
             "toString" -> "IslandTestWindow"
             else -> error("Unexpected WindowManager call: ${method.name}, ${args?.size}")
@@ -128,20 +130,41 @@ class IslandActivityLifecycleTest {
         drain()
         assertEquals(1, adds)
         val original = shell!!
-        val idleWidth = latestParams!!.width
+        val idleWidth = original.width
+        val canvasWidth = latestParams!!.width
         val lease = controller.showToast(IslandToastContent("OK", context.packageName, null), 3000)!!
         drain()
         assertSame(original, shell)
         assertEquals(1, adds)
-        assertTrue(latestParams!!.width > idleWidth)
+        assertTrue(original.width > idleWidth)
+        assertEquals(canvasWidth, latestParams!!.width)
+        assertEquals(0, windowUpdates)
         controller.releaseToast(lease); drain()
-        assertEquals(idleWidth, latestParams!!.width)
+        assertEquals(idleWidth, original.width)
+        assertEquals(canvasWidth, latestParams!!.width)
         assertEquals(1, adds)
         shell!!.onDismiss(); drain()
         assertFalse(original.isAttachedToWindow)
         controller.onScreenStateChanged(true); drain()
         assertSame(original, shell)
         assertEquals(2, adds)
+    }
+
+    @Test fun unlockedShadeRetainsOnlyTheIdleCapsuleAndNeverItsTouchHotspotOrMedia() {
+        val controller = controller(media = true, idle = true, simplified = true)
+        val original = shell!!
+        val idleWidth = original.width
+        native.player = launchablePlayer("shade-idle-music")
+        controller.updateFromNative(native); revealMedia()
+        assertTrue(original.width > idleWidth)
+        native.shade = true; native.allowed = false; native.changed!!(); drain()
+        assertSame(original, shell)
+        assertEquals(idleWidth, original.width)
+        assertFalse((original.parent as IslandTouchWindow).inputEnabled)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
+        native.shade = false; native.changed!!(); drain()
+        assertEquals(1, removes) // A privacy block cannot retain the unlocked-shade capsule.
     }
 
     private fun drain() {
@@ -219,6 +242,64 @@ class IslandActivityLifecycleTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(750)); drain()
         shell?.let { org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(it, "motion")?.end() }
         drain()
+    }
+
+    @Test fun bufferingKeepsTheVisibleTrackStillUntilPlaybackCommitsTheLatestMetadata() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("buffered-track")
+        native.player = player
+        native.track = MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Track A").build()
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val width = original.width
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_BUFFERING, 0, 0f).build())
+        native.track = MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Track B pending").build()
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(60)); drain()
+        assertSame(original, shell)
+        assertTrue(original.isAttachedToWindow)
+        assertEquals(width, original.width)
+        val waiting = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "lastContent")
+        assertEquals("Track A", waiting.title)
+        assertTrue(waiting.loading); assertFalse(waiting.playing)
+        native.player = null // A transient native-card gap must not invent a new owner.
+        controller.updateFromNative(native); drain()
+        assertTrue(original.isAttachedToWindow)
+        native.player = player
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        native.track = MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Track B").build()
+        controller.updateFromNative(native); drain()
+        val committed = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "lastContent")
+        assertEquals("Track B", committed.title)
+        assertTrue(committed.playing); assertFalse(committed.loading)
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun ambiguousPauseAfterBufferingHasBoundedGraceAndDuplicateSnapshotsCannotRenewIt() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("buffer-pause")
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_BUFFERING, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.LOADING_LIFETIME - 1)); drain()
+        assertTrue(shell!!.isAttachedToWindow)
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2)); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        controller.updateFromNative(native); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun anInitialLoadingSnapshotDoesNotInventAPlayingIsland() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("initial-buffer")
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_CONNECTING, 0, 0f).build())
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        assertEquals(0, adds)
     }
 
     private fun nativeReturn(controller: IslandActivityController, committedAt: Long = android.os.SystemClock.uptimeMillis()) {
@@ -1759,7 +1840,8 @@ class IslandActivityLifecycleTest {
         val density = context.resources.displayMetrics.density
         val expectedWidth = IslandSizing.collapsed(density,1080,(184*density).toInt(),(40*density).toInt(),(24*density),0f,
             heightDp = IslandSizing.automaticHeight(0))
-        assertEquals(expectedWidth + 2 * (shell!!.parent as IslandTouchWindow).margin, latestParams!!.width)
+        assertEquals(expectedWidth, shell!!.width)
+        assertEquals(metricsWidth + 2 * (shell!!.parent as IslandTouchWindow).margin, latestParams!!.width)
         val insets = org.robolectric.util.ReflectionHelpers.getField<Rect>(latestParams, "surfaceInsets")
         // InputMonitor exports one surfaceInset scalar, chosen from the left edge.
         // Asymmetric values render correctly but move or collapse the real touch frame.
@@ -1784,7 +1866,7 @@ class IslandActivityLifecycleTest {
             prefs.put("system_island_position", alignment.toString())
             observer.onChange("system_island_position"); drain()
             val root = shell!!.parent as IslandTouchWindow
-            val visualLeft = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + root.margin
+            val visualLeft = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + shell!!.left
             if (alignment == 0) assertEquals(0, visualLeft)
             else assertEquals(metricsWidth, visualLeft + shell!!.width)
             assertEquals(0, org.robolectric.util.ReflectionHelpers.getField<Int>(shell, "cameraGap"))

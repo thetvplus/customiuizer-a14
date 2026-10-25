@@ -1095,8 +1095,8 @@
     <string name="prefs_group_keyboard">Клавиатура</string>
     <string name="launcher_dock_background_liquid">Жидкое стекло</string>
     <string name="system_toast_bottom_title">Отступ снизу</string>
-    <string name="system_toast_capsule_title">Toast в Dynamic Island</string>
-    <string name="system_toast_capsule_summ">Использует системную верхнюю панель или Dynamic Island, если они включены. Длинные, форматированные и нестандартные Toast, а также занятое окно сохраняют обычное отображение. После изменений перезапустите системный интерфейс.</string>
+    <string name="system_toast_capsule_title">Подсказки приложений</string>
+    <string name="system_toast_capsule_summ">Короткие подсказки используют выбранный стиль.</string>
     <string name="system_toast_position_title">Положение Toast</string>
     <string name="system_toast_position_summ">Положение в безопасной области экрана. После изменений перезапустите системный интерфейс.</string>
     <string name="system_toast_position_top">Сверху</string>
@@ -1201,7 +1201,7 @@
     <string name="system_island_playing">Воспроизведение</string>
     <string name="system_island_paused">Пауза</string>
     <string name="system_island_connecting">Подключение</string>
-    <string name="system_island_chat_title">Перехват уведомлений</string>
+    <string name="system_island_chat_title">Сообщения</string>
     <string name="system_island_chat_summ">Заменяет всплывающее сообщение после успешного показа острова. Сохраняет центр уведомлений и системное действие по нажатию. После включения перезапустите интерфейс системы.</string>
     <string name="launcher_dock_background_full_width_title">Док на всю ширину</string>
     <string name="launcher_dock_background_full_width_summ">Фон заполняет ширину экрана до нижнего края. Значки остаются на месте. Перезапустите лаунчер.</string>
@@ -1244,8 +1244,8 @@
     <string name="system_island_basic_group">Основные настройки</string>
     <string name="system_island_geometry_group">Положение и размер</string>
     <string name="system_island_appearance_group">Вид и анимация</string>
-    <string name="system_island_feedback_group">Отклики и уведомления</string>
-    <string name="system_island_interaction_group">Музыка и управление</string>
+    <string name="system_island_feedback_group">Содержимое</string>
+    <string name="system_island_interaction_group">Поведение</string>
     <string name="system_island_gestures_title">Музыкальные жесты</string>
     <string name="system_island_waveform_off">Выключено</string>
     <string name="system_island_waveform_light">Лёгкая анимация</string>
@@ -1264,7 +1264,7 @@
     <string name="system_island_idle_width_title">Ширина малого острова</string>
     <string name="system_island_expand_down_title">Жесты разворачивания</string>
     <string name="system_island_expand_down_summ">Свайп вниз или долгое нажатие без назначенного действия показывает больше сведений. Настроенные музыкальные действия имеют приоритет.</string>
-    <string name="system_island_feedback_charging_title">Подключение зарядки</string>
+    <string name="system_island_feedback_charging_title">Зарядка</string>
     <string name="system_island_feedback_charging_summ">Краткий отклик при начале зарядки. Системная анимация зарядки на экране блокировки сохраняется.</string>
     <string name="system_island_feedback_low_battery_title">Низкий заряд</string>
     <string name="system_island_feedback_low_battery_summ">Заменять предупреждение, только когда остров виден; иначе сохранять системное. При первом включении перезапустите системный интерфейс и Центр безопасности.</string>

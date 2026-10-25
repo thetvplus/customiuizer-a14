@@ -19,7 +19,7 @@ internal object DockGlassOptics {
     }
 
     fun createLens(): RuntimeShader? = try {
-        RuntimeShader(LENS_SOURCE)
+        RuntimeShader(LENS_SOURCE).apply { setInputBuffer("cornerField", DockCornerField.shader) }
     } catch (error: Throwable) {
         FatalErrors.unwrapAndRethrowIfFatal(error)
         XposedHelpers.log("Dock lens: using native material", error)
@@ -31,6 +31,7 @@ internal object DockGlassOptics {
     // Attribution and license: assets/licenses/dock-liquid-glass.txt.
     internal const val LENS_SOURCE = """
         uniform shader content;
+        uniform shader cornerField;
         uniform float2 origin;
         uniform float2 size;
         uniform float radius;
@@ -52,15 +53,19 @@ internal object DockGlassOptics {
         half4 main(float2 coord) {
             float2 local = coord - origin;
             float2 p = local - size * 0.5;
-            float d = sd(p);
-            float coverage = 1.0 - smoothstep(-0.7, 0.7, d);
-            if (coverage < 0.001) return half4(0.0);
-            // Analytic rounded-box normal: stable on flat edges, no four extra SDF probes.
             float2 q = abs(p) - size * 0.5 + radius;
-            float2 outside = max(q, 0.0);
-            float edgeLength = length(outside);
-            float2 n = edgeLength > 0.001 ? sign(p) * outside / max(edgeLength, 0.001) :
-                (q.x > q.y ? float2(sign(p.x), 0.0) : float2(0.0, sign(p.y)));
+            float2 edge = abs(p) - size * 0.5;
+            float d = max(edge.x, edge.y);
+            float2 n = edge.x > edge.y ? float2(sign(p.x), 0.0) : float2(0.0, sign(p.y));
+            if (radius > 0.5 && q.x > 0.0 && q.y > 0.0) {
+                half4 field = cornerField.eval(clamp(q / radius, 0.0, 1.0) * 63.0 + 0.5);
+                d = (float(field.r) * 2.0 - 1.0) * radius;
+                n = sign(p) * (float2(field.gb) * 2.0 - 1.0);
+                n /= max(length(n), 0.001);
+            }
+            // Coverage comes from the same cached G4 Path, once. A second circular
+            // alpha mask would create the visibly different inner/outer corner outlines.
+            float coverage = 1.0;
             float inside = max(-d, 0.0);
             float bevel = max(1.0, min(min(size.x, size.y) * 0.34, 22.0 * density));
             float t = clamp(inside / bevel, 0.0, 1.0);

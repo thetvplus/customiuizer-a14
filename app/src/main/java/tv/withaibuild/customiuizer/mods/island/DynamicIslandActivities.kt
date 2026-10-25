@@ -85,7 +85,7 @@ internal data class IslandOptions(
                 prefs.getStringSet("system_island_media_return_apps").toSet(),
                 prefs.getBoolean("system_island_hide_in_floating_window"),
                 prefs.getBoolean("system_island_idle"),
-                if (prefs.getBoolean("system_island_idle_width_auto", true)) 0 else prefs.getInt("system_island_idle_width", 68).coerceIn(48, 120),
+                if (prefs.getBoolean("system_island_idle_width_auto", true)) 0 else prefs.getInt("system_island_idle_width", 100).coerceIn(48, 120),
                 prefs.getBoolean("system_island_expand_down", true),
                 prefs.getBoolean("system_island_height_auto", prefs.getInt("system_island_height", 40) == 40),
                 prefs.getBoolean("system_island_feedback_charging"),

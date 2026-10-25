@@ -5,6 +5,14 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class DuoGeometryTest {
+    @Test fun opticalCorrectionUsesOnlySpareNativeRowSpaceAndCannotChangeTheManualShift() {
+        assertEquals(0f, DuoSizing.opticalShift(60f, 60, 0f, 60.1f), 0f)
+        val correction = DuoSizing.opticalShift(60f, 100, -1f, 60.1f)
+        assertTrue(correction < 0f && correction > -1f)
+        assertTrue(20f - 1f + correction >= 0f)
+        assertEquals(28, DuoConfig(true, 28, autoSize = false).sizeDp)
+        assertEquals(-1f, DuoSizing.offset(100, -1f), 0f)
+    }
     @Test fun continuousBatterySweepCrossesTheTopWithNoSecondSegment() {
         var previous = 0f
         for (level in 0..100) {
@@ -44,10 +52,10 @@ class DuoGeometryTest {
     @Test fun automaticDrawingRetainsTheRequestedSizeWithoutTheStockIconHeightCap() {
         val config = DuoConfig(true, 24)
         val width = DuoSizing.pixels(config, 59, 2.8875f)
-        assertEquals(69, width)
+        assertEquals(70, width)
         // The previous version used the full content row. A 59px resource must not cap it.
-        assertEquals(69f, DuoSizing.drawingSize(width, 109, 0f), 0f)
-        assertEquals(69, DuoSizing.requiredHeight(width, 109, 0f))
+        assertEquals(70f, DuoSizing.drawingSize(width, 109, 0f), 0f)
+        assertEquals(70, DuoSizing.requiredHeight(width, 109, 0f))
         assertEquals(54f, DuoSizing.drawingSize(width, 54, 0f), 0f)
         assertEquals(54, DuoSizing.requiredHeight(width, 54, 0f))
         assertEquals(0, DuoSizing.requiredHeight(width, 0, 10f))
@@ -158,10 +166,10 @@ class DuoGeometryTest {
 
     @Test fun automaticSizeUsesNativeDensityAndKeepsImportedManualSizeSeparate() {
         val auto = DuoConfig(true, 28)
-        assertEquals(69, DuoSizing.pixels(auto, 59, 2.8875f))
-        assertEquals(47, DuoSizing.pixels(auto, 0, 2f))
-        assertEquals(41, DuoSizing.pixels(auto, 10, 2f))
-        assertEquals(49, DuoSizing.pixels(auto, 200, 2f))
+        assertEquals(70, DuoSizing.pixels(auto, 59, 2.8875f))
+        assertEquals(48, DuoSizing.pixels(auto, 0, 2f))
+        assertEquals(42, DuoSizing.pixels(auto, 10, 2f))
+        assertEquals(50, DuoSizing.pixels(auto, 200, 2f))
         assertEquals(56, DuoSizing.pixels(DuoConfig(true, 28, autoSize = false), 59, 2f))
         assertEquals(1, DuoSizing.pixels(auto, 0, 0.001f))
     }
@@ -180,7 +188,7 @@ class DuoGeometryTest {
         assertEquals(0f, DuoConfig.read(PrefMap()).offsetDp, 0f)
     }
 
-    @Test fun automaticSizeAddsHalfDpToThePreviousSizeBeforeDensityRounding() {
+    @Test fun automaticSizeAddsAnotherHalfDpToThePreviousSizeBeforeDensityRounding() {
         val config = DuoConfig(true, 24)
         for (density in floatArrayOf(1f, 1.5f, 2f, 2.8875f, 4f)) {
             for (nativeDp in floatArrayOf(12f, 18f, 20f, 24f, 40f)) {
@@ -188,7 +196,7 @@ class DuoGeometryTest {
                 val nativeHeight = (nativeDp * density).toInt()
                 val oldDp = (nativeHeight / density * 1.155f).coerceIn(20f, 24f)
                 val px = DuoSizing.pixels(config, nativeHeight, density)
-                assertEquals((oldDp * 0.99f + 0.5f) * density, px.toFloat(), 0.501f)
+                assertEquals((oldDp * 0.99f + 1f) * density, px.toFloat(), 0.501f)
             }
         }
     }

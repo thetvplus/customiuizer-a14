@@ -170,6 +170,7 @@ internal class IslandAudioSpectrum(
     }
 
     fun stop() = stop(clearFrame = true)
+    fun pauseKeepingFrame() = stop(clearFrame = false)
 
     private fun stop(clearFrame: Boolean) {
         captureGeneration.incrementAndGet()

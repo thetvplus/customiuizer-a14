@@ -30,6 +30,16 @@ import tv.withaibuild.customiuizer.utils.AppHelper
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class SeekBarPreferenceInputTest {
+    @Test fun replacingLinkedBoundsPreservesTheValueUntilTheCompleteNewRangeIsApplied() {
+        val pref = preference(min = 60, max = 100, shift = 80, default = 90)
+        pref.setValue(90)
+        pref.setValueRange(80, 160)
+        assertEquals(90, pref.getValue())
+        pref.setValueRange(0, 80)
+        assertEquals(80, pref.getValue())
+        pref.setValueRange(66, 94)
+        assertEquals(80, pref.getValue())
+    }
     private val controller = Robolectric.buildActivity(AppCompatActivity::class.java)
     private lateinit var activity: AppCompatActivity
     private val previousPrefs = AppHelper.appPrefs

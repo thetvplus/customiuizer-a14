@@ -48,6 +48,7 @@ EXPECTED_SPLITS = {
     "pref_key_system_cat_toasts": "prefs_system_toasts.xml",
     "pref_key_system_cat_statusbar": "prefs_system_statusbar.xml",
     "pref_key_system_cat_island": "prefs_system_island.xml",
+    "pref_key_system_cat_prompts": "prefs_system_prompts.xml",
     "pref_key_system_cat_drawer": "prefs_system_drawer.xml",
     "pref_key_system_cat_notifications": "prefs_system_notifications.xml",
     "pref_key_system_cat_qs": "prefs_system_qs.xml",
@@ -253,10 +254,14 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         source = ET.parse(SOURCE_DIR / "prefs_system.xml").getroot()
         island = next(e for e in source.iter() if e.get(ANDROID_KEY) == "pref_key_system_cat_island")
         self.assertEqual([f"@string/system_island_{name}_group" for name in
-                          ("basic", "geometry", "appearance", "feedback", "interaction")],
+                          ("basic", "feedback", "appearance", "interaction")],
                          [e.get(ANDROID_TITLE) for e in island])
         keys = {e.get(ANDROID_KEY) for e in island.iter()}
-        self.assertIn("pref_key_system_island_waveform_mode", keys)
+        self.assertNotIn("pref_key_system_island_waveform_mode", keys)
+        music = ET.parse(SOURCE_DIR / "prefs_system_island_music.xml").getroot()
+        self.assertIn("pref_key_system_island_waveform_mode", {e.get(ANDROID_KEY) for e in music.iter()})
+        self.assertIn("pref_key_system_island_layout_cat", keys)
+        self.assertIn("pref_key_system_island_notifications_cat", keys)
         self.assertNotIn("pref_key_system_island_waveform", keys)
 
     def test_every_standalone_preference_is_searchable_with_its_real_page(self) -> None:

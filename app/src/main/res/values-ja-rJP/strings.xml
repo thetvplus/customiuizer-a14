@@ -1096,8 +1096,8 @@
     <string name="prefs_group_keyboard">キーボード</string>
     <string name="launcher_dock_background_liquid">リキッドグラス</string>
     <string name="system_toast_bottom_title">下部の余白</string>
-    <string name="system_toast_capsule_title">Toast を Dynamic Island に表示</string>
-    <string name="system_toast_capsule_summ">有効な場合は標準の上部パネルまたは Dynamic Island を使用します。長文、書式付き、独自の Toast や使用中のウィンドウでは通常表示に戻ります。変更後はシステム UI を再起動してください。</string>
+    <string name="system_toast_capsule_title">アプリの通知</string>
+    <string name="system_toast_capsule_summ">アプリの短い通知に選択したスタイルを使用します。</string>
     <string name="system_toast_position_title">Toast の位置</string>
     <string name="system_toast_position_summ">画面の安全領域を基準に配置します。変更後はシステム UI を再起動してください。</string>
     <string name="system_toast_position_top">上部</string>
@@ -1202,7 +1202,7 @@
     <string name="system_island_playing">再生中</string>
     <string name="system_island_paused">一時停止</string>
     <string name="system_island_connecting">接続中</string>
-    <string name="system_island_chat_title">アプリ通知の統合</string>
+    <string name="system_island_chat_title">メッセージ</string>
     <string name="system_island_chat_summ">アイランドの表示成功後に対象メッセージのフローティング通知を置き換えます。通知センターと標準のタップ動作は維持されます。有効にしたらシステム UI を再起動してください。</string>
     <string name="launcher_dock_background_full_width_title">全幅 Dock</string>
     <string name="launcher_dock_background_full_width_summ">背景を画面の全幅と下端まで広げます。アイコン位置は維持します。ランチャーを再起動してください。</string>
@@ -1245,8 +1245,8 @@
     <string name="system_island_basic_group">基本設定</string>
     <string name="system_island_geometry_group">位置とサイズ</string>
     <string name="system_island_appearance_group">外観とアニメーション</string>
-    <string name="system_island_feedback_group">フィードバックと通知</string>
-    <string name="system_island_interaction_group">音楽と操作</string>
+    <string name="system_island_feedback_group">表示内容</string>
+    <string name="system_island_interaction_group">動作</string>
     <string name="system_island_gestures_title">音楽ジェスチャー</string>
     <string name="system_island_waveform_off">オフ</string>
     <string name="system_island_waveform_light">軽量アニメーション</string>
@@ -1265,10 +1265,10 @@
     <string name="system_island_idle_width_title">小さなアイランドの幅</string>
     <string name="system_island_expand_down_title">展開ジェスチャー</string>
     <string name="system_island_expand_down_summ">下スワイプや操作未設定の長押しで通知や曲の詳細を表示します。設定済みの音楽操作が優先されます。</string>
-    <string name="system_island_feedback_charging_title">充電開始のフィードバック</string>
+    <string name="system_island_feedback_charging_title">充電</string>
     <string name="system_island_feedback_charging_summ">充電開始時に一度だけ短く表示します。ロック画面のシステム充電アニメーションは保持します。</string>
-    <string name="system_island_feedback_low_battery_title">電池残量低下</string>
+    <string name="system_island_feedback_low_battery_title">バッテリー低下</string>
     <string name="system_island_feedback_low_battery_summ">代わりの表示が見える場合のみ警告を置き換え、それ以外はシステムの警告を保持します。初回有効化後はシステム UI とセキュリティを再起動してください。</string>
-    <string name="system_island_battery_charging">充電中</string>
-    <string name="system_island_battery_low">電池残量が少なくなっています</string>
+    <string name="system_island_battery_charging">充電</string>
+    <string name="system_island_battery_low">バッテリー低下</string>
 </resources>

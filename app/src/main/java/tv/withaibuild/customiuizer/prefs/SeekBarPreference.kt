@@ -190,6 +190,16 @@ class SeekBarPreference @JvmOverloads constructor(
 
     fun getMaxValue(): Int = maxValue
 
+    /** Atomically replace a linked range so an intermediate bound cannot persist a
+     * different value while the other bound still belongs to the previous layout. */
+    fun setValueRange(minimum: Int, maximum: Int) {
+        require(minimum >= 0 && maximum > minimum)
+        if (minValue == minimum && maxValue == maximum) return
+        minValue = minimum
+        maxValue = maximum
+        updateAllValues()
+    }
+
     fun setMaxValue(value: Int) {
         maxValue = value.coerceAtLeast(1)
         updateAllValues()

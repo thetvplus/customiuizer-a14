@@ -19,7 +19,8 @@ public class DockRuntimeShaderShadow extends ShadowNativeRuntimeShader {
     public static int uniformWrites;
     @Implementation
     protected static long nativeCreateBuilder(String source) {
-        return ShadowNativeRuntimeShader.nativeCreateBuilder(source.replace("content.eval(", "sample(content, "));
+        return ShadowNativeRuntimeShader.nativeCreateBuilder(source.replace("content.eval(", "sample(content, ")
+                .replace("cornerField.eval(", "sample(cornerField, "));
     }
 
     @Implementation

@@ -1096,8 +1096,8 @@
     <string name="prefs_group_keyboard">Teclado</string>
     <string name="launcher_dock_background_liquid">Vidro líquido</string>
     <string name="system_toast_bottom_title">Espaço inferior</string>
-    <string name="system_toast_capsule_title">Toast na Ilha Dinâmica</string>
-    <string name="system_toast_capsule_summ">Usa o painel superior nativo ou a Ilha Dinâmica quando ativado. Toasts longos, formatados ou personalizados e janelas ocupadas mantêm a exibição normal. Reinicie a interface do sistema após alterações.</string>
+    <string name="system_toast_capsule_title">Avisos de apps</string>
+    <string name="system_toast_capsule_summ">Usar o estilo escolhido nos avisos breves.</string>
     <string name="system_toast_position_title">Posição do Toast</string>
     <string name="system_toast_position_summ">Posiciona na área segura da tela. Reinicie a interface do sistema após alterar.</string>
     <string name="system_toast_position_top">Topo</string>
@@ -1202,7 +1202,7 @@
     <string name="system_island_playing">Reproduzindo</string>
     <string name="system_island_paused">Em pausa</string>
     <string name="system_island_connecting">Conectando</string>
-    <string name="system_island_chat_title">Integrar notificações</string>
+    <string name="system_island_chat_title">Mensagens</string>
     <string name="system_island_chat_summ">Substitui o aviso flutuante da mensagem após exibir a ilha com sucesso. Mantém a central de notificações e a ação nativa ao tocar. Reinicie a interface do sistema após ativar.</string>
     <string name="launcher_dock_background_full_width_title">Dock de largura total</string>
     <string name="launcher_dock_background_full_width_summ">Estende o fundo pela largura da tela até a borda inferior sem mover ícones. Reinicie o inicializador.</string>
@@ -1245,8 +1245,8 @@
     <string name="system_island_basic_group">Configurações básicas</string>
     <string name="system_island_geometry_group">Posição e tamanho</string>
     <string name="system_island_appearance_group">Aparência e animação</string>
-    <string name="system_island_feedback_group">Respostas e notificações</string>
-    <string name="system_island_interaction_group">Música e interação</string>
+    <string name="system_island_feedback_group">Conteúdo</string>
+    <string name="system_island_interaction_group">Comportamento</string>
     <string name="system_island_gestures_title">Gestos de música</string>
     <string name="system_island_waveform_off">Desativado</string>
     <string name="system_island_waveform_light">Animação leve</string>
@@ -1265,10 +1265,10 @@
     <string name="system_island_idle_width_title">Largura da ilha pequena</string>
     <string name="system_island_expand_down_title">Gestos para expandir</string>
     <string name="system_island_expand_down_summ">Deslize para baixo ou mantenha pressionado sem ação atribuída para ver mais conteúdo. Suas ações de música têm prioridade.</string>
-    <string name="system_island_feedback_charging_title">Conexão do carregador</string>
+    <string name="system_island_feedback_charging_title">Carregamento</string>
     <string name="system_island_feedback_charging_summ">Mostra um aviso breve ao começar a carregar. Mantém a animação do sistema na tela de bloqueio.</string>
     <string name="system_island_feedback_low_battery_title">Bateria fraca</string>
     <string name="system_island_feedback_low_battery_summ">Substitui o aviso apenas quando a ilha está visível; caso contrário, mantém o aviso do sistema. Na primeira ativação, reinicie a interface do sistema e Segurança.</string>
-    <string name="system_island_battery_charging">Carregando</string>
+    <string name="system_island_battery_charging">Carregamento</string>
     <string name="system_island_battery_low">Bateria fraca</string>
 </resources>

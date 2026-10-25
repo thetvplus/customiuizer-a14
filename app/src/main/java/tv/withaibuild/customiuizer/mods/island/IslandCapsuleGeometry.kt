@@ -10,6 +10,7 @@ import kotlin.math.sin
  * The analytic curve is rendered with cached Hermite cubics, not an exact G4 spline.
  */
 internal object IslandCapsuleGeometry {
+    // Preserve the established contour; controls are generated once and reused.
     private const val STEPS = 64
     private const val RAMP = 0.25
 
@@ -17,7 +18,7 @@ internal object IslandCapsuleGeometry {
         if (t > 1.0) return PI - heading(2.0 - t)
         val integral = if (t < RAMP) {
             val u = t / RAMP
-            RAMP * u * u * u * u * (2.5 - 3 * u + u * u)
+            RAMP * tv.withaibuild.customiuizer.utils.G4Geometry.curvatureIntegral(u)
         } else t - RAMP * 0.5
         return PI * 0.5 * integral / (1 - RAMP * 0.5)
     }

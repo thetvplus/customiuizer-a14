@@ -29,6 +29,9 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
         textSize = 30f
         isFakeBoldText = true
     }
+    private val topInk = Rect().also { text.getTextBounds("88", 0, 2, it) }
+    private val opticalCenter = (minOf(if (config.bold) 5f else 6f,
+        if (config.showPercent || config.showChargingBolt) 26f + topInk.top else 6f) + 117.2f) * .5f
     private val cellularText = if (config.networkFallback && config.cellularStyle == 2) Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         textSize = 35f
@@ -41,8 +44,7 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
         lineTo(54f, 34f); lineTo(72f, 13f); lineTo(61f, 13f); close()
         // Status Trio's shared optical height for top markers, adapted to native vectors.
         // Resolve once, never resize paths or measure text from the drawing callback.
-        val ink = Rect()
-        text.getTextBounds("88", 0, 2, ink)
+        val ink = topInk
         val scale = ink.height().coerceAtLeast(1) / 34f
         val center = 26f + (ink.top + ink.bottom) / 2f
         transform(Matrix().apply {
@@ -223,7 +225,7 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
             if (size <= 0f) return
             val scale = size / 120f
             canvas.translate(paddingLeft + (contentWidth - size) / 2f,
-                paddingTop + (contentHeight - size) / 2f + offset)
+                paddingTop + (contentHeight - size) / 2f + offset + DuoSizing.opticalShift(size, rowHeight, offset, opticalCenter))
             canvas.scale(scale, scale)
             drawIcon(canvas)
         } catch (t: Throwable) {

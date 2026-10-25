@@ -68,13 +68,14 @@ class IslandPolishTest {
             shell.geometry(280,40,40); layout(shell,280,40)
             shell.transition(184,40,280,40,false)
             val motion=getField<ValueAnimator>(shell,"motion")
+            val duration = motion.duration
             motion.currentPlayTime=100
             touch(shell,MotionEvent.ACTION_DOWN,140f,20f)
             if (hold) assertFalse(shell.performLongClick())
             else touch(shell,MotionEvent.ACTION_MOVE,140f,30f)
             touch(shell,MotionEvent.ACTION_UP,140f,30f)
             assertSame(motion,getField(shell,"motion"))
-            assertEquals(IslandMotion.MORPH,motion.duration)
+            assertEquals(duration,motion.duration)
             motion.end()
             assertEquals(40,shell.height)
             assertEquals(1f,shell.scaleX,.001f)

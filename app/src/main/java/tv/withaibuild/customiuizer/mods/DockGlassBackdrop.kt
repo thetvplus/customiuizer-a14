@@ -5,6 +5,7 @@ import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.Shader
 import android.graphics.RuntimeShader
@@ -39,6 +40,9 @@ internal class DockGlassBackdrop(
     private val liveWallpaper: Boolean,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
+    private val lensPath = Path()
+    private val lensPathBounds = Rect()
+    private var lensPathRadius = -1f
     private val owner = WeakReference(view)
     private val scope = CoroutineScope(SupervisorJob() + dispatcher + ModuleHelper.coroutineFailureHandler)
     private var shader: RuntimeShader? = null
@@ -281,7 +285,7 @@ internal class DockGlassBackdrop(
         XposedHelpers.log("Dock lens: wallpaper capture/rendering retired; using native material", error)
     }
 
-    fun draw(canvas: Canvas, bounds: Rect, radius: Float, density: Float): Boolean {
+    fun prepare(canvas: Canvas, bounds: Rect, radius: Float, density: Float): Boolean {
         if (!canvas.isHardwareAccelerated || !visible || broken || bitmap == null || bounds.isEmpty) return false
         val view = owner.get() ?: return false
         val lens = shader ?: return false
@@ -299,7 +303,12 @@ internal class DockGlassBackdrop(
             motion = if (lastX.isFinite()) (kotlin.math.abs(x - lastX) + kotlin.math.abs(y - lastY)).div(maxOf(density * 24f, 1f)).coerceIn(0f, 1f) else 0f
             lastX = x; lastY = y
             updateLensUniforms(lens, bounds, radius, density)
-            canvas.drawRect(bounds, paint)
+            if (lensPathBounds != bounds || lensPathRadius != radius) {
+                lensPathBounds.set(bounds); lensPathRadius = radius
+                lensPath.rewind()
+                DockCornerGeometry.build(lensPath, bounds.width().toFloat(), bounds.height().toFloat(), radius)
+                lensPath.offset(bounds.left.toFloat(), bounds.top.toFloat())
+            }
             true
         } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -307,6 +316,18 @@ internal class DockGlassBackdrop(
             false
         }
     }
+
+    fun drawPrepared(canvas: Canvas): Boolean = try {
+        canvas.drawPath(lensPath, paint)
+        true
+    } catch (error: Throwable) {
+        FatalErrors.unwrapAndRethrowIfFatal(error)
+        fail(error)
+        false
+    }
+
+    fun draw(canvas: Canvas, bounds: Rect, radius: Float, density: Float): Boolean =
+        prepare(canvas, bounds, radius, density) && drawPrepared(canvas)
 
     private fun updateLensUniforms(lens: RuntimeShader, bounds: Rect, radius: Float, density: Float) {
         val next = nextLensUniforms

@@ -5,8 +5,8 @@ import kotlin.math.roundToInt
 
 /** Shared collapsed forms: content may widen the short island, camera and physical safe bounds take precedence. */
 internal object IslandSizing {
-    const val SHORT_DP = 172
-    const val LONG_MAX_DP = 224
+    const val SHORT_DP = 168
+    const val LONG_MAX_DP = 218
     const val COLLAPSED_HEIGHT_DP = 40
     const val EDGE_DP = 16
     const val HEIGHT_MIN_DP = 32
@@ -50,9 +50,27 @@ internal object IslandSizing {
     fun automaticHeight(holeDp: Int): Int = if (holeDp <= 0) 38 else (32f + holeDp * .25f).roundToInt().coerceIn(36, 40)
 
     fun idleWidth(density: Float, height: Int, hole: Int, short: Int, manualDp: Int = 0): Int {
-        val preferred = if (manualDp > 0) manualDp.coerceIn(48, 120) * density else height * 1.8f
-        return maxOf(preferred.roundToInt(), height, hole + (16 * density).roundToInt()).coerceAtMost(short)
+        val preferred = if (manualDp > 0) manualDp.coerceIn(48, 120) * density
+            else maxOf(100f * density, height * 2.5f)
+        val minimum = maxOf(height, hole + (16 * density).roundToInt())
+        val ceiling = if (manualDp > 0) short else maxOf(minimum, short - (16 * density).roundToInt())
+        return maxOf(preferred.roundToInt(), minimum).coerceAtMost(ceiling.coerceAtMost(short))
     }
+
+    /** Expanded content can borrow the status-bar space whose intersecting icons fade.
+     * Its viewport bound is separate from the quiet, compact form's icon clearance. */
+    fun expanded(density: Float, screen: Int, safeWidth: Int, gap: Int, caption: Float,
+        heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true): Int {
+        val minimum = automatic(300, heightDp) * density
+        val maximum = automatic(352, heightDp) * density
+        val content = if (centered) gap + 2 * (caption + EDGE_DP * density)
+            else caption + (2 * EDGE_DP + 32) * density
+        return minOf(maxOf(minimum, content).coerceAtMost(maximum).roundToInt(),
+            screen - (16 * density).roundToInt(), safeWidth).coerceAtLeast(0)
+    }
+
+    fun horizontalOffsetLimit(short: Int, smallest: Int, gap: Int, contentInset: Int): Int =
+        minOf((smallest - gap) / 2, (short - gap) / 2 - contentInset).coerceAtLeast(0)
 
     fun automatic(base: Int, height: Int) = (base * (1f + (height.coerceIn(HEIGHT_MIN_DP, HEIGHT_MAX_DP) - COLLAPSED_HEIGHT_DP) / 80f)).roundToInt()
 }

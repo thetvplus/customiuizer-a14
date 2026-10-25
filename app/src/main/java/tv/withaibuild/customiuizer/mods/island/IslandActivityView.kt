@@ -65,16 +65,17 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var doubleCandidate = false
     private var inputCancelled = false
     private var tapsCancelled = false
+    private var tapSuppressed = false
     private var gestureIdentity: Any? = null
     private var musicActions = IslandMusicActions()
     private val tapListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = true
         override fun onSingleTapUp(e: MotionEvent): Boolean {
-            if (!doubleEnabled() && !longConsumed && !inputCancelled) performClick()
+            if (!doubleEnabled() && !longConsumed && !inputCancelled && !tapSuppressed) performClick()
             return true
         }
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            if (doubleEnabled() && !longConsumed && !inputCancelled && !leaving && !disposed) performClick()
+            if (doubleEnabled() && !longConsumed && !inputCancelled && !tapSuppressed && !leaving && !disposed) performClick()
             return true
         }
         override fun onDoubleTap(e: MotionEvent): Boolean {
@@ -82,7 +83,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             return doubleCandidate
         }
         override fun onDoubleTapEvent(e: MotionEvent): Boolean {
-            if (e.actionMasked == MotionEvent.ACTION_UP && doubleCandidate && !inputCancelled && !dragging && !multiTouch)
+            if (e.actionMasked == MotionEvent.ACTION_UP && doubleCandidate && !inputCancelled && !tapSuppressed && !dragging && !multiTouch)
                 submit(IslandMusicGesture.DOUBLE_TAP)
             return true
         }
@@ -102,6 +103,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var geometryHeight = 1
     private var maximumWidth = 1f
     private var cameraGap = 0
+    private var cameraOffset = 0f
     private var alignment = 1
     var touchMargin = 0
     private var labelWidth = 0f
@@ -132,6 +134,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var entranceStyle = IslandEntranceStyle.TOP
     var motionScale = 1f
     var idle = false
+        set(value) { field = value; isClickable = !value }
     var expanded = false
     var expandOnDown = true
     var shortWidth = Int.MAX_VALUE
@@ -139,6 +142,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var allowTextBlur = true
     private var flipDirection = 1f
     private var albumFlip = false
+    private var contentMotion = false
     private var blurLevel = -1
     // Four bounded effects on our own text only; no per-frame effects or host modification.
     private val textBlur by lazy { Array(4) { index ->
@@ -166,7 +170,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         left.addView(icon, LinearLayout.LayoutParams(dp(24), dp(24)))
         text.addView(title, LinearLayout.LayoutParams(-1, -2))
         addView(left); addView(text); addView(wave)
-        setOnClickListener { ModuleHelper.guarded { onOpen() } }
+        setOnClickListener { if (!idle) ModuleHelper.guarded { onOpen() } }
         taps.setIsLongpressEnabled(false)
         taps.setOnDoubleTapListener(null)
     }
@@ -212,7 +216,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     fun bind(label: String, detail: String?, drawable: Drawable?, playing: Boolean,
         media: Boolean, waveform: Boolean, actions: Long, showControls: Boolean,
         playbackState: Int = PlaybackState.STATE_NONE, avatar: Boolean = false, status: Boolean = false,
-        expanded: Boolean = false): Boolean {
+        expanded: Boolean = false, loading: Boolean = false): Boolean {
         if (isMedia != media) cancelInputs()
         isMedia = media
         this.expanded = expanded
@@ -235,6 +239,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     previous.expanded == expanded && previous.drawable != null && drawable != null
                 if (pendingContent == null) contentFadeRemaining = if (albumFlip) 140L else 60L
                 pendingContent = content
+                contentMotion = true
             } else {
                 pendingContent = null; contentFadeRemaining = 0L
                 applyContent(content)
@@ -242,6 +247,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         } else if (pendingContent == null && status) {
             title.setTextSize(TypedValue.COMPLEX_UNIT_PX, statusFit?.size ?: baseTextSize)
         }
+        wave.holding = media && loading && waveform && !simplified
         wave.playing = media && playing && waveform && !simplified
         val playbackDescription = if (!media) null else ModuleHelper.getModuleRes(context).getString(when (playbackState) {
             PlaybackState.STATE_PLAYING -> R.string.system_island_playing
@@ -257,8 +263,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         avatar = content.avatar
         title.ellipsize = if (content.status) null else TextUtils.TruncateAt.END
         title.maxLines = if (content.expanded) 2 else 1
+        title.gravity = (if (content.expanded) Gravity.START else Gravity.END) or Gravity.CENTER_VERTICAL
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (content.status) statusFit?.size
-            ?: baseTextSize else if (content.expanded) baseTextSize * .88f else baseTextSize)
+            ?: baseTextSize else if (content.expanded) baseTextSize * .94f else baseTextSize)
         title.text = content.label
         labelWidth = content.label.lineSequence().maxOfOrNull { title.paint.measureText(it) } ?: 0f
         text.visibility = if (content.media && !content.expanded) GONE else VISIBLE
@@ -296,15 +303,17 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         return statusFit?.let { height }
     }
 
-    fun geometry(width: Int, height: Int, cameraGap: Int, maximumWidth: Int = width, alignment: Int = 1) {
+    fun geometry(width: Int, height: Int, cameraGap: Int, maximumWidth: Int = width, alignment: Int = 1,
+        cameraOffset: Float = 0f) {
         if (this.alignment != alignment) cancelInputs()
         this.alignment = alignment
         pivotX = horizontalPivot(width)
         geometryWidth = width; geometryHeight = height
         this.maximumWidth = maximumWidth.coerceAtLeast(width).toFloat()
         this.cameraGap = cameraGap
+        this.cameraOffset = cameraOffset
         iconSize = iconSizeForHeight(height)
-        val half = (if (cameraGap > 0) (width - cameraGap) / 2
+        val half = (if (cameraGap > 0) ((width - cameraGap) / 2f + cameraOffset).toInt()
             else dp(IslandSizing.EDGE_DP) + iconSize + dp(8)).coerceAtLeast(1)
         val iconParams = icon.layoutParams
         if (iconParams.width != iconSize || iconParams.height != iconSize) {
@@ -385,10 +394,19 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     fun resumeEntry() { leaving = false }
 
+    /** A visible idle capsule is already the source object. Do not reset its opacity,
+     * breadth or pivot when the native app window hands music back to it. */
+    fun prepareReturnFromCurrent() {
+        if (!simplified && ValueAnimator.areAnimatorsEnabled()) mediaReturnProgress = 0f
+    }
+
     fun transition(fromWidth: Int, fromHeight: Int, width: Int, height: Int, entering: Boolean,
         secondary: Boolean = false, visualLeft: Float? = null, visualTop: Float? = null) {
         recall = IslandRecallGesture.onCancel()
         leaving = false
+        val startWidth = (if (entering) geometryWidth else fromWidth) * scaleX
+        val startHeight = (if (entering) geometryHeight else fromHeight) * scaleY
+        val catchAmount = IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat())
         if (!entering) {
             scaleX *= fromWidth.toFloat() / width.coerceAtLeast(1)
             scaleY *= fromHeight.toFloat() / height.coerceAtLeast(1)
@@ -397,11 +415,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             visualLeft?.let { translationX = it - pivotX * (1f - scaleX) }
             visualTop?.let { translationY = it - pivotY * (1f - scaleY) }
         }
-        animateTo(1f, 1f, 0f, 0f, 1f,
-            if (mediaReturnProgress == 0f) IslandMotion.MEDIA_RETURN - (35 * returnStrength).toLong() else if (entering) IslandMotion.ENTER
-                else if (secondary) IslandMotion.SECONDARY else IslandMotion.MORPH,
+        val travel = if (mediaReturnProgress == 0f) IslandMotion.MEDIA_RETURN - (35 * returnStrength).toLong()
+            else if (entering) IslandMotion.ENTER
+            else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
+        animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
             returning = mediaReturnProgress == 0f,
-            stretch = secondary || !entering && width > fromWidth + dp(6))
+            catchWeight = catchAmount)
     }
 
     private fun requestDismiss() {
@@ -454,9 +473,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) beginTouch(event)
-        if (event.actionMasked == MotionEvent.ACTION_MOVE && !multiTouch)
-            dragging = dragging || abs(event.rawY - downY) > slop || abs(event.rawX - downX) > slop
         return dragging || multiTouch || super.onInterceptTouchEvent(event)
     }
 
@@ -464,7 +480,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (motion == null) { entryCameraAnchor = false; resetTransform(); pivotY = 0f }
         downX = event.rawX; downY = event.rawY
         dragging = false; multiTouch = false; dragAxis = 0
-        longConsumed = false; inputCancelled = false; tapsCancelled = false
+        longConsumed = false; inputCancelled = false; tapsCancelled = false; tapSuppressed = false
         recall = IslandRecallGesture.onDown(event.getPointerId(0), event.rawX, event.rawY)
     }
 
@@ -473,6 +489,22 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN && !shape.contains(event.x, event.y) &&
             (touchMargin <= 0 || event.x < -touchMargin / scaleX.coerceAtLeast(.01f) || event.x > width + touchMargin / scaleX.coerceAtLeast(.01f) ||
                 event.y < -touchMargin / scaleY.coerceAtLeast(.01f) || event.y > height + touchMargin / scaleY.coerceAtLeast(.01f))) return false
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) beginTouch(event)
+        // Resolve intent before View / GestureDetector sees UP, including a coalesced
+        // flick with no MOVE. A small deliberate upward drag must never open the app.
+        if (!multiTouch && !inputCancelled && !longConsumed &&
+            (event.actionMasked == MotionEvent.ACTION_MOVE || event.actionMasked == MotionEvent.ACTION_UP)) {
+            val dx = event.rawX - downX
+            val dy = event.rawY - downY
+            val upward = -dy >= minOf(slop * .5f, dp(4).toFloat()).coerceAtLeast(dp(2).toFloat()) &&
+                abs(dx) <= -dy * .85f
+            dragging = dragging || upward || abs(dx) > slop || abs(dy) > slop
+            if (dragging && !tapSuppressed) {
+                cancelInputs(cancelDrag = false)
+                inputCancelled = false
+                tapSuppressed = true
+            }
+        }
         if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_UP) {
             multiTouch = true; recall = IslandRecallGesture.onCancel()
             cancelInputs()
@@ -505,9 +537,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         config, event.eventTime - event.downTime)
                     else IslandRecallGesture.onMove(recall, event.getPointerId(0), event.rawX, event.rawY, config)
                 if (dragging) {
-                    cancelInputs(cancelDrag = false)
-                    // The detector is cancelled, but this pointer still owns the locked drag.
-                    inputCancelled = false
+                    // The platform tap detector was already cancelled before dispatch.
                     if (event.actionMasked == MotionEvent.ACTION_UP) {
                         if (dragAxis == 2 && dy < -slop && abs(dx) <= -dy * config.maxHorizontalRatio &&
                             IslandRecallGesture.isTriggered(recall)) requestDismiss()
@@ -538,7 +568,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
-        onEnd: (() -> Unit)? = null, returning: Boolean = false, stretch: Boolean = false) {
+        onEnd: (() -> Unit)? = null, returning: Boolean = false, catchWeight: Float = 0f) {
         if (!returning) cancelMediaReturn()
         val carry = motion != null
         motion?.cancel(); motion = null
@@ -569,7 +599,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         shiftY.retarget(translationY, ty, seconds, carry)
         this.opacity.retarget(alpha, opacity, seconds, carry)
         var layerFrom = layerReveal
-        val fadeOut = if (pendingContent != null) contentFadeRemaining else 0L
+        val fadeOut = if (pendingContent != null) minOf(contentFadeRemaining, milliseconds * 46 / 100) else 0L
+        val fadeIn = minOf(160L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
+        val flipIn = minOf(140L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
         var revealAt = 0L
         var textAt: Long? = if (contentFits() && text.alpha > 0f) -100L else null
         ValueAnimator.ofFloat(0f, 1f).apply {
@@ -582,12 +614,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 scaleX = springBreadth / geometryWidth.coerceAtLeast(1)
                 scaleY = depth.sample(time, cameraDiameter, maximumHeight) / geometryHeight.coerceAtLeast(1)
                 val progress = (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                val catchWeight = (if (stretch) .025f else 0f) +
-                    (if (returning) .018f + .012f * returnStrength else 0f)
-                val physicalBreadth = springBreadth + geometryWidth * catchWeight * IslandMotion.mediaReturnCatch(progress)
+                val weight = catchWeight * if (returning) .85f + .3f * returnStrength else 1f
+                val physicalBreadth = springBreadth + geometryWidth * weight * IslandMotion.mediaReturnCatch(progress)
                 scaleX = minOf(maximumBreadth, physicalBreadth) / geometryWidth.coerceAtLeast(1)
                 breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else
-                    geometryWidth * catchWeight * IslandMotion.catchDerivative(progress) / seconds
+                    geometryWidth * weight * IslandMotion.catchDerivative(progress) / seconds
                 if (returning && mediaReturnProgress < 1f) {
                     mediaReturnProgress = progress
                     (parent as? View)?.invalidate()
@@ -603,14 +634,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         }
                     }
                     if (pendingContent == null) layerReveal = layerFrom + (1f - layerFrom) *
-                        ((it.currentPlayTime - revealAt) / 160f).coerceIn(0f, 1f)
+                        ((it.currentPlayTime - revealAt) / fadeIn).coerceIn(0f, 1f)
                 }
                 alpha = this@IslandActivityView.opacity.sample(time, 0f, 1f)
                 if (albumFlip) {
                     icon.cameraDistance = dp(640).toFloat()
                     icon.rotationY = flipDirection * if (pendingContent != null)
                         90f * (1f - contentFadeRemaining.toFloat() / fadeOut.coerceAtLeast(1L))
-                        else -90f * (1f - ((it.currentPlayTime - revealAt) / 140f).coerceIn(0f, 1f))
+                        else -90f * (1f - ((it.currentPlayTime - revealAt) / flipIn).coerceIn(0f, 1f))
                 }
                 if (contentFits()) {
                     val start = textAt ?: it.currentPlayTime.also { began -> textAt = began }
@@ -658,9 +689,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Compensate the drawing transform. The physical shell changes width while text,
         // square artwork and wave bars retain their own aspect ratios, including drags.
         val sx = scaleX.coerceAtLeast(.01f); val sy = scaleY.coerceAtLeast(.01f)
-        icon.scaleX = 1f / sx; icon.scaleY = 1f / sy
-        text.scaleX = 1f / sx; text.scaleY = 1f / sy
-        wave.scaleX = 1f / sx; wave.scaleY = 1f / sy
+        val contentScale = if (contentMotion && !simplified) .97f + .03f * layerReveal else 1f
+        icon.scaleX = contentScale / sx; icon.scaleY = contentScale / sy
+        text.scaleX = contentScale / sx; text.scaleY = contentScale / sy
+        wave.scaleX = contentScale / sx; wave.scaleY = contentScale / sy
         // Keep a physical 16dp margin instead of stretching target-layout coordinates.
         // Counter-scaling alone pushes the text into an end cap while lengthening.
         val edge = dp(IslandSizing.EDGE_DP)
@@ -669,7 +701,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val labelRoom = captionRoom(geometryWidth, cameraGap)
         text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f)
         val reveal = ((alpha - .12f) / .88f).coerceIn(0f, 1f) * layerReveal
-        val iconRoom = geometryWidth * sx >= cameraGap + 2 * (edge + iconSize)
+        val iconRoom = if (cameraGap > 0) (geometryWidth * sx - cameraGap) / 2f + cameraOffset - translationX >= edge + iconSize
+            else geometryWidth * sx >= 2 * (edge + iconSize)
         left.alpha = if (iconRoom && geometryHeight * sy >= iconSize) reveal else 0f
         if (mediaReturnProgress < 1f) left.alpha *= ((mediaReturnProgress - .72f) / .28f).coerceIn(0f, 1f)
         text.alpha = if (contentFits()) reveal * textReveal else 0f
@@ -679,9 +712,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             blurLevel = nextBlur
             text.setRenderEffect(if (nextBlur >= 0) textBlur[nextBlur] else null)
         }
-        wave.alpha = if (iconRoom && geometryHeight * sy >= waveHeight) reveal else 0f
-        shape.resize(geometryWidth, geometryHeight, sx, sy)
-        invalidateOutline()
+        val waveRoom = if (cameraGap > 0) (geometryWidth * sx - cameraGap) / 2f - cameraOffset + translationX >= edge + iconSize else iconRoom
+        wave.alpha = if (waveRoom && geometryHeight * sy >= waveHeight) reveal else 0f
+        if (shape.resize(geometryWidth, geometryHeight, sx, sy)) invalidateOutline()
     }
 
     fun cancelMediaReturn() {
@@ -693,6 +726,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     private fun clearContentEffects() {
         albumFlip = false
+        contentMotion = false
         icon.rotationY = 0f
         if (blurLevel >= 0) { text.setRenderEffect(null); blurLevel = -1 }
     }
@@ -700,13 +734,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private fun contentFits(): Boolean {
         val edge = dp(IslandSizing.EDGE_DP)
         val targetRoom = captionRoom(geometryWidth, cameraGap)
-        val room = if (cameraGap > 0) (geometryWidth * scaleX - cameraGap) / 2f - edge
+        val room = if (cameraGap > 0) (geometryWidth * scaleX - cameraGap) / 2f - cameraOffset + translationX - edge
             else geometryWidth * scaleX - 2 * edge - iconSize - dp(8)
         return room + .01f >= minOf(labelWidth, targetRoom.toFloat())
     }
 
     private fun captionRoom(width: Int, gap: Int) = (if (gap > 0)
-        (width - gap) / 2 - dp(IslandSizing.EDGE_DP)
+        ((width - gap) / 2f - cameraOffset).toInt() - dp(IslandSizing.EDGE_DP)
         else width - 2 * dp(IslandSizing.EDGE_DP) - iconSize - dp(8)).coerceAtLeast(0)
     private fun horizontalPivot(width: Int) = when (alignment) { 0 -> 0f; 2 -> width.toFloat(); else -> width * .5f }
 
@@ -789,6 +823,8 @@ internal class IslandWaveView(context: Context) : View(context) {
     }
     var playing = false
         set(value) { if (field != value) { field = value; updateRendering(); invalidate() } }
+    var holding = false
+        set(value) { if (field != value) { field = value; invalidate() } }
     private val frame = object : Runnable {
         override fun run() = ModuleHelper.guarded {
             scheduled = false
@@ -836,7 +872,8 @@ internal class IslandWaveView(context: Context) : View(context) {
         val step = width / 5f
         val barWidth = step * 0.56f
         for (index in 0..4) {
-            val fraction = if (real && playing) .12f + .83f * energies[index] else if (playing) 0.25f + 0.65f * abs(sin(phase + index * 1.4f)) else 0.22f
+            val fraction = if (real && (playing || holding)) .12f + .83f * energies[index]
+                else if (playing || holding) 0.25f + 0.65f * abs(sin(phase + index * 1.4f)) else 0.22f
             val h = height * fraction
             val x = step * index + (step - barWidth) * 0.5f
             canvas.drawRoundRect(x, (height - h) * 0.5f, x + barWidth, (height + h) * 0.5f,

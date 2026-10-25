@@ -32,7 +32,7 @@ SETTINGS_ACTION_KEYS = {
 PAGE_NOTES = {
     "pref_key_system_cat_toasts": "位置选项只显示对应的顶部 / 居中 / 底部偏移。",
     "pref_key_system_cat_qs": "国际版隐藏“对调控制中心与通知中心”。",
-    "pref_key_system_cat_island": "动态岛模式启用岛内参数；纵向偏移仅在该模式显示。应用反馈也可用于匹配状态栏高度模式。音乐 / 通知接入及允许名单仍有各自开关。",
+    "pref_key_system_cat_island": "系统提示样式在系统主目录；动态岛主页面集中内容、外观动效和行为。音乐、消息、系统反馈、位置尺寸各用子页。",
     "pref_key_system_island_music_cat": "需动态岛模式及音乐与媒体开启；动作编辑沿用当前项键和 _action 等派生键。",
     "pref_key_system_island_feedback_cat": "需动态岛模式；各类反馈分别启用，不把旧用户迁移值当作新安装默认值。",
     "pref_key_system_detailednetspeed_cat": "隐藏 B/s、隐藏低速及阈值只在详细样式 2 / 3 可编辑；原生样式保留存储值。",

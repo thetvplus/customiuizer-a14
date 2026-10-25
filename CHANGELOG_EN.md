@@ -14,11 +14,15 @@ versionCode 255. Changes since r14.25.5:
 
 - Reuse one Dynamic Island window across compact, long and optional persistent idle forms. Swiping up collapses the long form before dismissing it; notifications can expand on a downward swipe.
 - Refine content fades, local text blur, track artwork flips and damped horizontal feedback. Music return responds subtly to native swipe strength while preserving configured music actions.
-- Tighten automatic widths and derive a 36–40 dp height from the camera cutout. Idle width supports automatic or manual sizing.
+- Tighten collapsed automatic widths, give expanded music more space for track details, and derive a 36–40 dp height from the camera cutout. Automatic idle width starts at 100 dp; horizontal offsets are continuously bounded by the cutout and content.
 - Follow the ROM audio capture limit, interpolate the waveform at about 30 Hz, and reject small noise changes. Support mirrored Telegram / HyperOS media sessions, retain one same-app audio track while it remains active, and reduce handoff flicker.
 - Exclude confirmed floating-app media sources rather than hiding every activity. Other music, approved messages and system feedback remain eligible.
 - Add optional charging and low-battery feedback. Suppress the native low-battery dialog only after the replacement is visibly acknowledged.
-- Refine Dock glass refraction and edges, reduce repeated static-wallpaper captures, and align the optical height of Duo charging and percentage markers.
+- Keep one visible Dock material, with shared cached G4 clipping and optical edges; reduce repeated static-wallpaper captures. Add another 0.5 dp to Duo automatic sizing and balance native row height with optical centering.
+- Fix asymmetric morphs and diagonal unlock motion with one stable canvas, preserving current position and velocity. Similar sizes exchange content without extra bounce; the notification shade retains a still idle island with its touch region disabled.
+- Resolve upward intent before clicks; short upward drags only rebound. Tapping the idle island no longer implicitly opens notifications; its documented downward gesture remains.
+- Preserve current artwork and a still waveform while the same player buffers or loads a track. Commit new content after playback starts, with bounded grace for ambiguous pauses.
+- Simplify Island names and its main page, with dedicated size, music, message and system-feedback pages. Return the global prompt style to the system directory; app and action selection follow native components and view lifecycles.
 
 ### Engineering notes
 

@@ -41,6 +41,7 @@ class DockLensRenderingTest {
 
     private fun lens(source: Bitmap, rect: RectF): RuntimeShader = RuntimeShader(DockGlassOptics.LENS_SOURCE).apply {
         setInputShader("content", BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
+        setInputBuffer("cornerField", DockCornerField.shader)
         setFloatUniform("origin", rect.left, rect.top)
         setFloatUniform("size", rect.width(), rect.height())
         setFloatUniform("radius", 24f)
@@ -62,7 +63,10 @@ class DockLensRenderingTest {
         }
         val rect = RectF(0f, 0f, 320f, 100f)
         val shader = lens(source, rect)
-        val result = hardwarePixels(320, 100) { it.drawRect(rect, Paint().apply { this.shader = shader }) }
+        val result = hardwarePixels(320, 100) { it.drawPath(Path().apply {
+            tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+            offset(rect.left, rect.top)
+        }, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }) }
         assertEquals(0, Color.alpha(result.getPixel(0, 0)))
         assertTrue("inward lens samples a different stripe, rather than adding a bright rim",
             Color.red(result.getPixel(1, 50)) < 80)
@@ -70,7 +74,10 @@ class DockLensRenderingTest {
         assertTrue("the flat center still transmits its original stripe", Color.red(result.getPixel(160, 50)) > 220)
         val dark = Bitmap.createBitmap(320, 100, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.rgb(18, 22, 26)) }
         shader.setInputShader("content", BitmapShader(dark, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
-        val changed = hardwarePixels(320, 100) { it.drawRect(rect, Paint().apply { this.shader = shader }) }
+        val changed = hardwarePixels(320, 100) { it.drawPath(Path().apply {
+            tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+            offset(rect.left, rect.top)
+        }, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }) }
         assertTrue(Color.red(changed.getPixel(160, 50)) < 50)
         assertEquals(0, Color.alpha(changed.getPixel(0, 0)))
         source.recycle(); result.recycle(); dark.recycle(); changed.recycle()
@@ -83,7 +90,10 @@ class DockLensRenderingTest {
         }
         val rect = RectF(0f, 0f, 320f, 100f)
         val shader = lens(source, rect)
-        val image = hardwarePixels(320, 100) { it.drawRect(rect, Paint().apply { this.shader = shader }) }
+        val image = hardwarePixels(320, 100) { it.drawPath(Path().apply {
+            tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+            offset(rect.left, rect.top)
+        }, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }) }
         assertEquals(0, Color.alpha(image.getPixel(0, 0)))
         for (x in 24 until 296) for (y in 2 until 98) {
             val pixel = image.getPixel(x, y)
@@ -140,9 +150,12 @@ class DockLensRenderingTest {
                 val left = column * 360f + 24
                 val top = 40f + row * 250 + 80
                 val rect = RectF(left, top, left + 312, top + 96)
-                val path = Path().apply { addRoundRect(rect, 24f, 24f, Path.Direction.CW) }
+                val path = Path().apply {
+                    tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+                    offset(rect.left, rect.top)
+                }
                 val opacity = if (row == 3) .65f else .9f
-                if (column > 0) {
+                if (column == 1) {
                     val saved = output.save()
                     output.clipPath(path)
                     output.drawRenderNode(blurNodes[if (column == 1) 0 else 1])
@@ -155,7 +168,7 @@ class DockLensRenderingTest {
                 if (column == 2) {
                     paint.shader = lens(source, rect)
                     paint.alpha = (255 * opacity).toInt()
-                    output.drawRect(rect, paint)
+                    output.drawPath(path, paint)
                     paint.shader = null
                 }
                 // Native icons are foreground content, never part of the lens input texture.

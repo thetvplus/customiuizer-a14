@@ -12,13 +12,32 @@ internal object IslandMotion {
     const val REBOUND = 280L
     const val EXIT = 300L
     const val SECONDARY = 440L
+    const val CONTENT = 220L
+    const val ALBUM = 300L
     const val MEDIA_DELAY = 750L
     const val MEDIA_RETURN_DELAY = 80L
     const val MEDIA_RETURN = 560L
     const val PAUSE_LIFETIME = 2000L
+    const val LOADING_LIFETIME = 30000L
     val relaxed = TimeInterpolator { progress(it) }
     /** Committed collapse/exit and canceled drags settle without crossing their endpoint. */
     val settle = TimeInterpolator { val t = 1f - it.coerceIn(0f, 1f); 1f - t * t * t }
+    fun morphDuration(fromWidth: Float, fromHeight: Float, width: Float, height: Float, secondary: Boolean): Long {
+        val change = maxOf(kotlin.math.abs(width - fromWidth) / maxOf(width, fromWidth, 1f),
+            kotlin.math.abs(height - fromHeight) / maxOf(height, fromHeight, 1f)).coerceIn(0f, 1f)
+        if (change < .003f) return CONTENT
+        val full = if (secondary) SECONDARY else MORPH
+        return (CONTENT + (full - CONTENT) * (change / .55f).coerceAtMost(1f)).toLong()
+    }
+    /** Similar footprints only exchange content. Elastic travel is proportional to
+     * actual visible size change, never the activity kind or text length alone. */
+    fun sizeCatch(fromWidth: Float, fromHeight: Float, width: Float, height: Float, minimum: Float): Float {
+        val dw = kotlin.math.abs(width - fromWidth)
+        val dh = kotlin.math.abs(height - fromHeight)
+        if (maxOf(dw, dh) <= minimum) return 0f
+        val change = maxOf(dw / maxOf(width, fromWidth, 1f), dh / maxOf(height, fromHeight, 1f))
+        return ((change - .08f) / .42f).coerceIn(0f, 1f) * .03f
+    }
     /** The native window arrives while the shell's one finite clock makes a small catch. */
     fun mediaReturnCatch(progress: Float): Float {
         val t = ((progress - .55f) / .45f).coerceIn(0f, 1f)
