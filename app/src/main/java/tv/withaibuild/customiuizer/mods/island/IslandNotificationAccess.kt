@@ -12,6 +12,7 @@ import java.lang.ref.WeakReference
 
 /** Frozen CN/TW HyperOS 1 contract, resolved only when notification integration is enabled. */
 internal class IslandNotificationAccess internal constructor(entryClass: Class<*>, bindingClass: Class<*>) {
+    private val diagnostics = IslandDiagnostics()
     constructor(loader: ClassLoader) : this(
         XposedHelpers.findClass("com.android.systemui.statusbar.notification.collection.NotificationEntry", loader),
         XposedHelpers.findClass("com.android.systemui.statusbar.notification.collection.coordinator.HeadsUpCoordinator\$bindForAsyncHeadsUp\$1", loader))
@@ -35,10 +36,15 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
         val icon: Drawable?, val open: () -> Boolean)
 
     fun read(entry: Any): Bound? {
-        if (sensitive.getBoolean(entry) || appLocked.getBoolean(entry)) return null
+        if (sensitive.getBoolean(entry) || appLocked.getBoolean(entry)) {
+            diagnostics.report("notification-private"); return null
+        }
         val notification = sbn.get(entry) as? StatusBarNotification ?: return null
         val nativeRow = row.get(entry) as? View ?: return null
-        if (rowRemoved.getBoolean(nativeRow) || rowEntry.get(nativeRow) !== entry || !nativeRow.hasOnClickListeners()) return null
+        if (rowRemoved.getBoolean(nativeRow) || rowEntry.get(nativeRow) !== entry) {
+            diagnostics.report("notification-stale-row"); return null
+        }
+        if (!nativeRow.hasOnClickListeners()) { diagnostics.report("notification-click-not-ready"); return null }
         val rank = ranking.get(entry) as? Ranking ?: return null
         val icon = icons.get(entry)?.let { statusIcon.get(it) as? ImageView }?.drawable
         val weakRow = WeakReference(nativeRow)
@@ -60,15 +66,16 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
 
     /** Prepare the shell first; only this still-current bind may commit the native tail. */
     fun take(callback: Any, entry: Any, present: (Bound) -> Boolean, rollback: (Bound) -> Unit): Boolean {
+        diagnostics.report("notification-native-bind")
         val bound = read(entry) ?: return false
         val key = bound.notification.key
         val map = bindingMap(callback)
-        if (!map.containsKey(key)) return false
+        if (!map.containsKey(key)) { diagnostics.report("notification-bind-not-current"); return false }
         val binding = map[key]
         val nativeRow = row.get(entry)
         var committed = false
         try {
-            if (!present(bound)) return false
+            if (!present(bound)) { diagnostics.report("notification-presentation-declined"); return false }
             // Window insertion can synchronously re-enter native code. An update,
             // removal, Row replacement or newer bind invalidates this transaction.
             if (bindingMap(callback) !== map || !map.containsKey(key) || map[key] !== binding ||

@@ -763,7 +763,9 @@ internal class IslandActivityController(
             sbn.packageName !in options.notificationApps ||
             sbn.packageName in options.excludedApps ||
             sbn.packageName in options.chatExcludedApps || sbn.packageName == foregroundPackage ||
-            sbn.user != foregroundUser || sbn.notification.contentIntent == null) return false
+            sbn.user != foregroundUser || sbn.notification.contentIntent == null) {
+            diagnostics.report("notification-source-or-safety"); return false
+        }
         val now = SystemClock.uptimeMillis()
         if (chatNotification === sbn) {
             val current = chatLease?.let { attached && !exiting && state.owns(it, now) } == true
@@ -771,11 +773,13 @@ internal class IslandActivityController(
             return current
         }
         // Native system feedback and an already accepted ordinary Toast keep their lease.
-        if (state.toast(now)?.let { it.notificationKey == null } == true) return false
+        if (state.toast(now)?.let { it.notificationKey == null } == true) {
+            diagnostics.report("notification-feedback-active"); return false
+        }
         val rank = bound.ranking
         val prepared = IslandChatNotifications.prepare(context, sbn, rank.importance,
             rank.matchesInterruptionFilter(), rank.suppressedVisualEffects,
-            nativeIcon = bound.icon) ?: return false
+            nativeIcon = bound.icon) ?: run { diagnostics.report("notification-native-content"); return false }
         clearChat()
         chatKey = sbn.key; chatNotification = sbn; chatOpen = bound.open
         chatLease = state.offer(prepared, now, 4000)
