@@ -1178,7 +1178,7 @@
 | 重置模块设置 | `R.id.resetsettings` | 设置端动作 |
 | 关于 | `R.id.about` | 设置端动作 |
 
-备份与恢复分别使用系统文件创建 / 选择器；重置由 MainActivity 确认后执行。关于页显示版本、维护者及微信赞赏 / PayPal / 源码仓库入口（`about_donate_row` / `about_paypal_row` / `about_repository_row`），见 [AboutFragment](../app/src/main/java/tv/withaibuild/customiuizer/AboutFragment.kt)。首页框架状态提示由 MainFragment 的服务状态检查触发。
+备份与恢复分别使用系统文件创建 / 选择器；重置由 MainActivity 确认后执行。关于页显示版本、维护者及赞赏 / 在线捐赠 / 源码仓库入口（`about_donate_row` / `about_paypal_row` / `about_repository_row`），见 [AboutFragment](../app/src/main/java/tv/withaibuild/customiuizer/AboutFragment.kt)。首页框架状态提示由 MainFragment 的服务状态检查触发。
 
 ### 共用编辑与选择页面
 

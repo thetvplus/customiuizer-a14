@@ -33,8 +33,8 @@ Later source-branch changes may be absent from the official APK with the same ve
 
 ## Support and License
 
-Support continued maintenance via WeChat or [PayPal](https://paypal.me/Jinjitv).
+Support continued maintenance through the code below or [online donations](https://paypal.me/Jinjitv).
 
-<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.webp" alt="WeChat donation code" width="320">
+<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.webp" alt="Project donation code" width="320">
 
 Distributed under [GPL-3.0](LICENSE). Derived from [Mikanoshi/CustoMIUIzer](https://github.com/Mikanoshi/CustoMIUIzer), with Android 14 work referenced from [MonwF/customiuizer](https://github.com/MonwF/customiuizer). Duo references and bundled licenses are listed in the [Duo notes](docs/features/duo-status-bar.md).

@@ -33,8 +33,8 @@
 
 ## 支持与许可
 
-可以通过微信赞赏或 [PayPal](https://paypal.me/Jinjitv) 支持后续开发与维护。
+可以通过下方赞赏码或[在线捐赠](https://paypal.me/Jinjitv)支持后续开发与维护。
 
-<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.webp" alt="微信赞赏码" width="320">
+<img src="app/src/main/res/drawable-nodpi/wechat_donation_code.webp" alt="项目赞赏码" width="320">
 
 依据 [GPL-3.0](LICENSE) 分发，派生自 [Mikanoshi/CustoMIUIzer](https://github.com/Mikanoshi/CustoMIUIzer)，参考 [MonwF/customiuizer](https://github.com/MonwF/customiuizer) 的 Android 14 工作。Duo 图形参考与随包许可见 [Duo 使用说明](docs/features/duo-status-bar.md)。

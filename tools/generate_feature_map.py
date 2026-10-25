@@ -247,7 +247,7 @@ def render(repo: Path) -> str:
     for key, path in menu_entries(repo, strings):
         state = "条件显示：编辑页面确认修改" if key == "edit_confirm" else "设置端动作" if key != "restart_menu" else "首页子菜单"
         lines.append(f"| {cell(' → '.join(path))} | `R.id.{key}` | {state} |")
-    lines += ["", "备份与恢复分别使用系统文件创建 / 选择器；重置由 MainActivity 确认后执行。关于页显示版本、维护者及微信赞赏 / PayPal / 源码仓库入口（`about_donate_row` / `about_paypal_row` / `about_repository_row`），见 [AboutFragment](../app/src/main/java/tv/withaibuild/customiuizer/AboutFragment.kt)。首页框架状态提示由 MainFragment 的服务状态检查触发。", "",
+    lines += ["", "备份与恢复分别使用系统文件创建 / 选择器；重置由 MainActivity 确认后执行。关于页显示版本、维护者及赞赏 / 在线捐赠 / 源码仓库入口（`about_donate_row` / `about_paypal_row` / `about_repository_row`），见 [AboutFragment](../app/src/main/java/tv/withaibuild/customiuizer/AboutFragment.kt)。首页框架状态提示由 MainFragment 的服务状态检查触发。", "",
               "### 共用编辑与选择页面", "", "这些页面由上表的设置项进入，不注册第二套业务路由；标题沿用来源项或对应中文资源。", "", "| 进入方式 | 页面 / 对话框 | 稳定键或来源 |", "| --- | --- | --- |",
               "| 手势、按键、锁屏和音乐动作 → 编辑 | [MultiAction](../app/src/main/java/tv/withaibuild/customiuizer/subs/MultiAction.kt) | 来源项键派生 `_action`、`_app`、`_app_user`、`_shortcut`、`_shortcut_intent`、`_activity`、`_toggle` 等；选项依 Actions 分类 |",
               "| 应用名单、时钟 / 日历应用、隐藏应用、应用锁、修改标题 | [AppSelector](../app/src/main/java/tv/withaibuild/customiuizer/subs/AppSelector.kt) | 原设置键；隐藏应用 / 应用锁复用宿主配置；支持搜索 / 用户身份 |",
