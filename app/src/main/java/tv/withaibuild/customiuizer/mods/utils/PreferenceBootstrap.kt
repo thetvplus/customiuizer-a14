@@ -20,6 +20,10 @@ import tv.withaibuild.customiuizer.utils.canonicalPreferenceKey
  *     5. Atomically publish the final snapshot to the [PrefMap].
  *     6. Transition to [State.LOADED] or [State.VALID_EMPTY].
  *
+ * Initial, bulk and single-key publication share [lock], so a captured older snapshot cannot
+ * overwrite a callback that has already read a newer value. Observers run after releasing the
+ * lock; a failed read retains the last published value and does not dispatch a removal.
+ *
  * The transition to [State.LOADED] / [State.VALID_EMPTY] only happens after the listener is
  * successfully registered and a second snapshot has been read.  No caller may use the snapshot for
  * hook installation decisions before [isReady] returns true.
@@ -223,8 +227,8 @@ class PreferenceBootstrap private constructor(
         val second = getAllOrFail(remote) ?: return false
 
         if (second.isEmpty()) {
-            currentState = State.VALID_EMPTY
             prefs.clear()
+            currentState = State.VALID_EMPTY
             if (!validEmptyReported) {
                 validEmptyReported = true
                 XposedHelpers.log("Remote preferences are valid but empty (watcher confirmed)")
@@ -232,8 +236,9 @@ class PreferenceBootstrap private constructor(
             return true
         }
 
-        currentState = State.LOADED
         prefs.replaceSnapshot(second)
+        // Publish readiness last: installation gates also read currentState without lock.
+        currentState = State.LOADED
         return true
     }
 
@@ -292,22 +297,24 @@ class PreferenceBootstrap private constructor(
 
     private fun doRefreshRemoteKey(key: String, authoritativeValues: Map<String, Any> = emptyMap()) {
         try {
-            val remote = remotePrefs ?: return
+            synchronized(lock) {
+                val remote = remotePrefs ?: return
 
-            val rawValue = if (authoritativeValues.containsKey(key)) authoritativeValues[key] else if (remote.contains(key)) {
-                readChangedValue(remote, key)
-            } else {
-                null
+                val rawValue = if (authoritativeValues.containsKey(key)) authoritativeValues[key] else if (remote.contains(key)) {
+                    readChangedValue(remote, key)
+                } else {
+                    null
+                }
+
+                if (rawValue == null) {
+                    prefs.remove(key)
+                } else {
+                    prefs.put(key, rawValue)
+                }
+
+                synchronizeStateLocked()
             }
-
-            if (rawValue == null) {
-                prefs.remove(key)
-            } else {
-                prefs.put(key, rawValue)
-            }
-
-            synchronizeState()
-
+            // Observers may enter other owners; never dispatch while holding the publication lock.
             val canonicalKey = canonicalPreferenceKey(key)
             if (canonicalKey != "systemui_restart_time") {
                 changeDispatcher(canonicalKey)
@@ -320,10 +327,12 @@ class PreferenceBootstrap private constructor(
 
     private fun doRefreshBulk(authoritativeValues: Map<String, Any> = emptyMap()) {
         try {
-            val remote = remotePrefs ?: return
-            val snapshot = remote.all ?: return
-            prefs.replaceSnapshot(if (authoritativeValues.isEmpty()) snapshot else snapshot + authoritativeValues)
-            synchronizeState()
+            synchronized(lock) {
+                val remote = remotePrefs ?: return
+                val snapshot = remote.all ?: return
+                prefs.replaceSnapshot(if (authoritativeValues.isEmpty()) snapshot else snapshot + authoritativeValues)
+                synchronizeStateLocked()
+            }
             changeDispatcher(null)
         } catch (t: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(t)
@@ -351,13 +360,9 @@ class PreferenceBootstrap private constructor(
             }
         } catch (t: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(t)
-            try {
-                readUnknownType(remote, key)
-            } catch (fallback: Throwable) {
-                FatalErrors.unwrapAndRethrowIfFatal(fallback)
-                XposedHelpers.log(fallback)
-                null
-            }
+            // A failed fallback must reach the refresh boundary. Returning null here would
+            // delete a valid local value and dispatch defaults as if the key were removed.
+            readUnknownType(remote, key)
         }
     }
 
@@ -399,21 +404,19 @@ class PreferenceBootstrap private constructor(
     /**
      * Keep the bootstrap state in sync with the snapshot after a single-key update.
      *
-     * This is called from the listener thread.  It uses a quick in-memory check; no remote
-     * SharedPreferences access here.
+     * Called under [lock] after publication, including from the listener thread.
+     * It uses a quick in-memory check; no remote SharedPreferences access here.
      */
-    private fun synchronizeState() {
-        synchronized(lock) {
-            val s = currentState
-            val empty = prefs.size() == 0
+    private fun synchronizeStateLocked() {
+        val s = currentState
+        val empty = prefs.size() == 0
 
-            when {
-                (s == State.LOADED || s == State.VALID_EMPTY) && empty -> {
-                    currentState = State.VALID_EMPTY
-                }
-                (s == State.LOADED || s == State.VALID_EMPTY) && !empty -> {
-                    currentState = State.LOADED
-                }
+        when {
+            (s == State.LOADED || s == State.VALID_EMPTY) && empty -> {
+                currentState = State.VALID_EMPTY
+            }
+            (s == State.LOADED || s == State.VALID_EMPTY) && !empty -> {
+                currentState = State.LOADED
             }
         }
     }

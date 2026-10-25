@@ -6,6 +6,8 @@ Unreleased changes and retained releases; each release section consolidates chan
 
 ## Unreleased
 
+- Prevent initial or bulk preference snapshots from overwriting concurrent updates or reporting readiness before publication. Retain the last valid setting after a temporary read failure, preserving acknowledged status-bar height overrides and restart-only switch semantics.
+
 ## r14.25.6 — 2026-10-25
 
 versionCode 253. Changes since r14.25.3:

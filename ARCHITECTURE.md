@@ -26,6 +26,8 @@
 
 基础初始化、资源准备和动作通信入口可常驻；可选业务由开关控制。安装条件与运行期快照分开，具体重启语义属于各功能合同。
 
+偏好启动、单键和批量刷新在同一发布锁下读取并更新快照，完整发布后才公开就绪状态；观察者在锁外分发。读取异常保留最后有效值，确认键已删除才移除。system_server 的已提交高度覆盖仍优先于框架缓存，并在同一次发布后通知观察者；不改变 Feature 单次安装或安装型选项的重启语义。
+
 进程矩阵只生成 [JSON](docs/rom-intelligence/A14_PROCESS_MATRIX.json) / [CSV](docs/rom-intelligence/A14_PROCESS_MATRIX.csv)，来源是 catalog、路由和 scope。以下非表格化边界由源码和回归维护：
 
 - SystemUI、Settings、PermissionController、SecurityCenter 只接受各自主进程，拒绝 secondary / bootaware；fused location 与 networkstack 进程拒绝。
