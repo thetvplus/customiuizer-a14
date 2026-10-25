@@ -979,11 +979,11 @@
     <string name="system_cc_collapse_after_clicked_title">点击磁贴后自动收起</string>
     <string name="system_cc_freeform_when_longclick_title">长按磁贴时以小窗打开</string>
     <string name="system_show_step_count_title">显示步数</string>
-    <string name="system_strong_toast_title">系统提示样式</string>
+    <string name="system_strong_toast_title">灵动额头样式</string>
     <string name="system_strong_toast_summ">下次系统提示出现时生效。</string>
     <string name="system_strong_toast_mode_match_height">匹配状态栏高度</string>
     <string name="system_strong_toast_mode_dynamic_island">动态岛</string>
-    <string name="system_strong_toast_mode_hide">隐藏系统提示胶囊</string>
+    <string name="system_strong_toast_mode_hide">隐藏额头</string>
     <string name="system_strong_toast_island_offset_title">动态岛垂直位置</string>
     <string name="system_strong_toast_island_offset_summ">微调动态岛与摄像头挖孔的对齐。0 表示使用系统上报的挖孔位置。</string>
     <string name="various_clear_update_state_title">清除澎湃 OS 更新提醒</string>
@@ -1283,7 +1283,7 @@
     <string name="system_island_battery_low">低电量</string>
     <string name="system_island_gesture_tap">单击</string>
     <string name="system_island_idle_gestures_summ">仅在小岛显示时生效。播放类动作只控制最近一个有效媒体会话。</string>
-    <string name="system_island_live_sources_title">持续活动</string>
+    <string name="system_island_live_sources_title">活动来源</string>
     <string name="system_island_live_choose">活动来源</string>
     <string name="system_island_live_sources_summary">选择要上岛的活动。新增来源后重启；短信、日历需通知。</string>
     <string name="system_island_live_feedback">即时反馈</string>
@@ -1299,4 +1299,7 @@
     <string name="system_island_live_finished">时间到</string>
     <string name="system_island_live_camera">相机</string>
     <string name="system_island_live_microphone">麦克风</string>
+    <string name="system_island_live_return">上滑回岛</string>
+    <string name="system_island_live_return_summary">通话、时钟、录音从应用收回岛内。首次启用后重启桌面。</string>
+    <string name="system_strong_toast_mode_default">系统默认</string>
 </resources>

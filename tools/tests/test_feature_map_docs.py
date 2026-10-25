@@ -18,6 +18,17 @@ import generate_preference_artifacts as prefs
 
 
 class FeatureMapTest(unittest.TestCase):
+    def test_simple_next_level_preserves_enable_rows_and_real_sections_but_unwraps_hidden_containers(self):
+        xml = f'''<PreferenceScreen xmlns:android="{prefs.ANDROID_NS}" xmlns:app="{prefs.AUTO_NS}">
+          <{prefs.PREFERENCE_CATEGORY} app:state="2" android:title="Container">
+            <Preference android:key="enabled" android:title="启用" />
+            <{prefs.PREFERENCE_CATEGORY} android:title="位置">
+              <Preference android:key="offset" android:title="偏移" />
+            </{prefs.PREFERENCE_CATEGORY}>
+            <Preference android:key="hidden" android:title="隐藏项" app:isPreferenceVisible="false" />
+          </{prefs.PREFERENCE_CATEGORY}>
+        </PreferenceScreen>'''
+        self.assertEqual(["启用", "位置"], list(feature_map.simple_sections(ET.fromstring(xml), {})))
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -61,15 +72,18 @@ class FeatureMapTest(unittest.TestCase):
     def test_simple_tree_has_exact_business_page_structure_and_order(self):
         pages = feature_map.collect_pages(self.repo, feature_map.load_strings(self.repo))
         categories = {page.path[0] for page in pages}
+        business_paths = {page.path for page in pages}
         stack, actual = [], []
         for line in feature_map.render_simple(self.repo).splitlines():
             match = re.match(r"^((?:│  |   )*)(?:├─ |└─ )(.+)$", line)
             if match:
                 depth = len(match[1]) // 3
                 stack[depth:] = [match[2]]
-                if len(stack) >= 2 and stack[0] in categories:
+                if len(stack) >= 2 and stack[0] in categories and tuple(stack) in business_paths:
                     actual.append(tuple(stack))
         self.assertEqual([page.path for page in pages], actual)
+        self.assertIn("活动来源", feature_map.render_simple(self.repo))
+        self.assertIn("即时反馈", feature_map.render_simple(self.repo))
 
     def test_default_cli_checks_both_maps_and_writes_only_documentation(self):
         before = {p.relative_to(self.repo): p.read_bytes() for p in self.repo.rglob("*") if p.is_file()}

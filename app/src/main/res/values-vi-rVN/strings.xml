@@ -1289,4 +1289,7 @@
     <string name="system_island_live_finished">Hết giờ</string>
     <string name="system_island_live_camera">Máy ảnh</string>
     <string name="system_island_live_microphone">Micrô</string>
+    <string name="system_strong_toast_mode_default">Mặc định hệ thống</string>
+    <string name="system_island_live_return">Vuốt lên về đảo</string>
+    <string name="system_island_live_return_summary">Đưa cuộc gọi, Đồng hồ và Ghi âm về đảo. Khởi động lại màn hình chính sau lần bật đầu tiên.</string>
 </resources>

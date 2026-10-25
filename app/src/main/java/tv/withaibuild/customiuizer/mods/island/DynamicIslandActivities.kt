@@ -53,7 +53,13 @@ internal data class IslandOptions(
     val lowBattery: Boolean = false,
     val idleActions: IslandIdleActions = IslandIdleActions(),
     val liveKinds: Set<IslandLiveKind> = emptySet(),
+    val liveReturn: Boolean = true,
 ) {
+    private val returningPackages: Set<String> = buildSet {
+        if (media && mediaReturn) addAll(mediaReturnApps)
+        if (liveReturn) addAll(IslandLiveKind.windowPackages(liveKinds))
+    }
+    fun returnPackages(): Set<String> = returningPackages
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
             val mode = StrongToastPresentationMode.fromPreference(prefs.getStringAsInt("system_strong_toast_mode", 0))
@@ -91,7 +97,8 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_island_expand_down", true),
                 prefs.getBoolean("system_island_height_auto", prefs.getInt("system_island_height", 40) == 40),
                 prefs.getBoolean("system_island_feedback_charging"),
-                prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs), IslandLiveKind.read(prefs))
+                prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs), IslandLiveKind.read(prefs),
+                prefs.getBoolean("system_island_live_return", true))
         }
     }
 }

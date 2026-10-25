@@ -154,6 +154,32 @@ class IslandActivityLifecycleTest {
         assertSame(original, shell); assertEquals(1, adds)
     }
 
+    @Test fun selectedNativeActivityCanPublishItsExistingWindowTargetAndDisablingReturnWithdrawsIt() {
+        val controller = controller(idle = true, liveKinds = setOf("recorder", "call", "privacy"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val activity = IslandLiveActivity(IslandLiveKind.RECORDER, IslandLiveKind.RECORDER_PACKAGE, 10345,
+            IslandLiveClock(android.os.SystemClock.elapsedRealtime(), false), session = 42)
+        registry.update(IslandLiveKind.RECORDER, activity)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        fun frame() = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))
+        assertEquals(activity.packageName, frame()?.packageName)
+        assertTrue(frame()!!.valid())
+        val options = org.robolectric.util.ReflectionHelpers.getField<IslandOptions>(controller, "options")
+        org.robolectric.util.ReflectionHelpers.setField(controller, "options", options.copy(liveReturn = false))
+        assertNull(frame())
+        org.robolectric.util.ReflectionHelpers.setField(controller, "options", options)
+        registry.update(IslandLiveKind.CALL, IslandLiveActivity(IslandLiveKind.CALL, IslandLiveKind.CALL_PACKAGE,
+            1000, session = 43))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertEquals(IslandLiveKind.CALL_PACKAGE, frame()?.packageName)
+        registry.update(IslandLiveKind.CALL, null); registry.update(IslandLiveKind.RECORDER, null)
+        registry.update(IslandLiveKind.PRIVACY, IslandLiveActivity(IslandLiveKind.PRIVACY, IslandLiveKind.RECORDER_PACKAGE,
+            10345, privacy = IslandPrivacyAccess.MICROPHONE))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertNull(frame())
+    }
+
     @Test fun idleAndActivityReuseTheSameWindowAndDismissalStaysPassiveUntilWake() {
         val controller = controller(idle = true, simplified = true)
         drain()

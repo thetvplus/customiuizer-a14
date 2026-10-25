@@ -47,7 +47,7 @@ class IslandSizingTest {
             shortDp = 200, longDp = 260, manual = true))
         assertEquals(220, IslandSizing.collapsed(1f, 372, 220, 40, 24f, 100f,
             shortDp = 200, longDp = 260, manual = true))
-        assertEquals(168, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
+        assertEquals(160, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
             shortDp = 200, longDp = 260, manual = false))
         assertEquals(224, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 100f,
             shortDp = 224, longDp = 184, manual = true))
@@ -86,7 +86,7 @@ class IslandSizingTest {
         }
     }
     @Test fun compactAndMediumFormsFitTheirContentOnlyWithinTheEssentialIconsClearance() {
-        assertEquals(168, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 0f))
+        assertEquals(160, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 0f))
         val medium = IslandSizing.collapsed(1f, 372, 230, 40, 24f, 73f)
         assertEquals(218, medium)
         assertTrue((medium - 40) / 2 - 16 >= 73)

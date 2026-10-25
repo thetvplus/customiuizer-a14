@@ -394,13 +394,25 @@ class PreferenceNavigationUiTest {
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()
         assertFalse(requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
         val sources = requireNotNull((currentPage() as SubFragment)
-            .findPreference<androidx.preference.MultiSelectListPreference>("pref_key_system_island_live_kinds"))
-        assertTrue(sources.values.isEmpty())
-        assertEquals(8, sources.entries.size)
-        sources.performClick(); settleNavigation()
-        val sourcesDialog = requireNotNull(ShadowDialog.getLatestDialog())
-        assertTrue(sourcesDialog.isShowing)
-        sourcesDialog.dismiss(); settleNavigation()
+            .findPreference<PreferenceGroup>("pref_key_system_island_live_kinds"))
+        assertEquals(9, sources.preferenceCount) // Eight inline sources and one shared return switch.
+        activity.resources.getStringArray(R.array.system_island_live_values).forEachIndexed { index, value ->
+            assertEquals("Source order must remain semantic in every language", "pref_key_system_island_live_kinds_" + value,
+                sources.getPreference(index).key)
+        }
+        assertEquals("pref_key_system_island_live_return", sources.getPreference(8).key)
+        val recorder = requireNotNull((currentPage() as SubFragment)
+            .findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_kinds_recorder"))
+        assertFalse(recorder.isPersistent)
+        assertFalse(recorder.isChecked)
+        recorder.performClick(); settleNavigation()
+        assertTrue(recorder.isChecked)
+        assertEquals(setOf("recorder"), AppHelper.appPrefs!!.getStringSet("pref_key_system_island_live_kinds", emptySet()))
+        assertFalse(AppHelper.appPrefs!!.contains("pref_key_system_island_live_kinds_recorder"))
+        recorder.performClick(); settleNavigation()
+        assertTrue(AppHelper.appPrefs!!.getStringSet("pref_key_system_island_live_kinds", emptySet())!!.isEmpty())
+        assertTrue(requireNotNull((currentPage() as SubFragment)
+            .findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_return")).isChecked)
         pressToolbarBack()
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_notifications_cat")).performClick(); settleNavigation()
         val notifications = currentPage() as SubFragment

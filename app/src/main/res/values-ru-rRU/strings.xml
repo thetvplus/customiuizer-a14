@@ -1288,4 +1288,7 @@
     <string name="system_island_live_finished">Время вышло</string>
     <string name="system_island_live_camera">Камера</string>
     <string name="system_island_live_microphone">Микрофон</string>
+    <string name="system_strong_toast_mode_default">Системный</string>
+    <string name="system_island_live_return">Смахивание в остров</string>
+    <string name="system_island_live_return_summary">Возвращает звонок, часы и диктофон в остров. После первого включения перезапустите рабочий стол.</string>
 </resources>

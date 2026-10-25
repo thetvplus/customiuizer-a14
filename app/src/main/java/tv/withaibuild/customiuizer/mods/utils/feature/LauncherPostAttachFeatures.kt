@@ -987,7 +987,7 @@ internal class LauncherMusicReturnFeature(lpparam: PackageReadyParam, mPrefs: Pr
     companion object {
         @JvmStatic fun evaluateEnabled(prefs: PrefMap): Boolean {
             val options = tv.withaibuild.customiuizer.mods.island.IslandOptions.read(prefs)
-            return options.enabled && options.media && options.mediaReturn && options.mediaReturnApps.isNotEmpty() && !options.simplified
+            return options.enabled && options.returnPackages().isNotEmpty() && !options.simplified
         }
     }
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)

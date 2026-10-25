@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.SystemClock
 import android.telecom.TelecomManager
@@ -97,9 +96,10 @@ internal class IslandLiveSources(private val context: Context, private val handl
             val identities = withContext(io) {
                 buildMap {
                     for (pkg in IslandLiveKind.sourcePackages(kinds.map { it.value })) ModuleHelper.guarded {
-                        val app = context.packageManager.getApplicationInfo(pkg, 0)
-                        if (app.uid / 100000 == user && app.flags and
-                            (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0) put(pkg, app.uid)
+                        // An explicitly selected native-compatible app can be installed in /data
+                        // (e.g. the global Recorder). Pin its current UID, not its install location.
+                        // The subscriber still checks framework sender package/UID and token ownership.
+                        identity(context, pkg, user)?.let { put(pkg, it) }
                     }
                 }
             }
@@ -148,5 +148,12 @@ internal class IslandLiveSources(private val context: Context, private val handl
         read?.cancel(); read = null
         subscriber?.close(); subscriber = null
         if (callRegistered) { callRegistered = false; ModuleHelper.guarded { context.unregisterReceiver(calls) } }
+    }
+    companion object {
+        fun identity(context: Context, pkg: String, user: Int): Int? {
+            if (pkg != IslandLiveKind.CLOCK_PACKAGE && pkg != IslandLiveKind.RECORDER_PACKAGE) return null
+            val app = context.packageManager.getApplicationInfo(pkg, 0)
+            return app.uid.takeIf { app.enabled && it / 100000 == user }
+        }
     }
 }

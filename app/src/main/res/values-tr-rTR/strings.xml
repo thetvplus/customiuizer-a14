@@ -1295,4 +1295,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_live_finished">Süre doldu</string>
     <string name="system_island_live_camera">Kamera</string>
     <string name="system_island_live_microphone">Mikrofon</string>
+    <string name="system_strong_toast_mode_default">Sistem varsayılanı</string>
+    <string name="system_island_live_return">Kaydırarak adaya dön</string>
+    <string name="system_island_live_return_summary">Arama, Saat ve Kaydedici etkinliklerini adaya döndürür. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>
 </resources>

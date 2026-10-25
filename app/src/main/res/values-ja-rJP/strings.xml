@@ -1289,4 +1289,7 @@
     <string name="system_island_live_finished">時間になりました</string>
     <string name="system_island_live_camera">カメラ</string>
     <string name="system_island_live_microphone">マイク</string>
+    <string name="system_strong_toast_mode_default">システム標準</string>
+    <string name="system_island_live_return">上スワイプでアイランドへ</string>
+    <string name="system_island_live_return_summary">通話・時計・録音をアイランドに戻します。初回の有効化後はホームアプリを再起動してください。</string>
 </resources>

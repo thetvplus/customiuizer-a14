@@ -221,10 +221,26 @@ class System : SubFragment() {
 
             "pref_key_system_island_feedback_cat", "pref_key_system_island_music_cat" -> {
                 findPreference<MultiSelectListPreference>("pref_key_system_island_live_kinds")?.let { sources ->
-                    sources.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
-                        val selected = (value as? Set<*>)?.filterIsInstance<String>().orEmpty()
-                        tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected)
-                        true
+                    val group = requireNotNull(sources.parent)
+                    group.key = sources.key
+                    group.removePreference(sources)
+                    findPreference<Preference>("pref_key_system_island_live_return")?.order = sources.order + sources.entryValues.size
+                    sources.entryValues.forEachIndexed { index, entry ->
+                        val value = entry.toString()
+                        group.addPreference(CheckBoxPreferenceEx(requireContext(), null).apply {
+                            key = sources.key + "_" + value
+                            order = sources.order + index
+                            title = sources.entries[index]
+                            isPersistent = false
+                            isChecked = value in sources.values
+                            onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, checked ->
+                                val selected = sources.values.toMutableSet()
+                                if (checked == true) selected.add(value) else selected.remove(value)
+                                sources.values = selected
+                                tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected)
+                                true
+                            }
+                        })
                     }
                 }
                 val enabled = StrongToastPresentationMode.fromPreference(

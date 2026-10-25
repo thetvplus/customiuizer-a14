@@ -6,6 +6,16 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandLiveActivityTest {
+    @Test fun windowReturnSharesTheSelectedSourcesButNeverAddsPrivacyOrNotificationApps() {
+        val all = IslandOptions(true, false, false, liveKinds = IslandLiveKind.entries.toSet())
+        assertEquals(setOf(IslandLiveKind.CALL_PACKAGE, IslandLiveKind.CLOCK_PACKAGE, IslandLiveKind.RECORDER_PACKAGE), all.returnPackages())
+        assertTrue(all.copy(liveReturn = false).returnPackages().isEmpty())
+        assertTrue(IslandLiveKind.canReturn(IslandLiveKind.CALL, IslandLiveKind.CALL_PACKAGE))
+        assertFalse(IslandLiveKind.canReturn(IslandLiveKind.PRIVACY, IslandLiveKind.RECORDER_PACKAGE))
+        assertFalse(IslandLiveKind.canReturn(IslandLiveKind.CALL, "other.dialer"))
+        assertEquals(setOf(IslandLiveKind.CLOCK_PACKAGE, IslandLiveKind.RECORDER_PACKAGE),
+            IslandLiveKind.sourcePackages(IslandLiveKind.entries.map { it.value }))
+    }
     private fun activity(kind: IslandLiveKind, session: Long = 1, uid: Int = 10300) =
         IslandLiveActivity(kind, "native.source", uid, session = session)
     @Test fun sourcesAreOptInAndOnlyClockAndRecorderRequireAdditionalScope() {

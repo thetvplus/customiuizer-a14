@@ -96,11 +96,15 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         if (!params.isInstance(original) || (fields[7].get(original) as Enum<*>).name != "OPEN_FROM_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
             fields[15].getInt(original) != 0 || fields[16].getInt(original) != 0) return null
-        val targets = fields[0].get(original) ?: retainedTargets.get(owner)
-            ?: return if (fastAnimate?.declaringClass?.isInstance(owner) == true) fastPackage?.invoke(owner) as? String else null
-        val target = (apps.get(targets) as? Array<*>)?.singleOrNull() ?: return null
-        if (remoteMode.getInt(target) != openingMode || remoteType.getInt(target) != standardType) return null
-        return remotePackage.get(target) as? String
+        val explicit = fields[0].get(original)
+        val targets = explicit ?: retainedTargets.get(owner)
+        val target = targets?.let { (apps.get(it) as? Array<*>)?.singleOrNull() }
+        if (target != null && remoteMode.getInt(target) == openingMode && remoteType.getInt(target) == standardType)
+            return remotePackage.get(target) as? String
+        // A reused fast element can still retain its last CLOSING targets. Only
+        // prefetch may use the native opening package; retarget still requires task identity.
+        return if (explicit == null && fastAnimate?.declaringClass?.isInstance(owner) == true)
+            fastPackage?.invoke(owner) as? String else null
     }
 
     /** Called once at committed return, never from an animation update. Preserve the original

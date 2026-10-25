@@ -39,6 +39,8 @@ internal object IslandLiveSignal {
             activity?.let { value ->
                 putExtra("session", value.session); putExtra("alert", value.alert)
                 putExtra("open", value.open)
+                if (kind == IslandLiveKind.RECORDER && value.meter != null)
+                    putExtras(Bundle().apply { putBinder("meter", value.meter) })
                 value.clock?.let { clock ->
                     putExtra("clock", true); putExtra("base", clock.base); putExtra("down", clock.countdown)
                     clock.pausedMillis?.let { putExtra("paused", it) }
@@ -70,8 +72,10 @@ internal object IslandLiveSignal {
         } else null
         val open = intent.getParcelableExtra("open", PendingIntent::class.java)
         if (open != null && (!open.isActivity || open.creatorUid != uid || open.creatorPackage != packageName)) return null
+        val meter = intent.extras?.getBinder("meter")
+        if (meter != null && kind != IslandLiveKind.RECORDER) return null
         return Packet(kind, IslandLiveActivity(kind, packageName, uid, clock, open,
-            session = session, alert = intent.getBooleanExtra("alert", false)), sequence, nonce, owner)
+            session = session, alert = intent.getBooleanExtra("alert", false), meter = meter), sequence, nonce, owner)
     }
 
     /** One attached SystemUI owner, with no retry timer. Package/UID resolution is supplied cold. */

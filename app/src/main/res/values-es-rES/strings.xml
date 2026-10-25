@@ -1288,4 +1288,7 @@
     <string name="system_island_live_finished">Tiempo agotado</string>
     <string name="system_island_live_camera">Cámara</string>
     <string name="system_island_live_microphone">Micrófono</string>
+    <string name="system_strong_toast_mode_default">Predeterminado del sistema</string>
+    <string name="system_island_live_return">Deslizar a la isla</string>
+    <string name="system_island_live_return_summary">Devuelve llamadas, Reloj y Grabadora a la isla. Reinicia el lanzador tras activarlo por primera vez.</string>
 </resources>

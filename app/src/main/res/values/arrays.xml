@@ -721,7 +721,7 @@
 	</string-array>
 
 	<string-array name="strong_toast_presentation_modes">
-		<item>@string/array_system_default</item>
+		<item>@string/system_strong_toast_mode_default</item>
 		<item>@string/system_strong_toast_mode_match_height</item>
 		<item>@string/system_strong_toast_mode_hide</item>
 		<item>@string/system_strong_toast_mode_dynamic_island</item>

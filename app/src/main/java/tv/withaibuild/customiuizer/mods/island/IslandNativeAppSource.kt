@@ -74,12 +74,13 @@ internal object IslandNativeAppSource {
         }
         init { context.registerReceiver(receiver, IntentFilter(IslandLiveSignal.REQUEST), null,
             handler, Context.RECEIVER_EXPORTED) }
-        fun update(kind: IslandLiveKind, clock: IslandLiveClock?, active: Boolean, alert: Boolean = false) {
+        fun update(kind: IslandLiveKind, clock: IslandLiveClock?, active: Boolean, alert: Boolean = false,
+            meter: android.os.IBinder? = null) {
             val old = values[kind]
             val value = if (!active || !enabled(prefs, context.packageName) || kind !in IslandLiveKind.read(prefs)) null
             else IslandLiveActivity(kind, context.packageName, Process.myUid(), clock,
                 old?.open ?: open(kind), session = if (old == null || old.alert != alert)
-                    IslandApplicationOverlaySignal.nextSequence() else old.session, alert = alert)
+                    IslandApplicationOverlaySignal.nextSequence() else old.session, alert = alert, meter = meter)
             if (value == old) return
             if (value == null) values.remove(kind) else values[kind] = value
             send(kind)
@@ -229,6 +230,7 @@ internal object IslandNativeAppSource {
         // Semantic literals + full signatures, not obfuscated names. Bridge is cold and always closed.
         val state: Method
         val duration: Method
+        val amplitude: Method?
         try {
             MainModule.loadDexKit()
             XposedHelpers.createBridge(param.applicationInfo.sourceDir)
@@ -243,17 +245,30 @@ internal object IslandNativeAppSource {
             }
             state = locate("setState: state from ", listOf("int", "java.lang.String", "long"), Void.TYPE)
             duration = locate("getRecordingDuration mLastPausedRecordDuration: ", emptyList(), Long::class.javaPrimitiveType!!)
+            amplitude = ModuleHelper.guarded<Method?>(null) {
+                bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create().declaredClass(cls)
+                    .returnType(Int::class.javaPrimitiveType!!).paramTypes(emptyList<String>())
+                    .addInvoke(MethodMatcher.create().declaredClass("miuix.media.h").name("f")
+                        .returnType(Int::class.javaPrimitiveType!!).paramTypes(emptyList<String>()))))
+                    .single().getMethodInstance(param.classLoader).apply {
+                        check(declaringClass == state.declaringClass && returnType == Int::class.javaPrimitiveType)
+                        isAccessible = true
+                    }
+            }
         } finally { XposedHelpers.closeBridge() }
         var publisher: Publisher? = null
         var owner = WeakReference<Service>(null)
         var recordingState = 0
+        val meterOwner = java.util.concurrent.atomic.AtomicReference<Service?>(null)
+        var meter: android.os.IBinder? = null
         val handler = Handler(Looper.getMainLooper())
         val activeKey = "customiuizer_island_recorder_live"
         fun snapshot() {
             val service = owner.get() ?: return
             val clock = if (recordingState in 1..2) IslandLiveTime.elapsed(duration.invoke(service) as Long,
                 SystemClock.elapsedRealtime(), recordingState == 2) else null
-            publisher?.update(IslandLiveKind.RECORDER, clock, clock != null)
+            meterOwner.set(service.takeIf { recordingState == 1 })
+            publisher?.update(IslandLiveKind.RECORDER, clock, clock != null, meter = meter)
         }
         val create = state.declaringClass.getDeclaredMethod("onCreate")
         val destroy = state.declaringClass.getDeclaredMethod("onDestroy")
@@ -271,6 +286,15 @@ internal object IslandNativeAppSource {
                 if (owner.get() !== current) {
                     publisher?.close(); owner = WeakReference(current)
                     publisher = Publisher(current.applicationContext, prefs, ::snapshot)
+                    meter = amplitude?.let { method ->
+                        // Use the resolved SystemUI UID, including ROMs with a dedicated shared UID.
+                        val allowed = current.packageManager.getApplicationInfo("com.android.systemui", 0).uid
+                        val expected = WeakReference(current)
+                        IslandRecorderMeter.producer(allowed) {
+                            val active = meterOwner.get() ?: return@producer -1
+                            if (active !== expected.get()) -1 else method.invoke(active) as Int
+                        }
+                    }
                 }
                 recordingState = value
                 snapshot()
@@ -280,7 +304,10 @@ internal object IslandNativeAppSource {
             val service = WeakReference(callback.getThisObject() as Service)
             XposedHelpers.setAdditionalInstanceField(callback.getThisObject(), activeKey, false)
             handler.post { ModuleHelper.guarded {
-                if (owner.get() === service.get()) { publisher?.close(); publisher = null; owner.clear(); recordingState = 0 }
+                if (owner.get() === service.get()) {
+                    meterOwner.set(null); meter = null
+                    publisher?.close(); publisher = null; owner.clear(); recordingState = 0
+                }
             } }
         }
     }

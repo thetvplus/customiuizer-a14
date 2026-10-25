@@ -1296,4 +1296,7 @@
     <string name="system_island_live_finished">Čas vypršel</string>
     <string name="system_island_live_camera">Fotoaparát</string>
     <string name="system_island_live_microphone">Mikrofon</string>
+    <string name="system_strong_toast_mode_default">Výchozí systémové</string>
+    <string name="system_island_live_return">Tažením zpět do ostrova</string>
+    <string name="system_island_live_return_summary">Vrátí aktivní hovor, hodiny a záznamník do ostrova. Po prvním zapnutí restartujte plochu.</string>
 </resources>

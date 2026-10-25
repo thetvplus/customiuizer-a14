@@ -87,6 +87,10 @@ class LauncherMusicReturnAccessTest {
         val source = params(type = Type.OPEN_FROM_HOME, targets = null,
             targetView = View(RuntimeEnvironment.getApplication()))
         assertEquals("chosen.music", quick.openingPackage(source, FastElement()))
+        val reused = FastElement().apply { remoteAnimationTargetSet = Targets(arrayOf(Remote())) }
+        assertEquals("A retained closing target must not hide the next fast opening", "chosen.music",
+            quick.openingPackage(source, reused))
+        assertNull(quick.openingPackage(params(type = Type.OPEN_FROM_HOME), reused))
         assertNotNull(source.targetView)
         assertFalse(source.ignoreIcon)
         assertNull(quick.retarget(source, FastElement(), Nav(), frame))

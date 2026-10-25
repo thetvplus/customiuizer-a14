@@ -1012,7 +1012,7 @@
     <string name="system_cc_freeform_when_longclick_title">Open in freeform when longclick on tile</string>
     <string name="system_show_step_count_title">Show step count</string>
     <string name="system_cc_switch_ccandnotification_title">Switch control center and notification drawer</string>
-    <string name="system_strong_toast_title">System prompt style</string>
+    <string name="system_strong_toast_title">Top capsule style</string>
     <string name="system_strong_toast_summ">Applies to the next system popup.</string>
     <string name="system_strong_toast_mode_match_height">Match status bar height</string>
     <string name="system_strong_toast_mode_dynamic_island">Dynamic Island</string>
@@ -1306,7 +1306,7 @@
     <string name="system_island_battery_low">Low battery</string>
     <string name="system_island_gesture_tap">Tap</string>
     <string name="system_island_idle_gestures_summ">Only applies to the idle island. Playback actions use the most recent valid media session.</string>
-    <string name="system_island_live_sources_title">Ongoing activities</string>
+    <string name="system_island_live_sources_title">Activity sources</string>
     <string name="system_island_live_choose">Sources</string>
     <string name="system_island_live_sources_summary">Choose activities to show. Restart after adding sources. SMS and calendar require notifications.</string>
     <string name="system_island_live_feedback">Instant feedback</string>
@@ -1322,4 +1322,7 @@
     <string name="system_island_live_finished">Time is up</string>
     <string name="system_island_live_camera">Camera</string>
     <string name="system_island_live_microphone">Microphone</string>
+    <string name="system_island_live_return">Swipe back to island</string>
+    <string name="system_island_live_return_summary">Return active call, Clock and Recorder windows to the island. Restart Launcher after enabling for the first time.</string>
+    <string name="system_strong_toast_mode_default">System default</string>
 </resources>

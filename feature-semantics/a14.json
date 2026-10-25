@@ -18932,7 +18932,30 @@
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandLiveActivityTest; IslandLiveSignalTest; IslandActivityStateTest",
-      "notes": "Clock and Recorder require framework scope and a source-process restart. SMS/calendar reuse accepted native notifications only. No additional app permissions or polling."
+      "notes": "Clock and Recorder require framework scope and a source-process restart. Explicit native-compatible user installations are UID-pinned too. SMS/calendar require accepted native notifications. Recorder metering uses its existing scalar getter only while the background recording island is visible; no new recording permission."
+    },
+    {
+      "featureId": "system_island_live_return",
+      "featureName": "Native activity return",
+      "preferenceKeys": [
+        "system_island_live_return",
+        "pref_key_system_island_live_return"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/LauncherMusicReturnHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
+      "targetPackage": "com.android.systemui / com.miui.home",
+      "installPhase": "APPLICATION_ATTACH",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Return selected active native call/Clock/Recorder task windows to the current island",
+      "disableEffect": "Leave native window targets unchanged; retain activity content and ordinary entrance",
+      "valueChangeEffect": "Invalidate pending attempts and update attached owners; first hook installation requires Launcher restart",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "LauncherMusicReturnAccessTest; LauncherMusicReturnLifecycleTest; IslandActivityLifecycleTest; IslandLiveActivityTest; PreferenceNavigationUiTest",
+      "notes": "Enabled by default only for explicitly selected native sources. Full-screen task/user/package/rotation matching stays native. Does not grant background activity launch or privacy access."
     }
   ]
 }

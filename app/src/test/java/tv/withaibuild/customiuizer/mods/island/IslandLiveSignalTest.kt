@@ -13,6 +13,17 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class IslandLiveSignalTest {
+    @Test fun explicitlySelectedNativeCompatibleUserInstallationIsPinnedToItsActualUid() {
+        val context = RuntimeEnvironment.getApplication()
+        val app = android.content.pm.ApplicationInfo().apply {
+            packageName = IslandLiveKind.RECORDER_PACKAGE; uid = 10345; enabled = true; flags = 0
+        }
+        org.robolectric.Shadows.shadowOf(context.packageManager).installPackage(
+            android.content.pm.PackageInfo().apply { packageName = app.packageName; applicationInfo = app })
+        assertEquals(10345, IslandLiveSources.identity(context, app.packageName, 0))
+        assertNull(IslandLiveSources.identity(context, app.packageName, 1))
+        assertNull(IslandLiveSources.identity(context, "unrelated.app", 0))
+    }
     @Test fun unauthenticatedSenderCannotReachPayloadAndClosedReceiverIsIdempotent() {
         val context = RuntimeEnvironment.getApplication()
         var reads = 0

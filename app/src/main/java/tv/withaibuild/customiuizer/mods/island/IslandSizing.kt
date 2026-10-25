@@ -5,7 +5,7 @@ import kotlin.math.roundToInt
 
 /** Shared collapsed forms: content may widen the short island, camera and physical safe bounds take precedence. */
 internal object IslandSizing {
-    const val SHORT_DP = 168
+    const val SHORT_DP = 160
     const val LONG_MAX_DP = 218
     const val COLLAPSED_HEIGHT_DP = 40
     const val EDGE_DP = 16

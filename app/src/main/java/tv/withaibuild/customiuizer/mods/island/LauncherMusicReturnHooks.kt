@@ -33,7 +33,8 @@ import java.util.concurrent.atomic.AtomicLong
 internal object LauncherMusicReturnHooks {
     private const val OWNER = "customiuizer_music_return_owner"
     @Volatile private var active = WeakReference<Owner>(null)
-    private data class Attempt(val params: Any, val snapshot: IslandMusicReturnSignal.Snapshot, val gesture: Long, val impulse: Float)
+    private data class Attempt(val params: Any, val snapshot: IslandMusicReturnSignal.Snapshot,
+        val epoch: Long, val sequence: Long, val impulse: Float)
 
     fun install(param: PackageReadyParam, prefs: PrefMap) {
         val access = LauncherMusicReturnAccess(param.classLoader)
@@ -98,10 +99,12 @@ internal object LauncherMusicReturnHooks {
         private val handler = Handler(Looper.getMainLooper())
         private val queued = AtomicBoolean()
         private val gesture = AtomicLong()
-        private var committedGesture = -1L
+        private val activeAttempt = AtomicLong()
+        private var committedAttempt = -1L
         private val impulse = IslandGestureImpulse()
         @Volatile private var disposed = false
         @Volatile private var options = IslandOptions.read(prefs)
+        @Volatile private var returnPackages = options.returnPackages()
         @Volatile private var snapshot: IslandMusicReturnSignal.Snapshot? = null
         @Volatile private var scope: CoroutineScope? = null
         private var commitJob: Job? = null
@@ -136,12 +139,14 @@ internal object LauncherMusicReturnHooks {
                 throw error
             }
         }
-        private fun enabled() = !disposed && options.enabled && options.media && options.mediaReturn &&
-            options.mediaReturnApps.isNotEmpty() && !options.simplified && ValueAnimator.areAnimatorsEnabled()
+        private fun enabled() = !disposed && options.enabled && returnPackages.isNotEmpty() &&
+            !options.simplified && ValueAnimator.areAnimatorsEnabled()
 
         private fun configure() {
             if (disposed) return
             options = IslandOptions.read(prefs)
+            returnPackages = options.returnPackages()
+            invalidateAttempt()
             snapshot = null
             if (!enabled()) { stop(); return }
             if (!registered) {
@@ -155,7 +160,7 @@ internal object LauncherMusicReturnHooks {
         fun request(gesture: Boolean = false) {
             val tasks = scope ?: return
             if (!enabled()) return
-            if (gesture) this.gesture.updateAndGet { maxOf(it + 1, SystemClock.elapsedRealtimeNanos()) }
+            if (gesture) invalidateAttempt()
             if (!queued.compareAndSet(false, true)) return
             tasks.launch {
                 try {
@@ -177,19 +182,23 @@ internal object LauncherMusicReturnHooks {
         }
         fun retarget(original: Any, element: Any): Attempt? {
             if (!enabled() || !ScreenStateController.isScreenOn()) return null
+            val epoch = gesture.get()
             val current = snapshot
             if (current == null) { diagnostics.report("music-return-no-snapshot"); return null }
             val frame = current.frame ?: return null
-            if (!current.fresh(SystemClock.uptimeMillis()) || frame.packageName !in options.mediaReturnApps) return null
+            if (!current.fresh(SystemClock.uptimeMillis()) || frame.packageName !in returnPackages) return null
             val nav = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
             if (nav.display?.rotation != android.view.Surface.ROTATION_0) return null
             val result = access.retarget(original, element, nav, frame) ?: return null
-            return Attempt(result, current, gesture.get(), impulse.strength)
+            if (epoch != gesture.get()) return null
+            return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.strength)
+                .also { activeAttempt.set(it.sequence) }
         }
         fun prefetchOpening(original: Any, element: Any) {
             if (!enabled() || !ScreenStateController.isScreenOn()) return
             val opening = access.openingPackage(original, element) ?: return
-            if (opening in options.mediaReturnApps) request()
+            invalidateAttempt()
+            if (opening in returnPackages) request()
         }
         fun selectWindowTarget(native: Any): Boolean {
             val nav = view.get()?.takeIf { it === native && it.isAttachedToWindow } ?: return false
@@ -199,12 +208,12 @@ internal object LauncherMusicReturnHooks {
             if (!current.fresh(SystemClock.uptimeMillis())) {
                 diagnostics.report("music-return-target-expired"); return false
             }
-            if (frame.packageName !in options.mediaReturnApps) return false
+            if (frame.packageName !in returnPackages) return false
             return access.selectWindowTarget(nav, frame)
         }
         fun committed(attempt: Attempt, element: Any, deferred: Boolean = false) {
             val tasks = scope ?: return
-            if (!enabled() || attempt.gesture == committedGesture || attempt.gesture != gesture.get()) return
+            if (!enabled() || attempt.sequence == committedAttempt || !current(attempt)) return
             if (!access.accepted(attempt.params, element)) {
                 // An interrupted opening can start its replacement spring at the end of
                 // this native dispatch. Recheck once on the existing looper, never poll.
@@ -212,16 +221,16 @@ internal object LauncherMusicReturnHooks {
                 else diagnostics.report("music-return-native-not-running")
                 return
             }
-            committedGesture = attempt.gesture
+            committedAttempt = attempt.sequence
             val current = attempt.snapshot
             val message = IslandMusicReturnSignal.encode(current.frame, current.issuedAt, current.sequence)
                 .setAction(IslandMusicReturnSignal.REQUEST).setPackage(IslandMusicReturnSignal.SYSTEM_UI)
-                .putExtra("committed", true).putExtra("gesture", attempt.gesture)
+                .putExtra("committed", true).putExtra("gesture", attempt.sequence)
                 .putExtra("impulse", attempt.impulse)
                 .putExtra("committedAt", SystemClock.uptimeMillis()).addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             commitJob?.cancel()
             commitJob = tasks.launch {
-                if (enabled()) ModuleHelper.guarded { ModuleHelper.sendBroadcastWithIdentity(context, message) }
+                if (enabled() && current(attempt)) ModuleHelper.guarded { ModuleHelper.sendBroadcastWithIdentity(context, message) }
             }
             if (!reported) {
                 reported = true
@@ -229,9 +238,12 @@ internal object LauncherMusicReturnHooks {
             }
         }
         override fun onScreenStateChanged(isOn: Boolean) {
-            if (!isOn) snapshot = null else request()
+            if (!isOn) { invalidateAttempt(); snapshot = null } else request()
         }
+        private fun current(attempt: Attempt) = attempt.epoch == gesture.get() && attempt.sequence == activeAttempt.get()
+        private fun invalidateAttempt() { gesture.incrementAndGet(); activeAttempt.set(0); commitJob?.cancel(); commitJob = null }
         private fun stop() {
+            invalidateAttempt()
             snapshot = null
             commitJob?.cancel(); commitJob = null
             scope?.cancel(); scope = null

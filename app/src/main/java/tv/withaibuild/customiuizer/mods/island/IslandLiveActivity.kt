@@ -20,6 +20,7 @@ internal enum class IslandLiveKind(val value: String, val priority: Int, val lab
         const val PREFERENCE = "system_island_live_kinds"
         const val CLOCK_PACKAGE = "com.android.deskclock"
         const val RECORDER_PACKAGE = "com.android.soundrecorder"
+        const val CALL_PACKAGE = "com.android.incallui"
         val clockKinds = setOf(TIMER, STOPWATCH, ALARM)
         fun read(prefs: PrefMap): Set<IslandLiveKind> {
             val values = prefs.getStringSet(PREFERENCE)
@@ -29,6 +30,12 @@ internal enum class IslandLiveKind(val value: String, val priority: Int, val lab
             if (clockKinds.any { it.value in values }) add(CLOCK_PACKAGE)
             if (RECORDER.value in values) add(RECORDER_PACKAGE)
         }
+        fun windowPackages(kinds: Set<IslandLiveKind>): Set<String> = buildSet {
+            addAll(sourcePackages(kinds.map { it.value }))
+            if (CALL in kinds) add(CALL_PACKAGE)
+        }
+        fun canReturn(kind: IslandLiveKind, pkg: String) =
+            IslandLiveSignal.owns(pkg, kind) || kind == CALL && pkg == CALL_PACKAGE
     }
 }
 
@@ -42,7 +49,7 @@ internal data class IslandLiveKey(val kind: IslandLiveKind, val uid: Int, val se
 /** Minimal current state; no recording path, phone number, media sample or message history. */
 internal data class IslandLiveActivity(val kind: IslandLiveKind, val packageName: String, val uid: Int,
     val clock: IslandLiveClock? = null, val open: PendingIntent? = null, val privacy: Int = 0,
-    val session: Long = 0, val alert: Boolean = false) {
+    val session: Long = 0, val alert: Boolean = false, val meter: android.os.IBinder? = null) {
     val key = IslandLiveKey(kind, uid, session)
 }
 

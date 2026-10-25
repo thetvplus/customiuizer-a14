@@ -123,7 +123,7 @@ internal class IslandTouchWindow(val shell: IslandActivityView) : FrameLayout(sh
         return try {
             local.offsetLocation(-shell.left.toFloat(), -shell.top.toFloat())
             local.transform(inverse)
-            shell.dispatchTouchEvent(local)
+            shell.dispatchFromWindow(local, event)
         } finally {
             local.recycle()
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) tracking = false
