@@ -27,7 +27,7 @@ Availability depends on the ROM and system-app versions. Do not enable this modu
 
 The [documentation index](docs/README.md) covers development, testing, releases and feature contracts. Start with the [shared engineering rules](AGENTS.md) before contributing.
 
-Current source version: `r14.25.6` (versionCode 253). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
+Current source version: `r14.25.5` (versionCode 254). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
 
 Later source-branch changes may be absent from the official APK with the same version name. See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for unreleased changes and pending device checks.
 

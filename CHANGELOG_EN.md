@@ -2,9 +2,13 @@
 
 English | [简体中文](CHANGELOG.md)
 
-Unreleased changes and retained releases; cumulative notes use their designated baseline, while publication safety checks the latest published release separately. Preserve original source tags, APKs, signing identity and build provenance.
+Unreleased changes and retained releases; cumulative notes use their designated baseline, while publication safety checks the latest published release separately. Preserve original source identities, signing identity and build provenance.
 
 ## Unreleased
+
+## r14.25.5 — 2026-10-25
+
+versionCode 254. Changes since r14.24.1:
 
 ### User changes
 
@@ -31,41 +35,15 @@ Unreleased changes and retained releases; cumulative notes use their designated 
 
 ### Engineering notes
 
+- Read individual arguments in read-only before / after hooks instead of copying the whole array. Preserve argument writes, original calls and exception semantics; Host allocation comparisons establish no device performance gain.
 - Island handoffs reuse the existing finite clock, retain only one latest pending visual value and clear it on cancellation or detachment. Shrinking and position retargeting preserve current visible geometry. Animation and manual-width changes have targeted Host evidence only, without expanding device acceptance.
-- The cumulative notes baseline is r14.24.1; publication safety still uses the latest actually published stable release, historical certificate and exact main CI. Preserve real r14.25.1 and r14.25.3 releases and Git tags, excluding withdrawn designs and debugging history.
+- The cumulative notes baseline is r14.24.1; publication safety still uses the latest actually published stable release, historical certificate and exact main CI. Preserve truthful release records and Git history; remove superseded public pages and tags only after successful dual-repository acceptance and explicit authorization. Exclude withdrawn designs and debugging history.
 - Music returns retain native Surfaces, cancellation and spring callbacks. PiP and app-overlay state expire by owner, user and generation, with bounded queries and fallbacks and no continuous polling. Preserve accepted floating-window options, rapid music returns and manual island dimensions.
 - Keep the acknowledged status-bar height override for stale framework caches. Mark preferences ready only after atomic publication, serializing startup, bulk and single-key updates. Distinguish failed reads from real deletion and retain full-restart semantics for installation-time switches.
 - Notifications retain native Views and Pipeline attachment, compensation before commit and no alert replay after commit. Unknown lockscreen state blocks presentation. Release Dock sampling and geometry listeners with their owners; do not copy third-party implementations.
 - Remove human approval, self-dispatch and online Attestation dependencies from signing and publishing. Restrict environments to main and reuse successful CI for the exact SHA. Verify candidates against immutable Artifact IDs, archive digests, the historical Android certificate, APKs and source identity; recover without rebuilding.
 - Publish only the official APK and build-metadata.json, verifying the source repository before the download repository. Update download documents after both assets agree. Maintain long-term rules only in docs/RELEASE.md.
 - Reuse existing Host, tool, APK and device evidence with separate scopes. Uncovered notification end-to-end behavior, other ROMs, Bluetooth, dual SIM, multiple users and long-term power remain unconfirmed; claim no unmeasured performance gains.
-
-## r14.25.6 — 2026-10-25
-
-versionCode 253. Changes since r14.25.3:
-
-### User changes
-
-This version is for locally installed, officially signed trials only and has not been published. It refines Dynamic Island, status-bar dimensions and native window interactions, combining valid changes from r14.25.4, the withdrawn r14.25.5 and this fix while preserving historical commits and binaries.
-
-- Music direct-to-island now selects the native window-only return before desktop-icon lookup, then directs the validated app window to the island. Do not borrow or compress the desktop icon, or restore it only at the end. Keep the opt-in switch and explicit player selection. Prefetch the short-lived target during app opening and selected-player foreground changes for rapid Home returns.
-- Reject premature media-return confirmation during PiP entry, cancellation and exit. Retain full hide / restore, edge stash / restore and independent center, left and right double tap actions. Recheck current PiP state before the first draw, cancel an unshown entrance and animate an already-visible island out. Whole-island suppression covers native PiP, system and application overlay windows; its switch requires a full device reboot. One bounded task query on the real Home edge recognizes declared auto-PiP before its window request; admission waits for that transition to settle. Disabling whole-island suppression allows a media island alongside PiP while leaving the video window under native control.
-- Synchronize fixed status-bar height with system dimension resources, correcting stale-height layouts in third-party apps without expanding module scope. Keep the existing full-reboot requirement, application fullscreen visibility and native contrast protection.
-- Expand island height to 32–64 dp, short width to 96–320 dp and long width to 120–400 dp, linking text, artwork, waveform and touch geometry. Manual wide mode lets time and battery yield or hide, with extra safety clearance for small icons. Also fix recycled settings descriptions and geometry when actual rotation has no resource callback.
-- Strengthen notification-island keyguard, update and click identity checks while retaining native alerts on failed takeover. Stale media reads and old return confirmations cannot revive content.
-- Refine experimental live-waveform amplitude, weak high frequencies and silence decay while keeping lightweight mode as the default. Fix obsolete wallpaper-capture failures retiring a replacement Dock glass backdrop, skip unchanged parameter writes and preserve the effect, motion and hidden-owner cleanup.
-
-### Engineering notes
-
-- Use NavStubView's native no-icon branch without desktop-icon lookup, snapshots or hiding. Retain the task Surface, native spring, callbacks and cancellation; never hijack a desktop icon already chosen by a late path. Tasks declaring auto-PiP stay native and cannot confirm an early island entrance. Refresh the short-lived return target during app opening and selected-player foreground changes so a quick Home gesture need not wait for the gesture-down request.
-- Read only the published Shell scalar snapshot before drawing; coalesce rejected-frame handling into one controller-owned Main task and release it on disposal. Visible content follows the existing exit animation, while keyguard keeps immediate cleanup. Add no per-frame reflection, Binder, I/O or poller. The Home probe examines at most 16 tasks, with one controller-owned intent, serial query and expiry; cancellation, user changes, stale results and disposal invalidate it without polling. Retain at most one current-owner PiP request token and scalar identity; release on native state, cancellation or owner replacement, with a five-second deadline that rejects stale expiry callbacks.
-- Manage one fixed overlay identity and four dimensions in system_server. The persisted enabled flag always remains false; only the running module enables its runtime state. Native state calculation restores stock dimensions on a full boot without the module. Replacement / removal retires only unreferenced module-owned files, with bounded retries and retirement records to prevent accumulation.
-- Work around the confirmed stale system_server preference cache by retaining the existing authenticated, value-free invalidation. Read one acknowledged height through the non-exported, system-UID-only endpoint and include it in the same atomic preference publication. Do not mutate framework caches or recreate client listeners.
-- Read native Session surface inventories only after visibility changes, session cleanup or an island-owner reconnect. Filter by user and default display, bound scans and snapshots, retain no windows, inject into no additional apps and add no poller. Preserve native PiP Surface, input, Shell-executor and task / user identity contracts.
-- Keep Row / Sbn / binding transactions, pre-commit compensation and no alert replay after failed post-commit cleanup. Unknown or failing keyguard state blocks presentation. Bind geometry and gesture listeners to their real window / plugin owner, preserve empty native Insets frames and retain ordinary Home media timing.
-- Reject stale Dock frames and failures by generation. Two fixed scalar buffers retain only current lens parameters and invalidate with shader replacement. Keep real wallpaper sampling and existing island animation. External algorithm research informed duplicate-update elimination; no third-party code or shader was copied.
-- Base release review on stable asset digests, the exact source SHA, complete Git diff and bilingual content. Download documents read only published source, update in one non-forced commit and verify readback. Feature maps, process matrices and auxiliary summaries, filters, pagination and Schema / version checks retain existing generation and tool gates; do not restore deleted entries or automatically accept new risk fingerprints.
-- Inherit valid device and performance evidence, target affected shared paths and validate source, Host, tools and APKs separately. Existing device results do not establish all-ROM coverage. Fresh notification end-to-end events, Camera / Gallery preview appearance, Bluetooth, dual SIM, multiple users and long-term power remain separate checks; short-term PSS variation proves neither a leak nor memory savings.
 
 ## r14.25.3 — 2026-10-23
 

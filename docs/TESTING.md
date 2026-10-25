@@ -74,7 +74,7 @@ A14 试点测量、已知局限与配置审计见 [执行策略试点](maintenan
 
 同一 job 执行 Python / 源码契约、Full、一次 Develop 和 fatal lint；所有成功运行保留唯一 Develop APK 与 mapping，R8 输出始终检查。工具 / CI / catalog / matrix、tag 和手动运行另做矩阵确定性与必需独立 mutation。需要诊断可重复性时才做两次隔离构建与 `apk_semantic_diff.py`，不加入日常 CI。
 
-main / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment 审核、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
+main / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment main 限制、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
 
 清理历史时先核对 Release 元数据、原 run / attempt 及候选资产；签名任务最终失败也可能留下可恢复候选，不能按 conclusion 批量删除。没有过期或确认失效的资产时沿用现有保留期，不新增定时清理工作流。
 
@@ -104,6 +104,6 @@ Actions 固定完整 SHA；JDK 下载保留 force-download / verify-signature，
 
 SDK 安装与 Gradle 输入一致；宿主 classpath 与 APK runtime 分开审查。依赖变化按影响检查解析图、编译与 DEX 输出、R8 / API 隔离、签名及必要设备路径；不把 JVM 25 当作 Android API 可用性证明。
 
-发布故障回归覆盖 workflow / event / 仓库 / attempt / SHA、缺审核、确认期间 main 前进、错误证书 / 凭据、篡改、版本 / 双语记录、草稿资产、预发行 Latest 与双端部分失败。只允许 Validate / Sign 成功而 Publish 失败的原 attempt 恢复；测试模拟服务器不能证明远端 Secrets / 权限或设备通过。
+发布故障回归覆盖 workflow / event / 仓库 / attempt / SHA、环境策略漂移、签名前 main 前进、错误证书 / 凭据、篡改、版本 / 双语记录、草稿资产、预发行 Latest 与双端部分失败。只允许 Validate / Sign 成功而 Publish 失败的原 attempt 恢复；测试模拟服务器不能证明远端 Secrets / 权限或设备通过。
 
 发布工具测试覆盖原生 main / exact CI、零人工审批的 main-only 环境、指定正式目标与试用隔离、累计说明 / 安全两基线、无条数上限的双语内容、Artifact ID / 归档摘要及安全解压、原候选失败恢复、顺序双仓资产和下载文档幂等性。它们使用模拟 API，不触发正式签名或远端公开；远端环境和实际清理另以 API 读回核实，完整规则见 [发布与恢复](RELEASE.md)。
