@@ -7,7 +7,7 @@ main 合并、正式签名、tag 与公开发行以当前任务授权为准。�
 - 仅发行 HyperOS 1 / Android 14 / SDK 34 / arm64-v8a，保持既有 applicationId、libxposed API 102 与历史签名证书。
 - `versionName` 为 `r14.x.y`；`versionCode` 单调增加。Gradle、双语 README 与双语 Changelog 一起准备和检查。
 - 源码 tag 为 `<versionName>`，下载仓库 tag 为 `<versionCode>-<versionName>`；新 tag 均绑定构建 APK 的完整 source SHA。下载仓库 metadata main 单独维护。
-- 保留真实历史发行身份、APK 来源和源码提交；累计说明不删除已发布章节，不移动历史 tag，不重写旧源码。用户明确授权替代发行清理时，仅在双仓新版验收后删除被替代的公开页面、附件与标签，保留 r14.24.1 及更早正式版。
+- 保留真实历史发行身份、APK 来源和源码提交；不移动历史 tag，不重写旧源码。被替代版本经授权清理后，可将有效变化并入累计版本并移除独立展示章节，原文保留在 Git 历史中。用户明确授权替代发行清理时，仅在双仓新版验收后删除被替代的公开页面、附件与标签，保留 r14.24.1 及更早正式版。
 - README 的源码版本不代表公开状态；以两仓库 Release 及实际资产读回判断是否完成发行。
 
 ## Actions 构建与自动发布
@@ -62,7 +62,7 @@ gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
 - 安全基线读取实际 Latest、正式状态、tag / source SHA、APK 与构建元数据摘要、历史证书及 A14 平台契约。只发布源码的一次真实正式发行也可成为源码安全基线。
 - 累计基线由 `cumulative_releases.<version>.notes_base` 指定。早期版本没有现代 metadata 附件时，仍必须核验实际稳定 Release、tag 解析出的完整 SHA 和该源码声明的版本。
 - 校验“说明基线 → 当前稳定安全基线 → 最终候选”的 Git 祖先关系，并查看说明基线到候选 exact SHA 的完整 diff。双语 `自 … 起的变更 / Changes since …` 使用说明基线。
-- r14.25.5 统一从 r14.24.1 累计，整合 r14.25.1、r14.25.3 及后续有效修改，去重并排除撤销方案、调试过程与尚未实现内容。历史章节保留原事实；替代页面与标签按上文授权清理。
+- r14.25.5 统一从 r14.24.1 累计，整合 r14.25.1、r14.25.3 及后续有效修改，去重并排除撤销方案、调试过程与尚未实现内容。r14.25.1、r14.25.3 的有效变化统一收进 r14.25.5；原始记录保留在 Git 历史中，r14.24.1 及更早章节保持原文。替代页面与标签按上文授权清理。
 
 日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。准备时可先预览；对已准备完成的相同版本无需重复执行：
 

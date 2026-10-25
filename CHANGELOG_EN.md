@@ -2,7 +2,7 @@
 
 English | [简体中文](CHANGELOG.md)
 
-Unreleased changes and retained releases; cumulative notes use their designated baseline, while publication safety checks the latest published release separately. Preserve original source identities, signing identity and build provenance.
+Changes for maintained releases. Valid changes from the retired r14.25.1 and r14.25.3 releases are consolidated into r14.25.5; the original records remain in Git history.
 
 ## Unreleased
 
@@ -12,76 +12,34 @@ versionCode 254. Changes since r14.24.1:
 
 ### User changes
 
-- Reorganize settings into System, Home screen, Buttons and gestures, and Apps and maintenance. Unify grouped cards and descriptions, improve search navigation, and collect restart actions on the home page.
-- Enter precise slider values by tapping the number, with range, step and unit validation.
-- Add Dynamic Island for music, system states, brief notices and optional message notifications, with short and long forms, secondary activities, and Vertical or Center animations.
-- Add left, center and right island placement, horizontal adjustment and cutout avoidance. Adjust height from 32–64 dp, short width from 96–320 dp and long width from 120–400 dp, with matching text, artwork, waves and touch areas. Reducing manual short width no longer selects a wider form.
-- Smooth short/long island transitions and content handoffs, reducing blank gaps, first-frame shrink jumps and abrupt position changes.
-- Add five customizable island music gestures for track controls, volume and shortcuts. Refine pause visibility, opening the current player and upward dismissal.
-- Use the native icon-free return animation for direct music return to the island, including rapid switches and launchers with or without a player icon. This option is off by default and requires selecting a player.
-- Refine picture-in-picture entry, cancellation, exit, edge stashing and restoration. The floating-window hiding option suppresses the whole island; disabling it allows the media island and PiP to coexist while preserving native window transitions. Restart the device after changing this option.
-- Choose system feedback categories for the island and use an app allowlist for message notifications. Refine lockscreen restrictions, notification updates and click checks, retaining native alerts when takeover fails.
-- Keep lightweight music waves by default, with an experimental live mode and adjusted amplitude, quiet high frequencies and silence decay.
-- Add full-width Dock backgrounds, symmetric sizing and wallpaper-tinted glass. Offer liquid glass with a frosted-glass fallback when unavailable.
-- Follow native unlock, recents and app-return animations for Dock movement, scale, opacity and wallpaper sampling. Prevent an old sampling failure from degrading a new background.
-- Position Toasts at the top, center or bottom with spacing and offsets inside the safe area. Optionally show brief notices in the island while retaining ordinary Toasts for complex or long content.
-- Apply fixed status-bar height to system dimension resources to improve layouts that read an outdated height. Preserve independent content offset, app fullscreen visibility and native contrast protection. Restart the device after changing the height.
+- Reorganize settings into System, Home screen, Buttons and gestures, and Apps and maintenance. Unify groups and descriptions, improve search navigation, and collect restart actions on the home page.
+- Enter slider values by tapping the number, with range, step and unit validation.
+- Add Dynamic Island for music, system feedback, brief notices and optional message notifications, with short and long forms, secondary activities, and Vertical or Center animations.
+- Add left, center and right placement, horizontal adjustment and cutout avoidance. Set height to 32–64 dp, short width to 96–320 dp and long width to 120–400 dp, with matching text, artwork, waves and touch areas.
+- Improve short/long transitions and content handoffs. Fix blank gaps, first-frame shrink jumps, abrupt position changes and manual short widths incorrectly selecting the long form.
+- Add five customizable music gestures for tracks, volume and shortcuts. Refine pause visibility, opening the current player and upward dismissal.
+- Use the native icon-free animation for direct music return to the island, fixing rapid returns and desktop-icon issues. This option is off by default and requires selecting a player.
+- Refine picture-in-picture entry, cancellation, exit, edge stashing and restoration. The floating-window hiding option hides the whole island; turning it off allows music and PiP to coexist. A full device restart is required after changing this switch.
+- Select system feedback by category and message notifications by app allowlist. Refine lockscreen restrictions, update and click checks, retaining native alerts when takeover fails.
+- Keep lightweight music waves by default and offer an experimental live mode with improved amplitude, quiet high frequencies and silence decay.
+- Add full-width Dock backgrounds, symmetric sizing and wallpaper-tinted glass, with liquid glass and a frosted-glass fallback.
+- Follow unlock, recents and app-return animations for Dock movement, scale, opacity and wallpaper sampling. Prevent an old sampling failure from degrading a new background.
+- Position Toasts at the top, center or bottom with spacing and offsets inside the safe area. Brief notices can use the island; complex or long content retains ordinary Toasts.
+- Apply fixed status-bar height to system dimension resources to correct outdated-height layouts. Preserve independent content offset, app fullscreen visibility and native contrast protection. A full device restart is required after changing the height.
 - Refine normal and floating-window notification clicks, expansion, auto-removal, withdrawal and rebinding, folding and colors. Preserve native lockscreen, user and critical-channel protections.
-- Connect vibration strength to A14 native scaling. Correct volume timers, panel auto-hide, high-volume confirmation and audio-focus handling.
-- Fix back-gesture area compatibility and status-bar gesture actions. Improve state recovery after rotation, dimension changes and interrupted gestures.
+- Connect vibration strength to A14 native scaling. Fix volume timers, panel auto-hide, high-volume confirmation and audio-focus handling.
+- Fix back-gesture area compatibility and status-bar actions. Improve recovery after rotation, dimension changes and interrupted gestures.
 - Improve state recovery and resource cleanup for Control Center, the status bar, screenshot-hidden overlays and visualization, preserving screen-off update boundaries.
-- Refine configuration migration, backups and maintenance recovery. Save original system states before maintenance, check the results and retain recovery records on failure.
+- Refine configuration migration, backups and maintenance recovery. Save original states before maintenance, verify results and retain recovery records on failure.
 - Prevent startup or bulk preference refreshes from overwriting newer values with an old snapshot. Keep the last valid settings when a temporary read fails.
 
 ### Engineering notes
 
-- Read individual arguments in read-only before / after hooks instead of copying the whole array. Preserve argument writes, original calls and exception semantics; Host allocation comparisons establish no device performance gain.
-- Island handoffs reuse the existing finite clock, retain only one latest pending visual value and clear it on cancellation or detachment. Shrinking and position retargeting preserve current visible geometry. Animation and manual-width changes have targeted Host evidence only, without expanding device acceptance.
-- The cumulative notes baseline is r14.24.1; publication safety still uses the latest actually published stable release, historical certificate and exact main CI. Preserve truthful release records and Git history; remove superseded public pages and tags only after successful dual-repository acceptance and explicit authorization. Exclude withdrawn designs and debugging history.
-- Music returns retain native Surfaces, cancellation and spring callbacks. PiP and app-overlay state expire by owner, user and generation, with bounded queries and fallbacks and no continuous polling. Preserve accepted floating-window options, rapid music returns and manual island dimensions.
-- Keep the acknowledged status-bar height override for stale framework caches. Mark preferences ready only after atomic publication, serializing startup, bulk and single-key updates. Distinguish failed reads from real deletion and retain full-restart semantics for installation-time switches.
-- Notifications retain native Views and Pipeline attachment, compensation before commit and no alert replay after commit. Unknown lockscreen state blocks presentation. Release Dock sampling and geometry listeners with their owners; do not copy third-party implementations.
-- Remove human approval, self-dispatch and online Attestation dependencies from signing and publishing. Restrict environments to main and reuse successful CI for the exact SHA. Verify candidates against immutable Artifact IDs, archive digests, the historical Android certificate, APKs and source identity; recover without rebuilding.
-- Publish only the official APK and build-metadata.json, verifying the source repository before the download repository. Update download documents after both assets agree. Maintain long-term rules only in docs/RELEASE.md.
-- Reuse existing Host, tool, APK and device evidence with separate scopes. Uncovered notification end-to-end behavior, other ROMs, Bluetooth, dual SIM, multiple users and long-term power remain unconfirmed; claim no unmeasured performance gains.
+- Reduce whole-array copies in read-only hooks while preserving argument writes, original calls and exception behavior. Host allocation comparisons establish no device performance or power gain.
+- Invalidate, cancel and release animation, media, PiP, notification and Dock state with the owning window or controller so stale callbacks cannot restore old content.
+- Automate dual-repository publication without human approval. Publish only the official APK and build-metadata.json, retaining the historical certificate, source identity, matching assets and recovery from the original candidate.
 
-## r14.25.3 — 2026-10-23
-
-versionCode 248. Changes since r14.25.1:
-
-### User changes
-
-Refine Dynamic Island, Dock and notification interactions while preserving native animations and system security boundaries.
-
-- Add five customizable music gestures for track controls, volume and shortcuts. Fix unwanted appearances after pausing and refine opening the current player and upward dismissal.
-- Add left, center and right placement with safe horizontal adjustment, better cutout avoidance and touch edges. Select system feedback by category and notification takeover by app allowlist; keep lightweight waves by default with an experimental live mode.
-- Synchronize Dock backgrounds with native unlock animations, improving movement, scale, opacity and wallpaper-sampling transitions in normal and full-width modes.
-- Refine normal and floating-window notification clicks, expansion and auto-removal, withdrawal and rebinding, folding and colors. Preserve native lockscreen, user and critical-channel protections.
-- Fix back-gesture area compatibility and status-bar gesture actions; refine dimension changes, screen-off seconds updates and state recovery.
-- Refine island settings, configuration migration and backups. Save original system states before maintenance changes, verify results and retain recovery records on failure.
-
-### Engineering notes
-
-- Consolidate r14.25.2 and the subsequent island, quality and M03 branches against retained r14.25.1. Preserve Git history and the existing engineering roadmap without rewriting older provenance or validation facts.
-- Retain five music actions, the track-swipe switch, pause-visibility leases, ten on-demand feedback categories, silent new installs, upgrade migration and allowlist/exclusion precedence. Align ten maintained languages, backups and settings subpages. Lightweight waves remain default; experimental capture requires the current user, confirmed media identity and one active audio track, releasing resources on failure.
-- Contain island insets failures, release input owners, reuse unchanged layouts and invalidate density changes. Reliably journal maintenance recovery before system operations, validate package/user identity and actual state, strictly decode records and compensate failures without adding restriction targets.
-- M03 retains native notification views, pipeline attachment, timers and refresh boundaries. Scope floating-window options to one launch and validate delayed callback identity. Retire global channel-protection overrides and the system_server feature identity while retaining legacy keys and backups. Keep one invalidatable palette per notification.
-- Preserve native Dock geometry, animated opacity and interruption recovery in both modes. Fix no-argument back-width resolution and native side/bottom height branches; reuse the host Context for status-bar actions.
-- Trust only main for signing and require protected review for candidates and publication. End automatic/manual requests cheaply for published versions; reuse exact main CI while retaining signatures, digests, provenance, sequential dual publication and recovery from the original candidate.
-- Generate public notes from this User changes section and retain engineering details here. Cumulative preparation explicitly selects the superseded section and previous retained release. The ADB driver attempts and verifies locking on success, failure and interruption, retaining only relevant crash events.
-- Keep host, static ROM and device conclusions separate in the existing roadmap. Claim no unmeasured performance or battery gains. First acceptance after removing old system_server hooks requires a full reboot; do not guess or reset historical notification permissions.
-
-## r14.25.1 — 2026-10-22
-
-versionCode 246. Changes since r14.24.1:
-
-- Rebuild settings pages around System, Home screen, Buttons and gestures, and Apps and maintenance. Unify grouped cards, headings and descriptions, improve search navigation, and collect restart actions on the home page.
-- Add Dynamic Island for music, system states, brief notices and optional message notifications, with short and long forms, secondary activities, Vertical/Center animations, native ROM icons and familiar gestures. Hide status icons only when actually covered.
-- Add full-width Dock backgrounds, symmetric sizing and wallpaper-tinted glass. Refine background transitions for recents and app returns, with native-material and tint fallbacks.
-- Add top, center and bottom Toast positioning, with spacing and vertical offsets constrained to the safe screen area.
-- Allow direct numeric entry by tapping slider values, with range, step and unit validation for precise adjustments.
-- Connect vibration intensity to A14 native scaling. Correct volume timers, panel auto-hide, high-volume confirmation and audio-focus behavior.
-- Improve state recovery for Control Center, the status bar and visualization, plus exception handling, restore records and resource cleanup for maintenance and privacy operations.
+See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for verified scopes and pending device checks.
 
 ## r14.24.1 — 2026-10-19
 
