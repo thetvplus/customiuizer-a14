@@ -136,6 +136,7 @@ internal class IslandActivityController(
     private var chatKey: String? = null
     private var chatNotification: StatusBarNotification? = null
     private var chatOpen: (() -> Boolean)? = null
+    private var chatHidden: (() -> Boolean)? = null
     private var foregroundUser: UserHandle? = ModuleHelper.guarded(null) {
         val id = XposedHelpers.callStaticMethod(ActivityManager::class.java, "getCurrentUser") as Int
         // UserHandle.getIdentifier/constructors are hidden in the SDK; cache the public UID
@@ -769,7 +770,10 @@ internal class IslandActivityController(
         val now = SystemClock.uptimeMillis()
         if (chatNotification === sbn) {
             val current = chatLease?.let { attached && !exiting && state.owns(it, now) } == true
-            if (current) chatOpen = bound.open // A new native Row may keep the same Sbn and lease.
+            if (current) {
+                chatOpen = bound.open // A new native Row may keep the same Sbn and lease.
+                chatHidden = bound.hidden
+            }
             return current
         }
         // Native system feedback and an already accepted ordinary Toast keep their lease.
@@ -781,9 +785,16 @@ internal class IslandActivityController(
             rank.matchesInterruptionFilter(), rank.suppressedVisualEffects,
             nativeIcon = bound.icon) ?: run { diagnostics.report("notification-native-content"); return false }
         clearChat()
-        chatKey = sbn.key; chatNotification = sbn; chatOpen = bound.open
+        chatKey = sbn.key; chatNotification = sbn; chatOpen = bound.open; chatHidden = bound.hidden
         chatLease = state.offer(prepared, now, 4000)
         if (!render()) { clearChat(); return false }
+        if (chatNotification !== sbn || chatOpen !== bound.open ||
+            chatLease?.let { state.owns(it, SystemClock.uptimeMillis()) } != true) {
+            // Window insertion can re-enter a native privacy update. Reconcile any
+            // presentation prepared by the old call before retaining its native alert.
+            render()
+            return false
+        }
         if (!presentationAllowed()) { refreshSafety(); return false }
         ModuleHelper.guarded { shell.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) }
         return true
@@ -791,6 +802,13 @@ internal class IslandActivityController(
 
     fun notificationRemoved(key: String) = onMain {
         if (chatKey == key) { clearChat(); render() }
+    }
+
+    /** Native sensitivity render passes are events, not a frame/polling subscription. */
+    fun notificationPrivacyChanged() = onMain {
+        if (chatNotification != null && ModuleHelper.guarded(true) { chatHidden?.invoke() == true }) {
+            clearChat(); render()
+        }
     }
 
     fun cancelNotificationTakeover(bound: IslandNotificationAccess.Bound) = onMain {
@@ -803,6 +821,7 @@ internal class IslandActivityController(
         chatKey = null
         chatNotification = null
         chatOpen = null
+        chatHidden = null
     }
 
     fun updateFromNative(owner: Any) = onMain {

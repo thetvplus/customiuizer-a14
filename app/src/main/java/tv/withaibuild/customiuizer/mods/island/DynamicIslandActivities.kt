@@ -228,6 +228,13 @@ internal object DynamicIslandActivities {
             // ranking or the notification-center entry. A missing contract stays native.
             ModuleHelper.guarded {
                 val notifications = IslandNotificationAccess(param.classLoader)
+                notifications.onPrivacyUpdated?.let { method ->
+                    ModuleHelper.hookMethod(method, object : MethodHook() {
+                        override fun after(callback: AfterHookCallback) {
+                            if (callback.getThrowable() == null) active.get()?.notificationPrivacyChanged()
+                        }
+                    })
+                }
                 ModuleHelper.hookMethod(notifications.onBindFinished, object : MethodHook() {
                     override fun intercept(chain: XposedInterface.Chain): Any? {
                         val entry = chain.getArg(0) ?: return chain.proceed()
@@ -255,7 +262,7 @@ internal object DynamicIslandActivities {
                 "com.android.systemui.statusbar.notification.collection.NotifCollection\$1", param.classLoader),
                 "onNotificationRemoved", object : MethodHook() {
                     override fun after(callback: AfterHookCallback) {
-                        (callback.getArgs().firstOrNull() as? StatusBarNotification)?.let { active.get()?.notificationRemoved(it.key) }
+                        (callback.getArg(0) as? StatusBarNotification)?.let { active.get()?.notificationRemoved(it.key) }
                     }
                 })
         }

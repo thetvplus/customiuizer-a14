@@ -386,6 +386,29 @@ class IslandActivityLifecycleTest {
         return IslandNotificationAccess.Bound(sbn, ranking, null, open)
     }
 
+    @Test fun aNativePrivacyUpdateRevokesTheCurrentNoticeWithoutAFramePollingLoop() {
+        val controller = controller(chat = true, simplified = true)
+        var hidden = false
+        val bound = message(499) { true }.copy(hidden = { hidden })
+        assertTrue(controller.takeNotification(bound)); drain()
+        controller.notificationPrivacyChanged(); drain()
+        assertTrue(shell!!.isAttachedToWindow)
+        hidden = true
+        controller.notificationPrivacyChanged(); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "chatNotification"))
+    }
+
+    @Test fun privacyRevocationReenteringWindowInsertionCannotCommitAnObsoleteNotice() {
+        val controller = controller(chat = true, simplified = true)
+        var hidden = false
+        val bound = message(498) { true }.copy(hidden = { hidden })
+        onAdd = { hidden = true; controller.notificationPrivacyChanged() }
+        assertFalse(controller.takeNotification(bound)); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "chatNotification"))
+    }
+
     @Test fun notificationTakeoverIsExactAndUsesTheNativeClickOnlyOnce() {
         val controller = controller(chat = true, simplified = true)
         var firstClicks = 0; var secondClicks = 0

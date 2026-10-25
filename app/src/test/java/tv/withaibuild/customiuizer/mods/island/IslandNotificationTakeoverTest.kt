@@ -48,6 +48,42 @@ class IslandNotificationTakeoverTest {
         assertNotNull(access.read(entry))
     }
 
+    @Test fun anInitialSensitiveBitDoesNotOverrideAResolvedUnlockedNativePolicy() {
+        var concealed = false
+        val port = IslandNotificationAccess(Entry::class.java, Binding::class.java,
+            IslandNotificationPrivacy { _, _ -> concealed })
+        val entry = Entry(context, notification(1)).apply {
+            mSensitive = true // The actual ROM's constructor initializes this before rendering.
+            row.setOnClickListener { }
+        }
+        val bound = requireNotNull(port.read(entry))
+        assertFalse(requireNotNull(bound.hidden).invoke())
+        concealed = true
+        assertTrue(requireNotNull(bound.hidden).invoke())
+        assertNull(port.read(entry))
+    }
+
+    @Test fun aNativePolicyChangeDuringPresentationRollsBackBeforeConsumingTheBind() {
+        var concealed = false
+        val port = IslandNotificationAccess(Entry::class.java, Binding::class.java,
+            IslandNotificationPrivacy { _, _ -> concealed })
+        val entry = Entry(context, notification(1)).apply { mSensitive = true; row.setOnClickListener { } }
+        val binding = Binding(); val map = port.bindingMap(binding)
+        map[entry.mSbn.key] = 100L
+        var rollback = 0
+        assertFalse(port.take(binding, entry, { concealed = true; true }, { rollback++ }))
+        assertEquals(1, rollback)
+        assertFalse(entry.interruption)
+        assertEquals(mapOf(entry.mSbn.key to 100L), map)
+    }
+
+    @Test fun anUnavailableNativePolicyAlwaysRetainsTheNativeNotification() {
+        val port = IslandNotificationAccess(Entry::class.java, Binding::class.java,
+            IslandNotificationPrivacy { _, _ -> error("native policy unavailable") })
+        val entry = Entry(context, notification(1)).apply { row.setOnClickListener { } }
+        assertNull(port.read(entry))
+    }
+
     @Test fun successfulBindCompletionRetiresOnlyItsOwnBindingWithoutMarkingANativeHeadsUp() {
         val entry = Entry(context, notification(1))
         val binding = Binding()
