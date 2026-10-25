@@ -19,7 +19,7 @@
 | ROM / DEX | [DexSQL](../rom-intelligence/DEXSQL.md)、[SQL 查询集](../../tools/dexsql/README.md)、[M03 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |
 | 发布 | [RELEASE](../RELEASE.md)、实际 GitHub Release；Changelog 保存发行事实 |
 
-r14.25.6 / 253 曾以原应用身份及历史正式证书覆盖安装，用户确认该轮已测场景通过。当前正式候选为 r14.25.5 / 254，累计说明从 r14.24.1 对比；后续动画与 Hook 参数读取的源码整合不扩大 253 的实机验收范围。旧 r14.25.5 / 250 已撤回且草稿清除，不能晋升或作为新修复的验收依据。发行规则见 [发布与恢复](../RELEASE.md)，公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。
+r14.25.5 的 versionCode 253 测试候选曾以原应用身份及历史正式证书覆盖安装，用户确认该轮已测场景通过。当前正式源码版本为 r14.25.5 / 254，累计说明从 r14.24.1 对比；后续动画与 Hook 参数读取的源码整合不扩大 253 的实机验收范围。旧 r14.25.5 / 250 已撤回且草稿清除，不能晋升或作为新修复的验收依据。发行规则见 [发布与恢复](../RELEASE.md)，公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。
 
 ### 当前实机差异验收
 
