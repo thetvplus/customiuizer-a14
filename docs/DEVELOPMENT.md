@@ -1,6 +1,14 @@
 # 开发与构建
 
-任务认领、Git、安全边界和收口命令以 [AGENTS.md](../AGENTS.md) 为准；本页只维护环境、构建及生成输入。
+工程入口与授权边界见 [AGENTS.md](../AGENTS.md)；本页维护协作、环境、构建及生成输入，验证选择只见 [TESTING](TESTING.md#执行分级)。
+
+## Git 与协作
+
+一次取得 `git status --short --branch`、HEAD、`git worktree list` 及相关 Issue / PR / 真实远端 SHA，复用本轮快照。只读解释和局部检查不反复查询 GitHub；共享认领前、push / merge / 清理前，或已知 main / 分支 / 所有者变化后刷新相关范围。远端不可用要报告未知状态，不能推定无人工作。
+
+独立任务原则上对应一个 Issue 和工作分支；新聊天优先继续现有任务。写入前核对归属，在 Issue 中记录分支、HEAD、负责文件 / 共享状态和下一步；未发生所有权变化时无需每个文件重复认领。认领不是原子锁，竞争时只停止冲突范围并协调。同一 Worktree 只有一个写入者，只读审查可共享，不另建 Agent 任务数据库。
+
+交接只保留 `Issue / Branch / HEAD SHA / Changes / Verification / Remaining`，标明已推送提交。push 完成要读回真实远端 SHA；合并必须在当前授权内。分支清理前确认成果等价纳入、HEAD 未变化、无开放 PR / 活动 Worktree / 协作依赖并有可恢复来源；先远端保存成果，再按授权逐支删除。
 
 ## 环境
 
@@ -13,11 +21,9 @@
 
 ## 日常验证
 
-[根规则](../AGENTS.md#工具链与验证)列出 Fast / Full、工具测试及 diff 检查命令；[TESTING](TESTING.md)解释各层证明范围。
+[TESTING](TESTING.md#执行分级)统一维护 Quick / Standard / Deep / Release 的命令和复用条件；其余章节解释各层证明范围。
 
-`fast --changed` / `--staged` 仍运行静态门禁：文档 / 工具改动可跳过 Gradle，Android 测试或构建输入变化会运行 JVM 测试，普通生产源码变化先编译。需要行为回归时显式选类，例如 `python tools/verify.py fast --tests PreferenceBootstrapTest`。已提交改动使用不带 changed 的模式。
-
-`verify.py` 不构建 APK、不连接设备，也不执行 R8 或 lintVital；需要时另跑下面的构建。升级可为安全、能力、兼容或维护；保留官方来源、差异、回退和相应回归，不自动授权合并或发布。性能证据见 [OPTIMIZATION_GATES](OPTIMIZATION_GATES.md)。
+升级可为安全、能力、兼容或维护；保留官方来源、差异、回退和相应回归，不自动授权合并或发布。性能证据见 [OPTIMIZATION_GATES](OPTIMIZATION_GATES.md)。
 
 ## 构建与生成物
 

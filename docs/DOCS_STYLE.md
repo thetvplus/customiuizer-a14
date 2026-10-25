@@ -12,6 +12,7 @@
 | 当前问题、决定与待验收 | [精修路线图](maintenance/A14_REFINEMENT_ROADMAP.md) |
 | 平台与 ROM 支持边界 | [COMPATIBILITY.md](../COMPATIBILITY.md) |
 | 发布安全、操作和恢复 | [RELEASE.md](RELEASE.md) |
+| 执行分级、验证选择、复用和停止条件 | [TESTING.md](TESTING.md#执行分级) |
 | 历史发行变化 | [中文 CHANGELOG](../CHANGELOG.md) / [English CHANGELOG](../CHANGELOG_EN.md) |
 | ROM 取证 | 实际样本身份、哈希和[原始证据来源](rom-intelligence/README.md) |
 
@@ -44,7 +45,7 @@
 - 公开问题、实机场景和外部参考按功能 / 窗口类型描述，不写使用者的第三方应用名、包名、样本文件名 / 哈希、账号、设备序列号、密码、专网地址或个人配置；精确关联保留在仓库外证据。平台 / ROM 契约必要的组件名称、公开样本身份与许可归属按实际需要保留，公开功能入口和资源链接不透露个人使用情况。
 - 区分已实现、源码 / 构建验证和实机待验收；推断明确标注，不把历史样本写成当前设备结果。
 - 不用阶段性总结代替产品说明，不制造重复原文的中文版技术文档。
-- 文档改动运行 `python tools/check_docs.py`、`python tools/generate_feature_map.py --check` 和 `git diff --check`。
+- 文档改动按 [TESTING 的 Quick 文档范围](TESTING.md#执行分级)检查，不重复维护命令清单。
 - 生成器 / Python 工具变化补跑工具测试；页面 / 运行时生成合同变化仍需对应专项回归。
 - 链接检查覆盖仓库 Markdown 的本地目标、锚点和图片；不声称已验证外网可用性或设备功能。
 

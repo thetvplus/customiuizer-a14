@@ -5,7 +5,7 @@ description: Independently review a specified Git diff for actionable defects, r
 
 # 独立审查
 
-Read applicable repository instructions; in this project, shared contracts are in [AGENTS.md](../../../AGENTS.md). Review the specified exact base/head, with surrounding callers and tests only as needed.
+Use applicable [AGENTS](../../../AGENTS.md) instructions already in context. Review the specified exact base/head, with surrounding callers, tests and specialist contracts only as needed; do not rediscover unchanged ownership / remote state or expand into an unrelated full audit.
 
 ## 审查边界
 

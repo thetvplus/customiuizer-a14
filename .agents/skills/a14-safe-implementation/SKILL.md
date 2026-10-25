@@ -1,16 +1,15 @@
 ---
 name: a14-safe-implementation
-description: Implement and validate code, Hook, UI, build or ROM compatibility changes in thetvplus/customiuizer-a14. Not for review-only or release tasks.
+description: Implement A14 code, tooling or engineering-policy changes with checks matched to the affected contracts. Excludes read-only review and formal release execution.
 ---
 
 # 安全实施
 
-Use root [AGENTS.md](../../../AGENTS.md) for shared policy, task ownership, toolchain and verification. Read linked specialist documents only for the affected contract.
+Use [AGENTS](../../../AGENTS.md) for shared boundaries and the relevant row of [TESTING](../../../docs/TESTING.md#执行分级) for Quick / Standard / Deep routing. Do not reload unchanged instructions or all linked documents.
 
-1. Record the exact base/head and inspect local changes, the existing task branch and relevant GitHub ownership before writing.
-2. Trace the real caller, failure path and state owner. For ROM behavior, resolve the declaration and ClassLoader from identified samples; use the existing [DexSQL workflow](../../../docs/rom-intelligence/DEXSQL.md).
-3. Choose a coherent rollback unit. Explain the concrete benefit, costs and affected contracts; for caches or async work identify capacity, invalidation, concurrency, stale-result rejection and release. Reuse established mechanisms where suitable.
-4. Implement the authorized outcome and meaningful regression coverage. Keep functional changes separate from language migration or broad file moves; update affected imports, reflection / XML / R8 references, catalog and generated outputs together.
-5. Review the complete diff and run the root verification gates appropriate to its scope. Use `fast` without `--changed` for committed changes; reuse results only for the same source and scope. Keep APK, ROM and device evidence separate.
+1. Reuse the current task's base/head, worktree and ownership snapshot; refresh only when related state changes or before shared / remote writes. Trace the changed input, caller, failure path and owner, then start implementation.
+2. Choose a coherent rollback unit. For runtime changes use the affected [architecture contract](../../../ARCHITECTURE.md#运行时不变量); for ROM uncertainty load the [DexSQL workflow](../../../docs/rom-intelligence/DEXSQL.md). Documentation and leaf tools do not require ROM discovery.
+3. Implement the authorized result and meaningful regression coverage. Update affected imports, reflection / XML / R8 references and generated outputs together; avoid unrelated migration or cleanup.
+4. Review the complete task diff, select necessary checks by impact and reuse trustworthy results under [evidence reuse](../../../docs/TESTING.md#证据复用). Do not append Full, all Python tests or APK builds solely because the task is ending. New failures or risks require diagnosis and affected revalidation.
 
-Report changes, actual verification and remaining risks / device checks. Update the existing refinement page only when its current state or evidence changes; do not add another task ledger or process report.
+Report the chosen level, actual verification and remaining risks / device checks. Update the existing refinement page only when current decisions or evidence change; do not add a task ledger.

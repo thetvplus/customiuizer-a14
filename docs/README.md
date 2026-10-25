@@ -10,6 +10,7 @@
 | 长期文档职责、更新与删除标准 | [文档规范](DOCS_STYLE.md) |
 | 环境、构建与日常开发 | [开发与构建](DEVELOPMENT.md) |
 | 本地门禁与 CI | [测试与验证](TESTING.md) |
+| A14 执行分级试点与测量边界 | [执行策略试点](maintenance/A14_EXECUTION_PILOT.md) |
 | 签名、双仓库与发布验收 | [发布与恢复](RELEASE.md) |
 | 运行时结构、API 102 与生命周期 | [架构](../ARCHITECTURE.md) |
 | 支持范围与待确认 ROM 行为 | [兼容矩阵](../COMPATIBILITY.md) |
