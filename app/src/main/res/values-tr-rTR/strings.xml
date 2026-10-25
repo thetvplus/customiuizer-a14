@@ -1187,7 +1187,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="seekbar_value_error">Yukarıdaki aralık ve adıma uygun bir sayı girin.</string>
     <string name="restart_settings_sync_failed">Ayarlar eşitlenemedi. Modül bağlantısını bekleyip tekrar deneyin.</string>
     <string name="system_island_title">Sistem uyarıları</string>
-    <string name="system_island_intro">Adayı ilk kez etkinleştirdikten veya kaynak ekledikten sonra sistem arayüzünü yeniden başlatın.</string>
+    <string name="system_island_intro">Adayı ilk kez etkinleştirdikten veya kaynak ekledikten sonra telefonu yeniden başlatın.</string>
     <string name="system_island_media_title">Medyayı göster</string>
     <string name="system_island_media_return_title">Müziği adaya taşı</string>
     <string name="system_island_media_return_summ">Müzik çalarken seçili uygulamadan yukarı kaydırarak çıkın; pencere hafifçe sekerek adaya yerleşir. Yalnızca elle seçilen uygulamalarda geçerlidir. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>

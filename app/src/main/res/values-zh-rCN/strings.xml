@@ -1191,7 +1191,7 @@
     <string name="seekbar_value_error">请输入符合上方范围及步进的数值。</string>
     <string name="restart_settings_sync_failed">设置尚未同步成功，请等待模块连接后再重试。</string>
     <string name="system_island_title">系统提示</string>
-    <string name="system_island_intro">首次开启动态岛或新增来源后，请重启系统界面。</string>
+    <string name="system_island_intro">首次开启动态岛或新增来源后，请重启手机。</string>
     <string name="system_island_media_title">显示媒体</string>
     <string name="system_island_media_return_title">上滑回岛</string>
     <string name="system_island_media_return_summ">所选应用上滑回桌面时收进岛中。首次启用需重启桌面。</string>

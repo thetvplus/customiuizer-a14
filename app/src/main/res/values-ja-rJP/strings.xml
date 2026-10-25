@@ -1181,7 +1181,7 @@
     <string name="seekbar_value_error">上記の範囲と刻みに合う数値を入力してください。</string>
     <string name="restart_settings_sync_failed">設定を同期できません。モジュールの接続を待って再試行してください。</string>
     <string name="system_island_title">システムの案内</string>
-    <string name="system_island_intro">初めて有効にしたときや情報源を追加した後は、システムUIを再起動してください。</string>
+    <string name="system_island_intro">初めて有効にしたときや情報源を追加した後は、端末を再起動してください。</string>
     <string name="system_island_media_title">メディアを表示</string>
     <string name="system_island_media_return_title">音楽をアイランドへ</string>
     <string name="system_island_media_return_summ">音楽の再生中に選択したアプリから上にスワイプして離れると、ウィンドウがアイランドに収まり軽く弾みます。手動で選択したアプリのみ対象です。初回有効化後はランチャーを再起動してください。</string>

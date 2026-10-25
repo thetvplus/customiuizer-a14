@@ -1180,7 +1180,7 @@
     <string name="seekbar_value_error">Введите число в указанном диапазоне с указанным шагом.</string>
     <string name="restart_settings_sync_failed">Не удалось синхронизировать настройки. Дождитесь подключения модуля и повторите попытку.</string>
     <string name="system_island_title">Системные подсказки</string>
-    <string name="system_island_intro">После первого включения острова или добавления источника перезапустите интерфейс системы.</string>
+    <string name="system_island_intro">После первого включения острова или добавления источника перезапустите телефон.</string>
     <string name="system_island_media_title">Показывать медиа</string>
     <string name="system_island_media_return_title">Музыка в островок</string>
     <string name="system_island_media_return_summ">Во время воспроизведения выйдите из выбранного приложения свайпом вверх. Окно переместится в островок с лёгким отскоком. Только для выбранных вручную приложений. После первого включения перезапустите рабочий стол.</string>

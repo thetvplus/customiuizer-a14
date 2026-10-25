@@ -1188,7 +1188,7 @@
     <string name="seekbar_value_error">Zadejte číslo v uvedeném rozsahu a kroku.</string>
     <string name="restart_settings_sync_failed">Nastavení se nepodařilo synchronizovat. Počkejte na připojení modulu a zkuste to znovu.</string>
     <string name="system_island_title">Systémová upozornění</string>
-    <string name="system_island_intro">Po prvním zapnutí ostrova nebo přidání zdroje restartujte systémové rozhraní.</string>
+    <string name="system_island_intro">Po prvním zapnutí ostrova nebo přidání zdroje restartujte telefon.</string>
     <string name="system_island_media_title">Zobrazovat média</string>
     <string name="system_island_media_return_title">Hudba do ostrůvku</string>
     <string name="system_island_media_return_summ">Při přehrávání opusťte vybranou aplikaci tahem nahoru. Její okno se přesune do ostrůvku s jemným odrazem. Pouze pro ručně vybrané aplikace. Po prvním zapnutí restartujte launcher.</string>

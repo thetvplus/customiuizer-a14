@@ -1181,7 +1181,7 @@
     <string name="seekbar_value_error">Insira um número dentro do intervalo e do passo indicados.</string>
     <string name="restart_settings_sync_failed">Não foi possível sincronizar as configurações. Aguarde a conexão do módulo e tente novamente.</string>
     <string name="system_island_title">Avisos do sistema</string>
-    <string name="system_island_intro">Reinicie a interface do sistema ao ativar a ilha pela primeira vez ou adicionar uma fonte.</string>
+    <string name="system_island_intro">Reinicie o telefone ao ativar a ilha pela primeira vez ou adicionar uma fonte.</string>
     <string name="system_island_media_title">Mostrar mídia</string>
     <string name="system_island_media_return_title">Música para a ilha</string>
     <string name="system_island_media_return_summ">Durante a reprodução, deslize para cima para sair de um app selecionado. A janela entra na ilha com um leve balanço. Apenas para apps escolhidos manualmente. Reinicie o launcher após a primeira ativação.</string>

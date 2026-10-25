@@ -1214,7 +1214,7 @@
     <string name="seekbar_value_error">Enter a number within the range and step shown above.</string>
     <string name="restart_settings_sync_failed">Settings could not be synchronized. Wait for the module connection, then try again.</string>
     <string name="system_island_title">System prompts</string>
-    <string name="system_island_intro">Restart System UI after first enabling the island or adding a source.</string>
+    <string name="system_island_intro">Restart your phone after first enabling the island or adding a source.</string>
     <string name="system_island_media_title">Show media</string>
     <string name="system_island_media_return_title">Return to island</string>
     <string name="system_island_media_return_summ">While music plays, swipe up to leave a selected app and its window settles into the island with a gentle bounce. Only manually selected apps use this effect. Restart the launcher after first enabling it.</string>
