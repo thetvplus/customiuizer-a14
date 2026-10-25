@@ -47,6 +47,13 @@ class ProcessMatrixEligibilityTest(unittest.TestCase):
         actual = set(re.findall(r'"([^"]+)"', package_set))
         self.assertEqual(actual, set(self.rows["status_bar_height"]["allowedProcess"].split("; ")))
 
+    def test_only_the_power_warning_enters_the_exact_security_center_power_process(self):
+        rows = [row for row in self.rows.values()
+                if "com.miui.securitycenter.remote" in row["allowedProcess"].split("; ")]
+        self.assertEqual(["system_hidelowbatwarn"], [row["preferenceKey"] for row in rows])
+        router = (ROOT / "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/ProcessRouter.kt").read_text(encoding="utf-8")
+        self.assertIn('"com.miui.securitycenter.remote" -> ProcessScope.SECURITY_CENTER_POWER', router)
+
     def test_every_registered_feature_is_present_in_the_current_matrix(self):
         identities = parse_feature_ids(FEATURE_DIR / "FeatureIds.kt")
         registered = set()

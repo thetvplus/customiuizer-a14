@@ -42,6 +42,7 @@ class ProcessRouterTest {
         assertEquals(ProcessScope.SETTINGS_MAIN, ProcessRouter.resolve("com.android.settings", "com.android.settings"))
         assertEquals(ProcessScope.SETTINGS_REMOTE, ProcessRouter.resolve("com.android.settings", "com.android.settings:remote"))
         assertEquals(ProcessScope.SECURITY_CENTER_MAIN, ProcessRouter.resolve("com.miui.securitycenter", "com.miui.securitycenter"))
+        assertEquals(ProcessScope.SECURITY_CENTER_POWER, ProcessRouter.resolve("com.miui.securitycenter", "com.miui.securitycenter.remote"))
         assertEquals(ProcessScope.SECURITY_CENTER_BOOTAWARE, ProcessRouter.resolve("com.miui.securitycenter", "com.miui.securitycenter.bootaware"))
         assertEquals(ProcessScope.SECURITY_CENTER_REMOTE, ProcessRouter.resolve("com.miui.securitycenter", "com.miui.securitycenter:remote"))
     }
@@ -86,6 +87,7 @@ class ProcessRouterTest {
         assertTrue(ProcessScope.SETTINGS_MAIN.isInstallable)
         assertFalse(ProcessScope.SETTINGS_REMOTE.isInstallable)
         assertFalse(ProcessScope.SECURITY_CENTER_REMOTE.isInstallable)
+        assertTrue(ProcessScope.SECURITY_CENTER_POWER.isInstallable)
         assertFalse(ProcessScope.SECURITY_CENTER_BOOTAWARE.isInstallable)
         assertFalse(ProcessScope.NETWORK_STACK.isInstallable)
         assertFalse(ProcessScope.UNSUPPORTED.isInstallable)

@@ -157,6 +157,12 @@ public class MainModule extends XposedModule {
             return;
         }
 
+        if (scope == ProcessScope.SECURITY_CENTER_POWER) {
+            SecurityCenterInstaller.installPowerWarning(lpparam, mPrefs);
+            HookDiagnostics.printSummaryForStage("onPackageReady");
+            return;
+        }
+
         if (CommonPackageFeatures.hasEnabledFeature(mPrefs, pkg)) {
             FeatureInstallRegistry commonRegistry = new FeatureInstallRegistry();
             for (FeatureSpec feature : CommonPackageFeatures.all(lpparam, mPrefs)) {

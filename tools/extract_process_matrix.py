@@ -180,6 +180,8 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
         return ["com.miui.home"], ["third-party launchers (unless selected app sets)"]
     if target == "SYSTEM_PACKAGE":
         if installer_base == "SecurityCenterFeatures":
+            if pref == "system_hidelowbatwarn":
+                return ["com.miui.securitycenter", "com.miui.securitycenter.remote"], ["com.miui.securitycenter.bootaware"]
             return ["com.miui.securitycenter"], ["com.miui.securitycenter.bootaware"]
         if installer_base == "SettingsFeatures":
             return ["com.android.settings"], ["com.android.settings:remote"]

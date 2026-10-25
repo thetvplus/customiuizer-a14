@@ -120,6 +120,12 @@ class InstallerJvmAbiTest(
                 Void.TYPE,
             ),
             MethodAbi(
+                "tv.withaibuild.customiuizer.installers.SecurityCenterInstaller",
+                "installPowerWarning",
+                listOf(packageReadyParam, prefMap),
+                Void.TYPE,
+            ),
+            MethodAbi(
                 "tv.withaibuild.customiuizer.installers.SettingsInstaller",
                 "install",
                 listOf(packageReadyParam, prefMap),
