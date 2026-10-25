@@ -13,11 +13,13 @@
 | ROM / DEX | [DexSQL](../rom-intelligence/DEXSQL.md)、[SQL 查询集](../../tools/dexsql/README.md)、[M03 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |
 | 发布 | [RELEASE](../RELEASE.md)、实际 GitHub Release；Changelog 保存发行事实 |
 
-本轮 r14.25.6 / 253 已以原应用身份及历史正式证书覆盖安装，用户确认本轮测试全部通过。收口仅同步工作分支并触发 CI，不合并 main、不发布 Release。r14.25.5 / 250 的音乐返回候选曾被撤回，两端草稿及附件现已清除，不能作为本轮修复的验收依据。本地试用修复比较基线为 r14.25.3；后续 r14.25.5 累计发行说明从 r14.24.1 对比，发布安全基线仍核查最近公开版本，规则见 [发布与恢复](../RELEASE.md)。保留旧 Git 提交和原二进制；实际公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。后续发布另行授权，[任务 #54](https://github.com/thetvplus/customiuizer-a14/issues/54) 已收口。
+本轮 r14.25.6 / 253 已以原应用身份及历史正式证书覆盖安装，用户确认本轮测试全部通过。该次实机任务未发布 Release；其后续代码整合不扩大上述实机验收范围，正式发行仍暂停。r14.25.5 / 250 的音乐返回候选曾被撤回，两端草稿及附件现已清除，不能作为本轮修复的验收依据。本地试用修复比较基线为 r14.25.3；后续 r14.25.5 累计发行说明从 r14.24.1 对比，发布安全基线仍核查最近公开版本，规则见 [发布与恢复](../RELEASE.md)。保留旧 Git 提交和原二进制；实际公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。后续发布另行授权，[任务 #54](https://github.com/thetvplus/customiuizer-a14/issues/54) 已收口。
 
 ### 当前实机差异验收
 
 当前本地构建另扩展高度 32–64 dp、短宽 96–320 dp、长宽 120–400 dp。自动宽度与默认尺寸保留；用户明确选择手动宽模式可让时间、电池移动或隐藏，仍受屏幕 / 开孔安全边界约束。文字、封面、波形和触摸几何同步，小图标遮挡判定外扩 4 dp。253 上的 PiP 开关两态、音乐快速返回（当前页有 / 无应用图标）与手动尺寸联动由用户操作验收并反馈全部通过；不沿用 252 的失败结论。
+
+动态岛动画源码专项保留上述 253 实机行为；短长形态使用同一有限时长时钟，视觉内容仅保留一个待交接的最新值，取消 / 分离时清理。过渡绘制边界按当前几何有界扩展，仅归属一个窗口并随窗口移除释放，不增加逐帧窗口布局。收缩保留当前可见宽高，位置重定向延续当前物理起点。手动模式按随高度匹配的自然短形态阈值分类，再使用对应手动宽度；调小短宽不再反向触发长形态，长宽不窄于短宽及物理安全约束不变。本专项只验证定向 Host 数值与契约，不包含设备外观、帧率或性能结论。
 
 实机安装 APK 对应源码 `5f6a39345e7df75287efe8d7b19b3c451e3d7388`，SHA-256 为 `3dbac3b04584dc9a57890393e513850e5e08bc958fb817bc5968cd4b197799fd`。已核对应用身份、设置及作用域保留、模块启用与完整重启恢复；本轮未清除用户数据。完整 Host 门禁 3454 项（2 项跳过）无失败，工具测试原有 664 项中的文档摘要失配已修正并通过相关 11 项复验；正式 R8 / D8、签名及安装包一致性通过。详细结果保留在仓库外 `20261025-final/local-253-*.json`；收口不重复构建或测试。
 

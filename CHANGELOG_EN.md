@@ -11,7 +11,8 @@ Unreleased changes and retained releases; cumulative notes use their designated 
 - Reorganize settings into System, Home screen, Buttons and gestures, and Apps and maintenance. Unify grouped cards and descriptions, improve search navigation, and collect restart actions on the home page.
 - Enter precise slider values by tapping the number, with range, step and unit validation.
 - Add Dynamic Island for music, system states, brief notices and optional message notifications, with short and long forms, secondary activities, and Vertical or Center animations.
-- Add left, center and right island placement, horizontal adjustment and cutout avoidance. Adjust height from 32–64 dp, short width from 96–320 dp and long width from 120–400 dp, with matching text, artwork, waves and touch areas.
+- Add left, center and right island placement, horizontal adjustment and cutout avoidance. Adjust height from 32–64 dp, short width from 96–320 dp and long width from 120–400 dp, with matching text, artwork, waves and touch areas. Reducing manual short width no longer selects a wider form.
+- Smooth short/long island transitions and content handoffs, reducing blank gaps, first-frame shrink jumps and abrupt position changes.
 - Add five customizable island music gestures for track controls, volume and shortcuts. Refine pause visibility, opening the current player and upward dismissal.
 - Use the native icon-free return animation for direct music return to the island, including rapid switches and launchers with or without a player icon. This option is off by default and requires selecting a player.
 - Refine picture-in-picture entry, cancellation, exit, edge stashing and restoration. The floating-window hiding option suppresses the whole island; disabling it allows the media island and PiP to coexist while preserving native window transitions. Restart the device after changing this option.
@@ -30,6 +31,7 @@ Unreleased changes and retained releases; cumulative notes use their designated 
 
 ### Engineering notes
 
+- Island handoffs reuse the existing finite clock, retain only one latest pending visual value and clear it on cancellation or detachment. Shrinking and position retargeting preserve current visible geometry. Animation and manual-width changes have targeted Host evidence only, without expanding device acceptance.
 - The cumulative notes baseline is r14.24.1; publication safety still uses the latest actually published stable release, historical certificate and exact main CI. Preserve real r14.25.1 and r14.25.3 releases and Git tags, excluding withdrawn designs and debugging history.
 - Music returns retain native Surfaces, cancellation and spring callbacks. PiP and app-overlay state expire by owner, user and generation, with bounded queries and fallbacks and no continuous polling. Preserve accepted floating-window options, rapid music returns and manual island dimensions.
 - Keep the acknowledged status-bar height override for stale framework caches. Mark preferences ready only after atomic publication, serializing startup, bulk and single-key updates. Distinguish failed reads from real deletion and retain full-restart semantics for installation-time switches.
