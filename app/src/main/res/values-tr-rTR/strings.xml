@@ -1258,9 +1258,23 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_waveform_light">Hafif animasyon</string>
     <string name="system_island_waveform_real">Canlı dalga biçimi (deneysel)</string>
     <string name="system_island_waveform_mode_summ">Beş frekans bandı yalnızca ada görünürken ve müzik çalarken alınır. İzin, ses yolu veya oturum desteklenmiyorsa hafif animasyona dönülür.</string>
-    <string name="system_island_hide_in_floating_window_title">Kayan pencereler varken Dynamic Island gizlensin</string>
-    <string name="system_island_hide_in_floating_window_summ">Resim içinde resim, sistem kayan pencereleri veya uygulamaların görünür bindirme pencereleri varken tüm Dynamic Island içeriğini gizler. Değişiklikten sonra cihazı yeniden başlatın.</string>
+    <string name="system_island_hide_in_floating_window_title">Kayan uygulamaların medyasını hariç tut</string>
+    <string name="system_island_hide_in_floating_window_summ">Görünür kayan penceresi olan uygulamaların medya etkinliklerini gizler. Diğer müzikler, izin verilen mesajlar ve sistem bildirimleri normal devam eder. İlk etkinleştirmeden sonra cihazı yeniden başlatın.</string>
     <string name="array_global_actions_pip_hide">Resim içinde resmi gizle / geri getir</string>
     <string name="array_global_actions_pip_stash">Resim içinde resmi kenara al / geri getir</string>
     <string name="pip_action_hint">Oynatmayı duraklatmadan mevcut resim içinde resim penceresini kontrol eder. İlk ayardan sonra sistem arayüzünü yeniden başlatın. Sistem pencere geçişi tam gizlemeyi sonlandırır. Dynamic Island gizliyse PiP penceresini genel bir hareketle geri getirin.</string>
+    <string name="system_island_height_auto_title">Otomatik ada yüksekliği</string>
+    <string name="system_island_height_auto_summ">Kamera kesitine göre 36–40 dp yükseklik seçer. Elle ayarlamak için kapatın.</string>
+    <string name="system_island_idle_title">Kalıcı küçük ada</string>
+    <string name="system_island_idle_summ">Etkinlik yokken sabit bir kapsül gösterir. Bildirimleri açmak için dokunun veya aşağı kaydırın; sonraki etkinliğe ya da ekran uyanana kadar gizlemek için yukarı kaydırın.</string>
+    <string name="system_island_idle_width_auto_title">Otomatik küçük ada genişliği</string>
+    <string name="system_island_idle_width_title">Küçük ada genişliği</string>
+    <string name="system_island_expand_down_title">Genişletme hareketleri</string>
+    <string name="system_island_expand_down_summ">Daha fazla içerik için aşağı kaydırın veya eylem atanmamış uzun basmayı kullanın. Ayarlanmış müzik eylemleri önceliklidir.</string>
+    <string name="system_island_feedback_charging_title">Şarj bağlantısı</string>
+    <string name="system_island_feedback_charging_summ">Şarj başladığında bir kez kısa bildirim gösterir. Sistem kilit ekranı şarj animasyonu korunur.</string>
+    <string name="system_island_feedback_low_battery_title">Düşük pil</string>
+    <string name="system_island_feedback_low_battery_summ">Uyarıyı yalnızca ada görünürken değiştirir; aksi hâlde sistem uyarısını korur. İlk etkinleştirmede sistem arayüzünü ve Güvenlik uygulamasını yeniden başlatın.</string>
+    <string name="system_island_battery_charging">Şarj oluyor</string>
+    <string name="system_island_battery_low">Düşük pil</string>
 </resources>

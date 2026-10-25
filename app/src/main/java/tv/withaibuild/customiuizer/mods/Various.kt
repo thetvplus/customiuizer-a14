@@ -1028,6 +1028,7 @@ object Various {
 
     @JvmStatic
     fun NoLowBatteryWarningHook() {
+        val policy = tv.withaibuild.customiuizer.mods.island.IslandBatteryWarningPolicy(MainModule.mPrefs)
         val settingHook = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false
@@ -1035,6 +1036,8 @@ object Various {
                 var throwable: Throwable? = null
                 try {
                     val key = chain.getArg(1) as String
+                    if (key != "low_battery_dialog_disabled" && key != "low_battery_sound") return chain.proceed()
+                    if (!policy.suppress(chain.getArg(0) as? android.content.ContentResolver)) return chain.proceed()
                     if ("low_battery_dialog_disabled" == key) { skipped = true; result = 1; throwable = null }
                     else if ("low_battery_sound" == key) { skipped = true; result = null; throwable = null }
 

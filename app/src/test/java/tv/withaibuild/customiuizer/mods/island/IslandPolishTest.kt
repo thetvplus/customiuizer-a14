@@ -21,11 +21,38 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowChoreographer
 import org.robolectric.util.ReflectionHelpers.getField
+import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandPolishTest {
+    @Test fun measuredWaveInterpolatesWithoutKeepingAClockAfterSilenceOrDetachment() {
+        val activity=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val wave=IslandWaveView(activity)
+        activity.setContentView(wave,FrameLayout.LayoutParams(25,24))
+        wave.onVisibilityAggregated(true)
+        wave.spectrum(FloatArray(5))
+        wave.playing=true
+        assertFalse(getField(wave,"scheduled"))
+        wave.spectrum(FloatArray(5) { 1f })
+        assertEquals(0f,getField<FloatArray>(wave,"energies")[0],0f)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(33))
+        assertTrue(getField<FloatArray>(wave,"energies")[0] in .1f.. .99f)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
+        assertEquals(1f,getField<FloatArray>(wave,"energies")[0],.006f)
+        assertFalse(getField(wave,"scheduled"))
+        wave.spectrum(FloatArray(5) { .01f })
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
+        assertEquals(0f,getField<FloatArray>(wave,"energies")[0],.006f)
+        assertFalse(getField(wave,"scheduled"))
+        wave.spectrum(null)
+        assertTrue(getField(wave,"scheduled"))
+        activity.setContentView(FrameLayout(activity))
+        assertFalse(getField(wave,"scheduled"))
+        activity.finish()
+    }
+
     @Test fun smallDragDuringLengtheningPreservesMotionAndFinalContent() = morph(false)
     @Test fun releasingALongPressCannotCreateOrCancelASecondAnimation() = morph(true)
 

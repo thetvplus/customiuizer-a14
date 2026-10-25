@@ -134,6 +134,7 @@ internal class IslandApplicationOverlayAccess(
 
     fun snapshot(owner: Any): IslandApplicationOverlaySignal.Snapshot = synchronized(lock.get(owner)) {
         val users = linkedSetOf<Int>()
+        val uids = linkedSetOf<Int>()
         var remaining = 4096
         for (session in sessions.get(owner) as Collection<*>) {
             if (--remaining < 0) return@synchronized IslandApplicationOverlaySignal.Snapshot(emptySet(), false)
@@ -141,11 +142,14 @@ internal class IslandApplicationOverlayAccess(
             if (ownerUid < 0 || ownerUid % 100000 < 10000) continue
             for (surface in surfaces.get(session) as Collection<*>) {
                 if (--remaining < 0) return@synchronized IslandApplicationOverlaySignal.Snapshot(emptySet(), false)
-                if (display.invoke(win.get(animation.get(surface))) == Display.DEFAULT_DISPLAY) users.add(ownerUid / 100000)
-                if (users.size > IslandApplicationOverlaySignal.MAX_USERS)
+                if (display.invoke(win.get(animation.get(surface))) == Display.DEFAULT_DISPLAY) {
+                    users.add(ownerUid / 100000)
+                    uids.add(ownerUid)
+                }
+                if (uids.size > IslandApplicationOverlaySignal.MAX_USERS)
                     return@synchronized IslandApplicationOverlaySignal.Snapshot(emptySet(), false)
             }
         }
-        IslandApplicationOverlaySignal.Snapshot(users)
+        IslandApplicationOverlaySignal.Snapshot(users, uids = uids)
     }
 }

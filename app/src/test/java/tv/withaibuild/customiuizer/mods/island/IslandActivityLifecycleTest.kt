@@ -95,12 +95,14 @@ class IslandActivityLifecycleTest {
         io: kotlinx.coroutines.CoroutineDispatcher = dispatcher,
         entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
         geometryHost: View? = null, pipCandidate: IslandPipCandidatePort? = null,
-        height: Int = 40, automaticWidth: Boolean = true, shortWidth: Int = 184, longWidth: Int = 240): IslandActivityController {
+        height: Int = 40, automaticWidth: Boolean = true, shortWidth: Int = 184, longWidth: Int = 240,
+        idle: Boolean = false): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
             put("system_island_expanded_width", width)
             put("system_island_height", height); put("system_island_width_auto", automaticWidth)
+            put("system_island_idle", idle)
             put("system_island_width_short", shortWidth); put("system_island_width_medium", longWidth)
             put("system_island_simplified", simplified)
             put("system_island_chat", chat)
@@ -119,6 +121,27 @@ class IslandActivityLifecycleTest {
             it.refreshFloatingWindows()
             drain()
         }
+    }
+
+    @Test fun idleAndActivityReuseTheSameWindowAndDismissalStaysPassiveUntilWake() {
+        val controller = controller(idle = true, simplified = true)
+        drain()
+        assertEquals(1, adds)
+        val original = shell!!
+        val idleWidth = latestParams!!.width
+        val lease = controller.showToast(IslandToastContent("OK", context.packageName, null), 3000)!!
+        drain()
+        assertSame(original, shell)
+        assertEquals(1, adds)
+        assertTrue(latestParams!!.width > idleWidth)
+        controller.releaseToast(lease); drain()
+        assertEquals(idleWidth, latestParams!!.width)
+        assertEquals(1, adds)
+        shell!!.onDismiss(); drain()
+        assertFalse(original.isAttachedToWindow)
+        controller.onScreenStateChanged(true); drain()
+        assertSame(original, shell)
+        assertEquals(2, adds)
     }
 
     private fun drain() {
@@ -793,7 +816,7 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds)
     }
 
-    @Test fun theWholeIslandSwitchControlsCoexistenceAcrossVisibleHiddenAndStashedPip() {
+    @Test fun sourceExclusionRemainsStableAcrossVisibleHiddenAndStashedPip() {
         for (hideAll in listOf(false, true)) {
             val before = adds
             val controller = controller(media = true, simplified = true, hideFloating = hideAll)
@@ -856,6 +879,44 @@ class IslandActivityLifecycleTest {
             assertEquals(before + 1, adds)
             controller.dispose(); drain()
         }
+    }
+
+    @Test fun anExcludedNativeVideoSelectionKeepsOnePreviouslySelectedIndependentMusicSession() {
+        val controller = controller(media = true, hideFloating = true, simplified = true)
+        controller.foregroundChanged("com.miui.home")
+        val music = launchablePlayer("retained-music")
+        native.player = music; controller.updateFromNative(native); revealMedia()
+        assertEquals(1, adds)
+        val original = shell
+        pip(controller, 1, 4, packageName = "other.video")
+        val video = launchablePlayer("floating-video")
+        shadowOf(video).setPackageName("other.video")
+        native.player = video; controller.updateFromNative(native); revealMedia()
+        assertSame(music, org.robolectric.util.ReflectionHelpers.getField<MediaController>(controller, "selected"))
+        assertSame(original, shell)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
+        shell!!.onDismiss(); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<MediaController?>(controller, "backgroundPlayer"))
+        controller.updateFromNative(native); revealMedia()
+        assertEquals(1, adds)
+        native.player = null; controller.updateFromNative(native); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<MediaController?>(controller, "selected"))
+    }
+
+    @Test fun rebuildingAMediaControllerForTheSameTokenDoesNotReplaceItsOwnerOrWindow() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("same-token")
+        native.player = player; controller.updateFromNative(native); revealMedia()
+        val original = shell
+        val replacement = MediaController(context, player.sessionToken)
+        shadowOf(replacement).setPackageName(context.packageName)
+        shadowOf(replacement).setPlaybackState(player.playbackState)
+        native.player = replacement; controller.updateFromNative(native); revealMedia()
+        assertSame(player, org.robolectric.util.ReflectionHelpers.getField<MediaController>(controller, "selected"))
+        assertSame(original, shell)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
     }
 
     @Test fun pipCancelsAPreparedWindowBeforeItsFirstDrawAndDoesNotReenterWhenPinned() {
@@ -1019,19 +1080,33 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds)
     }
 
-    @Test fun hidingTheEntireIslandRetainsNativeToastAndHeadsUpAndDropsOldFeedback() {
-        val controller = controller(chat = true, hideFloating = true)
+    @Test fun aMusicAutoPipAdmissionGateDoesNotBlockOrdinaryFeedback() {
+        val controller = controller(media = true, hideFloating = true, simplified = true,
+            pipCandidate = IslandPipCandidatePort { pkg, user -> IslandPipCandidate(pkg, user, 17) })
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("auto-pip-feedback")
+        controller.updateFromNative(native); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); revealMedia()
+        assertEquals(0, adds)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        assertEquals(1, adds)
+    }
+
+    @Test fun sourceExclusionKeepsApprovedMessagesAndOrdinaryFeedbackInTheSameWindow() {
+        val controller = controller(chat = true, hideFloating = true, simplified = true)
         controller.foregroundChanged("com.miui.home")
         assertTrue(controller.takeNotification(message(801)))
+        val original = shell
         assertEquals(1, adds)
         pip(controller, 1, 4, packageName = "other.video")
-        assertEquals(1, removes)
-        assertFalse(controller.takeNotification(message(802)))
-        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
-        controller.systemActivity(IslandSystemActivity(IslandSystemKind.DND, 1))
+        assertEquals(0, removes)
+        assertTrue(controller.takeNotification(message(802)))
+        assertSame(original, shell)
+        assertEquals(1, adds)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
         pip(controller, 2, 0)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(3000)); drain()
-        assertEquals(1, adds)
+        assertEquals(1, adds) // Replacing a notice never queues it for later replay.
         assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
         assertEquals(2, adds)
     }
@@ -1046,7 +1121,7 @@ class IslandActivityLifecycleTest {
         nativeReturn(controller, committedAt)
         assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         val publisher = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "musicReturnPublisher")
-        pip(controller, 1, 3, packageName = "other.video")
+        pip(controller, 1, 3, packageName = context.packageName)
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "musicReturnPublisher"))
         assertTrue(org.robolectric.util.ReflectionHelpers.getField<Boolean>(publisher, "closed"))
@@ -1065,8 +1140,9 @@ class IslandActivityLifecycleTest {
 
     @Test fun theFloatingWindowSwitchRemainsAnInstallationSnapshotAcrossPreferenceRefreshes() {
         for (installed in listOf(false, true)) {
-            val controller = controller(hideFloating = installed)
-            pip(controller, 1, 4, packageName = "other.video")
+            val before = adds
+            val controller = controller(media = true, hideFloating = installed)
+            pip(controller, 1, 4)
             val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
             val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
             prefs.put("system_island_hide_in_floating_window", !installed)
@@ -1074,8 +1150,12 @@ class IslandActivityLifecycleTest {
             observer.onChange("system_island_height"); observer.onChange(null); drain()
             val current = org.robolectric.util.ReflectionHelpers.getField<IslandOptions>(controller, "options")
             assertEquals(installed, current.hideInFloatingWindow)
+            controller.foregroundChanged("com.miui.home")
+            native.player = launchablePlayer("installed-source-$installed")
+            controller.updateFromNative(native); revealMedia()
+            assertEquals(before + if (installed) 0 else 1, adds)
             val lease = controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000)
-            assertEquals(installed, lease == null)
+            assertNotNull(lease)
             controller.dispose(); drain()
         }
     }
@@ -1090,7 +1170,7 @@ class IslandActivityLifecycleTest {
         disabled.dispose(); drain()
         val controller = controller(hideFloating = true, freeform = source)
         assertEquals(1, reads)
-        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(3000)); drain()
         assertEquals(1, reads)
         windows = false
@@ -1677,7 +1757,8 @@ class IslandActivityLifecycleTest {
         assertFalse(source.isRecycled)
         assertFalse(shell!!.isLongClickable)
         val density = context.resources.displayMetrics.density
-        val expectedWidth = IslandSizing.collapsed(density,1080,(184*density).toInt(),(40*density).toInt(),(24*density),0f)
+        val expectedWidth = IslandSizing.collapsed(density,1080,(184*density).toInt(),(40*density).toInt(),(24*density),0f,
+            heightDp = IslandSizing.automaticHeight(0))
         assertEquals(expectedWidth + 2 * (shell!!.parent as IslandTouchWindow).margin, latestParams!!.width)
         val insets = org.robolectric.util.ReflectionHelpers.getField<Rect>(latestParams, "surfaceInsets")
         // InputMonitor exports one surfaceInset scalar, chosen from the left edge.

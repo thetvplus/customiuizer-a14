@@ -234,8 +234,10 @@ class SystemUIToastPresentationTest {
         mode = StrongToastPresentationMode.DYNAMIC_ISLAND
         assertNull(bridge.show("副屏提示", "example", 7000, 2))
         assertEquals(0, controller.calls)
-        val lease = bridge.show("复制成功", "example", 9000)!!
-        assertEquals("复制成功", controller.mMiuiStrongToast!!.mLeftTextView.text.toString())
+        // The smaller automatic wing must retain ordinary Toasts when all text cannot fit.
+        assertNull(bridge.show("复制成功", "example", 9000))
+        val lease = bridge.show("完成", "example", 9000)!!
+        assertEquals("完成", controller.mMiuiStrongToast!!.mLeftTextView.text.toString())
         assertTrue(controller.duration >= 9000)
         assertNull(bridge.show("新提示", "example", 7000))
         assertEquals(1, controller.calls)
@@ -284,7 +286,7 @@ class SystemUIToastPresentationTest {
         assertNull(bridge.show("完成", "example", 7000))
         controller.gated = false
         controller.fontScale = 8f
-        assertNull(bridge.show("复制成功", "example", 7000))
+        assertNull(bridge.show("完成", "example", 7000))
         assertNull(controller.mMiuiStrongToast!!.parent)
         assertEquals(0, controller.mMiuiStrongToast!!.hideCalls)
     }

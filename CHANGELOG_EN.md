@@ -6,6 +6,26 @@ Changes for maintained releases. Valid changes from the retired r14.25.1 and r14
 
 ## Unreleased
 
+## r14.25.6 — 2026-10-25
+
+versionCode 255. Changes since r14.25.5:
+
+### User changes
+
+- Reuse one Dynamic Island window across compact, long and optional persistent idle forms. Swiping up collapses the long form before dismissing it; notifications can expand on a downward swipe.
+- Refine content fades, local text blur, track artwork flips and damped horizontal feedback. Music return responds subtly to native swipe strength while preserving configured music actions.
+- Tighten automatic widths and derive a 36–40 dp height from the camera cutout. Idle width supports automatic or manual sizing.
+- Follow the ROM audio capture limit, interpolate the waveform at about 30 Hz, and reject small noise changes. Support mirrored Telegram / HyperOS media sessions, retain one same-app audio track while it remains active, and reduce handoff flicker.
+- Exclude confirmed floating-app media sources rather than hiding every activity. Other music, approved messages and system feedback remain eligible.
+- Add optional charging and low-battery feedback. Suppress the native low-battery dialog only after the replacement is visibly acknowledged.
+- Refine Dock glass refraction and edges, reduce repeated static-wallpaper captures, and align the optical height of Duo charging and percentage markers.
+
+### Engineering notes
+
+- Native window events publish bounded current snapshots. Audio, notification and animation resources retain explicit owners and release paths; no new recording permission, polling service or animation library.
+- Power saver stops Island capture and optional motion. Static Dock capture stops after its bounded native-animation catch-up period.
+- r14.25.6 is a locally signed official-build trial. Public release and device acceptance are tracked separately in the refinement roadmap; brief samples do not establish long-term battery life.
+
 ## r14.25.5 — 2026-10-25
 
 versionCode 254. Changes since r14.24.1:

@@ -9,4 +9,6 @@
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_wifi" android:title="@string/array_global_toggle_wifi" android:defaultValue="false" />
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_data" android:title="@string/array_global_toggle_mobiledata" android:defaultValue="false" />
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_bluetooth" android:title="@string/array_global_toggle_bt" android:defaultValue="false" />
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_charging" android:title="@string/system_island_feedback_charging_title" android:summary="@string/system_island_feedback_charging_summ" android:defaultValue="false" />
+	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_low_battery" android:title="@string/system_island_feedback_low_battery_title" android:summary="@string/system_island_feedback_low_battery_summ" android:defaultValue="false" />
 </PreferenceScreen>

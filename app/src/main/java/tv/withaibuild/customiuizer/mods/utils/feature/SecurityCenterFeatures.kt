@@ -435,7 +435,8 @@ internal class SecurityCenterNoLowBatteryWarningFeature(
 ) {
     companion object {
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_hidelowbatwarn")
+        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_hidelowbatwarn") ||
+            tv.withaibuild.customiuizer.mods.island.IslandBatteryWarningMarker.enabled(prefs)
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)

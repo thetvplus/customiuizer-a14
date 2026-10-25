@@ -2817,7 +2817,7 @@
       "phase": "PACKAGE_READY",
       "installer": "SecurityCenterFeatures",
       "installHook": "Various.NoLowBatteryWarningHook()",
-      "enableCondition": "prefs.getBoolean(\"system_hidelowbatwarn\")",
+      "enableCondition": "prefs.getBoolean(\"system_hidelowbatwarn\") || tv.withaibuild.customiuizer.mods.island.IslandBatteryWarningMarker.enabled(prefs)",
       "allowedProcess": "com.miui.securitycenter",
       "deniedProcess": "com.miui.securitycenter.bootaware"
     },

@@ -1252,9 +1252,23 @@
     <string name="system_island_waveform_light">輕量動畫</string>
     <string name="system_island_waveform_real">即時波形（實驗性）</string>
     <string name="system_island_waveform_mode_summ">即時模式僅在可見且播放時擷取五個音訊頻段。權限、路由或工作階段不支援時回復輕量動畫。</string>
-    <string name="system_island_hide_in_floating_window_title">有小窗時隱藏動態島</string>
-    <string name="system_island_hide_in_floating_window_summ">存在子母畫面、系統小窗或應用程式的可見懸浮視窗時隱藏整個動態島。變更後重新啟動手機生效。</string>
+    <string name="system_island_hide_in_floating_window_title">排除小窗來源的媒體</string>
+    <string name="system_island_hide_in_floating_window_summ">依應用程式和使用者排除可確認的小窗媒體來源，其餘音樂、已接入訊息和系統回饋照常顯示。首次啟用須完整重啟裝置。</string>
     <string name="array_global_actions_pip_hide">隱藏/恢復子母畫面</string>
     <string name="array_global_actions_pip_stash">邊緣收起/恢復子母畫面</string>
     <string name="pip_action_hint">控制目前的子母畫面，不暫停播放。首次設定後重新啟動系統介面生效；原生視窗轉場會結束完整隱藏。若動態島已隱藏，請用全域手勢恢復子母畫面。</string>
+    <string name="system_island_height_auto_title">自動動態島高度</string>
+    <string name="system_island_height_auto_summ">依挖孔匹配 36–40 dp 的緊湊高度；關閉後可手動設定。</string>
+    <string name="system_island_idle_title">常駐小島</string>
+    <string name="system_island_idle_summ">沒有活動時保留靜止小島。點選或下滑開啟通知欄；上滑隱藏至下一次活動或亮屏。</string>
+    <string name="system_island_idle_width_auto_title">自動小島寬度</string>
+    <string name="system_island_idle_width_title">小島寬度</string>
+    <string name="system_island_expand_down_title">展開手勢</string>
+    <string name="system_island_expand_down_summ">下滑或未綁定動作的長按可顯示通知、歌曲的更多內容。已設定的音樂動作優先。</string>
+    <string name="system_island_feedback_charging_title">充電接入回饋</string>
+    <string name="system_island_feedback_charging_summ">開始充電時短暫提示一次，保留系統鎖屏充電動畫。</string>
+    <string name="system_island_feedback_low_battery_title">低電量回饋</string>
+    <string name="system_island_feedback_low_battery_summ">替代提示可見時以動態島承接低電量提醒；否則保留系統提醒。首次啟用後需重啟系統介面與安全中心。</string>
+    <string name="system_island_battery_charging">正在充電</string>
+    <string name="system_island_battery_low">電量不足</string>
 </resources>

@@ -8,6 +8,26 @@
 
 已授权开发成果在必要验证后默认提交并推送任务工作分支，以远端完整 SHA 读回确认保存；main / Tag / Release 仍需相应授权。代理优先级、有限重试和网络故障恢复统一维护在 [Git 协作规范](../DEVELOPMENT.md#本地-git-网络与失败恢复)，本机代理配置仅留在仓库 Git 元数据中。
 
+## r14.25.6 设备试用
+
+本轮以 `0d6775f0316589c82fd9db46a707c9e5c5f79b95` 为源码基线，设备原版为 r14.25.5 / 254；目标为本地正式签名 r14.25.6 / 255。公开发布与 main 合并不在本任务内。
+
+当前决定：三形态共享一个窗口和有限动画时钟；默认不新建消息历史，保留单个当前通知；媒体同 UID 多音轨使用稳定保留选择及首帧交接。小窗策略按可确认的包 / 用户 / UID 反选来源，其他音乐、允许通知和反馈保持原规则。低电量底部弹窗仅在替代岛可见确认有效时抑制。自动尺寸收紧并与挖孔联动；系统省电停止岛的采集及非必要动效，静态 Dock 停止无关帧采样。
+
+实机已确认 Telegram / AyuGram 在一条 USAGE_MEDIA 音轨（UID 10321、session 377）上报告三个媒体会话，其中两个同歌 PLAYING；旧唯一媒体会话门禁由此回退，不能归因通知权限。当前 fuxi `framework.jar` 的 `MiuiFreeFormStackInfo` 已证实 `packageName:String`、`userId:Int`、`displayId:Int` 定义。原生 Visualizer 上限已实测为 20 Hz，显示采用约 30 Hz 局部插值且稳定后停钟。原版本播放录屏、播放 / 锁屏各 30 秒采样已保存；新版本动画、混合音频 / 小窗 / 通知、省电和正式 APK 设备验收仍进行中。
+
+外部参考按 A14 生命周期及单窗口约束筛选；时长 / 弹幅属于本项目参数，未引入完整 UI / 动画库。
+
+| 参考 | 当前采用与边界 |
+| --- | --- |
+| [Apple HIG](https://developer.apple.com/design/human-interface-guidelines/live-activities)、[WWDC23](https://developer.apple.com/videos/play/wwdc2023/10194/)、[WWDC26](https://developer.apple.com/videos/play/wwdc2026/223/) | 紧凑 / 展开共享来源、连续速度、克制弹性与最少必要信息；A14 横屏保持原有隐藏合同 |
+| [HyperIsland](https://github.com/1812z/HyperIsland) `b25f8992` | 参考采样 / 绘制分离及静音停止原则；不采用全局 session 0、新 ROM Hook 或定时读取配置 |
+| [DynamicIslandUtilities](https://github.com/theblixguy/DynamicIslandUtilities) `124fdbd1`、[SwiftUI Demo](https://github.com/stolyarenkoks/Dynamic-Island-SwiftUI-Demo) `90691b4e` | 参考开孔锚点与形态切换；UIKit / SwiftUI 代码不移植 |
+| [expressive-cutout](https://github.com/EvanKoe/expressive-cutout) `c93d68e0`、[dynamic-landing](https://github.com/bring-shrubbery/dynamic-landing) `d0050ee8` | 参考中断延续与活动身份原则；不引入 Compose、跨进程心跳及桌面平台所有权层 |
+| Status Trio `9bf2cca8`、QWEA0 Liquid Glass Android | 标记光学高度与已有 MIT 折射模型局部重实现；来源和许可保留在原功能文档及随包许可 |
+
+证据保留仓库外 `customiuizer-a14-evidence/island-r14256-20261025/`；最终门禁、APK / 证书与设备读回完成后更新本节。不把短时 USB 采样解释为长期耗电改善。
+
 ## 事实来源
 
 | 范围 | 权威入口 |

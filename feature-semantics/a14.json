@@ -17924,14 +17924,14 @@
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "INSTALL_TIME_SNAPSHOT",
-      "enableEffect": "Hide all Dynamic Island content while native PiP or current-user default-display freeform windows exist; keep native heads-up and Toast fallback and invalidate Music direct-to-island targets",
-      "disableEffect": "Do not install the optional freeform observer or query inventory; native PiP media deduplication remains independent",
+      "enableEffect": "Exclude media from confirmed current-user floating-app owners; independent music, approved messages and feedback remain eligible",
+      "disableEffect": "Do not exclude floating-app media",
       "valueChangeEffect": "Restart SystemUI to install or remove native window observers; ordinary preference refresh and status-bar recreation retain the installation snapshot",
       "restartTarget": "SYSTEMUI",
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandOptionsTest, IslandActivityLifecycleTest, IslandPipAccessTest, IslandFreeformAccessTest; CN/TW and saved live native PiP contracts",
-      "notes": "Default off; event-driven worker inventory reads, one in-flight query, generation rejection and owner disposal; no polling"
+      "notes": "Native PiP and bounded freeform package identities plus application-overlay UIDs. Events only; no polling; full restart for first installation."
     },
     {
       "featureId": "system_island_simplified",
@@ -18599,6 +18599,167 @@
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandAudioSpectrumTest; AudioFftBandsTest; IslandActivityLifecycleTest; IslandPreferenceDefaultsTest; BackupRestoreTest",
       "notes": "Experimental on HyperOS: requires inherited RECORD_AUDIO and MODIFY_AUDIO_ROUTING, unique UID/session attribution and a supported local route; never captures session 0. One 512-sample Visualizer at at most 20 Hz; no added permission, recording service or polling."
+    },
+    {
+      "featureId": "system_island_height_auto",
+      "featureName": "system_island_height_auto",
+      "preferenceKeys": [
+        "system_island_height_auto",
+        "pref_key_system_island_height_auto"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Choose 36–40 dp from the cutout; preserve explicit manual height",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle",
+      "featureName": "system_island_idle",
+      "preferenceKeys": [
+        "system_island_idle",
+        "pref_key_system_island_idle"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Keep one static idle capsule and notification-shade gesture hotspot",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_width_auto",
+      "featureName": "system_island_idle_width_auto",
+      "preferenceKeys": [
+        "system_island_idle_width_auto",
+        "pref_key_system_island_idle_width_auto"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Derive idle width from shared height, cutout and short width",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_width",
+      "featureName": "system_island_idle_width",
+      "preferenceKeys": [
+        "system_island_idle_width",
+        "pref_key_system_island_idle_width"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "68",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Bound manual idle width to 48–120 dp and the physical safe area",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_expand_down",
+      "featureName": "system_island_expand_down",
+      "preferenceKeys": [
+        "system_island_expand_down",
+        "pref_key_system_island_expand_down"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Expand current content on unassigned down swipe or long press; configured music actions take priority",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_feedback_charging",
+      "featureName": "system_island_feedback_charging",
+      "preferenceKeys": [
+        "system_island_feedback_charging",
+        "pref_key_system_island_feedback_charging"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "One charging-edge feedback; initial state does not emit",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_feedback_low_battery",
+      "featureName": "system_island_feedback_low_battery",
+      "preferenceKeys": [
+        "system_island_feedback_low_battery",
+        "pref_key_system_island_feedback_low_battery"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Present low battery only when safe, retaining native fallback",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "UNKNOWN",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "First installation requires SystemUI and SecurityCenter restart. Native warning is suppressed only after a visible replacement acknowledgement; failed or late acknowledgement retains native warning."
     }
   ]
 }

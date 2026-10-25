@@ -62,6 +62,7 @@ internal class IslandActivityState<T, M>(private val dismissal: MediaDismissal =
     }
 
     fun allowMediaAgain() { dismissal.key = null }
+    fun isMediaDismissed(key: Any) = dismissal.key == key
     fun sessionDestroyed(key: Any) { if (dismissal.key == key) dismissal.key = null }
 
     fun clear(preserveDismissal: Boolean = false) {

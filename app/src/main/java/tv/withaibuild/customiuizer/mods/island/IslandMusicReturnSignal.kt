@@ -69,6 +69,7 @@ internal object IslandMusicReturnSignal {
     class Publisher(private val context: Context, private val handler: Handler,
         private val scope: CoroutineScope, private val dispatcher: CoroutineDispatcher,
         private val onCommit: (Frame, Long) -> Unit = { _, _ -> },
+        private val onImpulse: (Float) -> Unit = {},
         private val current: () -> Frame?) : AutoCloseable {
         private var closed = false
         private var sent = false
@@ -86,6 +87,7 @@ internal object IslandMusicReturnSignal {
                     val now = SystemClock.uptimeMillis()
                     if (packet.frame == frame && gesture > committedGesture && at >= 0 && now >= at && now - at <= 1000) {
                         committedGesture = gesture
+                        onImpulse(intent.getFloatExtra("impulse", 0f).takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f)
                         onCommit(frame, at)
                     }
                 } else publish(force = true)

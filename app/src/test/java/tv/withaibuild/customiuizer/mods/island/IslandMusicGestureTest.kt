@@ -48,6 +48,23 @@ class IslandMusicGestureTest {
         shell.onGesture = { gestures.add(it) }; shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
     }
     @After fun cleanup() { host.finish() }
+    @Test fun downExpansionUsesTheSameShellAndPreservesAnAssignedMusicAction() {
+        var expanded = 0
+        shell.onExpand = { expanded++ }
+        shell.configureGestures(identity, IslandMusicActions(down = 1), true)
+        swipe(140f, 100f)
+        assertEquals(1, expanded)
+        assertTrue(gestures.isEmpty())
+        shell.configureGestures(identity, IslandMusicActions(down = 85), true)
+        swipe(140f, 100f)
+        assertEquals(1, expanded)
+        assertEquals(listOf(IslandMusicGesture.DOWN), gestures)
+        shell.bind("Notice", "Body", null, false, false, false, 0, false)
+        swipe(140f, 100f)
+        assertEquals(2, expanded)
+        assertTrue(shell.performAccessibilityAction(AccessibilityNodeInfo.ACTION_EXPAND, null))
+        assertEquals(3, expanded)
+    }
     private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
     private fun touch(action: Int, x: Float = 140f, y: Float = 20f) {
         if (action == MotionEvent.ACTION_DOWN) downTime = SystemClock.uptimeMillis()

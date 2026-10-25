@@ -10,10 +10,10 @@ class IslandSizingTest {
         assertEquals(376, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 1000f,
             shortDp = 320, longDp = 400, manual = true))
         assertEquals(220, IslandSizing.maximumWidth(1f, 400, 220, heightDp = 64))
-        assertEquals(240, IslandSizing.maximumWidth(1f, 400, 400))
+        assertEquals(224, IslandSizing.maximumWidth(1f, 400, 400))
     }
     @Test fun animationUsesTheSameConfiguredAndNativeSafeLimitAsLayout() {
-        assertEquals(240, IslandSizing.maximumWidth(1f, 400, 320))
+        assertEquals(224, IslandSizing.maximumWidth(1f, 400, 320))
         assertEquals(280, IslandSizing.maximumWidth(1f, 400, 320, manual = true, longDp = 280))
         assertEquals(210, IslandSizing.maximumWidth(1f, 400, 210, manual = true, longDp = 280))
         assertEquals(200, IslandSizing.maximumWidth(1f, 400, 320, romMaximum = 200))
@@ -26,7 +26,7 @@ class IslandSizingTest {
             shortDp = 200, longDp = 260, manual = true))
         assertEquals(220, IslandSizing.collapsed(1f, 372, 220, 40, 24f, 100f,
             shortDp = 200, longDp = 260, manual = true))
-        assertEquals(184, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
+        assertEquals(172, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
             shortDp = 200, longDp = 260, manual = false))
         assertEquals(224, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 100f,
             shortDp = 224, longDp = 184, manual = true))
@@ -65,12 +65,12 @@ class IslandSizingTest {
         }
     }
     @Test fun compactAndMediumFormsFitTheirContentOnlyWithinTheEssentialIconsClearance() {
-        assertEquals(184, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 0f))
-        val medium = IslandSizing.collapsed(1f, 372, 230, 40, 24f, 78f)
-        assertEquals(228, medium)
-        assertTrue((medium - 40) / 2 - 16 >= 78)
-        assertEquals(230, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 300f))
-        assertEquals(160, IslandSizing.collapsed(1f, 320, 160, 40, 24f, 78f))
+        assertEquals(172, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 0f))
+        val medium = IslandSizing.collapsed(1f, 372, 230, 40, 24f, 76f)
+        assertEquals(224, medium)
+        assertTrue((medium - 40) / 2 - 16 >= 76)
+        assertEquals(224, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 300f))
+        assertEquals(160, IslandSizing.collapsed(1f, 320, 160, 40, 24f, 76f))
         assertEquals(200, IslandSizing.collapsed(1f, 372, 250, 40, 24f, 200f, 200))
     }
 }

@@ -86,6 +86,21 @@ class DockGlassBackdropTest {
     }
 
     @Test
+    fun settledStaticWallpaperIgnoresUnrelatedNativeDrawsUntilItsSourceChanges() {
+        val controller = controller()
+        controller.onFrame(true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        repeat(60) { controller.onFrame(true) }
+        assertEquals(1, captures)
+        controller.invalidateSource()
+        controller.onFrame(true)
+        assertEquals(2, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        repeat(60) { controller.onFrame(true) }
+        assertEquals(2, captures)
+    }
+
+    @Test
     fun hiddenLiveWallpaperStopsRefreshingAndReturnedOldGenerationsAreReleased() {
         val controller = controller(live = true)
         controller.onFrame(true)

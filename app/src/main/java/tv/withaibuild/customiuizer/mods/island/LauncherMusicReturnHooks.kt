@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong
 internal object LauncherMusicReturnHooks {
     private const val OWNER = "customiuizer_music_return_owner"
     @Volatile private var active = WeakReference<Owner>(null)
-    private data class Attempt(val params: Any, val snapshot: IslandMusicReturnSignal.Snapshot, val gesture: Long)
+    private data class Attempt(val params: Any, val snapshot: IslandMusicReturnSignal.Snapshot, val gesture: Long, val impulse: Float)
 
     fun install(param: PackageReadyParam, prefs: PrefMap) {
         val access = LauncherMusicReturnAccess(param.classLoader)
@@ -65,8 +65,7 @@ internal object LauncherMusicReturnHooks {
         ModuleHelper.hookMethod(access.touch, object : MethodHook() {
             override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
                 // NavStubView can rewrite a MOVE to DOWN internally; inspect the original event.
-                if ((callback.getArgs().firstOrNull() as? MotionEvent)?.actionMasked == MotionEvent.ACTION_DOWN)
-                    active.get()?.request(gesture = true)
+                (callback.getArg(0) as? MotionEvent)?.let { active.get()?.touch(it) }
             }
         })
         ModuleHelper.hookMethod(access.animate, object : MethodHook() {
@@ -96,6 +95,7 @@ internal object LauncherMusicReturnHooks {
         private val queued = AtomicBoolean()
         private val gesture = AtomicLong()
         private var committedGesture = -1L
+        private val impulse = IslandGestureImpulse()
         @Volatile private var disposed = false
         @Volatile private var options = IslandOptions.read(prefs)
         @Volatile private var snapshot: IslandMusicReturnSignal.Snapshot? = null
@@ -162,6 +162,15 @@ internal object LauncherMusicReturnHooks {
                 } finally { queued.set(false) }
             }
         }
+        fun touch(event: MotionEvent) {
+            if (!enabled()) return
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { impulse.begin(event.rawY, event.eventTime); request(gesture = true) }
+                MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> if (event.pointerCount == 1)
+                    impulse.move(event.rawY, event.eventTime, context.resources.displayMetrics.density) else impulse.cancel()
+                MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> impulse.cancel()
+            }
+        }
         fun retarget(original: Any, element: Any): Attempt? {
             if (!enabled() || !ScreenStateController.isScreenOn()) return null
             val current = snapshot
@@ -171,7 +180,7 @@ internal object LauncherMusicReturnHooks {
             val nav = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
             if (nav.display?.rotation != android.view.Surface.ROTATION_0) return null
             val result = access.retarget(original, element, nav, frame) ?: return null
-            return Attempt(result, current, gesture.get())
+            return Attempt(result, current, gesture.get(), impulse.strength)
         }
         fun prefetchOpening(original: Any, element: Any) {
             if (!enabled() || !ScreenStateController.isScreenOn()) return
@@ -201,6 +210,7 @@ internal object LauncherMusicReturnHooks {
             val message = IslandMusicReturnSignal.encode(current.frame, current.issuedAt, current.sequence)
                 .setAction(IslandMusicReturnSignal.REQUEST).setPackage(IslandMusicReturnSignal.SYSTEM_UI)
                 .putExtra("committed", true).putExtra("gesture", attempt.gesture)
+                .putExtra("impulse", attempt.impulse)
                 .putExtra("committedAt", SystemClock.uptimeMillis()).addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             commitJob?.cancel()
             commitJob = tasks.launch {

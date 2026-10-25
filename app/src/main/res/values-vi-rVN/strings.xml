@@ -1252,9 +1252,23 @@
     <string name="system_island_waveform_light">Hoạt ảnh nhẹ</string>
     <string name="system_island_waveform_real">Dạng sóng trực tiếp (thử nghiệm)</string>
     <string name="system_island_waveform_mode_summ">Chỉ thu năm dải tần khi đảo hiển thị và đang phát. Chuyển về hoạt ảnh nhẹ nếu quyền, tuyến âm thanh hoặc phiên không được hỗ trợ.</string>
-    <string name="system_island_hide_in_floating_window_title">Ẩn Dynamic Island khi có cửa sổ nổi</string>
-    <string name="system_island_hide_in_floating_window_summ">Ẩn toàn bộ Dynamic Island khi có cửa sổ hình trong hình, cửa sổ nổi hệ thống hoặc cửa sổ phủ của ứng dụng đang hiển thị. Khởi động lại thiết bị sau khi thay đổi.</string>
+    <string name="system_island_hide_in_floating_window_title">Loại trừ nội dung của ứng dụng cửa sổ nổi</string>
+    <string name="system_island_hide_in_floating_window_summ">Ẩn hoạt động đa phương tiện của ứng dụng có cửa sổ nổi đang hiển thị. Nhạc khác, tin nhắn được phép và thông báo hệ thống vẫn hiện bình thường. Cần khởi động lại thiết bị khi bật lần đầu.</string>
     <string name="array_global_actions_pip_hide">Ẩn / khôi phục hình trong hình</string>
     <string name="array_global_actions_pip_stash">Thu gọn ra cạnh / khôi phục hình trong hình</string>
     <string name="pip_action_hint">Điều khiển cửa sổ hình trong hình hiện tại mà không tạm dừng phát. Khởi động lại giao diện hệ thống sau lần thiết lập đầu tiên. Chuyển cảnh cửa sổ của hệ thống sẽ kết thúc chế độ ẩn hoàn toàn. Nếu Dynamic Island đang ẩn, hãy dùng cử chỉ toàn cục để khôi phục PiP.</string>
+    <string name="system_island_height_auto_title">Tự động chỉnh chiều cao đảo</string>
+    <string name="system_island_height_auto_summ">Chọn chiều cao 36–40 dp theo phần khoét camera. Tắt để chỉnh thủ công.</string>
+    <string name="system_island_idle_title">Đảo nhỏ luôn hiển thị</string>
+    <string name="system_island_idle_summ">Giữ một viên nang tĩnh khi không có hoạt động. Chạm hoặc vuốt xuống để mở thông báo; vuốt lên để ẩn đến hoạt động tiếp theo hoặc khi màn hình sáng.</string>
+    <string name="system_island_idle_width_auto_title">Tự động chỉnh chiều rộng đảo nhỏ</string>
+    <string name="system_island_idle_width_title">Chiều rộng đảo nhỏ</string>
+    <string name="system_island_expand_down_title">Cử chỉ mở rộng</string>
+    <string name="system_island_expand_down_summ">Vuốt xuống hoặc nhấn giữ chưa gán thao tác để xem thêm nội dung. Các thao tác nhạc đã cấu hình được ưu tiên.</string>
+    <string name="system_island_feedback_charging_title">Kết nối sạc</string>
+    <string name="system_island_feedback_charging_summ">Hiển thị phản hồi ngắn một lần khi bắt đầu sạc. Giữ hoạt ảnh sạc của hệ thống trên màn hình khóa.</string>
+    <string name="system_island_feedback_low_battery_title">Pin yếu</string>
+    <string name="system_island_feedback_low_battery_summ">Chỉ thay cảnh báo khi đảo đang hiển thị; nếu không, giữ cảnh báo hệ thống. Lần đầu bật cần khởi động lại giao diện hệ thống và ứng dụng Bảo mật.</string>
+    <string name="system_island_battery_charging">Đang sạc</string>
+    <string name="system_island_battery_low">Pin yếu</string>
 </resources>

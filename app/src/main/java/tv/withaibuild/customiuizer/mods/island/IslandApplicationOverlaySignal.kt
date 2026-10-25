@@ -11,7 +11,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.utils.Helpers
 import java.util.concurrent.atomic.AtomicLong
 
-/** A14 sender identity is mandatory; only presence/user IDs cross the process boundary. */
+/** A14 sender identity is mandatory; only bounded app/user UIDs cross the process boundary. */
 internal object IslandApplicationOverlaySignal {
     val REQUEST = Helpers.modulePkg + ".ISLAND_APP_OVERLAY_REQUEST"
     val STATE = Helpers.modulePkg + ".ISLAND_APP_OVERLAY_STATE"
@@ -22,9 +22,10 @@ internal object IslandApplicationOverlaySignal {
     private val serial = AtomicLong()
     fun nextSequence() = serial.updateAndGet { maxOf(it + 1, SystemClock.elapsedRealtimeNanos()) }
 
-    data class Snapshot(val users: Set<Int>, val known: Boolean = true) {
+    data class Snapshot(val users: Set<Int>, val known: Boolean = true, val uids: Set<Int>? = null) {
         fun hasWindow(user: UserHandle): Boolean = known &&
             users.any { UserHandle.getUserHandleForUid(it * 100000) == user }
+        fun owns(uid: Int?) = known && uid != null && uids?.contains(uid) == true
     }
     data class Packet(val state: Snapshot, val sequence: Long, val nonce: Long) {
         // A fresh full-state event can initialize a new owner if the request response was
@@ -36,6 +37,7 @@ internal object IslandApplicationOverlaySignal {
         .setPackage(SYSTEM_UI).putExtra("at", SystemClock.uptimeMillis())
         .putExtra("sequence", sequence).putExtra("nonce", nonce).putExtra("known", state.known)
         .putExtra("users", state.users.sorted().toIntArray())
+        .apply { state.uids?.let { putExtra("uids", it.sorted().toIntArray()) } }
 
     fun decode(intent: Intent, now: Long): Packet? {
         if (intent.action != STATE) return null
@@ -45,7 +47,10 @@ internal object IslandApplicationOverlaySignal {
         val users = intent.getIntArrayExtra("users") ?: return null
         if (at < 0 || now < at || now - at > LIFETIME || sequence <= 0 || nonce < 0 ||
             users.size > MAX_USERS || users.any { it !in 0..21473 } || users.toSet().size != users.size) return null
-        return Packet(Snapshot(users.toSet(), intent.getBooleanExtra("known", false)), sequence, nonce)
+        val uids = intent.getIntArrayExtra("uids")
+        if (uids != null && (uids.size > MAX_USERS || uids.any { it < 10000 || it % 100000 < 10000 || it / 100000 !in users } ||
+                uids.toSet().size != uids.size || uids.map { it / 100000 }.toSet() != users.toSet())) return null
+        return Packet(Snapshot(users.toSet(), intent.getBooleanExtra("known", false), uids?.toSet()), sequence, nonce)
     }
 
     /** One receiver owned by one attached island. Last snapshot only; no periodic refresh. */
@@ -75,6 +80,7 @@ internal object IslandApplicationOverlaySignal {
             }
         }
         fun hasWindow(user: UserHandle) = state.hasWindow(user)
+        fun owns(uid: Int?) = state.owns(uid)
         override fun close() {
             if (closed) return
             closed = true

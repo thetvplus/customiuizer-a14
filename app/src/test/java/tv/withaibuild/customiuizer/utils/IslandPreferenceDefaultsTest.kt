@@ -4,6 +4,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandPreferenceDefaultsTest {
+    @Test fun automaticHeightPreservesExistingManualSizesAndExplicitChoices() {
+        for (height in listOf(null, 32, 39, 40, 64)) {
+            val entries = mutableMapOf<String, Any?>()
+            if (height != null) entries["pref_key_system_island_height"] = height
+            IslandPreferenceDefaults.migrate(entries)
+            assertEquals(height == null || height == 40, entries[IslandPreferenceDefaults.heightAutoKey])
+            entries[IslandPreferenceDefaults.heightAutoKey] = false
+            IslandPreferenceDefaults.migrate(entries)
+            assertEquals(false, entries[IslandPreferenceDefaults.heightAutoKey])
+            entries[IslandPreferenceDefaults.heightAutoKey] = true
+            IslandPreferenceDefaults.migrate(entries)
+            assertEquals(true, entries[IslandPreferenceDefaults.heightAutoKey])
+        }
+    }
+
     @Test fun newInstallIsSilentAndLegacyIslandPreservesItsFormerFeedback() {
         val fresh = mutableMapOf<String,Any?>()
         IslandPreferenceDefaults.migrate(fresh)

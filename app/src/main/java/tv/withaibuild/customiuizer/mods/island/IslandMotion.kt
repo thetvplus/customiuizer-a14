@@ -22,7 +22,13 @@ internal object IslandMotion {
     /** The native window arrives while the shell's one finite clock makes a small catch. */
     fun mediaReturnCatch(progress: Float): Float {
         val t = ((progress - .55f) / .45f).coerceIn(0f, 1f)
-        return (sin(Math.PI * t) * (1f - t)).toFloat()
+        val tail = 1f - t
+        return 9.6f * t * t * tail * tail
+    }
+    fun catchDerivative(progress: Float): Float {
+        if (progress <= .55f || progress >= 1f) return 0f
+        val t = (progress - .55f) / .45f
+        return 19.2f * t * (1f - t) * (1f - 2f * t) / .45f
     }
     private const val DECAY = 7.04
     private const val FREQUENCY = 5.28
@@ -48,6 +54,8 @@ internal object IslandMotion {
         private var displacement = 0.0
         private var impulse = 0.0
         private var omega = 1.0
+
+        fun addVelocity(physicalVelocity: Float) { velocity += physicalVelocity }
 
         fun retarget(current: Float, destination: Float, seconds: Float, carry: Boolean) {
             value = current

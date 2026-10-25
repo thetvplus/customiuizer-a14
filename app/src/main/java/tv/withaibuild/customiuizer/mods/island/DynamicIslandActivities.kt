@@ -45,6 +45,12 @@ internal data class IslandOptions(
     val mediaReturn: Boolean = false,
     val mediaReturnApps: Set<String> = emptySet(),
     val hideInFloatingWindow: Boolean = false,
+    val idle: Boolean = false,
+    val idleWidth: Int = 0,
+    val expandOnDown: Boolean = true,
+    val automaticHeight: Boolean = height == 40,
+    val charging: Boolean = false,
+    val lowBattery: Boolean = false,
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
@@ -77,7 +83,13 @@ internal data class IslandOptions(
                 prefs.getStringSet("system_island_notification_apps"), waveformMode,
                 prefs.getBoolean("system_island_media_return"),
                 prefs.getStringSet("system_island_media_return_apps").toSet(),
-                prefs.getBoolean("system_island_hide_in_floating_window"))
+                prefs.getBoolean("system_island_hide_in_floating_window"),
+                prefs.getBoolean("system_island_idle"),
+                if (prefs.getBoolean("system_island_idle_width_auto", true)) 0 else prefs.getInt("system_island_idle_width", 68).coerceIn(48, 120),
+                prefs.getBoolean("system_island_expand_down", true),
+                prefs.getBoolean("system_island_height_auto", prefs.getInt("system_island_height", 40) == 40),
+                prefs.getBoolean("system_island_feedback_charging"),
+                prefs.getBoolean("system_island_feedback_low_battery"))
         }
     }
 }

@@ -1251,9 +1251,23 @@
     <string name="system_island_waveform_light">Animación ligera</string>
     <string name="system_island_waveform_real">Onda en directo (experimental)</string>
     <string name="system_island_waveform_mode_summ">Solo se capturan cinco bandas de frecuencia con la isla visible y la reproducción activa. Si los permisos, la ruta o la sesión no son compatibles, se usa la animación ligera.</string>
-    <string name="system_island_hide_in_floating_window_title">Ocultar Dynamic Island con ventanas flotantes</string>
-    <string name="system_island_hide_in_floating_window_summ">Oculta toda la Dynamic Island cuando hay imagen en imagen, ventanas flotantes del sistema o ventanas superpuestas visibles de aplicaciones. Reinicia el dispositivo después de cambiar esta opción.</string>
+    <string name="system_island_hide_in_floating_window_title">Excluir medios de apps flotantes</string>
+    <string name="system_island_hide_in_floating_window_summ">Oculta las actividades multimedia de apps con ventana flotante visible. La otra música, los mensajes permitidos y los avisos del sistema siguen normalmente. Reinicia el dispositivo tras activarlo por primera vez.</string>
     <string name="array_global_actions_pip_hide">Ocultar / restaurar imagen en imagen</string>
     <string name="array_global_actions_pip_stash">Recoger / restaurar imagen en imagen</string>
     <string name="pip_action_hint">Controla la ventana actual de imagen en imagen sin pausar la reproducción. Reinicia la interfaz del sistema tras la primera configuración. Las transiciones del sistema finalizan la ocultación completa. Si Dynamic Island está oculto, restaura PiP con un gesto global.</string>
+    <string name="system_island_height_auto_title">Altura automática de la isla</string>
+    <string name="system_island_height_auto_summ">Ajusta la altura a 36–40 dp según la cámara. Desactiva para ajustarla manualmente.</string>
+    <string name="system_island_idle_title">Isla pequeña permanente</string>
+    <string name="system_island_idle_summ">Mantiene una cápsula inmóvil sin actividades. Toca o desliza hacia abajo para abrir notificaciones; desliza hacia arriba para ocultarla hasta la próxima actividad o activación de pantalla.</string>
+    <string name="system_island_idle_width_auto_title">Ancho automático de la isla pequeña</string>
+    <string name="system_island_idle_width_title">Ancho de la isla pequeña</string>
+    <string name="system_island_expand_down_title">Gestos para ampliar</string>
+    <string name="system_island_expand_down_summ">Desliza hacia abajo o mantén pulsado sin una acción asignada para ver más contenido. Tus acciones musicales tienen prioridad.</string>
+    <string name="system_island_feedback_charging_title">Conexión de carga</string>
+    <string name="system_island_feedback_charging_summ">Muestra un aviso breve al comenzar la carga. Conserva la animación del sistema en la pantalla de bloqueo.</string>
+    <string name="system_island_feedback_low_battery_title">Batería baja</string>
+    <string name="system_island_feedback_low_battery_summ">Sustituye el aviso solo cuando la isla está visible; en otro caso conserva el del sistema. Al activarlo por primera vez, reinicia la interfaz del sistema y Seguridad.</string>
+    <string name="system_island_battery_charging">Cargando</string>
+    <string name="system_island_battery_low">Batería baja</string>
 </resources>

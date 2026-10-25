@@ -1285,9 +1285,23 @@
     <string name="system_island_waveform_light">Lightweight animation</string>
     <string name="system_island_waveform_real">Live waveform (experimental)</string>
     <string name="system_island_waveform_mode_summ">Live mode uses five measured audio bands only while visible and playing. Unsupported permissions, routes or sessions fall back to lightweight animation.</string>
-    <string name="system_island_hide_in_floating_window_title">Hide Dynamic Island while floating windows exist</string>
-    <string name="system_island_hide_in_floating_window_summ">Hide all Dynamic Island content while picture-in-picture, system floating windows or visible app overlay windows exist. Restart the device after changing this option.</string>
+    <string name="system_island_hide_in_floating_window_title">Exclude floating-app media</string>
+    <string name="system_island_hide_in_floating_window_summ">Hide media activities belonging to a visible floating app. Other music, approved messages and system feedback continue normally. Requires a full restart when first enabled.</string>
     <string name="array_global_actions_pip_hide">Hide / restore picture-in-picture</string>
     <string name="array_global_actions_pip_stash">Stash / restore picture-in-picture</string>
     <string name="pip_action_hint">Control the current picture-in-picture window without pausing playback. Restart System UI after first configuration. Full hiding ends when the system starts a window transition. Use a global gesture to restore PiP if Dynamic Island is hidden.</string>
+    <string name="system_island_height_auto_title">Automatic island height</string>
+    <string name="system_island_height_auto_summ">Fit the camera cutout with a restrained 36–40 dp height. Turn off for manual height.</string>
+    <string name="system_island_idle_title">Persistent idle island</string>
+    <string name="system_island_idle_summ">Keep a small, still capsule when no activity is visible. Tap or swipe down to open notifications; swipe up to hide until the next activity or screen wake.</string>
+    <string name="system_island_idle_width_auto_title">Automatic idle width</string>
+    <string name="system_island_idle_width_title">Idle island width</string>
+    <string name="system_island_expand_down_title">Expand gestures</string>
+    <string name="system_island_expand_down_summ">Swipe down or use an unassigned long press to reveal more notification or track content. Your configured music actions take priority.</string>
+    <string name="system_island_feedback_charging_title">Charging connection</string>
+    <string name="system_island_feedback_charging_summ">Show one short feedback when charging begins. The system lock-screen charging animation remains available.</string>
+    <string name="system_island_feedback_low_battery_title">Low battery</string>
+    <string name="system_island_feedback_low_battery_summ">Replace low-battery warnings only while the island is visible; otherwise keep the system warning. Restart the system interface and Security Center after first enabling.</string>
+    <string name="system_island_battery_charging">Charging</string>
+    <string name="system_island_battery_low">Low battery</string>
 </resources>

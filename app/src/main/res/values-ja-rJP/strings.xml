@@ -1252,9 +1252,23 @@
     <string name="system_island_waveform_light">軽量アニメーション</string>
     <string name="system_island_waveform_real">リアルタイム波形（試験的）</string>
     <string name="system_island_waveform_mode_summ">表示中かつ再生中のみ5つの周波数帯域を取得します。権限、経路、セッションが非対応の場合は軽量アニメーションに戻ります。</string>
-    <string name="system_island_hide_in_floating_window_title">小窓の表示中はダイナミックアイランドを非表示</string>
-    <string name="system_island_hide_in_floating_window_summ">ピクチャーインピクチャー、システムのフローティングウィンドウ、アプリの表示中のオーバーレイウィンドウがある間、Dynamic Island 全体を非表示にします。変更後は端末を再起動してください。</string>
+    <string name="system_island_hide_in_floating_window_title">小窓アプリのメディアを除外</string>
+    <string name="system_island_hide_in_floating_window_summ">表示中の小窓アプリのメディアのみ除外します。他の音楽、許可されたメッセージ、システムの通知は通常どおり表示します。初回有効化後は端末の再起動が必要です。</string>
     <string name="array_global_actions_pip_hide">ピクチャーインピクチャーを非表示／復元</string>
     <string name="array_global_actions_pip_stash">ピクチャーインピクチャーを端に収納／復元</string>
     <string name="pip_action_hint">再生を一時停止せず、現在のピクチャーインピクチャーを操作します。初回設定後はシステム UI を再起動してください。システムのウィンドウ遷移で完全非表示は解除されます。ダイナミックアイランドが非表示の場合は全体ジェスチャーで復元してください。</string>
+    <string name="system_island_height_auto_title">アイランドの高さを自動調整</string>
+    <string name="system_island_height_auto_summ">カメラの切り欠きに合わせて 36–40 dp に調整します。オフにすると手動で設定できます。</string>
+    <string name="system_island_idle_title">小さなアイランドを常駐</string>
+    <string name="system_island_idle_summ">アクティビティがないときは静止したカプセルを表示します。タップまたは下スワイプで通知を開き、上スワイプで次のアクティビティか画面点灯まで隠します。</string>
+    <string name="system_island_idle_width_auto_title">小さなアイランドの幅を自動調整</string>
+    <string name="system_island_idle_width_title">小さなアイランドの幅</string>
+    <string name="system_island_expand_down_title">展開ジェスチャー</string>
+    <string name="system_island_expand_down_summ">下スワイプや操作未設定の長押しで通知や曲の詳細を表示します。設定済みの音楽操作が優先されます。</string>
+    <string name="system_island_feedback_charging_title">充電開始のフィードバック</string>
+    <string name="system_island_feedback_charging_summ">充電開始時に一度だけ短く表示します。ロック画面のシステム充電アニメーションは保持します。</string>
+    <string name="system_island_feedback_low_battery_title">電池残量低下</string>
+    <string name="system_island_feedback_low_battery_summ">代わりの表示が見える場合のみ警告を置き換え、それ以外はシステムの警告を保持します。初回有効化後はシステム UI とセキュリティを再起動してください。</string>
+    <string name="system_island_battery_charging">充電中</string>
+    <string name="system_island_battery_low">電池残量が少なくなっています</string>
 </resources>

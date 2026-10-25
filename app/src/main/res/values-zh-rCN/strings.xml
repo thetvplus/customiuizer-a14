@@ -1262,9 +1262,23 @@
     <string name="system_island_waveform_light">轻量动画</string>
     <string name="system_island_waveform_real">实时波形（实验性）</string>
     <string name="system_island_waveform_mode_summ">实时模式仅在可见且播放时采集五个音频频段。权限、路由或会话不支持时回退轻量动画。</string>
-    <string name="system_island_hide_in_floating_window_title">有小窗时隐藏动态岛</string>
-    <string name="system_island_hide_in_floating_window_summ">存在画中画、系统小窗或应用的可见悬浮窗时隐藏整个动态岛。更改后重启手机生效。</string>
+    <string name="system_island_hide_in_floating_window_title">排除小窗来源的媒体</string>
+    <string name="system_island_hide_in_floating_window_summ">按应用和用户排除可确认的小窗媒体来源，其他音乐、已接入消息和系统反馈照常显示。首次开启须完整重启设备。</string>
     <string name="array_global_actions_pip_hide">隐藏/恢复画中画</string>
     <string name="array_global_actions_pip_stash">边缘收起/恢复画中画</string>
     <string name="pip_action_hint">控制当前画中画，不暂停播放。首次配置后重启系统界面生效；原生窗口转场会结束完整隐藏。若动态岛已隐藏，请用全局手势恢复画中画。</string>
+    <string name="system_island_height_auto_title">自动动态岛高度</string>
+    <string name="system_island_height_auto_summ">根据挖孔匹配 36–40 dp 的紧凑高度，关闭后可手动设置。</string>
+    <string name="system_island_idle_title">常驻小岛</string>
+    <string name="system_island_idle_summ">没有活动时保留静止小岛，点击或下滑打开通知栏；上滑隐藏到下一次活动或亮屏。</string>
+    <string name="system_island_idle_width_auto_title">自动小岛宽度</string>
+    <string name="system_island_idle_width_title">小岛宽度</string>
+    <string name="system_island_expand_down_title">展开手势</string>
+    <string name="system_island_expand_down_summ">下滑或未绑定动作的长按可显示通知、歌曲的更多内容。已配置的音乐动作优先。</string>
+    <string name="system_island_feedback_charging_title">充电接入反馈</string>
+    <string name="system_island_feedback_charging_summ">开始充电时短暂提示一次，保留系统锁屏充电动画。</string>
+    <string name="system_island_feedback_low_battery_title">低电量反馈</string>
+    <string name="system_island_feedback_low_battery_summ">替代提示可见时用动态岛承接低电量提醒，否则保留系统提醒。首次启用后需重启系统界面与安全中心。</string>
+    <string name="system_island_battery_charging">正在充电</string>
+    <string name="system_island_battery_low">电量不足</string>
 </resources>

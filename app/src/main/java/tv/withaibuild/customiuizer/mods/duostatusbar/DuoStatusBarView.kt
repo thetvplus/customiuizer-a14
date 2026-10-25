@@ -4,6 +4,7 @@ import android.content.Context
 import android.animation.ValueAnimator
 import android.content.res.Configuration
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -38,6 +39,16 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
     private val bolt = Path().apply {
         moveTo(64f, 0f); lineTo(47f, 20f); lineTo(58f, 20f)
         lineTo(54f, 34f); lineTo(72f, 13f); lineTo(61f, 13f); close()
+        // Status Trio's shared optical height for top markers, adapted to native vectors.
+        // Resolve once, never resize paths or measure text from the drawing callback.
+        val ink = Rect()
+        text.getTextBounds("88", 0, 2, ink)
+        val scale = ink.height().coerceAtLeast(1) / 34f
+        val center = 26f + (ink.top + ink.bottom) / 2f
+        transform(Matrix().apply {
+            setScale(scale, scale, 59.5f, 17f)
+            postTranslate(0f, center - 17f)
+        })
     }
     private val plane = Path().apply {
         moveTo(60f, 43f); lineTo(65f, 59f); lineTo(83f, 69f); lineTo(83f, 75f)

@@ -1259,9 +1259,23 @@
     <string name="system_island_waveform_light">Lehká animace</string>
     <string name="system_island_waveform_real">Živý průběh (experimentální)</string>
     <string name="system_island_waveform_mode_summ">Pět frekvenčních pásem se snímá pouze při viditelném ostrově a přehrávání. Nepodporovaná oprávnění, trasa nebo relace použijí lehkou animaci.</string>
-    <string name="system_island_hide_in_floating_window_title">Skrýt Dynamic Island při plovoucích oknech</string>
-    <string name="system_island_hide_in_floating_window_summ">Skryje celý Dynamic Island při obrazu v obraze, systémovém plovoucím okně nebo viditelném překryvném okně aplikace. Po změně restartujte zařízení.</string>
+    <string name="system_island_hide_in_floating_window_title">Vyloučit média plovoucích aplikací</string>
+    <string name="system_island_hide_in_floating_window_summ">Skryje mediální aktivity aplikací s viditelným plovoucím oknem. Ostatní hudba, povolené zprávy a systémová upozornění fungují běžně. Po prvním zapnutí restartujte zařízení.</string>
     <string name="array_global_actions_pip_hide">Skrýt / obnovit obraz v obraze</string>
     <string name="array_global_actions_pip_stash">Zasunout / obnovit obraz v obraze</string>
     <string name="pip_action_hint">Ovládá aktuální obraz v obraze bez pozastavení přehrávání. Po prvním nastavení restartujte systémové rozhraní. Systémový přechod okna ukončí úplné skrytí. Pokud je Dynamic Island skrytý, obnovte PiP globálním gestem.</string>
+    <string name="system_island_height_auto_title">Automatická výška ostrova</string>
+    <string name="system_island_height_auto_summ">Přizpůsobí výšku 36–40 dp výřezu fotoaparátu. Vypnutím povolíte ruční nastavení.</string>
+    <string name="system_island_idle_title">Trvalý malý ostrov</string>
+    <string name="system_island_idle_summ">Bez aktivit ponechá nehybnou kapsli. Klepnutím nebo tahem dolů otevřete oznámení; tahem nahoru ji skryjete do další aktivity nebo probuzení obrazovky.</string>
+    <string name="system_island_idle_width_auto_title">Automatická šířka malého ostrova</string>
+    <string name="system_island_idle_width_title">Šířka malého ostrova</string>
+    <string name="system_island_expand_down_title">Gesta rozbalení</string>
+    <string name="system_island_expand_down_summ">Další obsah zobrazíte tahem dolů nebo dlouhým stiskem bez přiřazené akce. Nastavené hudební akce mají přednost.</string>
+    <string name="system_island_feedback_charging_title">Připojení nabíjení</string>
+    <string name="system_island_feedback_charging_summ">Při zahájení nabíjení jednou krátce upozorní. Systémová animace nabíjení na zamčené obrazovce zůstane zachována.</string>
+    <string name="system_island_feedback_low_battery_title">Slabá baterie</string>
+    <string name="system_island_feedback_low_battery_summ">Nahradí upozornění pouze při viditelném ostrovu; jinak zachová systémové. Po prvním zapnutí restartujte systémové rozhraní a aplikaci Zabezpečení.</string>
+    <string name="system_island_battery_charging">Nabíjení</string>
+    <string name="system_island_battery_low">Slabá baterie</string>
 </resources>

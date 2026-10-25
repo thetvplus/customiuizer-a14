@@ -72,6 +72,7 @@ internal class DockGlassBackdrop(
     private var completionDraw = false
     private var tickRequested = false
     private var lastRequest = Long.MIN_VALUE / 2
+    private var nativeMotionUntil = 0L
     private var lastX = Float.NaN
     private var lastY = Float.NaN
     private var lastWidth = 0
@@ -92,6 +93,7 @@ internal class DockGlassBackdrop(
     }
 
     fun invalidateSource() {
+        nativeMotionUntil = SystemClock.uptimeMillis() + 450L
         epoch++
         sourceDirty = true
         clearTexture()
@@ -112,6 +114,7 @@ internal class DockGlassBackdrop(
         // a secondary display. Unknown/non-affine transforms also keep the native material.
         if (view.display?.displayId != Display.DEFAULT_DISPLAY || !prepareMatrix(view)) return
         if (!values.contentEquals(frameMatrix) || lastWidth != view.width || lastHeight != view.height) {
+            nativeMotionUntil = SystemClock.uptimeMillis() + 450L
             values.copyInto(frameMatrix)
             lastWidth = view.width
             lastHeight = view.height
@@ -120,8 +123,10 @@ internal class DockGlassBackdrop(
         }
         val ownDraw = completionDraw
         completionDraw = false
-        if (!ownDraw || sourceDirty || tickRequested) {
-            val now = SystemClock.uptimeMillis()
+        val now = SystemClock.uptimeMillis()
+        // Unrelated icon/clock draws do not invalidate a settled static wallpaper. Native
+        // transforms and wallpaper changes retain a short bounded compositor catch-up.
+        if (sourceDirty || tickRequested || !ownDraw && (liveWallpaper || now < nativeMotionUntil)) {
             if (!busy) {
                 if (now - lastRequest >= FRAME_MS) {
                     tickRequested = false
