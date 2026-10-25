@@ -726,7 +726,7 @@ object SystemUIStatusBarHooks {
      */
     private val netSpeedSecondRowHookCallback = object : MethodHook() {
         override fun after(param: AfterHookCallback) {
-            val networkSpeedState = param.getArgs()[0]
+            val networkSpeedState = param.getArg(0)
             val number = XposedHelpers.getObjectField(networkSpeedState, "networkSpeedNumber")
             val unit = XposedHelpers.getObjectField(networkSpeedState, "networkSpeedUnit")
             val visible = XposedHelpers.getObjectField(networkSpeedState, "visible")
@@ -1113,7 +1113,7 @@ object SystemUIStatusBarHooks {
                 var digitalView = signalImageContainer.findViewWithTag<TextView>("digitalSignalView")
                 val mobileIconState = if (param.getMember().name == "setDripEnd") {
                     XposedHelpers.getObjectField(param.getThisObject(), "mState")
-                } else param.getArgs()[0]
+                } else param.getArg(0)
                 if (mobileIconState == null) {
                     digitalView?.visibility = View.GONE
                     return
@@ -1165,7 +1165,7 @@ object SystemUIStatusBarHooks {
         if (dualRows) {
             ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", object : MethodHook() {
                 override fun before(param: BeforeHookCallback) {
-                    val iconStates = param.getArgs()[1] as List<*>
+                    val iconStates = param.getArg(1) as List<*>
                     if (iconStates.size == 2) {
                         val iconState0 = iconStates[0]
                         val iconState1 = iconStates[1]
@@ -1325,7 +1325,7 @@ object SystemUIStatusBarHooks {
                     signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_5", "drawable", lpparam.packageName), 5)
                     signalResToLevelMap.put(res.getIdentifier("stat_sys_signal_null", "drawable", lpparam.packageName), 6)
                 }
-                val iconStates = param.getArgs()[1] as List<*>
+                val iconStates = param.getArg(1) as List<*>
                 if (iconStates.size == 2) {
                     val mainIconState = iconStates[0]
                     val subIconState = iconStates[1]
@@ -1356,7 +1356,7 @@ object SystemUIStatusBarHooks {
             override fun after(param: AfterHookCallback) {
                 val updateStateMethod = param.getMember().name == "updateState"
                 if (updateStateMethod || initAction) {
-                    val mobileIconState = param.getArgs()[0]
+                    val mobileIconState = param.getArg(0)
                     val visible = XposedHelpers.getBooleanField(mobileIconState, "visible")
                     if (!visible) return
                     val airplane = XposedHelpers.getBooleanField(mobileIconState, "airplane")
@@ -1499,7 +1499,7 @@ object SystemUIStatusBarHooks {
 
         ModuleHelper.findAndHookConstructor("com.android.systemui.statusbar.phone.StatusBarIconList", lpparam.classLoader, Array<String>::class.java, object : MethodHook() {
             override fun before(param: BeforeHookCallback) {
-                val allStatusIcons = ArrayList((param.getArgs()[0] as Array<String>).toList())
+                val allStatusIcons = ArrayList((param.getArg(0) as Array<String>).toList())
                 val MiuiIconManagerUtils = XposedHelpers.findClass("com.android.systemui.statusbar.phone.MiuiIconManagerUtils", lpparam.classLoader)
                 val rightBlockList = ModuleHelper.getStaticObjectFieldSilently(MiuiIconManagerUtils, "RIGHT_BLOCK_LIST") as? ArrayList<String> ?: ArrayList()
                 val customIcons = ArrayList<String>()
@@ -2659,7 +2659,7 @@ object SystemUIStatusBarHooks {
         val mBgHandlerField = XposedHelpers.findField(NetworkSpeedController, "mBgHandler")
         ModuleHelper.findAndHookMethod(mBgHandlerField.type, "handleMessage", Message::class.java, object : MethodHook() {
             override fun after(param: AfterHookCallback) {
-                val message = param.getArgs()[0] as Message
+                val message = param.getArg(0) as Message
                 if (message.what == 200001) {
                     val mBgHandler = param.getThisObject() as Handler
                     mBgHandler.removeMessages(200001)
@@ -2685,7 +2685,7 @@ object SystemUIStatusBarHooks {
     fun DisableFakeClockAnimHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.shade.MiuiNotificationPanelViewController", lpparam.classLoader, "setMNCSwitching", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun after(param: AfterHookCallback) {
-                val mNCSwitching = param.getArgs()[0] as Boolean
+                val mNCSwitching = param.getArg(0) as Boolean
                 if (!mNCSwitching) {
                     val mFakeClock = XposedHelpers.getObjectField(param.getThisObject(), "fakeStatusBarClockController")
                     XposedHelpers.setObjectField(mFakeClock, "ncSwitching", true)
@@ -2924,7 +2924,7 @@ object SystemUIStatusBarHooks {
 
         val iconHook = object : MethodHook() {
             override fun before(param: BeforeHookCallback) {
-                val slotName = param.getArgs()[0] as? String
+                val slotName = param.getArg(0) as? String
                 val snapshot = currentOrBuildStatusBarIconVisibilitySnapshot()
                 if (checkSlot(slotName, snapshot)) {
                     param.getArgs()[1] = false
@@ -2996,8 +2996,8 @@ object SystemUIStatusBarHooks {
                     val singleMobileType = layout.mobileTypeSingle
                     val showOnWifi = layout.mobileTypeShowOnWifi
                     val mMobileType = XposedHelpers.getObjectField(param.getThisObject(), "mMobileType") as View
-                    val dataConnected = XposedHelpers.getBooleanField(param.getArgs()[0], "dataConnected")
-                    val wifiAvailable = XposedHelpers.getObjectField(param.getArgs()[0], "wifiAvailable") as Boolean
+                    val dataConnected = XposedHelpers.getBooleanField(param.getArg(0), "dataConnected")
+                    val wifiAvailable = XposedHelpers.getObjectField(param.getArg(0), "wifiAvailable") as Boolean
                     if (opt == 3) {
                         if (singleMobileType) {
                             val mMobileTypeSingle = XposedHelpers.getObjectField(param.getThisObject(), "mMobileTypeSingle") as TextView

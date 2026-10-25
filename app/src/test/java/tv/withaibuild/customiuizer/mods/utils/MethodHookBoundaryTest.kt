@@ -7,7 +7,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class MethodHookBoundaryTest {
-    private class Chain(private val values: List<Any?> = emptyList(), val failure: Throwable? = null) : XposedInterface.Chain {
+    private class Chain(
+        private val values: List<Any?> = emptyList(),
+        val failure: Throwable? = null,
+        val duringProceed: () -> Unit = {},
+    ) : XposedInterface.Chain {
         var proceeds = 0
         var copiedProceeds = 0
         var listReads = 0
@@ -17,7 +21,7 @@ class MethodHookBoundaryTest {
         override fun getThisObject(): Any? = null
         override fun getArgs(): List<Any?> { listReads++; return values }
         override fun getArg(index: Int): Any? = values[index]
-        override fun proceed(): Any { proceeds++; failure?.let { throw it }; return result }
+        override fun proceed(): Any { proceeds++; duringProceed(); failure?.let { throw it }; return result }
         override fun proceed(args: Array<Any?>): Any { copiedProceeds++; supplied = args; return proceed() }
         override fun proceedWith(receiver: Any): Any = throw AssertionError("receiver changed")
         override fun proceedWith(receiver: Any, args: Array<Any?>): Any = throw AssertionError("receiver changed")
@@ -28,35 +32,111 @@ class MethodHookBoundaryTest {
     @Test fun readOnlyCallbacksKeepZeroCopyProceedAndOrder() {
         val calls = mutableListOf<String>()
         val chain = Chain(listOf("original"))
+        var afterArgument: Any? = null
         val hook = object : HookerClassHelper.MethodHook() {
             override fun before(callback: HookerClassHelper.BeforeHookCallback) {
                 calls += "before"; assertEquals("original", callback.getArg(0))
             }
             override fun after(callback: HookerClassHelper.AfterHookCallback) {
                 calls += "after"; assertSame(chain.result, callback.getResult())
+                afterArgument = callback.getArg(0)
             }
         }
         assertSame(chain.result, hook.intercept(chain))
         assertEquals(listOf("before", "after"), calls)
+        assertEquals("original", afterArgument)
         assertEquals(1, chain.proceeds); assertEquals(0, chain.copiedProceeds); assertEquals(0, chain.listReads)
     }
 
     @Test fun argumentMutationUsesOneOwnedArrayForBeforeProceedAndAfter() {
         val chain = Chain(listOf("original"))
         var arguments: Array<Any?>? = null
+        var afterRead: Any? = null
+        var rewrittenRead: Any? = null
+        var afterArguments: Array<Any?>? = null
         val hook = object : HookerClassHelper.MethodHook() {
             override fun before(callback: HookerClassHelper.BeforeHookCallback) {
                 arguments = callback.getArgs(); arguments!![0] = "changed"
                 assertEquals("changed", callback.getArg(0))
             }
             override fun after(callback: HookerClassHelper.AfterHookCallback) {
-                assertSame(arguments, callback.getArgs())
+                afterRead = callback.getArg(0)
+                afterArguments = callback.getArgs()
+                callback.getArgs()[0] = "after"
+                rewrittenRead = callback.getArg(0)
             }
         }
         assertSame(chain.result, hook.intercept(chain))
-        assertSame(arguments, chain.supplied); assertEquals("changed", chain.supplied!![0])
+        assertEquals("changed", afterRead); assertEquals("after", rewrittenRead)
+        assertSame(arguments, afterArguments)
+        assertSame(arguments, chain.supplied); assertEquals("after", chain.supplied!![0])
         assertEquals(1, chain.proceeds); assertEquals(1, chain.copiedProceeds); assertEquals(1, chain.listReads)
         assertEquals("original", chain.getArg(0))
+    }
+
+    @Test fun afterOnlyReadsAvoidMaterializingArgumentsIncludingNulls() {
+        val argument = Any()
+        val chain = Chain(listOf(null, argument))
+        val observed = mutableListOf<Any?>()
+        var skipped = true
+        val hook = object : HookerClassHelper.MethodHook() {
+            override fun after(callback: HookerClassHelper.AfterHookCallback) {
+                observed += callback.getArg(0)
+                observed += callback.getArg(1)
+                skipped = callback.isSkipped
+            }
+        }
+        assertSame(chain.result, hook.intercept(chain))
+        assertEquals(listOf(null, argument), observed)
+        assertFalse(skipped)
+        assertEquals(1, chain.proceeds); assertEquals(0, chain.copiedProceeds); assertEquals(0, chain.listReads)
+    }
+
+    @Test fun afterReadsObserveCalleeUpdatesUnlessBeforeOwnsArguments() {
+        val values = mutableListOf<Any?>("before")
+        val chain = Chain(values, duringProceed = { values[0] = "callee" })
+        val observed = mutableListOf<Any?>()
+        val hook = object : HookerClassHelper.MethodHook() {
+            override fun before(callback: HookerClassHelper.BeforeHookCallback) {
+                observed += callback.getArg(0)
+            }
+            override fun after(callback: HookerClassHelper.AfterHookCallback) {
+                observed += callback.getArg(0)
+                observed += callback.getArgs()[0]
+                observed += callback.getArg(0)
+            }
+        }
+        assertSame(chain.result, hook.intercept(chain))
+        assertEquals(listOf("before", "callee", "callee", "callee"), observed)
+        assertEquals(1, chain.proceeds); assertEquals(0, chain.copiedProceeds); assertEquals(1, chain.listReads)
+    }
+
+    @Test fun skippedAndRecoveredCallsCanReadArgumentsWithoutCopying() {
+        val argument = Any()
+        val failure = IllegalArgumentException("ordinary")
+        for (skip in listOf(false, true)) {
+            val chain = Chain(listOf(argument), failure)
+            var observedArgument: Any? = null
+            var observedFailure: Throwable? = null
+            var observedSkipped: Boolean? = null
+            val hook = object : HookerClassHelper.MethodHook() {
+                override fun before(callback: HookerClassHelper.BeforeHookCallback) {
+                    if (skip) callback.throwAndSkip(failure)
+                }
+                override fun after(callback: HookerClassHelper.AfterHookCallback) {
+                    observedArgument = callback.getArg(0)
+                    observedFailure = callback.getThrowable()
+                    observedSkipped = callback.isSkipped
+                    callback.setResult(chain.result)
+                }
+            }
+            assertSame(chain.result, hook.intercept(chain))
+            assertSame(argument, observedArgument)
+            assertSame(failure, observedFailure)
+            assertEquals(skip, observedSkipped)
+            assertEquals(if (skip) 0 else 1, chain.proceeds)
+            assertEquals(0, chain.copiedProceeds); assertEquals(0, chain.listReads)
+        }
     }
 
     @Test fun emptyArgumentsKeepCallbackIdentityAndExplicitProceedOverload() {

@@ -190,7 +190,7 @@ internal class IslandPipObserver(private val access: IslandPipAccess,
     internal fun consumedHook(): MethodHook = object : MethodHook() {
         override fun after(callback: AfterHookCallback) {
             if (callback.getThrowable() == null)
-                entryConsumed(callback.getThisObject() ?: return, callback.getArgs()[0] as? IBinder ?: return)
+                entryConsumed(callback.getThisObject() ?: return, callback.getArg(0) as? IBinder ?: return)
         }
     }
 

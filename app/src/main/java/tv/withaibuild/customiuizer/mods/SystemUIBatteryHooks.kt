@@ -180,7 +180,7 @@ object SystemUIBatteryHooks {
         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.NotificationIconAreaController", lpparam.classLoader, "onDarkChanged", object : MethodHook() {
             override fun after(param: AfterHookCallback) {
                 val indicator = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
-                indicator?.onDarkModeChanged(param.getArgs()[1] as Float, param.getArgs()[2] as Int)
+                indicator?.onDarkModeChanged(param.getArg(1) as Float, param.getArg(2) as Int)
             }
         })
 

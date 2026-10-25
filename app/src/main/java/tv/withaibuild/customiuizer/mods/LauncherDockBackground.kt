@@ -110,10 +110,10 @@ object LauncherDockBackground {
             Boolean::class.javaPrimitiveType, object : MethodHook() {
                 override fun after(callback: AfterHookCallback) {
                     if (callback.getThrowable() != null) return
-                    val host = callback.getArgs()[0] as? FrameLayout ?: return
+                    val host = callback.getArg(0) as? FrameLayout ?: return
                     if (!hotseats.isInstance(host)) return
                     val animation = host.animation as? AnimationSet ?: return
-                    findBackground(host)?.bindEditingAnimation(animation, callback.getArgs()[1] != true)
+                    findBackground(host)?.bindEditingAnimation(animation, callback.getArg(1) != true)
                 }
             })
     }

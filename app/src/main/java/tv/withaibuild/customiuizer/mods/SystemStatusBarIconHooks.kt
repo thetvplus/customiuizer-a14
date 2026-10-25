@@ -247,7 +247,7 @@ object SystemStatusBarIconHooks {
                             val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
                             val policy = policyRef?.get() ?: return
 
-                            val newState = param.getArgs()[0] as Boolean
+                            val newState = param.getArg(0) as Boolean
                             XposedHelpers.setAdditionalInstanceField(policy, ALARM_LAST_STATE, newState)
 
                             val mContext = XposedHelpers.getObjectField(policy, "mContext") as Context
@@ -262,7 +262,7 @@ object SystemStatusBarIconHooks {
                             val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
                             val policy = policyRef?.get() ?: return
 
-                            if (param.getArgs()[0] == null) {
+                            if (param.getArg(0) == null) {
                                 XposedHelpers.setAdditionalInstanceField(policy, ALARM_LAST_STATE, false)
                             }
 

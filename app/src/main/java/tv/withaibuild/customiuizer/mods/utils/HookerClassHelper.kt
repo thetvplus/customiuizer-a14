@@ -99,6 +99,9 @@ class HookerClassHelper private constructor() {
         fun getThisObject(): Any? = before.getThisObject()
         fun getArgs(): Array<Any?> = before.getArgs()
 
+        /** Reads the owned, possibly rewritten arguments when present, otherwise the chain. */
+        fun getArg(index: Int): Any? = before.getArg(index)
+
         fun getResult(): Any? = _result
         fun setResult(result: Any?) {
             _result = result

@@ -251,7 +251,7 @@ object SystemUILockScreenHooks {
             ModuleHelper.findAndHookMethodSilently(panelClass, "linkageViewAnim", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
                 override fun after(param: AfterHookCallback) {
                     try {
-                        val screenOn = param.getArgs()[0] as Boolean
+                        val screenOn = param.getArg(0) as Boolean
                         screenStates[0] = !screenOn
                         LockScreenAlbumArtController.setAod(!screenOn)
                         XposedHelpers.callMethod(param.getThisObject(), "updateThemeBackgroundVisibility")
@@ -455,7 +455,7 @@ object SystemUILockScreenHooks {
         if (!rightOff && !leftOff) return
         val mCurrentScreen = XposedHelpers.getIntField(param.getThisObject(), "mCurrentScreen")
         if (mCurrentScreen != 1) return
-        val translation = param.getArgs()[0] as Float
+        val translation = param.getArg(0) as Float
         if ((translation < 0 && rightOff) || (translation > 0 && leftOff)) {
             param.getArgs()[0] = 0.0f
         }

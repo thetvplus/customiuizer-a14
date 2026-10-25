@@ -202,7 +202,7 @@ object SystemUIControlCenterHooks {
             val window = XposedHelpers.getObjectField(dialog, "mWindow") as? Window ?: return
             val expanded = XposedHelpers.getBooleanField(dialog, "mExpanded")
             val snapshot = volumeBlurSnapshot
-            val blurRatio = if (expanded && !(param.getArgs()[0] as Boolean)) snapshot.expanded else snapshot.collapsed
+            val blurRatio = if (expanded && !(param.getArg(0) as Boolean)) snapshot.expanded else snapshot.collapsed
             if (blurRatio > 0f) {
                 window.setDimAmount(0f)
                 if (!expanded) window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
@@ -603,7 +603,7 @@ object SystemUIControlCenterHooks {
                     val headerView = XposedHelpers.callMethod(param.getThisObject(), "getView") as ViewGroup
                     val stepView = headerView.findViewWithTag<TextView>(tag)
                     if (stepView != null) {
-                        stepView.translationY = param.getArgs()[0] as Float
+                        stepView.translationY = param.getArg(0) as Float
                     }
                 }
             })
@@ -1070,7 +1070,7 @@ object SystemUIControlCenterHooks {
 
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, "distributePanels", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun after(param: AfterHookCallback) {
-                val horizontal = param.getArgs()[0] as Boolean
+                val horizontal = param.getArg(0) as Boolean
                 if (!horizontal && XposedHelpers.getBooleanField(param.getThisObject(), "inited")) {
                     val rightPanelContent = XposedHelpers.getObjectField(param.getThisObject(), "rightPanelContent") as ArrayList<*>
                     val leftPanelContent = XposedHelpers.getObjectField(param.getThisObject(), "leftPanelContent") as ArrayList<Any>
@@ -1169,7 +1169,7 @@ object SystemUIControlCenterHooks {
                 val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", mContext) as Boolean
                 if (verticalMode) {
                     val leftMainPanel = XposedHelpers.getObjectField(param.getThisObject(), "leftMainPanel") as ViewGroup
-                    leftMainPanel.visibility = param.getArgs()[0] as Int
+                    leftMainPanel.visibility = param.getArg(0) as Int
                 }
             }
         })
@@ -1195,7 +1195,7 @@ object SystemUIControlCenterHooks {
         })
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelAnimController", pluginLoader, "onConfigurationChanged", Int::class.javaPrimitiveType!!, object : MethodHook() {
             override fun after(param: AfterHookCallback) {
-                val i = param.getArgs()[0] as Int
+                val i = param.getArg(0) as Int
                 if ((i and 128) != 0) {
                     val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", pluginLoader)
                     val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
@@ -1750,11 +1750,11 @@ object SystemUIControlCenterHooks {
         ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "setToggleSliderBase", object : MethodHook() {
             private var inited = false
             override fun after(param: AfterHookCallback) {
-                if (!inited && param.getArgs()[0] != null) {
+                if (!inited && param.getArg(0) != null) {
                     inited = true
-                    val className = param.getArgs()[0]!!.javaClass.simpleName
+                    val className = param.getArg(0)!!.javaClass.simpleName
                     if ("ToggleSliderViewHolder" == className) return
-                    val sliderRef = WeakReference(param.getArgs()[0])
+                    val sliderRef = WeakReference(param.getArg(0))
                     val ownerRef = WeakReference(param.getThisObject())
                     val brightnessSeekBar = sliderRef.get() ?: return
                     val mOnSeekBarChangeListener = XposedHelpers.getObjectField(brightnessSeekBar, "mOnSeekBarChangeListener") ?: return
@@ -1782,7 +1782,7 @@ object SystemUIControlCenterHooks {
             override fun after(param: AfterHookCallback) {
                 if (param.getThrowable() != null) return
                 val pct = ownedPct(param.getThisObject(), PCT_SOURCE_BRIGHTNESS) ?: return
-                val currentLevel = param.getArgs()[3] as Int
+                val currentLevel = param.getArg(3) as Int
                 if (BrightnessUtils != null) {
                     val maxLevel = XposedHelpers.getStaticObjectField(BrightnessUtils, "GAMMA_SPACE_MAX") as Int
                     pct.text = ((currentLevel * 100) / maxLevel).toString() + "%"
@@ -1829,9 +1829,9 @@ object SystemUIControlCenterHooks {
             if (ss == null) return
             if (XposedHelpers.getIntField(mColumn, "stream") == 10) return
 
-            val fromUser = param.getArgs()[2] as Boolean
+            val fromUser = param.getArg(2) as Boolean
             val currentLevel: Int = if (fromUser) {
-                param.getArgs()[1] as Int
+                param.getArg(1) as Int
             } else {
                 val anim = XposedHelpers.getObjectField(mColumn, "anim") as ObjectAnimator?
                 if (anim == null || !anim.isRunning) return
@@ -1842,7 +1842,7 @@ object SystemUIControlCenterHooks {
             if (levelMin > 0 && adjustedLevel < levelMin * 1000) {
                 adjustedLevel = levelMin * 1000
             }
-            val seekBar = param.getArgs()[0] as SeekBar
+            val seekBar = param.getArg(0) as SeekBar
             val max = seekBar.max
             val maxLevel = max / 1000
             if (maxLevel <= 0) return

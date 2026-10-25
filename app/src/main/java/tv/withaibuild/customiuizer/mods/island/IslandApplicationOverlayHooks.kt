@@ -31,7 +31,7 @@ internal object IslandApplicationOverlayHooks {
         }
         check(ModuleHelper.hookMethod(access.visibilityChanged, object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                if (callback.getThrowable() == null && callback.getArgs()[2] == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) {
+                if (callback.getThrowable() == null && callback.getArg(2) == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) {
                     controller?.schedule()
                 }
             }

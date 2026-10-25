@@ -235,7 +235,7 @@ internal object DynamicIslandActivities {
                 object : MethodHook() {
                     override fun after(callback: AfterHookCallback) {
                         if (callback.getThrowable() == null) active.get()?.notificationPosted(
-                            callback.getArgs()[0] as StatusBarNotification)
+                            callback.getArg(0) as StatusBarNotification)
                     }
                 })
             ModuleHelper.hookAllMethods(XposedHelpers.findClass(

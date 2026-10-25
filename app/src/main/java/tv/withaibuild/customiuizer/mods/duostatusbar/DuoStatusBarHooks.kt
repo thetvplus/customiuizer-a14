@@ -332,7 +332,7 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
                 override fun after(param: AfterHookCallback) {
                     if (failed || audioFailed || param.getThrowable() != null) return
                     protectAudio {
-                        if ((param.getArgs()[1] as? Intent)?.action != Intent.ACTION_HEADSET_PLUG) return@protectAudio
+                        if ((param.getArg(1) as? Intent)?.action != Intent.ACTION_HEADSET_PLUG) return@protectAudio
                         param.getThisObject()?.let { receiver ->
                             fields.receiverOwner.get(receiver)?.let { readWired(it, true) }
                         }

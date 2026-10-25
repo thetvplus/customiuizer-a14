@@ -136,7 +136,7 @@ object SystemUIScreenshotHooks {
     fun HideStatusBarWhenCaptureHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment", lpparam.classLoader, "onViewCreated", View::class.java, Bundle::class.java, object : MethodHook() {
             override fun after(param: AfterHookCallback) {
-                val view = param.getArgs()[0] as View
+                val view = param.getArg(0) as View
                 bindScreenshotVisibility(view, false)
             }
         })

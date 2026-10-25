@@ -62,6 +62,8 @@ python tools/apk_size_report.py before.json --compare after.json --apk-budget-kb
 ## 保留的测量方法与维护决定
 
 - 应用列表以固定数据对照已选项稳定分组和每项状态读取次数；搜索以分配计数验证准备字段的效果，避免脆弱耗时阈值。元数据准备与四类适配器接入属于同一回退单位。
+- Hook 单参数读取复用 `BeforeHookCallback.getArg`，after 也委托同一入口；36 处现有单项读取改用该入口，条件改写仍在实际写入时才物化参数。`MethodHookBoundaryTest` 覆盖共享改写数组、空值、调用次数、跳过与异常恢复；关键结果在回调外断言，避免被普通异常隔离吞掉测试失败。helper、调用点与回归为同一回退单位，不新增缓存、线程、持久化格式或资源所有者。
+- `HookArgumentAllocationTest` 在 JDK 25.0.4.1 上以真实适配器对照四参数、每组 100,000 次调用、五组中位数：before 为 72→40 B/次，after 为 104→72 B/次，均少 32 B。旧读取复用同一个 List，且两组均保留可观察的 callback，因此只计适配器参数数组复制差异，不含 native List / JNI 成本；不能推断 ART 分配、CPU、PSS、帧率或耗电。2026-10-25 对照基线为 `8d2a204`；源码哈希、JUnit 与验证日志在仓库外 `customiuizer-a14-evidence/runtime-performance-20261025/`，不另建测量系统。
 - 备份对照覆盖最大允许 payload、严格格式 / CRC、输入所有权与可变集合；避免只测正常小文件。
 - 资源表压缩比较完整 AAPT2 dump，并在 Android 14 上检查资源名、ID、类型、值、密度、语言、day/night 与缺失项。隔离 compact 效果时，先对 R8 转回 binary 的资源包执行 `aapt2 optimize --shorten-resource-paths`，再对该输出执行 `aapt2 optimize --enable-compact-entries`；比较两份完整 dump，避免把路径缩短也计为 compact 收益。当前处理依赖固定 AGP 的内部 `OptimizeResourcesTask`，声明输入标记并在签名之前处理该任务自己的输出；公开 artifact API 没有等效的 optimized resource package 入口，继续保留。升级 AGP 必须复核无缓存双构建、mapping、资源 dump、UP-TO-DATE / FROM-CACHE 输出和最终 APK 对齐；参考 [AAPT2](https://developer.android.com/tools/aapt2) 与 [Android 14 资源格式](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android14-release/libs/androidfw/include/androidfw/ResourceTypes.h)。
 - 当前缓存、monitor、FeatureRegistry 和 StrongToast 基础设施保留有效契约；按根规则评估有证据的局部升级。“可以缓存”或静态模式命中不足以构成缺陷。
