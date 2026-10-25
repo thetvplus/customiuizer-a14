@@ -13,7 +13,7 @@
 | ROM / DEX | [DexSQL](../rom-intelligence/DEXSQL.md)、[SQL 查询集](../../tools/dexsql/README.md)、[M03 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |
 | 发布 | [RELEASE](../RELEASE.md)、实际 GitHub Release；Changelog 保存发行事实 |
 
-本轮 r14.25.6 / 253 已以原应用身份及历史正式证书覆盖安装，用户确认本轮测试全部通过。收口仅同步工作分支并触发 CI，不合并 main、不发布 Release。r14.25.5 / 250 的音乐返回候选曾被撤回，两端草稿及附件现已清除，不能作为本轮修复的验收依据。累计变更基线仍为 r14.25.3，保留旧 Git 提交和原二进制；实际公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。后续发布另行授权，[任务 #54](https://github.com/thetvplus/customiuizer-a14/issues/54) 已收口。
+本轮 r14.25.6 / 253 已以原应用身份及历史正式证书覆盖安装，用户确认本轮测试全部通过。收口仅同步工作分支并触发 CI，不合并 main、不发布 Release。r14.25.5 / 250 的音乐返回候选曾被撤回，两端草稿及附件现已清除，不能作为本轮修复的验收依据。本地试用修复比较基线为 r14.25.3；后续 r14.25.5 累计发行说明从 r14.24.1 对比，发布安全基线仍核查最近公开版本，规则见 [发布与恢复](../RELEASE.md)。保留旧 Git 提交和原二进制；实际公开状态以[源码发行](https://github.com/thetvplus/customiuizer-a14/releases)、[Xposed 发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases)为准。后续发布另行授权，[任务 #54](https://github.com/thetvplus/customiuizer-a14/issues/54) 已收口。
 
 ### 当前实机差异验收
 

@@ -1,5 +1,6 @@
 """Release preparation preserves history and refuses incomplete bilingual notes."""
 from datetime import date
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -109,6 +110,48 @@ class PrepareReleaseTest(unittest.TestCase):
                 with self.subTest(options=options), self.assertRaises(ValueError):
                     prepare_release.plan(root, "r14.25.3", 248, date(2026, 10, 23), **options)
             self.assertEqual(before, {path: path.read_bytes() for path in before})
+
+
+class CumulativePreparationTest(unittest.TestCase):
+    def trial_fixture(self, root):
+        PrepareReleaseTest.fixture(self, root)
+        for path in (root / "app/build.gradle.kts", root / "README.md", root / "README_EN.md"):
+            path.write_text(path.read_text(encoding="utf-8").replace("r14.25.1", "r14.25.6").replace("246", "253"), encoding="utf-8")
+        for filename in ("CHANGELOG.md", "CHANGELOG_EN.md"):
+            path = root / filename
+            text = path.read_text(encoding="utf-8").replace("## r14.25.1", "## r14.25.6").replace("versionCode 246", "versionCode 253")
+            for version, code in (("r14.25.3",248), ("r14.25.1",246), ("r14.24.1",245)):
+                text += f"\n## {version}\n\nversionCode {code}.\n\n- Published history.\n"
+            path.write_text(text, encoding="utf-8")
+        (root / "tools").mkdir()
+        (root / "tools/release-policy.json").write_text(json.dumps({
+            "release_target": {"version_name":"r14.25.5", "minimum_version_code":254, "unpublished_source":"r14.25.6"},
+            "cumulative_releases": {"r14.25.5":{"notes_base":"r14.24.1"}}
+        }), encoding="utf-8")
+
+    def test_designated_trial_transition_retains_all_real_history(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            self.trial_fixture(root)
+            before={p:p.read_bytes() for p in root.rglob("*") if p.is_file()}
+            changes=prepare_release.plan(root,"r14.25.5",254,date(2026,10,25),notes_base="r14.24.1")
+            for path,text in changes.items():
+                self.assertNotIn("r14.25.6", text)
+                if path.name.startswith("CHANGELOG"):
+                    for version in ("r14.25.3","r14.25.1","r14.24.1"):
+                        self.assertIn("## " + version, text)
+                    self.assertEqual(path.read_text(encoding="utf-8").split("## r14.25.3",1)[1], text.split("## r14.25.3",1)[1])
+                    self.assertIn("r14.24.1",text.split("- Reviewed",1)[0])
+            self.assertEqual(before,{p:p.read_bytes() for p in before})
+
+    def test_trial_exception_requires_matching_policy_baseline_and_increasing_code(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            self.trial_fixture(root)
+            for version,code,base in (("r14.25.5",253,"r14.24.1"),("r14.25.5",254,None),
+                                      ("r14.25.5",254,"r14.25.3"),("r14.25.4",254,"r14.24.1")):
+                with self.subTest(version=version,code=code,base=base),self.assertRaises(ValueError):
+                    prepare_release.plan(root,version,code,date(2026,10,25),notes_base=base)
 
 
 if __name__ == "__main__":

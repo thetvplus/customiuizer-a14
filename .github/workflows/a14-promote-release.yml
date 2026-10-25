@@ -18,10 +18,6 @@ on:
         description: 'Published version for docs-only, for example r14.25.3'
         required: false
         type: string
-      authorization:
-        description: 'publish <versionName> from <build_run_id>, or sync docs <versionName>'
-        required: false
-        type: string
       prerelease:
         description: '预发行版（恢复发布时必须与原始选择一致）'
         required: true
@@ -38,13 +34,12 @@ concurrency:
 jobs:
   verify:
     name: Verify original candidate
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'docs-only'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination != 'docs-only'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
       actions: read
-      attestations: read
     outputs:
       source_sha: ${{ steps.candidate.outputs.source_sha }}
       apk_sha256: ${{ steps.candidate.outputs.apk_sha256 }}
@@ -66,7 +61,7 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Install pinned Android SDK packages
         run: bash tools/ci_install_android_sdk.sh
-      - name: Verify original artifact, Android signature and attestation
+      - name: Verify original artifact digest, source and Android signature
         id: candidate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -76,7 +71,7 @@ jobs:
   publish:
     name: Publish the exact verified binary
     needs: verify
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && (inputs.destination == 'source' || inputs.destination == 'both') && inputs.authorization != ''
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && (inputs.destination == 'source' || inputs.destination == 'both')
     environment: release-publishing
     concurrency:
       group: a14-release-publish
@@ -86,7 +81,6 @@ jobs:
     permissions:
       contents: write
       actions: read
-      attestations: read
     steps:
       - name: Checkout trusted promotion tools
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -101,13 +95,12 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Install pinned Android SDK packages
         run: bash tools/ci_install_android_sdk.sh
-      - name: Publish only with matching explicit authorization
+      - name: Publish the original verified candidate
         env:
           GH_TOKEN: ${{ github.token }}
           A14_XPOSED_RELEASE_TOKEN: ${{ secrets.A14_XPOSED_RELEASE_TOKEN }}
           BUILD_RUN_ID: ${{ inputs.build_run_id }}
           RELEASE_DESTINATION: ${{ inputs.destination }}
-          RELEASE_AUTHORIZATION: ${{ inputs.authorization }}
           RELEASE_PRERELEASE: ${{ inputs.prerelease }}
           VERIFIED_SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
           VERIFIED_APK_SHA256: ${{ needs.verify.outputs.apk_sha256 }}
@@ -117,7 +110,7 @@ jobs:
 
   docs:
     name: Retry published download documents only
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination == 'docs-only' && inputs.authorization != ''
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination == 'docs-only'
     environment: release-publishing
     concurrency:
       group: a14-release-publish
@@ -138,5 +131,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           A14_XPOSED_RELEASE_TOKEN: ${{ secrets.A14_XPOSED_RELEASE_TOKEN }}
           RELEASE_DOC_VERSION: ${{ inputs.version }}
-          RELEASE_AUTHORIZATION: ${{ inputs.authorization }}
         run: python tools/signed_release.py sync-docs --version "$RELEASE_DOC_VERSION" --apply

@@ -206,42 +206,59 @@ def sync_published(version: str | None, *, apply: bool, env: dict | None = None)
     return actual
 
 
+def notes_baseline(version: str) -> dict:
+    """An older notes baseline needs a published stable tag, not modern metadata assets."""
+    release.require(re.fullmatch(r"r14\.\d+\.\d+", version) is not None, "Invalid cumulative notes baseline")
+    record = release.api(f"repos/{release.REPO}/releases/tags/{quote(version, safe='')}")
+    release.require(record.get("tag_name") == version and record.get("draft") is False and record.get("prerelease") is False,
+                    "Notes baseline must be an actually published stable release")
+    target = release.api(f"repos/{release.REPO}/git/ref/tags/{version}")["object"]
+    for _ in range(4):
+        if target.get("type") == "commit":
+            break
+        release.require(target.get("type") == "tag", "Invalid notes-baseline tag target")
+        target = release.api(f"repos/{release.REPO}/git/tags/{target['sha']}")["object"]
+    sha = target.get("sha", "")
+    release.require(target.get("type") == "commit" and release.SHA.fullmatch(sha) is not None,
+                    "Notes-baseline tag chain is invalid or too deep")
+    name, code = release.source_version(source_text("app/build.gradle.kts", sha))
+    release.require(name == version, "Notes-baseline tag and source version disagree")
+    return {"metadata": {"version_name": version, "version_code": code, "source_sha": sha}, "source": record}
+
+
 def review_candidate(name: str, code: int, sha: str) -> str:
-    """Generate review evidence, never infer user changes from commit messages."""
-    # Source-only publication is an existing authorized mode. Its successful stable
-    # release becomes the source baseline even if download synchronization is deferred.
-    baseline = published_version(require_download=False)
-    latest = baseline
-    superseded = ""
+    """Keep publication safety and cumulative user-content comparisons independent."""
+    safety = published_version(require_download=False)
+    safe_meta = safety["metadata"]
+    release.require(code > safe_meta["version_code"], "Candidate versionCode must exceed the published safety baseline")
+    release.require(tuple(map(int, name[1:].split("."))) > tuple(map(int, safe_meta["version_name"][1:].split("."))),
+                    "Candidate versionName must exceed the published safety baseline")
     cumulative = release.POLICY.get("cumulative_releases", {}).get(name)
     if cumulative is not None:
-        release.require(set(cumulative) == {"version_code", "supersedes", "base"} and
-                        cumulative["version_code"] == code and
-                        cumulative["supersedes"] == latest["metadata"]["version_name"],
-                        "Cumulative release authorization does not match this candidate and current stable release")
-        for filename, _ in release.CURRENT_CHANGELOGS:
-            sections = changelog_sections((release.ROOT / filename).read_text(encoding="utf-8"))
-            release.require([version for version, _ in sections[:2]] == [name, cumulative["base"]] and
-                            all(version != cumulative["supersedes"] for version, _ in sections),
-                            "Cumulative changelog must retain the explicit base and replace only the superseded section")
-        baseline = published_version(cumulative["base"], require_download=False, latest_only=False)
-        release.require(baseline["metadata"]["version_code"] < latest["metadata"]["version_code"] < code,
-                        "Cumulative release versions must advance monotonically")
-        release.run("git", "merge-base", "--is-ancestor", baseline["metadata"]["source_sha"], latest["metadata"]["source_sha"])
-        release.run("git", "merge-base", "--is-ancestor", latest["metadata"]["source_sha"], sha)
-        superseded = (f"Supersedes [{cumulative['supersedes']}]({latest['source']['html_url']}) "
-                      f"· `{latest['metadata']['source_sha']}`. Keep it published until both replacement releases pass acceptance.\n\n")
+        release.require(set(cumulative) == {"notes_base"}, "Invalid cumulative notes policy")
+        baseline = notes_baseline(cumulative["notes_base"])
+    else:
+        baseline = safety
     meta = baseline["metadata"]
-    release.run("git", "merge-base", "--is-ancestor", meta["source_sha"], sha)
+    release.require(meta["version_code"] <= safe_meta["version_code"], "Notes baseline cannot be newer than the safety baseline")
+    release.run("git", "merge-base", "--is-ancestor", meta["source_sha"], safe_meta["source_sha"])
+    release.run("git", "merge-base", "--is-ancestor", safe_meta["source_sha"], sha)
     changes = release.run("git", "diff", "--name-status", meta["source_sha"], sha, "--").strip()
-    release.require(bool(changes), "Candidate has no changes from the last published stable version")
+    release.require(bool(changes), "Candidate has no changes from its notes baseline")
+    counts = []
     for filename, language in release.CURRENT_CHANGELOGS:
-        body = release.release_notes_section((release.ROOT / filename).read_text(encoding="utf-8"), name, code, filename)
+        text = (release.ROOT / filename).read_text(encoding="utf-8")
+        body = release.release_notes_section(text, name, code, filename)
         marker = f"自 {meta['version_name']} 起的变更：" if language == "简体中文" else f"Changes since {meta['version_name']}:"
-        release.require(marker in body.split("###", 1)[0], "Changelog baseline must be the last successfully published stable release or its explicitly authorized retained base")
-    return (f"### Published baseline and complete change review\n\nBaseline: [{meta['version_name']}]({baseline['source']['html_url']}) "
-            f"· `{meta['source_sha']}`\n\n{superseded}Candidate: `{sha}`\n\n"
-            f"[Exact source comparison](https://github.com/{release.REPO}/compare/{meta['source_sha']}...{sha})\n\n"
-            "Review the complete Git diff, actual implementation and verification evidence against the bilingual user/engineering changes below. "
-            "Do not approve based on commit titles or treat this generated inventory as semantic review or device acceptance.\n\n"
+        release.require(marker in body.split("###", 1)[0], "Changelog baseline must match the designated notes baseline, independent of the last successfully published safety baseline")
+        public = release.public_release_notes_section(text, name, code, filename, language=language)
+        counts.append(len(re.findall(r"^[-*] \S", public, re.M)))
+    release.require(counts[0] == counts[1], "Bilingual public notes must cover the same number of core changes")
+    return (f"### Release baselines and complete change review\n\n"
+            f"Published safety baseline: [{safe_meta['version_name']}]({safety['source']['html_url']}) · `{safe_meta['source_sha']}`\n\n"
+            f"Cumulative notes baseline: [{meta['version_name']}]({baseline['source']['html_url']}) · `{meta['source_sha']}`\n\n"
+            f"Candidate: `{sha}`\n\n"
+            f"[Complete cumulative source comparison](https://github.com/{release.REPO}/compare/{meta['source_sha']}...{sha})\n\n"
+            "Both historical releases and Git tags remain intact. The bilingual Changelog is reviewed as source; "
+            "this inventory checks identity and coverage structure, not device acceptance or semantic equivalence.\n\n"
             f"```text\n{changes}\n```\n\n")

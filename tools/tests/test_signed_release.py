@@ -3,7 +3,10 @@ import base64
 import copy
 import hashlib
 import json
+import io
+from types import SimpleNamespace
 import os
+import re
 import tempfile
 import unittest
 import zipfile
@@ -33,20 +36,16 @@ def build_run():
             "head_branch": "main", "status": "completed", "conclusion": "success", "event": "workflow_dispatch"}
 
 
-def attestation():
-    return [{"verificationResult": {"statement": {
-        "predicateType": "https://slsa.dev/provenance/v1",
-        "predicate": {"buildDefinition": {
-            "externalParameters": {"workflow": {"repository": f"https://github.com/{release.REPO}", "path": release.WORKFLOW, "ref": REF}},
-            "resolvedDependencies": [{"digest": {"gitCommit": COMMIT}}]},
-            "runDetails": {"metadata": {"invocationId": f"https://github.com/{release.REPO}/actions/runs/42/attempts/1"}}}}}}]
-
-
 def ci_run():
     return dict(build_run(), id=100, workflow_id=8, name="A14 CI", path=".github/workflows/a14-ci.yml", event="push")
 
 
 class AutomaticReleaseTest(unittest.TestCase):
+    def setUp(self):
+        source = patch.object(release, "source_version", return_value=("r14.25.5", 254))
+        source.start()
+        self.addCleanup(source.stop)
+
     def environment(self, path, record=None):
         path.write_text(json.dumps({"action": "completed", "workflow_run": record or ci_run()}))
         return dict(ENV, GITHUB_EVENT_NAME="workflow_run", GITHUB_EVENT_PATH=str(path),
@@ -70,35 +69,41 @@ class AutomaticReleaseTest(unittest.TestCase):
                 with self.subTest(key=key), self.assertRaisesRegex(ValueError, "upstream main CI"):
                     release.event_source(env)
 
-    def test_upstream_ci_rerun_after_trigger_requires_a_fresh_confirmation(self):
+    def test_upstream_ci_rerun_after_trigger_requires_a_fresh_source_check(self):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(Path(temp) / "event.json")
             with patch.dict(os.environ, env), patch.object(release, "api", side_effect=[{"id": 8}, dict(ci_run(), run_attempt=2)]):
                 with self.assertRaisesRegex(ValueError, "attempt/source changed"):
                     release.automatic_ci()
 
-    def test_unprotected_environment_is_never_treated_as_human_confirmation(self):
-        protected = {"protection_rules": [{"type": "required_reviewers", "reviewers": [{"reviewer": {"login": "maintainer"}}]}],
-                     "deployment_branch_policy": {"custom_branch_policies": True, "protected_branches": False}}
-        with patch.object(release, "api", return_value=protected):
-            release.confirmation_policy()
-        for environment in ({}, dict(protected, protection_rules=[]), dict(protected, deployment_branch_policy=None)):
-            with self.subTest(environment=environment), patch.object(release, "api", return_value=environment):
-                with self.assertRaises(ValueError):
-                    release.confirmation_policy()
+    def test_zero_approval_environments_still_require_exact_main_branch_restrictions(self):
+        valid = {"protection_rules": [{"type": "branch_policy"}], "deployment_branch_policy": {"custom_branch_policies": True, "protected_branches": False}}
+        branches = {"total_count": 1, "branch_policies": [{"name": "main", "type": "branch"}]}
+        def read(path):
+            return branches if "deployment-branch-policies" in path else valid
+        with patch.object(release, "api", side_effect=read):
+            release.environment_policy()
+        for broken in ({}, dict(valid, protection_rules=[{"type": "required_reviewers", "reviewers": [1]}]),
+                       dict(valid, protection_rules=[{"type": "wait_timer", "wait_timer": 1}]),
+                       dict(valid, deployment_branch_policy=None)):
+            with self.subTest(broken=broken), patch.object(release, "api", return_value=broken), self.assertRaises(ValueError):
+                release.environment_policy()
+        for entry in ({"name": "*", "type": "branch"}, {"name": "main", "type": "tag"}, {"name": "other", "type": "branch"}):
+            with self.subTest(entry=entry), patch.object(release, "api", side_effect=[valid, {"total_count": 1, "branch_policies": [entry]}]), self.assertRaises(ValueError):
+                release.environment_policy()
 
     def test_already_published_main_only_skips_without_signing_or_requesting_approval(self):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(Path(temp) / "event.json")
             with patch.dict(os.environ, env), patch.object(release, "automatic_ci"), patch.object(release, "require_current_main"):
                 with patch.object(release, "optional_api", return_value={"draft": False}), patch.object(release, "output") as output:
-                    with patch.object(release, "confirmation_policy") as approval, patch.object(release, "check_new_release") as version:
+                    with patch.object(release, "environment_policy") as approval, patch.object(release, "check_new_release") as version:
                         release.release_plan()
                         self.assertEqual("false", output.call_args.kwargs["ready"])
                         approval.assert_not_called()
                         version.assert_not_called()
 
-    def test_new_release_requests_approval_only_after_version_and_notes_pass(self):
+    def test_new_release_checks_environment_only_after_version_and_notes_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(Path(temp) / "event.json")
             env["GITHUB_STEP_SUMMARY"] = str(Path(temp) / "summary.md")
@@ -109,7 +114,7 @@ class AutomaticReleaseTest(unittest.TestCase):
                 review = stack.enter_context(patch.object(release, "release_review", return_value="Published baseline and complete source comparison\n\n"))
                 stack.enter_context(patch.object(release, "optional_api", return_value=None))
                 notes = stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed changes"]))
-                approval = stack.enter_context(patch.object(release, "confirmation_policy"))
+                approval = stack.enter_context(patch.object(release, "environment_policy"))
                 output = stack.enter_context(patch.object(release, "output"))
                 release.release_plan()
                 summary = Path(env["GITHUB_STEP_SUMMARY"]).read_text(encoding="utf-8")
@@ -132,7 +137,7 @@ class AutomaticReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "successful A14 CI"):
                 release.require_main_ci(COMMIT, current=False)
 
-    def test_manual_publication_also_requires_the_protected_reviewer_before_signing(self):
+    def test_manual_publication_also_requires_exact_branch_environment_policy(self):
         with patch.dict(os.environ, ENV), ExitStack() as stack:
             stack.enter_context(patch.object(release, "dispatch_options", return_value=("both", False)))
             stack.enter_context(patch.object(release, "require_main_ci"))
@@ -140,12 +145,12 @@ class AutomaticReleaseTest(unittest.TestCase):
             stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed"]))
             stack.enter_context(patch.object(release, "release_review", return_value="Baseline review"))
             stack.enter_context(patch.object(release, "optional_api", return_value=None))
-            approval = stack.enter_context(patch.object(release, "confirmation_policy", side_effect=ValueError("Missing reviewer")))
+            approval = stack.enter_context(patch.object(release, "environment_policy", side_effect=ValueError("Invalid environment restrictions")))
             output = stack.enter_context(patch.object(release, "output"))
-            with self.assertRaisesRegex(ValueError,"Missing reviewer"):
+            with self.assertRaisesRegex(ValueError,"Invalid environment restrictions"):
                 release.release_plan()
             output.assert_not_called()
-            with self.assertRaisesRegex(ValueError,"Missing reviewer"):
+            with self.assertRaisesRegex(ValueError,"Invalid environment restrictions"):
                 release.signing_preflight()
             self.assertEqual(2, approval.call_count)
 
@@ -154,7 +159,7 @@ class AutomaticReleaseTest(unittest.TestCase):
             stack.enter_context(patch.object(release, "dispatch_options", return_value=("both", False)))
             stack.enter_context(patch.object(release, "optional_api", return_value={"draft": False}))
             ci = stack.enter_context(patch.object(release, "require_main_ci"))
-            approval = stack.enter_context(patch.object(release, "confirmation_policy"))
+            approval = stack.enter_context(patch.object(release, "environment_policy"))
             output = stack.enter_context(patch.object(release, "output"))
             release.release_plan()
             self.assertEqual("false", output.call_args.kwargs["ready"])
@@ -163,10 +168,10 @@ class AutomaticReleaseTest(unittest.TestCase):
 
     def test_candidate_only_cannot_use_an_unprotected_environment(self):
         with patch.dict(os.environ, ENV), patch.object(release, "dispatch_options", return_value=("actions-only", False)):
-            with patch.object(release, "confirmation_policy", side_effect=ValueError("Missing reviewer")):
-                with self.assertRaisesRegex(ValueError, "Missing reviewer"):
+            with patch.object(release, "environment_policy", side_effect=ValueError("Invalid environment restrictions")):
+                with self.assertRaisesRegex(ValueError, "Invalid environment restrictions"):
                     release.release_plan()
-                with self.assertRaisesRegex(ValueError, "Missing reviewer"):
+                with self.assertRaisesRegex(ValueError, "Invalid environment restrictions"):
                     release.signing_preflight()
 
     def test_public_notes_hide_engineering_without_losing_the_cumulative_baseline(self):
@@ -184,7 +189,7 @@ class AutomaticReleaseTest(unittest.TestCase):
             self.assertNotIn("r14.25.2", notes)
             with self.assertRaisesRegex(ValueError, "section pair"):
                 release.public_release_notes_section(text.replace(f"### {engineering}", f"### {user}"), "r14.25.3", 248, filename)
-            with self.assertRaisesRegex(ValueError, "4–6"):
+            with self.assertRaisesRegex(ValueError, "reviewed user changes"):
                 release.public_release_notes_section(text.replace("- User change", "User change"), "r14.25.3", 248, filename)
         legacy = "## r14.25.2\n\nversionCode 247.\n\n- Original release note.\n"
         self.assertEqual(release.release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG_EN.md"),
@@ -201,50 +206,37 @@ class SourceTrustTest(unittest.TestCase):
     def test_native_branch_and_exact_sha_are_accepted(self):
         self.assertEqual((REF, COMMIT), release.event_source(ENV))
 
-    def test_display_sha_cannot_select_or_mislabel_a_different_native_source(self):
+    def test_source_selector_inputs_are_rejected_even_if_they_match_the_native_commit(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "event.json"
-            env = dict(ENV, GITHUB_EVENT_PATH=str(path))
-            for inputs in ({}, {"display_sha": COMMIT[:8], "source_sha": COMMIT}):
-                path.write_text(json.dumps({"inputs": inputs}))
-                self.assertEqual((REF, COMMIT), release.event_source(env))
-            for inputs in ({"display_sha": COMMIT[:8]}, {"source_sha": COMMIT},
-                           {"display_sha": COMMIT, "source_sha": COMMIT},
-                           {"display_sha": COMMIT[:8], "source_sha": COMMIT[:8] + "b" * 32}):
-                path.write_text(json.dumps({"inputs": inputs}))
-                with self.subTest(inputs=inputs), self.assertRaisesRegex(ValueError, "native triggering commit"):
-                    release.event_source(env)
+            for key,value in (("ref", "main"), ("source_sha", COMMIT), ("display_sha", COMMIT[:8])):
+                path.write_text(json.dumps({"inputs": {key:value}}))
+                with self.subTest(key=key), self.assertRaisesRegex(ValueError, "Source selectors"):
+                    release.event_source(dict(ENV, GITHUB_EVENT_PATH=str(path)))
 
-    def test_title_request_pins_full_source_and_preserves_release_options(self):
-        with patch.dict(os.environ, ENV), ExitStack() as stack:
-            stack.enter_context(patch.object(release, "dispatch_options", return_value=("source", True)))
-            ci = stack.enter_context(patch.object(release, "require_main_ci"))
-            command = stack.enter_context(patch.object(release, "run", return_value=COMMIT + "\n"))
-            release.dispatch_build()
-            ci.assert_called_once_with(COMMIT)
-            args = command.call_args.args
-            self.assertIn(f"inputs[display_sha]={COMMIT[:8]}", args)
-            self.assertIn(f"inputs[source_sha]={COMMIT}", args)
-            self.assertIn("inputs[destination]=source", args)
-            self.assertIn("inputs[prerelease]=true", args)
-            self.assertIn("ref=main", args)
-            ci.side_effect = ValueError("main moved")
-            command.reset_mock()
-            with self.assertRaisesRegex(ValueError, "main moved"):
-                release.dispatch_build()
-            self.assertEqual([("git", "rev-parse", "HEAD")], [call.args for call in command.call_args_list])
-
-    def test_automatic_title_request_rechecks_the_original_ci_attempt(self):
+    def test_native_release_options_cannot_change_checkout_source(self):
         with tempfile.TemporaryDirectory() as temp:
-            env = AutomaticReleaseTest().environment(Path(temp) / "event.json")
-            with patch.dict(os.environ, env), ExitStack() as stack:
-                stack.enter_context(patch.object(release, "run", return_value=COMMIT))
-                automatic = stack.enter_context(patch.object(release, "automatic_ci", side_effect=ValueError("attempt/source changed")))
-                ci = stack.enter_context(patch.object(release, "require_main_ci"))
-                with self.assertRaisesRegex(ValueError, "attempt/source changed"):
-                    release.dispatch_build()
-                automatic.assert_called_once()
-                ci.assert_not_called()
+            path = Path(temp) / "event.json"
+            for destination in ("both", "source", "actions-only"):
+                path.write_text(json.dumps({"inputs":{"destination":destination,"prerelease":"true"}}))
+                env=dict(ENV,GITHUB_EVENT_PATH=str(path),GITHUB_WORKFLOW_REF=f"{release.REPO}/{release.WORKFLOW}@{REF}",GITHUB_WORKFLOW_SHA=COMMIT)
+                with patch.dict(os.environ,env):
+                    self.assertEqual((REF,COMMIT),release.event_source())
+                    self.assertEqual((destination,True),release.dispatch_options())
+
+    def test_signing_rechecks_the_original_main_ci_without_a_second_dispatch(self):
+        with patch.dict(os.environ,dict(ENV,GITHUB_EVENT_NAME="workflow_run")), ExitStack() as stack:
+            stack.enter_context(patch.object(release,"dispatch_options",return_value=("both",False)))
+            stack.enter_context(patch.object(release,"event_source",return_value=(REF,COMMIT)))
+            stack.enter_context(patch.object(release,"environment_policy"))
+            ci=stack.enter_context(patch.object(release,"automatic_ci"))
+            main=stack.enter_context(patch.object(release,"require_main_ci"))
+            stack.enter_context(patch.object(release,"source_version",return_value=("r14.25.5",254)))
+            for name in ("check_new_release","local_release_notes","release_review"):
+                stack.enter_context(patch.object(release,name))
+            command=stack.enter_context(patch.object(release,"run"))
+            release.signing_preflight()
+            ci.assert_called_once(); main.assert_called_once_with(COMMIT); command.assert_not_called()
 
     def test_pr_fork_tag_and_partial_sha_are_rejected(self):
         for field, value in (("GITHUB_EVENT_NAME", "pull_request"), ("GITHUB_REPOSITORY", "attacker/fork"),
@@ -294,7 +286,7 @@ class SourceTrustTest(unittest.TestCase):
 
 
 class ApkTrustTest(unittest.TestCase):
-    def test_candidate_uses_final_version_filename_before_attestation_without_altering_binary(self):
+    def test_candidate_uses_final_version_filename_without_online_proof_or_altering_binary(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, ENV):
             root = Path(temp)
             output = root / "app/build/outputs"
@@ -322,7 +314,7 @@ class ApkTrustTest(unittest.TestCase):
             self.assertEqual(f"https://github.com/{release.REPO}/actions/runs/42/attempts/1", metadata["run_url"])
             self.assertIn(COMMIT, metadata["workflow_url"])
             self.assertNotIn("attestation", metadata)
-            self.assertEqual(f"{release.digest(apk)}  {name}\n", (folder / "SHA256SUMS").read_text())
+            self.assertEqual({name, "build-metadata.json"}, {item.name for item in folder.iterdir()})
 
     def test_correct_manifest_and_historical_signature(self):
         release.check_badging(BADGING, "r14.24.1", 245)
@@ -364,124 +356,91 @@ class ApkTrustTest(unittest.TestCase):
                 metadata = release.verify_apk(apk, COMMIT, "r14.24.1", 245)
                 self.assertEqual(hashlib.sha256(apk.read_bytes()).hexdigest(), metadata["apk_sha256"])
 
-    def test_candidate_tampering_is_rejected_before_attestation(self):
-        record = build_run()
-        metadata = {"repository": release.REPO, "workflow": release.WORKFLOW, "source_sha": COMMIT,
-                    "source_ref": REF, "run_id": 42, "run_attempt": 1, "version_name": "r14.24.1", "apk": "CustoMIUIzer-A14-r14.24.1.apk", "apk_sha256": "a" * 64}
+    def test_candidate_tampering_is_rejected_before_android_verification(self):
+        record=build_run()
+        metadata={"repository":release.REPO,"workflow":release.WORKFLOW,"source_sha":COMMIT,"source_ref":REF,
+                  "run_id":42,"run_attempt":1,"version_name":"r14.24.1","apk":"CustoMIUIzer-A14-r14.24.1.apk","apk_sha256":"a"*64}
         with tempfile.TemporaryDirectory() as temp:
-            folder = Path(temp) / "download"
-            def download(*args):
-                folder.mkdir()
-                (folder / metadata["apk"]).write_bytes(b"tampered")
-                (folder / "build-metadata.json").write_text(json.dumps(metadata))
-                return ""
-            with patch.object(release, "api", side_effect=[{"id": 7}, record, {"artifacts": [{"name": "a14-signed-42-1", "expired": False}]}]):
-                with patch.object(release, "run", side_effect=download), self.assertRaisesRegex(ValueError, "digest differs"):
-                    release.fetch_candidate("42", folder)
+            folder=Path(temp)/"download"
+            def download(artifact,target):
+                target.mkdir();(target/metadata["apk"]).write_bytes(b"tampered")
+                release.write_json(target/"build-metadata.json",metadata)
+            with patch.object(release,"api",side_effect=[{"id":7},record,{"artifacts":[{"id":123,"name":"a14-signed-42-1","expired":False}]}]),patch.object(release,"download_candidate",side_effect=download),patch.object(release,"verify_apk") as verify:
+                with self.assertRaisesRegex(ValueError,"digest differs"):release.fetch_candidate("42",folder)
+                verify.assert_not_called()
 
 
-class OnlineAttestationTest(unittest.TestCase):
-    def fixture(self, folder, *, legacy=None):
-        name = "CustoMIUIzer-A14-r14.24.1.apk"
-        if legacy == "sha":
-            name = f"CustoMIUIzer-A14-r14.24.1-{COMMIT[:6]}.apk"
-        (folder / name).write_bytes(b"original signed APK bytes")
-        metadata = {"repository": release.REPO, "workflow": release.WORKFLOW, "source_sha": COMMIT,
-                    "source_ref": REF, "run_id": 42, "run_attempt": 1, "version_name": "r14.24.1",
-                    "version_code": 245, "apk": name, "apk_sha256": release.digest(folder / name)}
-        if legacy is None:
-            metadata["release_assets"] = [name, "build-metadata.json"]
-        release.write_json(folder / "build-metadata.json", metadata)
-        (folder / "SHA256SUMS").write_text(f"{metadata['apk_sha256']}  {name}\n", encoding="ascii")
-        (folder / "attestation.sigstore.json").write_text("original internal proof")
+class ArtifactIntegrityTest(unittest.TestCase):
+    def fixture(self, folder, legacy=None):
+        name="CustoMIUIzer-A14-r14.24.1.apk" if legacy!="sha" else f"CustoMIUIzer-A14-r14.24.1-{COMMIT[:6]}.apk"
+        (folder/name).write_bytes(b"original signed APK bytes")
+        metadata={"repository":release.REPO,"workflow":release.WORKFLOW,"source_sha":COMMIT,"source_ref":REF,
+                  "run_id":42,"run_attempt":1,"version_name":"r14.24.1","version_code":245,
+                  "apk":name,"apk_sha256":release.digest(folder/name)}
+        if legacy is None: metadata["release_assets"]=[name,"build-metadata.json"]
+        release.write_json(folder/"build-metadata.json",metadata)
+        if legacy:
+            (folder/"SHA256SUMS").write_text(f"{metadata['apk_sha256']}  {name}\n",encoding="ascii")
+            (folder/"attestation.sigstore.json").write_text("legacy evidence retained verbatim")
         return metadata
 
-    def online(self, *args, **kwargs):
-        self.assertEqual(("gh", "attestation", "verify"), args[:3])
-        self.assertNotIn("--bundle", args)
-        self.assertIn("--deny-self-hosted-runners", args)
-        self.assertEqual(COMMIT, args[args.index("--signer-digest") + 1])
-        self.assertEqual(COMMIT, args[args.index("--source-digest") + 1])
-        path = Path(args[3])
-        proof = attestation()
-        proof[0]["verificationResult"]["statement"]["subject"] = [{"name": path.name, "digest": {"sha256": release.digest(path)}}]
-        return json.dumps(proof)
+    def archive(self, entries):
+        stream=io.BytesIO()
+        with zipfile.ZipFile(stream,"w") as archive:
+            for name,value in entries: archive.writestr(name,value)
+        return stream.getvalue()
 
-    def test_metadata_records_actual_apk_verification_then_stays_unchanged_during_final_checks(self):
-        with tempfile.TemporaryDirectory() as temp:
-            folder = Path(temp)
-            metadata = self.fixture(folder)
-            before = (folder / "build-metadata.json").read_bytes()
-            with patch.object(release, "run", side_effect=self.online) as verify:
-                release.attest_apk(folder, metadata)
-                self.assertEqual(1, verify.call_count)
-                self.assertTrue(metadata["attestation"]["apk_verified"])
-                self.assertEqual("github-online", metadata["attestation"]["method"])
-                finalized = (folder / "build-metadata.json").read_bytes()
-                self.assertNotEqual(before, finalized)
-                release.attest(folder, metadata)
-                self.assertEqual(3, verify.call_count)
-                self.assertEqual(finalized, (folder / "build-metadata.json").read_bytes())
-                report = json.loads((folder / "attestation-verification.json").read_text())
-                self.assertEqual({metadata["apk"], "build-metadata.json"}, set(report))
-                with self.assertRaisesRegex(ValueError, "already been finalized"):
-                    release.attest_apk(folder, metadata)
-                self.assertEqual(finalized, (folder / "build-metadata.json").read_bytes())
+    def download(self, payload, *, digest=None):
+        artifact={"id":123,"size_in_bytes":len(payload),"digest":digest or "sha256:"+hashlib.sha256(payload).hexdigest()}
+        def command(args,**kwargs):
+            self.assertEqual(["gh","api",f"repos/{release.REPO}/actions/artifacts/123/zip"],args)
+            kwargs["stdout"].write(payload)
+            return SimpleNamespace(returncode=0)
+        return artifact,patch.object(release.subprocess,"run",side_effect=command)
 
-    def test_failed_online_verification_cannot_write_a_success_status(self):
-        with tempfile.TemporaryDirectory() as temp:
-            folder = Path(temp)
-            metadata = self.fixture(folder)
-            before = (folder / "build-metadata.json").read_bytes()
-            with patch.object(release, "run", side_effect=RuntimeError("Online proof not found")):
-                with self.assertRaises(RuntimeError):
-                    release.attest_apk(folder, metadata)
-            self.assertNotIn("attestation", metadata)
-            self.assertEqual(before, (folder / "build-metadata.json").read_bytes())
-            with patch.object(release, "run") as command:
-                with self.assertRaisesRegex(ValueError, "must pass before"):
-                    release.attest(folder, metadata)
-                command.assert_not_called()
+    def test_download_is_bound_to_exact_artifact_id_and_archive_digest(self):
+        payload=self.archive([("build-metadata.json",b"{}")])
+        artifact,command=self.download(payload)
+        with tempfile.TemporaryDirectory() as temp,command:
+            target=Path(temp)/"candidate"
+            release.download_candidate(artifact,target)
+            self.assertEqual(b"{}",(target/"build-metadata.json").read_bytes())
+        artifact,command=self.download(payload,digest="sha256:"+"a"*64)
+        with tempfile.TemporaryDirectory() as temp,command,self.assertRaisesRegex(ValueError,"archive bytes differ"):
+            release.download_candidate(artifact,Path(temp)/"candidate")
 
-    def test_attestation_subject_must_match_the_original_filename_and_bytes(self):
-        proof = attestation()
-        subject = {"name": "original.apk", "digest": {"sha256": "a" * 64}}
-        proof[0]["verificationResult"]["statement"]["subject"] = [subject]
-        release.check_attestation(proof, COMMIT, REF, 42, 1, filename="original.apk", sha256="a" * 64)
-        for name, digest in (("renamed.apk", "a" * 64), ("original.apk", "b" * 64)):
-            with self.subTest(name=name), self.assertRaises(ValueError):
-                release.check_attestation(proof, COMMIT, REF, 42, 1, filename=name, sha256=digest)
+    def test_missing_digest_or_oversize_archive_never_downloads(self):
+        for artifact in ({"id":123,"size_in_bytes":1}, {"id":123,"digest":"sha256:"+"a"*64,"size_in_bytes":33*1024*1024}):
+            with self.subTest(artifact=artifact),patch.object(release.subprocess,"run") as command,self.assertRaises(ValueError):
+                release.download_candidate(artifact,Path("unused"))
+            command.assert_not_called()
 
-    def test_old_and_new_candidate_formats_are_fetched_and_verified_without_rewriting_evidence(self):
-        for legacy in (None, "sha", "plain"):
-            with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as temp:
-                root = Path(temp)
-                original = root / "original"
-                original.mkdir()
-                metadata = self.fixture(original, legacy=legacy)
-                if legacy is None:
-                    metadata["attestation"] = {"apk_verified": True, "method": "github-online"}
-                    release.write_json(original / "build-metadata.json", metadata)
-                expected = {path.name: path.read_bytes() for path in original.iterdir()}
-                target = root / "download"
-                def command(*args, **kwargs):
-                    if args[:3] == ("gh", "run", "download"):
-                        target.mkdir()
-                        for name, data in expected.items():
-                            (target / name).write_bytes(data)
-                        return ""
-                    return self.online(*args, **kwargs)
-                source = {"content": base64.b64encode(b'val lastVersionName = "r14.24.1"\nval lastVersion = 245\n').decode()}
-                records = [{"id": 7}, build_run(), {"artifacts": [{"id": 123, "name": "a14-signed-42-1", "expired": False}]}, source]
-                checked = {"apk": metadata["apk"], "apk_sha256": metadata["apk_sha256"]}
-                with patch.object(release, "api", side_effect=records), patch.object(release, "run", side_effect=command):
-                    with patch.object(release, "verify_apk", return_value=checked) as apk_check:
-                        fetched = release.fetch_candidate("42", target)
-                        apk_check.assert_called_once_with(target / metadata["apk"], COMMIT, "r14.24.1", 245)
-                self.assertEqual(123, fetched["artifact_id"])
-                self.assertNotIn("artifact_id", json.loads((target / "build-metadata.json").read_text()))
-                for name, data in expected.items():
-                    self.assertEqual(data, (target / name).read_bytes())
+    def test_zip_traversal_symlinks_and_entry_growth_are_rejected_before_extraction(self):
+        link=zipfile.ZipInfo("link");link.create_system=3;link.external_attr=0o120777<<16
+        for entries in ([('../escape',b'x')],[(link,b'target')],[(f'{i}.txt',b'x') for i in range(17)]):
+            payload=self.archive(entries);artifact,command=self.download(payload)
+            with tempfile.TemporaryDirectory() as temp,command,self.assertRaisesRegex(ValueError,"archive"):
+                target=Path(temp)/"candidate"
+                try: release.download_candidate(artifact,target)
+                finally: self.assertFalse(target.exists())
+
+    def test_original_and_new_candidates_keep_metadata_unchanged_without_online_proof(self):
+        for legacy in (None,"sha","plain"):
+            with self.subTest(legacy=legacy),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);original=root/"original";original.mkdir()
+                metadata=self.fixture(original,legacy)
+                expected={item.name:item.read_bytes() for item in original.iterdir()}
+                payload=self.archive(list(expected.items()));artifact,command=self.download(payload)
+                artifact.update(name="a14-signed-42-1",expired=False)
+                source={"content":base64.b64encode(b'val lastVersionName = "r14.24.1"\nval lastVersion = 245\n').decode()}
+                records=[{"id":7},build_run(),{"artifacts":[artifact]},source,build_run()]
+                checked={"apk":metadata["apk"],"apk_sha256":metadata["apk_sha256"]}
+                with patch.object(release,"api",side_effect=records),command,patch.object(release,"verify_apk",return_value=checked) as verify:
+                    fetched=release.fetch_candidate("42",root/"download")
+                    verify.assert_called_once_with(root/"download"/metadata["apk"],COMMIT,"r14.24.1",245)
+                self.assertEqual(123,fetched["artifact_id"])
+                for name,data in expected.items(): self.assertEqual(data,(root/"download"/name).read_bytes())
+                self.assertNotIn("artifact_id",json.loads((root/"download/build-metadata.json").read_text()))
 
 
 class PromotionTrustTest(unittest.TestCase):
@@ -548,7 +507,7 @@ class PromotionTrustTest(unittest.TestCase):
                 publish.assert_not_called()
 
     def test_automatic_publication_binds_sign_receipt_without_selecting_another_run(self):
-        metadata = {"source_sha": COMMIT, "apk_sha256": "c" * 64, "run_attempt": 1, "artifact_id": 123}
+        metadata = {"version_name": "r14.25.5", "version_code": 254, "source_sha": COMMIT, "apk_sha256": "c" * 64, "run_attempt": 1, "artifact_id": 123}
         env = dict(ENV, GITHUB_JOB="publish", **{"VERIFIED_" + key.upper(): str(value) for key, value in metadata.items()})
         for prerelease in (False, True):
             with patch.dict(os.environ, env), patch.object(release, "dispatch_options", return_value=("source", prerelease)):
@@ -574,12 +533,14 @@ class PromotionTrustTest(unittest.TestCase):
                 release.fetch_candidate("42", Path(temp) / "candidate")
             command.assert_not_called()
 
-    def test_verified_attestation_must_match_source_workflow_ref_sha_and_run(self):
-        release.check_attestation(attestation(), COMMIT, REF, 42, 1)
-        for sha, ref, run_id, attempt in (("b" * 40, REF, 42, 1), (COMMIT, "refs/heads/other", 42, 1),
-                                         (COMMIT, REF, 43, 1), (COMMIT, REF, 42, 2)):
-            with self.assertRaises(ValueError):
-                release.check_attestation(attestation(), sha, ref, run_id, attempt)
+    def test_metadata_must_bind_every_original_source_and_run_identity(self):
+        meta={"repository":release.REPO,"workflow":release.WORKFLOW,"source_sha":COMMIT,"source_ref":REF,
+              "run_id":42,"run_attempt":1,"version_name":"r14.24.1","apk":"CustoMIUIzer-A14-r14.24.1.apk"}
+        release.check_metadata(meta,build_run())
+        for key,value in (("repository","attacker/fork"),("workflow","untrusted.yml"),("source_sha","b"*40),
+                          ("source_ref","refs/heads/other"),("run_id",43),("run_attempt",2)):
+            with self.subTest(key=key),self.assertRaisesRegex(ValueError,"selected workflow run"):
+                release.check_metadata(dict(meta,**{key:value}),build_run())
 
     def test_metadata_must_match_original_run_and_safe_filename(self):
         meta = {"repository": release.REPO, "workflow": release.WORKFLOW, "source_sha": COMMIT, "source_ref": REF,
@@ -615,12 +576,21 @@ class PromotionTrustTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "receipt is missing"):
             release.check_verification_receipt(metadata, {})
 
-    def test_empty_or_wrong_publish_authorization_never_writes(self):
-        metadata = {"version_name": "r14.24.1", "version_code": 245, "source_sha": COMMIT}
-        with patch.dict(os.environ, ENV), patch.object(release, "fetch_candidate", return_value=metadata):
-            with patch.object(release, "api") as command, self.assertRaisesRegex(ValueError, "Explicit authorization"):
-                release.publish(Path("candidate"), "42", "source", "")
-            command.assert_not_called()
+    def test_recovery_uses_native_inputs_and_no_human_authorization_field(self):
+        metadata={"version_name":"r14.25.5","version_code":254,"source_sha":COMMIT,"apk_sha256":"c"*64,"run_attempt":1,"artifact_id":123}
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/"event.json"
+            env=dict(ENV,GITHUB_EVENT_PATH=str(path),GITHUB_WORKFLOW_REF=f"{release.REPO}/.github/workflows/a14-promote-release.yml@{REF}",GITHUB_WORKFLOW_SHA=COMMIT,
+                     **{"VERIFIED_"+key.upper():str(metadata[key]) for key in ("source_sha","apk_sha256","run_attempt","artifact_id")})
+            original={"build_run_id":"42","destination":"source","prerelease":"false"}
+            for changed in (original,dict(original,build_run_id="43"),dict(original,destination="both"),dict(original,prerelease="true")):
+                path.write_text(json.dumps({"inputs":changed}))
+                with patch.dict(os.environ,env),patch.object(release,"fetch_candidate",return_value=metadata),patch.object(release,"publish_verified") as publish:
+                    if changed==original:
+                        release.publish(Path("candidate"),"42","source");publish.assert_called_once()
+                    else:
+                        with self.assertRaisesRegex(ValueError,"Recovery options"):release.publish(Path("candidate"),"42","source")
+                        publish.assert_not_called()
 
 
 class PublicationTest(unittest.TestCase):
@@ -672,7 +642,7 @@ class PublicationTest(unittest.TestCase):
                         self.assertEqual((True, prerelease, COMMIT), (request["draft"], request["prerelease"], request["target_commitish"]))
                         self.assertEqual("r14.25.2", request["name"])
                         self.assertIn("## English", request["body"])
-                        self.assertIn("gh attestation verify", request["body"])
+                        self.assertNotIn("gh attestation", request["body"]); self.assertIn("APK SHA-256:", request["body"]); self.assertIn(release.CERT, request["body"])
                         self.assertIn(metadata["apk_sha256"], request["body"])
                         records["body"] = request["body"]
                         writes.append("create")
@@ -1168,14 +1138,16 @@ class ProtectedWorkflowTest(unittest.TestCase):
         for filename in ("a14-signed-build.yml", "a14-promote-release.yml"):
             self.assertEqual([], self.scan(self.workflow(filename), filename))
 
-    def test_short_title_resolution_cannot_gain_secrets_or_bypass_validation(self):
-        for original, changed in (("inputs.display_sha || 'request'", "github.sha"),
-                                  ("actions: write", "contents: write"),
-                                  ("inputs.display_sha == ''", "true"),
-                                  ("inputs.display_sha != ''", "true"),
-                                  ("signed_release.py dispatch-build", "signed_release.py prepare-signing")):
-            with self.subTest(changed=changed):
-                self.assertTrue(self.scan(self.workflow().replace(original, changed)))
+    def test_one_native_run_cannot_gain_source_inputs_or_write_permissions(self):
+        original=self.workflow()
+        self.assertNotIn("dispatch-build",original)
+        self.assertNotIn("actions: write",original)
+        self.assertNotIn("display_sha",original)
+        for old,new in (("inputs:\n", "inputs:\n      ref:\n        type: string\n"),
+                        ("run-name: A14 Signed Build / ${{ github.ref_name }}","run-name: A14 Signed Build / ${{ inputs.ref }}"),
+                        ("      actions: read", "      actions: write")):
+            self.assertIn(old,original)
+            with self.subTest(new=new): self.assertTrue(self.scan(original.replace(old,new)))
 
     def test_filename_alone_cannot_exempt_signing(self):
         text = self.workflow().replace("environment: release-signing", "environment: unprotected")
@@ -1184,7 +1156,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
     def test_signing_guard_cleanup_checkout_or_verification_cannot_be_removed(self):
         for original, changed in (("needs.validate.outputs.authorized == 'true'", "true"),
                                   ("ref: ${{ github.sha }}", "ref: ${{ inputs.ref }}"),
-                                  ("if: always()", "if: failure()"), ("signed_release.py attest", "signed_release.py source-policy"),
+                                  ("if: always()", "if: failure()"), ("signed_release.py candidate", "signed_release.py source-policy"),
                                   ("id: artifact", "id: artifact\n        if: always()")):
             with self.subTest(changed=changed):
                 self.assertTrue(self.scan(self.workflow().replace(original, changed)))
@@ -1194,14 +1166,14 @@ class ProtectedWorkflowTest(unittest.TestCase):
             text = self.workflow() + "\n      - run: echo unexpected\n        env:\n          LEAK: ${{ " + expression + " }}\n"
             self.assertTrue(any("CI_SIGNING" in item for item in self.scan(text)))
 
-    def test_online_subjects_and_metadata_finalization_order_cannot_be_weakened(self):
-        for original, changed in (("github-token: ${{ github.token }}", "github-token: invalid"),
-                                  ("candidate/*.apk", "candidate/*"),
-                                  ("subject-path: ${{ runner.temp }}/candidate/build-metadata.json", "subject-path: ${{ runner.temp }}/candidate/*.apk"),
-                                  ("signed_release.py attest-apk", "signed_release.py source-policy"),
-                                  ("id: apk-provenance", "id: apk-provenance\n        if: false")):
-            with self.subTest(changed=changed):
-                self.assertTrue(self.scan(self.workflow().replace(original, changed)))
+    def test_candidate_upload_cannot_precede_verification_or_reintroduce_online_proof(self):
+        original=self.workflow()
+        for old,new in (("signed_release.py candidate", "signed_release.py source-policy"),
+                        ("path: ${{ runner.temp }}/candidate/", "path: ${{ runner.temp }}/"),
+                        ("id: artifact", "id: artifact\n        if: always()"),
+                        ("      actions: read", "      actions: read\n      attestations: write")):
+            self.assertIn(old,original)
+            with self.subTest(new=new): self.assertTrue(self.scan(original.replace(old,new)))
 
     def test_push_can_never_sign_and_untrusted_triggers_are_rejected(self):
         for event in ("pull_request", "push"):
@@ -1209,7 +1181,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
             with self.subTest(event=event):
                 self.assertTrue(self.scan(text))
 
-    def test_main_ci_success_sha_and_post_approval_preflight_guards_are_required(self):
+    def test_main_ci_success_sha_and_native_preflight_guards_are_required(self):
         for original, changed in (("branches: [main]", "branches: ['*']"),
                                   ("github.event.workflow_run.head_sha == github.sha", "true"),
                                   ("github.event.workflow_run.conclusion == 'success'", "true"),
@@ -1229,7 +1201,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
 
     def test_promotion_bootstrap_cannot_execute_a_job(self):
         filename = "a14-promote-release.yml"
-        text = self.workflow(filename).replace("    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.destination != 'docs-only'\n", "    if: always()\n")
+        text = self.workflow(filename).replace("    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination != 'docs-only'\n", "    if: always()\n")
         self.assertTrue(self.scan(text, filename))
 
     def test_promotion_cannot_rebuild_or_publish_by_default(self):
@@ -1248,6 +1220,32 @@ class ProtectedWorkflowTest(unittest.TestCase):
                                   ("RELEASE_DOC_VERSION: ${{ inputs.version }}", "RELEASE_DOC_VERSION: latest")):
             with self.subTest(changed=changed):
                 self.assertTrue(self.scan(self.workflow(filename).replace(original, changed), filename))
+
+
+class FormalTargetAndNotesTest(unittest.TestCase):
+    def test_trial_and_retired_candidate_cannot_be_formal_release(self):
+        release.release_target("r14.25.5",254)
+        for name,code in (("r14.25.5",250),("r14.25.5",253),("r14.25.6",253),("r14.25.4",254)):
+            with self.subTest(name=name,code=code),self.assertRaisesRegex(ValueError,"designated formal"):
+                release.release_target(name,code)
+
+    def test_user_change_count_is_unlimited_but_empty_and_duplicates_are_rejected(self):
+        for count in (1,3,7,18):
+            text="## r14.25.5\n\nversionCode 254. Changes since r14.24.1:\n\n### User changes\n\n"
+            text += "\n".join(f"- Core change {i}." for i in range(count))
+            text += "\n\n### Engineering notes\n\n- Technical facts.\n"
+            notes=release.public_release_notes_section(text,"r14.25.5",254,"CHANGELOG_EN.md")
+            self.assertEqual(count,len(re.findall(r"^[-*] ",notes,re.M)))
+            with self.assertRaisesRegex(ValueError,"duplicate"):
+                release.public_release_notes_section(text.replace("### Engineering notes","- Core change 0.\n\n### Engineering notes"),"r14.25.5",254,"CHANGELOG_EN.md")
+
+    def test_signed_candidate_also_requires_exact_current_main_ci(self):
+        with patch.dict(os.environ,ENV), patch.object(release,"dispatch_options",return_value=("actions-only",False)), \
+             patch.object(release,"environment_policy"), patch.object(release,"require_main_ci",side_effect=ValueError("missing exact CI")) as ci:
+            for operation in (release.release_plan,release.signing_preflight):
+                with self.subTest(operation=operation.__name__),self.assertRaisesRegex(ValueError,"missing exact CI"):
+                    operation()
+            self.assertEqual(2,ci.call_count)
 
 
 if __name__ == "__main__":

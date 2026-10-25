@@ -190,39 +190,44 @@ class DownloadDocumentsTest(unittest.TestCase):
 
 
 class BaselineReviewTest(unittest.TestCase):
-    def test_explicit_cumulative_review_requires_both_published_ancestors_and_matching_sections(self):
-        server = Server()
-        retained = {"metadata": server.metadata, "source": server.source}
-        latest = copy.deepcopy(retained)
-        latest["metadata"].update(version_name="r14.25.4", version_code=249, source_sha="b" * 40)
-        latest["source"].update(tag_name="r14.25.4")
-        policy = {"r14.25.5": {"version_code": 250, "supersedes": "r14.25.4", "base": VERSION}}
+    def test_legacy_notes_baseline_uses_the_published_tag_without_modern_assets(self):
+        record = {"tag_name":"r14.24.1", "draft":False, "prerelease":False, "assets":[]}
+        with patch.object(release,"api",side_effect=[record,{"object":{"type":"tag","sha":"b"*40}},{"object":{"type":"commit","sha":SHA}}]), \
+             patch.object(docs,"source_text",return_value='val lastVersion = 245\nval lastVersionName = "r14.24.1"\n') as source:
+            result=docs.notes_baseline("r14.24.1")
+            self.assertEqual({"version_name":"r14.24.1","version_code":245,"source_sha":SHA},result["metadata"])
+            source.assert_called_once_with("app/build.gradle.kts",SHA)
+
+    def test_notes_baseline_rejects_unpublished_or_mismatched_source(self):
+        record={"tag_name":"r14.24.1","draft":False,"prerelease":False}
+        for changed in ({"draft":True},{"prerelease":True},{"tag_name":"r14.24.2"}):
+            with self.subTest(changed=changed),patch.object(release,"api",return_value=dict(record,**changed)),self.assertRaisesRegex(ValueError,"actually published"):
+                docs.notes_baseline("r14.24.1")
+        with patch.object(release,"api",side_effect=[record,{"object":{"type":"commit","sha":SHA}}]), \
+             patch.object(docs,"source_text",return_value='val lastVersion = 246\nval lastVersionName = "r14.25.1"\n'),self.assertRaisesRegex(ValueError,"disagree"):
+            docs.notes_baseline("r14.24.1")
+
+    def test_cumulative_notes_and_published_safety_baselines_coexist_without_removing_history(self):
+        latest={"metadata":{"version_name":"r14.25.3","version_code":248,"source_sha":"b"*40},"source":{"html_url":"https://example.test/stable"}}
+        notes={"metadata":{"version_name":"r14.24.1","version_code":245,"source_sha":"a"*40},"source":{"html_url":"https://example.test/notes-base"}}
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            for filename, language in release.CURRENT_CHANGELOGS:
-                marker = "自 r14.25.3 起的变更：" if language == "简体中文" else "Changes since r14.25.3:"
-                (root / filename).write_text(f"## r14.25.5\n\nversionCode 250. {marker}\n\n- Reviewed.\n\n## r14.25.3\n\nversionCode 248.\n", encoding="utf-8")
-            with patch.object(release, "ROOT", root), patch.dict(release.POLICY, cumulative_releases=policy), \
-                    patch.object(docs, "published_version", side_effect=[latest, retained]) as read, \
-                    patch.object(release, "run", return_value="M\tapp/Actual.kt") as command:
-                summary = docs.review_candidate("r14.25.5", 250, "f" * 40)
-                self.assertIn("Supersedes [r14.25.4]", summary)
-                self.assertIn("Keep it published until both", summary)
-                self.assertEqual(((VERSION,), {"require_download": False, "latest_only": False}), read.call_args)
-                self.assertIn((("git", "merge-base", "--is-ancestor", SHA, "b" * 40),), command.call_args_list)
-                self.assertIn((("git", "merge-base", "--is-ancestor", "b" * 40, "f" * 40),), command.call_args_list)
-                self.assertEqual(("git", "diff", "--name-status", SHA, "f" * 40, "--"), command.call_args.args)
-            for wrong in ({**policy["r14.25.5"], "version_code": 251},
-                          {**policy["r14.25.5"], "supersedes": "r14.25.2"}):
-                with patch.object(release, "ROOT", root), patch.dict(release.POLICY, cumulative_releases={"r14.25.5": wrong}), \
-                        patch.object(docs, "published_version", return_value=latest), self.assertRaisesRegex(ValueError, "authorization"):
-                    docs.review_candidate("r14.25.5", 250, "f" * 40)
-            for filename, _ in release.CURRENT_CHANGELOGS:
-                path = root / filename
-                path.write_text(path.read_text(encoding="utf-8") + "\n## r14.25.4\n\nversionCode 249.\n", encoding="utf-8")
-            with patch.object(release, "ROOT", root), patch.dict(release.POLICY, cumulative_releases=policy), \
-                    patch.object(docs, "published_version", return_value=latest), self.assertRaisesRegex(ValueError, "replace only"):
-                docs.review_candidate("r14.25.5", 250, "f" * 40)
+            root=Path(temp)
+            for filename,language in release.CURRENT_CHANGELOGS:
+                marker="自 r14.24.1 起的变更：" if language=="简体中文" else "Changes since r14.24.1:"
+                (root/filename).write_text(f"## r14.25.5\n\nversionCode 254. {marker}\n\n- Reviewed cumulative change.\n\n## r14.25.3\n\nversionCode 248.\n\n## r14.25.1\n\nversionCode 246.\n\n## r14.24.1\n\nversionCode 245.\n",encoding="utf-8")
+            with patch.object(release,"ROOT",root),patch.dict(release.POLICY,cumulative_releases={"r14.25.5":{"notes_base":"r14.24.1"}}),patch.object(docs,"published_version",return_value=latest) as stable,patch.object(docs,"notes_baseline",return_value=notes) as historical,patch.object(release,"run",return_value="M\tapp/Actual.kt") as command:
+                result=docs.review_candidate("r14.25.5",254,"f"*40)
+                self.assertIn("Published safety baseline: [r14.25.3]",result)
+                self.assertIn("Cumulative notes baseline: [r14.24.1]",result)
+                stable.assert_called_once_with(require_download=False);historical.assert_called_once_with("r14.24.1")
+                self.assertIn((("git","merge-base","--is-ancestor","a"*40,"b"*40),),command.call_args_list)
+                self.assertIn((("git","merge-base","--is-ancestor","b"*40,"f"*40),),command.call_args_list)
+                self.assertEqual(("git","diff","--name-status","a"*40,"f"*40,"--"),command.call_args.args)
+                for path in root.glob("*.md"):
+                    self.assertIn("## r14.25.1",path.read_text(encoding="utf-8"));self.assertIn("## r14.25.3",path.read_text(encoding="utf-8"))
+                with self.assertRaisesRegex(ValueError,"versionCode"):docs.review_candidate("r14.25.5",248,"f"*40)
+                path=root/"CHANGELOG_EN.md";path.write_text(path.read_text(encoding="utf-8").replace("Changes since r14.24.1:","Changes since r14.25.3:"))
+                with self.assertRaisesRegex(ValueError,"designated notes baseline"):docs.review_candidate("r14.25.5",254,"f"*40)
 
     def test_historical_baseline_is_source_only_and_does_not_change_latest_document_gate(self):
         server = Server()
@@ -254,10 +259,9 @@ class BaselineReviewTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "last successfully published"):
                     docs.review_candidate("r14.25.4", 249, "f" * 40)
 
-    def test_document_retry_in_actions_rejects_untrusted_ref_or_missing_authorization(self):
-        for ref, authorization in (("refs/heads/untrusted", "sync docs r14.25.3"), ("refs/heads/main", "")):
-            env = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": release.REPO, "GITHUB_EVENT_NAME": "workflow_dispatch",
-                   "GITHUB_REF": ref, "GITHUB_SHA": SHA, "RELEASE_AUTHORIZATION": authorization}
-            with patch.dict(os.environ, env), patch("sys.argv", ["signed_release.py", "sync-docs", "--version", VERSION, "--apply"]), patch.object(docs, "sync_published") as sync:
-                self.assertEqual(1, release.main())
-                sync.assert_not_called()
+    def test_document_retry_rejects_an_untrusted_native_workflow_without_an_approval_token(self):
+        for ref in ("refs/heads/untrusted","refs/heads/main"):
+            env={"GITHUB_ACTIONS":"true","GITHUB_REPOSITORY":release.REPO,"GITHUB_EVENT_NAME":"workflow_dispatch",
+                 "GITHUB_REF":ref,"GITHUB_SHA":SHA,"GITHUB_WORKFLOW_REF":"attacker/untrusted.yml@refs/heads/main"}
+            with patch.dict(os.environ,env),patch("sys.argv",["signed_release.py","sync-docs","--version",VERSION,"--apply"]),patch.object(docs,"sync_published") as sync:
+                self.assertEqual(1,release.main());sync.assert_not_called()

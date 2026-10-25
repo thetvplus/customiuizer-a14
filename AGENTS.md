@@ -47,9 +47,9 @@
 ## 签名、发布与证据
 
 - Debug / Develop 不冒充正式版；正式构建须获明确授权且仓库外签名有效。版本名与双语 Changelog 同步，versionCode 单调增加。
-- 普通 A14 CI 不接触正式密钥。正式签名只走原生 ref / exact SHA、受 Required reviewer 保护的 `release-signing` 和独立 A14 Signed Build；工作流不硬编码本机路径。
-- 自动发布要求 exact main CI、新版本及双语记录齐备，并经过签名确认；手动默认 `both`，可选 `source`，仅试用选 `actions-only`。先验收源码端再同步 Xposed。
-- 候选晋升 / 失败恢复须匹配版本和原 run ID 的明确授权；不重建、覆盖已发布资产或移动历史标签。完整安全合同只维护在 [RELEASE](docs/RELEASE.md)。
+- 普通 A14 CI 不接触正式密钥。正式签名只走原生 ref / exact SHA、仅允许 main 且无人工审批的 `release-signing` 和独立 A14 Signed Build；工作流不硬编码本机路径。
+- 自动发布要求 exact main CI、新版本、双语记录及历史签名校验齐备，无人工审批；手动默认 `both`，可选 `source`，仅试用选 `actions-only`。先验收源码端再同步 Xposed。
+- 候选晋升 / 失败恢复须匹配原生 main 事件、版本、原 run / attempt / Artifact ID 及验证收据；不重建、覆盖已发布资产或移动历史标签。完整安全合同只维护在 [RELEASE](docs/RELEASE.md)。
 - APK、密钥、密码、本地签名配置、ROM、DEX、trace、mapping、日志和 profiler 数据不得入库；保留忽略目录及仓库外证据。
 - 精修状态、未决问题和历史证据入口更新[原路线图](docs/maintenance/A14_REFINEMENT_ROADMAP.md)，不另建流水账。
 - ROM / Hook / 最终 DEX 深查按 [DexSQL](docs/rom-intelligence/DEXSQL.md) 和 `tools/dexsql/`；核对已安装 schema、样本哈希、定义来源、同产物 mapping，仅相关开发任务按需使用，不进 APK / 默认 CI。

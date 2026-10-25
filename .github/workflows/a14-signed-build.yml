@@ -1,17 +1,9 @@
 name: A14 Signed Build
-run-name: A14 Signed Build / ${{ github.ref_name }} / ${{ inputs.display_sha || 'request' }}
+run-name: A14 Signed Build / ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
     inputs:
-      display_sha:
-        description: '自动解析的 8 位显示 SHA；手动触发时留空'
-        required: false
-        type: string
-      source_sha:
-        description: '自动解析的完整 SHA，仅用于核对原生提交；手动触发时留空'
-        required: false
-        type: string
       destination:
         description: '确认本次操作：构建后自动发布，或仅生成签名 APK'
         required: true
@@ -74,94 +66,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python tools/signed_release.py release-plan
-      - name: Look for trusted CI on this exact SHA
-        id: ci
-        if: steps.source.outputs.authorized != 'true' || steps.plan.outputs.ready == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python tools/signed_release.py ci-status
-      - name: Set up JDK 25
-        if: steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          java-version: '25'
-          force-download: true
-          verify-signature: true
-      - name: Set up Android SDK
-        if: steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
-        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
-        with:
-          packages: ''
-          log-accepted-android-sdk-licenses: false
-      - name: Install pinned Android SDK packages
-        if: steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
-        run: bash tools/ci_install_android_sdk.sh
-      - name: Set up Gradle
-        if: steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-        with:
-          cache-read-only: true
-      - name: Source, tools, JVM tests and lint
-        if: steps.ci.outcome == 'success' && steps.ci.outputs.reuse != 'true'
-        run: |
-          python tools/check_ci_portability.py
-          python tools/brutal_test_runner.py --config tools/brutal_test_config.json hermeticity
-          python tools/brutal_test_runner.py --config tools/brutal_test_config.json determinism
-          python tools/brutal_test_runner.py --config tools/brutal_test_config.json mutate --required-only
-          python tools/verify.py full
-          ./gradlew --no-daemon :app:assembleDevelop :app:lintVitalDevelop
-          test -s app/build/outputs/mapping/develop/mapping.txt
-          test -s app/build/outputs/mapping/develop/configuration.txt
-          test -f app/build/outputs/mapping/develop/usage.txt
-      - name: Upload validation diagnostics
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: signed-build-validation-diagnostics
-          path: |
-            app/build/reports/
-            app/build/test-results/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  request:
-    name: Resolve short SHA and request signing
-    needs: validate
-    if: github.repository == 'thetvplus/customiuizer-a14' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && inputs.display_sha == ''
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Checkout native commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.12'
-      - name: Dispatch with verified full and display SHA
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python tools/signed_release.py dispatch-build
 
   sign:
     name: Build, sign and verify Release
     needs: validate
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.display_sha != '' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'
+    if: github.repository == 'thetvplus/customiuizer-a14' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'
     environment: release-signing
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read
       actions: read
-      id-token: write
-      attestations: write
     outputs:
       source_sha: ${{ steps.candidate.outputs.source_sha }}
       apk_sha256: ${{ steps.candidate.outputs.apk_sha256 }}
@@ -178,7 +93,7 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
-      - name: Recheck source and release after confirmation
+      - name: Recheck native source, successful CI and release identity
         env:
           GH_TOKEN: ${{ github.token }}
         run: python tools/signed_release.py signing-preflight
@@ -217,34 +132,6 @@ jobs:
       - name: Verify APK and record candidate metadata
         id: candidate
         run: python tools/signed_release.py candidate --directory "$RUNNER_TEMP/candidate"
-      - name: Attest the final signed APK
-        id: apk-provenance
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-path: ${{ runner.temp }}/candidate/*.apk
-          github-token: ${{ github.token }}
-          create-storage-record: false
-      - name: Verify APK attestation and finalize metadata
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ATTESTATION_BUNDLE: ${{ steps.apk-provenance.outputs.bundle-path }}
-        run: |
-          cp "$ATTESTATION_BUNDLE" "$RUNNER_TEMP/candidate/apk-attestation.sigstore.json"
-          python tools/signed_release.py attest-apk --directory "$RUNNER_TEMP/candidate"
-      - name: Attest the finalized build metadata
-        id: provenance
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-path: ${{ runner.temp }}/candidate/build-metadata.json
-          github-token: ${{ github.token }}
-          create-storage-record: false
-      - name: Verify GitHub attestation
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ATTESTATION_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
-        run: |
-          cp "$ATTESTATION_BUNDLE" "$RUNNER_TEMP/candidate/attestation.sigstore.json"
-          python tools/signed_release.py attest --directory "$RUNNER_TEMP/candidate"
       - name: Upload verified signed candidate
         id: artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -263,13 +150,13 @@ jobs:
           from pathlib import Path
           data = json.loads((Path(os.environ['RUNNER_TEMP']) / 'candidate/build-metadata.json').read_text())
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write(f"### Verified signed APK\n\n{data['version_name']} ({data['version_code']})\n\nSource: `{data['source_sha']}`\n\nAPK SHA-256: `{data['apk_sha256']}`\n\nAndroid signature and GitHub provenance passed. [Download artifact]({os.environ['ARTIFACT_URL']}). Release publication, when selected, follows in a separate protected job.\n")
+              summary.write(f"### Verified signed APK\n\n{data['version_name']} ({data['version_code']})\n\nSource: `{data['source_sha']}`\n\nAPK SHA-256: `{data['apk_sha256']}`\n\nAndroid signature, exact source/run identity and APK digest passed. [Download artifact]({os.environ['ARTIFACT_URL']}). Release publication, when selected, follows in a separate job with scoped publishing credentials.\n")
           PY
 
   publish:
     name: Publish verified APK to Release
     needs: [validate, sign]
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && inputs.display_sha != '' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && needs.validate.outputs.destination != 'actions-only'
+    if: github.repository == 'thetvplus/customiuizer-a14' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true' && needs.validate.outputs.destination != 'actions-only'
     environment: release-publishing
     concurrency:
       group: a14-release-publish
@@ -279,7 +166,6 @@ jobs:
     permissions:
       contents: write
       actions: read
-      attestations: read
     steps:
       - name: Checkout triggering commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

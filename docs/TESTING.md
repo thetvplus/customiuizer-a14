@@ -12,7 +12,7 @@
 | JVM / Robolectric | `testDebugUnitTest` | 实际状态、动作和 Android 14 UI 模型；不运行目标 ROM Hook |
 | 独立缺陷注入 | `brutal_test_runner.py` | 注入缺陷是否被独立门禁检出 |
 | 普通 CI | [a14-ci.yml](../.github/workflows/a14-ci.yml) | 同 SHA 门禁、一次未签名 Develop、R8 和 fatal lint |
-| 正式候选 | [A14 Signed Build](RELEASE.md#actions-构建与自动发布) | 正式签名、元数据、来源证明及受保护发布 |
+| 正式候选 | [A14 Signed Build](RELEASE.md#actions-构建与自动发布) | 历史正式签名、来源 / Artifact 摘要、元数据及零人工审批发布契约 |
 | 设备 | 指定 APK / ROM 下操作与日志 | 实际 Hook、UI、生命周期和性能，仅限已测场景 |
 
 不以测试数量、静态命中或一次构建代替兼容结论。保留行为、备份 V2、偏好、所有权、热路径、API 边界和 issue 回归；只有无 production subject、完全重复或锁死错误细节的测试才可评估移除。Python 不重复实现 Kotlin 业务，也不以测试方法名匹配代替执行。
@@ -65,3 +65,5 @@ Actions 固定完整 SHA；JDK 下载保留 force-download / verify-signature，
 SDK 安装与 Gradle 输入一致；宿主 classpath 与 APK runtime 分开审查。依赖变化按影响检查解析图、编译与 DEX 输出、R8 / API 隔离、签名及必要设备路径；不把 JVM 25 当作 Android API 可用性证明。
 
 发布故障回归覆盖 workflow / event / 仓库 / attempt / SHA、缺审核、确认期间 main 前进、错误证书 / 凭据、篡改、版本 / 双语记录、草稿资产、预发行 Latest 与双端部分失败。只允许 Validate / Sign 成功而 Publish 失败的原 attempt 恢复；测试模拟服务器不能证明远端 Secrets / 权限或设备通过。
+
+发布工具测试覆盖原生 main / exact CI、零人工审批的 main-only 环境、指定正式目标与试用隔离、累计说明 / 安全两基线、无条数上限的双语内容、Artifact ID / 归档摘要及安全解压、原候选失败恢复、顺序双仓资产和下载文档幂等性。它们使用模拟 API，不触发正式签名或远端公开；远端环境和实际清理另以 API 读回核实，完整规则见 [发布与恢复](RELEASE.md)。

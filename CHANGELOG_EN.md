@@ -2,11 +2,41 @@
 
 English | [简体中文](CHANGELOG.md)
 
-Unreleased changes and retained releases; each release section consolidates changes since the previous retained version. Original source tags and APK provenance are preserved.
+Unreleased changes and retained releases; cumulative notes use their designated baseline, while publication safety checks the latest published release separately. Preserve original source tags, APKs, signing identity and build provenance.
 
 ## Unreleased
 
-- Prevent initial or bulk preference snapshots from overwriting concurrent updates or reporting readiness before publication. Retain the last valid setting after a temporary read failure, preserving acknowledged status-bar height overrides and restart-only switch semantics.
+### User changes
+
+- Reorganize settings into System, Home screen, Buttons and gestures, and Apps and maintenance. Unify grouped cards and descriptions, improve search navigation, and collect restart actions on the home page.
+- Enter precise slider values by tapping the number, with range, step and unit validation.
+- Add Dynamic Island for music, system states, brief notices and optional message notifications, with short and long forms, secondary activities, and Vertical or Center animations.
+- Add left, center and right island placement, horizontal adjustment and cutout avoidance. Adjust height from 32–64 dp, short width from 96–320 dp and long width from 120–400 dp, with matching text, artwork, waves and touch areas.
+- Add five customizable island music gestures for track controls, volume and shortcuts. Refine pause visibility, opening the current player and upward dismissal.
+- Use the native icon-free return animation for direct music return to the island, including rapid switches and launchers with or without a player icon. This option is off by default and requires selecting a player.
+- Refine picture-in-picture entry, cancellation, exit, edge stashing and restoration. The floating-window hiding option suppresses the whole island; disabling it allows the media island and PiP to coexist while preserving native window transitions. Restart the device after changing this option.
+- Choose system feedback categories for the island and use an app allowlist for message notifications. Refine lockscreen restrictions, notification updates and click checks, retaining native alerts when takeover fails.
+- Keep lightweight music waves by default, with an experimental live mode and adjusted amplitude, quiet high frequencies and silence decay.
+- Add full-width Dock backgrounds, symmetric sizing and wallpaper-tinted glass. Offer liquid glass with a frosted-glass fallback when unavailable.
+- Follow native unlock, recents and app-return animations for Dock movement, scale, opacity and wallpaper sampling. Prevent an old sampling failure from degrading a new background.
+- Position Toasts at the top, center or bottom with spacing and offsets inside the safe area. Optionally show brief notices in the island while retaining ordinary Toasts for complex or long content.
+- Apply fixed status-bar height to system dimension resources to improve layouts that read an outdated height. Preserve independent content offset, app fullscreen visibility and native contrast protection. Restart the device after changing the height.
+- Refine normal and floating-window notification clicks, expansion, auto-removal, withdrawal and rebinding, folding and colors. Preserve native lockscreen, user and critical-channel protections.
+- Connect vibration strength to A14 native scaling. Correct volume timers, panel auto-hide, high-volume confirmation and audio-focus handling.
+- Fix back-gesture area compatibility and status-bar gesture actions. Improve state recovery after rotation, dimension changes and interrupted gestures.
+- Improve state recovery and resource cleanup for Control Center, the status bar, screenshot-hidden overlays and visualization, preserving screen-off update boundaries.
+- Refine configuration migration, backups and maintenance recovery. Save original system states before maintenance, check the results and retain recovery records on failure.
+- Prevent startup or bulk preference refreshes from overwriting newer values with an old snapshot. Keep the last valid settings when a temporary read fails.
+
+### Engineering notes
+
+- The cumulative notes baseline is r14.24.1; publication safety still uses the latest actually published stable release, historical certificate and exact main CI. Preserve real r14.25.1 and r14.25.3 releases and Git tags, excluding withdrawn designs and debugging history.
+- Music returns retain native Surfaces, cancellation and spring callbacks. PiP and app-overlay state expire by owner, user and generation, with bounded queries and fallbacks and no continuous polling. Preserve accepted floating-window options, rapid music returns and manual island dimensions.
+- Keep the acknowledged status-bar height override for stale framework caches. Mark preferences ready only after atomic publication, serializing startup, bulk and single-key updates. Distinguish failed reads from real deletion and retain full-restart semantics for installation-time switches.
+- Notifications retain native Views and Pipeline attachment, compensation before commit and no alert replay after commit. Unknown lockscreen state blocks presentation. Release Dock sampling and geometry listeners with their owners; do not copy third-party implementations.
+- Remove human approval, self-dispatch and online Attestation dependencies from signing and publishing. Restrict environments to main and reuse successful CI for the exact SHA. Verify candidates against immutable Artifact IDs, archive digests, the historical Android certificate, APKs and source identity; recover without rebuilding.
+- Publish only the official APK and build-metadata.json, verifying the source repository before the download repository. Update download documents after both assets agree. Maintain long-term rules only in docs/RELEASE.md.
+- Reuse existing Host, tool, APK and device evidence with separate scopes. Uncovered notification end-to-end behavior, other ROMs, Bluetooth, dual SIM, multiple users and long-term power remain unconfirmed; claim no unmeasured performance gains.
 
 ## r14.25.6 — 2026-10-25
 
@@ -33,7 +63,7 @@ This version is for locally installed, officially signed trials only and has not
 - Keep Row / Sbn / binding transactions, pre-commit compensation and no alert replay after failed post-commit cleanup. Unknown or failing keyguard state blocks presentation. Bind geometry and gesture listeners to their real window / plugin owner, preserve empty native Insets frames and retain ordinary Home media timing.
 - Reject stale Dock frames and failures by generation. Two fixed scalar buffers retain only current lens parameters and invalidate with shader replacement. Keep real wallpaper sampling and existing island animation. External algorithm research informed duplicate-update elimination; no third-party code or shader was copied.
 - Base release review on stable asset digests, the exact source SHA, complete Git diff and bilingual content. Download documents read only published source, update in one non-forced commit and verify readback. Feature maps, process matrices and auxiliary summaries, filters, pagination and Schema / version checks retain existing generation and tool gates; do not restore deleted entries or automatically accept new risk fingerprints.
-- Inherit valid device and performance evidence, target affected shared paths and validate source, Host, tools and APKs separately. Xiaomi 13 results do not establish all-ROM coverage. Fresh notification end-to-end events, Camera / Gallery preview appearance, Bluetooth, dual SIM, multiple users and long-term power remain separate checks; short-term PSS variation proves neither a leak nor memory savings.
+- Inherit valid device and performance evidence, target affected shared paths and validate source, Host, tools and APKs separately. Existing device results do not establish all-ROM coverage. Fresh notification end-to-end events, Camera / Gallery preview appearance, Bluetooth, dual SIM, multiple users and long-term power remain separate checks; short-term PSS variation proves neither a leak nor memory savings.
 
 ## r14.25.3 — 2026-10-23
 

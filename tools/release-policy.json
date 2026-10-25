@@ -3,11 +3,14 @@
   "trusted_branches": ["main"],
   "certificate_sha256": "c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70",
   "download_repository": "Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14",
+  "release_target": {
+    "version_name": "r14.25.5",
+    "minimum_version_code": 254,
+    "unpublished_source": "r14.25.6"
+  },
   "cumulative_releases": {
     "r14.25.5": {
-      "version_code": 250,
-      "supersedes": "r14.25.4",
-      "base": "r14.25.3"
+      "notes_base": "r14.24.1"
     }
   }
 }
