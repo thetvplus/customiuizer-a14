@@ -1240,7 +1240,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_position_center">Orta</string>
     <string name="system_island_position_right">Sağ</string>
     <string name="system_island_horizontal_offset_title">Yatay kaydırma</string>
-    <string name="system_island_feedback_title">Sistem geri bildirimi</string>
+    <string name="system_island_feedback_title">Sistem etkinlikleri</string>
     <string name="system_island_notification_apps_title">Bildirimlerine izin verilen uygulamalar</string>
     <string name="system_island_notification_apps_summ">Yalnızca seçili uygulamalar. Hariç tutulan uygulamalar ve yerel kayan bildirimleri koruma önceliklidir.</string>
     <string name="system_island_action_play">Oynat</string>
@@ -1279,4 +1279,20 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_battery_low">Düşük pil</string>
     <string name="system_island_gesture_tap">Dokunma</string>
     <string name="system_island_idle_gestures_summ">Yalnızca boşta ada için. Oynatma son geçerli medya oturumunu kullanır.</string>
+    <string name="system_island_live_sources_title">Devam eden etkinlikler</string>
+    <string name="system_island_live_choose">Kaynaklar</string>
+    <string name="system_island_live_sources_summary">Etkinlikleri seçin. Kaynak ekledikten sonra yeniden başlatın. SMS ve takvim için bildirim gerekir.</string>
+    <string name="system_island_live_feedback">Anlık geri bildirim</string>
+    <string name="system_island_live_call">Arama</string>
+    <string name="system_island_live_alarm">Alarm</string>
+    <string name="system_island_live_timer">Zamanlayıcı</string>
+    <string name="system_island_live_stopwatch">Kronometre</string>
+    <string name="system_island_live_recorder">Ses kaydı</string>
+    <string name="system_island_live_privacy">Gizlilik etkinliği</string>
+    <string name="system_island_live_sms">SMS (bildirim)</string>
+    <string name="system_island_live_calendar">Takvim (bildirim)</string>
+    <string name="system_island_live_ringing">Gelen arama</string>
+    <string name="system_island_live_finished">Süre doldu</string>
+    <string name="system_island_live_camera">Kamera</string>
+    <string name="system_island_live_microphone">Mikrofon</string>
 </resources>

@@ -1234,7 +1234,7 @@
     <string name="system_island_position_center">Giữa</string>
     <string name="system_island_position_right">Phải</string>
     <string name="system_island_horizontal_offset_title">Độ lệch ngang</string>
-    <string name="system_island_feedback_title">Phản hồi hệ thống</string>
+    <string name="system_island_feedback_title">Hoạt động hệ thống</string>
     <string name="system_island_notification_apps_title">Ứng dụng được phép hiển thị thông báo</string>
     <string name="system_island_notification_apps_summ">Chỉ áp dụng cho ứng dụng đã chọn. Loại trừ ứng dụng và giữ thông báo nổi gốc được ưu tiên.</string>
     <string name="system_island_action_play">Phát</string>
@@ -1273,4 +1273,20 @@
     <string name="system_island_battery_low">Pin yếu</string>
     <string name="system_island_gesture_tap">Chạm</string>
     <string name="system_island_idle_gestures_summ">Chỉ áp dụng cho đảo chờ. Điều khiển phát dùng phiên phương tiện hợp lệ gần nhất.</string>
+    <string name="system_island_live_sources_title">Hoạt động đang diễn ra</string>
+    <string name="system_island_live_choose">Nguồn</string>
+    <string name="system_island_live_sources_summary">Chọn hoạt động. Khởi động lại sau khi thêm nguồn. SMS và lịch cần thông báo.</string>
+    <string name="system_island_live_feedback">Phản hồi tức thì</string>
+    <string name="system_island_live_call">Cuộc gọi</string>
+    <string name="system_island_live_alarm">Báo thức</string>
+    <string name="system_island_live_timer">Hẹn giờ</string>
+    <string name="system_island_live_stopwatch">Bấm giờ</string>
+    <string name="system_island_live_recorder">Ghi âm</string>
+    <string name="system_island_live_privacy">Quyền riêng tư</string>
+    <string name="system_island_live_sms">SMS (thông báo)</string>
+    <string name="system_island_live_calendar">Lịch (thông báo)</string>
+    <string name="system_island_live_ringing">Cuộc gọi đến</string>
+    <string name="system_island_live_finished">Hết giờ</string>
+    <string name="system_island_live_camera">Máy ảnh</string>
+    <string name="system_island_live_microphone">Micrô</string>
 </resources>

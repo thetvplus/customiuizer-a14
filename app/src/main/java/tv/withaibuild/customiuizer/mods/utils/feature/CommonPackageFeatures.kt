@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods.utils.feature
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.System as ModsSystem
 import tv.withaibuild.customiuizer.mods.Various
+import tv.withaibuild.customiuizer.mods.island.IslandNativeAppSource
 import tv.withaibuild.customiuizer.mods.utils.FeatureDefinition
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
 import tv.withaibuild.customiuizer.mods.utils.FeatureSpec
@@ -15,10 +16,19 @@ object CommonPackageFeatures {
     @JvmStatic
     fun hasEnabledFeature(prefs: PrefMap, packageName: String): Boolean =
         StatusBarHeightFeature.evaluateEnabled(prefs, packageName) ||
-            AlarmCompatFeature.evaluateEnabled(prefs, packageName)
+            AlarmCompatFeature.evaluateEnabled(prefs, packageName) || IslandNativeAppSource.enabled(prefs, packageName)
 
     @JvmStatic
     fun all(lpparam: PackageReadyParam, mPrefs: PrefMap): List<FeatureSpec> = listOf(
+        LazyFeatureSpec(
+            id = IslandLiveSourceFeatureId,
+            name = "Island Native Activity Sources",
+            preferenceKey = "system_island_live_kinds",
+            target = FeatureTarget.ANY,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> IslandNativeAppSource.enabled(prefs, lpparam.packageName.orEmpty()) },
+            factory = { IslandLiveSourceFeature(lpparam, mPrefs) },
+        ),
         LazyFeatureSpec(
             id = StatusBarHeightFeatureId,
             name = "Status Bar Height",
@@ -38,6 +48,13 @@ object CommonPackageFeatures {
             factory = { AlarmCompatFeature(lpparam, mPrefs) },
         ),
     )
+}
+
+internal class IslandLiveSourceFeature(lpparam: PackageReadyParam, mPrefs: PrefMap) : BasePackageReadyFeature(
+    lpparam, mPrefs, IslandLiveSourceFeatureId, "Island Native Activity Sources", "system_island_live_kinds", FeatureTarget.ANY,
+) {
+    override fun isEnabledCondition(prefs: PrefMap) = IslandNativeAppSource.enabled(prefs, packageName)
+    override fun installHook() = IslandNativeAppSource.install(lpparam, mPrefs)
 }
 
 internal class StatusBarHeightFeature(

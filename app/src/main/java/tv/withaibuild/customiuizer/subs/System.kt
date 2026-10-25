@@ -13,6 +13,7 @@ import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
+import androidx.preference.MultiSelectListPreference
 import miui.os.Build
 import tv.withaibuild.customiuizer.PrefsProvider
 import tv.withaibuild.customiuizer.R
@@ -219,6 +220,13 @@ class System : SubFragment() {
             "pref_key_system_cat_toasts" -> findPreference<Preference>("pref_key_system_blocktoasts_apps")?.setOnPreferenceClickListener(openAppsEdit)
 
             "pref_key_system_island_feedback_cat", "pref_key_system_island_music_cat" -> {
+                findPreference<MultiSelectListPreference>("pref_key_system_island_live_kinds")?.let { sources ->
+                    sources.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
+                        val selected = (value as? Set<*>)?.filterIsInstance<String>().orEmpty()
+                        tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected)
+                        true
+                    }
+                }
                 val enabled = StrongToastPresentationMode.fromPreference(
                     AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
                 ) == StrongToastPresentationMode.DYNAMIC_ISLAND

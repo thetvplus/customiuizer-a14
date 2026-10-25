@@ -1267,7 +1267,7 @@
     <string name="system_island_position_center">Center</string>
     <string name="system_island_position_right">Right</string>
     <string name="system_island_horizontal_offset_title">Horizontal offset</string>
-    <string name="system_island_feedback_title">System feedback</string>
+    <string name="system_island_feedback_title">System activities</string>
     <string name="system_island_notification_apps_title">Message apps</string>
     <string name="system_island_notification_apps_summ">Only selected apps are taken over. App exclusions and Keep native heads-up take priority over this list.</string>
     <string name="system_island_action_play">Play</string>
@@ -1306,4 +1306,20 @@
     <string name="system_island_battery_low">Low battery</string>
     <string name="system_island_gesture_tap">Tap</string>
     <string name="system_island_idle_gestures_summ">Only applies to the idle island. Playback actions use the most recent valid media session.</string>
+    <string name="system_island_live_sources_title">Ongoing activities</string>
+    <string name="system_island_live_choose">Sources</string>
+    <string name="system_island_live_sources_summary">Choose activities to show. Restart after adding sources. SMS and calendar require notifications.</string>
+    <string name="system_island_live_feedback">Instant feedback</string>
+    <string name="system_island_live_call">Call</string>
+    <string name="system_island_live_alarm">Alarm</string>
+    <string name="system_island_live_timer">Timer</string>
+    <string name="system_island_live_stopwatch">Stopwatch</string>
+    <string name="system_island_live_recorder">Recording</string>
+    <string name="system_island_live_privacy">Privacy activity</string>
+    <string name="system_island_live_sms">SMS (notification)</string>
+    <string name="system_island_live_calendar">Calendar (notification)</string>
+    <string name="system_island_live_ringing">Incoming call</string>
+    <string name="system_island_live_finished">Time is up</string>
+    <string name="system_island_live_camera">Camera</string>
+    <string name="system_island_live_microphone">Microphone</string>
 </resources>

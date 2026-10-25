@@ -1234,7 +1234,7 @@
     <string name="system_island_position_center">中央</string>
     <string name="system_island_position_right">右</string>
     <string name="system_island_horizontal_offset_title">横方向のオフセット</string>
-    <string name="system_island_feedback_title">システムのフィードバック</string>
+    <string name="system_island_feedback_title">システムアクティビティ</string>
     <string name="system_island_notification_apps_title">通知を許可するアプリ</string>
     <string name="system_island_notification_apps_summ">選択したアプリのみ対象です。除外と標準のポップアップ通知の維持が優先されます。</string>
     <string name="system_island_action_play">再生</string>
@@ -1273,4 +1273,20 @@
     <string name="system_island_battery_low">バッテリー低下</string>
     <string name="system_island_gesture_tap">タップ</string>
     <string name="system_island_idle_gestures_summ">待機中のアイランドのみ。再生操作は直近の有効なメディアセッションに適用します。</string>
+    <string name="system_island_live_sources_title">継続中のアクティビティ</string>
+    <string name="system_island_live_choose">表示する項目</string>
+    <string name="system_island_live_sources_summary">項目の追加後は再起動してください。SMSとカレンダーには通知が必要です。</string>
+    <string name="system_island_live_feedback">操作のフィードバック</string>
+    <string name="system_island_live_call">通話</string>
+    <string name="system_island_live_alarm">アラーム</string>
+    <string name="system_island_live_timer">タイマー</string>
+    <string name="system_island_live_stopwatch">ストップウォッチ</string>
+    <string name="system_island_live_recorder">録音</string>
+    <string name="system_island_live_privacy">プライバシー</string>
+    <string name="system_island_live_sms">SMS（通知）</string>
+    <string name="system_island_live_calendar">カレンダー（通知）</string>
+    <string name="system_island_live_ringing">着信</string>
+    <string name="system_island_live_finished">時間になりました</string>
+    <string name="system_island_live_camera">カメラ</string>
+    <string name="system_island_live_microphone">マイク</string>
 </resources>

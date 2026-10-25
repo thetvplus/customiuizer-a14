@@ -1,6 +1,6 @@
 package tv.withaibuild.customiuizer.mods.island
 
-/** Main-thread state, with one transient slot and one native-selected media slot. No queue. */
+/** Main-thread state, with transient, selected native activity and media slots. No queue. */
 internal class IslandActivityState<T, M>(private val dismissal: MediaDismissal = MediaDismissal()) {
     /** Main-owned, capacity one; only the session identity survives a status-bar View rebuild. */
     class MediaDismissal { var key: Any? = null }
@@ -9,6 +9,8 @@ internal class IslandActivityState<T, M>(private val dismissal: MediaDismissal =
     private var transient: Transient<T>? = null
     private var media: M? = null
     private var mediaKey: Any? = null
+    private var activity: T? = null
+    private var activityKey: Any? = null
     var allowed = true
 
     fun offer(value: T, now: Long, duration: Long): Lease {
@@ -38,10 +40,19 @@ internal class IslandActivityState<T, M>(private val dismissal: MediaDismissal =
         media = value
     }
 
+    fun setActivity(key: Any?, value: T?) { activityKey = key; activity = value }
+
+    fun activity(now: Long): T? {
+        expire(now)
+        return if (allowed && transient == null) activity else null
+    }
+
+    fun uncoveredMedia(): M? = if (allowed && mediaKey != dismissal.key) media else null
+
     fun identity(now: Long): Any? {
         expire(now)
         if (!allowed) return null
-        return transient?.lease ?: mediaKey?.takeUnless { it == dismissal.key }
+        return transient?.lease ?: activityKey ?: mediaKey?.takeUnless { it == dismissal.key }
     }
 
     fun toast(now: Long): T? {
@@ -51,14 +62,16 @@ internal class IslandActivityState<T, M>(private val dismissal: MediaDismissal =
 
     fun media(now: Long): M? {
         expire(now)
-        return if (allowed && transient == null &&
+        return if (allowed && transient == null && activity == null &&
             mediaKey != dismissal.key) media else null
     }
 
     fun deadline(): Long? = transient?.deadline
     fun clearToast() { transient = null }
     fun dismiss() {
-        if (transient != null) transient = null else dismissal.key = mediaKey
+        if (transient != null) transient = null
+        else if (activity != null) { activity = null; activityKey = null }
+        else dismissal.key = mediaKey
     }
 
     fun allowMediaAgain() { dismissal.key = null }
@@ -69,6 +82,8 @@ internal class IslandActivityState<T, M>(private val dismissal: MediaDismissal =
         transient = null
         media = null
         mediaKey = null
+        activity = null
+        activityKey = null
         if (!preserveDismissal) dismissal.key = null
     }
 

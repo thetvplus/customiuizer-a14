@@ -1241,7 +1241,7 @@
     <string name="system_island_position_center">Uprostřed</string>
     <string name="system_island_position_right">Vpravo</string>
     <string name="system_island_horizontal_offset_title">Vodorovný posun</string>
-    <string name="system_island_feedback_title">Systémová odezva</string>
+    <string name="system_island_feedback_title">Systémové aktivity</string>
     <string name="system_island_notification_apps_title">Povolené aplikace oznámení</string>
     <string name="system_island_notification_apps_summ">Pouze vybrané aplikace. Vyloučení a zachování původních plovoucích oznámení mají přednost.</string>
     <string name="system_island_action_play">Přehrát</string>
@@ -1280,4 +1280,20 @@
     <string name="system_island_battery_low">Slabá baterie</string>
     <string name="system_island_gesture_tap">Klepnutí</string>
     <string name="system_island_idle_gestures_summ">Platí jen pro nečinný ostrůvek. Přehrávání ovládá poslední platnou mediální relaci.</string>
+    <string name="system_island_live_sources_title">Probíhající aktivity</string>
+    <string name="system_island_live_choose">Zdroje</string>
+    <string name="system_island_live_sources_summary">Vyberte aktivity. Po přidání zdrojů restartujte zařízení. SMS a kalendář vyžadují oznámení.</string>
+    <string name="system_island_live_feedback">Okamžitá odezva</string>
+    <string name="system_island_live_call">Hovor</string>
+    <string name="system_island_live_alarm">Budík</string>
+    <string name="system_island_live_timer">Časovač</string>
+    <string name="system_island_live_stopwatch">Stopky</string>
+    <string name="system_island_live_recorder">Nahrávání</string>
+    <string name="system_island_live_privacy">Přístup k soukromí</string>
+    <string name="system_island_live_sms">SMS (oznámení)</string>
+    <string name="system_island_live_calendar">Kalendář (oznámení)</string>
+    <string name="system_island_live_ringing">Příchozí hovor</string>
+    <string name="system_island_live_finished">Čas vypršel</string>
+    <string name="system_island_live_camera">Fotoaparát</string>
+    <string name="system_island_live_microphone">Mikrofon</string>
 </resources>

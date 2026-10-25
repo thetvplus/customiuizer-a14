@@ -52,6 +52,7 @@ internal data class IslandOptions(
     val charging: Boolean = false,
     val lowBattery: Boolean = false,
     val idleActions: IslandIdleActions = IslandIdleActions(),
+    val liveKinds: Set<IslandLiveKind> = emptySet(),
 ) {
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
@@ -90,14 +91,15 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_island_expand_down", true),
                 prefs.getBoolean("system_island_height_auto", prefs.getInt("system_island_height", 40) == 40),
                 prefs.getBoolean("system_island_feedback_charging"),
-                prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs))
+                prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs), IslandLiveKind.read(prefs))
         }
     }
 }
 
 internal data class IslandToastContent(val text: String, val packageName: String?, val icon: Drawable?,
     val launch: PendingIntent? = null, val notificationKey: String? = null,
-    val detail: String? = null, val avatar: Boolean = false, val status: Boolean = false)
+    val detail: String? = null, val avatar: Boolean = false, val status: Boolean = false,
+    val liveActivity: IslandLiveActivity? = null)
 
 /** Only exact, whole, already-successful status messages may be shortened. Never guess from a substring. */
 internal object IslandToastText {
@@ -150,6 +152,7 @@ internal object DynamicIslandActivities {
     private var manager = WeakReference<Any>(null)
     private var safety = WeakReference<Any>(null)
     private val mediaDismissal = IslandActivityState.MediaDismissal()
+    private val liveDismissal = IslandLiveRegistry.Dismissal()
     @Volatile private var foregroundPackage: String? = null
     private var pipObserver: IslandPipObserver? = null
     private var freeformAccess: IslandFreeformAccess? = null
@@ -223,7 +226,16 @@ internal object DynamicIslandActivities {
                 override fun after(callback: AfterHookCallback) { captureMedia(callback.getThisObject()) }
             })
         }
-        if (options.chat) {
+        if (IslandLiveKind.PRIVACY in options.liveKinds) ModuleHelper.guarded {
+            ModuleHelper.findAndHookMethod("com.android.systemui.appops.AppOpsControllerImpl", param.classLoader,
+                "notifySuscribersWorker", String::class.java, Boolean::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) {
+                        if (callback.getThrowable() == null) active.get()?.refreshLivePrivacy()
+                    }
+                })
+        }
+        if (options.chat || options.liveKinds.any { it == IslandLiveKind.SMS || it == IslandLiveKind.CALENDAR }) {
             // Take over only the final, native-approved heads-up bind. Never block posting,
             // ranking or the notification-center entry. A missing contract stays native.
             ModuleHelper.guarded {
@@ -286,6 +298,7 @@ internal object DynamicIslandActivities {
         active.get()?.dispose()
         val controller = IslandActivityController(statusBar.context, source, options, resolved,
             dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader,
+            liveDismissal = liveDismissal,
             freeform = freeformAccess, pipStateReader = { pipObserver?.snapshot }, geometryHost = statusBar.rootView,
             trackApplicationOverlays = true,
             pipCandidate = if (options.media || options.hideInFloatingWindow) IslandPipCandidateAccess(statusBar.context) else null)

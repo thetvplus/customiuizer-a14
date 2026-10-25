@@ -25,7 +25,8 @@ import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.Chronometer
+import android.os.SystemClock
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.R
 import kotlin.math.abs
@@ -36,12 +37,18 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private val shape = IslandShape()
     private val icon = ImageView(context)
     private val wave = IslandWaveView(context)
-    private val title = TextView(context).apply {
+    private val title = Chronometer(context).apply {
         setTextColor(Color.WHITE); textSize = 13f; maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
         gravity = Gravity.END or Gravity.CENTER_VERTICAL
         includeFontPadding = false
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        fontFeatureSettings = "tnum"
+        setOnChronometerTickListener {
+            ModuleHelper.guarded { if (isCountDown && SystemClock.elapsedRealtime() >= base) {
+                stop(); text = format?.replace("%s", "00:00") ?: "00:00"
+            } }
+        }
     }
     private val statusPaint = TextPaint(title.paint)
     private var statusFit: IslandStatusLayout.Fit? = null
@@ -112,13 +119,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var textReveal = 1f
     private var layerReveal = 1f
     private class Content(val label: String, val drawable: Drawable?, val media: Boolean,
-        val waveform: Boolean, val avatar: Boolean, val status: Boolean, val expanded: Boolean, val photo: Boolean) {
+        val waveform: Boolean, val avatar: Boolean, val status: Boolean, val expanded: Boolean, val photo: Boolean,
+        val clock: IslandLiveClock? = null, val clockLabel: String? = null) {
         fun sameCompactVisual(other: Content) = media && other.media && !expanded && !other.expanded &&
             drawable === other.drawable && waveform == other.waveform && avatar == other.avatar &&
             status == other.status && photo == other.photo
         fun matches(label: String, drawable: Drawable?, media: Boolean, waveform: Boolean,
-            avatar: Boolean, status: Boolean, expanded: Boolean, photo: Boolean) = this.label == label && this.drawable === drawable &&
-            this.media == media && this.waveform == waveform && this.avatar == avatar && this.status == status && this.expanded == expanded && this.photo == photo
+            avatar: Boolean, status: Boolean, expanded: Boolean, photo: Boolean, clock: IslandLiveClock?) = this.label == label && this.drawable === drawable &&
+            this.media == media && this.waveform == waveform && this.avatar == avatar && this.status == status && this.expanded == expanded && this.photo == photo && this.clock == clock
     }
     private var displayedContent: Content? = null
     private var pendingContent: Content? = null
@@ -147,6 +155,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var shortWidth = Int.MAX_VALUE
     var returnStrength = 0f
     var allowTextBlur = true
+    var privacy = 0
+        set(value) { if (field != value) { field = value; invalidate() } }
+    private val privacyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var flipDirection = 1f
     private var albumFlip = false
     private var contentMotion = false
@@ -223,7 +234,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     fun bind(label: String, detail: String?, drawable: Drawable?, playing: Boolean,
         media: Boolean, waveform: Boolean, actions: Long, showControls: Boolean,
         playbackState: Int = PlaybackState.STATE_NONE, avatar: Boolean = false, status: Boolean = false,
-        expanded: Boolean = false, loading: Boolean = false, photo: Boolean = media || avatar): Boolean {
+        expanded: Boolean = false, loading: Boolean = false, photo: Boolean = media || avatar,
+        clock: IslandLiveClock? = null): Boolean {
         if (isMedia != media) cancelInputs()
         isMedia = media
         this.expanded = expanded
@@ -236,10 +248,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // handoff is deferred, with one latest value and the shell's existing finite clock.
         val caption = if (expanded && !detail.isNullOrBlank() && !status) "$label\n${detail.take(160)}" else label
         val previous = pendingContent ?: displayedContent
-        val changed = previous?.matches(caption, drawable, media, waveform, avatar, status, expanded, photo) != true
+        val changed = previous?.matches(caption, drawable, media, waveform, avatar, status, expanded, photo, clock) != true
         var visualChanged = changed
         if (changed) {
-            val content = Content(caption, drawable, media, waveform, avatar, status, expanded, photo)
+            val content = Content(caption, drawable, media, waveform, avatar, status, expanded, photo, clock, detail)
             if (previous != null && content.sameCompactVisual(previous)) {
                 // Compact media has no visible label. Metadata-only updates, including
                 // mirrored Binder copies of the same cover, must not fade its artwork/wave.
@@ -272,6 +284,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     private fun applyContent(content: Content) {
+        title.stop(); title.format = null
         displayedContent = content
         avatar = content.avatar
         title.ellipsize = if (content.status) null else TextUtils.TruncateAt.END
@@ -281,6 +294,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             ?: baseTextSize else if (content.expanded) baseTextSize * .94f else baseTextSize)
         val visibleLabel = if (content.media && !content.expanded) "" else content.label
         if (title.text.toString() != visibleLabel) title.text = visibleLabel
+        content.clock?.let { clock ->
+            val prefix = if (content.expanded) content.clockLabel?.let { "$it\n" }.orEmpty() else ""
+            if (clock.pausedMillis != null) title.text = prefix + IslandLiveLabels.time(clock.pausedMillis)
+            else {
+                title.isCountDown = clock.countdown
+                title.format = if (prefix.isEmpty()) null else prefix.replace("%", "%%") + "%s"
+                title.base = clock.base
+                title.start()
+            }
+        }
         labelWidth = visibleLabel.lineSequence().maxOfOrNull { title.paint.measureText(it) } ?: 0f
         text.visibility = if (content.media && !content.expanded) GONE else VISIBLE
         icon.scaleType = if (content.photo) ImageView.ScaleType.CENTER_CROP else ImageView.ScaleType.FIT_CENTER
@@ -767,6 +790,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private fun topTravel() = (windowTop + geometryHeight + dp(8)).coerceAtLeast(geometryHeight).toFloat()
     override fun onAttachedToWindow() { disposed = false; super.onAttachedToWindow() }
     override fun onDetachedFromWindow() {
+        title.stop()
         disposed = true
         pendingContent = null; displayedContent = null; contentFadeRemaining = 0L
         cancelInputs()
@@ -776,6 +800,17 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         leaving = false; entryCameraAnchor = false
         resetTransform()
         super.onDetachedFromWindow()
+    }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        super.dispatchDraw(canvas)
+        if (privacy != 0 && !idle) {
+            // Reserved camera padding, never over the cutout or a second overlay window.
+            val x = if (cameraGap > 0) width * .5f + cameraOffset + cameraGap * .5f - dp(4)
+                else width - dp(6).toFloat()
+            privacyPaint.color = if (privacy and IslandPrivacyAccess.CAMERA != 0) 0xff32d074.toInt() else 0xffffa52d.toInt()
+            canvas.drawCircle(x, height * .5f, dp(2).toFloat(), privacyPaint)
+        }
     }
 
     override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {

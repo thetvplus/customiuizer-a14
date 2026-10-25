@@ -1234,7 +1234,7 @@
     <string name="system_island_position_center">中</string>
     <string name="system_island_position_right">右</string>
     <string name="system_island_horizontal_offset_title">橫向微调</string>
-    <string name="system_island_feedback_title">系統回饋</string>
+    <string name="system_island_feedback_title">系統活動</string>
     <string name="system_island_notification_apps_title">通知應用</string>
     <string name="system_island_notification_apps_summ">只接入所選應用，排除與原生通知名单优先。</string>
     <string name="system_island_action_play">播放</string>
@@ -1273,4 +1273,20 @@
     <string name="system_island_battery_low">低電量</string>
     <string name="system_island_gesture_tap">點按</string>
     <string name="system_island_idle_gestures_summ">僅在小島顯示時生效。播放類動作只控制最近一個有效媒體工作階段。</string>
+    <string name="system_island_live_sources_title">持續活動</string>
+    <string name="system_island_live_choose">活動來源</string>
+    <string name="system_island_live_sources_summary">選擇要上島的活動。新增來源後重新啟動；簡訊、行事曆需通知。</string>
+    <string name="system_island_live_feedback">即時回饋</string>
+    <string name="system_island_live_call">通話</string>
+    <string name="system_island_live_alarm">鬧鐘</string>
+    <string name="system_island_live_timer">倒數計時</string>
+    <string name="system_island_live_stopwatch">碼錶</string>
+    <string name="system_island_live_recorder">錄音</string>
+    <string name="system_island_live_privacy">隱私活動</string>
+    <string name="system_island_live_sms">簡訊（通知）</string>
+    <string name="system_island_live_calendar">行事曆（通知）</string>
+    <string name="system_island_live_ringing">來電</string>
+    <string name="system_island_live_finished">時間到</string>
+    <string name="system_island_live_camera">相機</string>
+    <string name="system_island_live_microphone">麥克風</string>
 </resources>

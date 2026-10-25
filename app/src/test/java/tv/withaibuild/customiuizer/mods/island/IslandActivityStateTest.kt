@@ -4,6 +4,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandActivityStateTest {
+    @Test fun liveActivityPreemptsMediaButTemporaryFeedbackRestoresTheSameLiveIdentity() {
+        val state = IslandActivityState<String, String>()
+        state.setMedia("player", "music")
+        state.setActivity("timer", "00:12")
+        assertEquals("timer", state.identity(0))
+        assertNull(state.media(0)); assertEquals("music", state.uncoveredMedia())
+        val lease = state.offer("copied", 0, 100)
+        assertEquals("copied", state.toast(20)); assertNull(state.activity(20))
+        state.release(lease)
+        assertEquals("00:12", state.activity(30)); assertEquals("timer", state.identity(30))
+        state.allowed = false
+        assertNull(state.activity(40)); assertNull(state.uncoveredMedia())
+        state.allowed = true; state.dismiss()
+        assertEquals("music", state.media(50))
+        state.setActivity("timer2", "00:20"); state.clear(preserveDismissal = true)
+        assertNull(state.activity(60)); assertNull(state.identity(60))
+    }
     @Test fun leaseOwnershipExpiresWithoutAllowingAnOldFeedbackCallbackToReleaseItsSuccessor() {
         val state = IslandActivityState<String, String>()
         val first = state.offer("system", 0, 200)

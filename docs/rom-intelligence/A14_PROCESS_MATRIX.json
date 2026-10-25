@@ -3275,13 +3275,28 @@
       "enableCondition": "{ prefs -> IslandApplicationOverlayFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "system_server",
       "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 259,
+      "featureIdName": "system_island_native_activity_sources",
+      "name": "Island Native Activity Sources",
+      "preferenceKey": "system_island_live_kinds",
+      "target": "ANY",
+      "phase": "PACKAGE_READY",
+      "installer": "CommonPackageFeatures (MainModule)",
+      "installHook": "IslandNativeAppSource.install(lpparam, mPrefs)",
+      "enableCondition": "{ prefs -> IslandNativeAppSource.enabled(prefs, lpparam.packageName.orEmpty()) }",
+      "allowedProcess": "any scoped package where hasEnabledFeature() is true",
+      "deniedProcess": ""
     }
   ],
   "scope": [
     "android",
+    "com.android.deskclock",
     "com.android.incallui",
     "com.android.permissioncontroller",
     "com.android.settings",
+    "com.android.soundrecorder",
     "com.android.systemui",
     "com.baidu.input",
     "com.baidu.input_mi",

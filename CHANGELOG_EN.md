@@ -12,6 +12,7 @@ versionCode 255. Changes since r14.25.5:
 
 ### User changes
 
+- Select calls, alarms, timers, stopwatch, recording and privacy activity together using native events. SMS and calendar retain notification privacy rules. Clocks update while visible; ending source processes restores media or the idle island.
 - Reuse one Dynamic Island window across compact, long and optional persistent idle forms. Swiping up collapses the long form before dismissing it; notifications can expand on a downward swipe.
 - Refine content fades, local text blur, track artwork flips and damped horizontal feedback. Music return responds subtly to native swipe strength while preserving configured music actions.
 - Tighten collapsed automatic widths, give expanded music more space for track details, and derive a 36–40 dp height from the camera cutout. Automatic idle width starts at 100 dp; horizontal offsets are continuously bounded by the cutout and content.

@@ -1067,3 +1067,8 @@ data object IslandApplicationOverlayFeatureId : FeatureId {
     override val id = 258
     override val name = "system_island_application_overlays"
 }
+
+data object IslandLiveSourceFeatureId : FeatureId {
+    override val id = 259
+    override val name = "system_island_native_activity_sources"
+}

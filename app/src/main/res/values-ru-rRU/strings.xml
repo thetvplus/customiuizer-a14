@@ -1233,7 +1233,7 @@
     <string name="system_island_position_center">По центру</string>
     <string name="system_island_position_right">Справа</string>
     <string name="system_island_horizontal_offset_title">Горизонтальное смещение</string>
-    <string name="system_island_feedback_title">Системные отклики</string>
+    <string name="system_island_feedback_title">Системные события</string>
     <string name="system_island_notification_apps_title">Разрешённые приложения уведомлений</string>
     <string name="system_island_notification_apps_summ">Только выбранные приложения. Исключения и сохранение штатных всплывающих уведомлений имеют приоритет.</string>
     <string name="system_island_action_play">Воспроизвести</string>
@@ -1272,4 +1272,20 @@
     <string name="system_island_battery_low">Низкий заряд</string>
     <string name="system_island_gesture_tap">Нажатие</string>
     <string name="system_island_idle_gestures_summ">Только для острова ожидания. Управление последним действующим медиасеансом.</string>
+    <string name="system_island_live_sources_title">Текущие события</string>
+    <string name="system_island_live_choose">Источники</string>
+    <string name="system_island_live_sources_summary">Выберите события. После добавления источников перезагрузите устройство. Для СМС и календаря нужны уведомления.</string>
+    <string name="system_island_live_feedback">Мгновенный отклик</string>
+    <string name="system_island_live_call">Вызов</string>
+    <string name="system_island_live_alarm">Будильник</string>
+    <string name="system_island_live_timer">Таймер</string>
+    <string name="system_island_live_stopwatch">Секундомер</string>
+    <string name="system_island_live_recorder">Запись</string>
+    <string name="system_island_live_privacy">Доступ к датчикам</string>
+    <string name="system_island_live_sms">СМС (уведомление)</string>
+    <string name="system_island_live_calendar">Календарь (уведомление)</string>
+    <string name="system_island_live_ringing">Входящий вызов</string>
+    <string name="system_island_live_finished">Время вышло</string>
+    <string name="system_island_live_camera">Камера</string>
+    <string name="system_island_live_microphone">Микрофон</string>
 </resources>

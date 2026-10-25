@@ -1,4 +1,8 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" xmlns:miuizer="http://schemas.android.com/apk/res-auto">
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_live_sources_title">
+		<androidx.preference.MultiSelectListPreference android:key="pref_key_system_island_live_kinds" android:title="@string/system_island_live_choose" android:summary="@string/system_island_live_sources_summary" android:entries="@array/system_island_live_entries" android:entryValues="@array/system_island_live_values" miuizer:iconSpaceReserved="false" />
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_live_feedback">
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_dnd" android:title="@string/system_statusbaricons_dnd_title" android:defaultValue="false" />
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_ringer" android:title="@string/system_island_feedback_ringer_title" android:defaultValue="false" />
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_dark" android:title="@string/system_island_mode_dark" android:defaultValue="false" />
@@ -11,4 +15,5 @@
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_bluetooth" android:title="@string/array_global_toggle_bt" android:defaultValue="false" />
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_charging" android:title="@string/system_island_feedback_charging_title" android:summary="@string/system_island_feedback_charging_summ" android:defaultValue="false" />
 	<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_feedback_low_battery" android:title="@string/system_island_feedback_low_battery_title" android:summary="@string/system_island_feedback_low_battery_summ" android:defaultValue="false" />
+	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 </PreferenceScreen>

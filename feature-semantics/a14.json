@@ -18910,6 +18910,29 @@
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
       "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_live_kinds",
+      "featureName": "Native island activities",
+      "preferenceKeys": [
+        "system_island_live_kinds",
+        "pref_key_system_island_live_kinds"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandNativeAppSource.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandNativeAppSource.kt:install",
+      "targetPackage": "com.android.systemui / com.android.deskclock / com.android.soundrecorder",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Observe selected native activity state sources",
+      "disableEffect": "Close attached source observers and clear their current slots",
+      "valueChangeEffect": "Reconfigure attached sources; newly installed native hooks require restart",
+      "restartTarget": "REBOOT",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandLiveActivityTest; IslandLiveSignalTest; IslandActivityStateTest",
+      "notes": "Clock and Recorder require framework scope and a source-process restart. SMS/calendar reuse accepted native notifications only. No additional app permissions or polling."
     }
   ]
 }

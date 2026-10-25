@@ -98,13 +98,14 @@ class IslandActivityLifecycleTest {
         entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
         geometryHost: View? = null, pipCandidate: IslandPipCandidatePort? = null,
         height: Int = 40, automaticWidth: Boolean = true, shortWidth: Int = 184, longWidth: Int = 240,
-        idle: Boolean = false): IslandActivityController {
+        idle: Boolean = false, liveKinds: Set<String> = emptySet()): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
             put("system_island_expanded_width", width)
             put("system_island_height", height); put("system_island_width_auto", automaticWidth)
             put("system_island_idle", idle)
+            put("system_island_live_kinds", liveKinds)
             put("system_island_width_short", shortWidth); put("system_island_width_medium", longWidth)
             put("system_island_simplified", simplified)
             put("system_island_chat", chat)
@@ -123,6 +124,34 @@ class IslandActivityLifecycleTest {
             it.refreshFloatingWindows()
             drain()
         }
+    }
+
+    @Test fun nativeTimerAndFeedbackShareTheExistingShellAndDismissalReturnsToMedia() {
+        val controller = controller(media = true, idle = true, simplified = true, liveKinds = setOf("timer"))
+        native.player = launchablePlayer("live-timer-music")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val activity = IslandLiveActivity(IslandLiveKind.TIMER, context.packageName, context.applicationInfo.uid,
+            IslandLiveClock(android.os.SystemClock.elapsedRealtime() + 30000, true), session = 10)
+        registry.update(IslandLiveKind.TIMER, activity)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertSame(original, shell); assertEquals(1, adds)
+        val chronometer = org.robolectric.util.ReflectionHelpers.getField<android.widget.Chronometer>(original, "title")
+        assertTrue(chronometer.isCountDown)
+        val text = chronometer.text.toString()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1100)); drain()
+        assertNotEquals(text, chronometer.text.toString())
+        assertEquals(1, adds)
+        val lease = controller.showToast(IslandToastContent("Copied", context.packageName, null), 3000)!!; drain()
+        assertFalse(original.isMedia)
+        controller.releaseToast(lease); drain()
+        assertTrue(chronometer.isCountDown)
+        original.onDismiss(); drain()
+        assertTrue(original.isMedia)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue(original.isMedia)
+        assertSame(original, shell); assertEquals(1, adds)
     }
 
     @Test fun idleAndActivityReuseTheSameWindowAndDismissalStaysPassiveUntilWake() {

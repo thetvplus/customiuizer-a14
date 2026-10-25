@@ -19,7 +19,7 @@ import kotlin.math.max
 internal object IslandChatNotifications {
     fun prepare(context: Context, sbn: StatusBarNotification, importance: Int,
         interruptionAllowed: Boolean, suppressed: Int,
-        nativeIcon: Drawable? = null): IslandToastContent? {
+        nativeIcon: Drawable? = null, calendar: Boolean = false): IslandToastContent? {
         val n = sbn.notification
         if (sbn.packageName == "com.android.systemui" || sbn.user != Process.myUserHandle() ||
             importance < NotificationManager.IMPORTANCE_DEFAULT || !interruptionAllowed ||
@@ -29,9 +29,10 @@ internal object IslandChatNotifications {
         val style = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(n)
         val messageNotification = style != null || n.category == Notification.CATEGORY_MESSAGE
         val pictureNotification = n.extras.getString(Notification.EXTRA_TEMPLATE) == Notification.BigPictureStyle::class.java.name
+        val event = calendar && IslandLiveLabels.notificationKind(sbn.packageName, n.category, n.channelId) == IslandLiveKind.CALENDAR
         // Generic standard styles carry content semantics. An arbitrary app branding icon
         // alone does not turn every notification into a new activity.
-        if (!messageNotification && !pictureNotification) return null
+        if (!messageNotification && !pictureNotification && !event) return null
         val message = style?.messages?.lastOrNull()
         val person = message?.person
         val title = title(person?.name) ?: title(n.extras.getCharSequence(Notification.EXTRA_TITLE)) ?: return null
@@ -50,9 +51,9 @@ internal object IslandChatNotifications {
         }
         // Native status icons retain their View callback. Copy their pixels too, never
         // transfer a drawable owned by SystemUI to the island ImageView.
-        val candidate = source ?: nativeIcon?.takeIf { messageNotification }
+        val candidate = source ?: nativeIcon?.takeIf { messageNotification || event }
         val icon = candidate?.let { drawable -> ModuleHelper.guarded<Drawable?>(null) { thumbnail(context, drawable) } }
-        if (!messageNotification && icon == null) return null
+        if (!messageNotification && !event && icon == null) return null
         return IslandToastContent(title, sbn.packageName, icon, notificationKey = sbn.key,
             detail = detail, avatar = avatar != null && icon != null)
     }

@@ -393,6 +393,14 @@ class PreferenceNavigationUiTest {
         val page = currentPage() as SubFragment
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()
         assertFalse(requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
+        val sources = requireNotNull((currentPage() as SubFragment)
+            .findPreference<androidx.preference.MultiSelectListPreference>("pref_key_system_island_live_kinds"))
+        assertTrue(sources.values.isEmpty())
+        assertEquals(8, sources.entries.size)
+        sources.performClick(); settleNavigation()
+        val sourcesDialog = requireNotNull(ShadowDialog.getLatestDialog())
+        assertTrue(sourcesDialog.isShowing)
+        sourcesDialog.dismiss(); settleNavigation()
         pressToolbarBack()
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_notifications_cat")).performClick(); settleNavigation()
         val notifications = currentPage() as SubFragment

@@ -1234,7 +1234,7 @@
     <string name="system_island_position_center">Centro</string>
     <string name="system_island_position_right">Direita</string>
     <string name="system_island_horizontal_offset_title">Deslocamento horizontal</string>
-    <string name="system_island_feedback_title">Avisos do sistema</string>
+    <string name="system_island_feedback_title">Atividades do sistema</string>
     <string name="system_island_notification_apps_title">Apps de notificações permitidos</string>
     <string name="system_island_notification_apps_summ">Somente os apps selecionados. Exclusões e notificações flutuantes nativas têm prioridade.</string>
     <string name="system_island_action_play">Reproduzir</string>
@@ -1273,4 +1273,20 @@
     <string name="system_island_battery_low">Bateria fraca</string>
     <string name="system_island_gesture_tap">Toque</string>
     <string name="system_island_idle_gestures_summ">Somente na ilha ociosa. A reprodução usa a última sessão de mídia válida.</string>
+    <string name="system_island_live_sources_title">Atividades em andamento</string>
+    <string name="system_island_live_choose">Fontes</string>
+    <string name="system_island_live_sources_summary">Escolha as atividades. Reinicie após adicionar fontes. SMS e calendário precisam de notificações.</string>
+    <string name="system_island_live_feedback">Resposta imediata</string>
+    <string name="system_island_live_call">Chamada</string>
+    <string name="system_island_live_alarm">Alarme</string>
+    <string name="system_island_live_timer">Temporizador</string>
+    <string name="system_island_live_stopwatch">Cronômetro</string>
+    <string name="system_island_live_recorder">Gravação</string>
+    <string name="system_island_live_privacy">Privacidade</string>
+    <string name="system_island_live_sms">SMS (notificação)</string>
+    <string name="system_island_live_calendar">Calendário (notificação)</string>
+    <string name="system_island_live_ringing">Chamada recebida</string>
+    <string name="system_island_live_finished">Tempo esgotado</string>
+    <string name="system_island_live_camera">Câmera</string>
+    <string name="system_island_live_microphone">Microfone</string>
 </resources>

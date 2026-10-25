@@ -13,6 +13,11 @@ import tv.withaibuild.customiuizer.R
  * system_server / SystemUI / Launcher must not request scope.
  */
 object DynamicAppScope {
+    @JvmStatic
+    fun requestForIslandSources(context: Context?, selected: Collection<String>) {
+        val packages = tv.withaibuild.customiuizer.mods.island.IslandLiveKind.sourcePackages(selected)
+        if (packages.isNotEmpty()) requestPackages(context, packages.toList())
+    }
 
     val REQUIRED_STORAGE_KEYS = setOf(
         "pref_key_system_statusbarcolor_apps",

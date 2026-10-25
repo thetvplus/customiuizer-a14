@@ -27,6 +27,20 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandChatNotificationsTest {
+    @Test fun verifiedNativeCalendarChannelsSupportRemindersWithoutInventingAnAndroidCategory() {
+        fun reminder(channel: String) = NotificationCompat.Builder(context, channel)
+            .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Test reminder").setContentText("Starts soon").build()
+        val sbn = posted("com.xiaomi.calendar", reminder("calendar_channel_normal"))
+        assertNull(sbn.notification.category)
+        assertNull(prepare(sbn))
+        val content = IslandChatNotifications.prepare(context, sbn, NotificationManager.IMPORTANCE_HIGH,
+            true, 0, calendar = true)!!
+        assertEquals("Test reminder", content.text); assertEquals("Starts soon", content.detail)
+        assertNull(IslandChatNotifications.prepare(context, posted("com.xiaomi.calendar", reminder("marketing")),
+            NotificationManager.IMPORTANCE_HIGH, true, 0, calendar = true))
+        assertNull(IslandChatNotifications.prepare(context, sbn, NotificationManager.IMPORTANCE_HIGH,
+            false, 0, calendar = true))
+    }
     private val context get() = RuntimeEnvironment.getApplication()
     private fun notification() = NotificationCompat.Builder(context, "chat")
         .setSmallIcon(android.R.drawable.ic_dialog_email)

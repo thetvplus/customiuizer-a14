@@ -1,6 +1,7 @@
 package tv.withaibuild.customiuizer.mods.island
 
 import tv.withaibuild.customiuizer.mods.SystemUIStrongToastHooks
+import tv.withaibuild.customiuizer.R
 
 import android.animation.ValueAnimator
 import android.app.ActivityManager
@@ -97,10 +98,17 @@ internal class IslandActivityController(
     geometryHost: View? = null,
     trackApplicationOverlays: Boolean = false,
     pipCandidate: IslandPipCandidatePort? = null,
+    liveDismissal: IslandLiveRegistry.Dismissal = IslandLiveRegistry.Dismissal(),
 ) : ScreenStateController.ScreenStateListener {
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
     private val state = IslandActivityState<IslandToastContent, IslandMediaContent>(dismissal)
+    private val live = IslandLiveRegistry(liveDismissal)
+    private var liveSources: IslandLiveSources? = null
+    private var liveContent: IslandToastContent? = null
+    private var liveSourceOptions: Pair<Set<IslandLiveKind>, Set<String>>? = null
+    private val privacyAccess = if (IslandLiveKind.PRIVACY in options.liveKinds && markerLoader != null)
+        ModuleHelper.guarded<IslandPrivacyAccess?>(null) { IslandPrivacyAccess(markerLoader) } else null
     private val forms = IslandFormState()
     private val idleIdentity = Any()
     private val shell = IslandActivityView(context)
@@ -285,11 +293,11 @@ internal class IslandActivityController(
                 else {
                     if (previousOptions.charging != options.charging || previousOptions.lowBattery != options.lowBattery)
                         configureBatterySignals()
+                    if (previousOptions.liveKinds != options.liveKinds || previousOptions.excludedApps != options.excludedApps) configureLiveSources()
                     if (!options.toast && state.toast(SystemClock.uptimeMillis())?.let {
                             !it.status && it.notificationKey == null } == true) state.clearToast()
                     if (!options.media) { clearMedia(); state.allowMediaAgain() }
-                    if (!options.chat || state.toast(SystemClock.uptimeMillis())?.packageName.let {
-                            it in options.chatExcludedApps || it !in options.notificationApps }) clearChat()
+                    if (chatNotification?.let { !notificationSourceAllowed(it) } == true) clearChat()
                     if (previousOptions.feedback != options.feedback) {
                         clearSystemActivity()
                         systemActivities?.dispose()
@@ -329,6 +337,9 @@ internal class IslandActivityController(
                 actionJob?.cancel()
                 recentMedia = null
                 state.clear()
+                live.clear(); liveContent = null
+                liveSources?.close(); liveSources = null; liveSourceOptions = null
+                configureLiveSources()
                 foregroundPackage = null
                 clearSystemActivity()
                 systemActivities?.resetForUserSwitch()
@@ -343,7 +354,10 @@ internal class IslandActivityController(
         touchWindow.onUnavailable = { handler.post { ModuleHelper.guarded { if (!disposed) render() } } }
         shell.onDismiss = {
             if ((lastContent as? IslandMediaContent)?.token == backgroundPlayer?.sessionToken) backgroundPlayer = null
-            if (lastContent === idleIdentity) forms.dismissIdle() else state.dismiss()
+            if (lastContent === idleIdentity) forms.dismissIdle() else {
+                (lastContent as? IslandToastContent)?.liveActivity?.let { live.dismiss(it.key) }
+                state.dismiss()
+            }
             forms.collapse()
             render()
         }
@@ -375,6 +389,7 @@ internal class IslandActivityController(
             refreshGeometry()
             if (options.enabled) systemActivities = createSystemActivities()
             if (options.enabled) configureBatterySignals()
+            if (options.enabled) configureLiveSources()
             actionMarkers?.update(options.feedback)
             if (hideInFloatingWindow && trackApplicationOverlays) ModuleHelper.guarded {
                 applicationOverlays = IslandApplicationOverlaySignal.Subscriber(context, handler,
@@ -397,6 +412,58 @@ internal class IslandActivityController(
             dispose()
             throw error
         }
+    }
+
+    fun refreshLivePrivacy() = onMain { liveSources?.refresh() }
+
+    private fun configureLiveSources() {
+        val kinds = options.liveKinds.filterTo(linkedSetOf()) { it != IslandLiveKind.SMS && it != IslandLiveKind.CALENDAR }
+        val configuration = Pair(kinds, options.excludedApps)
+        if (configuration == liveSourceOptions) return
+        liveSourceOptions = configuration
+        liveSources?.close(); liveSources = null
+        live.clear(preserveDismissal = true); liveContent = null; state.setActivity(null, null)
+        if (kinds.isEmpty() || foregroundUser != contextUser) return
+        liveSources = IslandLiveSources(context, handler, scope, ioDispatcher, context.applicationInfo.uid / 100000,
+            kinds, privacyAccess, options.excludedApps) { kind, value ->
+            if (!disposed) { live.update(kind, value); render() }
+        }
+    }
+
+    private fun selectLive() {
+        val user = if (foregroundUser == contextUser) context.applicationInfo.uid / 100000 else -1
+        val value = live.select(options.liveKinds, options.excludedApps, user,
+            privacyIsSecondary = state.uncoveredMedia()?.packageName?.let { it != foregroundPackage } == true,
+            elapsed = SystemClock.elapsedRealtime())
+        if (liveContent?.liveActivity != value) {
+            liveContent = value?.let {
+                val res = ModuleHelper.getModuleRes(context)
+                val source = res.getString(it.kind.label)
+                val text = when {
+                    it.clock != null -> IslandLiveLabels.time(it.clock.millis(SystemClock.elapsedRealtime()))
+                    it.kind == IslandLiveKind.CALL && it.alert -> res.getString(R.string.system_island_live_ringing)
+                    it.alert && it.kind == IslandLiveKind.TIMER -> res.getString(R.string.system_island_live_finished)
+                    it.kind == IslandLiveKind.PRIVACY -> res.getString(if (it.privacy == IslandPrivacyAccess.CAMERA)
+                        R.string.system_island_live_camera else if (it.privacy == IslandPrivacyAccess.MICROPHONE)
+                        R.string.system_island_live_microphone else R.string.system_island_live_privacy)
+                    else -> source
+                }
+                val detail = if (it.clock?.pausedMillis != null) "$source · ${res.getString(R.string.system_island_paused)}" else source
+                val icon = ModuleHelper.guarded<Drawable?>(null) {
+                    context.packageManager.getApplicationIcon(it.packageName)
+                }
+                IslandToastContent(text, it.packageName, icon, launch = it.open, detail = detail, liveActivity = it)
+            }
+        }
+        state.setActivity(value?.key, liveContent)
+        shell.privacy = if (state.allowed && IslandLiveKind.PRIVACY in options.liveKinds) live.privacy(user) else 0
+    }
+
+    private fun notificationSourceAllowed(sbn: StatusBarNotification): Boolean {
+        if (sbn.packageName in options.excludedApps || sbn.packageName in options.chatExcludedApps) return false
+        val selectedNative = IslandLiveLabels.notificationKind(sbn.packageName, sbn.notification.category,
+            sbn.notification.channelId, sbn.notification.extras.getString(android.app.Notification.EXTRA_TEMPLATE)) in options.liveKinds
+        return selectedNative || options.chat && sbn.packageName in options.notificationApps
     }
 
     fun connectSafety(owner: Any) = onMain {
@@ -518,7 +585,7 @@ internal class IslandActivityController(
         // fence must not stall their existing exit animation on an old Surface buffer.
         if (exiting || !state.allowed) return true
         val pip = pipStateReader?.invoke()?.takeIf { it.generation >= pipSnapshot.generation } ?: pipSnapshot
-        val notification = (lastContent as? IslandToastContent)?.notificationKey != null
+        val notification = (lastContent as? IslandToastContent)?.let { it.notificationKey != null || it.liveActivity != null } == true
         return !floatingWindowBlocked(pip, notification, lastContent is IslandMediaContent) &&
             !pipHomeBlocked(notification, lastContent as? IslandMediaContent)
     }
@@ -756,12 +823,11 @@ internal class IslandActivityController(
     /** Synchronous transaction on the final native heads-up bind; false always retains native UI. */
     fun takeNotification(bound: IslandNotificationAccess.Bound): Boolean {
         val sbn = bound.notification
-        if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled || !options.chat || floatingWindowBlocked(notification = true)) return false
+        if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled || !notificationSourceAllowed(sbn) || floatingWindowBlocked(notification = true)) return false
         // The native keyguard can lead the status-bar callback. Read it at the
         // takeover boundary, before any notification lease or native mutation.
         refreshSafety()
         if (!state.allowed ||
-            sbn.packageName !in options.notificationApps ||
             sbn.packageName in options.excludedApps ||
             sbn.packageName in options.chatExcludedApps || sbn.packageName == foregroundPackage ||
             sbn.user != foregroundUser || sbn.notification.contentIntent == null) {
@@ -783,7 +849,10 @@ internal class IslandActivityController(
         val rank = bound.ranking
         val prepared = IslandChatNotifications.prepare(context, sbn, rank.importance,
             rank.matchesInterruptionFilter(), rank.suppressedVisualEffects,
-            nativeIcon = bound.icon) ?: run { diagnostics.report("notification-native-content"); return false }
+            nativeIcon = bound.icon, calendar = IslandLiveKind.CALENDAR in options.liveKinds &&
+                IslandLiveLabels.notificationKind(sbn.packageName, sbn.notification.category,
+                    sbn.notification.channelId) == IslandLiveKind.CALENDAR)
+            ?: run { diagnostics.report("notification-native-content"); return false }
         clearChat()
         chatKey = sbn.key; chatNotification = sbn; chatOpen = bound.open; chatHidden = bound.hidden
         chatLease = state.offer(prepared, now, 4000)
@@ -1181,7 +1250,7 @@ internal class IslandActivityController(
         // Landscape cutouts are at a side; keep that layout entirely native.
         if (bounds.width >= bounds.height) return null
         val now = SystemClock.uptimeMillis()
-        val feedback = state.toast(now)?.takeIf { label == null && !mediaOnly }
+        val feedback = (state.toast(now) ?: state.activity(now))?.takeIf { label == null && !mediaOnly }
         val heightDp = if (options.automaticHeight) IslandSizing.automaticHeight(
             (bounds.holeWidth / context.resources.displayMetrics.density).toInt(),
             (bounds.statusBarHeight / context.resources.displayMetrics.density).toInt()) else options.height
@@ -1262,7 +1331,7 @@ internal class IslandActivityController(
             if (!state.allowed || current?.playing != true || current.user == null || pipSnapshot.blocks(current) ||
                 pipHomeGate?.let { it.confirmed && pipHomeBlocked(current = current) } == true ||
                 current.user != foregroundUser || current.packageName !in options.mediaReturnApps ||
-                state.toast(SystemClock.uptimeMillis()) != null || bounds == null) null
+                state.toast(SystemClock.uptimeMillis()) != null || state.activity(SystemClock.uptimeMillis()) != null || bounds == null) null
             else geometry(mediaOnly = true)?.let { geometry ->
                 IslandMusicReturnSignal.Frame(current.packageName, current.user,
                     geometry.left.toFloat(), geometry.top.toFloat(), (geometry.left + geometry.width).toFloat(),
@@ -1277,8 +1346,15 @@ internal class IslandActivityController(
         // scalar snapshot at the commit boundary; this performs no native query or polling.
         pipStateReader?.invoke()?.let(::applyPipSnapshot)
         handler.removeCallbacks(expiry)
-        val selectedToast = state.toast(SystemClock.uptimeMillis())
-        val notification = selectedToast?.notificationKey != null
+        val now = SystemClock.uptimeMillis()
+        if (pauseDeadline?.let { now >= it } == true) state.setMedia(null, null)
+        if (loadingDeadline?.let { it > 0L && now >= it } == true) {
+            loadingDeadline = 0L
+            state.setMedia(null, null)
+        }
+        selectLive()
+        val selectedToast = state.toast(now)
+        val notification = selectedToast?.notificationKey != null || state.activity(now) != null
         if (floatingWindowBlocked(notification = notification, allowMedia = selectedToast == null)) {
             cancelMediaReturn()
             publishMusicReturn()
@@ -1298,7 +1374,6 @@ internal class IslandActivityController(
             cancelMediaReturn()
         }
         publishMusicReturn()
-        val now = SystemClock.uptimeMillis()
         if (mediaReturn?.let { now >= it.expiresAt } == true || !state.allowed ||
             !options.mediaReturn || reducedMotion() || !ValueAnimator.areAnimatorsEnabled()) {
             cancelMediaReturn()
@@ -1307,11 +1382,6 @@ internal class IslandActivityController(
         if (systemPresentation?.let { state.owns(it.lease, now) } != true) systemPresentation = null
         scheduleSystemFeedback()
         if (mediaRevealAt?.let { now >= it } == true) mediaRevealAt = null
-        if (pauseDeadline?.let { now >= it } == true) state.setMedia(null, null)
-        if (loadingDeadline?.let { it > 0L && now >= it } == true) {
-            loadingDeadline = 0L
-            state.setMedia(null, null)
-        }
         val shadeIdle = !state.allowed && idleShadeAllowed()
         if (shadeBlocked && !state.allowed && !shadeIdle) {
             val deadline = listOfNotNull(pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE }, mediaRevealAt?.takeIf { it > now },
@@ -1325,7 +1395,7 @@ internal class IslandActivityController(
         if (state.toast(now)?.let { it.notificationKey != null && it.packageName == foregroundPackage } == true) {
             clearChat(); state.clearToast()
         }
-        val toast = state.toast(now).takeIf { state.allowed }
+        val toast = (state.toast(now) ?: state.activity(now)).takeIf { state.allowed }
         if (toast != null) cancelMediaReturn()
         // Returning from a shade needs one current snapshot before the retained slot can
         // draw: it may still contain PLAYING although a real pause expired while hidden.
@@ -1334,7 +1404,9 @@ internal class IslandActivityController(
         forms.select(if (toast != null || current != null) state.identity(now) else null)
         val idle = options.idle && !forms.idleSuppressed && (state.allowed || shadeIdle) && toast == null && current == null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null
-        val nextExpiry = listOfNotNull(state.deadline(), pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
+        val liveExpiry = toast?.liveActivity?.clock?.takeIf { it.countdown && it.pausedMillis == null }
+            ?.let { now + (it.base + 3000 - SystemClock.elapsedRealtime()).coerceAtLeast(1) }
+        val nextExpiry = listOfNotNull(liveExpiry, state.deadline(), pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
             mediaRevealAt?.takeIf { it > now }, mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()
         if (!disposed && nextExpiry != null) handler.postAtTime(expiry, nextExpiry)
         if (geometry == null) {
@@ -1371,7 +1443,8 @@ internal class IslandActivityController(
             showingMedia, options.waveform, if (showingMedia) current?.actions ?: 0L else 0L, showingMedia && options.mediaSwipe,
             current?.playbackState ?: PlaybackState.STATE_NONE, toast?.avatar == true, toast?.status == true,
             expanded = forms.expanded, loading = showingMedia && current?.loading == true,
-            photo = if (showingMedia) current?.artwork == true else toast?.avatar == true)
+            photo = if (showingMedia) current?.artwork == true else toast?.avatar == true,
+            clock = toast?.liveActivity?.clock)
         shell.configureGestures(if (idle) idleIdentity else if (showingMedia) selected else state.identity(now),
             if (idle) options.idleActions.gestures else options.musicActions, idle || showingMedia && options.mediaSwipe)
         val cameraOffset = screen?.takeIf { options.position == 1 && it.holeWidth > 0 }?.let {
@@ -1481,7 +1554,7 @@ internal class IslandActivityController(
     private fun openPlayer() {
         val now = SystemClock.uptimeMillis()
         if (disposed || exiting || !attached || !state.allowed) return
-        val toast = state.toast(now)
+        val toast = state.toast(now) ?: state.activity(now)
         if (toast?.notificationKey != null) {
             ModuleHelper.guarded { chatOpen?.invoke() }
             clearChat(); render()
@@ -1502,7 +1575,14 @@ internal class IslandActivityController(
                 fun valid() = actionContext.isActive && epoch == actionEpoch && !disposed && state.allowed && !exiting &&
                     keyguard?.isKeyguardLocked != true && (toast != null || selected === controller)
                 if (toast != null) {
-                    if (valid()) ModuleHelper.guarded { toast.launch?.send() }
+                    if (valid()) ModuleHelper.guarded {
+                        when (toast.liveActivity?.kind) {
+                            IslandLiveKind.CALL -> IslandLiveCalls.open(context)
+                            IslandLiveKind.PRIVACY -> context.startActivity(Intent(android.provider.Settings.ACTION_PRIVACY_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            else -> toast.launch?.send()
+                        }
+                    }
                     return@withLock
                 }
                 val player = controller ?: return@withLock
@@ -1678,6 +1758,8 @@ internal class IslandActivityController(
     }
 
     fun dispose() {
+        liveSources?.close(); liveSources = null
+        live.clear(preserveDismissal = true); liveContent = null
         recentMedia = null
         if (disposed) return
         disposed = true

@@ -269,6 +269,7 @@ def _append_compact_search_category(
 FEATURE_PREFERENCE_KEY = re.compile(r'preferenceKey\s*=\s*"([A-Za-z][A-Za-z0-9_]*)"')
 
 XML_VALUE_TYPES = {
+    "androidx.preference.MultiSelectListPreference": "STRING_SET",
     "tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx": "BOOLEAN",
     "tv.withaibuild.customiuizer.prefs.ListPreferenceEx": "STRING",
     "tv.withaibuild.customiuizer.prefs.DropDownPreferenceEx": "STRING",

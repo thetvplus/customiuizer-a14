@@ -1,6 +1,8 @@
 system
 android
 com.android.incallui
+com.android.deskclock
+com.android.soundrecorder
 com.android.settings
 com.android.systemui
 com.android.permissioncontroller
