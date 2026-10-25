@@ -1181,13 +1181,13 @@
     <string name="seekbar_value_error">Insira um número dentro do intervalo e do passo indicados.</string>
     <string name="restart_settings_sync_failed">Não foi possível sincronizar as configurações. Aguarde a conexão do módulo e tente novamente.</string>
     <string name="system_island_title">Avisos do sistema</string>
-    <string name="system_island_intro">Reinicie a interface do sistema após selecionar Dynamic Island pela primeira vez ou ativar uma integração. Oculto na tela de bloqueio, com a tela desligada, no modo paisagem ou com o painel de notificações aberto.</string>
-    <string name="system_island_media_title">Música e mídia</string>
+    <string name="system_island_intro">Reinicie a interface do sistema ao ativar a ilha pela primeira vez ou adicionar uma fonte.</string>
+    <string name="system_island_media_title">Mostrar mídia</string>
     <string name="system_island_media_return_title">Música para a ilha</string>
     <string name="system_island_media_return_summ">Durante a reprodução, deslize para cima para sair de um app selecionado. A janela entra na ilha com um leve balanço. Apenas para apps escolhidos manualmente. Reinicie o launcher após a primeira ativação.</string>
     <string name="system_island_media_return_apps_title">Selecionar apps de música</string>
     <string name="system_island_media_return_apps_summ">Selecione os apps manualmente. Sem seleção, a animação habitual é mantida.</string>
-    <string name="system_island_media_summ">Usa o player selecionado pelo sistema. Deslize para cima para ocultar. A música visível fecha 2 segundos após pausar; a música pausada e oculta continua oculta.</string>
+    <string name="system_island_media_summ">Usa o reprodutor do sistema e permanece brevemente após pausar.</string>
     <string name="system_island_media_swipe_title">Deslizar para trocar de faixa</string>
     <string name="system_island_media_swipe_summ">Desativar bloqueia a troca de faixa ao deslizar na horizontal. Outras ações configuradas continuam disponíveis.</string>
     <string name="system_island_waveform_title">Onda musical leve</string>

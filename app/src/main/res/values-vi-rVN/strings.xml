@@ -1181,13 +1181,13 @@
     <string name="seekbar_value_error">Nhập số trong phạm vi và đúng bước nêu trên.</string>
     <string name="restart_settings_sync_failed">Không thể đồng bộ cài đặt. Hãy đợi mô-đun kết nối rồi thử lại.</string>
     <string name="system_island_title">Thông báo hệ thống</string>
-    <string name="system_island_intro">Khởi động lại giao diện hệ thống sau khi chọn Dynamic Island lần đầu hoặc bật tích hợp. Ẩn trên màn hình khóa, khi tắt màn hình, ở chế độ ngang hoặc khi mở bảng thông báo.</string>
-    <string name="system_island_media_title">Nhạc và phương tiện</string>
+    <string name="system_island_intro">Khởi động lại giao diện hệ thống sau khi bật đảo lần đầu hoặc thêm nguồn.</string>
+    <string name="system_island_media_title">Hiển thị phương tiện</string>
     <string name="system_island_media_return_title">Đưa nhạc vào đảo</string>
     <string name="system_island_media_return_summ">Khi đang phát nhạc, vuốt lên để rời ứng dụng đã chọn; cửa sổ thu vào đảo và nảy nhẹ. Chỉ áp dụng cho ứng dụng được chọn thủ công. Khởi động lại trình khởi chạy sau lần bật đầu tiên.</string>
     <string name="system_island_media_return_apps_title">Chọn ứng dụng nhạc</string>
     <string name="system_island_media_return_apps_summ">Chọn ứng dụng thủ công. Không chọn ứng dụng nào sẽ giữ hiệu ứng thông thường.</string>
-    <string name="system_island_media_summ">Dùng trình phát do hệ thống chọn. Vuốt lên để ẩn. Đảo đang hiển thị sẽ đóng sau 2 giây tạm dừng; nhạc tạm dừng đang ẩn sẽ không hiện lại.</string>
+    <string name="system_island_media_summ">Theo trình phát hệ thống; giữ lại ngắn sau khi tạm dừng.</string>
     <string name="system_island_media_swipe_title">Vuốt ngang để chuyển bài</string>
     <string name="system_island_media_swipe_summ">Tắt sẽ chặn chuyển bài khi vuốt ngang. Các thao tác khác đã cấu hình vẫn khả dụng.</string>
     <string name="system_island_waveform_title">Sóng nhạc nhẹ</string>

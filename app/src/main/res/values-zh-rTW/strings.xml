@@ -1181,13 +1181,13 @@
     <string name="seekbar_value_error">請輸入符合上方範圍及間距的數值。</string>
     <string name="restart_settings_sync_failed">設定尚未同步成功，請等待模組連線後再重試。</string>
     <string name="system_island_title">系統提示</string>
-    <string name="system_island_intro">先在系統頁選擇動態島。首次接入新來源需重啟系統界面；鎖屏、息屏、橫屏隱藏。</string>
-    <string name="system_island_media_title">顯示音樂</string>
+    <string name="system_island_intro">首次開啟動態島或新增來源後，請重新啟動系統介面。</string>
+    <string name="system_island_media_title">顯示媒體</string>
     <string name="system_island_media_return_title">上滑回島</string>
     <string name="system_island_media_return_summ">所選應用上滑回桌面時收進島中。首次啟用需重啟桌面。</string>
     <string name="system_island_media_return_apps_title">回島應用</string>
     <string name="system_island_media_return_apps_summ">選擇支持上滑回島的音樂應用。</string>
-    <string name="system_island_media_summ">播放時顯示；已顯示的音樂暫停 2 秒後收起。</string>
+    <string name="system_island_media_summ">跟隨系統播放器；暫停後短暫保留。</string>
     <string name="system_island_media_swipe_title">滑動切歌</string>
     <string name="system_island_media_swipe_summ">左右滑動切歌，其他已設手势继续生效。</string>
     <string name="system_island_waveform_title">播放波形</string>

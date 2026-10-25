@@ -1180,13 +1180,13 @@
     <string name="seekbar_value_error">Введите число в указанном диапазоне с указанным шагом.</string>
     <string name="restart_settings_sync_failed">Не удалось синхронизировать настройки. Дождитесь подключения модуля и повторите попытку.</string>
     <string name="system_island_title">Системные подсказки</string>
-    <string name="system_island_intro">Перезапустите системный интерфейс после первого выбора Dynamic Island или включения интеграции. Остров скрыт на экране блокировки, при выключенном экране, в альбомной ориентации и при открытой шторке.</string>
-    <string name="system_island_media_title">Музыка и медиа</string>
+    <string name="system_island_intro">После первого включения острова или добавления источника перезапустите интерфейс системы.</string>
+    <string name="system_island_media_title">Показывать медиа</string>
     <string name="system_island_media_return_title">Музыка в островок</string>
     <string name="system_island_media_return_summ">Во время воспроизведения выйдите из выбранного приложения свайпом вверх. Окно переместится в островок с лёгким отскоком. Только для выбранных вручную приложений. После первого включения перезапустите рабочий стол.</string>
     <string name="system_island_media_return_apps_title">Выбрать музыкальные приложения</string>
     <string name="system_island_media_return_apps_summ">Выберите приложения вручную. Пустой список сохраняет обычную анимацию.</string>
-    <string name="system_island_media_summ">Используется выбранный системой плеер. Смахните вверх, чтобы скрыть. Видимый остров закрывается через 2 секунды после паузы; скрытая музыка на паузе не появляется.</string>
+    <string name="system_island_media_summ">Следует системному плееру; после паузы ненадолго остаётся.</string>
     <string name="system_island_media_swipe_title">Смена трека смахиванием</string>
     <string name="system_island_media_swipe_summ">Отключение запрещает переключение треков горизонтальным смахиванием. Другие настроенные действия остаются доступны.</string>
     <string name="system_island_waveform_title">Лёгкая звуковая волна</string>

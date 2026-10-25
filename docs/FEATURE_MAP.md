@@ -466,7 +466,7 @@
 
 | 功能（页内分组 → 选项） | 稳定键 | 入口状态 / XML 依赖 |
 | --- | --- | --- |
-| 媒体 → 显示音乐 | `pref_key_system_island_media` | 可见 |
+| 媒体 → 显示媒体 | `pref_key_system_island_media` | 可见 |
 | 媒体 → 播放波形 | `pref_key_system_island_waveform_mode` | 条件启用：`pref_key_system_island_media` |
 | 媒体 → 滑动切歌 | `pref_key_system_island_media_swipe` | 条件启用：`pref_key_system_island_media` |
 | 上滑回岛 → 上滑回岛 | `pref_key_system_island_media_return` | 条件启用：`pref_key_system_island_media` |
