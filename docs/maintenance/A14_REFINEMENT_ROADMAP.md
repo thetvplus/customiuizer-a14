@@ -29,6 +29,8 @@
 
 ROM 取证为 fuxi HyperOS 1 / A14 的 CN、TW miui-services.jar：相关五个原生实现 Smali 一致，三处调度调用均在原生用户锁内；服务外壳先完成原有权限 / 身份路径。安装器样本仅证明 CN 私有绑定合同和 TW 缺失边界。查询、完整方法、样本哈希及 Host / APK 结果存放仓库外 `customiuizer-a14-evidence/island-handoff-20261026/passive-features/`。本批按 Deep 检查：Full 的 411 个套件、3,718 项测试零失败 / 错误、2 项既定跳过，Debug lint、源码 / 热路径 / 偏好 / 生命周期门禁和文档 / 功能地图通过；全量工具 677 项通过、5 项既定跳过。真实应用锁计时与隐私刷新、多用户切换、安装器布局 / 无障碍、控制中心重锁和桌面快速重建仍待设备验收，不能由 Host 或 ROM 静态样本代替。
 
+应用源码 `effb1a3ba8ec828490b5fc01ae49fa9e19a8f82e` 的未签名 Develop R8 / fatal lint、工程 revision 来源校验、min / target SDK 34、arm64 和 16 KiB 对齐均通过。最终 DEX 的 compileOnly API 定义及设置 Manifest 入口直接 API 指令引用为零，setId / getId 各一次、replaceHook 为零；同产物 mapping 将调用对应到既有 HookInstallation 安装 / 回读策略，源类加载回归通过，无新增录音权限。APK 为 `CustoMIUIzer-A14-r14.25.6-effb1a-develop-unsigned.apk`，4,254,182 字节，SHA-256 `1612af357e20b65a3a4ef88ad0daecf2d3d69bf6d46defc27fe43bc02e7f2b16`；完整提交 SHA 与工程包内 8 位 revision 在仓库外收据关联。该候选未签名、未安装，不作为正式发布或设备验收结果。
+
 ## 动态岛来源与过渡精修
 
 当前源码把来源状态（小岛 / 媒体 / 通知 / 系统活动 / 即时反馈）与小 / 短 / 长形态分开管理，共享协调器按已提交的来源、身份与形态决定内容交接。通知从当前音乐岛连续扩展，自动 / 手动高度沿用同一入口；通知关闭直接回有效系统活动 / 媒体，否则回常驻小岛或退出。展开媒体先收回同一短岛，再次上滑才抑制媒体。原通用的先缩短再退场已移除，顶部退出固定释放时宽高，清除尺寸残余速度，只向上移动。
