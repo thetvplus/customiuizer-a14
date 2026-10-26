@@ -44,7 +44,7 @@
 | 媒体及系统活动候选 | 音轨选择为一次遍历并稳定保留有效会话；系统活动为 EnumMap 固定八类线性优先级选择，不逐次排序。原生会话 / 音轨列表只在采集租约及原生变化边界获取，未改为按绘制帧查询 |
 | 作用域、恢复选择与进程路由 | 授权集合每次操作只取一次，缺失项 / 已安装包以集合交叉；恢复和选择清理为冷路径。进程路由已有精确表和小型固定前缀，Feature 安装保持单次，未增加轮询或跨 ClassLoader 状态 |
 
-本轮完整源码 Deep Host 为 396 个套件、3,625 项测试，零失败 / 错误、2 项既定跳过，Debug lint 通过。全量工具 677 项通过、5 项既定跳过；新增页面输入后补验文档生成、EOL 和运行时合同工具 50 项通过。相同源码的源码门禁、文档链接及生成指纹通过；压缩 APK、API 102 / 设置类加载边界和来源检查在候选构建后补充。证据入口为仓库外 `customiuizer-a14-evidence/island-handoff-20261026/`。当前无设备连接，录音格式矩阵、动画 / 手势、键盘高度变化及页面帧时间仍待实机验收。
+本轮完整源码 `70964ff4081aa8357a4bc6afd707764b7e806604` 的 Deep Host 为 396 个套件、3,625 项测试，零失败 / 错误、2 项既定跳过，Debug lint 通过。全量工具 677 项通过、5 项既定跳过；新增页面输入后补验文档生成、EOL 和运行时合同工具 50 项通过。源码门禁、文档链接及生成指纹通过。未签名 Develop R8 / fatal lint、同产物来源、SDK 34、arm64 及 16 KiB 对齐通过；最终 DEX 没有 compileOnly Hook API 定义，设置 Manifest 入口没有直接 API 指令引用，既有类加载回归通过。setId / getId 各一次，同产物 mapping 对应 HookInstallation.intercept / confirmStableHookId，replaceHook 为零；没有新增录音权限。APK SHA-256 为 `e926a1533b4ed0d027954fb97a8bdff398ceadd6de0504cd623c0a54e1ed2307`，mapping / usage / configuration 与边界查询保留在证据子目录 `70964ff4/`。证据入口为仓库外 `customiuizer-a14-evidence/island-handoff-20261026/`。当前无设备连接，录音格式矩阵、动画 / 手势、键盘高度变化及页面帧时间仍待实机验收。
 
 ## r14.25.6 设备试用
 
