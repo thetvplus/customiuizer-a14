@@ -12,6 +12,7 @@ import java.util.ArrayList
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -36,7 +37,7 @@ object LauncherLayoutHooks {
     private fun refreshLayoutSnapshot() {
         val prefs = MainModule.mPrefs
         hideSeekPointsEdit = prefs.getBoolean("launcher_hideseekpoints_edit")
-        horizWidgetMargin = prefs.getInt("launcher_horizwidgetmargin", 0)
+        horizWidgetMargin = prefs.getInt("launcher_horizwidgetmargin", 0).coerceIn(0, 41)
     }
 
     private fun installLayoutSnapshot() {
@@ -443,55 +444,35 @@ object LauncherLayoutHooks {
     @JvmStatic
     fun HorizontalWidgetSpacingHook(lpparam: PackageReadyParam) {
         installLayoutSnapshot()
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.DeviceConfig", lpparam.classLoader, "getMiuiWidgetSizeSpec", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val args = chain.args
+        ModuleHelper.hookAllMethods("com.miui.home.launcher.DeviceConfig", lpparam.classLoader, "getMiuiWidgetSizeSpec", horizontalWidgetSizeHook())
+        ModuleHelper.hookAllMethods("com.miui.home.launcher.MIUIWidgetUtil", lpparam.classLoader, "getMiuiWidgetPadding", horizontalWidgetPaddingHook())
+    }
 
-                    if (args.size < 4) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val spec = result as Long
-                    var width = spec shr 32
-                    var height = spec - ((spec shr 32) shl 32)
-                    val opt = Math.round((horizWidgetMargin - 21) * Resources.getSystem().displayMetrics.density) * 2
-                    width -= opt.toLong()
-                    result = (width shl 32) or height
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun horizontalWidgetSizeHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            val margin = horizWidgetMargin
+            if (margin == 0 || result !is Long) return result
+            return try {
+                if (chain.executable.parameterCount < 4) return result
+                val width = result shr 32
+                if (width <= 0) return result
+                val inset = Math.round((margin - 21) * Resources.getSystem().displayMetrics.density) * 2L
+                val adjusted = (width - inset).coerceIn(1L, Int.MAX_VALUE.toLong())
+                (adjusted shl 32) or (result and 0xffffffffL)
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
+                XposedHelpers.log(t)
+                result
             }
-        })
+        }
+    }
 
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.MIUIWidgetUtil", lpparam.classLoader, "getMiuiWidgetPadding", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    result = Rect()
-                    throwable = null
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+    internal fun horizontalWidgetPaddingHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            return if (horizWidgetMargin > 0 && result is Rect) Rect() else result
+        }
     }
 
     @JvmStatic

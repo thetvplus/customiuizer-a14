@@ -599,26 +599,14 @@ object System {
     @JvmStatic
     fun ClearAllTasksHook(lpparam: SystemServerStartingParam) {
         val wpuClass = "com.android.server.wm.WindowProcessUtils"
-        ModuleHelper.hookAllMethods(wpuClass, lpparam.classLoader, "getPerceptibleRecentAppList", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
+        ModuleHelper.hookAllMethods(wpuClass, lpparam.classLoader, "getPerceptibleRecentAppList", clearAllPerceptibleResultHook())
+    }
 
-                    result = null; throwable = null
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+    internal fun clearAllPerceptibleResultHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            chain.proceed()
+            return null
+        }
     }
 
     @JvmStatic

@@ -26,7 +26,6 @@ import android.os.Message
 import android.os.SystemClock
 import android.os.UserHandle
 import android.provider.Settings
-import android.text.SpannableStringBuilder
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.Menu
@@ -1542,83 +1541,12 @@ object Various {
     }
 
     @JvmStatic
-    @Suppress("UNCHECKED_CAST")
     fun AppInfoDuringMiuiInstallHook(lpparam: PackageReadyParam) {
-        val AppInfoViewObjectClass = XposedHelpers.findClassIfExists("com.miui.packageInstaller.ui.listcomponets.AppInfoViewObject", lpparam.classLoader)
-        if (AppInfoViewObjectClass != null) {
-            val ViewHolderClass = XposedHelpers.findClassIfExists("com.miui.packageInstaller.ui.listcomponets.AppInfoViewObject\$ViewHolder", lpparam.classLoader)
-            val methods = XposedHelpers.findMethodsByExactParameters(AppInfoViewObjectClass, Void.TYPE, ViewHolderClass)
-            if (methods.isEmpty()) {
-                XposedHelpers.log("AppInfoDuringMiuiInstallHook", "Cannot find appropriate method")
-                return
-            }
-            val ApkInfoClass = XposedHelpers.findClassIfExists("com.miui.packageInstaller.model.ApkInfo", lpparam.classLoader)
-
-            val fields = AppInfoViewObjectClass.declaredFields
-            var apkInfoFieldName: String? = null
-            for (field in fields)
-                if (ApkInfoClass.isAssignableFrom(field.type)) {
-                    apkInfoFieldName = field.name
-                    break
-                }
-            if (apkInfoFieldName == null) return
-            val finalApkInfoFieldName = apkInfoFieldName
-            ModuleHelper.hookMethod(methods[0], object : MethodHook() {
-                override fun intercept(chain: XposedInterface.Chain): Any? {
-                    var result: Any?
-                    var throwable: Throwable? = null
-                    try {
-                        result = chain.proceed()
-                    } catch (t: Throwable) {
-                        throwable = t
-                        result = null
-                    }
-                    try {
-                        val thisObject = chain.thisObject
-
-                        val viewHolder = chain.getArg(0) ?: return XposedHelpers.throwOrReturn(throwable, result)
-                        val tvAppVersion = XposedHelpers.callMethod(viewHolder, "getTvDes") as TextView?
-                        val tvAppSize = XposedHelpers.callMethod(viewHolder, "getAppSize") as TextView?
-                        val tvAppName = XposedHelpers.callMethod(viewHolder, "getTvAppName") as TextView?
-                        if (tvAppVersion == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-
-                        val appNameLp = tvAppName!!.layoutParams as ViewGroup.MarginLayoutParams
-                        appNameLp.topMargin = 0
-                        tvAppName.layoutParams = appNameLp
-
-                        val apkInfo = XposedHelpers.getObjectField(thisObject, finalApkInfoFieldName)
-                        val mAppInfo = XposedHelpers.callMethod(apkInfo, "getInstalledPackageInfo") as ApplicationInfo?
-                        val mPkgInfo = XposedHelpers.callMethod(apkInfo, "getPackageInfo") as PackageInfo
-                        val modRes = ModuleHelper.getModuleRes(tvAppVersion.context)!!
-                        val builder = SpannableStringBuilder()
-                        builder.append(modRes.getString(R.string.various_installappinfo_vername)).append(": ")
-                        if (mAppInfo != null) builder.append(XposedHelpers.callMethod(apkInfo, "getInstalledVersionName") as String).append(" ➟ ")
-                        builder.append(mPkgInfo.versionName).append("\n")
-                        builder.append(tvAppSize!!.text).append("\n")
-                        builder.append(modRes.getString(R.string.various_installappinfo_vercode)).append(": ")
-                        if (mAppInfo != null) builder.append(XposedHelpers.callMethod(apkInfo, "getInstalledVersionCode").toString()).append(" ➟ ")
-                        builder.append(mPkgInfo.getLongVersionCode().toString()).append("\n")
-                        builder.append(modRes.getString(R.string.various_installappinfo_sdk)).append(": ")
-                        if (mAppInfo != null) builder.append(mAppInfo.minSdkVersion.toString()).append("-").append(mAppInfo.targetSdkVersion.toString()).append(" ➟ ")
-                        builder.append(mPkgInfo.applicationInfo!!.minSdkVersion.toString()).append("-").append(mPkgInfo.applicationInfo!!.targetSdkVersion.toString())
-
-                        tvAppVersion.text = builder
-                        tvAppVersion.setSingleLine(false)
-                        tvAppVersion.maxLines = 10
-                        val layout = tvAppVersion.parent as LinearLayout
-                        val versionSizeLp = layout.layoutParams as ViewGroup.MarginLayoutParams
-                        versionSizeLp.topMargin = 0
-                        layout.layoutParams = versionSizeLp
-                        layout.removeAllViews()
-                        layout.addView(tvAppVersion)
-
-                    } catch (t: Throwable) {
-                        XposedHelpers.log(t)
-                    }
-                    return XposedHelpers.throwOrReturn(throwable, result)
-                }
-            })
-        }
+        val owner = XposedHelpers.findClassIfExists("com.miui.packageInstaller.ui.listcomponets.AppInfoViewObject", lpparam.classLoader) ?: return
+        val holder = XposedHelpers.findClassIfExists("com.miui.packageInstaller.ui.listcomponets.AppInfoViewObject\$ViewHolder", lpparam.classLoader) ?: return
+        val apk = XposedHelpers.findClassIfExists("com.miui.packageInstaller.model.ApkInfo", lpparam.classLoader) ?: return
+        val access = InstallerAppInfo.prepare(owner, holder, apk) ?: return
+        ModuleHelper.hookMethod(access.bind, access.hook())
     }
 
     @JvmStatic

@@ -218,45 +218,27 @@ object Launcher {
             XposedHelpers.log("HideFromRecentsHook", "hook failed")
             return
         }
-        ModuleHelper.findAndHookMethod(ActivityManagerWrapper!!, "needRemoveTask", TaskInfoCompat, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
+        if (ActivityManagerWrapper == null) return
+        ModuleHelper.findAndHookMethod(ActivityManagerWrapper, "needRemoveTask", TaskInfoCompat, hideFromRecentsResultHook())
+    }
 
-                    if (chain.getArg(0) != null) {
-                        val mainTask = XposedHelpers.getObjectField(chain.getArg(0), "mMainTaskInfo")
-                        var componentName = XposedHelpers.getObjectField(mainTask, "topActivity") as ComponentName?
-                        var pkgName: String? = null
-                        if (componentName != null) {
-                            pkgName = componentName.packageName
-                        } else {
-                            val baseIntent = XposedHelpers.getObjectField(mainTask, "baseIntent") as Intent?
-                            if (baseIntent != null && baseIntent.component != null) {
-                                pkgName = baseIntent.component!!.packageName
-                            }
-                        }
-                        if (pkgName != null) {
-                            val selectedApps = hideFromRecentsApps
-                            if (selectedApps.contains(pkgName)) {
-                                result = true
-                                throwable = null
-                            }
-                        }
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun hideFromRecentsResultHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            val selected = hideFromRecentsApps
+            if (result != false || selected.isEmpty()) return result
+            return try {
+                val group = chain.getArg(0) ?: return result
+                val task = XposedHelpers.getObjectField(group, "mMainTaskInfo") ?: return result
+                val top = XposedHelpers.getObjectField(task, "topActivity") as? ComponentName
+                val component = top ?: (XposedHelpers.getObjectField(task, "baseIntent") as? Intent)?.component
+                if (component?.packageName in selected) true else result
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
+                XposedHelpers.log(t)
+                result
             }
-        })
+        }
     }
 
     /**
@@ -454,6 +436,7 @@ object Launcher {
             "onFinishInflate",
             object : MethodHook() {
                 override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) return
                     val taskView = callback.getThisObject() as? View ?: return
                     try {
                         val resources = taskView.resources

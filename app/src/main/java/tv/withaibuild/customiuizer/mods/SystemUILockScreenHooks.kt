@@ -314,11 +314,23 @@ object SystemUILockScreenHooks {
         }
     }
 
+    internal fun torchStateObserver(owner: Any, handler: Handler): ContentObserver {
+        val reference = WeakReference(owner)
+        return object : ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) = ModuleHelper.guarded {
+                if (selfChange || !lockScreenConfig.leftTapAction) return@guarded
+                val current = reference.get() ?: return@guarded
+                XposedHelpers.callMethod(current, "updateLeftIcon")
+            }
+        }
+    }
+
     @JvmStatic
     fun LockScreenShortcutHook(lpparam: PackageReadyParam) {
         installLockScreenConfigSnapshot()
         ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateLeftIcon", object : MethodHook() {
             override fun after(param: AfterHookCallback) {
+                if (param.getThrowable() != null) return
                 val thisObject = param.getThisObject()
                 val mLeftButton = XposedHelpers.getObjectField(thisObject, "mLeftButton") as ImageView?
                 if (mLeftButton == null) return
@@ -340,16 +352,13 @@ object SystemUILockScreenHooks {
         if (lockScreenConfig.leftTapAction) {
             ModuleHelper.hookAllConstructors("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, object : MethodHook() {
                 override fun after(param: AfterHookCallback) {
-                    val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
+                    if (param.getThrowable() != null) return
+                    val owner = param.getThisObject() ?: return
+                    val mContext = XposedHelpers.getObjectField(owner, "mContext") as Context
                     val resolver = mContext.contentResolver
                     // Handler() without a Looper binds to whichever thread ran the constructor
                     // hook and throws outright when that thread has no Looper.
-                    val torchObserver = object : ContentObserver(Handler(mContext.mainLooper)) {
-                        override fun onChange(selfChange: Boolean) = ModuleHelper.guarded {
-                            if (selfChange) return@guarded
-                            XposedHelpers.callMethod(param.getThisObject(), "updateLeftIcon")
-                        }
-                    }
+                    val torchObserver = torchStateObserver(owner, Handler(mContext.mainLooper))
                     resolver.registerContentObserver(Settings.Global.getUriFor("torch_state"), false, torchObserver)
                     ModuleHelper.replaceModuleRegistration("keyguardTorchObserver") {
                         resolver.unregisterContentObserver(torchObserver)
@@ -360,6 +369,7 @@ object SystemUILockScreenHooks {
 
         val updateRightButtonHook = object : MethodHook() {
             override fun after(param: AfterHookCallback) {
+                if (param.getThrowable() != null) return
                 val thisObject = param.getThisObject()
                 val mRightButton = XposedHelpers.getObjectField(thisObject, "mRightButton") as ImageView?
                 if (mRightButton == null) return
@@ -384,6 +394,7 @@ object SystemUILockScreenHooks {
         if (leftAction || rightAction) {
             ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateIcons", object : MethodHook() {
                 override fun after(param: AfterHookCallback) {
+                    if (param.getThrowable() != null) return
                     val mLeftButton = XposedHelpers.getObjectField(param.getThisObject(), "mLeftButton") as View?
                     if (mLeftButton == null) {
                         return

@@ -14,7 +14,6 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.Helpers.MimeType
-import java.util.List
 import tv.withaibuild.customiuizer.utils.HookUtils
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
@@ -65,6 +64,7 @@ object SystemShareMenuHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.thisObject
 
@@ -90,6 +90,7 @@ object SystemShareMenuHooks {
                     else if (removeDual) originalApp?.performClick()
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -100,59 +101,8 @@ object SystemShareMenuHooks {
     @JvmStatic
     fun CleanShareMenuServiceHook(lpparam: SystemServerStartingParam) {
         installShareMenuSnapshot()
-        val hook = object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-                    val args = chain.args
-
-                    try {
-                        if (args[0] == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        if (args.size < 6) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        val origIntent = args[0] as Intent
-                        val intent = origIntent.clone() as Intent
-                        val action = intent.action
-                        if (action == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        if (action != Intent.ACTION_SEND && action != Intent.ACTION_SENDTO && action != Intent.ACTION_SEND_MULTIPLE) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        if (intent.dataString != null && intent.dataString!!.contains(":")) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        if (intent.hasExtra("CustoMIUIzer") && intent.getBooleanExtra("CustoMIUIzer", false)) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        val selectedApps = cleanShareApps
-                        val resolved = result as? List<ResolveInfo> ?: return XposedHelpers.throwOrReturn(throwable, result)
-                        val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                        val pm = mContext.packageManager
-                        val itr = resolved.iterator()
-                        while (itr.hasNext()) {
-                            val resolveInfo = itr.next()
-                            val removeOriginal = selectedApps.contains(resolveInfo.activityInfo.packageName) || selectedApps.contains(resolveInfo.activityInfo.packageName + "|0")
-                            val removeDual = selectedApps.contains(resolveInfo.activityInfo.packageName + "|999")
-                            var hasDual = false
-                            try {
-                                hasDual = XposedHelpers.callMethod(pm, "getPackageInfoAsUser", resolveInfo.activityInfo.packageName, 0, 999) != null
-                            } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
-                            if ((removeOriginal && !hasDual) || (removeOriginal && hasDual && removeDual)) itr.remove()
-                        }
-                        result = resolved; throwable = null
-                    } catch (t: Throwable) {
-                        if (t !is BadParcelableException) XposedHelpers.log(t)
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        }
-
-        val ActQueryService = "com.android.server.pm.ComputerEngine"
-        ModuleHelper.hookAllMethods(ActQueryService, lpparam.classLoader, "queryIntentActivitiesInternal", hook)
+        ModuleHelper.hookAllMethods("com.android.server.pm.ComputerEngine", lpparam.classLoader,
+            "queryIntentActivitiesInternal", cleanMenuServiceHook(false))
     }
 
     private fun hideMimeType(mimeFlags: Int, mimeType: String?): Boolean {
@@ -224,6 +174,7 @@ object SystemShareMenuHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.thisObject
 
@@ -247,6 +198,7 @@ object SystemShareMenuHooks {
                     else if (isRemove.second) originalApp?.performClick()
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -257,64 +209,66 @@ object SystemShareMenuHooks {
     @JvmStatic
     fun CleanOpenWithMenuServiceHook(lpparam: SystemServerStartingParam) {
         installShareMenuSnapshot()
-        val hook = object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+        ModuleHelper.hookAllMethods("com.android.server.pm.ComputerEngine", lpparam.classLoader,
+            "queryIntentActivitiesInternal", cleanMenuServiceHook(true))
+    }
+
+    internal fun cleanMenuServiceHook(openWith: Boolean) = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            val selected = if (openWith) cleanOpenWithApps else cleanShareApps
+            if (selected.isEmpty()) return result
+            return try {
+                if (chain.executable.parameterCount < 6) return result
+                val intent = chain.getArg(0) as? Intent ?: return result
+                if (openWith) {
+                    if (intent.action != Intent.ACTION_VIEW) return result
+                    val scheme = intent.scheme
+                    if (intent.type == null && scheme != "http" && scheme != "https" && scheme != "vnd.youtube") return result
+                } else {
+                    if (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SENDTO && intent.action != Intent.ACTION_SEND_MULTIPLE) return result
+                    if (intent.dataString?.contains(":") == true) return result
                 }
-                try {
-                    val thisObject = chain.thisObject
-                    val args = chain.args
-
-                    try {
-                        if (args[0] == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        if (args.size < 6) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        val origIntent = args[0] as Intent
-                        val intent = origIntent.clone() as Intent
-                        val action = intent.action
-                        if (action != Intent.ACTION_VIEW) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        if (intent.hasExtra("CustoMIUIzer") && intent.getBooleanExtra("CustoMIUIzer", false)) { return XposedHelpers.throwOrReturn(throwable, result) }
-                        val scheme = intent.scheme
-                        val validSchemes = scheme == "http" || scheme == "https" || scheme == "vnd.youtube"
-                        if (intent.type == null && !validSchemes) { return XposedHelpers.throwOrReturn(throwable, result) }
-
-                        val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                        val mimeType = getContentType(mContext, intent)
-
-                        val key = "system_cleanopenwith_apps"
-                        val selectedApps = cleanOpenWithApps
-                        val resolved = result as? List<ResolveInfo> ?: return XposedHelpers.throwOrReturn(throwable, result)
-                        val pm = mContext.packageManager
-                        val itr = resolved.iterator()
-                        while (itr.hasNext()) {
-                            val resolveInfo = itr.next()
-                            val isRemove = isRemoveApp(false, mContext, resolveInfo.activityInfo.packageName, selectedApps, mimeType)
-                            var hasDual = false
-                            try {
-                                hasDual = XposedHelpers.callMethod(pm, "getPackageInfoAsUser", resolveInfo.activityInfo.packageName, 0, 999) != null
-                            } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
-                            if ((isRemove.first && !hasDual) || (isRemove.first && hasDual && isRemove.second)) itr.remove()
-                        }
-
-                        result = resolved; throwable = null
-                    } catch (t: Throwable) {
-                        if (t !is BadParcelableException) XposedHelpers.log(t)
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                if (intent.getBooleanExtra("CustoMIUIzer", false)) return result
+                @Suppress("UNCHECKED_CAST")
+                val resolved = result as? kotlin.collections.List<ResolveInfo> ?: return result
+                if (resolved.isEmpty()) return result
+                val context = XposedHelpers.getObjectField(chain.thisObject, "mContext") as Context
+                val mime = if (openWith) getContentType(context, intent) else null
+                filterResolvedActivities(resolved, { pkg ->
+                    if (openWith) isRemoveApp(false, context, pkg, selected, mime)
+                    else Pair(pkg in selected || "$pkg|0" in selected, "$pkg|999" in selected)
+                }, { pkg ->
+                    try { XposedHelpers.callMethod(context.packageManager, "getPackageInfoAsUser", pkg, 0, 999) != null }
+                    catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t); false }
+                })
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
+                if (t !is BadParcelableException) XposedHelpers.log(t)
+                result
             }
         }
+    }
 
-        val ActQueryService = "com.android.server.pm.ComputerEngine"
-        ModuleHelper.hookAllMethods(ActQueryService, lpparam.classLoader, "queryIntentActivitiesInternal", hook)
+    internal fun filterResolvedActivities(
+        resolved: kotlin.collections.List<ResolveInfo>,
+        selection: (String) -> Pair<Boolean, Boolean>,
+        hasDual: (String) -> Boolean,
+    ): kotlin.collections.List<ResolveInfo> {
+        val decisions = HashMap<String, Boolean>()
+        var filtered: ArrayList<ResolveInfo>? = null
+        for ((index, item) in resolved.withIndex()) {
+            val pkg = item.activityInfo?.packageName
+            val remove = pkg != null && decisions.getOrPut(pkg) {
+                val selected = selection(pkg)
+                selected.first && (selected.second || !hasDual(pkg))
+            }
+            if (remove && filtered == null) filtered = ArrayList<ResolveInfo>(resolved.size).apply {
+                addAll(resolved.subList(0, index))
+            }
+            if (!remove) filtered?.add(item)
+        }
+        return filtered ?: resolved
     }
 
 }

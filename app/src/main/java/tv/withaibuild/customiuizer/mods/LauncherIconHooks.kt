@@ -15,10 +15,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
 import android.widget.TextView
-import java.util.HashSet
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -46,17 +46,26 @@ object LauncherIconHooks {
 
     private var iconStyleObserverRegistered = false
 
-    internal fun refreshIconStyleSnapshot() {
-        val prefs = MainModule.mPrefs
-        val renamed = HashMap<String, String>()
-        for ((key, value) in prefs.getAll()) {
-            if (key.startsWith(PREF_RENAME_PREFIX) && value is String) {
-                renamed[key] = value
+    @Synchronized
+    internal fun refreshIconStyleSnapshot(changedKey: String? = null) {
+        val prefs = MainModule.mPrefs.getAll()
+        val current = iconStyleConfig
+        val renamed = when {
+            changedKey == null -> prefs.entries.asSequence()
+                .filter { it.key.startsWith(PREF_RENAME_PREFIX) && it.value is String }
+                .associate { it.key to it.value as String }
+            changedKey.startsWith(PREF_RENAME_PREFIX) -> {
+                val value = prefs[changedKey] as? String
+                if (current.renameTitles[changedKey] == value) current.renameTitles
+                else current.renameTitles.toMutableMap().apply {
+                    if (value == null) remove(changedKey) else put(changedKey, value)
+                }
             }
+            else -> current.renameTitles
         }
         iconStyleConfig = IconStyleSnapshot(
-            titleFontSizeSp = prefs.getInt(PREF_TITLE_FONT_SIZE, 5).toFloat(),
-            titleTopMargin = prefs.getInt(PREF_TITLE_TOP_MARGIN, 0),
+            titleFontSizeSp = (prefs[PREF_TITLE_FONT_SIZE] as? Int ?: 5).coerceIn(5, 20).toFloat(),
+            titleTopMargin = (prefs[PREF_TITLE_TOP_MARGIN] as? Int ?: 0).coerceIn(0, 21),
             renameTitles = renamed,
         )
     }
@@ -73,7 +82,7 @@ object LauncherIconHooks {
                     key == PREF_TITLE_TOP_MARGIN ||
                     key.startsWith(PREF_RENAME_PREFIX)
                 ) {
-                    refreshIconStyleSnapshot()
+                    refreshIconStyleSnapshot(key)
                 }
             }
         })
@@ -89,6 +98,36 @@ object LauncherIconHooks {
             "launcher_renameapps_list:" + pkgName + "|" + actName + "|" + user.hashCode()
         ] ?: ""
         if (!TextUtils.isEmpty(newTitle)) XposedHelpers.setObjectField(thisObject, "mLabel", newTitle)
+    }
+
+    internal fun updateRenamedShortcuts(owner: Activity, changedKey: String?, packageName: String) {
+        owner.runOnUiThread {
+            ModuleHelper.guarded {
+                if (owner.isDestroyed || owner.isFinishing) return@guarded
+                val field = XposedHelpers.findFieldIfExists(owner.javaClass, "mAllLoadedShortcut")
+                    ?: XposedHelpers.findFieldIfExists(owner.javaClass, "mAllLoadedApps") ?: return@guarded
+                val shortcuts = field.get(owner) as? Collection<*> ?: return@guarded
+                val titles = iconStyleConfig.renameTitles
+                for (shortcut in shortcuts.toList()) {
+                    shortcut ?: continue
+                    if (XposedHelpers.callMethod(shortcut, "isApplicatoin") != true) continue
+                    val pkg = XposedHelpers.callMethod(shortcut, "getPackageName") as String
+                    val act = XposedHelpers.callMethod(shortcut, "getClassName") as String
+                    val user = XposedHelpers.getObjectField(shortcut, "user") as UserHandle
+                    val key = "$PREF_RENAME_PREFIX:$pkg|$act|${user.hashCode()}"
+                    if (changedKey != null && changedKey != key) continue
+                    val title = titles[key]?.takeUnless { it.isEmpty() }
+                        ?: XposedHelpers.getAdditionalInstanceField(shortcut, "mLabelOrig") as? CharSequence ?: continue
+                    if (XposedHelpers.getObjectField(shortcut, "mLabel") == title) continue
+                    XposedHelpers.setObjectField(shortcut, "mLabel", title)
+                    if (packageName == "com.miui.home") XposedHelpers.callMethod(shortcut, "updateBuddyIconView", owner)
+                    else {
+                        val buddy = XposedHelpers.callMethod(shortcut, "getBuddyIconView")
+                        if (buddy != null) XposedHelpers.callMethod(buddy, "updateInfo", owner, shortcut)
+                    }
+                }
+            }
+        }
     }
 
     @JvmStatic
@@ -109,51 +148,22 @@ object LauncherIconHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.getThisObject()
 
                     ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
                         override fun onChange(key: String?) {
                             ModuleHelper.guarded {
-                                if (key == null || !key.startsWith("launcher_renameapps_list")) return
-                                refreshIconStyleSnapshot()
-                                val newTitle = iconStyleConfig.renameTitles[key] ?: ""
-                                var mAllLoadedApps: HashSet<*>? = null
-                                if (XposedHelpers.findFieldIfExists(thisObject.javaClass, "mAllLoadedShortcut") != null)
-                                    mAllLoadedApps = XposedHelpers.getObjectField(thisObject, "mAllLoadedShortcut") as? HashSet<*>
-                                else if (XposedHelpers.findFieldIfExists(thisObject.javaClass, "mAllLoadedApps") != null)
-                                    mAllLoadedApps = XposedHelpers.getObjectField(thisObject, "mAllLoadedApps") as? HashSet<*>
-                                val act = thisObject as Activity
-                                if (mAllLoadedApps != null)
-                                    for (shortcut in mAllLoadedApps) {
-                                        val shortcutObj = shortcut ?: continue
-                                        val isApplicatoin = XposedHelpers.callMethod(shortcutObj, "isApplicatoin") as Boolean
-                                        if (!isApplicatoin) continue
-                                        val pkgName = XposedHelpers.callMethod(shortcutObj, "getPackageName") as String
-                                        val actName = XposedHelpers.callMethod(shortcutObj, "getClassName") as String
-                                        val user = XposedHelpers.getObjectField(shortcutObj, "user") as UserHandle
-                                        if (("launcher_renameapps_list:" + pkgName + "|" + actName + "|" + user.hashCode()) == key) {
-                                            val newStr: CharSequence? = if (TextUtils.isEmpty(newTitle)) XposedHelpers.getAdditionalInstanceField(shortcutObj, "mLabelOrig") as? CharSequence else newTitle
-                                            XposedHelpers.setObjectField(shortcutObj, "mLabel", newStr)
-
-                                            act.runOnUiThread {
-                                                ModuleHelper.guarded {
-                                                    if (lpparam.packageName == "com.miui.home") {
-                                                        XposedHelpers.callMethod(shortcutObj, "updateBuddyIconView", act)
-                                                    } else {
-                                                        val buddyIconView = XposedHelpers.callMethod(shortcutObj, "getBuddyIconView")
-                                                        if (buddyIconView != null) XposedHelpers.callMethod(buddyIconView, "updateInfo", thisObject, shortcutObj)
-                                                    }
-                                                }
-                                            }
-                                            break
-                                        }
-                                    }
+                                if (key != null && !key.startsWith(PREF_RENAME_PREFIX)) return
+                                refreshIconStyleSnapshot(key)
+                                updateRenamedShortcuts(thisObject as Activity, key, lpparam.packageName)
                             }
                         }
                     }, thisObject)
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -165,7 +175,7 @@ object LauncherIconHooks {
                 var result: Any? = null
                 var throwable: Throwable? = null
                 try {
-                    ModuleHelper.unregisterPreferenceObserver(chain.getThisObject())
+                    ModuleHelper.guarded { ModuleHelper.unregisterPreferenceObserver(chain.getThisObject()) }
                     result = chain.proceed()
                 } catch (t: Throwable) {
                     throwable = t
@@ -185,14 +195,15 @@ object LauncherIconHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.getThisObject()
-                    val args = chain.args
 
                     XposedHelpers.setAdditionalInstanceField(thisObject, "mLabelOrig", XposedHelpers.getObjectField(thisObject, "mLabel"))
-                    if (args.size > 0) modifyTitle(thisObject)
+                    if (chain.executable.parameterCount > 0) modifyTitle(thisObject)
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -209,6 +220,7 @@ object LauncherIconHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.getThisObject()
 
@@ -216,6 +228,7 @@ object LauncherIconHooks {
                     modifyTitle(thisObject)
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -232,6 +245,7 @@ object LauncherIconHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.getThisObject()
 
@@ -239,6 +253,7 @@ object LauncherIconHooks {
                     modifyTitle(thisObject)
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -255,12 +270,14 @@ object LauncherIconHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.getThisObject()
 
                     modifyTitle(thisObject)
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -277,12 +294,14 @@ object LauncherIconHooks {
                     throwable = t
                     result = null
                 }
+                if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
                 try {
                     val thisObject = chain.getThisObject()
 
                     modifyTitle(thisObject)
 
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -497,139 +516,57 @@ object LauncherIconHooks {
     @JvmStatic
     fun TitleFontSizeHook(lpparam: PackageReadyParam) {
         installIconStyleSnapshot()
-        ModuleHelper.findAndHookMethod("com.miui.home.launcher.ItemIcon", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.getThisObject()
-
-                    val mTitle = XposedHelpers.getObjectField(thisObject, "mTitle") as? TextView
-                    if (mTitle != null) mTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconStyleConfig.titleFontSizeSp)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
+        ModuleHelper.findAndHookMethod("com.miui.home.launcher.ItemIcon", lpparam.classLoader, "onFinishInflate", titleFontHook { chain, _ ->
+            XposedHelpers.getObjectField(chain.thisObject, "mTitle") as? TextView
         })
-
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "fromXml", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    // The two ROM overloads place ShortcutInfo at different argument indexes.
-                    // Both return the icon whose native creation has just completed.
-                    val buddyIcon = result
-                    if (buddyIcon == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val mTitle = XposedHelpers.getObjectField(buddyIcon, "mTitle") as? TextView
-                    if (mTitle != null) mTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconStyleConfig.titleFontSizeSp)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
+        val resultHook = titleFontHook { _, result ->
+            result?.let { XposedHelpers.getObjectField(it, "mTitle") as? TextView }
+        }
+        ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "fromXml", resultHook)
+        ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "createShortcutIcon", resultHook)
+        ModuleHelper.hookAllMethods("com.miui.home.launcher.common.Utilities", lpparam.classLoader, "adaptTitleStyleToWallpaper", titleFontHook { chain, _ ->
+            (chain.getArg(1) as? TextView)?.takeIf { it.id == it.resources.getIdentifier("icon_title", "id", "com.miui.home") }
         })
+    }
 
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "createShortcutIcon", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    val buddyIcon = result
-                    if (buddyIcon == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val mTitle = XposedHelpers.getObjectField(buddyIcon, "mTitle") as? TextView
-                    if (mTitle != null) mTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconStyleConfig.titleFontSizeSp)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.common.Utilities", lpparam.classLoader, "adaptTitleStyleToWallpaper", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    val mTitle = chain.getArg(1) as? TextView
-                    if (mTitle != null && mTitle.id == mTitle.resources.getIdentifier("icon_title", "id", "com.miui.home"))
-                        mTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconStyleConfig.titleFontSizeSp)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+    internal fun titleFontHook(title: (XposedInterface.Chain, Any?) -> TextView?) = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            val size = iconStyleConfig.titleFontSizeSp
+            if (size <= 5f) return result
+            try { title(chain, result)?.setTextSize(TypedValue.COMPLEX_UNIT_SP, size) }
+            catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t); XposedHelpers.log(t) }
+            return result
+        }
     }
 
     @JvmStatic
     fun TitleTopMarginHook(lpparam: PackageReadyParam) {
         installIconStyleSnapshot()
-        ModuleHelper.findAndHookMethod("com.miui.home.launcher.ItemIcon", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.getThisObject()
+        ModuleHelper.findAndHookMethod("com.miui.home.launcher.ItemIcon", lpparam.classLoader, "onFinishInflate", titleTopMarginHook())
+    }
 
-                    val mTitleContainer = XposedHelpers.getObjectField(thisObject, "mTitleContainer") as? ViewGroup
-                    if (mTitleContainer == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val lp = mTitleContainer.layoutParams
-                    val opt = Math.round((iconStyleConfig.titleTopMargin - 11) * mTitleContainer.resources.displayMetrics.density)
-                    if (lp is RelativeLayout.LayoutParams) {
-                        lp.topMargin = opt
-                        mTitleContainer.layoutParams = lp
-                    } else {
-                        mTitleContainer.translationY = opt.toFloat()
-                        mTitleContainer.clipChildren = false
-                        mTitleContainer.clipToPadding = false
-                        (mTitleContainer.parent as? ViewGroup)?.clipChildren = false
-                        (mTitleContainer.parent as? ViewGroup)?.clipToPadding = false
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
+    internal fun titleTopMarginHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            val margin = iconStyleConfig.titleTopMargin
+            if (margin == 0) return result
+            try {
+                val container = XposedHelpers.getObjectField(chain.thisObject, "mTitleContainer") as? ViewGroup ?: return result
+                val offset = Math.round((margin - 11) * container.resources.displayMetrics.density)
+                val lp = container.layoutParams
+                if (lp is RelativeLayout.LayoutParams) {
+                    if (lp.topMargin != offset) { lp.topMargin = offset; container.layoutParams = lp }
+                } else {
+                    container.translationY = offset.toFloat()
+                    container.clipChildren = false
+                    container.clipToPadding = false
+                    (container.parent as? ViewGroup)?.clipChildren = false
+                    (container.parent as? ViewGroup)?.clipToPadding = false
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+            } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t); XposedHelpers.log(t) }
+            return result
+        }
     }
 
     @JvmStatic

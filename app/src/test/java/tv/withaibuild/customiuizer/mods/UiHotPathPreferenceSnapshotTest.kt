@@ -201,7 +201,8 @@ class UiHotPathPreferenceSnapshotTest {
         )
         assertFalse(body.contains("MainModule.mPrefs"))
         assertTrue(body.contains("isSecureQsTile"))
-        assertTrue(body.contains("secureQsSnapshot.keepOpened"))
+        assertTrue(body.contains("val current = secureQsSnapshot"))
+        assertTrue(body.contains("current.keepOpened"))
     }
 
     @Test
@@ -265,14 +266,14 @@ class UiHotPathPreferenceSnapshotTest {
     fun titleFontAndMarginReadIconStyleSnapshot() {
         val font = methodBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherIconHooks.kt",
-            "fun TitleFontSizeHook",
+            "fun titleFontHook",
         )
         assertFalse(font.contains("MainModule.mPrefs"))
         assertTrue(font.contains("iconStyleConfig.titleFontSizeSp"))
 
         val margin = methodBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherIconHooks.kt",
-            "fun TitleTopMarginHook",
+            "fun titleTopMarginHook",
         )
         assertFalse(margin.contains("MainModule.mPrefs"))
         assertTrue(margin.contains("iconStyleConfig.titleTopMargin"))
