@@ -16,6 +16,7 @@ internal object IslandSizing {
     const val SHORT_MAX_DP = 320
     const val LONG_MIN_DP = 120
     const val LONG_MAX_MANUAL_DP = 400
+    const val FORM_GAP_DP = 24
 
     fun maximumWidth(density: Float, screen: Int, clearance: Int,
         romMaximum: Int = Int.MAX_VALUE, shortDp: Int = 184,
@@ -67,8 +68,9 @@ internal object IslandSizing {
     /** Expanded content can borrow the status-bar space whose intersecting icons fade.
      * Its viewport bound is separate from the quiet, compact form's icon clearance. */
     fun expanded(density: Float, screen: Int, safeWidth: Int, gap: Int, caption: Float,
-        heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true): Int {
-        val minimum = automatic(SHORT_DP, heightDp) * density
+        heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true, shortWidth: Int = 0): Int {
+        val minimum = maxOf(automatic(SHORT_DP + FORM_GAP_DP, heightDp) * density,
+            shortWidth + FORM_GAP_DP * density)
         val maximum = automatic(320, heightDp) * density
         val content = if (centered) gap + 2 * (maxOf(caption, 24 * density) + EDGE_DP * density)
             else caption + (2 * EDGE_DP + 32) * density

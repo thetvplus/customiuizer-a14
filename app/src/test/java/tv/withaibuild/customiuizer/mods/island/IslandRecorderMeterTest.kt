@@ -19,14 +19,14 @@ import org.robolectric.shadows.ShadowBinder
 class IslandRecorderMeterTest {
     @Test fun peakMappingKeepsSilenceQuietAndLeavesHeadroomForOrdinarySpeechAndClipping() {
         assertEquals(0f, IslandRecorderMeter.level(256), 0f)
-        assertTrue(IslandRecorderMeter.level(8192) in .41f.. .43f)
-        assertTrue(IslandRecorderMeter.level(16384) in .59f.. .61f)
-        assertTrue("Quiet speech must survive the display gate", IslandRecorderMeter.level(1024) > .12f)
-        assertEquals(.85f, IslandRecorderMeter.level(32767), .00001f)
+        assertTrue(IslandRecorderMeter.level(8192) in .24f.. .25f)
+        assertTrue(IslandRecorderMeter.level(16384) in .49f.. .50f)
+        assertTrue("Quiet speech must survive the display gate", IslandRecorderMeter.level(1024) > .02f)
+        assertEquals(1f, IslandRecorderMeter.level(32767), .00001f)
         var previous = 0f
         for (raw in 0..32768 step 64) {
             val value = IslandRecorderMeter.level(raw)
-            assertTrue(value in previous.. .85f)
+            assertTrue(value in previous..1f)
             previous = value
         }
     }
@@ -68,7 +68,7 @@ class IslandRecorderMeterTest {
             scheduler.runCurrent()
             scheduler.advanceTimeBy(335); scheduler.runCurrent()
             assertTrue(reads in 5..6)
-            assertArrayEquals(FloatArray(5) { .85f }, frames.last(), .00001f)
+            assertArrayEquals(FloatArray(5) { 1f }, frames.last(), .00001f)
             amplitude = 0
             scheduler.advanceTimeBy(402); scheduler.runCurrent()
             assertArrayEquals(FloatArray(5), frames.last(), 0f)

@@ -30,7 +30,7 @@ internal object AudioFftBands {
             // small-height view. Keep one-bit complex quantization noise at rest;
             // never auto-normalize a quiet band to full height.
             val gain = when (index) { 3 -> 3f; 4 -> 8f; else -> 1f }
-            val energy = if (index >= 3 && power <= 2f) 0f
+            val energy = if (power <= 2f) 0f
                 else (sqrt(power / 32768f) * gain).coerceAtMost(1f)
             // At 20 Hz a quiet interval falls below 10% in four frames (200 ms).
             // Only five values survive a frame; raw FFT never does.

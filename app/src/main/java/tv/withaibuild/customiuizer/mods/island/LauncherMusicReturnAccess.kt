@@ -109,7 +109,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
 
     /** Called once at committed return, never from an animation update. Preserve the original
      * params, callbacks, task leash, velocity and finish/cancel policy in a separate native copy. */
-    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame): Any? {
+    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = false): Any? {
         if (!params.isInstance(original) || !frame.valid()) return null
         if ((fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
@@ -124,12 +124,12 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
         val values = fields.map { it.get(original) }.toTypedArray()
-        val landing = frame.landingRectangle()
+        val landing = if (absorption) frame.landingRectangle() else frame.rectangle()
         values[2] = landing
         values[4] = landing.height() * .5f
         // Keep the real window opaque until it is wholly inside the island's mask.
         // Native finish/cancel still owns its leash and animation clock.
-        values[6] = 1f
+        if (absorption) values[6] = 1f
         // A14's frame callback draws any *already initialized* floating icon without
         // consulting ignoreIcon. A null target makes native initTargetView retire that
         // icon before the window spring starts, restoring its real desktop owner once.

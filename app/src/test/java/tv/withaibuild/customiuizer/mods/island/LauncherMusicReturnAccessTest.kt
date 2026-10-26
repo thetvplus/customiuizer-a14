@@ -72,7 +72,7 @@ class LauncherMusicReturnAccessTest {
 
     @Test fun incomingWindowsLandWhollyInsideTheIslandMaskWithTheSameCentre() {
         val source = params()
-        val target = (access.retarget(source, Element(), Nav(), frame) as Params).targetRect
+        val target = (access.retarget(source, Element(), Nav(), frame, absorption = true) as Params).targetRect
         assertTrue(target.width() < frame.right - frame.left)
         assertTrue(target.left > frame.left)
         assertTrue(target.right < frame.right)
@@ -88,7 +88,7 @@ class LauncherMusicReturnAccessTest {
             val current = frame.copy(packageName = pkg)
             val source = params(targets = Targets(arrayOf(Remote().apply { packageName = pkg })))
             val nav = Nav().apply { mRunningTaskComponentName = ComponentName(pkg, "Activity") }
-            val target = (access.retarget(source, Element(), nav, current) as Params).targetRect
+            val target = (access.retarget(source, Element(), nav, current, absorption = true) as Params).targetRect
             assertEquals((frame.right - frame.left) * .84f, target.width(), .001f)
             assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
             assertEquals((frame.bottom - frame.top) * .86f, target.height(), .001f)
@@ -134,7 +134,7 @@ class LauncherMusicReturnAccessTest {
 
     @Test fun closingWindowUsesNativeNoIconTargetWithoutChangingTheOriginal() {
         val source = params()
-        val result = access.retarget(source, Element(), Nav(), frame) as Params
+        val result = access.retarget(source, Element(), Nav(), frame, absorption = true) as Params
         assertNotSame(source, result)
         assertEquals(frame.landingRectangle(), result.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
@@ -152,6 +152,16 @@ class LauncherMusicReturnAccessTest {
         assertSame(source.animListener, result.animListener)
         assertSame(source.clipAnimationHelper, result.clipAnimationHelper)
         assertSame(source.targetApps, result.targetApps)
+    }
+
+    @Test fun standardBoardingRestoresOnlyTheNativeTargetAndPreservesNativeTransparency() {
+        val source = params()
+        val result = access.retarget(source, Element(), Nav(), frame) as Params
+        assertEquals(frame.rectangle(), result.targetRect)
+        assertEquals(source.startAlpha, result.startAlpha, 0f)
+        assertEquals(source.endAlpha, result.endAlpha, 0f)
+        assertSame(source.animListener, result.animListener)
+        assertNull(result.targetView)
     }
 
     @Test fun returnFromAnotherPageKeepsTheNativeAbsentIconTarget() {

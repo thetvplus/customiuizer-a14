@@ -1300,4 +1300,8 @@
     <string name="system_island_waveform_group">波形</string>
     <string name="system_island_motion_group">動畫</string>
     <string name="system_island_general_gestures_group">通用</string>
+    <string name="system_island_return_effect_title">上島效果</string>
+    <string name="system_island_return_effect_summ">標準沿用原生視窗動畫；吸入讓頁面先收上緣、再壓縮下緣。適用於音樂和持續活動。</string>
+    <string name="system_island_return_effect_standard">標準上島</string>
+    <string name="system_island_return_effect_absorption">吸入上島</string>
 </resources>

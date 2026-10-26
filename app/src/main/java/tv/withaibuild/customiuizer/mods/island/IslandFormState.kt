@@ -37,11 +37,11 @@ internal class IslandFormState {
     fun dismissIdle() { idleSuppressed = true }
     fun wake() { idleSuppressed = false }
 
-    /** Dismissing a notice releases its owner immediately; the next live slot is the
-     * morph target. Only an expanded media detail collapses within the same owner. */
+    /** A long form first collapses within its current owner. A second upward gesture
+     * releases that source and selects the next live slot. */
     fun dismissal() = when {
         source == Source.IDLE -> Dismissal.IDLE
-        source == Source.MEDIA && expanded -> Dismissal.COLLAPSE
+        expanded -> Dismissal.COLLAPSE
         else -> Dismissal.SOURCE
     }
 

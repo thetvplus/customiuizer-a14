@@ -21,7 +21,7 @@ internal object IslandRecorderMeter {
     internal fun level(raw: Int): Float {
         if (raw <= 256) return 0f
         val x = (raw.coerceAtMost(32767) - 256) / 32511f
-        return kotlin.math.sqrt(x) * .85f
+        return x
     }
     fun producer(systemUiUid: Int, level: () -> Int): IBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {

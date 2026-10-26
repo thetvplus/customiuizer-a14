@@ -143,9 +143,14 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         val remaining = ((active.progress - active.firstProgress) / (1f - active.firstProgress).coerceAtLeast(.01f)).coerceIn(0f, 1f)
         root.getLocationOnScreen(active.location)
         active.rect.set(rect); active.rect.offset(-active.location[0].toFloat(), -active.location[1].toFloat())
+        if (active.sourceRect.isEmpty) active.sourceRect.set(active.rect)
         active.destination.set(active.target); active.destination.offset(-active.location[0].toFloat(), -active.location[1].toFloat())
         active.radius = radius.coerceAtLeast(0f)
-        IslandAbsorptionMesh.fill(active.vertices, active.rect, active.destination, remaining)
+        IslandAbsorptionMesh.fill(active.vertices, active.sourceRect, active.destination, remaining)
+        val last = IslandAbsorptionMesh.ROWS * 4
+        active.rect.set(minOf(active.vertices[0], active.vertices[last]), active.vertices[1],
+            maxOf(active.vertices[2], active.vertices[last + 2]), active.vertices[last + 1])
+        active.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.opacity(remaining)).toInt().coerceIn(0, 255)
         active.setBounds(0, 0, root.width, root.height)
         active.invalidateSelf()
         val frameId = ++active.frameId
@@ -201,7 +206,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         val root = WeakReference(root)
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
         val location = IntArray(2)
-        val rect = RectF(); val destination = RectF()
+        val rect = RectF(); val destination = RectF(); val sourceRect = RectF()
         val path = Path()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         var texture: Bitmap? = null

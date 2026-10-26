@@ -33,17 +33,30 @@ class IslandPolishTest {
         wave.spectrum(FloatArray(5) { .2f })
         val before = getField<FloatArray>(wave, "targets")[0]
         wave.gainPercent = 200
-        assertEquals(before * 2, getField<FloatArray>(wave, "targets")[0], .00001f)
+        assertTrue(getField<FloatArray>(wave, "targets")[0] > before * 1.8f)
         wave.gainPercent = 10000
         assertEquals(800, wave.gainPercent)
-        assertEquals(1f, getField<FloatArray>(wave, "targets")[0], 0f)
-        for (quiet in listOf(0f, .01f, Float.NaN, Float.POSITIVE_INFINITY, -1f)) {
+        assertTrue(getField<FloatArray>(wave, "targets")[0] in .8f.. .9f)
+        for (quiet in listOf(0f, Float.NaN, Float.POSITIVE_INFINITY, -1f)) {
             wave.spectrum(FloatArray(5) { quiet })
             assertArrayEquals(FloatArray(5), getField<FloatArray>(wave, "targets"), 0f)
         }
         wave.gainPercent = -1
         assertEquals(100, wave.gainPercent)
     }
+    @Test fun weakMusicSurvivesGainAndRecordingDoesNotHitAFlatClippingPlateau() {
+        val wave = IslandWaveView(org.robolectric.RuntimeEnvironment.getApplication())
+        wave.gainPercent = 450
+        wave.spectrum(FloatArray(5) { .011f })
+        assertTrue(getField<FloatArray>(wave, "targets")[0] > .04f)
+        wave.spectrum(FloatArray(5) { IslandRecorderMeter.level(8192) })
+        val speech = getField<FloatArray>(wave, "targets")[0]
+        wave.spectrum(FloatArray(5) { IslandRecorderMeter.level(16384) })
+        val louder = getField<FloatArray>(wave, "targets")[0]
+        assertTrue(speech in .6f.. .8f)
+        assertTrue(louder > speech && louder < 1f)
+    }
+
     @Test fun measuredWaveInterpolatesWithoutKeepingAClockAfterSilenceOrDetachment() {
         val activity=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val wave=IslandWaveView(activity)
@@ -57,9 +70,9 @@ class IslandPolishTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(33))
         assertTrue(getField<FloatArray>(wave,"energies")[0] in .1f.. .99f)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
-        assertEquals(1f,getField<FloatArray>(wave,"energies")[0],.006f)
+        assertEquals(.8944272f,getField<FloatArray>(wave,"energies")[0],.006f)
         assertFalse(getField(wave,"scheduled"))
-        wave.spectrum(FloatArray(5) { .01f })
+        wave.spectrum(FloatArray(5))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
         assertEquals(0f,getField<FloatArray>(wave,"energies")[0],.006f)
         assertFalse(getField(wave,"scheduled"))

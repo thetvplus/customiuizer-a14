@@ -32,9 +32,9 @@ class IslandMediaCaptureFormatTest {
 
     private fun backend() = IslandAudioSpectrum.NativeBackend(RuntimeEnvironment.getApplication(), Handler(Looper.getMainLooper()))
 
-    @Test fun realCaptureKeepsPlaybackLevelInsteadOfAmplifyingQuietContent() {
+    @Test fun realCaptureNormalizesBeforeLowVolumeIsQuantizedAway() {
         val capture = backend().capture(42) { _, _ -> }
-        assertEquals(Visualizer.SCALING_MODE_AS_PLAYED, FormatVisualizer.mode)
+        assertEquals(Visualizer.SCALING_MODE_NORMALIZED, FormatVisualizer.mode)
         assertEquals(512, FormatVisualizer.size)
         assertTrue(FormatVisualizer.captureEnabled)
         capture.close()
@@ -64,8 +64,8 @@ class IslandMediaCaptureFormatTest {
         assertFalse(FormatVisualizer.captureEnabled)
     }
 
-    @Test fun ignoredScalingRequestsCannotSilentlyPublishNormalizedLevels() {
-        FormatVisualizer.readback = Visualizer.SCALING_MODE_NORMALIZED
+    @Test fun ignoredScalingRequestsCannotSilentlyPublishZeroQuantizedLevels() {
+        FormatVisualizer.readback = Visualizer.SCALING_MODE_AS_PLAYED
         assertThrows(IllegalStateException::class.java) { backend().capture(42) { _, _ -> } }
         assertEquals(1, FormatVisualizer.released)
         assertFalse(FormatVisualizer.captureEnabled)

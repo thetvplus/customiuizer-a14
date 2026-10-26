@@ -241,7 +241,7 @@ internal class DockGlassBackdrop(
                         // A wallpaper replacement, hide or release also invalidates failures.
                         // Only the current capture may retire this decoration's lens.
                         if (!current.released && !current.broken && current.visible && current.epoch == requestEpoch)
-                            current.fail(error)
+                            current.unavailable()
                         else if (!current.released && !current.broken && current.visible)
                             current.owner.get()?.postInvalidateOnAnimation()
                     }
@@ -261,11 +261,7 @@ internal class DockGlassBackdrop(
             return
         }
         if (frame == null) {
-            // Wallpaper may not have a compositor frame on the first Launcher draw.
-            // Try once after presentation; then wait for a real source/visibility event.
-            sourceDirty = false
-            sourceUnavailable = true
-            if (unavailableTries++ == 0) owner.get()?.let { scheduleTick(it, 64L) }
+            unavailable()
             return
         }
         if (frame.isRecycled || frame.width > MAX_WIDTH + 1 || frame.height > MAX_HEIGHT + 1 || frameCrop.isEmpty ||
@@ -315,6 +311,16 @@ internal class DockGlassBackdrop(
             FatalErrors.unwrapAndRethrowIfFatal(error)
             fail(error)
         }
+    }
+
+    /** Compositor readiness is transient. One visible generation gets a finite
+     * 64/160/400 ms recovery window, then waits for a genuine source change. */
+    private fun unavailable() {
+        busy = false
+        sourceDirty = false
+        sourceUnavailable = true
+        val delay = when (unavailableTries++) { 0 -> 64L; 1 -> 160L; 2 -> 400L; else -> return }
+        owner.get()?.let { scheduleTick(it, delay) }
     }
 
     private fun scheduleTick(view: View, delay: Long = FRAME_MS) {

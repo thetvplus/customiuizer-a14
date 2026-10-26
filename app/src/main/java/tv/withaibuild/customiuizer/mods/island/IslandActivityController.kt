@@ -125,7 +125,7 @@ internal class IslandActivityController(
             (lastContent as? IslandMediaContent)?.takeIf { it.token == event && it.playing && !exiting }
                 ?.let { displayedMedia = it.token }
             updateSpectrum(visible = true)
-        }, hidden = { spectrum?.stop(); recorderWave.stop(); batteryWarningMarker?.visible(false) }, frameAllowed = ::frameAllowed,
+        }, hidden = { spectrum?.stop(); recorderWave?.stop(); batteryWarningMarker?.visible(false) }, frameAllowed = ::frameAllowed,
         rejected = ::queueFrameRecheck)
     private val window = context.getSystemService(WindowManager::class.java)
     private var attached = false
@@ -161,7 +161,7 @@ internal class IslandActivityController(
     }
     private val diagnostics = IslandDiagnostics()
     private var spectrum: IslandAudioSpectrum? = null
-    private val recorderWave by lazy { IslandRecorderMeter.Consumer(scope, ioDispatcher, shell::spectrum) }
+    private var recorderWave: IslandRecorderMeter.Consumer? = null
     private val snapshotMutex = Mutex()
     private val sessionMutex = Mutex()
     private val actionMutex = Mutex()
@@ -828,6 +828,7 @@ internal class IslandActivityController(
     }
 
     private fun presentSystemEntry(entry: IslandSystemFeedback.Entry, now: Long) {
+        if (state.toast(now)?.notificationKey != null) return
         val content = entry.activity.content(context)
         val animation = if (!reducedMotion() && ValueAnimator.areAnimatorsEnabled())
             IslandMotion.ENTER else 0L
@@ -842,6 +843,7 @@ internal class IslandActivityController(
         if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled || !options.toast ||
             !state.allowed || content.packageName in options.excludedApps ||
             content.packageName == "com.android.systemui") return null
+        if (state.toast(SystemClock.uptimeMillis())?.notificationKey != null) return null
         if (systemPresentation?.let { state.owns(it.lease, SystemClock.uptimeMillis()) } == true) return null
         // A late native recorder Toast keeps its normal native surface; it must not
         // take the island back after that recording has already boarded on Home.
@@ -886,10 +888,6 @@ internal class IslandActivityController(
             }
             return current
         }
-        // Native system feedback and an already accepted ordinary Toast keep their lease.
-        if (state.toast(now)?.let { it.notificationKey == null } == true) {
-            diagnostics.report("notification-feedback-active"); return false
-        }
         val rank = bound.ranking
         val prepared = IslandChatNotifications.prepare(context, sbn, rank.importance,
             rank.matchesInterruptionFilter(), rank.suppressedVisualEffects,
@@ -898,6 +896,7 @@ internal class IslandActivityController(
                     sbn.notification.channelId) == IslandLiveKind.CALENDAR)
             ?: run { diagnostics.report("notification-native-content"); return false }
         clearChat()
+        clearSystemActivity()
         chatKey = sbn.key; chatNotification = sbn; chatOpen = bound.open; chatHidden = bound.hidden
         chatLease = state.offer(prepared, now, 4000)
         if (!render()) { clearChat(); return false }
@@ -949,10 +948,18 @@ internal class IslandActivityController(
     private fun refreshFromNative(owner: Any) {
         if (!options.media || !state.allowed) return
         val nativeSelection = access.controller(owner)
-        // Some players temporarily remove the native card between tracks. Keep only
-        // the already selected, loading session; its existing callback owns recovery.
-        val nativePlayer = nativeSelection ?: selected?.takeIf { media?.loading == true &&
-            loadingDeadline?.let { it > SystemClock.uptimeMillis() } == true }
+        // A ringing alarm can remove the native media card without ending the music
+        // session. Retain only our exact selected, still-playing OS session; losing
+        // the native manager, destruction or pause still follows the existing cleanup.
+        val nativePlayer = nativeSelection ?: selected?.takeIf { candidate ->
+            media?.loading == true && loadingDeadline?.let { it > SystemClock.uptimeMillis() } == true ||
+                media?.playing == true && ModuleHelper.guarded(false) {
+                    candidate.playbackState?.state == PlaybackState.STATE_PLAYING &&
+                        context.getSystemService(android.media.session.MediaSessionManager::class.java)
+                            ?.getActiveSessions(null)?.any { it.sessionToken == candidate.sessionToken &&
+                                it.packageName == candidate.packageName } == true
+                }
+        }
         if (nativePlayer == null || nativePlayer.sessionToken == destroyedToken) {
             clearMedia()
             render()
@@ -1325,24 +1332,20 @@ internal class IslandActivityController(
         val compactMaximumWidth = IslandSizing.maximumWidth(density, bounds.width, clearance,
             shortDp = options.shortWidth, longDp = options.longWidth, manual = !options.automaticWidth,
             heightDp = heightDp, centered = centered)
+        val shortWidth = IslandSizing.collapsed(density, bounds.width, clearance, gap, dp(24).toFloat(),
+            dp(24).toFloat(), shortDp = options.shortWidth, longDp = options.longWidth,
+            manual = !options.automaticWidth, heightDp = heightDp, centered = centered).coerceAtMost((safeWidth - dp(IslandSizing.FORM_GAP_DP)).coerceAtLeast(0))
         val maximumWidth = if (expanded && options.automaticWidth) {
             val content = maxOf(shell.textWidth(feedback?.text ?: media?.title.orEmpty()),
                 shell.textWidth(feedback?.detail ?: media?.artist.orEmpty())) * .94f
             IslandSizing.expanded(density, bounds.width, safeWidth, gap,
-                content, heightDp, centered)
-        } else compactMaximumWidth
-        val naturalWidth = IslandSizing.collapsed(density, bounds.width, clearance, gap, dp(24).toFloat(),
-            caption?.let { if (feedback?.status == true) shell.statusWidth(it) else shell.textWidth(it) }
-                ?: dp(24).toFloat(), shortDp = options.shortWidth, longDp = options.longWidth,
-            manual = !options.automaticWidth, heightDp = heightDp, centered = centered)
-        val shortWidth = IslandSizing.collapsed(density, bounds.width, clearance, gap, dp(24).toFloat(),
-            dp(24).toFloat(), shortDp = options.shortWidth, longDp = options.longWidth,
-            manual = !options.automaticWidth, heightDp = heightDp, centered = centered)
+                content, heightDp, centered, shortWidth)
+        } else if (expanded) maxOf(compactMaximumWidth, shortWidth + dp(IslandSizing.FORM_GAP_DP)).coerceAtMost(safeWidth)
+        else compactMaximumWidth
         val width = when {
             idle -> IslandSizing.idleWidth(density, dp(heightDp), bounds.holeWidth, shortWidth, options.idleWidth)
             expanded -> maximumWidth
-            feedback?.notificationKey != null -> shortWidth
-            else -> naturalWidth
+            else -> shortWidth
         }
         val offset = dp(SystemUIStrongToastHooks.currentSnapshot()?.islandOffsetDp ?: 0)
         val anchor = if (bounds.holeTop >= 0) bounds.holeTop else dp(8)
@@ -1491,6 +1494,7 @@ internal class IslandActivityController(
         exiting = false
         shell.simplified = reducedMotion()
         shell.waveformGain = options.waveformGain
+        shell.realtimeWaveform = options.waveformMode == 2
         shell.allowTextBlur = !reducedMotion()
         shell.entranceStyle = options.entranceStyle
         shell.windowTop = geometry.top
@@ -1584,7 +1588,7 @@ internal class IslandActivityController(
 
     private fun hide(animate: Boolean = false) {
         spectrum?.stop()
-        recorderWave.stop()
+        recorderWave?.stop()
         invalidateActions()
         if (animate && attached && (presentation.phase == IslandWindowPresentation.Phase.VISIBLE ||
                 presentation.phase == IslandWindowPresentation.Phase.EXITING)) {
@@ -1620,10 +1624,10 @@ internal class IslandActivityController(
         val recording = (lastContent as? IslandToastContent)?.liveActivity?.takeIf { it.kind == IslandLiveKind.RECORDER }
         if (canCapture && needsWaveform && recording?.meter != null &&
             recording.clock?.pausedMillis == null && recording.packageName != foregroundPackage) {
-            spectrum?.stop(); recorderWave.start(recording.meter)
+            spectrum?.stop(); (recorderWave ?: IslandRecorderMeter.Consumer(scope, ioDispatcher, shell::spectrum).also { recorderWave = it }).start(recording.meter)
             return
         }
-        recorderWave.stop()
+        recorderWave?.stop()
         val content = lastContent as? IslandMediaContent
         val player = selected
         if (!canCapture || !needsWaveform || content?.playing != true ||
@@ -1727,6 +1731,7 @@ internal class IslandActivityController(
                 }
             }, event = { event ->
                 if (!disposed && state.allowed && options.enabled &&
+                    state.toast(SystemClock.uptimeMillis())?.notificationKey == null &&
                     (if (event.low) options.lowBattery else options.charging)) {
                     val res = ModuleHelper.getModuleRes(context)
                     val icon = context.getDrawable(if (event.low) android.R.drawable.ic_lock_idle_low_battery

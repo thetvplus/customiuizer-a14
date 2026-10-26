@@ -5,6 +5,16 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun boardingDefaultsToNativeAndOnlyTheExplicitAbsorptionValueEnablesCapture() {
+        val prefs = PrefMap()
+        assertFalse(IslandOptions.read(prefs).absorption)
+        for (value in listOf("0", "1", "2", "-1")) {
+            prefs.put("system_island_return_effect", value)
+            assertEquals(value == "1", IslandOptions.read(prefs).absorption)
+            assertFalse(IslandOptions.read(prefs).mediaReturn)
+        }
+    }
+
     @Test fun measuredWaveformGainHasABoundedDefaultAndDoesNotEnableCapture() {
         val prefs = PrefMap()
         assertEquals(200, IslandOptions.read(prefs).waveformGain)

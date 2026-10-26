@@ -1307,4 +1307,8 @@
     <string name="system_island_general_gestures_group">Obecné</string>
     <string name="system_island_waveform_gain_title">Zesílení průběhu</string>
     <string name="system_island_waveform_gain_summ">Zesílí ukazatele hudby a nahrávání v reálném čase. Mění pouze zobrazení; ticho zůstává ploché.</string>
+    <string name="system_island_return_effect_title">Efekt vstupu na ostrov</string>
+    <string name="system_island_return_effect_summ">Standardní efekt používá animaci systému; vtažení postupně vtáhne stránku do ostrova. Platí pro hudbu a probíhající aktivity.</string>
+    <string name="system_island_return_effect_standard">Standardní</string>
+    <string name="system_island_return_effect_absorption">Vtažení</string>
 </resources>

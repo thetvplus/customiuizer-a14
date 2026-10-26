@@ -1299,4 +1299,8 @@
     <string name="system_island_general_gestures_group">General</string>
     <string name="system_island_waveform_gain_title">Ganancia de la forma de onda</string>
     <string name="system_island_waveform_gain_summ">Amplifica las barras de música y grabación en tiempo real. Solo cambia la visualización; el silencio permanece plano.</string>
+    <string name="system_island_return_effect_title">Efecto de entrada en la isla</string>
+    <string name="system_island_return_effect_summ">Estándar usa la animación nativa; absorción comprime la página hacia la isla. Se aplica a música y actividades en curso.</string>
+    <string name="system_island_return_effect_standard">Estándar</string>
+    <string name="system_island_return_effect_absorption">Absorción</string>
 </resources>

@@ -1299,4 +1299,8 @@
     <string name="system_island_general_gestures_group">Общие</string>
     <string name="system_island_waveform_gain_title">Усиление волны</string>
     <string name="system_island_waveform_gain_summ">Усиливает индикаторы музыки и записи в реальном времени. Меняется только отображение; в тишине индикаторы остаются плоскими.</string>
+    <string name="system_island_return_effect_title">Эффект перехода на остров</string>
+    <string name="system_island_return_effect_summ">Стандартный использует системную анимацию окна; втягивание сжимает страницу в остров. Для музыки и текущих действий.</string>
+    <string name="system_island_return_effect_standard">Стандартный</string>
+    <string name="system_island_return_effect_absorption">Втягивание</string>
 </resources>

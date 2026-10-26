@@ -4,6 +4,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandMotionTest {
+    @Test fun elasticOverscrollCrossesTheBoundaryOnceAndSettlesWithinTheFiniteClock() {
+        val spring = IslandMotion.Spring()
+        val seconds = IslandMotion.REBOUND / 1000f
+        spring.retarget(110f, 100f, seconds, false, elastic = true)
+        assertEquals(110f, spring.sample(0f), .0001f)
+        assertTrue(spring.sample(seconds * .4f) < 100f)
+        assertEquals(100f, spring.sample(seconds), .05f)
+        spring.finish()
+        assertEquals(0f, spring.velocity, 0f)
+    }
+
     @Test fun nativeIntakePrecedesOneBoundedCatchWithExactEndpoints() {
         assertEquals(0f, IslandMotion.mediaReturnCatch(0f), 0f)
         assertEquals(0f, IslandMotion.mediaReturnCatch(1f), 0f)

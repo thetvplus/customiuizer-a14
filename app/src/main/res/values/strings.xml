@@ -1333,4 +1333,8 @@
     <string name="system_island_waveform_group">Waveform</string>
     <string name="system_island_motion_group">Animation</string>
     <string name="system_island_general_gestures_group">General</string>
+    <string name="system_island_return_effect_title">Boarding effect</string>
+    <string name="system_island_return_effect_summ">Standard uses the native window animation; absorption pulls the page into the island. Applies to music and ongoing activities.</string>
+    <string name="system_island_return_effect_standard">Standard</string>
+    <string name="system_island_return_effect_absorption">Absorption</string>
 </resources>

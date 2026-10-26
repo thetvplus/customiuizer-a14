@@ -9,7 +9,7 @@ import kotlin.math.sin
 internal object IslandMotion {
     const val ENTER = 360L
     const val MORPH = 320L
-    const val REBOUND = 250L
+    const val REBOUND = 190L
     const val EXIT = 300L
     const val SECONDARY = 380L
     const val CONTENT = 220L
@@ -79,7 +79,7 @@ internal object IslandMotion {
         return (response(input.coerceIn(0f, 1f).toDouble()) / finalResponse).toFloat()
     }
 
-    /** Critical damping, solved analytically in physical pixels. The animator is only a
+    /** Analytic damping in physical pixels; overscroll alone uses an elastic response. The animator is only a
      * finite clock; retargeting preserves measured position and velocity, independent of Hz.
      * No reference implementation is incorporated and no spring library is required. */
     class Spring {
@@ -91,20 +91,36 @@ internal object IslandMotion {
         private var displacement = 0.0
         private var impulse = 0.0
         private var omega = 1.0
+        private var elastic = false
 
         fun addVelocity(physicalVelocity: Float) { velocity += physicalVelocity }
 
-        fun retarget(current: Float, destination: Float, seconds: Float, carry: Boolean) {
+        fun retarget(current: Float, destination: Float, seconds: Float, carry: Boolean, elastic: Boolean = false) {
             value = current
             target = destination
             if (!carry) velocity = 0f
+            velocityAtStart = velocity
             omega = 10.5 / seconds.coerceIn(.1f, 1f)
+            this.elastic = elastic
             displacement = (current - destination).toDouble()
             impulse = velocity + omega * displacement
         }
 
         fun sample(seconds: Float, minimum: Float = -Float.MAX_VALUE, maximum: Float = Float.MAX_VALUE): Float {
             val time = seconds.coerceAtLeast(0f).toDouble()
+            if (elastic) {
+                val damping = .56 * omega
+                val frequency = omega * kotlin.math.sqrt(1.0 - .56 * .56)
+                val b = (velocityAtStart + damping * displacement) / frequency
+                val c = cos(frequency * time); val s = sin(frequency * time)
+                val offset = displacement * c + b * s
+                val decay = exp(-damping * time)
+                value = (target + decay * offset).toFloat()
+                velocity = (decay * (-damping * offset + frequency * (b * c - displacement * s))).toFloat()
+                if (value < minimum) { value = minimum; velocity = 0f }
+                if (value > maximum) { value = maximum; velocity = 0f }
+                return value
+            }
             val decay = exp(-omega * time)
             val offset = displacement + impulse * time
             value = (target + offset * decay).toFloat()
@@ -115,5 +131,6 @@ internal object IslandMotion {
         }
 
         fun finish() { value = target; velocity = 0f }
+        private var velocityAtStart = 0f
     }
 }

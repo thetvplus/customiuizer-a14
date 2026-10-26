@@ -486,6 +486,9 @@ class IslandActivityLifecycleTest {
         arrival.end()
         val longWidth = original.width
         assertTrue(original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null))
+        assertFalse(original.expanded)
+        assertFalse(original.isMedia)
+        original.onDismiss()
         assertTrue("The source is released before any animation waypoint", original.isMedia)
         drain()
         assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
@@ -512,6 +515,8 @@ class IslandActivityLifecycleTest {
         org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
         val longWidth = original.width
         original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        assertFalse(original.expanded)
+        original.onDismiss()
         assertTrue(original.idle)
         drain()
         assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
@@ -530,9 +535,14 @@ class IslandActivityLifecycleTest {
         assertTrue(controller.takeNotification(message(703))); drain()
         val original = shell!!
         org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        assertFalse(original.expanded)
+        drain()
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        drain()
         val width = original.width
         val height = original.height
-        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        original.onDismiss()
         val exit = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
         assertEquals(IslandMotion.EXIT, exit.duration)
         var previousY = original.translationY
@@ -586,6 +596,9 @@ class IslandActivityLifecycleTest {
         }
         clock.end()
         original.onDismiss(); drain()
+        assertFalse(original.expanded)
+        assertFalse(original.isMedia)
+        original.onDismiss(); drain()
         assertTrue(original.isMedia)
         assertEquals(48f, original.height * original.scaleY, .001f)
     }
@@ -604,6 +617,8 @@ class IslandActivityLifecycleTest {
         val velocity = org.robolectric.util.ReflectionHelpers.getField<IslandMotion.Spring>(original, "breadth").velocity +
             org.robolectric.util.ReflectionHelpers.getField<Float>(original, "breadthExtraVelocity")
         original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        assertFalse(original.expanded)
+        original.onDismiss()
         assertTrue(original.isMedia)
         drain()
         assertEquals(width, original.width * original.scaleX, .001f)
@@ -741,6 +756,36 @@ class IslandActivityLifecycleTest {
         assertEquals("B", updated.title)
         assertNull(org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion"))
         assertEquals(1f, shell!!.getChildAt(0).alpha, .001f)
+    }
+
+    @Test fun anAlarmNativeCardGapCannotDismissTheStillActiveMusicSession() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("alarm-native-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        native.player = null
+        controller.updateFromNative(native); drain()
+        assertTrue(original.isAttachedToWindow)
+        assertTrue(original.isMedia)
+        assertEquals(0, removes)
+        shadowOf(manager).clearControllers()
+        controller.updateFromNative(native); drain()
+        assertFalse(original.isAttachedToWindow)
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+    }
+
+    @Test fun notificationPreemptsOrdinaryFeedbackAndCannotBeOverwrittenByAnotherToast() {
+        val controller = controller(chat = true, simplified = true)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 5000))
+        assertTrue(controller.takeNotification(message(812)))
+        val lease = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "chatLease")
+        assertNull(controller.showToast(IslandToastContent("Copied", context.packageName, null), 5000))
+        assertSame(lease, org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        assertEquals(1, adds)
+        assertTrue(shell!!.isAttachedToWindow)
     }
 
     @Test fun idleResumeResolvesOnlyTheLastVerifiedSessionAfterItsNativeCardDisappears() {
@@ -1729,9 +1774,9 @@ class IslandActivityLifecycleTest {
         assertTrue(controller.takeNotification(message(802)))
         assertSame(original, shell)
         assertEquals(1, adds)
-        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
         pip(controller, 2, 0)
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(3000)); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(4500)); drain()
         assertEquals(1, adds) // Replacing a notice never queues it for later replay.
         assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
         assertEquals(2, adds)

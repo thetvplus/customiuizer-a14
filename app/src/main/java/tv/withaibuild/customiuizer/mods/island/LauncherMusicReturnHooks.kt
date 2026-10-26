@@ -220,7 +220,7 @@ internal object LauncherMusicReturnHooks {
             if (!current.fresh(SystemClock.uptimeMillis()) || frame.packageName !in returnPackages) return null
             val nav = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
             if (nav.display?.rotation != android.view.Surface.ROTATION_0) return null
-            val result = access.retarget(original, element, nav, frame) ?: return null
+            val result = access.retarget(original, element, nav, frame, options.absorption) ?: return null
             if (epoch != gesture.get()) return null
             return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.strength)
                 .also { activeAttempt.set(it.sequence) }
@@ -253,7 +253,9 @@ internal object LauncherMusicReturnHooks {
                 return
             }
             committedAttempt = attempt.sequence
-            attempt.snapshot.frame?.let { frame -> ModuleHelper.guarded { absorption?.begin(tasks, element, attempt.params, frame) } }
+            if (options.absorption) attempt.snapshot.frame?.let { frame ->
+                ModuleHelper.guarded { absorption?.begin(tasks, element, attempt.params, frame) }
+            }
             val current = attempt.snapshot
             val message = IslandMusicReturnSignal.encode(current.frame, current.issuedAt, current.sequence)
                 .setAction(IslandMusicReturnSignal.REQUEST).setPackage(IslandMusicReturnSignal.SYSTEM_UI)

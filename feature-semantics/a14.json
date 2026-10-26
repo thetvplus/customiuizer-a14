@@ -18983,6 +18983,29 @@
       "confidence": "CODE_VERIFIED",
       "evidence": "LauncherMusicReturnAccessTest; LauncherMusicReturnLifecycleTest; IslandActivityLifecycleTest; IslandLiveActivityTest; PreferenceNavigationUiTest",
       "notes": "Enabled by default only for explicitly selected native sources. Full-screen task/user/package/rotation matching stays native. Does not grant background activity launch or privacy access."
+    },
+    {
+      "featureId": "system_island_return_effect",
+      "featureName": "system_island_return_effect",
+      "preferenceKeys": [
+        "system_island_return_effect",
+        "pref_key_system_island_return_effect"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "0",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.miui.home",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Select native standard boarding or page absorption for eligible music and live activity returns",
+      "disableEffect": "Standard preserves native alpha and creates no capture overlay",
+      "valueChangeEffect": "Apply to the next native return; invalidate an in-flight old attempt",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandOptionsTest; LauncherMusicReturnAccessTest; IslandAbsorptionMeshTest",
+      "notes": "Does not enable a source, change its whitelist or restore unrelated r14.25.5 behavior"
     }
   ]
 }

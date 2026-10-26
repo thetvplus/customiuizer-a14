@@ -48,7 +48,7 @@ class LauncherMusicReturnWindowOwnershipTest {
         assertNull(access.retarget(second, Element(), Nav().apply { mRunningTaskId = 99 }, frame))
         assertNull(first.targetView); assertNull(second.targetView)
         nested.targetRect.offset(10f, 0f)
-        assertEquals(frame.landingRectangle(), outer.targetRect)
+        assertEquals(frame.rectangle(), outer.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), first.targetRect)
     }
 

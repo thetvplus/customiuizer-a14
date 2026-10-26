@@ -143,18 +143,18 @@ class DockGlassBackdropTest {
     }
 
     @Test
-    fun unavailableFirstFrameRetriesOnceThenWaitsForANativeSourceChange() {
+    fun unavailableFirstFrameHasABoundedCompositorRecoveryWindow() {
         val controller = controller(source = DockWallpaperSampler { _, _ -> captures++; null })
         controller.onFrame(true)
-        repeat(12) {
+        repeat(30) {
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
             controller.onFrame(true)
         }
-        assertEquals(2, captures)
+        assertEquals(4, captures)
         assertFalse(controller.draw(Canvas(Bitmap.createBitmap(300, 80, Bitmap.Config.ARGB_8888)), Rect(0, 0, 300, 80), 20f, 1f))
         controller.invalidateSource()
         controller.onFrame(true)
-        assertEquals(3, captures)
+        assertEquals(5, captures)
     }
 
     @Test fun powerSaverReleasesTheTextureAndStopsLiveCaptureUntilItChangesAgain() {

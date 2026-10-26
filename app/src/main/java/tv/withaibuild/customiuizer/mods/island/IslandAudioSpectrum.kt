@@ -242,10 +242,11 @@ internal class IslandAudioSpectrum(
                 // Above 102.4 kHz, a 512-point capture cannot resolve our first 200 Hz band.
                 val size = if (visualizer.samplingRate > 200_000 * 512) 1024 else 512
                 check(visualizer.setCaptureSize(size.coerceIn(range[0], range[1])) == Visualizer.SUCCESS)
-                // Normalized capture can amplify quiet content to near full scale.
-                // Preserve playback level; never silently retain the normalized default.
-                check(visualizer.setScalingMode(Visualizer.SCALING_MODE_AS_PLAYED) == Visualizer.SUCCESS)
-                check(visualizer.scalingMode == Visualizer.SCALING_MODE_AS_PLAYED)
+                // AS_PLAYED quantizes low-volume playback to an all-zero 8-bit FFT on
+                // fuxi. Native normalization preserves a useful display signal before
+                // quantization. User gain never changes the actual playback volume.
+                check(visualizer.setScalingMode(Visualizer.SCALING_MODE_NORMALIZED) == Visualizer.SUCCESS)
+                check(visualizer.scalingMode == Visualizer.SCALING_MODE_NORMALIZED)
                 val status = visualizer.setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
                     override fun onWaveFormDataCapture(v: Visualizer, data: ByteArray, rate: Int) = Unit
                     override fun onFftDataCapture(v: Visualizer, data: ByteArray, rate: Int) { fft(data, rate) }

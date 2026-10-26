@@ -1300,4 +1300,8 @@
     <string name="system_island_general_gestures_group">共通</string>
     <string name="system_island_waveform_gain_title">波形ゲイン</string>
     <string name="system_island_waveform_gain_summ">音楽と録音のリアルタイム波形を増幅します。表示のみが変わり、無音時は平らなままです。</string>
+    <string name="system_island_return_effect_title">アイランドへの移動効果</string>
+    <string name="system_island_return_effect_summ">標準はシステムのウィンドウアニメーションを使用します。吸収はページの上端からアイランドへ引き込みます。音楽と進行中のアクティビティに適用されます。</string>
+    <string name="system_island_return_effect_standard">標準</string>
+    <string name="system_island_return_effect_absorption">吸収</string>
 </resources>

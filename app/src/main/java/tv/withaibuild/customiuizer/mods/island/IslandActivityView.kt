@@ -174,6 +174,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var waveformGain: Int
         get() = wave.gainPercent
         set(value) { wave.gainPercent = value }
+    var realtimeWaveform = false
     var expandOnDown = true
     var returnStrength = 0f
     var allowTextBlur = true
@@ -349,7 +350,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         applyContent(latest)
     }
 
-    fun spectrum(values: FloatArray?) { wave.spectrum(if (recording && values == null) quietRecording else values) }
+    fun spectrum(values: FloatArray?) { wave.spectrum(if ((recording || realtimeWaveform) && values == null) quietRecording else values) }
 
     fun fitsToast(value: String, width: Int, cameraGap: Int, height: Int = dp(IslandSizing.COLLAPSED_HEIGHT_DP)): Boolean =
         statusPaint.measureText(value) <= captionRoom(width, cameraGap) &&
@@ -588,7 +589,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             if (longConsumed) cancelInputs()
             recall = IslandRecallGesture.onCancel()
             if (!leaving && motion == null && (dragging || multiTouch) && (scaleX != 1f || scaleY != 1f))
-                animateTo(1f, 1f, 0f, 0f, 1f, IslandMotion.REBOUND)
+                animateTo(1f, 1f, 0f, 0f, 1f, IslandMotion.REBOUND, rebound = true)
             dragging = false; multiTouch = false; dragAxis = 0
         }
         return result
@@ -657,7 +658,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
-        onEnd: (() -> Unit)? = null, returning: Boolean = false, catchWeight: Float = 0f, rigid: Boolean = false) {
+        onEnd: (() -> Unit)? = null, returning: Boolean = false, catchWeight: Float = 0f, rigid: Boolean = false, rebound: Boolean = false) {
         if (!returning) cancelMediaReturn()
         val carry = motion != null
         motion?.cancel(); motion = null
@@ -676,8 +677,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val seconds = milliseconds / 1000f
         if (carry && !rigid) breadth.addVelocity(breadthExtraVelocity)
         breadthExtraVelocity = 0f
-        breadth.retarget(geometryWidth * scaleX, geometryWidth * x, seconds, carry && !rigid)
-        depth.retarget(geometryHeight * scaleY, geometryHeight * y, seconds, carry && !rigid)
+        breadth.retarget(geometryWidth * scaleX, geometryWidth * x, seconds, carry && !rigid, rebound)
+        depth.retarget(geometryHeight * scaleY, geometryHeight * y, seconds, carry && !rigid, rebound)
         // Side placements cap their target at its new width. Keep the already visible
         // breadth admissible while shrinking instead of clamping it on the first frame.
         val maximumBreadth = maxOf(maximumWidth, geometryWidth * scaleX)
@@ -934,8 +935,9 @@ internal class IslandWaveView(context: Context) : View(context) {
         for (index in 0..4) {
             val raw = measured[index]
             // Gate quantisation before applying user gain. Silence never gains a fake beat.
-            val next = if (!raw.isFinite() || raw <= .015f) 0f
-                else (((raw.coerceAtMost(1f) - .015f) / .985f) * gainPercent / 100f).coerceAtMost(1f)
+            val amplified = raw.coerceIn(0f, 1f) * gainPercent / 100f
+            val next = if (!raw.isFinite() || raw <= 0f) 0f
+                else amplified / kotlin.math.sqrt(1f + amplified * amplified)
             if (changedMode || abs(next - targets[index]) >= .006f || next == 0f) targets[index] = next
             if (changedMode) energies[index] = targets[index]
             if (abs(targets[index] - energies[index]) > .006f) settling = true

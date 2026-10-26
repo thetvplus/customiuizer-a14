@@ -4,7 +4,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandFormStateTest {
-    @Test fun sourceAndFormDetermineDismissalWithoutAnIntermediateNotificationForm() {
+    @Test fun everyExpandedSourceCollapsesBeforeItCanBeDismissed() {
         val forms = IslandFormState()
         assertEquals(IslandFormState.Form.IDLE, forms.form)
         assertEquals(IslandFormState.Dismissal.IDLE, forms.dismissal())
@@ -15,8 +15,7 @@ class IslandFormStateTest {
             assertEquals(IslandFormState.Dismissal.SOURCE, forms.dismissal())
             assertTrue(forms.expand())
             assertEquals(IslandFormState.Form.LONG, forms.form)
-            assertEquals(if (source == IslandFormState.Source.MEDIA) IslandFormState.Dismissal.COLLAPSE
-                else IslandFormState.Dismissal.SOURCE, forms.dismissal())
+            assertEquals(IslandFormState.Dismissal.COLLAPSE, forms.dismissal())
         }
         forms.select(null)
         assertEquals(IslandFormState.Source.IDLE, forms.source)

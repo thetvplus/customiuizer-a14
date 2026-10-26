@@ -1306,4 +1306,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_general_gestures_group">Genel</string>
     <string name="system_island_waveform_gain_title">Dalga biçimi kazancı</string>
     <string name="system_island_waveform_gain_summ">Müzik ve kayıt çubuklarını gerçek zamanlı olarak büyütür. Yalnızca görünümü değiştirir; sessizlikte çubuklar düz kalır.</string>
+    <string name="system_island_return_effect_title">Ada giriş efekti</string>
+    <string name="system_island_return_effect_summ">Standart, sistemin pencere animasyonunu kullanır; emilim sayfayı adaya doğru sıkıştırır. Müzik ve devam eden etkinlikler için geçerlidir.</string>
+    <string name="system_island_return_effect_standard">Standart</string>
+    <string name="system_island_return_effect_absorption">Emilim</string>
 </resources>
