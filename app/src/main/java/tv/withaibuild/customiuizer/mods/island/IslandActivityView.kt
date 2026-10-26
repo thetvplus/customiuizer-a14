@@ -445,10 +445,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             alpha = 0f
             entryCameraAnchor = mediaReturnProgress == 0f || entranceStyle == IslandEntranceStyle.CENTER
             pivotY = if (entryCameraAnchor) cameraY else 0f
-            // Establish the final height before anything becomes visible, then grow
-            // only the middle. The first shape is a full-height camera-centred circle.
+            // Centre entry grows straight from the camera seed to the target form.
+            // Top entry travels at the target width, with no short-form waypoint.
             scaleX = if (entryCameraAnchor) compactWidth() / geometryWidth.coerceAtLeast(1)
-                else if (expanded) shortWidth.toFloat().coerceAtMost(geometryWidth.toFloat()) / geometryWidth.coerceAtLeast(1) else 1f
+                else 1f
             scaleY = 1f
             translationX = 0f
             translationY = if (entryCameraAnchor) 0f else -topTravel()

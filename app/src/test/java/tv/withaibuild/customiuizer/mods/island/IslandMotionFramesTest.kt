@@ -98,6 +98,37 @@ class IslandMotionFramesTest {
         } finally { ShadowChoreographer.setPaused(false); activity.finish() }
     }
 
+    @Test fun expandedArrivalsUseOneFlightToTheFinalFormWithoutAShortFormWaypoint() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        shadowOf(Looper.getMainLooper()).idle()
+        ShadowChoreographer.setPaused(true)
+        try {
+            for (style in IslandEntranceStyle.entries) {
+                val shell = IslandActivityView(activity).apply {
+                    entranceStyle = style; windowTop = 8; shortWidth = 160
+                }
+                activity.setContentView(shell, FrameLayout.LayoutParams(300, 40))
+                shell.geometry(300, 40, 40, 300); shell.layout(0, 0, 300, 40); shell.cameraAnchor(20f, 16f)
+                shell.bind("Alice", "Message body", null, false, false, false, 0, false, expanded = true)
+                shell.prepareEntry()
+                assertEquals(if (style == IslandEntranceStyle.TOP) 300f else 40f,
+                    shell.width * shell.scaleX, .001f)
+                shell.transition(300, 40, 300, 40, true)
+                val flight = getField<ValueAnimator>(shell, "motion")
+                assertEquals(IslandMotion.ENTER, flight.duration)
+                for (time in 0L until flight.duration step 16L) {
+                    flight.currentPlayTime = time
+                    assertSame(flight, getField<ValueAnimator>(shell, "motion"))
+                    if (style == IslandEntranceStyle.TOP) assertEquals(300f, shell.width * shell.scaleX, .001f)
+                    assertEquals(40f, shell.height * shell.scaleY, .001f)
+                }
+                flight.end()
+                assertEquals(300f, shell.width * shell.scaleX, .001f)
+                assertEquals(1f, shell.alpha, .001f)
+            }
+        } finally { ShadowChoreographer.setPaused(false); activity.finish() }
+    }
+
     @Test fun verticalStyleEntersAndExitsVerticallyWithoutCameraWidthCollapse() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity).apply { entranceStyle = IslandEntranceStyle.TOP; windowTop = 8 }
