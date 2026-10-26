@@ -92,6 +92,8 @@ Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，
 
 `res/xml/prefs_*.xml` 是页面源；`generatePreferenceArtifacts` 生成分页、搜索和当前偏好目录到 `app/build/generated/`。搜索保留控制器、目标键和导航元数据；恢复按当前偏好契约校准，生成输入与 AGP 依赖见 [DEVELOPMENT](docs/DEVELOPMENT.md#构建与生成物)。当前页面与稳定键导航见[功能地图](docs/FEATURE_MAP.md)，其独立生成不改变运行时产物。
 
+设置行的名称、底部说明和右侧当前值各有职责：说明不被当前值或数量替换，复用时分别绑定 / 清空；没有右侧值的行不创建隐藏值控件。分隔线只能位于完整功能之间，不能拆开功能与其说明；组前说明不单独画线。分组语义在 adapter 变化时生成缓存，绘制不遍历偏好树。公共显示选项独立于单一内容来源，入口移动须同步普通导航、搜索、依赖与功能地图。
+
 备份 V2 使用大小限制、严格解码与 CRC；受限旧格式解码保留既有用户兼容。维护恢复记录使用精确原状态和可恢复事务，不进入备份传输。语义约束见[遗留合同](docs/maintenance/LEGACY_SEMANTIC_CALIBRATION.md)。目录重排不能改变偏好键或稳定 Feature ID。
 
 `MainModule.java`、`XposedHelpers.java`、`MemberUtilsX.java` 保留 Java；Kotlin Installer 的 `@JvmStatic` 保持入口 ABI，见 [Java 边界](docs/JAVA_BOUNDARY_ALLOWLIST.md)。

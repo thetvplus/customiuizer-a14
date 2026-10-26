@@ -848,7 +848,7 @@
     <string name="white_color">Bílá</string>
     <string name="black_color">Černá</string>
     <string name="auto_color">Barva stavového řádku</string>
-    <string name="system_statusbar_batterytempandcurrent_title">Zobrazit informace o baterii</string>
+    <string name="system_statusbar_batterytempandcurrent_title">Informace o baterii</string>
     <string name="system_statusbar_batterytempandcurrent_content_title">Zobrazit obsah</string>
     <string name="system_statusbar_batterytempandcurrentatright_title">Zobrazit na pravé straně</string>
     <string name="system_statusbar_batterytempandcurrent_positive_title">Aktuální hodnota je vždy kladná</string>
@@ -858,7 +858,7 @@
     <string name="system_statusbar_batterytempandcurrent_hideunit_title">Skrýt jednotku</string>
     <string name="system_statusbar_batterytempandcurrent_singlerow_title">Zobrazit v jednom řádku</string>
     <string name="system_statusbar_batterytempandcurrent_reverseorder_title">Obrátit pořadí</string>
-    <string name="system_statusbar_showdevicetemperature_title">Zobrazit teplotu zařízení</string>
+    <string name="system_statusbar_showdevicetemperature_title">Teplota zařízení</string>
     <string name="system_statusbar_batterystyle_title">Styl ikony baterie</string>
     <string name="system_statusbar_batterystyle_digit_title">Čísla baterie</string>
     <string name="system_statusbar_batterystyle_mark_fontsize_title">Velikost písma značky procenta</string>
@@ -885,9 +885,9 @@
     <string name="system_statusbaricons_wifi_mobile_atleft_title">Přesunout mobilní síť a síť Wi-Fi doleva</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">Prohodit mobilní signál a Wi-Fi</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">Prohodit ikonu a procento baterie</string>
-    <string name="system_statusbaricons_change_position_title">Změnit pozici ikon</string>
-    <string name="system_statusbar_mobile_signal_cat_title">Nastavení ikony mobilního signálu</string>
-    <string name="system_statusbar_clocktweak_title">Nastavení hodin</string>
+    <string name="system_statusbaricons_change_position_title">Umístění ikon</string>
+    <string name="system_statusbar_mobile_signal_cat_title">Indikátory mobilní sítě</string>
+    <string name="system_statusbar_clocktweak_title">Hodiny</string>
     <string name="system_statusbaricons_netspeed_title">Indikátor rychlosti sítě</string>
     <string name="system_statusbaricons_clock_title">Hodiny</string>
     <string name="various_allow_untrusted_touch_title">Povolit nedůvěryhodné dotyky</string>
@@ -904,7 +904,7 @@
     <string name="various_swipe_expand_sidebar_title">Povolit rozbalování postranního panelu</string>
     <string name="system_lockscreenshortcuts_left_tapaction_title">Dlouhým klepnutím levým tlačítkem přepnete svítilnu</string>
     <string name="system_cc_tile_roundedrect_title">Zaoblený obdélník</string>
-    <string name="system_cc_tile_style_cat_tile">Nastavení stylu motivu</string>
+    <string name="system_cc_tile_style_cat_tile">Motiv</string>
     <string name="system_cc_tile_enabled_color_title">Povolit dlaždici</string>
     <string name="system_cc_card_enabled_color_title">Dlaždice karty povolena</string>
     <string name="system_cc_card_enabled_primary_textcolor_title">Barva primárního textu</string>
@@ -929,6 +929,8 @@
     <string name="about_link_unavailable">Tento odkaz nemůže otevřít žádná aplikace</string>
     <string name="about_notes_category">Poznámky</string>
     <string name="about_repository_summary">Zdrojový kód a vydání</string>
+    <string name="about_links_category">Projekt</string>
+    <string name="about_community_title">Komunita na Telegramu</string>
     <string name="about_repository_title">Repozitář</string>
     <string name="about_restart_notes_title">Chování po restartu</string>
     <string name="about_support_category">Vývoj a podpora</string>
@@ -1191,13 +1193,13 @@
     <string name="system_island_intro">Po prvním zapnutí ostrova nebo přidání zdroje restartujte telefon.</string>
     <string name="system_island_media_title">Zobrazovat média</string>
     <string name="system_island_media_return_title">Hudba do ostrůvku</string>
-    <string name="system_island_media_return_summ">Při přehrávání opusťte vybranou aplikaci tahem nahoru. Její okno se přesune do ostrůvku s jemným odrazem. Pouze pro ručně vybrané aplikace. Po prvním zapnutí restartujte launcher.</string>
-    <string name="system_island_media_return_apps_title">Vybrat hudební aplikace</string>
-    <string name="system_island_media_return_apps_summ">Aplikace vyberte ručně. Prázdný výběr zachová běžnou animaci.</string>
+    <string name="system_island_media_return_summ">Vybrané mediální aplikace se při přejetí domů vrátí na ostrov. Po prvním zapnutí restartujte plochu.</string>
+    <string name="system_island_media_return_apps_title">Aplikace pro návrat</string>
+    <string name="system_island_media_return_apps_summ">Vyberte mediální aplikace pro tento efekt.</string>
     <string name="system_island_media_summ">Sleduje systémový přehrávač; po pozastavení krátce zůstane.</string>
     <string name="system_island_media_swipe_title">Přepínat skladby tažením</string>
     <string name="system_island_media_swipe_summ">Vypnutí blokuje změnu skladby vodorovným přejetím. Ostatní nastavené akce zůstávají dostupné.</string>
-    <string name="system_island_waveform_title">Lehká hudební vlna</string>
+    <string name="system_island_waveform_title">Režim vlny</string>
     <string name="system_island_waveform_summ">Řídí se stavem přehrávání bez záznamu zvuku. Zastaví se při pozastavení, skrytí a vypnutí obrazovky.</string>
     <string name="system_island_entrance_style_title">Animace zobrazení</string>
     <string name="system_island_entrance_style_center">Střed</string>
@@ -1251,14 +1253,14 @@
     <string name="system_island_feedback_ringer_title">Režim vyzvánění</string>
     <string name="system_island_basic_group">Základní nastavení</string>
     <string name="system_island_geometry_group">Poloha a velikost</string>
-    <string name="system_island_appearance_group">Vzhled a animace</string>
+    <string name="system_island_appearance_group">Vzhled</string>
     <string name="system_island_feedback_group">Obsah</string>
-    <string name="system_island_interaction_group">Chování</string>
+    <string name="system_island_interaction_group">Ovládání</string>
     <string name="system_island_gestures_title">Gesta</string>
     <string name="system_island_waveform_off">Vypnuto</string>
     <string name="system_island_waveform_light">Lehká animace</string>
     <string name="system_island_waveform_real">Živý průběh (experimentální)</string>
-    <string name="system_island_waveform_mode_summ">Pět frekvenčních pásem se snímá pouze při viditelném ostrově a přehrávání. Nepodporovaná oprávnění, trasa nebo relace použijí lehkou animaci.</string>
+    <string name="system_island_waveform_mode_summ">Společné pro média a nahrávání. Živý odběr běží jen při zobrazení.</string>
     <string name="system_island_hide_in_floating_window_title">Vyloučit média plovoucích aplikací</string>
     <string name="system_island_hide_in_floating_window_summ">Skryje mediální aktivity aplikací s viditelným plovoucím oknem. Ostatní hudba, povolené zprávy a systémová upozornění fungují běžně. Po prvním zapnutí restartujte zařízení.</string>
     <string name="array_global_actions_pip_hide">Skrýt / obnovit obraz v obraze</string>
@@ -1299,4 +1301,8 @@
     <string name="system_strong_toast_mode_default">Výchozí systémové</string>
     <string name="system_island_live_return">Tažením zpět do ostrova</string>
     <string name="system_island_live_return_summary">Vrátí aktivní hovor, hodiny a záznamník do ostrova. Po prvním zapnutí restartujte plochu.</string>
+    <string name="system_island_effects_title">Vlna a animace</string>
+    <string name="system_island_waveform_group">Zvuková vlna</string>
+    <string name="system_island_motion_group">Animace</string>
+    <string name="system_island_general_gestures_group">Obecné</string>
 </resources>

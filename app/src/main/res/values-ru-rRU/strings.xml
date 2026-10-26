@@ -123,7 +123,7 @@
     <string name="system_statusbar_mobile_showname_title">Другой тип мобильной сети</string>
     <string name="system_netspeedinterval_title">Частота обновления индикатора скорости</string>
     <string name="system_detailednetspeed_title">Подробный индикатор скорости соединения</string>
-    <string name="system_netspeed_cat_title">Настройка индикатора скорости сети</string>
+    <string name="system_netspeed_cat_title">Скорость сети</string>
     <string name="system_detailednetspeed_icon_title">Иконки индикатора</string>
     <string name="system_detailednetspeed_icon_summ">Набор иконок входящего/исходящего трафика для отображения рядом со значением скорости (есть не во всех кастомных шрифтах)</string>
     <string name="system_detailednetspeed_low_title">Скрыть низкие скорости</string>
@@ -833,7 +833,7 @@
     <string name="white_color">Белый</string>
     <string name="black_color">Чёрный</string>
     <string name="auto_color">Цвет статус бара</string>
-    <string name="system_statusbar_batterytempandcurrent_title">Информация о батарее</string>
+    <string name="system_statusbar_batterytempandcurrent_title">Сведения о батарее</string>
     <string name="system_statusbar_batterytempandcurrent_content_title">Показать содержимое</string>
     <string name="system_statusbar_batterytempandcurrentatright_title">Отображать справа</string>
     <string name="system_statusbar_batterytempandcurrent_positive_title">Текущее значение всегда положительно</string>
@@ -843,7 +843,7 @@
     <string name="system_statusbar_batterytempandcurrent_hideunit_title">Скрыть единицу измерения</string>
     <string name="system_statusbar_batterytempandcurrent_singlerow_title">Отображать в одной строке</string>
     <string name="system_statusbar_batterytempandcurrent_reverseorder_title">Обратный порядок</string>
-    <string name="system_statusbar_showdevicetemperature_title">Отображать температуру устройства</string>
+    <string name="system_statusbar_showdevicetemperature_title">Температура устройства</string>
     <string name="system_statusbar_batterystyle_title">Настройка иконки батареи</string>
     <string name="system_statusbar_batterystyle_digit_title">Цифра батареи</string>
     <string name="system_statusbar_batterystyle_mark_fontsize_title">Размер шрифта знака в процентах</string>
@@ -870,9 +870,9 @@
     <string name="system_statusbaricons_wifi_mobile_atleft_title">Перемещать мобильный и Wi-Fi влево</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">Поменять местами мобильный сигнал и Wi-Fi</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">Поменять местами значок и процент батареи</string>
-    <string name="system_statusbaricons_change_position_title">Изменить положение значков</string>
-    <string name="system_statusbar_mobile_signal_cat_title">Настройки отображения значка мобильного сигнала</string>
-    <string name="system_statusbar_clocktweak_title">Настройки часов</string>
+    <string name="system_statusbaricons_change_position_title">Положение значков</string>
+    <string name="system_statusbar_mobile_signal_cat_title">Индикаторы мобильной сети</string>
+    <string name="system_statusbar_clocktweak_title">Часы</string>
     <string name="system_statusbaricons_netspeed_title">Индикатор скорости сети</string>
     <string name="system_statusbaricons_clock_title">Часы</string>
     <string name="various_allow_untrusted_touch_title">Разрешить нежелательные касания</string>
@@ -889,7 +889,7 @@
     <string name="various_swipe_expand_sidebar_title">Разрешить смахивание для расширения боковой панели</string>
     <string name="system_lockscreenshortcuts_left_tapaction_title">Удерживайте клавишу слева для переключения фонарика</string>
     <string name="system_cc_tile_roundedrect_title">Скруглённые прямоугольные плитки</string>
-    <string name="system_cc_tile_style_cat_tile">Настройки стиля темы</string>
+    <string name="system_cc_tile_style_cat_tile">Тема</string>
     <string name="system_cc_tile_enabled_color_title">Включена плитка</string>
     <string name="system_cc_card_enabled_color_title">Включена плитка карты</string>
     <string name="system_cc_card_enabled_primary_textcolor_title">Цвет основного текста</string>
@@ -914,6 +914,8 @@
     <string name="about_link_unavailable">Нет приложения для открытия этой ссылки</string>
     <string name="about_notes_category">Примечания</string>
     <string name="about_repository_summary">Исходный код и выпуски</string>
+    <string name="about_links_category">Проект</string>
+    <string name="about_community_title">Сообщество в Telegram</string>
     <string name="about_repository_title">Репозиторий</string>
     <string name="about_restart_notes_title">Перезапуск</string>
     <string name="about_support_category">Разработка и поддержка</string>
@@ -1183,13 +1185,13 @@
     <string name="system_island_intro">После первого включения острова или добавления источника перезапустите телефон.</string>
     <string name="system_island_media_title">Показывать медиа</string>
     <string name="system_island_media_return_title">Музыка в островок</string>
-    <string name="system_island_media_return_summ">Во время воспроизведения выйдите из выбранного приложения свайпом вверх. Окно переместится в островок с лёгким отскоком. Только для выбранных вручную приложений. После первого включения перезапустите рабочий стол.</string>
-    <string name="system_island_media_return_apps_title">Выбрать музыкальные приложения</string>
-    <string name="system_island_media_return_apps_summ">Выберите приложения вручную. Пустой список сохраняет обычную анимацию.</string>
+    <string name="system_island_media_return_summ">Выбранные медиаприложения возвращаются в остров при свайпе домой. После первого включения перезапустите лаунчер.</string>
+    <string name="system_island_media_return_apps_title">Приложения для возврата</string>
+    <string name="system_island_media_return_apps_summ">Выберите медиаприложения для этого эффекта.</string>
     <string name="system_island_media_summ">Следует системному плееру; после паузы ненадолго остаётся.</string>
     <string name="system_island_media_swipe_title">Смена трека смахиванием</string>
     <string name="system_island_media_swipe_summ">Отключение запрещает переключение треков горизонтальным смахиванием. Другие настроенные действия остаются доступны.</string>
-    <string name="system_island_waveform_title">Лёгкая звуковая волна</string>
+    <string name="system_island_waveform_title">Режим волны</string>
     <string name="system_island_waveform_summ">Анимация зависит от состояния воспроизведения, без записи звука. Останавливается на паузе, при скрытии и выключенном экране.</string>
     <string name="system_island_entrance_style_title">Анимация появления</string>
     <string name="system_island_entrance_style_center">Центр</string>
@@ -1243,14 +1245,14 @@
     <string name="system_island_feedback_ringer_title">Режим звонка</string>
     <string name="system_island_basic_group">Основные настройки</string>
     <string name="system_island_geometry_group">Положение и размер</string>
-    <string name="system_island_appearance_group">Вид и анимация</string>
+    <string name="system_island_appearance_group">Внешний вид</string>
     <string name="system_island_feedback_group">Содержимое</string>
-    <string name="system_island_interaction_group">Поведение</string>
+    <string name="system_island_interaction_group">Управление</string>
     <string name="system_island_gestures_title">Жесты</string>
     <string name="system_island_waveform_off">Выключено</string>
     <string name="system_island_waveform_light">Лёгкая анимация</string>
     <string name="system_island_waveform_real">Живой спектр (эксперимент)</string>
-    <string name="system_island_waveform_mode_summ">Пять частотных полос считываются только при видимом острове и воспроизведении. Если права, маршрут или сеанс не поддерживаются, используется лёгкая анимация.</string>
+    <string name="system_island_waveform_mode_summ">Общий режим для медиа и записи. Захват в реальном времени работает только при отображении.</string>
     <string name="system_island_hide_in_floating_window_title">Исключать медиа плавающих приложений</string>
     <string name="system_island_hide_in_floating_window_summ">Скрывать медиаактивности приложений с видимым плавающим окном. Другая музыка, разрешённые сообщения и системные отклики отображаются как обычно. После первого включения перезагрузите устройство.</string>
     <string name="array_global_actions_pip_hide">Скрыть / восстановить «Картинка в картинке»</string>
@@ -1291,4 +1293,8 @@
     <string name="system_strong_toast_mode_default">Системный</string>
     <string name="system_island_live_return">Смахивание в остров</string>
     <string name="system_island_live_return_summary">Возвращает звонок, часы и диктофон в остров. После первого включения перезапустите рабочий стол.</string>
+    <string name="system_island_effects_title">Волна и анимация</string>
+    <string name="system_island_waveform_group">Волна</string>
+    <string name="system_island_motion_group">Анимация</string>
+    <string name="system_island_general_gestures_group">Общие</string>
 </resources>

@@ -906,6 +906,40 @@ class DualPublicationTest(unittest.TestCase):
             self.assertEqual(source["name"], download["name"])
             self.assertEqual({metadata["apk"], "build-metadata.json"}, {asset["name"] for asset in source["assets"]})
 
+    def test_community_footer_is_published_once_and_legacy_recovery_is_read_only(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server):
+                release.publish_verified(root, "42", "both", metadata)
+                for record in server.records.values():
+                    self.assertTrue(record["body"].endswith(release.community_notes() + "\n"))
+                    self.assertEqual(1, record["body"].count(release.POLICY["community_url"]))
+                for legacy in (False, True):
+                    if legacy:
+                        for record in server.records.values():
+                            record["body"] = record["body"].removesuffix("\n\n" + release.community_notes() + "\n") + "\n"
+                    original = copy.deepcopy(server.records)
+                    server.events.clear()
+                    release.publish_verified(root, "42", "both", metadata)
+                    self.assertEqual(original, server.records)
+                    self.assertFalse(any(event[0] in {"create", "upload", "publish", "git"} for event in server.events))
+
+    def test_changed_community_url_cannot_bypass_existing_candidate_validation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server):
+                release.publish_verified(root, "42", "both", metadata)
+                server.records[release.REPO]["body"] = server.records[release.REPO]["body"].replace(
+                    release.POLICY["community_url"], "https://t.me/wrong")
+                server.events.clear()
+                with self.assertRaisesRegex(ValueError, "notes/title"):
+                    release.publish_verified(root, "42", "both", metadata)
+                self.assertFalse(any(event[0] in {"create", "upload", "publish", "git"} for event in server.events))
+
     def test_changed_title_or_notes_stop_publication_and_cross_repo_sync(self):
         for phase in ("create", "draft-readback", "published-readback"):
             for repository in (release.REPO, ReleaseServer.download):

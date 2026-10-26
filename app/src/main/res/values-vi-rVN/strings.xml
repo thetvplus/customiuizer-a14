@@ -126,7 +126,7 @@
     <string name="system_hidestatusbar_whenscreenshot_title">Ẩn thanh trạng thái khi chụp ảnh màn hình</string>
     <string name="system_netspeedinterval_title">Thời gian cập nhật tốc độ mạng</string>
     <string name="system_detailednetspeed_title">Tốc độ tải lên và tải xuống được hiển thị trong hàng kép</string>
-    <string name="system_netspeed_cat_title">Mod tốc độ mạng</string>
+    <string name="system_netspeed_cat_title">Tốc độ mạng</string>
     <string name="system_detailednetspeed_icon_title">Biểu tượng chỉ báo</string>
     <string name="system_detailednetspeed_icon_summ">Biểu tượng lưu lượng lên và xuống được hiển thị bên cạnh tốc độ mạng (không phải phông chữ nào cũng có biểu tượng tương ứng)</string>
     <string name="system_detailednetspeed_low_title">Ẩn tốc độ chậm</string>
@@ -851,7 +851,7 @@
     <string name="white_color">Trắng</string>
     <string name="black_color">Đen</string>
     <string name="auto_color">Màu thanh trạng thái</string>
-    <string name="system_statusbar_batterytempandcurrent_title">Hiển thị thông tin pin</string>
+    <string name="system_statusbar_batterytempandcurrent_title">Thông tin pin</string>
     <string name="system_statusbar_batterytempandcurrent_content_title">Hiển thị nội dung</string>
     <string name="system_statusbar_batterytempandcurrentatright_title">Hiển thị bên phải</string>
     <string name="system_statusbar_batterytempandcurrent_positive_title">Làm cho giá trị dòng điện luôn dương</string>
@@ -861,7 +861,7 @@
     <string name="system_statusbar_batterytempandcurrent_hideunit_title">Ẩn đơn vị</string>
     <string name="system_statusbar_batterytempandcurrent_singlerow_title">Hiển thị trong một dòng</string>
     <string name="system_statusbar_batterytempandcurrent_reverseorder_title">Đảo ngược thứ tự</string>
-    <string name="system_statusbar_showdevicetemperature_title">Hiển thị nhiệt độ máy</string>
+    <string name="system_statusbar_showdevicetemperature_title">Nhiệt độ thiết bị</string>
     <string name="system_statusbar_batterystyle_title">Kiểu biểu tượng pin</string>
     <string name="system_statusbar_batterystyle_digit_title">Số ở pin</string>
     <string name="system_statusbar_batterystyle_mark_fontsize_title">Cỡ chữ của dấu phần trăm</string>
@@ -889,9 +889,9 @@
     <string name="system_statusbaricons_wifi_mobile_atleft_title">Di chuyển biểu tượng di động và Wi-Fi sang bên trái</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">Hoán đổi biểu tượng di động và Wi-Fi</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">Hoán đổi biểu tượng và phần trăm pin</string>
-    <string name="system_statusbaricons_change_position_title">Thay đổi vị trí hiển thị biểu tượng</string>
-    <string name="system_statusbar_mobile_signal_cat_title">Cài đặt hiển thị biểu tượng tín hiệu di động</string>
-    <string name="system_statusbar_clocktweak_title">Cài đặt đồng hồ</string>
+    <string name="system_statusbaricons_change_position_title">Vị trí biểu tượng</string>
+    <string name="system_statusbar_mobile_signal_cat_title">Chỉ báo mạng di động</string>
+    <string name="system_statusbar_clocktweak_title">Đồng hồ</string>
     <string name="system_statusbar_enable_weather_param_title">Sử dụng TQ để hiển thị thời tiết khi định dạng</string>
     <string name="system_statusbaricons_netspeed_title">Chỉ số tốc độ mạng</string>
     <string name="system_statusbaricons_clock_title">Đồng hồ</string>
@@ -910,7 +910,7 @@
     <string name="various_swipe_expand_sidebar_title">Cho phép vuốt để mở rộng thanh bên</string>
     <string name="system_lockscreenshortcuts_left_tapaction_title">Bật tắt đèn pin khi nhấn và giữ biểu tượng bên trái</string>
     <string name="system_cc_tile_roundedrect_title">Ô hình chữ nhật bo tròn</string>
-    <string name="system_cc_tile_style_cat_tile">Cài đặt kiểu chủ đề</string>
+    <string name="system_cc_tile_style_cat_tile">Chủ đề</string>
     <string name="system_cc_tile_enabled_color_title">Ô đã bật</string>
     <string name="system_cc_card_enabled_color_title">Ô thẻ đã bật</string>
     <string name="system_cc_card_enabled_primary_textcolor_title">Màu văn bản chính</string>
@@ -935,6 +935,8 @@
     <string name="about_link_unavailable">Không có ứng dụng nào có thể mở liên kết này</string>
     <string name="about_notes_category">Lưu ý</string>
     <string name="about_repository_summary">Mã nguồn và bản phát hành</string>
+    <string name="about_links_category">Dự án</string>
+    <string name="about_community_title">Cộng đồng Telegram</string>
     <string name="about_repository_title">Kho mã nguồn</string>
     <string name="about_restart_notes_title">Hoạt động khi khởi động lại</string>
     <string name="about_support_category">Phát triển và hỗ trợ</string>
@@ -1184,13 +1186,13 @@
     <string name="system_island_intro">Khởi động lại điện thoại sau khi bật đảo lần đầu hoặc thêm nguồn.</string>
     <string name="system_island_media_title">Hiển thị phương tiện</string>
     <string name="system_island_media_return_title">Đưa nhạc vào đảo</string>
-    <string name="system_island_media_return_summ">Khi đang phát nhạc, vuốt lên để rời ứng dụng đã chọn; cửa sổ thu vào đảo và nảy nhẹ. Chỉ áp dụng cho ứng dụng được chọn thủ công. Khởi động lại trình khởi chạy sau lần bật đầu tiên.</string>
-    <string name="system_island_media_return_apps_title">Chọn ứng dụng nhạc</string>
-    <string name="system_island_media_return_apps_summ">Chọn ứng dụng thủ công. Không chọn ứng dụng nào sẽ giữ hiệu ứng thông thường.</string>
+    <string name="system_island_media_return_summ">Ứng dụng đã chọn trở về đảo khi vuốt về màn hình chính. Khởi động lại trình khởi chạy sau lần bật đầu tiên.</string>
+    <string name="system_island_media_return_apps_title">Ứng dụng về đảo</string>
+    <string name="system_island_media_return_apps_summ">Chọn ứng dụng đa phương tiện cho hiệu ứng này.</string>
     <string name="system_island_media_summ">Theo trình phát hệ thống; giữ lại ngắn sau khi tạm dừng.</string>
     <string name="system_island_media_swipe_title">Vuốt ngang để chuyển bài</string>
     <string name="system_island_media_swipe_summ">Tắt sẽ chặn chuyển bài khi vuốt ngang. Các thao tác khác đã cấu hình vẫn khả dụng.</string>
-    <string name="system_island_waveform_title">Sóng nhạc nhẹ</string>
+    <string name="system_island_waveform_title">Chế độ sóng</string>
     <string name="system_island_waveform_summ">Chuyển động theo trạng thái phát, không thu âm. Dừng khi tạm dừng, bị ẩn hoặc tắt màn hình.</string>
     <string name="system_island_entrance_style_title">Hiệu ứng hiện và ẩn</string>
     <string name="system_island_entrance_style_center">Trung tâm</string>
@@ -1244,14 +1246,14 @@
     <string name="system_island_feedback_ringer_title">Chế độ chuông</string>
     <string name="system_island_basic_group">Cài đặt cơ bản</string>
     <string name="system_island_geometry_group">Vị trí và kích thước</string>
-    <string name="system_island_appearance_group">Giao diện và hoạt ảnh</string>
+    <string name="system_island_appearance_group">Giao diện</string>
     <string name="system_island_feedback_group">Nội dung</string>
-    <string name="system_island_interaction_group">Hành vi</string>
+    <string name="system_island_interaction_group">Tương tác</string>
     <string name="system_island_gestures_title">Cử chỉ</string>
     <string name="system_island_waveform_off">Tắt</string>
     <string name="system_island_waveform_light">Hoạt ảnh nhẹ</string>
     <string name="system_island_waveform_real">Dạng sóng trực tiếp (thử nghiệm)</string>
-    <string name="system_island_waveform_mode_summ">Chỉ thu năm dải tần khi đảo hiển thị và đang phát. Chuyển về hoạt ảnh nhẹ nếu quyền, tuyến âm thanh hoặc phiên không được hỗ trợ.</string>
+    <string name="system_island_waveform_mode_summ">Dùng chung cho nội dung đa phương tiện và ghi âm. Chỉ lấy mẫu trực tiếp khi đang hiển thị.</string>
     <string name="system_island_hide_in_floating_window_title">Loại trừ nội dung của ứng dụng cửa sổ nổi</string>
     <string name="system_island_hide_in_floating_window_summ">Ẩn hoạt động đa phương tiện của ứng dụng có cửa sổ nổi đang hiển thị. Nhạc khác, tin nhắn được phép và thông báo hệ thống vẫn hiện bình thường. Cần khởi động lại thiết bị khi bật lần đầu.</string>
     <string name="array_global_actions_pip_hide">Ẩn / khôi phục hình trong hình</string>
@@ -1292,4 +1294,8 @@
     <string name="system_strong_toast_mode_default">Mặc định hệ thống</string>
     <string name="system_island_live_return">Vuốt lên về đảo</string>
     <string name="system_island_live_return_summary">Đưa cuộc gọi, Đồng hồ và Ghi âm về đảo. Khởi động lại màn hình chính sau lần bật đầu tiên.</string>
+    <string name="system_island_effects_title">Sóng và hoạt ảnh</string>
+    <string name="system_island_waveform_group">Sóng</string>
+    <string name="system_island_motion_group">Hoạt ảnh</string>
+    <string name="system_island_general_gestures_group">Chung</string>
 </resources>

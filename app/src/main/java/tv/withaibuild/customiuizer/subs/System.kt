@@ -224,6 +224,12 @@ class System : SubFragment() {
                     val group = requireNotNull(sources.parent)
                     group.key = sources.key
                     group.removePreference(sources)
+                    group.addPreference(tv.withaibuild.customiuizer.prefs.PreferenceEx(requireContext(), null).apply {
+                        order = sources.order - 1
+                        summary = sources.summary
+                        isSelectable = false
+                        isPersistent = false
+                    })
                     findPreference<Preference>("pref_key_system_island_live_return")?.order = sources.order + sources.entryValues.size
                     sources.entryValues.forEachIndexed { index, entry ->
                         val value = entry.toString()
@@ -255,6 +261,11 @@ class System : SubFragment() {
                         onPreferenceClickListener = openMusicActions
                     }
                 }
+            }
+            "pref_key_system_island_effects_cat" -> {
+                preferenceScreen.isEnabled = StrongToastPresentationMode.fromPreference(
+                    AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
+                ) == StrongToastPresentationMode.DYNAMIC_ISLAND
             }
             "pref_key_system_island_actions_cat" -> {
                 val enabled = StrongToastPresentationMode.fromPreference(
@@ -298,25 +309,22 @@ class System : SubFragment() {
                 findPreference<Preference>("pref_key_system_island_music_cat")?.setOnPreferenceClickListener {
                     openSystemSubFragment(it, false, R.xml.prefs_system_island_music); true
                 }
+                findPreference<Preference>("pref_key_system_island_effects_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.xml.prefs_system_island_effects); true
+                }
                 val strongToastMode = findPreference<ListPreferenceEx>("pref_key_system_strong_toast_mode")
-                val islandOffset = findPreference<Preference>("pref_key_system_strong_toast_island_offset")
                 fun showIslandOffset(mode: Any?) {
                     val presentation = StrongToastPresentationMode.fromPreference(
                         mode?.toString()?.toIntOrNull() ?: 0
                     )
                     val enabled = presentation == StrongToastPresentationMode.DYNAMIC_ISLAND
-                    for (entry in listOf("music_cat", "layout_cat", "expand_down"))
-                        findPreference<Preference>("pref_key_system_island_$entry")?.parent?.isVisible = enabled
+                    for (entry in listOf("music_cat", "layout_cat", "actions_cat"))
+                        findPreference<Preference>("pref_key_system_island_$entry")?.parent?.apply {
+                            isVisible = enabled
+                            isEnabled = enabled
+                        }
                     findPreference<Preference>("pref_key_system_toast_capsule")?.isVisible =
                         enabled || presentation == StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT
-                    islandOffset?.isVisible = enabled
-                    for (key in listOf("feedback_cat", "music_cat", "actions_cat", "layout_cat", "notifications_cat", "idle", "expand_down", "entrance_style", "simplified", "excluded_apps", "hide_in_floating_window")) {
-                        findPreference<Preference>("pref_key_system_island_$key")?.isEnabled = enabled
-                    }
-                    for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
-                        findPreference<Preference>("pref_key_${gesture.key}")?.isEnabled = enabled
-                    for (key in tv.withaibuild.customiuizer.utils.IslandPreferenceDefaults.feedbackKeys)
-                        findPreference<Preference>(key)?.isEnabled = enabled
                     findPreference<Preference>("pref_key_system_toast_capsule")?.isEnabled =
                         enabled || presentation == StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT
                 }

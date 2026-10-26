@@ -107,7 +107,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_mobile_showname_title">Özel mobil ağ türü</string>
     <string name="system_netspeedinterval_title">Ağ hızı güncelleme aralığı</string>
     <string name="system_detailednetspeed_title">Karşıya yükleme ve indirme hızı çift satırda görüntülenir</string>
-    <string name="system_netspeed_cat_title">Ağ hızı modları</string>
+    <string name="system_netspeed_cat_title">Ağ hızı</string>
     <string name="system_detailednetspeed_icon_title">Gösterge simgeleri</string>
     <string name="system_detailednetspeed_icon_summ">Hız değerinin yanında görüntülenen gelen / giden trafik simgeleri (tüm özel yazı tiplerinde her simge bulunmaz)</string>
     <string name="system_detailednetspeed_low_title">Düşük hızı gizle</string>
@@ -779,7 +779,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="white_color">Beyaz</string>
     <string name="black_color">Siyah</string>
     <string name="auto_color">Durum çubuğu rengi</string>
-    <string name="system_statusbar_batterytempandcurrent_title">Pil sıcaklığını ve akımını göster</string>
+    <string name="system_statusbar_batterytempandcurrent_title">Pil bilgisi</string>
     <string name="system_statusbar_batterytempandcurrent_content_title">İçeriği Görüntüle</string>
     <string name="system_statusbar_batterytempandcurrentatright_title">Sağda görüntüle</string>
     <string name="system_statusbar_batterytempandcurrent_positive_title">Mevcut değer her zaman pozitiftir</string>
@@ -788,7 +788,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbar_batterytempandcurrent_hideunit_title">Birimi gizle</string>
     <string name="system_statusbar_batterytempandcurrent_singlerow_title">Tek sırada görüntüle</string>
     <string name="system_statusbar_batterytempandcurrent_reverseorder_title">Ters sıra</string>
-    <string name="system_statusbar_showdevicetemperature_title">Cihaz sıcaklığını göster</string>
+    <string name="system_statusbar_showdevicetemperature_title">Cihaz sıcaklığı</string>
     <string name="system_statusbar_batterystyle_title">Pil simgesinin stilini değiştir</string>
     <string name="system_statusbar_batterystyle_digit_title">Pil basamağı</string>
     <string name="system_statusbar_batterystyle_mark_fontsize_title">Yüzde işaretinin yazı tipi boyutu</string>
@@ -813,9 +813,9 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_statusbaricons_wifi_mobile_atleft_title">Mobil ve WiFiyi sola taşı</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">Mobil Sinyali ve WiFiyi Değiştirin</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">Simge ve Pil yüzdesi Değiştirin</string>
-    <string name="system_statusbaricons_change_position_title">Simgelerin konumunu değiştir</string>
-    <string name="system_statusbar_mobile_signal_cat_title">Mobil sinyal simgesi görüntüleme ayarları</string>
-    <string name="system_statusbar_clocktweak_title">Saat ayarları</string>
+    <string name="system_statusbaricons_change_position_title">Simge konumu</string>
+    <string name="system_statusbar_mobile_signal_cat_title">Mobil ağ göstergeleri</string>
+    <string name="system_statusbar_clocktweak_title">Saat</string>
     <string name="system_statusbaricons_netspeed_title">Ağ hızı göstergesi</string>
     <string name="system_statusbaricons_clock_title">Saat</string>
     <string name="various_allow_untrusted_touch_title">Güvenilmeyen dokunmaya izin ver</string>
@@ -843,6 +843,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="about_link_unavailable">Bu bağlantıyı açabilecek uygulama yok</string>
     <string name="about_notes_category">Notlar</string>
     <string name="about_repository_summary">Kaynak kodu ve sürümler</string>
+    <string name="about_links_category">Proje</string>
+    <string name="about_community_title">Telegram topluluğu</string>
     <string name="about_repository_title">Depo</string>
     <string name="about_restart_notes_title">Yeniden başlatma davranışı</string>
     <string name="about_support_category">Geliştirme ve destek</string>
@@ -943,7 +945,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_cc_slider_color_enable_title">Kaydırıcıyı aç/kapat</string>
     <string name="system_cc_slider_progress_color_title">İlerleme rengi</string>
     <string name="system_cc_tile_enabled_color_title">Etkin döşeme rengi</string>
-    <string name="system_cc_tile_style_cat_tile">Tema stili ayarları</string>
+    <string name="system_cc_tile_style_cat_tile">Tema</string>
     <string name="system_charginginfo_fontsize_summary">Alt şarj göstergesini ayarlar. Varsayılan sistem metin boyutunu korur. Uygulamak için SystemUI yeniden başlatın.</string>
     <string name="system_charginginfo_fontsize_title">Yazı boyutu</string>
     <string name="system_colorizenotiftitle_summ">Simge rengini karta uygula</string>
@@ -1190,13 +1192,13 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_intro">Adayı ilk kez etkinleştirdikten veya kaynak ekledikten sonra telefonu yeniden başlatın.</string>
     <string name="system_island_media_title">Medyayı göster</string>
     <string name="system_island_media_return_title">Müziği adaya taşı</string>
-    <string name="system_island_media_return_summ">Müzik çalarken seçili uygulamadan yukarı kaydırarak çıkın; pencere hafifçe sekerek adaya yerleşir. Yalnızca elle seçilen uygulamalarda geçerlidir. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>
-    <string name="system_island_media_return_apps_title">Müzik uygulamalarını seç</string>
-    <string name="system_island_media_return_apps_summ">Uygulamaları elle seçin. Seçim boşsa normal animasyon korunur.</string>
+    <string name="system_island_media_return_summ">Seçilen medya uygulamaları ana ekrana kaydırınca adaya döner. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>
+    <string name="system_island_media_return_apps_title">Dönüş uygulamaları</string>
+    <string name="system_island_media_return_apps_summ">Bu efekt için medya uygulamalarını seçin.</string>
     <string name="system_island_media_summ">Sistem oynatıcısını izler; duraklatınca kısa süre görünür kalır.</string>
     <string name="system_island_media_swipe_title">Kaydırarak parça değiştir</string>
     <string name="system_island_media_swipe_summ">Kapatıldığında yatay kaydırma ile parça değiştirme engellenir. Yapılandırılan diğer işlemler kullanılabilir.</string>
-    <string name="system_island_waveform_title">Hafif müzik dalgası</string>
+    <string name="system_island_waveform_title">Dalga modu</string>
     <string name="system_island_waveform_summ">Ses kaydetmeden oynatma durumuyla hareket eder. Duraklatıldığında, gizliyken ve ekran kapalıyken durur.</string>
     <string name="system_island_entrance_style_title">Giriş ve çıkış animasyonu</string>
     <string name="system_island_entrance_style_center">Merkez</string>
@@ -1250,14 +1252,14 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_feedback_ringer_title">Zil modu</string>
     <string name="system_island_basic_group">Temel ayarlar</string>
     <string name="system_island_geometry_group">Konum ve boyut</string>
-    <string name="system_island_appearance_group">Görünüm ve animasyon</string>
+    <string name="system_island_appearance_group">Görünüm</string>
     <string name="system_island_feedback_group">İçerik</string>
-    <string name="system_island_interaction_group">Davranış</string>
+    <string name="system_island_interaction_group">Etkileşim</string>
     <string name="system_island_gestures_title">Hareketler</string>
     <string name="system_island_waveform_off">Kapalı</string>
     <string name="system_island_waveform_light">Hafif animasyon</string>
     <string name="system_island_waveform_real">Canlı dalga biçimi (deneysel)</string>
-    <string name="system_island_waveform_mode_summ">Beş frekans bandı yalnızca ada görünürken ve müzik çalarken alınır. İzin, ses yolu veya oturum desteklenmiyorsa hafif animasyona dönülür.</string>
+    <string name="system_island_waveform_mode_summ">Medya ve kayıt için ortaktır. Canlı örnekleme yalnızca görünürken çalışır.</string>
     <string name="system_island_hide_in_floating_window_title">Kayan uygulamaların medyasını hariç tut</string>
     <string name="system_island_hide_in_floating_window_summ">Görünür kayan penceresi olan uygulamaların medya etkinliklerini gizler. Diğer müzikler, izin verilen mesajlar ve sistem bildirimleri normal devam eder. İlk etkinleştirmeden sonra cihazı yeniden başlatın.</string>
     <string name="array_global_actions_pip_hide">Resim içinde resmi gizle / geri getir</string>
@@ -1298,4 +1300,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_strong_toast_mode_default">Sistem varsayılanı</string>
     <string name="system_island_live_return">Kaydırarak adaya dön</string>
     <string name="system_island_live_return_summary">Arama, Saat ve Kaydedici etkinliklerini adaya döndürür. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>
+    <string name="system_island_effects_title">Dalga ve animasyon</string>
+    <string name="system_island_waveform_group">Dalga</string>
+    <string name="system_island_motion_group">Animasyon</string>
+    <string name="system_island_general_gestures_group">Genel</string>
 </resources>

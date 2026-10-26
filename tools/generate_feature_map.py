@@ -32,8 +32,9 @@ SETTINGS_ACTION_KEYS = {
 PAGE_NOTES = {
     "pref_key_system_cat_toasts": "位置选项只显示对应的顶部 / 居中 / 底部偏移。",
     "pref_key_system_cat_qs": "国际版隐藏“对调控制中心与通知中心”。",
-    "pref_key_system_cat_island": "顶部统一选择提示样式；选择动态岛后显示内容、外观动效和行为。音乐、消息、反馈、位置尺寸各用子页，默认模式不显示岛内参数。",
-    "pref_key_system_island_music_cat": "需动态岛模式及音乐与媒体开启；动作编辑沿用当前项键和 _action 等派生键。",
+    "pref_key_system_cat_island": "顶部选择提示样式；动态岛按内容、外观、交互分组，公共波形与动效、位置尺寸和手势各有子页。其他样式隐藏岛专用分组。",
+    "pref_key_system_island_music_cat": "需动态岛模式；回岛与小窗媒体排除依赖媒体开关，回岛另选应用。公共波形设置位于波形与动效页。",
+    "pref_key_system_island_effects_cat": "需动态岛模式；波形供媒体与录音共用，不依赖媒体开关。仅调整显示，不改变来源接入。",
     "pref_key_system_island_feedback_cat": "需动态岛模式；八种活动来源以原生开关铺开，共用原来源集合；上滑回岛单独控制通话、时钟、录音的原生窗口返回。即时反馈分别启用。",
     "pref_key_system_detailednetspeed_cat": "隐藏 B/s、隐藏低速及阈值只在详细样式 2 / 3 可编辑；原生样式保留存储值。",
     "pref_key_system_visualizer_cat": "自定义颜色仅在颜色模式 2 可编辑，动态颜色变化间隔仅在模式 5 可编辑。",

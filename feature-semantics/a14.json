@@ -41,6 +41,10 @@
       "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
     },
     {
+      "preferenceKey": "system_island_effects_cat",
+      "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
+    },
+    {
       "preferenceKey": "system_island_layout_cat",
       "reason": "Navigation-only lazy Dynamic Island settings page; no stored value or Hook."
     },

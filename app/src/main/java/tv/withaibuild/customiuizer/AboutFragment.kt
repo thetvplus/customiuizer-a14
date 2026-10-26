@@ -68,6 +68,11 @@ class AboutFragment : Fragment() {
         view.findViewById<View>(R.id.about_repository_row).setOnClickListener {
             openLink(REPOSITORY_URL)
         }
+        view.findViewById<TextView>(R.id.about_community_summary).text =
+            BuildConfig.COMMUNITY_URL.removePrefix("https://")
+        view.findViewById<View>(R.id.about_community_row).setOnClickListener {
+            openLink(BuildConfig.COMMUNITY_URL)
+        }
     }
 
     private fun updateHeadViews(view: View, config: Configuration) {

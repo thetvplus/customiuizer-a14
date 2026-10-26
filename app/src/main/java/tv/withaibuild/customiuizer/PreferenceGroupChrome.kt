@@ -33,6 +33,7 @@ internal object PreferenceGroupChrome {
         val isCategory: Boolean,
         val isTopLevel: Boolean,
         val titleVisible: Boolean,
+        val supportingText: Boolean = false,
     )
 
     data class Chrome(
@@ -93,7 +94,10 @@ internal object PreferenceGroupChrome {
     ) {
         if (start >= end) return
         val last = end - 1
+        var hasOwner = false
         for (i in start until end) {
+            if (rows[i].isCategory) hasOwner = false
+            else if (!rows[i].supportingText) hasOwner = true
             result.add(
                 Chrome(
                     kind = if (rows[i].isCategory) Kind.INNER_HEADER else Kind.CARD,
@@ -101,7 +105,8 @@ internal object PreferenceGroupChrome {
                     inCard = true,
                     cardStart = i == start,
                     cardEnd = i == last,
-                    dividerBelow = i != last && !rows[i].isCategory && !rows[i + 1].isCategory,
+                    dividerBelow = i != last && !rows[i].isCategory && !rows[i + 1].isCategory &&
+                        !rows[i + 1].supportingText && (!rows[i].supportingText || hasOwner),
                 )
             )
         }
@@ -114,8 +119,12 @@ internal fun preferenceGroupInputRow(pref: Preference): PreferenceGroupChrome.In
         isTopLevel = pref.parent is PreferenceScreen ||
             (pref.parent as? PreferenceCategoryEx)?.isPageContainer() == true,
         titleVisible = (pref as? PreferenceCategoryEx)?.isTitleVisible() ?: true,
+        supportingText = isSupportingPreference(pref),
     )
 }
+
+internal fun isSupportingPreference(pref: Preference): Boolean =
+    pref !is PreferenceCategory && !pref.isSelectable && pref.title.isNullOrEmpty() && !pref.summary.isNullOrEmpty()
 
 internal fun groupedListRowBackground(position: Int, count: Int): Int {
     if (count <= 1) return R.drawable.pref_search_row_single
@@ -295,26 +304,26 @@ internal class PreferenceGroupDecoration(
         // Keep one displayed snapshot until an adapter notification or screen change.
         val item = PreferenceGroupChrome.InputRow(false, false, true)
         val inputs = MutableList(adapter.itemCount) { item }
-        collectDisplayedCategories(screen, positions, inputs)
+        collectDisplayedRows(screen, positions, inputs)
         return PreferenceGroupChrome.layout(inputs).also {
             cachedScreen = screen
             cachedChrome = it
         }
     }
 
-    private fun collectDisplayedCategories(
+    private fun collectDisplayedRows(
         group: PreferenceGroup,
         positions: PreferenceGroup.PreferencePositionCallback,
         inputs: MutableList<PreferenceGroupChrome.InputRow>,
     ) {
         for (index in 0 until group.preferenceCount) {
             val pref = group.getPreference(index)
-            if (pref is PreferenceCategory) {
+            if (pref is PreferenceCategory || isSupportingPreference(pref)) {
                 val position = positions.getPreferenceAdapterPosition(pref)
                 if (position in inputs.indices) inputs[position] = preferenceGroupInputRow(pref)
             }
             if (pref is PreferenceGroup && pref !is PreferenceScreen) {
-                collectDisplayedCategories(pref, positions, inputs)
+                collectDisplayedRows(pref, positions, inputs)
             }
         }
     }

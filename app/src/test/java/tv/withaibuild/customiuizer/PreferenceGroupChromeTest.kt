@@ -116,6 +116,17 @@ class PreferenceGroupChromeTest {
         titleVisible = true,
     )
 
+    @Test fun supportingTextStaysWithItsOwnerAndSectionIntrosDoNotGetARule() {
+        val description = PreferenceGroupChrome.InputRow(false, false, true, supportingText = true)
+        val chrome = PreferenceGroupChrome.layout(listOf(header(), description, item(), description, description, item()))
+        assertFalse(chrome[1].dividerBelow)
+        assertFalse(chrome[2].dividerBelow)
+        assertFalse(chrome[3].dividerBelow)
+        assertTrue("The rule follows the whole feature, including its explanation", chrome[4].dividerBelow)
+        assertFalse(chrome[5].dividerBelow)
+        assertTrue(chrome.drop(1).all { it.groupId == chrome[1].groupId })
+    }
+
     private fun hiddenHeader() = PreferenceGroupChrome.InputRow(
         isCategory = true,
         isTopLevel = true,
@@ -218,9 +229,11 @@ class PreferenceGroupChromeWiringTest {
                 .substringBefore("about_paypal_row")
                 .contains("about_divider"),
         )
-        val afterRepository = aboutLayout.substringAfter("about_repository_row")
-            .substringBefore("about_notes_category")
-        assertFalse(afterRepository.contains("android:background=\"@color/about_divider\""))
+        assertTrue(aboutLayout.indexOf("about_repository_row") < aboutLayout.indexOf("about_community_row"))
+        assertTrue(aboutLayout.indexOf("about_community_row") < aboutLayout.indexOf("about_support_category"))
+        val afterCommunity = aboutLayout.substringAfter("about_community_row")
+            .substringBefore("about_support_category")
+        assertFalse(afterCommunity.contains("android:background=\"@color/about_divider\""))
     }
 
     @Test

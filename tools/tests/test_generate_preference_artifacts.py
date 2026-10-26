@@ -258,7 +258,15 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         keys = {e.get(ANDROID_KEY) for e in island.iter()}
         self.assertNotIn("pref_key_system_island_waveform_mode", keys)
         music = ET.parse(SOURCE_DIR / "prefs_system_island_music.xml").getroot()
-        self.assertIn("pref_key_system_island_waveform_mode", {e.get(ANDROID_KEY) for e in music.iter()})
+        self.assertNotIn("pref_key_system_island_waveform_mode", {e.get(ANDROID_KEY) for e in music.iter()})
+        effects = ET.parse(SOURCE_DIR / "prefs_system_island_effects.xml").getroot()
+        wave = next(e for e in effects.iter() if e.get(ANDROID_KEY) == "pref_key_system_island_waveform_mode")
+        self.assertIsNone(wave.get("{http://schemas.android.com/apk/res/android}dependency"))
+        self.assertEqual("@string/system_island_waveform_mode_summ", wave.get("{http://schemas.android.com/apk/res/android}summary"))
+        match = [entry for entry in entries if entry["key"] == "pref_key_system_island_waveform_mode"]
+        self.assertEqual(1, len(match))
+        self.assertEqual("@xml/prefs_system_island_effects", match[0]["page"])
+        self.assertEqual("pref_key_system_island_effects_cat", match[0]["routeSub"])
         self.assertIn("pref_key_system_island_layout_cat", keys)
         self.assertIn("pref_key_system_island_notifications_cat", keys)
         self.assertNotIn("pref_key_system_island_waveform", keys)

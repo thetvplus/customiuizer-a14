@@ -153,7 +153,8 @@
 
 			<tv.withaibuild.customiuizer.prefs.PreferenceEx
 				android:key="pref_key_various_calluibright_cat"
-				android:title="@string/various_calluibright_title" />
+				android:title="@string/various_calluibright_title"
+				android:widgetLayout="@layout/preference_widget_disclosure" />
 
 		</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 
@@ -199,7 +200,8 @@
 
 				<tv.withaibuild.customiuizer.prefs.PreferenceEx
 					android:key="pref_key_various_hiddenfeatures_cat"
-					android:title="@string/various_hiddenfeatures_title" />
+					android:title="@string/various_hiddenfeatures_title"
+					android:widgetLayout="@layout/preference_widget_disclosure" />
 
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 					android:key="pref_key_various_disable_access_devicelogs"

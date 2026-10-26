@@ -88,6 +88,15 @@ class PreferenceGroupDecorationTest {
         assertEquals("Two category lookups for the whole unchanged page", 2, adapter.lookups)
     }
 
+    @Test fun supportingTextIsRecognizedByMeaningRatherThanItsRuntimeClass() {
+        val info = Preference(context).apply { summary = "Source explanation"; isSelectable = false }
+        assertTrue(preferenceGroupInputRow(info).supportingText)
+        info.title = "Action"
+        assertFalse(preferenceGroupInputRow(info).supportingText)
+        info.title = null; info.isSelectable = true
+        assertFalse(preferenceGroupInputRow(info).supportingText)
+    }
+
     @Test
     fun everyAdapterChangeInvalidatesTheSnapshotEvenWhenCountIsUnchanged() {
         decoration.onDraw(canvas, list, state)

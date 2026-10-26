@@ -126,7 +126,7 @@
     <string name="system_hidestatusbar_whenscreenshot_title">Ocultar barra de status ao fazer uma captura de tela</string>
     <string name="system_netspeedinterval_title">Intervalo de atualização da velocidade da rede</string>
     <string name="system_detailednetspeed_title">A velocidade de upload/download é exibida em duas linhas</string>
-    <string name="system_netspeed_cat_title">Mods de velocidade de rede</string>
+    <string name="system_netspeed_cat_title">Velocidade da rede</string>
     <string name="system_detailednetspeed_icon_title">Ícones indicadores</string>
     <string name="system_detailednetspeed_icon_summ">Os ícones de tráfego de download/upload exibidos ao lado da velocidade (nem todas as fontes personalizadas tem todos os ícones)</string>
     <string name="system_detailednetspeed_low_title">Ocultar baixa velocidade</string>
@@ -851,7 +851,7 @@
     <string name="white_color">Branco</string>
     <string name="black_color">Preto</string>
     <string name="auto_color">Cor da barra de status</string>
-    <string name="system_statusbar_batterytempandcurrent_title">Exibir temperatura e corrente da bateria</string>
+    <string name="system_statusbar_batterytempandcurrent_title">Informações da bateria</string>
     <string name="system_statusbar_batterytempandcurrent_content_title">Exibir conteúdo</string>
     <string name="system_statusbar_batterytempandcurrentatright_title">Exibir à direita</string>
     <string name="system_statusbar_batterytempandcurrent_positive_title">O valor atual é sempre positivo</string>
@@ -861,7 +861,7 @@
     <string name="system_statusbar_batterytempandcurrent_hideunit_title">Ocultar unidade</string>
     <string name="system_statusbar_batterytempandcurrent_singlerow_title">Exibir em linha única</string>
     <string name="system_statusbar_batterytempandcurrent_reverseorder_title">Ordem reversa</string>
-    <string name="system_statusbar_showdevicetemperature_title">Exibir temperatura do dispositivo</string>
+    <string name="system_statusbar_showdevicetemperature_title">Temperatura do dispositivo</string>
     <string name="system_statusbar_batterystyle_title">Estilo do ícone da bateria</string>
     <string name="system_statusbar_batterystyle_digit_title">Dígito da bateria</string>
     <string name="system_statusbar_batterystyle_mark_fontsize_title">Tamanho da fonte da marca de porcentagem</string>
@@ -889,9 +889,9 @@
     <string name="system_statusbaricons_wifi_mobile_atleft_title">Mover o sinal móvel e Wi-Fi para a esquerda</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">Trocar sinal móvel e Wi-Fi</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">Trocar ícone e porcentagem da bateria</string>
-    <string name="system_statusbaricons_change_position_title">Mudar posição dos ícones</string>
-    <string name="system_statusbar_mobile_signal_cat_title">Exibir configuração do ícone de rede móvel</string>
-    <string name="system_statusbar_clocktweak_title">Configurações do relógio</string>
+    <string name="system_statusbaricons_change_position_title">Posição dos ícones</string>
+    <string name="system_statusbar_mobile_signal_cat_title">Indicadores de rede móvel</string>
+    <string name="system_statusbar_clocktweak_title">Relógio</string>
     <string name="system_statusbar_enable_weather_param_title">Usar tq para exibir o clima durante a formatação</string>
     <string name="system_statusbaricons_netspeed_title">Indicador de velocidade da rede</string>
     <string name="system_statusbaricons_clock_title">Relógio</string>
@@ -910,7 +910,7 @@
     <string name="various_swipe_expand_sidebar_title">Permitir deslizar para expandir a barra lateral</string>
     <string name="system_lockscreenshortcuts_left_tapaction_title">Pressione o atalho esquerdo para alternar a lanterna</string>
     <string name="system_cc_tile_roundedrect_title">Retângulo arredondado</string>
-    <string name="system_cc_tile_style_cat_tile">Configurações de estilo de tema</string>
+    <string name="system_cc_tile_style_cat_tile">Tema</string>
     <string name="system_cc_tile_enabled_color_title">Bloco ativado</string>
     <string name="system_cc_card_enabled_color_title">Bloco de cartão ativado</string>
     <string name="system_cc_card_enabled_primary_textcolor_title">Cor do texto principal</string>
@@ -935,6 +935,8 @@
     <string name="about_link_unavailable">Nenhum aplicativo pode abrir este link</string>
     <string name="about_notes_category">Observações</string>
     <string name="about_repository_summary">Código-fonte e versões</string>
+    <string name="about_links_category">Projeto</string>
+    <string name="about_community_title">Comunidade no Telegram</string>
     <string name="about_repository_title">Repositório</string>
     <string name="about_restart_notes_title">Comportamento ao reiniciar</string>
     <string name="about_support_category">Desenvolvimento e suporte</string>
@@ -1184,13 +1186,13 @@
     <string name="system_island_intro">Reinicie o telefone ao ativar a ilha pela primeira vez ou adicionar uma fonte.</string>
     <string name="system_island_media_title">Mostrar mídia</string>
     <string name="system_island_media_return_title">Música para a ilha</string>
-    <string name="system_island_media_return_summ">Durante a reprodução, deslize para cima para sair de um app selecionado. A janela entra na ilha com um leve balanço. Apenas para apps escolhidos manualmente. Reinicie o launcher após a primeira ativação.</string>
-    <string name="system_island_media_return_apps_title">Selecionar apps de música</string>
-    <string name="system_island_media_return_apps_summ">Selecione os apps manualmente. Sem seleção, a animação habitual é mantida.</string>
+    <string name="system_island_media_return_summ">Apps de mídia selecionados voltam à ilha ao deslizar para a tela inicial. Reinicie o launcher após ativar pela primeira vez.</string>
+    <string name="system_island_media_return_apps_title">Apps de retorno</string>
+    <string name="system_island_media_return_apps_summ">Escolha os apps de mídia para este efeito.</string>
     <string name="system_island_media_summ">Usa o reprodutor do sistema e permanece brevemente após pausar.</string>
     <string name="system_island_media_swipe_title">Deslizar para trocar de faixa</string>
     <string name="system_island_media_swipe_summ">Desativar bloqueia a troca de faixa ao deslizar na horizontal. Outras ações configuradas continuam disponíveis.</string>
-    <string name="system_island_waveform_title">Onda musical leve</string>
+    <string name="system_island_waveform_title">Modo da onda</string>
     <string name="system_island_waveform_summ">Segue o estado da reprodução sem capturar áudio. Para em pausa, oculta ou com a tela desligada.</string>
     <string name="system_island_entrance_style_title">Animação de entrada e saída</string>
     <string name="system_island_entrance_style_center">Centro</string>
@@ -1244,14 +1246,14 @@
     <string name="system_island_feedback_ringer_title">Modo de toque</string>
     <string name="system_island_basic_group">Configurações básicas</string>
     <string name="system_island_geometry_group">Posição e tamanho</string>
-    <string name="system_island_appearance_group">Aparência e animação</string>
+    <string name="system_island_appearance_group">Aparência</string>
     <string name="system_island_feedback_group">Conteúdo</string>
-    <string name="system_island_interaction_group">Comportamento</string>
+    <string name="system_island_interaction_group">Interação</string>
     <string name="system_island_gestures_title">Gestos</string>
     <string name="system_island_waveform_off">Desativado</string>
     <string name="system_island_waveform_light">Animação leve</string>
     <string name="system_island_waveform_real">Forma de onda ao vivo (experimental)</string>
-    <string name="system_island_waveform_mode_summ">Cinco faixas de frequência são capturadas apenas com a ilha visível e a reprodução ativa. Permissões, rotas ou sessões incompatíveis usam a animação leve.</string>
+    <string name="system_island_waveform_mode_summ">Compartilhado por mídia e gravação. A captura ao vivo só ocorre enquanto visível.</string>
     <string name="system_island_hide_in_floating_window_title">Excluir mídia de apps flutuantes</string>
     <string name="system_island_hide_in_floating_window_summ">Oculta atividades de mídia de apps com janela flutuante visível. Outras músicas, mensagens permitidas e avisos do sistema continuam normalmente. Reinicie o dispositivo após a primeira ativação.</string>
     <string name="array_global_actions_pip_hide">Ocultar / restaurar picture-in-picture</string>
@@ -1292,4 +1294,8 @@
     <string name="system_strong_toast_mode_default">Padrão do sistema</string>
     <string name="system_island_live_return">Deslizar para a ilha</string>
     <string name="system_island_live_return_summary">Retorna chamadas, Relógio e Gravador à ilha. Reinicie o launcher após ativar pela primeira vez.</string>
+    <string name="system_island_effects_title">Onda e animação</string>
+    <string name="system_island_waveform_group">Onda</string>
+    <string name="system_island_motion_group">Animação</string>
+    <string name="system_island_general_gestures_group">Geral</string>
 </resources>

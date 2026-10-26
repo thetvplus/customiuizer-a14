@@ -21,6 +21,9 @@ class AboutSupportContractTest {
                 .contains("about_divider"),
         )
         assertTrue(layout.contains("about_repository_title"))
+        assertTrue(layout.contains("about_links_category"))
+        assertTrue(layout.contains("about_community_row"))
+        assertTrue(fragment.contains("openLink(BuildConfig.COMMUNITY_URL)"))
         assertFalse(layout.contains("about_contact_row"))
         assertTrue(layout.contains("about_dynamic"))
         assertTrue(layout.contains("about_unsupported"))

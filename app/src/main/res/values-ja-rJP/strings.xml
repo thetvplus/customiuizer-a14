@@ -126,7 +126,7 @@
     <string name="system_hidestatusbar_whenscreenshot_title">スクリーンショットの撮影時にステータスバーを非表示にする</string>
     <string name="system_netspeedinterval_title">ネットワーク速度の更新間隔</string>
     <string name="system_detailednetspeed_title">2段表示</string>
-    <string name="system_netspeed_cat_title">ネットワーク速度Mod</string>
+    <string name="system_netspeed_cat_title">通信速度</string>
     <string name="system_detailednetspeed_icon_title">インジケーターアイコン</string>
     <string name="system_detailednetspeed_icon_summ">受信/送信の速度値に表示されるトラフィックアイコン (一部のカスタムフォントでは適用できない場合があります)</string>
     <string name="system_detailednetspeed_low_title">低速時で非表示にする</string>
@@ -851,7 +851,7 @@
     <string name="white_color">ホワイト</string>
     <string name="black_color">ブラック</string>
     <string name="auto_color">ステータスバーの色</string>
-    <string name="system_statusbar_batterytempandcurrent_title">バッテリー情報の表示</string>
+    <string name="system_statusbar_batterytempandcurrent_title">バッテリー情報</string>
     <string name="system_statusbar_batterytempandcurrent_content_title">表示をする内容</string>
     <string name="system_statusbar_batterytempandcurrentatright_title">右側の表示</string>
     <string name="system_statusbar_batterytempandcurrent_positive_title">電流値を常に正の値にする</string>
@@ -861,7 +861,7 @@
     <string name="system_statusbar_batterytempandcurrent_hideunit_title">単位を非表示にする</string>
     <string name="system_statusbar_batterytempandcurrent_singlerow_title">一列に並べて表示する</string>
     <string name="system_statusbar_batterytempandcurrent_reverseorder_title">逆順</string>
-    <string name="system_statusbar_showdevicetemperature_title">デバイスの温度を表示する</string>
+    <string name="system_statusbar_showdevicetemperature_title">端末の温度</string>
     <string name="system_statusbar_batterystyle_title">バッテリーアイコンのスタイル</string>
     <string name="system_statusbar_batterystyle_digit_title">バッテリーの数値</string>
     <string name="system_statusbar_batterystyle_mark_fontsize_title">パーセントマークのフォントの大きさ</string>
@@ -889,9 +889,9 @@
     <string name="system_statusbaricons_wifi_mobile_atleft_title">モバイルデータとWi-Fiを左側に移動する</string>
     <string name="system_statusbaricons_swap_wifi_mobile_title">モバイルデータとWi-Fiの表示を入れ替える</string>
     <string name="system_statusbaricons_swap_batteryicon_percentage_title">バッテリーアイコンとバッテリーのパーセント表示を入れ替える</string>
-    <string name="system_statusbaricons_change_position_title">アイコンの表示位置を変更</string>
-    <string name="system_statusbar_mobile_signal_cat_title">モバイル信号アイコンの設定</string>
-    <string name="system_statusbar_clocktweak_title">時計の設定</string>
+    <string name="system_statusbaricons_change_position_title">アイコンの位置</string>
+    <string name="system_statusbar_mobile_signal_cat_title">モバイルネットワーク表示</string>
+    <string name="system_statusbar_clocktweak_title">時計</string>
     <string name="system_statusbar_enable_weather_param_title">書式の設定時で天気を表示する場合にTQを使用する</string>
     <string name="system_statusbaricons_netspeed_title">ネットワーク速度のインジケーター</string>
     <string name="system_statusbaricons_clock_title">時計</string>
@@ -910,7 +910,7 @@
     <string name="various_swipe_expand_sidebar_title">スワイプでサイドバーを展開可能にする</string>
     <string name="system_lockscreenshortcuts_left_tapaction_title">左側のショートカットを懐中電灯に置き換える (アイコンを長押しで切り替え)</string>
     <string name="system_cc_tile_roundedrect_title">丸みを帯びた長方形のタイル</string>
-    <string name="system_cc_tile_style_cat_tile">テーマスタイルの設定</string>
+    <string name="system_cc_tile_style_cat_tile">テーマ</string>
     <string name="system_cc_tile_enabled_color_title">有効なタイル</string>
     <string name="system_cc_card_enabled_color_title">有効なカードタイル</string>
     <string name="system_cc_card_enabled_primary_textcolor_title">プライマリテキストの色</string>
@@ -935,6 +935,8 @@
     <string name="about_link_unavailable">このリンクを開けるアプリがありません</string>
     <string name="about_notes_category">注意事項</string>
     <string name="about_repository_summary">ソースコードとリリース</string>
+    <string name="about_links_category">プロジェクト</string>
+    <string name="about_community_title">Telegram コミュニティ</string>
     <string name="about_repository_title">リポジトリ</string>
     <string name="about_restart_notes_title">再起動の動作</string>
     <string name="about_support_category">開発とサポート</string>
@@ -1184,13 +1186,13 @@
     <string name="system_island_intro">初めて有効にしたときや情報源を追加した後は、端末を再起動してください。</string>
     <string name="system_island_media_title">メディアを表示</string>
     <string name="system_island_media_return_title">音楽をアイランドへ</string>
-    <string name="system_island_media_return_summ">音楽の再生中に選択したアプリから上にスワイプして離れると、ウィンドウがアイランドに収まり軽く弾みます。手動で選択したアプリのみ対象です。初回有効化後はランチャーを再起動してください。</string>
-    <string name="system_island_media_return_apps_title">音楽アプリを選択</string>
-    <string name="system_island_media_return_apps_summ">アプリを手動で選択してください。未選択の場合は通常のアニメーションを使用します。</string>
+    <string name="system_island_media_return_summ">選択したメディアアプリから上にスワイプしてホームへ戻ると、アイランドに収まります。初回はホームアプリを再起動してください。</string>
+    <string name="system_island_media_return_apps_title">対象アプリ</string>
+    <string name="system_island_media_return_apps_summ">この効果を使うメディアアプリを選択します。</string>
     <string name="system_island_media_summ">システムのプレーヤーに従い、一時停止後もしばらく表示します。</string>
     <string name="system_island_media_swipe_title">左右スワイプで曲を切り替え</string>
     <string name="system_island_media_swipe_summ">オフにすると左右スワイプで曲を変更できません。設定した他の操作は引き続き使用できます。</string>
-    <string name="system_island_waveform_title">軽量な音楽波形</string>
+    <string name="system_island_waveform_title">波形モード</string>
     <string name="system_island_waveform_summ">音声を収集せず再生状態で動きます。一時停止中、非表示、画面オフでは更新しません。</string>
     <string name="system_island_entrance_style_title">表示アニメーション</string>
     <string name="system_island_entrance_style_center">中央</string>
@@ -1244,14 +1246,14 @@
     <string name="system_island_feedback_ringer_title">着信音モード</string>
     <string name="system_island_basic_group">基本設定</string>
     <string name="system_island_geometry_group">位置とサイズ</string>
-    <string name="system_island_appearance_group">外観とアニメーション</string>
+    <string name="system_island_appearance_group">外観</string>
     <string name="system_island_feedback_group">表示内容</string>
-    <string name="system_island_interaction_group">動作</string>
+    <string name="system_island_interaction_group">操作</string>
     <string name="system_island_gestures_title">ジェスチャー</string>
     <string name="system_island_waveform_off">オフ</string>
     <string name="system_island_waveform_light">軽量アニメーション</string>
     <string name="system_island_waveform_real">リアルタイム波形（試験的）</string>
-    <string name="system_island_waveform_mode_summ">表示中かつ再生中のみ5つの周波数帯域を取得します。権限、経路、セッションが非対応の場合は軽量アニメーションに戻ります。</string>
+    <string name="system_island_waveform_mode_summ">メディアと録音で共用します。リアルタイム取得は表示中のみ動作します。</string>
     <string name="system_island_hide_in_floating_window_title">小窓アプリのメディアを除外</string>
     <string name="system_island_hide_in_floating_window_summ">表示中の小窓アプリのメディアのみ除外します。他の音楽、許可されたメッセージ、システムの通知は通常どおり表示します。初回有効化後は端末の再起動が必要です。</string>
     <string name="array_global_actions_pip_hide">ピクチャーインピクチャーを非表示／復元</string>
@@ -1292,4 +1294,8 @@
     <string name="system_strong_toast_mode_default">システム標準</string>
     <string name="system_island_live_return">上スワイプでアイランドへ</string>
     <string name="system_island_live_return_summary">通話・時計・録音をアイランドに戻します。初回の有効化後はホームアプリを再起動してください。</string>
+    <string name="system_island_effects_title">波形とアニメーション</string>
+    <string name="system_island_waveform_group">波形</string>
+    <string name="system_island_motion_group">アニメーション</string>
+    <string name="system_island_general_gestures_group">共通</string>
 </resources>
