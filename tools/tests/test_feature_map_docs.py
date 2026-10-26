@@ -18,6 +18,19 @@ import generate_preference_artifacts as prefs
 
 
 class FeatureMapTest(unittest.TestCase):
+    def test_about_links_and_groups_follow_the_native_layout_in_both_maps(self):
+        strings = feature_map.load_strings(self.repo)
+        entries = list(feature_map.about_entries(self.repo, strings))
+        self.assertIn(("about_community_row", ("项目", "Telegram 交流群"), True), entries)
+        detailed, simple = feature_map.render(self.repo), feature_map.render_simple(self.repo)
+        self.assertIn("项目 → Telegram 交流群", detailed)
+        self.assertIn("`R.id.about_community_row`", detailed)
+        self.assertIn("└─ Telegram 交流群", simple)
+        layout = self.repo / feature_map.RES / "layout/fragment_about.xml"
+        layout.write_text(layout.read_text(encoding="utf-8").replace("@string/about_community_title", "交流群测试"), encoding="utf-8")
+        self.assertIn("项目 → 交流群测试", feature_map.render(self.repo))
+        self.assertIn("└─ 交流群测试", feature_map.render_simple(self.repo))
+
     def test_simple_next_level_preserves_enable_rows_and_real_sections_but_unwraps_hidden_containers(self):
         xml = f'''<PreferenceScreen xmlns:android="{prefs.ANDROID_NS}" xmlns:app="{prefs.AUTO_NS}">
           <{prefs.PREFERENCE_CATEGORY} app:state="2" android:title="Container">

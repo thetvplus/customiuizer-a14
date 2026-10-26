@@ -1227,7 +1227,16 @@
 | 重置模块设置 | `R.id.resetsettings` | 设置端动作 |
 | 关于 | `R.id.about` | 设置端动作 |
 
-备份与恢复分别使用系统文件创建 / 选择器；重置由 MainActivity 确认后执行。关于页显示版本、维护者及赞赏 / 在线捐赠 / 源码仓库入口（`about_donate_row` / `about_paypal_row` / `about_repository_row`），见 [AboutFragment](../app/src/main/java/tv/withaibuild/customiuizer/AboutFragment.kt)。首页框架状态提示由 MainFragment 的服务状态检查触发。
+备份与恢复分别使用系统文件创建 / 选择器；重置由 MainActivity 确认后执行。首页框架状态提示由 MainFragment 的服务状态检查触发。关于页显示版本与维护者，以下分组和内容直接读取 [原生布局](../app/src/main/res/layout/fragment_about.xml)，点击由 [AboutFragment](../app/src/main/java/tv/withaibuild/customiuizer/AboutFragment.kt) 处理。
+
+| 关于页内容 | 稳定 ID | 行为 |
+| --- | --- | --- |
+| 项目 → 仓库主页 | `R.id.about_repository_row` | 点按打开 |
+| 项目 → Telegram 交流群 | `R.id.about_community_row` | 点按打开 |
+| 开发与支持 → 微信赞赏码 | `R.id.about_donate_row` | 点按打开 |
+| 开发与支持 → PayPal 赞赏 | `R.id.about_paypal_row` | 点按打开 |
+| 说明 → 重启说明 | `R.id.about_restart_notes_row` | 说明 |
+| 说明 → 设备兼容 | `R.id.about_compatibility_notes_row` | 说明 |
 
 ### 共用编辑与选择页面
 
