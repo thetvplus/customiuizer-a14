@@ -17,6 +17,18 @@ import org.robolectric.shadows.ShadowBinder
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class IslandRecorderMeterTest {
+    @Test fun peakMappingKeepsSilenceQuietAndLeavesHeadroomForOrdinarySpeechAndClipping() {
+        assertEquals(0f, IslandRecorderMeter.level(256), 0f)
+        assertTrue(IslandRecorderMeter.level(8192) in .16f.. .18f)
+        assertTrue(IslandRecorderMeter.level(16384) in .35f.. .38f)
+        assertEquals(.85f, IslandRecorderMeter.level(32767), .00001f)
+        var previous = 0f
+        for (raw in 0..32768 step 64) {
+            val value = IslandRecorderMeter.level(raw)
+            assertTrue(value in previous.. .85f)
+            previous = value
+        }
+    }
     @Test fun scalarCapabilityChecksTheCallerBeforeReadingAndRejectsInactiveOrForeignPayloads() {
         var reads = 0
         val meter = IslandRecorderMeter.producer(1000) { reads++; 12345 }
@@ -55,7 +67,7 @@ class IslandRecorderMeterTest {
             scheduler.runCurrent()
             scheduler.advanceTimeBy(335); scheduler.runCurrent()
             assertTrue(reads in 5..6)
-            assertArrayEquals(FloatArray(5) { 1f }, frames.last(), 0f)
+            assertArrayEquals(FloatArray(5) { .85f }, frames.last(), .00001f)
             amplitude = 0
             scheduler.advanceTimeBy(402); scheduler.runCurrent()
             assertArrayEquals(FloatArray(5), frames.last(), 0f)

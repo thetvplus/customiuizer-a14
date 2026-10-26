@@ -145,6 +145,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var entryCameraAnchor = false
     private var motion: ValueAnimator? = null
     private var mediaReturnProgress = 1f
+    private var nativeArrival = false
     private val breadth = IslandMotion.Spring()
     private var breadthExtraVelocity = 0f
     private val depth = IslandMotion.Spring()
@@ -434,6 +435,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         commitContent()
         clearContentEffects()
         disposed = false; leaving = false
+        nativeArrival = mediaReturn
         mediaReturnProgress = if (mediaReturn && icon.drawable != null &&
             !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
         if (simplified || !ValueAnimator.areAnimatorsEnabled()) resetTransform()
@@ -443,7 +445,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             pivotY = if (entryCameraAnchor) cameraY else 0f
             // Establish the final height before anything becomes visible, then grow
             // only the middle. The first shape is a full-height camera-centred circle.
-            scaleX = if (entryCameraAnchor) compactWidth() / geometryWidth.coerceAtLeast(1) else 1f
+            scaleX = if (entryCameraAnchor) compactWidth() / geometryWidth.coerceAtLeast(1)
+                else if (expanded) shortWidth.toFloat().coerceAtMost(geometryWidth.toFloat()) / geometryWidth.coerceAtLeast(1) else 1f
             scaleY = 1f
             translationX = 0f
             translationY = if (entryCameraAnchor) 0f else -topTravel()
@@ -456,6 +459,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     /** A visible idle capsule is already the source object. Do not reset its opacity,
      * breadth or pivot when the native app window hands music back to it. */
     fun prepareReturnFromCurrent() {
+        nativeArrival = true
+        if (!simplified && ValueAnimator.areAnimatorsEnabled()) mediaReturnProgress = 0f
+    }
+
+    fun prepareContentArrivalFromCurrent() {
+        nativeArrival = false
         if (!simplified && ValueAnimator.areAnimatorsEnabled()) mediaReturnProgress = 0f
     }
 
@@ -474,7 +483,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             visualLeft?.let { translationX = it - pivotX * (1f - scaleX) }
             visualTop?.let { translationY = it - pivotY * (1f - scaleY) }
         }
-        val travel = if (mediaReturnProgress == 0f) IslandMotion.MEDIA_RETURN - (35 * returnStrength).toLong()
+        val travel = if (mediaReturnProgress == 0f) {
+            if (nativeArrival) IslandMotion.MEDIA_RETURN - (35 * returnStrength).toLong() else IslandMotion.ENTER
+        }
             else if (entering) IslandMotion.ENTER
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
         animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
@@ -673,7 +684,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 scaleX = springBreadth / geometryWidth.coerceAtLeast(1)
                 scaleY = depth.sample(time, cameraDiameter, maximumHeight) / geometryHeight.coerceAtLeast(1)
                 val progress = (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                val weight = catchWeight * if (returning) .85f + .3f * returnStrength else 1f
+                val weight = catchWeight * if (returning && nativeArrival) .85f + .3f * returnStrength else 1f
                 val physicalBreadth = springBreadth + geometryWidth * weight * IslandMotion.mediaReturnCatch(progress)
                 scaleX = minOf(maximumBreadth, physicalBreadth) / geometryWidth.coerceAtLeast(1)
                 breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else
@@ -748,8 +759,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Compensate the drawing transform. The physical shell changes width while text,
         // square artwork and wave bars retain their own aspect ratios, including drags.
         val sx = scaleX.coerceAtLeast(.01f); val sy = scaleY.coerceAtLeast(.01f)
-        val arrival = if (mediaReturnProgress < 1f && !simplified)
-            .92f + .08f * IslandMotion.settle.getInterpolation(((mediaReturnProgress - .5f) / .5f).coerceIn(0f, 1f)) else 1f
+        val arrival = if (mediaReturnProgress < 1f && !simplified) IslandMotion.arrivalScale(mediaReturnProgress) else 1f
         val contentScale = (if (contentMotion && !simplified) .97f + .03f * layerReveal else 1f) * arrival
         icon.scaleX = contentScale / sx; icon.scaleY = contentScale / sy
         text.scaleX = contentScale / sx; text.scaleY = contentScale / sy

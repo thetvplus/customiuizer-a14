@@ -110,6 +110,7 @@ internal class IslandActivityController(
     private val privacyAccess = if (IslandLiveKind.PRIVACY in options.liveKinds && markerLoader != null)
         ModuleHelper.guarded<IslandPrivacyAccess?>(null) { IslandPrivacyAccess(markerLoader) } else null
     private val forms = IslandFormState()
+    private val motionCoordinator = IslandMotionCoordinator()
     private val idleIdentity = Any()
     private val shell = IslandActivityView(context)
     private val touchWindow = IslandTouchWindow(shell)
@@ -1434,7 +1435,8 @@ internal class IslandActivityController(
         // draw: it may still contain PLAYING although a real pause expired while hidden.
         val current = if (state.allowed && mediaRevealAt == null && !shadeBaseline && !foregroundBaseline) state.media(now)?.takeUnless {
             it.packageName == foregroundPackage } else null
-        forms.select(if (toast != null || current != null) state.identity(now) else null)
+        forms.select(if (toast != null || current != null) state.identity(now) else null,
+            options.automaticWidth && IslandMotionCoordinator.prefersLong(toast))
         val idle = options.idle && !forms.idleSuppressed && (state.allowed || shadeIdle) && toast == null && current == null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null
         val liveExpiry = toast?.liveActivity?.clock?.takeIf { it.countdown && it.pausedMillis == null }
@@ -1466,8 +1468,14 @@ internal class IslandActivityController(
         if (showingMedia != (lastContent is IslandMediaContent) ||
             showingMedia && (lastContent as? IslandMediaContent)?.token != current?.token ||
             !showingMedia && lastContent !== toast) invalidateActions()
-        val secondary = attached && lastContent != null &&
-            ((lastContent is IslandToastContent) != (toast != null) || toast != null && lastContent !== toast)
+        val motionIdentity = if (idle) idleIdentity else state.identity(now)
+        val motionKind = when {
+            idle -> IslandMotionCoordinator.Kind.IDLE
+            showingMedia -> IslandMotionCoordinator.Kind.MEDIA
+            toast?.liveActivity != null -> IslandMotionCoordinator.Kind.ACTIVITY
+            else -> IslandMotionCoordinator.Kind.NOTICE
+        }
+        val secondary = attached && motionCoordinator.replacement(motionIdentity)
         val visualLeft = shell.pivotX * (1f - shell.scaleX) + shell.translationX
         val visualTop = shell.pivotY * (1f - shell.scaleY) + shell.translationY
         val contentChanged = shell.bind(toast?.text ?: current?.title.orEmpty(), if (showingMedia) current?.artist else toast?.detail,
@@ -1505,13 +1513,13 @@ internal class IslandActivityController(
         return try {
             val entering = !attached
             val fromIdle = attached && !resumingExit && lastContent === idleIdentity
-            val sourceEntry = options.liveReturn && (entering || resumingExit || fromIdle) && toast?.liveActivity != null
-            val returning = sourceEntry || (entering || resumingExit || fromIdle) && showingMedia && current?.playing == true &&
+            val returning = (entering || resumingExit || fromIdle) && showingMedia && current?.playing == true &&
                 current.packageName in options.mediaReturnApps && mediaReturn?.token == current.token
+            val arrival = motionCoordinator.arrival(motionIdentity, motionKind, entering, resumingExit, returning)
             if (showingMedia) mediaReturn = null // One foreground edge can animate only once.
             if (returning) {
                 if (fromIdle) shell.prepareReturnFromCurrent() else shell.prepareEntry(mediaReturn = true)
-            }
+            } else if (arrival == IslandMotionCoordinator.Arrival.CONTENT) shell.prepareContentArrivalFromCurrent()
             if (entering) {
                 // Prepare alpha/scale BEFORE the first Surface can be drawn, including re-entry
                 // after a native activity or a notification-panel transition.
@@ -1520,7 +1528,7 @@ internal class IslandActivityController(
                 if (!touchWindow.inputRegionAvailable) { hide(); return false }
             }
             else if (windowGeometryChanged) window!!.updateViewLayout(touchWindow, params)
-            if (entering || resumingExit || secondary || contentChanged || lastWidth != geometry.width ||
+            if (arrival != IslandMotionCoordinator.Arrival.NONE || resumingExit || secondary || contentChanged || lastWidth != geometry.width ||
                 lastHeight != geometry.height || lastLeft != geometry.left || lastTop != geometry.top) {
                 shell.transition(lastWidth, lastHeight, geometry.width, geometry.height, entering, secondary,
                     if (entering || returning && !fromIdle) null else lastLeft - geometry.left + visualLeft,
@@ -1530,6 +1538,7 @@ internal class IslandActivityController(
             lastTop = geometry.top
             lastLeft = geometry.left
             lastContent = toast ?: current ?: idleIdentity
+            motionCoordinator.commit(motionIdentity, motionKind)
             updateSpectrum()
             (if (idle) idleIdentity else state.identity(now))?.let { presentation.prepare(it, geometry.width) }
             true

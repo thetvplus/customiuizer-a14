@@ -12,12 +12,18 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
-import kotlin.math.sqrt
 
 /** Read-only scalar bridge. Never creates an AudioRecord or returns recorded samples. */
 internal object IslandRecorderMeter {
     private const val DESCRIPTOR = "tv.withaibuild.customiuizer.r14.RecorderLevel"
     private const val LEVEL = IBinder.FIRST_CALL_TRANSACTION
+    /** The native input is a 16-bit peak, not RMS. Keep visible headroom rather than
+     * boosting speech peaks with sqrt or normalising every sample to its own maximum. */
+    internal fun level(raw: Int): Float {
+        if (raw <= 256) return 0f
+        val x = raw.coerceAtMost(32767) / 32767f
+        return x * (.6f + .25f * x)
+    }
     fun producer(systemUiUid: Int, level: () -> Int): IBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code != LEVEL) return super.onTransact(code, data, reply, flags)
@@ -57,7 +63,7 @@ internal object IslandRecorderMeter {
                 while (isActive && generation == epoch) {
                     val start = SystemClock.uptimeMillis()
                     val raw = withContext(io) { ModuleHelper.guarded<Int?>(null) { read(next) } } ?: break
-                    val level = sqrt(raw / 32767f)
+                    val level = level(raw)
                     // A five-sample envelope, not invented frequency bands. Quiet remains quiet.
                     if (previous < 0f || kotlin.math.abs(level - previous) >= .018f || level == 0f && previous != 0f)
                         previous = level

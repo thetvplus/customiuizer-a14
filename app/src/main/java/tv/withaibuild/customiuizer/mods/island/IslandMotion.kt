@@ -42,13 +42,15 @@ internal object IslandMotion {
     fun mediaReturnCatch(progress: Float): Float {
         val t = ((progress - .55f) / .45f).coerceIn(0f, 1f)
         val tail = 1f - t
-        return 9.6f * t * t * tail * tail
+        return 7.2f * t * t * tail * tail
     }
     fun catchDerivative(progress: Float): Float {
         if (progress <= .55f || progress >= 1f) return 0f
         val t = (progress - .55f) / .45f
-        return 19.2f * t * (1f - t) * (1f - 2f * t) / .45f
+        return 14.4f * t * (1f - t) * (1f - 2f * t) / .45f
     }
+    fun arrivalScale(progress: Float): Float = .96f + .04f *
+        settle.getInterpolation(((progress - .5f) / .5f).coerceIn(0f, 1f))
     private const val DECAY = 7.04
     private const val FREQUENCY = 5.28
     private const val PHASE = 4.0 / 3.0
