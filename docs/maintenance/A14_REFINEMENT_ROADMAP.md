@@ -48,6 +48,14 @@
 
 本轮完整源码 `70964ff4081aa8357a4bc6afd707764b7e806604` 的 Deep Host 为 396 个套件、3,625 项测试，零失败 / 错误、2 项既定跳过，Debug lint 通过。全量工具 677 项通过、5 项既定跳过；新增页面输入后补验文档生成、EOL 和运行时合同工具 50 项通过。源码门禁、文档链接及生成指纹通过。未签名 Develop R8 / fatal lint、同产物来源、SDK 34、arm64 及 16 KiB 对齐通过；最终 DEX 没有 compileOnly Hook API 定义，设置 Manifest 入口没有直接 API 指令引用，既有类加载回归通过。setId / getId 各一次，同产物 mapping 对应 HookInstallation.intercept / confirmStableHookId，replaceHook 为零；没有新增录音权限。APK SHA-256 为 `e926a1533b4ed0d027954fb97a8bdff398ceadd6de0504cd623c0a54e1ed2307`，mapping / usage / configuration 与边界查询保留在证据子目录 `70964ff4/`。证据入口为仓库外 `customiuizer-a14-evidence/island-handoff-20261026/`。当前无设备连接，录音格式矩阵、动画 / 手势、键盘高度变化及页面帧时间仍待实机验收。
 
+## 媒体岛的格式与真实电平
+
+追加格式审查确认媒体不直接读取 WAV / M4A / MP3 / FLAC / Opus 文件；SystemUI Visualizer 返回的始终是转换后的 8 位频谱，原始 16 / 24 / 32 位 PCM、压缩码率与录音桥接不能混算。依 [Android Visualizer 合同](https://developer.android.com/reference/android/media/audiofx/Visualizer)，旧 NORMALIZED 模式会按内容放大，现改为 AS_PLAYED 并核验设置返回值及模式读回；原生不支持则释放，沿用轻量回退。音量减小或静音时柱高相应降低，不把源格式标签用作增益，也不读取文件来推断实际解码品质。
+
+原生采集率高于 102.4 kHz 时请求 1024 点频谱，普通采集率仍为 512 点，始终服从原生容量；避免 176.4 / 192 kHz 下 512 点无法观测第一段 200 Hz 频率。只在采集创建时查询一次，不增加逐帧 Binder、解码器或 PCM 缓存；五个标量及既有静止停钟 / 隐藏释放继续保留。高采集率下增加的 FFT 工作限于该租约，设备 CPU 与功耗成本待测，不宣称本项提速或省电。
+
+新原生后端回归先在 `447c31b7` 复现三项缺口：仍开启归一化、高采集率低频分辨率不足、忽略原生配置失败；失败 XML / 日志在同一仓库外证据 `media-format-before-contract.*`。补齐模式读回失败释放、原生容量上限、8–192 kHz / 256–1024 点静音及幅度对照、换轨首帧静音和变采集率不重启等回归。包含此前按键 / 导航 / 应用管理的 Deep 完整 Host 为 406 个套件、3,691 项测试，零失败 / 错误、2 项既定跳过；Debug lint、源码门禁、文档及生成指纹通过，全量工具 677 项通过、5 项既定跳过。播放器的真实编码 / 位深、扬声器 / 有线 / 蓝牙路由、offload 与受保护音频仍待实机，不将 Host FFT 输入当作文件解码测试。
+
 ## 功能边界与输入法收回键
 
 按宿主稳定、隐私、当前所有者与异常语义优先核对共享路由 / 安装门禁及高风险调用链，保持每个开关只操作其目标。没有重新调整全局输入、导航高度、系统 Insets、通知解锁策略或其他来源的开关。

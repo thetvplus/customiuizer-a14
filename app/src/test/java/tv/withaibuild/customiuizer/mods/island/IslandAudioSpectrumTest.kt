@@ -101,6 +101,34 @@ class IslandAudioSpectrumTest {
         assertEquals(count, frames.size)
     }
 
+    @Test fun aQuietFirstFrameAfterTrackReplacementClearsThePreviousSongsLevels() {
+        start()
+        backend.listener!!(ByteArray(512) { 100 }, 48_000_000); drain()
+        assertTrue(frames.last()!!.any { it > .1f })
+        val old = backend.listener!!
+        backend.session = 99; backend.changed!!(); drain()
+        backend.listener!!(ByteArray(1024), 192_000_000); drain()
+        assertArrayEquals(FloatArray(5), frames.last(), 0f)
+        val count = frames.size
+        old(ByteArray(512) { 127 }, 48_000_000); drain()
+        assertEquals(count, frames.size)
+        assertEquals(listOf(42), backend.closed)
+    }
+
+    @Test fun callbackSampleRateChangesUseCurrentFrequencyMappingWithoutRestartingCapture() {
+        start()
+        for (rate in listOf(44_100_000, 48_000_000, 96_000_000, 192_000_000)) {
+            val fft = ByteArray(1024)
+            val bin = kotlin.math.round(1000f * fft.size / (rate / 1000f)).toInt()
+            fft[bin * 2] = 64
+            backend.listener!!(fft, rate); drain()
+            assertTrue("rate=$rate", frames.last()!![2] > .1f)
+            for (index in listOf(0, 1, 3, 4)) assertEquals(0f, frames.last()!![index], 0f)
+        }
+        assertEquals(listOf(42), backend.opened)
+        assertEquals(1, backend.subscriptions)
+    }
+
     @Test fun invalidDataOrAbsentCallbacksReleaseAndFallbackWithoutRetryPolling() {
         start()
         backend.listener!!(ByteArray(7), 0); drain()
