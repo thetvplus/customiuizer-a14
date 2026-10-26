@@ -14,14 +14,6 @@ import kotlin.math.sin
 internal object G4Geometry {
     private const val STEPS = 32
 
-    /** Follow the physical display when available, retaining a short flat side on shallow panels. */
-    fun radius(screenRadius: Float, manual: Float, fallback: Float, limit: Float): Float {
-        val automatic = if (screenRadius > 0f) minOf(screenRadius, limit * .92f)
-            else minOf(fallback, limit * .64f)
-        val radius = if (manual > 0f) manual else automatic
-        return radius.coerceIn(0f, limit.coerceAtLeast(0f))
-    }
-
     internal fun heading(t: Double): Double {
         if (t > 0.5) return PI / 2 - heading(1 - t)
         val u = t * 2

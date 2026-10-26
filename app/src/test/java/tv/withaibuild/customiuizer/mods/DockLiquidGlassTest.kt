@@ -119,11 +119,14 @@ class DockLiquidGlassTest {
             val material = decoration.getChildAt(0) as DockBackgroundTest.NativeMaterial
             assertEquals(1, DockWindowManagerShadow.listenerCount())
             assertTrue(material.appliedEnabled)
+            val radius = (decoration.foreground as DockBackgroundTint).radius
             fun assertPanel() {
                 val bitmap = Bitmap.createBitmap(decoration.width, decoration.height, Bitmap.Config.ARGB_8888)
                 decoration.draw(Canvas(bitmap))
                 assertEquals(View.INVISIBLE, material.visibility)
                 assertFalse(material.appliedEnabled)
+                assertEquals(radius, (decoration.foreground as DockBackgroundTint).radius, 0f)
+                assertEquals(radius, material.appliedCornerRadius, 0f)
                 assertTrue("Every unavailable material must still draw a visible panel",
                     Color.alpha(bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)) > 180)
                 bitmap.recycle()
@@ -134,6 +137,8 @@ class DockLiquidGlassTest {
             DockWindowManagerShadow.change(true)
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
             assertTrue(material.appliedEnabled)
+            assertEquals(radius, (decoration.foreground as DockBackgroundTint).radius, 0f)
+            assertEquals(radius, material.appliedCornerRadius, 0f)
             org.robolectric.Shadows.shadowOf(power).setIsPowerSaveMode(true)
             activity.get().sendBroadcast(android.content.Intent(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED))
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()

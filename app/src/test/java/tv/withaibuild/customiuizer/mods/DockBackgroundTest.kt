@@ -656,10 +656,10 @@ class DockBackgroundTest {
     }
 
     @Test
-    fun automaticCornersFollowTheDeviceAndKeepAFlatSideOnShallowPanels() {
-        assertEquals(80f, DockCornerGeometry.radius(80f, 0f, 28f, 100f), 0f)
-        assertEquals(80f, DockCornerGeometry.radius(80f, 0f, 28f, 140f), 0f)
-        assertEquals(36.8f, DockCornerGeometry.radius(80f, 0f, 28f, 40f), 0.00001f)
+    fun automaticCornersKeepMainPanelProportionsEvenWithLargeDisplayCorners() {
+        assertEquals(28f, DockCornerGeometry.radius(80f, 0f, 28f, 100f), 0f)
+        assertEquals(28f, DockCornerGeometry.radius(80f, 0f, 28f, 140f), 0f)
+        assertEquals(25.6f, DockCornerGeometry.radius(80f, 0f, 28f, 40f), 0.00001f)
         assertEquals(10f, DockCornerGeometry.radius(10f, 0f, 28f, 40f), 0f)
         assertEquals(24f, DockCornerGeometry.radius(80f, 24f, 28f, 40f), 0f)
         assertEquals(25.6f, DockCornerGeometry.radius(0f, 0f, 28f, 40f), 0.00001f)
@@ -820,7 +820,8 @@ class DockBackgroundTest {
         layout()
         native.viewTreeObserver.dispatchOnPreDraw()
         val radius = (decoration.foreground as DockBackgroundTint).radius
-        assertEquals(minOf(100f, minOf(decoration.width, decoration.height) * .46f), radius)
+        assertEquals(minOf(100f, 20f * decoration.resources.displayMetrics.density,
+            minOf(decoration.width, decoration.height) * .32f), radius)
         val material = decoration.getChildAt(0) as NativeMaterial
         val params = decoration.layoutParams as FrameLayout.LayoutParams
         val margin = params.leftMargin
@@ -870,7 +871,8 @@ class DockBackgroundTest {
             native.layout(0, top, 360, top + 80)
             decoration.onApplyWindowInsets(insets)
             native.viewTreeObserver.dispatchOnPreDraw()
-            val expected = minOf(100f, minOf(decoration.width, decoration.height) * .46f)
+            val expected = minOf(100f, 20f * decoration.resources.displayMetrics.density,
+                minOf(decoration.width, decoration.height) * .32f)
             assertTrue(expected > 0f)
             assertEquals(expected, (decoration.foreground as DockBackgroundTint).radius, 0f)
             assertEquals(expected, material.appliedCornerRadius, 0f)
@@ -1261,11 +1263,20 @@ class DockBackgroundTest {
                 LauncherDockBackground.attach(native, DockBackgroundConfig(material = material, radiusDp = manual), materialConstructor, access)
                 repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
                 val decoration = native.getChildAt(0) as DockBackgroundView
+                decoration.onApplyWindowInsets(WindowInsets.Builder()
+                    .setRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT,
+                        RoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT, 118, 118, 118))
+                    .setRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT,
+                        RoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT, 118, 118, 118)).build())
                 val actual = (decoration.foreground as DockBackgroundTint).radius
                 if (first < 0f) first = actual
                 assertEquals(first, actual, 0f)
                 assertEquals(actual, (decoration.getChildAt(0) as NativeMaterial).appliedCornerRadius, 0f)
-                if (manual == 0) assertTrue(actual < decoration.height * 0.5f)
+                if (manual == 0) {
+                    assertTrue("A physical display corner must not inflate the native panel", actual <=
+                        ReflectionHelpers.getField<Float>(decoration, "panelRadius"))
+                    assertTrue("Automatic Dock corners retain main's flat sides", actual <= decoration.height * .32f)
+                }
                 native.removeView(decoration)
             }
         }
