@@ -29,6 +29,44 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
+    @Test fun contractingTheShellKeepsTheWholeArtworkInsideItsPhysicalEdgeMargin() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell = IslandActivityView(activity)
+        activity.setContentView(shell, FrameLayout.LayoutParams(280, 40))
+        shell.bind("Notice", null, android.graphics.drawable.ColorDrawable(Color.RED), false, false, false, 0, false)
+        fun layout(width: Int) {
+            shell.geometry(width, 40, 40, 300)
+            shell.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(40, View.MeasureSpec.EXACTLY))
+            shell.layout(0, 0, width, 40); shell.cameraAnchor(20f, 16f)
+        }
+        layout(280)
+        shadowOf(Looper.getMainLooper()).idle()
+        ShadowChoreographer.setPaused(true)
+        try {
+            layout(184)
+            shell.transition(280, 40, 184, 40, false)
+            val clock = getField<ValueAnimator>(shell, "motion")
+            for (time in listOf(0L, 16L, 48L, 96L, 160L)) {
+                clock.currentPlayTime = time
+                val bitmap = Bitmap.createBitmap(320, 40, Bitmap.Config.ARGB_8888)
+                try {
+                    val canvas = Canvas(bitmap)
+                    canvas.translate(-shell.pivotX * (1f - shell.scaleX) - shell.translationX, 0f)
+                    canvas.concat(shell.matrix)
+                    shell.draw(canvas)
+                    val redPixels = (0 until bitmap.width).filter { x ->
+                        val pixel = bitmap.getPixel(x, 20)
+                        Color.red(pixel) > 240 && Color.green(pixel) < 16 && Color.alpha(pixel) > 240
+                    }
+                    assertEquals("The full 24 px cover must survive contraction at $time ms", 24, redPixels.size)
+                    assertEquals(16, redPixels.first())
+                } finally { bitmap.recycle() }
+            }
+            clock.end()
+        } finally { ShadowChoreographer.setPaused(false); activity.finish() }
+    }
+
     @Test fun sixtyHzSequenceAndMidFlightReversal() = frames(60)
     @Test fun oneHundredTwentyHzSequenceAndMidFlightReversal() = frames(120)
     @Test fun earlyReversalBrakesWithinTheActualSafeWidthInsteadOfStopping() = reverseAt(32L)
@@ -105,7 +143,7 @@ class IslandMotionFramesTest {
         try {
             for (style in IslandEntranceStyle.entries) {
                 val shell = IslandActivityView(activity).apply {
-                    entranceStyle = style; windowTop = 8; shortWidth = 160
+                    entranceStyle = style; windowTop = 8
                 }
                 activity.setContentView(shell, FrameLayout.LayoutParams(300, 40))
                 shell.geometry(300, 40, 40, 300); shell.layout(0, 0, 300, 40); shell.cameraAnchor(20f, 16f)

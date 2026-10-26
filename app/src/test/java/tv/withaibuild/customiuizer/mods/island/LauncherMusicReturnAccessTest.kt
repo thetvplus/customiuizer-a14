@@ -70,6 +70,36 @@ class LauncherMusicReturnAccessTest {
     private val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
         280f, 15f, 800f, 125f, 1080, 2400)
 
+    @Test fun incomingWindowsLandInsideTheIslandWithTheSameCentreAndHeight() {
+        val source = params()
+        val target = (access.retarget(source, Element(), Nav(), frame) as Params).targetRect
+        assertTrue(target.width() < frame.right - frame.left)
+        assertTrue(target.left > frame.left)
+        assertTrue(target.right < frame.right)
+        assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
+        assertEquals(frame.top, target.top, 0f)
+        assertEquals(frame.bottom, target.bottom, 0f)
+        assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
+    }
+
+    @Test fun musicClockRecorderAndCallWindowsUseTheSameBoundedLandingPolicy() {
+        for (pkg in listOf("chosen.music", "com.android.deskclock", "com.android.soundrecorder", "com.android.incallui")) {
+            val current = frame.copy(packageName = pkg)
+            val source = params(targets = Targets(arrayOf(Remote().apply { packageName = pkg })))
+            val nav = Nav().apply { mRunningTaskComponentName = ComponentName(pkg, "Activity") }
+            val target = (access.retarget(source, Element(), nav, current) as Params).targetRect
+            assertEquals((frame.right - frame.left) * .92f, target.width(), .001f)
+            assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
+            assertEquals(frame.bottom - frame.top, target.height(), .001f)
+        }
+        for (width in listOf(38f, 48f, 100f, 160f, 320f)) {
+            val current = frame.copy(left = 0f, right = width, top = 0f, bottom = 38f)
+            val target = current.landingRectangle()
+            assertTrue(target.width() >= 38f)
+            assertTrue(target.left >= current.left && target.right <= current.right)
+        }
+    }
+
     @Test fun quickOpeningOverrideAndItsSuperDispatchChooseExactlyOneInstalledEntry() {
         val quick = LauncherMusicReturnAccess(Nav::class.java, Element::class.java, Params::class.java,
             Targets::class.java, Remote::class.java, DeviceConfig::class.java, FastElement::class.java)
@@ -105,7 +135,7 @@ class LauncherMusicReturnAccessTest {
         val source = params()
         val result = access.retarget(source, Element(), Nav(), frame) as Params
         assertNotSame(source, result)
-        assertEquals(frame.rectangle(), result.targetRect)
+        assertEquals(frame.landingRectangle(), result.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
         assertEquals(55f, result.endRadius, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)

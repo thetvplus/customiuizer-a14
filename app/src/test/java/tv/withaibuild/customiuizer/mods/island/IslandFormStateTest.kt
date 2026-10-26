@@ -4,6 +4,36 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandFormStateTest {
+    @Test fun sourceAndFormDetermineDismissalWithoutAnIntermediateNotificationForm() {
+        val forms = IslandFormState()
+        assertEquals(IslandFormState.Form.IDLE, forms.form)
+        assertEquals(IslandFormState.Dismissal.IDLE, forms.dismissal())
+        for (source in IslandFormState.Source.entries.filter { it != IslandFormState.Source.IDLE }) {
+            forms.select(source, source = source)
+            assertEquals(source, forms.source)
+            assertEquals(IslandFormState.Form.SHORT, forms.form)
+            assertEquals(IslandFormState.Dismissal.SOURCE, forms.dismissal())
+            assertTrue(forms.expand())
+            assertEquals(IslandFormState.Form.LONG, forms.form)
+            assertEquals(if (source == IslandFormState.Source.MEDIA) IslandFormState.Dismissal.COLLAPSE
+                else IslandFormState.Dismissal.SOURCE, forms.dismissal())
+        }
+        forms.select(null)
+        assertEquals(IslandFormState.Source.IDLE, forms.source)
+        assertEquals(IslandFormState.Form.IDLE, forms.form)
+    }
+
+    @Test fun notificationsActivitiesAndFeedbackHaveExplicitSourceOwnership() {
+        val feedback = IslandToastContent("Copied", "source", null)
+        assertEquals(IslandFormState.Source.FEEDBACK, IslandFormState.source(feedback, true))
+        assertEquals(IslandFormState.Source.NOTIFICATION,
+            IslandFormState.source(feedback.copy(notificationKey = "native-key"), true))
+        assertEquals(IslandFormState.Source.ACTIVITY, IslandFormState.source(feedback.copy(
+            liveActivity = IslandLiveActivity(IslandLiveKind.RECORDER, "source", 1000)), true))
+        assertEquals(IslandFormState.Source.MEDIA, IslandFormState.source(null, true))
+        assertEquals(IslandFormState.Source.IDLE, IslandFormState.source(null, false))
+    }
+
     @Test fun onlyCurrentIdentityMayStayExpandedAndThereIsNoMessageHistory() {
         val forms = IslandFormState()
         val media = Any(); val notice = Any()

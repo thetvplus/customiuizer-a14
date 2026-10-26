@@ -9,6 +9,7 @@ internal object IslandSizing {
     const val LONG_MAX_DP = 218
     const val COLLAPSED_HEIGHT_DP = 40
     const val EDGE_DP = 16
+    const val SCREEN_EDGE_DP = 24
     const val HEIGHT_MIN_DP = 32
     const val HEIGHT_MAX_DP = 64
     const val SHORT_MIN_DP = 96
@@ -21,7 +22,7 @@ internal object IslandSizing {
         longDp: Int = 240, manual: Boolean = false, heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true): Int {
         val short = if (manual) shortDp.coerceIn(SHORT_MIN_DP, SHORT_MAX_DP) else automatic(SHORT_DP, heightDp)
         val long = if (manual) maxOf(short, longDp.coerceIn(LONG_MIN_DP, LONG_MAX_MANUAL_DP)) else automatic(LONG_MAX_DP, heightDp)
-        return minOf((long * density).roundToInt(), screen - (if (centered) (24 * density).roundToInt() else 0),
+        return minOf((long * density).roundToInt(), screen - (if (centered) (2 * SCREEN_EDGE_DP * density).roundToInt() else 0),
             clearance, romMaximum).coerceAtLeast(0)
     }
 
@@ -67,13 +68,18 @@ internal object IslandSizing {
      * Its viewport bound is separate from the quiet, compact form's icon clearance. */
     fun expanded(density: Float, screen: Int, safeWidth: Int, gap: Int, caption: Float,
         heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true): Int {
-        val minimum = automatic(300, heightDp) * density
-        val maximum = automatic(352, heightDp) * density
+        val minimum = automatic(280, heightDp) * density
+        val maximum = automatic(320, heightDp) * density
         val content = if (centered) gap + 2 * (caption + EDGE_DP * density)
             else caption + (2 * EDGE_DP + 32) * density
         return minOf(maxOf(minimum, content).coerceAtMost(maximum).roundToInt(),
-            screen - (16 * density).roundToInt(), safeWidth).coerceAtLeast(0)
+            screen - (2 * SCREEN_EDGE_DP * density).roundToInt(), safeWidth).coerceAtLeast(0)
     }
+
+    /** A small catch may borrow free space, while keeping both physical edges safe. */
+    fun elasticMaximum(width: Int, left: Int, safeLeft: Int, safeRight: Int, density: Float): Int =
+        width + minOf((8 * density).roundToInt(),
+            2 * minOf(left - safeLeft, safeRight - left - width).coerceAtLeast(0))
 
     fun horizontalOffsetLimit(short: Int, smallest: Int, gap: Int, contentInset: Int): Int =
         minOf((smallest - gap) / 2, (short - gap) / 2 - contentInset).coerceAtLeast(0)

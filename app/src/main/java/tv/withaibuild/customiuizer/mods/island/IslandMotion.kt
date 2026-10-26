@@ -19,6 +19,10 @@ internal object IslandMotion {
     const val MEDIA_RETURN = 560L
     const val PAUSE_LIFETIME = 2000L
     const val LOADING_LIFETIME = 30000L
+    const val LANDING_WIDTH_RATIO = .92f
+    /** All accepted native content lands inside the shell, with the same centre and
+     * height. Keep at least a round end cap even for the smallest available island. */
+    fun landingWidth(width: Float, height: Float) = maxOf(width * LANDING_WIDTH_RATIO, minOf(width, height))
     val relaxed = TimeInterpolator { progress(it) }
     /** Committed collapse/exit and canceled drags settle without crossing their endpoint. */
     val settle = TimeInterpolator { val t = 1f - it.coerceIn(0f, 1f); 1f - t * t * t }

@@ -343,6 +343,195 @@ class IslandActivityLifecycleTest {
         drain()
     }
 
+    @Test fun notificationWidensTheCurrentMusicAndDismissesToItAtTheSharedAutomaticHeight() {
+        val controller = controller(chat = true, media = true)
+        native.player = launchablePlayer("shared-notice-motion")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val musicWidth = original.width
+        val height = original.height
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(701))); drain()
+        assertSame(original, shell)
+        assertEquals(1, adds); assertEquals(0, removes)
+        assertTrue(original.expanded)
+        assertTrue(original.width > musicWidth)
+        assertEquals(musicWidth.toFloat(), original.width * original.scaleX, .001f)
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertEquals(IslandMotion.ENTER, arrival.duration)
+        for (time in 0L until arrival.duration step 16L) {
+            arrival.currentPlayTime = time
+            assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+            assertEquals(0f, original.translationY, .001f)
+        }
+        arrival.end()
+        val longWidth = original.width
+        assertTrue(original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null))
+        assertTrue("The source is released before any animation waypoint", original.isMedia)
+        drain()
+        assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
+        val returning = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertEquals(IslandMotion.ENTER, returning.duration)
+        returning.currentPlayTime = 80
+        assertTrue(original.width * original.scaleX < longWidth)
+        assertTrue(original.width * original.scaleX > musicWidth)
+        assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+        returning.end()
+        assertEquals(musicWidth, original.width)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun noticeDismissalWithoutMusicReturnsDirectlyToTheConfiguredIdleIsland() {
+        val controller = controller(chat = true, idle = true)
+        drain()
+        val original = shell!!
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(original, "motion")?.end()
+        val idleWidth = original.width
+        val height = original.height
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(702))); drain()
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        val longWidth = original.width
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        assertTrue(original.idle)
+        drain()
+        assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
+        val returning = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        returning.currentPlayTime = 80
+        assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+        assertEquals(0f, original.translationY, .001f)
+        returning.end()
+        assertEquals(idleWidth, original.width)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun finalNoticeInTopModeExitsInOneRigidVerticalFlight() {
+        val controller = controller(chat = true)
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(703))); drain()
+        val original = shell!!
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        val width = original.width
+        val height = original.height
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        val exit = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertEquals(IslandMotion.EXIT, exit.duration)
+        var previousY = original.translationY
+        for (time in 0L until exit.duration step 16L) {
+            exit.currentPlayTime = time
+            assertEquals(width.toFloat(), original.width * original.scaleX, .001f)
+            assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+            assertEquals(0f, original.translationX, .001f)
+            assertTrue(original.translationY <= previousY)
+            previousY = original.translationY
+        }
+        assertTrue(original.translationY < 0f)
+        exit.end()
+        assertEquals(1, removes)
+        assertFalse(original.isAttachedToWindow)
+    }
+
+    @Test fun expandedMusicDismissalCollapsesTheSameMediaBeforeDismissingItsSource() {
+        val controller = controller(media = true, idle = true)
+        native.player = launchablePlayer("music-detail-dismissal")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val compactWidth = original.width
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        original.onExpand(); drain()
+        assertTrue(original.expanded)
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        original.onDismiss(); drain()
+        assertTrue(original.isMedia)
+        assertFalse(original.expanded)
+        assertFalse(original.idle)
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        assertEquals(compactWidth, original.width)
+        original.onDismiss(); drain()
+        assertTrue(original.idle)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun notificationAndMusicAlsoShareAnExplicitlyConfiguredHeight() {
+        val controller = controller(chat = true, media = true, height = 48)
+        native.player = launchablePlayer("manual-notice-height")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertEquals(48, original.height)
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(704))); drain()
+        val clock = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        for (time in 0L until clock.duration step 16L) {
+            clock.currentPlayTime = time
+            assertEquals(48f, original.height * original.scaleY, .001f)
+        }
+        clock.end()
+        original.onDismiss(); drain()
+        assertTrue(original.isMedia)
+        assertEquals(48f, original.height * original.scaleY, .001f)
+    }
+
+    @Test fun dismissingANoticeDuringExpansionCarriesTheVisibleWidthAndVelocityBackToMusic() {
+        val controller = controller(chat = true, media = true)
+        native.player = launchablePlayer("interrupted-notice-motion")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val compactWidth = original.width
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(705))); drain()
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        arrival.currentPlayTime = 80
+        val width = original.width * original.scaleX
+        val velocity = org.robolectric.util.ReflectionHelpers.getField<IslandMotion.Spring>(original, "breadth").velocity
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        assertTrue(original.isMedia)
+        drain()
+        assertEquals(width, original.width * original.scaleX, .001f)
+        assertEquals(velocity, org.robolectric.util.ReflectionHelpers.getField<IslandMotion.Spring>(original, "breadth").velocity, .01f)
+        val returning = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertNotSame(arrival, returning)
+        arrival.end()
+        assertSame(returning, org.robolectric.util.ReflectionHelpers.getField(original, "motion"))
+        returning.end()
+        assertEquals(compactWidth, original.width)
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun expandedNoticeAndItsElasticCeilingRespectBothNativeRoundedCorners() {
+        metricsWidth = 360
+        metricsInsets = WindowInsets.Builder()
+            .setRoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT,
+                android.view.RoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT, 40, 40, 40))
+            .setRoundedCorner(android.view.RoundedCorner.POSITION_TOP_RIGHT,
+                android.view.RoundedCorner(android.view.RoundedCorner.POSITION_TOP_RIGHT, 40, 320, 40)).build()
+        val controller = controller(chat = true, simplified = true)
+        assertTrue(controller.takeNotification(message(706))); drain()
+        val original = shell!!
+        val left = original.left - (original.parent as IslandTouchWindow).margin
+        assertTrue(left >= 40)
+        assertTrue(left + original.width <= 320)
+        assertTrue(original.width <= 280)
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Float>(original, "maximumWidth") <= 280f)
+    }
+
+    @Test fun horizontalOffsetsCannotPushAWideCenteredNoticeIntoEitherScreenCorner() {
+        metricsWidth = 360
+        val controller = controller(chat = true, simplified = true, automaticWidth = false,
+            shortWidth = 160, longWidth = 400)
+        assertTrue(controller.takeNotification(message(707))); drain()
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        for (value in listOf(0, 80, 160)) {
+            prefs.put("system_island_horizontal_offset", value)
+            observer.onChange("system_island_horizontal_offset"); drain()
+            val original = shell!!
+            val left = original.left - (original.parent as IslandTouchWindow).margin
+            assertTrue("left edge at stored offset $value", left >= 24)
+            assertTrue("right edge at stored offset $value", left + original.width <= metricsWidth - 24)
+            assertEquals(312, original.width)
+        }
+    }
+
     @Test fun bufferingKeepsTheVisibleTrackStillUntilPlaybackCommitsTheLatestMetadata() {
         val controller = controller(media = true, simplified = true)
         val player = launchablePlayer("buffered-track")

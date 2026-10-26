@@ -9,10 +9,34 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class IslandMotionCoordinatorTest {
+    @Test fun mediaAndNotificationHandoffsUseTheSharedArrivalInBothDirections() {
+        val policy = IslandMotionCoordinator()
+        policy.commit("music", IslandFormState.Source.MEDIA)
+        assertEquals(IslandMotionCoordinator.Arrival.CONTENT,
+            policy.arrival("message", IslandFormState.Source.NOTIFICATION, false, false, false))
+        policy.commit("message", IslandFormState.Source.NOTIFICATION)
+        assertEquals(IslandMotionCoordinator.Arrival.CONTENT,
+            policy.arrival("music", IslandFormState.Source.MEDIA, false, false, false))
+    }
+
+    @Test fun changingFormsUsesTheSharedArrivalButRefreshingTheSameFormDoesNotReplayIt() {
+        val policy = IslandMotionCoordinator()
+        for (source in IslandFormState.Source.entries.filter { it != IslandFormState.Source.IDLE }) {
+            policy.commit("current", source)
+            assertEquals(IslandMotionCoordinator.Arrival.CONTENT,
+                policy.arrival("current", source, false, false, false, expanded = true))
+            policy.commit("current", source, expanded = true)
+            assertEquals(IslandMotionCoordinator.Arrival.NONE,
+                policy.arrival("current", source, false, false, false, expanded = true))
+            assertEquals(IslandMotionCoordinator.Arrival.CONTENT,
+                policy.arrival("current", source, false, false, false))
+        }
+    }
+
     @Test fun everyContentSourceUsesTheSameIdleArrivalAndOnlyAnAcceptedNativeWindowGetsItsProfile() {
-        for (kind in IslandMotionCoordinator.Kind.entries.filter { it != IslandMotionCoordinator.Kind.IDLE }) {
+        for (kind in IslandFormState.Source.entries.filter { it != IslandFormState.Source.IDLE }) {
             val policy = IslandMotionCoordinator()
-            policy.commit("idle", IslandMotionCoordinator.Kind.IDLE)
+            policy.commit("idle", IslandFormState.Source.IDLE)
             assertEquals(IslandMotionCoordinator.Arrival.CONTENT, policy.arrival("new", kind, false, false, false))
             assertEquals(IslandMotionCoordinator.Arrival.STANDARD, policy.arrival("new", kind, true, false, false))
             assertEquals(IslandMotionCoordinator.Arrival.NATIVE_WINDOW, policy.arrival("new", kind, false, false, true))
@@ -21,18 +45,18 @@ class IslandMotionCoordinatorTest {
     @Test fun aFeedbackPreemptionCannotTurnTheFollowingRecorderIntoAMetadataOnlyRefresh() {
         val policy = IslandMotionCoordinator()
         val recorder = IslandLiveKey(IslandLiveKind.RECORDER, 10305, 1)
-        policy.commit("silent-toast", IslandMotionCoordinator.Kind.NOTICE)
+        policy.commit("silent-toast", IslandFormState.Source.FEEDBACK)
         assertEquals(IslandMotionCoordinator.Arrival.CONTENT,
-            policy.arrival(recorder, IslandMotionCoordinator.Kind.ACTIVITY, false, false, false))
-        policy.commit(recorder, IslandMotionCoordinator.Kind.ACTIVITY)
+            policy.arrival(recorder, IslandFormState.Source.ACTIVITY, false, false, false))
+        policy.commit(recorder, IslandFormState.Source.ACTIVITY)
         repeat(64) {
             assertFalse(policy.replacement(recorder))
             assertEquals(IslandMotionCoordinator.Arrival.NONE,
-                policy.arrival(recorder, IslandMotionCoordinator.Kind.ACTIVITY, false, false, false))
+                policy.arrival(recorder, IslandFormState.Source.ACTIVITY, false, false, false))
         }
-        policy.commit("copy", IslandMotionCoordinator.Kind.NOTICE)
+        policy.commit("copy", IslandFormState.Source.FEEDBACK)
         assertEquals(IslandMotionCoordinator.Arrival.CONTENT,
-            policy.arrival(recorder, IslandMotionCoordinator.Kind.ACTIVITY, false, false, false))
+            policy.arrival(recorder, IslandFormState.Source.ACTIVITY, false, false, false))
         assertEquals(0f, IslandMotion.sizeCatch(160f, 40f, 160f, 40f, 6f), 0f)
     }
     @Test fun aNotificationBodyEarnsLongFormWithoutALengthThresholdAndUserCollapseStillWins() {

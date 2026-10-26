@@ -34,6 +34,9 @@ internal object IslandMusicReturnSignal {
             left >= 0 && top >= 0 && right > left && bottom > top &&
             right <= screenWidth && bottom <= screenHeight
         fun rectangle() = RectF(left, top, right, bottom)
+        fun landingRectangle() = rectangle().apply {
+            inset((width() - IslandMotion.landingWidth(width(), height())) * .5f, 0f)
+        }
     }
 
     data class Snapshot(val frame: Frame?, val issuedAt: Long, val sequence: Long) {

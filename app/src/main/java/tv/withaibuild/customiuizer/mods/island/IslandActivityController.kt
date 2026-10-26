@@ -356,10 +356,14 @@ internal class IslandActivityController(
     init {
         touchWindow.onUnavailable = { handler.post { ModuleHelper.guarded { if (!disposed) render() } } }
         shell.onDismiss = {
-            if ((lastContent as? IslandMediaContent)?.token == backgroundPlayer?.sessionToken) backgroundPlayer = null
-            if (lastContent === idleIdentity) forms.dismissIdle() else {
-                (lastContent as? IslandToastContent)?.liveActivity?.let { live.dismiss(it.key) }
-                state.dismiss()
+            when (forms.dismissal()) {
+                IslandFormState.Dismissal.COLLAPSE -> Unit
+                IslandFormState.Dismissal.IDLE -> forms.dismissIdle()
+                IslandFormState.Dismissal.SOURCE -> {
+                    if ((lastContent as? IslandMediaContent)?.token == backgroundPlayer?.sessionToken) backgroundPlayer = null
+                    (lastContent as? IslandToastContent)?.liveActivity?.let { live.dismiss(it.key) }
+                    state.dismiss()
+                }
             }
             forms.collapse()
             render()
@@ -1238,10 +1242,14 @@ internal class IslandActivityController(
                     val hole = metrics.windowInsets.displayCutout?.boundingRectTop
                     val safe = metrics.windowInsets.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.systemBars() or
                         android.view.WindowInsets.Type.displayCutout())
+                    // Rounded corners are not display-cutout insets. Use their physical
+                    // inner edges conservatively; this is read only on geometry changes.
+                    val leftCorner = metrics.windowInsets.getRoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT)?.radius ?: 0
+                    val rightCorner = metrics.windowInsets.getRoundedCorner(android.view.RoundedCorner.POSITION_TOP_RIGHT)?.radius ?: 0
                     Screen(metrics.bounds.width(), metrics.bounds.height(), hole?.width() ?: 0,
                         if (hole != null && !hole.isEmpty) hole.bottom - minOf(hole.width(), hole.height()) else -1,
                         if (hole != null && !hole.isEmpty) hole.bottom - minOf(hole.width(), hole.height()) * .5f else -1f,
-                        safe.left, metrics.bounds.width() - safe.right,
+                        maxOf(safe.left, leftCorner), metrics.bounds.width() - maxOf(safe.right, rightCorner),
                         hole?.left ?: 0, hole?.right ?: 0, hole?.bottom ?: 0, hole?.top ?: 0, safe.top)
                 }
             }
@@ -1262,12 +1270,15 @@ internal class IslandActivityController(
         shell.contentHeight(heightDp)
         val caption = label ?: feedback?.text
         val centered = options.position == 1
+        val safeLeft = if (centered) maxOf(bounds.safeLeft, dp(IslandSizing.SCREEN_EDGE_DP)) else bounds.safeLeft
+        val safeRight = if (centered) minOf(bounds.safeRight, bounds.width - dp(IslandSizing.SCREEN_EDGE_DP)) else bounds.safeRight
+        val safeWidth = (safeRight - safeLeft).coerceAtLeast(0)
         val gap = if (centered) maxOf(dp(40), bounds.holeWidth + dp(16)) else 0
         val center = if (bounds.holeWidth > 0) (bounds.holeLeft + bounds.holeRight) * .5f else bounds.width * .5f
         val nativeClearance = if (centered && options.automaticWidth)
             DynamicIslandStatusBarFade.measuredCompactClearance(bounds.width, center) else null
-        val clearance = if (centered && options.automaticWidth) nativeClearance ?: dp(IslandSizing.SHORT_DP)
-            else bounds.safeRight - bounds.safeLeft
+        val clearance = if (centered && options.automaticWidth) minOf(nativeClearance ?: dp(IslandSizing.SHORT_DP), safeWidth)
+            else safeWidth
         val density = context.resources.displayMetrics.density
         val expanded = !idle && !mediaOnly && label == null && forms.expanded
         val compactMaximumWidth = IslandSizing.maximumWidth(density, bounds.width, clearance,
@@ -1276,7 +1287,7 @@ internal class IslandActivityController(
         val maximumWidth = if (expanded && options.automaticWidth) {
             val content = maxOf(shell.textWidth(feedback?.text ?: media?.title.orEmpty()),
                 shell.textWidth(feedback?.detail ?: media?.artist.orEmpty())) * .94f
-            IslandSizing.expanded(density, bounds.width, bounds.safeRight - bounds.safeLeft, gap,
+            IslandSizing.expanded(density, bounds.width, safeWidth, gap,
                 content, heightDp, centered)
         } else compactMaximumWidth
         val naturalWidth = IslandSizing.collapsed(density, bounds.width, clearance, gap, dp(24).toFloat(),
@@ -1308,14 +1319,17 @@ internal class IslandActivityController(
         val horizontalOffset = if (centered && bounds.holeWidth > 0) dp(options.horizontalOffset).coerceIn(-offsetLimit, offsetLimit)
             else dp(options.horizontalOffset)
         val placement = IslandPosition.layout(width, dp(heightDp), minimumWidth,
-            bounds.safeLeft, bounds.safeRight, options.position, horizontalOffset,
+            safeLeft, safeRight, options.position, horizontalOffset,
             (anchor + offset).coerceAtLeast(0), gap, bounds.holeLeft, bounds.holeRight,
             bounds.holePhysicalTop, bounds.holeBottom, dp(8)) ?: return null
         val height = if (feedback?.status == true)
             shell.statusHeight(feedback.text, placement.width, placement.gap, dp(heightDp)) ?: return null
             else dp(heightDp)
-        return Geometry(placement.width, height, placement.top, placement.gap,
-            if (centered) maximumWidth else placement.width, placement.left)
+        val elasticMaximum = IslandSizing.elasticMaximum(placement.width, placement.left,
+            safeLeft, safeRight, density)
+        val animationMaximum = if (!centered) placement.width else if (expanded && options.automaticWidth)
+            elasticMaximum else minOf(maximumWidth, elasticMaximum)
+        return Geometry(placement.width, height, placement.top, placement.gap, animationMaximum, placement.left)
     }
 
     private fun liveReturnFrame(now: Long): IslandMusicReturnSignal.Frame? {
@@ -1414,8 +1428,10 @@ internal class IslandActivityController(
         // draw: it may still contain PLAYING although a real pause expired while hidden.
         val current = if (state.allowed && mediaRevealAt == null && !shadeBaseline && !foregroundBaseline) state.media(now)?.takeUnless {
             it.packageName == foregroundPackage || mediaSourceExcluded(it) || pipHomeBlocked(it) } else null
+        val showingMedia = toast == null && current != null
+        val motionSource = IslandFormState.source(toast, showingMedia)
         forms.select(if (toast != null || current != null) state.identity(now) else null,
-            IslandMotionCoordinator.prefersLong(toast, options.automaticWidth))
+            IslandMotionCoordinator.prefersLong(toast, options.automaticWidth), motionSource)
         val idle = options.idle && !forms.idleSuppressed && (state.allowed || shadeIdle) && toast == null && current == null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null
         val liveExpiry = toast?.liveActivity?.clock?.takeIf { it.countdown && it.pausedMillis == null }
@@ -1438,22 +1454,10 @@ internal class IslandActivityController(
         shell.idleTapAction = options.idleActions.tap
         shell.expandOnDown = options.expandOnDown
         shell.expanded = forms.expanded
-        shell.shortWidth = IslandSizing.collapsed(context.resources.displayMetrics.density,
-            screen?.width ?: geometry.width, geometry.maximumWidth, geometry.gap,
-            dp(24).toFloat(), dp(24).toFloat(), shortDp = options.shortWidth, longDp = options.longWidth,
-            manual = !options.automaticWidth, heightDp = kotlin.math.round(geometry.height / context.resources.displayMetrics.density).toInt(),
-            centered = options.position == 1)
-        val showingMedia = toast == null && current != null
         if (showingMedia != (lastContent is IslandMediaContent) ||
             showingMedia && (lastContent as? IslandMediaContent)?.token != current?.token ||
             !showingMedia && lastContent !== toast) invalidateActions()
         val motionIdentity = if (idle) idleIdentity else state.identity(now)
-        val motionKind = when {
-            idle -> IslandMotionCoordinator.Kind.IDLE
-            showingMedia -> IslandMotionCoordinator.Kind.MEDIA
-            toast?.liveActivity != null -> IslandMotionCoordinator.Kind.ACTIVITY
-            else -> IslandMotionCoordinator.Kind.NOTICE
-        }
         val secondary = attached && motionCoordinator.replacement(motionIdentity)
         val visualLeft = shell.pivotX * (1f - shell.scaleX) + shell.translationX
         val visualTop = shell.pivotY * (1f - shell.scaleY) + shell.translationY
@@ -1494,7 +1498,7 @@ internal class IslandActivityController(
             val fromIdle = attached && !resumingExit && lastContent === idleIdentity
             val returning = (entering || resumingExit || fromIdle) && showingMedia && current?.playing == true &&
                 options.returnsMedia(current.packageName) && mediaReturn?.token == current.token
-            val arrival = motionCoordinator.arrival(motionIdentity, motionKind, entering, resumingExit, returning)
+            val arrival = motionCoordinator.arrival(motionIdentity, motionSource, entering, resumingExit, returning, forms.expanded)
             if (showingMedia) mediaReturn = null // One foreground edge can animate only once.
             if (returning) {
                 if (fromIdle) shell.prepareReturnFromCurrent() else shell.prepareEntry(mediaReturn = true)
@@ -1517,7 +1521,7 @@ internal class IslandActivityController(
             lastTop = geometry.top
             lastLeft = geometry.left
             lastContent = toast ?: current ?: idleIdentity
-            motionCoordinator.commit(motionIdentity, motionKind)
+            motionCoordinator.commit(motionIdentity, motionSource, forms.expanded)
             updateSpectrum()
             (if (idle) idleIdentity else state.identity(now))?.let { presentation.prepare(it, geometry.width) }
             true

@@ -23,6 +23,72 @@ import org.robolectric.util.ReflectionHelpers.setField
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandTransitionContinuityTest {
+    @Test fun cameraSeedCannotMakeTheSelectedHeightJumpDuringContentArrivalOrRigidExit() {
+        layout(240, 32)
+        shell.cameraAnchor(16f, 40f)
+        shell.prepareContentArrivalFromCurrent()
+        shell.transition(240, 32, 240, 32, false)
+        val arrival = motion()
+        for (time in 0L until arrival.duration step 16L) {
+            arrival.currentPlayTime = time
+            assertEquals(32f, shell.height * shell.scaleY, .001f)
+        }
+        arrival.end()
+        shell.entranceStyle = IslandEntranceStyle.TOP
+        shell.exit {}
+        val exit = motion()
+        for (time in 0L until exit.duration step 16L) {
+            exit.currentPlayTime = time
+            assertEquals(32f, shell.height * shell.scaleY, .001f)
+        }
+        exit.end()
+    }
+
+    @Test fun topExitDuringAMorphHoldsItsCurrentPhysicalSizeWhileMovingStraightUp() {
+        shell.entranceStyle = IslandEntranceStyle.TOP
+        layout(300, 40)
+        shell.transition(184, 40, 300, 40, false, secondary = true)
+        motion().currentPlayTime = 80
+        val width = shell.width * shell.scaleX
+        val height = shell.height * shell.scaleY
+        var completed = 0
+        val old = motion()
+        shell.exit { completed++ }
+        val exit = motion()
+        assertEquals(IslandMotion.EXIT, exit.duration)
+        var previousY = shell.translationY
+        for (time in 0L until exit.duration step 8L) {
+            exit.currentPlayTime = time
+            assertEquals(width, shell.width * shell.scaleX, .001f)
+            assertEquals(height, shell.height * shell.scaleY, .001f)
+            assertTrue(shell.translationY <= previousY)
+            previousY = shell.translationY
+            assertEquals(0f, shell.translationX, .001f)
+        }
+        old.end()
+        assertEquals(0, completed)
+        exit.end()
+        assertEquals(1, completed)
+    }
+
+    @Test fun longFormCanMakeASmallBoundedCatchWithoutChangingItsHeight() {
+        layout(300, 40, maximum = 308)
+        shell.prepareContentArrivalFromCurrent()
+        shell.transition(184, 40, 300, 40, false, secondary = true)
+        val clock = motion()
+        var widest = 0f
+        for (time in 0L until clock.duration step 8L) {
+            clock.currentPlayTime = time
+            val width = shell.width * shell.scaleX
+            widest = maxOf(widest, width)
+            assertTrue(width <= 308f)
+            assertEquals(40f, shell.height * shell.scaleY, .001f)
+        }
+        assertTrue("The shared catch should settle past its target in the reserved space", widest > 300f)
+        clock.end()
+        assertEquals(300f, shell.width * shell.scaleX, .001f)
+    }
+
     @Test fun albumHandoffCompletesOpacityAndRotationBeforeItsFiniteClockEnds() {
         label("Track A", true)
         shell.transition(184, 40, 184, 40, false)

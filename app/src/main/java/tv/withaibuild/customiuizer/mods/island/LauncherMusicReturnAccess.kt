@@ -124,7 +124,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
         val values = fields.map { it.get(original) }.toTypedArray()
-        values[2] = frame.rectangle()
+        values[2] = frame.landingRectangle()
         values[4] = (frame.bottom - frame.top) * .5f
         // A14's frame callback draws any *already initialized* floating icon without
         // consulting ignoreIcon. A null target makes native initTargetView retire that

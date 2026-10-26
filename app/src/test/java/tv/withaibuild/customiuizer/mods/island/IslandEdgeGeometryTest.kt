@@ -55,7 +55,7 @@ class IslandEdgeGeometryTest {
     @Test fun sideSizingUsesContiguousContentAndIgnoresTheClockBatteryClearance() {
         assertEquals(164, IslandSizing.collapsed(1f, 400, 400, 0, 24f, 100f, centered = false))
         assertEquals(218, IslandSizing.maximumWidth(1f, 240, 400, centered = false))
-        assertEquals(216, IslandSizing.maximumWidth(1f, 240, 400))
+        assertEquals(192, IslandSizing.maximumWidth(1f, 240, 400)) // 24 dp per centered edge.
         val camera = IslandPosition.layout(184, 40, 140, 0, 400, 1, 0, 8, 40, 192, 208, 0, 32)!!
         assertEquals(108, camera.left)
         assertEquals(40, camera.gap)

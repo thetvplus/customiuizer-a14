@@ -2,8 +2,25 @@ package tv.withaibuild.customiuizer.mods.island
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlin.math.roundToInt
 
 class IslandSizingTest {
+    @Test fun longContentLeavesVisibleSpaceBeforeTheScreenCornersAtEveryHeight() {
+        for (height in 32..64) for (density in listOf(1f, 2.75f, 3f)) {
+            val screen = (360 * density).roundToInt()
+            val width = IslandSizing.expanded(density, screen, screen, (40 * density).roundToInt(),
+                10000f, height)
+            assertTrue("height=$height density=$density width=$width", width <= screen - (48 * density).roundToInt())
+        }
+    }
+
+    @Test fun elasticTravelUsesOnlyTheRemainingSafeSpaceOnBothSides() {
+        assertEquals(328, IslandSizing.elasticMaximum(320, 40, 24, 376, 1f))
+        assertEquals(320, IslandSizing.elasticMaximum(320, 24, 24, 376, 1f))
+        assertEquals(324, IslandSizing.elasticMaximum(320, 54, 24, 376, 1f))
+        assertEquals(320, IslandSizing.elasticMaximum(320, 40, 40, 360, 1f))
+    }
+
     @Test fun automaticHeightFitsTheNativeRowWithoutPretendingToFillIt() {
         assertEquals(38, IslandSizing.automaticHeight(24, 46))
         assertEquals(36, IslandSizing.automaticHeight(24, 42))
@@ -19,16 +36,16 @@ class IslandSizingTest {
     }
     @Test fun expandedContentUsesMoreRoomWithoutChangingTheCompactCeiling() {
         val expanded = IslandSizing.expanded(1f, 372, 372, 40, 150f, 38)
-        assertTrue(expanded in 300..356)
+        assertTrue(expanded in 273..312)
         assertEquals(218, IslandSizing.maximumWidth(1f, 372, 372))
-        assertEquals(264, IslandSizing.expanded(1f, 280, 280, 40, 500f))
+        assertEquals(232, IslandSizing.expanded(1f, 280, 280, 40, 500f))
         assertTrue(IslandSizing.expanded(1f, 372, 372, 40, 150f) >=
             IslandSizing.expanded(1f, 372, 372, 40, 20f))
     }
     @Test fun expandedManualRangeCanUseTheViewportWhileAutomaticWidthRetainsItsClearance() {
         assertEquals(320, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 0f,
             shortDp = 320, longDp = 400, manual = true))
-        assertEquals(376, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 1000f,
+        assertEquals(352, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 1000f,
             shortDp = 320, longDp = 400, manual = true))
         assertEquals(220, IslandSizing.maximumWidth(1f, 400, 220, heightDp = 64))
         assertEquals(218, IslandSizing.maximumWidth(1f, 400, 400))
@@ -38,7 +55,7 @@ class IslandSizingTest {
         assertEquals(280, IslandSizing.maximumWidth(1f, 400, 320, manual = true, longDp = 280))
         assertEquals(210, IslandSizing.maximumWidth(1f, 400, 210, manual = true, longDp = 280))
         assertEquals(200, IslandSizing.maximumWidth(1f, 400, 320, romMaximum = 200))
-        assertEquals(176, IslandSizing.maximumWidth(1f, 200, 320))
+        assertEquals(152, IslandSizing.maximumWidth(1f, 200, 320))
     }
     @Test fun manualShortAndMediumWidthsStillYieldToNativeEssentialIconsAndScreenBounds() {
         assertEquals(200, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
