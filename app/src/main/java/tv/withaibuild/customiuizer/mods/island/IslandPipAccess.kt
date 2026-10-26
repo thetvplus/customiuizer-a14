@@ -24,11 +24,13 @@ internal data class IslandPipSnapshot(val generation: Long, val state: Int,
     val component: ComponentName? = null, val user: UserHandle? = null,
     val taskId: Int? = null, val displayId: Int = Display.DEFAULT_DISPLAY,
     val visible: Boolean = true, val stashed: Boolean = false, val pendingEntry: Boolean = false) {
+    fun belongsTo(packageName: String, sourceUser: UserHandle?): Boolean = displayId == Display.DEFAULT_DISPLAY &&
+        sourceUser != null && user == sourceUser && component?.packageName == packageName
+
     /** Protect the native video window; media display is controlled by the floating-window option. */
     fun blocks(media: IslandMediaContent): Boolean = (pendingEntry || state in 1..5 &&
         (state != 4 || visible && !stashed)) &&
-        displayId == Display.DEFAULT_DISPLAY && component?.packageName == media.packageName &&
-        user != null && user == media.user
+        belongsTo(media.packageName, media.user)
 }
 
 /** Resolved once in the actual Shell ClassLoader; none of these reads run from a draw callback. */

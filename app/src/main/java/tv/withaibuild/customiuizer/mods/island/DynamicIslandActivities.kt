@@ -55,11 +55,21 @@ internal data class IslandOptions(
     val liveKinds: Set<IslandLiveKind> = emptySet(),
     val liveReturn: Boolean = true,
 ) {
+    private val mediaReturningPackages: Set<String> = if (enabled && media && mediaReturn)
+        mediaReturnApps.filterTo(linkedSetOf()) { it !in excludedApps } else emptySet()
     private val returningPackages: Set<String> = buildSet {
-        if (media && mediaReturn) addAll(mediaReturnApps)
-        if (liveReturn) addAll(IslandLiveKind.windowPackages(liveKinds))
+        addAll(mediaReturningPackages)
+        if (enabled && liveReturn) IslandLiveKind.windowPackages(liveKinds).filterTo(this) { it !in excludedApps }
     }
     fun returnPackages(): Set<String> = returningPackages
+    fun returnsMedia(pkg: String): Boolean = pkg in mediaReturningPackages
+    fun returnsLive(kind: IslandLiveKind, pkg: String): Boolean = enabled && liveReturn && kind in liveKinds &&
+        IslandLiveKind.canReturn(kind, pkg) && pkg in returningPackages
+    fun acceptsNotification(pkg: String, category: String?, channel: String? = null, template: String? = null): Boolean {
+        if (!enabled || pkg in excludedApps || pkg in chatExcludedApps) return false
+        if (chat && pkg in notificationApps) return true
+        return IslandLiveLabels.notificationKind(pkg, category, channel, template)?.let { it in liveKinds } == true
+    }
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
             val mode = StrongToastPresentationMode.fromPreference(prefs.getStringAsInt("system_strong_toast_mode", 0))
@@ -73,14 +83,14 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_toast_capsule"), prefs.getBoolean("system_island_media"),
                 waveformMode != 0,
                 prefs.getBoolean("system_island_simplified"),
-                prefs.getStringSet("system_island_excluded_apps"),
+                prefs.getStringSet("system_island_excluded_apps").toSet(),
                 prefs.getBoolean("system_island_chat"),
                 prefs.getInt("system_island_height", 40).coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP),
                 prefs.getBoolean("system_island_width_auto", true),
                 shortWidth,
                 prefs.getInt("system_island_width_medium", 240).coerceIn(IslandSizing.LONG_MIN_DP, IslandSizing.LONG_MAX_MANUAL_DP).coerceAtLeast(shortWidth),
                 IslandEntranceStyle.fromPreference(prefs.getStringAsInt("system_island_entrance_style", 1)),
-                prefs.getStringSet("system_island_chat_excluded_apps"),
+                prefs.getStringSet("system_island_chat_excluded_apps").toSet(),
                 prefs.getBoolean("system_island_media_swipe", true),
                 IslandMusicActions.read(prefs),
                 prefs.getStringAsInt("system_island_position", 1).coerceIn(0, 2),
@@ -88,7 +98,7 @@ internal data class IslandOptions(
                 IslandSystemKind.entries.filterTo(linkedSetOf()) {
                     prefs.getBoolean(it.preferenceKey, legacyFeedback)
                 },
-                prefs.getStringSet("system_island_notification_apps"), waveformMode,
+                prefs.getStringSet("system_island_notification_apps").toSet(), waveformMode,
                 prefs.getBoolean("system_island_media_return"),
                 prefs.getStringSet("system_island_media_return_apps").toSet(),
                 prefs.getBoolean("system_island_hide_in_floating_window"),

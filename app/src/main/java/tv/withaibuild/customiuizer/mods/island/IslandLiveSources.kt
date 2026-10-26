@@ -95,7 +95,7 @@ internal class IslandLiveSources(private val context: Context, private val handl
         setup = scope.launch {
             val identities = withContext(io) {
                 buildMap {
-                    for (pkg in IslandLiveKind.sourcePackages(kinds.map { it.value })) ModuleHelper.guarded {
+                    for (pkg in kinds.mapNotNullTo(linkedSetOf()) { it.signalPackage }) ModuleHelper.guarded {
                         // An explicitly selected native-compatible app can be installed in /data
                         // (e.g. the global Recorder). Pin its current UID, not its install location.
                         // The subscriber still checks framework sender package/UID and token ownership.

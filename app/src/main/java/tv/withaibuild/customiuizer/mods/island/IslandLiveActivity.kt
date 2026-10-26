@@ -16,6 +16,13 @@ internal enum class IslandLiveKind(val value: String, val priority: Int, val lab
     SMS("sms", 0, R.string.system_island_live_sms),
     CALENDAR("calendar", 0, R.string.system_island_live_calendar);
 
+    val signalPackage: String? get() = when {
+        this in clockKinds -> CLOCK_PACKAGE
+        this == RECORDER -> RECORDER_PACKAGE
+        else -> null
+    }
+    val windowPackage: String? get() = if (this == CALL) CALL_PACKAGE else signalPackage
+
     companion object {
         const val PREFERENCE = "system_island_live_kinds"
         const val CLOCK_PACKAGE = "com.android.deskclock"
@@ -27,15 +34,11 @@ internal enum class IslandLiveKind(val value: String, val priority: Int, val lab
             return entries.filterTo(linkedSetOf()) { it.value in values }
         }
         fun sourcePackages(values: Collection<String>): Set<String> = buildSet {
-            if (clockKinds.any { it.value in values }) add(CLOCK_PACKAGE)
-            if (RECORDER.value in values) add(RECORDER_PACKAGE)
+            for (kind in entries) if (kind.value in values) kind.signalPackage?.let { add(it) }
         }
-        fun windowPackages(kinds: Set<IslandLiveKind>): Set<String> = buildSet {
-            addAll(sourcePackages(kinds.map { it.value }))
-            if (CALL in kinds) add(CALL_PACKAGE)
-        }
-        fun canReturn(kind: IslandLiveKind, pkg: String) =
-            IslandLiveSignal.owns(pkg, kind) || kind == CALL && pkg == CALL_PACKAGE
+        fun windowPackages(kinds: Set<IslandLiveKind>): Set<String> =
+            kinds.mapNotNullTo(linkedSetOf()) { it.windowPackage }
+        fun canReturn(kind: IslandLiveKind, pkg: String) = kind.windowPackage == pkg
     }
 }
 

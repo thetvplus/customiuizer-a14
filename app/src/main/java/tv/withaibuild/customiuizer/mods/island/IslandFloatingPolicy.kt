@@ -4,10 +4,10 @@ import android.os.UserHandle
 
 /** Published scalar identities only. No task lookup or Binder call from presentation/draw. */
 internal object IslandFloatingPolicy {
-    fun blocked(enabled: Boolean, notification: Boolean, media: IslandMediaContent?, user: UserHandle?,
+    fun blocksMedia(enabled: Boolean, media: IslandMediaContent?, user: UserHandle?,
         freeformKnown: Boolean, freeform: Boolean, packages: Set<String>?, pip: IslandPipSnapshot,
         applicationOverlay: Boolean): Boolean {
-        if (notification || media == null) return false
+        if (media == null) return false
         return excludes(enabled, media.packageName, media.user, user, freeformKnown, freeform, packages, pip, applicationOverlay)
     }
 
@@ -15,8 +15,8 @@ internal object IslandFloatingPolicy {
         freeformKnown: Boolean, freeform: Boolean, packages: Set<String>?, pip: IslandPipSnapshot,
         applicationOverlay: Boolean): Boolean {
         if (!enabled || sourceUser == null || sourceUser != user) return false
-        val pipActive = pip.displayId == 0 && (pip.pendingEntry || pip.state in 1..5)
+        val pipActive = pip.pendingEntry || pip.state in 1..5
         return applicationOverlay || freeformKnown && freeform && packages?.contains(packageName) == true ||
-            pipActive && pip.user == user && pip.component?.packageName == packageName
+            pipActive && pip.belongsTo(packageName, sourceUser)
     }
 }

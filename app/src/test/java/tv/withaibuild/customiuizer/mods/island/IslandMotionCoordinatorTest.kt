@@ -69,4 +69,13 @@ class IslandMotionCoordinatorTest {
         forms.select("clock", automaticExpanded = true); assertFalse(forms.expanded)
         forms.select("next", automaticExpanded = true); assertTrue(forms.expanded)
     }
+    @Test fun nativeMediaCancellationDoesNotOwnAnIndependentContentArrival() {
+        val view = IslandActivityView(org.robolectric.RuntimeEnvironment.getApplication())
+        view.prepareContentArrivalFromCurrent()
+        view.cancelNativeArrival()
+        assertEquals(0f, org.robolectric.util.ReflectionHelpers.getField<Float>(view, "mediaReturnProgress"), 0f)
+        view.prepareReturnFromCurrent()
+        view.cancelNativeArrival()
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(view, "mediaReturnProgress"), 0f)
+    }
 }

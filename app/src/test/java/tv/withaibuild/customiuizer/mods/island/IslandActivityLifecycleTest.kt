@@ -180,6 +180,50 @@ class IslandActivityLifecycleTest {
         assertNull(frame())
     }
 
+    @Test fun excludedFloatingMediaUsesTheExistingIdleCapsuleInsteadOfRemovingIt() {
+        val controller = controller(media = true, idle = true, hideFloating = true, simplified = true)
+        native.player = launchablePlayer("excluded-video-idle")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertTrue(original.isMedia)
+        controller.pipChanged(IslandPipSnapshot(1, 4,
+            android.content.ComponentName(context.packageName, "Player"), android.os.Process.myUserHandle()))
+        drain()
+        assertTrue(original.isAttachedToWindow)
+        assertTrue(original.idle)
+        assertEquals(1, adds)
+        val lease = controller.showToast(IslandToastContent("Copied", context.packageName, null), 3000)!!
+        drain(); assertFalse(original.idle)
+        controller.releaseToast(lease); drain()
+        assertTrue(original.idle)
+        assertSame(original, shell)
+        assertEquals(1, adds)
+    }
+
+    @Test fun excludingAPipPlayerCannotWithdrawAnIndependentRecorderReturnTarget() {
+        val controller = controller(media = true, idle = true, hideFloating = true, liveKinds = setOf("recorder"))
+        native.player = launchablePlayer("excluded-video-recorder")
+        controller.updateFromNative(native); revealMedia()
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        controller.pipChanged(IslandPipSnapshot(1, 4,
+            android.content.ComponentName(context.packageName, "Player"), android.os.Process.myUserHandle()))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        registry.update(IslandLiveKind.RECORDER, IslandLiveActivity(IslandLiveKind.RECORDER,
+            IslandLiveKind.RECORDER_PACKAGE, 10345, IslandLiveClock(android.os.SystemClock.elapsedRealtime(), false), session = 42))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        val publisher = org.robolectric.util.ReflectionHelpers.getField<IslandMusicReturnSignal.Publisher?>(controller, "musicReturnPublisher")
+        assertNotNull("Only the PiP media source is excluded; the recorder still owns a native return target", publisher)
+        val current = org.robolectric.util.ReflectionHelpers.getField<() -> IslandMusicReturnSignal.Frame?>(publisher, "current")
+        assertEquals(IslandLiveKind.RECORDER_PACKAGE, current()?.packageName)
+        val motion = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        motion.currentPlayTime = 120
+        val progress = org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress")
+        assertTrue(progress > 0f && progress < 1f)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertEquals("Media invalidation must not cancel the recorder's shared content arrival",
+            progress, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), .0001f)
+    }
+
     @Test fun idleAndActivityReuseTheSameWindowAndDismissalStaysPassiveUntilWake() {
         val controller = controller(idle = true, simplified = true)
         drain()

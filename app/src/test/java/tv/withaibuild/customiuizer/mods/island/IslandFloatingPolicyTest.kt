@@ -20,9 +20,9 @@ class IslandFloatingPolicyTest {
         val music = IslandMediaContent(session.sessionToken, "music.app", "Track", null, null,
             true, 0, PlaybackState.STATE_PLAYING, user, 10001)
         val video = IslandPipSnapshot(1, 4, ComponentName("video.app", "Player"), user)
-        fun blocked(content: IslandMediaContent? = music, notice: Boolean = false,
+        fun blocked(content: IslandMediaContent? = music,
             packages: Set<String>? = emptySet(), pip: IslandPipSnapshot = video, overlay: Boolean = false,
-            known: Boolean = true) = IslandFloatingPolicy.blocked(true, notice, content, user,
+            known: Boolean = true) = IslandFloatingPolicy.blocksMedia(true, content, user,
                 known, packages?.isNotEmpty() == true, packages, pip, overlay)
         try {
             assertFalse(blocked())
@@ -30,10 +30,28 @@ class IslandFloatingPolicyTest {
             assertFalse(blocked(packages = setOf("another.video")))
             assertTrue(blocked(packages = setOf("music.app")))
             assertTrue(blocked(overlay = true))
-            assertFalse(blocked(notice = true, overlay = true))
             assertFalse(blocked(content = null, overlay = true))
             assertFalse(blocked(known = false, packages = null, pip = video.copy(component = null)))
             assertFalse(blocked(music.copy(packageName = "video.app"), pip = video.copy(displayId = 1)))
+        } finally { session.release() }
+    }
+
+    @Test fun pinnedOwnershipAndNativeWindowHandoffShareIdentityButKeepTheirDifferentVisibilityRules() {
+        val session = MediaSession(RuntimeEnvironment.getApplication(), "pip-owner")
+        val user = Process.myUserHandle()
+        val media = IslandMediaContent(session.sessionToken, "video.app", "Video", null, null,
+            true, 0, PlaybackState.STATE_PLAYING, user, 10001)
+        try {
+            val pip = IslandPipSnapshot(1, 4, ComponentName("video.app", "Player"), user, stashed = true)
+            assertTrue(pip.belongsTo(media.packageName, user))
+            assertFalse(pip.blocks(media))
+            assertTrue(IslandFloatingPolicy.blocksMedia(true, media, user, true, false, emptySet(), pip, false))
+            for (unrelated in listOf(pip.copy(displayId = 1), pip.copy(user = null), pip.copy(component = null),
+                pip.copy(component = ComponentName("other.video", "Player")))) {
+                assertFalse(unrelated.belongsTo(media.packageName, user))
+                assertFalse(unrelated.blocks(media))
+                assertFalse(IslandFloatingPolicy.blocksMedia(true, media, user, false, false, null, unrelated, false))
+            }
         } finally { session.release() }
     }
 }

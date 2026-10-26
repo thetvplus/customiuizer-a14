@@ -25,9 +25,7 @@ internal object IslandLiveSignal {
         fun acceptedBy(ownerNonce: Long, previous: Long) = sequence > previous && (nonce == 0L || nonce == ownerNonce)
     }
 
-    fun owns(packageName: String, kind: IslandLiveKind) =
-        packageName == IslandLiveKind.CLOCK_PACKAGE && kind in IslandLiveKind.clockKinds ||
-            packageName == IslandLiveKind.RECORDER_PACKAGE && kind == IslandLiveKind.RECORDER
+    fun owns(packageName: String, kind: IslandLiveKind) = kind.signalPackage == packageName
 
     fun encode(packageName: String, kind: IslandLiveKind, activity: IslandLiveActivity?,
         sequence: Long, nonce: Long = 0, owner: IBinder? = null): Intent = Intent(STATE).setPackage("com.android.systemui")

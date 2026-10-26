@@ -32,7 +32,7 @@ internal object IslandNativeAppSource {
     fun enabled(prefs: PrefMap, pkg: String): Boolean =
         StrongToastPresentationMode.fromPreference(prefs.getStringAsInt("system_strong_toast_mode", 0)) ==
             StrongToastPresentationMode.DYNAMIC_ISLAND &&
-            pkg in IslandLiveKind.sourcePackages(IslandLiveKind.read(prefs).map { it.value })
+            IslandLiveKind.read(prefs).any { it.signalPackage == pkg }
 
     fun install(param: PackageReadyParam, prefs: PrefMap) {
         val pkg = param.packageName.orEmpty()

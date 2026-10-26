@@ -789,6 +789,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (shape.resize(geometryWidth, geometryHeight, sx, sy)) invalidateOutline()
     }
 
+    fun cancelNativeArrival() { if (nativeArrival) cancelMediaReturn() }
+
     fun cancelMediaReturn() {
         if (mediaReturnProgress >= 1f) return
         mediaReturnProgress = 1f
