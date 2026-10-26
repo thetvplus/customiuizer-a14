@@ -163,6 +163,8 @@ IslandOptions 统一通知与返回准入，并复制应用集合，避免原地
 
 应用 / 构建源码 `ebb36a815b601c322763c36de8a6d7b20aeb52bf` 的未签名 Develop 压缩构建和 fatal lint 通过，APK SHA-256 `d309ec612fd3434f94080167ff9b985f3cc7d49715f6e623d580cf5e2737013a`；同一 APK 的来源、R8 mapping / API 102 边界、单 DEX、SDK 34 / arm64、无录音权限及 16 KiB 对齐通过。进程矩阵两份输出确定性、11 / 11 必需独立 mutation 通过，无门禁或清理错误。后续只补文档地图生成器：关于页目录从原生布局读取，双语标签变更可跟随生成，13 项关联回归及文档链接检查通过；应用 / 构建输入未变，不重建 APK。
 
+按用户授权另从最新源码 `ba9fcc7041fb825b09496f891f8128eb00f51389` 构建本地日常试用的正式签名 Release：r14.25.6 / 255，APK SHA-256 `f83108096e614e759254a3678a1ddae2b0633914bceaa1836dc20bff18cb81f3`。复用上述未变化范围的代码回归，补验 Release 压缩构建、fatal lint、同 APK 来源 / R8 / API 边界、SDK 34 / arm64、单 DEX、无录音权限、16 KiB 对齐及唯一历史正式 V2 签名，均通过。APK 与校验文件已置于本机下载目录，完整收据、mapping 和检查留在仓库外 `customiuizer-a14-evidence/daily-release-20261026-ba9fcc70/`；未操作设备或创建公开发行，日常安装与实机反馈由用户进行。
+
 ## 交流入口与发布文档
 
 公开交流统一为 [Telegram 群组](https://t.me/customiuizerA14)。两仓 About 简介已精简为“米客 A14｜CustoMIUIzer A14｜HyperOS 1 / Android 14”，主页指向群组；当前源码与下载仓库双语 README 已移除 Issues 反馈入口，工程记录的 Issue 引用保留为文字。只对两仓最新 r14.25.5 发布说明末尾附一行普通群链接，不增加大标题；原正文、版本、标签、来源和全部附件的身份 / 摘要读回一致，其他发布未改动。
