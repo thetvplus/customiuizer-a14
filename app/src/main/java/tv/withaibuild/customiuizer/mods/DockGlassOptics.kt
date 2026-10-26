@@ -19,7 +19,7 @@ internal object DockGlassOptics {
     }
 
     fun createLens(): RuntimeShader? = try {
-        RuntimeShader(LENS_SOURCE).apply { setInputBuffer("cornerField", DockCornerField.shader) }
+        RuntimeShader(LENS_SOURCE)
     } catch (error: Throwable) {
         FatalErrors.unwrapAndRethrowIfFatal(error)
         XposedHelpers.log("Dock lens: using native material", error)
@@ -31,7 +31,6 @@ internal object DockGlassOptics {
     // Attribution and license: assets/licenses/dock-liquid-glass.txt.
     internal const val LENS_SOURCE = """
         uniform shader content;
-        uniform shader cornerField;
         uniform float2 origin;
         uniform float2 size;
         uniform float radius;
@@ -41,10 +40,6 @@ internal object DockGlassOptics {
         uniform float2 sampleSize;
         uniform float motion;
 
-        float sd(float2 p) {
-            float2 q = abs(p) - size * 0.5 + radius;
-            return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius;
-        }
         float2 uv(float2 p) {
             float3 point = float3(p, 1.0);
             return clamp(float2(dot(sampleX, point), dot(sampleY, point)),
@@ -54,23 +49,19 @@ internal object DockGlassOptics {
             float2 local = coord - origin;
             float2 p = local - size * 0.5;
             float2 q = abs(p) - size * 0.5 + radius;
-            float2 edge = abs(p) - size * 0.5;
-            float d = max(edge.x, edge.y);
-            float2 n = edge.x > edge.y ? float2(sign(p.x), 0.0) : float2(0.0, sign(p.y));
-            if (radius > 0.5 && q.x > 0.0 && q.y > 0.0) {
-                half4 field = cornerField.eval(clamp(q / radius, 0.0, 1.0) * 63.0 + 0.5);
-                d = (float(field.r) * 2.0 - 1.0) * radius;
-                n = sign(p) * (float2(field.gb) * 2.0 - 1.0);
-                n /= max(length(n), 0.001);
-            }
-            // Coverage comes from the same cached G4 Path, once. A second circular
-            // alpha mask would create the visibly different inner/outer corner outlines.
+            float2 corner = max(q, 0.0);
+            float cornerLength = length(corner);
+            float d = min(max(q.x, q.y), 0.0) + cornerLength - radius;
+            float2 n = cornerLength > 0.001 ? sign(p) * corner / cornerLength :
+                (q.x > q.y ? float2(sign(p.x), 0.0) : float2(0.0, sign(p.y)));
+            // One native rounded-rectangle silhouette owns coverage for both materials.
+            // The same analytic boundary drives refraction; no second alpha mask.
             float coverage = 1.0;
             float inside = max(-d, 0.0);
             float bevel = max(1.0, min(min(size.x, size.y) * 0.34, 22.0 * density));
             float t = clamp(inside / bevel, 0.0, 1.0);
             // Snell-law surface mapping, informed by AyuGram's LiquidGlassEffect.
-            // Use our shared G4 normal, one cached texture and a bounded optical depth.
+            // Use the shared material outline's normal and bounded optical depth.
             float slope = 1.0 - t;
             float vertical = sqrt(max(1.0 - slope * slope, 0.0));
             float3 surfaceNormal = float3(n * slope, vertical);

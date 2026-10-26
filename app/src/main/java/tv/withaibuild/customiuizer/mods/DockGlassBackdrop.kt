@@ -352,7 +352,7 @@ internal class DockGlassBackdrop(
             if (lensPathBounds != bounds || lensPathRadius != radius) {
                 lensPathBounds.set(bounds); lensPathRadius = radius
                 lensPath.rewind()
-                DockCornerGeometry.build(lensPath, bounds.width().toFloat(), bounds.height().toFloat(), radius)
+                DockCornerGeometry.outline(lensPath, bounds.width().toFloat(), bounds.height().toFloat(), radius)
                 lensPath.offset(bounds.left.toFloat(), bounds.top.toFloat())
             }
             true

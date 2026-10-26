@@ -92,7 +92,7 @@ class SeekBarPreferenceInputTest {
         shadowOf(Looper.getMainLooper()).idle()
     }
 
-    @Test fun numericEditorFitsTheVisibleKeyboardAndSystemBarsWithAnUpwardBias() {
+    @Test fun numericEditorUsesNativeKeyboardFittingWithoutAnExtraVerticalOffset() {
         val (dialog, input) = edit(bind(preference()))
         val params = dialog.window!!.attributes
         val required = WindowInsets.Type.ime() or WindowInsets.Type.systemBars()
@@ -103,7 +103,7 @@ class SeekBarPreferenceInputTest {
         assertEquals(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE,
             params.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_STATE)
         assertEquals(Gravity.CENTER, params.gravity)
-        assertEquals(-(24 * activity.resources.displayMetrics.density).toInt(), params.y)
+        assertEquals(0, params.y)
         assertTrue(input.hasFocus())
         confirm(dialog, input, "12")
         assertFalse(dialog.isShowing)

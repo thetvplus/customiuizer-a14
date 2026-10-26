@@ -512,7 +512,6 @@ internal class DockBackgroundView(
             removeView(material)
         } finally {
             material.background = null
-            tint.rounded = false
         }
     }
 
@@ -910,7 +909,6 @@ internal class DockBackgroundView(
         }
         tint.color = if (night || lightWallpaper) Color.rgb(24, 26, 30) else Color.WHITE
         tint.alpha = (config.opacity * if (config.material == 3) 0.2f else 0.85f).roundToInt()
-        tint.rounded = config.material != 3 && nativeMaterial != null
         glassBackdrop?.invalidateSource()
         updateGeometry()
         scheduleGeometry()
@@ -969,8 +967,6 @@ internal class DockBackgroundTint(withRim: Boolean = false, private val density:
         }
     var radius = 0f
         set(value) { if (field != value) { field = value; rebuild(); invalidateSelf() } }
-    var rounded = false
-        set(value) { if (field != value) { field = value; rebuild(); invalidateSelf() } }
 
     override fun onBoundsChange(bounds: android.graphics.Rect) {
         gradientDepth = if (depth == null || bounds.isEmpty) null else LinearGradient(
@@ -991,10 +987,9 @@ internal class DockBackgroundTint(withRim: Boolean = false, private val density:
         rimPath?.rewind()
         if (bounds.isEmpty) return
         val r = radius.coerceIn(0f, min(bounds.width(), bounds.height()) * 0.5f)
-        if (rounded) path.addRoundRect(0f, 0f, bounds.width().toFloat(), bounds.height().toFloat(), r, r, Path.Direction.CW)
-        else DockCornerGeometry.build(path, bounds.width().toFloat(), bounds.height().toFloat(), r)
+        DockCornerGeometry.outline(path, bounds.width().toFloat(), bounds.height().toFloat(), r)
         path.offset(bounds.left.toFloat(), bounds.top.toFloat())
-        depth?.shader = if (rounded && optics != null) optics.apply {
+        depth?.shader = if (optics != null) optics.apply {
             setFloatUniform("origin", bounds.left.toFloat(), bounds.top.toFloat())
             setFloatUniform("size", bounds.width().toFloat(), bounds.height().toFloat())
             setFloatUniform("radius", r)

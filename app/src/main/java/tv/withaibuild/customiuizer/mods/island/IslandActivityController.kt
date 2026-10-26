@@ -1265,7 +1265,7 @@ internal class IslandActivityController(
         val now = SystemClock.uptimeMillis()
         val feedback = (state.toast(now) ?: state.activity(now))?.takeIf { label == null && !mediaOnly }
         val heightDp = if (options.automaticHeight) IslandSizing.automaticHeight(
-            (bounds.holeWidth / context.resources.displayMetrics.density).toInt(),
+            ((bounds.holeBottom - bounds.holePhysicalTop).coerceAtLeast(0) / context.resources.displayMetrics.density).toInt(),
             (bounds.statusBarHeight / context.resources.displayMetrics.density).toInt()) else options.height
         shell.contentHeight(heightDp)
         val caption = label ?: feedback?.text

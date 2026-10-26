@@ -7,7 +7,6 @@ import android.content.res.TypedArray
 import android.text.InputFilter
 import android.text.InputType
 import android.util.AttributeSet
-import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
@@ -381,12 +380,9 @@ class SeekBarPreference @JvmOverloads constructor(
                 window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or
                     WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
                 window.attributes = window.attributes.apply {
-                    // Let WindowManager fit the floating dialog above the actual IME, including
-                    // keyboard-height changes. A small upward bias leaves the editor more room.
+                    // WindowManager alone fits the dialog to the visible keyboard and system bars.
                     setFitInsetsTypes(fitInsetsTypes or WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
                     setFitInsetsIgnoringVisibility(false)
-                    gravity = Gravity.CENTER
-                    y = -(24 * activity.resources.displayMetrics.density).toInt()
                 }
             }
         }

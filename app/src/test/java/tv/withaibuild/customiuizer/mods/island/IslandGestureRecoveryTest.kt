@@ -24,6 +24,33 @@ import org.robolectric.util.ReflectionHelpers.getField
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGestureRecoveryTest {
+    @Test fun shortSlowUpwardReleasesWithinTheIslandHeightDismissWithoutOpening() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        for (height in listOf(32, 36, 38, 40, 64)) {
+            shell.geometry(240, height, 40); layout(240, height)
+            val distance = minOf(android.view.ViewConfiguration.get(activity).scaledTouchSlop.toFloat(), height * .16f) + .5f
+            val before = dismissed
+            touch(MotionEvent.ACTION_DOWN, y = height * .5f)
+            touch(MotionEvent.ACTION_UP, y = height * .5f - distance)
+            assertEquals("height=$height distance=$distance", before + 1, dismissed)
+            assertEquals(0, opened)
+        }
+    }
+
+    @Test fun upwardIntentBelowCommitDistanceCannotFallThroughToAClick() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, y = 16.5f)
+        touch(MotionEvent.ACTION_UP, y = 16.5f)
+        assertEquals(0, dismissed)
+        assertEquals(0, opened)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_UP, y = 19f)
+        assertEquals(1, opened)
+    }
+
     private lateinit var activity: Activity
     private lateinit var shell: IslandActivityView
 

@@ -72,6 +72,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var opticalY = 0f
     private var slop = ViewConfiguration.get(context).scaledTouchSlop
     private var recall = IslandRecallGesture.onCancel()
+    private var recallConfig = IslandRecallGesture.configFromSlop(slop, dp(IslandSizing.COLLAPSED_HEIGHT_DP))
     private var downY = 0f
     private var downX = 0f
     private var windowEvent: MotionEvent? = null
@@ -549,6 +550,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         dragging = false; multiTouch = false; dragAxis = 0
         longConsumed = false; inputCancelled = false; tapsCancelled = false; tapSuppressed = false
         recall = IslandRecallGesture.onDown(event.getPointerId(0), downX, downY)
+        // Freeze thresholds at DOWN using the actual capsule, including automatic
+        // sizing. Global navigation and the platform's shared touch slop are untouched.
+        recallConfig = IslandRecallGesture.configFromSlop(slop,
+            kotlin.math.round(geometryHeight * scaleY).toInt().coerceAtLeast(1))
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -563,8 +568,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             (event.actionMasked == MotionEvent.ACTION_MOVE || event.actionMasked == MotionEvent.ACTION_UP)) {
             val dx = pointerX(event) - downX
             val dy = pointerY(event) - downY
-            val upward = -dy >= minOf(slop * .5f, dp(4).toFloat()).coerceAtLeast(dp(2).toFloat()) &&
-                abs(dx) <= -dy * .85f
+            val upward = dragAxis != 1 && IslandRecallGesture.hasUpwardIntent(recall,
+                event.getPointerId(0), pointerX(event), pointerY(event), recallConfig)
+            if (upward && dragAxis == 0) dragAxis = 2
             dragging = dragging || upward || abs(dx) > slop || abs(dy) > slop
             if (dragging && !tapSuppressed) {
                 cancelInputs(cancelDrag = false)
@@ -598,7 +604,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     if (abs(dx) > abs(dy) * 1.2f) dragAxis = 1
                     else if (abs(dy) > abs(dx) * 1.2f) dragAxis = 2
                 }
-                val config = IslandRecallGesture.configFromSlop(slop, geometryHeight)
+                val config = recallConfig
                 if (dragAxis == 2) recall = if (event.actionMasked == MotionEvent.ACTION_UP)
                     IslandRecallGesture.onUp(recall, event.getPointerId(0), pointerX(event), pointerY(event),
                         config, event.eventTime - event.downTime)
@@ -606,7 +612,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 if (dragging) {
                     // The platform tap detector was already cancelled before dispatch.
                     if (event.actionMasked == MotionEvent.ACTION_UP) {
-                        if (dragAxis == 2 && dy < -slop && abs(dx) <= -dy * config.maxHorizontalRatio &&
+                        if (dragAxis == 2 && -dy >= config.intentDistancePx && abs(dx) <= -dy * config.maxHorizontalRatio &&
                             IslandRecallGesture.isTriggered(recall)) requestDismiss()
                         else if (dragAxis == 1 && (isMedia || idle) &&
                             abs(dx) >= maxOf(dp(32).toFloat(), slop * 3f) && abs(dx) > abs(dy) * 1.2f)

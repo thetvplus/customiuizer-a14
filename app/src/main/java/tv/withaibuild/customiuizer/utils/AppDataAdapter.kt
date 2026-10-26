@@ -117,36 +117,21 @@ class AppDataAdapter(
     }
 
     private fun sortList() {
-        filteredAppList.sortWith { app1, app2 ->
-            when (aType) {
-                AppHelper.AppAdapterType.Mutli -> {
-                    if (selectedApps.isEmpty() && selectedAppsBlack.isEmpty()) return@sortWith 0
-                    val app1checked = if (bwlist) shouldSelectBW(app1.pkgName) else shouldSelect(app1.pkgName, app1.user)
-                    val app2checked = if (bwlist) shouldSelectBW(app2.pkgName) else shouldSelect(app2.pkgName, app2.user)
-                    when {
-                        app1checked && app2checked -> 0
-                        app1checked -> -1
-                        app2checked -> 1
-                        else -> 0
-                    }
+        when (aType) {
+            AppHelper.AppAdapterType.Mutli -> {
+                if (selectedApps.isEmpty() && selectedAppsBlack.isEmpty()) return
+                filteredAppList = selectedAppsFirst(filteredAppList) { app ->
+                    if (bwlist) shouldSelectBW(app.pkgName) else shouldSelect(app.pkgName, app.user)
                 }
-                AppHelper.AppAdapterType.Standalone -> {
-                    if (app1.pkgName == "" && app1.actName == "") return@sortWith -1
-                    if (app2.pkgName == "" && app2.actName == "") return@sortWith 1
-                    val app1checked = selectedApp == "${app1.pkgName}|${app1.actName}" && selectedUser == app1.user
-                    val app2checked = selectedApp == "${app2.pkgName}|${app2.actName}" && selectedUser == app2.user
-                    when {
-                        app1checked && app2checked -> 0
-                        app1checked -> -1
-                        app2checked -> 1
-                        else -> 0
-                    }
-                }
-                AppHelper.AppAdapterType.Activities -> {
-                    app1.actNameLower.compareTo(app2.actNameLower)
-                }
-                else -> 0
             }
+            // The synthetic default is first in every source/filter result. Stable grouping
+            // keeps it first, followed by the selected user/activity, without a comparator.
+            AppHelper.AppAdapterType.Standalone -> filteredAppList = selectedAppsFirst(filteredAppList) { app ->
+                app.pkgName.isEmpty() && app.actName.isEmpty() ||
+                    selectedUser == app.user && selectedApp == "${app.pkgName}|${app.actName}"
+            }
+            AppHelper.AppAdapterType.Activities -> filteredAppList.sortBy { it.actNameLower }
+            else -> Unit
         }
     }
 

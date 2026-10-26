@@ -85,7 +85,8 @@ class IslandMusicGestureTest {
     }
 
     @Test fun shortUpwardIntentCancelsClickEvenWithoutMoveAndReboundsBelowRecallDistance() {
-        val distance = ViewConfiguration.get(host).scaledTouchSlop * .75f
+        // 3.5 px is upward intent in this 40 px capsule, but below the recall threshold.
+        val distance = 3.5f
         for (withMove in listOf(false, true)) {
             touch(MotionEvent.ACTION_DOWN)
             advance(50)

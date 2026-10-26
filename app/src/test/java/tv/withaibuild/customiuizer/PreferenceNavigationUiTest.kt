@@ -109,6 +109,19 @@ class PreferenceNavigationUiTest {
     }
 
     @Test
+    fun pageAnimatorsLeaveSystemDurationScalingToAndroid() {
+        val page = currentPage() as MainFragment
+        for (scale in listOf(0f, .5f, 1f, 2f, 10f)) {
+            Settings.Global.putFloat(activity.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, scale)
+            for (resource in listOf(R.animator.fragment_open_enter, R.animator.fragment_open_exit,
+                R.animator.fragment_close_enter, R.animator.fragment_close_exit)) {
+                val animator = requireNotNull(page.onCreateAnimator(0, true, resource))
+                assertEquals("Android applies $scale itself; the requested duration stays unscaled", 350L, animator.duration)
+            }
+        }
+    }
+
+    @Test
     fun collectingAnAnimatorPreservesTheFrameworksPendingVisibility() {
         val page = currentPage() as MainFragment
         val view = page.requireView()

@@ -497,6 +497,17 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds); assertEquals(0, removes)
     }
 
+    @Test fun automaticHeightUsesPhysicalCutoutHeightRatherThanItsHorizontalSpan() {
+        metricsWidth = 360
+        metricsInsets = WindowInsets.Builder()
+            .setInsets(android.view.WindowInsets.Type.statusBars(), android.graphics.Insets.of(0, 46, 0, 0))
+            .setDisplayCutout(android.view.DisplayCutout(android.graphics.Insets.of(0, 32, 0, 0),
+                null, Rect(120, 8, 240, 32), null, null)).build()
+        val controller = controller(chat = true, simplified = true)
+        assertTrue(controller.takeNotification(message(707))); drain()
+        assertEquals("120 px wide / 24 px tall cutout must use the 24 px vertical input", 38, shell!!.height)
+    }
+
     @Test fun expandedNoticeAndItsElasticCeilingRespectBothNativeRoundedCorners() {
         metricsWidth = 360
         metricsInsets = WindowInsets.Builder()

@@ -55,7 +55,6 @@ class DockLiquidGlassTest {
             color = Color.WHITE
             alpha = 18
             radius = 20f
-            rounded = true
             setBounds(0, 0, 320, 80)
         }
         val node = RenderNode("dock-glass-test")
@@ -158,7 +157,6 @@ class DockLiquidGlassTest {
             color = Color.WHITE
             alpha = 18
             radius = 28f
-            rounded = true
             setBounds(0, 0, 320, 100)
         }
         fun render(): Bitmap = Bitmap.createBitmap(320, 100, Bitmap.Config.ARGB_8888).also {
@@ -185,7 +183,6 @@ class DockLiquidGlassTest {
             color = Color.WHITE
             alpha = 18
             radius = 20f
-            rounded = true
             setBounds(0, 0, 320, 80)
         }
         val bitmap = Bitmap.createBitmap(320, 80, Bitmap.Config.ARGB_8888)

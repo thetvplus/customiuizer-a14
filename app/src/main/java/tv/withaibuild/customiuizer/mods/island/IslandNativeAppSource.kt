@@ -231,6 +231,7 @@ internal object IslandNativeAppSource {
         val state: Method
         val duration: Method
         val amplitude: Method?
+        val peakAccess: IslandRecorderPeakAccess?
         try {
             MainModule.loadDexKit()
             XposedHelpers.createBridge(param.applicationInfo.sourceDir)
@@ -255,11 +256,16 @@ internal object IslandNativeAppSource {
                         isAccessible = true
                     }
             }
+            peakAccess = amplitude?.let { method -> ModuleHelper.guarded<IslandRecorderPeakAccess?>(null) {
+                IslandRecorderPeakAccess(method, state.declaringClass.declaredFields.single {
+                    it.type.name == "miuix.media.h"
+                })
+            } }
         } finally { XposedHelpers.closeBridge() }
         var publisher: Publisher? = null
         var owner = WeakReference<Service>(null)
         var recordingState = 0
-        val meterOwner = java.util.concurrent.atomic.AtomicReference<Service?>(null)
+        val meterOwner = java.util.concurrent.atomic.AtomicReference<IslandRecorderPeakAccess.Reader?>(null)
         var meter: android.os.IBinder? = null
         val handler = Handler(Looper.getMainLooper())
         val activeKey = "customiuizer_island_recorder_live"
@@ -267,7 +273,9 @@ internal object IslandNativeAppSource {
             val service = owner.get() ?: return
             val clock = if (recordingState in 1..2) IslandLiveTime.elapsed(duration.invoke(service) as Long,
                 SystemClock.elapsedRealtime(), recordingState == 2) else null
-            meterOwner.set(service.takeIf { recordingState == 1 })
+            meterOwner.set(if (recordingState == 1) ModuleHelper.guarded<IslandRecorderPeakAccess.Reader?>(null) {
+                peakAccess?.bind(service)
+            } else null)
             publisher?.update(IslandLiveKind.RECORDER, clock, clock != null, meter = meter)
         }
         val create = state.declaringClass.getDeclaredMethod("onCreate")
@@ -286,13 +294,13 @@ internal object IslandNativeAppSource {
                 if (owner.get() !== current) {
                     publisher?.close(); owner = WeakReference(current)
                     publisher = Publisher(current.applicationContext, prefs, ::snapshot)
-                    meter = amplitude?.let { method ->
+                    meter = peakAccess?.let {
                         // Use the resolved SystemUI UID, including ROMs with a dedicated shared UID.
                         val allowed = current.packageManager.getApplicationInfo("com.android.systemui", 0).uid
                         val expected = WeakReference(current)
                         IslandRecorderMeter.producer(allowed) {
                             val active = meterOwner.get() ?: return@producer -1
-                            if (active !== expected.get()) -1 else method.invoke(active) as Int
+                            if (!active.owns(expected.get())) -1 else active.read()
                         }
                     }
                 }

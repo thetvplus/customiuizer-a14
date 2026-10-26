@@ -41,7 +41,6 @@ class DockLensRenderingTest {
 
     private fun lens(source: Bitmap, rect: RectF): RuntimeShader = RuntimeShader(DockGlassOptics.LENS_SOURCE).apply {
         setInputShader("content", BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
-        setInputBuffer("cornerField", DockCornerField.shader)
         setFloatUniform("origin", rect.left, rect.top)
         setFloatUniform("size", rect.width(), rect.height())
         setFloatUniform("radius", 24f)
@@ -64,7 +63,7 @@ class DockLensRenderingTest {
         val rect = RectF(0f, 0f, 320f, 100f)
         val shader = lens(source, rect)
         val result = hardwarePixels(320, 100) { it.drawPath(Path().apply {
-            tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+            DockCornerGeometry.outline(this, rect.width(), rect.height(), 24f)
             offset(rect.left, rect.top)
         }, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }) }
         assertEquals(0, Color.alpha(result.getPixel(0, 0)))
@@ -75,7 +74,7 @@ class DockLensRenderingTest {
         val dark = Bitmap.createBitmap(320, 100, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.rgb(18, 22, 26)) }
         shader.setInputShader("content", BitmapShader(dark, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
         val changed = hardwarePixels(320, 100) { it.drawPath(Path().apply {
-            tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+            DockCornerGeometry.outline(this, rect.width(), rect.height(), 24f)
             offset(rect.left, rect.top)
         }, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }) }
         assertTrue(Color.red(changed.getPixel(160, 50)) < 50)
@@ -91,7 +90,7 @@ class DockLensRenderingTest {
         val rect = RectF(0f, 0f, 320f, 100f)
         val shader = lens(source, rect)
         val image = hardwarePixels(320, 100) { it.drawPath(Path().apply {
-            tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+            DockCornerGeometry.outline(this, rect.width(), rect.height(), 24f)
             offset(rect.left, rect.top)
         }, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }) }
         assertEquals(0, Color.alpha(image.getPixel(0, 0)))
@@ -151,7 +150,7 @@ class DockLensRenderingTest {
                 val top = 40f + row * 250 + 80
                 val rect = RectF(left, top, left + 312, top + 96)
                 val path = Path().apply {
-                    tv.withaibuild.customiuizer.utils.G4Geometry.build(this, rect.width(), rect.height(), 24f)
+                    DockCornerGeometry.outline(this, rect.width(), rect.height(), 24f)
                     offset(rect.left, rect.top)
                 }
                 val opacity = if (row == 3) .65f else .9f

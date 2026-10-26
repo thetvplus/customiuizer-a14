@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Insets
 import android.graphics.Path
+import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.ColorDrawable
@@ -527,6 +528,7 @@ class DockBackgroundTest {
         val decoration = host.getChildAt(0) as DockBackgroundView
         val material = decoration.getChildAt(0) as NativeMaterial
         NativeMaterial.failure = IllegalStateException("retired native blur binder")
+        val silhouette = org.robolectric.util.ReflectionHelpers.getField<Path>(decoration.foreground, "path").generationId
         decoration.visibility = View.INVISIBLE
         decoration.onVisibilityAggregated(false)
         assertEquals(0, decoration.childCount)
@@ -536,7 +538,7 @@ class DockBackgroundTest {
         decoration.visibility = View.VISIBLE
         repeat(20) { decoration.onVisibilityAggregated(true); host.viewTreeObserver.dispatchOnPreDraw() }
         assertEquals(attempts, material.enableCalls)
-        assertFalse((decoration.foreground as DockBackgroundTint).rounded)
+        assertEquals(silhouette, org.robolectric.util.ReflectionHelpers.getField<Path>(decoration.foreground, "path").generationId)
     }
 
     @Test
@@ -603,7 +605,6 @@ class DockBackgroundTest {
                 val nativeShape = DockBackgroundTint().apply {
                     color = Color.WHITE
                     this.radius = radius
-                    rounded = true
                     setBounds(0, 0, 240, 80)
                 }
                 nativeShape.draw(Canvas(bitmap))
@@ -615,12 +616,8 @@ class DockBackgroundTest {
                         kotlin.math.abs(alpha - Color.alpha(bitmap.getPixel(x, 79 - y))))
                 }
                 bitmap.eraseColor(Color.TRANSPARENT)
-                val shape = DockBackgroundTint().apply {
-                    color = Color.WHITE
-                    this.radius = radius
-                    setBounds(0, 0, 240, 80)
-                }
-                shape.draw(Canvas(bitmap))
+                val shape = Path().apply { DockCornerGeometry.build(this, 240f, 80f, radius) }
+                Canvas(bitmap).drawPath(shape, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
                 assertEquals(Color.WHITE, bitmap.getPixel(120, 40))
                 var g4Delta = 0
                 for (y in 0 until 80) {
