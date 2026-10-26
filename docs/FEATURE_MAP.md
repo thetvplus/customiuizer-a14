@@ -854,12 +854,12 @@
 | 连接 → USB 默认用途 | `pref_key_system_usb_default_function` | 可见 |
 | 应用 → 允许降级 | `pref_key_system_downgrade` | 可见 |
 | 应用 → 禁用签名认证 | `pref_key_system_apksign` | 可见 |
-| 应用 → 禁用系统完整性检查 | `pref_key_system_disableintegrity` | 可见 |
+| 应用 → 允许旧版 APK 签名方案 | `pref_key_system_disableintegrity` | 可见 |
 | 应用 → 禁用安全内容保护 | `pref_key_system_removesecure` | 可见 |
 | 应用 → 移除启动应用确认 | `pref_key_system_remove_startactconfirm` | 可见 |
 | 应用 → 阻止应用强制关闭 | `pref_key_system_forceclose` | 可见 |
 | 应用 → 已选应用 | `pref_key_system_forceclose_apps` | 条件启用：`pref_key_system_forceclose` |
-| 样式 → 允许所有应用强制开启深色模式 | `pref_key_system_force_darken_allapps` | 可见 |
+| 样式 → 显示用户应用的强制深色开关 | `pref_key_system_force_darken_allapps` | 可见 |
 | 样式 → 关闭窗口级模糊 | `pref_key_system_disable_window_blurs` | 可见 |
 | 样式 → 禁用弹性滚动 | `pref_key_system_nooverscroll` | 可见 |
 | 样式 → 已选应用 | `pref_key_system_nooverscroll_apps` | 条件启用：`pref_key_system_nooverscroll` |
@@ -997,8 +997,8 @@
 
 | 功能（页内分组 → 选项） | 稳定键 | 入口状态 / XML 依赖 |
 | --- | --- | --- |
-| 禁用日志和统计 | `pref_key_launcher_disable_log` | 可见 |
-| 修复动画 | `pref_key_launcher_fixanim` | 可见 |
+| 停用桌面使用统计 | `pref_key_launcher_disable_log` | 可见 |
+| 跟随系统动画时长 | `pref_key_launcher_fixanim` | 可见 |
 | 修复应用信息 | `pref_key_launcher_fixlaunch` | 可见 |
 
 ## 按键与手势
@@ -1106,9 +1106,9 @@
 | 功能（页内分组 → 选项） | 稳定键 | 入口状态 / XML 依赖 |
 | --- | --- | --- |
 | 应用 → 跳过开启特殊权限的倒计时 | `pref_key_various_skip_interceptperm` | 可见 |
-| 应用 → 默认打开 | `pref_key_various_replace_defaultopen_with_openbydefault` | 可见 |
+| 应用 → 打开链接默认设置 | `pref_key_various_replace_defaultopen_with_openbydefault` | 可见 |
 | 应用 → 跳过安全体检 | `pref_key_various_skip_securityscan` | 可见 |
-| 应用 → 电池页面显示温度值 | `pref_key_various_show_battery_temperature` | 可见 |
+| 应用 → 智能充电页显示电池温度 | `pref_key_various_show_battery_temperature` | 可见 |
 | 应用 → 禁止重置模糊预览图列表 | `pref_key_various_disable_reset_recents_privacy_blur` | 可见 |
 | 侧边栏 → 禁用侧边栏应用推荐黑名单 | `pref_key_various_disable_freeform_suggest_blacklist` | 可见 |
 | 侧边栏 → 侧边栏不显示推荐应用 | `pref_key_various_disable_dock_suggest` | 可见 |

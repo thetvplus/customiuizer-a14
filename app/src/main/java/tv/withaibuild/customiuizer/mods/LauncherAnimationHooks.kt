@@ -17,30 +17,25 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
  */
 object LauncherAnimationHooks {
 
-    private fun scaleStiffness(`val`: Float, scale: Float): Float {
-        return (if (scale < 1.0f) 2f / scale else 1.0f / scale) * `val`
+    internal fun scaleStiffness(stiffness: Float, scale: Float): Float {
+        if (!stiffness.isFinite() || stiffness <= 0f || !scale.isFinite() || scale < 0f) return stiffness
+        val duration = if (scale == 0f) .01 else scale.toDouble()
+        // Spring frequency is sqrt(k); duration therefore needs inverse-square stiffness.
+        return (stiffness / (duration * duration)).coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
     }
 
     @JvmStatic
     fun FixAnimHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.animate.SpringAnimator", lpparam.classLoader, "getSpringForce", object : MethodHook() {
+        ModuleHelper.findAndHookMethod("com.miui.home.launcher.animate.SpringAnimator", lpparam.classLoader, "getSpringForce",
+            Float::class.javaPrimitiveType!!, Float::class.javaPrimitiveType!!, Float::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-
-                    var scale = ValueAnimator.getDurationScale()
-                    if (scale == 1.0f) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (scale == 0f) scale = 0.01f
-                    val args = XposedHelpers.getArgsArray(chain)
-                    args[2] = scaleStiffness(args[2] as Float, scale)
-
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                val scale = ValueAnimator.getDurationScale()
+                if (scale == 1.0f) return chain.proceed()
+                val original = chain.getArg(2) as Float
+                val updated = scaleStiffness(original, scale)
+                if (updated == original) return chain.proceed()
+                val args = XposedHelpers.getArgsArray(chain); args[2] = updated
+                return chain.proceed(args)
             }
         })
     }

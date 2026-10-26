@@ -219,7 +219,7 @@
     <string name="system_chargeanimtime_title">Charge animation screen timeout</string>
     <string name="system_chargeanimtime_summ">How long screen should be kept on after charging animation starts</string>
     <string name="system_nolightuponcharges_title">No screen light up on charge</string>
-    <string name="system_nolightuponcharges_summ">Do not turn screen on when you connect or disconnect a charger</string>
+    <string name="system_nolightuponcharges_summ">Enabled blocks charger connection and disconnection wake-ups and hides charging animation. The animation-only option keeps normal wake behavior. Restart the device when first enabling.</string>
     <string name="system_lstimeout_title">Screen off timeout on lock screen</string>
     <string name="system_dimtime_title">Dim duration</string>
     <string name="system_dimtime_summ">How long screen should remain dimmed before turning off automatically (in percentage of total screen off timeout)</string>
@@ -352,9 +352,9 @@
     <string name="system_wifi_password_label">Password</string>
     <string name="system_wifi_password_dlgtitle">Wi-Fi detail</string>
     <string name="system_other_wallpaper_scale_title">Wallpaper zoom level</string>
-    <string name="system_force_darken_allapps_title">Remove blacklist of dark mode</string>
+    <string name="system_force_darken_allapps_title">Show force dark controls for user apps</string>
     <string name="system_epm_title">Extended power menu</string>
-    <string name="system_epm_summ">Add new restart options to power menu (Fastboot mode, Recovery mode)</string>
+    <string name="system_epm_summ">Add Fastboot and Recovery restart actions using the system fallback power menu. Restart System UI after changing this option.</string>
     <string name="system_epm_action_fastboot_title">Fastboot</string>
     <string name="system_epm_action_fastboot_confirm_title">Reboot to fastboot mode</string>
     <string name="system_epm_action_recovery_title">Recovery</string>
@@ -362,7 +362,7 @@
     <string name="system_downgrade_title">Allow downgrade</string>
     <string name="system_downgrade_summ">Make installing older app version on top of a newer one possible</string>
     <string name="system_apksign_title">Disable signature verification</string>
-    <string name="system_disableintegrity_title">Disable system integrity verification</string>
+    <string name="system_disableintegrity_title">Allow legacy APK signature schemes</string>
     <string name="system_apksign_summ">Allow app updating even when APK signature differs from installed one</string>
     <string name="system_nooverscroll_title">Disable overscroll</string>
     <string name="system_nooverscroll_summ">Prevent list views from overscrolling</string>
@@ -519,7 +519,7 @@
     <string name="launcher_folderspace_title">Reduce side padding</string>
     <string name="launcher_disable_log_title">Disable analytics</string>
     <string name="launcher_fixanim_title">Fix animation</string>
-    <string name="launcher_fixanim_summ">Apply value animators\' duration scaling to some launcher animations</string>
+    <string name="launcher_fixanim_summ">Make supported launcher spring animations follow the system Animator duration scale. Restart the launcher after changing this option.</string>
     <string name="launcher_fixlaunch_title">Fix app info</string>
     <string name="launcher_fixlaunch_summ">Always open MIUI-styled app info from long press menu</string>
     <string name="launcher_folderblur">Background blur</string>

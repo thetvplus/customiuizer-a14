@@ -182,7 +182,7 @@
     <string name="system_chargeanimtime_title">充電動畫顯示時間</string>
     <string name="system_chargeanimtime_summ">充電動畫顯示多久</string>
     <string name="system_nolightuponcharges_title">充電時不點亮螢幕</string>
-    <string name="system_nolightuponcharges_summ">連接或者斷開充電器時不亮屏</string>
+    <string name="system_nolightuponcharges_summ">「啟用」阻止連接或拔除充電器時亮屏，並隱藏充電動畫；「亮屏但不顯示動畫」保留系統亮屏。首次啟用需重新啟動裝置。</string>
     <string name="system_lstimeout_title">鎖屏螢幕超時</string>
     <string name="system_dimtime_title">暗屏時長</string>
     <string name="system_dimtime_summ">自動滅屏前保持暗屏的時間(螢幕關閉超時總數的百分比)</string>
@@ -299,7 +299,7 @@
     <string name="system_downgrade_title">允許降級</string>
     <string name="system_downgrade_summ">可以在新版本應用上安裝舊版本應用</string>
     <string name="system_apksign_title">禁用簽名認證</string>
-    <string name="system_disableintegrity_title">禁用系統完整性檢查</string>
+    <string name="system_disableintegrity_title">允許舊版 APK 簽章方案</string>
     <string name="system_apksign_summ">APK簽名與已安裝應用不同時允許對其進行更新</string>
     <string name="system_nooverscroll_title">禁用彈性滾動</string>
     <string name="system_nooverscroll_summ">阻止列表檢視越界回彈</string>
@@ -439,9 +439,9 @@
     <string name="launcher_folder_cols_title">資料夾排列數量</string>
     <string name="launcher_folderwidth_title">使用整個資料夾的寬度</string>
     <string name="launcher_folderspace_title">減少邊距</string>
-    <string name="launcher_disable_log_title">禁用日誌和統計</string>
-    <string name="launcher_fixanim_title">修復動畫</string>
-    <string name="launcher_fixanim_summ">將動畫值時長比例應用到某些啟動器動畫</string>
+    <string name="launcher_disable_log_title">停用桌面使用統計</string>
+    <string name="launcher_fixanim_title">跟隨系統動畫時長</string>
+    <string name="launcher_fixanim_summ">讓支援的桌面彈簧動畫跟隨系統「動畫時長比例」。變更後重新啟動桌面生效。</string>
     <string name="launcher_fixlaunch_title">修復應用訊息</string>
     <string name="launcher_fixlaunch_summ">長按功能表始終開啟MIUI樣式應用訊息</string>
     <string name="launcher_folderblur">背景模糊</string>
@@ -816,7 +816,7 @@
     <string name="various_disable_access_devicelogs_title">關閉訪問設備日誌確認</string>
     <string name="various_skip_interceptperm_title">跳過開啟特殊權限的倒計時</string>
     <string name="various_skip_securityscan_title">跳過安全體檢</string>
-    <string name="various_show_battery_temperature_title">電池頁面顯示溫度值</string>
+    <string name="various_show_battery_temperature_title">智慧充電頁顯示電池溫度</string>
     <string name="various_disable_freeform_suggest_blacklist_title">禁用側邊欄推薦App黑名單</string>
     <string name="various_enable_expand_sidebar_title">隱藏側邊欄</string>
     <string name="various_disable_dock_suggest_title">側邊欄不顯示推薦應用</string>
@@ -933,10 +933,10 @@
     <string name="system_colorizenotiftitle_summ">將圖示顏色套用到卡片</string>
     <string name="system_drawer_remove_emptynotify_title">隱藏無通知提示</string>
     <string name="system_drawer_removeshortcut_title">隱藏通知抽屜快捷方式</string>
-    <string name="system_epm_summ">在電源功能表中新增重新啟動選項（Fastboot 模式、Recovery 模式）</string>
+    <string name="system_epm_summ">改用系統備用電源選單，加入 Fastboot 和 Recovery 重新啟動項目。變更後重新啟動系統介面生效。</string>
     <string name="system_floatingtime_tile_summ">在懸浮視窗中顯示時間</string>
     <string name="system_floatingtime_tile_title">顯示懸浮時間磁貼</string>
-    <string name="system_force_darken_allapps_title">移除深色模式黑名單</string>
+    <string name="system_force_darken_allapps_title">顯示使用者應用程式的強制深色開關</string>
     <string name="system_forceclose_summ">不允許 HyperOS 強制關閉所選應用程式</string>
     <string name="system_hidestatusbar_whenscreenshot_title">截圖時隱藏狀態欄</string>
     <string name="system_lockscreen_disable_edit_title">禁用長按編輯</string>
@@ -994,7 +994,7 @@
     <string name="various_hide_report_ondetails_title">隱藏應用程式詳情中的檢舉按鈕</string>
     <string name="various_installer_purify_title">淨化套件安裝程式</string>
     <string name="various_miuiinstaller_summ">允許其更新系統應用程式</string>
-    <string name="various_open_by_default_title">預設開啟</string>
+    <string name="various_open_by_default_title">開啟連結預設設定</string>
     <string name="various_package_installer_cat_title">應用程式安裝程式</string>
     <string name="various_persist_batteryoptimization_settings_title">保持電池最佳化設定</string>
     <string name="various_privacyapps_column_nums4_title">隱藏應用列表設為 4 欄</string>
@@ -1007,10 +1007,10 @@
     <string name="unlock_host_summary">主機：%1$s\n套件：%2$s\n目前憑證：\n%3$s\n憑證紀錄：\n%4$s</string>
     <string name="unlock_host_first">%1$s\n\n點選確定以綁定此主機並簽發安全權杖。</string>
     <string name="unlock_host_reuse">%1$s\n\n此主機已綁定。將復用現有權杖。</string>
-    <string name="system_epm_action_fastboot_title">Fastboot</string>
-    <string name="system_epm_action_fastboot_confirm_title">重啟至 Fastboot 模式</string>
-    <string name="system_epm_action_recovery_title">Recovery</string>
-    <string name="system_epm_action_recovery_confirm_title">重啟至 Recovery 模式</string>
+    <string name="system_epm_action_fastboot_title">Fastboot 模式</string>
+    <string name="system_epm_action_fastboot_confirm_title">重新啟動至 Fastboot 模式</string>
+    <string name="system_epm_action_recovery_title">Recovery 模式</string>
+    <string name="system_epm_action_recovery_confirm_title">重新啟動至 Recovery 模式</string>
     <string name="various_calluibright_day_title">日間模式</string>
     <string name="array_global_actions_splitscreen">分割畫面</string>
     <string name="array_global_actions_clear_notifs">清除通知</string>

@@ -1998,11 +1998,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "LAUNCHER",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPackageReadyFeatures.kt:266",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Launcher.DisableLauncherLogHook; installed AnalyticalDataCollector/JobService signatures verified.",
+      "notes": "Stops supported launcher usage analytics and OneTrack entry. Does not claim to suppress every launcher log or crash report."
     },
     {
       "featureId": "launcher_disable_wallpaperscale",
@@ -2181,11 +2181,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "LAUNCHER",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:1016",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "LauncherAnimationHooks.FixAnimHook and scaleStiffness; native getSpringForce(FFF) and stiffness argument verified.",
+      "notes": "Only supported Launcher spring factories follow Animator duration scale. Stiffness changes by inverse-square duration, preserves damping ratio, has no discontinuity near 1, and bounds zero/invalid inputs."
     },
     {
       "featureId": "launcher_fixlaunch",
@@ -2204,11 +2204,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "LAUNCHER",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:735",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Launcher.FixAppInfoLaunchHook; native ShortcutMenuManager.startAppDetailsActivity item/View signature verified.",
+      "notes": "Read the explicit UserHandle identifier; missing/invalid metadata retains the native call instead of guessing owner user or rethrowing a preparation failure."
     },
     {
       "featureId": "launcher_folder_cols",
@@ -6602,11 +6602,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:520",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemSecurityHooks.DisableSystemIntegrityHook; installed ApkSignatureVerifier.getMinimumSignatureSchemeVersionForTargetSdk verified.",
+      "notes": "Lowers minimum APK signature scheme to v1. This is not a switch for device Verified Boot or general system integrity."
     },
     {
       "featureId": "system_downgrade",
@@ -6829,14 +6829,14 @@
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "enableEffect": "After SystemUI restart, use the existing fallback power menu with two owner-scoped Fastboot and Recovery actions.",
+      "disableEffect": "Restart SystemUI to restore the native plugin power menu.",
+      "valueChangeEffect": "Changes require SystemUI restart.",
+      "restartTarget": "SYSTEMUI",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:1692",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemUI.ExtendedPowerMenuHook -> ExtendedPowerMenu.install; exact A14 dialog, constructor and plugin signatures verified from the installed ROM.",
+      "notes": "Only the exact miui.systemui.plugin GlobalActionsPlugin is bypassed after all hooks install. Constructor scope is thread/owner bound; both actions prepare before insertion. Confirmation is single-use and rejects stale menu generations."
     },
     {
       "featureId": "system_expandheadups",
@@ -6993,11 +6993,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:571",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemDisplayHooks.ForceDarkAllAppsHook.",
+      "notes": "Exposes eligible user-app controls in ROM forced-dark settings; excludes system/updated-system apps and system UIDs. Does not promise dark rendering for all app surfaces."
     },
     {
       "featureId": "system_forceclose",
@@ -8180,19 +8180,19 @@
       ],
       "xmlSource": "app/src/main/res/xml/prefs_system.xml",
       "defaultValue": "1",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemDisplayHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:evaluateEnabled",
-      "targetPackage": "com.android.systemui",
+      "targetPackage": "android",
       "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Option 2 blocks known charger wake reasons in system_server and hides SystemUI charging animation. Option 3 only hides charging animation.",
+      "disableEffect": "Already installed hooks return to native behavior on option 1; reboot ensures both processes use the new installation gates.",
+      "valueChangeEffect": "Initial installation needs reboot. A process started with option 3 has no system_server wake hook, so changing to option 2 also needs reboot.",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:724",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemDisplayHooks.NoLightUpOnChargeHook and SystemUI.chargeAnimationHook; A14 wakePowerGroupLocked signature and charging caller verified.",
+      "notes": "System-server gate remains option 2; SystemUI gate remains options 2/3. Both installed callbacks read pushed scalar snapshots; no automatic installation reset."
     },
     {
       "featureId": "system_nooverscroll",
@@ -16517,11 +16517,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "TARGET_APP",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:178",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Various.AppInfoHook -> AppInformationHooks; installed AMAppInformationFragment.onCreatePreferences/onPreferenceTreeClick and PackageInfo field verified.",
+      "notes": "No global Activity/Fragment/PackageInfo or per-visit hooks. Added rows bind weak fragment/screen and exact package/UID, reject old rows and changed profiles, and preserve 64-bit version codes."
     },
     {
       "featureId": "various_appsort",
@@ -16536,15 +16536,15 @@
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:evaluateEnabled",
       "targetPackage": "android",
       "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "runtimeReadMode": "OBSERVER_PUSH",
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "TARGET_APP",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:278",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Various.AppsDefaultSortHook and initialAppSort; installed A14 ManageFragment.onActivityCreated and native sort keys verified.",
+      "notes": "Install once on the native ManageFragment, not per Activity creation; leave the separate AppFragment landing page unchanged. Seed only missing sort keys into a copied Bundle; preserve restored user selection. An installed callback observes changed defaults for future fresh pages; first installation requires SecurityCenter restart."
     },
     {
       "featureId": "various_batteryoptimization",
@@ -17000,11 +17000,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:198",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Various.AppsDisableHook, AppsDisableServiceHook and changeApplicationState.",
+      "notes": "UI and system_server installation require host restart/reboot. Explicit enable overrides manifest-disabled defaults; verify effective enabled state and current UID. Existing protected core packages remain protected."
     },
     {
       "featureId": "various_enable_expand_sidebar",

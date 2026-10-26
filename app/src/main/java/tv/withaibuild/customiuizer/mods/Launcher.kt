@@ -153,31 +153,18 @@ object Launcher {
 
     @JvmStatic
     fun FixAppInfoLaunchHook(lpparam: PackageReadyParam) {
+        val userId = UserHandle::class.java.getDeclaredMethod("getIdentifier").apply { isAccessible = true }
         ModuleHelper.hookAllMethods("com.miui.home.launcher.shortcuts.ShortcutMenuManager", lpparam.classLoader, "startAppDetailsActivity", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                try {
-
-                    val component = XposedHelpers.callMethod(args[0], "getComponentName") as ComponentName?
-                    if (component == null) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val view = args[1] as View?
-                    if (view == null) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val userHandle = XposedHelpers.callMethod(args[0], "getUserHandle") as UserHandle?
-                    ModuleHelper.openAppInfo(view.context, component.packageName, userHandle?.hashCode() ?: 0)
-                    skipped = true
-                    result = null
-                    throwable = null
-
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                val handled = ModuleHelper.guarded(false) {
+                    val item = chain.getArg(0) ?: return@guarded false
+                    val view = chain.getArg(1) as? View ?: return@guarded false
+                    val component = XposedHelpers.callMethod(item, "getComponentName") as? ComponentName ?: return@guarded false
+                    val user = XposedHelpers.callMethod(item, "getUserHandle") as? UserHandle ?: return@guarded false
+                    ModuleHelper.openAppInfo(view.context, component.packageName, userId.invoke(user) as Int)
+                    true
                 }
-                if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                result = chain.proceed()
-                return XposedHelpers.throwOrReturn(throwable, result)
+                return if (handled) null else chain.proceed()
             }
         })
     }
