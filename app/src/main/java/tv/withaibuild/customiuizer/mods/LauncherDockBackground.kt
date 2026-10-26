@@ -578,7 +578,10 @@ internal class DockBackgroundView(
         if (!config.fullWidth) glassBackdrop?.setLegacyTransform(matrix)
         syncFullWidthHost()
         syncNativeOpacity()
-        if (!running) finishEditingAnimation()
+        // false is returned while ViewGroup is still drawing the native terminal
+        // transformation. Keep that matrix/alpha through this draw; retire only after
+        // the host clears/replaces its animation, observed by the next pre-draw.
+        if (!running) postInvalidateOnAnimation()
     }
 
     private fun clearEditingAnimation() {

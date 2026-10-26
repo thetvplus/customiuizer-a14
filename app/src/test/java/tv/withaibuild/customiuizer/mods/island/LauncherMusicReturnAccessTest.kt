@@ -70,15 +70,16 @@ class LauncherMusicReturnAccessTest {
     private val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
         280f, 15f, 800f, 125f, 1080, 2400)
 
-    @Test fun incomingWindowsLandInsideTheIslandWithTheSameCentreAndHeight() {
+    @Test fun incomingWindowsLandWhollyInsideTheIslandMaskWithTheSameCentre() {
         val source = params()
         val target = (access.retarget(source, Element(), Nav(), frame) as Params).targetRect
         assertTrue(target.width() < frame.right - frame.left)
         assertTrue(target.left > frame.left)
         assertTrue(target.right < frame.right)
         assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
-        assertEquals(frame.top, target.top, 0f)
-        assertEquals(frame.bottom, target.bottom, 0f)
+        assertTrue(target.top > frame.top)
+        assertTrue(target.bottom < frame.bottom)
+        assertEquals((frame.top + frame.bottom) * .5f, target.centerY(), .001f)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
     }
 
@@ -88,9 +89,9 @@ class LauncherMusicReturnAccessTest {
             val source = params(targets = Targets(arrayOf(Remote().apply { packageName = pkg })))
             val nav = Nav().apply { mRunningTaskComponentName = ComponentName(pkg, "Activity") }
             val target = (access.retarget(source, Element(), nav, current) as Params).targetRect
-            assertEquals((frame.right - frame.left) * .92f, target.width(), .001f)
+            assertEquals((frame.right - frame.left) * .84f, target.width(), .001f)
             assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
-            assertEquals(frame.bottom - frame.top, target.height(), .001f)
+            assertEquals((frame.bottom - frame.top) * .86f, target.height(), .001f)
         }
         for (width in listOf(38f, 48f, 100f, 160f, 320f)) {
             val current = frame.copy(left = 0f, right = width, top = 0f, bottom = 38f)
@@ -137,12 +138,14 @@ class LauncherMusicReturnAccessTest {
         assertNotSame(source, result)
         assertEquals(frame.landingRectangle(), result.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
-        assertEquals(55f, result.endRadius, 0f)
+        assertEquals(result.targetRect.height() * .5f, result.endRadius, 0f)
+        assertEquals("The window remains opaque until it enters the mask", 1f, result.endAlpha, 0f)
+        assertEquals(0f, source.endAlpha, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)
         assertNull("The window return must not borrow or animate the desktop icon", result.targetView)
         assertNull(source.targetView)
         for (field in Params::class.java.declaredFields) {
-            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView")) continue
+            if (field.name in setOf("targetRect", "endRadius", "endAlpha", "ignoreIcon", "targetView")) continue
             field.isAccessible = true
             assertEquals("Preserve native ${field.name}", field.get(source), field.get(result))
         }

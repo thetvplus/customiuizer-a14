@@ -1304,4 +1304,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_waveform_group">Dalga</string>
     <string name="system_island_motion_group">Animasyon</string>
     <string name="system_island_general_gestures_group">Genel</string>
+    <string name="system_island_waveform_gain_title">Dalga biçimi kazancı</string>
+    <string name="system_island_waveform_gain_summ">Müzik ve kayıt çubuklarını gerçek zamanlı olarak büyütür. Yalnızca görünümü değiştirir; sessizlikte çubuklar düz kalır.</string>
 </resources>

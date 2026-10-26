@@ -9,6 +9,8 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.inputmethodservice.InputMethodService
+import android.inputmethodservice.AbstractInputMethodService
+import android.view.inputmethod.InputMethodSession
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
@@ -492,22 +494,33 @@ object Controls {
     @JvmStatic
     fun VolumeCursorHook(lpparam: PackageReadyParam) {
         installControlsSnapshot()
-        ModuleHelper.findAndHookMethod("android.inputmethodservice.InputMethodService", lpparam.classLoader,
-            "onKeyDown", Int::class.javaPrimitiveType, KeyEvent::class.java, object : MethodHook() {
-                override fun intercept(chain: XposedInterface.Chain): Any? = dispatchVolumeCursor(chain, true)
-            })
-        ModuleHelper.findAndHookMethod("android.inputmethodservice.InputMethodService", lpparam.classLoader,
-            "onKeyUp", Int::class.javaPrimitiveType, KeyEvent::class.java, object : MethodHook() {
-                override fun intercept(chain: XposedInterface.Chain): Any? = dispatchVolumeCursor(chain, false)
-            })
+        val session = AbstractInputMethodService.AbstractInputMethodSessionImpl::class.java
+        val owner = XposedHelpers.findField(session, "this\$0")
+        ModuleHelper.findAndHookMethod(session, "dispatchKeyEvent", Int::class.javaPrimitiveType,
+            KeyEvent::class.java, InputMethodSession.EventCallback::class.java, volumeCursorSessionHook(owner))
     }
 
-    private fun dispatchVolumeCursor(chain: XposedInterface.Chain, down: Boolean): Any? {
-        val code = chain.getArg(0) as? Int ?: return chain.proceed()
-        if (code != KeyEvent.KEYCODE_VOLUME_UP && code != KeyEvent.KEYCODE_VOLUME_DOWN) return chain.proceed()
-        val event = chain.getArg(1) as? KeyEvent ?: return chain.proceed()
-        val service = chain.thisObject as? InputMethodService ?: return chain.proceed()
-        val handled = ModuleHelper.guarded(false) {
+    /** The framework session precedes IME overrides that may never call super.onKeyDown.
+     * An accepted key completes its original callback once; all other events proceed unchanged. */
+    internal fun volumeCursorSessionHook(owner: java.lang.reflect.Field) = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val event = chain.getArg(1) as? KeyEvent ?: return chain.proceed()
+            val code = event.keyCode
+            if (code != KeyEvent.KEYCODE_VOLUME_UP && code != KeyEvent.KEYCODE_VOLUME_DOWN ||
+                event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return chain.proceed()
+            val session = chain.thisObject as? AbstractInputMethodService.AbstractInputMethodSessionImpl ?: return chain.proceed()
+            if (!session.isEnabled) return chain.proceed()
+            val callback = chain.getArg(2) as? InputMethodSession.EventCallback ?: return chain.proceed()
+            val sequence = chain.getArg(0) as? Int ?: return chain.proceed()
+            val service = owner.get(session) as? InputMethodService ?: return chain.proceed()
+            if (!dispatchVolumeCursor(service, code, event, event.action == KeyEvent.ACTION_DOWN)) return chain.proceed()
+            callback.finishedEvent(sequence, true)
+            return null
+        }
+    }
+
+    private fun dispatchVolumeCursor(service: InputMethodService, code: Int, event: KeyEvent, down: Boolean): Boolean =
+        ModuleHelper.guarded(false) {
             val key = "customiuizer_volume_cursor_keys"
             var state = XposedHelpers.getAdditionalInstanceField(service, key) as? VolumeCursorKeys
             if (state == null) {
@@ -517,8 +530,6 @@ object Controls {
             }
             if (down) state.onDown(code, event, controlsConfig) else state.onUp(code, event)
         }
-        return if (handled) true else chain.proceed()
-    }
 
     private fun handleNavBarAction(context: Context, key: String): Boolean {
         val action = navbarActionFor(key)

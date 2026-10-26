@@ -1297,4 +1297,6 @@
     <string name="system_island_waveform_group">Волна</string>
     <string name="system_island_motion_group">Анимация</string>
     <string name="system_island_general_gestures_group">Общие</string>
+    <string name="system_island_waveform_gain_title">Усиление волны</string>
+    <string name="system_island_waveform_gain_summ">Усиливает индикаторы музыки и записи в реальном времени. Меняется только отображение; в тишине индикаторы остаются плоскими.</string>
 </resources>

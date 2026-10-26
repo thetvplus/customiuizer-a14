@@ -395,9 +395,11 @@ class DockBackgroundTest {
         decoration.onEditingFrame(animation, .5f, true)
         assertEquals(115, material.background.alpha)
         decoration.onEditingFrame(animation, 0f, false)
+        assertEquals("The native terminal draw is transparent before ownership is retired", 0, material.background.alpha)
+        native.clearAnimation()
+        native.viewTreeObserver.dispatchOnPreDraw()
         assertFalse(material.appliedEnabled)
         assertNull(material.background)
-        native.clearAnimation()
         native.visibility = View.VISIBLE
         decoration.onVisibilityAggregated(true)
         assertEquals(230, material.background.alpha)

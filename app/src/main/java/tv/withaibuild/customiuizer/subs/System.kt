@@ -266,6 +266,10 @@ class System : SubFragment() {
                 preferenceScreen.isEnabled = StrongToastPresentationMode.fromPreference(
                     AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
                 ) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                val mode = findPreference<ListPreferenceEx>("pref_key_system_island_waveform_mode")
+                val gain = findPreference<Preference>("pref_key_system_island_waveform_gain")
+                gain?.isEnabled = mode?.value == "2"
+                mode?.setOnPreferenceChangeListener { _, value -> gain?.isEnabled = value.toString() == "2"; true }
             }
             "pref_key_system_island_actions_cat" -> {
                 val enabled = StrongToastPresentationMode.fromPreference(

@@ -35,7 +35,8 @@ internal object IslandMusicReturnSignal {
             right <= screenWidth && bottom <= screenHeight
         fun rectangle() = RectF(left, top, right, bottom)
         fun landingRectangle() = rectangle().apply {
-            inset((width() - IslandMotion.landingWidth(width(), height())) * .5f, 0f)
+            inset((width() - IslandMotion.landingWidth(width(), height())) * .5f,
+                height() * (1f - IslandMotion.LANDING_HEIGHT_RATIO) * .5f)
         }
     }
 

@@ -1226,6 +1226,8 @@
     <string name="system_island_media_swipe_title">Swipe to skip</string>
     <string name="system_island_media_swipe_summ">Turning this off blocks previous/next track on horizontal swipes. Other configured actions remain available.</string>
     <string name="system_island_waveform_title">Waveform mode</string>
+    <string name="system_island_waveform_gain_title">Waveform gain</string>
+    <string name="system_island_waveform_gain_summ">Amplify live music and recording bars. This changes the display only; silence stays flat.</string>
     <string name="system_island_waveform_summ">Animation follows playback state without recording audio. Stops when paused, hidden or the screen is off.</string>
     <string name="system_island_entrance_style_title">Entry &amp; exit</string>
     <string name="system_island_entrance_style_center">Center</string>

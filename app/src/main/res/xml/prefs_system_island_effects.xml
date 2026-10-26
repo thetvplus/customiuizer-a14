@@ -1,6 +1,7 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" xmlns:miuizer="http://schemas.android.com/apk/res-auto" android:key="pref_key_system_island_effects_cat">
 	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_waveform_group">
 		<tv.withaibuild.customiuizer.prefs.ListPreferenceEx android:key="pref_key_system_island_waveform_mode" android:title="@string/system_island_waveform_title" android:entries="@array/island_waveform_modes" android:entryValues="@array/island_waveform_modes_val" android:defaultValue="1" miuizer:valueAsSummary="true" android:summary="@string/system_island_waveform_mode_summ" />
+		<tv.withaibuild.customiuizer.prefs.SeekBarPreference android:key="pref_key_system_island_waveform_gain" android:title="@string/system_island_waveform_gain_title" android:summary="@string/system_island_waveform_gain_summ" android:defaultValue="200" miuizer:minValue="100" miuizer:maxValue="800" miuizer:stepValue="25" miuizer:format="%d%%" />
 	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_motion_group">
 		<tv.withaibuild.customiuizer.prefs.ListPreferenceEx android:key="pref_key_system_island_entrance_style" android:title="@string/system_island_entrance_style_title" android:entries="@array/island_entrance_styles" android:entryValues="@array/island_entrance_styles_val" android:defaultValue="1" miuizer:valueAsSummary="true" />

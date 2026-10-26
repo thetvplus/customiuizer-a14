@@ -12,6 +12,54 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VolumeCursorKeysTest {
+    class OverridingIme : android.inputmethodservice.InputMethodService() {
+        var nativeDowns = 0
+        override fun onKeyDown(code: Int, event: KeyEvent): Boolean { nativeDowns++; return false }
+    }
+
+    @Test fun frameworkSessionHandlesVolumeBeforeAnImeOverrideAndCompletesEachKeyOnce() {
+        val service = org.robolectric.Robolectric.buildService(OverridingIme::class.java).create()
+        val ime = service.get()
+        val session = ime.InputMethodSessionImpl().apply { isEnabled = true }
+        val owner = android.inputmethodservice.AbstractInputMethodService.AbstractInputMethodSessionImpl::class.java
+            .getDeclaredField("this\$0").apply { isAccessible = true }
+        val hook = Controls.volumeCursorSessionHook(owner)
+        val editor = Editor()
+        tv.withaibuild.customiuizer.mods.utils.XposedHelpers.setAdditionalInstanceField(ime,
+            "customiuizer_volume_cursor_keys", VolumeCursorKeys(editor))
+        val previous = org.robolectric.util.ReflectionHelpers.getStaticField<Controls.ControlsSnapshot>(Controls::class.java, "controlsConfig")
+        org.robolectric.util.ReflectionHelpers.setStaticField(Controls::class.java, "controlsConfig", enabled)
+        var completions = 0
+        val callback = android.view.inputmethod.InputMethodSession.EventCallback { _, handled -> assertTrue(handled); completions++ }
+        class Chain(private val key: KeyEvent, private val callbackValue: Any? = callback) : io.github.libxposed.api.XposedInterface.Chain {
+            var proceeds = 0
+            override fun getExecutable() = session.javaClass.getMethod("dispatchKeyEvent", Int::class.javaPrimitiveType,
+                KeyEvent::class.java, android.view.inputmethod.InputMethodSession.EventCallback::class.java)
+            override fun getThisObject(): Any = session
+            override fun getArgs(): List<Any?> = error("Read individual arguments")
+            override fun getArg(index: Int): Any? = when (index) { 0 -> 11; 1 -> key; 2 -> callbackValue; else -> error("index") }
+            override fun proceed(): Any? { proceeds++; return null }
+            override fun proceed(args: Array<Any?>): Any? = error("Original arguments must be retained")
+            override fun proceedWith(receiver: Any): Any? = error("Original receiver must be retained")
+            override fun proceedWith(receiver: Any, args: Array<Any?>): Any? = error("Original receiver must be retained")
+        }
+        try {
+            val down = Chain(event()); hook.intercept(down)
+            assertEquals(0, down.proceeds); assertEquals(1, completions); assertEquals(1, editor.moves.size)
+            val up = Chain(event(action = KeyEvent.ACTION_UP)); hook.intercept(up)
+            assertEquals(0, up.proceeds); assertEquals(2, completions); assertEquals(0, ime.nativeDowns)
+            val ordinary = Chain(event(code = KeyEvent.KEYCODE_A)); hook.intercept(ordinary)
+            assertEquals(1, ordinary.proceeds); assertEquals(2, completions)
+            val absentCallback = Chain(event(), null); hook.intercept(absentCallback)
+            assertEquals(1, absentCallback.proceeds); assertEquals(1, editor.moves.size)
+            session.isEnabled = false
+            val disabled = Chain(event()); hook.intercept(disabled)
+            assertEquals(1, disabled.proceeds); assertEquals(2, completions)
+        } finally {
+            org.robolectric.util.ReflectionHelpers.setStaticField(Controls::class.java, "controlsConfig", previous)
+            service.destroy()
+        }
+    }
     private val enabled = Controls.ControlsSnapshot(volumeCursorEnabled = true)
     private class Editor : VolumeCursorKeys.Editor {
         var current: VolumeCursorKeys.Target? = VolumeCursorKeys.Target(Any(), "editor.app")

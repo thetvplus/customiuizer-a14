@@ -38,6 +38,8 @@ internal object LauncherMusicReturnHooks {
 
     fun install(param: PackageReadyParam, prefs: PrefMap) {
         val access = LauncherMusicReturnAccess(param.classLoader)
+        val absorption = LauncherWindowAbsorption.resolve(param.classLoader, Handler(Looper.getMainLooper()))
+        var absorptionInstalled = false
         val targetHook = ModuleHelper.hookMethod(access.closingTarget, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 val nav = chain.thisObject ?: return chain.proceed()
@@ -52,7 +54,7 @@ internal object LauncherMusicReturnHooks {
                 if (callback.getThrowable() != null || !view.isAttachedToWindow ||
                     XposedHelpers.getAdditionalInstanceField(view, OWNER) != null) return@guarded
                 active.get()?.dispose()
-                val owner = Owner(view, prefs, access)
+                val owner = Owner(view, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
                 XposedHelpers.setAdditionalInstanceField(view, OWNER, owner)
                 active = WeakReference(owner)
             }
@@ -90,9 +92,38 @@ internal object LauncherMusicReturnHooks {
         }
         access.fastAnimate?.let { fastInstalled = ModuleHelper.hookMethod(it, animationHook(it)) != null }
         ModuleHelper.hookMethod(access.animate, animationHook(access.animate))
+        if (absorption != null) {
+            val (meshAccess, mesh) = absorption
+            val frameHook = ModuleHelper.hookMethod(meshAccess.update, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val element = chain.thisObject ?: return chain.proceed()
+                    if (!mesh.owns(element)) return chain.proceed()
+                    val alpha = chain.getArg(0) as Float
+                    val hiding = ModuleHelper.guarded(false) { mesh.hides(element) }
+                    val result = if (hiding) {
+                        val args = chain.args.toTypedArray(); args[0] = 0f
+                        chain.proceed(args)
+                    } else chain.proceed()
+                    ModuleHelper.guarded {
+                        mesh.frame(element, chain.getArg(1) as android.graphics.RectF,
+                            chain.getArg(3) as Float, chain.getArg(2) as Float, alpha)
+                    }
+                    return result
+                }
+            })
+            var endingsInstalled = frameHook != null
+            for (method in meshAccess.cancellations) {
+                if (ModuleHelper.hookMethod(method, object : MethodHook() {
+                    override fun intercept(chain: XposedInterface.Chain): Any? = try { chain.proceed() }
+                        finally { ModuleHelper.guarded { chain.thisObject?.let(mesh::end) } }
+                }) == null) endingsInstalled = false
+            }
+            absorptionInstalled = endingsInstalled
+        }
     }
 
-    private class Owner(host: View, private val prefs: PrefMap, private val access: LauncherMusicReturnAccess) :
+    private class Owner(host: View, private val prefs: PrefMap, private val access: LauncherMusicReturnAccess,
+        private val absorption: LauncherWindowAbsorption?) :
         ScreenStateController.ScreenStateListener {
         private val view = WeakReference(host)
         private val context = host.context.applicationContext
@@ -222,6 +253,7 @@ internal object LauncherMusicReturnHooks {
                 return
             }
             committedAttempt = attempt.sequence
+            attempt.snapshot.frame?.let { frame -> ModuleHelper.guarded { absorption?.begin(tasks, element, attempt.params, frame) } }
             val current = attempt.snapshot
             val message = IslandMusicReturnSignal.encode(current.frame, current.issuedAt, current.sequence)
                 .setAction(IslandMusicReturnSignal.REQUEST).setPackage(IslandMusicReturnSignal.SYSTEM_UI)
@@ -241,7 +273,10 @@ internal object LauncherMusicReturnHooks {
             if (!isOn) { invalidateAttempt(); snapshot = null } else request()
         }
         private fun current(attempt: Attempt) = attempt.epoch == gesture.get() && attempt.sequence == activeAttempt.get()
-        private fun invalidateAttempt() { gesture.incrementAndGet(); activeAttempt.set(0); commitJob?.cancel(); commitJob = null }
+        private fun invalidateAttempt() {
+            gesture.incrementAndGet(); activeAttempt.set(0); commitJob?.cancel(); commitJob = null
+            ModuleHelper.guarded { absorption?.cancel() }
+        }
         private fun stop() {
             invalidateAttempt()
             snapshot = null

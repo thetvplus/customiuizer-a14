@@ -1298,4 +1298,6 @@
     <string name="system_island_waveform_group">Onda</string>
     <string name="system_island_motion_group">Animação</string>
     <string name="system_island_general_gestures_group">Geral</string>
+    <string name="system_island_waveform_gain_title">Ganho da forma de onda</string>
+    <string name="system_island_waveform_gain_summ">Amplifica as barras de música e gravação em tempo real. Altera apenas a exibição; o silêncio continua plano.</string>
 </resources>

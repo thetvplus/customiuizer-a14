@@ -18594,6 +18594,29 @@
       "notes": "Requires the island integration installed at SystemUI startup; updates within that integration are immediate"
     },
     {
+      "featureId": "system_island_waveform_gain",
+      "featureName": "system_island_waveform_gain",
+      "preferenceKeys": [
+        "system_island_waveform_gain",
+        "pref_key_system_island_waveform_gain"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_effects.xml",
+      "defaultValue": "200",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Scale the five measured music or recorder display levels by 100-800 percent; gate silence before amplification",
+      "disableEffect": "No capture or callback is created by gain; waveform mode and the existing visible lease own sampling",
+      "valueChangeEffect": "The current wave view reapplies its five scalar measured levels on Main without restarting capture",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandPolishTest; IslandRecorderMeterTest; IslandOptionsTest",
+      "notes": "Display gain only; 200 percent default, bounded 100-800 percent. No audio volume, sample capture, process lifetime or route change."
+    },
+    {
       "featureId": "system_island_waveform_mode",
       "featureName": "system_island_waveform_mode",
       "preferenceKeys": [

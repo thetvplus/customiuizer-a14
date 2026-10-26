@@ -311,7 +311,10 @@ class UiHotPathPreferenceSnapshotTest {
             "fun VolumeCursorHook",
         )
         assertFalse(volume.contains("MainModule.mPrefs"))
-        assertTrue(volume.contains("dispatchVolumeCursor"))
+        assertTrue(volume.contains("volumeCursorSessionHook"))
+        val session = methodBody("app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt", "fun volumeCursorSessionHook")
+        assertTrue(session.contains("dispatchVolumeCursor"))
+        assertFalse(session.contains("MainModule.mPrefs"))
         val dispatch = methodBody("app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt", "fun dispatchVolumeCursor")
         assertTrue(dispatch.contains("controlsConfig"))
         assertFalse(dispatch.contains("Settings.Global"))

@@ -356,9 +356,13 @@ class PreferenceNavigationUiTest {
         settleNavigation()
         val page = currentPage() as SubFragment
         val wave = requireNotNull(page.findPreference<ListPreference>("pref_key_system_island_waveform_mode"))
+        val gain = requireNotNull(page.findPreference<Preference>("pref_key_system_island_waveform_gain"))
         assertTrue("Recording can configure the shared waveform without enabling media", wave.isEnabled)
         assertEquals("1", wave.value)
+        assertFalse(gain.isEnabled)
+        assertTrue(wave.callChangeListener("2"))
         wave.value = "2"
+        assertTrue(gain.isEnabled)
         val waveRow = LayoutInflater.from(activity).inflate(wave.layoutResource, null)
         wave.onBindViewHolder(PreferenceViewHolder.createInstanceForTests(waveRow))
         assertEquals(activity.getString(R.string.system_island_waveform_real),

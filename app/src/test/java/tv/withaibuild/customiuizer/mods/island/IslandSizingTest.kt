@@ -5,6 +5,17 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class IslandSizingTest {
+    @Test fun expandedWidthFitsTheActualCaptionInsteadOfReservingAnEmptyWideCard() {
+        assertEquals(160, IslandSizing.expanded(1f, 400, 400, 40, 20f))
+        assertEquals(192, IslandSizing.expanded(1f, 400, 400, 40, 60f))
+        assertEquals(272, IslandSizing.expanded(1f, 400, 400, 40, 100f))
+        for (density in listOf(1f, 2.75f, 3f)) for (height in 32..64) {
+            val short = IslandSizing.expanded(density, 4000, 4000, (40 * density).roundToInt(), 20 * density, height)
+            val longer = IslandSizing.expanded(density, 4000, 4000, (40 * density).roundToInt(), 80 * density, height)
+            assertTrue(longer > short)
+            assertTrue(short < IslandSizing.automatic(280, height) * density)
+        }
+    }
     @Test fun longContentLeavesVisibleSpaceBeforeTheScreenCornersAtEveryHeight() {
         for (height in 32..64) for (density in listOf(1f, 2.75f, 3f)) {
             val screen = (360 * density).roundToInt()

@@ -68,9 +68,9 @@ internal object IslandSizing {
      * Its viewport bound is separate from the quiet, compact form's icon clearance. */
     fun expanded(density: Float, screen: Int, safeWidth: Int, gap: Int, caption: Float,
         heightDp: Int = COLLAPSED_HEIGHT_DP, centered: Boolean = true): Int {
-        val minimum = automatic(280, heightDp) * density
+        val minimum = automatic(SHORT_DP, heightDp) * density
         val maximum = automatic(320, heightDp) * density
-        val content = if (centered) gap + 2 * (caption + EDGE_DP * density)
+        val content = if (centered) gap + 2 * (maxOf(caption, 24 * density) + EDGE_DP * density)
             else caption + (2 * EDGE_DP + 32) * density
         return minOf(maxOf(minimum, content).coerceAtMost(maximum).roundToInt(),
             screen - (2 * SCREEN_EDGE_DP * density).roundToInt(), safeWidth).coerceAtLeast(0)

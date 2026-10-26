@@ -171,6 +171,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var expanded = false
     /** Target content owns capture; the old child may still be fading during a handoff. */
     val waveformRequested: Boolean get() = recording || isMedia && !expanded
+    var waveformGain: Int
+        get() = wave.gainPercent
+        set(value) { wave.gainPercent = value }
     var expandOnDown = true
     var returnStrength = 0f
     var allowTextBlur = true
@@ -481,7 +484,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         leaving = false
         val startWidth = (if (entering) geometryWidth else fromWidth) * scaleX
         val startHeight = (if (entering) geometryHeight else fromHeight) * scaleY
-        val catchAmount = IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat())
+        val catchAmount = maxOf(IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat()),
+            if (mediaReturnProgress == 0f) if (nativeArrival) .085f else .055f else 0f)
         if (!entering) {
             scaleX *= fromWidth.toFloat() / width.coerceAtLeast(1)
             scaleY *= fromHeight.toFloat() / height.coerceAtLeast(1)
@@ -491,7 +495,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             visualTop?.let { translationY = it - pivotY * (1f - scaleY) }
         }
         val travel = if (mediaReturnProgress == 0f) {
-            if (nativeArrival) IslandMotion.MEDIA_RETURN - (35 * returnStrength).toLong() else IslandMotion.ENTER
+            if (nativeArrival) IslandMotion.MEDIA_RETURN - (35 * returnStrength).toLong() else IslandMotion.CONTENT_ARRIVAL
         }
             else if (entering) IslandMotion.ENTER
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
@@ -566,17 +570,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // flick with no MOVE. A small deliberate upward drag must never open the app.
         if (!multiTouch && !inputCancelled && !longConsumed &&
             (event.actionMasked == MotionEvent.ACTION_MOVE || event.actionMasked == MotionEvent.ACTION_UP)) {
-            val dx = pointerX(event) - downX
-            val dy = pointerY(event) - downY
-            val upward = dragAxis != 1 && IslandRecallGesture.hasUpwardIntent(recall,
-                event.getPointerId(0), pointerX(event), pointerY(event), recallConfig)
-            if (upward && dragAxis == 0) dragAxis = 2
-            dragging = dragging || upward || abs(dx) > slop || abs(dy) > slop
-            if (dragging && !tapSuppressed) {
-                cancelInputs(cancelDrag = false)
-                inputCancelled = false
-                tapSuppressed = true
-            }
+            // Batched MOVE history can contain the upward excursion even when the
+            // finger rolls back near DOWN at release. Use original window coordinates.
+            val original = windowEvent ?: event
+            val rawOffsetX = original.rawX - original.x
+            val rawOffsetY = original.rawY - original.y
+            for (sample in 0 until original.historySize) observeTouchSample(event.getPointerId(0),
+                original.getHistoricalX(0, sample) + rawOffsetX, original.getHistoricalY(0, sample) + rawOffsetY)
+            observeTouchSample(event.getPointerId(0), pointerX(event), pointerY(event))
         }
         if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_UP) {
             multiTouch = true; recall = IslandRecallGesture.onCancel()
@@ -591,6 +592,21 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             dragging = false; multiTouch = false; dragAxis = 0
         }
         return result
+    }
+
+    private fun observeTouchSample(pointer: Int, x: Float, y: Float) {
+        val dx = x - downX
+        val dy = y - downY
+        val upward = dragAxis != 1 && IslandRecallGesture.hasUpwardIntent(recall,
+            pointer, x, y, recallConfig)
+        if (upward && dragAxis == 0) dragAxis = 2
+        dragging = dragging || upward || abs(dx) > slop || abs(dy) > slop
+        if ((dragging || IslandRecallGesture.vetoesTap(recall, pointer, y, recallConfig)) && !tapSuppressed) {
+            cancelInputs(cancelDrag = false)
+            inputCancelled = false
+            tapSuppressed = true
+        }
+        if (dragAxis == 2) recall = IslandRecallGesture.onMove(recall, pointer, x, y, recallConfig)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -636,7 +652,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             }
             MotionEvent.ACTION_CANCEL -> { cancelInputs(); return true }
         }
-        taps.onTouchEvent(event)
+        if (!tapSuppressed) taps.onTouchEvent(event)
         return true
     }
 
@@ -691,10 +707,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 scaleY = depth.sample(time, minimumHeight, maximumHeight) / geometryHeight.coerceAtLeast(1)
                 val progress = (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
                 val weight = catchWeight * if (returning && nativeArrival) .85f + .3f * returnStrength else 1f
-                val physicalBreadth = springBreadth + geometryWidth * weight * IslandMotion.mediaReturnCatch(progress)
+                val physicalBreadth = springBreadth + geometryWidth * weight * IslandMotion.mediaReturnCatch(progress, nativeArrival)
                 scaleX = minOf(maximumBreadth, physicalBreadth) / geometryWidth.coerceAtLeast(1)
                 breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else
-                    geometryWidth * weight * IslandMotion.catchDerivative(progress) / seconds
+                    geometryWidth * weight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
                 if (returning && mediaReturnProgress < 1f) {
                     mediaReturnProgress = progress
                     (parent as? View)?.invalidate()
@@ -895,18 +911,32 @@ internal class IslandWaveView(context: Context) : View(context) {
     private var phase = 0f
     private val energies = FloatArray(5)
     private val targets = FloatArray(5)
+    private val measured = FloatArray(5)
     private var settling = false
     private var lastFrame = 0L
     private var real = false
+    var gainPercent = 200
+        set(value) {
+            val next = value.coerceIn(100, 800)
+            if (field == next) return
+            field = next
+            if (real) applyLevels(false)
+        }
     fun spectrum(values: FloatArray?) {
         if (values == null && !real) return
         val changedMode = real != (values != null)
         real = values != null
+        for (index in 0..4) measured[index] = values?.get(index) ?: 0f
+        applyLevels(changedMode)
+    }
+    private fun applyLevels(changedMode: Boolean) {
         settling = false
         for (index in 0..4) {
-            // Reject small quantisation noise without turning quiet audio into large bars.
-            val next = values?.get(index)?.let { if (it < .055f) 0f else (it - .055f) / .945f } ?: 0f
-            if (changedMode || abs(next - targets[index]) >= .018f || next == 0f) targets[index] = next
+            val raw = measured[index]
+            // Gate quantisation before applying user gain. Silence never gains a fake beat.
+            val next = if (!raw.isFinite() || raw <= .015f) 0f
+                else (((raw.coerceAtMost(1f) - .015f) / .985f) * gainPercent / 100f).coerceAtMost(1f)
+            if (changedMode || abs(next - targets[index]) >= .006f || next == 0f) targets[index] = next
             if (changedMode) energies[index] = targets[index]
             if (abs(targets[index] - energies[index]) > .006f) settling = true
         }

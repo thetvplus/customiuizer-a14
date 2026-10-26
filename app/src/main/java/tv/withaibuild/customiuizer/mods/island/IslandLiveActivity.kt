@@ -69,17 +69,27 @@ internal class IslandLiveRegistry(private val dismissal: Dismissal = Dismissal()
     }
 
     fun select(kinds: Set<IslandLiveKind>, excluded: Set<String>, user: Int,
-        privacyIsSecondary: Boolean = false, elapsed: Long = 0): IslandLiveActivity? {
+        privacyIsSecondary: Boolean = false, elapsed: Long = 0, foregroundPackage: String? = null): IslandLiveActivity? =
+        choose(kinds, excluded, user, privacyIsSecondary, elapsed, foregroundPackage, null).also { selected = it?.key }
+
+    /** The native return target remains available while its app owns the foreground UI.
+     * Looking it up must not replace the selected background activity or undo dismissal. */
+    fun forPackage(packageName: String?, kinds: Set<IslandLiveKind>, excluded: Set<String>, user: Int,
+        elapsed: Long): IslandLiveActivity? = if (packageName == null) null
+        else choose(kinds, excluded, user, false, elapsed, null, packageName)
+
+    private fun choose(kinds: Set<IslandLiveKind>, excluded: Set<String>, user: Int,
+        privacyIsSecondary: Boolean, elapsed: Long, foregroundPackage: String?, requiredPackage: String?): IslandLiveActivity? {
         var best: IslandLiveActivity? = null
         for (candidate in current.values) {
             if (candidate.kind !in kinds || candidate.packageName in excluded || candidate.uid / 100000 != user ||
+                candidate.packageName == foregroundPackage || requiredPackage != null && candidate.packageName != requiredPackage ||
                 candidate.key in dismissal.keys || privacyIsSecondary && candidate.kind == IslandLiveKind.PRIVACY ||
                 candidate.clock?.let { it.countdown && it.pausedMillis == null && elapsed - it.base >= 3000 } == true) continue
             val old = best
             if (old == null || candidate.kind.priority > old.kind.priority ||
                 candidate.kind.priority == old.kind.priority && candidate.key == selected) best = candidate
         }
-        selected = best?.key
         return best
     }
 

@@ -24,6 +24,7 @@ object IslandRecallGesture {
         val minUpDistancePx: Float,
         val maxHorizontalRatio: Float,
         val intentDistancePx: Float = scaledTouchSlopPx * .5f,
+        val tapVetoDistancePx: Float = intentDistancePx,
     )
 
     @JvmStatic
@@ -36,6 +37,8 @@ object IslandRecallGesture {
             maxHorizontalRatio = 0.85f,
             intentDistancePx = if (heightPx == Int.MAX_VALUE) slop * .5f else
                 minOf(slop * .35f, heightPx.coerceAtLeast(1) * .07f).coerceAtLeast(1f),
+            tapVetoDistancePx = if (heightPx == Int.MAX_VALUE) slop * .25f else
+                minOf(slop * .15f, heightPx.coerceAtLeast(1) * .03f).coerceAtLeast(1.5f),
         )
     }
 
@@ -50,6 +53,11 @@ object IslandRecallGesture {
         val up = current.downY - y
         return up >= config.intentDistancePx && kotlin.math.abs(x - current.downX) <= up
     }
+
+    /** Veto a tap before committing/locking an axis. A short or slanted upward
+     * excursion may rebound, but must not become an application launch on release. */
+    fun vetoesTap(current: Snapshot, pointerId: Int, y: Float, config: Config): Boolean =
+        current.state != STATE_IDLE && current.pointerId == pointerId && current.downY - y >= config.tapVetoDistancePx
 
     @JvmStatic
     fun onMove(current: Snapshot, pointerId: Int, x: Float, y: Float, config: Config): Snapshot {

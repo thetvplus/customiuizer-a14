@@ -54,6 +54,7 @@ internal data class IslandOptions(
     val idleActions: IslandIdleActions = IslandIdleActions(),
     val liveKinds: Set<IslandLiveKind> = emptySet(),
     val liveReturn: Boolean = true,
+    val waveformGain: Int = 200,
 ) {
     private val mediaReturningPackages: Set<String> = if (enabled && media && mediaReturn)
         mediaReturnApps.filterTo(linkedSetOf()) { it !in excludedApps } else emptySet()
@@ -108,7 +109,8 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_island_height_auto", prefs.getInt("system_island_height", 40) == 40),
                 prefs.getBoolean("system_island_feedback_charging"),
                 prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs), IslandLiveKind.read(prefs),
-                prefs.getBoolean("system_island_live_return", true))
+                prefs.getBoolean("system_island_live_return", true),
+                prefs.getInt("system_island_waveform_gain", 200).coerceIn(100, 800))
         }
     }
 }

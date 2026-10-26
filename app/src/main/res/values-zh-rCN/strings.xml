@@ -1203,6 +1203,8 @@
     <string name="system_island_media_swipe_title">滑动切歌</string>
     <string name="system_island_media_swipe_summ">左右滑动切歌，其他已设手势继续生效。</string>
     <string name="system_island_waveform_title">波形模式</string>
+    <string name="system_island_waveform_gain_title">波形增益</string>
+    <string name="system_island_waveform_gain_summ">放大实时音乐与录音的波形起伏，仅影响显示；静音保持平直。</string>
     <string name="system_island_waveform_summ">随播放状态变化，隐藏或暂停时停止。</string>
     <string name="system_island_entrance_style_title">进出动效</string>
     <string name="system_island_entrance_style_center">横向展开</string>

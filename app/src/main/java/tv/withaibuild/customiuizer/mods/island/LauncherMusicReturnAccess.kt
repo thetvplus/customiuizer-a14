@@ -124,8 +124,12 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
         val values = fields.map { it.get(original) }.toTypedArray()
-        values[2] = frame.landingRectangle()
-        values[4] = (frame.bottom - frame.top) * .5f
+        val landing = frame.landingRectangle()
+        values[2] = landing
+        values[4] = landing.height() * .5f
+        // Keep the real window opaque until it is wholly inside the island's mask.
+        // Native finish/cancel still owns its leash and animation clock.
+        values[6] = 1f
         // A14's frame callback draws any *already initialized* floating icon without
         // consulting ignoreIcon. A null target makes native initTargetView retire that
         // icon before the window spring starts, restoring its real desktop owner once.

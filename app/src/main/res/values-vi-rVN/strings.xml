@@ -1298,4 +1298,6 @@
     <string name="system_island_waveform_group">Sóng</string>
     <string name="system_island_motion_group">Hoạt ảnh</string>
     <string name="system_island_general_gestures_group">Chung</string>
+    <string name="system_island_waveform_gain_title">Độ khuếch đại dạng sóng</string>
+    <string name="system_island_waveform_gain_summ">Khuếch đại các cột nhạc và ghi âm theo thời gian thực. Chỉ thay đổi hiển thị; khi im lặng, các cột vẫn phẳng.</string>
 </resources>

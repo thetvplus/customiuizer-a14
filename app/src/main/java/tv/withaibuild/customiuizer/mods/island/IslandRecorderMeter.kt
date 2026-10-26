@@ -17,12 +17,11 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 internal object IslandRecorderMeter {
     private const val DESCRIPTOR = "tv.withaibuild.customiuizer.r14.RecorderLevel"
     private const val LEVEL = IBinder.FIRST_CALL_TRANSACTION
-    /** The native input is a 16-bit peak, not RMS. Keep visible headroom rather than
-     * boosting speech peaks with sqrt or normalising every sample to its own maximum. */
+    /** Fixed speech display response to a 16-bit peak. Noise remains quiet; no per-frame AGC. */
     internal fun level(raw: Int): Float {
         if (raw <= 256) return 0f
-        val x = raw.coerceAtMost(32767) / 32767f
-        return x * (.6f + .25f * x)
+        val x = (raw.coerceAtMost(32767) - 256) / 32511f
+        return kotlin.math.sqrt(x) * .85f
     }
     fun producer(systemUiUid: Int, level: () -> Int): IBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
@@ -65,7 +64,7 @@ internal object IslandRecorderMeter {
                     val raw = withContext(io) { ModuleHelper.guarded<Int?>(null) { read(next) } } ?: break
                     val level = level(raw)
                     // A five-sample envelope, not invented frequency bands. Quiet remains quiet.
-                    if (previous < 0f || kotlin.math.abs(level - previous) >= .018f || level == 0f && previous != 0f)
+                    if (previous < 0f || kotlin.math.abs(level - previous) >= .004f || level == 0f && previous != 0f)
                         previous = level
                     if (bars.any { kotlin.math.abs(it - previous) >= .006f }) {
                         for (i in 0..3) bars[i] = bars[i + 1]

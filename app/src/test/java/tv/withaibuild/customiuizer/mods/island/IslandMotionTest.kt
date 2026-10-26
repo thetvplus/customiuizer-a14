@@ -4,7 +4,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandMotionTest {
-    @Test fun musicReturnMakesOneBoundedCatchAndHasExactEndpoints() {
+    @Test fun nativeIntakePrecedesOneBoundedCatchWithExactEndpoints() {
         assertEquals(0f, IslandMotion.mediaReturnCatch(0f), 0f)
         assertEquals(0f, IslandMotion.mediaReturnCatch(1f), 0f)
         var previous = 0f
@@ -12,12 +12,15 @@ class IslandMotionTest {
         for (i in 0..1000) {
             val p = i / 1000f
             val catchValue = IslandMotion.mediaReturnCatch(p)
-            assertTrue(catchValue.isFinite() && catchValue in 0f.. .6f)
-            if (catchValue < previous) descending = true
-            if (descending) assertTrue(catchValue <= previous)
+            assertTrue(catchValue.isFinite() && catchValue in -.2001f.. .6f)
+            if (p >= .55f) {
+                if (catchValue < previous) descending = true
+                if (descending) assertTrue(catchValue <= previous)
+            } else assertTrue(catchValue <= 0f)
             previous = catchValue
         }
         assertTrue(descending)
+        assertEquals(-.2f, IslandMotion.mediaReturnCatch(.35f), .0001f)
         assertEquals(0f, IslandMotion.mediaReturnCatch(.55f), 0f)
         assertTrue(IslandMotion.mediaReturnCatch(.72f) > 0f)
         assertTrue(IslandMotion.MEDIA_RETURN_DELAY < IslandMotion.MEDIA_DELAY)

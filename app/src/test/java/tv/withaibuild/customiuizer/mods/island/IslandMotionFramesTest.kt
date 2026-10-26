@@ -29,6 +29,29 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
+    @Test fun equalSizeContentArrivalExpandsOnceFromTheCurrentShellAndSettlesWithinTheSameClock() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell = IslandActivityView(activity)
+        activity.setContentView(shell, FrameLayout.LayoutParams(160, 40))
+        shell.geometry(160, 40, 40, 168); shell.layout(0, 0, 160, 40)
+        shadowOf(Looper.getMainLooper()).idle()
+        ShadowChoreographer.setPaused(true)
+        try {
+            shell.prepareContentArrivalFromCurrent()
+            shell.transition(160, 40, 160, 40, false)
+            val clock = getField<ValueAnimator>(shell, "motion")
+            clock.currentPlayTime = 0
+            assertEquals(160f, shell.width * shell.scaleX, .001f)
+            clock.currentPlayTime = clock.duration / 2
+            assertTrue("An already-present shell must acknowledge the arrival", shell.width * shell.scaleX > 163f)
+            assertTrue(shell.width * shell.scaleX <= 168f)
+            assertEquals(40f, shell.height * shell.scaleY, .001f)
+            clock.end()
+            assertEquals(1f, shell.scaleX, .001f)
+            assertEquals(1f, shell.alpha, .001f)
+            assertNull(getField<ValueAnimator?>(shell, "motion"))
+        } finally { ShadowChoreographer.setPaused(false); activity.finish() }
+    }
     @Test fun contractingTheShellKeepsTheWholeArtworkInsideItsPhysicalEdgeMargin() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)
@@ -243,7 +266,7 @@ class IslandMotionFramesTest {
             layout(280); shell.transition(184, 40, 280, 40, false)
             getField<ValueAnimator>(shell, "motion").currentPlayTime = time
             val before = shell.width * shell.scaleX
-            val velocity = getField<IslandMotion.Spring>(shell, "breadth").velocity
+            val velocity = getField<IslandMotion.Spring>(shell, "breadth").velocity + getField<Float>(shell, "breadthExtraVelocity")
             assertTrue(velocity > 0f)
             layout(184); shell.transition(280, 40, 184, 40, false)
             assertEquals(before, shell.width * shell.scaleX, .001f)
@@ -320,7 +343,7 @@ class IslandMotionFramesTest {
             layout(280); shell.transition(184, 40, 280, 40, false)
             sample(3, "interrupt", end = false)
             val before = shell.width * shell.scaleX
-            val velocity = getField<IslandMotion.Spring>(shell, "breadth").velocity
+            val velocity = getField<IslandMotion.Spring>(shell, "breadth").velocity + getField<Float>(shell, "breadthExtraVelocity")
             layout(184); shell.transition(280, 40, 184, 40, false)
             assertEquals(before, shell.width * shell.scaleX, .001f)
             assertEquals(velocity, getField<IslandMotion.Spring>(shell, "breadth").velocity, .01f)

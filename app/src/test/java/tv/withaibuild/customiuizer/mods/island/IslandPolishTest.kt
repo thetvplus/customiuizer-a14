@@ -27,6 +27,23 @@ import java.time.Duration
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandPolishTest {
+    @Test fun measuredGainIsBoundedImmediateAndCannotInventASignalForSilenceOrInvalidSamples() {
+        val wave = IslandWaveView(org.robolectric.RuntimeEnvironment.getApplication())
+        wave.gainPercent = 100
+        wave.spectrum(FloatArray(5) { .2f })
+        val before = getField<FloatArray>(wave, "targets")[0]
+        wave.gainPercent = 200
+        assertEquals(before * 2, getField<FloatArray>(wave, "targets")[0], .00001f)
+        wave.gainPercent = 10000
+        assertEquals(800, wave.gainPercent)
+        assertEquals(1f, getField<FloatArray>(wave, "targets")[0], 0f)
+        for (quiet in listOf(0f, .01f, Float.NaN, Float.POSITIVE_INFINITY, -1f)) {
+            wave.spectrum(FloatArray(5) { quiet })
+            assertArrayEquals(FloatArray(5), getField<FloatArray>(wave, "targets"), 0f)
+        }
+        wave.gainPercent = -1
+        assertEquals(100, wave.gainPercent)
+    }
     @Test fun measuredWaveInterpolatesWithoutKeepingAClockAfterSilenceOrDetachment() {
         val activity=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val wave=IslandWaveView(activity)

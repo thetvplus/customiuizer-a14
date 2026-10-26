@@ -46,7 +46,7 @@ class LauncherMusicReturnLifecycleTest {
             LauncherMusicReturnAccessTest.Targets::class.java, LauncherMusicReturnAccessTest.Remote::class.java,
             LauncherMusicReturnAccessTest.DeviceConfig::class.java)
         val type = Class.forName("${LauncherMusicReturnHooks::class.java.name}\$Owner")
-        return type.declaredConstructors.single().apply { isAccessible = true }.newInstance(View(context), prefs, access)
+        return type.declaredConstructors.single().apply { isAccessible = true }.newInstance(View(context), prefs, access, null)
     }
     private fun dispose(owner: Any) { owner.javaClass.getDeclaredMethod("dispose").apply { isAccessible = true }.invoke(owner) }
 

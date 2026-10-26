@@ -1298,4 +1298,6 @@
     <string name="system_island_waveform_group">波形</string>
     <string name="system_island_motion_group">アニメーション</string>
     <string name="system_island_general_gestures_group">共通</string>
+    <string name="system_island_waveform_gain_title">波形ゲイン</string>
+    <string name="system_island_waveform_gain_summ">音楽と録音のリアルタイム波形を増幅します。表示のみが変わり、無音時は平らなままです。</string>
 </resources>

@@ -37,7 +37,7 @@ class IslandRecorderPeakAccessTest {
         assertEquals(0f, IslandRecorderMeter.level(reader.read()), 0f)
         pcm.peak = 2097152
         assertEquals(8191, reader.read())
-        assertTrue(IslandRecorderMeter.level(reader.read()) in .16f.. .18f)
+        assertTrue(IslandRecorderMeter.level(reader.read()) in .41f.. .43f)
         pcm.peak = 8388607
         assertEquals(32767, reader.read())
     }

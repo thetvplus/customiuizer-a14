@@ -24,6 +24,29 @@ import org.robolectric.util.ReflectionHelpers.getField
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGestureRecoveryTest {
+    @Test fun aShortSlantedUpwardMotionVetoesTapBeforeItCommitsOrLocksAnAxis() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_UP, x = 126f, y = 17.8f)
+        assertEquals(0, opened); assertEquals(0, dismissed)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_UP, y = 19.5f)
+        assertEquals(1, opened)
+    }
+
+    @Test fun batchedUpwardExcursionCannotTurnIntoAClickWhenTheFingerRollsBackAtRelease() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        touch(MotionEvent.ACTION_DOWN)
+        val move = MotionEvent.obtain(0, 116, MotionEvent.ACTION_MOVE, 120f, 17.8f, 0)
+        move.addBatch(132, 120f, 19.8f, 1f, 1f, 0)
+        assertEquals(1, move.historySize)
+        shell.dispatchTouchEvent(move); move.recycle()
+        val up = MotionEvent.obtain(0, 148, MotionEvent.ACTION_UP, 120f, 20f, 0)
+        shell.dispatchTouchEvent(up); up.recycle()
+        assertEquals(0, opened); assertEquals(0, dismissed)
+    }
     @Test fun shortSlowUpwardReleasesWithinTheIslandHeightDismissWithoutOpening() {
         var opened = 0; var dismissed = 0
         shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }

@@ -19,8 +19,9 @@ import org.robolectric.shadows.ShadowBinder
 class IslandRecorderMeterTest {
     @Test fun peakMappingKeepsSilenceQuietAndLeavesHeadroomForOrdinarySpeechAndClipping() {
         assertEquals(0f, IslandRecorderMeter.level(256), 0f)
-        assertTrue(IslandRecorderMeter.level(8192) in .16f.. .18f)
-        assertTrue(IslandRecorderMeter.level(16384) in .35f.. .38f)
+        assertTrue(IslandRecorderMeter.level(8192) in .41f.. .43f)
+        assertTrue(IslandRecorderMeter.level(16384) in .59f.. .61f)
+        assertTrue("Quiet speech must survive the display gate", IslandRecorderMeter.level(1024) > .12f)
         assertEquals(.85f, IslandRecorderMeter.level(32767), .00001f)
         var previous = 0f
         for (raw in 0..32768 step 64) {

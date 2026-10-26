@@ -5,6 +5,18 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun measuredWaveformGainHasABoundedDefaultAndDoesNotEnableCapture() {
+        val prefs = PrefMap()
+        assertEquals(200, IslandOptions.read(prefs).waveformGain)
+        for ((stored, expected) in listOf(-1 to 100, 125 to 125, 5000 to 800)) {
+            prefs.put("system_island_waveform_gain", stored)
+            val options = IslandOptions.read(prefs)
+            assertEquals(expected, options.waveformGain)
+            assertFalse(options.enabled)
+            assertFalse(options.media)
+            assertEquals(1, options.waveformMode)
+        }
+    }
     @Test fun returnAdmissionUsesEnabledSelectionsAndExclusionWinsForMediaAndNativeActivities() {
         val options = IslandOptions(true, true, true, mediaReturn = true,
             mediaReturnApps = setOf("music.app", "blocked.app"), excludedApps = setOf("blocked.app", IslandLiveKind.CLOCK_PACKAGE),

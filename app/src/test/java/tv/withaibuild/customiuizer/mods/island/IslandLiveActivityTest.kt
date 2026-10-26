@@ -6,6 +6,28 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandLiveActivityTest {
+    @Test fun foregroundOwnershipFiltersEverySourceWithoutDismissingItsNextBackgroundPresentation() {
+        val registry = IslandLiveRegistry()
+        val all = IslandLiveKind.entries.toSet()
+        for (kind in IslandLiveKind.entries) {
+            registry.clear()
+            val current = activity(kind)
+            registry.update(kind, current)
+            assertNull(registry.select(all, emptySet(), 0, foregroundPackage = current.packageName))
+            assertEquals(current, registry.forPackage(current.packageName, all, emptySet(), 0, 0))
+            assertEquals(current, registry.select(all, emptySet(), 0, foregroundPackage = "other.app"))
+            registry.dismiss(current.key)
+            assertNull(registry.forPackage(current.packageName, all, emptySet(), 0, 0))
+            assertNull(registry.select(all, emptySet(), 0))
+        }
+        val timer = activity(IslandLiveKind.TIMER).copy(packageName = "foreground.clock")
+        val recorder = activity(IslandLiveKind.RECORDER).copy(packageName = "background.recorder")
+        registry.clear(); registry.update(timer.kind, timer); registry.update(recorder.kind, recorder)
+        assertEquals(recorder, registry.select(all, emptySet(), 0, foregroundPackage = timer.packageName))
+        assertEquals(timer, registry.forPackage(timer.packageName, all, emptySet(), 0, 0))
+        assertNull(registry.forPackage(timer.packageName, all, emptySet(), 10, 0))
+        assertNull(registry.forPackage(timer.packageName, all, setOf(timer.packageName), 0, 0))
+    }
     @Test fun windowReturnSharesTheSelectedSourcesButNeverAddsPrivacyOrNotificationApps() {
         val all = IslandOptions(true, false, false, liveKinds = IslandLiveKind.entries.toSet())
         assertEquals(setOf(IslandLiveKind.CALL_PACKAGE, IslandLiveKind.CLOCK_PACKAGE, IslandLiveKind.RECORDER_PACKAGE), all.returnPackages())
