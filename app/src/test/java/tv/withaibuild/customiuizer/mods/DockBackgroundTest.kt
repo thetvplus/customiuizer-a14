@@ -314,6 +314,25 @@ class DockBackgroundTest {
     }
 
     @Test
+    fun anUnownedNativeAnimationDoesNotReadTransformationArguments() {
+        val animation = android.view.animation.AnimationSet(false)
+        var calls = 0; var reads = 0
+        val chain = Proxy.newProxyInstance(XposedInterface.Chain::class.java.classLoader,
+            arrayOf(XposedInterface.Chain::class.java)) { _, method, args ->
+            when (method.name) {
+                "proceed" -> { assertTrue(args.isNullOrEmpty()); calls++; true }
+                "getThisObject" -> animation
+                "getArg" -> { reads++; android.view.animation.Transformation() }
+                else -> error("Unexpected chain read: ${method.name}")
+            }
+        } as XposedInterface.Chain
+        val hook = LauncherDockBackground.editingTransformationHook()
+        repeat(120) { assertEquals(true, hook.intercept(chain)) }
+        assertEquals(120, calls)
+        assertEquals(0, reads)
+    }
+
+    @Test
     fun editingTransformationHookProceedsOnceWithoutCopyingArgumentsAndPreservesNativeFailures() {
         NativeMaterial.googleSupported = true
         val native = nativeHost()

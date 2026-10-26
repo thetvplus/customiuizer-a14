@@ -2146,6 +2146,37 @@ class IslandActivityLifecycleTest {
         assertNull(shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).nextStartedActivity)
     }
 
+    @Test fun expandedMediaReleasesItsHiddenSpectrumAndCompactMediaReacquiresOnlyOnce() {
+        var acquired = 0; var released = 0; var subscribed = 0
+        val backend = object : IslandAudioSpectrum.Backend {
+            override fun permitted() = true
+            override fun session(player: MediaController, user: android.os.UserHandle?) = 42
+            override fun subscribe(changed: () -> Unit): AutoCloseable { subscribed++; return AutoCloseable { subscribed-- } }
+            override fun capture(session: Int, fft: (ByteArray, Int) -> Unit): AutoCloseable {
+                acquired++; fft(ByteArray(512) { 64 }, 48_000_000)
+                return AutoCloseable { released++ }
+            }
+        }
+        val controller = controller(media = true, waveformMode = 2, spectrumBackend = backend)
+        native.player = launchablePlayer("expanded-wave-lease")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertEquals(1, acquired); assertEquals(1, subscribed)
+        original.onExpand(); drain()
+        assertTrue(original.expanded)
+        assertEquals("A layout without wave bars has no active effect", acquired, released)
+        assertEquals(0, subscribed)
+        repeat(4) { controller.updateFromNative(native); drain() }
+        assertEquals(1, acquired)
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").collapse()
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertFalse(original.expanded)
+        assertEquals(2, acquired); assertEquals(1, subscribed)
+        assertSame(original, shell); assertEquals(1, adds)
+        controller.dispose(); drain()
+        assertEquals(acquired, released); assertEquals(0, subscribed)
+    }
+
     @Test fun realCaptureFollowsActualVisibilityPauseShadeScreenOffAndDisposal() {
         var acquired = 0; var released = 0; var subscribed = 0
         val backend = object : IslandAudioSpectrum.Backend {

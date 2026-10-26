@@ -1561,9 +1561,11 @@ internal class IslandActivityController(
     }
 
     private fun updateSpectrum(visible: Boolean = presentation.phase == IslandWindowPresentation.Phase.VISIBLE) {
+        val canCapture = visible && !disposed && !exiting && attached && state.allowed && options.waveformMode == 2 &&
+            !reducedMotion() && ValueAnimator.areAnimatorsEnabled()
+        val needsWaveform = shell.waveformRequested
         val recording = (lastContent as? IslandToastContent)?.liveActivity?.takeIf { it.kind == IslandLiveKind.RECORDER }
-        if (visible && !disposed && !exiting && attached && state.allowed && options.waveformMode == 2 &&
-            !reducedMotion() && ValueAnimator.areAnimatorsEnabled() && recording?.meter != null &&
+        if (canCapture && needsWaveform && recording?.meter != null &&
             recording.clock?.pausedMillis == null && recording.packageName != foregroundPackage) {
             spectrum?.stop(); recorderWave.start(recording.meter)
             return
@@ -1571,11 +1573,12 @@ internal class IslandActivityController(
         recorderWave.stop()
         val content = lastContent as? IslandMediaContent
         val player = selected
-        if (!visible || disposed || exiting || !attached || !state.allowed || options.waveformMode != 2 ||
-            reducedMotion() || !ValueAnimator.areAnimatorsEnabled() || content?.playing != true ||
+        if (!canCapture || !needsWaveform || content?.playing != true ||
             player == null || player.sessionToken != content.token) {
-            if (visible && !disposed && !exiting && attached && state.allowed && content?.loading == true &&
-                player?.sessionToken == content.token) spectrum?.pauseKeepingFrame() else spectrum?.stop()
+            if (visible && !disposed && !exiting && attached && state.allowed && content != null &&
+                player?.sessionToken == content.token &&
+                (content.loading || canCapture && content.playing && !needsWaveform))
+                spectrum?.pauseKeepingFrame() else spectrum?.stop()
             return
         }
         val source = spectrum ?: IslandAudioSpectrum(scope, ioDispatcher, handler,

@@ -163,6 +163,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var idleTapAction = 1
         set(value) { field = value; isClickable = !idle || value != 1 }
     var expanded = false
+    /** Target content owns capture; the old child may still be fading during a handoff. */
+    val waveformRequested: Boolean get() = recording || isMedia && !expanded
     var expandOnDown = true
     var shortWidth = Int.MAX_VALUE
     var returnStrength = 0f

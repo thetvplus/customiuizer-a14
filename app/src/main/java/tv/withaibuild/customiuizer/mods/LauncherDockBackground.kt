@@ -129,9 +129,10 @@ object LauncherDockBackground {
             ModuleHelper.guarded {
                 val animation = chain.thisObject as AnimationSet
                 @Suppress("UNCHECKED_CAST")
-                val owner = XposedHelpers.getAdditionalInstanceField(animation, EDITING_OWNER) as? WeakReference<DockBackgroundView>
+                val owner = (XposedHelpers.getAdditionalInstanceField(animation, EDITING_OWNER) as? WeakReference<DockBackgroundView>)
+                    ?.get() ?: return@guarded
                 val transformation = chain.getArg(1) as Transformation
-                owner?.get()?.onEditingFrame(animation, transformation.alpha, result == true, transformation.matrix)
+                owner.onEditingFrame(animation, transformation.alpha, result == true, transformation.matrix)
             }
             return result
         }
