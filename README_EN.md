@@ -4,7 +4,9 @@
 
 A system UI and interaction customization module maintained for **HyperOS 1 / Android 14**, derived from CustoMIUIzer. Supports **arm64-v8a** and requires **libxposed API 102 or later**.
 
-[Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Changelog](CHANGELOG_EN.md) · [Report an issue](https://github.com/thetvplus/customiuizer-a14/issues)
+[Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Changelog](CHANGELOG_EN.md)
+
+[Telegram community](https://t.me/customiuizerA14)
 
 ## Main Features
 
