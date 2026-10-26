@@ -116,11 +116,28 @@ IslandOptions 统一通知与返回准入，并复制应用集合，避免原地
 | Dock | 原生编辑帧求值之后，无有效 Dock owner 即返回原结果，避免读无关 Transformation；不提前或重复推进原生动画。静态壁纸仍为事件失效与 450 ms 有界跟随，动态壁纸最多 30 Hz；沿用隐藏 / 省电释放、三材质回退和统一圆角 |
 | 温度 / 电流 / 网速 | 当前温度 / 电流监控只在相关功能启用时工作，息屏停钟、同值不重复发布，读取失败有有界退避；网速沿用原生 controller 的采样 / 消息节奏。广播不能提供全部现有数值及精度，保留必要采样，不用停更换取表面上的低回调数 |
 | 手势 / 传感器 / 常规 Hook | 触摸沿用实际原生事件，摇动监听随 Launcher resume / pause 注册释放；不下沉为全局输入扫描。手电 WakeLock 有特定功能条件、十分钟上限及释放路径，未证实泄漏，不凭静态疑虑改写 system_server 语义。安装、绑定、配置、通知和系统状态路径继续使用现有局部 Hook 与快照 |
-| 设置与绘制组件 | 保留已有原生 Android / MIUI 设置控件、列表和输入；自有岛体与五柱使用当前 Canvas / 缓存几何，特有折射沿用有限 Shader。复用系统能力须同时核对失效与降级，不能以增加通用 View 层级、换动画库或下沉私有接口推断更省电 |
+| 设置与绘制组件 | 设置框架为 AndroidX Preference / AppCompat，列表和输入使用原生 View；自有岛体与五柱使用当前 Canvas / 缓存几何，特有折射沿用有限 Shader。复用系统能力须同时核对失效与降级，不能以增加通用 View 层级、换动画库或下沉私有接口推断更省电 |
 
 两项新增回归均先在旧源码失败：媒体长岛的隐藏采集未释放、无 Dock owner 的 120 次回调仍读参数 120 次。修正后验证长→短恢复只重新采集一次、重复元数据不重启、同一窗口不重建；无 owner 的原生调用仍为 120 次而参数读取为零。有 owner、原生失败传播及隐藏 / 锁屏 / 省电释放沿用关联回归。这是主机行为计数，不是 ART 分配、设备 CPU 或续航测量。
 
 源码 `06044aa04a21f41be9ad72a051f78b52db8a0930`：Deep 的完整 3,575 项回归零失败（2 项既定跳过）、Debug lint 和全量工具 673 项通过（5 项既定跳过）；未签名 Develop 压缩构建、fatal lint、同 APK 的来源 / R8 mapping / API 102、SDK 34 / arm64 与 16 KiB 对齐通过，APK SHA-256 `852e3c7851f55af71c6f51e201c2d79300b2d6f2b9f2ecb5e63747c7424dc534`。证据位于既有仓库外目录，前缀 `power-audit-`，包括旧行为失败 / 修正后 XML、完整验证与缓存录音机 DexSQL 结果。未安装，动画仍须实机录屏，同设备同负载的采集 / 绘制 / CPU / GPU / 帧时间 / 电量对照仍待验。此前连续中断返回的 2 / 20 漏接未被本轮主机检查闭环。
+
+## 原生组件取舍
+
+本轮将设置 App 的组件与 SystemUI / Launcher 内的持续功能分开审查。设置页采用 AndroidX PreferenceFragmentCompat / RecyclerView、AppCompat 对话框和 Android View，并非自行实现整套控件，也不是直接加载系统设置 APK 的私有页面。保留官方推荐的 [AndroidX Preference](https://developer.android.com/develop/ui/views/components/settings)，不为「更底层」迁回已废弃的 android.preference；ROM 私有能力继续限于已有目标证据、宿主内使用及有回退的接入。
+
+| 部分 | 当前决定与收益边界 |
+| --- | --- |
+| 设置开关、输入、对话框与列表 | 保留框架控件和既有生命周期；分组装饰使用同一 RecyclerView 的 ItemDecoration、缓存几何及 adapter 事件，不增加常驻布局循环。收益侧重正确的输入 / 无障碍 / 释放与复用，未测量提速或耗电 |
+| 应用选择与搜索 | 原有四种应用适配器已经使用 ListView 的 convertView 和系统 Filter。搜索入口收敛为 [Filterable](https://developer.android.com/reference/android/widget/Filterable)，不再枚举四个具体类；原生 ArrayAdapter 及 HeaderViewListAdapter 的过滤也可复用。已有选择、排序、用户、黑白名单和图标规则仍归适配器管理；空 Filter 或已销毁视图安全无操作，不新增自建线程 / 队列 / 缓存 |
+| 图标 | 继续从 PackageManager 取原生图标，保留现有异步加载、同键合并、128 项有界队列和字节缓存。工作线程闲置十五秒可退出；直接在绑定时同步取图标会扩大 UI 路径的工作，暂不替换 |
+| 手势与拖动排序 | 岛体已使用 GestureDetector / ViewConfiguration；业务仲裁仍需自己的小状态模型。排序页当前为 ListView 上的行快照 / 位移，候选是 RecyclerView + [ItemTouchHelper](https://developer.android.com/reference/androidx/recyclerview/widget/ItemTouchHelper)，需完整保留排序、取消和触摸语义并录屏；未实施迁移、未声称收益 |
+| Wi-Fi / 蓝牙页 | 当前为 ScrollView 内两段 ListViewEx，按全内容高度测量；大数据量下可评估带分组的单一可回收列表。此项是源码结构风险，仍需长列表计数、布局和滚动验收，不凭小样本将其认定为日常耗电来源 |
+| 动态岛 / Dock | 自绘已调用系统 Canvas、ValueAnimator、Chronometer、原生材质及 Shader；保留一实例、有限动画、按需采集和缓存路径。系统接口不等于无 CPU / GPU 成本；减少无效 invalidate / requestLayout、层级和不可见工作比单纯替换控件更有依据，见 [Android 自定义 View 优化](https://developer.android.com/develop/ui/views/layout/custom-views/optimizing-view?hl=en) |
+
+设置组件的改造主要影响打开、搜索、滚动和拖动期间的工作量；日常续航仍需优先核对宿主内持续采集、绘制及不可见时的停止。此次只实施搜索接口收敛，按 Standard 验证，未改控件外观、尺寸、动画、持久化、权限、Hook 或构建依赖。主机功能测试用于验证查询 / 清空、原生表头包装及空 Filter；它们不证明 ART 分配、设备帧时间或电量改善。专项证据留在既有仓库外目录，前缀 `native-components-`；未操作手机。
+
+旧入口在有效回归中未过滤普通原生适配器或系统表头包装后的适配器，预期两项而仍返回三项，失败证据为 `native-components-red-valid-filter.xml`。修正后搜索入口 / 视图释放、四类应用列表元数据、排序与搜索分配的五类关联回归共 17 项零失败、零跳过，静态合同与文档链接检查通过；未改工具、依赖或宿主源码，不重复此前无变化范围的完整 / R8 检查。当前验证证明接口分发和既有列表语义，不形成设备性能或续航结论。
 
 ## 消息长岛策略
 
