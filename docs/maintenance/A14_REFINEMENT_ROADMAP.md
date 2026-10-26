@@ -132,6 +132,8 @@ IslandOptions 统一通知与返回准入，并复制应用集合，避免原地
 
 旧源码的三项消息策略失败及一项入场宽度失败已留存，覆盖短正文、原生消息实际长岛 / 返回同一媒体窗口、手动尺寸及两种入场的同一时钟；修正后完整 3,578 项回归零失败（2 项既定跳过）、Debug lint 及文档链接检查通过。工具链未变，复用同轮全量工具 673 项通过结果（5 项既定跳过）；证据前缀 `notification-long-` 与 `direct-long-`。主机逐帧断言不等同实机录像或帧率；此次仅静态续作，未重新安装或操作手机。
 
+最终源码 `2aa7ff057d6324af6d5d6764748f761ee858ec3a` 的未签名 Develop 压缩构建及 fatal lint 通过；同一 APK 的来源、R8 mapping / API 102 边界、SDK 34 / arm64、无新增录音权限与 16 KiB 对齐通过，SHA-256 `7fec11be1a261ba94ce7f67233dd452565c6ae58167b109145a9dea70f88be96`。后续收口只补本段证据，未改变应用、构建或测试源码；设备动效与耗电仍按上述待验范围报告。
+
 ## 最近任务堆叠调研
 
 [AOSPStackingRecent](https://github.com/C70246247/AOSPStackingRecent/tree/89aa34d9da59b1bbd119251a718e19080c5e24fa) 目标为 AOSP Launcher3 / Pixel，不是本机 MiuiHome；该源树未见许可证，暂不复制代码。其 `RecentsHook` 在绘制链刷新偏好、反射读写额外字段并嵌套遍历卡片，README 也保留动画缺陷待办。只参考重叠、缩放和连续消除的交互目标，不引入该热路径。
