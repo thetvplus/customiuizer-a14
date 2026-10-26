@@ -47,12 +47,12 @@ object Controls {
 
     private const val NAV_BAR_DARK_STATE_FIELD = "custo_nav_bar_buttons_dark"
 
-    private var isPowerPressed = false
+    @Volatile private var isPowerPressed = false
     private var isPowerLongPressed = false
-    private var isVolumePressed = false
-    private var isVolumeLongPressed = false
+    @Volatile private var isVolumePressed = false
+    @Volatile private var isVolumeLongPressed = false
     private var isWaitingForPowerLongPressed = false
-    private var isWaitingForVolumeLongPressed = false
+    @Volatile private var isWaitingForVolumeLongPressed = false
     private var wasRaise2WakeEnabled = false
     private var mHandler: Handler? = null
 
@@ -61,6 +61,7 @@ object Controls {
         val volumeMediaUp: Int = 0,
         val volumeMediaDown: Int = 0,
         val volumeCursorApps: Set<String> = emptySet(),
+        val volumeCursorEnabled: Boolean = false,
         val volumeCursorReverse: Boolean = false,
         val navbarMargin: Int = 0,
         val navbarLeftAction: Int = 1,
@@ -88,6 +89,7 @@ object Controls {
         "controls_volumemedia_up",
         "controls_volumemedia_down",
         "controls_volumecursor_apps",
+        "controls_volumecursor",
         "controls_volumecursor_reverse",
         "controls_navbarmargin",
         "controls_navbarleft_action",
@@ -112,6 +114,7 @@ object Controls {
             volumeMediaUp = prefs.getStringAsInt("controls_volumemedia_up", 0),
             volumeMediaDown = prefs.getStringAsInt("controls_volumemedia_down", 0),
             volumeCursorApps = HashSet(prefs.getStringSet("controls_volumecursor_apps")),
+            volumeCursorEnabled = prefs.getBoolean("controls_volumecursor"),
             volumeCursorReverse = prefs.getBoolean("controls_volumecursor_reverse"),
             navbarMargin = prefs.getInt("controls_navbarmargin", 0),
             navbarLeftAction = prefs.getInt("controls_navbarleft_action", 1),
@@ -123,8 +126,8 @@ object Controls {
             menuLongAction = prefs.getInt("controls_menulong_action", 1),
             fingerprintSuccessIgnore = prefs.getBoolean("controls_fingerprintsuccess_ignore"),
             fingerprintSuccess = prefs.getString("controls_fingerprintsuccess", "1").toIntOrNull() ?: 1,
-            fsgCoverage = prefs.getInt("controls_fsg_coverage", 60),
-            fsgWidth = prefs.getInt("controls_fsg_width", 100),
+            fsgCoverage = prefs.getInt("controls_fsg_coverage", 60).coerceIn(20, 95),
+            fsgWidth = prefs.getInt("controls_fsg_width", 100).coerceIn(100, 400),
             volumeDownDtTorch = prefs.getBoolean("controls_volumedowndt_torch"),
             powerDtAction = prefs.getInt("controls_powerdt_action", 1),
         )
@@ -295,188 +298,226 @@ object Controls {
     }
 
     @JvmStatic
-    @SuppressLint("MissingPermission")
     fun VolumeMediaButtonsHook(lpparam: SystemServerStartingParam) {
         installControlsSnapshot()
-        ModuleHelper.findAndHookMethod("com.android.server.policy.MiuiPhoneWindowManager", lpparam.classLoader, "interceptKeyBeforeQueueing", KeyEvent::class.java, Int::class.javaPrimitiveType, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    val thisObject = chain.thisObject
+        val owner = XposedHelpers.findClassIfExists("com.android.server.policy.MiuiPhoneWindowManager", lpparam.classLoader)
+            ?: return unsupportedControlsContract("VolumeMediaButtonsHook")
+        val access = VolumePolicyAccess.resolve(owner) ?: return unsupportedControlsContract("VolumeMediaButtonsHook")
+        ModuleHelper.hookMethod(access.intercept, volumeMediaButtonsHook(access))
+    }
 
-                    // Power and volkeys are pressed at the same time
-                    if (isPowerPressed) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val keyEvent = chain.getArg(0) as KeyEvent
+    private data class VolumePressToken(val code: Int, val device: Int, val downTime: Long)
 
-                    val keycode = keyEvent.keyCode
-                    val action = keyEvent.action
-                    val flags = keyEvent.flags
+    private fun unsupportedControlsContract(name: String) {
+        XposedHelpers.log("$name: complete native contract unavailable; keeping native behavior")
+    }
 
-                    // Ignore repeated KeyEvents simulated on volume Key Up
-                    if ((flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) == KeyEvent.FLAG_VIRTUAL_HARD_KEY) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if ((flags and KeyEvent.FLAG_FROM_SYSTEM) != KeyEvent.FLAG_FROM_SYSTEM || (keycode != KeyEvent.KEYCODE_VOLUME_UP && keycode != KeyEvent.KEYCODE_VOLUME_DOWN)) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
+    // The callback runs only in PhoneWindowManager, using the system process permissions.
+    @SuppressLint("MissingPermission")
+    internal fun volumeMediaButtonsHook(access: VolumePolicyAccess) = object : MethodHook() {
+        private val longPress = tv.withaibuild.customiuizer.mods.utils.OwnedHandlerCallback()
+        @Volatile private var owned: VolumePressToken? = null
+        private fun owns(event: KeyEvent) = owned?.let {
+            it.code == event.keyCode && it.device == event.deviceId && it.downTime == event.downTime
+        } == true
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            var skipped = false
+            var result: Any? = null
+            var throwable: Throwable? = null
+            try {
+                // Power and volkeys are pressed at the same time
+                if (isPowerPressed) {
+                    longPress.cancel(); isVolumePressed = false; isWaitingForVolumeLongPressed = false
+                    val event = chain.getArg(0) as KeyEvent
+                    if (owns(event)) {
+                        if (event.action == KeyEvent.ACTION_UP) owned = null
+                        return 0
+                    }
+                    return chain.proceed()
+                }
+                val keyEvent = chain.getArg(0) as KeyEvent
 
-                    // Volume long press
-                    val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    val mPowerManager = XposedHelpers.getObjectField(thisObject, "mPowerManager") as PowerManager
-                    if (mPowerManager.isInteractive) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (action == KeyEvent.ACTION_DOWN) {
-                        isVolumePressed = true
-                        isVolumeLongPressed = false
+                val keycode = keyEvent.keyCode
+                val action = keyEvent.action
+                val flags = keyEvent.flags
 
-                        mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
+                // Ignore repeated KeyEvents simulated on volume Key Up
+                if ((flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) == KeyEvent.FLAG_VIRTUAL_HARD_KEY) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
+                if ((flags and KeyEvent.FLAG_FROM_SYSTEM) != KeyEvent.FLAG_FROM_SYSTEM || (keycode != KeyEvent.KEYCODE_VOLUME_UP && keycode != KeyEvent.KEYCODE_VOLUME_DOWN)) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
 
-                        // Post only one delayed runnable that waits for long press timeout
-                        if (mHandler != null && !isWaitingForVolumeLongPressed) {
-                            // Runs on the PhoneWindowManager handler inside system_server, outside
-                            // this hook's try/catch. An unguarded throw here reboots the device.
-                            mHandler!!.postDelayed(Runnable {
+                val configured = if (keycode == KeyEvent.KEYCODE_VOLUME_UP) controlsConfig.volumeMediaUp else controlsConfig.volumeMediaDown
+                if (action == KeyEvent.ACTION_DOWN && owned != null && !owns(keyEvent)) {
+                    longPress.cancel(); isVolumePressed = false; isWaitingForVolumeLongPressed = false
+                    if (keycode == owned?.code && keyEvent.deviceId == owned?.device && keyEvent.repeatCount == 0)
+                    owned = null // A new stroke repairs a missing old UP.
+                    else { isVolumeLongPressed = true; return chain.proceed() }
+                }
+                if (!owns(keyEvent) && configured == 0 || action == KeyEvent.ACTION_UP && !owns(keyEvent)) return chain.proceed()
+                if (action == KeyEvent.ACTION_DOWN && owns(keyEvent)) return 0
+                if (action == KeyEvent.ACTION_DOWN && (keyEvent.repeatCount > 0 || keyEvent.isCanceled)) return chain.proceed()
+
+                // Volume long press
+                val thisObject = chain.thisObject
+                if (!access.owner.isInstance(thisObject)) return chain.proceed()
+                val mContext = access.context.get(thisObject) as? Context ?: return chain.proceed()
+                val mPowerManager = access.power.get(thisObject) as? PowerManager ?: return chain.proceed()
+                if (mPowerManager.isInteractive) {
+                    longPress.cancel(); isVolumePressed = false; isWaitingForVolumeLongPressed = false
+                    if (owns(keyEvent)) {
+                        if (action == KeyEvent.ACTION_UP) owned = null
+                        return 0
+                    }
+                    return chain.proceed()
+                }
+                if (action == KeyEvent.ACTION_DOWN) {
+                    val volumeHandler = access.handler.get(thisObject) as? Handler ?: return chain.proceed()
+                    if (access.wakeLock.get(thisObject) !is WakeLock) return chain.proceed()
+                    val press = VolumePressToken(keycode, keyEvent.deviceId, keyEvent.downTime)
+                    owned = press
+                    isVolumePressed = true
+                    isVolumeLongPressed = false
+
+                    // Post only one delayed runnable that waits for long press timeout
+                    if (!isWaitingForVolumeLongPressed) {
+                        // Runs on the PhoneWindowManager handler inside system_server, outside
+                        // this hook's try/catch. An unguarded throw here reboots the device.
+                        val task = object : Runnable {
+                            override fun run() {
+                                if (!longPress.take(this)) return
                                 ModuleHelper.guarded {
-                                    if (isVolumePressed && GlobalActions.isMediaActionsAllowed(mContext)) {
-                                        isVolumeLongPressed = true
-                                        when (keyEvent.keyCode) {
+                                    if (owned === press && isVolumePressed && !isPowerPressed && !mPowerManager.isInteractive && GlobalActions.isMediaActionsAllowed(mContext)) {
+                                        when (press.code) {
                                             KeyEvent.KEYCODE_VOLUME_UP -> {
                                                 val pref_mediaUp = controlsConfig.volumeMediaUp
-                                                if (pref_mediaUp != 0) GlobalActions.sendDownUpKeyEvent(mContext, pref_mediaUp, true)
+                                                if (pref_mediaUp != 0) {
+                                                    isVolumeLongPressed = true
+                                                    GlobalActions.sendDownUpKeyEvent(mContext, pref_mediaUp, true)
+                                                }
                                             }
                                             KeyEvent.KEYCODE_VOLUME_DOWN -> {
                                                 val pref_mediaDown = controlsConfig.volumeMediaDown
-                                                if (pref_mediaDown != 0) GlobalActions.sendDownUpKeyEvent(mContext, pref_mediaDown, true)
+                                                if (pref_mediaDown != 0) {
+                                                    isVolumeLongPressed = true
+                                                    GlobalActions.sendDownUpKeyEvent(mContext, pref_mediaDown, true)
+                                                }
                                             }
                                         }
                                     }
                                 }
-                                isVolumePressed = false
-                                isWaitingForVolumeLongPressed = false
-                            }, ViewConfiguration.getLongPressTimeout().toLong())
+                                if (owned === press) {
+                                    isVolumePressed = false
+                                    isWaitingForVolumeLongPressed = false
+                                }
+                            }
                         }
-
+                        // Publish before enqueue: the policy handler can run before post returns.
                         isWaitingForVolumeLongPressed = true
-                        skipped = true; result = 0; throwable = null
+                        if (!longPress.post(volumeHandler, task, ViewConfiguration.getLongPressTimeout().toLong())) {
+                            owned = null
+                            isVolumePressed = false
+                            isWaitingForVolumeLongPressed = false
+                            return chain.proceed()
+                        }
                     }
+                    skipped = true; result = 0; throwable = null
+                }
 
-                    if (action == KeyEvent.ACTION_UP) {
-                        isVolumePressed = false
-                        // Kill all callbacks (removing only posted Runnable is not working... no idea)
-                        mHandler?.removeCallbacksAndMessages(null)
-                        if (!isVolumeLongPressed) {
-                            val am = mContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                            val tm = mContext.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-                            val mBroadcastWakeLock = XposedHelpers.getObjectField(thisObject, "mBroadcastWakeLock") as WakeLock
-                            var k = AudioManager.ADJUST_RAISE
-                            if (keycode != KeyEvent.KEYCODE_VOLUME_UP) k = AudioManager.ADJUST_LOWER
-                            mBroadcastWakeLock.acquire(5000L)
+                if (action == KeyEvent.ACTION_UP) {
+                    isVolumePressed = false
+                    // This is the PhoneWindowManager's shared Handler. Remove only our lease.
+                    longPress.cancel()
+                    isWaitingForVolumeLongPressed = false
+                    owned = null
+                    if (!isVolumeLongPressed && !keyEvent.isCanceled) {
+                        val am = mContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                        val tm = mContext.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+                        val mBroadcastWakeLock = access.wakeLock.get(thisObject) as? WakeLock ?: return 0
+                        var k = AudioManager.ADJUST_RAISE
+                        if (keycode != KeyEvent.KEYCODE_VOLUME_UP) k = AudioManager.ADJUST_LOWER
+                        mBroadcastWakeLock.acquire(5000L)
+                        try {
                             // If music stream is playing, adjust its volume
                             if (am.isMusicActive) am.adjustStreamVolume(AudioManager.STREAM_MUSIC, k, 0)
                             // If voice call is active while screen off by proximity sensor, adjust its volume
                             else if (tm.isInCall) am.adjustStreamVolume(AudioManager.STREAM_VOICE_CALL, k, 0)
                             // If volume keys to wake option active, wake the device
-                            else if (Settings.System.getInt(mContext.contentResolver, "volumekey_wake_screen", 0) == 1)
-                                XposedHelpers.callMethod(mPowerManager, "wakeUp", SystemClock.uptimeMillis())
+                            else if (Settings.System.getInt(mContext.contentResolver, "volumekey_wake_screen", 0) == 1) XposedHelpers.callMethod(mPowerManager, "wakeUp", SystemClock.uptimeMillis())
+                        } finally {
                             if (mBroadcastWakeLock.isHeld) mBroadcastWakeLock.release()
                         }
-                        skipped = true; result = 0; throwable = null
-                        isWaitingForVolumeLongPressed = false
                     }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                    skipped = true; result = 0; throwable = null
+                    isWaitingForVolumeLongPressed = false
+                    owned = null
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+
+                if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
+                result = chain.proceed()
+            } catch (t: Throwable) {
+                throwable = t
+                result = null
+            }
+            return XposedHelpers.throwOrReturn(throwable, result)
+        }
+    }
+
+
+    @JvmStatic
+    fun VolumeMediaPlayerHook(lpparam: PackageReadyParam) {
+        val player = XposedHelpers.findClassIfExists("android.media.MediaPlayer", lpparam.classLoader)
+            ?: return unsupportedControlsContract("VolumeMediaPlayerHook")
+        val stream = XposedHelpers.findMethodExactIfExists(player, "getAudioStreamType")
+            ?: return unsupportedControlsContract("VolumeMediaPlayerHook")
+        if (stream.returnType != Int::class.javaPrimitiveType) return unsupportedControlsContract("VolumeMediaPlayerHook")
+        stream.isAccessible = true
+        ModuleHelper.findAndHookMethod(player, "pause", mediaPauseHook { owner ->
+            val context = ModuleHelper.findContext(lpparam) ?: return@mediaPauseHook
+            val type = stream.invoke(owner) as? Int ?: return@mediaPauseHook
+            if (type == AudioManager.STREAM_MUSIC || type == 0x80000000.toInt()) {
+                val intent = Intent(GlobalActions.ACTION_PREFIX + "SaveLastMusicPausedTime")
+                intent.setPackage("com.android.systemui")
+                context.sendBroadcast(intent)
             }
         })
     }
 
-    @JvmStatic
-    fun VolumeMediaPlayerHook(lpparam: PackageReadyParam) {
-        val MediaPlayerCls = XposedHelpers.findClass("android.media.MediaPlayer", lpparam.classLoader)
-        ModuleHelper.findAndHookMethod(MediaPlayerCls, "pause", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    val thisObject = chain.thisObject
-
-                    val mContext = ModuleHelper.findContext(lpparam)
-                    val mStreamType = XposedHelpers.findMethodExact(MediaPlayerCls, "getAudioStreamType", *emptyArray<Any?>()).invoke(thisObject) as Int
-                    if (mContext != null && (mStreamType == AudioManager.STREAM_MUSIC || mStreamType == 0x80000000.toInt())) {
-                        val intent = Intent(GlobalActions.ACTION_PREFIX + "SaveLastMusicPausedTime")
-                        intent.setPackage("com.android.systemui")
-                        mContext.sendBroadcast(intent)
-                    }
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+    internal fun mediaPauseHook(afterPause: (Any) -> Unit) = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val original = chain.proceed()
+            ModuleHelper.guarded { afterPause(chain.thisObject) }
+            return original
+        }
     }
 
     @JvmStatic
     fun VolumeCursorHook(lpparam: PackageReadyParam) {
         installControlsSnapshot()
-        ModuleHelper.findAndHookMethod("android.inputmethodservice.InputMethodService", lpparam.classLoader, "onKeyDown", Int::class.javaPrimitiveType, KeyEvent::class.java, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    val thisObject = chain.thisObject
+        ModuleHelper.findAndHookMethod("android.inputmethodservice.InputMethodService", lpparam.classLoader,
+            "onKeyDown", Int::class.javaPrimitiveType, KeyEvent::class.java, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? = dispatchVolumeCursor(chain, true)
+            })
+        ModuleHelper.findAndHookMethod("android.inputmethodservice.InputMethodService", lpparam.classLoader,
+            "onKeyUp", Int::class.javaPrimitiveType, KeyEvent::class.java, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? = dispatchVolumeCursor(chain, false)
+            })
+    }
 
-                    val ims = thisObject as InputMethodService
-                    val code = chain.getArg(0) as Int
-                    if ((code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) && ims.isInputViewShown) {
-                        val pkgName = Settings.Global.getString(ims.contentResolver, Helpers.modulePkg + ".foreground.package")
-                        if (pkgName != null && pkgName in controlsConfig.volumeCursorApps) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                        val swapDir = controlsConfig.volumeCursorReverse
-                        ims.sendDownUpKeyEvents(if (code == (if (swapDir) KeyEvent.KEYCODE_VOLUME_DOWN else KeyEvent.KEYCODE_VOLUME_UP)) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
-                        skipped = true; result = true; throwable = null
-                    }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    private fun dispatchVolumeCursor(chain: XposedInterface.Chain, down: Boolean): Any? {
+        val code = chain.getArg(0) as? Int ?: return chain.proceed()
+        if (code != KeyEvent.KEYCODE_VOLUME_UP && code != KeyEvent.KEYCODE_VOLUME_DOWN) return chain.proceed()
+        val event = chain.getArg(1) as? KeyEvent ?: return chain.proceed()
+        val service = chain.thisObject as? InputMethodService ?: return chain.proceed()
+        val handled = ModuleHelper.guarded(false) {
+            val key = "customiuizer_volume_cursor_keys"
+            var state = XposedHelpers.getAdditionalInstanceField(service, key) as? VolumeCursorKeys
+            if (state == null) {
+                if (!down || !controlsConfig.volumeCursorEnabled) return@guarded false
+                state = VolumeCursorKeys(VolumeCursorKeys.Native(service))
+                XposedHelpers.setAdditionalInstanceField(service, key, state)
             }
-        })
-
-        ModuleHelper.findAndHookMethod("android.inputmethodservice.InputMethodService", lpparam.classLoader, "onKeyUp", Int::class.javaPrimitiveType, KeyEvent::class.java, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    val thisObject = chain.thisObject
-
-                    val ims = thisObject as InputMethodService
-                    val code = chain.getArg(0) as Int
-                    if ((code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) && ims.isInputViewShown) {
-                        val pkgName = Settings.Global.getString(ims.contentResolver, Helpers.modulePkg + ".foreground.package")
-                        if (pkgName == null || pkgName !in controlsConfig.volumeCursorApps) {
-                            skipped = true; result = true; throwable = null
-                        }
-                    }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+            if (down) state.onDown(code, event, controlsConfig) else state.onUp(code, event)
+        }
+        return if (handled) true else chain.proceed()
     }
 
     private fun handleNavBarAction(context: Context, key: String): Boolean {
@@ -1056,63 +1097,44 @@ object Controls {
 
     @JvmStatic
     fun HideNavBarHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllConstructors("com.android.systemui.recents.OverviewProxyService", lpparam.classLoader, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
+        val loader = lpparam.classLoader
+        val callback = XposedHelpers.findClassIfExists("com.android.systemui.recents.OverviewProxyService\$6", loader) ?: return unsupportedControlsContract("HideNavBarHook")
+        val controller = XposedHelpers.findClassIfExists("com.android.systemui.navigationbar.NavigationBarController", loader) ?: return unsupportedControlsContract("HideNavBarHook")
+        val result = XposedHelpers.findClassIfExists("com.android.internal.statusbar.RegisterStatusBarResult", loader) ?: return unsupportedControlsContract("HideNavBarHook")
+        val observer = XposedHelpers.findClassIfExists("com.miui.systemui.controller.GestureObserver", loader) ?: return unsupportedControlsContract("HideNavBarHook")
+        val gestureLine = XposedHelpers.findFieldIfExists(observer, "mGestureLineEnable") ?: return unsupportedControlsContract("HideNavBarHook")
+        val state = XposedHelpers.findMethodExactIfExists(callback, "setWindowState",
+            Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType) ?: return unsupportedControlsContract("HideNavBarHook")
+        val create = XposedHelpers.findMethodExactIfExists(controller, "createNavigationBar",
+            android.view.Display::class.java, Bundle::class.java, result) ?: return unsupportedControlsContract("HideNavBarHook")
+        if (state.returnType != Void.TYPE || create.returnType != Void.TYPE || gestureLine.type != Boolean::class.javaPrimitiveType ||
+            java.lang.reflect.Modifier.isStatic(gestureLine.modifiers) || java.lang.reflect.Modifier.isFinal(gestureLine.modifiers) ||
+            listOf(state, create).any { java.lang.reflect.Modifier.isStatic(it.modifiers) || java.lang.reflect.Modifier.isAbstract(it.modifiers) })
+            return unsupportedControlsContract("HideNavBarHook")
+        gestureLine.isAccessible = true
+        val stateHandle = ModuleHelper.hookMethod(state, hiddenNavWindowStateHook {
+            val current = ModuleHelper.getDepInstance(loader, "com.miui.systemui.controller.GestureObserver")
+            if (observer.isInstance(current)) gestureLine.setBoolean(current, true)
+        }) ?: return unsupportedControlsContract("HideNavBarHook")
+        if (ModuleHelper.hookMethod(create, hiddenNavCreationHook()) == null) stateHandle.unhook()
+    }
 
-                    val mCallbacks = ModuleHelper.getObjectFieldByPath(thisObject, "mCommandQueue.mCallbacks") as ArrayList<*>
-                    val callback = mCallbacks[mCallbacks.size - 1]
-                    ModuleHelper.findAndHookMethod(callback.javaClass, "setWindowState", Integer::class.javaPrimitiveType!!, Integer::class.javaPrimitiveType!!, Integer::class.javaPrimitiveType!!, object : MethodHook() {
-                        override fun intercept(chain: XposedInterface.Chain): Any? {
-                            var result: Any? = null
-                            var throwable: Throwable? = null
-                            try {
-                                val GestureObserver = ModuleHelper.getDepInstance(lpparam.classLoader, "com.miui.systemui.controller.GestureObserver")
-                                XposedHelpers.setObjectField(GestureObserver, "mGestureLineEnable", true)
+    internal fun hiddenNavWindowStateHook(enableGestureLine: () -> Unit) = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            // Both sampled native bodies consume this flag before updating the default
+            // display's navigation-window state. Status-bar and secondary-display events
+            // must not change that shared native property.
+            if (chain.getArg(0) == android.view.Display.DEFAULT_DISPLAY && chain.getArg(1) == 2)
+                ModuleHelper.guarded { enableGestureLine() }
+            return chain.proceed()
+        }
+    }
 
-                                result = chain.proceed()
-                            } catch (t: Throwable) {
-                                throwable = t
-                                result = null
-                            }
-                            return XposedHelpers.throwOrReturn(throwable, result)
-                        }
-                    })
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-        ModuleHelper.hookAllMethods("com.android.systemui.navigationbar.NavigationBarController", lpparam.classLoader, "createNavigationBar", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                try {
-                    if (args.size >= 3) {
-                        skipped = true; result = null; throwable = null
-                    }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+    internal fun hiddenNavCreationHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val display = chain.getArg(0) as? android.view.Display
+            return if (display?.displayId == android.view.Display.DEFAULT_DISPLAY) null else chain.proceed()
+        }
     }
 
     @JvmStatic
@@ -1192,9 +1214,8 @@ object Controls {
                     val thisObject = chain.thisObject
 
                     val bundle = chain.getArg(0) as Bundle?
-                    if (bundle == null || bundle.getInt("triggered_by", 0) != 83 || bundle.getInt("invocation_type", 0) != 1) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
+                    val pos = assistGestureSide(bundle) ?: return chain.proceed()
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    val pos = if (bundle.getInt("inDirection", 0) == 1) "right" else "left"
                     if (GlobalActions.handleAction(mContext, "controls_fsg_assist_$pos", false, bundle)) {
                         HookUtils.performLightVibration(mContext)
                         skipped = true; result = null; throwable = null
@@ -1215,82 +1236,18 @@ object Controls {
 
     @JvmStatic
     fun HideImeDismissButtonHook(lpparam: PackageReadyParam) {
-        val navBarViewClass = XposedHelpers.findClassIfExists(
-            "com.android.systemui.navigationbar.NavigationBarView",
-            lpparam.classLoader
-        ) ?: run {
-            XposedHelpers.log("HideImeDismissButtonHook: NavigationBarView not found")
+        val access = ImeDismissButtonAccess.resolve(lpparam.classLoader) ?: run {
+            XposedHelpers.log("HideImeDismissButtonHook: complete native button contract unavailable")
             return
         }
-
-        val backButtonDispatcherClass = XposedHelpers.findClassIfExists(
-            "com.android.systemui.navigationbar.buttons.ButtonDispatcher",
-            lpparam.classLoader
-        ) ?: run {
-            XposedHelpers.log("HideImeDismissButtonHook: ButtonDispatcher not found")
-            return
-        }
-
-        val navigationIconHintsField = XposedHelpers.findFieldIfExists(navBarViewClass, "mNavigationIconHints")
-            ?: run {
-                XposedHelpers.log("HideImeDismissButtonHook: mNavigationIconHints not found")
-                return
-            }
-
-        val navBarModeField = XposedHelpers.findFieldIfExists(navBarViewClass, "mNavBarMode")
-            ?: run {
-                XposedHelpers.log("HideImeDismissButtonHook: mNavBarMode not found")
-                return
-            }
-
-        val getBackButtonMethod = XposedHelpers.findMethodExactIfExists(
-            navBarViewClass,
-            "getBackButton"
-        ) ?: run {
-            XposedHelpers.log("HideImeDismissButtonHook: getBackButton not found")
-            return
-        }
-
-        val setVisibilityMethod = XposedHelpers.findMethodExactIfExists(
-            backButtonDispatcherClass,
-            "setVisibility",
-            Int::class.javaPrimitiveType
-        ) ?: run {
-            XposedHelpers.log("HideImeDismissButtonHook: ButtonDispatcher.setVisibility not found")
-            return
-        }
-
-        ModuleHelper.findAndHookMethod(navBarViewClass, "updateNavButtonIcons", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.unwrapAndRethrowIfFatal(t)
-                    throwable = t
-                    result = null
-                }
-
-                try {
-                    val thisObject = chain.thisObject
-                    val navigationIconHints = navigationIconHintsField.getInt(thisObject)
-                    val navBarMode = navBarModeField.getInt(thisObject)
-
-                    if (shouldHideImeDismissButton(navigationIconHints, navBarMode)) {
-                        val backButton = getBackButtonMethod.invoke(thisObject)
-                        if (backButton != null) {
-                            setVisibilityMethod.invoke(backButton, View.INVISIBLE)
-                        }
-                    }
-                } catch (t: Throwable) {
-                    FatalErrors.unwrapAndRethrowIfFatal(t)
-                    XposedHelpers.log(t)
-                }
-
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
+        ModuleHelper.hookMethod(access.update, object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? = access.dispatch(chain)
         })
+    }
+
+    internal fun assistGestureSide(bundle: Bundle?): String? {
+        if (bundle == null || bundle.getInt("triggered_by", 0) != 83 || bundle.getInt("invocation_type", 0) != 1) return null
+        return when (bundle.getInt("inDirection", -1)) { 0 -> "left"; 1 -> "right"; else -> null }
     }
 
     /**

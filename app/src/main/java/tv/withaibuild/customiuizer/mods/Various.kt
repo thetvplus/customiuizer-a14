@@ -388,9 +388,29 @@ object Various {
         })
     }
 
-    private fun setAppState(act: Activity, pkgName: String, item: MenuItem, enable: Boolean) {
+    internal data class AppStateTarget(val packageName: String, val uid: Int)
+    private const val APP_STATE_TARGET = "customiuizer_app_state_target"
+
+    internal fun resolveAppStateTarget(info: PackageInfo?, contextUser: Int): AppStateTarget? {
+        val application = info?.applicationInfo ?: return null
+        val name = info.packageName ?: return null
+        if (name.isBlank() || application.packageName != name || application.uid < 0 || contextUser < 0 ||
+            application.uid / 100000 != contextUser) return null
+        return AppStateTarget(name, application.uid)
+    }
+
+    internal fun appStateTarget(act: Activity, info: PackageInfo): AppStateTarget? = ModuleHelper.guarded<AppStateTarget?>(null) {
+        resolveAppStateTarget(info, XposedHelpers.callMethod(act, "getUserId") as Int)
+    }
+
+    private fun setAppState(act: Activity, target: AppStateTarget, item: MenuItem, enable: Boolean) {
         ModuleHelper.guarded {
+            if (act.isFinishing || act.isDestroyed) return@guarded
+            val current = XposedHelpers.findFirstFieldByExactType(act.javaClass, PackageInfo::class.java).get(act) as? PackageInfo
+            if (current == null || appStateTarget(act, current) != target || target.packageName in MIUI_CORE_APPS) return@guarded
+            val pkgName = target.packageName
             val pm = act.packageManager
+            if (pm.getApplicationInfo(pkgName, PackageManager.GET_META_DATA).uid != target.uid) return@guarded
             pm.setApplicationEnabledSetting(pkgName, if (enable) PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 0)
             val state = pm.getApplicationEnabledSetting(pkgName)
             val isEnabledOrDefault = state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
@@ -400,7 +420,9 @@ object Various {
             } else {
                 Toast.makeText(act, ModuleHelper.getModuleRes(act)!!.getString(R.string.disable_app_fail), Toast.LENGTH_LONG).show()
             }
-            Handler(Looper.getMainLooper()).postDelayed({ ModuleHelper.guarded { act.invalidateOptionsMenu() } }, 500)
+            Handler(Looper.getMainLooper()).postDelayed({ ModuleHelper.guarded {
+                if (!act.isFinishing && !act.isDestroyed) act.invalidateOptionsMenu()
+            } }, 500)
         }
     }
 
@@ -431,14 +453,8 @@ object Various {
     fun AppsDisableHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.miui.appmanager.ApplicationsDetailsActivity", lpparam.classLoader, "onCreateOptionsMenu", Menu::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
+                var result = chain.proceed()
                 var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
                 try {
                     val thisObject = chain.thisObject
 
@@ -452,6 +468,9 @@ object Various {
                     val pm = act.packageManager
                     val piField = XposedHelpers.findFirstFieldByExactType(act.javaClass, PackageInfo::class.java)
                     val mPackageInfo = piField.get(act) as PackageInfo
+                    val target = appStateTarget(act, mPackageInfo)
+                    if (target == null) { dis.isEnabled = false; return result }
+                    XposedHelpers.setAdditionalInstanceField(dis, APP_STATE_TARGET, target)
                     val appInfo = pm.getApplicationInfo(mPackageInfo.packageName, PackageManager.GET_META_DATA)
                     val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                     val isUpdatedSystem = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
@@ -463,6 +482,7 @@ object Various {
                         item?.isVisible = false
                     }
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -471,24 +491,20 @@ object Various {
 
         ModuleHelper.findAndHookMethod("com.miui.appmanager.ApplicationsDetailsActivity", lpparam.classLoader, "onOptionsItemSelected", MenuItem::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
+                var result = chain.proceed()
                 var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
                 try {
                     val thisObject = chain.thisObject
 
                     val item = chain.getArg(0) as MenuItem
-                    if (item.itemId != 666) { return XposedHelpers.throwOrReturn(throwable, result) }
+                    if (item.itemId != 666) return result
+                    val target = XposedHelpers.getAdditionalInstanceField(item, APP_STATE_TARGET) as? AppStateTarget ?: return result
 
                     val act = thisObject as Activity
                     val modRes = ModuleHelper.getModuleRes(act)!!
                     val piField = XposedHelpers.findFirstFieldByExactType(act.javaClass, PackageInfo::class.java)
                     val mPackageInfo = piField.get(act) as PackageInfo
+                    if (appStateTarget(act, mPackageInfo) != target) return result
                     if (MIUI_CORE_APPS.contains(mPackageInfo.packageName)) {
                         Toast.makeText(act, modRes.getString(R.string.disable_app_settings), Toast.LENGTH_SHORT).show()
                         return XposedHelpers.throwOrReturn(throwable, result)
@@ -504,12 +520,13 @@ object Various {
                             val title = modRes.getString(R.string.disable_app_title)
                             val text = modRes.getString(R.string.disable_app_text)
                             AlertDialog.Builder(act).setTitle(title).setMessage(text).setPositiveButton(android.R.string.ok) { _, _ ->
-                                ModuleHelper.guarded { setAppState(act, mPackageInfo.packageName, item, false) }
+                                ModuleHelper.guarded { setAppState(act, target, item, false) }
                             }.setNegativeButton(android.R.string.cancel, null).show()
-                        } else setAppState(act, mPackageInfo.packageName, item, false)
-                    } else setAppState(act, mPackageInfo.packageName, item, true)
+                        } else setAppState(act, target, item, false)
+                    } else setAppState(act, target, item, true)
                     result = true; throwable = null
                 } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
@@ -551,29 +568,7 @@ object Various {
         if (mGetAppInfo.isEmpty())
             XposedHelpers.log("AppsRestrictHook", "Cannot find getAppInfo method!")
         else
-            ModuleHelper.hookMethod(mGetAppInfo[0], object : MethodHook() {
-                override fun intercept(chain: XposedInterface.Chain): Any? {
-                    var result: Any?
-                    var throwable: Throwable? = null
-                    try {
-                        result = chain.proceed()
-                    } catch (t: Throwable) {
-                        throwable = t
-                        result = null
-                    }
-                    try {
-                        val args = chain.args
-                        if ((args[3] as Int) == 128 && (args[4] as Int) == 0) {
-                            val appInfo = result as ApplicationInfo
-                            appInfo.flags = appInfo.flags and ApplicationInfo.FLAG_SYSTEM.inv()
-                            result = appInfo; throwable = null
-                        }
-                    } catch (t: Throwable) {
-                        XposedHelpers.log(t)
-                    }
-                    return XposedHelpers.throwOrReturn(throwable, result)
-                }
-            })
+            ModuleHelper.hookMethod(mGetAppInfo[0], appRestrictionInfoHook())
 
         ModuleHelper.findAndHookMethod("com.miui.networkassistant.ui.fragment.ShowAppDetailFragment", lpparam.classLoader, "initFirewallData", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
@@ -594,6 +589,19 @@ object Various {
         })
 
         ModuleHelper.hookAllMethods("com.miui.networkassistant.service.FirewallService", lpparam.classLoader, "setSystemAppWifiRuleAllow", HookerClassHelper.DO_NOTHING)
+    }
+
+    internal fun appRestrictionInfoHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val original = chain.proceed()
+            if (original !is ApplicationInfo || original.javaClass != ApplicationInfo::class.java ||
+                original.flags and ApplicationInfo.FLAG_SYSTEM == 0) return original
+            return ModuleHelper.guarded(original) {
+                if (chain.getArg(3) == 128 && chain.getArg(4) == 0)
+                    ApplicationInfo(original).apply { flags = flags and ApplicationInfo.FLAG_SYSTEM.inv() }
+                else original
+            }
+        }
     }
 
     @JvmStatic
@@ -1318,25 +1326,17 @@ object Various {
 
     @JvmStatic
     fun AlarmCompatHook() {
-        ModuleHelper.findAndHookMethod(Settings.System::class.java, "getStringForUser", ContentResolver::class.java, String::class.java, Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = XposedHelpers.getArgsArray(chain)
-                try {
-                    val key = args[1] as String
-                    if ("next_alarm_formatted" == key) {
-                        args[1] = "next_alarm_clock_formatted"
-                    }
+        ModuleHelper.findAndHookMethod(Settings.System::class.java, "getStringForUser", ContentResolver::class.java,
+            String::class.java, Int::class.javaPrimitiveType!!, alarmCompatSettingHook())
+    }
 
-                    result = chain.proceed(args)
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+    internal fun alarmCompatSettingHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            if (chain.getArg(1) != "next_alarm_formatted") return chain.proceed()
+            val args = XposedHelpers.getArgsArray(chain)
+            args[1] = "next_alarm_clock_formatted"
+            return chain.proceed(args)
+        }
     }
 
     @JvmStatic
@@ -1380,35 +1380,29 @@ object Various {
             }
         })
 
-        ModuleHelper.findAndHookMethod("com.android.server.alarm.AlarmManagerService", lpparam.classLoader, "getNextAlarmClockImpl", Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
+        ModuleHelper.findAndHookMethod("com.android.server.alarm.AlarmManagerService", lpparam.classLoader,
+            "getNextAlarmClockImpl", Int::class.javaPrimitiveType!!, alarmCompatResultHook())
+    }
 
-                    val mContext = XposedHelpers.callMethod(thisObject, "getContext") as Context?
-                    if (mContext != null) {
-                        val pkgName = mContext.packageManager.getNameForUid(Binder.getCallingUid())
-                        val mNextAlarmTime = XposedHelpers.getAdditionalInstanceField(thisObject, "mNextAlarmTime")
-                        val set = variousConfig.alarmCompatApps
-                        if (mNextAlarmTime != null && pkgName != null && set.contains(pkgName)) {
-                            result = if (mNextAlarmTime as Long == 0L) null else AlarmManager.AlarmClockInfo(mNextAlarmTime as Long, null)
-                            throwable = null
-                        }
-                    }
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun alarmCompatUserAllowed(uid: Int, requestedUser: Int): Boolean =
+        uid >= 0 && uid / 100000 == 0 && requestedUser == 0
+
+    internal fun alarmCompatResultHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val original = chain.proceed()
+            val uid = Binder.getCallingUid()
+            if (!alarmCompatUserAllowed(uid, chain.getArg(0) as Int)) return original
+            return ModuleHelper.guarded<Any?>(original) {
+                val owner = chain.thisObject
+                val context = XposedHelpers.callMethod(owner, "getContext") as? Context ?: return@guarded original
+                val pkg = context.packageManager.getNameForUid(uid) ?: return@guarded original
+                if (pkg !in variousConfig.alarmCompatApps) return@guarded original
+                val next = XposedHelpers.getAdditionalInstanceField(owner, "mNextAlarmTime") as? Long ?: return@guarded original
+                // The legacy formatted source is owned by user 0; never publish it for
+                // another caller/profile, an unrelated setting, or a failed native query.
+                if (next < 0) original else if (next == 0L) null else AlarmManager.AlarmClockInfo(next, null)
             }
-        })
+        }
     }
 
     @JvmStatic

@@ -904,37 +904,27 @@ object LauncherGestureHooks {
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
-        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader, "getNextTask", Context::class.java, Boolean::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val args = chain.args
+        ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureStubView", lpparam.classLoader,
+            "getNextTask", Context::class.java, Boolean::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
+            swipeStopResultHook { direction ->
+                val owner = gestureStubViews[0] ?: return@swipeStopResultHook
+                ModuleHelper.callMethodSilently(owner, "onBackCancelled")
+                val context = XposedHelpers.getObjectField(owner, "mContext") as Context
+                val bundle = Bundle().apply { putInt("inDirection", direction) }
+                GlobalActions.handleAction(context, "controls_fsg_swipeandstop", false, bundle)
+            })
+    }
 
-                    val nextTaskInfo = args[1] as Boolean
-                    if (!nextTaskInfo || gestureStubViews[0] == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val outerThis = gestureStubViews[0]
-                    ModuleHelper.callMethodSilently(outerThis, "onBackCancelled")
-                    val mContext = XposedHelpers.getObjectField(outerThis, "mContext") as Context
-                    val mGestureStubPos = args[2] as Int
-                    val bundle = Bundle()
-                    bundle.putInt("inDirection", mGestureStubPos)
-                    GlobalActions.handleAction(mContext, "controls_fsg_swipeandstop", false, bundle)
-
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun swipeStopResultHook(perform: (Int) -> Unit) = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val original = chain.proceed()
+            ModuleHelper.guarded {
+                if (chain.getArg(1) != true) return@guarded
+                val direction = chain.getArg(2) as? Int ?: return@guarded
+                if (direction in 0..1) perform(direction)
             }
-        })
+            return original
+        }
     }
 
     @JvmStatic

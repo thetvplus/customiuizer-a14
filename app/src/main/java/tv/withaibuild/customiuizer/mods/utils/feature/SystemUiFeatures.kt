@@ -79,7 +79,7 @@ internal class ForegroundMonitorFeature(
 ) {
     companion object {
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getStringAsInt("various_showcallui", 0) > 0 || prefs.getBoolean("controls_volumecursor")
+        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getStringAsInt("various_showcallui", 0) > 0
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)

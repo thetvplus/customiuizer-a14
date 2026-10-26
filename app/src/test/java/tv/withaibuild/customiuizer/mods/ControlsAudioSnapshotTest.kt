@@ -45,14 +45,16 @@ class ControlsAudioSnapshotTest {
         assertFalse("com.ime" in Controls.controlsConfig.volumeCursorApps)
 
         MainModule.mPrefs.put("controls_backlong_action", 4)
-        MainModule.mPrefs.put("controls_fsg_width", 80)
+        MainModule.mPrefs.put("controls_fsg_width", 150)
         MainModule.mPrefs.put("controls_volumecursor_apps", setOf("com.ime"))
+        MainModule.mPrefs.put("controls_volumecursor", true)
         MainModule.mPrefs.put("controls_fingerprintsuccess", "3")
         Controls.refreshControlsSnapshot()
 
         assertEquals(4, Controls.controlsConfig.backLongAction)
-        assertEquals(80, Controls.controlsConfig.fsgWidth)
+        assertEquals(150, Controls.controlsConfig.fsgWidth)
         assertTrue("com.ime" in Controls.controlsConfig.volumeCursorApps)
+        assertTrue(Controls.controlsConfig.volumeCursorEnabled)
         assertEquals(3, Controls.controlsConfig.fingerprintSuccess)
     }
 

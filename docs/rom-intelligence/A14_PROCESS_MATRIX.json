@@ -633,7 +633,7 @@
       "phase": "PACKAGE_READY",
       "installer": "SystemUiFeatures",
       "installHook": "GlobalActions.setupForegroundMonitor(lpparam)",
-      "enableCondition": "prefs.getStringAsInt(\"various_showcallui\", 0) > 0 || prefs.getBoolean(\"controls_volumecursor\")",
+      "enableCondition": "prefs.getStringAsInt(\"various_showcallui\", 0) > 0",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
