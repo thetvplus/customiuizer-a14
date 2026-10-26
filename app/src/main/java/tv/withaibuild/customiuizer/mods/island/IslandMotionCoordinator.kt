@@ -20,12 +20,15 @@ internal class IslandMotionCoordinator {
     fun commit(next: Any?, nextKind: Kind) { identity = next; kind = nextKind }
 
     companion object {
-        /** More information earns the expanded form; a second generic label does not. */
-        fun prefersLong(content: IslandToastContent?): Boolean {
+        /** A message body needs its own line; manual sizing still uses the chosen long width. */
+        fun prefersLong(content: IslandToastContent?, automaticWidth: Boolean = true): Boolean {
             content ?: return false
-            if (content.status && content.text.length >= 12) return true
-            val detail = content.detail?.trim()?.takeIf { it.isNotEmpty() && it != content.text } ?: return false
-            if (content.notificationKey != null) return detail.length >= 12 || content.text.length + detail.length >= 20
+            val notification = content.notificationKey != null
+            if (!notification && !automaticWidth) return false
+            if (!notification && content.status && content.text.length >= 12) return true
+            val detail = content.detail?.trim()
+            if (detail.isNullOrEmpty() || detail == content.text) return false
+            if (notification) return true
             val activity = content.liveActivity ?: return false
             return (activity.kind in IslandLiveKind.clockKinds || activity.kind == IslandLiveKind.RECORDER) &&
                 activity.clock?.pausedMillis != null

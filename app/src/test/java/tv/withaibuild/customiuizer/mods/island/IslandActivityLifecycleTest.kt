@@ -525,6 +525,44 @@ class IslandActivityLifecycleTest {
         assertEquals(1, removes)
     }
 
+    @Test fun shortMessageBodyUsesLongFormAndReturnsToTheSameCompactMediaWindow() {
+        val controller = controller(chat = true, media = true, simplified = true)
+        native.player = launchablePlayer("message-long-form")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertFalse(original.expanded)
+        val bound = message(501)
+        bound.notification.notification.extras.putCharSequence(android.app.Notification.EXTRA_TEXT, "好")
+        assertTrue(controller.takeNotification(bound)); drain()
+        assertTrue(original.expanded)
+        val caption = org.robolectric.util.ReflectionHelpers.getField<android.widget.Chronometer>(original, "title")
+        assertEquals("Alice\n好", caption.text.toString())
+        assertEquals(2, caption.maxLines)
+        assertEquals(android.text.TextUtils.TruncateAt.END, caption.ellipsize)
+        val lease = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "chatLease")
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").collapse()
+        repeat(4) {
+            controller.updateFromNative(native); drain()
+            assertTrue(controller.takeNotification(bound)); drain()
+            assertFalse(original.expanded)
+        }
+        assertSame(lease, org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        controller.notificationRemoved(bound.notification.key); drain()
+        assertTrue(original.isMedia); assertFalse(original.expanded)
+        assertSame(original, shell); assertEquals(1, adds)
+    }
+
+    @Test fun messageBodySelectsTheConfiguredLongWidthEvenWhenAutomaticSizingIsOff() {
+        val controller = controller(chat = true, simplified = true, automaticWidth = false,
+            shortWidth = 160, longWidth = 300)
+        val bound = message(502)
+        bound.notification.notification.extras.putCharSequence(android.app.Notification.EXTRA_TEXT, "好")
+        assertTrue(controller.takeNotification(bound)); drain()
+        assertTrue(shell!!.expanded)
+        val width = org.robolectric.util.ReflectionHelpers.getField<Int>(shell!!, "geometryWidth")
+        assertEquals(kotlin.math.round(300 * context.resources.displayMetrics.density).toInt(), width)
+    }
+
     @Test fun emptyNotificationAllowListLeavesTheNativeNotificationUntouched() {
         val controller = controller(chat = true, notificationApps = emptySet())
         assertFalse(controller.takeNotification(message(50)))

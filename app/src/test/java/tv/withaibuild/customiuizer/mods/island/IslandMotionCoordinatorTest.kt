@@ -35,11 +35,14 @@ class IslandMotionCoordinatorTest {
             policy.arrival(recorder, IslandMotionCoordinator.Kind.ACTIVITY, false, false, false))
         assertEquals(0f, IslandMotion.sizeCatch(160f, 40f, 160f, 40f, 6f), 0f)
     }
-    @Test fun expandedContentNeedsUsefulInformationAndAUserCollapseDoesNotReopenOnRefresh() {
+    @Test fun aNotificationBodyEarnsLongFormWithoutALengthThresholdAndUserCollapseStillWins() {
         val rich = IslandToastContent("Sender", "native.message", null, notificationKey = "key",
             detail = "A notification with enough useful details")
         assertTrue(IslandMotionCoordinator.prefersLong(rich))
-        assertFalse(IslandMotionCoordinator.prefersLong(rich.copy(detail = "OK")))
+        assertTrue(IslandMotionCoordinator.prefersLong(rich.copy(detail = "OK")))
+        assertTrue(IslandMotionCoordinator.prefersLong(rich.copy(detail = "好")))
+        assertFalse(IslandMotionCoordinator.prefersLong(rich.copy(detail = null)))
+        assertFalse(IslandMotionCoordinator.prefersLong(rich.copy(detail = "  ")))
         assertFalse(IslandMotionCoordinator.prefersLong(rich.copy(detail = "Sender")))
         assertFalse(IslandMotionCoordinator.prefersLong(IslandToastContent("Copied", "native.app", null)))
         val forms = IslandFormState()

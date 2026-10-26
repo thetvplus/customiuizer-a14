@@ -1415,7 +1415,7 @@ internal class IslandActivityController(
         val current = if (state.allowed && mediaRevealAt == null && !shadeBaseline && !foregroundBaseline) state.media(now)?.takeUnless {
             it.packageName == foregroundPackage || mediaSourceExcluded(it) || pipHomeBlocked(it) } else null
         forms.select(if (toast != null || current != null) state.identity(now) else null,
-            options.automaticWidth && IslandMotionCoordinator.prefersLong(toast))
+            IslandMotionCoordinator.prefersLong(toast, options.automaticWidth))
         val idle = options.idle && !forms.idleSuppressed && (state.allowed || shadeIdle) && toast == null && current == null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null
         val liveExpiry = toast?.liveActivity?.clock?.takeIf { it.countdown && it.pausedMillis == null }
