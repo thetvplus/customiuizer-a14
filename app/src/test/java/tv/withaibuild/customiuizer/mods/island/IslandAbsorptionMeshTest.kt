@@ -60,8 +60,8 @@ class IslandAbsorptionMeshTest {
 
     @Test fun thePageRemainsReadableThroughIntakeThenFadesContinuouslyIntoTheBlackIsland() {
         assertEquals(1f, IslandAbsorptionMesh.opacity(0f), 0f)
-        assertEquals(.88f, IslandAbsorptionMesh.opacity(.14f), .00001f)
-        assertTrue(IslandAbsorptionMesh.opacity(.5f) > .85f)
+        assertEquals(.96f, IslandAbsorptionMesh.opacity(.14f), .00001f)
+        assertEquals(.96f, IslandAbsorptionMesh.opacity(.6f), .00001f)
         var previous = 1f
         for (i in 0..100) {
             val next = IslandAbsorptionMesh.opacity(i / 100f)
@@ -69,6 +69,18 @@ class IslandAbsorptionMeshTest {
             previous = next
         }
         assertTrue(previous in .04f.. .06f)
+    }
+
+    @Test fun admissionUsesTheAcceptedReturnProgressRatherThanTheDistanceAlreadyDragged() {
+        for (atRelease in listOf(0f, .3f, .6f, .8f)) {
+            val first = IslandAbsorptionMesh.returnProgress(atRelease, atRelease)
+            assertEquals(0f, first, .00001f)
+            assertTrue(IslandAbsorptionMesh.mayReplaceNative(first, 1f))
+            val progress = atRelease + (1f - atRelease) * .3f
+            assertEquals(.3f, IslandAbsorptionMesh.returnProgress(progress, atRelease), .00001f)
+            assertTrue(IslandAbsorptionMesh.mayReplaceNative(IslandAbsorptionMesh.returnProgress(progress, atRelease), 1f))
+            assertEquals(1f, IslandAbsorptionMesh.returnProgress(1f, atRelease), .00001f)
+        }
     }
 
     @Test fun actualCanvasMeshDrawsAnOpaqueCurvedWindowInsteadOfFadingARectangle() {

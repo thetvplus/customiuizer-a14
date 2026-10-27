@@ -17,14 +17,20 @@ internal object IslandMotion {
     const val ALBUM = 300L
     const val MEDIA_DELAY = 750L
     const val MEDIA_RETURN_DELAY = 80L
-    const val MEDIA_RETURN = 560L
-    const val ABSORPTION_TIME_SCALE = 1.18f
+    const val MEDIA_RETURN = 540L
+    const val ABSORPTION_TIME_SCALE = 1.5f
     const val PAUSE_LIFETIME = 2000L
     const val LOADING_LIFETIME = 30000L
     const val NATIVE_CARD_GAP_LIFETIME = 30000L
     const val EXPANDED_DWELL = 5000L
     const val LANDING_WIDTH_RATIO = .84f
     const val LANDING_HEIGHT_RATIO = .86f
+    /** One narrow response range for an accepted Home return. Native spring geometry,
+     * damping and initial velocity remain authoritative; distance never sets the tempo. */
+    fun returnDuration(strength: Float, absorption: Boolean): Long =
+        ((MEDIA_RETURN - 40f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f).toLong()
+    fun returnResponse(strength: Float, absorption: Boolean): Float =
+        (.35f - .02f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f
     /** All accepted native content lands inside the shell, with the same centre and
      * height. Keep at least a round end cap even for the smallest available island. */
     fun landingWidth(width: Float, height: Float) = maxOf(width * LANDING_WIDTH_RATIO, minOf(width, height))

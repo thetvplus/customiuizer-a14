@@ -11,6 +11,11 @@ internal object IslandAbsorptionMesh {
     /** A translucent or late first frame cannot replace the native window without a flash. */
     fun mayReplaceNative(progress: Float, alpha: Float) = progress >= 0f && progress < .55f && alpha >= .98f && alpha <= 1f
 
+    /** Native progress includes the drag before release. Admission and mesh travel
+     * belong to the accepted return, including a release from an already small page. */
+    fun returnProgress(progress: Float, atCommit: Float): Float =
+        ((progress - atCommit) / (1f - atCommit).coerceAtLeast(.01f)).coerceIn(0f, 1f)
+
     fun fill(output: FloatArray, rect: RectF, destination: RectF, progress: Float) {
         require(output.size == FLOATS)
         val t = progress.coerceIn(0f, 1f)
@@ -42,8 +47,8 @@ internal object IslandAbsorptionMesh {
 
     fun opacity(progress: Float): Float {
         val start = (progress / .14f).coerceIn(0f, 1f)
-        val base = 1f - .12f * start * start * (3f - 2f * start)
-        val tail = ((progress - .48f) / .52f).coerceIn(0f, 1f)
+        val base = 1f - .04f * start * start * (3f - 2f * start)
+        val tail = ((progress - .62f) / .38f).coerceIn(0f, 1f)
         return base * (1f - .94f * tail * tail * (3f - 2f * tail))
     }
 }

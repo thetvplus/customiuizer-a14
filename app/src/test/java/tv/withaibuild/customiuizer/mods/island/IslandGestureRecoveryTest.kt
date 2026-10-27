@@ -24,6 +24,27 @@ import org.robolectric.util.ReflectionHelpers.getField
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGestureRecoveryTest {
+    @Test fun aThinConfiguredIslandKeepsTheRealCameraHeightCoveredDuringDragAndRecoil() {
+        shell.geometry(240, 32, 40, 280); layout(240, 32)
+        shell.cameraAnchor(16f, 28f, 27f)
+        touch(MotionEvent.ACTION_DOWN, y = 16f)
+        touch(MotionEvent.ACTION_MOVE, y = -100f)
+        fun covered() {
+            assertTrue("Only the physical camera height limits compression", shell.height * shell.scaleY >= 31f)
+            val points = floatArrayOf(106f, 2.5f, 134f, 29.5f)
+            val inverse = android.graphics.Matrix()
+            assertTrue(shell.matrix.invert(inverse)); inverse.mapPoints(points)
+            val shape = getField<IslandShape>(shell, "shape")
+            assertTrue(shape.contains(points[0], points[1])); assertTrue(shape.contains(points[2], points[3]))
+        }
+        covered()
+        touch(MotionEvent.ACTION_CANCEL, y = -100f)
+        val clock = motion()!!
+        for (at in 0..260 step 8) { clock.currentPlayTime = at.toLong(); covered() }
+        clock.end()
+        assertEquals(1f, shell.scaleY, 0f); assertEquals(0f, shell.translationY, 0f)
+    }
+
     @Test fun nativeRecentVelocityChangesRecoilWithoutTurningTravelDistanceIntoADuration() {
         fun release(step: Long): Float {
             motion()?.end()

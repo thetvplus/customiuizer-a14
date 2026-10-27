@@ -43,7 +43,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     private val currentParams = element.getDeclaredField("currentRectFParams").apply { isAccessible = true }
     private val animation = element.getDeclaredField("mAnim").apply { isAccessible = true }
     private val animationTarget = animation.type.getMethod("getTargetRect")
-    private val absorptionTiming = ModuleHelper.guarded<LauncherAbsorptionTiming?>(null) { LauncherAbsorptionTiming(animation.type) }
+    private val returnTiming = ModuleHelper.guarded<LauncherReturnTiming?>(null) { LauncherReturnTiming(animation.type) }
     private val running = element.getMethod("isRunning")
     private val apps = targets.getDeclaredField("apps").apply { isAccessible = true }
     private val remotePackage = remote.getDeclaredField("packageName").apply { isAccessible = true }
@@ -113,7 +113,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
 
     /** Called once at committed return, never from an animation update. Preserve the original
      * params, callbacks, task leash, velocity and finish/cancel policy in a separate native copy. */
-    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = false): Any? {
+    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame): Any? {
         if (!params.isInstance(original) || !frame.valid()) return null
         if ((fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
@@ -128,11 +128,14 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
         val values = fields.map { it.get(original) }.toTypedArray()
-        val landing = if (absorption) frame.landingRectangle() else frame.rectangle()
+        val landing = frame.landingRectangle()
         values[2] = landing
         values[4] = landing.height() * .5f
-        // Preserve native opacity in both modes. The mesh multiplies that same alpha
-        // by its page fade; a late capture or cancellation cannot reveal an opaque cap.
+        // Keep the previous late-build landing and opaque native end. The original
+        // start alpha is retained, so a partially faded gesture never jumps opaque.
+        // Only the absorption mesh adds a final page fade; unavailable capture retains
+        // the same continuous native return inside the shell.
+        values[6] = 1f
         // A14's frame callback draws any *already initialized* floating icon without
         // consulting ignoreIcon. A null target makes native initTargetView retire that
         // icon before the window spring starts, restoring its real desktop owner once.
@@ -147,24 +150,27 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     fun accepted(copy: Any, owner: Any): Boolean = currentParams.get(owner) === copy &&
         running.invoke(owner) == true && animationTarget.invoke(animation.get(owner)) == fields[2].get(copy)
 
-    fun slowAbsorption(owner: Any) { absorptionTiming?.apply(animation.get(owner)) }
-    fun absorptionLease(owner: Any): Any? = absorptionTiming?.lease(animation.get(owner))
-    fun restoreAbsorption(owner: Any? = null, lease: Any? = null) { absorptionTiming?.restore(owner?.let { animation.get(it) }, lease) }
+    fun timeReturn(owner: Any, strength: Float, absorption: Boolean) {
+        returnTiming?.apply(animation.get(owner), strength, absorption)
+    }
+    fun returnTimingLease(owner: Any): Any? = returnTiming?.lease(animation.get(owner))
+    fun restoreReturnTiming(owner: Any? = null, lease: Any? = null) { returnTiming?.restore(owner?.let { animation.get(it) }, lease) }
 }
 
 /** Adjust only an accepted return's existing spring forces, before its next native frame.
  * One weak lease restores only forces still carrying this attempt's exact adjustment.
  * No global spring hook, listener replacement, velocity rewrite or independent clock. */
-internal class LauncherAbsorptionTiming(springType: Class<*>) {
+internal class LauncherReturnTiming(springType: Class<*>) {
     private val bundle = springType.getDeclaredMethod("getSpringBundle", String::class.java).apply { isAccessible = true }
+    private val modifyResponse = springType.getDeclaredMethod("getModifyResponse", Float::class.javaPrimitiveType).apply { isAccessible = true }
     private val stiffness = bundle.returnType.getMethod("getStiffness")
     private val setStiffness = bundle.returnType.getMethod("setStiffness", Float::class.javaPrimitiveType)
     private val keys = arrayOf("centerX", "centerY", "Width", "Ratio", "Radius", "Alpha", "SurfaceExtAlpha")
     private var active = WeakReference<Any>(null)
     private var original: FloatArray? = null
-    private val factor = 1f / (IslandMotion.ABSORPTION_TIME_SCALE * IslandMotion.ABSORPTION_TIME_SCALE)
+    private var factor = 1f
 
-    fun apply(spring: Any): Boolean {
+    fun apply(spring: Any, strength: Float = .5f, absorption: Boolean = true): Boolean {
         restore()
         val tracks = arrayOfNulls<Any>(keys.size)
         val values = FloatArray(keys.size)
@@ -175,6 +181,11 @@ internal class LauncherAbsorptionTiming(springType: Class<*>) {
                 values[i] = stiffness.invoke(tracks[i]) as Float
                 if (!values[i].isFinite() || values[i] <= 0f) return false
             }
+            // Width is the ROM progress reference. Normalize that single response,
+            // applying the same factor to every native track to retain their ratios.
+            val response = modifyResponse.invoke(spring, IslandMotion.returnResponse(strength, absorption)) as Float
+            if (!response.isFinite() || response <= 0f) return false
+            factor = (39.478418f / (response * response * values[2])).coerceIn(.25f, 4f)
             for (i in keys.indices) {
                 attempted = i
                 setStiffness.invoke(tracks[i], values[i] * factor)
@@ -184,7 +195,7 @@ internal class LauncherAbsorptionTiming(springType: Class<*>) {
         } catch (error: Throwable) {
             for (i in 0..attempted) ModuleHelper.guarded { setStiffness.invoke(tracks[i], values[i]) }
             FatalErrors.unwrapAndRethrowIfFatal(error)
-            XposedHelpers.log("Island absorption: retaining native spring timing", error)
+            XposedHelpers.log("Island return: retaining native spring timing", error)
             return false
         }
     }

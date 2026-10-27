@@ -65,6 +65,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         setTextColor(0xffb8b8bd.toInt()); maxLines = 1
         ellipsize = TextUtils.TruncateAt.END; includeFontPadding = false
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+    }
+    private val identityTitle = TextView(context).apply {
+        setTextColor(Color.WHITE); maxLines = 1; includeFontPadding = false
+        ellipsize = TextUtils.TruncateAt.END
+        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        pivotX = 0f
     }
     private val text = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
@@ -72,6 +80,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var controlActions = 0L
     private var controlPlayback = PlaybackState.STATE_NONE
     private var baseTextSize = title.textSize
+    private var contentHeightDp = IslandSizing.COLLAPSED_HEIGHT_DP
     private var iconSize = dp(24)
     private var waveHeight = dp(20)
     private var controlsEnabled = false
@@ -142,6 +151,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private val taps = GestureDetector(context, tapListener)
     private var cameraY = 0f
     private var cameraDiameter = dp(16).toFloat()
+    private var cameraHeight = cameraDiameter
+    private var cameraAnchored = false
     private var geometryWidth = 1
     private var geometryHeight = 1
     private var maximumWidth = 1f
@@ -150,6 +161,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var alignment = 1
     var touchMargin = 0
     private var labelWidth = 0f
+    private var identityWidth = 0f
     private var textReveal = 1f
     private var layerReveal = 1f
     private class Content(val label: String, val drawable: Drawable?, val media: Boolean,
@@ -228,6 +240,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         icon.background = iconMask
         icon.clipToOutline = true
         left.addView(icon, LinearLayout.LayoutParams(dp(24), dp(24)))
+        left.addView(identityTitle, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(8) })
         text.addView(title, LinearLayout.LayoutParams(-1, -2))
         text.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
         addView(left); addView(text); addView(wave)
@@ -336,16 +349,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         avatar = content.avatar
         title.ellipsize = if (content.status) null else TextUtils.TruncateAt.END
         val detail = content.clockLabel?.trim()?.takeIf { it.isNotEmpty() && it != content.label }
-        val twoLevels = content.expanded && !content.status && detail != null
-        title.maxLines = if (content.expanded && !twoLevels && content.clock == null) 2 else 1
-        title.gravity = (if (content.expanded) Gravity.START else Gravity.END) or Gravity.CENTER_VERTICAL
-        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (content.status) statusFit?.size
-            ?: baseTextSize else if (content.expanded) baseTextSize * .94f else baseTextSize)
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, baseTextSize * .82f)
+        val split = content.expanded && !content.status && content.clock == null && detail != null
+        val twoLevels = content.expanded && !content.status && content.clock != null && detail != null
+        title.gravity = Gravity.END or Gravity.CENTER_VERTICAL
+        applyTextSizes(content, split)
+        identityTitle.text = if (split) content.label else ""
+        identityTitle.visibility = if (split) VISIBLE else GONE
         subtitle.text = detail.orEmpty()
         subtitle.visibility = if (twoLevels) VISIBLE else GONE
         fitTextRows()
-        val visibleLabel = if (content.media && !content.expanded) "" else content.label
+        val visibleLabel = if (content.media && !content.expanded) "" else if (split) detail.orEmpty() else content.label
         if (title.text.toString() != visibleLabel) title.text = visibleLabel
         content.clock?.let { clock ->
             if (clock.pausedMillis != null) title.text = IslandLiveLabels.time(clock.pausedMillis)
@@ -357,6 +370,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
         labelWidth = maxOf(visibleLabel.lineSequence().maxOfOrNull { title.paint.measureText(it) } ?: 0f,
             if (twoLevels) subtitle.paint.measureText(detail) else 0f)
+        identityWidth = if (split) identityTitle.paint.measureText(content.label) else 0f
         text.visibility = if (content.media && !content.expanded) GONE else VISIBLE
         icon.scaleType = if (content.photo) ImageView.ScaleType.CENTER_CROP else ImageView.ScaleType.FIT_CENTER
         icon.clipToOutline = content.photo
@@ -367,6 +381,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         icon.visibility = if (content.drawable == null || recording) GONE else VISIBLE
         wave.visibility = if ((content.media && !content.expanded || recording) && content.waveform) VISIBLE else GONE
         iconMask.shape = if (content.avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
+        geometry(geometryWidth, geometryHeight, cameraGap, maximumWidth.toInt(), alignment, cameraOffset)
     }
 
     private fun commitContent() {
@@ -379,7 +394,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     fun fitsToast(value: String, width: Int, cameraGap: Int, height: Int = dp(IslandSizing.COLLAPSED_HEIGHT_DP),
         expanded: Boolean = false): Boolean {
-        val room = captionRoom(width, cameraGap, height)
+        val room = captionRoom(width, cameraGap, height, split = false)
         if (room <= 0) return false
         val paint = TextPaint(statusPaint).apply { textSize = baseTextSize * if (expanded) .94f else 1f }
         val layout = StaticLayout.Builder.obtain(value, 0, value.length, paint, room)
@@ -407,11 +422,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         this.alignment = alignment
         pivotX = horizontalPivot(width)
         geometryWidth = width; geometryHeight = height
+        if (!cameraAnchored) cameraY = height * .5f
         this.maximumWidth = maximumWidth.coerceAtLeast(width).toFloat()
         this.cameraGap = cameraGap
         this.cameraOffset = cameraOffset
         iconSize = iconSizeForHeight(height)
         val half = (if (cameraGap > 0) ((width - cameraGap) / 2f + cameraOffset).toInt()
+            else if (identityTitle.visibility == VISIBLE) (width - dp(8)) / 2
             else dp(IslandSizing.EDGE_DP) + iconSize + dp(8)).coerceAtLeast(1)
         val iconParams = icon.layoutParams
         if (iconParams.width != iconSize || iconParams.height != iconSize) {
@@ -421,7 +438,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val scale = iconSize.toFloat() / dp(24).coerceAtLeast(1)
         iconMask.cornerRadius = dp(7) * scale
         iconMask.shape = if (avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
-        left.setPadding(dp(IslandSizing.EDGE_DP), 0, 0, 0)
+        left.setPadding(dp(IslandSizing.EDGE_DP), 0, if (identityTitle.visibility == VISIBLE) dp(8) else 0, 0)
         layoutChild(left, half, height, Gravity.TOP or Gravity.START)
         layoutChild(text, captionRoom(width, cameraGap), height, Gravity.TOP or Gravity.END,
             end = dp(IslandSizing.EDGE_DP))
@@ -438,8 +455,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     private fun fitTextRows() {
         val content = displayedContent ?: return
+        title.maxLines = if (content.expanded && !content.status && content.clock == null && !content.media &&
+            title.paint.fontSpacing * 2f <= geometryHeight - dp(4)) 2 else 1
         val detail = content.clockLabel?.trim()
-        subtitle.visibility = if (content.expanded && !content.status && !detail.isNullOrEmpty() && detail != content.label &&
+        subtitle.visibility = if (content.expanded && content.clock != null && !content.status && !detail.isNullOrEmpty() && detail != content.label &&
             title.paint.fontSpacing + subtitle.paint.fontSpacing <= geometryHeight - dp(4)) VISIBLE else GONE
     }
 
@@ -452,9 +471,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         child.layoutParams = params
     }
 
-    fun cameraAnchor(centerY: Float, diameter: Float) {
+    fun cameraAnchor(centerY: Float, diameter: Float, height: Float = diameter) {
+        cameraAnchored = true
         cameraY = centerY
         cameraDiameter = diameter.coerceAtLeast(dp(8).toFloat())
+        cameraHeight = height.coerceAtLeast(dp(8).toFloat())
     }
 
     private fun compactWidth() = maxOf(cameraDiameter, geometryHeight.toFloat())
@@ -462,18 +483,33 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     fun refreshConfiguration() {
         slop = ViewConfiguration.get(context).scaledTouchSlop
-        title.textSize = 13f
-        baseTextSize = title.textSize
-        statusPaint.set(title.paint); statusFit = null
+        baseTextSize = -1f
+        contentHeight(contentHeightDp)
     }
 
     fun contentHeight(heightDp: Int) {
         val height = heightDp.coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP)
+        contentHeightDp = height
         val size = (13f + (height - 40) * .1f) * resources.displayMetrics.scaledDensity
-        if (abs(title.textSize - size) > .001f) title.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
+        if (abs(baseTextSize - size) <= .001f) return
         baseTextSize = size
         iconSize = iconSizeForHeight(dp(height))
         if (statusPaint.textSize != size) { statusPaint.textSize = size; statusFit = null }
+        if (displayedContent == null) title.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
+        displayedContent?.let { content ->
+            val split = identityTitle.visibility == VISIBLE
+            applyTextSizes(content, split)
+            labelWidth = maxOf(title.text.lineSequence().maxOfOrNull { title.paint.measureText(it.toString()) } ?: 0f,
+                if (subtitle.visibility == VISIBLE) subtitle.paint.measureText(subtitle.text.toString()) else 0f)
+            identityWidth = if (split) identityTitle.paint.measureText(content.label) else 0f
+        }
+    }
+
+    private fun applyTextSizes(content: Content, split: Boolean) {
+        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (content.status) statusFit?.size ?: baseTextSize
+            else baseTextSize * if (split && content.media) .82f else if (content.expanded) .94f else 1f)
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, baseTextSize * .82f)
+        identityTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, baseTextSize * .94f)
     }
 
     private fun iconSizeForHeight(height: Int) =
@@ -536,8 +572,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             visualTop?.let { translationY = it - pivotY * (1f - scaleY) }
         }
         val travel = if (mediaReturnProgress == 0f) {
-            if (nativeArrival) ((IslandMotion.MEDIA_RETURN - 35 * returnStrength) *
-                if (absorption) IslandMotion.ABSORPTION_TIME_SCALE else 1f).toLong() else IslandMotion.CONTENT_ARRIVAL
+            if (nativeArrival) IslandMotion.returnDuration(returnStrength, absorption) else IslandMotion.CONTENT_ARRIVAL
         }
             else if (entering) IslandMotion.ENTER
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
@@ -679,16 +714,17 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         config, event.eventTime - event.downTime)
                     else IslandRecallGesture.onMove(recall, event.getPointerId(0), pointerX(event), pointerY(event), config)
                 if (dragging) {
+                    val horizontal = IslandMotion.resistance(dx, dp(56).toFloat())
+                    val vertical = IslandMotion.resistance(dy, dp(48).toFloat())
+                    val freedom = if (cameraGap > 0) .65f else 1f
                     if (!dragCaptured) {
                         if (motion != null) {
-                            val horizontal = IslandMotion.resistance(dx, dp(56).toFloat())
-                            val vertical = IslandMotion.resistance(dy, dp(48).toFloat()).let { if (cameraGap > 0) maxOf(0f, it) else it }
                             downScaleX = scaleX - if (dragAxis == 1) .10f * abs(horizontal) else 0f
-                            downScaleY = scaleY - if (dragAxis == 2) .12f * vertical else if (cameraGap == 0) -.035f * abs(horizontal) else 0f
+                            downScaleY = scaleY - if (dragAxis == 2) .12f * vertical * freedom else -.035f * abs(horizontal) * freedom
                             val room = ((maximumWidth - geometryWidth * scaleX) * .5f).coerceAtLeast(0f)
-                            downTranslationX = translationX - if (dragAxis == 1 && alignment == 1 && cameraGap == 0)
-                                (dp(4) * horizontal).coerceIn(-room, room) else 0f
-                            downTranslationY = translationY - if (dragAxis == 2 && cameraGap == 0) dp(3) * vertical else 0f
+                            downTranslationX = translationX - if (dragAxis == 1 && alignment == 1)
+                                (dp(4) * horizontal * freedom).coerceIn(-room, room) else 0f
+                            downTranslationY = translationY - if (dragAxis == 2) dp(3) * vertical * freedom else 0f
                         }
                         motion?.cancel(); motion = null
                         cancelMediaReturn()
@@ -711,15 +747,15 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         return true
                     }
                     scaleX = if (dragAxis == 1)
-                        minOf(downScaleX + .10f * abs(IslandMotion.resistance(dx, dp(56).toFloat())),
+                        minOf(downScaleX + .10f * abs(horizontal),
                             maxOf(maximumWidth / geometryWidth, downScaleX)) else downScaleX
-                    val vertical = IslandMotion.resistance(dy, dp(48).toFloat()).let { if (cameraGap > 0) maxOf(0f, it) else it }
-                    scaleY = if (dragAxis == 2) downScaleY + .12f * vertical
-                        else downScaleY - if (cameraGap == 0) .035f * abs(IslandMotion.resistance(dx, dp(56).toFloat())) else 0f
+                    scaleY = if (dragAxis == 2) downScaleY + .12f * vertical * freedom
+                        else downScaleY - .035f * abs(horizontal) * freedom
+                    if (cameraGap > 0) scaleY = maxOf(scaleY, cameraMinimumHeight() / geometryHeight.coerceAtLeast(1))
                     val sideRoom = ((maximumWidth - geometryWidth * scaleX) * .5f).coerceAtLeast(0f)
-                    translationX = downTranslationX + if (dragAxis == 1 && alignment == 1 && cameraGap == 0)
-                        (dp(4) * IslandMotion.resistance(dx, dp(56).toFloat())).coerceIn(-sideRoom, sideRoom) else 0f
-                    translationY = downTranslationY + if (dragAxis == 2 && cameraGap == 0) dp(3) * vertical else 0f
+                    translationX = downTranslationX + if (dragAxis == 1 && alignment == 1)
+                        (dp(4) * horizontal * freedom).coerceIn(-sideRoom, sideRoom) else 0f
+                    translationY = cameraSafeTranslation(downTranslationY + if (dragAxis == 2) dp(3) * vertical * freedom else 0f)
                     updateContour()
                     return true
                 }
@@ -741,11 +777,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val vertical = IslandMotion.resistanceVelocity(dy, tracker.getYVelocity(pointer), dp(48).toFloat())
         val direction = if (dx < 0f) -1f else 1f
         val bound = dp(1200).toFloat()
+        val freedom = if (cameraGap > 0) .65f else 1f
         breadth.setVelocity(if (dragAxis == 1) (geometryWidth * .10f * horizontal * direction).coerceIn(-bound, bound) else 0f)
-        depth.setVelocity((if (dragAxis == 2 && (cameraGap == 0 || dy > 0f)) geometryHeight * .12f * vertical
-            else if (dragAxis == 1 && cameraGap == 0) -geometryHeight * .035f * horizontal * direction else 0f).coerceIn(-bound, bound))
-        shiftX.setVelocity(if (dragAxis == 1 && alignment == 1 && cameraGap == 0) (dp(4) * horizontal).coerceIn(-bound, bound) else 0f)
-        shiftY.setVelocity(if (dragAxis == 2 && cameraGap == 0) (dp(3) * vertical).coerceIn(-bound, bound) else 0f)
+        depth.setVelocity((if (dragAxis == 2) geometryHeight * .12f * vertical * freedom
+            else if (dragAxis == 1) -geometryHeight * .035f * horizontal * direction * freedom else 0f).coerceIn(-bound, bound))
+        shiftX.setVelocity(if (dragAxis == 1 && alignment == 1) (dp(4) * horizontal * freedom).coerceIn(-bound, bound) else 0f)
+        shiftY.setVelocity(if (dragAxis == 2) (dp(3) * vertical * freedom).coerceIn(-bound, bound) else 0f)
         breadthExtraVelocity = 0f
     }
 
@@ -756,6 +793,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             ModuleHelper.guarded { onInteraction(false) }
         }
     }
+
+    private fun cameraSafeTranslation(value: Float): Float {
+        if (cameraGap == 0) return value
+        val top = pivotY * (1f - scaleY)
+        val minimum = cameraY + cameraHeight * .5f + dp(2) - top - geometryHeight * scaleY
+        val maximum = cameraY - cameraHeight * .5f - dp(2) - top
+        return if (minimum <= maximum) value.coerceIn(minimum, maximum) else value
+    }
+
+    private fun cameraMinimumHeight() = minOf(geometryHeight.toFloat(), cameraHeight + dp(4))
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
         onEnd: (() -> Unit)? = null, returning: Boolean = false, catchWeight: Float = 0f, rigid: Boolean = false, rebound: Boolean = false) {
@@ -787,7 +834,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val maximumHeight = maxOf(maxOf(dp(44), geometryHeight) * 1.14f, geometryHeight * scaleY)
         // The camera seed must not override the shared configured height, or clamp
         // a smaller current height when a geometry change is being interrupted.
-        val minimumHeight = minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
+        val minimumHeight = if (rebound && cameraGap > 0) cameraMinimumHeight()
+            else minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         shiftY.retarget(translationY, ty, seconds, carry && !rigid, rebound)
         this.opacity.retarget(alpha, opacity, seconds, carry)
@@ -807,7 +855,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 scaleX = springBreadth / geometryWidth.coerceAtLeast(1)
                 scaleY = depth.sample(time, minimumHeight, maximumHeight) / geometryHeight.coerceAtLeast(1)
                 val progress = (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                val weight = catchWeight * if (returning && nativeArrival) .85f + .3f * returnStrength else 1f
+                val weight = catchWeight * if (returning && nativeArrival) .96f + .08f * returnStrength else 1f
                 val catchValue = IslandMotion.mediaReturnCatch(progress, nativeArrival)
                 val effectiveWeight = if (catchValue >= 0f)
                     IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival) else weight
@@ -819,7 +867,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     mediaReturnProgress = progress
                     (parent as? View)?.invalidate()
                 }
-                translationX = shiftX.sample(time); translationY = shiftY.sample(time)
+                translationX = shiftX.sample(time)
+                val nextY = shiftY.sample(time)
+                translationY = if (rebound) cameraSafeTranslation(nextY) else nextY
                 if (opacity > 0f) {
                     if (pendingContent != null) {
                         contentFadeRemaining = (fadeOut - it.currentPlayTime).coerceAtLeast(0L)
@@ -888,6 +938,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val arrival = if (mediaReturnProgress < 1f && !simplified) IslandMotion.arrivalScale(mediaReturnProgress) else 1f
         val contentScale = (if (contentMotion && !simplified) .97f + .03f * layerReveal else 1f) * arrival
         icon.scaleX = contentScale / sx; icon.scaleY = contentScale / sy
+        identityTitle.scaleX = contentScale / sx; identityTitle.scaleY = contentScale / sy
         text.scaleX = contentScale / sx; text.scaleY = contentScale / sy
         wave.scaleX = contentScale / sx; wave.scaleY = contentScale / sy
         // Keep a physical 16dp margin instead of stretching target-layout coordinates.
@@ -895,6 +946,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val edge = dp(IslandSizing.EDGE_DP)
         icon.translationX = (edge + iconSize * .5f) * (1f / sx - 1f) + opticalX * iconSize / sx
         icon.translationY = opticalY * iconSize / sy
+        identityTitle.translationX = (edge + (if (icon.visibility == VISIBLE) iconSize else 0) + dp(8)) * (1f / sx - 1f)
         wave.translationX = (if (recording) dp(28) else -dp(28)) * (1f / sx - 1f)
         val labelRoom = captionRoom(geometryWidth, cameraGap)
         text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f)
@@ -902,6 +954,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val iconRoom = if (cameraGap > 0) IslandContentLayout.leading(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize + maxOf(0f, opticalX * iconSize)
             else geometryWidth * sx >= 2 * (edge + iconSize)
         left.alpha = if (iconRoom && geometryHeight * sy >= iconSize) reveal else 0f
+        val identityLane = if (cameraGap > 0) IslandContentLayout.leading(geometryWidth * sx, cameraGap, cameraOffset, translationX)
+            else (geometryWidth * sx - dp(8)) * .5f
+        val identityInset = edge + (if (icon.visibility == VISIBLE) iconSize else 0) + dp(8) + left.paddingEnd
+        val identityRoom = identityLane - identityInset
+        identityTitle.alpha = if (identityRoom + .01f >= minOf(identityWidth,
+                (left.width - identityInset).coerceAtLeast(0).toFloat())) reveal * textReveal else 0f
         if (nativeArrival && mediaReturnProgress < 1f) left.alpha *= ((mediaReturnProgress - .64f) / .3f).coerceIn(0f, 1f)
         text.alpha = if (contentFits()) reveal * textReveal else 0f
         val nextBlur = if (text.visibility == VISIBLE && allowTextBlur && !simplified && isHardwareAccelerated && text.alpha in .01f..0.99f)
@@ -935,12 +993,15 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val edge = dp(IslandSizing.EDGE_DP)
         val targetRoom = captionRoom(geometryWidth, cameraGap)
         val room = if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * scaleX, cameraGap, cameraOffset, translationX) - edge
+            else if (identityTitle.visibility == VISIBLE) (geometryWidth * scaleX - dp(8)) * .5f - edge
             else geometryWidth * scaleX - 2 * edge - iconSize - dp(8)
         return room + .01f >= minOf(labelWidth, targetRoom.toFloat())
     }
 
-    private fun captionRoom(width: Int, gap: Int, height: Int = geometryHeight) = (if (gap > 0)
+    private fun captionRoom(width: Int, gap: Int, height: Int = geometryHeight,
+        split: Boolean = identityTitle.visibility == VISIBLE) = (if (gap > 0)
         IslandContentLayout.trailing(width.toFloat(), gap, cameraOffset, 0f).toInt() - dp(IslandSizing.EDGE_DP)
+        else if (split) (width - dp(8)) / 2 - dp(IslandSizing.EDGE_DP)
         else width - 2 * dp(IslandSizing.EDGE_DP) - iconSizeForHeight(height) - dp(8)).coerceAtLeast(0)
     private fun horizontalPivot(width: Int) = when (alignment) { 0 -> 0f; 2 -> width.toFloat(); else -> width * .5f }
 

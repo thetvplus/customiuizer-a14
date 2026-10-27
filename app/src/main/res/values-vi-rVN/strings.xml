@@ -1098,7 +1098,7 @@
     <string name="prefs_group_keyboard">Bàn phím</string>
     <string name="launcher_dock_background_liquid">Kính lỏng</string>
     <string name="system_toast_bottom_title">Khoảng cách phía dưới</string>
-    <string name="system_toast_capsule_title">Kết quả thao tác ứng dụng</string>
+    <string name="system_toast_capsule_title">Phản hồi Toast</string>
     <string name="system_toast_capsule_summ">Toast văn bản, như kết quả xóa hoặc lưu, dùng kiểu đã chọn. Biểu ngữ tin nhắn được cấu hình trong thông báo.</string>
     <string name="system_toast_position_title">Vị trí Toast</string>
     <string name="system_toast_position_summ">Đặt trong vùng an toàn của màn hình. Khởi động lại giao diện hệ thống sau khi đổi.</string>

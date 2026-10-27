@@ -1106,7 +1106,7 @@
     <string name="system_statusbar_duo_cellular_text">Text</string>
     <string name="launcher_dock_category">Dock</string>
     <string name="system_toast_bottom_title">Bottom spacing</string>
-    <string name="system_toast_capsule_title">App operation feedback</string>
+    <string name="system_toast_capsule_title">Toast feedback</string>
     <string name="system_toast_capsule_summ">Show plain text Toasts, such as deletion or saving results, in the selected style. Notification banners are configured separately.</string>
     <string name="launcher_dock_background_title">Dock background</string>
     <string name="launcher_dock_background_summ">Blends into the native Dock. Restart the launcher after changes.</string>

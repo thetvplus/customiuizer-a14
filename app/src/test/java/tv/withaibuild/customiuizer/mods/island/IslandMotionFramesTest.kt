@@ -29,6 +29,46 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
+    @Test fun expandedMetadataGlyphsStayInTheirOwnPhysicalLaneDuringTheWholeMorph() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell = IslandActivityView(activity)
+        activity.setContentView(shell, FrameLayout.LayoutParams(280, 40))
+        ShadowChoreographer.setPaused(true)
+        try {
+            for (gap in listOf(0, 40)) for (artwork in listOf(false, true)) {
+                shell.geometry(280, 40, gap, 288)
+                shell.bind("Summer evening concert", "The Band", if (artwork) android.graphics.drawable.ColorDrawable(Color.CYAN) else null,
+                    true, true, false, 0, false, expanded = true)
+                shell.measure(View.MeasureSpec.makeMeasureSpec(280, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(40, View.MeasureSpec.EXACTLY))
+                shell.layout(0, 0, 280, 40)
+                shell.prepareEntry(); shell.transition(160, 40, 280, 40, false)
+                val clock = getField<ValueAnimator>(shell, "motion")
+                val identity = getField<android.widget.TextView>(shell, "identityTitle")
+                val title = getField<android.widget.TextView>(shell, "title")
+                val leading = getField<View>(shell, "left"); val trailing = getField<View>(shell, "text")
+                fun ink(view: android.widget.TextView): android.graphics.RectF {
+                    val layout = requireNotNull(view.layout)
+                    return android.graphics.RectF(layout.getLineLeft(0), 0f, layout.getLineRight(0), view.height.toFloat()).also {
+                        val matrix = android.graphics.Matrix(); view.transformMatrixToGlobal(matrix); matrix.mapRect(it)
+                    }
+                }
+                for (at in 0L..clock.duration step 8) {
+                    clock.currentPlayTime = at
+                    val center = floatArrayOf(140f, 20f)
+                    val matrix = android.graphics.Matrix(); shell.transformMatrixToGlobal(matrix); matrix.mapPoints(center)
+                    if (identity.alpha * leading.alpha > .01f)
+                        assertTrue("Leading text crosses its lane at $at ms, gap=$gap artwork=$artwork",
+                            ink(identity).right <= center[0] - gap * .5f + .5f)
+                    if (trailing.alpha > .01f)
+                        assertTrue("Right-aligned text crosses its lane at $at ms, gap=$gap artwork=$artwork",
+                            ink(title).left >= center[0] + gap * .5f - .5f)
+                }
+                clock.end()
+            }
+        } finally { ShadowChoreographer.setPaused(false); activity.finish() }
+    }
+
     @Test fun equalSizeContentArrivalExpandsOnceFromTheCurrentShellAndSettlesWithinTheSameClock() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)

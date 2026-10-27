@@ -445,7 +445,7 @@
 | 功能（页内分组 → 选项） | 稳定键 | 入口状态 / XML 依赖 |
 | --- | --- | --- |
 | 展示方式 → 灵动额头样式 | `pref_key_system_strong_toast_mode` | 可见 |
-| 展示方式 → 应用操作反馈 | `pref_key_system_toast_capsule` | 可见 |
+| 展示方式 → Toast 反馈 | `pref_key_system_toast_capsule` | 可见 |
 | 内容 → 媒体 | `pref_key_system_island_music_cat` | 可见 |
 | 内容 → 消息通知 | `pref_key_system_island_notifications_cat` | 可见 |
 | 内容 → 系统活动 | `pref_key_system_island_feedback_cat` | 可见 |

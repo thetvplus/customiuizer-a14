@@ -1073,7 +1073,7 @@
     <string name="system_statusbar_duo_cellular_text">文字</string>
     <string name="launcher_dock_category">Dock</string>
     <string name="system_toast_bottom_title">底部間距</string>
-    <string name="system_toast_capsule_title">應用操作回饋</string>
+    <string name="system_toast_capsule_title">Toast 回饋</string>
     <string name="system_toast_capsule_summ">讓刪除、儲存等操作結果的純文字 Toast 跟隨所選樣式。訊息橫幅在「訊息通知」中設定。</string>
     <string name="launcher_dock_background_title">Dock 背景</string>
     <string name="launcher_dock_background_summ">融入原生 Dock。變更後重新啟動桌面生效。</string>

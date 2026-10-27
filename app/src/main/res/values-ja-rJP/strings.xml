@@ -1098,7 +1098,7 @@
     <string name="prefs_group_keyboard">キーボード</string>
     <string name="launcher_dock_background_liquid">リキッドグラス</string>
     <string name="system_toast_bottom_title">下部の余白</string>
-    <string name="system_toast_capsule_title">アプリの操作結果</string>
+    <string name="system_toast_capsule_title">Toast フィードバック</string>
     <string name="system_toast_capsule_summ">削除や保存などの文字のみの Toast を選択したスタイルで表示します。通知バナーは「メッセージ通知」で設定します。</string>
     <string name="system_toast_position_title">Toast の位置</string>
     <string name="system_toast_position_summ">画面の安全領域を基準に配置します。変更後はシステム UI を再起動してください。</string>

@@ -265,6 +265,25 @@ class DockGlassBackdropTest {
         assertFalse(lastBitmap!!.isRecycled)
     }
 
+    @Test fun nativePinchMidpointKeepsRealWallpaperPixelsWhileTheNextCaptureIsPending() {
+        val controller = controller()
+        controller.onFrame(true)
+        val first = lastBitmap!!
+        val node = RenderNode("dock-native-pinch-midpoint").apply { setPosition(0, 0, 300, 80) }
+        val canvas = node.beginRecording()
+        try {
+            // The current draw receives a legacy matrix after pre-draw. A replacement
+            // compositor frame cannot have completed yet; the retained crop must cover it.
+            for (dy in listOf(-40f, -80f, -120f, -80f, 0f)) {
+                controller.setLegacyTransform(Matrix().apply { setTranslate(0f, dy) })
+                assertTrue("Native editing midpoint dy=$dy", controller.prepare(canvas, Rect(0, 0, 300, 80), 20f, 1f))
+                assertSame(first, lastBitmap)
+                assertFalse(first.isRecycled)
+            }
+            assertEquals("No synchronous capture is needed during drawing", 1, captures)
+        } finally { node.endRecording(); controller.release() }
+    }
+
     @Test fun uncoveredOldPixelsCannotRestartExhaustedBadFrameRecoveryOnUnrelatedDraws() {
         for (live in listOf(false, true)) {
             view.translationY = 0f
@@ -275,7 +294,7 @@ class DockGlassBackdropTest {
             })
             controller.onFrame(true)
             assertEquals(1, attempts)
-            view.translationY = -80f // an actual native scene change leaves the old crop
+            view.translationY = -320f // leave even the reserved native-animation sweep
             val node = RenderNode("dock-exhausted-recovery").apply { setPosition(0, 0, 300, 80) }
             val canvas = node.beginRecording()
             try {
@@ -363,7 +382,8 @@ class DockGlassBackdropTest {
         controller.setLegacyTransform(Matrix().apply { setTranslate(0f, -120f) })
         controller.onFrame(true)
         assertTrue("crop=$lastCrop position=${position.contentToString()}", lastCrop.contains(Rect(position[0], position[1] - 120, position[0] + 300, position[1] - 40)))
-        assertFalse(lastCrop.contains(Rect(position[0], position[1], position[0] + 300, position[1] + 80)))
+        assertTrue("The real native position and its next sweep share one retained crop",
+            lastCrop.contains(Rect(position[0], position[1], position[0] + 300, position[1] + 80)))
         val values = ReflectionHelpers.getField<Matrix>(controller, "world")
         val mapped = floatArrayOf(150f, 40f)
         values.mapPoints(mapped)

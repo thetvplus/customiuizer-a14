@@ -1097,7 +1097,7 @@
     <string name="prefs_group_keyboard">Клавиатура</string>
     <string name="launcher_dock_background_liquid">Жидкое стекло</string>
     <string name="system_toast_bottom_title">Отступ снизу</string>
-    <string name="system_toast_capsule_title">Результаты действий приложений</string>
+    <string name="system_toast_capsule_title">Уведомления Toast</string>
     <string name="system_toast_capsule_summ">Текстовые Toast, например после удаления или сохранения, используют выбранный стиль. Баннеры сообщений настраиваются в уведомлениях.</string>
     <string name="system_toast_position_title">Положение Toast</string>
     <string name="system_toast_position_summ">Положение в безопасной области экрана. После изменений перезапустите системный интерфейс.</string>

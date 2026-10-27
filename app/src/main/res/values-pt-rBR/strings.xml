@@ -1098,7 +1098,7 @@
     <string name="prefs_group_keyboard">Teclado</string>
     <string name="launcher_dock_background_liquid">Vidro líquido</string>
     <string name="system_toast_bottom_title">Espaço inferior</string>
-    <string name="system_toast_capsule_title">Resultados dos aplicativos</string>
+    <string name="system_toast_capsule_title">Avisos Toast</string>
     <string name="system_toast_capsule_summ">Toasts de texto, como resultados de exclusão ou salvamento, usam o estilo escolhido. Configure os banners nas notificações.</string>
     <string name="system_toast_position_title">Posição do Toast</string>
     <string name="system_toast_position_summ">Posiciona na área segura da tela. Reinicie a interface do sistema após alterar.</string>

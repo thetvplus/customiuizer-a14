@@ -1105,7 +1105,7 @@
     <string name="prefs_group_keyboard">Klávesnice</string>
     <string name="launcher_dock_background_liquid">Tekuté sklo</string>
     <string name="system_toast_bottom_title">Dolní odstup</string>
-    <string name="system_toast_capsule_title">Zpětná vazba aplikací</string>
+    <string name="system_toast_capsule_title">Zpětná vazba Toast</string>
     <string name="system_toast_capsule_summ">Textové Toasty po smazání nebo uložení používají vybraný styl. Bannery zpráv nastavte v oznámeních.</string>
     <string name="system_toast_position_title">Poloha Toastu</string>
     <string name="system_toast_position_summ">Umístění v bezpečné oblasti obrazovky. Po změně restartujte systémové rozhraní.</string>

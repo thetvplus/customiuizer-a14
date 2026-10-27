@@ -205,11 +205,16 @@ internal class DockGlassBackdrop(
         points[6] = 0f; points[7] = view.height.toFloat()
         world.mapPoints(points)
         val margin = 32f * view.resources.displayMetrics.density
+        // Reserve a bounded vertical sweep before editing/unlock starts. The native
+        // legacy matrix arrives during drawing, after pre-draw; a small instantaneous
+        // crop otherwise loses coverage before a new compositor frame can arrive.
+        // Output remains one <=1024x384 texture, with the same real-screen mapping.
+        val verticalMargin = maxOf(margin, view.height * 2f)
         val requestCrop = Rect(
             floor((minOf(points[0], points[2], points[4], points[6]) - margin).coerceAtLeast(0f) / 4f).toInt() * 4,
-            floor((minOf(points[1], points[3], points[5], points[7]) - margin).coerceAtLeast(0f) / 4f).toInt() * 4,
+            floor((minOf(points[1], points[3], points[5], points[7]) - verticalMargin).coerceAtLeast(0f) / 4f).toInt() * 4,
             minOf(viewportWidth, ceil((maxOf(points[0], points[2], points[4], points[6]) + margin) / 4f).toInt() * 4),
-            minOf(viewportHeight, ceil((maxOf(points[1], points[3], points[5], points[7]) + margin) / 4f).toInt() * 4))
+            minOf(viewportHeight, ceil((maxOf(points[1], points[3], points[5], points[7]) + verticalMargin) / 4f).toInt() * 4))
         if (requestCrop.isEmpty || maxOf(points[0], points[2], points[4], points[6]) <= 0f ||
             minOf(points[0], points[2], points[4], points[6]) >= viewportWidth ||
             maxOf(points[1], points[3], points[5], points[7]) <= 0f ||
@@ -424,9 +429,13 @@ internal class DockGlassBackdrop(
         points[4] = view.width.toFloat(); points[5] = view.height.toFloat()
         points[6] = 0f; points[7] = view.height.toFloat()
         world.mapPoints(points)
-        for (i in 0..6 step 2) if (points[i] < area.left || points[i] > area.right ||
-            points[i + 1] < area.top || points[i + 1] > area.bottom) return false
-        return true
+        // Offscreen parts are clipped by the display. Requiring their nonexistent
+        // wallpaper pixels would toggle materials while a native scene slides out.
+        val left = maxOf(0f, minOf(points[0], points[2], points[4], points[6]))
+        val right = minOf(viewportWidth.toFloat(), maxOf(points[0], points[2], points[4], points[6]))
+        val top = maxOf(0f, minOf(points[1], points[3], points[5], points[7]))
+        val bottom = minOf(viewportHeight.toFloat(), maxOf(points[1], points[3], points[5], points[7]))
+        return left < right && top < bottom && left >= area.left && right <= area.right && top >= area.top && bottom <= area.bottom
     }
 
     private fun clearTexture() {

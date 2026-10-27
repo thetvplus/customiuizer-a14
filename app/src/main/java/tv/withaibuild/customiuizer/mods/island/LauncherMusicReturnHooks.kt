@@ -79,7 +79,7 @@ internal object LauncherMusicReturnHooks {
                 val owner = active.get()
                 val attempt = ModuleHelper.guarded<Attempt?>(null) {
                     val element = chain.thisObject ?: return@guarded null
-                    access.restoreAbsorption(element)
+                    access.restoreReturnTiming(element)
                     owner?.prefetchOpening(original, element)
                     owner?.retarget(original, element)
                 }
@@ -118,9 +118,9 @@ internal object LauncherMusicReturnHooks {
                     override fun intercept(chain: XposedInterface.Chain): Any? {
                         val element = chain.thisObject ?: return chain.proceed()
                         val meshLease = mesh.lease(element)
-                        val timingLease = ModuleHelper.guarded<Any?>(null) { access.absorptionLease(element) }
+                        val timingLease = ModuleHelper.guarded<Any?>(null) { access.returnTimingLease(element) }
                         return try { chain.proceed() } finally { ModuleHelper.guarded {
-                            if (timingLease != null) access.restoreAbsorption(element, timingLease)
+                            if (timingLease != null) access.restoreReturnTiming(element, timingLease)
                             mesh.end(element, meshLease)
                         } }
                     }
@@ -213,9 +213,14 @@ internal object LauncherMusicReturnHooks {
         fun touch(event: MotionEvent) {
             if (!enabled()) return
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { impulse.begin(event.rawY, event.eventTime); request(gesture = true) }
-                MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> if (event.pointerCount == 1)
-                    impulse.move(event.rawY, event.eventTime, context.resources.displayMetrics.density) else impulse.cancel()
+                MotionEvent.ACTION_DOWN -> { request(gesture = true); impulse.begin(event.rawY, event.eventTime) }
+                MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> if (event.pointerCount == 1) {
+                    val density = context.resources.displayMetrics.density
+                    val offset = event.rawY - event.y
+                    for (i in 0 until event.historySize)
+                        impulse.move(event.getHistoricalY(0, i) + offset, event.getHistoricalEventTime(i), density)
+                    impulse.move(event.rawY, event.eventTime, density)
+                } else impulse.cancel()
                 MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> impulse.cancel()
             }
         }
@@ -228,9 +233,9 @@ internal object LauncherMusicReturnHooks {
             if (!current.fresh(SystemClock.uptimeMillis()) || frame.packageName !in returnPackages) return null
             val nav = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
             if (nav.display?.rotation != android.view.Surface.ROTATION_0) return null
-            val result = access.retarget(original, element, nav, frame, options.absorption) ?: return null
+            val result = access.retarget(original, element, nav, frame) ?: return null
             if (epoch != gesture.get()) return null
-            return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.strength)
+            return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.recentStrength(SystemClock.uptimeMillis()))
                 .also { activeAttempt.set(it.sequence) }
         }
         fun prefetchOpening(original: Any, element: Any) {
@@ -261,8 +266,8 @@ internal object LauncherMusicReturnHooks {
                 return
             }
             committedAttempt = attempt.sequence
+            if (absorption != null) access.timeReturn(element, attempt.impulse, options.absorption)
             if (options.absorption && absorption != null) attempt.snapshot.frame?.let { frame ->
-                access.slowAbsorption(element)
                 ModuleHelper.guarded { absorption?.begin(tasks, element, attempt.params, frame) }
             }
             val current = attempt.snapshot
@@ -285,9 +290,10 @@ internal object LauncherMusicReturnHooks {
         }
         private fun current(attempt: Attempt) = attempt.epoch == gesture.get() && attempt.sequence == activeAttempt.get()
         private fun invalidateAttempt() {
+            impulse.cancel()
             gesture.incrementAndGet(); activeAttempt.set(0); commitJob?.cancel(); commitJob = null
             ModuleHelper.guarded { absorption?.cancel() }
-            ModuleHelper.guarded { access.restoreAbsorption() }
+            ModuleHelper.guarded { access.restoreReturnTiming() }
         }
         private fun stop() {
             invalidateAttempt()

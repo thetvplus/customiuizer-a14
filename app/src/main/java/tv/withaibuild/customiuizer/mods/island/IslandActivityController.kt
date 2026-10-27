@@ -1366,8 +1366,12 @@ internal class IslandActivityController(
             dp(24).toFloat(), shortDp = options.shortWidth, longDp = options.longWidth,
             manual = !options.automaticWidth, heightDp = heightDp, centered = centered).coerceAtMost((safeWidth - dp(IslandSizing.FORM_GAP_DP)).coerceAtLeast(0))
         val maximumWidth = if (expanded && options.automaticWidth) {
-            val content = maxOf(shell.textWidth(caption ?: media?.title.orEmpty()),
-                if (label != null) 0f else shell.textWidth(feedback?.detail ?: media?.artist.orEmpty())) * .94f
+            val primary = caption ?: media?.title.orEmpty()
+            val detail = if (label != null) "" else feedback?.detail ?: media?.artist.orEmpty()
+            val split = detail.isNotBlank() && detail != primary && feedback?.liveActivity?.clock == null
+            val content = if (split) maxOf(shell.textWidth(primary) * .94f + dp(32),
+                shell.textWidth(detail) * if (feedback == null) .82f else .94f)
+                else maxOf(shell.textWidth(primary) * .94f, shell.textWidth(detail) * .82f)
             IslandSizing.expanded(density, bounds.width, safeWidth, gap,
                 content, heightDp, centered, shortWidth)
         } else if (expanded) maxOf(compactMaximumWidth, shortWidth + dp(IslandSizing.FORM_GAP_DP)).coerceAtMost(safeWidth)
@@ -1560,7 +1564,8 @@ internal class IslandActivityController(
         shell.geometry(geometry.width, geometry.height, geometry.gap, geometry.maximumWidth, options.position, cameraOffset)
         screen?.let { bounds ->
             shell.cameraAnchor(if (options.position != 1) geometry.height * .5f else if (bounds.holeCenter >= 0f) bounds.holeCenter - geometry.top else dp(20).toFloat(),
-                if (options.position != 1) 0f else if (bounds.holeWidth > 0) bounds.holeWidth.toFloat() else dp(16).toFloat())
+                if (options.position != 1) 0f else if (bounds.holeWidth > 0) bounds.holeWidth.toFloat() else dp(16).toFloat(),
+                if (bounds.holeWidth > 0) (bounds.holeBottom - bounds.holePhysicalTop).coerceAtLeast(0).toFloat() else dp(16).toFloat())
         }
         if (resumingExit) shell.resumeEntry()
         // One stable, transparent status-band canvas. Form changes happen together in

@@ -122,7 +122,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                 }
             } finally { texture?.recycle() }
         }
-        handler.postDelayed(active.timeout, 1200)
+        handler.postDelayed(active.timeout, 1600)
     }
 
     fun hides(element: Any) = session?.let { it.element.get() === element && it.presented && api.current(element, it.copy) } == true
@@ -137,7 +137,14 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
             root.alpha != 1f || root.display?.rotation != android.view.Surface.ROTATION_0 ||
             !progress.isFinite() || !alpha.isFinite() || !radius.isFinite() || rect.isEmpty ||
             !rect.left.isFinite() || !rect.top.isFinite() || !rect.right.isFinite() || !rect.bottom.isFinite()) { cancel(); return }
-        active.progress = progress.coerceIn(0f, 1f)
+        // reset() temporarily leaves native width at zero until the first frame.
+        // Latch the first actual return frame, never query that uninitialized width
+        // or measure the gesture's earlier progress against a fullscreen baseline.
+        if (!active.atCommit.isFinite()) {
+            if (progress >= .96f || rect.width() <= active.target.width() * 1.05f) { cancel(); return }
+            active.atCommit = progress.coerceIn(0f, 1f)
+        }
+        active.progress = IslandAbsorptionMesh.returnProgress(progress, active.atCommit)
         active.nativeAlpha = alpha.coerceIn(0f, 1f)
         if (active.texture == null) return
         if (!active.installed) {
@@ -211,7 +218,8 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         } finally { old.texture?.recycle(); old.texture = null }
     }
 
-    private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl, val target: RectF) : Drawable(), View.OnAttachStateChangeListener {
+    private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl,
+        val target: RectF) : Drawable(), View.OnAttachStateChangeListener {
         val element = WeakReference(element)
         val rootWidth = root.width
         val rootHeight = root.height
@@ -223,6 +231,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         var texture: Bitmap? = null
         var progress = 0f; var firstProgress = 0f; var radius = 0f
+        var atCommit = Float.NaN
         var fadeAt = 0f
         var nativeAlpha = 1f
         var installed = false; var queuedHide = false
