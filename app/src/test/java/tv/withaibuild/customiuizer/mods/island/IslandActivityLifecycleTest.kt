@@ -777,6 +777,53 @@ class IslandActivityLifecycleTest {
         assertTrue(shadowOf(player).callbacks.isEmpty())
     }
 
+    @Test fun anAlarmPauseWithoutANativeCardCanResumeThroughTheExistingCallback() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("alarm-pause-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        val callback = shadowOf(player).callbacks.single()
+        native.player = null
+        val paused = PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build()
+        shadowOf(player).setPlaybackState(paused); callback.onPlaybackStateChanged(paused); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2500)); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        assertSame(callback, shadowOf(player).callbacks.single())
+        val playing = PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build()
+        shadowOf(player).setPlaybackState(playing); callback.onPlaybackStateChanged(playing); drain(); revealMedia()
+        assertTrue(shell!!.isAttachedToWindow)
+        assertTrue(shell!!.isMedia)
+        assertEquals(2, adds)
+        assertSame(callback, shadowOf(player).callbacks.single())
+        val stopped = PlaybackState.Builder().setState(PlaybackState.STATE_STOPPED, 0, 0f).build()
+        shadowOf(player).setPlaybackState(stopped); callback.onPlaybackStateChanged(stopped); drain()
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+        assertFalse(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun repeatedPausedNativeCardGapsCannotRenewTheSessionRetention() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("alarm-expired-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        native.player = null
+        val paused = PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build()
+        shadowOf(player).setPlaybackState(paused)
+        shadowOf(player).callbacks.single().onPlaybackStateChanged(paused); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(20)); drain()
+        controller.updateFromNative(native); drain()
+        assertEquals(1, shadowOf(player).callbacks.size)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11)); drain()
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+        assertFalse(shell!!.isAttachedToWindow)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertEquals(1, adds)
+    }
+
     @Test fun aCompletedDeleteThatDoesNotFitShortUsesTheLongFormThenRestoresMusic() {
         val controller = controller(media = true, simplified = true, automaticWidth = false, shortWidth = 96, longWidth = 240)
         native.player = launchablePlayer("delete-feedback-over-music")
@@ -821,6 +868,8 @@ class IslandActivityLifecycleTest {
             .setActions(PlaybackState.ACTION_PLAY).build())
         native.player = null
         controller.updateFromNative(native); drain()
+        assertFalse(shell!!.idle)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2100)); drain()
         assertTrue(shell!!.idle)
         shell!!.onGesture(IslandMusicGesture.LEFT); drain()
         assertEquals(PlaybackState.ACTION_PLAY, shadowOf(player.transportControls).lastPerformedAction)

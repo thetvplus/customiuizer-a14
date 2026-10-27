@@ -20,6 +20,7 @@ internal object IslandMotion {
     const val MEDIA_RETURN = 560L
     const val PAUSE_LIFETIME = 2000L
     const val LOADING_LIFETIME = 30000L
+    const val NATIVE_CARD_GAP_LIFETIME = 30000L
     const val LANDING_WIDTH_RATIO = .84f
     const val LANDING_HEIGHT_RATIO = .86f
     /** All accepted native content lands inside the shell, with the same centre and

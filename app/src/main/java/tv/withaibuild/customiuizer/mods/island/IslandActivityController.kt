@@ -190,6 +190,9 @@ internal class IslandActivityController(
     private data class Artwork(val source: WeakReference<Bitmap>, val epoch: Long, val drawable: BitmapDrawable)
     @Volatile private var artwork: Artwork? = null
     private var pauseDeadline: Long? = null
+    // Missing native card: keep a verified playing session, or one finite pause grace.
+    // Repeated card/metadata snapshots cannot renew a paused gap.
+    private var nativeCardGapDeadline: Long? = null
     // One deadline for this session's loading episode; metadata churn cannot renew it.
     private var loadingDeadline: Long? = null
     private var observedPlaybackState: Int? = null
@@ -953,12 +956,15 @@ internal class IslandActivityController(
         if (!options.media || !state.allowed) return
         val nativeSelection = access.controller(owner)
         // A ringing alarm can remove the native media card without ending the music
-        // session. Retain only our exact selected, still-playing OS session; losing
-        // the native manager, destruction or pause still follows the existing cleanup.
+        // session. Retain our exact OS session through a bounded pause as well, so
+        // the existing callback can observe playback returning after the alarm.
+        val now = SystemClock.uptimeMillis()
         val nativePlayer = nativeSelection ?: selected?.takeIf { candidate ->
-            media?.loading == true && loadingDeadline?.let { it > SystemClock.uptimeMillis() } == true ||
-                media?.playing == true && ModuleHelper.guarded(false) {
-                    candidate.playbackState?.state == PlaybackState.STATE_PLAYING &&
+            media?.loading == true && loadingDeadline?.let { it > now } == true ||
+                ModuleHelper.guarded(false) {
+                    val playback = candidate.playbackState?.state
+                    (playback == PlaybackState.STATE_PLAYING || playback == PlaybackState.STATE_PAUSED &&
+                        nativeCardGapDeadline?.let { it > now } != false) &&
                         context.getSystemService(android.media.session.MediaSessionManager::class.java)
                             ?.getActiveSessions(null)?.any { it.sessionToken == candidate.sessionToken &&
                                 it.packageName == candidate.packageName } == true
@@ -990,6 +996,8 @@ internal class IslandActivityController(
             clearMedia(keepBackground = true)
             selected = controller
         }
+        nativeCardGapDeadline = if (nativeSelection != null || independent != null) null
+            else nativeCardGapDeadline ?: Long.MAX_VALUE
         val metadata = if (independent == null && nativeSelection != null) access.metadata(owner) else controller.metadata
         val readOptions = options
         val currentIconEpoch = iconEpoch
@@ -1013,6 +1021,12 @@ internal class IslandActivityController(
             if (prepared == null) {
                 clearMedia()
             } else {
+                if (nativeCardGapDeadline != null) {
+                    if (prepared.playbackState == PlaybackState.STATE_PAUSED) {
+                        if (nativeCardGapDeadline == Long.MAX_VALUE)
+                            nativeCardGapDeadline = now + IslandMotion.NATIVE_CARD_GAP_LIFETIME
+                    } else if (prepared.playing || prepared.loading) nativeCardGapDeadline = Long.MAX_VALUE
+                }
                 if (sessionJob == null) watchSession(controller)
                 if (prepared.playing && prepared.user == foregroundUser && prepared.uid != null && prepared.user != null &&
                     !sourceExcluded(prepared.packageName, prepared.user, prepared.uid))
@@ -1266,6 +1280,7 @@ internal class IslandActivityController(
         displayedMedia = null
         foregroundBaseline = false
         pauseDeadline = null
+        nativeCardGapDeadline = null
         loadingDeadline = null
         observedPlaybackState = null
         mediaRevealAt = null
@@ -1430,6 +1445,7 @@ internal class IslandActivityController(
         pipStateReader?.invoke()?.let(::applyPipSnapshot)
         handler.removeCallbacks(expiry)
         val now = SystemClock.uptimeMillis()
+        if (nativeCardGapDeadline?.let { it != Long.MAX_VALUE && now >= it } == true) clearMedia()
         if (pauseDeadline?.let { now >= it } == true) state.setMedia(null, null)
         if (loadingDeadline?.let { it > 0L && now >= it } == true) {
             loadingDeadline = 0L
@@ -1456,7 +1472,8 @@ internal class IslandActivityController(
         if (mediaRevealAt?.let { now >= it } == true) mediaRevealAt = null
         val shadeIdle = !state.allowed && idleShadeAllowed()
         if (shadeBlocked && !state.allowed && !shadeIdle) {
-            val deadline = listOfNotNull(pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE }, mediaRevealAt?.takeIf { it > now },
+            val deadline = listOfNotNull(nativeCardGapDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
+                pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE }, mediaRevealAt?.takeIf { it > now },
                 mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()
             if (!disposed && deadline != null) handler.postAtTime(expiry, deadline)
             hide(animate = true)
@@ -1486,7 +1503,8 @@ internal class IslandActivityController(
         val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null
         val liveExpiry = toast?.liveActivity?.clock?.takeIf { it.countdown && it.pausedMillis == null }
             ?.let { now + (it.base + 3000 - SystemClock.elapsedRealtime()).coerceAtLeast(1) }
-        val nextExpiry = listOfNotNull(liveExpiry, state.deadline(), pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
+        val nextExpiry = listOfNotNull(liveExpiry, state.deadline(), nativeCardGapDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
+            pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
             mediaRevealAt?.takeIf { it > now }, mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()
         if (!disposed && nextExpiry != null) handler.postAtTime(expiry, nextExpiry)
         if (geometry == null) {
