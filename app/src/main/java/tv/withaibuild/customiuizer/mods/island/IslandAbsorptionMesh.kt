@@ -8,24 +8,32 @@ internal object IslandAbsorptionMesh {
     const val ROWS = 48
     const val FLOATS = (ROWS + 1) * 4
 
+    /** A translucent or late first frame cannot replace the native window without a flash. */
+    fun mayReplaceNative(progress: Float, alpha: Float) = progress >= 0f && progress < .55f && alpha >= .98f && alpha <= 1f
+
     fun fill(output: FloatArray, rect: RectF, destination: RectF, progress: Float) {
         require(output.size == FLOATS)
         val t = progress.coerceIn(0f, 1f)
         // Keep the captured page's aspect while the leading edge enters first. The
         // native spring supplies the only clock; the trailing edge compresses later.
-        val leading = 1f - (1f - t).pow(2.6f)
-        val trailing = t.pow(1.8f)
-        val top = rect.top + (destination.top - rect.top) * leading
-        val bottom = rect.bottom + (destination.bottom - rect.bottom) * trailing
-        val topWidth = rect.width() + (destination.width() - rect.width()) * leading
-        val bottomWidth = rect.width() + (destination.width() - rect.width()) * t.pow(2.4f)
+        val grip = (t / .14f).coerceIn(0f, 1f)
+        val leading = grip * grip * (3f - 2f * grip)
+        val trailing = t.pow(2.25f)
+        val holeHeight = maxOf(1f, destination.height() * .08f)
+        val holeTop = destination.centerY() - holeHeight * .5f
+        val holeBottom = destination.centerY() + holeHeight * .5f
+        val neck = minOf(destination.width() * .28f, destination.height() * .8f)
+        val top = rect.top + (holeTop - rect.top) * leading
+        val bottom = rect.bottom + (holeBottom - rect.bottom) * trailing
+        val topWidth = rect.width() + (neck - rect.width()) * leading
+        val bottomWidth = rect.width() + (neck - rect.width()) * t.pow(2.4f)
         val topCenter = rect.centerX() + (destination.centerX() - rect.centerX()) * leading
         val bottomCenter = rect.centerX() + (destination.centerX() - rect.centerX()) * trailing
         for (row in 0..ROWS) {
             val v = row.toFloat() / ROWS
-            val width = topWidth + (bottomWidth - topWidth) * v.pow(.7f)
+            val width = topWidth + (bottomWidth - topWidth) * v.pow(.85f)
             val center = topCenter + (bottomCenter - topCenter) * v
-            val y = top + (bottom - top) * v.pow(1f + 1.6f * t * (1f - t))
+            val y = top + (bottom - top) * v.pow(1f + 2.6f * t * (1f - t))
             val index = row * 4
             output[index] = center - width * .5f; output[index + 1] = y
             output[index + 2] = center + width * .5f; output[index + 3] = y
@@ -33,7 +41,9 @@ internal object IslandAbsorptionMesh {
     }
 
     fun opacity(progress: Float): Float {
-        val t = ((progress - .45f) / .55f).coerceIn(0f, 1f)
-        return 1f - .82f * t * t * (3f - 2f * t)
+        val start = (progress / .14f).coerceIn(0f, 1f)
+        val base = 1f - .38f * start * start * (3f - 2f * start)
+        val tail = ((progress - .3f) / .7f).coerceIn(0f, 1f)
+        return base * (1f - .92f * tail * tail * (3f - 2f * tail))
     }
 }

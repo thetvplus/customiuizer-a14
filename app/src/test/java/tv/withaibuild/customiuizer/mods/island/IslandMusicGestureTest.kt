@@ -48,21 +48,27 @@ class IslandMusicGestureTest {
         shell.onGesture = { gestures.add(it) }; shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
     }
     @After fun cleanup() { host.finish() }
-    @Test fun downExpansionUsesTheSameShellAndPreservesAnAssignedMusicAction() {
+    @Test fun downExpansionHasPriorityForEveryActiveSourceAndTurningItOffRestoresTheStoredAction() {
         var expanded = 0
         shell.onExpand = { expanded++ }
-        shell.configureGestures(identity, IslandMusicActions(down = 1), true)
+        shell.configureGestures(identity, IslandMusicActions(down = 85, doubleTap = 85), true)
         swipe(140f, 100f)
         assertEquals(1, expanded)
         assertTrue(gestures.isEmpty())
-        shell.configureGestures(identity, IslandMusicActions(down = 85), true)
-        swipe(140f, 100f)
-        assertEquals(1, expanded)
-        assertEquals(listOf(IslandMusicGesture.DOWN), gestures)
-        shell.bind("Notice", "Body", null, false, false, false, 0, false)
+        val node = shell.createAccessibilityNodeInfo()
+        assertTrue(node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND })
+        assertTrue(shell.performAccessibilityAction(AccessibilityNodeInfo.ACTION_EXPAND, null))
+        assertEquals(2, expanded)
+        tap(); advance(80); tap()
+        advance(ViewConfiguration.getDoubleTapTimeout().toLong() + 1)
+        assertEquals(listOf(IslandMusicGesture.DOUBLE_TAP), gestures)
+        shell.expandOnDown = false
         swipe(140f, 100f)
         assertEquals(2, expanded)
-        assertTrue(shell.performAccessibilityAction(AccessibilityNodeInfo.ACTION_EXPAND, null))
+        assertEquals(listOf(IslandMusicGesture.DOUBLE_TAP, IslandMusicGesture.DOWN), gestures)
+        shell.expandOnDown = true
+        shell.bind("Notice", "Body", null, false, false, false, 0, false)
+        swipe(140f, 100f)
         assertEquals(3, expanded)
     }
     private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
@@ -145,6 +151,7 @@ class IslandMusicGestureTest {
     }
 
     @Test fun longPressAndDragAreExclusiveAndDownCanRunOneConfiguredAction() {
+        shell.expandOnDown = false
         shell.configureGestures(identity, IslandMusicActions(down = 18, longPress = 19), true)
         touch(MotionEvent.ACTION_DOWN)
         advance(ViewConfiguration.getLongPressTimeout().toLong()+100)
@@ -182,6 +189,7 @@ class IslandMusicGestureTest {
     }
 
     @Test fun accessibilityKeepsClickAndExposesOnlyConfiguredActions() {
+        shell.expandOnDown = false
         shell.configureGestures(identity, IslandMusicActions(left=1,right=1,down=18), true)
         val node = shell.createAccessibilityNodeInfo()
         assertTrue(node.isClickable)

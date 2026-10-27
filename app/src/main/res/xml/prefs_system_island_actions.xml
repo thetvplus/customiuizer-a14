@@ -1,11 +1,11 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" android:key="pref_key_system_island_actions_cat">
 	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_general_gestures_group">
-		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_expand_down" android:title="@string/system_island_expand_down_title" android:summary="@string/system_island_expand_down_summ" android:defaultValue="true" />
+		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_expand_down" android:title="@string/system_island_expand_down_title" android:summary="@string/system_island_expand_down_summ" android:defaultValue="true" android:disableDependentsState="true" />
 	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_music_group">
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_left" android:title="@string/system_island_gesture_left" />
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_right" android:title="@string/system_island_gesture_right" />
-		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_down" android:title="@string/system_island_gesture_down" />
+		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_down" android:title="@string/system_island_gesture_down" android:dependency="pref_key_system_island_expand_down" />
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_double" android:title="@string/system_island_gesture_double" />
 		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_music_long" android:title="@string/system_island_gesture_long" />
 	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>

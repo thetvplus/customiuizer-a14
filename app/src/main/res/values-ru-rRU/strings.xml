@@ -1265,7 +1265,7 @@
     <string name="system_island_idle_width_auto_title">Автоматическая ширина малого острова</string>
     <string name="system_island_idle_width_title">Ширина малого острова</string>
     <string name="system_island_expand_down_title">Жесты разворачивания</string>
-    <string name="system_island_expand_down_summ">Свайп вниз или долгое нажатие без назначенного действия показывает больше сведений. Настроенные музыкальные действия имеют приоритет.</string>
+    <string name="system_island_expand_down_summ">Свайп вниз раскрывает любой активный остров. Отключите для назначения действия музыки. Долгое нажатие без действия также раскрывает остров.</string>
     <string name="system_island_feedback_charging_title">Зарядка</string>
     <string name="system_island_feedback_charging_summ">Краткий отклик при начале зарядки. Системная анимация зарядки на экране блокировки сохраняется.</string>
     <string name="system_island_feedback_low_battery_title">Низкий заряд</string>

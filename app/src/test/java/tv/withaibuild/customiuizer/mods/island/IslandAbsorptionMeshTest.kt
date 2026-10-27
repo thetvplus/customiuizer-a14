@@ -16,6 +16,13 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandAbsorptionMeshTest {
+    @Test fun aFastLateOrAlreadyTranslucentWindowStaysNativeInsteadOfFlashingIntoAMesh() {
+        assertTrue(IslandAbsorptionMesh.mayReplaceNative(.04f, 1f))
+        assertTrue(IslandAbsorptionMesh.mayReplaceNative(.3f, .99f))
+        assertFalse(IslandAbsorptionMesh.mayReplaceNative(.04f, .8f))
+        assertFalse(IslandAbsorptionMesh.mayReplaceNative(.6f, 1f))
+        assertFalse(IslandAbsorptionMesh.mayReplaceNative(Float.NaN, 1f))
+    }
     @Test fun pageRetainsATrailingBodyWhileTheLeadingEdgeArrivesAndRowsNeverFold() {
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
         val rect = RectF(100f, 80f, 900f, 1680f)
@@ -30,30 +37,38 @@ class IslandAbsorptionMeshTest {
                 assertEquals(vertices[i + 1], vertices[i + 3], 0f)
             }
             assertTrue(vertices[1] in target.top..rect.top)
-            assertTrue(vertices[IslandAbsorptionMesh.ROWS * 4 + 1] in target.bottom..rect.bottom)
+            assertTrue(vertices[IslandAbsorptionMesh.ROWS * 4 + 1] in target.top..rect.bottom)
         }
         IslandAbsorptionMesh.fill(vertices, rect, target, .5f)
         assertTrue(vertices[2] - vertices[0] < rect.width() * .45f)
         assertTrue(vertices[IslandAbsorptionMesh.ROWS * 4 + 2] - vertices[IslandAbsorptionMesh.ROWS * 4] > rect.width() * .8f)
         assertTrue(vertices[IslandAbsorptionMesh.ROWS * 4 + 1] - vertices[1] > rect.height() * .65f)
-        for (end in listOf(0f, 1f)) {
-            IslandAbsorptionMesh.fill(vertices, rect, target, end)
-            val expected = if (end == 0f) rect else target
-            assertEquals(expected.left, vertices[0], .001f)
-            assertEquals(expected.right, vertices[2], .001f)
+        IslandAbsorptionMesh.fill(vertices, rect, target, 0f)
+        assertEquals(rect.left, vertices[0], .001f)
+        assertEquals(rect.right, vertices[2], .001f)
+        for (t in listOf(.14f, .3f, .6f, 1f)) {
+            IslandAbsorptionMesh.fill(vertices, rect, target, t)
+            assertEquals(target.centerY() - target.height() * .04f, vertices[1], .001f)
+            assertEquals(target.centerX(), (vertices[0] + vertices[2]) * .5f, .001f)
+            assertTrue(vertices[2] - vertices[0] < target.width() * .4f)
+        }
+        for (row in 0..IslandAbsorptionMesh.ROWS) {
+            assertTrue(target.contains(vertices[row * 4], vertices[row * 4 + 1]))
+            assertTrue(target.contains(vertices[row * 4 + 2], vertices[row * 4 + 3]))
         }
     }
 
-    @Test fun fadeBeginsOnlyAfterThePageStartsEnteringAndRemainsContinuous() {
+    @Test fun thePageBecomesSecondaryQuicklyAndFadesContinuouslyIntoTheBlackIsland() {
         assertEquals(1f, IslandAbsorptionMesh.opacity(0f), 0f)
-        assertEquals(1f, IslandAbsorptionMesh.opacity(.45f), 0f)
+        assertEquals(.62f, IslandAbsorptionMesh.opacity(.14f), .00001f)
+        assertTrue(IslandAbsorptionMesh.opacity(.5f) < .55f)
         var previous = 1f
         for (i in 0..100) {
             val next = IslandAbsorptionMesh.opacity(i / 100f)
-            assertTrue(next <= previous && previous - next < .025f)
+            assertTrue(next <= previous && previous - next < .045f)
             previous = next
         }
-        assertEquals(.18f, previous, .00001f)
+        assertTrue(previous in .04f.. .06f)
     }
 
     @Test fun actualCanvasMeshDrawsAnOpaqueCurvedWindowInsteadOfFadingARectangle() {

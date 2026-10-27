@@ -1266,7 +1266,7 @@
     <string name="system_island_idle_width_auto_title">小さなアイランドの幅を自動調整</string>
     <string name="system_island_idle_width_title">小さなアイランドの幅</string>
     <string name="system_island_expand_down_title">展開ジェスチャー</string>
-    <string name="system_island_expand_down_summ">下スワイプや操作未設定の長押しで通知や曲の詳細を表示します。設定済みの音楽操作が優先されます。</string>
+    <string name="system_island_expand_down_summ">有効時はすべてのアクティブなアイランドを下スワイプで展開します。無効にすると音楽の下スワイプを設定できます。未割り当ての長押しでも展開できます。</string>
     <string name="system_island_feedback_charging_title">充電</string>
     <string name="system_island_feedback_charging_summ">充電開始時に一度だけ短く表示します。ロック画面のシステム充電アニメーションは保持します。</string>
     <string name="system_island_feedback_low_battery_title">バッテリー低下</string>

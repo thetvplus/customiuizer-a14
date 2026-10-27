@@ -635,7 +635,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                             abs(dx) >= maxOf(dp(32).toFloat(), slop * 3f) && abs(dx) > abs(dy) * 1.2f)
                             { flipDirection = if (dx < 0) -1f else 1f; submit(if (dx < 0) IslandMusicGesture.LEFT else IslandMusicGesture.RIGHT) }
                         else if (dragAxis == 2 && dy >= maxOf(dp(24).toFloat(), slop * 3f) && abs(dy) > abs(dx) * 1.2f) {
-                            if (!idle && expandOnDown && (!isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1))
+                            if (!idle && expandOnDown)
                                 ModuleHelper.guarded { onExpand() }
                             else submit(IslandMusicGesture.DOWN)
                         }
@@ -708,10 +708,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 scaleY = depth.sample(time, minimumHeight, maximumHeight) / geometryHeight.coerceAtLeast(1)
                 val progress = (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
                 val weight = catchWeight * if (returning && nativeArrival) .85f + .3f * returnStrength else 1f
-                val physicalBreadth = springBreadth + geometryWidth * weight * IslandMotion.mediaReturnCatch(progress, nativeArrival)
+                val catchValue = IslandMotion.mediaReturnCatch(progress, nativeArrival)
+                val effectiveWeight = if (catchValue >= 0f)
+                    IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival) else weight
+                val physicalBreadth = springBreadth + geometryWidth * effectiveWeight * catchValue
                 scaleX = minOf(maximumBreadth, physicalBreadth) / geometryWidth.coerceAtLeast(1)
                 breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else
-                    geometryWidth * weight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
+                    geometryWidth * effectiveWeight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
                 if (returning && mediaReturnProgress < 1f) {
                     mediaReturnProgress = progress
                     (parent as? View)?.invalidate()
@@ -870,13 +873,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)
         info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_DISMISS)
-        if (!idle && expandOnDown && !expanded && (!isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1))
+        if (!idle && expandOnDown && !expanded)
             info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_EXPAND)
         if (isMedia || idle) {
             val res = ModuleHelper.getModuleRes(context)
             val labels = intArrayOf(R.string.system_island_gesture_left, R.string.system_island_gesture_right,
                 R.string.system_island_gesture_down, R.string.system_island_gesture_double, R.string.system_island_gesture_long)
-            for (gesture in IslandMusicGesture.entries) if (musicActions.resolve(gesture, controlsEnabled) != 1)
+            for (gesture in IslandMusicGesture.entries) if (musicActions.resolve(gesture, controlsEnabled) != 1 &&
+                (gesture != IslandMusicGesture.DOWN || idle || !expandOnDown))
                 info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction(
                     accessibilityActions[gesture.ordinal], res.getString(labels[gesture.ordinal])))
         }
@@ -887,14 +891,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS) {
             requestDismiss(); return true
         }
-        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_EXPAND && !idle && expandOnDown && !expanded &&
-            (!isMedia || musicActions.resolve(IslandMusicGesture.DOWN, controlsEnabled) == 1)) {
+        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_EXPAND && !idle && expandOnDown && !expanded) {
             ModuleHelper.guarded { onExpand() }; return true
         }
         val index = accessibilityActions.indexOf(action)
         if (index >= 0) {
             val gesture = IslandMusicGesture.entries[index]
-            if ((!isMedia && !idle) || musicActions.resolve(gesture, controlsEnabled) == 1) return false
+            if ((!isMedia && !idle) || musicActions.resolve(gesture, controlsEnabled) == 1 ||
+                gesture == IslandMusicGesture.DOWN && !idle && expandOnDown) return false
             submit(gesture); return true
         }
         return super.performAccessibilityAction(action, arguments)

@@ -18538,14 +18538,14 @@
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "OBSERVER_PUSH",
-      "enableEffect": "Use this island option for the current owner",
+      "enableEffect": "Run the configured music DOWN action only while common downward expansion is disabled",
       "disableEffect": "Cancel pending gesture or feedback work for the disabled option",
       "valueChangeEffect": "Owner observes system_island_ keys on Main; replaces registrations only when selected feedback kinds change",
       "restartTarget": "NONE",
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandMusicActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest; IslandPreferenceDefaultsTest",
-      "notes": "Requires the island integration installed at SystemUI startup; updates within that integration are immediate"
+      "notes": "Stored action is preserved when common expansion takes priority; double tap and long press remain independently configurable"
     },
     {
       "featureId": "system_island_music_double",
@@ -18745,14 +18745,14 @@
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "OBSERVER_PUSH",
-      "enableEffect": "Expand current content on unassigned down swipe or long press; configured music actions take priority",
-      "disableEffect": "Keep existing activity and native system behavior",
-      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "enableEffect": "Downward swipe expands every active island, ahead of a stored music DOWN action; unassigned long press may also expand",
+      "disableEffect": "Restore the independently stored music DOWN action; other gestures and idle-island actions remain independent",
+      "valueChangeEffect": "The next gesture and accessibility action use the current expansion policy",
       "restartTarget": "NONE",
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
-      "notes": "One owner; bounded state; no recording permission or background service"
+      "notes": "Native inverted preference dependency disables only the conflicting music DOWN editor without deleting its stored action"
     },
     {
       "featureId": "system_island_feedback_charging",

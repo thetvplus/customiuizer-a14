@@ -1301,7 +1301,7 @@
     <string name="system_island_idle_width_auto_title">Automatic idle width</string>
     <string name="system_island_idle_width_title">Idle island width</string>
     <string name="system_island_expand_down_title">Expand details</string>
-    <string name="system_island_expand_down_summ">Swipe down or use an unassigned long press to reveal more notification or track content. Your configured music actions take priority.</string>
+    <string name="system_island_expand_down_summ">Swipe down expands every active island. Turn this off to use a custom music swipe-down action; an unassigned long press can also expand.</string>
     <string name="system_island_feedback_charging_title">Charging</string>
     <string name="system_island_feedback_charging_summ">Briefly show a new charging connection.</string>
     <string name="system_island_feedback_low_battery_title">Low battery</string>

@@ -1273,7 +1273,7 @@
     <string name="system_island_idle_width_auto_title">Automatická šířka malého ostrova</string>
     <string name="system_island_idle_width_title">Šířka malého ostrova</string>
     <string name="system_island_expand_down_title">Gesta rozbalení</string>
-    <string name="system_island_expand_down_summ">Další obsah zobrazíte tahem dolů nebo dlouhým stiskem bez přiřazené akce. Nastavené hudební akce mají přednost.</string>
+    <string name="system_island_expand_down_summ">Potažení dolů rozbalí každý aktivní ostrov. Po vypnutí lze nastavit vlastní hudební akci. Rozbalit lze i nepřiřazeným dlouhým stiskem.</string>
     <string name="system_island_feedback_charging_title">Nabíjení</string>
     <string name="system_island_feedback_charging_summ">Při zahájení nabíjení jednou krátce upozorní. Systémová animace nabíjení na zamčené obrazovce zůstane zachována.</string>
     <string name="system_island_feedback_low_battery_title">Slabá baterie</string>

@@ -157,6 +157,26 @@ class DockGlassBackdropTest {
         assertEquals(5, captures)
     }
 
+    @Test fun aTransientCaptureFailureRecoversWithoutRetiringTheLensOrStartingAnIdleLoop() {
+        var attempts = 0
+        val controller = controller(source = DockWallpaperSampler { crop, scale ->
+            if (++attempts == 1) throw IllegalStateException("compositor frame pending")
+            sampler.capture(crop, scale)
+        })
+        controller.onFrame(true)
+        assertEquals(1, attempts)
+        assertFalse(ReflectionHelpers.getField(controller, "broken"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(64))
+        controller.onFrame(true)
+        assertEquals(2, attempts)
+        assertFalse(lastBitmap!!.isRecycled)
+        assertFalse(ReflectionHelpers.getField(controller, "broken"))
+        controller.onFrame(false)
+        assertTrue(lastBitmap!!.isRecycled)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
+        assertEquals(2, attempts)
+    }
+
     @Test fun powerSaverReleasesTheTextureAndStopsLiveCaptureUntilItChangesAgain() {
         val controller = controller(live = true)
         controller.onFrame(true)

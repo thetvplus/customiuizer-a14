@@ -1266,7 +1266,7 @@
     <string name="system_island_idle_width_auto_title">Tự động chỉnh chiều rộng đảo nhỏ</string>
     <string name="system_island_idle_width_title">Chiều rộng đảo nhỏ</string>
     <string name="system_island_expand_down_title">Cử chỉ mở rộng</string>
-    <string name="system_island_expand_down_summ">Vuốt xuống hoặc nhấn giữ chưa gán thao tác để xem thêm nội dung. Các thao tác nhạc đã cấu hình được ưu tiên.</string>
+    <string name="system_island_expand_down_summ">Vuốt xuống mở rộng mọi đảo đang hoạt động. Tắt để gán thao tác nhạc riêng. Nhấn giữ chưa gán cũng mở rộng đảo.</string>
     <string name="system_island_feedback_charging_title">Sạc</string>
     <string name="system_island_feedback_charging_summ">Hiển thị phản hồi ngắn một lần khi bắt đầu sạc. Giữ hoạt ảnh sạc của hệ thống trên màn hình khóa.</string>
     <string name="system_island_feedback_low_battery_title">Pin yếu</string>

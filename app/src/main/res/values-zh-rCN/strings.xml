@@ -1278,7 +1278,7 @@
     <string name="system_island_idle_width_auto_title">小岛自动宽度</string>
     <string name="system_island_idle_width_title">小岛宽度</string>
     <string name="system_island_expand_down_title">展开详情</string>
-    <string name="system_island_expand_down_summ">未分配动作的下滑或长按可展开详情。</string>
+    <string name="system_island_expand_down_summ">开启后，所有活动岛下滑统一展开长岛；关闭后可自定义音乐下滑。未分配动作的长按也可展开。</string>
     <string name="system_island_feedback_charging_title">充电</string>
     <string name="system_island_feedback_charging_summ">接电时短暂提示一次。</string>
     <string name="system_island_feedback_low_battery_title">低电量</string>

@@ -9,7 +9,7 @@ import kotlin.math.sin
 internal object IslandMotion {
     const val ENTER = 360L
     const val MORPH = 320L
-    const val REBOUND = 190L
+    const val REBOUND = 160L
     const val EXIT = 300L
     const val SECONDARY = 380L
     const val CONTENT = 220L
@@ -46,25 +46,41 @@ internal object IslandMotion {
     }
     /** The native window arrives while the shell's one finite clock makes a small catch. */
     fun mediaReturnCatch(progress: Float, nativeWindow: Boolean = true): Float {
-        if (nativeWindow && progress < .55f) {
-            val intake = ((progress - .15f) / .4f).coerceIn(0f, 1f)
+        if (!nativeWindow) {
+            val t = progress.coerceIn(0f, 1f)
+            return 7.2f * t * t * (1f - t) * (1f - t)
+        }
+        if (nativeWindow && progress < .5f) {
+            val intake = ((progress - .15f) / .35f).coerceIn(0f, 1f)
             return -3.2f * intake * intake * (1f - intake) * (1f - intake)
         }
-        val start = if (nativeWindow) .55f else 0f
-        val t = ((progress - start) / (1f - start)).coerceIn(0f, 1f)
+        val start = if (nativeWindow) .5f else 0f
+        val span = if (nativeWindow) .4f else .8f
+        val t = ((progress - start) / span).coerceIn(0f, 1f)
         val tail = 1f - t
-        return 7.2f * t * t * tail * tail
+        // Early kick, one peak, cubic release. The symmetric bell postponed the
+        // response and could remain visibly at the width cap for several frames.
+        return 5.5f * t * tail * tail * tail
     }
     fun catchDerivative(progress: Float, nativeWindow: Boolean = true): Float {
-        if (nativeWindow && progress > .15f && progress < .55f) {
-            val intake = (progress - .15f) / .4f
-            return -6.4f * intake * (1f - intake) * (1f - 2f * intake) / .4f
+        if (!nativeWindow) {
+            val t = progress.coerceIn(0f, 1f)
+            return 14.4f * t * (1f - t) * (1f - 2f * t)
         }
-        val start = if (nativeWindow) .55f else 0f
-        if (progress <= start || progress >= 1f) return 0f
-        val t = (progress - start) / (1f - start)
-        return 14.4f * t * (1f - t) * (1f - 2f * t) / (1f - start)
+        if (nativeWindow && progress > .15f && progress < .5f) {
+            val intake = (progress - .15f) / .35f
+            return -6.4f * intake * (1f - intake) * (1f - 2f * intake) / .35f
+        }
+        val start = if (nativeWindow) .5f else 0f
+        val span = if (nativeWindow) .4f else .8f
+        if (progress < start || progress >= start + span) return 0f
+        val t = (progress - start) / span
+        return 5.5f * (1f - t) * (1f - t) * (1f - 4f * t) / span
     }
+    const val CATCH_PEAK = .580078125f
+    fun boundedCatchWeight(width: Float, maximum: Float, requested: Float, nativeWindow: Boolean = true): Float =
+        minOf(requested, (maximum - width).coerceAtLeast(0f) /
+            (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else .45f)).coerceAtLeast(0f)
     fun arrivalScale(progress: Float): Float = .96f + .04f *
         settle.getInterpolation(((progress - .5f) / .5f).coerceIn(0f, 1f))
     private const val DECAY = 7.04
@@ -100,7 +116,7 @@ internal object IslandMotion {
             target = destination
             if (!carry) velocity = 0f
             velocityAtStart = velocity
-            omega = 10.5 / seconds.coerceIn(.1f, 1f)
+            omega = (if (elastic) 12.5 else 10.5) / seconds.coerceIn(.1f, 1f)
             this.elastic = elastic
             displacement = (current - destination).toDouble()
             impulse = velocity + omega * displacement
@@ -109,8 +125,8 @@ internal object IslandMotion {
         fun sample(seconds: Float, minimum: Float = -Float.MAX_VALUE, maximum: Float = Float.MAX_VALUE): Float {
             val time = seconds.coerceAtLeast(0f).toDouble()
             if (elastic) {
-                val damping = .56 * omega
-                val frequency = omega * kotlin.math.sqrt(1.0 - .56 * .56)
+                val damping = .60 * omega
+                val frequency = omega * .8
                 val b = (velocityAtStart + damping * displacement) / frequency
                 val c = cos(frequency * time); val s = sin(frequency * time)
                 val offset = displacement * c + b * s

@@ -139,7 +139,7 @@ class LauncherMusicReturnAccessTest {
         assertEquals(frame.landingRectangle(), result.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
         assertEquals(result.targetRect.height() * .5f, result.endRadius, 0f)
-        assertEquals("The window remains opaque until it enters the mask", 1f, result.endAlpha, 0f)
+        assertEquals("Absorption must preserve the native alpha for fallback and cancellation", source.endAlpha, result.endAlpha, 0f)
         assertEquals(0f, source.endAlpha, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)
         assertNull("The window return must not borrow or animate the desktop icon", result.targetView)

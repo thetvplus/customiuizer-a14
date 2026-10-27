@@ -777,6 +777,24 @@ class IslandActivityLifecycleTest {
         assertTrue(shadowOf(player).callbacks.isEmpty())
     }
 
+    @Test fun aCompletedDeleteThatDoesNotFitShortUsesTheLongFormThenRestoresMusic() {
+        val controller = controller(media = true, simplified = true, automaticWidth = false, shortWidth = 96, longWidth = 240)
+        native.player = launchablePlayer("delete-feedback-over-music")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val lease = requireNotNull(controller.showToast(IslandToastContent("删除成功", "com.miui.gallery", null), 1800))
+        assertSame(original, shell)
+        assertFalse(original.isMedia)
+        assertTrue(original.expanded)
+        drain()
+        assertEquals(240, original.width)
+        controller.releaseToast(lease); drain()
+        assertSame(original, shell)
+        assertTrue(original.isMedia)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
+    }
+
     @Test fun notificationPreemptsOrdinaryFeedbackAndCannotBeOverwrittenByAnotherToast() {
         val controller = controller(chat = true, simplified = true)
         assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 5000))
@@ -2499,6 +2517,7 @@ class IslandActivityLifecycleTest {
             if (entry == "cancelled") pending!!.cancel()
             native.player = launchablePlayer(entry, pending)
             controller.updateFromNative(native); drain(); revealMedia()
+            shell!!.expandOnDown = false
             for (gesture in listOf(false, true)) {
                 if (gesture) {
                     val now = android.os.SystemClock.uptimeMillis()

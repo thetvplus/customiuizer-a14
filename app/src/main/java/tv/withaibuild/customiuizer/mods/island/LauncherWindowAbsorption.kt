@@ -19,7 +19,10 @@ import android.view.View
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -90,6 +93,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
     @Volatile private var session: Session? = null
     private var epoch = 0L
     private var captureJob: Job? = null
+    private val captureMutex = Mutex()
 
     fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame) {
         if (!handler.looper.isCurrentThread) return
@@ -105,7 +109,10 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         captureJob = scope.launch(Dispatchers.Default) {
             var texture: Bitmap? = null
             try {
-                texture = api.capture(surface, frame.screenWidth, frame.screenHeight)
+                texture = captureMutex.withLock {
+                    ensureActive()
+                    api.capture(surface, frame.screenWidth, frame.screenHeight)
+                }
                 withContext(Dispatchers.Main.immediate) {
                     if (generation == epoch && session === active && api.current(element, copy)) {
                         if (texture != null && active.progress < .55f) {
@@ -134,7 +141,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         active.nativeAlpha = alpha.coerceIn(0f, 1f)
         if (active.texture == null) return
         if (!active.installed) {
-            if (active.progress >= .55f) { cancel(); return }
+            if (!IslandAbsorptionMesh.mayReplaceNative(active.progress, active.nativeAlpha)) { cancel(); return }
             active.firstProgress = active.progress
             active.installed = true
             root.overlay.add(active)
@@ -150,21 +157,24 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         val last = IslandAbsorptionMesh.ROWS * 4
         active.rect.set(minOf(active.vertices[0], active.vertices[last]), active.vertices[1],
             maxOf(active.vertices[2], active.vertices[last + 2]), active.vertices[last + 1])
-        active.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.opacity(remaining)).toInt().coerceIn(0, 255)
+        val fade = if (active.presented) IslandAbsorptionMesh.opacity(
+            ((active.progress - active.fadeAt) / (1f - active.fadeAt).coerceAtLeast(.01f)).coerceIn(0f, 1f)) else 1f
+        active.paint.alpha = (255f * active.nativeAlpha * fade).toInt().coerceIn(0, 255)
         active.setBounds(0, 0, root.width, root.height)
         active.invalidateSelf()
-        val frameId = ++active.frameId
-        if (!active.presented) {
-            active.committed?.let { root.viewTreeObserver.unregisterFrameCommitCallback(it) }
-            // Leave the original opaque until an equivalent mesh frame is submitted.
+        if (!active.presented && active.committed == null) {
+            // Leave the native window visible until an equivalent mesh frame is submitted.
             // No queued hide transaction can outlive cancellation or a new native owner.
             val committed = Runnable { handler.post {
                 ModuleHelper.guarded {
-                    if (session === active && active.frameId == frameId && active.surface.isValid &&
+                    // A later mesh frame does not invalidate an earlier submitted one.
+                    // Re-arming per frame can starve this handoff during a fast return.
+                    if (session === active && active.installed && active.surface.isValid &&
                         active.element.get()?.let { api.current(it, active.copy) } == true && root.isAttachedToWindow) {
                         try {
                             active.queuedHide = true
                             SurfaceControl.Transaction().use { it.setAlpha(active.surface, 0f).apply() }
+                            active.fadeAt = active.progress
                             active.presented = true
                         } catch (error: Throwable) {
                             FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -172,6 +182,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                             throw error
                         }
                     }
+                    active.committed = null
                 }
             } }
             active.committed = committed
@@ -211,8 +222,8 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         var texture: Bitmap? = null
         var progress = 0f; var firstProgress = 0f; var radius = 0f
+        var fadeAt = 0f
         var nativeAlpha = 1f
-        var frameId = 0L
         var installed = false; var queuedHide = false
         @Volatile var presented = false
         var committed: Runnable? = null

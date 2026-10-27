@@ -127,9 +127,8 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         val landing = if (absorption) frame.landingRectangle() else frame.rectangle()
         values[2] = landing
         values[4] = landing.height() * .5f
-        // Keep the real window opaque until it is wholly inside the island's mask.
-        // Native finish/cancel still owns its leash and animation clock.
-        if (absorption) values[6] = 1f
+        // Preserve native opacity in both modes. The mesh multiplies that same alpha
+        // by its page fade; a late capture or cancellation cannot reveal an opaque cap.
         // A14's frame callback draws any *already initialized* floating icon without
         // consulting ignoreIcon. A null target makes native initTargetView retire that
         // icon before the window spring starts, restoring its real desktop owner once.

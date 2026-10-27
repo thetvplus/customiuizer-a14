@@ -1272,7 +1272,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_idle_width_auto_title">Otomatik küçük ada genişliği</string>
     <string name="system_island_idle_width_title">Küçük ada genişliği</string>
     <string name="system_island_expand_down_title">Genişletme hareketleri</string>
-    <string name="system_island_expand_down_summ">Daha fazla içerik için aşağı kaydırın veya eylem atanmamış uzun basmayı kullanın. Ayarlanmış müzik eylemleri önceliklidir.</string>
+    <string name="system_island_expand_down_summ">Aşağı kaydırma tüm etkin adaları genişletir. Özel müzik hareketi için kapatın. Atanmamış uzun basma da genişletir.</string>
     <string name="system_island_feedback_charging_title">Şarj</string>
     <string name="system_island_feedback_charging_summ">Şarj başladığında bir kez kısa bildirim gösterir. Sistem kilit ekranı şarj animasyonu korunur.</string>
     <string name="system_island_feedback_low_battery_title">Düşük pil</string>

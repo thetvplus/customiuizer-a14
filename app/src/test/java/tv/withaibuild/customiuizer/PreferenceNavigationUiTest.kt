@@ -387,6 +387,27 @@ class PreferenceNavigationUiTest {
         capturePage("island-waveform-320-zh")
     }
 
+    @Test fun expandingOnDownDisablesOnlyTheConflictingMusicActionWithoutErasingIt() {
+        requireNotNull(AppHelper.appPrefs).edit().putInt("pref_key_system_island_music_down_action", 85).apply()
+        val mediaPage = openIslandMusic()
+        requireNotNull(mediaPage.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        pressToolbarBack()
+        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_island_actions_cat")).performClick()
+        settleNavigation()
+        val page = currentPage() as SubFragment
+        val expand = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_expand_down"))
+        val down = requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_down"))
+        val double = requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_double"))
+        assertTrue(expand.isChecked)
+        assertFalse(down.isEnabled)
+        assertTrue(double.isEnabled)
+        expand.isChecked = false
+        assertTrue(down.isEnabled)
+        expand.isChecked = true
+        assertFalse(down.isEnabled)
+        assertEquals(85, requireNotNull(AppHelper.appPrefs).getInt("pref_key_system_island_music_down_action", -1))
+    }
+
     @Test fun islandGroupsFollowContentAppearanceAndInteractionAndDisableAsAWhole() {
         val page = openIslandPage()
         fun pref(suffix: String) = requireNotNull(page.findPreference<Preference>("pref_key_system_island_$suffix"))

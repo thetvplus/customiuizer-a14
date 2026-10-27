@@ -79,6 +79,7 @@ internal class DockGlassBackdrop(
     private var viewportWidth = 0
     private var viewportHeight = 0
     private var reportedTexture = false
+    private var reportedCaptureFailure = false
     private var sourceUnavailable = false
     private var unavailableTries = 0
     private var completionDraw = false
@@ -241,7 +242,7 @@ internal class DockGlassBackdrop(
                         // A wallpaper replacement, hide or release also invalidates failures.
                         // Only the current capture may retire this decoration's lens.
                         if (!current.released && !current.broken && current.visible && current.epoch == requestEpoch)
-                            current.unavailable()
+                            current.unavailable(error)
                         else if (!current.released && !current.broken && current.visible)
                             current.owner.get()?.postInvalidateOnAnimation()
                     }
@@ -315,7 +316,11 @@ internal class DockGlassBackdrop(
 
     /** Compositor readiness is transient. One visible generation gets a finite
      * 64/160/400 ms recovery window, then waits for a genuine source change. */
-    private fun unavailable() {
+    private fun unavailable(error: Throwable? = null) {
+        if (error != null && !reportedCaptureFailure) {
+            reportedCaptureFailure = true
+            XposedHelpers.log("Dock lens: transient wallpaper capture unavailable; bounded recovery", error)
+        }
         busy = false
         sourceDirty = false
         sourceUnavailable = true

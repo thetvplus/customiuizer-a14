@@ -850,11 +850,15 @@ internal class IslandActivityController(
         if (content.packageName != foregroundPackage &&
             liveForPackage(content.packageName)?.kind == IslandLiveKind.RECORDER) return null
         val text = IslandToastText.resolve(content.text, true) ?: return null
-        val geometry = geometry(label = text) ?: return null
+        val compact = geometry(label = text) ?: return null
+        val expandFeedback = !shell.fitsToast(text, compact.width, compact.gap, compact.height)
+        val geometry = if (expandFeedback) geometry(label = text, feedbackExpanded = true) ?: return null else compact
         if (!shell.fitsToast(text, geometry.width, geometry.gap, geometry.height)) return null
         val value = content.copy(text = text,
             icon = content.icon ?: context.getDrawable(android.R.drawable.ic_dialog_info))
         val lease = state.offer(value, SystemClock.uptimeMillis(), duration)
+        forms.select(lease, source = IslandFormState.Source.FEEDBACK)
+        if (expandFeedback) forms.expand()
         // Only suppress the native Toast window after insertion of this shell actually succeeded.
         if (!render()) { state.release(lease); render(); return null }
         return lease
@@ -1304,7 +1308,7 @@ internal class IslandActivityController(
     }
 
     private fun geometry(label: String? = null, mediaOnly: Boolean = false, idle: Boolean = false,
-        returnActivity: IslandToastContent? = null): Geometry? {
+        returnActivity: IslandToastContent? = null, feedbackExpanded: Boolean = false): Geometry? {
         if (!touchWindow.inputRegionAvailable) return null
         val bounds = screen ?: return null
         // Landscape cutouts are at a side; keep that layout entirely native.
@@ -1327,8 +1331,8 @@ internal class IslandActivityController(
         val clearance = if (centered && options.automaticWidth) minOf(nativeClearance ?: dp(IslandSizing.SHORT_DP), safeWidth)
             else safeWidth
         val density = context.resources.displayMetrics.density
-        val expanded = !idle && !mediaOnly && label == null &&
-            (if (returnActivity != null) IslandMotionCoordinator.prefersLong(returnActivity, options.automaticWidth) else forms.expanded)
+        val expanded = !idle && !mediaOnly && (feedbackExpanded || label == null &&
+            (if (returnActivity != null) IslandMotionCoordinator.prefersLong(returnActivity, options.automaticWidth) else forms.expanded))
         val compactMaximumWidth = IslandSizing.maximumWidth(density, bounds.width, clearance,
             shortDp = options.shortWidth, longDp = options.longWidth, manual = !options.automaticWidth,
             heightDp = heightDp, centered = centered)
@@ -1336,8 +1340,8 @@ internal class IslandActivityController(
             dp(24).toFloat(), shortDp = options.shortWidth, longDp = options.longWidth,
             manual = !options.automaticWidth, heightDp = heightDp, centered = centered).coerceAtMost((safeWidth - dp(IslandSizing.FORM_GAP_DP)).coerceAtLeast(0))
         val maximumWidth = if (expanded && options.automaticWidth) {
-            val content = maxOf(shell.textWidth(feedback?.text ?: media?.title.orEmpty()),
-                shell.textWidth(feedback?.detail ?: media?.artist.orEmpty())) * .94f
+            val content = maxOf(shell.textWidth(caption ?: media?.title.orEmpty()),
+                if (label != null) 0f else shell.textWidth(feedback?.detail ?: media?.artist.orEmpty())) * .94f
             IslandSizing.expanded(density, bounds.width, safeWidth, gap,
                 content, heightDp, centered, shortWidth)
         } else if (expanded) maxOf(compactMaximumWidth, shortWidth + dp(IslandSizing.FORM_GAP_DP)).coerceAtMost(safeWidth)

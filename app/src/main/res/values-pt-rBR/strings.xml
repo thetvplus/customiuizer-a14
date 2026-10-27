@@ -1266,7 +1266,7 @@
     <string name="system_island_idle_width_auto_title">Largura automática da ilha pequena</string>
     <string name="system_island_idle_width_title">Largura da ilha pequena</string>
     <string name="system_island_expand_down_title">Gestos para expandir</string>
-    <string name="system_island_expand_down_summ">Deslize para baixo ou mantenha pressionado sem ação atribuída para ver mais conteúdo. Suas ações de música têm prioridade.</string>
+    <string name="system_island_expand_down_summ">Deslizar para baixo expande toda ilha ativa. Desative para definir uma ação de música. Pressionar e segurar sem ação atribuída também expande.</string>
     <string name="system_island_feedback_charging_title">Carregamento</string>
     <string name="system_island_feedback_charging_summ">Mostra um aviso breve ao começar a carregar. Mantém a animação do sistema na tela de bloqueio.</string>
     <string name="system_island_feedback_low_battery_title">Bateria fraca</string>
