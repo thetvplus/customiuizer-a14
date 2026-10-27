@@ -888,60 +888,67 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         ValueAnimator.ofFloat(0f, 1f).apply {
             this.duration = milliseconds
             interpolator = LinearInterpolator()
-            addUpdateListener { ModuleHelper.guarded {
-                if (motion !== it) return@guarded
-                val time = it.currentPlayTime / 1000f
-                val springBreadth = breadth.sample(time, compactWidth(), maximumBreadth)
-                scaleX = springBreadth / geometryWidth.coerceAtLeast(1)
-                scaleY = depth.sample(time, minimumHeight, maximumHeight) / geometryHeight.coerceAtLeast(1)
-                val progress = if (nativeDriven) returnProgress?.read()?.takeIf { p -> p >= 0f }?.coerceIn(0f, 1f) ?: 1f
-                    else (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                val weight = catchWeight * if (returning && nativeArrival) .99f + .02f * returnStrength else 1f
-                val catchValue = if (nativeDriven) IslandMotion.absorptionCatch(progress) else IslandMotion.mediaReturnCatch(progress, nativeArrival)
-                val effectiveWeight = if (nativeDriven) minOf(weight, ((maximumBreadth - geometryWidth) / geometryWidth.coerceAtLeast(1)).coerceAtLeast(0f))
-                    else if (catchValue >= 0f)
-                    IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival) else weight
-                val physicalBreadth = springBreadth + geometryWidth * effectiveWeight * catchValue
-                scaleX = minOf(maximumBreadth, physicalBreadth) / geometryWidth.coerceAtLeast(1)
-                val catchPixels = geometryWidth * effectiveWeight * catchValue
-                breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else if (nativeDriven)
-                    if (time > lastCatchTime) (catchPixels - lastCatch) / (time - lastCatchTime) else 0f
-                    else geometryWidth * effectiveWeight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
-                lastCatch = catchPixels; lastCatchTime = time
-                if (returning && mediaReturnProgress < 1f) {
-                    mediaReturnProgress = progress
-                    (parent as? View)?.invalidate()
-                }
-                translationX = shiftX.sample(time)
-                val nextY = shiftY.sample(time)
-                translationY = if (rebound) cameraSafeTranslation(nextY) else nextY
-                if (opacity > 0f) {
-                    if (pendingContent != null) {
-                        contentFadeRemaining = (fadeOut - it.currentPlayTime).coerceAtLeast(0L)
-                        layerReveal = layerFrom * (contentFadeRemaining.toFloat() / fadeOut.coerceAtLeast(1L))
-                        if (contentFadeRemaining == 0L) {
-                            commitContent()
-                            layerFrom = 0f; revealAt = fadeOut; textAt = null
-                        }
+            addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
+                override fun onAnimationUpdate(animation: ValueAnimator) = ModuleHelper.guarded {
+                    if (motion !== animation) return@guarded
+                    val time = animation.currentPlayTime / 1000f
+                    val springBreadth = breadth.sample(time, compactWidth(), maximumBreadth)
+                    scaleX = springBreadth / geometryWidth.coerceAtLeast(1)
+                    scaleY = depth.sample(time, minimumHeight, maximumHeight) / geometryHeight.coerceAtLeast(1)
+                    val progress = if (nativeDriven) returnProgress?.read()?.takeIf { p -> p >= 0f }?.coerceIn(0f, 1f) ?: 1f
+                        else (animation.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                    val weight = catchWeight * if (returning && nativeArrival) .99f + .02f * returnStrength else 1f
+                    val catchValue = if (nativeDriven) IslandMotion.absorptionCatch(progress) else IslandMotion.mediaReturnCatch(progress, nativeArrival)
+                    val effectiveWeight = if (nativeDriven) minOf(weight, ((maximumBreadth - geometryWidth) / geometryWidth.coerceAtLeast(1)).coerceAtLeast(0f))
+                        else if (catchValue >= 0f)
+                        IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival) else weight
+                    val physicalBreadth = springBreadth + geometryWidth * effectiveWeight * catchValue
+                    scaleX = minOf(maximumBreadth, physicalBreadth) / geometryWidth.coerceAtLeast(1)
+                    val catchPixels = geometryWidth * effectiveWeight * catchValue
+                    breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else if (nativeDriven)
+                        if (time > lastCatchTime) (catchPixels - lastCatch) / (time - lastCatchTime) else 0f
+                        else geometryWidth * effectiveWeight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
+                    lastCatch = catchPixels; lastCatchTime = time
+                    if (returning && mediaReturnProgress < 1f) {
+                        mediaReturnProgress = progress
+                        (parent as? View)?.invalidate()
                     }
-                    if (pendingContent == null) layerReveal = layerFrom + (1f - layerFrom) *
-                        ((it.currentPlayTime - revealAt) / fadeIn).coerceIn(0f, 1f)
+                    translationX = shiftX.sample(time)
+                    val nextY = shiftY.sample(time)
+                    translationY = if (rebound) cameraSafeTranslation(nextY) else nextY
+                    if (opacity > 0f) {
+                        if (pendingContent != null) {
+                            contentFadeRemaining = (fadeOut - animation.currentPlayTime).coerceAtLeast(0L)
+                            layerReveal = layerFrom * (contentFadeRemaining.toFloat() / fadeOut.coerceAtLeast(1L))
+                            if (contentFadeRemaining == 0L) {
+                                commitContent()
+                                layerFrom = 0f; revealAt = fadeOut; textAt = null
+                            }
+                        }
+                        if (pendingContent == null) layerReveal = layerFrom + (1f - layerFrom) *
+                            ((animation.currentPlayTime - revealAt) / fadeIn).coerceIn(0f, 1f)
+                    }
+                    alpha = this@IslandActivityView.opacity.sample(time, 0f, 1f)
+                    if (albumFlip) {
+                        icon.cameraDistance = dp(640).toFloat()
+                        icon.rotationY = flipDirection * if (pendingContent != null)
+                            90f * (1f - contentFadeRemaining.toFloat() / fadeOut.coerceAtLeast(1L))
+                            else -90f * (1f - ((animation.currentPlayTime - revealAt) / flipIn).coerceIn(0f, 1f))
+                    }
+                    if (contentFits()) {
+                        val start = textAt ?: animation.currentPlayTime.also { began -> textAt = began }
+                        textReveal = ((animation.currentPlayTime - start).toFloat() /
+                            minOf(100L, milliseconds - start).coerceAtLeast(1L)).coerceIn(0f, 1f)
+                    } else { textAt = null; textReveal = 0f }
+                    updateContour()
+                    if (nativeDriven && progress >= 1f && pendingContent == null && layerReveal >= 1f) {
+                        // end() synchronously emits another frame on A14. Retire this
+                        // clock's update listener before entering its terminal callbacks.
+                        animation.removeUpdateListener(this)
+                        animation.end()
+                    }
                 }
-                alpha = this@IslandActivityView.opacity.sample(time, 0f, 1f)
-                if (albumFlip) {
-                    icon.cameraDistance = dp(640).toFloat()
-                    icon.rotationY = flipDirection * if (pendingContent != null)
-                        90f * (1f - contentFadeRemaining.toFloat() / fadeOut.coerceAtLeast(1L))
-                        else -90f * (1f - ((it.currentPlayTime - revealAt) / flipIn).coerceIn(0f, 1f))
-                }
-                if (contentFits()) {
-                    val start = textAt ?: it.currentPlayTime.also { began -> textAt = began }
-                    textReveal = ((it.currentPlayTime - start).toFloat() /
-                        minOf(100L, milliseconds - start).coerceAtLeast(1L)).coerceIn(0f, 1f)
-                } else { textAt = null; textReveal = 0f }
-                updateContour()
-                if (nativeDriven && progress >= 1f && pendingContent == null && layerReveal >= 1f) it.end()
-            } }
+            })
             addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
                 override fun onAnimationCancel(animation: Animator) { cancelled = true }
