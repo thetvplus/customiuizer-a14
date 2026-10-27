@@ -79,6 +79,7 @@ internal object LauncherMusicReturnHooks {
                 val owner = active.get()
                 val attempt = ModuleHelper.guarded<Attempt?>(null) {
                     val element = chain.thisObject ?: return@guarded null
+                    access.restoreAbsorption(element)
                     owner?.prefetchOpening(original, element)
                     owner?.retarget(original, element)
                 }
@@ -114,8 +115,15 @@ internal object LauncherMusicReturnHooks {
             var endingsInstalled = frameHook != null
             for (method in meshAccess.cancellations) {
                 if (ModuleHelper.hookMethod(method, object : MethodHook() {
-                    override fun intercept(chain: XposedInterface.Chain): Any? = try { chain.proceed() }
-                        finally { ModuleHelper.guarded { chain.thisObject?.let(mesh::end) } }
+                    override fun intercept(chain: XposedInterface.Chain): Any? {
+                        val element = chain.thisObject ?: return chain.proceed()
+                        val meshLease = mesh.lease(element)
+                        val timingLease = ModuleHelper.guarded<Any?>(null) { access.absorptionLease(element) }
+                        return try { chain.proceed() } finally { ModuleHelper.guarded {
+                            if (timingLease != null) access.restoreAbsorption(element, timingLease)
+                            mesh.end(element, meshLease)
+                        } }
+                    }
                 }) == null) endingsInstalled = false
             }
             absorptionInstalled = endingsInstalled
@@ -253,7 +261,8 @@ internal object LauncherMusicReturnHooks {
                 return
             }
             committedAttempt = attempt.sequence
-            if (options.absorption) attempt.snapshot.frame?.let { frame ->
+            if (options.absorption && absorption != null) attempt.snapshot.frame?.let { frame ->
+                access.slowAbsorption(element)
                 ModuleHelper.guarded { absorption?.begin(tasks, element, attempt.params, frame) }
             }
             val current = attempt.snapshot
@@ -278,6 +287,7 @@ internal object LauncherMusicReturnHooks {
         private fun invalidateAttempt() {
             gesture.incrementAndGet(); activeAttempt.set(0); commitJob?.cancel(); commitJob = null
             ModuleHelper.guarded { absorption?.cancel() }
+            ModuleHelper.guarded { access.restoreAbsorption() }
         }
         private fun stop() {
             invalidateAttempt()

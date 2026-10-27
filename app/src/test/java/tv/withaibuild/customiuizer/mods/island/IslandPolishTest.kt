@@ -134,7 +134,7 @@ class IslandPolishTest {
         shell.bind("Enabled","Do Not Disturb",art,false,false,false,0,false,status=true)
         shell.geometry(240,height,40); layout(shell,240,height)
         assertEquals(40,height)
-        assertEquals(1,(shell.getChildAt(1) as LinearLayout).childCount)
+        assertEquals(2,(shell.getChildAt(1) as LinearLayout).childCount)
         assertTrue(shell.contentDescription.toString().contains("Do Not Disturb"))
         assertFalse(shell.performLongClick())
         activity.finish()

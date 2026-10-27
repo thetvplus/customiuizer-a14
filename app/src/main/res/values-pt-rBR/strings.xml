@@ -1098,8 +1098,8 @@
     <string name="prefs_group_keyboard">Teclado</string>
     <string name="launcher_dock_background_liquid">Vidro líquido</string>
     <string name="system_toast_bottom_title">Espaço inferior</string>
-    <string name="system_toast_capsule_title">Avisos de apps</string>
-    <string name="system_toast_capsule_summ">Usar o estilo escolhido nos avisos breves.</string>
+    <string name="system_toast_capsule_title">Resultados dos aplicativos</string>
+    <string name="system_toast_capsule_summ">Toasts de texto, como resultados de exclusão ou salvamento, usam o estilo escolhido. Configure os banners nas notificações.</string>
     <string name="system_toast_position_title">Posição do Toast</string>
     <string name="system_toast_position_summ">Posiciona na área segura da tela. Reinicie a interface do sistema após alterar.</string>
     <string name="system_toast_position_top">Topo</string>
@@ -1185,7 +1185,7 @@
     <string name="system_island_title">Avisos do sistema</string>
     <string name="system_island_intro">Reinicie o telefone ao ativar a ilha pela primeira vez ou adicionar uma fonte.</string>
     <string name="system_island_media_title">Mostrar mídia</string>
-    <string name="system_island_media_return_title">Música para a ilha</string>
+    <string name="system_island_media_return_title">Música</string>
     <string name="system_island_media_return_summ">Apps de mídia selecionados voltam à ilha ao deslizar para a tela inicial. Reinicie o launcher após ativar pela primeira vez.</string>
     <string name="system_island_media_return_apps_title">Apps de retorno</string>
     <string name="system_island_media_return_apps_summ">Escolha os apps de mídia para este efeito.</string>
@@ -1249,7 +1249,7 @@
     <string name="system_island_appearance_group">Aparência</string>
     <string name="system_island_feedback_group">Conteúdo</string>
     <string name="system_island_interaction_group">Interação</string>
-    <string name="system_island_gestures_title">Gestos</string>
+    <string name="system_island_gestures_title">Gestos e retorno</string>
     <string name="system_island_waveform_off">Desativado</string>
     <string name="system_island_waveform_light">Animação leve</string>
     <string name="system_island_waveform_real">Forma de onda ao vivo (experimental)</string>
@@ -1277,7 +1277,7 @@
     <string name="system_island_idle_gestures_summ">Somente na ilha ociosa. A reprodução usa a última sessão de mídia válida.</string>
     <string name="system_island_live_sources_title">Atividades em andamento</string>
     <string name="system_island_live_choose">Fontes</string>
-    <string name="system_island_live_sources_summary">Escolha as atividades. Reinicie após adicionar fontes. SMS e calendário precisam de notificações.</string>
+    <string name="system_island_live_sources_summary">Chamadas, relógio, gravação e privacidade em andamento. Reinicie após adicionar uma fonte. Selecione mensagens pela lista de aplicativos de notificações.</string>
     <string name="system_island_live_feedback">Resposta imediata</string>
     <string name="system_island_live_call">Chamada</string>
     <string name="system_island_live_alarm">Alarme</string>
@@ -1292,7 +1292,7 @@
     <string name="system_island_live_camera">Câmera</string>
     <string name="system_island_live_microphone">Microfone</string>
     <string name="system_strong_toast_mode_default">Padrão do sistema</string>
-    <string name="system_island_live_return">Deslizar para a ilha</string>
+    <string name="system_island_live_return">Atividades em andamento</string>
     <string name="system_island_live_return_summary">Retorna chamadas, Relógio e Gravador à ilha. Reinicie o launcher após ativar pela primeira vez.</string>
     <string name="system_island_effects_title">Onda e animação</string>
     <string name="system_island_waveform_group">Onda</string>
@@ -1304,4 +1304,6 @@
     <string name="system_island_return_effect_summ">Padrão usa a animação nativa; absorção comprime a página em direção à ilha. Aplica-se a músicas e atividades em andamento.</string>
     <string name="system_island_return_effect_standard">Padrão</string>
     <string name="system_island_return_effect_absorption">Absorção</string>
+    <string name="system_island_width_group">Largura</string>
+    <string name="system_island_return_group">Ao voltar à tela inicial</string>
 </resources>

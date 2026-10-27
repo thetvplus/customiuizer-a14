@@ -58,10 +58,10 @@ class IslandAbsorptionMeshTest {
         }
     }
 
-    @Test fun thePageBecomesSecondaryQuicklyAndFadesContinuouslyIntoTheBlackIsland() {
+    @Test fun thePageRemainsReadableThroughIntakeThenFadesContinuouslyIntoTheBlackIsland() {
         assertEquals(1f, IslandAbsorptionMesh.opacity(0f), 0f)
-        assertEquals(.62f, IslandAbsorptionMesh.opacity(.14f), .00001f)
-        assertTrue(IslandAbsorptionMesh.opacity(.5f) < .55f)
+        assertEquals(.88f, IslandAbsorptionMesh.opacity(.14f), .00001f)
+        assertTrue(IslandAbsorptionMesh.opacity(.5f) > .85f)
         var previous = 1f
         for (i in 0..100) {
             val next = IslandAbsorptionMesh.opacity(i / 100f)

@@ -20,6 +20,27 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandPresentationTest {
+    @Test fun expandedMediaUsesDistinctPrimaryAndSecondaryLinesAndDoesNotDuplicateMetadata() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val shell = IslandActivityView(activity).apply { simplified = true }
+        activity.setContentView(shell)
+        shell.geometry(280, 40, 0)
+        shell.bind("Song title", "Artist name", null, true, true, true, 0, false, expanded = true)
+        val group = shell.getChildAt(1) as android.widget.LinearLayout
+        val primary = group.getChildAt(0) as android.widget.TextView
+        val secondary = group.getChildAt(1) as android.widget.TextView
+        assertEquals("Song title", primary.text.toString()); assertEquals("Artist name", secondary.text.toString())
+        assertEquals(1, primary.maxLines); assertEquals(1, secondary.maxLines)
+        assertTrue(primary.textSize > secondary.textSize)
+        assertEquals(android.view.View.VISIBLE, secondary.visibility)
+        shell.bind("Song title", "Song title", null, true, true, true, 0, false, expanded = true)
+        assertEquals(android.view.View.GONE, secondary.visibility)
+        assertEquals(1, Regex("Song title").findAll(shell.contentDescription.toString()).count())
+        shell.bind("Song title", "Artist name", null, true, true, true, 0, false, expanded = false)
+        assertEquals(android.view.View.GONE, group.visibility)
+        activity.finish()
+    }
+
     @Test fun playbackReentryCanInterruptCameraExitWithoutLeavingAnInvisibleWindow() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)
@@ -79,7 +100,7 @@ class IslandPresentationTest {
         shell.geometry(240, 40, 40); shell.layout(0, 0, 240, 40)
         assertFalse(shell.performLongClick())
         assertEquals(3, shell.childCount)
-        assertEquals(1, (shell.getChildAt(1) as android.widget.LinearLayout).childCount)
+        assertEquals(2, (shell.getChildAt(1) as android.widget.LinearLayout).childCount)
         assertTrue(shell.contentDescription.toString().contains("Message supplied by notification"))
         activity.finish()
     }

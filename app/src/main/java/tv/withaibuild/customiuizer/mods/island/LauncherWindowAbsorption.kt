@@ -190,7 +190,8 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         }
     }
 
-    fun end(element: Any) { if (session?.element?.get() === element) cancel() }
+    fun lease(element: Any): Any? = session?.takeIf { it.element.get() === element }
+    fun end(element: Any, lease: Any? = session) { if (lease != null && session === lease && session?.element?.get() === element) cancel() }
     fun cancel() {
         epoch++
         captureJob?.cancel(); captureJob = null

@@ -377,7 +377,20 @@ internal class IslandActivityController(
             render()
         }
         shell.onExpand = {
-            if (lastContent !== idleIdentity && forms.expand()) render()
+            val dwell = context.getSystemService(android.view.accessibility.AccessibilityManager::class.java)
+                ?.getRecommendedTimeoutMillis(IslandMotion.EXPANDED_DWELL.toInt(),
+                    android.view.accessibility.AccessibilityManager.FLAG_CONTENT_TEXT or
+                        android.view.accessibility.AccessibilityManager.FLAG_CONTENT_CONTROLS)?.toLong()
+                ?: IslandMotion.EXPANDED_DWELL
+            if (lastContent !== idleIdentity && forms.expand(SystemClock.uptimeMillis(), dwell)) render()
+        }
+        shell.onInteraction = { active ->
+            val scheduled = forms.expansionDeadline != null
+            forms.interact(active, SystemClock.uptimeMillis())
+            // Reuse the one expiry callback; never render reentrantly inside a window/input mutation.
+            if (!disposed && (scheduled || forms.expansionDeadline != null)) {
+                handler.removeCallbacks(expiry); handler.post(expiry)
+            }
         }
         shell.onOpen = {
             if (lastContent === idleIdentity) executeIdleAction("tap", options.idleActions.tap) else openPlayer()
@@ -432,7 +445,7 @@ internal class IslandActivityController(
     fun refreshLivePrivacy() = onMain { liveSources?.refresh() }
 
     private fun configureLiveSources() {
-        val kinds = options.liveKinds.filterTo(linkedSetOf()) { it != IslandLiveKind.SMS && it != IslandLiveKind.CALENDAR }
+        val kinds = options.liveKinds
         val configuration = Pair(kinds, options.excludedApps)
         if (configuration == liveSourceOptions) return
         liveSourceOptions = configuration
@@ -856,12 +869,12 @@ internal class IslandActivityController(
         val compact = geometry(label = text) ?: return null
         val expandFeedback = !shell.fitsToast(text, compact.width, compact.gap, compact.height)
         val geometry = if (expandFeedback) geometry(label = text, feedbackExpanded = true) ?: return null else compact
-        if (!shell.fitsToast(text, geometry.width, geometry.gap, geometry.height)) return null
+        if (!shell.fitsToast(text, geometry.width, geometry.gap, geometry.height, expandFeedback)) return null
         val value = content.copy(text = text,
             icon = content.icon ?: context.getDrawable(android.R.drawable.ic_dialog_info))
         val lease = state.offer(value, SystemClock.uptimeMillis(), duration)
         forms.select(lease, source = IslandFormState.Source.FEEDBACK)
-        if (expandFeedback) forms.expand()
+        if (expandFeedback) forms.expand(SystemClock.uptimeMillis())
         // Only suppress the native Toast window after insertion of this shell actually succeeded.
         if (!render()) { state.release(lease); render(); return null }
         return lease
@@ -898,9 +911,7 @@ internal class IslandActivityController(
         val rank = bound.ranking
         val prepared = IslandChatNotifications.prepare(context, sbn, rank.importance,
             rank.matchesInterruptionFilter(), rank.suppressedVisualEffects,
-            nativeIcon = bound.icon, calendar = IslandLiveKind.CALENDAR in options.liveKinds &&
-                IslandLiveLabels.notificationKind(sbn.packageName, sbn.notification.category,
-                    sbn.notification.channelId) == IslandLiveKind.CALENDAR)
+            nativeIcon = bound.icon)
             ?: run { diagnostics.report("notification-native-content"); return false }
         clearChat()
         clearSystemActivity()
@@ -1499,11 +1510,12 @@ internal class IslandActivityController(
         val motionSource = IslandFormState.source(toast, showingMedia)
         forms.select(if (toast != null || current != null) state.identity(now) else null,
             IslandMotionCoordinator.prefersLong(toast, options.automaticWidth), motionSource)
+        forms.expireExpansion(now)
         val idle = options.idle && !forms.idleSuppressed && (state.allowed || shadeIdle) && toast == null && current == null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null
         val liveExpiry = toast?.liveActivity?.clock?.takeIf { it.countdown && it.pausedMillis == null }
             ?.let { now + (it.base + 3000 - SystemClock.elapsedRealtime()).coerceAtLeast(1) }
-        val nextExpiry = listOfNotNull(liveExpiry, state.deadline(), nativeCardGapDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
+        val nextExpiry = listOfNotNull(forms.expansionDeadline, liveExpiry, state.deadline(), nativeCardGapDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
             pauseDeadline?.takeIf { it > now }, loadingDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
             mediaRevealAt?.takeIf { it > now }, mediaReturn?.expiresAt?.takeIf { it > now }).minOrNull()
         if (!disposed && nextExpiry != null) handler.postAtTime(expiry, nextExpiry)
@@ -1519,6 +1531,7 @@ internal class IslandActivityController(
         shell.realtimeWaveform = options.waveformMode == 2
         shell.allowTextBlur = !reducedMotion()
         shell.entranceStyle = options.entranceStyle
+        shell.absorption = options.absorption
         shell.windowTop = geometry.top
         shell.idle = idle
         shell.idleTapAction = options.idleActions.tap
@@ -1914,7 +1927,7 @@ internal class IslandActivityController(
         clearChat()
         state.clear(preserveDismissal = true)
         hide()
-        shell.onDismiss = {}; shell.onOpen = {}; shell.onGesture = {}; shell.onExpand = {}
+        shell.onDismiss = {}; shell.onOpen = {}; shell.onGesture = {}; shell.onExpand = {}; shell.onInteraction = {}
         scope.cancel()
     }
 

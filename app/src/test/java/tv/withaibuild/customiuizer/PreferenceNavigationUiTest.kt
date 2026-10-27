@@ -38,6 +38,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -291,34 +292,39 @@ class PreferenceNavigationUiTest {
     }
 
     @Test fun musicReturnRequiresTheModeMediaSwitchAndManualAppSelection() {
-        val page = openIslandMusic()
-        val media = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media"))
+        val island = openIslandPage()
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
+        val page = currentPage() as SubFragment
         val returning = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
         val apps = requireNotNull(page.findPreference<Preference>("pref_key_system_island_media_return_apps"))
         assertFalse(returning.isChecked); assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
-        media.isChecked = true
-        assertTrue(returning.isEnabled); assertFalse(apps.isEnabled)
-        returning.isChecked = true; assertTrue(apps.isEnabled)
-        assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(apps.key, emptySet())!!.isEmpty())
-        apps.performClick(); settleNavigation()
-        assertTrue(currentPage() is tv.withaibuild.customiuizer.subs.AppSelector)
-        assertEquals(apps.key, currentPage().arguments?.getString("key"))
-        assertTrue(currentPage().arguments?.getBoolean("multi") == true)
+        assertTrue(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_return")).isChecked)
         pressToolbarBack()
-        media.isChecked = false
-        assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
-        pressToolbarBack(); pressToolbarBack(); pressToolbarBack()
-        val disabled = openIslandPage("0")
-        assertFalse(requireNotNull(disabled.findPreference<Preference>("pref_key_system_island_music_cat")).isEnabled)
-        assertFalse(requireNotNull(disabled.findPreference<Preference>("pref_key_system_island_notifications_cat")).isEnabled)
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
+        requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        pressToolbarBack()
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
+        val gestures = currentPage() as SubFragment
+        val enabled = requireNotNull(gestures.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
+        assertTrue(enabled.isEnabled); enabled.isChecked = true
+        val choices = requireNotNull(gestures.findPreference<Preference>("pref_key_system_island_media_return_apps"))
+        assertTrue(choices.isEnabled)
+        assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(choices.key, emptySet())!!.isEmpty())
+        choices.performClick(); settleNavigation()
+        assertTrue(currentPage() is tv.withaibuild.customiuizer.subs.AppSelector)
+        assertEquals(choices.key, currentPage().arguments?.getString("key"))
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun applicationSearchStaysAboveTheScrollingListWhenTheViewportShrinks() {
         val page = openIslandMusic()
         requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
-        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return")).isChecked = true
-        requireNotNull(page.findPreference<Preference>("pref_key_system_island_media_return_apps")).performClick()
+        pressToolbarBack()
+        val island = currentPage() as SubFragment
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
+        val gestures = currentPage() as SubFragment
+        requireNotNull(gestures.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return")).isChecked = true
+        requireNotNull(gestures.findPreference<Preference>("pref_key_system_island_media_return_apps")).performClick()
         settleNavigation()
         val selector = currentPage() as tv.withaibuild.customiuizer.subs.AppSelector
         val fields = requireNotNull(selector.view).findViewById<View>(R.id.fields)
@@ -468,27 +474,15 @@ class PreferenceNavigationUiTest {
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()
         assertFalse(requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
         val sources = requireNotNull((currentPage() as SubFragment)
-            .findPreference<PreferenceGroup>("pref_key_system_island_live_kinds"))
-        assertEquals(10, sources.preferenceCount) // Intro, eight sources, and the shared return switch.
-        assertTrue(isSupportingPreference(sources.getPreference(0)))
-        assertEquals(activity.getString(R.string.system_island_live_sources_summary), sources.getPreference(0).summary)
-        activity.resources.getStringArray(R.array.system_island_live_values).forEachIndexed { index, value ->
-            assertEquals("Source order must remain semantic in every language", "pref_key_system_island_live_kinds_" + value,
-                sources.getPreference(index + 1).key)
-        }
-        assertEquals("pref_key_system_island_live_return", sources.getPreference(9).key)
-        val recorder = requireNotNull((currentPage() as SubFragment)
-            .findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_kinds_recorder"))
-        assertFalse(recorder.isPersistent)
-        assertFalse(recorder.isChecked)
-        recorder.performClick(); settleNavigation()
-        assertTrue(recorder.isChecked)
+            .findPreference<androidx.preference.MultiSelectListPreference>("pref_key_system_island_live_kinds"))
+        assertEquals(6, sources.entryValues.size)
+        assertFalse(sources.entryValues.any { it.toString() in setOf("sms", "calendar") })
+        assertEquals(activity.getString(R.string.system_island_live_sources_summary), sources.summary)
+        assertTrue(sources.callChangeListener(setOf("recorder")))
+        sources.values = setOf("recorder")
         assertEquals(setOf("recorder"), AppHelper.appPrefs!!.getStringSet("pref_key_system_island_live_kinds", emptySet()))
+        assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_island_live_return"))
         assertFalse(AppHelper.appPrefs!!.contains("pref_key_system_island_live_kinds_recorder"))
-        recorder.performClick(); settleNavigation()
-        assertTrue(AppHelper.appPrefs!!.getStringSet("pref_key_system_island_live_kinds", emptySet())!!.isEmpty())
-        assertTrue(requireNotNull((currentPage() as SubFragment)
-            .findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_return")).isChecked)
         pressToolbarBack()
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_notifications_cat")).performClick(); settleNavigation()
         val notifications = currentPage() as SubFragment

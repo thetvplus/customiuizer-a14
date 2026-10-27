@@ -4,6 +4,28 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandFormStateTest {
+    @Test fun manualExpansionExpiresWithoutMetadataRenewalAndInteractionDefersItsDeadline() {
+        val forms = IslandFormState()
+        forms.select("playing", source = IslandFormState.Source.MEDIA)
+        assertTrue(forms.expand(100))
+        repeat(20) { forms.select("playing", source = IslandFormState.Source.MEDIA) }
+        assertEquals(5100L, forms.expansionDeadline)
+        forms.interact(true, 5000)
+        forms.expireExpansion(20000)
+        assertTrue(forms.expanded); assertNull(forms.expansionDeadline)
+        forms.interact(false, 21000)
+        forms.expireExpansion(25999); assertTrue(forms.expanded)
+        forms.expireExpansion(26000); assertFalse(forms.expanded)
+        forms.select("playing", automaticExpanded = true, source = IslandFormState.Source.MEDIA)
+        assertFalse("Updates cannot undo an automatic contraction", forms.expanded)
+        assertTrue(forms.expand(30000, 15000))
+        assertEquals(45000L, forms.expansionDeadline)
+        forms.select("new notice", automaticExpanded = true, source = IslandFormState.Source.NOTIFICATION)
+        assertNull(forms.expansionDeadline)
+        forms.expireExpansion(90000)
+        assertTrue("A previous expansion cannot shorten a successor notice", forms.expanded)
+    }
+
     @Test fun everyExpandedSourceCollapsesBeforeItCanBeDismissed() {
         val forms = IslandFormState()
         assertEquals(IslandFormState.Form.IDLE, forms.form)

@@ -581,6 +581,56 @@ class IslandActivityLifecycleTest {
         assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
     }
 
+    @Test fun manuallyExpandedPlayingMusicAutomaticallyContractsAfterInteractionWithoutRemovingItsWindow() {
+        val controller = controller(media = true, simplified = true)
+        native.player = launchablePlayer("automatic-detail-contraction")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        original.onExpand(); drain()
+        assertTrue(original.expanded)
+        original.onInteraction(true); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(8)); drain()
+        assertTrue(original.expanded)
+        original.onInteraction(false); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.EXPANDED_DWELL - 1)); drain()
+        assertTrue(original.expanded)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        assertFalse(original.expanded); assertTrue(original.isMedia)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun touchingAnIdleIslandDoesNotQueueAnUnrelatedRenderThatCancelsItsOwnGesture() {
+        controller(idle = true, simplified = true)
+        val original = shell!!
+        assertTrue(original.idle)
+        val down = android.view.MotionEvent.obtain(0, 10, android.view.MotionEvent.ACTION_DOWN,
+            original.width * .5f, original.height * .5f, 0)
+        try { assertTrue(original.dispatchTouchEvent(down)) } finally { down.recycle() }
+        drain()
+        assertFalse(org.robolectric.util.ReflectionHelpers.getField(original, "inputCancelled"))
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField(original, "touchActive"))
+        val up = android.view.MotionEvent.obtain(0, 30, android.view.MotionEvent.ACTION_UP,
+            original.width * .5f, original.height * .5f, 0)
+        try { original.dispatchTouchEvent(up) } finally { up.recycle() }
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<android.view.VelocityTracker?>(original, "velocityTracker"))
+    }
+
+    @Test fun aBatchGalleryDeletionCanUseTwoReadableLongLinesAndStillRetainsNativeOnOverflow() {
+        val controller = controller(media = true, simplified = true, automaticWidth = false, shortWidth = 96, longWidth = 320)
+        native.player = launchablePlayer("batch-gallery-delete")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val message = "已将选中的 24 张照片和视频移至最近删除"
+        val lease = requireNotNull(controller.showToast(IslandToastContent(message, "com.miui.gallery", null), 1800))
+        assertTrue(original.expanded)
+        val label = (original.getChildAt(1) as android.widget.LinearLayout).getChildAt(0) as android.widget.TextView
+        assertEquals(message, label.text.toString()); assertEquals(2, label.maxLines)
+        controller.releaseToast(lease); drain()
+        assertTrue(original.isMedia)
+        assertNull(controller.showToast(IslandToastContent("删除".repeat(80), "com.miui.gallery", null), 1800))
+        assertTrue(original.isMedia); assertSame(original, shell)
+    }
+
     @Test fun notificationAndMusicAlsoShareAnExplicitlyConfiguredHeight() {
         val controller = controller(chat = true, media = true, height = 48)
         native.player = launchablePlayer("manual-notice-height")
@@ -968,8 +1018,11 @@ class IslandActivityLifecycleTest {
         assertTrue(controller.takeNotification(bound)); drain()
         assertTrue(original.expanded)
         val caption = org.robolectric.util.ReflectionHelpers.getField<android.widget.Chronometer>(original, "title")
-        assertEquals("Alice\n好", caption.text.toString())
-        assertEquals(2, caption.maxLines)
+        assertEquals("Alice", caption.text.toString())
+        assertEquals(1, caption.maxLines)
+        val detail = org.robolectric.util.ReflectionHelpers.getField<android.widget.TextView>(original, "subtitle")
+        assertEquals("好", detail.text.toString()); assertEquals(View.VISIBLE, detail.visibility)
+        assertTrue(caption.textSize > detail.textSize)
         assertEquals(android.text.TextUtils.TruncateAt.END, caption.ellipsize)
         val lease = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "chatLease")
         org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").collapse()

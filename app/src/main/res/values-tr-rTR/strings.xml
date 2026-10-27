@@ -1104,8 +1104,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="prefs_group_keyboard">Klavye</string>
     <string name="launcher_dock_background_liquid">Sıvı cam</string>
     <string name="system_toast_bottom_title">Alt boşluk</string>
-    <string name="system_toast_capsule_title">Uygulama ipuçları</string>
-    <string name="system_toast_capsule_summ">Kısa uygulama ipuçlarında seçilen stili kullan.</string>
+    <string name="system_toast_capsule_title">Uygulama işlem sonuçları</string>
+    <string name="system_toast_capsule_summ">Silme veya kaydetme gibi işlemlerin metin Toast iletileri seçilen stili kullanır. Mesaj başlıklarını bildirimlerde ayarlayın.</string>
     <string name="system_toast_position_title">Toast konumu</string>
     <string name="system_toast_position_summ">Ekranın güvenli alanına yerleştirir. Değişiklikten sonra sistem arayüzünü yeniden başlatın.</string>
     <string name="system_toast_position_top">Üst</string>
@@ -1191,7 +1191,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_title">Sistem uyarıları</string>
     <string name="system_island_intro">Adayı ilk kez etkinleştirdikten veya kaynak ekledikten sonra telefonu yeniden başlatın.</string>
     <string name="system_island_media_title">Medyayı göster</string>
-    <string name="system_island_media_return_title">Müziği adaya taşı</string>
+    <string name="system_island_media_return_title">Müzik</string>
     <string name="system_island_media_return_summ">Seçilen medya uygulamaları ana ekrana kaydırınca adaya döner. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>
     <string name="system_island_media_return_apps_title">Dönüş uygulamaları</string>
     <string name="system_island_media_return_apps_summ">Bu efekt için medya uygulamalarını seçin.</string>
@@ -1255,7 +1255,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_appearance_group">Görünüm</string>
     <string name="system_island_feedback_group">İçerik</string>
     <string name="system_island_interaction_group">Etkileşim</string>
-    <string name="system_island_gestures_title">Hareketler</string>
+    <string name="system_island_gestures_title">Hareketler ve dönüş</string>
     <string name="system_island_waveform_off">Kapalı</string>
     <string name="system_island_waveform_light">Hafif animasyon</string>
     <string name="system_island_waveform_real">Canlı dalga biçimi (deneysel)</string>
@@ -1283,7 +1283,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_idle_gestures_summ">Yalnızca boşta ada için. Oynatma son geçerli medya oturumunu kullanır.</string>
     <string name="system_island_live_sources_title">Devam eden etkinlikler</string>
     <string name="system_island_live_choose">Kaynaklar</string>
-    <string name="system_island_live_sources_summary">Etkinlikleri seçin. Kaynak ekledikten sonra yeniden başlatın. SMS ve takvim için bildirim gerekir.</string>
+    <string name="system_island_live_sources_summary">Devam eden aramalar, saat, kayıt ve gizlilik durumları. Kaynak ekledikten sonra yeniden başlatın. Mesajları bildirim uygulamaları listesinden seçin.</string>
     <string name="system_island_live_feedback">Anlık geri bildirim</string>
     <string name="system_island_live_call">Arama</string>
     <string name="system_island_live_alarm">Alarm</string>
@@ -1298,7 +1298,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_live_camera">Kamera</string>
     <string name="system_island_live_microphone">Mikrofon</string>
     <string name="system_strong_toast_mode_default">Sistem varsayılanı</string>
-    <string name="system_island_live_return">Kaydırarak adaya dön</string>
+    <string name="system_island_live_return">Devam eden etkinlikler</string>
     <string name="system_island_live_return_summary">Arama, Saat ve Kaydedici etkinliklerini adaya döndürür. İlk etkinleştirmeden sonra başlatıcıyı yeniden başlatın.</string>
     <string name="system_island_effects_title">Dalga ve animasyon</string>
     <string name="system_island_waveform_group">Dalga</string>
@@ -1308,6 +1308,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_waveform_gain_summ">Müzik ve kayıt çubuklarını gerçek zamanlı olarak büyütür. Yalnızca görünümü değiştirir; sessizlikte çubuklar düz kalır.</string>
     <string name="system_island_return_effect_title">Ada giriş efekti</string>
     <string name="system_island_return_effect_summ">Standart, sistemin pencere animasyonunu kullanır; emilim sayfayı adaya doğru sıkıştırır. Müzik ve devam eden etkinlikler için geçerlidir.</string>
-    <string name="system_island_return_effect_standard">Standart</string>
-    <string name="system_island_return_effect_absorption">Emilim</string>
+    <string name="system_island_return_effect_standard">Varsayılan</string>
+    <string name="system_island_return_effect_absorption">İçine çekme</string>
+    <string name="system_island_width_group">Genişlik</string>
+    <string name="system_island_return_group">Ana ekrana dönerken</string>
 </resources>

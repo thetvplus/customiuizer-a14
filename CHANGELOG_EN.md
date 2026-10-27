@@ -6,6 +6,10 @@ Changes for maintained releases. Valid changes from the retired r14.25.1 and r14
 
 ## Unreleased
 
+- Unify continuous island dragging and velocity inheritance, automatically contract manually expanded details, and refine text hierarchy for music, notifications and operation feedback.
+- Keep absorbed pages clearer with a gentler native spring response. Recover from transient Dock wallpaper crop mismatches instead of permanently retiring the lens.
+- Centralize return-to-island gestures, route SMS and calendar through notification app selection, and clarify boarding names, size groups and app Toast feedback.
+
 ## r14.25.6 — 2026-10-25
 
 versionCode 255. Changes since r14.25.5:

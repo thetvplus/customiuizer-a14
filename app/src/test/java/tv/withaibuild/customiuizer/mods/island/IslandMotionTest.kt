@@ -60,8 +60,10 @@ class IslandMotionTest {
         val spring = IslandMotion.Spring()
         val seconds = IslandMotion.REBOUND / 1000f
         spring.retarget(110f, 100f, seconds, false, elastic = true)
-        assertTrue(spring.sample(1f / 60f) < 106f)
-        assertTrue(spring.sample(.05f) in 98.8f..99.3f)
+        // The longer elastic tail retains visible first-frame travel. The same physical
+        // undershoot is reached later on the shared clock, rather than by changing damping.
+        assertTrue(spring.sample(1f / 60f) in 107f..108f)
+        assertTrue(spring.sample(seconds * .3125f) in 98.8f..99.3f)
         val current = spring.sample(.065f)
         val velocity = spring.velocity
         spring.retarget(current, 108f, seconds, true, elastic = true)

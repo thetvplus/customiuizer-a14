@@ -268,7 +268,9 @@ internal class DockGlassBackdrop(
         if (frame.isRecycled || frame.width > MAX_WIDTH + 1 || frame.height > MAX_HEIGHT + 1 || frameCrop.isEmpty ||
             kotlin.math.abs(frame.width - frameCrop.width() * scale) > 1f || kotlin.math.abs(frame.height - frameCrop.height() * scale) > 1f) {
             frame?.recycle()
-            fail(IllegalStateException("wallpaper-only capture returned no usable SDR frame"))
+            // Size/crop readiness belongs to this compositor request, not GPU capability.
+            // A native pinch/unlock can invalidate one result without retiring the lens.
+            unavailable(IllegalStateException("wallpaper-only capture returned no usable SDR frame"))
             return
         }
         val lens = shader ?: DockGlassOptics.createLens()?.also { shader = it }

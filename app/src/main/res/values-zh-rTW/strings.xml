@@ -1073,8 +1073,8 @@
     <string name="system_statusbar_duo_cellular_text">文字</string>
     <string name="launcher_dock_category">Dock</string>
     <string name="system_toast_bottom_title">底部間距</string>
-    <string name="system_toast_capsule_title">應用短提示</string>
-    <string name="system_toast_capsule_summ">應用短提示跟隨所選樣式。</string>
+    <string name="system_toast_capsule_title">應用操作回饋</string>
+    <string name="system_toast_capsule_summ">讓刪除、儲存等操作結果的純文字 Toast 跟隨所選樣式。訊息橫幅在「訊息通知」中設定。</string>
     <string name="launcher_dock_background_title">Dock 背景</string>
     <string name="launcher_dock_background_summ">融入原生 Dock。變更後重新啟動桌面生效。</string>
     <string name="launcher_dock_background_material_title">材質</string>
@@ -1185,7 +1185,7 @@
     <string name="system_island_title">系統提示</string>
     <string name="system_island_intro">首次啟用或新增來源後，重新啟動手機。</string>
     <string name="system_island_media_title">媒體上島</string>
-    <string name="system_island_media_return_title">上滑回島</string>
+    <string name="system_island_media_return_title">音樂</string>
     <string name="system_island_media_return_summ">所選媒體應用上滑回桌面時收進島中。首次啟用需重新啟動桌面。</string>
     <string name="system_island_media_return_apps_title">回島應用</string>
     <string name="system_island_media_return_apps_summ">選擇要上滑回島的媒體應用。</string>
@@ -1251,7 +1251,7 @@
     <string name="system_island_appearance_group">外觀</string>
     <string name="system_island_feedback_group">內容</string>
     <string name="system_island_interaction_group">互動</string>
-    <string name="system_island_gestures_title">手勢</string>
+    <string name="system_island_gestures_title">手勢與返回</string>
     <string name="system_island_waveform_off">關閉</string>
     <string name="system_island_waveform_light">轻量波形</string>
     <string name="system_island_waveform_real">實時波形</string>
@@ -1268,7 +1268,7 @@
     <string name="system_island_idle_width_auto_title">小島自動寬度</string>
     <string name="system_island_idle_width_title">小島寬度</string>
     <string name="system_island_expand_down_title">展開詳情</string>
-    <string name="system_island_expand_down_summ">開啟後，所有活動島下滑統一展開長島；關閉後可自訂音樂下滑。未分配動作的長按也可展開。</string>
+    <string name="system_island_expand_down_summ">下滑展開活動島，上滑先收為短島；停止操作約 5 秒後自動收短。關閉後可自訂音樂下滑動作。</string>
     <string name="system_island_feedback_charging_title">充電</string>
     <string name="system_island_feedback_charging_summ">接電時短暫提示一次。</string>
     <string name="system_island_feedback_low_battery_title">低電量</string>
@@ -1279,7 +1279,7 @@
     <string name="system_island_idle_gestures_summ">僅在小島顯示時生效。播放類動作只控制最近一個有效媒體工作階段。</string>
     <string name="system_island_live_sources_title">活動來源</string>
     <string name="system_island_live_choose">活動來源</string>
-    <string name="system_island_live_sources_summary">選擇要上島的活動。新增來源後重新啟動；簡訊、行事曆需通知。</string>
+    <string name="system_island_live_sources_summary">接入通話、時鐘、錄音和隱私狀態等持續活動。新增來源後需重新啟動；訊息統一在「訊息通知」中選擇應用。</string>
     <string name="system_island_live_feedback">即時回饋</string>
     <string name="system_island_live_call">通話</string>
     <string name="system_island_live_alarm">鬧鐘</string>
@@ -1294,14 +1294,16 @@
     <string name="system_island_live_camera">相機</string>
     <string name="system_island_live_microphone">麥克風</string>
     <string name="system_strong_toast_mode_default">系統預設</string>
-    <string name="system_island_live_return">上滑回島</string>
+    <string name="system_island_live_return">持續活動</string>
     <string name="system_island_live_return_summary">將通話、時鐘及錄音收回島內。首次啟用後重新啟動桌面。</string>
     <string name="system_island_effects_title">波形與動效</string>
     <string name="system_island_waveform_group">波形</string>
     <string name="system_island_motion_group">動畫</string>
     <string name="system_island_general_gestures_group">通用</string>
     <string name="system_island_return_effect_title">上島效果</string>
-    <string name="system_island_return_effect_summ">標準沿用原生視窗動畫；吸入讓頁面先收上緣、再壓縮下緣。適用於音樂和持續活動。</string>
-    <string name="system_island_return_effect_standard">標準上島</string>
-    <string name="system_island_return_effect_absorption">吸入上島</string>
+    <string name="system_island_return_effect_summ">預設沿用原生視窗動畫；吸入讓頁面逐漸收進島內。音樂和持續活動共用。</string>
+    <string name="system_island_return_effect_standard">預設</string>
+    <string name="system_island_return_effect_absorption">吸入</string>
+    <string name="system_island_width_group">寬度</string>
+    <string name="system_island_return_group">返回桌面時上島</string>
 </resources>

@@ -1097,8 +1097,8 @@
     <string name="prefs_group_keyboard">Teclado</string>
     <string name="launcher_dock_background_liquid">Vidrio líquido</string>
     <string name="system_toast_bottom_title">Margen inferior</string>
-    <string name="system_toast_capsule_title">Avisos de apps</string>
-    <string name="system_toast_capsule_summ">Usar el estilo elegido para avisos breves.</string>
+    <string name="system_toast_capsule_title">Resultados de las aplicaciones</string>
+    <string name="system_toast_capsule_summ">Los Toast de texto, como resultados de borrar o guardar, usan el estilo seleccionado. Los banners se configuran en las notificaciones.</string>
     <string name="system_toast_position_title">Posición del Toast</string>
     <string name="system_toast_position_summ">Ubicación en el área segura de la pantalla. Reinicia la interfaz del sistema tras cambiarla.</string>
     <string name="system_toast_position_top">Arriba</string>
@@ -1184,7 +1184,7 @@
     <string name="system_island_title">Avisos del sistema</string>
     <string name="system_island_intro">Reinicia el teléfono al activar la isla por primera vez o añadir una fuente.</string>
     <string name="system_island_media_title">Mostrar multimedia</string>
-    <string name="system_island_media_return_title">Música a la isla</string>
+    <string name="system_island_media_return_title">Música</string>
     <string name="system_island_media_return_summ">Las apps elegidas vuelven a la isla al deslizar al inicio. Reinicia el lanzador al activarlo por primera vez.</string>
     <string name="system_island_media_return_apps_title">Apps de retorno</string>
     <string name="system_island_media_return_apps_summ">Elige apps multimedia para este efecto.</string>
@@ -1248,7 +1248,7 @@
     <string name="system_island_appearance_group">Apariencia</string>
     <string name="system_island_feedback_group">Contenido</string>
     <string name="system_island_interaction_group">Interacción</string>
-    <string name="system_island_gestures_title">Gestos</string>
+    <string name="system_island_gestures_title">Gestos y retorno</string>
     <string name="system_island_waveform_off">Desactivado</string>
     <string name="system_island_waveform_light">Animación ligera</string>
     <string name="system_island_waveform_real">Onda en directo (experimental)</string>
@@ -1276,7 +1276,7 @@
     <string name="system_island_idle_gestures_summ">Solo en la isla inactiva. Los controles usan la última sesión multimedia válida.</string>
     <string name="system_island_live_sources_title">Actividades en curso</string>
     <string name="system_island_live_choose">Fuentes</string>
-    <string name="system_island_live_sources_summary">Elige actividades. Reinicia después de añadir fuentes. SMS y calendario requieren notificaciones.</string>
+    <string name="system_island_live_sources_summary">Llamadas, reloj, grabación y privacidad en curso. Reinicia tras añadir una fuente. Selecciona los mensajes mediante las aplicaciones de notificaciones.</string>
     <string name="system_island_live_feedback">Respuesta inmediata</string>
     <string name="system_island_live_call">Llamada</string>
     <string name="system_island_live_alarm">Alarma</string>
@@ -1291,7 +1291,7 @@
     <string name="system_island_live_camera">Cámara</string>
     <string name="system_island_live_microphone">Micrófono</string>
     <string name="system_strong_toast_mode_default">Predeterminado del sistema</string>
-    <string name="system_island_live_return">Deslizar a la isla</string>
+    <string name="system_island_live_return">Actividades en curso</string>
     <string name="system_island_live_return_summary">Devuelve llamadas, Reloj y Grabadora a la isla. Reinicia el lanzador tras activarlo por primera vez.</string>
     <string name="system_island_effects_title">Onda y animación</string>
     <string name="system_island_waveform_group">Onda</string>
@@ -1301,6 +1301,8 @@
     <string name="system_island_waveform_gain_summ">Amplifica las barras de música y grabación en tiempo real. Solo cambia la visualización; el silencio permanece plano.</string>
     <string name="system_island_return_effect_title">Efecto de entrada en la isla</string>
     <string name="system_island_return_effect_summ">Estándar usa la animación nativa; absorción comprime la página hacia la isla. Se aplica a música y actividades en curso.</string>
-    <string name="system_island_return_effect_standard">Estándar</string>
+    <string name="system_island_return_effect_standard">Predeterminado</string>
     <string name="system_island_return_effect_absorption">Absorción</string>
+    <string name="system_island_width_group">Anchura</string>
+    <string name="system_island_return_group">Al volver al inicio</string>
 </resources>

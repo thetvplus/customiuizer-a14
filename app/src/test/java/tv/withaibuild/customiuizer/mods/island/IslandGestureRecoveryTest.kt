@@ -24,6 +24,48 @@ import org.robolectric.util.ReflectionHelpers.getField
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGestureRecoveryTest {
+    @Test fun nativeRecentVelocityChangesRecoilWithoutTurningTravelDistanceIntoADuration() {
+        fun release(step: Long): Float {
+            motion()?.end()
+            shell.geometry(240, 40, 40, 280); layout(240, 40)
+            val start = android.os.SystemClock.uptimeMillis()
+            for (i in 0..4) {
+                val event = MotionEvent.obtain(start, start + step * i,
+                    if (i == 0) MotionEvent.ACTION_DOWN else if (i == 4) MotionEvent.ACTION_UP else MotionEvent.ACTION_MOVE,
+                    120f + i * 12f, 20f, 0)
+                try { shell.dispatchTouchEvent(event) } finally { event.recycle() }
+            }
+            assertEquals(IslandMotion.REBOUND, motion()!!.duration)
+            assertNull(getField<android.view.VelocityTracker?>(shell, "velocityTracker"))
+            return getField<IslandMotion.Spring>(shell, "breadth").velocity
+        }
+        val slow = release(70)
+        val fast = release(8)
+        assertTrue("Recent speed must contribute physical recoil: slow=$slow fast=$fast", fast > slow * 2f + 1f)
+    }
+
+    @Test fun aNewDragGrabsTheCurrentReboundAndReversalDoesNotWaitForItsOldAnimator() {
+        shell.geometry(240, 40, 0, 280); layout(240, 40)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, x = 150f)
+        touch(MotionEvent.ACTION_UP, x = 150f)
+        val previous = motion()!!
+        previous.currentPlayTime = 20
+        val physicalWidth = shell.width * shell.scaleX
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, x = 150f)
+        assertNull(motion())
+        assertEquals("Capture retains the actually presented width", physicalWidth, shell.width * shell.scaleX, .01f)
+        val first = shell.translationX
+        touch(MotionEvent.ACTION_MOVE, x = 90f)
+        assertTrue(shell.translationX < first)
+        touch(MotionEvent.ACTION_CANCEL)
+        assertNotSame(previous, motion())
+        motion()!!.end()
+        assertEquals(1f, shell.scaleX, 0f); assertEquals(0f, shell.translationX, 0f)
+        assertNull(getField<android.view.VelocityTracker?>(shell, "velocityTracker"))
+    }
+
     @Test fun aShortSlantedUpwardMotionVetoesTapBeforeItCommitsOrLocksAnAxis() {
         var opened = 0; var dismissed = 0
         shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }

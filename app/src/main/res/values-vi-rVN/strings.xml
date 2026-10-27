@@ -1098,8 +1098,8 @@
     <string name="prefs_group_keyboard">Bàn phím</string>
     <string name="launcher_dock_background_liquid">Kính lỏng</string>
     <string name="system_toast_bottom_title">Khoảng cách phía dưới</string>
-    <string name="system_toast_capsule_title">Thông báo ứng dụng</string>
-    <string name="system_toast_capsule_summ">Dùng kiểu đã chọn cho thông báo ngắn.</string>
+    <string name="system_toast_capsule_title">Kết quả thao tác ứng dụng</string>
+    <string name="system_toast_capsule_summ">Toast văn bản, như kết quả xóa hoặc lưu, dùng kiểu đã chọn. Biểu ngữ tin nhắn được cấu hình trong thông báo.</string>
     <string name="system_toast_position_title">Vị trí Toast</string>
     <string name="system_toast_position_summ">Đặt trong vùng an toàn của màn hình. Khởi động lại giao diện hệ thống sau khi đổi.</string>
     <string name="system_toast_position_top">Trên</string>
@@ -1185,7 +1185,7 @@
     <string name="system_island_title">Thông báo hệ thống</string>
     <string name="system_island_intro">Khởi động lại điện thoại sau khi bật đảo lần đầu hoặc thêm nguồn.</string>
     <string name="system_island_media_title">Hiển thị phương tiện</string>
-    <string name="system_island_media_return_title">Đưa nhạc vào đảo</string>
+    <string name="system_island_media_return_title">Âm nhạc</string>
     <string name="system_island_media_return_summ">Ứng dụng đã chọn trở về đảo khi vuốt về màn hình chính. Khởi động lại trình khởi chạy sau lần bật đầu tiên.</string>
     <string name="system_island_media_return_apps_title">Ứng dụng về đảo</string>
     <string name="system_island_media_return_apps_summ">Chọn ứng dụng đa phương tiện cho hiệu ứng này.</string>
@@ -1249,7 +1249,7 @@
     <string name="system_island_appearance_group">Giao diện</string>
     <string name="system_island_feedback_group">Nội dung</string>
     <string name="system_island_interaction_group">Tương tác</string>
-    <string name="system_island_gestures_title">Cử chỉ</string>
+    <string name="system_island_gestures_title">Cử chỉ và trở về</string>
     <string name="system_island_waveform_off">Tắt</string>
     <string name="system_island_waveform_light">Hoạt ảnh nhẹ</string>
     <string name="system_island_waveform_real">Dạng sóng trực tiếp (thử nghiệm)</string>
@@ -1277,7 +1277,7 @@
     <string name="system_island_idle_gestures_summ">Chỉ áp dụng cho đảo chờ. Điều khiển phát dùng phiên phương tiện hợp lệ gần nhất.</string>
     <string name="system_island_live_sources_title">Hoạt động đang diễn ra</string>
     <string name="system_island_live_choose">Nguồn</string>
-    <string name="system_island_live_sources_summary">Chọn hoạt động. Khởi động lại sau khi thêm nguồn. SMS và lịch cần thông báo.</string>
+    <string name="system_island_live_sources_summary">Cuộc gọi, đồng hồ, ghi âm và trạng thái quyền riêng tư đang diễn ra. Khởi động lại sau khi thêm nguồn. Chọn tin nhắn qua danh sách ứng dụng thông báo.</string>
     <string name="system_island_live_feedback">Phản hồi tức thì</string>
     <string name="system_island_live_call">Cuộc gọi</string>
     <string name="system_island_live_alarm">Báo thức</string>
@@ -1292,7 +1292,7 @@
     <string name="system_island_live_camera">Máy ảnh</string>
     <string name="system_island_live_microphone">Micrô</string>
     <string name="system_strong_toast_mode_default">Mặc định hệ thống</string>
-    <string name="system_island_live_return">Vuốt lên về đảo</string>
+    <string name="system_island_live_return">Hoạt động đang diễn ra</string>
     <string name="system_island_live_return_summary">Đưa cuộc gọi, Đồng hồ và Ghi âm về đảo. Khởi động lại màn hình chính sau lần bật đầu tiên.</string>
     <string name="system_island_effects_title">Sóng và hoạt ảnh</string>
     <string name="system_island_waveform_group">Sóng</string>
@@ -1302,6 +1302,8 @@
     <string name="system_island_waveform_gain_summ">Khuếch đại các cột nhạc và ghi âm theo thời gian thực. Chỉ thay đổi hiển thị; khi im lặng, các cột vẫn phẳng.</string>
     <string name="system_island_return_effect_title">Hiệu ứng lên đảo</string>
     <string name="system_island_return_effect_summ">Tiêu chuẩn dùng hoạt ảnh cửa sổ gốc; hút nén trang dần vào đảo. Áp dụng cho nhạc và hoạt động đang diễn ra.</string>
-    <string name="system_island_return_effect_standard">Tiêu chuẩn</string>
-    <string name="system_island_return_effect_absorption">Hút</string>
+    <string name="system_island_return_effect_standard">Mặc định</string>
+    <string name="system_island_return_effect_absorption">Hút vào</string>
+    <string name="system_island_width_group">Chiều rộng</string>
+    <string name="system_island_return_group">Khi trở về màn hình chính</string>
 </resources>

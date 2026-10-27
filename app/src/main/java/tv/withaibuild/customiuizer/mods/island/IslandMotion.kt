@@ -9,7 +9,7 @@ import kotlin.math.sin
 internal object IslandMotion {
     const val ENTER = 360L
     const val MORPH = 320L
-    const val REBOUND = 160L
+    const val REBOUND = 260L
     const val EXIT = 300L
     const val SECONDARY = 380L
     const val CONTENT = 220L
@@ -18,9 +18,11 @@ internal object IslandMotion {
     const val MEDIA_DELAY = 750L
     const val MEDIA_RETURN_DELAY = 80L
     const val MEDIA_RETURN = 560L
+    const val ABSORPTION_TIME_SCALE = 1.18f
     const val PAUSE_LIFETIME = 2000L
     const val LOADING_LIFETIME = 30000L
     const val NATIVE_CARD_GAP_LIFETIME = 30000L
+    const val EXPANDED_DWELL = 5000L
     const val LANDING_WIDTH_RATIO = .84f
     const val LANDING_HEIGHT_RATIO = .86f
     /** All accepted native content lands inside the shell, with the same centre and
@@ -29,6 +31,13 @@ internal object IslandMotion {
     val relaxed = TimeInterpolator { progress(it) }
     /** Committed collapse/exit and canceled drags settle without crossing their endpoint. */
     val settle = TimeInterpolator { val t = 1f - it.coerceIn(0f, 1f); 1f - t * t * t }
+    /** Rubber-band displacement and its derivative share the same units. Recent native
+     * pointer velocity supplies inertia; total path length never sets a duration. */
+    fun resistance(distance: Float, range: Float): Float = distance / (range + kotlin.math.abs(distance))
+    fun resistanceVelocity(distance: Float, velocity: Float, range: Float): Float {
+        val denominator = range + kotlin.math.abs(distance)
+        return velocity * range / (denominator * denominator)
+    }
     fun morphDuration(fromWidth: Float, fromHeight: Float, width: Float, height: Float, secondary: Boolean): Long {
         val change = maxOf(kotlin.math.abs(width - fromWidth) / maxOf(width, fromWidth, 1f),
             kotlin.math.abs(height - fromHeight) / maxOf(height, fromHeight, 1f)).coerceIn(0f, 1f)
@@ -111,6 +120,7 @@ internal object IslandMotion {
         private var elastic = false
 
         fun addVelocity(physicalVelocity: Float) { velocity += physicalVelocity }
+        fun setVelocity(physicalVelocity: Float) { velocity = if (physicalVelocity.isFinite()) physicalVelocity else 0f }
 
         fun retarget(current: Float, destination: Float, seconds: Float, carry: Boolean, elastic: Boolean = false) {
             value = current

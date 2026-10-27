@@ -1098,8 +1098,8 @@
     <string name="prefs_group_keyboard">キーボード</string>
     <string name="launcher_dock_background_liquid">リキッドグラス</string>
     <string name="system_toast_bottom_title">下部の余白</string>
-    <string name="system_toast_capsule_title">アプリの通知</string>
-    <string name="system_toast_capsule_summ">アプリの短い通知に選択したスタイルを使用します。</string>
+    <string name="system_toast_capsule_title">アプリの操作結果</string>
+    <string name="system_toast_capsule_summ">削除や保存などの文字のみの Toast を選択したスタイルで表示します。通知バナーは「メッセージ通知」で設定します。</string>
     <string name="system_toast_position_title">Toast の位置</string>
     <string name="system_toast_position_summ">画面の安全領域を基準に配置します。変更後はシステム UI を再起動してください。</string>
     <string name="system_toast_position_top">上部</string>
@@ -1185,7 +1185,7 @@
     <string name="system_island_title">システムの案内</string>
     <string name="system_island_intro">初めて有効にしたときや情報源を追加した後は、端末を再起動してください。</string>
     <string name="system_island_media_title">メディアを表示</string>
-    <string name="system_island_media_return_title">音楽をアイランドへ</string>
+    <string name="system_island_media_return_title">音楽</string>
     <string name="system_island_media_return_summ">選択したメディアアプリから上にスワイプしてホームへ戻ると、アイランドに収まります。初回はホームアプリを再起動してください。</string>
     <string name="system_island_media_return_apps_title">対象アプリ</string>
     <string name="system_island_media_return_apps_summ">この効果を使うメディアアプリを選択します。</string>
@@ -1249,7 +1249,7 @@
     <string name="system_island_appearance_group">外観</string>
     <string name="system_island_feedback_group">表示内容</string>
     <string name="system_island_interaction_group">操作</string>
-    <string name="system_island_gestures_title">ジェスチャー</string>
+    <string name="system_island_gestures_title">ジェスチャーと復帰</string>
     <string name="system_island_waveform_off">オフ</string>
     <string name="system_island_waveform_light">軽量アニメーション</string>
     <string name="system_island_waveform_real">リアルタイム波形（試験的）</string>
@@ -1266,7 +1266,7 @@
     <string name="system_island_idle_width_auto_title">小さなアイランドの幅を自動調整</string>
     <string name="system_island_idle_width_title">小さなアイランドの幅</string>
     <string name="system_island_expand_down_title">展開ジェスチャー</string>
-    <string name="system_island_expand_down_summ">有効時はすべてのアクティブなアイランドを下スワイプで展開します。無効にすると音楽の下スワイプを設定できます。未割り当ての長押しでも展開できます。</string>
+    <string name="system_island_expand_down_summ">下スワイプで展開し、上スワイプで先に縮小します。操作しないと約5秒で縮小します。無効にすると音楽の下スワイプを設定できます。</string>
     <string name="system_island_feedback_charging_title">充電</string>
     <string name="system_island_feedback_charging_summ">充電開始時に一度だけ短く表示します。ロック画面のシステム充電アニメーションは保持します。</string>
     <string name="system_island_feedback_low_battery_title">バッテリー低下</string>
@@ -1277,7 +1277,7 @@
     <string name="system_island_idle_gestures_summ">待機中のアイランドのみ。再生操作は直近の有効なメディアセッションに適用します。</string>
     <string name="system_island_live_sources_title">継続中のアクティビティ</string>
     <string name="system_island_live_choose">表示する項目</string>
-    <string name="system_island_live_sources_summary">項目の追加後は再起動してください。SMSとカレンダーには通知が必要です。</string>
+    <string name="system_island_live_sources_summary">通話、時計、録音、プライバシー状態を表示します。追加後は再起動してください。メッセージは通知のアプリ一覧で選択します。</string>
     <string name="system_island_live_feedback">操作のフィードバック</string>
     <string name="system_island_live_call">通話</string>
     <string name="system_island_live_alarm">アラーム</string>
@@ -1292,7 +1292,7 @@
     <string name="system_island_live_camera">カメラ</string>
     <string name="system_island_live_microphone">マイク</string>
     <string name="system_strong_toast_mode_default">システム標準</string>
-    <string name="system_island_live_return">上スワイプでアイランドへ</string>
+    <string name="system_island_live_return">継続中のアクティビティ</string>
     <string name="system_island_live_return_summary">通話・時計・録音をアイランドに戻します。初回の有効化後はホームアプリを再起動してください。</string>
     <string name="system_island_effects_title">波形とアニメーション</string>
     <string name="system_island_waveform_group">波形</string>
@@ -1301,7 +1301,9 @@
     <string name="system_island_waveform_gain_title">波形ゲイン</string>
     <string name="system_island_waveform_gain_summ">音楽と録音のリアルタイム波形を増幅します。表示のみが変わり、無音時は平らなままです。</string>
     <string name="system_island_return_effect_title">アイランドへの移動効果</string>
-    <string name="system_island_return_effect_summ">標準はシステムのウィンドウアニメーションを使用します。吸収はページの上端からアイランドへ引き込みます。音楽と進行中のアクティビティに適用されます。</string>
-    <string name="system_island_return_effect_standard">標準</string>
-    <string name="system_island_return_effect_absorption">吸収</string>
+    <string name="system_island_return_effect_summ">デフォルトはシステムのウィンドウアニメーションを使い、吸い込みはページをゆっくりアイランドに収めます。音楽と継続中のアクティビティで共通です。</string>
+    <string name="system_island_return_effect_standard">デフォルト</string>
+    <string name="system_island_return_effect_absorption">吸い込み</string>
+    <string name="system_island_width_group">幅</string>
+    <string name="system_island_return_group">ホームに戻るときにアイランドへ</string>
 </resources>

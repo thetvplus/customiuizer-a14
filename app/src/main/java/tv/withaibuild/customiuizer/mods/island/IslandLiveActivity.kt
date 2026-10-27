@@ -1,7 +1,6 @@
 package tv.withaibuild.customiuizer.mods.island
 
 import android.app.PendingIntent
-import android.app.Notification
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.utils.PrefMap
 
@@ -12,9 +11,7 @@ internal enum class IslandLiveKind(val value: String, val priority: Int, val lab
     TIMER("timer", 80, R.string.system_island_live_timer),
     RECORDER("recorder", 70, R.string.system_island_live_recorder),
     STOPWATCH("stopwatch", 60, R.string.system_island_live_stopwatch),
-    PRIVACY("privacy", 20, R.string.system_island_live_privacy),
-    SMS("sms", 0, R.string.system_island_live_sms),
-    CALENDAR("calendar", 0, R.string.system_island_live_calendar);
+    PRIVACY("privacy", 20, R.string.system_island_live_privacy);
 
     val signalPackage: String? get() = when {
         this in clockKinds -> CLOCK_PACKAGE
@@ -106,15 +103,6 @@ internal object IslandLiveLabels {
         val seconds = (millis.coerceAtLeast(0) / 1000)
         return if (seconds >= 3600) String.format(java.util.Locale.ROOT, "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
         else String.format(java.util.Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60)
-    }
-    private val calendarChannels = setOf("calendar_channel_normal", "calendar_normal_no_vibration",
-        "calendar_normal_no_sound", "calendar_channel_silent")
-    fun notificationKind(pkg: String, category: String?, channel: String? = null, template: String? = null): IslandLiveKind? = when {
-        pkg == "com.android.mms" && (category == Notification.CATEGORY_MESSAGE ||
-            template == Notification.MessagingStyle::class.java.name) -> IslandLiveKind.SMS
-        pkg == "com.xiaomi.calendar" && (category == Notification.CATEGORY_EVENT || category == Notification.CATEGORY_REMINDER ||
-            category == null && channel in calendarChannels) -> IslandLiveKind.CALENDAR
-        else -> null
     }
 }
 

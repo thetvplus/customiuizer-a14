@@ -4,6 +4,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandPreferenceDefaultsTest {
+    @Test fun retiredMessageKindsAreRemovedOnRestoreWithoutEnablingOrBroadeningAppAdmission() {
+        val entries = mutableMapOf<String, Any?>("pref_key_system_island_live_kinds" to setOf("sms", "calendar", "timer"),
+            "pref_key_system_island_chat" to false, "pref_key_system_island_notification_apps" to setOf("chosen.app"))
+        IslandPreferenceDefaults.migrate(entries)
+        assertEquals(setOf("timer"), entries["pref_key_system_island_live_kinds"])
+        assertEquals(false, entries["pref_key_system_island_chat"])
+        assertEquals(setOf("chosen.app"), entries["pref_key_system_island_notification_apps"])
+        val snapshot = entries.toMap()
+        IslandPreferenceDefaults.migrate(entries)
+        assertEquals(snapshot, entries)
+    }
+
     @Test fun automaticHeightPreservesExistingManualSizesAndExplicitChoices() {
         for (height in listOf(null, 32, 39, 40, 64)) {
             val entries = mutableMapOf<String, Any?>()

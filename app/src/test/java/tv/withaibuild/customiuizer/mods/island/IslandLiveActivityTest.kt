@@ -46,7 +46,7 @@ class IslandLiveActivityTest {
         assertFalse(IslandNativeAppSource.enabled(prefs, IslandLiveKind.CLOCK_PACKAGE))
         prefs.put("system_strong_toast_mode", "3")
         prefs.put(IslandLiveKind.PREFERENCE, setOf("sms", "calendar", "privacy", "unknown"))
-        assertEquals(setOf(IslandLiveKind.SMS, IslandLiveKind.CALENDAR, IslandLiveKind.PRIVACY), IslandLiveKind.read(prefs))
+        assertEquals(setOf(IslandLiveKind.PRIVACY), IslandLiveKind.read(prefs))
         assertTrue(IslandLiveKind.sourcePackages(setOf("sms", "privacy", "call")).isEmpty())
         prefs.put(IslandLiveKind.PREFERENCE, setOf("timer", "alarm", "stopwatch", "recorder"))
         assertTrue(IslandNativeAppSource.enabled(prefs, IslandLiveKind.CLOCK_PACKAGE))
@@ -104,16 +104,18 @@ class IslandLiveActivityTest {
         assertNull(IslandLiveTime.elapsed(IslandLiveTime.MAX_SPAN + 1, 100))
         assertEquals("01:01", IslandLiveLabels.time(61000)); assertEquals("1:01:01", IslandLiveLabels.time(3661000))
     }
-    @Test fun smsAndCalendarClassificationRequiresBothNativePackageAndSemanticCategory() {
-        assertEquals(IslandLiveKind.SMS, IslandLiveLabels.notificationKind("com.android.mms", Notification.CATEGORY_MESSAGE))
-        assertEquals(IslandLiveKind.CALENDAR, IslandLiveLabels.notificationKind("com.xiaomi.calendar", Notification.CATEGORY_EVENT))
-        assertNull(IslandLiveLabels.notificationKind("untrusted.app", Notification.CATEGORY_EVENT))
-        assertNull(IslandLiveLabels.notificationKind("com.xiaomi.calendar", Notification.CATEGORY_PROMO))
-        assertEquals(IslandLiveKind.CALENDAR, IslandLiveLabels.notificationKind("com.xiaomi.calendar", null, "calendar_channel_normal"))
-        assertEquals(IslandLiveKind.CALENDAR, IslandLiveLabels.notificationKind("com.xiaomi.calendar", null, "calendar_channel_silent"))
-        assertNull(IslandLiveLabels.notificationKind("com.xiaomi.calendar", null, "marketing"))
-        assertNull(IslandLiveLabels.notificationKind("com.xiaomi.calendar", Notification.CATEGORY_PROMO, "calendar_channel_normal"))
-        assertEquals(IslandLiveKind.SMS, IslandLiveLabels.notificationKind("com.android.mms", null,
-            template = "android.app.Notification\$MessagingStyle"))
+    @Test fun retiredMessageKindsCannotBypassNotificationAppSelection() {
+        val prefs = PrefMap().apply {
+            put("system_strong_toast_mode", "3")
+            put(IslandLiveKind.PREFERENCE, setOf("sms", "calendar", "timer"))
+        }
+        val options = IslandOptions.read(prefs)
+        assertEquals(setOf(IslandLiveKind.TIMER), options.liveKinds)
+        assertFalse(options.acceptsNotification("com.android.mms", Notification.CATEGORY_MESSAGE))
+        assertFalse(options.acceptsNotification("com.xiaomi.calendar", Notification.CATEGORY_EVENT))
+        val selected = options.copy(chat = true, notificationApps = setOf("com.android.mms", "com.xiaomi.calendar"))
+        assertTrue(selected.acceptsNotification("com.android.mms", Notification.CATEGORY_MESSAGE))
+        assertTrue(selected.acceptsNotification("com.xiaomi.calendar", Notification.CATEGORY_EVENT))
+        assertFalse(selected.copy(chat = false).acceptsNotification("com.android.mms", Notification.CATEGORY_MESSAGE))
     }
 }

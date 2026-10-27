@@ -4,8 +4,4 @@
 		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media_swipe" android:title="@string/system_island_media_swipe_title" android:defaultValue="true" android:summary="@string/system_island_media_swipe_summ" android:dependency="pref_key_system_island_media" />
 		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_hide_in_floating_window" android:title="@string/system_island_hide_in_floating_window_title" android:defaultValue="false" android:summary="@string/system_island_hide_in_floating_window_summ" android:dependency="pref_key_system_island_media" />
 	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
-	<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_island_media_return_title">
-		<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx android:key="pref_key_system_island_media_return" android:title="@string/system_island_media_return_title" android:defaultValue="false" android:summary="@string/system_island_media_return_summ" android:dependency="pref_key_system_island_media" />
-		<tv.withaibuild.customiuizer.prefs.PreferenceEx android:key="pref_key_system_island_media_return_apps" android:title="@string/system_island_media_return_apps_title" android:summary="@string/system_island_media_return_apps_summ" android:dependency="pref_key_system_island_media_return" miuizer:countAsSummary="true" />
-	</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 </PreferenceScreen>

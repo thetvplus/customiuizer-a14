@@ -1106,8 +1106,8 @@
     <string name="system_statusbar_duo_cellular_text">Text</string>
     <string name="launcher_dock_category">Dock</string>
     <string name="system_toast_bottom_title">Bottom spacing</string>
-    <string name="system_toast_capsule_title">App toasts</string>
-    <string name="system_toast_capsule_summ">Use the selected style for brief app prompts.</string>
+    <string name="system_toast_capsule_title">App operation feedback</string>
+    <string name="system_toast_capsule_summ">Show plain text Toasts, such as deletion or saving results, in the selected style. Notification banners are configured separately.</string>
     <string name="launcher_dock_background_title">Dock background</string>
     <string name="launcher_dock_background_summ">Blends into the native Dock. Restart the launcher after changes.</string>
     <string name="launcher_dock_background_material_title">Material</string>
@@ -1218,7 +1218,7 @@
     <string name="system_island_title">System prompts</string>
     <string name="system_island_intro">Restart the phone after first enabling the island or adding a source.</string>
     <string name="system_island_media_title">Media in island</string>
-    <string name="system_island_media_return_title">Return to island</string>
+    <string name="system_island_media_return_title">Music</string>
     <string name="system_island_media_return_summ">Selected media apps return to the island when swiping home. Restart the launcher after first enabling.</string>
     <string name="system_island_media_return_apps_title">Return apps</string>
     <string name="system_island_media_return_apps_summ">Choose media apps for this effect.</string>
@@ -1284,7 +1284,7 @@
     <string name="system_island_appearance_group">Appearance</string>
     <string name="system_island_feedback_group">Content</string>
     <string name="system_island_interaction_group">Interaction</string>
-    <string name="system_island_gestures_title">Gestures</string>
+    <string name="system_island_gestures_title">Gestures and return</string>
     <string name="system_island_waveform_off">Off</string>
     <string name="system_island_waveform_light">Lightweight animation</string>
     <string name="system_island_waveform_real">Measured waveform</string>
@@ -1301,7 +1301,7 @@
     <string name="system_island_idle_width_auto_title">Automatic idle width</string>
     <string name="system_island_idle_width_title">Idle island width</string>
     <string name="system_island_expand_down_title">Expand details</string>
-    <string name="system_island_expand_down_summ">Swipe down expands every active island. Turn this off to use a custom music swipe-down action; an unassigned long press can also expand.</string>
+    <string name="system_island_expand_down_summ">Swipe down expands an active island; swipe up collapses it first. Details return to compact form after about five seconds without interaction. Turn off to use a custom music swipe-down action.</string>
     <string name="system_island_feedback_charging_title">Charging</string>
     <string name="system_island_feedback_charging_summ">Briefly show a new charging connection.</string>
     <string name="system_island_feedback_low_battery_title">Low battery</string>
@@ -1312,7 +1312,7 @@
     <string name="system_island_idle_gestures_summ">Only applies to the idle island. Playback actions use the most recent valid media session.</string>
     <string name="system_island_live_sources_title">Activity sources</string>
     <string name="system_island_live_choose">Sources</string>
-    <string name="system_island_live_sources_summary">Choose activities to show. Restart after adding sources. SMS and calendar require notifications.</string>
+    <string name="system_island_live_sources_summary">Ongoing calls, clocks, recording and privacy indicators. Restart after adding a source. Messages use the notification app selection.</string>
     <string name="system_island_live_feedback">Instant feedback</string>
     <string name="system_island_live_call">Call</string>
     <string name="system_island_live_alarm">Alarm</string>
@@ -1326,7 +1326,7 @@
     <string name="system_island_live_finished">Time is up</string>
     <string name="system_island_live_camera">Camera</string>
     <string name="system_island_live_microphone">Microphone</string>
-    <string name="system_island_live_return">Swipe back to island</string>
+    <string name="system_island_live_return">Ongoing activities</string>
     <string name="system_island_live_return_summary">Return active call, Clock and Recorder windows to the island. Restart Launcher after enabling for the first time.</string>
     <string name="system_strong_toast_mode_default">System default</string>
     <string name="system_island_effects_title">Waveform &amp; motion</string>
@@ -1334,7 +1334,9 @@
     <string name="system_island_motion_group">Animation</string>
     <string name="system_island_general_gestures_group">General</string>
     <string name="system_island_return_effect_title">Boarding effect</string>
-    <string name="system_island_return_effect_summ">Standard uses the native window animation; absorption pulls the page into the island. Applies to music and ongoing activities.</string>
-    <string name="system_island_return_effect_standard">Standard</string>
+    <string name="system_island_return_effect_summ">Default follows the native window animation. Absorption draws the page into the island more gradually. Shared by music and ongoing activities.</string>
+    <string name="system_island_return_effect_standard">Default</string>
     <string name="system_island_return_effect_absorption">Absorption</string>
+    <string name="system_island_width_group">Width</string>
+    <string name="system_island_return_group">Return to island on Home</string>
 </resources>

@@ -42,8 +42,8 @@ internal object IslandAbsorptionMesh {
 
     fun opacity(progress: Float): Float {
         val start = (progress / .14f).coerceIn(0f, 1f)
-        val base = 1f - .38f * start * start * (3f - 2f * start)
-        val tail = ((progress - .3f) / .7f).coerceIn(0f, 1f)
-        return base * (1f - .92f * tail * tail * (3f - 2f * tail))
+        val base = 1f - .12f * start * start * (3f - 2f * start)
+        val tail = ((progress - .48f) / .52f).coerceIn(0f, 1f)
+        return base * (1f - .94f * tail * tail * (3f - 2f * tail))
     }
 }

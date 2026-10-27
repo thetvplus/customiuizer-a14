@@ -257,7 +257,12 @@ class DockGlassBackdropTest {
         val bad = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
         controller.accept(bad, Rect(lastCrop), 1, lastScale)
         assertTrue(bad.isRecycled)
-        assertTrue(lastBitmap!!.isRecycled)
+        assertFalse("A valid aligned texture survives a transient bad replacement", lastBitmap!!.isRecycled)
+        assertFalse(ReflectionHelpers.getField(controller, "broken"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(64))
+        controller.onFrame(true)
+        assertEquals(3, captures)
+        assertFalse(lastBitmap!!.isRecycled)
     }
 
     @Test

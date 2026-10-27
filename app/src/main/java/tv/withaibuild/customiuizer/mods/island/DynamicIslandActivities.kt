@@ -68,9 +68,7 @@ internal data class IslandOptions(
     fun returnsLive(kind: IslandLiveKind, pkg: String): Boolean = enabled && liveReturn && kind in liveKinds &&
         IslandLiveKind.canReturn(kind, pkg) && pkg in returningPackages
     fun acceptsNotification(pkg: String, category: String?, channel: String? = null, template: String? = null): Boolean {
-        if (!enabled || pkg in excludedApps || pkg in chatExcludedApps) return false
-        if (chat && pkg in notificationApps) return true
-        return IslandLiveLabels.notificationKind(pkg, category, channel, template)?.let { it in liveKinds } == true
+        return enabled && chat && pkg in notificationApps && pkg !in excludedApps && pkg !in chatExcludedApps
     }
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
@@ -256,7 +254,7 @@ internal object DynamicIslandActivities {
                     }
                 })
         }
-        if (options.chat || options.liveKinds.any { it == IslandLiveKind.SMS || it == IslandLiveKind.CALENDAR }) {
+        if (options.chat) {
             // Take over only the final, native-approved heads-up bind. Never block posting,
             // ranking or the notification-center entry. A missing contract stays native.
             ModuleHelper.guarded {

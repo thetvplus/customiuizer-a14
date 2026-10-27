@@ -5,7 +5,10 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.os.UserHandle
 import android.view.MotionEvent
+import java.lang.ref.WeakReference
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 /** Exact HyperOS 1 WindowElement contract; all reflection is resolved before installation. */
 internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
@@ -40,6 +43,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     private val currentParams = element.getDeclaredField("currentRectFParams").apply { isAccessible = true }
     private val animation = element.getDeclaredField("mAnim").apply { isAccessible = true }
     private val animationTarget = animation.type.getMethod("getTargetRect")
+    private val absorptionTiming = ModuleHelper.guarded<LauncherAbsorptionTiming?>(null) { LauncherAbsorptionTiming(animation.type) }
     private val running = element.getMethod("isRunning")
     private val apps = targets.getDeclaredField("apps").apply { isAccessible = true }
     private val remotePackage = remote.getDeclaredField("packageName").apply { isAccessible = true }
@@ -142,4 +146,60 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
      * running native target. This is one submission-time read, never a frame callback. */
     fun accepted(copy: Any, owner: Any): Boolean = currentParams.get(owner) === copy &&
         running.invoke(owner) == true && animationTarget.invoke(animation.get(owner)) == fields[2].get(copy)
+
+    fun slowAbsorption(owner: Any) { absorptionTiming?.apply(animation.get(owner)) }
+    fun absorptionLease(owner: Any): Any? = absorptionTiming?.lease(animation.get(owner))
+    fun restoreAbsorption(owner: Any? = null, lease: Any? = null) { absorptionTiming?.restore(owner?.let { animation.get(it) }, lease) }
+}
+
+/** Adjust only an accepted return's existing spring forces, before its next native frame.
+ * One weak lease restores only forces still carrying this attempt's exact adjustment.
+ * No global spring hook, listener replacement, velocity rewrite or independent clock. */
+internal class LauncherAbsorptionTiming(springType: Class<*>) {
+    private val bundle = springType.getDeclaredMethod("getSpringBundle", String::class.java).apply { isAccessible = true }
+    private val stiffness = bundle.returnType.getMethod("getStiffness")
+    private val setStiffness = bundle.returnType.getMethod("setStiffness", Float::class.javaPrimitiveType)
+    private val keys = arrayOf("centerX", "centerY", "Width", "Ratio", "Radius", "Alpha", "SurfaceExtAlpha")
+    private var active = WeakReference<Any>(null)
+    private var original: FloatArray? = null
+    private val factor = 1f / (IslandMotion.ABSORPTION_TIME_SCALE * IslandMotion.ABSORPTION_TIME_SCALE)
+
+    fun apply(spring: Any): Boolean {
+        restore()
+        val tracks = arrayOfNulls<Any>(keys.size)
+        val values = FloatArray(keys.size)
+        var attempted = -1
+        try {
+            for (i in keys.indices) {
+                tracks[i] = bundle.invoke(spring, keys[i]) ?: return false
+                values[i] = stiffness.invoke(tracks[i]) as Float
+                if (!values[i].isFinite() || values[i] <= 0f) return false
+            }
+            for (i in keys.indices) {
+                attempted = i
+                setStiffness.invoke(tracks[i], values[i] * factor)
+            }
+            active = WeakReference(spring); original = values
+            return true
+        } catch (error: Throwable) {
+            for (i in 0..attempted) ModuleHelper.guarded { setStiffness.invoke(tracks[i], values[i]) }
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            XposedHelpers.log("Island absorption: retaining native spring timing", error)
+            return false
+        }
+    }
+
+    fun lease(spring: Any): Any? = original.takeIf { active.get() === spring }
+
+    fun restore(only: Any? = null, lease: Any? = null) {
+        if (lease != null && lease !== original) return
+        val spring = active.get() ?: run { original = null; return }
+        if (only != null && only !== spring) return
+        val values = original ?: return
+        active.clear(); original = null
+        for (i in keys.indices) ModuleHelper.guarded {
+            val track = bundle.invoke(spring, keys[i]) ?: return@guarded
+            if (stiffness.invoke(track) as Float == values[i] * factor) setStiffness.invoke(track, values[i])
+        }
+    }
 }

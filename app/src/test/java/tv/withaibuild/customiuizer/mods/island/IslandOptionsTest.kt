@@ -49,12 +49,11 @@ class IslandOptionsTest {
 
     @Test fun notificationAdmissionNeverBroadensAnEmptyPositiveSelectionAndPreservesNativeSources() {
         val options = IslandOptions(true, true, false, chat = true,
-            notificationApps = setOf("chosen.app", "blocked.app"), chatExcludedApps = setOf("blocked.app"),
-            liveKinds = setOf(IslandLiveKind.SMS))
+            notificationApps = setOf("chosen.app", "blocked.app"), chatExcludedApps = setOf("blocked.app"))
         assertTrue(options.acceptsNotification("chosen.app", null))
         assertFalse(options.acceptsNotification("blocked.app", null))
         assertFalse(options.acceptsNotification("unknown.app", null))
-        assertTrue(options.copy(chat = false).acceptsNotification("com.android.mms", android.app.Notification.CATEGORY_MESSAGE))
+        assertFalse(options.copy(chat = false).acceptsNotification("com.android.mms", android.app.Notification.CATEGORY_MESSAGE))
         assertFalse(options.copy(chat = false).acceptsNotification("unknown.app", android.app.Notification.CATEGORY_MESSAGE))
         assertFalse(options.copy(excludedApps = setOf("com.android.mms"))
             .acceptsNotification("com.android.mms", android.app.Notification.CATEGORY_MESSAGE))

@@ -1097,8 +1097,8 @@
     <string name="prefs_group_keyboard">Клавиатура</string>
     <string name="launcher_dock_background_liquid">Жидкое стекло</string>
     <string name="system_toast_bottom_title">Отступ снизу</string>
-    <string name="system_toast_capsule_title">Подсказки приложений</string>
-    <string name="system_toast_capsule_summ">Короткие подсказки используют выбранный стиль.</string>
+    <string name="system_toast_capsule_title">Результаты действий приложений</string>
+    <string name="system_toast_capsule_summ">Текстовые Toast, например после удаления или сохранения, используют выбранный стиль. Баннеры сообщений настраиваются в уведомлениях.</string>
     <string name="system_toast_position_title">Положение Toast</string>
     <string name="system_toast_position_summ">Положение в безопасной области экрана. После изменений перезапустите системный интерфейс.</string>
     <string name="system_toast_position_top">Сверху</string>
@@ -1184,7 +1184,7 @@
     <string name="system_island_title">Системные подсказки</string>
     <string name="system_island_intro">После первого включения острова или добавления источника перезапустите телефон.</string>
     <string name="system_island_media_title">Показывать медиа</string>
-    <string name="system_island_media_return_title">Музыка в островок</string>
+    <string name="system_island_media_return_title">Музыка</string>
     <string name="system_island_media_return_summ">Выбранные медиаприложения возвращаются в остров при свайпе домой. После первого включения перезапустите лаунчер.</string>
     <string name="system_island_media_return_apps_title">Приложения для возврата</string>
     <string name="system_island_media_return_apps_summ">Выберите медиаприложения для этого эффекта.</string>
@@ -1248,7 +1248,7 @@
     <string name="system_island_appearance_group">Внешний вид</string>
     <string name="system_island_feedback_group">Содержимое</string>
     <string name="system_island_interaction_group">Управление</string>
-    <string name="system_island_gestures_title">Жесты</string>
+    <string name="system_island_gestures_title">Жесты и возврат</string>
     <string name="system_island_waveform_off">Выключено</string>
     <string name="system_island_waveform_light">Лёгкая анимация</string>
     <string name="system_island_waveform_real">Живой спектр (эксперимент)</string>
@@ -1276,7 +1276,7 @@
     <string name="system_island_idle_gestures_summ">Только для острова ожидания. Управление последним действующим медиасеансом.</string>
     <string name="system_island_live_sources_title">Текущие события</string>
     <string name="system_island_live_choose">Источники</string>
-    <string name="system_island_live_sources_summary">Выберите события. После добавления источников перезагрузите устройство. Для СМС и календаря нужны уведомления.</string>
+    <string name="system_island_live_sources_summary">Текущие звонки, часы, запись и индикаторы конфиденциальности. После добавления источника перезагрузите устройство. Сообщения выбираются через список приложений уведомлений.</string>
     <string name="system_island_live_feedback">Мгновенный отклик</string>
     <string name="system_island_live_call">Вызов</string>
     <string name="system_island_live_alarm">Будильник</string>
@@ -1291,7 +1291,7 @@
     <string name="system_island_live_camera">Камера</string>
     <string name="system_island_live_microphone">Микрофон</string>
     <string name="system_strong_toast_mode_default">Системный</string>
-    <string name="system_island_live_return">Смахивание в остров</string>
+    <string name="system_island_live_return">Текущие действия</string>
     <string name="system_island_live_return_summary">Возвращает звонок, часы и диктофон в остров. После первого включения перезапустите рабочий стол.</string>
     <string name="system_island_effects_title">Волна и анимация</string>
     <string name="system_island_waveform_group">Волна</string>
@@ -1301,6 +1301,8 @@
     <string name="system_island_waveform_gain_summ">Усиливает индикаторы музыки и записи в реальном времени. Меняется только отображение; в тишине индикаторы остаются плоскими.</string>
     <string name="system_island_return_effect_title">Эффект перехода на остров</string>
     <string name="system_island_return_effect_summ">Стандартный использует системную анимацию окна; втягивание сжимает страницу в остров. Для музыки и текущих действий.</string>
-    <string name="system_island_return_effect_standard">Стандартный</string>
+    <string name="system_island_return_effect_standard">По умолчанию</string>
     <string name="system_island_return_effect_absorption">Втягивание</string>
+    <string name="system_island_width_group">Ширина</string>
+    <string name="system_island_return_group">При возврате на рабочий стол</string>
 </resources>

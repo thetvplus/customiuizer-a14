@@ -221,32 +221,10 @@ class System : SubFragment() {
 
             "pref_key_system_island_feedback_cat", "pref_key_system_island_music_cat" -> {
                 findPreference<MultiSelectListPreference>("pref_key_system_island_live_kinds")?.let { sources ->
-                    val group = requireNotNull(sources.parent)
-                    group.key = sources.key
-                    group.removePreference(sources)
-                    group.addPreference(tv.withaibuild.customiuizer.prefs.PreferenceEx(requireContext(), null).apply {
-                        order = sources.order - 1
-                        summary = sources.summary
-                        isSelectable = false
-                        isPersistent = false
-                    })
-                    findPreference<Preference>("pref_key_system_island_live_return")?.order = sources.order + sources.entryValues.size
-                    sources.entryValues.forEachIndexed { index, entry ->
-                        val value = entry.toString()
-                        group.addPreference(CheckBoxPreferenceEx(requireContext(), null).apply {
-                            key = sources.key + "_" + value
-                            order = sources.order + index
-                            title = sources.entries[index]
-                            isPersistent = false
-                            isChecked = value in sources.values
-                            onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, checked ->
-                                val selected = sources.values.toMutableSet()
-                                if (checked == true) selected.add(value) else selected.remove(value)
-                                sources.values = selected
-                                tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected)
-                                true
-                            }
-                        })
+                    sources.setOnPreferenceChangeListener { _, selected ->
+                        @Suppress("UNCHECKED_CAST")
+                        tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected as Set<String>)
+                        true
                     }
                 }
                 val enabled = StrongToastPresentationMode.fromPreference(
@@ -277,6 +255,8 @@ class System : SubFragment() {
                 ) == StrongToastPresentationMode.DYNAMIC_ISLAND
                 preferenceScreen.isEnabled = enabled
                 val media = AppHelper.appPrefs?.getBoolean("pref_key_system_island_media", false) == true
+                findPreference<Preference>("pref_key_system_island_media_return")?.isEnabled = enabled && media
+                findPreference<Preference>("pref_key_system_island_media_return_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
                     findPreference<Preference>("pref_key_${gesture.key}")?.apply {
                         isEnabled = enabled && media
