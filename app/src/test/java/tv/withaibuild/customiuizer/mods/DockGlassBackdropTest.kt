@@ -265,6 +265,32 @@ class DockGlassBackdropTest {
         assertFalse(lastBitmap!!.isRecycled)
     }
 
+    @Test fun uncoveredOldPixelsCannotRestartExhaustedBadFrameRecoveryOnUnrelatedDraws() {
+        for (live in listOf(false, true)) {
+            view.translationY = 0f
+            var attempts = 0
+            val controller = controller(live = live, source = DockWallpaperSampler { crop, scale ->
+                if (++attempts == 1) sampler.capture(crop, scale)
+                else Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+            })
+            controller.onFrame(true)
+            assertEquals(1, attempts)
+            view.translationY = -80f // an actual native scene change leaves the old crop
+            val node = RenderNode("dock-exhausted-recovery").apply { setPosition(0, 0, 300, 80) }
+            val canvas = node.beginRecording()
+            try {
+                repeat(60) {
+                    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+                    controller.onFrame(true)
+                    assertFalse(controller.prepare(canvas, Rect(0, 0, 300, 80), 20f, 1f))
+                }
+                assertEquals("One failure and three bounded retries; drawing cannot replenish them", 5, attempts)
+                assertFalse(ReflectionHelpers.getField(controller, "broken"))
+            } finally { node.endRecording(); controller.onFrame(false); controller.release() }
+            assertTrue(lastBitmap!!.isRecycled)
+        }
+    }
+
     @Test
     fun onePendingCaptureHasNoQueueAndDetachDisposesTheLateWorkerResult() {
         val entered = CountDownLatch(1)

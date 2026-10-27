@@ -161,7 +161,7 @@ internal class DockGlassBackdrop(
                 } else scheduleTick(view, FRAME_MS - (now - lastRequest))
             }
         }
-        if (liveWallpaper && !busy) scheduleTick(view)
+        if (liveWallpaper && !busy && !sourceUnavailable) scheduleTick(view)
     }
 
     private fun prepareMatrix(view: View): Boolean {
@@ -353,8 +353,13 @@ internal class DockGlassBackdrop(
             // Require the WHOLE panel to be backed by real captured pixels. Never stretch the
             // last edge of an old crop across a moved Dock while a newer capture is pending.
             if (!coveredBy(view, crop)) {
-                sourceDirty = true
-                if (!busy) scheduleTick(view)
+                // A draw of an uncovered old crop is not a new compositor event.
+                // Respect exhausted/backing-off recovery until an actual transform,
+                // visibility or wallpaper change invalidates the source in onFrame.
+                if (!sourceUnavailable) {
+                    sourceDirty = true
+                    if (!busy) scheduleTick(view)
+                }
                 return false
             }
             val x = values[Matrix.MTRANS_X]
