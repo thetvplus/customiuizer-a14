@@ -6,12 +6,17 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.RectF
 import android.os.Handler
+import android.os.Binder
+import android.os.Bundle
 import android.os.SystemClock
 import android.os.UserHandle
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import java.util.concurrent.atomic.AtomicLong
 
@@ -72,7 +77,7 @@ internal object IslandMusicReturnSignal {
     /** Owned by one attached SystemUI island controller; capacity one queued send. */
     class Publisher(private val context: Context, private val handler: Handler,
         private val scope: CoroutineScope, private val dispatcher: CoroutineDispatcher,
-        private val onCommit: (Frame, Long) -> Unit = { _, _ -> },
+        private val onCommit: (Frame, Long, IslandReturnProgress?) -> Unit = { _, _, progress -> progress?.close() },
         private val onImpulse: (Float) -> Unit = {},
         private val current: () -> Frame?) : AutoCloseable {
         private var closed = false
@@ -80,6 +85,9 @@ internal object IslandMusicReturnSignal {
         private var last: Frame? = null
         private var job: Job? = null
         private var committedGesture = -1L
+        private val owner = Binder()
+        private var progressJob: Job? = null
+        private val progressRead = Mutex()
         private val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
                 if (closed || intent.action != REQUEST || !ModuleHelper.isTrustedBroadcast(this, LAUNCHER)) return@guarded
@@ -91,8 +99,22 @@ internal object IslandMusicReturnSignal {
                     val now = SystemClock.uptimeMillis()
                     if (packet.frame == frame && gesture > committedGesture && at >= 0 && now >= at && now - at <= 1000) {
                         committedGesture = gesture
+                        progressJob?.cancel(); progressJob = null
                         onImpulse(intent.getFloatExtra("impulse", 0f).takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f)
-                        onCommit(frame, at)
+                        val source = intent.extras?.getBinder("progress")
+                        if (source == null) onCommit(frame, at, null)
+                        else progressJob = scope.launch(dispatcher) {
+                            val progress = progressRead.withLock {
+                                ensureActive()
+                                ModuleHelper.guarded<IslandReturnProgress?>(null) { IslandReturnProgress.receive(source) }
+                            }
+                            // No frame IPC: map one read-only scalar on IO, then hand its
+                            // ownership to the same admitted native return on Main.
+                            handler.post {
+                                if (closed || committedGesture != gesture || current() != frame) progress?.close()
+                                else ModuleHelper.guarded { onCommit(frame, at, progress) }
+                            }
+                        }
                     }
                 } else publish(force = true)
             }
@@ -105,7 +127,7 @@ internal object IslandMusicReturnSignal {
             val frame = current()?.takeIf { it.valid() }
             if (!force && sent && frame == last) return
             last = frame; sent = true
-            val message = encode(frame)
+            val message = encode(frame).putExtras(Bundle().apply { putBinder("owner", owner) })
             job?.cancel()
             job = scope.launch(dispatcher) { ModuleHelper.guarded { ModuleHelper.sendBroadcastWithIdentity(context, message) } }
         }
@@ -114,9 +136,11 @@ internal object IslandMusicReturnSignal {
             if (closed) return
             closed = true
             job?.cancel(); job = null
+            progressJob?.cancel(); progressJob = null
             try {
                 // Final invalidation is a cold lifecycle operation, completed before owner disposal.
-                if (sent) ModuleHelper.guarded { ModuleHelper.sendBroadcastWithIdentity(context, encode(null)) }
+                if (sent) ModuleHelper.guarded { ModuleHelper.sendBroadcastWithIdentity(context,
+                    encode(null).putExtras(Bundle().apply { putBinder("owner", owner) })) }
             } finally { ModuleHelper.guarded { context.unregisterReceiver(receiver) } }
             last = null
         }

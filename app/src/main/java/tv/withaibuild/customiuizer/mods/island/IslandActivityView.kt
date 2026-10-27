@@ -144,7 +144,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 longConsumed = true
                 if ((isMedia || idle) && musicActions.resolve(IslandMusicGesture.LONG_PRESS, controlsEnabled) != 1)
                     submit(IslandMusicGesture.LONG_PRESS)
-                else ModuleHelper.guarded { onExpand() }
             }
         }
     }
@@ -181,6 +180,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var motion: ValueAnimator? = null
     private var mediaReturnProgress = 1f
     private var nativeArrival = false
+    private var returnProgress: IslandReturnProgress? = null
+
+    fun acceptReturnProgress(progress: IslandReturnProgress?) {
+        if (returnProgress !== progress) returnProgress?.close()
+        returnProgress = progress
+    }
     private val breadth = IslandMotion.Spring()
     private var breadthExtraVelocity = 0f
     private val depth = IslandMotion.Spring()
@@ -204,7 +209,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         get() = wave.gainPercent
         set(value) { wave.gainPercent = value }
     var realtimeWaveform = false
-    var expandOnDown = true
     var returnStrength = 0f
     var absorption = false
     var allowTextBlur = true
@@ -226,7 +230,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     var onDismiss: () -> Unit = {}
     var onOpen: () -> Unit = {}
     var onGesture: (IslandMusicGesture) -> Unit = {}
-    var onExpand: () -> Unit = {}
     var onInteraction: (Boolean) -> Unit = {}
 
     init {
@@ -250,7 +253,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     private fun doubleEnabled() = (isMedia || idle) && musicActions.doubleTap != 1
-    private fun longEnabled() = (isMedia || idle) && musicActions.longPress != 1 || expandOnDown && !expanded && !idle
+    private fun longEnabled() = (isMedia || idle) && musicActions.longPress != 1
 
     fun configureGestures(identity: Any?, actions: IslandMusicActions, trackSwipes: Boolean) {
         if (gestureIdentity != identity || musicActions != actions || controlsEnabled != trackSwipes) cancelInputs()
@@ -399,7 +402,33 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val paint = TextPaint(statusPaint).apply { textSize = baseTextSize * if (expanded) .94f else 1f }
         val layout = StaticLayout.Builder.obtain(value, 0, value.length, paint, room)
             .setIncludePad(false).setMaxLines(if (expanded) 2 else 1).build()
-        return layout.height <= height - dp(4) && layout.getLineEnd(layout.lineCount - 1) == value.length
+        return layout.height <= height - dp(4) && layout.getLineEnd(layout.lineCount - 1) == value.length &&
+            (0 until layout.lineCount).all { layout.getLineWidth(it) <= room + .5f }
+    }
+
+    private var measuredToast: String? = null
+    private val toastBounds = IntArray(5)
+    private var toastTextSize = 0f
+    private var measuredToastWidth = 0
+    private var measuredToastExpanded = false
+
+    /** Cold, bounded native line layout; the selected width is reused at presentation. */
+    fun toastWidth(value: String, minimum: Int, maximum: Int, gap: Int, height: Int, expanded: Boolean = true): Int {
+        if (measuredToast == value && toastBounds[0] == minimum && toastBounds[1] == maximum &&
+            toastBounds[2] == gap && toastBounds[3] == height && toastBounds[4] == resources.configuration.layoutDirection &&
+            toastTextSize == baseTextSize && measuredToastExpanded == expanded) return measuredToastWidth
+        var low = minimum.coerceAtMost(maximum)
+        var high = maximum
+        // Pixel-space monotone fit, at most fourteen layouts even at the supported 10k screen bound.
+        while (low < high) {
+            val middle = (low + high) ushr 1
+            if (fitsToast(value, middle, gap, height, expanded)) high = middle else low = middle + 1
+        }
+        measuredToast = value; measuredToastWidth = high; toastTextSize = baseTextSize
+        measuredToastExpanded = expanded
+        toastBounds[0] = minimum; toastBounds[1] = maximum; toastBounds[2] = gap; toastBounds[3] = height
+        toastBounds[4] = resources.configuration.layoutDirection
+        return high
     }
 
     fun textWidth(value: String): Float = statusPaint.measureText(value)
@@ -484,6 +513,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     fun refreshConfiguration() {
         slop = ViewConfiguration.get(context).scaledTouchSlop
         baseTextSize = -1f
+        measuredToast = null
         contentHeight(contentHeightDp)
     }
 
@@ -522,9 +552,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         clearContentEffects()
         disposed = false; leaving = false
         nativeArrival = mediaReturn
-        mediaReturnProgress = if (mediaReturn && icon.drawable != null &&
+        mediaReturnProgress = if (mediaReturn && absorption && returnProgress != null &&
             !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
-        if (simplified || !ValueAnimator.areAnimatorsEnabled()) resetTransform()
+        if (mediaReturn || simplified || !ValueAnimator.areAnimatorsEnabled()) resetTransform(preserveReturn = mediaReturn)
         else {
             alpha = 0f
             entryCameraAnchor = mediaReturnProgress == 0f || entranceStyle == IslandEntranceStyle.CENTER
@@ -546,10 +576,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
      * breadth or pivot when the native app window hands music back to it. */
     fun prepareReturnFromCurrent() {
         nativeArrival = true
-        if (!simplified && ValueAnimator.areAnimatorsEnabled()) mediaReturnProgress = 0f
+        mediaReturnProgress = if (absorption && returnProgress != null && !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
     }
 
     fun prepareContentArrivalFromCurrent() {
+        acceptReturnProgress(null)
         nativeArrival = false
         if (!simplified && ValueAnimator.areAnimatorsEnabled()) mediaReturnProgress = 0f
     }
@@ -559,10 +590,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (dragCaptured) cancelInputs()
         recall = IslandRecallGesture.onCancel()
         leaving = false
+        if (nativeArrival && mediaReturnProgress >= 1f) {
+            motion?.cancel(); motion = null
+            commitContent(); clearContentEffects(); resetTransform()
+            cancelMediaReturn()
+            return
+        }
         val startWidth = (if (entering) geometryWidth else fromWidth) * scaleX
         val startHeight = (if (entering) geometryHeight else fromHeight) * scaleY
         val catchAmount = maxOf(IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat()),
-            if (mediaReturnProgress == 0f) if (nativeArrival) .085f else .055f else 0f)
+            if (mediaReturnProgress == 0f) if (nativeArrival) dp(6).toFloat() / width.coerceAtLeast(1) else .055f else 0f)
         if (!entering) {
             scaleX *= fromWidth.toFloat() / width.coerceAtLeast(1)
             scaleY *= fromHeight.toFloat() / height.coerceAtLeast(1)
@@ -572,7 +609,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             visualTop?.let { translationY = it - pivotY * (1f - scaleY) }
         }
         val travel = if (mediaReturnProgress == 0f) {
-            if (nativeArrival) IslandMotion.returnDuration(returnStrength, absorption) else IslandMotion.CONTENT_ARRIVAL
+            if (nativeArrival) IslandMotion.RETURN_TIMEOUT else IslandMotion.CONTENT_ARRIVAL
         }
             else if (entering) IslandMotion.ENTER
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
@@ -630,7 +667,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         velocityTracker = VelocityTracker.obtain()
         touchActive = true
         ModuleHelper.guarded { onInteraction(true) }
-        if (motion == null) { entryCameraAnchor = false; changePivot(horizontalPivot(geometryWidth), 0f) }
+        if (motion == null) { entryCameraAnchor = false; changePivot(horizontalPivot(geometryWidth), cameraY) }
         downX = pointerX(event); downY = pointerY(event)
         downScaleX = scaleX; downScaleY = scaleY
         downTranslationX = translationX; downTranslationY = translationY
@@ -719,12 +756,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     val freedom = if (cameraGap > 0) .65f else 1f
                     if (!dragCaptured) {
                         if (motion != null) {
-                            downScaleX = scaleX - if (dragAxis == 1) .10f * abs(horizontal) else 0f
-                            downScaleY = scaleY - if (dragAxis == 2) .12f * vertical * freedom else -.035f * abs(horizontal) * freedom
+                            downScaleX = scaleX - if (dragAxis == 1) .04f * abs(horizontal) else 0f
+                            downScaleY = scaleY - if (dragAxis == 2) .04f * vertical * freedom else -.015f * abs(horizontal) * freedom
                             val room = ((maximumWidth - geometryWidth * scaleX) * .5f).coerceAtLeast(0f)
                             downTranslationX = translationX - if (dragAxis == 1 && alignment == 1)
                                 (dp(4) * horizontal * freedom).coerceIn(-room, room) else 0f
-                            downTranslationY = translationY - if (dragAxis == 2) dp(3) * vertical * freedom else 0f
+                            downTranslationY = translationY
                         }
                         motion?.cancel(); motion = null
                         cancelMediaReturn()
@@ -739,23 +776,23 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                             abs(dx) >= maxOf(dp(32).toFloat(), slop * 3f) && abs(dx) > abs(dy) * 1.2f)
                             { flipDirection = if (dx < 0) -1f else 1f; submit(if (dx < 0) IslandMusicGesture.LEFT else IslandMusicGesture.RIGHT) }
                         else if (dragAxis == 2 && dy >= maxOf(dp(24).toFloat(), slop * 3f) && abs(dy) > abs(dx) * 1.2f) {
-                            if (!idle && expandOnDown)
-                                ModuleHelper.guarded { onExpand() }
-                            else submit(IslandMusicGesture.DOWN)
+                            submit(IslandMusicGesture.DOWN)
                         }
                         isPressed = false
                         return true
                     }
                     scaleX = if (dragAxis == 1)
-                        minOf(downScaleX + .10f * abs(horizontal),
+                        minOf(downScaleX + .04f * abs(horizontal),
                             maxOf(maximumWidth / geometryWidth, downScaleX)) else downScaleX
-                    scaleY = if (dragAxis == 2) downScaleY + .12f * vertical * freedom
-                        else downScaleY - .035f * abs(horizontal) * freedom
+                    scaleY = if (dragAxis == 2) downScaleY + .04f * vertical * freedom
+                        else downScaleY - .015f * abs(horizontal) * freedom
                     if (cameraGap > 0) scaleY = maxOf(scaleY, cameraMinimumHeight() / geometryHeight.coerceAtLeast(1))
                     val sideRoom = ((maximumWidth - geometryWidth * scaleX) * .5f).coerceAtLeast(0f)
                     translationX = downTranslationX + if (dragAxis == 1 && alignment == 1)
                         (dp(4) * horizontal * freedom).coerceIn(-sideRoom, sideRoom) else 0f
-                    translationY = cameraSafeTranslation(downTranslationY + if (dragAxis == 2) dp(3) * vertical * freedom else 0f)
+                    // Stretch about the camera; a downward expansion must not drag the
+                    // entire status-band object away from its established anchor.
+                    translationY = cameraSafeTranslation(downTranslationY)
                     updateContour()
                     return true
                 }
@@ -773,16 +810,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val tracker = velocityTracker ?: return
         tracker.computeCurrentVelocity(1000, dp(8000).toFloat())
         val pointer = event.getPointerId(0)
-        val horizontal = IslandMotion.resistanceVelocity(dx, tracker.getXVelocity(pointer), dp(56).toFloat())
-        val vertical = IslandMotion.resistanceVelocity(dy, tracker.getYVelocity(pointer), dp(48).toFloat())
+        val horizontal = .3f * IslandMotion.resistanceVelocity(dx, tracker.getXVelocity(pointer), dp(56).toFloat())
+        val vertical = .3f * IslandMotion.resistanceVelocity(dy, tracker.getYVelocity(pointer), dp(48).toFloat())
         val direction = if (dx < 0f) -1f else 1f
         val bound = dp(1200).toFloat()
         val freedom = if (cameraGap > 0) .65f else 1f
-        breadth.setVelocity(if (dragAxis == 1) (geometryWidth * .10f * horizontal * direction).coerceIn(-bound, bound) else 0f)
-        depth.setVelocity((if (dragAxis == 2) geometryHeight * .12f * vertical * freedom
-            else if (dragAxis == 1) -geometryHeight * .035f * horizontal * direction * freedom else 0f).coerceIn(-bound, bound))
+        breadth.setVelocity(if (dragAxis == 1) (geometryWidth * .04f * horizontal * direction).coerceIn(-bound, bound) else 0f)
+        depth.setVelocity((if (dragAxis == 2) geometryHeight * .04f * vertical * freedom
+            else if (dragAxis == 1) -geometryHeight * .015f * horizontal * direction * freedom else 0f).coerceIn(-bound, bound))
         shiftX.setVelocity(if (dragAxis == 1 && alignment == 1) (dp(4) * horizontal * freedom).coerceIn(-bound, bound) else 0f)
-        shiftY.setVelocity(if (dragAxis == 2) (dp(3) * vertical * freedom).coerceIn(-bound, bound) else 0f)
+        shiftY.setVelocity(0f)
         breadthExtraVelocity = 0f
     }
 
@@ -820,8 +857,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             updateContour(); onEnd?.invoke()
             return
         }
-        val milliseconds = (duration * motionScale.coerceIn(.65f, 1f)).toLong()
-        val seconds = milliseconds / 1000f
+        val nativeDriven = returning && nativeArrival && returnProgress != null
+        val milliseconds = if (nativeDriven) duration else (duration * motionScale.coerceIn(.65f, 1f)).toLong()
+        val seconds = (if (nativeDriven) IslandMotion.returnDuration(returnStrength, true) else milliseconds) / 1000f
         if (carry && !rigid) breadth.addVelocity(breadthExtraVelocity)
         breadthExtraVelocity = 0f
         breadth.retarget(geometryWidth * scaleX, geometryWidth * x, seconds, carry && !rigid, rebound)
@@ -845,6 +883,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val flipIn = minOf(140L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
         var revealAt = 0L
         var textAt: Long? = if (contentFits() && text.alpha > 0f) -100L else null
+        var lastCatch = 0f
+        var lastCatchTime = 0f
         ValueAnimator.ofFloat(0f, 1f).apply {
             this.duration = milliseconds
             interpolator = LinearInterpolator()
@@ -854,15 +894,20 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 val springBreadth = breadth.sample(time, compactWidth(), maximumBreadth)
                 scaleX = springBreadth / geometryWidth.coerceAtLeast(1)
                 scaleY = depth.sample(time, minimumHeight, maximumHeight) / geometryHeight.coerceAtLeast(1)
-                val progress = (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                val weight = catchWeight * if (returning && nativeArrival) .96f + .08f * returnStrength else 1f
-                val catchValue = IslandMotion.mediaReturnCatch(progress, nativeArrival)
-                val effectiveWeight = if (catchValue >= 0f)
+                val progress = if (nativeDriven) returnProgress?.read()?.takeIf { p -> p >= 0f }?.coerceIn(0f, 1f) ?: 1f
+                    else (it.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                val weight = catchWeight * if (returning && nativeArrival) .99f + .02f * returnStrength else 1f
+                val catchValue = if (nativeDriven) IslandMotion.absorptionCatch(progress) else IslandMotion.mediaReturnCatch(progress, nativeArrival)
+                val effectiveWeight = if (nativeDriven) minOf(weight, ((maximumBreadth - geometryWidth) / geometryWidth.coerceAtLeast(1)).coerceAtLeast(0f))
+                    else if (catchValue >= 0f)
                     IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival) else weight
                 val physicalBreadth = springBreadth + geometryWidth * effectiveWeight * catchValue
                 scaleX = minOf(maximumBreadth, physicalBreadth) / geometryWidth.coerceAtLeast(1)
-                breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else
-                    geometryWidth * effectiveWeight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
+                val catchPixels = geometryWidth * effectiveWeight * catchValue
+                breadthExtraVelocity = if (physicalBreadth > maximumBreadth) -breadth.velocity else if (nativeDriven)
+                    if (time > lastCatchTime) (catchPixels - lastCatch) / (time - lastCatchTime) else 0f
+                    else geometryWidth * effectiveWeight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
+                lastCatch = catchPixels; lastCatchTime = time
                 if (returning && mediaReturnProgress < 1f) {
                     mediaReturnProgress = progress
                     (parent as? View)?.invalidate()
@@ -895,6 +940,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         minOf(100L, milliseconds - start).coerceAtLeast(1L)).coerceIn(0f, 1f)
                 } else { textAt = null; textReveal = 0f }
                 updateContour()
+                if (nativeDriven && progress >= 1f && pendingContent == null && layerReveal >= 1f) it.end()
             } }
             addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
@@ -920,11 +966,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
     }
 
-    private fun resetTransform() {
+    private fun resetTransform(preserveReturn: Boolean = false) {
         commitContent()
         clearContentEffects()
         breadthExtraVelocity = 0f
-        cancelMediaReturn()
+        if (!preserveReturn) cancelMediaReturn()
         scaleX = 1f; scaleY = 1f; translationX = 0f; translationY = 0f; alpha = 1f
         textReveal = 1f
         layerReveal = 1f
@@ -976,6 +1022,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     fun cancelNativeArrival() { if (nativeArrival) cancelMediaReturn() }
 
     fun cancelMediaReturn() {
+        acceptReturnProgress(null)
+        nativeArrival = false
         if (mediaReturnProgress >= 1f) return
         mediaReturnProgress = 1f
         (parent as? View)?.invalidate()
@@ -1034,14 +1082,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)
         info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_DISMISS)
-        if (!idle && expandOnDown && !expanded)
-            info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_EXPAND)
         if (isMedia || idle) {
             val res = ModuleHelper.getModuleRes(context)
             val labels = intArrayOf(R.string.system_island_gesture_left, R.string.system_island_gesture_right,
                 R.string.system_island_gesture_down, R.string.system_island_gesture_double, R.string.system_island_gesture_long)
-            for (gesture in IslandMusicGesture.entries) if (musicActions.resolve(gesture, controlsEnabled) != 1 &&
-                (gesture != IslandMusicGesture.DOWN || idle || !expandOnDown))
+            for (gesture in IslandMusicGesture.entries) if (musicActions.resolve(gesture, controlsEnabled) != 1)
                 info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction(
                     accessibilityActions[gesture.ordinal], res.getString(labels[gesture.ordinal])))
         }
@@ -1052,14 +1097,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS) {
             requestDismiss(); return true
         }
-        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_EXPAND && !idle && expandOnDown && !expanded) {
-            ModuleHelper.guarded { onExpand() }; return true
-        }
         val index = accessibilityActions.indexOf(action)
         if (index >= 0) {
             val gesture = IslandMusicGesture.entries[index]
-            if ((!isMedia && !idle) || musicActions.resolve(gesture, controlsEnabled) == 1 ||
-                gesture == IslandMusicGesture.DOWN && !idle && expandOnDown) return false
+            if ((!isMedia && !idle) || musicActions.resolve(gesture, controlsEnabled) == 1) return false
             submit(gesture); return true
         }
         return super.performAccessibilityAction(action, arguments)

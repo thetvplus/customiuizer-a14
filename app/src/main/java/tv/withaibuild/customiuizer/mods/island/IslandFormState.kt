@@ -4,7 +4,7 @@ package tv.withaibuild.customiuizer.mods.island
 internal class IslandFormState {
     enum class Source { IDLE, MEDIA, NOTIFICATION, ACTIVITY, FEEDBACK }
     enum class Form { IDLE, SHORT, LONG }
-    enum class Dismissal { COLLAPSE, SOURCE, IDLE }
+    enum class Dismissal { SOURCE, IDLE }
     private var identity: Any? = null
     private var manualExpansion: Boolean? = null
     private var interacting = false
@@ -54,11 +54,9 @@ internal class IslandFormState {
     fun dismissIdle() { idleSuppressed = true }
     fun wake() { idleSuppressed = false }
 
-    /** A long form first collapses within its current owner. A second upward gesture
-     * releases that source and selects the next live slot. */
+    /** One upward gesture dismisses the selected source, regardless of its width. */
     fun dismissal() = when {
         source == Source.IDLE -> Dismissal.IDLE
-        expanded -> Dismissal.COLLAPSE
         else -> Dismissal.SOURCE
     }
 

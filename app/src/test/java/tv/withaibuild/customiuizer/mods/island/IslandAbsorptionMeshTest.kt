@@ -58,17 +58,23 @@ class IslandAbsorptionMeshTest {
         }
     }
 
-    @Test fun thePageRemainsReadableThroughIntakeThenFadesContinuouslyIntoTheBlackIsland() {
-        assertEquals(1f, IslandAbsorptionMesh.opacity(0f), 0f)
-        assertEquals(.96f, IslandAbsorptionMesh.opacity(.14f), .00001f)
-        assertEquals(.96f, IslandAbsorptionMesh.opacity(.6f), .00001f)
-        var previous = 1f
-        for (i in 0..100) {
-            val next = IslandAbsorptionMesh.opacity(i / 100f)
-            assertTrue(next <= previous && previous - next < .045f)
-            previous = next
+    @Test fun islandRecoilPeaksWhenTheActualPageTailHasOnlyTenPercentRemaining() {
+        assertEquals(0f, IslandMotion.absorptionCatch(.55f), 0f)
+        assertEquals(1f, IslandMotion.absorptionCatch(.9f), .00001f)
+        assertEquals(0f, IslandMotion.absorptionCatch(1f), 0f)
+        val delta = .0001f
+        for (boundary in listOf(.55f, .9f, 1f)) {
+            val slope = (IslandMotion.absorptionCatch(boundary + delta) -
+                IslandMotion.absorptionCatch(boundary - delta)) / (2 * delta)
+            assertEquals("No velocity cusp at $boundary", 0f, slope, .025f)
         }
-        assertTrue(previous in .04f.. .06f)
+        var previous = 0f
+        for (i in 0..1000) {
+            val tail = IslandAbsorptionMesh.tailProgress(i / 1000f)
+            assertTrue(tail >= previous && tail in 0f..1f)
+            previous = tail
+        }
+        assertEquals(1f, previous, 0f)
     }
 
     @Test fun admissionUsesTheAcceptedReturnProgressRatherThanTheDistanceAlreadyDragged() {

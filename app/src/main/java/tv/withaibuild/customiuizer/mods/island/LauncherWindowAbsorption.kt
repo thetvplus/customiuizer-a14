@@ -95,14 +95,14 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
     private var captureJob: Job? = null
     private val captureMutex = Mutex()
 
-    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame) {
-        if (!handler.looper.isCurrentThread) return
+    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame): IslandReturnProgress.Producer? {
+        if (!handler.looper.isCurrentThread) return null
         cancel()
         val root = api.root()?.takeIf { it.isAttachedToWindow && it.isHardwareAccelerated && it.isShown &&
             it.width == frame.screenWidth && it.height == frame.screenHeight && it.scaleX == 1f && it.scaleY == 1f &&
-            it.alpha == 1f && it.display?.displayId == android.view.Display.DEFAULT_DISPLAY } ?: return
-        if (root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) return
-        val surface = api.surface(element, copy)?.takeIf { it.isValid } ?: return
+            it.alpha == 1f && it.display?.displayId == android.view.Display.DEFAULT_DISPLAY } ?: return null
+        if (root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) return null
+        val surface = api.surface(element, copy)?.takeIf { it.isValid } ?: return null
         val active = Session(element, copy, root, surface, frame.landingRectangle())
         session = active
         val generation = epoch
@@ -122,7 +122,8 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                 }
             } finally { texture?.recycle() }
         }
-        handler.postDelayed(active.timeout, 1600)
+        handler.postDelayed(active.timeout, IslandMotion.RETURN_TIMEOUT)
+        return active.progressChannel
     }
 
     fun hides(element: Any) = session?.let { it.element.get() === element && it.presented && api.current(element, it.copy) } == true
@@ -164,9 +165,8 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         val last = IslandAbsorptionMesh.ROWS * 4
         active.rect.set(minOf(active.vertices[0], active.vertices[last]), active.vertices[1],
             maxOf(active.vertices[2], active.vertices[last + 2]), active.vertices[last + 1])
-        val fade = if (active.presented) IslandAbsorptionMesh.opacity(
-            ((active.progress - active.fadeAt) / (1f - active.fadeAt).coerceAtLeast(.01f)).coerceIn(0f, 1f)) else 1f
-        active.paint.alpha = (255f * active.nativeAlpha * fade).toInt().coerceIn(0, 255)
+        active.paint.alpha = (255f * active.nativeAlpha).toInt().coerceIn(0, 255)
+        if (active.presented) active.progressChannel.write(IslandAbsorptionMesh.tailProgress(remaining))
         active.setBounds(0, 0, root.width, root.height)
         active.invalidateSelf()
         if (!active.presented && active.committed == null) {
@@ -181,7 +181,6 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                         try {
                             active.queuedHide = true
                             SurfaceControl.Transaction().use { it.setAlpha(active.surface, 0f).apply() }
-                            active.fadeAt = active.progress
                             active.presented = true
                         } catch (error: Throwable) {
                             FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -215,7 +214,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
             }
             if (old.queuedHide && old.surface.isValid && old.element.get()?.let { api.current(it, old.copy) } == true)
                 SurfaceControl.Transaction().use { it.setAlpha(old.surface, old.nativeAlpha).apply() }
-        } finally { old.texture?.recycle(); old.texture = null }
+        } finally { old.progressChannel.close(); old.texture?.recycle(); old.texture = null }
     }
 
     private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl,
@@ -224,6 +223,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         val rootWidth = root.width
         val rootHeight = root.height
         val root = WeakReference(root)
+        val progressChannel = IslandReturnProgress.Producer()
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
         val location = IntArray(2)
         val rect = RectF(); val destination = RectF(); val sourceRect = RectF()
@@ -232,7 +232,6 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         var texture: Bitmap? = null
         var progress = 0f; var firstProgress = 0f; var radius = 0f
         var atCommit = Float.NaN
-        var fadeAt = 0f
         var nativeAlpha = 1f
         var installed = false; var queuedHide = false
         @Volatile var presented = false

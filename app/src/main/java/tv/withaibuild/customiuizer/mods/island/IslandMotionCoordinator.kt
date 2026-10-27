@@ -26,14 +26,11 @@ internal class IslandMotionCoordinator {
         fun prefersLong(content: IslandToastContent?, automaticWidth: Boolean = true): Boolean {
             content ?: return false
             val notification = content.notificationKey != null
-            if (!notification && !automaticWidth) return false
-            if (!notification && content.status && content.text.length >= 12) return true
+            if (content.liveActivity != null) return true
             val detail = content.detail?.trim()
             if (detail.isNullOrEmpty() || detail == content.text) return false
             if (notification) return true
-            val activity = content.liveActivity ?: return false
-            return (activity.kind in IslandLiveKind.clockKinds || activity.kind == IslandLiveKind.RECORDER) &&
-                activity.clock?.pausedMillis != null
+            return false
         }
     }
 }

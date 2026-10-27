@@ -4,6 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.app.Activity
+import android.os.IBinder
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -48,13 +51,39 @@ internal object LauncherMusicReturnHooks {
             }
         })
         if (targetHook == null) return
+        access.home?.let { home ->
+            ModuleHelper.hookMethod(home.attached, object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    val activity = callback.getThisObject() as? Activity ?: return@guarded
+                    if (callback.getThrowable() != null || XposedHelpers.getAdditionalInstanceField(activity, OWNER) != null) return@guarded
+                    val old = active.get()
+                    val nav = old?.navigationView()
+                    old?.dispose()
+                    val owner = Owner(activity.window.decorView, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
+                    nav?.let { owner.bindNavigation(it); XposedHelpers.setAdditionalInstanceField(it, OWNER, owner) }
+                    XposedHelpers.setAdditionalInstanceField(activity, OWNER, owner)
+                    active = WeakReference(owner)
+                }
+            })
+            ModuleHelper.hookMethod(home.destroyed, object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    (XposedHelpers.removeAdditionalInstanceField(callback.getThisObject(), OWNER) as? Owner)?.dispose()
+                }
+            })
+            ModuleHelper.hookMethod(home.closingTarget, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val selected = ModuleHelper.guarded(false) { chain.getArg(1)?.let { active.get()?.selectHomeTarget(it) } == true }
+                    return if (selected) null else chain.proceed()
+                }
+            })
+        }
         ModuleHelper.hookMethod(access.attached, object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 val view = callback.getThisObject() as? View ?: return@guarded
                 if (callback.getThrowable() != null || !view.isAttachedToWindow ||
                     XposedHelpers.getAdditionalInstanceField(view, OWNER) != null) return@guarded
-                active.get()?.dispose()
-                val owner = Owner(view, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
+                val owner = active.get()?.takeIf { !it.disposed } ?: Owner(view, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
+                owner.bindNavigation(view)
                 XposedHelpers.setAdditionalInstanceField(view, OWNER, owner)
                 active = WeakReference(owner)
             }
@@ -62,7 +91,7 @@ internal object LauncherMusicReturnHooks {
         ModuleHelper.hookMethod(access.detached, object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 val view = callback.getThisObject() ?: return@guarded
-                (XposedHelpers.removeAdditionalInstanceField(view, OWNER) as? Owner)?.dispose()
+                (XposedHelpers.removeAdditionalInstanceField(view, OWNER) as? Owner)?.detachNavigation(view)
             }
         })
         ModuleHelper.hookMethod(access.touch, object : MethodHook() {
@@ -86,7 +115,7 @@ internal object LauncherMusicReturnHooks {
                 if (attempt == null) return chain.proceed()
                 // Native null-target cleanup retires the floating icon before the spring.
                 // Keep its task leash, listeners, velocity and cancellation policy intact.
-                val result = chain.proceed(arrayOf(attempt.params))
+                val result = if (attempt.params === original) chain.proceed() else chain.proceed(arrayOf(attempt.params))
                 ModuleHelper.guarded { owner?.committed(attempt, chain.thisObject!!) }
                 return result
             }
@@ -134,6 +163,8 @@ internal object LauncherMusicReturnHooks {
         private val absorption: LauncherWindowAbsorption?) :
         ScreenStateController.ScreenStateListener {
         private val view = WeakReference(host)
+        private var navigation = WeakReference(host)
+        private var homeTarget = WeakReference<Any>(null)
         private val context = host.context.applicationContext
         private val handler = Handler(Looper.getMainLooper())
         private val queued = AtomicBoolean()
@@ -141,7 +172,11 @@ internal object LauncherMusicReturnHooks {
         private val activeAttempt = AtomicLong()
         private var committedAttempt = -1L
         private val impulse = IslandGestureImpulse()
-        @Volatile private var disposed = false
+        @Volatile var disposed = false
+            private set
+        private var tracking = false
+        private var publisher: IBinder? = null
+        private var publisherDied: IBinder.DeathRecipient? = null
         @Volatile private var options = IslandOptions.read(prefs)
         @Volatile private var returnPackages = options.returnPackages()
         @Volatile private var snapshot: IslandMusicReturnSignal.Snapshot? = null
@@ -159,6 +194,17 @@ internal object LauncherMusicReturnHooks {
                     diagnostics.report("music-return-untrusted-state"); return@guarded
                 }
                 val next = IslandMusicReturnSignal.decode(intent, SystemClock.uptimeMillis()) ?: return@guarded
+                if (next.sequence <= sequence) return@guarded
+                val source = intent.extras?.getBinder("owner") ?: return@guarded
+                if (source !== publisher) {
+                    unlinkPublisher()
+                    val death = IBinder.DeathRecipient { handler.post {
+                        if (publisher === source) { snapshot = null; invalidateAttempt(); unlinkPublisher() }
+                    } }
+                    source.linkToDeath(death, 0)
+                    publisher = source
+                    publisherDied = death
+                }
                 if (next.sequence > sequence) { sequence = next.sequence; snapshot = next }
             }
         }
@@ -180,6 +226,18 @@ internal object LauncherMusicReturnHooks {
         }
         private fun enabled() = !disposed && options.enabled && returnPackages.isNotEmpty() &&
             !options.simplified && ValueAnimator.areAnimatorsEnabled()
+
+        fun bindNavigation(nav: View) { navigation = WeakReference(nav) }
+        fun navigationView() = navigation.get()?.takeIf { it !== view.get() || access.attached.declaringClass.isInstance(it) }
+        fun detachNavigation(nav: Any) {
+            if (navigation.get() === nav) { navigation.clear(); tracking = false; invalidateAttempt() }
+            if (view.get() === nav) dispose()
+        }
+        private fun unlinkPublisher() {
+            publisherDied?.let { death -> publisher?.let { ModuleHelper.guarded { it.unlinkToDeath(death, 0) } } }
+            publisher = null
+            publisherDied = null
+        }
 
         private fun configure() {
             if (disposed) return
@@ -212,6 +270,8 @@ internal object LauncherMusicReturnHooks {
         }
         fun touch(event: MotionEvent) {
             if (!enabled()) return
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) tracking = true
+            else if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) tracking = false
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> { request(gesture = true); impulse.begin(event.rawY, event.eventTime) }
                 MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> if (event.pointerCount == 1) {
@@ -225,15 +285,19 @@ internal object LauncherMusicReturnHooks {
             }
         }
         fun retarget(original: Any, element: Any): Attempt? {
-            if (!enabled() || !ScreenStateController.isScreenOn()) return null
+            if (!enabled() || tracking || !ScreenStateController.isScreenOn()) return null
             val epoch = gesture.get()
             val current = snapshot
             if (current == null) { diagnostics.report("music-return-no-snapshot"); return null }
             val frame = current.frame ?: return null
-            if (!current.fresh(SystemClock.uptimeMillis()) || frame.packageName !in returnPackages) return null
-            val nav = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
-            if (nav.display?.rotation != android.view.Surface.ROTATION_0) return null
-            val result = access.retarget(original, element, nav, frame) ?: return null
+            if (frame.packageName !in returnPackages) return null
+            val host = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
+            if (host.display?.rotation != android.view.Surface.ROTATION_0) return null
+            val selected = homeTarget.get()
+            val useMesh = options.absorption && absorption != null
+            val result = if (selected != null) access.retargetHome(original, element, selected, frame, useMesh)
+                else navigation.get()?.takeIf { it.isAttachedToWindow }?.let { access.retarget(original, element, it, frame, useMesh) }
+            if (result == null) return null
             if (epoch != gesture.get()) return null
             return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.recentStrength(SystemClock.uptimeMillis()))
                 .also { activeAttempt.set(it.sequence) }
@@ -245,15 +309,22 @@ internal object LauncherMusicReturnHooks {
             if (opening in returnPackages) request()
         }
         fun selectWindowTarget(native: Any): Boolean {
-            val nav = view.get()?.takeIf { it === native && it.isAttachedToWindow } ?: return false
+            homeTarget.clear()
+            val nav = navigation.get()?.takeIf { it === native && it.isAttachedToWindow } ?: return false
             if (!enabled() || !ScreenStateController.isScreenOn() || nav.display?.rotation != android.view.Surface.ROTATION_0) return false
             val current = snapshot ?: run { diagnostics.report("music-return-target-not-ready"); return false }
             val frame = current.frame ?: run { diagnostics.report("music-return-target-inactive"); return false }
-            if (!current.fresh(SystemClock.uptimeMillis())) {
-                diagnostics.report("music-return-target-expired"); return false
-            }
             if (frame.packageName !in returnPackages) return false
-            return access.selectWindowTarget(nav, frame)
+            return options.absorption && absorption != null && access.selectWindowTarget(nav, frame)
+        }
+        fun selectHomeTarget(target: Any): Boolean {
+            homeTarget.clear()
+            if (!enabled() || tracking || !ScreenStateController.isScreenOn() ||
+                view.get()?.display?.rotation != android.view.Surface.ROTATION_0) return false
+            val frame = snapshot?.frame ?: return false
+            if (frame.packageName !in returnPackages || access.home?.eligible(target, frame) != true) return false
+            homeTarget = WeakReference(target)
+            return options.absorption && absorption != null
         }
         fun committed(attempt: Attempt, element: Any, deferred: Boolean = false) {
             val tasks = scope ?: return
@@ -266,16 +337,16 @@ internal object LauncherMusicReturnHooks {
                 return
             }
             committedAttempt = attempt.sequence
-            if (absorption != null) access.timeReturn(element, attempt.impulse, options.absorption)
-            if (options.absorption && absorption != null) attempt.snapshot.frame?.let { frame ->
-                ModuleHelper.guarded { absorption?.begin(tasks, element, attempt.params, frame) }
-            }
+            val progress = if (options.absorption && absorption != null) attempt.snapshot.frame?.let { frame ->
+                ModuleHelper.guarded<IslandReturnProgress.Producer?>(null) { absorption.begin(tasks, element, attempt.params, frame) }
+            } else null
             val current = attempt.snapshot
-            val message = IslandMusicReturnSignal.encode(current.frame, current.issuedAt, current.sequence)
+            val message = IslandMusicReturnSignal.encode(current.frame, SystemClock.uptimeMillis(), current.sequence)
                 .setAction(IslandMusicReturnSignal.REQUEST).setPackage(IslandMusicReturnSignal.SYSTEM_UI)
                 .putExtra("committed", true).putExtra("gesture", attempt.sequence)
                 .putExtra("impulse", attempt.impulse)
                 .putExtra("committedAt", SystemClock.uptimeMillis()).addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+                .putExtras(Bundle().apply { putBinder("progress", progress) })
             commitJob?.cancel()
             commitJob = tasks.launch {
                 if (enabled() && current(attempt)) ModuleHelper.guarded { ModuleHelper.sendBroadcastWithIdentity(context, message) }
@@ -291,6 +362,7 @@ internal object LauncherMusicReturnHooks {
         private fun current(attempt: Attempt) = attempt.epoch == gesture.get() && attempt.sequence == activeAttempt.get()
         private fun invalidateAttempt() {
             impulse.cancel()
+            homeTarget.clear()
             gesture.incrementAndGet(); activeAttempt.set(0); commitJob?.cancel(); commitJob = null
             ModuleHelper.guarded { absorption?.cancel() }
             ModuleHelper.guarded { access.restoreReturnTiming() }
@@ -298,6 +370,8 @@ internal object LauncherMusicReturnHooks {
         private fun stop() {
             invalidateAttempt()
             snapshot = null
+            tracking = false
+            unlinkPublisher()
             commitJob?.cancel(); commitJob = null
             scope?.cancel(); scope = null
             queued.set(false)

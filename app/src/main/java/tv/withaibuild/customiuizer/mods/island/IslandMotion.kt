@@ -18,6 +18,7 @@ internal object IslandMotion {
     const val MEDIA_DELAY = 750L
     const val MEDIA_RETURN_DELAY = 80L
     const val MEDIA_RETURN = 540L
+    const val RETURN_TIMEOUT = 1600L
     const val ABSORPTION_TIME_SCALE = 1.5f
     const val PAUSE_LIFETIME = 2000L
     const val LOADING_LIFETIME = 30000L
@@ -28,9 +29,9 @@ internal object IslandMotion {
     /** One narrow response range for an accepted Home return. Native spring geometry,
      * damping and initial velocity remain authoritative; distance never sets the tempo. */
     fun returnDuration(strength: Float, absorption: Boolean): Long =
-        ((MEDIA_RETURN - 40f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f).toLong()
+        ((MEDIA_RETURN - 12f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f).toLong()
     fun returnResponse(strength: Float, absorption: Boolean): Float =
-        (.35f - .02f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f
+        (.35f - .006f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f
     /** All accepted native content lands inside the shell, with the same centre and
      * height. Keep at least a round end cap even for the smallest available island. */
     fun landingWidth(width: Float, height: Float) = maxOf(width * LANDING_WIDTH_RATIO, minOf(width, height))
@@ -97,6 +98,13 @@ internal object IslandMotion {
     fun boundedCatchWeight(width: Float, maximum: Float, requested: Float, nativeWindow: Boolean = true): Float =
         minOf(requested, (maximum - width).coerceAtLeast(0f) /
             (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else .45f)).coerceAtLeast(0f)
+    /** Peak at 90% of the trailing edge's physical travel, with zero endpoint velocity. */
+    fun absorptionCatch(tailProgress: Float): Float {
+        val t = tailProgress.coerceIn(0f, 1f)
+        val phase = if (t <= .9f) ((t - .55f) / .35f).coerceIn(0f, 1f) else (1f - t) / .1f
+        return phase * phase * (3f - 2f * phase)
+    }
+
     fun arrivalScale(progress: Float): Float = .96f + .04f *
         settle.getInterpolation(((progress - .5f) / .5f).coerceIn(0f, 1f))
     private const val DECAY = 7.04

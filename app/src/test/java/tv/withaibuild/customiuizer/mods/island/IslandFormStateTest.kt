@@ -26,7 +26,7 @@ class IslandFormStateTest {
         assertTrue("A previous expansion cannot shorten a successor notice", forms.expanded)
     }
 
-    @Test fun everyExpandedSourceCollapsesBeforeItCanBeDismissed() {
+    @Test fun everySourceIsDismissedWithOneGestureAtEitherWidth() {
         val forms = IslandFormState()
         assertEquals(IslandFormState.Form.IDLE, forms.form)
         assertEquals(IslandFormState.Dismissal.IDLE, forms.dismissal())
@@ -37,7 +37,7 @@ class IslandFormStateTest {
             assertEquals(IslandFormState.Dismissal.SOURCE, forms.dismissal())
             assertTrue(forms.expand())
             assertEquals(IslandFormState.Form.LONG, forms.form)
-            assertEquals(IslandFormState.Dismissal.COLLAPSE, forms.dismissal())
+            assertEquals(IslandFormState.Dismissal.SOURCE, forms.dismissal())
         }
         forms.select(null)
         assertEquals(IslandFormState.Source.IDLE, forms.source)

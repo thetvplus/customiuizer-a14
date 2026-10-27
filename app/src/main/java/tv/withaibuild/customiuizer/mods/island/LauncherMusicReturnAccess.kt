@@ -12,7 +12,8 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
 /** Exact HyperOS 1 WindowElement contract; all reflection is resolved before installation. */
 internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
-    private val params: Class<*>, targets: Class<*>, remote: Class<*>, config: Class<*>, fastElement: Class<*>? = null) {
+    private val params: Class<*>, targets: Class<*>, remote: Class<*>, config: Class<*>, fastElement: Class<*>? = null,
+    val home: LauncherHomeReturnAccess? = null) {
     constructor(loader: ClassLoader) : this(
         XposedHelpers.findClass("com.miui.home.recents.NavStubView", loader),
         XposedHelpers.findClass("com.miui.home.recents.anim.WindowElement", loader),
@@ -20,7 +21,8 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         XposedHelpers.findClass("com.miui.home.recents.util.RemoteAnimationTargetSet", loader),
         XposedHelpers.findClass("com.android.systemui.shared.recents.system.RemoteAnimationTargetCompat", loader),
         XposedHelpers.findClass("com.miui.home.launcher.DeviceConfig", loader),
-        XposedHelpers.findClassIfExists("com.miui.home.recents.anim.FastLaunchWindowElement", loader))
+        XposedHelpers.findClassIfExists("com.miui.home.recents.anim.FastLaunchWindowElement", loader),
+        ModuleHelper.guarded<LauncherHomeReturnAccess?>(null) { LauncherHomeReturnAccess(loader) })
 
     val attached = nav.getDeclaredMethod("onAttachedToWindow")
     val detached = nav.getDeclaredMethod("onDetachedFromWindow")
@@ -113,29 +115,41 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
 
     /** Called once at committed return, never from an animation update. Preserve the original
      * params, callbacks, task leash, velocity and finish/cancel policy in a separate native copy. */
-    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame): Any? {
+    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = true): Any? {
         if (!params.isInstance(original) || !frame.valid()) return null
         if ((fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
             fields[15].getInt(original) != 0 || fields[16].getInt(original) != 0) return null
         // A late fresh snapshot must never hijack an already-selected desktop icon.
         // Auto-PiP stays native before Shell can publish its pinned task.
-        if (fields[11].get(original) != null || !eligibleTask(nav, frame)) return null
+        if (absorption && fields[11].get(original) != null || !eligibleTask(nav, frame)) return null
         val selectedTargets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
         val selectedApps = apps.get(selectedTargets) as? Array<*> ?: return null
         if (selectedApps.size != 1) return null
         val target = selectedApps.single() ?: return null
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
+        return if (absorption) copyTarget(original, frame) else original
+    }
+
+    fun retargetHome(original: Any, owner: Any, selected: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean): Any? {
+        val home = home ?: return null
+        if (!params.isInstance(original) || !home.eligible(selected, frame) ||
+            (fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
+            fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
+            fields[15].getInt(original) != 0 || fields[16].getInt(original) != 0 ||
+            absorption && fields[11].get(original) != null) return null
+        val targets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
+        if ((apps.get(targets) as? Array<*>)?.singleOrNull() !== selected) return null
+        return if (absorption) copyTarget(original, frame) else original
+    }
+
+    private fun copyTarget(original: Any, frame: IslandMusicReturnSignal.Frame): Any {
         val values = fields.map { it.get(original) }.toTypedArray()
         val landing = frame.landingRectangle()
         values[2] = landing
         values[4] = landing.height() * .5f
-        // Keep the previous late-build landing and opaque native end. The original
-        // start alpha is retained, so a partially faded gesture never jumps opaque.
-        // Only the absorption mesh adds a final page fade; unavailable capture retains
-        // the same continuous native return inside the shell.
-        values[6] = 1f
+        // Both alpha endpoints belong to the ROM, including translucent tasks.
         // A14's frame callback draws any *already initialized* floating icon without
         // consulting ignoreIcon. A null target makes native initTargetView retire that
         // icon before the window spring starts, restoring its real desktop owner once.
@@ -212,5 +226,44 @@ internal class LauncherReturnTiming(springType: Class<*>) {
             val track = bundle.invoke(spring, keys[i]) ?: return@guarded
             if (stiffness.invoke(track) as Float == values[i] * factor) setStiffness.invoke(track, values[i])
         }
+    }
+}
+
+/** Button Home uses the same CLOSE_TO_HOME params via this native provider, without NavStub task state. */
+internal class LauncherHomeReturnAccess(provider: Class<*>, launcher: Class<*>, remote: Class<*>) {
+    constructor(loader: ClassLoader) : this(
+        XposedHelpers.findClass("com.miui.home.recents.anim.WindowAnimParamsProvider", loader),
+        XposedHelpers.findClass("com.miui.home.launcher.Launcher", loader),
+        XposedHelpers.findClass("com.android.systemui.shared.recents.system.RemoteAnimationTargetCompat", loader))
+
+    val attached = launcher.getDeclaredMethod("onAttachedToWindow")
+    val destroyed = launcher.getDeclaredMethod("onDestroy")
+    val closingTarget = provider.getDeclaredMethod("findClosingAnimTarget", launcher, remote)
+    private val nativeTarget = remote.getDeclaredField("target").apply { isAccessible = true }
+    private val info = nativeTarget.type.getDeclaredField("taskInfo").apply { isAccessible = true }
+    private val mode = info.type.getMethod("getWindowingMode")
+    private val user = info.type.getField("userId")
+    private val task = info.type.getField("taskId")
+    private val display = info.type.getField("displayId")
+    private val pip = info.type.getField("pictureInPictureParams")
+    private val autoPip = pip.type.getMethod("isAutoEnterEnabled")
+    private val remotePackage = remote.getDeclaredField("packageName").apply { isAccessible = true }
+    private val remoteTask = remote.getDeclaredField("taskId").apply { isAccessible = true }
+    private val remoteMode = remote.getDeclaredField("mode").apply { isAccessible = true }
+    private val remoteType = remote.getDeclaredField("activityType").apply { isAccessible = true }
+
+    init {
+        require(attached.returnType == Void.TYPE && destroyed.returnType == Void.TYPE && !closingTarget.returnType.isPrimitive)
+    }
+
+    fun eligible(target: Any, frame: IslandMusicReturnSignal.Frame): Boolean {
+        if (!frame.valid() || remotePackage.get(target) != frame.packageName || remoteMode.getInt(target) != 1 ||
+            remoteType.getInt(target) != 1) return false
+        val platform = nativeTarget.get(target) ?: return false
+        val taskInfo = info.get(platform) ?: return false
+        val userId = user.getInt(taskInfo)
+        return userId in 0..10000 && UserHandle.getUserHandleForUid(userId * 100000) == frame.user &&
+            task.getInt(taskInfo) == remoteTask.getInt(target) && display.getInt(taskInfo) == 0 && mode.invoke(taskInfo) == 1 &&
+            pip.get(taskInfo)?.let { autoPip.invoke(it) } != true
     }
 }

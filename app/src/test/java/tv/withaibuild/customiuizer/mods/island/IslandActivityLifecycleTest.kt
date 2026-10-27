@@ -126,7 +126,21 @@ class IslandActivityLifecycleTest {
         }
     }
 
-    @Test fun foregroundActivityKeepsItsNativeLandingTargetAndACommitAnimatesTheExistingIdleShellOnce() {
+    @Test fun disposedOrForeignThreadReturnAlwaysReleasesTheIncomingProgressMapping() {
+        val controller = controller()
+        val frame = IslandMusicReturnSignal.Frame(context.packageName, android.os.UserHandle.getUserHandleForUid(1000),
+            100f, 10f, 200f, 50f, 1080, 2400)
+        val foreign = IslandReturnProgress(java.nio.ByteBuffer.allocateDirect(4))
+        Thread { controller.nativeMusicReturn(frame, progress = foreign) }.apply { start(); join() }
+        assertEquals(-1f, foreign.read(), 0f)
+        val late = IslandReturnProgress(java.nio.ByteBuffer.allocateDirect(4))
+        controller.dispose(); drain()
+        controller.nativeMusicReturn(frame, progress = late)
+        assertEquals(-1f, late.read(), 0f)
+        assertEquals(0, adds)
+    }
+
+    @Test fun foregroundActivityKeepsItsLandingTargetAndConfirmedDefaultReturnAppearsDirectly() {
         val controller = controller(idle = true, liveKinds = setOf("stopwatch"))
         val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
         val activity = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE, 10345,
@@ -144,21 +158,14 @@ class IslandActivityLifecycleTest {
         controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
         assertFalse(shell!!.idle)
         assertEquals(1, adds)
-        val clock = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
-        assertEquals(IslandMotion.MEDIA_RETURN, clock.duration)
-        clock.currentPlayTime = 400
-        val progress = org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress")
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
-        assertSame(clock, org.robolectric.util.ReflectionHelpers.getField(shell, "motion"))
-        assertEquals(progress, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), .0001f)
-        clock.end()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
         registry.update(activity.kind, activity.copy(clock = activity.clock!!.copy(base = activity.clock.base - 1000)))
         org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
         assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
-        val refresh = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
-        refresh.currentPlayTime = refresh.duration / 2
         assertEquals(1f, shell!!.scaleX, .0001f)
-        refresh.end()
     }
 
     @Test fun delayedNativeConfirmationCannotReplayTheSameForegroundAdmission() {
@@ -174,18 +181,16 @@ class IslandActivityLifecycleTest {
         val committedAt = android.os.SystemClock.uptimeMillis()
         org.robolectric.shadows.ShadowChoreographer.setPaused(true)
         controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
-        val clock = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
-        clock.currentPlayTime = 100
+        assertTrue("Home is not confirmed while the source is only transitioning", shell!!.idle)
         controller.nativeMusicReturn(target, committedAt); drain()
-        assertSame(clock, org.robolectric.util.ReflectionHelpers.getField(shell, "motion"))
-        assertEquals(100L, clock.currentPlayTime)
-        clock.end()
+        assertFalse(shell!!.idle)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        controller.nativeMusicReturn(target, committedAt); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(5))
         controller.nativeMusicReturn(target); drain()
-        val fresh = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
-        assertNotSame("A new native boarding gesture still animates an existing shell", clock, fresh)
-        assertEquals(IslandMotion.MEDIA_RETURN, fresh.duration)
-        fresh.end()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        assertEquals(1f, shell!!.scaleX, 0f)
+        assertEquals(1, adds)
     }
 
     @Test fun recordingToastHandsBackToTheSameRecordingOnHomeAndItsLateLeaseCannotCoverItAgain() {
@@ -487,9 +492,7 @@ class IslandActivityLifecycleTest {
         val longWidth = original.width
         assertTrue(original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null))
         assertFalse(original.expanded)
-        assertFalse(original.isMedia)
-        original.onDismiss()
-        assertTrue("The source is released before any animation waypoint", original.isMedia)
+        assertTrue("The source is released by the first gesture", original.isMedia)
         drain()
         assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
         val returning = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
@@ -516,7 +519,6 @@ class IslandActivityLifecycleTest {
         val longWidth = original.width
         original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
         assertFalse(original.expanded)
-        original.onDismiss()
         assertTrue(original.idle)
         drain()
         assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
@@ -535,14 +537,9 @@ class IslandActivityLifecycleTest {
         assertTrue(controller.takeNotification(message(703))); drain()
         val original = shell!!
         org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
-        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
-        assertFalse(original.expanded)
-        drain()
-        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
-        drain()
         val width = original.width
         val height = original.height
-        original.onDismiss()
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
         val exit = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
         assertEquals(IslandMotion.EXIT, exit.duration)
         var previousY = original.translationY
@@ -560,22 +557,17 @@ class IslandActivityLifecycleTest {
         assertFalse(original.isAttachedToWindow)
     }
 
-    @Test fun expandedMusicDismissalCollapsesTheSameMediaBeforeDismissingItsSource() {
+    @Test fun expandedMusicDismissalReleasesTheSourceInOneGesture() {
         val controller = controller(media = true, idle = true)
         native.player = launchablePlayer("music-detail-dismissal")
         controller.updateFromNative(native); revealMedia()
         val original = shell!!
         val compactWidth = original.width
         org.robolectric.shadows.ShadowChoreographer.setPaused(true)
-        original.onExpand(); drain()
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").expand(android.os.SystemClock.uptimeMillis())
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
         assertTrue(original.expanded)
         org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
-        original.onDismiss(); drain()
-        assertTrue(original.isMedia)
-        assertFalse(original.expanded)
-        assertFalse(original.idle)
-        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
-        assertEquals(compactWidth, original.width)
         original.onDismiss(); drain()
         assertTrue(original.idle)
         assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
@@ -586,7 +578,8 @@ class IslandActivityLifecycleTest {
         native.player = launchablePlayer("automatic-detail-contraction")
         controller.updateFromNative(native); revealMedia()
         val original = shell!!
-        original.onExpand(); drain()
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").expand(android.os.SystemClock.uptimeMillis())
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
         assertTrue(original.expanded)
         original.onInteraction(true); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(8)); drain()
@@ -649,8 +642,6 @@ class IslandActivityLifecycleTest {
         clock.end()
         original.onDismiss(); drain()
         assertFalse(original.expanded)
-        assertFalse(original.isMedia)
-        original.onDismiss(); drain()
         assertTrue(original.isMedia)
         assertEquals(48f, original.height * original.scaleY, .001f)
     }
@@ -670,7 +661,6 @@ class IslandActivityLifecycleTest {
             org.robolectric.util.ReflectionHelpers.getField<Float>(original, "breadthExtraVelocity")
         original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
         assertFalse(original.expanded)
-        original.onDismiss()
         assertTrue(original.isMedia)
         drain()
         assertEquals(width, original.width * original.scaleX, .001f)
@@ -1390,25 +1380,17 @@ class IslandActivityLifecycleTest {
         controller.foregroundChanged("com.miui.home")
         assertNotNull("Foreground edge must create a return", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         drain()
-        assertNotNull("Selected playback must retain one pending return", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
-        assertEquals(android.os.SystemClock.uptimeMillis() + IslandMotion.MEDIA_RETURN_DELAY,
-            org.robolectric.util.ReflectionHelpers.getField<Long?>(controller, "mediaRevealAt"))
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY - 1))
-        assertEquals(0, adds)
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        assertNull("The accepted return is consumed by the direct presentation", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Long?>(controller, "mediaRevealAt"))
         assertEquals(1, adds)
-        val motion = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
-        assertEquals(IslandMotion.MEDIA_RETURN, motion.duration)
-        motion.currentPlayTime = 140
-        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress") < 1f)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
         val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
         prefs.put("system_island_media_return_apps", emptySet<String>())
         observer.onChange("system_island_media_return_apps"); drain()
         assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
-        motion.currentPlayTime = 280 // An old clock cannot resume the canceled cover.
-        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
-        motion.end()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
         repeat(3) { controller.updateFromNative(native); drain() }
         assertEquals(1, adds)
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
@@ -1426,6 +1408,10 @@ class IslandActivityLifecycleTest {
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(749)); drain()
             assertEquals(before, adds)
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+            if (enabled && context.packageName in apps) {
+                assertEquals("A selected task waits for native Home confirmation", before, adds)
+                nativeReturn(controller); drain()
+            }
             assertEquals(before + 1, adds)
             assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
             controller.dispose(); drain()
@@ -1441,11 +1427,10 @@ class IslandActivityLifecycleTest {
         controller.foregroundChanged("com.miui.home"); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(10))
         nativeReturn(controller, committedAt); drain()
-        assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         assertEquals(1, adds)
-        assertEquals(IslandMotion.MEDIA_RETURN,
-            org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion").duration)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        assertEquals(1f, shell!!.alpha, 0f)
     }
 
     @Test fun aPlayerForegroundEdgeRenewsTheExpiredUnchangedReturnTargetBeforeGestureDown() {
@@ -1497,12 +1482,12 @@ class IslandActivityLifecycleTest {
         val player = launchablePlayer("revoke-return")
         controller.foregroundChanged(context.packageName)
         native.player = player; controller.updateFromNative(native); revealMedia()
-        nativeReturn(controller)
         controller.foregroundChanged("com.miui.home"); drain()
         val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
         val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
         prefs.put("system_island_media_return", false)
         observer.onChange("system_island_media_return"); drain()
+        nativeReturn(controller); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(749)); drain()
         assertEquals(0, adds)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
@@ -1913,6 +1898,7 @@ class IslandActivityLifecycleTest {
         val committedAt = android.os.SystemClock.uptimeMillis()
         nativeReturn(controller, committedAt)
         assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertEquals(0, adds)
         val publisher = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "musicReturnPublisher")
         pip(controller, 1, 3, packageName = context.packageName)
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
@@ -1926,7 +1912,8 @@ class IslandActivityLifecycleTest {
         assertEquals(ordinary, org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt"))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1))
         nativeReturn(controller); drain()
-        assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertEquals(1, adds)
         revealMedia()
         assertEquals(1, adds)
     }
@@ -2621,7 +2608,6 @@ class IslandActivityLifecycleTest {
             if (entry == "cancelled") pending!!.cancel()
             native.player = launchablePlayer(entry, pending)
             controller.updateFromNative(native); drain(); revealMedia()
-            shell!!.expandOnDown = false
             for (gesture in listOf(false, true)) {
                 if (gesture) {
                     val now = android.os.SystemClock.uptimeMillis()
@@ -2688,7 +2674,8 @@ class IslandActivityLifecycleTest {
         controller.updateFromNative(native); revealMedia()
         val original = shell!!
         assertEquals(1, acquired); assertEquals(1, subscribed)
-        original.onExpand(); drain()
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").expand(android.os.SystemClock.uptimeMillis())
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
         assertTrue(original.expanded)
         assertEquals("A layout without wave bars has no active effect", acquired, released)
         assertEquals(0, subscribed)

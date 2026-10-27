@@ -393,7 +393,7 @@ class PreferenceNavigationUiTest {
         capturePage("island-waveform-320-zh")
     }
 
-    @Test fun expandingOnDownDisablesOnlyTheConflictingMusicActionWithoutErasingIt() {
+    @Test fun mediaDownActionStaysEditableAndLegacyExpansionHasNoControl() {
         requireNotNull(AppHelper.appPrefs).edit().putInt("pref_key_system_island_music_down_action", 85).apply()
         val mediaPage = openIslandMusic()
         requireNotNull(mediaPage.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
@@ -401,16 +401,11 @@ class PreferenceNavigationUiTest {
         requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_island_actions_cat")).performClick()
         settleNavigation()
         val page = currentPage() as SubFragment
-        val expand = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_expand_down"))
+        assertNull(page.findPreference<Preference>("pref_key_system_island_expand_down"))
         val down = requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_down"))
         val double = requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_double"))
-        assertTrue(expand.isChecked)
-        assertFalse(down.isEnabled)
-        assertTrue(double.isEnabled)
-        expand.isChecked = false
         assertTrue(down.isEnabled)
-        expand.isChecked = true
-        assertFalse(down.isEnabled)
+        assertTrue(double.isEnabled)
         assertEquals(85, requireNotNull(AppHelper.appPrefs).getInt("pref_key_system_island_music_down_action", -1))
     }
 
@@ -425,7 +420,7 @@ class PreferenceNavigationUiTest {
         assertSame(appearance, pref("effects_cat").parent)
         assertSame(interaction, pref("idle").parent)
         assertTrue(setOf(content, appearance, interaction).size == 3)
-        for (suffix in listOf("waveform_mode", "entrance_style", "simplified", "expand_down"))
+        for (suffix in listOf("waveform_mode", "entrance_style", "simplified"))
             assertEquals(null, page.findPreference<Preference>("pref_key_system_island_$suffix"))
         val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
         assertTrue(mode.callChangeListener("0")); mode.value = "0"

@@ -7,6 +7,7 @@ import kotlin.math.pow
 internal object IslandAbsorptionMesh {
     const val ROWS = 48
     const val FLOATS = (ROWS + 1) * 4
+    private val rowWidths = FloatArray(ROWS + 1) { (it.toFloat() / ROWS).pow(.85f) }
 
     /** A translucent or late first frame cannot replace the native window without a flash. */
     fun mayReplaceNative(progress: Float, alpha: Float) = progress >= 0f && progress < .55f && alpha >= .98f && alpha <= 1f
@@ -36,7 +37,7 @@ internal object IslandAbsorptionMesh {
         val bottomCenter = rect.centerX() + (destination.centerX() - rect.centerX()) * trailing
         for (row in 0..ROWS) {
             val v = row.toFloat() / ROWS
-            val width = topWidth + (bottomWidth - topWidth) * v.pow(.85f)
+            val width = topWidth + (bottomWidth - topWidth) * rowWidths[row]
             val center = topCenter + (bottomCenter - topCenter) * v
             val y = top + (bottom - top) * v.pow(1f + 2.6f * t * (1f - t))
             val index = row * 4
@@ -45,10 +46,6 @@ internal object IslandAbsorptionMesh {
         }
     }
 
-    fun opacity(progress: Float): Float {
-        val start = (progress / .14f).coerceIn(0f, 1f)
-        val base = 1f - .04f * start * start * (3f - 2f * start)
-        val tail = ((progress - .62f) / .38f).coerceIn(0f, 1f)
-        return base * (1f - .94f * tail * tail * (3f - 2f * tail))
-    }
+    /** Remaining trailing-body travel, measured in the same geometry used to draw. */
+    fun tailProgress(progress: Float): Float = progress.coerceIn(0f, 1f).pow(2.25f)
 }

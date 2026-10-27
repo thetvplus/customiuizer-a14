@@ -139,13 +139,13 @@ class LauncherMusicReturnAccessTest {
         assertEquals(frame.landingRectangle(), result.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
         assertEquals(result.targetRect.height() * .5f, result.endRadius, 0f)
-        assertEquals("An accepted page remains opaque through intake", 1f, result.endAlpha, 0f)
+        assertEquals("The ROM owns page opacity", source.endAlpha, result.endAlpha, 0f)
         assertEquals(0f, source.endAlpha, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)
         assertNull("The window return must not borrow or animate the desktop icon", result.targetView)
         assertNull(source.targetView)
         for (field in Params::class.java.declaredFields) {
-            if (field.name in setOf("targetRect", "endRadius", "endAlpha", "ignoreIcon", "targetView")) continue
+            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView")) continue
             field.isAccessible = true
             assertEquals("Preserve native ${field.name}", field.get(source), field.get(result))
         }
@@ -154,12 +154,13 @@ class LauncherMusicReturnAccessTest {
         assertSame(source.targetApps, result.targetApps)
     }
 
-    @Test fun standardBoardingKeepsTheInsetLandingAndAnOpaqueEndWithoutChangingNativeStartOrListeners() {
+    @Test fun standardBoardingObservesNativeConfirmationWithoutRetargetingOrChangingOpacity() {
         val source = params()
-        val result = access.retarget(source, Element(), Nav(), frame) as Params
-        assertEquals(frame.landingRectangle(), result.targetRect)
+        val result = access.retarget(source, Element(), Nav(), frame, absorption = false) as Params
+        assertSame(source, result)
+        assertEquals(source.targetRect, result.targetRect)
         assertEquals(source.startAlpha, result.startAlpha, 0f)
-        assertEquals(1f, result.endAlpha, 0f)
+        assertEquals(source.endAlpha, result.endAlpha, 0f)
         assertSame(source.animListener, result.animListener)
         assertNull(result.targetView)
     }
