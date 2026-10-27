@@ -484,8 +484,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     private fun fitTextRows() {
         val content = displayedContent ?: return
-        title.maxLines = if (content.expanded && !content.status && content.clock == null && !content.media &&
+        val maxLines = if (content.expanded && !content.status && content.clock == null && !content.media &&
             title.paint.fontSpacing * 2f <= geometryHeight - dp(4)) 2 else 1
+        if (title.maxLines != maxLines) title.maxLines = maxLines
         val detail = content.clockLabel?.trim()
         subtitle.visibility = if (content.expanded && content.clock != null && !content.status && !detail.isNullOrEmpty() && detail != content.label &&
             title.paint.fontSpacing + subtitle.paint.fontSpacing <= geometryHeight - dp(4)) VISIBLE else GONE

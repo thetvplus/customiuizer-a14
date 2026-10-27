@@ -1,6 +1,9 @@
 package tv.withaibuild.customiuizer.mods.island
 
 import android.content.res.Configuration
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -14,6 +17,40 @@ import java.util.Locale
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGlanceLayoutTest {
+    @Test fun repeatedGeometryKeepsTextLayoutSettledAndRealRowChangesStillApply() {
+        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { simplified = true }
+        shell.bind("Notice", "Public message", null, false, false, false, 0, false, expanded = true)
+        shell.geometry(280, 40, 40)
+        val title = (shell.getChildAt(1) as LinearLayout).getChildAt(0) as TextView
+        fun layout(height: Int) {
+            shell.measure(View.MeasureSpec.makeMeasureSpec(280, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            shell.layout(0, 0, 280, height)
+        }
+        layout(40)
+        assertEquals(2, title.maxLines)
+        assertFalse(title.isLayoutRequested)
+        var redundantLayouts = 0
+        repeat(120) {
+            shell.geometry(280, 40, 40)
+            if (title.isLayoutRequested) redundantLayouts++
+            layout(40)
+        }
+        assertEquals("Unchanged geometry must not request another text layout", 0, redundantLayouts)
+
+        shell.geometry(280, 32, 40)
+        assertEquals(1, title.maxLines)
+        assertTrue(title.isLayoutRequested)
+        layout(32)
+        shell.geometry(280, 40, 40)
+        assertEquals(2, title.maxLines)
+        assertTrue(title.isLayoutRequested)
+        layout(40)
+        shell.bind("Notice", "Public message", null, false, false, false, 0, false, expanded = false)
+        assertEquals(1, title.maxLines)
+        assertTrue(title.isLayoutRequested)
+    }
+
     @Test fun shortFeedbackUsesMeasuredGlyphsAndLargeMultilingualTextRespectsTheCeiling() {
         val app = RuntimeEnvironment.getApplication()
         for (locale in listOf("zh-CN", "zh-TW", "en", "de", "ar", "ja")) for (scale in listOf(1f, 1.3f, 2f)) {
