@@ -232,6 +232,113 @@ class SystemClockHotPathTest {
         return ClockResolver.resolveCalendarFromDeclaredType(FakeCalendar::class.java, Context::class.java)
     }
 
+    @Test
+    fun dateOnlyPreferencesPrepareAndFormatWithoutEnablingEitherClockTweak() {
+        for ((key, clockName) in listOf(
+            "system_drawer_dateformat" to "drawerDate",
+            "system_cc_dateformat" to "ccDate",
+        )) {
+            val prefs = PrefMap().apply { put(key, "yyyy/MM/dd EEEE") }
+            var resolutions = 0
+            val publication = SystemClockHooks.prepareClockEffectPublication(prefs) {
+                resolutions++
+                makePublication(makeCalendarCold())!!.currentEffect()!!.abi
+            }
+            assertNotNull("$key must work independently of clock styling", publication)
+            assertEquals(1, resolutions)
+            val snapshot = SystemClockHooks.buildClockStyleSnapshot(prefs, FakeResources())
+            val pattern = SystemClockHooks.buildClockText(clockName, snapshot, null, false, false)
+            assertEquals("yyyy/MM/dd EEEE", pattern)
+            val effect = publication!!.currentEffect()!!
+            val clock = RecordingClockView()
+            val controller = makeControllerWithClock(clock)
+            val calendar = effect.readCalendar(effect.readController(clock)!!)!!
+            val text = StringBuilder()
+            assertTrue(effect.format(calendar, controller.mContext, text, StringBuilder(pattern!!)))
+            assertEquals(pattern, text.toString())
+            assertNull(SystemClockHooks.buildClockText("clock", snapshot, null, false, false))
+            assertNull(SystemClockHooks.buildClockText("ccClock", snapshot, null, false, false))
+        }
+    }
+
+    @Test
+    fun inactiveClockOptionsDoNotResolveFormattingCapabilities() {
+        val cases = listOf(
+            PrefMap(),
+            PrefMap().apply { put("system_drawer_hidedate", true) },
+            PrefMap().apply { put("system_cc_hidedate", true) },
+            PrefMap().apply {
+                put("system_statusbaricons_clock", true)
+                put("system_statusbar_clocktweak", true)
+            },
+            PrefMap().apply {
+                put("system_drawer_hidedate", true)
+                put("system_drawer_dateformat", "yyyy")
+            },
+            PrefMap().apply {
+                put("system_cc_hidedate", true)
+                put("system_cc_dateformat", "yyyy")
+            },
+        )
+        for (prefs in cases) {
+            assertNull(SystemClockHooks.prepareClockEffectPublication(prefs) {
+                fail("Hidden/default clocks must not resolve an unused formatter")
+                null
+            })
+        }
+    }
+
+    @Test
+    fun unavailableDateFormattingKeepsTheNativeFallbackAvailable() {
+        for (key in listOf("system_drawer_dateformat", "system_cc_dateformat")) {
+            var resolutions = 0
+            assertNull(SystemClockHooks.prepareClockEffectPublication(PrefMap().apply { put(key, "yyyy") }) {
+                resolutions++
+                null
+            })
+            assertEquals("Date-only setup must attempt the ROM capability", 1, resolutions)
+        }
+    }
+
+    @Test
+    fun clockTweaksStillPrepareTheSharedFormattingCapability() {
+        for (key in listOf("system_statusbar_clocktweak", "system_cc_clocktweak")) {
+            var resolutions = 0
+            assertNotNull(SystemClockHooks.prepareClockEffectPublication(PrefMap().apply { put(key, true) }) {
+                resolutions++
+                makePublication(makeCalendarCold())!!.currentEffect()!!.abi
+            })
+            assertEquals(1, resolutions)
+        }
+    }
+
+    @Test
+    fun dateOnlyActivationDoesNotStartASecondsTickerOrChangeOtherClocks() {
+        val prefs = PrefMap().apply {
+            put("system_drawer_dateformat", "yyyy/MM/dd")
+            // Saved options belonging to disabled clock tweaks must remain inactive.
+            put("system_statusbar_clock_show_seconds", true)
+            put("system_cc_clock_customformat", "HH:mm:ss")
+        }
+        val publication = SystemClockHooks.prepareClockEffectPublication(prefs) {
+            makePublication(makeCalendarCold())!!.currentEffect()!!.abi
+        }
+        assertNotNull(publication)
+        setCurrentSnapshot(SystemClockHooks.buildClockStyleSnapshot(prefs, FakeResources()))
+        try {
+            val controller = makeControllerWithClocks()
+            val listenerCount = screenStateListeners().size
+            SystemClockHooks.initSecondTicker(controller, false, false, publication)
+            assertNull(SystemClockHooks.activeSecondTicker(controller))
+            assertEquals(listenerCount, screenStateListeners().size)
+            for (clock in controller.mClockListeners) {
+                assertNull(ModuleHelper.getViewInfo(clock as View, "showSeconds"))
+            }
+        } finally {
+            setCurrentSnapshot(null)
+        }
+    }
+
     private fun makeFailingIs24Publication(calendarCold: CalendarCapability? = null): ClockEffectPublication? {
         val cls = FailingIs24FakeController::class.java
         val calendarField = cls.getDeclaredField("mCalendar").apply { isAccessible = true }

@@ -45,6 +45,14 @@ ROM 取证为 fuxi HyperOS 1 / A14 的 CN、TW miui-services.jar：相关五个�
 
 依用户本地自用测试授权，已从 `cac717e36cefd5b42d56f40bc5b6ecb039d9462a` 构建 r14.25.6 / 255 正式签名 Release，应用 / 构建输入与上述完整验证实现一致。JDK 25、Release R8 / fatal lint、完整 sourceCommit、不可调试、SDK 34 / arm64、16 KiB 对齐、API 102 及同产物 mapping 检查通过；V2 签名与历史证书一致。APK 4,258,233 字节，SHA-256 `6fbe09d53614eb2ce2034ebebb488f237b38eb5462e06218ed410cf56c6ddd7e`，交付到本机下载目录 `CustoMIUIzer-A14-r14.25.6-cac717e3/`；签名 / 产物证据在仓库外同专项的 `local-release-cac717e3/`。本次仅本地构建交付，未安装、未打 tag 或公开发行，设备待验项继续保留。
 
+## 通知中心与控制中心日期
+
+自定义日期单独启用时也准备共享时钟格式化能力，并沿当前原生 controller 的弱所有者偏好观察刷新；不再依赖状态栏或控制中心的“时钟自定义”开关。改写格式及清空恢复继续使用既有快照与原生回退；隐藏日期、默认配置不为未使用的格式化器解析能力。日期本身不启动秒级时钟，不启用已关闭时钟的样式或遗留秒数选项，Feature 的首次安装与重启语义不变。
+
+已核对 duchan 国行、fuxi 国行 / 台版及 POCO munch 印尼版的 SystemUI 样本：MiuiClock、ControlCenterDateView 继承、controller 字段和 Calendar 三参数格式化接口满足当前窄契约。没有将 POCO Launcher 的差异扩散到 SystemUI，也没有新增宽泛匹配或备用 Hook。静态样本不代替实机；日期格式往返、横屏 / 旧版通知栏及 POCO 实际效果仍待验。修前回归和本轮查询 / 原始 Smali 留在仓库外 `customiuizer-a14-evidence/notification-date-20261028/`。
+
+Deep：原激活条件下两项行为回归复现失败；修复后的完整 Host 为 419 个套件、3,792 项测试，零失败 / 错误、2 项既定跳过，包含日期独立格式化、不可用回退和日期不启动秒级时钟的新增回归。Debug lint、源码契约、文档和功能地图通过；工具 677 项通过、5 项既定跳过。未签名 Develop / R8 与 fatal lint、SDK 34 / arm64 / 16 KiB 对齐和工程 revision 来源通过。最终 DEX 无 Hook API 定义，八个设置入口的直接 API 指令、继承及成员签名引用为零；setId / getId 各一次，按同产物 mapping 归属共享 HookInstallation，replaceHook 为零。APK SHA-256 `b3f45970617939c77489a9d835f9442e33f3c64a0d5993e743371152ad4e5144`；完整源码身份、JUnit、APK / mapping 和查询留在同一仓库外证据目录。本批未签名或安装手机包，原有七个暂存技能文件保留；相关 CRLF 新增文件未混入任务验证索引或提交。
+
 ## 动态岛来源与过渡精修
 
 当前源码把来源状态（小岛 / 媒体 / 通知 / 系统活动 / 即时反馈）与小 / 短 / 长形态分开管理，共享协调器按已提交的来源、身份与形态决定内容交接。通知从当前音乐岛连续扩展，自动 / 手动高度沿用同一入口；通知关闭直接回有效系统活动 / 媒体，否则回常驻小岛或退出。展开媒体先收回同一短岛，再次上滑才抑制媒体。原通用的先缩短再退场已移除，顶部退出固定释放时宽高，清除尺寸残余速度，只向上移动。
