@@ -53,6 +53,8 @@ ROM 取证为 fuxi HyperOS 1 / A14 的 CN、TW miui-services.jar：相关五个�
 
 Deep：原激活条件下两项行为回归复现失败；修复后的完整 Host 为 419 个套件、3,792 项测试，零失败 / 错误、2 项既定跳过，包含日期独立格式化、不可用回退和日期不启动秒级时钟的新增回归。Debug lint、源码契约、文档和功能地图通过；工具 677 项通过、5 项既定跳过。未签名 Develop / R8 与 fatal lint、SDK 34 / arm64 / 16 KiB 对齐和工程 revision 来源通过。最终 DEX 无 Hook API 定义，八个设置入口的直接 API 指令、继承及成员签名引用为零；setId / getId 各一次，按同产物 mapping 归属共享 HookInstallation，replaceHook 为零。APK SHA-256 `b3f45970617939c77489a9d835f9442e33f3c64a0d5993e743371152ad4e5144`；完整源码身份、JUnit、APK / mapping 和查询留在同一仓库外证据目录。本批未签名或安装手机包，原有七个暂存技能文件保留；相关 CRLF 新增文件未混入任务验证索引或提交。
 
+随后依用户本地试用请求，从 `97bcfd3dabbfe1f5b90ffceba51b439414bcddd7` 构建历史证书签名的 Release `r14.25.6`（255），4,296,069 字节，SHA-256 `869b1ae419d137286f47719af134cce2c21d951e49cd1921bd145a3ce715cad3`，交付至本机下载目录 `CustoMIUIzer-A14-r14.25.6-97bcfd3d/`。应用 / 测试 / 构建输入沿用上述已验证实现；本次 Release / R8、fatal lint、完整 sourceCommit、SDK 34 / arm64 / API 102、16 KiB 对齐、V2 历史单签名与同产物 API / mapping 检查通过，交付文件 hash 读回一致。APK / mapping、签名报告与 `local-apk-receipt.json` 保留在同一证据的 `local-release-97bcfd3d/`。用户自行安装，本轮未操作设备、打 tag 或公开发行；日期与 POCO 实机待验项继续保留。
+
 ## 动态岛来源与过渡精修
 
 当前源码把来源状态（小岛 / 媒体 / 通知 / 系统活动 / 即时反馈）与小 / 短 / 长形态分开管理，共享协调器按已提交的来源、身份与形态决定内容交接。通知从当前音乐岛连续扩展，自动 / 手动高度沿用同一入口；通知关闭直接回有效系统活动 / 媒体，否则回常驻小岛或退出。展开媒体先收回同一短岛，再次上滑才抑制媒体。原通用的先缩短再退场已移除，顶部退出固定释放时宽高，清除尺寸残余速度，只向上移动。
