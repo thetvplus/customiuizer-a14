@@ -13,9 +13,9 @@ versionCode 256. Changes since r14.25.5:
 ### User changes
 
 - Select calls, alarms, timers, stopwatch, recording and privacy activity together using native events. SMS and calendar retain notification privacy rules. Clocks update while visible; ending source processes restores media or the idle island.
-- Reuse one Dynamic Island window across compact, long and optional persistent idle forms. Swiping up collapses the long form before dismissing it; notifications can expand on a downward swipe.
+- Present one current activity, entering directly as a short or long island according to its content. Reuse the window across sources; one upward swipe dismisses the source and downward swipes do not expand details. An optional still idle island remains when no activity is shown.
 - Refine content fades, local text blur, track artwork flips and damped horizontal feedback. Music return responds subtly to native swipe strength while preserving configured music actions.
-- Tighten collapsed automatic widths, give expanded music more space for track details, and derive a 36–40 dp height from the camera cutout. Automatic idle width starts at 100 dp; horizontal offsets are continuously bounded by the cutout and content.
+- Use a short island for music and a long island for ongoing activities or messages with distinct body text. Derive a 36–40 dp automatic height from the camera cutout; idle width starts at 100 dp, with content widths and offsets bounded by the cutout and safe area.
 - Follow the ROM audio capture limit, interpolate the waveform at about 30 Hz, and reject small noise changes. Support mirrored Telegram / HyperOS media sessions, retain one same-app audio track while it remains active, and reduce handoff flicker.
 - Exclude confirmed floating-app media sources rather than hiding every activity. Other music, approved messages and system feedback remain eligible.
 - Add optional charging and low-battery feedback. Suppress the native low-battery dialog only after the replacement is visibly acknowledged.
@@ -25,7 +25,7 @@ versionCode 256. Changes since r14.25.5:
 - Preserve current artwork and a still waveform while the same player buffers or loads a track. Commit new content after playback starts, with bounded grace for ambiguous pauses.
 - Simplify Island names and its main page, with dedicated size, music, message and system-feedback pages. Return the global prompt style to the system directory; app and action selection follow native components and view lifecycles.
 
-- Unify continuous dragging and velocity handoff, contract manually expanded details on the existing deadline, and refine text hierarchy for music, notifications and feedback. Use a gentler native spring response for absorbed pages and group return gestures together.
+- Unify continuous dragging and velocity handoff, presenting current content directly without a manually expanded detail step. Refine text hierarchy for notifications, ongoing activities and feedback. Use a gentler native spring response for absorbed pages and group return gestures together.
 - Open notifications with distinct body text directly in the long form. Preserve the current window and visibility across Home, media and system-activity handoffs; fix recursion when the shared progress clock ends and clear stale timer activity when its service is destroyed.
 - Add an independent folder-icon background blur switch, off by default and requiring a Launcher restart after changes. MIUI and POCO use their verified native folder paths while retaining hardware, system-blur and default-icon restrictions; appearance on each ROM still requires device acceptance.
 - Stop invalid Dock captures outside the visible region and prepare again on return. Refresh capture policy when wallpaper type changes, and remove stable transparent full-width backgrounds from frame observation.
