@@ -306,6 +306,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         taps.setOnDoubleTapListener(if (doubleEnabled()) tapListener else null)
         controlsEnabled = showControls
         controlActions = actions
+        val playbackChanged = controlPlayback != playbackState
         controlPlayback = playbackState
         // Action identity and accessibility follow the owner immediately. Only the visual
         // handoff is deferred, with one latest value and the shell's existing finite clock.
@@ -337,13 +338,17 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
         wave.holding = media && loading && waveform && !simplified
         wave.playing = (media && playing || recording && clock?.pausedMillis == null) && waveform && !simplified
-        val playbackDescription = if (!media) null else ModuleHelper.getModuleRes(context).getString(when (playbackState) {
+        if (changed || playbackChanged || contentDescription == null) updateDescription(label, detail, media)
+        return visualChanged
+    }
+
+    private fun updateDescription(label: String, detail: String?, media: Boolean) {
+        val playbackDescription = if (!media) null else ModuleHelper.getModuleRes(context).getString(when (controlPlayback) {
             PlaybackState.STATE_PLAYING -> R.string.system_island_playing
             PlaybackState.STATE_PAUSED -> R.string.system_island_paused
             else -> R.string.system_island_connecting
         })
         contentDescription = listOfNotNull(label, playbackDescription, detail?.takeIf { it.isNotBlank() && it != label }).joinToString(", ")
-        return visualChanged
     }
 
     private fun applyContent(content: Content) {
@@ -383,7 +388,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         icon.setImageDrawable(content.drawable)
         icon.visibility = if (content.drawable == null || recording) GONE else VISIBLE
         wave.visibility = if ((content.media && !content.expanded || recording) && content.waveform) VISIBLE else GONE
-        iconMask.shape = if (content.avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
         geometry(geometryWidth, geometryHeight, cameraGap, maximumWidth.toInt(), alignment, cameraOffset)
     }
 
@@ -465,8 +469,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             icon.layoutParams = iconParams
         }
         val scale = iconSize.toFloat() / dp(24).coerceAtLeast(1)
-        iconMask.cornerRadius = dp(7) * scale
-        iconMask.shape = if (avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
+        val radius = dp(7) * scale
+        if (iconMask.cornerRadius != radius) iconMask.cornerRadius = radius
+        val iconShape = if (avatar) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
+        if (iconMask.shape != iconShape) iconMask.shape = iconShape
         left.setPadding(dp(IslandSizing.EDGE_DP), 0, if (identityTitle.visibility == VISIBLE) dp(8) else 0, 0)
         layoutChild(left, half, height, Gravity.TOP or Gravity.START)
         layoutChild(text, captionRoom(width, cameraGap), height, Gravity.TOP or Gravity.END,
@@ -516,6 +522,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         baseTextSize = -1f
         measuredToast = null
         contentHeight(contentHeightDp)
+        // Localized playback text can change independently of the latest bound content.
+        (pendingContent ?: displayedContent)?.let { updateDescription(it.label, it.clockLabel, it.media) }
     }
 
     fun contentHeight(heightDp: Int) {
