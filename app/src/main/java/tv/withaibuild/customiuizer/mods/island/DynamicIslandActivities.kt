@@ -21,7 +21,38 @@ import tv.withaibuild.customiuizer.mods.SystemPipActions
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
+import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+
+/** Install the notification policy observer and its dependent heads-up takeover together. */
+internal fun installIslandNotificationTakeover(
+    privacyUpdated: Method?,
+    onBindFinished: Method,
+    privacyHook: MethodHook,
+    bindHook: MethodHook,
+): Boolean {
+    val method = privacyUpdated ?: return false
+    val observer = ModuleHelper.hookMethod(method, privacyHook) ?: return false
+    var installed = false
+    var failure: Throwable? = null
+    try {
+        installed = ModuleHelper.hookMethod(onBindFinished, bindHook) != null
+        return installed
+    } catch (error: Throwable) {
+        failure = error
+        throw error
+    } finally {
+        if (!installed) {
+            try {
+                ModuleHelper.guarded { observer.unhook() }
+            } catch (cleanup: Throwable) {
+                val original = failure
+                if (original == null) throw cleanup
+                if (cleanup !== original) original.addSuppressed(cleanup)
+            }
+        }
+    }
+}
 
 internal data class IslandOptions(
     val enabled: Boolean, val toast: Boolean, val media: Boolean,
@@ -45,7 +76,30 @@ internal data class IslandOptions(
     val mediaReturn: Boolean = false,
     val mediaReturnApps: Set<String> = emptySet(),
     val hideInFloatingWindow: Boolean = false,
+    val idle: Boolean = false,
+    val idleWidth: Int = 0,
+    val automaticHeight: Boolean = height == 40,
+    val charging: Boolean = false,
+    val lowBattery: Boolean = false,
+    val idleActions: IslandIdleActions = IslandIdleActions(),
+    val liveKinds: Set<IslandLiveKind> = emptySet(),
+    val liveReturn: Boolean = true,
+    val waveformGain: Int = 200,
+    val absorption: Boolean = false,
 ) {
+    private val mediaReturningPackages: Set<String> = if (enabled && media && mediaReturn)
+        mediaReturnApps.filterTo(linkedSetOf()) { it !in excludedApps } else emptySet()
+    private val returningPackages: Set<String> = buildSet {
+        addAll(mediaReturningPackages)
+        if (enabled && liveReturn) IslandLiveKind.windowPackages(liveKinds).filterTo(this) { it !in excludedApps }
+    }
+    fun returnPackages(): Set<String> = returningPackages
+    fun returnsMedia(pkg: String): Boolean = pkg in mediaReturningPackages
+    fun returnsLive(kind: IslandLiveKind, pkg: String): Boolean = enabled && liveReturn && kind in liveKinds &&
+        IslandLiveKind.canReturn(kind, pkg) && pkg in returningPackages
+    fun acceptsNotification(pkg: String, category: String?, channel: String? = null, template: String? = null): Boolean {
+        return enabled && chat && pkg in notificationApps && pkg !in excludedApps && pkg !in chatExcludedApps
+    }
     companion object {
         fun read(prefs: PrefMap): IslandOptions {
             val mode = StrongToastPresentationMode.fromPreference(prefs.getStringAsInt("system_strong_toast_mode", 0))
@@ -59,14 +113,14 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_toast_capsule"), prefs.getBoolean("system_island_media"),
                 waveformMode != 0,
                 prefs.getBoolean("system_island_simplified"),
-                prefs.getStringSet("system_island_excluded_apps"),
+                prefs.getStringSet("system_island_excluded_apps").toSet(),
                 prefs.getBoolean("system_island_chat"),
                 prefs.getInt("system_island_height", 40).coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP),
                 prefs.getBoolean("system_island_width_auto", true),
                 shortWidth,
                 prefs.getInt("system_island_width_medium", 240).coerceIn(IslandSizing.LONG_MIN_DP, IslandSizing.LONG_MAX_MANUAL_DP).coerceAtLeast(shortWidth),
                 IslandEntranceStyle.fromPreference(prefs.getStringAsInt("system_island_entrance_style", 1)),
-                prefs.getStringSet("system_island_chat_excluded_apps"),
+                prefs.getStringSet("system_island_chat_excluded_apps").toSet(),
                 prefs.getBoolean("system_island_media_swipe", true),
                 IslandMusicActions.read(prefs),
                 prefs.getStringAsInt("system_island_position", 1).coerceIn(0, 2),
@@ -74,17 +128,26 @@ internal data class IslandOptions(
                 IslandSystemKind.entries.filterTo(linkedSetOf()) {
                     prefs.getBoolean(it.preferenceKey, legacyFeedback)
                 },
-                prefs.getStringSet("system_island_notification_apps"), waveformMode,
+                prefs.getStringSet("system_island_notification_apps").toSet(), waveformMode,
                 prefs.getBoolean("system_island_media_return"),
                 prefs.getStringSet("system_island_media_return_apps").toSet(),
-                prefs.getBoolean("system_island_hide_in_floating_window"))
+                prefs.getBoolean("system_island_hide_in_floating_window"),
+                prefs.getBoolean("system_island_idle"),
+                if (prefs.getBoolean("system_island_idle_width_auto", true)) 0 else prefs.getInt("system_island_idle_width", 100).coerceIn(48, 120),
+                prefs.getBoolean("system_island_height_auto", prefs.getInt("system_island_height", 40) == 40),
+                prefs.getBoolean("system_island_feedback_charging"),
+                prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs), IslandLiveKind.read(prefs),
+                prefs.getBoolean("system_island_live_return", true),
+                prefs.getInt("system_island_waveform_gain", 200).coerceIn(100, 800),
+                prefs.getStringAsInt("system_island_return_effect", 0) == 1)
         }
     }
 }
 
 internal data class IslandToastContent(val text: String, val packageName: String?, val icon: Drawable?,
     val launch: PendingIntent? = null, val notificationKey: String? = null,
-    val detail: String? = null, val avatar: Boolean = false, val status: Boolean = false)
+    val detail: String? = null, val avatar: Boolean = false, val status: Boolean = false,
+    val liveActivity: IslandLiveActivity? = null)
 
 /** Only exact, whole, already-successful status messages may be shortened. Never guess from a substring. */
 internal object IslandToastText {
@@ -137,6 +200,7 @@ internal object DynamicIslandActivities {
     private var manager = WeakReference<Any>(null)
     private var safety = WeakReference<Any>(null)
     private val mediaDismissal = IslandActivityState.MediaDismissal()
+    private val liveDismissal = IslandLiveRegistry.Dismissal()
     @Volatile private var foregroundPackage: String? = null
     private var pipObserver: IslandPipObserver? = null
     private var freeformAccess: IslandFreeformAccess? = null
@@ -210,25 +274,41 @@ internal object DynamicIslandActivities {
                 override fun after(callback: AfterHookCallback) { captureMedia(callback.getThisObject()) }
             })
         }
+        if (IslandLiveKind.PRIVACY in options.liveKinds) ModuleHelper.guarded {
+            ModuleHelper.findAndHookMethod("com.android.systemui.appops.AppOpsControllerImpl", param.classLoader,
+                "notifySuscribersWorker", String::class.java, Boolean::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) {
+                        if (callback.getThrowable() == null) active.get()?.refreshLivePrivacy()
+                    }
+                })
+        }
         if (options.chat) {
             // Take over only the final, native-approved heads-up bind. Never block posting,
             // ranking or the notification-center entry. A missing contract stays native.
             ModuleHelper.guarded {
                 val notifications = IslandNotificationAccess(param.classLoader)
-                ModuleHelper.hookMethod(notifications.onBindFinished, object : MethodHook() {
-                    override fun intercept(chain: XposedInterface.Chain): Any? {
-                        val entry = chain.getArg(0) ?: return chain.proceed()
-                        val controller = active.get() ?: return chain.proceed()
-                        val accepted = try {
-                            notifications.take(chain.thisObject!!, entry, controller::takeNotification, controller::cancelNotificationTakeover)
-                        } catch (error: Throwable) {
-                            FatalErrors.unwrapAndRethrowIfFatal(error)
-                            XposedHelpers.log("Dynamic Island: retaining native heads-up", error)
-                            false
+                installIslandNotificationTakeover(
+                    notifications.onPrivacyUpdated, notifications.onBindFinished,
+                    object : MethodHook() {
+                        override fun after(callback: AfterHookCallback) {
+                            if (callback.getThrowable() == null) active.get()?.notificationPrivacyChanged()
                         }
-                        return if (accepted) null else chain.proceed()
-                    }
-                })
+                    }, object : MethodHook() {
+                        override fun intercept(chain: XposedInterface.Chain): Any? {
+                            val entry = chain.getArg(0) ?: return chain.proceed()
+                            val controller = active.get() ?: return chain.proceed()
+                            val accepted = try {
+                                notifications.take(chain.thisObject!!, entry, controller::takeNotification, controller::cancelNotificationTakeover)
+                            } catch (error: Throwable) {
+                                FatalErrors.unwrapAndRethrowIfFatal(error)
+                                XposedHelpers.log("Dynamic Island: retaining native heads-up", error)
+                                false
+                            }
+                            return if (accepted) null else chain.proceed()
+                        }
+                    },
+                )
             }
             ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.collection.NotifCollection\$1",
                 param.classLoader, "onNotificationPosted", StatusBarNotification::class.java, RankingMap::class.java,
@@ -242,7 +322,7 @@ internal object DynamicIslandActivities {
                 "com.android.systemui.statusbar.notification.collection.NotifCollection\$1", param.classLoader),
                 "onNotificationRemoved", object : MethodHook() {
                     override fun after(callback: AfterHookCallback) {
-                        (callback.getArgs().firstOrNull() as? StatusBarNotification)?.let { active.get()?.notificationRemoved(it.key) }
+                        (callback.getArg(0) as? StatusBarNotification)?.let { active.get()?.notificationRemoved(it.key) }
                     }
                 })
         }
@@ -266,6 +346,7 @@ internal object DynamicIslandActivities {
         active.get()?.dispose()
         val controller = IslandActivityController(statusBar.context, source, options, resolved,
             dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader,
+            liveDismissal = liveDismissal,
             freeform = freeformAccess, pipStateReader = { pipObserver?.snapshot }, geometryHost = statusBar.rootView,
             trackApplicationOverlays = true,
             pipCandidate = if (options.media || options.hideInFloatingWindow) IslandPipCandidateAccess(statusBar.context) else null)

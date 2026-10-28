@@ -8,6 +8,8 @@ import java.lang.reflect.Modifier
 internal fun interface IslandFreeformPort {
     /** Worker-only, once on attachment and after native mode events. Null means unavailable. */
     fun hasWindow(user: UserHandle): Boolean?
+    data class Snapshot(val present: Boolean?, val packages: Set<String>? = null)
+    fun snapshot(user: UserHandle) = Snapshot(hasWindow(user))
 }
 
 /** Reads the native current stack inventory instead of guessing from undocumented event numbers. */
@@ -29,13 +31,27 @@ internal class IslandFreeformAccess(manager: Class<*>, callback: Class<*>, stack
     private val userId = stack.getDeclaredField("userId").apply {
         require(type == Int::class.javaPrimitiveType && !Modifier.isStatic(modifiers)); isAccessible = true
     }
-
-    override fun hasWindow(user: UserHandle): Boolean? {
-        val stacks = read.invoke(null, Display.DEFAULT_DISPLAY) as? List<*> ?: return null
-        return stacks.any { entry ->
-            entry != null && display.getInt(entry) == Display.DEFAULT_DISPLAY && userId.getInt(entry).let { id ->
-                id >= 0 && UserHandle.getUserHandleForUid(Math.multiplyExact(id, 100000)) == user
-            }
+    private val packageName = try {
+        stack.getDeclaredField("packageName").apply {
+            require(type == String::class.java && !Modifier.isStatic(modifiers)); isAccessible = true
         }
+    } catch (_: ReflectiveOperationException) { null }
+
+    override fun hasWindow(user: UserHandle) = snapshot(user).present
+
+    override fun snapshot(user: UserHandle): IslandFreeformPort.Snapshot {
+        val stacks = read.invoke(null, Display.DEFAULT_DISPLAY) as? List<*> ?: return IslandFreeformPort.Snapshot(null)
+        if (stacks.size > 16) return IslandFreeformPort.Snapshot(null)
+        var present = false
+        var identified = true
+        val packages = linkedSetOf<String>()
+        for (entry in stacks) if (entry != null && display.getInt(entry) == Display.DEFAULT_DISPLAY && userId.getInt(entry).let { id ->
+                id >= 0 && UserHandle.getUserHandleForUid(Math.multiplyExact(id, 100000)) == user
+            }) {
+            present = true
+            val name = packageName?.get(entry) as? String
+            if (name.isNullOrBlank() || name.length > 255) identified = false else packages.add(name)
+        }
+        return IslandFreeformPort.Snapshot(present, packages.takeIf { identified })
     }
 }

@@ -1067,3 +1067,18 @@ data object IslandApplicationOverlayFeatureId : FeatureId {
     override val id = 258
     override val name = "system_island_application_overlays"
 }
+
+data object IslandLiveSourceFeatureId : FeatureId {
+    override val id = 259
+    override val name = "system_island_native_activity_sources"
+}
+
+data object LauncherFolderIconBlurFeatureId : FeatureId {
+    override val id = 260
+    override val name = "launcher_folder_icon_blur"
+}
+
+data object PocoFolderIconBlurFeatureId : FeatureId {
+    override val id = 261
+    override val name = "poco_folder_icon_blur"
+}

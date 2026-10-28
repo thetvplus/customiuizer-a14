@@ -201,7 +201,8 @@ class UiHotPathPreferenceSnapshotTest {
         )
         assertFalse(body.contains("MainModule.mPrefs"))
         assertTrue(body.contains("isSecureQsTile"))
-        assertTrue(body.contains("secureQsSnapshot.keepOpened"))
+        assertTrue(body.contains("val current = secureQsSnapshot"))
+        assertTrue(body.contains("current.keepOpened"))
     }
 
     @Test
@@ -265,14 +266,14 @@ class UiHotPathPreferenceSnapshotTest {
     fun titleFontAndMarginReadIconStyleSnapshot() {
         val font = methodBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherIconHooks.kt",
-            "fun TitleFontSizeHook",
+            "fun titleFontHook",
         )
         assertFalse(font.contains("MainModule.mPrefs"))
         assertTrue(font.contains("iconStyleConfig.titleFontSizeSp"))
 
         val margin = methodBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherIconHooks.kt",
-            "fun TitleTopMarginHook",
+            "fun titleTopMarginHook",
         )
         assertFalse(margin.contains("MainModule.mPrefs"))
         assertTrue(margin.contains("iconStyleConfig.titleTopMargin"))
@@ -310,7 +311,16 @@ class UiHotPathPreferenceSnapshotTest {
             "fun VolumeCursorHook",
         )
         assertFalse(volume.contains("MainModule.mPrefs"))
-        assertTrue(volume.contains("controlsConfig.volumeCursorApps"))
+        assertTrue(volume.contains("volumeCursorSessionHook"))
+        val session = methodBody("app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt", "fun volumeCursorSessionHook")
+        assertTrue(session.contains("dispatchVolumeCursor"))
+        assertFalse(session.contains("MainModule.mPrefs"))
+        val dispatch = methodBody("app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt", "fun dispatchVolumeCursor")
+        assertTrue(dispatch.contains("controlsConfig"))
+        assertFalse(dispatch.contains("Settings.Global"))
+        val cursor = methodBody("app/src/main/java/tv/withaibuild/customiuizer/mods/VolumeCursorKeys.kt", "fun onDown")
+        assertTrue(cursor.contains("config.volumeCursorApps"))
+        assertFalse(cursor.contains("MainModule.mPrefs"))
 
         val nav = methodBody(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/Controls.kt",

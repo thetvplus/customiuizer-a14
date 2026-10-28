@@ -25,13 +25,15 @@ import tv.withaibuild.customiuizer.utils.PrefMap
 object GenericAppInstaller {
 
     @JvmStatic
+    @JvmOverloads
     fun installPostAttach(
         lpparam: PackageReadyParam,
         mPrefs: PrefMap,
         isLauncherPkg: Boolean,
         isStatusBarColor: Boolean,
         isNoOverscroll: Boolean,
-        controlMedia: Boolean
+        controlMedia: Boolean,
+        pocoFolderIconBlur: Boolean = false,
     ) {
         ModuleHelper.findAndHookMethodWithId(
             Application::class.java.name,
@@ -48,7 +50,8 @@ object GenericAppInstaller {
                         isLauncherPkg,
                         isStatusBarColor,
                         isNoOverscroll,
-                        controlMedia
+                        controlMedia,
+                        pocoFolderIconBlur,
                     )) {
                         registry.register(feature)
                     }
@@ -57,7 +60,7 @@ object GenericAppInstaller {
                         registry.installAll(FeatureTarget.LAUNCHER, InstallPhase.APPLICATION_ATTACHED, mPrefs)
                     }
 
-                    if (isStatusBarColor || isNoOverscroll || controlMedia) {
+                    if (isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur) {
                         registry.installAll(FeatureTarget.ANY, InstallPhase.APPLICATION_ATTACHED, mPrefs)
                     }
 

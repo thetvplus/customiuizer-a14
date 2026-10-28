@@ -14,8 +14,13 @@ internal object IslandPosition {
         var w = minOf(width, available)
         val overlaps = holeRight > holeLeft && top < holeBottom && top + height > holeTop
         if (alignment == 1) {
-            val x = left(w, safeLeft, safeRight, alignment, offset, gap,
-                holeLeft, holeRight, overlaps) ?: return null
+            val wanted = ((if (holeRight > holeLeft) (holeLeft + holeRight - w) / 2
+                else safeLeft + (available - w) / 2).toLong() + offset)
+            val guard = ((gap - (holeRight - holeLeft)) / 2).coerceAtLeast(0)
+            val low = if (overlaps) maxOf(safeLeft, holeRight + guard - w) else safeLeft
+            val high = if (overlaps) minOf(safeRight - w, holeLeft - guard) else safeRight - w
+            if (low > high) return null
+            val x = wanted.coerceIn(low.toLong(), high.toLong()).toInt()
             return Layout(x, top, w, gap)
         }
         // Offset is applied to the selected edge before width is constrained. Narrowing

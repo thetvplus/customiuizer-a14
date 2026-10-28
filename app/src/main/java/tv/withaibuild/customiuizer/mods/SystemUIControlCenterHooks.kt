@@ -1600,20 +1600,12 @@ object SystemUIControlCenterHooks {
                     val kgMgr = mContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                     if (!kgMgr.isKeyguardLocked || !kgMgr.isKeyguardSecure) return
                     val activityStater = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.plugins.ActivityStarter")
-                    XposedHelpers.callMethod(activityStater, "postQSRunnableDismissingKeyguard", true, Runnable {
-                        ModuleHelper.guarded {
-                            if (secureQsSnapshot.keepOpened) {
-                                val handler = Handler(mContext.mainLooper)
-                                handler.postDelayed({
-                                    ModuleHelper.guarded {
-                                        val openCCIntent = Intent(GlobalActions.ACTION_PREFIX + "ExpandSettings")
-                                        openCCIntent.setPackage("com.android.systemui")
-                                        mContext.sendBroadcast(openCCIntent)
-                                    }
-                                }, 800)
-                            }
-                        }
-                    })
+                    val selectedName = name
+                    val reopen = secureQsReopener(mContext).begin {
+                        val current = secureQsSnapshot
+                        current.keepOpened && isSecureQsTile(selectedName, current)
+                    }
+                    XposedHelpers.callMethod(activityStater, "postQSRunnableDismissingKeyguard", true, reopen)
                     val mStatusBar = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.statusbar.CommandQueue")
                     XposedHelpers.callMethod(mStatusBar, "animateCollapsePanels", 0, false)
                     param.returnAndSkip(null)
@@ -1623,6 +1615,20 @@ object SystemUIControlCenterHooks {
         ModuleHelper.findAndHookMethod("com.android.systemui.qs.tileimpl.QSTileImpl", lpparam.classLoader, "click", View::class.java, clickHook)
         ModuleHelper.findAndHookMethod("com.android.systemui.qs.tileimpl.QSTileImpl", lpparam.classLoader, "longClick", View::class.java, clickHook)
         ModuleHelper.findAndHookMethod("com.android.systemui.qs.tileimpl.QSTileImpl", lpparam.classLoader, "secondaryClick", View::class.java, clickHook)
+    }
+
+    private var qsReopener: tv.withaibuild.customiuizer.mods.utils.SecureQsReopener? = null
+
+    @Synchronized
+    private fun secureQsReopener(context: Context): tv.withaibuild.customiuizer.mods.utils.SecureQsReopener {
+        qsReopener?.let { return it }
+        val application = context.applicationContext
+        val keyguard = application.getSystemService(KeyguardManager::class.java)
+        return tv.withaibuild.customiuizer.mods.utils.SecureQsReopener(Handler(application.mainLooper),
+            { keyguard != null && !keyguard.isKeyguardLocked }, {
+                val intent = Intent(GlobalActions.ACTION_PREFIX + "ExpandSettings").setPackage("com.android.systemui")
+                application.sendBroadcast(intent)
+            }).also { qsReopener = it }
     }
 
     private var mPctRef: WeakReference<TextView>? = null

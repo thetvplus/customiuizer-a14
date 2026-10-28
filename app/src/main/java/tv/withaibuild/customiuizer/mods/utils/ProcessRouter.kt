@@ -61,6 +61,7 @@ object ProcessRouter {
             "com.android.settings" -> if (packageName == actualProcessName) ProcessScope.SETTINGS_MAIN else ProcessScope.SETTINGS_REMOTE
             "com.miui.securitycenter" -> when (actualProcessName) {
                 "com.miui.securitycenter" -> ProcessScope.SECURITY_CENTER_MAIN
+                "com.miui.securitycenter.remote" -> ProcessScope.SECURITY_CENTER_POWER
                 "com.miui.securitycenter.bootaware" -> ProcessScope.SECURITY_CENTER_BOOTAWARE
                 else -> ProcessScope.SECURITY_CENTER_REMOTE
             }

@@ -35,12 +35,13 @@ import java.lang.reflect.Proxy
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], shadows = [IslandLaunchPackageManagerShadow::class])
+@Config(sdk = [34], qualifiers = "w1080dp-h2400dp-mdpi", shadows = [IslandLaunchPackageManagerShadow::class])
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class IslandActivityLifecycleTest {
     private var owner: IslandActivityController? = null
     private var adds = 0
     private var removes = 0
+    private var windowUpdates = 0
     private var reject = false
     private var shell: IslandActivityView? = null
     private var latestParams: WindowManager.LayoutParams? = null
@@ -56,6 +57,204 @@ class IslandActivityLifecycleTest {
     private var metricsHeight = 2400
     private var metricsReads = 0
     private var metricsInsets = WindowInsets.Builder().build()
+    @Test fun everySystemActivityUsesTheConfiguredShortWidthWithoutAnIntermediateLongForm() {
+        val controller = controller(liveKinds = IslandLiveKind.entries.mapTo(linkedSetOf()) { it.value },
+            automaticWidth = false, shortWidth = 184, longWidth = 320, simplified = true)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        onAdd = { assertFalse("The first visible frame must already be short", shell!!.expanded) }
+        for (kind in IslandLiveKind.entries) {
+            registry.clear()
+            val activity = IslandLiveActivity(kind, kind.windowPackage ?: "native.source", context.applicationInfo.uid,
+                clock = if (kind == IslandLiveKind.TIMER) IslandLiveClock(android.os.SystemClock.elapsedRealtime() + 60000, true)
+                    else if (kind in setOf(IslandLiveKind.RECORDER, IslandLiveKind.STOPWATCH)) IslandLiveClock(0, false) else null,
+                session = 100L + kind.ordinal)
+            registry.update(kind, activity)
+            org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+            assertTrue(kind.name, shell!!.isAttachedToWindow)
+            assertFalse(kind.name, shell!!.expanded)
+            assertTrue(kind.name, shell!!.width <= 184)
+            assertEquals(activity.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(
+                controller, "lastContent").liveActivity!!.key)
+        }
+    }
+
+    @Test fun landscapeMediaAndActivitiesAppearWithoutWaitingForPortraitOnlyNativeReturn() {
+        metricsWidth = 2400; metricsHeight = 1080
+        val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName),
+            liveKinds = setOf("stopwatch"), simplified = true)
+        native.player = launchablePlayer("landscape-return")
+        controller.updateFromNative(native); revealMedia()
+        controller.foregroundChanged(context.packageName); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain(); revealMedia()
+        assertTrue(shell!!.isAttachedToWindow)
+        assertTrue(shell!!.isMedia)
+        val stale = IslandReturnProgress(java.nio.ByteBuffer.allocateDirect(4))
+        controller.nativeMusicReturn(IslandMusicReturnSignal.Frame(context.packageName,
+            android.os.UserHandle.getUserHandleForUid(context.applicationInfo.uid),
+            100f, 10f, 284f, 50f, 1080, 2400), progress = stale)
+        assertEquals("A portrait return cannot retarget the landscape window", -1f, stale.read(), 0f)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 400)
+        controller.foregroundChanged(watch.packageName)
+        registry.update(watch.kind, watch)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertEquals(watch.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(
+            controller, "lastContent").liveActivity!!.key)
+        assertFalse(shell!!.expanded)
+        metricsWidth = 1080; metricsHeight = 2400
+        org.robolectric.util.ReflectionHelpers.getField<android.content.ComponentCallbacks>(controller, "configuration")
+            .onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain()
+        assertTrue("Returning to portrait must not revive an obsolete Home confirmation wait", shell!!.isAttachedToWindow)
+        assertFalse(shell!!.expanded)
+        native.allowed = false; native.changed!!(); drain()
+        assertFalse("Landscape cannot bypass lockscreen/privacy safety", shell!!.isAttachedToWindow)
+    }
+
+    @Test @Config(qualifiers = "xxhdpi")
+    fun landscapeLongNotificationsRespectTheCapSafeEdgesAndElasticFramesForEveryAlignment() {
+        metricsWidth = 2400; metricsHeight = 1080
+        metricsInsets = WindowInsets.Builder().setDisplayCutout(android.view.DisplayCutout(
+            android.graphics.Insets.of(180, 0, 0, 0), Rect(0, 400, 180, 500), null, null, null)).build()
+        val controller = controller(chat = true, automaticWidth = false, shortWidth = 320, longWidth = 400)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        val density = context.resources.displayMetrics.density
+        val cap = 240 * density
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        for (automatic in listOf(false, true)) for (alignment in listOf(0, 1, 2)) {
+            prefs.put("system_island_position", alignment.toString())
+            prefs.put("system_island_width_auto", automatic)
+            observer.onChange(null); drain()
+            assertTrue(controller.takeNotification(message(900 + alignment + if (automatic) 10 else 0))); drain()
+            assertTrue(shell!!.expanded)
+            assertTrue("Manual and automatic targets share the landscape cap", shell!!.width <= cap)
+            val left = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + shell!!.left
+            assertTrue("Leave extra room outside the physical side cutout", left >= 180 + 16 * density)
+            assertTrue("Keep the opposite landscape edge clear", left + shell!!.width <= metricsWidth - 48 * density)
+            org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")?.let { motion ->
+                for (time in 0L until motion.duration step 16L) {
+                    motion.currentPlayTime = time
+                    assertTrue("Elastic motion cannot widen past the landscape cap", shell!!.width * shell!!.scaleX <= cap + 1f)
+                }
+                motion.end()
+            }
+        }
+    }
+
+    private var snapshotIo = false
+    private var mediaManagerReads = 0
+    private var mediaManagerReadsOutsideIo = 0
+    private val markedIo = object : kotlinx.coroutines.CoroutineDispatcher() {
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+            dispatcher.dispatch(context, Runnable {
+                snapshotIo = true
+                try { block.run() } finally { snapshotIo = false }
+            })
+        }
+    }
+
+    @Test fun musicStartedAfterAClockTakesOverAndPauseHandsBackWithoutRemovingOrMovingTheWindow() {
+        val controller = controller(media = true, liveKinds = setOf("stopwatch"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 45)
+        registry.update(watch.kind, watch)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")?.end()
+        val top = latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY
+        val player = launchablePlayer("music-after-clock")
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        registry.update(watch.kind, watch.copy(clock = IslandLiveClock(-1000, false)))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue("Clock metadata cannot steal newer music",
+            org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.PAUSE_LIFETIME + 10)); drain()
+        assertEquals(watch.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(controller, "lastContent").liveActivity!!.key)
+        val transition = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")
+        transition?.let { clock ->
+            for (time in 0L until clock.duration step 16L) {
+                clock.currentPlayTime = time
+                assertEquals(top, latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY, .001f)
+            }
+            clock.end()
+        }
+        assertFalse(org.robolectric.util.ReflectionHelpers.getField(controller, "exiting"))
+        assertEquals(1, adds); assertEquals(0, removes)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        controller.updateFromNative(native); drain()
+        assertTrue("Real playback resume takes the same shell back",
+            org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun aSecondNativeActivityKeepsTheFirstIslandsScreenTopThroughoutItsReturn() {
+        val controller = controller(media = true, liveKinds = setOf("stopwatch"))
+        native.player = launchablePlayer("music-before-second-return")
+        controller.updateFromNative(native); revealMedia()
+        val top = latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 46)
+        controller.foregroundChanged(watch.packageName)
+        registry.update(watch.kind, watch)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        val target = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))!!
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        val committedAt = android.os.SystemClock.uptimeMillis()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertFalse("Waiting for confirmation must not start exiting the first activity",
+            org.robolectric.util.ReflectionHelpers.getField(controller, "exiting"))
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        val prepared = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))!!
+        assertEquals("Waiting preserves the closing activity's prepared target", target, prepared)
+        controller.nativeMusicReturn(target, committedAt); drain()
+        val clock = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        for (time in 0L until clock.duration step 8L) {
+            clock.currentPlayTime = time
+            assertEquals("Second activity must not translate the whole island", top,
+                latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY, .001f)
+        }
+        clock.end()
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun aVisibleClockAndKnownPlayingMediaCanSwitchRepeatedlyWithoutARevealDelayOrWindowExit() {
+        val controller = controller(media = true, liveKinds = setOf("stopwatch"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val activity = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 44)
+        val session = MediaSession(context, "clock-music-continuity")
+        try {
+            val player = MediaController(context, session.sessionToken)
+            shadowOf(player).setPackageName(context.packageName)
+            shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+            native.player = player
+            controller.updateFromNative(native); revealMedia()
+            registry.update(activity.kind, activity)
+            controller.foregroundChanged(context.packageName); drain()
+            assertEquals(activity.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(controller, "lastContent").liveActivity!!.key)
+            repeat(12) {
+                controller.foregroundChanged(activity.packageName)
+                // No advancing time, IO or drawing is necessary to select the known source.
+                val current = org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "lastContent")
+                assertTrue("Music must be ready at the activity foreground edge", current is IslandMediaContent)
+                assertEquals(player.sessionToken, (current as IslandMediaContent).token)
+                assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaRevealAt"))
+                assertFalse(org.robolectric.util.ReflectionHelpers.getField(controller, "exiting"))
+                drain()
+                controller.foregroundChanged(context.packageName); drain()
+                assertEquals(activity.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(controller, "lastContent").liveActivity!!.key)
+            }
+            assertEquals(1, adds - removes)
+        } finally { session.release() }
+    }
     private val window = Proxy.newProxyInstance(WindowManager::class.java.classLoader,
         arrayOf(WindowManager::class.java)) { _, method, args ->
         when (method.name) {
@@ -65,13 +264,21 @@ class IslandActivityLifecycleTest {
                 frame.addView(args[0] as View, FrameLayout.LayoutParams(latestParams!!.width, latestParams!!.height)); onAdd?.invoke(); null }
             "removeViewImmediate" -> { frame.removeView(args!![0] as View); removes++; null }
             "updateViewLayout" -> { val params = args!![1] as WindowManager.LayoutParams
+                windowUpdates++
                 (args[0] as View).layoutParams = FrameLayout.LayoutParams(params.width, params.height); null }
             "toString" -> "IslandTestWindow"
             else -> error("Unexpected WindowManager call: ${method.name}, ${args?.size}")
         }
     } as WindowManager
     private val context get() = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
-        override fun getSystemService(name: String): Any? = if (name == Context.WINDOW_SERVICE) window else super.getSystemService(name)
+        override fun getSystemService(name: String): Any? {
+            if (name == Context.WINDOW_SERVICE) return window
+            if (name == Context.MEDIA_SESSION_SERVICE) {
+                mediaManagerReads++
+                if (!snapshotIo) mediaManagerReadsOutsideIo++
+            }
+            return super.getSystemService(name)
+        }
     }
 
     @Before fun setup() {
@@ -95,12 +302,15 @@ class IslandActivityLifecycleTest {
         io: kotlinx.coroutines.CoroutineDispatcher = dispatcher,
         entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
         geometryHost: View? = null, pipCandidate: IslandPipCandidatePort? = null,
-        height: Int = 40, automaticWidth: Boolean = true, shortWidth: Int = 184, longWidth: Int = 240): IslandActivityController {
+        height: Int = 40, automaticWidth: Boolean = true, shortWidth: Int = 184, longWidth: Int = 240,
+        idle: Boolean = false, liveKinds: Set<String> = emptySet()): IslandActivityController {
         val prefs = PrefMap().apply {
             put("system_strong_toast_mode", "3"); put("system_toast_capsule", true)
             put("system_island_media", media); put("system_island_controls", true)
             put("system_island_expanded_width", width)
             put("system_island_height", height); put("system_island_width_auto", automaticWidth)
+            put("system_island_idle", idle)
+            put("system_island_live_kinds", liveKinds)
             put("system_island_width_short", shortWidth); put("system_island_width_medium", longWidth)
             put("system_island_simplified", simplified)
             put("system_island_chat", chat)
@@ -121,6 +331,280 @@ class IslandActivityLifecycleTest {
         }
     }
 
+    @Test fun disposedOrForeignThreadReturnAlwaysReleasesTheIncomingProgressMapping() {
+        val controller = controller()
+        val frame = IslandMusicReturnSignal.Frame(context.packageName, android.os.UserHandle.getUserHandleForUid(1000),
+            100f, 10f, 200f, 50f, 1080, 2400)
+        val foreign = IslandReturnProgress(java.nio.ByteBuffer.allocateDirect(4))
+        Thread { controller.nativeMusicReturn(frame, progress = foreign) }.apply { start(); join() }
+        assertEquals(-1f, foreign.read(), 0f)
+        val late = IslandReturnProgress(java.nio.ByteBuffer.allocateDirect(4))
+        controller.dispose(); drain()
+        controller.nativeMusicReturn(frame, progress = late)
+        assertEquals(-1f, late.read(), 0f)
+        assertEquals(0, adds)
+    }
+
+    @Test fun foregroundActivityKeepsItsLandingTargetAndMorphsFromTheExistingIslandWithoutCapture() {
+        val controller = controller(idle = true, liveKinds = setOf("stopwatch"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val activity = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE, 10345,
+            IslandLiveClock(android.os.SystemClock.elapsedRealtime(), false), session = 9)
+        controller.foregroundChanged(activity.packageName)
+        registry.update(activity.kind, activity)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue("The source app owns the activity; only the optional idle shell remains", shell!!.idle)
+        val target = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))!!
+        assertEquals(activity.packageName, target.packageName)
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        controller.nativeMusicReturn(target); drain()
+        assertTrue(shell!!.idle)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertFalse(shell!!.idle)
+        assertEquals(1, adds)
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        assertNotNull("The already-visible idle island must morph to the activity", arrival)
+        assertEquals(IslandMotion.CONTENT_ARRIVAL, arrival.duration)
+        assertEquals(0f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertSame("A repeated render cannot restart the same arrival", arrival,
+            org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        arrival.end()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        registry.update(activity.kind, activity.copy(clock = activity.clock!!.copy(base = activity.clock.base - 1000)))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
+        assertEquals(1f, shell!!.scaleX, .0001f)
+    }
+
+    @Test fun delayedNativeConfirmationCannotReplayTheSameForegroundAdmission() {
+        val controller = controller(idle = true, liveKinds = setOf("stopwatch"))
+        controller.foregroundChanged(IslandLiveKind.CLOCK_PACKAGE)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val source = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE, 10345,
+            IslandLiveClock(0, false), session = 10)
+        registry.update(source.kind, source)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        val target = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))!!
+        val committedAt = android.os.SystemClock.uptimeMillis()
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertTrue("Home is not confirmed while the source is only transitioning", shell!!.idle)
+        controller.nativeMusicReturn(target, committedAt); drain()
+        assertFalse(shell!!.idle)
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        assertNotNull(arrival)
+        controller.nativeMusicReturn(target, committedAt); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(5))
+        controller.nativeMusicReturn(target, committedAt); drain()
+        assertSame("Duplicate confirmations cannot replace an in-flight arrival", arrival,
+            org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        arrival.end()
+        controller.nativeMusicReturn(target, committedAt); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        assertEquals(1f, shell!!.scaleX, 0f)
+        assertEquals(1, adds)
+    }
+
+    @Test fun recordingToastHandsBackToTheSameRecordingOnHomeAndItsLateLeaseCannotCoverItAgain() {
+        val controller = controller(simplified = true, liveKinds = setOf("recorder"))
+        val source = IslandLiveActivity(IslandLiveKind.RECORDER, IslandLiveKind.RECORDER_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 17)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        controller.foregroundChanged(source.packageName); registry.update(source.kind, source)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertEquals(0, adds)
+        val toast = IslandToastContent("已静音", source.packageName, null)
+        val lease = controller.showToast(toast, 3500)
+        assertNotNull(lease)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        val state = org.robolectric.util.ReflectionHelpers.getField<IslandActivityState<IslandToastContent, IslandMediaContent>>(controller, "state")
+        assertEquals(source.key, state.activity(android.os.SystemClock.uptimeMillis())?.liveActivity?.key)
+        assertNull(controller.showToast(toast, 3500))
+        controller.releaseToast(lease!!); drain()
+        assertEquals(source.key, state.activity(android.os.SystemClock.uptimeMillis())?.liveActivity?.key)
+        assertEquals(1, adds)
+    }
+
+    @Test fun pendingRecorderMuteFeedbackDoesNotArriveAfterTheRecordingBoards() = recorderMuteHandoff(false)
+    @Test fun visibleRecorderMuteFeedbackHandsBackButALaterUserRingerChangeStillAppears() = recorderMuteHandoff(true)
+
+    private fun recorderMuteHandoff(presented: Boolean) {
+        val controller = controller(simplified = true, liveKinds = setOf("recorder"))
+        val source = IslandLiveActivity(IslandLiveKind.RECORDER, IslandLiveKind.RECORDER_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 18)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        controller.foregroundChanged(source.packageName); registry.update(source.kind, source)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        controller.systemActivity(IslandSystemActivity(IslandSystemKind.RINGER, android.media.AudioManager.RINGER_MODE_SILENT))
+        if (presented) shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandSystemFeedback.COLLECT))
+        assertEquals(if (presented) 1 else 0, adds)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandSystemFeedback.COLLECT))
+        val state = org.robolectric.util.ReflectionHelpers.getField<IslandActivityState<IslandToastContent, IslandMediaContent>>(controller, "state")
+        assertNull(state.toast(android.os.SystemClock.uptimeMillis()))
+        assertEquals(source.key, state.activity(android.os.SystemClock.uptimeMillis())?.liveActivity?.key)
+        controller.systemActivity(IslandSystemActivity(IslandSystemKind.RINGER, android.media.AudioManager.RINGER_MODE_NORMAL))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandSystemFeedback.COLLECT))
+        assertNotNull("A subsequent independent ringer event must remain visible", state.toast(android.os.SystemClock.uptimeMillis()))
+        assertEquals(1, adds)
+    }
+
+    @Test fun foregroundClockWithoutIdleHasNoActivityWindowUntilItLeavesTheSource() {
+        val controller = controller(simplified = true, liveKinds = setOf("stopwatch"))
+        controller.foregroundChanged(IslandLiveKind.CLOCK_PACKAGE)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        registry.update(IslandLiveKind.STOPWATCH, IslandLiveActivity(IslandLiveKind.STOPWATCH,
+            IslandLiveKind.CLOCK_PACKAGE, 10345, IslandLiveClock(0, false), session = 10))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertEquals(0, adds)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertEquals(1, adds)
+        assertFalse(shell!!.idle)
+    }
+
+    @Test fun nativeTimerAndFeedbackShareTheExistingShellAndDismissalReturnsToMedia() {
+        val controller = controller(media = true, idle = true, simplified = true, liveKinds = setOf("timer"))
+        native.player = launchablePlayer("live-timer-music")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val activity = IslandLiveActivity(IslandLiveKind.TIMER, context.packageName, context.applicationInfo.uid,
+            IslandLiveClock(android.os.SystemClock.elapsedRealtime() + 30000, true), session = 10)
+        registry.update(IslandLiveKind.TIMER, activity)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertSame(original, shell); assertEquals(1, adds)
+        val chronometer = org.robolectric.util.ReflectionHelpers.getField<android.widget.Chronometer>(original, "title")
+        assertTrue(chronometer.isCountDown)
+        val text = chronometer.text.toString()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1100)); drain()
+        assertNotEquals(text, chronometer.text.toString())
+        assertEquals(1, adds)
+        val lease = controller.showToast(IslandToastContent("Copied", context.packageName, null), 3000)!!; drain()
+        assertFalse(original.isMedia)
+        controller.releaseToast(lease); drain()
+        assertTrue(chronometer.isCountDown)
+        original.onDismiss(); drain()
+        assertTrue(original.isMedia)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue(original.isMedia)
+        assertSame(original, shell); assertEquals(1, adds)
+    }
+
+    @Test fun selectedNativeActivityCanPublishItsExistingWindowTargetAndDisablingReturnWithdrawsIt() {
+        val controller = controller(idle = true, liveKinds = setOf("recorder", "call", "privacy"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val activity = IslandLiveActivity(IslandLiveKind.RECORDER, IslandLiveKind.RECORDER_PACKAGE, 10345,
+            IslandLiveClock(android.os.SystemClock.elapsedRealtime(), false), session = 42)
+        registry.update(IslandLiveKind.RECORDER, activity)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        fun frame() = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))
+        assertEquals(activity.packageName, frame()?.packageName)
+        assertTrue(frame()!!.valid())
+        val options = org.robolectric.util.ReflectionHelpers.getField<IslandOptions>(controller, "options")
+        org.robolectric.util.ReflectionHelpers.setField(controller, "options", options.copy(liveReturn = false))
+        assertNull(frame())
+        org.robolectric.util.ReflectionHelpers.setField(controller, "options", options)
+        registry.update(IslandLiveKind.CALL, IslandLiveActivity(IslandLiveKind.CALL, IslandLiveKind.CALL_PACKAGE,
+            1000, session = 43))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertEquals(IslandLiveKind.CALL_PACKAGE, frame()?.packageName)
+        registry.update(IslandLiveKind.CALL, null); registry.update(IslandLiveKind.RECORDER, null)
+        registry.update(IslandLiveKind.PRIVACY, IslandLiveActivity(IslandLiveKind.PRIVACY, IslandLiveKind.RECORDER_PACKAGE,
+            10345, privacy = IslandPrivacyAccess.MICROPHONE))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertNull(frame())
+    }
+
+    @Test fun excludedFloatingMediaUsesTheExistingIdleCapsuleInsteadOfRemovingIt() {
+        val controller = controller(media = true, idle = true, hideFloating = true, simplified = true)
+        native.player = launchablePlayer("excluded-video-idle")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertTrue(original.isMedia)
+        controller.pipChanged(IslandPipSnapshot(1, 4,
+            android.content.ComponentName(context.packageName, "Player"), android.os.Process.myUserHandle()))
+        drain()
+        assertTrue(original.isAttachedToWindow)
+        assertTrue(original.idle)
+        assertEquals(1, adds)
+        val lease = controller.showToast(IslandToastContent("Copied", context.packageName, null), 3000)!!
+        drain(); assertFalse(original.idle)
+        controller.releaseToast(lease); drain()
+        assertTrue(original.idle)
+        assertSame(original, shell)
+        assertEquals(1, adds)
+    }
+
+    @Test fun excludingAPipPlayerCannotWithdrawAnIndependentRecorderReturnTarget() {
+        val controller = controller(media = true, idle = true, hideFloating = true, liveKinds = setOf("recorder"))
+        native.player = launchablePlayer("excluded-video-recorder")
+        controller.updateFromNative(native); revealMedia()
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        controller.pipChanged(IslandPipSnapshot(1, 4,
+            android.content.ComponentName(context.packageName, "Player"), android.os.Process.myUserHandle()))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        registry.update(IslandLiveKind.RECORDER, IslandLiveActivity(IslandLiveKind.RECORDER,
+            IslandLiveKind.RECORDER_PACKAGE, 10345, IslandLiveClock(android.os.SystemClock.elapsedRealtime(), false), session = 42))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        val publisher = org.robolectric.util.ReflectionHelpers.getField<IslandMusicReturnSignal.Publisher?>(controller, "musicReturnPublisher")
+        assertNotNull("Only the PiP media source is excluded; the recorder still owns a native return target", publisher)
+        val current = org.robolectric.util.ReflectionHelpers.getField<() -> IslandMusicReturnSignal.Frame?>(publisher, "current")
+        assertEquals(IslandLiveKind.RECORDER_PACKAGE, current()?.packageName)
+        val motion = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        motion.currentPlayTime = 120
+        val progress = org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress")
+        assertTrue(progress > 0f && progress < 1f)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertEquals("Media invalidation must not cancel the recorder's shared content arrival",
+            progress, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), .0001f)
+    }
+
+    @Test fun idleAndActivityReuseTheSameWindowAndDismissalStaysPassiveUntilWake() {
+        val controller = controller(idle = true, simplified = true)
+        drain()
+        assertEquals(1, adds)
+        val original = shell!!
+        val idleWidth = original.width
+        val canvasWidth = latestParams!!.width
+        val lease = controller.showToast(IslandToastContent("OK", context.packageName, null), 3000)!!
+        drain()
+        assertSame(original, shell)
+        assertEquals(1, adds)
+        assertTrue(original.width > idleWidth)
+        assertEquals(canvasWidth, latestParams!!.width)
+        assertEquals(0, windowUpdates)
+        controller.releaseToast(lease); drain()
+        assertEquals(idleWidth, original.width)
+        assertEquals(canvasWidth, latestParams!!.width)
+        assertEquals(1, adds)
+        shell!!.onDismiss(); drain()
+        assertFalse(original.isAttachedToWindow)
+        controller.onScreenStateChanged(true); drain()
+        assertSame(original, shell)
+        assertEquals(2, adds)
+    }
+
+    @Test fun unlockedShadeRetainsOnlyTheIdleCapsuleAndNeverItsTouchHotspotOrMedia() {
+        val controller = controller(media = true, idle = true, simplified = true)
+        val original = shell!!
+        val idleWidth = original.width
+        native.player = launchablePlayer("shade-idle-music")
+        controller.updateFromNative(native); revealMedia()
+        assertTrue(original.width > idleWidth)
+        native.shade = true; native.allowed = false; native.changed!!(); drain()
+        assertSame(original, shell)
+        assertEquals(idleWidth, original.width)
+        assertFalse((original.parent as IslandTouchWindow).inputEnabled)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
+        native.shade = false; native.changed!!(); drain()
+        assertEquals(1, removes) // A privacy block cannot retain the unlocked-shade capsule.
+    }
+
     private fun drain() {
         shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
         if (drawFrames) {
@@ -135,7 +619,7 @@ class IslandActivityLifecycleTest {
         }
     }
 
-    @Test fun actualWindowRotationWithoutResourceConfigurationHidesAndRestoresTheIsland() {
+    @Test fun actualWindowRotationWithoutResourceConfigurationKeepsTheIslandInBothDirections() {
         val geometry = View(host)
         frame.addView(geometry, FrameLayout.LayoutParams(1080, 133))
         geometry.layout(0, 0, 1080, 133)
@@ -146,20 +630,24 @@ class IslandActivityLifecycleTest {
         drain()
         assertTrue(shell!!.isAttachedToWindow)
         try {
-            display.setRotation(Surface.ROTATION_90)
-            geometry.layoutParams.width = 2400
-            geometry.layout(0, 0, 2400, 133)
-            shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
-            assertEquals("This path must not depend on a resource callback", orientation, context.resources.configuration.orientation)
-            assertFalse(shell!!.isAttachedToWindow)
-            assertNull(controller.showToast(IslandToastContent("Landscape", context.packageName, null), 1000))
-            display.setRotation(Surface.ROTATION_0)
-            geometry.layoutParams.width = 1080
-            geometry.layout(0, 0, 1080, 133)
-            shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
-            assertNotNull(controller.showToast(IslandToastContent("Portrait", context.packageName, null), 1000))
-            drain()
-            assertTrue(shell!!.isAttachedToWindow)
+            for (rotation in listOf(Surface.ROTATION_90, Surface.ROTATION_270)) {
+                display.setRotation(rotation)
+                metricsWidth = 2400; metricsHeight = 1080
+                geometry.layoutParams.width = 2400
+                geometry.layout(0, 0, 2400, 133)
+                shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+                assertEquals("This path must not depend on a resource callback", orientation, context.resources.configuration.orientation)
+                assertTrue(shell!!.isAttachedToWindow)
+                assertNotNull(controller.showToast(IslandToastContent("Landscape", context.packageName, null), 1000))
+                display.setRotation(Surface.ROTATION_0)
+                metricsWidth = 1080; metricsHeight = 2400
+                geometry.layoutParams.width = 1080
+                geometry.layout(0, 0, 1080, 133)
+                shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+                assertNotNull(controller.showToast(IslandToastContent("Portrait", context.packageName, null), 1000))
+                drain()
+                assertTrue(shell!!.isAttachedToWindow)
+            }
         } finally { display.setRotation(Surface.ROTATION_0) }
     }
 
@@ -198,6 +686,539 @@ class IslandActivityLifecycleTest {
         drain()
     }
 
+    @Test fun notificationWidensTheCurrentMusicAndDismissesToItAtTheSharedAutomaticHeight() {
+        val controller = controller(chat = true, media = true)
+        native.player = launchablePlayer("shared-notice-motion")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val musicWidth = original.width
+        val height = original.height
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(701))); drain()
+        assertSame(original, shell)
+        assertEquals(1, adds); assertEquals(0, removes)
+        assertTrue(original.expanded)
+        assertTrue(original.width > musicWidth)
+        assertEquals(musicWidth.toFloat(), original.width * original.scaleX, .001f)
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertEquals(IslandMotion.CONTENT_ARRIVAL, arrival.duration)
+        for (time in 0L until arrival.duration step 16L) {
+            arrival.currentPlayTime = time
+            assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+            assertEquals(0f, original.translationY, .001f)
+        }
+        arrival.end()
+        val longWidth = original.width
+        assertTrue(original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null))
+        assertFalse(original.expanded)
+        assertTrue("The source is released by the first gesture", original.isMedia)
+        drain()
+        assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
+        val returning = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertEquals(IslandMotion.CONTENT_ARRIVAL, returning.duration)
+        returning.currentPlayTime = 80
+        assertTrue(original.width * original.scaleX < longWidth)
+        assertTrue(original.width * original.scaleX > musicWidth)
+        assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+        returning.end()
+        assertEquals(musicWidth, original.width)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun noticeDismissalWithoutMusicReturnsDirectlyToTheConfiguredIdleIsland() {
+        val controller = controller(chat = true, idle = true)
+        drain()
+        val original = shell!!
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(original, "motion")?.end()
+        val idleWidth = original.width
+        val height = original.height
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(702))); drain()
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        val longWidth = original.width
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        assertFalse(original.expanded)
+        assertTrue(original.idle)
+        drain()
+        assertEquals(longWidth.toFloat(), original.width * original.scaleX, .001f)
+        val returning = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        returning.currentPlayTime = 80
+        assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+        assertEquals(0f, original.translationY, .001f)
+        returning.end()
+        assertEquals(idleWidth, original.width)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun finalNoticeInTopModeExitsInOneRigidVerticalFlight() {
+        val controller = controller(chat = true)
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(703))); drain()
+        val original = shell!!
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        val width = original.width
+        val height = original.height
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        val exit = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertEquals(IslandMotion.EXIT, exit.duration)
+        var previousY = original.translationY
+        for (time in 0L until exit.duration step 16L) {
+            exit.currentPlayTime = time
+            assertEquals(width.toFloat(), original.width * original.scaleX, .001f)
+            assertEquals(height.toFloat(), original.height * original.scaleY, .001f)
+            assertEquals(0f, original.translationX, .001f)
+            assertTrue(original.translationY <= previousY)
+            previousY = original.translationY
+        }
+        assertTrue(original.translationY < 0f)
+        exit.end()
+        assertEquals(1, removes)
+        assertFalse(original.isAttachedToWindow)
+    }
+
+    @Test fun expandedMusicDismissalReleasesTheSourceInOneGesture() {
+        val controller = controller(media = true, idle = true)
+        native.player = launchablePlayer("music-detail-dismissal")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val compactWidth = original.width
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").expand(android.os.SystemClock.uptimeMillis())
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue(original.expanded)
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion").end()
+        original.onDismiss(); drain()
+        assertTrue(original.idle)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun manuallyExpandedPlayingMusicAutomaticallyContractsAfterInteractionWithoutRemovingItsWindow() {
+        val controller = controller(media = true, simplified = true)
+        native.player = launchablePlayer("automatic-detail-contraction")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").expand(android.os.SystemClock.uptimeMillis())
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue(original.expanded)
+        original.onInteraction(true); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(8)); drain()
+        assertTrue(original.expanded)
+        val releasedAt = android.os.SystemClock.uptimeMillis()
+        original.onInteraction(false); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(
+            releasedAt + IslandMotion.EXPANDED_DWELL - android.os.SystemClock.uptimeMillis() - 1))
+        assertTrue(original.expanded)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        assertFalse(original.expanded); assertTrue(original.isMedia)
+        assertSame(original, shell); assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun touchingAnIdleIslandDoesNotQueueAnUnrelatedRenderThatCancelsItsOwnGesture() {
+        controller(idle = true, simplified = true)
+        val original = shell!!
+        assertTrue(original.idle)
+        val down = android.view.MotionEvent.obtain(0, 10, android.view.MotionEvent.ACTION_DOWN,
+            original.width * .5f, original.height * .5f, 0)
+        try { assertTrue(original.dispatchTouchEvent(down)) } finally { down.recycle() }
+        drain()
+        assertFalse(org.robolectric.util.ReflectionHelpers.getField(original, "inputCancelled"))
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField(original, "touchActive"))
+        val up = android.view.MotionEvent.obtain(0, 30, android.view.MotionEvent.ACTION_UP,
+            original.width * .5f, original.height * .5f, 0)
+        try { original.dispatchTouchEvent(up) } finally { up.recycle() }
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<android.view.VelocityTracker?>(original, "velocityTracker"))
+    }
+
+    @Test fun aBatchGalleryDeletionCanUseTwoReadableLongLinesAndStillRetainsNativeOnOverflow() {
+        val controller = controller(media = true, simplified = true, automaticWidth = false, shortWidth = 96, longWidth = 320)
+        native.player = launchablePlayer("batch-gallery-delete")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val message = "已将选中的 24 张照片和视频移至最近删除"
+        val lease = requireNotNull(controller.showToast(IslandToastContent(message, "com.miui.gallery", null), 1800))
+        assertTrue(original.expanded)
+        val label = (original.getChildAt(1) as android.widget.LinearLayout).getChildAt(0) as android.widget.TextView
+        assertEquals(message, label.text.toString()); assertEquals(2, label.maxLines)
+        controller.releaseToast(lease); drain()
+        assertTrue(original.isMedia)
+        assertNull(controller.showToast(IslandToastContent("删除".repeat(80), "com.miui.gallery", null), 1800))
+        assertTrue(original.isMedia); assertSame(original, shell)
+    }
+
+    @Test fun notificationAndMusicAlsoShareAnExplicitlyConfiguredHeight() {
+        val controller = controller(chat = true, media = true, height = 48)
+        native.player = launchablePlayer("manual-notice-height")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertEquals(48, original.height)
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(704))); drain()
+        val clock = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        for (time in 0L until clock.duration step 16L) {
+            clock.currentPlayTime = time
+            assertEquals(48f, original.height * original.scaleY, .001f)
+        }
+        clock.end()
+        original.onDismiss(); drain()
+        assertFalse(original.expanded)
+        assertTrue(original.isMedia)
+        assertEquals(48f, original.height * original.scaleY, .001f)
+    }
+
+    @Test fun dismissingANoticeDuringExpansionCarriesTheVisibleWidthAndVelocityBackToMusic() {
+        val controller = controller(chat = true, media = true)
+        native.player = launchablePlayer("interrupted-notice-motion")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val compactWidth = original.width
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        assertTrue(controller.takeNotification(message(705))); drain()
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        arrival.currentPlayTime = 80
+        val width = original.width * original.scaleX
+        val velocity = org.robolectric.util.ReflectionHelpers.getField<IslandMotion.Spring>(original, "breadth").velocity +
+            org.robolectric.util.ReflectionHelpers.getField<Float>(original, "breadthExtraVelocity")
+        original.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS, null)
+        assertFalse(original.expanded)
+        assertTrue(original.isMedia)
+        drain()
+        assertEquals(width, original.width * original.scaleX, .001f)
+        assertEquals(velocity, org.robolectric.util.ReflectionHelpers.getField<IslandMotion.Spring>(original, "breadth").velocity, .01f)
+        val returning = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(original, "motion")
+        assertNotSame(arrival, returning)
+        arrival.end()
+        assertSame(returning, org.robolectric.util.ReflectionHelpers.getField(original, "motion"))
+        returning.end()
+        assertEquals(compactWidth, original.width)
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun automaticHeightUsesPhysicalCutoutHeightRatherThanItsHorizontalSpan() {
+        metricsWidth = 360
+        metricsInsets = WindowInsets.Builder()
+            .setInsets(android.view.WindowInsets.Type.statusBars(), android.graphics.Insets.of(0, 46, 0, 0))
+            .setDisplayCutout(android.view.DisplayCutout(android.graphics.Insets.of(0, 32, 0, 0),
+                null, Rect(120, 8, 240, 32), null, null)).build()
+        val controller = controller(chat = true, simplified = true)
+        assertTrue(controller.takeNotification(message(707))); drain()
+        assertEquals("120 px wide / 24 px tall cutout must use the 24 px vertical input", 38, shell!!.height)
+    }
+
+    @Test fun expandedNoticeAndItsElasticCeilingRespectBothNativeRoundedCorners() {
+        metricsWidth = 360
+        metricsInsets = WindowInsets.Builder()
+            .setRoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT,
+                android.view.RoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT, 40, 40, 40))
+            .setRoundedCorner(android.view.RoundedCorner.POSITION_TOP_RIGHT,
+                android.view.RoundedCorner(android.view.RoundedCorner.POSITION_TOP_RIGHT, 40, 320, 40)).build()
+        val controller = controller(chat = true, simplified = true)
+        assertTrue(controller.takeNotification(message(706))); drain()
+        val original = shell!!
+        val left = original.left - (original.parent as IslandTouchWindow).margin
+        assertTrue(left >= 40)
+        assertTrue(left + original.width <= 320)
+        assertTrue(original.width <= 280)
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Float>(original, "maximumWidth") <= 280f)
+    }
+
+    @Test fun horizontalOffsetsCannotPushAWideCenteredNoticeIntoEitherScreenCorner() {
+        metricsWidth = 360
+        val controller = controller(chat = true, simplified = true, automaticWidth = false,
+            shortWidth = 160, longWidth = 400)
+        assertTrue(controller.takeNotification(message(707))); drain()
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        for (value in listOf(0, 80, 160)) {
+            prefs.put("system_island_horizontal_offset", value)
+            observer.onChange("system_island_horizontal_offset"); drain()
+            val original = shell!!
+            val left = original.left - (original.parent as IslandTouchWindow).margin
+            assertTrue("left edge at stored offset $value", left >= 24)
+            assertTrue("right edge at stored offset $value", left + original.width <= metricsWidth - 24)
+            assertEquals(312, original.width)
+        }
+    }
+
+    @Test fun bufferingKeepsTheVisibleTrackStillUntilPlaybackCommitsTheLatestMetadata() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("buffered-track")
+        native.player = player
+        native.track = MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Track A").build()
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val width = original.width
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_BUFFERING, 0, 0f).build())
+        native.track = MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Track B pending").build()
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(60)); drain()
+        assertSame(original, shell)
+        assertTrue(original.isAttachedToWindow)
+        assertEquals(width, original.width)
+        val waiting = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "lastContent")
+        assertEquals("Track A", waiting.title)
+        assertTrue(waiting.loading); assertFalse(waiting.playing)
+        native.player = null // A transient native-card gap must not invent a new owner.
+        controller.updateFromNative(native); drain()
+        assertTrue(original.isAttachedToWindow)
+        native.player = player
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        native.track = MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Track B").build()
+        controller.updateFromNative(native); drain()
+        val committed = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "lastContent")
+        assertEquals("Track B", committed.title)
+        assertTrue(committed.playing); assertFalse(committed.loading)
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun ambiguousPauseAfterBufferingHasBoundedGraceAndDuplicateSnapshotsCannotRenewIt() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("buffer-pause")
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_BUFFERING, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.LOADING_LIFETIME - 1)); drain()
+        assertTrue(shell!!.isAttachedToWindow)
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2)); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        controller.updateFromNative(native); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun anInitialLoadingSnapshotDoesNotInventAPlayingIsland() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("initial-buffer")
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_CONNECTING, 0, 0f).build())
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        assertEquals(0, adds)
+    }
+
+    @Test fun mirroredCoversAndHiddenMetadataUpdatesDoNotFadeCompactMedia() {
+        val controller = controller(media = true)
+        val player = launchablePlayer("cover-copies")
+        native.player = player
+        val image = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            eraseColor(android.graphics.Color.BLUE)
+        }
+        fun metadata(title: String, bitmap: android.graphics.Bitmap) = MediaMetadata.Builder()
+            .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+            .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, bitmap).build()
+        native.track = metadata("A", image)
+        controller.updateFromNative(native); revealMedia()
+        val first = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "media").icon
+        native.track = metadata("B", requireNotNull(image.copy(android.graphics.Bitmap.Config.ARGB_8888, false)))
+        controller.updateFromNative(native); drain()
+        val updated = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "media")
+        assertSame(first, updated.icon)
+        assertEquals("B", updated.title)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion"))
+        assertEquals(1f, shell!!.getChildAt(0).alpha, .001f)
+    }
+
+    @Test fun nativeCardGapValidationWaitsForTheSnapshotWorkerAndNeverQueriesMain() {
+        val controller = controller(media = true, simplified = true, io = markedIo)
+        val player = launchablePlayer("worker-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        mediaManagerReads = 0; mediaManagerReadsOutsideIo = 0
+        native.player = null
+        controller.updateFromNative(native)
+        shadowOf(Looper.getMainLooper()).idle() // Deliver nativeRefresh, but do not run the IO queue.
+        assertEquals("Native card loss cannot synchronously enumerate sessions", 0, mediaManagerReads)
+        drain()
+        assertEquals(1, mediaManagerReads)
+        assertEquals("The snapshot worker owns session enumeration", 0, mediaManagerReadsOutsideIo)
+        assertSame(player, org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertTrue(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun aPendingCardGapCannotOverrideANewerNativeSelectionOrSurviveDisposal() {
+        val controller = controller(media = true, simplified = true, io = markedIo)
+        val old = launchablePlayer("old-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(old)
+        native.player = old
+        controller.updateFromNative(native); revealMedia()
+        val next = launchablePlayer("new-native-selection")
+        mediaManagerReads = 0; mediaManagerReadsOutsideIo = 0
+        native.player = null
+        controller.updateFromNative(native); shadowOf(Looper.getMainLooper()).idle()
+        native.player = next
+        controller.updateFromNative(native); drain()
+        assertSame(next, org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertEquals("Cancelled gap work must not enumerate sessions", 0, mediaManagerReads)
+        native.player = null
+        controller.updateFromNative(native); shadowOf(Looper.getMainLooper()).idle()
+        controller.dispose(); drain()
+        assertEquals(0, mediaManagerReads)
+        assertTrue(shadowOf(old).callbacks.isEmpty()); assertTrue(shadowOf(next).callbacks.isEmpty())
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+    }
+
+    @Test fun anAlarmNativeCardGapCannotDismissTheStillActiveMusicSession() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("alarm-native-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        native.player = null
+        controller.updateFromNative(native); drain()
+        assertTrue(original.isAttachedToWindow)
+        assertTrue(original.isMedia)
+        assertEquals(0, removes)
+        shadowOf(manager).clearControllers()
+        controller.updateFromNative(native); drain()
+        assertFalse(original.isAttachedToWindow)
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+    }
+
+    @Test fun userSwitchCancelsPendingCardGapValidationAndRetiresTheOldSession() {
+        val controller = controller(media = true, simplified = true, io = markedIo)
+        val player = launchablePlayer("user-switch-card-gap")
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        mediaManagerReads = 0; mediaManagerReadsOutsideIo = 0
+        native.player = null
+        controller.updateFromNative(native); shadowOf(Looper.getMainLooper()).idle()
+        val receiver = org.robolectric.util.ReflectionHelpers.getField<android.content.BroadcastReceiver>(controller, "userReceiver")
+        receiver.onReceive(context, android.content.Intent("android.intent.action.USER_SWITCHED")
+            .putExtra("android.intent.extra.user_handle", 10))
+        drain()
+        assertEquals(0, mediaManagerReads)
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "lastContent"))
+        assertFalse(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun anAlarmPauseWithoutANativeCardCanResumeThroughTheExistingCallback() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("alarm-pause-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        val callback = shadowOf(player).callbacks.single()
+        native.player = null
+        val paused = PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build()
+        shadowOf(player).setPlaybackState(paused); callback.onPlaybackStateChanged(paused); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2500)); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        assertSame(callback, shadowOf(player).callbacks.single())
+        val playing = PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build()
+        shadowOf(player).setPlaybackState(playing); callback.onPlaybackStateChanged(playing); drain(); revealMedia()
+        assertTrue(shell!!.isAttachedToWindow)
+        assertTrue(shell!!.isMedia)
+        assertEquals(2, adds)
+        assertSame(callback, shadowOf(player).callbacks.single())
+        val stopped = PlaybackState.Builder().setState(PlaybackState.STATE_STOPPED, 0, 0f).build()
+        shadowOf(player).setPlaybackState(stopped); callback.onPlaybackStateChanged(stopped); drain()
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+        assertFalse(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun repeatedPausedNativeCardGapsCannotRenewTheSessionRetention() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("alarm-expired-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        native.player = null
+        val paused = PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build()
+        shadowOf(player).setPlaybackState(paused)
+        shadowOf(player).callbacks.single().onPlaybackStateChanged(paused); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(20)); drain()
+        controller.updateFromNative(native); drain()
+        assertEquals(1, shadowOf(player).callbacks.size)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11)); drain()
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+        assertFalse(shell!!.isAttachedToWindow)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertEquals(1, adds)
+    }
+
+    @Test fun aCompletedDeleteThatDoesNotFitShortUsesTheLongFormThenRestoresMusic() {
+        val controller = controller(media = true, simplified = true, automaticWidth = false, shortWidth = 96, longWidth = 240)
+        native.player = launchablePlayer("delete-feedback-over-music")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        val lease = requireNotNull(controller.showToast(IslandToastContent("删除成功", "com.miui.gallery", null), 1800))
+        assertSame(original, shell)
+        assertFalse(original.isMedia)
+        assertTrue(original.expanded)
+        drain()
+        assertEquals(240, original.width)
+        controller.releaseToast(lease); drain()
+        assertSame(original, shell)
+        assertTrue(original.isMedia)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
+    }
+
+    @Test fun notificationPreemptsOrdinaryFeedbackAndCannotBeOverwrittenByAnotherToast() {
+        val controller = controller(chat = true, simplified = true)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 5000))
+        assertTrue(controller.takeNotification(message(812)))
+        val lease = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "chatLease")
+        assertNull(controller.showToast(IslandToastContent("Copied", context.packageName, null), 5000))
+        assertSame(lease, org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        assertEquals(1, adds)
+        assertTrue(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun idleResumeResolvesOnlyTheLastVerifiedSessionAfterItsNativeCardDisappears() {
+        val controller = controller(media = true, idle = true, simplified = true)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        prefs.put("system_island_idle_left_action", IslandMusicActions.PLAY)
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        observer.onChange("system_island_idle_left_action"); drain()
+        val player = launchablePlayer("idle-resume")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f)
+            .setActions(PlaybackState.ACTION_PLAY).build())
+        native.player = null
+        controller.updateFromNative(native); drain()
+        assertFalse(shell!!.idle)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2100)); drain()
+        assertTrue(shell!!.idle)
+        shell!!.onGesture(IslandMusicGesture.LEFT); drain()
+        assertEquals(PlaybackState.ACTION_PLAY, shadowOf(player.transportControls).lastPerformedAction)
+        val other = launchablePlayer("unrelated-token")
+        val baseline = shadowOf(other.transportControls).lastPerformedAction
+        shadowOf(manager).clearControllers(); shadowOf(manager).addController(other)
+        shell!!.onGesture(IslandMusicGesture.LEFT); drain()
+        assertEquals(baseline, shadowOf(other.transportControls).lastPerformedAction)
+    }
+
+    @Test fun confirmedReturnCanPrecedeTheForegroundAppEdgeOfAnInterruptedOpening() {
+        val controller = controller(media = true, simplified = true, mediaReturn = true,
+            mediaReturnApps = setOf(context.packageName))
+        // Simplified mode intentionally declines flight; enable normal motion for this contract.
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        prefs.put("system_island_simplified", false)
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        observer.onChange("system_island_simplified"); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER)
+        native.player = launchablePlayer("opening-interrupted-before-foreground")
+        controller.updateFromNative(native); drain()
+        assertEquals(0, adds)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        nativeReturn(controller); drain()
+        assertEquals(1, adds)
+    }
+
     private fun nativeReturn(controller: IslandActivityController, committedAt: Long = android.os.SystemClock.uptimeMillis()) {
         val media = org.robolectric.util.ReflectionHelpers.getField<IslandMediaContent>(controller, "media")
         controller.nativeMusicReturn(IslandMusicReturnSignal.Frame(media.packageName, requireNotNull(media.user),
@@ -217,6 +1238,29 @@ class IslandActivityLifecycleTest {
         return IslandNotificationAccess.Bound(sbn, ranking, null, open)
     }
 
+    @Test fun aNativePrivacyUpdateRevokesTheCurrentNoticeWithoutAFramePollingLoop() {
+        val controller = controller(chat = true, simplified = true)
+        var hidden = false
+        val bound = message(499) { true }.copy(hidden = { hidden })
+        assertTrue(controller.takeNotification(bound)); drain()
+        controller.notificationPrivacyChanged(); drain()
+        assertTrue(shell!!.isAttachedToWindow)
+        hidden = true
+        controller.notificationPrivacyChanged(); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "chatNotification"))
+    }
+
+    @Test fun privacyRevocationReenteringWindowInsertionCannotCommitAnObsoleteNotice() {
+        val controller = controller(chat = true, simplified = true)
+        var hidden = false
+        val bound = message(498) { true }.copy(hidden = { hidden })
+        onAdd = { hidden = true; controller.notificationPrivacyChanged() }
+        assertFalse(controller.takeNotification(bound)); drain()
+        assertFalse(shell!!.isAttachedToWindow)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "chatNotification"))
+    }
+
     @Test fun notificationTakeoverIsExactAndUsesTheNativeClickOnlyOnce() {
         val controller = controller(chat = true, simplified = true)
         var firstClicks = 0; var secondClicks = 0
@@ -232,6 +1276,47 @@ class IslandActivityLifecycleTest {
         shell!!.performClick()
         assertEquals(1, secondClicks)
         assertEquals(1, removes)
+    }
+
+    @Test fun shortMessageBodyUsesLongFormAndReturnsToTheSameCompactMediaWindow() {
+        val controller = controller(chat = true, media = true, simplified = true)
+        native.player = launchablePlayer("message-long-form")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertFalse(original.expanded)
+        val bound = message(501)
+        bound.notification.notification.extras.putCharSequence(android.app.Notification.EXTRA_TEXT, "好")
+        assertTrue(controller.takeNotification(bound)); drain()
+        assertTrue(original.expanded)
+        val caption = org.robolectric.util.ReflectionHelpers.getField<android.widget.Chronometer>(original, "title")
+        assertEquals("好", caption.text.toString())
+        val identity = org.robolectric.util.ReflectionHelpers.getField<android.widget.TextView>(original, "identityTitle")
+        assertEquals("Alice", identity.text.toString()); assertEquals(View.VISIBLE, identity.visibility)
+        assertEquals(android.view.Gravity.END, caption.gravity and android.view.Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK)
+        assertTrue(identity.textSize >= caption.textSize)
+        assertEquals(android.text.TextUtils.TruncateAt.END, caption.ellipsize)
+        val lease = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "chatLease")
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").collapse()
+        repeat(4) {
+            controller.updateFromNative(native); drain()
+            assertTrue(controller.takeNotification(bound)); drain()
+            assertFalse(original.expanded)
+        }
+        assertSame(lease, org.robolectric.util.ReflectionHelpers.getField(controller, "chatLease"))
+        controller.notificationRemoved(bound.notification.key); drain()
+        assertTrue(original.isMedia); assertFalse(original.expanded)
+        assertSame(original, shell); assertEquals(1, adds)
+    }
+
+    @Test fun messageBodySelectsTheConfiguredLongWidthEvenWhenAutomaticSizingIsOff() {
+        val controller = controller(chat = true, simplified = true, automaticWidth = false,
+            shortWidth = 160, longWidth = 300)
+        val bound = message(502)
+        bound.notification.notification.extras.putCharSequence(android.app.Notification.EXTRA_TEXT, "好")
+        assertTrue(controller.takeNotification(bound)); drain()
+        assertTrue(shell!!.expanded)
+        val width = org.robolectric.util.ReflectionHelpers.getField<Int>(shell!!, "geometryWidth")
+        assertEquals(kotlin.math.round(300 * context.resources.displayMetrics.density).toInt(), width)
     }
 
     @Test fun emptyNotificationAllowListLeavesTheNativeNotificationUntouched() {
@@ -574,25 +1659,17 @@ class IslandActivityLifecycleTest {
         controller.foregroundChanged("com.miui.home")
         assertNotNull("Foreground edge must create a return", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         drain()
-        assertNotNull("Selected playback must retain one pending return", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
-        assertEquals(android.os.SystemClock.uptimeMillis() + IslandMotion.MEDIA_RETURN_DELAY,
-            org.robolectric.util.ReflectionHelpers.getField<Long?>(controller, "mediaRevealAt"))
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY - 1))
-        assertEquals(0, adds)
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+        assertNull("The accepted return is consumed by the direct presentation", org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Long?>(controller, "mediaRevealAt"))
         assertEquals(1, adds)
-        val motion = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
-        assertEquals(IslandMotion.MEDIA_RETURN, motion.duration)
-        motion.currentPlayTime = 140
-        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress") < 1f)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
         val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
         prefs.put("system_island_media_return_apps", emptySet<String>())
         observer.onChange("system_island_media_return_apps"); drain()
         assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
-        motion.currentPlayTime = 280 // An old clock cannot resume the canceled cover.
-        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
-        motion.end()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
         repeat(3) { controller.updateFromNative(native); drain() }
         assertEquals(1, adds)
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
@@ -610,6 +1687,10 @@ class IslandActivityLifecycleTest {
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(749)); drain()
             assertEquals(before, adds)
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
+            if (enabled && context.packageName in apps) {
+                assertEquals("A selected task waits for native Home confirmation", before, adds)
+                nativeReturn(controller); drain()
+            }
             assertEquals(before + 1, adds)
             assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
             controller.dispose(); drain()
@@ -625,11 +1706,10 @@ class IslandActivityLifecycleTest {
         controller.foregroundChanged("com.miui.home"); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(10))
         nativeReturn(controller, committedAt); drain()
-        assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         assertEquals(1, adds)
-        assertEquals(IslandMotion.MEDIA_RETURN,
-            org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion").duration)
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        assertEquals(1f, shell!!.alpha, 0f)
     }
 
     @Test fun aPlayerForegroundEdgeRenewsTheExpiredUnchangedReturnTargetBeforeGestureDown() {
@@ -658,6 +1738,29 @@ class IslandActivityLifecycleTest {
         assertEquals("Unrelated foreground changes do not renew the packet", afterSourceEdge, packets().size)
     }
 
+    @Test fun aClockInTheBackgroundCannotReplaceTheForegroundPlayersPreparedHomeTarget() {
+        val application: android.app.Application = RuntimeEnvironment.getApplication()
+        val controller = controller(media = true, mediaReturn = true,
+            mediaReturnApps = setOf(context.packageName), liveKinds = setOf("stopwatch"))
+        native.player = launchablePlayer("clock-cannot-take-player-return")
+        controller.updateFromNative(native); revealMedia()
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 47)
+        registry.update(watch.kind, watch)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        controller.foregroundChanged(context.packageName); drain()
+        val packet = shadowOf(application).broadcastIntents.last {
+            it.action == IslandMusicReturnSignal.STATE && it.getBooleanExtra("active", false)
+        }
+        assertEquals(context.packageName, IslandMusicReturnSignal.decode(packet, android.os.SystemClock.uptimeMillis())!!.frame!!.packageName)
+        val target = IslandMusicReturnSignal.decode(packet, android.os.SystemClock.uptimeMillis())!!.frame!!
+        controller.nativeMusicReturn(target); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
     @Test fun lateNativeCommitsCannotCrossAnotherAppSwitchOrReenterThePlayer() {
         for (destinations in listOf(listOf("other.app"), listOf("other.app", "com.miui.home"), listOf(context.packageName))) {
             val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName))
@@ -681,12 +1784,12 @@ class IslandActivityLifecycleTest {
         val player = launchablePlayer("revoke-return")
         controller.foregroundChanged(context.packageName)
         native.player = player; controller.updateFromNative(native); revealMedia()
-        nativeReturn(controller)
         controller.foregroundChanged("com.miui.home"); drain()
         val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
         val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
         prefs.put("system_island_media_return", false)
         observer.onChange("system_island_media_return"); drain()
+        nativeReturn(controller); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(749)); drain()
         assertEquals(0, adds)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
@@ -793,7 +1896,7 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds)
     }
 
-    @Test fun theWholeIslandSwitchControlsCoexistenceAcrossVisibleHiddenAndStashedPip() {
+    @Test fun sourceExclusionRemainsStableAcrossVisibleHiddenAndStashedPip() {
         for (hideAll in listOf(false, true)) {
             val before = adds
             val controller = controller(media = true, simplified = true, hideFloating = hideAll)
@@ -856,6 +1959,44 @@ class IslandActivityLifecycleTest {
             assertEquals(before + 1, adds)
             controller.dispose(); drain()
         }
+    }
+
+    @Test fun anExcludedNativeVideoSelectionKeepsOnePreviouslySelectedIndependentMusicSession() {
+        val controller = controller(media = true, hideFloating = true, simplified = true)
+        controller.foregroundChanged("com.miui.home")
+        val music = launchablePlayer("retained-music")
+        native.player = music; controller.updateFromNative(native); revealMedia()
+        assertEquals(1, adds)
+        val original = shell
+        pip(controller, 1, 4, packageName = "other.video")
+        val video = launchablePlayer("floating-video")
+        shadowOf(video).setPackageName("other.video")
+        native.player = video; controller.updateFromNative(native); revealMedia()
+        assertSame(music, org.robolectric.util.ReflectionHelpers.getField<MediaController>(controller, "selected"))
+        assertSame(original, shell)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
+        shell!!.onDismiss(); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<MediaController?>(controller, "backgroundPlayer"))
+        controller.updateFromNative(native); revealMedia()
+        assertEquals(1, adds)
+        native.player = null; controller.updateFromNative(native); drain()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<MediaController?>(controller, "selected"))
+    }
+
+    @Test fun rebuildingAMediaControllerForTheSameTokenDoesNotReplaceItsOwnerOrWindow() {
+        val controller = controller(media = true, simplified = true)
+        val player = launchablePlayer("same-token")
+        native.player = player; controller.updateFromNative(native); revealMedia()
+        val original = shell
+        val replacement = MediaController(context, player.sessionToken)
+        shadowOf(replacement).setPackageName(context.packageName)
+        shadowOf(replacement).setPlaybackState(player.playbackState)
+        native.player = replacement; controller.updateFromNative(native); revealMedia()
+        assertSame(player, org.robolectric.util.ReflectionHelpers.getField<MediaController>(controller, "selected"))
+        assertSame(original, shell)
+        assertEquals(1, adds)
+        assertEquals(0, removes)
     }
 
     @Test fun pipCancelsAPreparedWindowBeforeItsFirstDrawAndDoesNotReenterWhenPinned() {
@@ -1014,24 +2155,37 @@ class IslandActivityLifecycleTest {
         controller.updateFromNative(native); drain()
         nativeReturn(controller)
         controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
         assertEquals(1, queries)
         assertEquals(1, adds)
     }
 
-    @Test fun hidingTheEntireIslandRetainsNativeToastAndHeadsUpAndDropsOldFeedback() {
-        val controller = controller(chat = true, hideFloating = true)
+    @Test fun aMusicAutoPipAdmissionGateDoesNotBlockOrdinaryFeedback() {
+        val controller = controller(media = true, hideFloating = true, simplified = true,
+            pipCandidate = IslandPipCandidatePort { pkg, user -> IslandPipCandidate(pkg, user, 17) })
+        controller.foregroundChanged(context.packageName)
+        native.player = launchablePlayer("auto-pip-feedback")
+        controller.updateFromNative(native); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); revealMedia()
+        assertEquals(0, adds)
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        assertEquals(1, adds)
+    }
+
+    @Test fun sourceExclusionKeepsApprovedMessagesAndOrdinaryFeedbackInTheSameWindow() {
+        val controller = controller(chat = true, hideFloating = true, simplified = true)
         controller.foregroundChanged("com.miui.home")
         assertTrue(controller.takeNotification(message(801)))
+        val original = shell
         assertEquals(1, adds)
         pip(controller, 1, 4, packageName = "other.video")
-        assertEquals(1, removes)
-        assertFalse(controller.takeNotification(message(802)))
-        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
-        controller.systemActivity(IslandSystemActivity(IslandSystemKind.DND, 1))
-        pip(controller, 2, 0)
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(3000)); drain()
+        assertEquals(0, removes)
+        assertTrue(controller.takeNotification(message(802)))
+        assertSame(original, shell)
         assertEquals(1, adds)
+        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        pip(controller, 2, 0)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(4500)); drain()
+        assertEquals(1, adds) // Replacing a notice never queues it for later replay.
         assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
         assertEquals(2, adds)
     }
@@ -1045,8 +2199,9 @@ class IslandActivityLifecycleTest {
         val committedAt = android.os.SystemClock.uptimeMillis()
         nativeReturn(controller, committedAt)
         assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertEquals(0, adds)
         val publisher = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "musicReturnPublisher")
-        pip(controller, 1, 3, packageName = "other.video")
+        pip(controller, 1, 3, packageName = context.packageName)
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "musicReturnPublisher"))
         assertTrue(org.robolectric.util.ReflectionHelpers.getField<Boolean>(publisher, "closed"))
@@ -1058,15 +2213,17 @@ class IslandActivityLifecycleTest {
         assertEquals(ordinary, org.robolectric.util.ReflectionHelpers.getField<Long>(controller, "mediaRevealAt"))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1))
         nativeReturn(controller); drain()
-        assertNotNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaReturn"))
+        assertEquals(1, adds)
         revealMedia()
         assertEquals(1, adds)
     }
 
     @Test fun theFloatingWindowSwitchRemainsAnInstallationSnapshotAcrossPreferenceRefreshes() {
         for (installed in listOf(false, true)) {
-            val controller = controller(hideFloating = installed)
-            pip(controller, 1, 4, packageName = "other.video")
+            val before = adds
+            val controller = controller(media = true, hideFloating = installed)
+            pip(controller, 1, 4)
             val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
             val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
             prefs.put("system_island_hide_in_floating_window", !installed)
@@ -1074,8 +2231,12 @@ class IslandActivityLifecycleTest {
             observer.onChange("system_island_height"); observer.onChange(null); drain()
             val current = org.robolectric.util.ReflectionHelpers.getField<IslandOptions>(controller, "options")
             assertEquals(installed, current.hideInFloatingWindow)
+            controller.foregroundChanged("com.miui.home")
+            native.player = launchablePlayer("installed-source-$installed")
+            controller.updateFromNative(native); revealMedia()
+            assertEquals(before + if (installed) 0 else 1, adds)
             val lease = controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000)
-            assertEquals(installed, lease == null)
+            assertNotNull(lease)
             controller.dispose(); drain()
         }
     }
@@ -1090,7 +2251,7 @@ class IslandActivityLifecycleTest {
         disabled.dispose(); drain()
         val controller = controller(hideFloating = true, freeform = source)
         assertEquals(1, reads)
-        assertNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
+        assertNotNull(controller.showToast(IslandToastContent("Saved", context.packageName, null), 1000))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(3000)); drain()
         assertEquals(1, reads)
         windows = false
@@ -1677,8 +2838,10 @@ class IslandActivityLifecycleTest {
         assertFalse(source.isRecycled)
         assertFalse(shell!!.isLongClickable)
         val density = context.resources.displayMetrics.density
-        val expectedWidth = IslandSizing.collapsed(density,1080,(184*density).toInt(),(40*density).toInt(),(24*density),0f)
-        assertEquals(expectedWidth + 2 * (shell!!.parent as IslandTouchWindow).margin, latestParams!!.width)
+        val expectedWidth = IslandSizing.collapsed(density,1080,(184*density).toInt(),(40*density).toInt(),(24*density),0f,
+            heightDp = IslandSizing.automaticHeight(0))
+        assertEquals(expectedWidth, shell!!.width)
+        assertEquals(metricsWidth + 2 * (shell!!.parent as IslandTouchWindow).margin, latestParams!!.width)
         val insets = org.robolectric.util.ReflectionHelpers.getField<Rect>(latestParams, "surfaceInsets")
         // InputMonitor exports one surfaceInset scalar, chosen from the left edge.
         // Asymmetric values render correctly but move or collapse the real touch frame.
@@ -1703,7 +2866,7 @@ class IslandActivityLifecycleTest {
             prefs.put("system_island_position", alignment.toString())
             observer.onChange("system_island_position"); drain()
             val root = shell!!.parent as IslandTouchWindow
-            val visualLeft = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + root.margin
+            val visualLeft = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + shell!!.left
             if (alignment == 0) assertEquals(0, visualLeft)
             else assertEquals(metricsWidth, visualLeft + shell!!.width)
             assertEquals(0, org.robolectric.util.ReflectionHelpers.getField<Int>(shell, "cameraGap"))
@@ -1711,10 +2874,22 @@ class IslandActivityLifecycleTest {
         }
         val config = org.robolectric.util.ReflectionHelpers.getField<android.content.ComponentCallbacks>(controller, "configuration")
         metricsWidth = 2400; metricsHeight = 1080
-        config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain()
-        assertFalse(shell!!.isAttachedToWindow)
-        assertNull((shell!!.parent as IslandTouchWindow).parent)
+        for (leftSide in listOf(true, false)) {
+            metricsInsets = WindowInsets.Builder().setDisplayCutout(android.view.DisplayCutout(
+                android.graphics.Insets.of(if (leftSide) 120 else 0, 0, if (leftSide) 0 else 120, 0),
+                if (leftSide) Rect(0, 492, 120, 588) else null, null,
+                if (leftSide) null else Rect(2280, 492, 2400, 588), null)).build()
+            config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain(); revealMedia()
+            assertTrue(shell!!.isAttachedToWindow)
+            val visualLeft = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + shell!!.left
+            assertTrue(visualLeft >= if (leftSide) 120 else 0)
+            assertTrue("side=$leftSide left=$visualLeft width=${shell!!.width}",
+                visualLeft + shell!!.width <= if (leftSide) 2400 else 2280)
+            assertEquals(1, (shell!!.parent as IslandTouchWindow).childCount)
+        }
         metricsWidth = 1080; metricsHeight = 2400
+        metricsInsets = WindowInsets.Builder().setDisplayCutout(android.view.DisplayCutout(
+            android.graphics.Insets.of(0, 120, 0, 0), null, camera, null, null)).build()
         config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain(); revealMedia()
         assertNotNull(shell!!.parent)
         assertEquals(1, (shell!!.parent as IslandTouchWindow).childCount)
@@ -1794,6 +2969,38 @@ class IslandActivityLifecycleTest {
         native.player = launchablePlayer("replacement")
         controller.updateFromNative(native); drain()
         assertNull(shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).nextStartedActivity)
+    }
+
+    @Test fun expandedMediaReleasesItsHiddenSpectrumAndCompactMediaReacquiresOnlyOnce() {
+        var acquired = 0; var released = 0; var subscribed = 0
+        val backend = object : IslandAudioSpectrum.Backend {
+            override fun permitted() = true
+            override fun session(player: MediaController, user: android.os.UserHandle?) = 42
+            override fun subscribe(changed: () -> Unit): AutoCloseable { subscribed++; return AutoCloseable { subscribed-- } }
+            override fun capture(session: Int, fft: (ByteArray, Int) -> Unit): AutoCloseable {
+                acquired++; fft(ByteArray(512) { 64 }, 48_000_000)
+                return AutoCloseable { released++ }
+            }
+        }
+        val controller = controller(media = true, waveformMode = 2, spectrumBackend = backend)
+        native.player = launchablePlayer("expanded-wave-lease")
+        controller.updateFromNative(native); revealMedia()
+        val original = shell!!
+        assertEquals(1, acquired); assertEquals(1, subscribed)
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").expand(android.os.SystemClock.uptimeMillis())
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue(original.expanded)
+        assertEquals("A layout without wave bars has no active effect", acquired, released)
+        assertEquals(0, subscribed)
+        repeat(4) { controller.updateFromNative(native); drain() }
+        assertEquals(1, acquired)
+        org.robolectric.util.ReflectionHelpers.getField<IslandFormState>(controller, "forms").collapse()
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertFalse(original.expanded)
+        assertEquals(2, acquired); assertEquals(1, subscribed)
+        assertSame(original, shell); assertEquals(1, adds)
+        controller.dispose(); drain()
+        assertEquals(acquired, released); assertEquals(0, subscribed)
     }
 
     @Test fun realCaptureFollowsActualVisibilityPauseShadeScreenOffAndDisposal() {

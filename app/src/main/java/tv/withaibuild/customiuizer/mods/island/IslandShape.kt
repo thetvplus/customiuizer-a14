@@ -18,10 +18,10 @@ internal open class IslandShape : ViewOutlineProvider() {
     private val inverse = Matrix()
     private var regionDirty = false
 
-    fun resize(w: Int, h: Int, scaleX: Float = horizontal, scaleY: Float = vertical) {
+    fun resize(w: Int, h: Int, scaleX: Float = horizontal, scaleY: Float = vertical): Boolean {
         val sx = scaleX.coerceAtLeast(.01f)
         val sy = scaleY.coerceAtLeast(.01f)
-        if (w == width && h == height && horizontal == sx && vertical == sy) return
+        if (w == width && h == height && horizontal == sx && vertical == sy) return false
         width = w
         height = h
         horizontal = sx; vertical = sy
@@ -36,6 +36,7 @@ internal open class IslandShape : ViewOutlineProvider() {
             }
             regionDirty = true
         } else { region.setEmpty(); regionDirty = false }
+        return true
     }
 
     fun contains(x: Float, y: Float): Boolean {

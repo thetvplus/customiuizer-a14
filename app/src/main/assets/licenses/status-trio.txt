@@ -1,6 +1,9 @@
 Wi-Fi marker geometry adapted from Status Trio.
 Source: https://github.com/lingyired/status-trio/blob/c065b80ca55b736c2393d2a5fa566482be84f8ff/status-menubar.svg
 
+Top-marker optical-height alignment reimplemented from StatusIconRenderer.swift,
+revision 9bf2cca86b427e948862a6db6046bf3c94b1cf77 (2026-10-25).
+
 Status Trio
 Copyright 2026 lingyired
 

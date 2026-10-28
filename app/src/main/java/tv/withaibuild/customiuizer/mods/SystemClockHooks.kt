@@ -21,6 +21,7 @@ import android.widget.TextView
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.mods.clock.ClockAbi
 import tv.withaibuild.customiuizer.mods.clock.ClockEffect
 import tv.withaibuild.customiuizer.mods.clock.ClockEffectPublication
 import tv.withaibuild.customiuizer.mods.clock.ClockResolver
@@ -900,6 +901,22 @@ object SystemClockHooks {
         })
     }
 
+    /** Prepare only the immutable formatting capability; never retain a clock or controller. */
+    internal fun prepareClockEffectPublication(
+        prefs: PrefMap,
+        resolveCore: () -> ClockAbi?,
+    ): ClockEffectPublication? {
+        val statusbarClockTweak = !prefs.getBoolean("system_statusbaricons_clock") &&
+            prefs.getBoolean("system_statusbar_clocktweak")
+        val ccClockTweak = prefs.getBoolean("system_cc_clocktweak")
+        val ccDateTweak = !prefs.getBoolean("system_cc_hidedate") &&
+            prefs.getString("system_cc_dateformat", "").isNotEmpty()
+        val drawerDateTweak = !prefs.getBoolean("system_drawer_hidedate") &&
+            prefs.getString("system_drawer_dateformat", "").isNotEmpty()
+        if (!statusbarClockTweak && !ccClockTweak && !ccDateTweak && !drawerDateTweak) return null
+        return resolveCore()?.let(::ClockEffectPublication)
+    }
+
     @JvmStatic
     fun StatusBarClockTweakHook(lpparam: PackageReadyParam) {
         val enableWeatherParam = MainModule.mPrefs.getBoolean("system_statusbar_enable_weather_param")
@@ -912,10 +929,8 @@ object SystemClockHooks {
         val hideDateView = MainModule.mPrefs.getBoolean("system_cc_hidedate")
         val hideDrawerDate = MainModule.mPrefs.getBoolean("system_drawer_hidedate")
 
-        val clockEffectPublication = if (statusbarClockTweak || ccClockTweak) {
-            ClockResolver.resolveCore(lpparam.classLoader)?.let(::ClockEffectPublication)
-        } else {
-            null
+        val clockEffectPublication = prepareClockEffectPublication(MainModule.mPrefs) {
+            ClockResolver.resolveCore(lpparam.classLoader)
         }
 
         val scheduleHook = object : MethodHook() {
@@ -996,7 +1011,7 @@ object SystemClockHooks {
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         }
-        if (ccClockTweak || statusbarClockTweak) {
+        if (ccClockTweak || statusbarClockTweak || clockEffectPublication != null) {
             ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.MiuiStatusBarClockController", lpparam.classLoader, scheduleHook)
         }
 

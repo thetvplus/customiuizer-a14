@@ -58,6 +58,7 @@ internal class DockFullWidthContainer(context: Context) : FrameLayout(context) {
             appliedMatrix.set(hostToRoot)
             hasAppliedMatrix = true
         }
-        alpha = if (owner === root) opacity.coerceIn(0f, 1f) else 0f
+        val nextAlpha = if (owner === root) opacity.coerceIn(0f, 1f) else 0f
+        if (alpha != nextAlpha) alpha = nextAlpha
     }
 }

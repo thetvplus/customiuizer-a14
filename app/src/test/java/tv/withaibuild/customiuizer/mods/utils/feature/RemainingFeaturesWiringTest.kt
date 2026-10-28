@@ -13,6 +13,17 @@ import java.lang.reflect.Proxy
 
 class RemainingFeaturesWiringTest {
 
+    @Test fun folderIconBlurIsAnIndependentOptInForTheSharedLauncherTarget() {
+        val off = PrefMap()
+        val spec = LauncherPostAttachFeatures.all(fakePackageReadyParam(), off).single { it.id == LauncherFolderIconBlurFeatureId }
+        assertFalse(spec.isEnabled(off))
+        assertFalse(spec.isEnabled(PrefMap().apply { put("launcher_folderblur_opacity", 80) }))
+        assertTrue(spec.isEnabled(PrefMap().apply { put("launcher_folder_icon_blur", true) }))
+        assertEquals("launcher_folder_icon_blur", spec.preferenceKey)
+        assertEquals(FeatureTarget.LAUNCHER, spec.target)
+        assertEquals(InstallPhase.APPLICATION_ATTACHED, spec.phase)
+    }
+
     @Test
     fun guardProviderRetainsChinaPathButRejectsInternationalStalePreference() {
         val prefs = PrefMap().apply {

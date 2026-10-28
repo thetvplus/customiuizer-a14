@@ -42,4 +42,19 @@ class SystemPipActionsConfigTest {
         assertFalse(SystemPipActions.selected(prefs, 33))
         assertFalse(SystemPipActions.request(34)) // No native owner has been installed.
     }
+
+    @Test fun idlePipActionsDoNotDependOnTheMediaToggle() {
+        val prefs = MainModule.mPrefs
+        prefs.put("system_strong_toast_mode", "3")
+        prefs.put("system_island_idle_left_action", 33)
+        assertFalse(SystemPipActions.selected(prefs, 33))
+        prefs.put("system_island_idle", true)
+        assertTrue(SystemPipActions.selected(prefs, 33))
+        assertFalse(SystemPipActions.selected(prefs, 34))
+        prefs.put("system_island_idle_tap_action", 34)
+        assertTrue(SystemPipActions.selected(prefs, 34))
+        prefs.put("system_strong_toast_mode", "0")
+        assertFalse(SystemPipActions.selected(prefs, 33))
+        assertFalse(SystemPipActions.selected(prefs, 34))
+    }
 }

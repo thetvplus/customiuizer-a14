@@ -40,10 +40,6 @@ internal object DockGlassOptics {
         uniform float2 sampleSize;
         uniform float motion;
 
-        float sd(float2 p) {
-            float2 q = abs(p) - size * 0.5 + radius;
-            return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius;
-        }
         float2 uv(float2 p) {
             float3 point = float3(p, 1.0);
             return clamp(float2(dot(sampleX, point), dot(sampleY, point)),
@@ -52,29 +48,38 @@ internal object DockGlassOptics {
         half4 main(float2 coord) {
             float2 local = coord - origin;
             float2 p = local - size * 0.5;
-            float d = sd(p);
-            float coverage = 1.0 - smoothstep(-0.7, 0.7, d);
-            if (coverage < 0.001) return half4(0.0);
-            float2 grad = float2(sd(p + float2(0.5, 0.0)) - sd(p - float2(0.5, 0.0)),
-                sd(p + float2(0.0, 0.5)) - sd(p - float2(0.0, 0.5)));
-            float2 n = grad / max(length(grad), 0.001);
+            float2 q = abs(p) - size * 0.5 + radius;
+            float2 corner = max(q, 0.0);
+            float cornerLength = length(corner);
+            float d = min(max(q.x, q.y), 0.0) + cornerLength - radius;
+            float2 n = cornerLength > 0.001 ? sign(p) * corner / cornerLength :
+                (q.x > q.y ? float2(sign(p.x), 0.0) : float2(0.0, sign(p.y)));
+            // One native rounded-rectangle silhouette owns coverage for both materials.
+            // The same analytic boundary drives refraction; no second alpha mask.
+            float coverage = 1.0;
             float inside = max(-d, 0.0);
-            float bevel = max(1.0, min(min(size.x, size.y) * 0.30, 16.0 * density));
+            float bevel = max(1.0, min(min(size.x, size.y) * 0.34, 22.0 * density));
             float t = clamp(inside / bevel, 0.0, 1.0);
-            float falloff = 1.0 + 4.0 * t;
-            float slope = (1.0 / (falloff * falloff) - 0.04) / 0.96;
-            float depth = min(min(size.x, size.y) * 0.22, 12.0 * density);
-            float2 offset = -n * depth * slope * (1.0 + 0.12 * motion);
+            // Snell-law surface mapping, informed by AyuGram's LiquidGlassEffect.
+            // Use the shared material outline's normal and bounded optical depth.
+            float slope = 1.0 - t;
+            float vertical = sqrt(max(1.0 - slope * slope, 0.0));
+            float3 surfaceNormal = float3(n * slope, vertical);
+            float3 ray = refract(float3(0.0, 0.0, -1.0), surfaceNormal, 1.0 / 1.36);
+            float height = sqrt(max(inside * (2.0 * bevel - inside), 0.0));
+            float travel = (height + 6.0 * bevel) * 0.18 / max(-ray.z, 0.25);
+            float2 offset = ray.xy * min(travel, 30.0 * density) * (1.0 + 0.08 * motion);
             // Flat interior stays clear; the curved band compresses / folds actual background
             // features. RGB offsets follow the SAME normal and remain under one screen pixel.
             float dispersion = 0.008 * slope;
             float2 samplePoint = local - p * (0.004 * (1.0 - slope));
             half4 g = content.eval(uv(samplePoint + offset));
-            half3 col = half3(content.eval(uv(samplePoint + offset * (1.0 - dispersion))).r,
+            half3 col = g.rgb;
+            if (slope > 0.02) col = half3(content.eval(uv(samplePoint + offset * (1.0 - dispersion))).r,
                 g.g, content.eval(uv(samplePoint + offset * (1.0 + dispersion))).b);
             float lum = dot(col, half3(0.2126, 0.7152, 0.0722));
             float adaptive = smoothstep(0.25, 0.85, lum);
-            col = mix(col, half3(1.0 - adaptive), half(0.045 + 0.045 * adaptive));
+            col = mix(col, half3(1.0 - adaptive), half(0.035 + 0.025 * adaptive));
             float light = dot(n, float2(-0.6, -0.8));
             float front = pow(max(light, 0.0), 4.5);
             float back = pow(max(-light, 0.0), 4.5);

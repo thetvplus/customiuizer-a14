@@ -242,7 +242,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         for suffix, keys in (
             ("feedback", [f"pref_key_system_island_feedback_{kind}" for kind in
                           ("dnd", "ringer", "dark", "airplane", "nfc", "hotspot", "torch", "wifi", "data", "bluetooth")]),
-            ("music", [f"pref_key_system_island_music_{gesture}" for gesture in ("left", "right", "down", "double", "long")]),
+            ("actions", [f"pref_key_system_island_music_{gesture}" for gesture in ("left", "right", "down", "double", "long")]),
         ):
             for key in keys:
                 match = [entry for entry in entries if entry["key"] == key]
@@ -253,10 +253,22 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         source = ET.parse(SOURCE_DIR / "prefs_system.xml").getroot()
         island = next(e for e in source.iter() if e.get(ANDROID_KEY) == "pref_key_system_cat_island")
         self.assertEqual([f"@string/system_island_{name}_group" for name in
-                          ("basic", "geometry", "appearance", "feedback", "interaction")],
+                          ("basic", "feedback", "appearance", "interaction")],
                          [e.get(ANDROID_TITLE) for e in island])
         keys = {e.get(ANDROID_KEY) for e in island.iter()}
-        self.assertIn("pref_key_system_island_waveform_mode", keys)
+        self.assertNotIn("pref_key_system_island_waveform_mode", keys)
+        music = ET.parse(SOURCE_DIR / "prefs_system_island_music.xml").getroot()
+        self.assertNotIn("pref_key_system_island_waveform_mode", {e.get(ANDROID_KEY) for e in music.iter()})
+        effects = ET.parse(SOURCE_DIR / "prefs_system_island_effects.xml").getroot()
+        wave = next(e for e in effects.iter() if e.get(ANDROID_KEY) == "pref_key_system_island_waveform_mode")
+        self.assertIsNone(wave.get("{http://schemas.android.com/apk/res/android}dependency"))
+        self.assertEqual("@string/system_island_waveform_mode_summ", wave.get("{http://schemas.android.com/apk/res/android}summary"))
+        match = [entry for entry in entries if entry["key"] == "pref_key_system_island_waveform_mode"]
+        self.assertEqual(1, len(match))
+        self.assertEqual("@xml/prefs_system_island_effects", match[0]["page"])
+        self.assertEqual("pref_key_system_island_effects_cat", match[0]["routeSub"])
+        self.assertIn("pref_key_system_island_layout_cat", keys)
+        self.assertIn("pref_key_system_island_notifications_cat", keys)
         self.assertNotIn("pref_key_system_island_waveform", keys)
 
     def test_every_standalone_preference_is_searchable_with_its_real_page(self) -> None:
@@ -456,6 +468,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertIn("val VALUE_TYPES: Map<String, PreferenceValueType>", catalog)
         self.assertIn("PreferenceValueType.BOOLEAN", catalog)
         self.assertIn("PreferenceValueType.STRING_SET", catalog)
+        self.assertIn('"pref_key_system_island_live_kinds" to PreferenceValueType.STRING_SET', catalog)
         self.assertNotIn('"pref_key_..."', catalog)
         self.assertNotIn("val ALL_VALID_KEYS", catalog)
         for retired_key in RETIRED_A14_KEYS:

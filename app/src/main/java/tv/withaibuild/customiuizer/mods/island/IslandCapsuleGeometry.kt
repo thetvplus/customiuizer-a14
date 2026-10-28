@@ -10,6 +10,7 @@ import kotlin.math.sin
  * The analytic curve is rendered with cached Hermite cubics, not an exact G4 spline.
  */
 internal object IslandCapsuleGeometry {
+    // Preserve the established contour; controls are generated once and reused.
     private const val STEPS = 64
     private const val RAMP = 0.25
 
@@ -17,13 +18,13 @@ internal object IslandCapsuleGeometry {
         if (t > 1.0) return PI - heading(2.0 - t)
         val integral = if (t < RAMP) {
             val u = t / RAMP
-            RAMP * u * u * u * u * (2.5 - 3 * u + u * u)
+            RAMP * tv.withaibuild.customiuizer.utils.G4Geometry.curvatureIntegral(u)
         } else t - RAMP * 0.5
         return PI * 0.5 * integral / (1 - RAMP * 0.5)
     }
 
     private val cap = run {
-        val result = FloatArray(STEPS * 6)
+        val result = DoubleArray(STEPS * 6)
         val step = 2.0 / STEPS
         var x = 0.0
         var y = 0.0
@@ -34,18 +35,21 @@ internal object IslandCapsuleGeometry {
             val nx = x + step / 6 * (cos(a) + 4 * cos(middle) + cos(b))
             val ny = y + step / 6 * (sin(a) + 4 * sin(middle) + sin(b))
             val offset = i * 6
-            result[offset] = (x + step / 3 * cos(a)).toFloat()
-            result[offset + 1] = (y + step / 3 * sin(a)).toFloat()
-            result[offset + 2] = (nx - step / 3 * cos(b)).toFloat()
-            result[offset + 3] = (ny - step / 3 * sin(b)).toFloat()
-            result[offset + 4] = nx.toFloat()
-            result[offset + 5] = ny.toFloat()
+            result[offset] = (x + step / 3 * cos(a))
+            result[offset + 1] = (y + step / 3 * sin(a))
+            result[offset + 2] = (nx - step / 3 * cos(b))
+            result[offset + 3] = (ny - step / 3 * sin(b))
+            result[offset + 4] = nx
+            result[offset + 5] = ny
             x = nx; y = ny
         }
-        for (i in result.indices) result[i] = (result[i] / y).toFloat()
-        result[result.lastIndex - 1] = 0f
-        result[result.lastIndex] = 1f
-        result
+        val precise = FloatArray(result.size) { (result[it] / y).toFloat() }
+        // Explicit collinear controls remove finite-cubic curvature at the straight join.
+        precise[1] = 0f; precise[3] = 0f
+        precise[precise.size - 5] = 1f; precise[precise.size - 3] = 1f
+        precise[precise.lastIndex - 1] = 0f
+        precise[precise.lastIndex] = 1f
+        precise
     }
 
     fun build(path: Path, width: Float, height: Float) {

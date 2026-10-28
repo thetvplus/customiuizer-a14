@@ -30,6 +30,19 @@ native-code: 'arm64-v8a'
 SIGNATURE = f"Verified using v2 scheme (APK Signature Scheme v2): true\nSigner #1 certificate SHA-256 digest: {release.CERT}\n"
 
 
+def setUpModule():
+    # These API/asset fixtures model the published r14.25.5 release. Keep that
+    # identity explicit so advancing the repository target does not rewrite them.
+    global historical_target
+    historical_target = patch.dict(release.POLICY, release_target={
+        "version_name": "r14.25.5", "minimum_version_code": 254})
+    historical_target.start()
+
+
+def tearDownModule():
+    historical_target.stop()
+
+
 def build_run():
     return {"id": 42, "run_attempt": 1, "workflow_id": 7, "path": release.WORKFLOW,
             "head_repository": {"full_name": release.REPO}, "head_sha": COMMIT,
@@ -906,6 +919,40 @@ class DualPublicationTest(unittest.TestCase):
             self.assertEqual(source["name"], download["name"])
             self.assertEqual({metadata["apk"], "build-metadata.json"}, {asset["name"] for asset in source["assets"]})
 
+    def test_community_footer_is_published_once_and_legacy_recovery_is_read_only(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server):
+                release.publish_verified(root, "42", "both", metadata)
+                for record in server.records.values():
+                    self.assertTrue(record["body"].endswith(release.community_notes() + "\n"))
+                    self.assertEqual(1, record["body"].count(release.POLICY["community_url"]))
+                for legacy in (False, True):
+                    if legacy:
+                        for record in server.records.values():
+                            record["body"] = record["body"].removesuffix("\n\n" + release.community_notes() + "\n") + "\n"
+                    original = copy.deepcopy(server.records)
+                    server.events.clear()
+                    release.publish_verified(root, "42", "both", metadata)
+                    self.assertEqual(original, server.records)
+                    self.assertFalse(any(event[0] in {"create", "upload", "publish", "git"} for event in server.events))
+
+    def test_changed_community_url_cannot_bypass_existing_candidate_validation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            metadata = self.fixture(root)
+            server = ReleaseServer(root)
+            with self.context(server):
+                release.publish_verified(root, "42", "both", metadata)
+                server.records[release.REPO]["body"] = server.records[release.REPO]["body"].replace(
+                    release.POLICY["community_url"], "https://t.me/wrong")
+                server.events.clear()
+                with self.assertRaisesRegex(ValueError, "notes/title"):
+                    release.publish_verified(root, "42", "both", metadata)
+                self.assertFalse(any(event[0] in {"create", "upload", "publish", "git"} for event in server.events))
+
     def test_changed_title_or_notes_stop_publication_and_cross_repo_sync(self):
         for phase in ("create", "draft-readback", "published-readback"):
             for repository in (release.REPO, ReleaseServer.download):
@@ -1223,6 +1270,19 @@ class ProtectedWorkflowTest(unittest.TestCase):
 
 
 class FormalTargetAndNotesTest(unittest.TestCase):
+    def test_repository_target_matches_the_next_source_and_preserves_both_notes_baselines(self):
+        policy = json.loads((REPO_ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
+        name, code = release.source_version((REPO_ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
+        self.assertEqual("r14.25.7", name)
+        self.assertEqual(256, code)
+        with patch.object(release, "POLICY", policy):
+            release.release_target(name, code)
+            for retired in (("r14.25.5", 254), ("r14.25.6", 255), (name, 255)):
+                with self.assertRaisesRegex(ValueError, "designated formal"):
+                    release.release_target(*retired)
+        self.assertEqual({"notes_base": "r14.25.5"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.24.1"}, policy["cumulative_releases"]["r14.25.5"])
+
     def test_trial_and_retired_candidate_cannot_be_formal_release(self):
         release.release_target("r14.25.5",254)
         for name,code in (("r14.25.5",250),("r14.25.5",253),("r14.25.6",253),("r14.25.4",254)):

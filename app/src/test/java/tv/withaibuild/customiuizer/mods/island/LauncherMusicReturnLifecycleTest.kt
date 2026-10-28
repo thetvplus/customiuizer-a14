@@ -7,6 +7,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.os.UserHandle
+import android.graphics.RectF
 import android.view.View
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -43,9 +46,50 @@ class LauncherMusicReturnLifecycleTest {
             LauncherMusicReturnAccessTest.Targets::class.java, LauncherMusicReturnAccessTest.Remote::class.java,
             LauncherMusicReturnAccessTest.DeviceConfig::class.java)
         val type = Class.forName("${LauncherMusicReturnHooks::class.java.name}\$Owner")
-        return type.declaredConstructors.single().apply { isAccessible = true }.newInstance(View(context), prefs, access)
+        return type.declaredConstructors.single().apply { isAccessible = true }.newInstance(View(context), prefs, access, null)
     }
     private fun dispose(owner: Any) { owner.javaClass.getDeclaredMethod("dispose").apply { isAccessible = true }.invoke(owner) }
+
+    @Test fun repeatedNativeClosesWithoutNewTouchCommitIndependentlyAndOldCallbacksCannotStealTheNextReturn() {
+        val prefs = PrefMap().apply {
+            put("system_strong_toast_mode", "3"); put("system_island_media", true)
+            put("system_island_media_return", true); put("system_island_media_return_apps", setOf("chosen.music"))
+        }
+        val owner = owner(ContextSpy(), prefs)
+        try {
+            val epoch = ReflectionHelpers.getField<java.util.concurrent.atomic.AtomicLong>(owner, "gesture")
+            val active = ReflectionHelpers.getField<java.util.concurrent.atomic.AtomicLong>(owner, "activeAttempt")
+            val attemptType = Class.forName("${LauncherMusicReturnHooks::class.java.name}\$Attempt")
+            val make = attemptType.declaredConstructors.single().apply { isAccessible = true }
+            val commit = owner.javaClass.getDeclaredMethod("committed", attemptType,
+                Any::class.java, Boolean::class.javaPrimitiveType).apply { isAccessible = true }
+            val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000), 280f, 15f, 800f, 125f, 1080, 2400)
+            val snapshot = IslandMusicReturnSignal.Snapshot(frame, SystemClock.uptimeMillis(), 1)
+            val params = LauncherMusicReturnAccessTest.Params(null, null, frame.rectangle(), 0f, 55f, 1f, 1f,
+                LauncherMusicReturnAccessTest.Type.CLOSE_TO_HOME, true, true, false, null, null, null,
+                true, 0, 0, true, 0, false, false)
+            val element = LauncherMusicReturnAccessTest.Element().apply {
+                currentRectFParams = params; running = true; mAnim.targetRect = RectF(frame.rectangle())
+            }
+            var stale: Any? = null
+            repeat(48) { index ->
+                val sequence = 100L + index
+                active.set(sequence)
+                val attempt = make.newInstance(params, snapshot, epoch.get(), sequence, .4f)
+                stale?.let { commit.invoke(owner, it, element, true) }
+                commit.invoke(owner, attempt, element, false)
+                assertEquals(sequence, ReflectionHelpers.getField<Long>(owner, "committedAttempt"))
+                commit.invoke(owner, attempt, element, true)
+                assertEquals(sequence, ReflectionHelpers.getField<Long>(owner, "committedAttempt"))
+                stale = attempt
+            }
+            val invalidate = owner.javaClass.getDeclaredMethod("invalidateAttempt").apply { isAccessible = true }
+            invalidate.invoke(owner)
+            commit.invoke(owner, stale, element, true)
+            assertEquals(147L, ReflectionHelpers.getField<Long>(owner, "committedAttempt"))
+            assertEquals(0L, active.get())
+        } finally { dispose(owner) }
+    }
 
     @Test fun disablingAndDetachingReleaseTheReceiverAndScopeWithoutDroppingFrameworkDeliveries() {
         val context = ContextSpy()

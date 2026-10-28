@@ -721,7 +721,7 @@
 	</string-array>
 
 	<string-array name="strong_toast_presentation_modes">
-		<item>@string/array_system_default</item>
+		<item>@string/system_strong_toast_mode_default</item>
 		<item>@string/system_strong_toast_mode_match_height</item>
 		<item>@string/system_strong_toast_mode_hide</item>
 		<item>@string/system_strong_toast_mode_dynamic_island</item>
@@ -828,4 +828,6 @@
     <string-array name="island_waveform_modes_val" translatable="false">
         <item>0</item><item>1</item><item>2</item>
     </string-array>
+    <string-array name="island_return_effects"><item>@string/system_island_return_effect_standard</item><item>@string/system_island_return_effect_absorption</item></string-array>
+    <string-array name="island_return_effects_val" translatable="false"><item>0</item><item>1</item></string-array>
 </resources>

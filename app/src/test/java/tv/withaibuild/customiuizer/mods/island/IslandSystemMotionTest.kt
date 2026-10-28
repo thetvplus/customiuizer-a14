@@ -35,7 +35,7 @@ import java.lang.reflect.Proxy
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "w1080dp-h2400dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandSystemMotionTest {
     private val scheduler = TestCoroutineScheduler()

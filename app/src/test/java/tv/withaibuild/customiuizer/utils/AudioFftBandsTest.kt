@@ -85,4 +85,27 @@ class AudioFftBandsTest {
         assertTrue(AudioFftBands.five(ByteArray(128), 44_100_000, levels))
         assertArrayEquals(FloatArray(5), levels, 0f)
     }
+
+    @Test fun nativeRatesAndCaptureLengthsKeepQuietContentBelowStrongContentWithoutCodecGain() {
+        // File codecs and PCM depths have already been converted by the native effect;
+        // the input here is always signed 8-bit FFT at the reported capture rate.
+        for (rate in listOf(8_000_000, 16_000_000, 44_100_000, 48_000_000,
+            88_200_000, 96_000_000, 176_400_000, 192_000_000)) {
+            for (size in listOf(256, 512, 1024)) {
+                val fft = ByteArray(size)
+                val bin = kotlin.math.round(1000f * size / (rate / 1000f)).toInt().coerceAtLeast(1)
+                val levels = FloatArray(5)
+                fft[bin * 2] = 64
+                repeat(30) { assertTrue(AudioFftBands.five(fft, rate, levels)) }
+                val strong = levels[2]
+                assertTrue("rate=$rate, size=$size", strong > .1f && strong < .9f)
+                fft[bin * 2] = 2
+                repeat(30) { assertTrue(AudioFftBands.five(fft, rate, levels)) }
+                assertTrue("quiet rate=$rate, size=$size", levels[2] < strong * .05f)
+                fft.fill(0)
+                repeat(30) { AudioFftBands.five(fft, rate, levels) }
+                assertTrue(levels.all { it >= 0f && it < .0001f })
+            }
+        }
+    }
 }

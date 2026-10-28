@@ -13,6 +13,7 @@ import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
+import androidx.preference.MultiSelectListPreference
 import miui.os.Build
 import tv.withaibuild.customiuizer.PrefsProvider
 import tv.withaibuild.customiuizer.R
@@ -29,6 +30,8 @@ import tv.withaibuild.customiuizer.utils.Helpers
 import kotlin.math.roundToInt
 
 class System : SubFragment() {
+    private var islandOffsetUpdate: Runnable? = null
+    private var islandOffsetHandler: Handler? = null
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         if (sub == "pref_key_system_cat_recents") {
@@ -43,6 +46,7 @@ class System : SubFragment() {
         }
         super.onCreatePreferences(savedInstanceState, rootKey)
         selectSub()
+        if (sub == "pref_key_system_island_layout_cat") configureIslandOffsetRange()
         if (sub == "pref_key_system_cat_toasts") {
             val position = findPreference<ListPreferenceEx>("pref_key_system_toast_position")
             fun showOffset(value: Any?) {
@@ -67,6 +71,67 @@ class System : SubFragment() {
                 findPreference<ListPreferenceEx>("pref_key_system_detailednetspeed_style")?.value
             )
         }
+    }
+
+    private fun configureIslandOffsetRange() {
+        val prefs = AppHelper.appPrefs ?: return
+        val offset = findPreference<SeekBarPreference>("pref_key_system_island_horizontal_offset") ?: return
+        val metrics = activity?.windowManager?.currentWindowMetrics
+        val hole = metrics?.windowInsets?.displayCutout?.boundingRectTop?.width() ?: 0
+        val density = resources.displayMetrics.density
+        val screenWidth = metrics?.bounds?.width() ?: resources.displayMetrics.widthPixels
+        fun px(dp: Int) = (dp * density + .5f).toInt()
+        val update = Runnable {
+            if (!isAdded) return@Runnable
+            val alignment = prefs.getString("pref_key_system_island_position", "1")?.toIntOrNull() ?: 1
+            val centered = alignment == 1
+            var limit = 80
+            if (centered && hole > 0) {
+                val manualHeight = prefs.getInt("pref_key_system_island_height", 40)
+                val height = if (prefs.getBoolean("pref_key_system_island_height_auto", manualHeight == 40))
+                    tv.withaibuild.customiuizer.mods.island.IslandSizing.automaticHeight((hole / density).toInt(), ((metrics?.windowInsets?.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars())?.top ?: 0) / density).toInt()) else manualHeight
+                val gap = maxOf(px(40), hole + px(16))
+                val sizing = tv.withaibuild.customiuizer.mods.island.IslandSizing
+                val short = sizing.collapsed(density, screenWidth, screenWidth, gap, px(24).toFloat(), px(24).toFloat(),
+                    shortDp = prefs.getInt("pref_key_system_island_width_short", 184),
+                    longDp = prefs.getInt("pref_key_system_island_width_medium", 240),
+                    manual = !prefs.getBoolean("pref_key_system_island_width_auto", true), heightDp = height)
+                val smallest = if (prefs.getBoolean("pref_key_system_island_idle", false)) sizing.idleWidth(density,
+                    px(height), hole, short, if (prefs.getBoolean("pref_key_system_island_idle_width_auto", true)) 0
+                    else prefs.getInt("pref_key_system_island_idle_width", 100)) else short
+                limit = (sizing.horizontalOffsetLimit(short, smallest, gap, px(sizing.EDGE_DP + 24)) / density).toInt().coerceIn(0, 80)
+            }
+            offset.setValueRange(if (alignment == 0) 80 else 80 - limit,
+                if (alignment == 2) 80 else maxOf(81, 80 + limit))
+            if (limit == 0) offset.setValue(80)
+            val autoHeight = prefs.getBoolean("pref_key_system_island_height_auto", prefs.getInt("pref_key_system_island_height", 40) == 40)
+            val autoWidth = prefs.getBoolean("pref_key_system_island_width_auto", true)
+            findPreference<Preference>("pref_key_system_island_height")?.isVisible = !autoHeight
+            for (kind in listOf("short", "medium"))
+                findPreference<Preference>("pref_key_system_island_width_$kind")?.isVisible = !autoWidth
+            val idle = prefs.getBoolean("pref_key_system_island_idle", false)
+            findPreference<Preference>("pref_key_system_island_idle_width_auto")?.isVisible = idle
+            findPreference<Preference>("pref_key_system_island_idle_width")?.isVisible = idle && !prefs.getBoolean("pref_key_system_island_idle_width_auto", true)
+            val mode = prefs.all["pref_key_system_strong_toast_mode"]?.toString()?.toIntOrNull() ?: 0
+            offset.isEnabled = limit > 0 && StrongToastPresentationMode.fromPreference(mode) == StrongToastPresentationMode.DYNAMIC_ISLAND
+        }
+        val handler = Handler(Looper.getMainLooper())
+        islandOffsetHandler = handler; islandOffsetUpdate = update
+        for (suffix in listOf("position", "height_auto", "height", "width_auto", "width_short", "width_medium",
+                "idle", "idle_width_auto", "idle_width")) {
+            findPreference<Preference>("pref_key_system_island_$suffix")?.setOnPreferenceChangeListener { _, _ ->
+                handler.removeCallbacks(update)
+                handler.post(update)
+                true
+            }
+        }
+        update.run()
+    }
+
+    override fun onDestroyView() {
+        islandOffsetUpdate?.let { islandOffsetHandler?.removeCallbacks(it) }
+        islandOffsetUpdate = null; islandOffsetHandler = null
+        super.onDestroyView()
     }
 
     private fun updateDetailedNetSpeedOptions(style: Any?) {
@@ -155,41 +220,95 @@ class System : SubFragment() {
             "pref_key_system_cat_toasts" -> findPreference<Preference>("pref_key_system_blocktoasts_apps")?.setOnPreferenceClickListener(openAppsEdit)
 
             "pref_key_system_island_feedback_cat", "pref_key_system_island_music_cat" -> {
+                findPreference<MultiSelectListPreference>("pref_key_system_island_live_kinds")?.let { sources ->
+                    sources.setOnPreferenceChangeListener { _, selected ->
+                        @Suppress("UNCHECKED_CAST")
+                        tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected as Set<String>)
+                        true
+                    }
+                }
                 val enabled = StrongToastPresentationMode.fromPreference(
                     AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
                 ) == StrongToastPresentationMode.DYNAMIC_ISLAND
-                val media = AppHelper.appPrefs?.getBoolean("pref_key_system_island_media", false) == true
-                for (key in tv.withaibuild.customiuizer.utils.IslandPreferenceDefaults.feedbackKeys)
-                    findPreference<Preference>(key)?.isEnabled = enabled
+                // Native Preference dependencies own media/return enablement and propagate
+                // changes through the existing screen; no mirrored checkbox state.
+                preferenceScreen.isEnabled = enabled
+                findPreference<Preference>("pref_key_system_island_media_return_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries) {
                     findPreference<Preference>("pref_key_${gesture.key}")?.apply {
-                        isEnabled = enabled && media
                         onPreferenceClickListener = openMusicActions
                     }
                 }
             }
+            "pref_key_system_island_effects_cat" -> {
+                preferenceScreen.isEnabled = StrongToastPresentationMode.fromPreference(
+                    AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
+                ) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                val mode = findPreference<ListPreferenceEx>("pref_key_system_island_waveform_mode")
+                val gain = findPreference<Preference>("pref_key_system_island_waveform_gain")
+                gain?.isEnabled = mode?.value == "2"
+                mode?.setOnPreferenceChangeListener { _, value -> gain?.isEnabled = value.toString() == "2"; true }
+            }
+            "pref_key_system_island_actions_cat" -> {
+                val enabled = StrongToastPresentationMode.fromPreference(
+                    AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
+                ) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                preferenceScreen.isEnabled = enabled
+                val media = AppHelper.appPrefs?.getBoolean("pref_key_system_island_media", false) == true
+                findPreference<Preference>("pref_key_system_island_media_return")?.isEnabled = enabled && media
+                findPreference<Preference>("pref_key_system_island_media_return_apps")?.setOnPreferenceClickListener(openAppsEdit)
+                for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
+                    findPreference<Preference>("pref_key_${gesture.key}")?.apply {
+                        isEnabled = enabled && media
+                        onPreferenceClickListener = openMusicActions
+                    }
+                for ((suffix, _) in tv.withaibuild.customiuizer.mods.island.IslandIdleActions.defaults)
+                    findPreference<Preference>("pref_key_system_island_idle_$suffix")?.onPreferenceClickListener = openMusicActions
+            }
+            "pref_key_system_island_notifications_cat" -> {
+                val prefs = AppHelper.appPrefs
+                val enabled = StrongToastPresentationMode.fromPreference(prefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                preferenceScreen.isEnabled = enabled
+                for (suffix in listOf("notification_apps", "chat_excluded_apps"))
+                    findPreference<Preference>("pref_key_system_island_$suffix")?.setOnPreferenceClickListener(openAppsEdit)
+            }
+            "pref_key_system_island_layout_cat" -> {
+                val enabled = StrongToastPresentationMode.fromPreference(AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                preferenceScreen.isEnabled = enabled
+                islandOffsetUpdate?.run()
+            }
             "pref_key_system_cat_island" -> {
+                findPreference<Preference>("pref_key_system_island_actions_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.xml.prefs_system_island_actions); true
+                }
+                findPreference<Preference>("pref_key_system_island_layout_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.xml.prefs_system_island_layout); true
+                }
+                findPreference<Preference>("pref_key_system_island_notifications_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.xml.prefs_system_island_notifications); true
+                }
                 findPreference<Preference>("pref_key_system_island_feedback_cat")?.setOnPreferenceClickListener {
                     openSystemSubFragment(it, false, R.xml.prefs_system_island_feedback); true
                 }
                 findPreference<Preference>("pref_key_system_island_music_cat")?.setOnPreferenceClickListener {
                     openSystemSubFragment(it, false, R.xml.prefs_system_island_music); true
                 }
+                findPreference<Preference>("pref_key_system_island_effects_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.xml.prefs_system_island_effects); true
+                }
                 val strongToastMode = findPreference<ListPreferenceEx>("pref_key_system_strong_toast_mode")
-                val islandOffset = findPreference<Preference>("pref_key_system_strong_toast_island_offset")
                 fun showIslandOffset(mode: Any?) {
                     val presentation = StrongToastPresentationMode.fromPreference(
                         mode?.toString()?.toIntOrNull() ?: 0
                     )
                     val enabled = presentation == StrongToastPresentationMode.DYNAMIC_ISLAND
-                    islandOffset?.isVisible = enabled
-                    for (key in listOf("media", "media_return", "media_return_apps", "media_swipe", "waveform_mode", "feedback_cat", "music_cat", "height", "width_auto", "width_short", "width_medium", "entrance_style", "simplified", "excluded_apps", "chat", "chat_excluded_apps", "position", "horizontal_offset", "notification_apps")) {
-                        findPreference<Preference>("pref_key_system_island_$key")?.isEnabled = enabled
-                    }
-                    for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
-                        findPreference<Preference>("pref_key_${gesture.key}")?.isEnabled = enabled
-                    for (key in tv.withaibuild.customiuizer.utils.IslandPreferenceDefaults.feedbackKeys)
-                        findPreference<Preference>(key)?.isEnabled = enabled
+                    for (entry in listOf("music_cat", "layout_cat", "actions_cat"))
+                        findPreference<Preference>("pref_key_system_island_$entry")?.parent?.apply {
+                            isVisible = enabled
+                            isEnabled = enabled
+                        }
+                    findPreference<Preference>("pref_key_system_toast_capsule")?.isVisible =
+                        enabled || presentation == StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT
                     findPreference<Preference>("pref_key_system_toast_capsule")?.isEnabled =
                         enabled || presentation == StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT
                 }
@@ -198,7 +317,8 @@ class System : SubFragment() {
                     showIslandOffset(newValue)
                     true
                 }
-                showIslandOffset(strongToastMode?.value)
+                showIslandOffset(strongToastMode?.value ?: AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode"))
+                islandOffsetUpdate?.run()
                 findPreference<Preference>("pref_key_system_island_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_island_chat_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_island_notification_apps")?.setOnPreferenceClickListener(openAppsEdit)
@@ -390,12 +510,13 @@ class System : SubFragment() {
 
     override fun onResume() {
         super.onResume()
-        if (sub != "pref_key_system_island_music_cat") return
+        if (sub != "pref_key_system_island_actions_cat") return
         val values = resources.getIntArray(R.array.global_actions_island_music_val)
         val labels = resources.getStringArray(R.array.global_actions_island_music)
-        for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries) {
-            val key = "pref_key_${gesture.key}"
-            val action = AppHelper.getIntOfAppPrefs(key + "_action", gesture.defaultAction)
+        val keys = tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries.map { "pref_key_${it.key}" } +
+            tv.withaibuild.customiuizer.mods.island.IslandIdleActions.defaults.map { "pref_key_system_island_idle_${it.first}" }
+        for (key in keys) {
+            val action = AppHelper.getIntOfAppPrefs(key + "_action", tv.withaibuild.customiuizer.mods.island.IslandIdleActions.defaultForKey(key))
             val index = values.indexOf(action).coerceAtLeast(0)
             val label = if (action == 8 || action == 9 || action == 20)
                 AppHelper.getActionNameLocal(requireContext(), key)?.let { listOf(it.first, it.second).filter(String::isNotBlank).joinToString(": ") }

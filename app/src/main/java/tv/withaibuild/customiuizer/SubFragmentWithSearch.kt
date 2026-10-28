@@ -7,17 +7,13 @@ import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.widget.ListAdapter
+import android.widget.Filterable
 import android.widget.ListView
 import android.widget.TextView
 
 import androidx.appcompat.app.AppCompatActivity
 
-import tv.withaibuild.customiuizer.utils.AppDataAdapter
 import tv.withaibuild.customiuizer.utils.Helpers
-import tv.withaibuild.customiuizer.utils.LockedAppAdapter
-import tv.withaibuild.customiuizer.utils.PrivacyAppAdapter
-import tv.withaibuild.customiuizer.utils.ResolveInfoAdapter
 
 open class SubFragmentWithSearch : SubFragment() {
 
@@ -86,12 +82,6 @@ open class SubFragmentWithSearch : SubFragment() {
     }
 
     private fun applyFilter(filter: String) {
-        val adapter = listView?.adapter ?: return
-        when (adapter) {
-            is AppDataAdapter -> adapter.filter.filter(filter)
-            is PrivacyAppAdapter -> adapter.filter.filter(filter)
-            is LockedAppAdapter -> adapter.filter.filter(filter)
-            is ResolveInfoAdapter -> adapter.filter.filter(filter)
-        }
+        (listView?.adapter as? Filterable)?.filter?.filter(filter)
     }
 }

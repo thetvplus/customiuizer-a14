@@ -50,6 +50,10 @@ CATEGORY_SOURCES = (
 STANDALONE_PAGES = (
     ("pref_key_system_island_feedback_cat", "prefs_system_island_feedback", "System", False),
     ("pref_key_system_island_music_cat", "prefs_system_island_music", "System", False),
+    ("pref_key_system_island_effects_cat", "prefs_system_island_effects", "System", False),
+    ("pref_key_system_island_actions_cat", "prefs_system_island_actions", "System", False),
+    ("pref_key_system_island_layout_cat", "prefs_system_island_layout", "System", False),
+    ("pref_key_system_island_notifications_cat", "prefs_system_island_notifications", "System", False),
     ("pref_key_system_autobrightness_cat", "prefs_system_autobrightness", "System_AutoBrightness", False),
     ("pref_key_system_visualizer_cat", "prefs_system_visualizer", "System_Visualizer", False),
     ("pref_key_system_vibration_amp_cat", "prefs_system_vibration_amp", "System_VibrationAmp", False),
@@ -129,7 +133,10 @@ def _structured_categories(
             split_root = _new_screen(source_root)
             split_root.append(copy.deepcopy(source_category))
             _write_xml(xml_dir / _split_name(category, key), split_root)
-            selector_group.append(ET.Element(PREFERENCE_ITEM, {ANDROID_KEY: key, ANDROID_TITLE: title}))
+            selector_group.append(ET.Element(PREFERENCE_ITEM, {
+                ANDROID_KEY: key, ANDROID_TITLE: title,
+                f"{{{ANDROID_NS}}}widgetLayout": "@layout/preference_widget_disclosure",
+            }))
             found += 1
 
     append_group(source_root, selector)
@@ -266,6 +273,7 @@ def _append_compact_search_category(
 FEATURE_PREFERENCE_KEY = re.compile(r'preferenceKey\s*=\s*"([A-Za-z][A-Za-z0-9_]*)"')
 
 XML_VALUE_TYPES = {
+    "androidx.preference.MultiSelectListPreference": "STRING_SET",
     "tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx": "BOOLEAN",
     "tv.withaibuild.customiuizer.prefs.ListPreferenceEx": "STRING",
     "tv.withaibuild.customiuizer.prefs.DropDownPreferenceEx": "STRING",

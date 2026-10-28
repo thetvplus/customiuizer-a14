@@ -1,0 +1,11 @@
+<resources>
+    <string-array name="system_island_live_entries">
+        <item>@string/system_island_live_call</item><item>@string/system_island_live_alarm</item>
+        <item>@string/system_island_live_timer</item><item>@string/system_island_live_stopwatch</item>
+        <item>@string/system_island_live_recorder</item><item>@string/system_island_live_privacy</item>
+    </string-array>
+    <string-array name="system_island_live_values" translatable="false">
+        <item>call</item><item>alarm</item><item>timer</item><item>stopwatch</item>
+        <item>recorder</item><item>privacy</item>
+    </string-array>
+</resources>

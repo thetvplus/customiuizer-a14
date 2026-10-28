@@ -16,9 +16,13 @@ internal object DynamicIslandStatusBarFade {
     private val islandBounds = Rect()
     private var compact: IslandStatusBarCompact? = null
 
-    fun compactClearance(screenWidth: Int, fallback: Int): Int {
+    fun compactClearance(screenWidth: Int, fallback: Int, center: Float = screenWidth * .5f): Int {
+        return measuredCompactClearance(screenWidth, center) ?: fallback
+    }
+
+    fun measuredCompactClearance(screenWidth: Int, center: Float = screenWidth * .5f): Int? {
         if (compact == null) contentsRef?.get()?.let { compact = IslandStatusBarCompact.resolve(it) }
-        return compact?.maximumWidth(screenWidth) ?: fallback
+        return compact?.maximumWidth(screenWidth, center)
     }
 
     fun bindFromStatusBar(statusBar: View) {

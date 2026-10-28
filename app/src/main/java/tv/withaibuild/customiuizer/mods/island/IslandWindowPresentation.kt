@@ -33,7 +33,9 @@ internal class IslandWindowPresentation(
     private val transformedOrigin = FloatArray(2)
 
     fun prepare(event: Any, compactWidth: Int) {
-        if (identity !== event || phase == Phase.EXITING) {
+        // Activity snapshots recreate equal keys. Metadata/form updates keep the same
+        // visible lease; only a new logical source or an interrupted exit reacquires it.
+        if (identity != event || phase == Phase.EXITING) {
             release()
             identity = event
             phase = Phase.PREPARED

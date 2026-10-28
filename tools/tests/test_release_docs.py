@@ -114,6 +114,24 @@ class DownloadDocumentsTest(unittest.TestCase):
             self.assertNotIn("INTERNAL_ONLY", result[filename])
         self.assertIn(server.metadata["apk"], result["README.md"])
         self.assertIn("/commit/" + SHA, result["README_EN.md"])
+        for filename in ("README.md", "README_EN.md"):
+            self.assertEqual(1, result[filename].count(release.POLICY["community_url"]))
+            self.assertNotIn("/issues", result[filename])
+
+    def test_community_link_is_shared_by_source_docs_and_app_build(self):
+        url = release.POLICY["community_url"]
+        self.assertEqual("https://t.me/customiuizerA14", url)
+        self.assertEqual("米客 A14｜CustoMIUIzer A14｜HyperOS 1 / Android 14", release.POLICY["repository_description"])
+        for filename in ("README.md", "README_EN.md"):
+            text = (release.ROOT / filename).read_text(encoding="utf-8")
+            self.assertEqual(1, text.count(url))
+            self.assertNotIn("/issues", text)
+        build = (release.ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+        self.assertIn('releasePolicy["community_url"]', build)
+        self.assertIn('buildConfigField("String", "COMMUNITY_URL", JsonOutput.toJson(communityUrl))', build)
+        self.assertIn(url, release.community_notes())
+        self.assertEqual(1, len(release.community_notes().splitlines()))
+        self.assertNotIn("#", release.community_notes())
 
     def test_stable_identity_asset_and_platform_mismatches_fail_without_any_write(self):
         for key, value in (("draft", True), ("prerelease", True), ("tag_name", "r14.99.0"), ("target_commitish", "f" * 40)):

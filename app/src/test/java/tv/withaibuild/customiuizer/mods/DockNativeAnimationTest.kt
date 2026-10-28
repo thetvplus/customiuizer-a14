@@ -13,9 +13,75 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class)
+@Config(sdk = [34], application = android.app.Application::class, shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockNativeAnimationTest {
+    @Test fun settledFullWidthNativeMaterialSkipsEqualOpacitySubmissionsButFollowsChangedParents() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        DockBackgroundTest.NativeMaterial.googleSupported = true
+        try {
+            val root = FrameLayout(activity.get())
+            activity.get().setContentView(root)
+            val host = FrameLayout(activity.get())
+            root.addView(host, FrameLayout.LayoutParams(320, 80).apply { topMargin = 600 })
+            LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true),
+                DockBackgroundTest.NativeMaterial::class.java.getConstructor(android.content.Context::class.java))
+            val decor = host.rootView as FrameLayout
+            val layer = (0 until decor.childCount).map { decor.getChildAt(it) }.filterIsInstance<DockFullWidthContainer>().single()
+            val panel = layer.getChildAt(0) as DockBackgroundView
+            repeat(4) {
+                decor.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY))
+                decor.layout(0, 0, 360, 800); panel.onPreDraw()
+            }
+            val material = panel.getChildAt(0) as DockBackgroundTest.NativeMaterial
+            material.alphaSubmissions = 0
+            repeat(120) { panel.onPreDraw() }
+            assertEquals(0, material.alphaSubmissions)
+            host.alpha = .5f
+            panel.onPreDraw()
+            assertEquals(115, material.background.alpha)
+            assertEquals(1, material.alphaSubmissions)
+            host.alpha = 0f
+            panel.onPreDraw()
+            assertFalse(material.appliedEnabled)
+            host.alpha = 1f
+            panel.onPreDraw()
+            assertTrue(material.appliedEnabled)
+            assertEquals(230, material.background.alpha)
+        } finally { activity.pause().stop().destroy(); DockBackgroundTest.NativeMaterial.googleSupported = false }
+    }
+
+    @Test fun nativeTerminalEditingFrameRetainsItsTransformUntilTheHostFinishesDrawing() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val root = FrameLayout(activity.get())
+        activity.get().setContentView(root)
+        val host = FrameLayout(activity.get())
+        root.addView(host, FrameLayout.LayoutParams(320, 80).apply { topMargin = 600 })
+        LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true), null)
+        val decor = host.rootView as FrameLayout
+        val layer = (0 until decor.childCount).map { decor.getChildAt(it) }.filterIsInstance<DockFullWidthContainer>().single()
+        val panel = layer.getChildAt(0) as DockBackgroundView
+        repeat(3) {
+            decor.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY))
+            decor.layout(0, 0, 360, 800); panel.onPreDraw()
+        }
+        val animation = android.view.animation.AnimationSet(false)
+        host.startAnimation(animation)
+        panel.bindEditingAnimation(animation, showing = false)
+        val terminal = Matrix().apply { setTranslate(0f, 40f) }
+        panel.onEditingFrame(animation, 0f, false, terminal)
+        assertSame(animation, org.robolectric.util.ReflectionHelpers.getField(panel, "editingAnimation"))
+        val actual = FloatArray(9)
+        org.robolectric.util.ReflectionHelpers.getField<Matrix>(panel, "editingMatrix").getValues(actual)
+        assertEquals(40f, actual[Matrix.MTRANS_Y], .0001f)
+        assertEquals(0f, layer.alpha, .0001f)
+        host.clearAnimation(); panel.onPreDraw()
+        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(panel, "editingAnimation"))
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Matrix>(panel, "editingMatrix").isIdentity)
+        activity.pause().stop().destroy()
+    }
     @Test fun nativePrepareFramesAndResetOwnThePanelInBothModes() {
         for (full in listOf(false, true)) {
             val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()

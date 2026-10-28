@@ -27,11 +27,11 @@ internal object IslandChatNotifications {
             n.visibility == Notification.VISIBILITY_SECRET || n.flags and Notification.FLAG_GROUP_SUMMARY != 0 || sbn.isOngoing ||
             n.fullScreenIntent != null || n.contentView != null || n.bigContentView != null || n.headsUpContentView != null) return null
         val style = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(n)
-        val messageNotification = style != null || n.category == Notification.CATEGORY_MESSAGE
         val pictureNotification = n.extras.getString(Notification.EXTRA_TEMPLATE) == Notification.BigPictureStyle::class.java.name
-        // Generic standard styles carry content semantics. An arbitrary app branding icon
-        // alone does not turn every notification into a new activity.
-        if (!messageNotification && !pictureNotification) return null
+        // App admission is already explicit. Native standard text, SMS and calendar notices
+        // share one lifetime; custom views, ongoing cards and unsafe alerts stay native above.
+        val template = n.extras.getString(Notification.EXTRA_TEMPLATE)
+        if (template != null && template !in standardTemplates) return null
         val message = style?.messages?.lastOrNull()
         val person = message?.person
         val title = title(person?.name) ?: title(n.extras.getCharSequence(Notification.EXTRA_TITLE)) ?: return null
@@ -50,12 +50,16 @@ internal object IslandChatNotifications {
         }
         // Native status icons retain their View callback. Copy their pixels too, never
         // transfer a drawable owned by SystemUI to the island ImageView.
-        val candidate = source ?: nativeIcon?.takeIf { messageNotification }
+        val candidate = source ?: nativeIcon?.takeUnless { pictureNotification }
         val icon = candidate?.let { drawable -> ModuleHelper.guarded<Drawable?>(null) { thumbnail(context, drawable) } }
-        if (!messageNotification && icon == null) return null
+        if (pictureNotification && icon == null) return null
         return IslandToastContent(title, sbn.packageName, icon, notificationKey = sbn.key,
             detail = detail, avatar = avatar != null && icon != null)
     }
+
+    private val standardTemplates = setOf(Notification.MessagingStyle::class.java.name,
+        Notification.BigTextStyle::class.java.name, Notification.BigPictureStyle::class.java.name,
+        Notification.InboxStyle::class.java.name)
 
     private fun title(value: CharSequence?): String? = value?.take(80)?.toString()
         ?.takeUnless { it.isBlank() || it.any(Char::isISOControl) }

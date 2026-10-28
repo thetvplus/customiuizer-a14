@@ -61,7 +61,7 @@ object SystemDisplayHooks {
         if (anim == 0) anim = 250
         screenAnimDurationMs = anim
         noLightUpOnCharge = MainModule.mPrefs.getStringAsInt("system_nolightuponcharges", 1)
-        dimTimeRatio = MainModule.mPrefs.getInt("system_dimtime", 0) / 100f
+        dimTimeRatio = MainModule.mPrefs.getInt("system_dimtime", 0).coerceIn(0, 99) / 100f
         wallpaperScale = MainModule.mPrefs.getInt("system_other_wallpaper_scale", 6) / 10.0f
     }
 
@@ -678,86 +678,67 @@ object SystemDisplayHooks {
 
     @JvmStatic
     fun AutoBrightnessAfterScreenOffHook(lpparam: SystemServerStartingParam) {
-        ModuleHelper.findAndHookMethod("com.android.server.display.DisplayPowerController", lpparam.classLoader, "setScreenState", Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            var stateChanged = false
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                val thisObject = chain.thisObject
+        ModuleHelper.findAndHookMethod("com.android.server.display.DisplayPowerController", lpparam.classLoader, "setScreenState", Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, autoBrightnessScreenOffHook())
+    }
+
+    internal fun autoBrightnessScreenOffHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            // Eligibility belongs to this call: another controller or a nested call must not overwrite it.
+            var changed = false
+            if (chain.getArg(0) == 1 && chain.getArg(1) == false) {
                 try {
-
-                    val state = args[0] as Int
-                    val reportOnly = args[1] as Boolean
-                    val mUseAutoBrightness = XposedHelpers.getBooleanField(thisObject, "mUseAutoBrightness")
-                    if (state == 1 && mUseAutoBrightness && !reportOnly) {
-                        val mPowerState = XposedHelpers.getObjectField(thisObject, "mPowerState")
-                        val mScreenState = XposedHelpers.getIntField(mPowerState, "mScreenState")
-                        stateChanged = state != mScreenState
-                    } else {
-                        stateChanged = false
+                    val owner = chain.thisObject
+                    if (XposedHelpers.getBooleanField(owner, "mUseAutoBrightness")) {
+                        val powerState = XposedHelpers.getObjectField(owner, "mPowerState")
+                        changed = XposedHelpers.getIntField(powerState, "mScreenState") != 1
                     }
-
                 } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(t)
                 }
-
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    if (stateChanged) {
-                        val readyToUpdateDisplayState = XposedHelpers.callMethod(thisObject, "readyToUpdateDisplayState") as Boolean
-                        if (readyToUpdateDisplayState) {
-                            val mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
-                            val msg = mHandler.obtainMessage(255)
-                            mHandler.sendMessage(msg)
-                        }
-                    }
-
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
             }
-        })
+            val result = chain.proceed()
+            if (changed) {
+                try {
+                    val owner = chain.thisObject
+                    if (XposedHelpers.callMethod(owner, "readyToUpdateDisplayState") == true) {
+                        val handler = XposedHelpers.getObjectField(owner, "mHandler") as Handler
+                        handler.sendEmptyMessage(255)
+                    }
+                } catch (t: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(t)
+                    XposedHelpers.log(t)
+                }
+            }
+            return result
+        }
     }
 
     @JvmStatic
     fun ScreenDimTimeHook(lpparam: SystemServerStartingParam) {
         installDisplaySnapshot()
-        ModuleHelper.findAndHookMethod("com.android.server.power.PowerManagerService", lpparam.classLoader, "readConfigurationLocked", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
+        ModuleHelper.findAndHookMethod("com.android.server.power.PowerManagerService", lpparam.classLoader, "readConfigurationLocked", screenDimConfigurationHook())
+    }
 
-                    val opt = dimTimeRatio
-                    XposedHelpers.setIntField(thisObject, "mMaximumScreenDimDurationConfig", 600000)
-                    XposedHelpers.setFloatField(thisObject, "mMaximumScreenDimRatioConfig", opt)
-
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun screenDimConfigurationHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            val ratio = dimTimeRatio
+            if (ratio <= 0f) return result
+            try {
+                val owner = chain.thisObject
+                // Resolve both fields before touching either native value.
+                val duration = XposedHelpers.findField(owner.javaClass, "mMaximumScreenDimDurationConfig")
+                val fraction = XposedHelpers.findField(owner.javaClass, "mMaximumScreenDimRatioConfig")
+                if (duration.type != Int::class.javaPrimitiveType || fraction.type != Float::class.javaPrimitiveType) return result
+                duration.setInt(owner, 600000)
+                fraction.setFloat(owner, ratio)
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
+                XposedHelpers.log(t)
             }
-        })
+            return result
+        }
     }
 
     @JvmStatic

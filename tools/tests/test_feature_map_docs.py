@@ -18,6 +18,30 @@ import generate_preference_artifacts as prefs
 
 
 class FeatureMapTest(unittest.TestCase):
+    def test_about_links_and_groups_follow_the_native_layout_in_both_maps(self):
+        strings = feature_map.load_strings(self.repo)
+        entries = list(feature_map.about_entries(self.repo, strings))
+        self.assertIn(("about_community_row", ("项目", "Telegram 交流群"), True), entries)
+        detailed, simple = feature_map.render(self.repo), feature_map.render_simple(self.repo)
+        self.assertIn("项目 → Telegram 交流群", detailed)
+        self.assertIn("`R.id.about_community_row`", detailed)
+        self.assertIn("└─ Telegram 交流群", simple)
+        layout = self.repo / feature_map.RES / "layout/fragment_about.xml"
+        layout.write_text(layout.read_text(encoding="utf-8").replace("@string/about_community_title", "交流群测试"), encoding="utf-8")
+        self.assertIn("项目 → 交流群测试", feature_map.render(self.repo))
+        self.assertIn("└─ 交流群测试", feature_map.render_simple(self.repo))
+
+    def test_simple_next_level_preserves_enable_rows_and_real_sections_but_unwraps_hidden_containers(self):
+        xml = f'''<PreferenceScreen xmlns:android="{prefs.ANDROID_NS}" xmlns:app="{prefs.AUTO_NS}">
+          <{prefs.PREFERENCE_CATEGORY} app:state="2" android:title="Container">
+            <Preference android:key="enabled" android:title="启用" />
+            <{prefs.PREFERENCE_CATEGORY} android:title="位置">
+              <Preference android:key="offset" android:title="偏移" />
+            </{prefs.PREFERENCE_CATEGORY}>
+            <Preference android:key="hidden" android:title="隐藏项" app:isPreferenceVisible="false" />
+          </{prefs.PREFERENCE_CATEGORY}>
+        </PreferenceScreen>'''
+        self.assertEqual(["启用", "位置"], list(feature_map.simple_sections(ET.fromstring(xml), {})))
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -41,7 +65,10 @@ class FeatureMapTest(unittest.TestCase):
                     with self.subTest(path=path.name, key=key):
                         self.assertTrue(f"`{key}`" in rendered, f"map missing {path.name}: {key}")
         self.assertIn("系统 → 状态栏 → Duo 三合一图标", rendered)
-        self.assertIn("系统 → 动态岛 → 音乐手势", rendered)
+        self.assertIn("系统 → 系统提示 → 媒体", rendered)
+        self.assertIn("系统 → 系统提示 → 位置尺寸", rendered)
+        self.assertIn("系统 → 系统提示 → 消息通知", rendered)
+        self.assertIn("系统 → 系统提示", rendered)
         self.assertIn("桌面 → Dock", rendered)
         self.assertNotIn("system_betterpopups_nohide", rendered)
         self.assertNotIn("状态刷新", rendered)
@@ -58,15 +85,18 @@ class FeatureMapTest(unittest.TestCase):
     def test_simple_tree_has_exact_business_page_structure_and_order(self):
         pages = feature_map.collect_pages(self.repo, feature_map.load_strings(self.repo))
         categories = {page.path[0] for page in pages}
+        business_paths = {page.path for page in pages}
         stack, actual = [], []
         for line in feature_map.render_simple(self.repo).splitlines():
             match = re.match(r"^((?:│  |   )*)(?:├─ |└─ )(.+)$", line)
             if match:
                 depth = len(match[1]) // 3
                 stack[depth:] = [match[2]]
-                if len(stack) >= 2 and stack[0] in categories:
+                if len(stack) >= 2 and stack[0] in categories and tuple(stack) in business_paths:
                     actual.append(tuple(stack))
         self.assertEqual([page.path for page in pages], actual)
+        self.assertIn("活动来源", feature_map.render_simple(self.repo))
+        self.assertIn("即时反馈", feature_map.render_simple(self.repo))
 
     def test_default_cli_checks_both_maps_and_writes_only_documentation(self):
         before = {p.relative_to(self.repo): p.read_bytes() for p in self.repo.rglob("*") if p.is_file()}

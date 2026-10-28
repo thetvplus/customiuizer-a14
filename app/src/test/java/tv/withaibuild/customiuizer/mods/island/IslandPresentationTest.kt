@@ -20,6 +20,100 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandPresentationTest {
+    @Test fun returningHomeCannotResizeOrRewrapAnAlreadyVisibleToast() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell = IslandActivityView(activity).apply { simplified = true }
+        activity.setContentView(shell)
+        val label = "1项已删除"
+        shell.contentHeight(40)
+        val width = 40 + 2 * (kotlin.math.ceil(shell.textWidth(label) * .94f).toInt() + 16)
+        shell.geometry(width, 40, 40)
+        shell.bind(label, null, android.graphics.drawable.ColorDrawable(-1), false, false, false, 0, false, expanded = true)
+        fun layout() {
+            shell.measure(android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(40, android.view.View.MeasureSpec.EXACTLY))
+            shell.layout(0, 0, width, 40)
+        }
+        layout()
+        val title = (shell.getChildAt(1) as android.widget.LinearLayout).getChildAt(0) as android.widget.TextView
+        val size = title.textSize
+        val lines = title.lineCount
+        val icon = (shell.getChildAt(0) as android.widget.LinearLayout).getChildAt(0)
+        val iconLeft = icon.left; val iconTop = icon.top
+        repeat(3) {
+            // Foreground, accepted native return, and window refresh all measure the same source.
+            shell.contentHeight(40)
+            shell.refreshConfiguration()
+            layout()
+            assertEquals("A geometry query must not change displayed typography", size, title.textSize, 0f)
+            assertEquals(lines, title.lineCount)
+            assertEquals(iconLeft, icon.left); assertEquals(iconTop, icon.top)
+        }
+        activity.finish()
+    }
+
+    @Test fun expandedLanesKeepTheirTextOutsideTheCameraAndRightContentShrinksInward() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell = IslandActivityView(activity).apply { simplified = true }
+        activity.setContentView(shell)
+        val directory = System.getenv("ISLAND_PREVIEW_DIR")?.let { java.io.File(it) }?.also { it.mkdirs() }
+        for (gap in listOf(0, 40)) for (media in listOf(false, true)) {
+            shell.contentHeight(40)
+            shell.geometry(280, 40, gap)
+            shell.bind(if (media) "Summer evening" else "Alice", if (media) "The Band" else "Photos saved successfully",
+                android.graphics.drawable.ColorDrawable(android.graphics.Color.CYAN), media, media, false, 0, false, expanded = true)
+            shell.measure(android.view.View.MeasureSpec.makeMeasureSpec(280, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(40, android.view.View.MeasureSpec.EXACTLY))
+            shell.layout(0, 0, 280, 40)
+            val leading = shell.getChildAt(0) as android.widget.LinearLayout
+            val group = shell.getChildAt(1) as android.widget.LinearLayout
+            val identity = leading.getChildAt(1) as android.widget.TextView
+            val content = group.getChildAt(0) as android.widget.TextView
+            assertTrue(identity.width > 0); assertTrue(content.width > 0)
+            assertTrue("Both lanes retain content", identity.text.isNotEmpty() && content.text.isNotEmpty())
+            assertEquals(264, group.right)
+            assertTrue(leading.right <= 140 - gap / 2)
+            assertTrue(group.left >= 140 + gap / 2)
+            assertEquals(android.view.Gravity.END, content.gravity and android.view.Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK)
+            assertTrue(content.height <= 36)
+            if (directory != null) {
+                val bitmap = android.graphics.Bitmap.createBitmap(280, 40, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bitmap)
+                val shape = org.robolectric.util.ReflectionHelpers.getField<IslandShape>(shell, "shape")
+                canvas.clipPath(shape.path); shell.draw(canvas)
+                java.io.File(directory, "long-${if (media) "music" else "message"}-gap$gap.png").outputStream().use {
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                }
+                bitmap.recycle()
+            }
+        }
+        activity.finish()
+    }
+
+    @Test fun expandedMediaBalancesIdentityAndRightAlignedDetailWithoutDuplicatingMetadata() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val shell = IslandActivityView(activity).apply { simplified = true }
+        activity.setContentView(shell)
+        shell.geometry(280, 40, 0)
+        shell.bind("Song title", "Artist name", null, true, true, true, 0, false, expanded = true)
+        val group = shell.getChildAt(1) as android.widget.LinearLayout
+        val primary = group.getChildAt(0) as android.widget.TextView
+        val secondary = group.getChildAt(1) as android.widget.TextView
+        val identity = (shell.getChildAt(0) as android.widget.LinearLayout).getChildAt(1) as android.widget.TextView
+        assertEquals("Song title", identity.text.toString()); assertEquals("Artist name", primary.text.toString())
+        assertEquals(1, primary.maxLines); assertEquals(1, secondary.maxLines)
+        assertTrue(identity.textSize > primary.textSize)
+        assertEquals(android.view.Gravity.END, primary.gravity and android.view.Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK)
+        assertEquals(android.view.View.GONE, secondary.visibility)
+        shell.bind("Song title", "Song title", null, true, true, true, 0, false, expanded = true)
+        assertEquals(android.view.View.GONE, secondary.visibility)
+        assertEquals(android.view.View.GONE, identity.visibility)
+        assertEquals(1, Regex("Song title").findAll(shell.contentDescription.toString()).count())
+        shell.bind("Song title", "Artist name", null, true, true, true, 0, false, expanded = false)
+        assertEquals(android.view.View.GONE, group.visibility)
+        activity.finish()
+    }
+
     @Test fun playbackReentryCanInterruptCameraExitWithoutLeavingAnInvisibleWindow() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)
@@ -79,7 +173,7 @@ class IslandPresentationTest {
         shell.geometry(240, 40, 40); shell.layout(0, 0, 240, 40)
         assertFalse(shell.performLongClick())
         assertEquals(3, shell.childCount)
-        assertEquals(1, (shell.getChildAt(1) as android.widget.LinearLayout).childCount)
+        assertEquals(2, (shell.getChildAt(1) as android.widget.LinearLayout).childCount)
         assertTrue(shell.contentDescription.toString().contains("Message supplied by notification"))
         activity.finish()
     }
@@ -154,26 +248,33 @@ class IslandPresentationTest {
         }
     }
 
-    @Test fun draggingStretchesOnlyTheLatchedAxisAndNeverMovesTheCameraCover() {
+    @Test fun cameraCoverAllowsBoundedCrossAxisElasticityWithoutUncoveringThePhysicalHole() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val shell = IslandActivityView(activity).apply { simplified = true }
         activity.setContentView(shell)
         shell.geometry(400, 80, 80, 448); shell.layout(0, 0, 400, 80)
+        shell.cameraAnchor(40f, 32f)
         fun touch(action: Int, x: Float, y: Float) {
             val event = MotionEvent.obtain(0, 10, action, x, y, 0)
             shell.dispatchTouchEvent(event); event.recycle()
         }
         touch(MotionEvent.ACTION_DOWN, 200f, 40f)
         touch(MotionEvent.ACTION_MOVE, 340f, 45f)
-        assertTrue(shell.scaleX > 1f); assertEquals(1f, shell.scaleY)
+        assertTrue(shell.scaleX > 1f); assertTrue(shell.scaleY in .97f..1f)
+        val squeeze = shell.scaleY
         touch(MotionEvent.ACTION_MOVE, 220f, 190f)
-        assertEquals(1f, shell.scaleY)
-        assertEquals(0f, shell.translationX); assertEquals(0f, shell.translationY)
+        assertTrue(shell.scaleY >= squeeze)
+        assertTrue(kotlin.math.abs(shell.translationX) <= 2.6f)
+        val hole = floatArrayOf(184f, 24f, 216f, 56f)
+        val inverse = android.graphics.Matrix()
+        assertTrue(shell.matrix.invert(inverse)); inverse.mapPoints(hole)
+        val shape = org.robolectric.util.ReflectionHelpers.getField<IslandShape>(shell, "shape")
+        assertTrue(shape.contains(hole[0], hole[1])); assertTrue(shape.contains(hole[2], hole[3]))
         touch(MotionEvent.ACTION_CANCEL, 220f, 190f)
         touch(MotionEvent.ACTION_DOWN, 200f, 40f)
         touch(MotionEvent.ACTION_MOVE, 204f, 160f)
         assertEquals(1f, shell.scaleX); assertTrue(shell.scaleY > 1f)
-        assertEquals(0f, shell.translationX); assertEquals(0f, shell.translationY)
+        assertEquals(0f, shell.translationX); assertTrue(shell.translationY in 0f..1.95f)
         touch(MotionEvent.ACTION_CANCEL, 204f, 160f)
         assertEquals(1f, shell.scaleY)
         // At the actual icon/screen clearance, even a horizontal drag cannot cross it.

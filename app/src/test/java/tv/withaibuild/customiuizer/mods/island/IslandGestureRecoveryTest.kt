@@ -24,6 +24,161 @@ import org.robolectric.util.ReflectionHelpers.getField
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGestureRecoveryTest {
+    @Test fun horizontalKneadingDeformsAroundTheAnchorWithIncreasingResistanceInBothDirections() {
+        for (sign in listOf(-1f, 1f)) {
+            motion()?.end()
+            shell.geometry(240, 40, 40, 260); layout(240, 40)
+            shell.cameraAnchor(20f, 16f)
+            touch(MotionEvent.ACTION_DOWN)
+            touch(MotionEvent.ACTION_MOVE, x = 120f + sign * 28f)
+            val first = shell.scaleX
+            touch(MotionEvent.ACTION_MOVE, x = 120f + sign * 56f)
+            val second = shell.scaleX
+            touch(MotionEvent.ACTION_MOVE, x = 120f + sign * 112f)
+            assertTrue(first > 1.02f)
+            assertTrue(second > first && shell.scaleX > second)
+            assertTrue("Equal extra travel yields less stretch", shell.scaleX - second < second - 1f)
+            assertEquals("Kneading must not slide the body away from its anchor", 0f, shell.translationX, 0f)
+            assertTrue(shell.scaleY < .985f)
+            assertTrue(shell.width * shell.scaleX <= 260f)
+            touch(MotionEvent.ACTION_CANCEL)
+            motion()!!.end()
+        }
+    }
+
+    @Test fun aThinConfiguredIslandKeepsTheRealCameraHeightCoveredDuringDragAndRecoil() {
+        shell.geometry(240, 32, 40, 280); layout(240, 32)
+        shell.cameraAnchor(16f, 28f, 27f)
+        touch(MotionEvent.ACTION_DOWN, y = 16f)
+        touch(MotionEvent.ACTION_MOVE, y = -100f)
+        fun covered() {
+            assertTrue("Only the physical camera height limits compression", shell.height * shell.scaleY >= 31f)
+            val points = floatArrayOf(106f, 2.5f, 134f, 29.5f)
+            val inverse = android.graphics.Matrix()
+            assertTrue(shell.matrix.invert(inverse)); inverse.mapPoints(points)
+            val shape = getField<IslandShape>(shell, "shape")
+            assertTrue(shape.contains(points[0], points[1])); assertTrue(shape.contains(points[2], points[3]))
+        }
+        covered()
+        touch(MotionEvent.ACTION_CANCEL, y = -100f)
+        val clock = motion()!!
+        for (at in 0..260 step 8) { clock.currentPlayTime = at.toLong(); covered() }
+        clock.end()
+        assertEquals(1f, shell.scaleY, 0f); assertEquals(0f, shell.translationY, 0f)
+    }
+
+    @Test fun aWidthLimitStopsOutwardReleaseVelocityWithoutMovingTheAnchor() {
+        shell.geometry(240, 40, 40, 244); layout(240, 40)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, x = 176f)
+        assertEquals(244f, shell.width * shell.scaleX, .001f)
+        assertEquals(0f, getField<IslandMotion.Spring>(shell, "breadth").velocity, 0f)
+        assertEquals(0f, shell.translationX, 0f)
+        touch(MotionEvent.ACTION_UP, x = 176f)
+        val clock = motion()!!
+        for (at in 0..260 step 8) {
+            clock.currentPlayTime = at.toLong()
+            assertTrue(shell.width * shell.scaleX <= 244.001f)
+            assertEquals(0f, shell.translationX, 0f)
+        }
+    }
+
+    @Test fun nativeRecentVelocityChangesRecoilWithoutTurningTravelDistanceIntoADuration() {
+        fun release(step: Long): Float {
+            motion()?.end()
+            shell.geometry(240, 40, 40, 280); layout(240, 40)
+            val start = android.os.SystemClock.uptimeMillis()
+            for (i in 0..4) {
+                val event = MotionEvent.obtain(start, start + step * i,
+                    if (i == 0) MotionEvent.ACTION_DOWN else if (i == 4) MotionEvent.ACTION_UP else MotionEvent.ACTION_MOVE,
+                    120f + i * 12f, 20f, 0)
+                try { shell.dispatchTouchEvent(event) } finally { event.recycle() }
+            }
+            assertEquals(IslandMotion.REBOUND, motion()!!.duration)
+            assertNull(getField<android.view.VelocityTracker?>(shell, "velocityTracker"))
+            return getField<IslandMotion.Spring>(shell, "breadth").velocity
+        }
+        val slow = release(70)
+        val fast = release(8)
+        assertTrue("Recent speed must contribute physical recoil: slow=$slow fast=$fast", fast > slow * 2f + 1f)
+    }
+
+    @Test fun aNewDragGrabsTheCurrentReboundAndReversalDoesNotWaitForItsOldAnimator() {
+        shell.geometry(240, 40, 0, 280); layout(240, 40)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, x = 150f)
+        touch(MotionEvent.ACTION_UP, x = 150f)
+        val previous = motion()!!
+        previous.currentPlayTime = 20
+        val physicalWidth = shell.width * shell.scaleX
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, x = 150f)
+        assertNull(motion())
+        assertEquals("Capture retains the actually presented width", physicalWidth, shell.width * shell.scaleX, .01f)
+        val first = shell.scaleX
+        touch(MotionEvent.ACTION_MOVE, x = 120f)
+        val reversed = shell.scaleX
+        assertTrue("Reversal immediately releases the stretch", reversed < first)
+        touch(MotionEvent.ACTION_MOVE, x = 90f)
+        assertTrue("Pulling the other way deforms the same body", shell.scaleX > reversed)
+        assertEquals(0f, shell.translationX, 0f)
+        touch(MotionEvent.ACTION_CANCEL)
+        assertNotSame(previous, motion())
+        motion()!!.end()
+        assertEquals(1f, shell.scaleX, 0f); assertEquals(0f, shell.translationX, 0f)
+        assertNull(getField<android.view.VelocityTracker?>(shell, "velocityTracker"))
+    }
+
+    @Test fun aShortSlantedUpwardMotionVetoesTapBeforeItCommitsOrLocksAnAxis() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_UP, x = 126f, y = 17.8f)
+        assertEquals(0, opened); assertEquals(0, dismissed)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_UP, y = 19.5f)
+        assertEquals(1, opened)
+    }
+
+    @Test fun batchedUpwardExcursionCannotTurnIntoAClickWhenTheFingerRollsBackAtRelease() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        touch(MotionEvent.ACTION_DOWN)
+        val move = MotionEvent.obtain(0, 116, MotionEvent.ACTION_MOVE, 120f, 17.8f, 0)
+        move.addBatch(132, 120f, 19.8f, 1f, 1f, 0)
+        assertEquals(1, move.historySize)
+        shell.dispatchTouchEvent(move); move.recycle()
+        val up = MotionEvent.obtain(0, 148, MotionEvent.ACTION_UP, 120f, 20f, 0)
+        shell.dispatchTouchEvent(up); up.recycle()
+        assertEquals(0, opened); assertEquals(0, dismissed)
+    }
+    @Test fun shortSlowUpwardReleasesWithinTheIslandHeightDismissWithoutOpening() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        for (height in listOf(32, 36, 38, 40, 64)) {
+            shell.geometry(240, height, 40); layout(240, height)
+            val distance = minOf(android.view.ViewConfiguration.get(activity).scaledTouchSlop.toFloat(), height * .16f) + .5f
+            val before = dismissed
+            touch(MotionEvent.ACTION_DOWN, y = height * .5f)
+            touch(MotionEvent.ACTION_UP, y = height * .5f - distance)
+            assertEquals("height=$height distance=$distance", before + 1, dismissed)
+            assertEquals(0, opened)
+        }
+    }
+
+    @Test fun upwardIntentBelowCommitDistanceCannotFallThroughToAClick() {
+        var opened = 0; var dismissed = 0
+        shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, y = 16.5f)
+        touch(MotionEvent.ACTION_UP, y = 16.5f)
+        assertEquals(0, dismissed)
+        assertEquals(0, opened)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_UP, y = 19f)
+        assertEquals(1, opened)
+    }
+
     private lateinit var activity: Activity
     private lateinit var shell: IslandActivityView
 

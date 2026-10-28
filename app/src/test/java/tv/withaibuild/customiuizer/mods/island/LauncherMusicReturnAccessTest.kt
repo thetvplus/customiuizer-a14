@@ -45,14 +45,19 @@ class LauncherMusicReturnAccessTest {
         @JvmField var activityType = ACTIVITY_TYPE_STANDARD
     }
     class Targets(@JvmField val apps: Array<Remote>)
-    class Animation(var targetRect: RectF = RectF())
-    class Element(@JvmField var remoteAnimationTargetSet: Targets? = null) {
+    class Animation(var targetRect: RectF = RectF(), var currentAlpha: Float = Float.NaN)
+    open class Element(@JvmField var remoteAnimationTargetSet: Targets? = null) {
         @JvmField var currentRectFParams: Any? = null
         @JvmField val mAnim = Animation()
         var running = false
         fun isRunning() = running
-        fun animTo(value: Any) {}
+        open fun animTo(value: Any) {}
         fun updateFloatingIconView(launcher: Any, params: Params) {}
+    }
+    class FastElement : Element() {
+        var packageName = "chosen.music"
+        override fun animTo(value: Any) { super.animTo(value) }
+        fun getFastLaunchRunningTaskPkgName() = packageName
     }
     class Params(val targetApps: Targets?, val startRect: RectF?, val targetRect: RectF,
         val startRadius: Float, val endRadius: Float, val startAlpha: Float, val endAlpha: Float,
@@ -64,30 +69,135 @@ class LauncherMusicReturnAccessTest {
         Targets::class.java, Remote::class.java, DeviceConfig::class.java)
     private val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
         280f, 15f, 800f, 125f, 1080, 2400)
+
+    @Test fun incomingWindowsLandWhollyInsideTheIslandMaskWithTheSameCentre() {
+        val source = params()
+        val target = (access.retarget(source, Element(), Nav(), frame) as Params).targetRect
+        assertTrue(target.width() < frame.right - frame.left)
+        assertTrue(target.left > frame.left)
+        assertTrue(target.right < frame.right)
+        assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
+        assertTrue(target.top > frame.top)
+        assertTrue(target.bottom < frame.bottom)
+        assertEquals((frame.top + frame.bottom) * .5f, target.centerY(), .001f)
+        assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
+    }
+
+    @Test fun musicClockRecorderAndCallWindowsUseTheSameBoundedLandingPolicy() {
+        for (pkg in listOf("chosen.music", "com.android.deskclock", "com.android.soundrecorder", "com.android.incallui")) {
+            val current = frame.copy(packageName = pkg)
+            val source = params(targets = Targets(arrayOf(Remote().apply { packageName = pkg })))
+            val nav = Nav().apply { mRunningTaskComponentName = ComponentName(pkg, "Activity") }
+            val target = (access.retarget(source, Element(), nav, current) as Params).targetRect
+            assertEquals((frame.right - frame.left) * .84f, target.width(), .001f)
+            assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
+            assertEquals((frame.bottom - frame.top) * .86f, target.height(), .001f)
+        }
+        for (width in listOf(38f, 48f, 100f, 160f, 320f)) {
+            val current = frame.copy(left = 0f, right = width, top = 0f, bottom = 38f)
+            val target = current.landingRectangle()
+            assertTrue(target.width() >= 38f)
+            assertTrue(target.left >= current.left && target.right <= current.right)
+        }
+    }
+
+    @Test fun quickOpeningOverrideAndItsSuperDispatchChooseExactlyOneInstalledEntry() {
+        val quick = LauncherMusicReturnAccess(Nav::class.java, Element::class.java, Params::class.java,
+            Targets::class.java, Remote::class.java, DeviceConfig::class.java, FastElement::class.java)
+        assertEquals(Element::class.java, quick.animationEntry(Element(), true).declaringClass)
+        assertEquals(FastElement::class.java, quick.animationEntry(FastElement(), true).declaringClass)
+        assertEquals("A failed optional hook must leave the base path active", Element::class.java,
+            quick.animationEntry(FastElement(), false).declaringClass)
+        val owner = FastElement().apply { remoteAnimationTargetSet = Targets(arrayOf(Remote())) }
+        assertNotNull(quick.retarget(params(targets = null), owner, Nav(), frame))
+    }
+
+    @Test fun absorptionHasASmallerLowerLandingWithoutChangingDefaultOrNativeParams() {
+        val original = params()
+        val nativeTarget = RectF(original.targetRect)
+        val ordinary = access.retarget(original, Element(), Nav(), frame) as Params
+        val absorption = access.retarget(original, Element(), Nav(), frame, absorption = true) as Params
+        assertEquals(frame.landingRectangle(), ordinary.targetRect)
+        assertEquals(frame.landingRectangle(absorption = true), absorption.targetRect)
+        assertTrue(absorption.targetRect.width() < ordinary.targetRect.width() * .6f)
+        assertTrue(absorption.targetRect.height() < ordinary.targetRect.height() * .6f)
+        assertTrue(absorption.targetRect.centerY() > ordinary.targetRect.centerY())
+        assertTrue(frame.rectangle().contains(absorption.targetRect))
+        assertEquals(nativeTarget, original.targetRect)
+        assertEquals(original.startRect, absorption.startRect)
+    }
+
+    @Test fun quickOpeningCanPrefetchBeforeItsRemoteTargetsArriveWithoutChangingTheWindow() {
+        val quick = LauncherMusicReturnAccess(Nav::class.java, Element::class.java, Params::class.java,
+            Targets::class.java, Remote::class.java, DeviceConfig::class.java, FastElement::class.java)
+        val source = params(type = Type.OPEN_FROM_HOME, targets = null,
+            targetView = View(RuntimeEnvironment.getApplication()))
+        assertEquals("chosen.music", quick.openingPackage(source, FastElement()))
+        val reused = FastElement().apply { remoteAnimationTargetSet = Targets(arrayOf(Remote())) }
+        assertEquals("A retained closing target must not hide the next fast opening", "chosen.music",
+            quick.openingPackage(source, reused))
+        assertNull(quick.openingPackage(params(type = Type.OPEN_FROM_HOME), reused))
+        assertNotNull(source.targetView)
+        assertFalse(source.ignoreIcon)
+        assertNull(quick.retarget(source, FastElement(), Nav(), frame))
+    }
     private fun params(type: Type = Type.CLOSE_TO_HOME, quick: Boolean = false, split: Boolean = false,
         rotation: Int = 0, targets: Targets? = Targets(arrayOf(Remote())),
-        targetView: View? = null) = Params(targets,
-        RectF(0f, 0f, 1080f, 2400f), RectF(200f, 1800f, 300f, 1900f), 32f, 20f, 1f, 0f,
-        type, false, true, quick, targetView, Any(), Any(), true, rotation, 0, true, 0, split, false)
+        targetView: View? = null, startAlpha: Float = 1f, translucent: Boolean = false) = Params(targets,
+        RectF(0f, 0f, 1080f, 2400f), RectF(200f, 1800f, 300f, 1900f), 32f, 20f, startAlpha, 0f,
+        type, false, true, quick, targetView, Any(), Any(), true, rotation, 0, true, 0, split, translucent)
 
     @Test fun closingWindowUsesNativeNoIconTargetWithoutChangingTheOriginal() {
         val source = params()
         val result = access.retarget(source, Element(), Nav(), frame) as Params
         assertNotSame(source, result)
-        assertEquals(frame.rectangle(), result.targetRect)
+        assertEquals(frame.landingRectangle(), result.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
-        assertEquals(55f, result.endRadius, 0f)
+        assertEquals(result.targetRect.height() * .5f, result.endRadius, 0f)
+        assertEquals("Keep the release opacity throughout the return", source.startAlpha, result.endAlpha, 0f)
+        assertEquals(0f, source.endAlpha, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)
         assertNull("The window return must not borrow or animate the desktop icon", result.targetView)
         assertNull(source.targetView)
         for (field in Params::class.java.declaredFields) {
-            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView")) continue
+            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView", "endAlpha")) continue
             field.isAccessible = true
             assertEquals("Preserve native ${field.name}", field.get(source), field.get(result))
         }
         assertSame(source.animListener, result.animListener)
         assertSame(source.clipAnimationHelper, result.clipAnimationHelper)
         assertSame(source.targetApps, result.targetApps)
+    }
+
+    @Test fun bothBoardingEffectsUseTheIslandInsteadOfAnIconAndRetainTheActualReleaseOpacity() {
+        for (alpha in listOf(1f, .8f, .4f)) {
+            val source = params(startAlpha = alpha)
+            val result = access.retarget(source, Element(), Nav(), frame) as Params
+            assertNotSame(source, result)
+            assertEquals(frame.landingRectangle(), result.targetRect)
+            assertEquals(alpha, result.startAlpha, 0f)
+            assertEquals(alpha, result.endAlpha, 0f)
+            assertSame("The release rectangle belongs to the ROM", source.startRect, result.startRect)
+            assertSame(source.animListener, result.animListener)
+            assertTrue(result.ignoreIcon)
+            assertNull(result.targetView)
+        }
+        val translucent = params(startAlpha = .6f, translucent = true)
+        val result = access.retarget(translucent, Element(), Nav(), frame) as Params
+        assertEquals("A translucent task keeps its native fade contract", translucent.endAlpha, result.endAlpha, 0f)
+    }
+
+    @Test fun anInterruptedReturnUsesPresentedAlphaInsteadOfAStartDefaultOrSentinel() {
+        for (start in listOf(1f, -1f, Float.NaN)) {
+            val source = params(startAlpha = start)
+            val owner = Element().apply { currentRectFParams = Any(); mAnim.currentAlpha = .75f }
+            val copy = access.retarget(source, owner, Nav(), frame) as Params
+            assertEquals(.75f, copy.endAlpha, 0f)
+            assertEquals(.75f, copy.startAlpha, 0f)
+            assertEquals(start, source.startAlpha, 0f)
+            assertEquals(0f, source.endAlpha, 0f)
+        }
+        assertNull("Unknown opacity must retain the native path", access.retarget(params(startAlpha = -1f), Element(), Nav(), frame))
     }
 
     @Test fun returnFromAnotherPageKeepsTheNativeAbsentIconTarget() {

@@ -17,7 +17,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], qualifiers = "mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandTouchWindowTest {
-    @Test fun musicCatchUsesTheExistingClockAndInputBoundsWithOneCoverHandoff() {
+    @Test fun confirmedDefaultReturnHasNoClockAndKeepsTheExistingInputBounds() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         org.robolectric.shadows.ShadowChoreographer.setPaused(true)
         try {
@@ -31,17 +31,11 @@ class IslandTouchWindowTest {
             layout(root, 240 + 2 * root.margin, 40 + 2 * root.margin)
             shell.prepareEntry(mediaReturn = true)
             shell.transition(240, 40, 240, 40, true)
-            val motion = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
-            assertEquals(IslandMotion.MEDIA_RETURN, motion.duration)
-            motion.currentPlayTime = 112
+            assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
             val cover = org.robolectric.util.ReflectionHelpers.getField<View>(shell, "left")
-            assertEquals(0f, cover.alpha, 0f)
             assertEquals(240 + 2 * root.margin, root.width)
             assertEquals(40 + 2 * root.margin, root.height)
             assertFalse(touch(root, MotionEvent.ACTION_DOWN, root.width * .5f, root.height + 25f, 0))
-            motion.currentPlayTime = 450
-            assertTrue(cover.alpha > 0f)
-            motion.end()
             assertEquals(1f, cover.alpha, 0f)
             assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         } finally {
@@ -114,6 +108,34 @@ class IslandTouchWindowTest {
 
     @Test @Config(qualifiers = "xxhdpi")
     fun highDensityEdgesRetainTheSamePhysicalGestureContract() = boundedWindowAcceptsRealEdgeStartsAndReleaseWithoutAnyMove()
+
+    @Test fun screenSpaceUpwardIntentWinsEvenWhenAnInterruptedAnimationRebasesLocalCoordinates() {
+        val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        try {
+            val shell = IslandActivityView(host).apply { simplified = true }
+            host.setContentView(shell)
+            shell.geometry(240, 40, 0)
+            layout(shell, 240, 40)
+            var opens = 0; var dismissals = 0
+            shell.onOpen = { opens++ }; shell.onDismiss = { dismissals++ }
+            repeat(24) { index ->
+                val now = SystemClock.uptimeMillis()
+                fun dispatch(action: Int, screenY: Float, delay: Long) {
+                    val local = MotionEvent.obtain(now, now + delay, action, 120f, 20f, 0)
+                    val original = MotionEvent.obtain(now, now + delay, action, 540f, screenY, 0)
+                    try { shell.dispatchFromWindow(local, original) } finally { local.recycle(); original.recycle() }
+                }
+                dispatch(MotionEvent.ACTION_DOWN, 90f, 0)
+                if (index % 2 == 0) dispatch(MotionEvent.ACTION_MOVE, 60f, 30)
+                dispatch(MotionEvent.ACTION_UP, 20f, 70)
+            }
+            assertEquals(24, dismissals)
+            assertEquals(0, opens)
+            touch(shell, MotionEvent.ACTION_DOWN, 120f, 20f, 0)
+            touch(shell, MotionEvent.ACTION_UP, 120f, 20f, 20)
+            assertEquals(1, opens)
+        } finally { host.finish() }
+    }
 
     @Test fun changingDisplayDensityRefreshesTheProductionInputMarginAndThreshold() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()

@@ -212,7 +212,7 @@ open class SubFragment : PreferenceFragmentBase() {
             }
             smoothScroller.setTargetPosition(position)
             lifecycleScope.launch {
-                val delayMs = (animDur * Helpers.getAnimationScale(2) + 30).toLong()
+                val delayMs = (animDur * android.animation.ValueAnimator.getDurationScale() + 30).toLong()
                 delay(delayMs)
                 if (isAdded) {
                     mList.layoutManager?.startSmoothScroll(smoothScroller)

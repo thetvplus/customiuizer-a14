@@ -39,6 +39,22 @@
     {
       "preferenceKey": "system_island_music_cat",
       "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
+    },
+    {
+      "preferenceKey": "system_island_effects_cat",
+      "reason": "Navigation-only island subpage; retains existing child keys and stores no setting."
+    },
+    {
+      "preferenceKey": "system_island_layout_cat",
+      "reason": "Navigation-only lazy Dynamic Island settings page; no stored value or Hook."
+    },
+    {
+      "preferenceKey": "system_island_notifications_cat",
+      "reason": "Navigation-only lazy Dynamic Island settings page; no stored value or Hook."
+    },
+    {
+      "preferenceKey": "system_island_actions_cat",
+      "reason": "Navigation-only shared media/idle gesture page; action payload keys retain their existing contract."
     }
   ],
   "entries": [
@@ -1982,11 +1998,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "LAUNCHER",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPackageReadyFeatures.kt:266",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Launcher.DisableLauncherLogHook; installed AnalyticalDataCollector/JobService signatures verified.",
+      "notes": "Stops supported launcher usage analytics and OneTrack entry. Does not claim to suppress every launcher log or crash report."
     },
     {
       "featureId": "launcher_disable_wallpaperscale",
@@ -2165,11 +2181,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "LAUNCHER",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:1016",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "LauncherAnimationHooks.FixAnimHook and scaleStiffness; native getSpringForce(FFF) and stiffness argument verified.",
+      "notes": "Only supported Launcher spring factories follow Animator duration scale. Stiffness changes by inverse-square duration, preserves damping ratio, has no discontinuity near 1, and bounds zero/invalid inputs."
     },
     {
       "featureId": "launcher_fixlaunch",
@@ -2188,11 +2204,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "LAUNCHER",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:735",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Launcher.FixAppInfoLaunchHook; native ShortcutMenuManager.startAppDetailsActivity item/View signature verified.",
+      "notes": "Read the explicit UserHandle identifier; missing/invalid metadata retains the native call instead of guessing owner user or rethrowing a preparation failure."
     },
     {
       "featureId": "launcher_folder_cols",
@@ -2239,6 +2255,29 @@
       "confidence": "UNKNOWN",
       "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:1097",
       "notes": ""
+    },
+    {
+      "featureId": "launcher_folder_icon_blur",
+      "featureName": "Launcher Folder Icon Blur",
+      "preferenceKeys": [
+        "launcher_folder_icon_blur",
+        "pref_key_launcher_folder_icon_blur"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
+      "targetPackage": "com.miui.home; com.mi.android.globallauncher (main process only)",
+      "installPhase": "APPLICATION_ATTACH",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Enables the existing ROM folder icon blur path within verified folder preparation and draw calls",
+      "disableEffect": "Restart Launcher to restore the native product gate",
+      "valueChangeEffect": "Restart Launcher to install or remove the folder-scoped gate",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "LauncherFolderIconBlur.install / installFolderIconBlurHooks; FolderIconBlurTest; PocoFolderBlurRoutingTest; LauncherPostAttachFeatures.LauncherFolderIconBlurFeature; GenericAppFeatures.PocoFolderIconBlurFeature",
+      "notes": "MIUI uses the Launcher catalog; POCO uses only PocoFolderIconBlurFeature in its main process through GenericAppInstaller. Both packages are in static scope. Opt-in, native hardware support / background blur enabled / default icon gates remain. No global launcher identity or system setting changes. CN/TW and munch POCO APK declarations verified; device appearance pending."
     },
     {
       "featureId": "launcher_folderblur_opacity",
@@ -6586,11 +6625,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:520",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemSecurityHooks.DisableSystemIntegrityHook; installed ApkSignatureVerifier.getMinimumSignatureSchemeVersionForTargetSdk verified.",
+      "notes": "Lowers minimum APK signature scheme to v1. This is not a switch for device Verified Boot or general system integrity."
     },
     {
       "featureId": "system_downgrade",
@@ -6813,14 +6852,14 @@
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "enableEffect": "After SystemUI restart, use the existing fallback power menu with two owner-scoped Fastboot and Recovery actions.",
+      "disableEffect": "Restart SystemUI to restore the native plugin power menu.",
+      "valueChangeEffect": "Changes require SystemUI restart.",
+      "restartTarget": "SYSTEMUI",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:1692",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemUI.ExtendedPowerMenuHook -> ExtendedPowerMenu.install; exact A14 dialog, constructor and plugin signatures verified from the installed ROM.",
+      "notes": "Only the exact miui.systemui.plugin GlobalActionsPlugin is bypassed after all hooks install. Constructor scope is thread/owner bound; both actions prepare before insertion. Confirmation is single-use and rejects stale menu generations."
     },
     {
       "featureId": "system_expandheadups",
@@ -6977,11 +7016,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:571",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemDisplayHooks.ForceDarkAllAppsHook.",
+      "notes": "Exposes eligible user-app controls in ROM forced-dark settings; excludes system/updated-system apps and system UIDs. Does not promise dark rendering for all app surfaces."
     },
     {
       "featureId": "system_forceclose",
@@ -8164,19 +8203,19 @@
       ],
       "xmlSource": "app/src/main/res/xml/prefs_system.xml",
       "defaultValue": "1",
-      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemDisplayHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:evaluateEnabled",
-      "targetPackage": "com.android.systemui",
+      "targetPackage": "android",
       "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
-      "enableEffect": "Applies hook when enabled",
-      "disableEffect": "Restores default behavior",
-      "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Option 2 blocks known charger wake reasons in system_server and hides SystemUI charging animation. Option 3 only hides charging animation.",
+      "disableEffect": "Already installed hooks return to native behavior on option 1; reboot ensures both processes use the new installation gates.",
+      "valueChangeEffect": "Initial installation needs reboot. A process started with option 3 has no system_server wake hook, so changing to option 2 also needs reboot.",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:724",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "SystemDisplayHooks.NoLightUpOnChargeHook and SystemUI.chargeAnimationHook; A14 wakePowerGroupLocked signature and charging caller verified.",
+      "notes": "System-server gate remains option 2; SystemUI gate remains options 2/3. Both installed callbacks read pushed scalar snapshots; no automatic installation reset."
     },
     {
       "featureId": "system_nooverscroll",
@@ -14268,7 +14307,7 @@
         "system_strong_toast_island_offset",
         "pref_key_system_strong_toast_island_offset"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "24",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt:resolveIslandOffsetDp",
@@ -16501,11 +16540,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "TARGET_APP",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:178",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Various.AppInfoHook -> AppInformationHooks; installed AMAppInformationFragment.onCreatePreferences/onPreferenceTreeClick and PackageInfo field verified.",
+      "notes": "No global Activity/Fragment/PackageInfo or per-visit hooks. Added rows bind weak fragment/screen and exact package/UID, reject old rows and changed profiles, and preserve 64-bit version codes."
     },
     {
       "featureId": "various_appsort",
@@ -16520,15 +16559,15 @@
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:evaluateEnabled",
       "targetPackage": "android",
       "installPhase": "PACKAGE_READY",
-      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "runtimeReadMode": "OBSERVER_PUSH",
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "TARGET_APP",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:278",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Various.AppsDefaultSortHook and initialAppSort; installed A14 ManageFragment.onActivityCreated and native sort keys verified.",
+      "notes": "Install once on the native ManageFragment, not per Activity creation; leave the separate AppFragment landing page unchanged. Seed only missing sort keys into a copied Bundle; preserve restored user selection. An installed callback observes changed defaults for future fresh pages; first installation requires SecurityCenter restart."
     },
     {
       "featureId": "various_batteryoptimization",
@@ -16984,11 +17023,11 @@
       "enableEffect": "Applies hook when enabled",
       "disableEffect": "Restores default behavior",
       "valueChangeEffect": "Value change may require process restart to install/uninstall the feature",
-      "restartTarget": "UNKNOWN",
+      "restartTarget": "REBOOT",
       "hotReloadable": false,
-      "confidence": "INFERRED",
-      "evidence": "PrefMap call at app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SecurityCenterFeatures.kt:198",
-      "notes": "Master key controls feature installation at the declared install phase. A value change may require the host process to restart before install/uninstall takes effect."
+      "confidence": "CODE_VERIFIED",
+      "evidence": "Various.AppsDisableHook, AppsDisableServiceHook and changeApplicationState.",
+      "notes": "UI and system_server installation require host restart/reboot. Explicit enable overrides manifest-disabled defaults; verify effective enabled state and current UID. Existing protected core packages remain protected."
     },
     {
       "featureId": "various_enable_expand_sidebar",
@@ -17825,7 +17864,7 @@
         "system_island_media",
         "pref_key_system_island_media"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -17848,7 +17887,7 @@
         "system_island_media_return",
         "pref_key_system_island_media_return"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/LauncherMusicReturnHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
@@ -17871,7 +17910,7 @@
         "system_island_media_return_apps",
         "pref_key_system_island_media_return_apps"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/LauncherMusicReturnHooks.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
@@ -17894,7 +17933,7 @@
         "system_island_media_swipe",
         "pref_key_system_island_media_swipe"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "true",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -17924,14 +17963,14 @@
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "INSTALL_TIME_SNAPSHOT",
-      "enableEffect": "Hide all Dynamic Island content while native PiP or current-user default-display freeform windows exist; keep native heads-up and Toast fallback and invalidate Music direct-to-island targets",
-      "disableEffect": "Do not install the optional freeform observer or query inventory; native PiP media deduplication remains independent",
+      "enableEffect": "Exclude media from confirmed current-user floating-app owners; independent music, approved messages and feedback remain eligible",
+      "disableEffect": "Do not exclude floating-app media",
       "valueChangeEffect": "Restart SystemUI to install or remove native window observers; ordinary preference refresh and status-bar recreation retain the installation snapshot",
       "restartTarget": "SYSTEMUI",
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandOptionsTest, IslandActivityLifecycleTest, IslandPipAccessTest, IslandFreeformAccessTest; CN/TW and saved live native PiP contracts",
-      "notes": "Default off; event-driven worker inventory reads, one in-flight query, generation rejection and owner disposal; no polling"
+      "notes": "Native PiP and bounded freeform package identities plus application-overlay UIDs. Events only; no polling; full restart for first installation."
     },
     {
       "featureId": "system_island_simplified",
@@ -17986,7 +18025,7 @@
         "system_island_chat",
         "pref_key_system_island_chat"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_notifications.xml",
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18032,7 +18071,7 @@
         "system_island_height",
         "pref_key_system_island_height"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "40",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18055,7 +18094,7 @@
         "system_island_width_auto",
         "pref_key_system_island_width_auto"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "true",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18078,7 +18117,7 @@
         "system_island_width_short",
         "pref_key_system_island_width_short"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "184",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18101,7 +18140,7 @@
         "system_island_width_medium",
         "pref_key_system_island_width_medium"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "240",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18147,7 +18186,7 @@
         "system_island_chat_excluded_apps",
         "pref_key_system_island_chat_excluded_apps"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_notifications.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18170,7 +18209,7 @@
         "system_island_position",
         "pref_key_system_island_position"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "1",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18193,7 +18232,7 @@
         "system_island_horizontal_offset",
         "pref_key_system_island_horizontal_offset"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
       "defaultValue": "80",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18446,7 +18485,7 @@
         "system_island_notification_apps",
         "pref_key_system_island_notification_apps"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_notifications.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18469,7 +18508,7 @@
         "system_island_music_left",
         "pref_key_system_island_music_left"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18492,7 +18531,7 @@
         "system_island_music_right",
         "pref_key_system_island_music_right"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18515,21 +18554,21 @@
         "system_island_music_down",
         "pref_key_system_island_music_down"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
       "targetPackage": "com.android.systemui",
       "installPhase": "PACKAGE_READY",
       "runtimeReadMode": "OBSERVER_PUSH",
-      "enableEffect": "Use this island option for the current owner",
+      "enableEffect": "Run the configured music DOWN action only while common downward expansion is disabled",
       "disableEffect": "Cancel pending gesture or feedback work for the disabled option",
       "valueChangeEffect": "Owner observes system_island_ keys on Main; replaces registrations only when selected feedback kinds change",
       "restartTarget": "NONE",
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandMusicActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest; IslandPreferenceDefaultsTest",
-      "notes": "Requires the island integration installed at SystemUI startup; updates within that integration are immediate"
+      "notes": "Stored action is preserved when common expansion takes priority; double tap and long press remain independently configurable"
     },
     {
       "featureId": "system_island_music_double",
@@ -18538,7 +18577,7 @@
         "system_island_music_double",
         "pref_key_system_island_music_double"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18561,7 +18600,7 @@
         "system_island_music_long",
         "pref_key_system_island_music_long"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
       "defaultValue": "",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18578,13 +18617,36 @@
       "notes": "Requires the island integration installed at SystemUI startup; updates within that integration are immediate"
     },
     {
+      "featureId": "system_island_waveform_gain",
+      "featureName": "system_island_waveform_gain",
+      "preferenceKeys": [
+        "system_island_waveform_gain",
+        "pref_key_system_island_waveform_gain"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_effects.xml",
+      "defaultValue": "200",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Scale the five measured music or recorder display levels by 100-800 percent; gate silence before amplification",
+      "disableEffect": "No capture or callback is created by gain; waveform mode and the existing visible lease own sampling",
+      "valueChangeEffect": "The current wave view reapplies its five scalar measured levels on Main without restarting capture",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandPolishTest; IslandRecorderMeterTest; IslandOptionsTest",
+      "notes": "Display gain only; 200 percent default, bounded 100-800 percent. No audio volume, sample capture, process lifetime or route change."
+    },
+    {
       "featureId": "system_island_waveform_mode",
       "featureName": "system_island_waveform_mode",
       "preferenceKeys": [
         "system_island_waveform_mode",
         "pref_key_system_island_waveform_mode"
       ],
-      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_music.xml",
       "defaultValue": "1",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
@@ -18599,6 +18661,374 @@
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandAudioSpectrumTest; AudioFftBandsTest; IslandActivityLifecycleTest; IslandPreferenceDefaultsTest; BackupRestoreTest",
       "notes": "Experimental on HyperOS: requires inherited RECORD_AUDIO and MODIFY_AUDIO_ROUTING, unique UID/session attribution and a supported local route; never captures session 0. One 512-sample Visualizer at at most 20 Hz; no added permission, recording service or polling."
+    },
+    {
+      "featureId": "system_island_height_auto",
+      "featureName": "system_island_height_auto",
+      "preferenceKeys": [
+        "system_island_height_auto",
+        "pref_key_system_island_height_auto"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Choose 36–40 dp from the cutout; preserve explicit manual height",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle",
+      "featureName": "system_island_idle",
+      "preferenceKeys": [
+        "system_island_idle",
+        "pref_key_system_island_idle"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Keep one static idle capsule and notification-shade gesture hotspot",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_width_auto",
+      "featureName": "system_island_idle_width_auto",
+      "preferenceKeys": [
+        "system_island_idle_width_auto",
+        "pref_key_system_island_idle_width_auto"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Derive idle width from shared height, cutout and short width",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_width",
+      "featureName": "system_island_idle_width",
+      "preferenceKeys": [
+        "system_island_idle_width",
+        "pref_key_system_island_idle_width"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_layout.xml",
+      "defaultValue": "100",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Bound manual idle width to 48–120 dp and the physical safe area",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_expand_down",
+      "featureName": "system_island_expand_down",
+      "preferenceKeys": [
+        "system_island_expand_down",
+        "pref_key_system_island_expand_down"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Downward swipe expands every active island, ahead of a stored music DOWN action; unassigned long press may also expand",
+      "disableEffect": "Restore the independently stored music DOWN action; other gestures and idle-island actions remain independent",
+      "valueChangeEffect": "The next gesture and accessibility action use the current expansion policy",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "Native inverted preference dependency disables only the conflicting music DOWN editor without deleting its stored action"
+    },
+    {
+      "featureId": "system_island_feedback_charging",
+      "featureName": "system_island_feedback_charging",
+      "preferenceKeys": [
+        "system_island_feedback_charging",
+        "pref_key_system_island_feedback_charging"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "One charging-edge feedback; initial state does not emit",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_feedback_low_battery",
+      "featureName": "system_island_feedback_low_battery",
+      "preferenceKeys": [
+        "system_island_feedback_low_battery",
+        "pref_key_system_island_feedback_low_battery"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Present low battery only when safe, retaining native fallback",
+      "disableEffect": "Keep existing activity and native system behavior",
+      "valueChangeEffect": "Apply on the existing controller without a new window or polling",
+      "restartTarget": "UNKNOWN",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandFormStateTest; IslandOptionsTest; IslandBatterySignalsTest",
+      "notes": "First installation requires SystemUI and SecurityCenter restart. Native warning is suppressed only after a visible replacement acknowledgement; failed or late acknowledgement retains native warning."
+    },
+    {
+      "featureId": "system_island_idle_tap",
+      "featureName": "system_island_idle_tap",
+      "preferenceKeys": [
+        "system_island_idle_tap",
+        "pref_key_system_island_idle_tap"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_left",
+      "featureName": "system_island_idle_left",
+      "preferenceKeys": [
+        "system_island_idle_left",
+        "pref_key_system_island_idle_left"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_right",
+      "featureName": "system_island_idle_right",
+      "preferenceKeys": [
+        "system_island_idle_right",
+        "pref_key_system_island_idle_right"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_down",
+      "featureName": "system_island_idle_down",
+      "preferenceKeys": [
+        "system_island_idle_down",
+        "pref_key_system_island_idle_down"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_double",
+      "featureName": "system_island_idle_double",
+      "preferenceKeys": [
+        "system_island_idle_double",
+        "pref_key_system_island_idle_double"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_idle_long",
+      "featureName": "system_island_idle_long",
+      "preferenceKeys": [
+        "system_island_idle_long",
+        "pref_key_system_island_idle_long"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_actions.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandMusicActions.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.android.systemui",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Execute the configured idle gesture against its native action or one verified recent media session",
+      "disableEffect": "No idle action when unassigned",
+      "valueChangeEffect": "Cancel pending input and reconfigure the existing view; validate owner and capability again on execution",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandIdleActionsTest; IslandMusicGestureTest; IslandActivityLifecycleTest",
+      "notes": "One owner; bounded state; no recording permission or background service"
+    },
+    {
+      "featureId": "system_island_live_kinds",
+      "featureName": "Native island activities",
+      "preferenceKeys": [
+        "system_island_live_kinds",
+        "pref_key_system_island_live_kinds"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandNativeAppSource.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandNativeAppSource.kt:install",
+      "targetPackage": "com.android.systemui / com.android.deskclock / com.android.soundrecorder",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Observe selected native activity state sources",
+      "disableEffect": "Close attached source observers and clear their current slots",
+      "valueChangeEffect": "Reconfigure attached sources; newly installed native hooks require restart",
+      "restartTarget": "REBOOT",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandLiveActivityTest; IslandLiveSignalTest; IslandActivityStateTest",
+      "notes": "Clock and Recorder require framework scope and a source-process restart. Explicit native-compatible user installations are UID-pinned too. SMS/calendar require accepted native notifications. Recorder metering uses its existing scalar getter only while the background recording island is visible; no new recording permission."
+    },
+    {
+      "featureId": "system_island_live_return",
+      "featureName": "Native activity return",
+      "preferenceKeys": [
+        "system_island_live_return",
+        "pref_key_system_island_live_return"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_island_feedback.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/LauncherMusicReturnHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
+      "targetPackage": "com.android.systemui / com.miui.home",
+      "installPhase": "APPLICATION_ATTACH",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Return selected active native call/Clock/Recorder task windows to the current island",
+      "disableEffect": "Leave native window targets unchanged; retain activity content and ordinary entrance",
+      "valueChangeEffect": "Invalidate pending attempts and update attached owners; first hook installation requires Launcher restart",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "LauncherMusicReturnAccessTest; LauncherMusicReturnLifecycleTest; IslandActivityLifecycleTest; IslandLiveActivityTest; PreferenceNavigationUiTest",
+      "notes": "Enabled by default only for explicitly selected native sources. Full-screen task/user/package/rotation matching stays native. Does not grant background activity launch or privacy access."
+    },
+    {
+      "featureId": "system_island_return_effect",
+      "featureName": "system_island_return_effect",
+      "preferenceKeys": [
+        "system_island_return_effect",
+        "pref_key_system_island_return_effect"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system.xml",
+      "defaultValue": "0",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/island/DynamicIslandActivities.kt:install",
+      "targetPackage": "com.miui.home",
+      "installPhase": "PACKAGE_READY",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Select native standard boarding or page absorption for eligible music and live activity returns",
+      "disableEffect": "Standard preserves native alpha and creates no capture overlay",
+      "valueChangeEffect": "Apply to the next native return; invalidate an in-flight old attempt",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "IslandOptionsTest; LauncherMusicReturnAccessTest; IslandAbsorptionMeshTest",
+      "notes": "Does not enable a source, change its whitelist or restore unrelated r14.25.5 behavior"
     }
   ]
 }

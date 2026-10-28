@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Insets
 import android.graphics.Path
+import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.ColorDrawable
@@ -35,7 +36,8 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w360dp-h800dp")
+@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w360dp-h800dp",
+    shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockBackgroundTest {
     private val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
@@ -313,6 +315,25 @@ class DockBackgroundTest {
     }
 
     @Test
+    fun anUnownedNativeAnimationDoesNotReadTransformationArguments() {
+        val animation = android.view.animation.AnimationSet(false)
+        var calls = 0; var reads = 0
+        val chain = Proxy.newProxyInstance(XposedInterface.Chain::class.java.classLoader,
+            arrayOf(XposedInterface.Chain::class.java)) { _, method, args ->
+            when (method.name) {
+                "proceed" -> { assertTrue(args.isNullOrEmpty()); calls++; true }
+                "getThisObject" -> animation
+                "getArg" -> { reads++; android.view.animation.Transformation() }
+                else -> error("Unexpected chain read: ${method.name}")
+            }
+        } as XposedInterface.Chain
+        val hook = LauncherDockBackground.editingTransformationHook()
+        repeat(120) { assertEquals(true, hook.intercept(chain)) }
+        assertEquals(120, calls)
+        assertEquals(0, reads)
+    }
+
+    @Test
     fun editingTransformationHookProceedsOnceWithoutCopyingArgumentsAndPreservesNativeFailures() {
         NativeMaterial.googleSupported = true
         val native = nativeHost()
@@ -374,9 +395,11 @@ class DockBackgroundTest {
         decoration.onEditingFrame(animation, .5f, true)
         assertEquals(115, material.background.alpha)
         decoration.onEditingFrame(animation, 0f, false)
+        assertEquals("The native terminal draw is transparent before ownership is retired", 0, material.background.alpha)
+        native.clearAnimation()
+        native.viewTreeObserver.dispatchOnPreDraw()
         assertFalse(material.appliedEnabled)
         assertNull(material.background)
-        native.clearAnimation()
         native.visibility = View.VISIBLE
         decoration.onVisibilityAggregated(true)
         assertEquals(230, material.background.alpha)
@@ -507,6 +530,7 @@ class DockBackgroundTest {
         val decoration = host.getChildAt(0) as DockBackgroundView
         val material = decoration.getChildAt(0) as NativeMaterial
         NativeMaterial.failure = IllegalStateException("retired native blur binder")
+        val silhouette = org.robolectric.util.ReflectionHelpers.getField<Path>(decoration.foreground, "path").generationId
         decoration.visibility = View.INVISIBLE
         decoration.onVisibilityAggregated(false)
         assertEquals(0, decoration.childCount)
@@ -516,7 +540,7 @@ class DockBackgroundTest {
         decoration.visibility = View.VISIBLE
         repeat(20) { decoration.onVisibilityAggregated(true); host.viewTreeObserver.dispatchOnPreDraw() }
         assertEquals(attempts, material.enableCalls)
-        assertFalse((decoration.foreground as DockBackgroundTint).rounded)
+        assertEquals(silhouette, org.robolectric.util.ReflectionHelpers.getField<Path>(decoration.foreground, "path").generationId)
     }
 
     @Test
@@ -583,7 +607,6 @@ class DockBackgroundTest {
                 val nativeShape = DockBackgroundTint().apply {
                     color = Color.WHITE
                     this.radius = radius
-                    rounded = true
                     setBounds(0, 0, 240, 80)
                 }
                 nativeShape.draw(Canvas(bitmap))
@@ -595,12 +618,8 @@ class DockBackgroundTest {
                         kotlin.math.abs(alpha - Color.alpha(bitmap.getPixel(x, 79 - y))))
                 }
                 bitmap.eraseColor(Color.TRANSPARENT)
-                val shape = DockBackgroundTint().apply {
-                    color = Color.WHITE
-                    this.radius = radius
-                    setBounds(0, 0, 240, 80)
-                }
-                shape.draw(Canvas(bitmap))
+                val shape = Path().apply { DockCornerGeometry.build(this, 240f, 80f, radius) }
+                Canvas(bitmap).drawPath(shape, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
                 assertEquals(Color.WHITE, bitmap.getPixel(120, 40))
                 var g4Delta = 0
                 for (y in 0 until 80) {
@@ -655,7 +674,7 @@ class DockBackgroundTest {
     }
 
     @Test
-    fun automaticCornersUsePanelScaleAndAvoidCapsulesEvenWithLargeDisplayCorners() {
+    fun automaticCornersKeepMainPanelProportionsEvenWithLargeDisplayCorners() {
         assertEquals(28f, DockCornerGeometry.radius(80f, 0f, 28f, 100f), 0f)
         assertEquals(28f, DockCornerGeometry.radius(80f, 0f, 28f, 140f), 0f)
         assertEquals(25.6f, DockCornerGeometry.radius(80f, 0f, 28f, 40f), 0.00001f)
@@ -819,7 +838,8 @@ class DockBackgroundTest {
         layout()
         native.viewTreeObserver.dispatchOnPreDraw()
         val radius = (decoration.foreground as DockBackgroundTint).radius
-        assertEquals(minOf(20f * host.resources.displayMetrics.density, minOf(decoration.width, decoration.height) * 0.32f), radius)
+        assertEquals(minOf(100f, 20f * decoration.resources.displayMetrics.density,
+            minOf(decoration.width, decoration.height) * .32f), radius)
         val material = decoration.getChildAt(0) as NativeMaterial
         val params = decoration.layoutParams as FrameLayout.LayoutParams
         val margin = params.leftMargin
@@ -869,7 +889,8 @@ class DockBackgroundTest {
             native.layout(0, top, 360, top + 80)
             decoration.onApplyWindowInsets(insets)
             native.viewTreeObserver.dispatchOnPreDraw()
-            val expected = minOf(20f * host.resources.displayMetrics.density, minOf(decoration.width, decoration.height) * 0.32f)
+            val expected = minOf(100f, 20f * decoration.resources.displayMetrics.density,
+                minOf(decoration.width, decoration.height) * .32f)
             assertTrue(expected > 0f)
             assertEquals(expected, (decoration.foreground as DockBackgroundTint).radius, 0f)
             assertEquals(expected, material.appliedCornerRadius, 0f)
@@ -1260,11 +1281,20 @@ class DockBackgroundTest {
                 LauncherDockBackground.attach(native, DockBackgroundConfig(material = material, radiusDp = manual), materialConstructor, access)
                 repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
                 val decoration = native.getChildAt(0) as DockBackgroundView
+                decoration.onApplyWindowInsets(WindowInsets.Builder()
+                    .setRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT,
+                        RoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT, 118, 118, 118))
+                    .setRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT,
+                        RoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT, 118, 118, 118)).build())
                 val actual = (decoration.foreground as DockBackgroundTint).radius
                 if (first < 0f) first = actual
                 assertEquals(first, actual, 0f)
                 assertEquals(actual, (decoration.getChildAt(0) as NativeMaterial).appliedCornerRadius, 0f)
-                if (manual == 0) assertTrue(actual < decoration.height * 0.5f)
+                if (manual == 0) {
+                    assertTrue("A physical display corner must not inflate the native panel", actual <=
+                        ReflectionHelpers.getField<Float>(decoration, "panelRadius"))
+                    assertTrue("Automatic Dock corners retain main's flat sides", actual <= decoration.height * .32f)
+                }
                 native.removeView(decoration)
             }
         }
@@ -1519,13 +1549,14 @@ class DockBackgroundTest {
         var appliedCornerRadius = 0f
         var enableCalls = 0
         var cornerCalls = 0
+        var alphaSubmissions = 0
         @JvmField val mBlurLayerHolder = BlendLayer()
         init {
             // BackgroundBlurDrawable keeps exact alpha; ColorDrawable quantizes low alpha twice.
             background = object : ColorDrawable(Color.WHITE) {
                 private var opacity = 255
                 override fun getAlpha() = opacity
-                override fun setAlpha(value: Int) { opacity = value; super.setAlpha(value) }
+                override fun setAlpha(value: Int) { alphaSubmissions++; opacity = value; super.setAlpha(value) }
             }
         }
         private var retainedBackground = background

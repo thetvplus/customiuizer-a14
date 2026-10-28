@@ -41,11 +41,28 @@ class ProcessMatrixEligibilityTest(unittest.TestCase):
         cls.matrix = json.loads(MATRIX.read_text(encoding="utf-8"))
         cls.rows = {row["featureIdName"]: row for row in cls.matrix["features"]}
 
+    def test_poco_folder_blur_is_scoped_without_broad_launcher_routing(self):
+        poco = "com.mi.android.globallauncher"
+        self.assertIn(poco, self.matrix["scope"])
+        self.assertNotIn(poco, self.matrix["routing"])
+        row = self.rows["poco_folder_icon_blur"]
+        self.assertEqual(poco, row["allowedProcess"])
+        self.assertEqual("APPLICATION_ATTACHED", row["phase"])
+        self.assertEqual("GenericAppFeatures", row["installer"])
+        self.assertEqual("com.miui.home", self.rows["launcher_folder_icon_blur"]["allowedProcess"])
+
     def test_status_bar_height_matches_its_resource_package_allowlist(self):
         source = (FEATURE_DIR / "CommonPackageFeatures.kt").read_text(encoding="utf-8")
         package_set = re.search(r"RESOURCE_PACKAGES\s*=\s*setOf\((.*?)\)", source, re.S).group(1)
         actual = set(re.findall(r'"([^"]+)"', package_set))
         self.assertEqual(actual, set(self.rows["status_bar_height"]["allowedProcess"].split("; ")))
+
+    def test_only_the_power_warning_enters_the_exact_security_center_power_process(self):
+        rows = [row for row in self.rows.values()
+                if "com.miui.securitycenter.remote" in row["allowedProcess"].split("; ")]
+        self.assertEqual(["system_hidelowbatwarn"], [row["preferenceKey"] for row in rows])
+        router = (ROOT / "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/ProcessRouter.kt").read_text(encoding="utf-8")
+        self.assertIn('"com.miui.securitycenter.remote" -> ProcessScope.SECURITY_CENTER_POWER', router)
 
     def test_every_registered_feature_is_present_in_the_current_matrix(self):
         identities = parse_feature_ids(FEATURE_DIR / "FeatureIds.kt")

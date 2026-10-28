@@ -21,6 +21,12 @@ WHERE (class_descriptor='Lcom/android/systemui/statusbar/NotificationMediaManage
  AND method_name='onBindFinished')
  OR (class_descriptor='Lcom/android/systemui/statusbar/notification/interruption/HeadsUpViewBinder;'
  AND method_name IN ('abortBindCallback','unbindHeadsUpView'))
+ OR (class_descriptor='Lcom/android/systemui/statusbar/notification/collection/coordinator/SensitiveContentCoordinatorImpl;'
+ AND method_name='onBeforeRenderList')
+ OR (class_descriptor='Lcom/android/systemui/statusbar/NotificationLockscreenUserManagerImpl;'
+ AND method_name='isLockscreenPublicMode')
+ OR (class_descriptor='Lcom/android/systemui/statusbar/notification/policy/NotificationSensitiveController;'
+ AND method_name='showSensitiveByAppLock')
  OR (class_descriptor='Lcom/android/systemui/statusbar/notification/NotificationClicker;'
  AND method_name='onClick')
  OR (class_descriptor='Landroid/media/AudioManager;'
@@ -44,6 +50,7 @@ WHERE (class_descriptor='Lcom/android/systemui/statusbar/NotificationMediaManage
  OR (class_descriptor='Lcom/android/systemui/statusbar/notification/collection/coordinator/HeadsUpCoordinator;'
  AND field_name IN ('mEntriesBindingUntil','mHeadsUpViewBinder'))
  OR (class_descriptor='Lcom/android/systemui/statusbar/notification/row/ExpandableNotificationRow;' AND field_name IN ('mEntry','mRemoved'))
+ OR (class_descriptor='Lcom/android/systemui/statusbar/NotificationLockscreenUserManagerImpl;' AND field_name='mCurrentUserId')
  OR (class_descriptor='Lcom/android/systemui/statusbar/notification/icon/IconPack;' AND field_name='mStatusBarIcon')
 ORDER BY file_id, kind, descriptor;
 

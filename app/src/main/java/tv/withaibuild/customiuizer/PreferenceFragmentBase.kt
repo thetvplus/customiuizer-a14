@@ -570,12 +570,13 @@ open class PreferenceFragmentBase : PreferenceFragmentCompat() {
             else -> return null
         }
 
-        val duration = (animDur * Helpers.getAnimationScale(2) + 0.5f).toLong()
+        // ValueAnimator applies the system duration scale. Multiplying here applies it twice
+        // and adds a settings-provider read while FragmentManager prepares each transition.
         // Fragment collects animators before preparing the view's entry visibility.
         // Changing alpha here makes it skip the entry animation and leaves the page
         // offscreen. Let Fragment own visibility and move the view only when started.
         return ObjectAnimator.ofFloat(view, View.TRANSLATION_X, startTrans, endTrans).apply {
-            this.duration = duration
+            this.duration = animDur.toLong()
             interpolator = DecelerateInterpolator(1.2f)
         }
     }

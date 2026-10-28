@@ -15,7 +15,7 @@ internal object AudioFftBands {
     }
 
     /** Five frequency bands, adapted to the actual callback sample rate (in milli-Hz). */
-    fun five(fft: ByteArray, sampleRate: Int, output: FloatArray): Boolean {
+    fun five(fft: ByteArray, sampleRate: Int, output: FloatArray, attack: Float = .8f, release: Float = .45f): Boolean {
         if (output.size != 5 || fft.size < 32 || fft.size and (fft.size - 1) != 0 || sampleRate <= 0) return false
         val hertz = sampleRate / 1000f
         if (hertz < 8000f || hertz > 192000f) return false
@@ -30,12 +30,12 @@ internal object AudioFftBands {
             // small-height view. Keep one-bit complex quantization noise at rest;
             // never auto-normalize a quiet band to full height.
             val gain = when (index) { 3 -> 3f; 4 -> 8f; else -> 1f }
-            val energy = if (index >= 3 && power <= 2f) 0f
+            val energy = if (power <= 2f) 0f
                 else (sqrt(power / 32768f) * gain).coerceAtMost(1f)
             // At 20 Hz a quiet interval falls below 10% in four frames (200 ms).
             // Only five values survive a frame; raw FFT never does.
             val previous = output[index]
-            output[index] = (previous + (energy - previous) * if (energy > previous) .8f else .45f).coerceIn(0f, 1f)
+            output[index] = (previous + (energy - previous) * if (energy > previous) attack else release).coerceIn(0f, 1f)
             start = end
         }
         return true

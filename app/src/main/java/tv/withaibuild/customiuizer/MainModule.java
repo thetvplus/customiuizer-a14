@@ -21,6 +21,7 @@ import tv.withaibuild.customiuizer.installers.GenericAppInstaller;
 import tv.withaibuild.customiuizer.installers.GuardProviderInstaller;
 import tv.withaibuild.customiuizer.installers.InputMethodInstaller;
 import tv.withaibuild.customiuizer.installers.LauncherInstaller;
+import tv.withaibuild.customiuizer.mods.utils.feature.GenericAppFeatures;
 import tv.withaibuild.customiuizer.installers.MediaInstaller;
 import tv.withaibuild.customiuizer.installers.PackageInstallerRouter;
 import tv.withaibuild.customiuizer.installers.PermissionControllerInstaller;
@@ -157,6 +158,12 @@ public class MainModule extends XposedModule {
             return;
         }
 
+        if (scope == ProcessScope.SECURITY_CENTER_POWER) {
+            SecurityCenterInstaller.installPowerWarning(lpparam, mPrefs);
+            HookDiagnostics.printSummaryForStage("onPackageReady");
+            return;
+        }
+
         if (CommonPackageFeatures.hasEnabledFeature(mPrefs, pkg)) {
             FeatureInstallRegistry commonRegistry = new FeatureInstallRegistry();
             for (FeatureSpec feature : CommonPackageFeatures.all(lpparam, mPrefs)) {
@@ -211,8 +218,9 @@ public class MainModule extends XposedModule {
         final boolean isNoOverscroll = mPrefs.getBoolean("system_nooverscroll") && mPrefs.getStringSet("system_nooverscroll_apps").contains(pkg);
         final boolean controlMedia = (mPrefs.getStringAsInt("controls_volumemedia_up", 0) > 0
             || mPrefs.getStringAsInt("controls_volumemedia_down", 0) > 0) && mPrefs.getStringSet("controls_mediaplayer_apps").contains(pkg);
-        if (isLauncherPkg || isStatusBarColor || isNoOverscroll || controlMedia) {
-            GenericAppInstaller.installPostAttach(lpparam, mPrefs, isLauncherPkg, isStatusBarColor, isNoOverscroll, controlMedia);
+        final boolean pocoFolderIconBlur = GenericAppFeatures.shouldInstallPocoFolderIconBlur(mPrefs, pkg, processName);
+        if (isLauncherPkg || isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur) {
+            GenericAppInstaller.installPostAttach(lpparam, mPrefs, isLauncherPkg, isStatusBarColor, isNoOverscroll, controlMedia, pocoFolderIconBlur);
         }
 
         HookDiagnostics.printSummaryForStage("onPackageReady");

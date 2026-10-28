@@ -6,6 +6,27 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IslandRecallGestureTest {
+    @Test fun tinyCapsulesUseTheirOwnHeightInsteadOfAFullScreenSwipeRange() {
+        for (density in listOf(1f, 2.75f, 3f)) for (height in listOf(32, 36, 38, 40, 64)) for (slop in listOf(8, 16)) {
+            val config = IslandRecallGesture.configFromSlop((slop * density).toInt(), (height * density).toInt())
+            assertTrue(config.intentDistancePx < config.minUpDistancePx)
+            assertTrue(config.minUpDistancePx <= config.scaledTouchSlopPx)
+            assertTrue(config.minUpDistancePx <= height * density * .25f)
+            val start = IslandRecallGesture.onDown(0, 100f, 100f)
+            val end = 100f - config.minUpDistancePx - .01f
+            assertTrue(IslandRecallGesture.hasUpwardIntent(start, 0, 100f, end, config))
+            assertTrue(IslandRecallGesture.isTriggered(IslandRecallGesture.onUp(start, 0, 100f, end, config, 500)))
+            assertFalse(IslandRecallGesture.hasUpwardIntent(start, 1, 100f, end, config))
+        }
+    }
+
+    @Test fun coalescedSmallFlickHasALowerBoundAndDoesNotRequireAMoveEvent() {
+        val config = IslandRecallGesture.configFromSlop(8, 38)
+        val start = IslandRecallGesture.onDown(0, 50f, 20f)
+        assertTrue(IslandRecallGesture.isTriggered(IslandRecallGesture.onUp(start, 0, 50f, 15f, config, 20)))
+        assertFalse(IslandRecallGesture.isTriggered(IslandRecallGesture.onUp(start, 0, 50f, 19f, config, 20)))
+        assertFalse(IslandRecallGesture.isTriggered(IslandRecallGesture.onUp(start, 0, 50f, 15f, config, 500)))
+    }
 
     private val config = IslandRecallGesture.configFromSlop(16)
 

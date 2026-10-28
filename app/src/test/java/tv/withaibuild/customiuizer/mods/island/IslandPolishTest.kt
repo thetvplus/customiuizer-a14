@@ -21,11 +21,68 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowChoreographer
 import org.robolectric.util.ReflectionHelpers.getField
+import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandPolishTest {
+    @Test fun measuredGainIsBoundedImmediateAndCannotInventASignalForSilenceOrInvalidSamples() {
+        val wave = IslandWaveView(org.robolectric.RuntimeEnvironment.getApplication())
+        wave.gainPercent = 100
+        wave.spectrum(FloatArray(5) { .2f })
+        val before = getField<FloatArray>(wave, "targets")[0]
+        wave.gainPercent = 200
+        assertTrue(getField<FloatArray>(wave, "targets")[0] > before * 1.8f)
+        wave.gainPercent = 10000
+        assertEquals(800, wave.gainPercent)
+        assertTrue(getField<FloatArray>(wave, "targets")[0] in .8f.. .9f)
+        for (quiet in listOf(0f, Float.NaN, Float.POSITIVE_INFINITY, -1f)) {
+            wave.spectrum(FloatArray(5) { quiet })
+            assertArrayEquals(FloatArray(5), getField<FloatArray>(wave, "targets"), 0f)
+        }
+        wave.gainPercent = -1
+        assertEquals(100, wave.gainPercent)
+    }
+    @Test fun weakMusicSurvivesGainAndRecordingDoesNotHitAFlatClippingPlateau() {
+        val wave = IslandWaveView(org.robolectric.RuntimeEnvironment.getApplication())
+        wave.gainPercent = 450
+        wave.spectrum(FloatArray(5) { .011f })
+        assertTrue(getField<FloatArray>(wave, "targets")[0] > .04f)
+        wave.spectrum(FloatArray(5) { IslandRecorderMeter.level(8192) })
+        val speech = getField<FloatArray>(wave, "targets")[0]
+        wave.spectrum(FloatArray(5) { IslandRecorderMeter.level(16384) })
+        val louder = getField<FloatArray>(wave, "targets")[0]
+        assertTrue(speech in .6f.. .8f)
+        assertTrue(louder > speech && louder < 1f)
+    }
+
+    @Test fun measuredWaveInterpolatesWithoutKeepingAClockAfterSilenceOrDetachment() {
+        val activity=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val wave=IslandWaveView(activity)
+        activity.setContentView(wave,FrameLayout.LayoutParams(25,24))
+        wave.onVisibilityAggregated(true)
+        wave.spectrum(FloatArray(5))
+        wave.playing=true
+        assertFalse(getField(wave,"scheduled"))
+        wave.spectrum(FloatArray(5) { 1f })
+        assertEquals(0f,getField<FloatArray>(wave,"energies")[0],0f)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(33))
+        assertTrue(getField<FloatArray>(wave,"energies")[0] in .1f.. .99f)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
+        assertEquals(.8944272f,getField<FloatArray>(wave,"energies")[0],.006f)
+        assertFalse(getField(wave,"scheduled"))
+        wave.spectrum(FloatArray(5))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
+        assertEquals(0f,getField<FloatArray>(wave,"energies")[0],.006f)
+        assertFalse(getField(wave,"scheduled"))
+        wave.spectrum(null)
+        assertTrue(getField(wave,"scheduled"))
+        activity.setContentView(FrameLayout(activity))
+        assertFalse(getField(wave,"scheduled"))
+        activity.finish()
+    }
+
     @Test fun smallDragDuringLengtheningPreservesMotionAndFinalContent() = morph(false)
     @Test fun releasingALongPressCannotCreateOrCancelASecondAnimation() = morph(true)
 
@@ -41,13 +98,14 @@ class IslandPolishTest {
             shell.geometry(280,40,40); layout(shell,280,40)
             shell.transition(184,40,280,40,false)
             val motion=getField<ValueAnimator>(shell,"motion")
+            val duration = motion.duration
             motion.currentPlayTime=100
             touch(shell,MotionEvent.ACTION_DOWN,140f,20f)
             if (hold) assertFalse(shell.performLongClick())
             else touch(shell,MotionEvent.ACTION_MOVE,140f,30f)
             touch(shell,MotionEvent.ACTION_UP,140f,30f)
             assertSame(motion,getField(shell,"motion"))
-            assertEquals(IslandMotion.MORPH,motion.duration)
+            assertEquals(duration,motion.duration)
             motion.end()
             assertEquals(40,shell.height)
             assertEquals(1f,shell.scaleX,.001f)
@@ -76,7 +134,7 @@ class IslandPolishTest {
         shell.bind("Enabled","Do Not Disturb",art,false,false,false,0,false,status=true)
         shell.geometry(240,height,40); layout(shell,240,height)
         assertEquals(40,height)
-        assertEquals(1,(shell.getChildAt(1) as LinearLayout).childCount)
+        assertEquals(2,(shell.getChildAt(1) as LinearLayout).childCount)
         assertTrue(shell.contentDescription.toString().contains("Do Not Disturb"))
         assertFalse(shell.performLongClick())
         activity.finish()

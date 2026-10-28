@@ -10,6 +10,9 @@ WHERE (class_descriptor = 'Lcom/miui/home/recents/NavStubView;'
            'updateFloatingIconView', 'handleFloatingIconViewWhenNewTargetViewNull',
            'resetFloatingIcon', 'onFinishCompleted', 'cancelAnimWithoutEndListener'))
    OR (class_descriptor = 'Lcom/miui/home/recents/anim/RectFParams;' AND method_name = '<init>')
+   OR (class_descriptor = 'Lcom/miui/home/recents/anim/FastLaunchWindowElement;'
+       AND method_name IN ('animTo', 'isRunning', 'useFastLaunch', 'getFastLaunchRunningTaskPkgName',
+           'getRunningTaskId', 'injectRecentTransition', 'handleFloatingIconViewWhenNewTargetViewNull'))
    OR (class_descriptor = 'Lcom/miui/home/recents/util/RectFSpringAnim;'
        AND method_name IN ('getTargetRect', 'isRunning'))
 ORDER BY file_id, class_descriptor, method_idx;
@@ -31,11 +34,12 @@ ORDER BY file_id, class_descriptor, field_idx;
 -- the native floating-icon cleanup; do not remove or hide the real desktop icon.
 SELECT DISTINCT file_id, method, callee
 FROM method_calls
-WHERE method_class = 'Lcom/miui/home/recents/anim/WindowElement;'
+WHERE method_class IN ('Lcom/miui/home/recents/anim/WindowElement;', 'Lcom/miui/home/recents/anim/FastLaunchWindowElement;')
   AND (callee LIKE 'Lcom/miui/home/recents/util/RectFSpringAnim;->reset(%'
        OR callee LIKE 'Lcom/miui/home/recents/util/RectFSpringAnim;->updateAllAnimValues(%'
        OR callee LIKE 'Lcom/miui/home/recents/anim/WindowElement;->animResetReady(%'
        OR callee LIKE 'Lcom/miui/home/recents/anim/WindowElement;->runningAnimUpdate(%'
        OR callee LIKE 'Lcom/miui/home/recents/anim/WindowElement;->resetFloatingIcon(%'
-       OR callee LIKE 'Lcom/miui/home/recents/FloatingIconInterface;->recycle(%')
+       OR callee LIKE 'Lcom/miui/home/recents/FloatingIconInterface;->recycle(%'
+       OR callee = 'Lcom/miui/home/recents/anim/WindowElement;->animTo(Ljava/lang/Object;)V')
 ORDER BY file_id, method, callee;

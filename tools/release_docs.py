@@ -145,6 +145,7 @@ def documents(published: dict) -> dict[str, str]:
                          f"[{'下载正式 APK' if chinese else 'Download official APK'}]({download_url}/releases/download/{tag}/{quote(apk)}) · "
                          f"[{'发行说明' if chinese else 'Release notes'}]({download_url}/releases/tag/{tag}) · "
                          f"[{'更新记录' if chinese else 'Changelog'}]({target})\n\n"
+                         f"[{'Telegram 交流群' if chinese else 'Telegram community'}]({release.POLICY['community_url']})\n\n"
                          f"## {'当前正式版' if chinese else 'Current stable release'}\n\n"
                          f"`{name}` · versionCode `{code}` · `{meta['application_id']}`\n\n"
                          f"APK: `{apk}` ({meta['apk_size']:,} bytes)\n\nSHA-256: `{meta['apk_sha256']}`\n\n"
@@ -152,8 +153,7 @@ def documents(published: dict) -> dict[str, str]:
                          f"## {'本版变化' if chinese else 'Changes'}\n\n{current}\n\n"
                          f"## {'安装与兼容' if chinese else 'Installation and compatibility'}\n\n{install}\n\n"
                          f"[{'使用说明与支持' if chinese else 'Usage and support'}]({source_url}/tree/{sha}) · "
-                         f"[{'兼容矩阵' if chinese else 'Compatibility'}]({source_url}/blob/{sha}/COMPATIBILITY.md) · "
-                         f"[{'反馈问题' if chinese else 'Report an issue'}]({source_url}/issues)\n\n"
+                         f"[{'兼容矩阵' if chinese else 'Compatibility'}]({source_url}/blob/{sha}/COMPATIBILITY.md)\n\n"
                          + ("此仓库只维护正式下载说明。开发分支的未发布内容不代表本 APK 的功能或验收结果。\n" if chinese else
                             "This repository documents published downloads. Unreleased development changes do not describe this APK or its device acceptance.\n"))
     release.require(set(result) == FILES, "Unexpected download document path")

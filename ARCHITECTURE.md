@@ -8,7 +8,9 @@
 - 保持 Hook 时序、参数改写、返回 / 异常语义及 `chain.proceed()` 次数。回调最外层用既有安全边界，普通异常局部隔离，不吞 `OutOfMemoryError`、`ThreadDeath`、`VirtualMachineError`。
 - Receiver / Observer / listener / controller 绑定所有者，覆盖替换、迟到失效和释放；静态字段不强持有 Activity、View 或短生命周期 controller。
 - 反射、DexKit、磁盘 I/O 和同步 Binder 留在冷路径；热路径读准备好的不可变 / 原子状态。缓存有界且按 ClassLoader 隔离。资源增长说明容量、失效、释放、成本和验证，测量规则见 [优化门禁](docs/OPTIMIZATION_GATES.md)。
+- 按[关键路径优化原则](docs/OPTIMIZATION_GATES.md#关键路径优化原则)准备稳定依赖、按需激活业务并增量提交状态。准备限于依赖已就绪的安全生命周期，不提前安装 Hook 或把临时未就绪缓存为永久缺失；异步发布核验当前 owner / generation。复用不得跳过当前安全 / 会话核验、独立事件或释放；配置、尺寸、字体 / 主题、来源或 owner 变化使对应结果失效，原有视觉、弹簧速度与交互语义保持。
 - PrefMap、ResourceHooks、FeatureRegistry、ProcessRouter、PreferenceBootstrap 的变化须有具体问题、受影响契约和专项回归。保留 Dynamic Island / Dock 视觉与布局合同；不默认迁移 Compose、DI、StateFlow 或全量 Kotlin。语言迁移小批量、行为等价，与功能变化分开。
+- 项目自绘圆角复用共享 G4 曲率模型，保留现有视觉比例；单位曲线按需缓存，逐帧不重新积分或创建效果对象。原生组件遵循系统自身几何；材质接管每帧仅保留一个可见填充，回退不叠加另一种曲率轮廓。
 
 ## 产品职责
 
@@ -38,9 +40,10 @@
 
 进程矩阵只生成 [JSON](docs/rom-intelligence/A14_PROCESS_MATRIX.json) / [CSV](docs/rom-intelligence/A14_PROCESS_MATRIX.csv)，来源是 catalog、路由和 scope。以下非表格化边界由源码和回归维护：
 
-- SystemUI、Settings、PermissionController、SecurityCenter 只接受各自主进程，拒绝 secondary / bootaware；fused location 与 networkstack 进程拒绝。
+- SystemUI、Settings、PermissionController 只接受各自主进程。SecurityCenter 的常规功能也只在主进程安装；精确的 `com.miui.securitycenter.remote` 电源进程只安装已有低电量策略，提前返回，不安装主进程 UI 或 GenericApp 功能；其它 secondary / bootaware 继续拒绝。fused location 与 networkstack 进程拒绝。
 - `miui.systemui.plugin` 不单独加入 scope；SystemUI 从 `PluginFactory.createPlugin` 取得插件 ClassLoader，安装 / 释放由插件 runtime 持有。
 - 键盘包必须在静态 scope；`ProcessRouter` 交给 InputMethodInstaller，scope 外无回调。Launcher 还可按用户选择安装 GenericApp 的 post-attach 功能。
+- POCO 的 `com.mi.android.globallauncher` 仍是 GENERIC_APP；只有该包主进程且明确启用文件夹图标模糊时，才复用 Application.attach 安装单独 Feature。不得把整个 Launcher catalog 扩至 POCO；MIUI 的 Launcher 路由不变。
 - `StatusBarHeightFeature` 虽为 ANY，仍限资源包集合和高度开关；窗口几何归 system_server 的 Insets Feature。`AlarmCompatFeature` 另受应用名单控制。
 - SystemUI bootstrap 与 Launcher 在安装派发前维护 ReflectionCache 安全生命周期；GuardProvider / Media 按需加载并关闭 DexKit，目标始终用实际加载器解析。
 
@@ -77,6 +80,18 @@ R8 保留入口、Hooker、JNI、ServiceLoader 及设置进程与 compileOnly AP
 
 动态岛的单窗口展示、状态栏占用及新旧事件隔离由上述 owner 负责；通用 StrongToast 快照与安全层不复制。完整布局、输入、租约、媒体返回及波形合同以[功能说明](docs/features/island/README.md)为准。
 
+除既有加载会话的持有合同外，动态岛媒体卡片因闹钟等短暂中断消失时，只有原生 manager 仍存活、系统活动会话列表再次确认当前已选会话的相同 token / 包名，才保留既有回调。真实 PLAYING 继续显示；PAUSED 仍按原两秒可见期限隐藏，仅给同一回调最多 30 秒恢复机会，重复卡片 / 元数据快照不续期，未恢复则释放。复核只在原生卡片缺口事件执行，期限复用既有 expiry；不轮询、不从旧 PLAYING 复活会话，manager 丢失、会话销毁、安全失效和 STOPPED / ERROR 仍清理。
+
+原生返回的共享进度表示已接受返回的整体行程，网格后缘压缩仅用于网格几何；可选捕获不得推迟接收岛体的反馈。原生进度确认接入 / 完成，接收岛体宽高取同一初始状态并按已有有限时钟的已用时间推进，不能由页面速度压缩完整形变。首次小形态及已有完整岛体都从可见状态接续；完成从当前尺寸 / 速度收敛，不另建常驻动画或逐帧 Binder。
+
+动态岛来源元数据归 IslandLiveKind，配置集合及正选 / 排除规则归不可变 IslandOptions 快照；异步读取不观察原集合后续突变。小窗身份只筛对应媒体槽，不负责全局窗口隐藏。Controller 仍分别核验通知提交、原生窗口返回和安全生命周期；媒体返回取消不得清除其他活动的内容接入进度，绘制继续共用同一有限时钟。具体入口与资源边界见[来源规则](docs/features/island/README.md#来源规则与复用)。
+
+持续系统活动仍由同一个岛 controller 选择，每类最多一个当前状态。时钟 / 录音生产者只在明确作用域与来源开启时安装，跨进程状态先验证原生发送者再读载荷；每个生产包最多一个匿名存活令牌，死亡、替换与 detach 释放旧所有者，不轮询进程或保留活动历史。系统原生提醒与权限状态不由岛改写。
+
+TimerService 销毁先撤销匹配的当前 owner，再发布剩余状态；应用进程仍存活不构成服务继续计时的依据。到期三秒交接与正在响铃的提醒独立保留，旧服务销毁不能撤销新 owner。Launcher 返回主 Hook 组先完整解析，任一安装失败停止并逆序撤回；可选吸入网格独立回退，不能留下只有目标覆盖或只有 owner 的半安装。
+
+录音可附加一个仅 SystemUI UID 可读的峰值令牌，接口只返回标量，不提供命令或音频。可见后台录音由单个 owner 限速读取，所有隐藏 / 暂停 / 配置失效取消；前台录音 UI 保留其原生峰值读取。音乐与系统活动共用 Launcher 返回所有权和单窗口形变，每次原生提交独立标识，旧尝试在新打开 / 触摸 / 停用后失效。
+
 Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，以弱 owner 跟随其布局、可见性、原生动画与解绑，不松开祖先裁切、不移动图标、不接受触摸。关闭选项回到原背景合同，见 [Dock](docs/features/dock/README.md)。
 
 状态栏几何 Binding 跟随实际 View / Window，保留最新原生基线，仅恢复自己仍持有的属性；配置和 detach 不改写其他 owner 的新值。变更不得扩大到通用 View setter 或全局窗口缓存。
@@ -84,6 +99,8 @@ Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，
 ## 设置、生成与持久化
 
 `res/xml/prefs_*.xml` 是页面源；`generatePreferenceArtifacts` 生成分页、搜索和当前偏好目录到 `app/build/generated/`。搜索保留控制器、目标键和导航元数据；恢复按当前偏好契约校准，生成输入与 AGP 依赖见 [DEVELOPMENT](docs/DEVELOPMENT.md#构建与生成物)。当前页面与稳定键导航见[功能地图](docs/FEATURE_MAP.md)，其独立生成不改变运行时产物。
+
+设置行的名称、底部说明和右侧当前值各有职责：说明不被当前值或数量替换，复用时分别绑定 / 清空；没有右侧值的行不创建隐藏值控件。分隔线只能位于完整功能之间，不能拆开功能与其说明；组前说明不单独画线。分组语义在 adapter 变化时生成缓存，绘制不遍历偏好树。公共显示选项独立于单一内容来源，入口移动须同步普通导航、搜索、依赖与功能地图。
 
 备份 V2 使用大小限制、严格解码与 CRC；受限旧格式解码保留既有用户兼容。维护恢复记录使用精确原状态和可恢复事务，不进入备份传输。语义约束见[遗留合同](docs/maintenance/LEGACY_SEMANTIC_CALIBRATION.md)。目录重排不能改变偏好键或稳定 Feature ID。
 

@@ -58,7 +58,9 @@ class ListPreferenceEx(context: Context, attrs: AttributeSet?) : ListPreference(
         val valSummary = finalView.findViewById<TextView>(android.R.id.hint)
         val res = context.resources
 
-        summary?.visibility = if (valueAsSummary || summary.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        val currentSummary = this.summary
+        summary?.text = currentSummary
+        summary?.visibility = if (currentSummary.isNullOrEmpty()) View.GONE else View.VISIBLE
         valSummary?.visibility = if (valueAsSummary) View.VISIBLE else View.GONE
         valSummary?.text = if (valueAsSummary) {
             val resolved = entry
@@ -91,7 +93,7 @@ class ListPreferenceEx(context: Context, attrs: AttributeSet?) : ListPreference(
         val summary = holder.findViewById(android.R.id.summary) as? TextView
 
         var valSummary = holder.itemView.findViewById<TextView>(android.R.id.hint)
-        if (valSummary == null) {
+        if (valSummary == null && valueAsSummary) {
             valSummary = TextView(context).apply {
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, summary?.textSize ?: textSize)
                 setPadding(summary?.paddingLeft ?: 0, summary?.paddingTop ?: 0, context.resources.getDimensionPixelSize(R.dimen.preference_summary_padding_right), summary?.paddingBottom ?: 0)

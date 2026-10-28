@@ -5,6 +5,20 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class IslandEdgeGeometryTest {
+    @Test fun centerOffsetsMoveContinuouslyToTheirCameraSafeLimitsWithoutSelectingAnotherAnchor() {
+        var previous = -1
+        for (offset in -80..80) {
+            val placed = IslandPosition.layout(184, 40, 80, 0, 400, 1, offset, 0, 40, 188, 212, 0, 28)!!
+            assertTrue(placed.left >= previous)
+            if (previous >= 0) assertTrue(placed.left - previous <= 1)
+            assertTrue(placed.left + 8 <= 188)
+            assertTrue(placed.left + placed.width - 8 >= 212)
+            previous = placed.left
+        }
+        assertEquals(14, IslandSizing.horizontalOffsetLimit(168, 68, 40, 40))
+        assertEquals(24, IslandSizing.horizontalOffsetLimit(168, 168, 40, 40))
+        assertEquals(0, IslandSizing.horizontalOffsetLimit(96, 68, 40, 40))
+    }
     @Test fun realCameraWidthDensityManualWidthsAndOffsetsRetainTheSelectedSafeEdge() {
         for (density in listOf(.75f, 1f, 2.75f, 3f, 4f)) {
             fun px(dp: Int) = (dp * density).roundToInt()
@@ -39,9 +53,9 @@ class IslandEdgeGeometryTest {
     }
 
     @Test fun sideSizingUsesContiguousContentAndIgnoresTheClockBatteryClearance() {
-        assertEquals(184, IslandSizing.collapsed(1f, 400, 400, 0, 24f, 100f, centered = false))
-        assertEquals(240, IslandSizing.maximumWidth(1f, 240, 400, centered = false))
-        assertEquals(216, IslandSizing.maximumWidth(1f, 240, 400))
+        assertEquals(164, IslandSizing.collapsed(1f, 400, 400, 0, 24f, 100f, centered = false))
+        assertEquals(218, IslandSizing.maximumWidth(1f, 240, 400, centered = false))
+        assertEquals(192, IslandSizing.maximumWidth(1f, 240, 400)) // 24 dp per centered edge.
         val camera = IslandPosition.layout(184, 40, 140, 0, 400, 1, 0, 8, 40, 192, 208, 0, 32)!!
         assertEquals(108, camera.left)
         assertEquals(40, camera.gap)

@@ -1,4 +1,6 @@
 import java.util.Properties
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.WriteProperties
 import org.gradle.api.file.DirectoryProperty
@@ -61,8 +63,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 254
-val lastVersionName = "r14.25.5"
+val lastVersion = 256
+val lastVersionName = "r14.25.7"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -93,6 +95,10 @@ fun resolveBuildRevision(): String {
 }
 
 val buildRevision = resolveBuildRevision()
+val releasePolicy = JsonSlurper().parseText(providers.fileContents(
+    rootProject.layout.projectDirectory.file("tools/release-policy.json")
+).asText.get()) as Map<*, *>
+val communityUrl = releasePolicy["community_url"] as String
 val supportedLocales = setOf(
     "ru-rRU",
     "zh-rCN",
@@ -163,6 +169,7 @@ android {
         versionCode = lastVersion
         versionName = lastVersionName
         buildConfigField("String", "BUILD_REVISION", "\"$buildRevision\"")
+        buildConfigField("String", "COMMUNITY_URL", JsonOutput.toJson(communityUrl))
         ndk {
             abiFilters += "arm64-v8a"
         }

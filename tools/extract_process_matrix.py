@@ -180,6 +180,8 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
         return ["com.miui.home"], ["third-party launchers (unless selected app sets)"]
     if target == "SYSTEM_PACKAGE":
         if installer_base == "SecurityCenterFeatures":
+            if pref == "system_hidelowbatwarn":
+                return ["com.miui.securitycenter", "com.miui.securitycenter.remote"], ["com.miui.securitycenter.bootaware"]
             return ["com.miui.securitycenter"], ["com.miui.securitycenter.bootaware"]
         if installer_base == "SettingsFeatures":
             return ["com.android.settings"], ["com.android.settings:remote"]
@@ -221,6 +223,8 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
                 "com.tencent.wetype",
             ], ["packages outside scope.list (no callback with static scope)"]
         if installer_base == "GenericAppFeatures":
+            if pref == "launcher_folder_icon_blur":
+                return ["com.mi.android.globallauncher"], ["secondary processes; other Launcher features"]
             return ["com.miui.home + selected packages"], []
         if installer_base == "AndroidPackageFeatures":
             return ["android"], []

@@ -17,7 +17,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.format.DateFormat
 import android.text.format.DateUtils
-import android.util.ArrayMap
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -70,6 +69,7 @@ object SystemLockScreenHooks {
         val skip: Boolean = false,
         val req: Int = 1,
         val skipActivities: Set<String> = emptySet(),
+        val appLockTimeoutMinutes: Int = 1,
     )
 
     @Volatile
@@ -82,6 +82,7 @@ object SystemLockScreenHooks {
         "system_noscreenlock_skip",
         "system_noscreenlock_req",
         "system_applock_skip_activities",
+        "system_applock_timeout",
     )
 
     internal fun refreshNoScreenLockSnapshot() {
@@ -100,6 +101,7 @@ object SystemLockScreenHooks {
             skip = prefs.getBoolean("system_noscreenlock_skip"),
             req = prefs.getStringAsInt("system_noscreenlock_req", 1),
             skipActivities = pairs,
+            appLockTimeoutMinutes = prefs.getInt("system_applock_timeout", 1).coerceIn(1, 60),
         )
     }
 
@@ -826,135 +828,15 @@ object SystemLockScreenHooks {
         })
     }
 
-    private fun saveLastCheck(thisObject: Any, pkgName: String?, userId: Int) {
-        var enabled = false
-        if (pkgName != null && pkgName != "com.miui.home") enabled = XposedHelpers.callMethod(thisObject, "getApplicationAccessControlEnabledAsUser", pkgName, userId) as Boolean
-        val userState = XposedHelpers.callMethod(thisObject, "getUserStateLocked", userId)
-        XposedHelpers.setAdditionalInstanceField(userState, "mAccessControlLastCheckSaved",
-            if (enabled) ArrayMap<String, Long>(XposedHelpers.getObjectField(userState, "mAccessControlLastCheck") as ArrayMap<String, Long>) else null
-        )
-    }
-
-    private fun checkLastCheck(thisObject: Any, userId: Int) {
-        val userState = XposedHelpers.callMethod(thisObject, "getUserStateLocked", userId)
-        val mAccessControlLastCheckSaved = XposedHelpers.getAdditionalInstanceField(userState, "mAccessControlLastCheckSaved") as ArrayMap<String, Long>?
-        if (mAccessControlLastCheckSaved == null) return
-        val mAccessControlLastCheck = XposedHelpers.getObjectField(userState, "mAccessControlLastCheck") as ArrayMap<String, Long>
-        if (mAccessControlLastCheck.size == 0) return
-        val timeout = MainModule.mPrefs.getInt("system_applock_timeout", 1) * 60L * 1000L
-        for (pair in mAccessControlLastCheck) {
-            val pkg = pair.key
-            val time = pair.value
-            if (mAccessControlLastCheckSaved.containsKey(pkg)) {
-                val oldTime = mAccessControlLastCheckSaved[pkg]
-                if (time != oldTime) {
-                    mAccessControlLastCheck.put(pkg, time + (timeout - 60000L))
-                    XposedHelpers.setObjectField(userState, "mAccessControlLastCheck", mAccessControlLastCheck)
-                }
-            } else {
-                mAccessControlLastCheck.put(pkg, time + (timeout - 60000L))
-                XposedHelpers.setObjectField(userState, "mAccessControlLastCheck", mAccessControlLastCheck)
-            }
-        }
-    }
-
     @JvmStatic
     fun AppLockTimeoutHook(lpparam: SystemServerStartingParam) {
-        ModuleHelper.findAndHookMethod("com.miui.server.SecurityManagerService", lpparam.classLoader, "addAccessControlPassForUser", String::class.java, Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                val thisObject = chain.thisObject
-                try {
-
-                    saveLastCheck(thisObject, args[0] as String?, args[1] as Int)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    checkLastCheck(thisObject, args[1] as Int)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.miui.server.SecurityManagerService", lpparam.classLoader, "checkAccessControlPassLocked", String::class.java, Intent::class.java, Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val args = chain.args
-                val thisObject = chain.thisObject
-                try {
-
-                    saveLastCheck(thisObject, args[0] as String?, args[2] as Int)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    checkLastCheck(thisObject, args[2] as Int)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
-
-        ModuleHelper.findAndHookMethod("com.miui.server.SecurityManagerService", lpparam.classLoader, "activityResume", Intent::class.java, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
-
-                    val intent = chain.getArg(0) as Intent
-                    if (intent.component != null)
-                        saveLastCheck(thisObject, intent.component?.packageName, 0)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    val intent = chain.getArg(0) as Intent
-                    if (intent.component != null)
-                        checkLastCheck(thisObject, 0)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+        installNoScreenLockSnapshot()
+        val implementation = XposedHelpers.findClassIfExists("com.miui.server.security.AccessControlImpl", lpparam.classLoader) ?: return
+        val service = XposedHelpers.findClassIfExists("com.miui.server.SecurityManagerService", lpparam.classLoader) ?: return
+        val state = XposedHelpers.findClassIfExists("com.miui.server.security.SecurityUserState", lpparam.classLoader) ?: return
+        val access = AppLockTimeoutAccess.prepare(implementation, service, state) { noScreenLockConfig.appLockTimeoutMinutes } ?: return
+        val delay = ModuleHelper.hookMethod(access.postDelayed, access.handlerDelayHook()) ?: return
+        if (ModuleHelper.hookMethod(access.schedule, access.scheduleHook()) == null) delay.unhook()
     }
 
     @JvmStatic
@@ -1665,33 +1547,22 @@ object SystemLockScreenHooks {
     @JvmStatic
     fun SkipAppLockHook(lpparam: SystemServerStartingParam) {
         installNoScreenLockSnapshot()
-        ModuleHelper.hookAllMethods("com.miui.server.AccessController", lpparam.classLoader, "skipActivity", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
+        ModuleHelper.hookAllMethods("com.miui.server.AccessController", lpparam.classLoader, "skipActivity", skipAppLockResultHook())
+    }
 
-                    val intent = chain.getArg(0) as Intent?
-                    if (intent == null || intent.component == null) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    val pkgName = intent.component!!.packageName
-                    val actName = intent.component!!.className
-                    if ("$pkgName|$actName" in noScreenLockConfig.skipActivities) {
-                        result = true
-                        throwable = null
-                    }
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun skipAppLockResultHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            if (result != false) return result
+            return try {
+                val component = (chain.getArg(0) as? Intent)?.component ?: return result
+                if ("${component.packageName}|${component.className}" in noScreenLockConfig.skipActivities) true else result
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
+                XposedHelpers.log(t)
+                result
             }
-        })
+        }
     }
 
     @JvmStatic

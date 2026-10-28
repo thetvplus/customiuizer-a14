@@ -75,6 +75,8 @@ Landroid/app/INotificationManager$Stub$Proxy;->buzzBeepBlinkForNotification(Ljav
 `KeyguardNotificationVisibilityProviderImpl.isLockedOrLocking()` 读取 `KeyguardStateControllerImpl.mShowing` 和 `StatusBarStateControllerImpl.mUpcomingState`，不能仅以 `mState=0` 推断解锁。
 动态岛沿用 `Dependency.get(KeyguardStateController.class)` 和 native Callback，在现有 owner 的连接 / 释放边界注册 / 移除，事件边界拒绝 Showing、GoingAway、FadingAway、Bouncer、LaunchTransitionFadingAway、KeyguardRequested、Dozing / Dreaming 及未知状态。
 `onBindFinished(NotificationEntry)` 的原生尾部设置 Heads-up / alert 状态、`interruption` 并移除本次 binding；模块只在当前通知 / Row / binding 仍有效且窗口插入成功后提交。
+
+2026-10-26 实机补证：`NotificationEntry` 构造时将 `mSensitive` 初始化为 true，稍后的 `SensitiveContentCoordinatorImpl.onBeforeRenderList` 才按当前用户公开模式和 `NotificationSensitiveController.showSensitiveByAppLock` 更新。因此，提前接管时不能把尚未更新的字段当作最终隐私判定。当前实现只读复用这两项原生策略，公开模式或应用锁仍退回原生；策略不可取得也退回原生，不修改 entry 的隐私字段。原生敏感状态渲染回调结束后只复核当前消息，必要时清除；不扫描列表、不保存正文历史、不增加轮询。锁屏 / 独立 Keyguard、安全用户、秘密通知及 DND 门禁继续单独保留。
 未提交失败回滚自己的通知 lease 和中间状态；提交后的 `unbindHeadsUpView` 失败不重放原生提醒。该方法将 **flag 4** 标为 freeable 后请求 rebind，不能凭它断言普通 / 锁屏 Row 被删除。
 锁屏列表另经 `KeyguardCoordinator` / `KeyguardNotificationVisibilityProviderImpl` 的隐私、用户和静默过滤；本次未更改这些决策，也未实机验证列表绘制。补充声明、字段写入和 Dependency 来源查询已纳入 [island_activity_contract.sql](../../tools/dexsql/island_activity_contract.sql)。
 

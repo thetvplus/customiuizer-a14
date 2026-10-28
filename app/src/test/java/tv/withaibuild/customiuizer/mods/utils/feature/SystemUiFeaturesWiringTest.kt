@@ -141,7 +141,7 @@ class SystemUiFeaturesWiringTest {
     }
 
     @Test
-    fun foregroundMonitorFeatureHasCorrectMultiKeyGuard() {
+    fun foregroundMonitorIsNotInstalledSolelyForImeCursorControl() {
         val feature = ForegroundMonitorFeature(fakePackageReadyParam(), PrefMap())
 
         assertEquals(ForegroundMonitorFeatureId, feature.id)
@@ -156,7 +156,7 @@ class SystemUiFeaturesWiringTest {
         assertTrue(feature.isEnabled(on))
 
         val onByCursor = PrefMap().apply { put("controls_volumecursor", true) }
-        assertTrue(feature.isEnabled(onByCursor))
+        assertFalse(feature.isEnabled(onByCursor))
     }
 
     @Test

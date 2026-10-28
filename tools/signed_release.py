@@ -353,6 +353,10 @@ def local_release_notes(name: str, code: int) -> list[str]:
             for filename, language in CURRENT_CHANGELOGS]
 
 
+def community_notes() -> str:
+    return f"[交流与反馈 · Telegram / Community]({POLICY['community_url']})"
+
+
 def public_release_notes_section(text: str, name: str, code: int, filename: str, *, language: str | None = None) -> str:
     """Render reviewed user changes; legacy releases retain their original format."""
     body = release_notes_section(text, name, code, filename)
@@ -693,10 +697,11 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         body = public_release_notes_section(base64.b64decode(changelog["content"]).decode("utf-8"), name, code, filename, language=language)
         sections.append(f"## {language}\n\n{body}")
     notes = folder / "release-notes.md"
-    notes.write_text("\n\n".join(sections) + f"\n\n## APK / Provenance\n\nSource: `{sha}`\n\n"
+    original_notes = ("\n\n".join(sections) + f"\n\n## APK / Provenance\n\nSource: `{sha}`\n\n"
                      f"[Build](https://github.com/{REPO}/actions/runs/{run_id})\n\n"
                      f"APK: `{metadata['apk']}`\n\nAPK SHA-256: `{metadata['apk_sha256']}`\n\n"
-                     f"Android signer SHA-256: `{CERT}`\n", encoding="utf-8")
+                     f"Android signer SHA-256: `{CERT}`\n")
+    notes.write_text(original_notes.rstrip() + "\n\n" + community_notes() + "\n", encoding="utf-8")
     existing = {}
     # All existing destinations must belong to this exact verified candidate.
     # A matching published source is read-only; a matching draft may be completed
@@ -709,7 +714,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
             check_release_identity(record, record["id"], tag, sha)
             titles = {name} if "release_assets" in metadata else {name, f"CustoMIUIzer A14 · {name}"}
             require(record.get("name") in titles
-                    and record.get("body", "").strip() == notes.read_text(encoding="utf-8").strip(),
+                    and record.get("body", "").strip() in {original_notes.strip(), notes.read_text(encoding="utf-8").strip()},
                     "Existing release notes/title differ from the verified original candidate")
             check_release_assets(record, folder, release_assets(metadata, record), draft=record["draft"], prerelease=prerelease, partial=record["draft"])
     source = existing[REPO]
@@ -719,6 +724,10 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
     check_new_release(name, code, sha, resume=source is not None)
     for repository, tag, env in repositories:
         record = existing[repository]
+        # A resumed legacy candidate retains its exact reviewed body. Only the
+        # canonical community footer is optional at initial recovery validation;
+        # every subsequent readback must still match the same reviewed content.
+        expected_notes = record["body"] if record is not None else notes.read_text(encoding="utf-8")
         filenames = release_assets(metadata, record)
         if record is not None and not record["draft"]:
             check_tag(repository, tag, sha, must_exist=True, env=env)
@@ -752,7 +761,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         require(created["draft"] is True and created["tag_name"] == tag, "Draft creation returned another release")
         require(created.get("immutable") is not True, "Immutable release cannot be modified")
         check_release_identity(created, created["id"], tag, sha)
-        check_release_content(created, draft_title, notes.read_text(encoding="utf-8"))
+        check_release_content(created, draft_title, expected_notes)
         present = {asset["name"] for asset in created.get("assets", [])}
         missing = [str(folder / filename) for filename in filenames if filename not in present]
         if missing:
@@ -761,7 +770,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         # numeric ID returned by creation, including when its tag is still new.
         draft = json.loads(run("gh", "api", f"repos/{repository}/releases/{created['id']}", env=env))
         check_release_identity(draft, created["id"], tag, sha)
-        check_release_content(draft, draft_title, notes.read_text(encoding="utf-8"))
+        check_release_content(draft, draft_title, expected_notes)
         check_release_assets(draft, folder, filenames, draft=True, prerelease=prerelease)
         # Before the first publication, current main must still be the verified
         # source. Once that exact source release is publicly verified, syncing
@@ -774,7 +783,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
             f"--prerelease={str(prerelease).lower()}", f"--latest={str(not prerelease).lower()}", env=env)
         release = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}", env=env))
         check_release_identity(release, created["id"], tag, sha)
-        check_release_content(release, name, notes.read_text(encoding="utf-8"))
+        check_release_content(release, name, expected_notes)
         check_release_assets(release, folder, filenames, draft=False, prerelease=prerelease)
         check_tag(repository, tag, sha, must_exist=True, env=env)
         if not prerelease:

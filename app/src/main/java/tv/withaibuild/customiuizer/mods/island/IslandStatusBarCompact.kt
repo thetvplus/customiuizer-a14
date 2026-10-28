@@ -118,16 +118,21 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
         if (entering || wasRestoring) transition(reveal = false) else applyHiddenAlpha()
     }
 
-    fun maximumWidth(screenWidth: Int): Int? {
+    fun maximumWidth(screenWidth: Int, center: Float = screenWidth * .5f): Int? {
         val host = root.get() ?: return null
         val clock = kept[0].view.get() ?: return null
         val battery = kept[1].view.get() ?: return null
         if (host.width <= 0 || clock.width <= 0 || battery.width <= 0) return null
-        host.getLocationOnScreen(position)
         val gap = (16 * host.resources.displayMetrics.density).roundToInt()
-        val left = position[0] + host.paddingLeft + clock.width + gap
-        val right = screenWidth - (position[0] + host.width - host.paddingRight) + battery.width + gap
-        return (screenWidth - 2 * maxOf(left, right)).coerceAtLeast(0)
+        clock.getLocationOnScreen(position)
+        val clockShift = kept[0].takeIf { abs(clock.translationX - it.baseTranslation - it.shift) < .01f }?.shift ?: 0f
+        val left = position[0] - clockShift + clock.width + gap
+        battery.getLocationOnScreen(position)
+        val batteryShift = kept[1].takeIf { abs(battery.translationX - it.baseTranslation - it.shift) < .01f }?.shift ?: 0f
+        val right = position[0] - batteryShift - gap
+        // Include native layout margins, padding and clock-chip width. Subtract only
+        // our own avoidance shift so it cannot feed back into the next form's width.
+        return (2 * minOf(center - left, right - center)).roundToInt().coerceIn(0, screenWidth)
     }
 
     private fun collectBranches() {
@@ -160,9 +165,16 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
     }
 
     private fun updateOcclusion() {
+        val host = root.get() ?: return
         occlusionBounds.set(island)
-        val margin = root.get()?.resources?.displayMetrics?.density?.let { kotlin.math.ceil(4f * it).toInt() } ?: 0
+        val margin = kotlin.math.ceil(4f * host.resources.displayMetrics.density).toInt()
         occlusionBounds.inset(-margin, -margin)
+        // All collected leaves belong to this window. Its screen offset is common even
+        // while native child matrices animate; retain each leaf's current clipped bounds.
+        host.getLocationOnScreen(position)
+        host.getLocationInWindow(windowPosition)
+        val offsetX = position[0] - windowPosition[0]
+        val offsetY = position[1] - windowPosition[1]
         var changed = false
         for (entry in hidden) {
             val view = entry.view.get()
@@ -170,9 +182,7 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
             if (view != null && view.isShown && view.getGlobalVisibleRect(visibleBounds)) {
                 // Global visible bounds are in the ViewRoot coordinate space; the island
                 // lives in another window, so compare both in physical screen coordinates.
-                view.getLocationOnScreen(position)
-                view.getLocationInWindow(windowPosition)
-                visibleBounds.offset(position[0] - windowPosition[0], position[1] - windowPosition[1])
+                visibleBounds.offset(offsetX, offsetY)
                 overlaps = Rect.intersects(occlusionBounds, visibleBounds)
             }
             if (entry.occluded != overlaps) { entry.occluded = overlaps; changed = true }
@@ -304,6 +314,8 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
         val islandRight = island.right + gap
         for (item in kept) {
             val view = item.view.get() ?: continue
+            // Suppression owns zero, not the native animation's latest nonzero target.
+            if (!item.suppressed || view.alpha != 0f) item.alpha = view.alpha
             if (abs(view.translationX - item.baseTranslation - item.shift) > .01f) {
                 item.baseTranslation = view.translationX
                 item.shift = 0f
@@ -315,7 +327,7 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
             val desired = if (!overlaps) baseLeft else if (item.left) minOf(baseLeft, islandLeft - view.width).coerceAtLeast(outerLeft)
                 else maxOf(baseLeft, islandRight).coerceAtMost(outerRight - view.width)
             val fits = !overlaps || if (item.left) desired + view.width <= islandLeft else desired >= islandRight
-            if (!fits) { view.alpha = 0f; item.suppressed = true }
+            if (!fits) { if (view.alpha != 0f) view.alpha = 0f; item.suppressed = true }
             else if (item.suppressed) { view.alpha = item.alpha; item.suppressed = false }
             item.shift = (desired - baseLeft).roundToInt().toFloat()
             if (item.shift != 0f) allowTranslation(view)

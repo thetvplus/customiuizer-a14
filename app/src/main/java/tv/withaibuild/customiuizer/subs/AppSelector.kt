@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import java.lang.reflect.Method
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,6 +48,7 @@ class AppSelector : SubFragmentWithSearch() {
     private var openwith = false
     private var selectActivity = false
     private var configFetched = false
+    private var receiverContext: Context? = null
     private var key: String? = null
     private var mPrivacyAppsMap: HashMap<Int, ArrayList<String>>? = null
 
@@ -62,7 +64,7 @@ class AppSelector : SubFragmentWithSearch() {
                 configFetched = true
                 initialized = true
                 mPrivacyAppsMap = intent.getSerializableExtra("privacyAppsMap") as? HashMap<Int, ArrayList<String>>
-                lifecycleScope.launch(Dispatchers.Main) {
+                if (view != null) viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     if (isAdded) setupList()
                 }
             }
@@ -93,7 +95,7 @@ class AppSelector : SubFragmentWithSearch() {
         if (initialized) {
             setupList()
         } else {
-            lifecycleScope.launch(Dispatchers.IO) {
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                 delay(animDur.toLong())
                 loadApps()
                 if (privacy && !configFetched) return@launch
@@ -129,6 +131,8 @@ class AppSelector : SubFragmentWithSearch() {
                 }
             }
         } catch (e: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(e)
+            if (e is CancellationException) throw e
             e.printStackTrace()
         }
     }
@@ -319,8 +323,10 @@ class AppSelector : SubFragmentWithSearch() {
 
     private fun registerReceivers() {
         if (privacy) {
-            val ctx = getValidContext()
-            ctx.registerReceiver(configReceiver, IntentFilter(GlobalActions.EVENT_PREFIX + "PUSHAPPCONFIG"), null, null, Context.RECEIVER_EXPORTED)
+            val ctx = receiverContext ?: getValidContext().applicationContext.also {
+                it.registerReceiver(configReceiver, IntentFilter(GlobalActions.EVENT_PREFIX + "PUSHAPPCONFIG"), null, null, Context.RECEIVER_EXPORTED)
+                receiverContext = it
+            }
             val intent = Intent(GlobalActions.EVENT_PREFIX + "FETCHAPPCONFIG")
             intent.putExtra("DATATYPE", "privacy")
             intent.setPackage("com.miui.home")
@@ -329,8 +335,10 @@ class AppSelector : SubFragmentWithSearch() {
     }
 
     private fun unregisterReceivers() {
+        val ctx = receiverContext ?: return
+        receiverContext = null
         try {
-            getValidContext().unregisterReceiver(configReceiver)
+            ctx.unregisterReceiver(configReceiver)
         } catch (t: Throwable) { FatalErrors.unwrapAndRethrowIfFatal(t) }
     }
 

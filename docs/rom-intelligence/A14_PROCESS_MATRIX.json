@@ -633,7 +633,7 @@
       "phase": "PACKAGE_READY",
       "installer": "SystemUiFeatures",
       "installHook": "GlobalActions.setupForegroundMonitor(lpparam)",
-      "enableCondition": "prefs.getStringAsInt(\"various_showcallui\", 0) > 0 || prefs.getBoolean(\"controls_volumecursor\")",
+      "enableCondition": "prefs.getStringAsInt(\"various_showcallui\", 0) > 0",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
@@ -2817,8 +2817,8 @@
       "phase": "PACKAGE_READY",
       "installer": "SecurityCenterFeatures",
       "installHook": "Various.NoLowBatteryWarningHook()",
-      "enableCondition": "prefs.getBoolean(\"system_hidelowbatwarn\")",
-      "allowedProcess": "com.miui.securitycenter",
+      "enableCondition": "prefs.getBoolean(\"system_hidelowbatwarn\") || tv.withaibuild.customiuizer.mods.island.IslandBatteryWarningMarker.enabled(prefs)",
+      "allowedProcess": "com.miui.securitycenter; com.miui.securitycenter.remote",
       "deniedProcess": "com.miui.securitycenter.bootaware"
     },
     {
@@ -3275,13 +3275,54 @@
       "enableCondition": "{ prefs -> IslandApplicationOverlayFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "system_server",
       "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 259,
+      "featureIdName": "system_island_native_activity_sources",
+      "name": "Island Native Activity Sources",
+      "preferenceKey": "system_island_live_kinds",
+      "target": "ANY",
+      "phase": "PACKAGE_READY",
+      "installer": "CommonPackageFeatures (MainModule)",
+      "installHook": "IslandNativeAppSource.install(lpparam, mPrefs)",
+      "enableCondition": "{ prefs -> IslandNativeAppSource.enabled(prefs, lpparam.packageName.orEmpty()) }",
+      "allowedProcess": "any scoped package where hasEnabledFeature() is true",
+      "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 260,
+      "featureIdName": "launcher_folder_icon_blur",
+      "name": "Launcher Folder Icon Blur",
+      "preferenceKey": "launcher_folder_icon_blur",
+      "target": "LAUNCHER",
+      "phase": "APPLICATION_ATTACHED",
+      "installer": "LauncherPostAttachFeatures",
+      "installHook": "LauncherFolderIconBlur.install(lpparam.classLoader)",
+      "enableCondition": "prefs.getBoolean(\"launcher_folder_icon_blur\")",
+      "allowedProcess": "com.miui.home",
+      "deniedProcess": "third-party launchers (unless selected app sets)"
+    },
+    {
+      "featureIdInt": 261,
+      "featureIdName": "poco_folder_icon_blur",
+      "name": "POCO Folder Icon Blur",
+      "preferenceKey": "launcher_folder_icon_blur",
+      "target": "ANY",
+      "phase": "APPLICATION_ATTACHED",
+      "installer": "GenericAppFeatures",
+      "installHook": "LauncherFolderIconBlur.install(lpparam.classLoader)",
+      "enableCondition": "packageName == \"com.mi.android.globallauncher\" && prefs.getBoolean(\"launcher_folder_icon_blur\")",
+      "allowedProcess": "com.mi.android.globallauncher",
+      "deniedProcess": "secondary processes; other Launcher features"
     }
   ],
   "scope": [
     "android",
+    "com.android.deskclock",
     "com.android.incallui",
     "com.android.permissioncontroller",
     "com.android.settings",
+    "com.android.soundrecorder",
     "com.android.systemui",
     "com.baidu.input",
     "com.baidu.input_mi",
@@ -3289,6 +3330,7 @@
     "com.google.android.permissioncontroller",
     "com.iflytek.inputmethod",
     "com.iflytek.inputmethod.miui",
+    "com.mi.android.globallauncher",
     "com.miui.gallery",
     "com.miui.guardprovider",
     "com.miui.home",

@@ -27,6 +27,19 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandChatNotificationsTest {
+    @Test fun selectedAppTextUsesOneNotificationPathWithoutASpecialCalendarOrSmsFlag() {
+        fun reminder(channel: String) = NotificationCompat.Builder(context, channel)
+            .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Test reminder").setContentText("Starts soon").build()
+        for (pkg in listOf("com.xiaomi.calendar", "com.android.mms", "selected.app")) {
+            val sbn = posted(pkg, reminder("native-alert"))
+            assertNull(sbn.notification.category)
+            val content = prepare(sbn)!!
+            assertEquals("Test reminder", content.text); assertEquals("Starts soon", content.detail)
+            assertNull(prepare(sbn, allowed = false))
+            assertNull(prepare(sbn, importance = NotificationManager.IMPORTANCE_LOW))
+            assertNull(prepare(sbn, suppressed = NotificationManager.Policy.SUPPRESSED_EFFECT_PEEK))
+        }
+    }
     private val context get() = RuntimeEnvironment.getApplication()
     private fun notification() = NotificationCompat.Builder(context, "chat")
         .setSmallIcon(android.R.drawable.ic_dialog_email)
@@ -117,16 +130,17 @@ class IslandChatNotificationsTest {
         assertEquals(200, picture.width); assertFalse(picture.isRecycled)
     }
 
-    @Test fun ordinaryBrandingOnlyNotificationsAndEmptyPictureStylesStayNative() {
+    @Test fun selectedStandardTextUsesNativeContentAndEmptyPictureStylesStayNative() {
         val icon = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
         val ordinary = NotificationCompat.Builder(context, "ordinary")
             .setSmallIcon(android.R.drawable.ic_dialog_info).setLargeIcon(icon)
             .setContentTitle("Promotion").setContentText("Branding alone").build()
-        assertNull(prepare(posted("other.app", ordinary)))
+        val content = prepare(posted("other.app", ordinary))!!
+        assertEquals("Promotion", content.text); assertEquals("Branding alone", content.detail)
         val emptyPicture = NotificationCompat.Builder(context, "ordinary")
             .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("No cover")
             .setStyle(NotificationCompat.BigPictureStyle()).build()
-        assertNull(prepare(posted("other.app", emptyPicture)))
+        assertNull(emptyPicture.extras.toString(), prepare(posted("other.app", emptyPicture)))
         assertNull(IslandChatNotifications.prepare(context, posted("other.app", emptyPicture),
             NotificationManager.IMPORTANCE_HIGH, true, 0, android.graphics.drawable.ColorDrawable(Color.CYAN)))
     }

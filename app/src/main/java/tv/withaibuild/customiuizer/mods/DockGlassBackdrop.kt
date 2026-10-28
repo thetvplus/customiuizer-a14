@@ -5,12 +5,14 @@ import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.Shader
 import android.graphics.RuntimeShader
 import android.os.SystemClock
 import android.view.Display
 import android.view.View
+import android.view.WindowManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
@@ -23,22 +25,25 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.ref.WeakReference
-import kotlin.math.ceil
-import kotlin.math.floor
+import kotlin.math.sqrt
 
 /** One decoration owns one texture, one shader and at most one pending wallpaper-only capture.
  * Static wallpaper follows native rendered frames, with the completion draw excluded to avoid
  * feedback. Live wallpaper alone needs a visible, 30 Hz maximum refresh; hidden/transparent
  * owners stop it. No full-display screenshot, CPU pixel readback/blur, file decode or capture
- * of the Launcher tree. The sampler returns only the cropped wallpaper compositor layer.
+ * of the Launcher tree. One bounded wallpaper-only viewport survives the whole native
+ * pinch/unlock transform; changing the Dock's position cannot change material ownership.
  */
 internal class DockGlassBackdrop(
     view: View,
     private val sampler: DockWallpaperSampler,
     opacity: Int,
-    private val liveWallpaper: Boolean,
+    private var liveWallpaper: Boolean,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
+    private val lensPath = Path()
+    private val lensPathBounds = Rect()
+    private var lensPathRadius = -1f
     private val owner = WeakReference(view)
     private val scope = CoroutineScope(SupervisorJob() + dispatcher + ModuleHelper.coroutineFailureHandler)
     private var shader: RuntimeShader? = null
@@ -66,12 +71,21 @@ internal class DockGlassBackdrop(
     private var epoch = 0
     private var busy = false
     private var visible = false
+    private var powerSave = false
     private var released = false
     private var broken = false
     private var sourceDirty = true
+    private var viewportDirty = true
+    private var viewportWidth = 0
+    private var viewportHeight = 0
+    private var reportedTexture = false
+    private var reportedCaptureFailure = false
+    private var sourceUnavailable = false
+    private var unavailableTries = 0
     private var completionDraw = false
     private var tickRequested = false
     private var lastRequest = Long.MIN_VALUE / 2
+    private var nativeMotionUntil = 0L
     private var lastX = Float.NaN
     private var lastY = Float.NaN
     private var lastWidth = 0
@@ -91,13 +105,27 @@ internal class DockGlassBackdrop(
         if (matrix == null) legacy.reset() else legacy.set(matrix)
     }
 
-    fun invalidateSource() {
+    fun setPowerSave(enabled: Boolean) {
+        if (powerSave == enabled) return
+        powerSave = enabled
+        invalidateSource()
+        owner.get()?.let { view -> view.removeCallbacks(tick); tickRequested = false; view.invalidate() }
+    }
+
+    fun invalidateSource(liveWallpaper: Boolean = this.liveWallpaper) {
+        this.liveWallpaper = liveWallpaper
+        owner.get()?.removeCallbacks(tick)
+        tickRequested = false
+        nativeMotionUntil = SystemClock.uptimeMillis() + 450L
         epoch++
         sourceDirty = true
+        viewportDirty = true
+        sourceUnavailable = false
+        unavailableTries = 0
         clearTexture()
     }
 
-    fun onFrame(isVisible: Boolean) {
+    fun onFrame(isVisible: Boolean, rendering: Boolean = true) {
         val view = owner.get() ?: return
         if (visible != isVisible) {
             visible = isVisible
@@ -107,21 +135,30 @@ internal class DockGlassBackdrop(
                 return
             }
         }
-        if (!visible || broken || released || !view.isAttachedToWindow || view.width <= 0 || view.height <= 0) return
+        if (!visible || powerSave || broken || released || !view.isAttachedToWindow || view.width <= 0 || view.height <= 0) return
+        // A native animation can pass through zero alpha while the owner is still
+        // visible. Pause sampling but retain its material until it really hides.
+        if (!rendering) { view.removeCallbacks(tick); tickRequested = false; return }
         // The ROM extension has no display selector. Never substitute default-display pixels on
         // a secondary display. Unknown/non-affine transforms also keep the native material.
         if (view.display?.displayId != Display.DEFAULT_DISPLAY || !prepareMatrix(view)) return
         if (!values.contentEquals(frameMatrix) || lastWidth != view.width || lastHeight != view.height) {
+            nativeMotionUntil = SystemClock.uptimeMillis() + 450L
             values.copyInto(frameMatrix)
             lastWidth = view.width
             lastHeight = view.height
             sourceDirty = true
+            sourceUnavailable = false
+            unavailableTries = 0
             view.invalidate() // follow a native transform, including RenderNode-only scaleX
         }
         val ownDraw = completionDraw
         completionDraw = false
-        if (!ownDraw || sourceDirty || tickRequested) {
-            val now = SystemClock.uptimeMillis()
+        val now = SystemClock.uptimeMillis()
+        if (sourceUnavailable && !sourceDirty && !tickRequested) return
+        // Unrelated icon/clock draws do not invalidate a settled static wallpaper. Native
+        // transforms and wallpaper changes retain a short bounded compositor catch-up.
+        if (sourceDirty || tickRequested || !ownDraw && (liveWallpaper || now < nativeMotionUntil)) {
             if (!busy) {
                 if (now - lastRequest >= FRAME_MS) {
                     tickRequested = false
@@ -130,7 +167,7 @@ internal class DockGlassBackdrop(
                 } else scheduleTick(view, FRAME_MS - (now - lastRequest))
             }
         }
-        if (liveWallpaper && !busy) scheduleTick(view)
+        if (liveWallpaper && !busy && !sourceUnavailable) scheduleTick(view)
     }
 
     private fun prepareMatrix(view: View): Boolean {
@@ -158,32 +195,37 @@ internal class DockGlassBackdrop(
     }
 
     private fun request(view: View, now: Long): Boolean {
-        points[0] = 0f; points[1] = 0f
-        points[2] = view.width.toFloat(); points[3] = 0f
-        points[4] = view.width.toFloat(); points[5] = view.height.toFloat()
-        points[6] = 0f; points[7] = view.height.toFloat()
-        world.mapPoints(points)
-        val margin = 32f * view.resources.displayMetrics.density
-        val metrics = view.resources.displayMetrics
-        val requestCrop = Rect(
-            floor((minOf(points[0], points[2], points[4], points[6]) - margin).coerceAtLeast(0f) / 4f).toInt() * 4,
-            floor((minOf(points[1], points[3], points[5], points[7]) - margin).coerceAtLeast(0f) / 4f).toInt() * 4,
-            minOf(metrics.widthPixels, ceil((maxOf(points[0], points[2], points[4], points[6]) + margin) / 4f).toInt() * 4),
-            minOf(metrics.heightPixels, ceil((maxOf(points[1], points[3], points[5], points[7]) + margin) / 4f).toInt() * 4))
-        if (requestCrop.isEmpty || maxOf(points[0], points[2], points[4], points[6]) <= 0f ||
-            minOf(points[0], points[2], points[4], points[6]) >= metrics.widthPixels ||
-            maxOf(points[1], points[3], points[5], points[7]) <= 0f ||
-            minOf(points[1], points[3], points[5], points[7]) >= metrics.heightPixels) return false
-        val scale = minOf(1f, MAX_WIDTH.toFloat() / requestCrop.width(), MAX_HEIGHT.toFloat() / requestCrop.height())
+        if (viewportDirty) {
+            // Resources may describe the app area after system-bar insets. The wallpaper
+            // compositor uses the full default display, including status/navigation bars.
+            val viewport = ModuleHelper.guarded<Rect?>(null) {
+                view.context.getSystemService(WindowManager::class.java)?.maximumWindowMetrics?.bounds
+            } ?: return false
+            if (viewport.left != 0 || viewport.top != 0 || viewport.isEmpty) return false
+            viewportWidth = viewport.width(); viewportHeight = viewport.height()
+            viewportDirty = false
+        }
+        // A crop based on the previous draw cannot predict a legacy matrix delivered
+        // during this draw. Sample the wallpaper viewport once at a bounded pixel
+        // budget instead of alternating lens/native blur whenever that crop is left.
+        // This contains wallpaper only, never application or Launcher pixels.
+        val requestCrop = Rect(0, 0, viewportWidth, viewportHeight)
+        // Native visibility can stay true while the whole panel is beyond the display.
+        // There are no visible wallpaper pixels to acquire; reentry is observed by onFrame.
+        if (!coveredBy(view, requestCrop)) return false
+        val scale = minOf(1f, MAX_WIDTH.toFloat() / viewportWidth, MAX_HEIGHT.toFloat() / viewportHeight,
+            sqrt((MAX_PIXELS - MAX_WIDTH - MAX_HEIGHT).toDouble() / (viewportWidth.toDouble() * viewportHeight)).toFloat())
         val requestEpoch = epoch
         busy = true
         lastRequest = now
         val target = WeakReference(this)
         val captureSource = sampler
+        val captureWidth = viewportWidth
+        val captureHeight = viewportHeight
         scope.launch {
             var captured: Bitmap? = null
             try {
-                captured = captureSource.capture(requestCrop, scale)
+                captured = captureSource.capture(requestCrop, scale, captureWidth, captureHeight)
                 withContext(Dispatchers.Main.immediate) {
                     val current = target.get()
                     if (current != null) {
@@ -200,7 +242,7 @@ internal class DockGlassBackdrop(
                         // A wallpaper replacement, hide or release also invalidates failures.
                         // Only the current capture may retire this decoration's lens.
                         if (!current.released && !current.broken && current.visible && current.epoch == requestEpoch)
-                            current.fail(error)
+                            current.unavailable(error)
                         else if (!current.released && !current.broken && current.visible)
                             current.owner.get()?.postInvalidateOnAnimation()
                     }
@@ -219,10 +261,17 @@ internal class DockGlassBackdrop(
             if (!released && !broken && visible) owner.get()?.postInvalidateOnAnimation()
             return
         }
-        if (frame == null || frame.isRecycled || frame.width > MAX_WIDTH + 1 || frame.height > MAX_HEIGHT + 1 || frameCrop.isEmpty ||
+        if (frame == null) {
+            unavailable()
+            return
+        }
+        if (frame.isRecycled || frame.width > MAX_WIDTH || frame.height > MAX_HEIGHT ||
+            frame.width.toLong() * frame.height > MAX_PIXELS || frameCrop.isEmpty ||
             kotlin.math.abs(frame.width - frameCrop.width() * scale) > 1f || kotlin.math.abs(frame.height - frameCrop.height() * scale) > 1f) {
             frame?.recycle()
-            fail(IllegalStateException("wallpaper-only capture returned no usable SDR frame"))
+            // Size/crop readiness belongs to this compositor request, not GPU capability.
+            // A native pinch/unlock can invalidate one result without retiring the lens.
+            unavailable(IllegalStateException("wallpaper-only capture returned no usable SDR frame"))
             return
         }
         val lens = shader ?: DockGlassOptics.createLens()?.also { shader = it }
@@ -230,8 +279,9 @@ internal class DockGlassBackdrop(
         val view = owner.get()
         if (view == null || !prepareMatrix(view) || !coveredBy(view, frameCrop)) {
             frame.recycle()
-            sourceDirty = true
-            view?.postInvalidateOnAnimation()
+            // An unusable result must share the same finite budget as null/size failures.
+            // Otherwise its own completion invalidation can sustain captures forever.
+            unavailable()
             return
         }
         try {
@@ -246,7 +296,13 @@ internal class DockGlassBackdrop(
             sampleScaleX = frame.width.toFloat() / crop.width()
             sampleScaleY = frame.height.toFloat() / crop.height()
             sourceDirty = false
+            sourceUnavailable = false
+            unavailableTries = 0
             paint.shader = lens
+            if (!reportedTexture) {
+                reportedTexture = true
+                XposedHelpers.log("Dock lens: wallpaper texture ${frame.width}x${frame.height} from ${viewportWidth}x${viewportHeight}")
+            }
             // Native RenderThread recordings retain their own image references. The owner no
             // longer reads the previous Java Bitmap after replacing the shader input.
             previous?.recycle()
@@ -260,6 +316,20 @@ internal class DockGlassBackdrop(
             FatalErrors.unwrapAndRethrowIfFatal(error)
             fail(error)
         }
+    }
+
+    /** Compositor readiness is transient. One visible generation gets a finite
+     * 64/160/400 ms recovery window, then waits for a genuine source change. */
+    private fun unavailable(error: Throwable? = null) {
+        if (error != null && !reportedCaptureFailure) {
+            reportedCaptureFailure = true
+            XposedHelpers.log("Dock lens: transient wallpaper capture unavailable; bounded recovery", error)
+        }
+        busy = false
+        sourceDirty = false
+        sourceUnavailable = true
+        val delay = when (unavailableTries++) { 0 -> 64L; 1 -> 160L; 2 -> 400L; else -> return }
+        owner.get()?.let { scheduleTick(it, delay) }
     }
 
     private fun scheduleTick(view: View, delay: Long = FRAME_MS) {
@@ -276,7 +346,7 @@ internal class DockGlassBackdrop(
         XposedHelpers.log("Dock lens: wallpaper capture/rendering retired; using native material", error)
     }
 
-    fun draw(canvas: Canvas, bounds: Rect, radius: Float, density: Float): Boolean {
+    fun prepare(canvas: Canvas, bounds: Rect, radius: Float, density: Float): Boolean {
         if (!canvas.isHardwareAccelerated || !visible || broken || bitmap == null || bounds.isEmpty) return false
         val view = owner.get() ?: return false
         val lens = shader ?: return false
@@ -285,8 +355,13 @@ internal class DockGlassBackdrop(
             // Require the WHOLE panel to be backed by real captured pixels. Never stretch the
             // last edge of an old crop across a moved Dock while a newer capture is pending.
             if (!coveredBy(view, crop)) {
-                sourceDirty = true
-                if (!busy) scheduleTick(view)
+                // A draw of an uncovered old crop is not a new compositor event.
+                // Respect exhausted/backing-off recovery until an actual transform,
+                // visibility or wallpaper change invalidates the source in onFrame.
+                if (!sourceUnavailable) {
+                    sourceDirty = true
+                    if (!busy) scheduleTick(view)
+                }
                 return false
             }
             val x = values[Matrix.MTRANS_X]
@@ -294,7 +369,12 @@ internal class DockGlassBackdrop(
             motion = if (lastX.isFinite()) (kotlin.math.abs(x - lastX) + kotlin.math.abs(y - lastY)).div(maxOf(density * 24f, 1f)).coerceIn(0f, 1f) else 0f
             lastX = x; lastY = y
             updateLensUniforms(lens, bounds, radius, density)
-            canvas.drawRect(bounds, paint)
+            if (lensPathBounds != bounds || lensPathRadius != radius) {
+                lensPathBounds.set(bounds); lensPathRadius = radius
+                lensPath.rewind()
+                DockCornerGeometry.outline(lensPath, bounds.width().toFloat(), bounds.height().toFloat(), radius)
+                lensPath.offset(bounds.left.toFloat(), bounds.top.toFloat())
+            }
             true
         } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
@@ -302,6 +382,18 @@ internal class DockGlassBackdrop(
             false
         }
     }
+
+    fun drawPrepared(canvas: Canvas): Boolean = try {
+        canvas.drawPath(lensPath, paint)
+        true
+    } catch (error: Throwable) {
+        FatalErrors.unwrapAndRethrowIfFatal(error)
+        fail(error)
+        false
+    }
+
+    fun draw(canvas: Canvas, bounds: Rect, radius: Float, density: Float): Boolean =
+        prepare(canvas, bounds, radius, density) && drawPrepared(canvas)
 
     private fun updateLensUniforms(lens: RuntimeShader, bounds: Rect, radius: Float, density: Float) {
         val next = nextLensUniforms
@@ -334,9 +426,13 @@ internal class DockGlassBackdrop(
         points[4] = view.width.toFloat(); points[5] = view.height.toFloat()
         points[6] = 0f; points[7] = view.height.toFloat()
         world.mapPoints(points)
-        for (i in 0..6 step 2) if (points[i] < area.left || points[i] > area.right ||
-            points[i + 1] < area.top || points[i + 1] > area.bottom) return false
-        return true
+        // Offscreen parts are clipped by the display. Requiring their nonexistent
+        // wallpaper pixels would toggle materials while a native scene slides out.
+        val left = maxOf(0f, minOf(points[0], points[2], points[4], points[6]))
+        val right = minOf(viewportWidth.toFloat(), maxOf(points[0], points[2], points[4], points[6]))
+        val top = maxOf(0f, minOf(points[1], points[3], points[5], points[7]))
+        val bottom = minOf(viewportHeight.toFloat(), maxOf(points[1], points[3], points[5], points[7]))
+        return left < right && top < bottom && left >= area.left && right <= area.right && top >= area.top && bottom <= area.bottom
     }
 
     private fun clearTexture() {
@@ -362,6 +458,7 @@ internal class DockGlassBackdrop(
     companion object {
         private const val FRAME_MS = 34L
         internal const val MAX_WIDTH = 1024
-        internal const val MAX_HEIGHT = 384
+        internal const val MAX_HEIGHT = 1024
+        internal const val MAX_PIXELS = 1024 * 384
     }
 }

@@ -2,22 +2,72 @@ package tv.withaibuild.customiuizer.mods.island
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlin.math.roundToInt
 
 class IslandSizingTest {
+    @Test fun expandedWidthFitsTheActualCaptionInsteadOfReservingAnEmptyWideCard() {
+        assertEquals(184, IslandSizing.expanded(1f, 400, 400, 40, 20f))
+        assertEquals(192, IslandSizing.expanded(1f, 400, 400, 40, 60f))
+        assertEquals(272, IslandSizing.expanded(1f, 400, 400, 40, 100f))
+        for (density in listOf(1f, 2.75f, 3f)) for (height in 32..64) {
+            val short = IslandSizing.expanded(density, 4000, 4000, (40 * density).roundToInt(), 20 * density, height)
+            val longer = IslandSizing.expanded(density, 4000, 4000, (40 * density).roundToInt(), 110 * density, height)
+            assertTrue(longer > short)
+            assertTrue(short < IslandSizing.automatic(280, height) * density)
+        }
+    }
+    @Test fun longContentLeavesVisibleSpaceBeforeTheScreenCornersAtEveryHeight() {
+        for (height in 32..64) for (density in listOf(1f, 2.75f, 3f)) {
+            val screen = (360 * density).roundToInt()
+            val width = IslandSizing.expanded(density, screen, screen, (40 * density).roundToInt(),
+                10000f, height)
+            assertTrue("height=$height density=$density width=$width", width <= screen - (48 * density).roundToInt())
+        }
+    }
+
+    @Test fun elasticTravelUsesOnlyTheRemainingSafeSpaceOnBothSides() {
+        assertEquals(340, IslandSizing.elasticMaximum(320, 40, 24, 376, 1f))
+        assertEquals(112, IslandSizing.elasticMaximum(100, 120, 24, 376, 1f))
+        assertEquals(320, IslandSizing.elasticMaximum(320, 24, 24, 376, 1f))
+        assertEquals(324, IslandSizing.elasticMaximum(320, 54, 24, 376, 1f))
+        assertEquals(320, IslandSizing.elasticMaximum(320, 40, 40, 360, 1f))
+    }
+
+    @Test fun automaticHeightFitsTheNativeRowWithoutPretendingToFillIt() {
+        assertEquals(38, IslandSizing.automaticHeight(24, 46))
+        assertEquals(36, IslandSizing.automaticHeight(24, 42))
+        assertEquals(34, IslandSizing.automaticHeight(26, 40))
+        assertEquals(38, IslandSizing.automaticHeight(24))
+    }
+    @Test fun idleAutomaticWidthUsesOneHundredDpAndLeavesRoomForTheShortForm() {
+        assertEquals(100, IslandSizing.idleWidth(1f, 38, 20, 164))
+        assertEquals(300, IslandSizing.idleWidth(3f, 114, 60, 492))
+        assertEquals(68, IslandSizing.idleWidth(1f, 38, 20, 164, 68))
+        assertEquals(120, IslandSizing.idleWidth(1f, 64, 20, 136))
+        assertEquals(116, IslandSizing.idleWidth(1f, 38, 100, 132))
+    }
+    @Test fun expandedContentUsesMoreRoomWithoutChangingTheCompactCeiling() {
+        val expanded = IslandSizing.expanded(1f, 372, 372, 40, 150f, 38)
+        assertTrue(expanded in 273..312)
+        assertEquals(218, IslandSizing.maximumWidth(1f, 372, 372))
+        assertEquals(232, IslandSizing.expanded(1f, 280, 280, 40, 500f))
+        assertTrue(IslandSizing.expanded(1f, 372, 372, 40, 150f) >=
+            IslandSizing.expanded(1f, 372, 372, 40, 20f))
+    }
     @Test fun expandedManualRangeCanUseTheViewportWhileAutomaticWidthRetainsItsClearance() {
         assertEquals(320, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 0f,
             shortDp = 320, longDp = 400, manual = true))
-        assertEquals(376, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 1000f,
+        assertEquals(352, IslandSizing.collapsed(1f, 400, 400, 40, 24f, 1000f,
             shortDp = 320, longDp = 400, manual = true))
         assertEquals(220, IslandSizing.maximumWidth(1f, 400, 220, heightDp = 64))
-        assertEquals(240, IslandSizing.maximumWidth(1f, 400, 400))
+        assertEquals(218, IslandSizing.maximumWidth(1f, 400, 400))
     }
     @Test fun animationUsesTheSameConfiguredAndNativeSafeLimitAsLayout() {
-        assertEquals(240, IslandSizing.maximumWidth(1f, 400, 320))
+        assertEquals(218, IslandSizing.maximumWidth(1f, 400, 320))
         assertEquals(280, IslandSizing.maximumWidth(1f, 400, 320, manual = true, longDp = 280))
         assertEquals(210, IslandSizing.maximumWidth(1f, 400, 210, manual = true, longDp = 280))
         assertEquals(200, IslandSizing.maximumWidth(1f, 400, 320, romMaximum = 200))
-        assertEquals(176, IslandSizing.maximumWidth(1f, 200, 320))
+        assertEquals(152, IslandSizing.maximumWidth(1f, 200, 320))
     }
     @Test fun manualShortAndMediumWidthsStillYieldToNativeEssentialIconsAndScreenBounds() {
         assertEquals(200, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
@@ -26,7 +76,7 @@ class IslandSizingTest {
             shortDp = 200, longDp = 260, manual = true))
         assertEquals(220, IslandSizing.collapsed(1f, 372, 220, 40, 24f, 100f,
             shortDp = 200, longDp = 260, manual = true))
-        assertEquals(184, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
+        assertEquals(160, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 0f,
             shortDp = 200, longDp = 260, manual = false))
         assertEquals(224, IslandSizing.collapsed(1f, 372, 300, 40, 24f, 100f,
             shortDp = 224, longDp = 184, manual = true))
@@ -65,12 +115,12 @@ class IslandSizingTest {
         }
     }
     @Test fun compactAndMediumFormsFitTheirContentOnlyWithinTheEssentialIconsClearance() {
-        assertEquals(184, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 0f))
-        val medium = IslandSizing.collapsed(1f, 372, 230, 40, 24f, 78f)
-        assertEquals(228, medium)
-        assertTrue((medium - 40) / 2 - 16 >= 78)
-        assertEquals(230, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 300f))
-        assertEquals(160, IslandSizing.collapsed(1f, 320, 160, 40, 24f, 78f))
+        assertEquals(160, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 0f))
+        val medium = IslandSizing.collapsed(1f, 372, 230, 40, 24f, 73f)
+        assertEquals(218, medium)
+        assertTrue((medium - 40) / 2 - 16 >= 73)
+        assertEquals(218, IslandSizing.collapsed(1f, 372, 230, 40, 24f, 300f))
+        assertEquals(160, IslandSizing.collapsed(1f, 320, 160, 40, 24f, 76f))
         assertEquals(200, IslandSizing.collapsed(1f, 372, 250, 40, 24f, 200f, 200))
     }
 }

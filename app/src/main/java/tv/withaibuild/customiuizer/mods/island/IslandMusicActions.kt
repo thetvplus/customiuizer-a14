@@ -44,6 +44,26 @@ internal data class IslandMusicActions(
     }
 }
 
+internal data class IslandIdleActions(val tap: Int = 1,
+    val gestures: IslandMusicActions = IslandMusicActions(left = 1, right = 1, down = 2)) {
+    companion object {
+        val defaults = listOf("tap" to 1, "left" to 1, "right" to 1, "down" to 2, "double" to 1, "long" to 1)
+        fun read(prefs: PrefMap): IslandIdleActions {
+            fun action(suffix: String, default: Int): Int {
+                val key = "system_island_idle_$suffix"
+                return prefs.getInt(key + "_action", default).takeIf(IslandMusicActions::supported) ?: 1
+            }
+            return IslandIdleActions(action("tap", 1), IslandMusicActions(action("left", 1), action("right", 1),
+                action("down", 2), action("double", 1), action("long", 1)))
+        }
+        fun defaultForKey(key: String): Int {
+            val short = key.removePrefix("pref_key_")
+            return defaults.firstOrNull { short == "system_island_idle_${it.first}" }?.second
+                ?: IslandMusicGesture.entries.firstOrNull { it.key == short }?.defaultAction ?: 1
+        }
+    }
+}
+
 /** Resolve play/pause from the current snapshot, and require that exact session's capability. */
 internal object IslandTransportAction {
     fun resolve(action: Int, state: Int, capabilities: Long): Long? {

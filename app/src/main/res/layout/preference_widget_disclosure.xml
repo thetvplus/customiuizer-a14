@@ -1,0 +1,5 @@
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="24dp" android:layout_height="24dp"
+    android:layout_gravity="center_vertical" android:padding="4dp"
+    android:src="@drawable/ic_disclosure" android:importantForAccessibility="no"
+    android:focusable="false" android:clickable="false" android:duplicateParentState="true" />

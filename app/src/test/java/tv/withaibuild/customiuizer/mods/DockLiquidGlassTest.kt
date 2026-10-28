@@ -21,7 +21,7 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockLiquidGlassTest {
     @Test
@@ -55,7 +55,6 @@ class DockLiquidGlassTest {
             color = Color.WHITE
             alpha = 18
             radius = 20f
-            rounded = true
             setBounds(0, 0, 320, 80)
         }
         val node = RenderNode("dock-glass-test")
@@ -103,12 +102,61 @@ class DockLiquidGlassTest {
     }
 
     @Test
+    fun systemBlurAndPowerEventsDowngradeToAnOpaquePanelAndReleaseTheirListeners() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val power = activity.get().getSystemService(android.os.PowerManager::class.java)
+        try {
+            DockBackgroundTest.NativeMaterial.googleSupported = true
+            val host = FrameLayout(activity.get())
+            activity.get().setContentView(host)
+            LauncherDockBackground.attach(host, DockBackgroundConfig(material = 3),
+                DockBackgroundTest.NativeMaterial::class.java.getConstructor(Context::class.java))
+            host.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(80, View.MeasureSpec.EXACTLY))
+            host.layout(0, 0, 360, 80)
+            val decoration = host.getChildAt(0) as DockBackgroundView
+            val material = decoration.getChildAt(0) as DockBackgroundTest.NativeMaterial
+            assertEquals(1, DockWindowManagerShadow.listenerCount())
+            assertTrue(material.appliedEnabled)
+            val radius = (decoration.foreground as DockBackgroundTint).radius
+            fun assertPanel() {
+                val bitmap = Bitmap.createBitmap(decoration.width, decoration.height, Bitmap.Config.ARGB_8888)
+                decoration.draw(Canvas(bitmap))
+                assertEquals(View.INVISIBLE, material.visibility)
+                assertFalse(material.appliedEnabled)
+                assertEquals(radius, (decoration.foreground as DockBackgroundTint).radius, 0f)
+                assertEquals(radius, material.appliedCornerRadius, 0f)
+                assertTrue("Every unavailable material must still draw a visible panel",
+                    Color.alpha(bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)) > 180)
+                bitmap.recycle()
+            }
+            DockWindowManagerShadow.change(false)
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            assertPanel()
+            DockWindowManagerShadow.change(true)
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            assertTrue(material.appliedEnabled)
+            assertEquals(radius, (decoration.foreground as DockBackgroundTint).radius, 0f)
+            assertEquals(radius, material.appliedCornerRadius, 0f)
+            org.robolectric.Shadows.shadowOf(power).setIsPowerSaveMode(true)
+            activity.get().sendBroadcast(android.content.Intent(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED))
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            assertPanel()
+            host.removeView(decoration)
+            assertEquals(0, DockWindowManagerShadow.listenerCount())
+        } finally {
+            org.robolectric.Shadows.shadowOf(power).setIsPowerSaveMode(false)
+            activity.pause().stop().destroy()
+            DockBackgroundTest.NativeMaterial.googleSupported = false
+        }
+    }
+
+    @Test
     fun glassRimAndDepthLeaveTheLiveSampleVisibleAndCornersTransparent() {
         val tint = DockBackgroundTint(withRim = true).apply {
             color = Color.WHITE
             alpha = 18
             radius = 28f
-            rounded = true
             setBounds(0, 0, 320, 100)
         }
         fun render(): Bitmap = Bitmap.createBitmap(320, 100, Bitmap.Config.ARGB_8888).also {
@@ -135,7 +183,6 @@ class DockLiquidGlassTest {
             color = Color.WHITE
             alpha = 18
             radius = 20f
-            rounded = true
             setBounds(0, 0, 320, 80)
         }
         val bitmap = Bitmap.createBitmap(320, 80, Bitmap.Config.ARGB_8888)

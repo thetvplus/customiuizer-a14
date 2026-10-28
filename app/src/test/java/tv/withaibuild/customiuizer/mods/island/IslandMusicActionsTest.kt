@@ -55,7 +55,7 @@ class IslandMusicActionsTest {
         assertNull(IslandPosition.left(500, 12, 388, 0, 0, 40))
         for (density in listOf(.75f, 1f, 2.75f, 4f)) for (height in listOf(38, 40, 44)) {
             val auto = IslandSizing.collapsed(density, (400*density).toInt(), (300*density).toInt(), (40*density).toInt(), heightDp = height)
-            assertTrue(auto > (160*density).toInt())
+            assertTrue("Camera plus two 24dp contents and their 16dp margins must fit", auto >= (120*density).toInt())
             assertTrue(auto <= (280*density).toInt())
             assertEquals((184*density).toInt(), IslandSizing.collapsed(density, 2000, 2000, 40, manual=true, heightDp=height))
         }

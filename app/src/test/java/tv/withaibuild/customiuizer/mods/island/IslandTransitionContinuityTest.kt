@@ -23,6 +23,146 @@ import org.robolectric.util.ReflectionHelpers.setField
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandTransitionContinuityTest {
+    @Test fun aGeometryHandoffAfterNativePageCompletionCannotResetTheStillVisibleShellTransform() {
+        shell.prepareReturnFromCurrent()
+        setField(shell, "mediaReturnProgress", 1f)
+        shell.scaleX = .95f
+        shell.translationY = -3f
+        val left = shell.pivotX * (1f - shell.scaleX) + shell.translationX
+        val top = shell.pivotY * (1f - shell.scaleY) + shell.translationY
+        layout(280, 40)
+        shell.transition(184, 40, 280, 40, false, secondary = true, visualLeft = left, visualTop = top)
+        assertEquals("A completed page is not a completed shell", top,
+            shell.pivotY * (1f - shell.scaleY) + shell.translationY, .001f)
+        assertEquals(184f * .95f, 280f * shell.scaleX, .001f)
+        motion().end()
+    }
+
+    @Test fun cameraSeedCannotMakeTheSelectedHeightJumpDuringContentArrivalOrRigidExit() {
+        layout(240, 32)
+        shell.cameraAnchor(16f, 40f)
+        shell.prepareContentArrivalFromCurrent()
+        shell.transition(240, 32, 240, 32, false)
+        val arrival = motion()
+        for (time in 0L until arrival.duration step 16L) {
+            arrival.currentPlayTime = time
+            assertEquals(32f, shell.height * shell.scaleY, .001f)
+        }
+        arrival.end()
+        shell.entranceStyle = IslandEntranceStyle.TOP
+        shell.exit {}
+        val exit = motion()
+        for (time in 0L until exit.duration step 16L) {
+            exit.currentPlayTime = time
+            assertEquals(32f, shell.height * shell.scaleY, .001f)
+        }
+        exit.end()
+    }
+
+    @Test fun topExitDuringAMorphHoldsItsCurrentPhysicalSizeWhileMovingStraightUp() {
+        shell.entranceStyle = IslandEntranceStyle.TOP
+        layout(300, 40)
+        shell.transition(184, 40, 300, 40, false, secondary = true)
+        motion().currentPlayTime = 80
+        val width = shell.width * shell.scaleX
+        val height = shell.height * shell.scaleY
+        var completed = 0
+        val old = motion()
+        shell.exit { completed++ }
+        val exit = motion()
+        assertEquals(IslandMotion.EXIT, exit.duration)
+        var previousY = shell.translationY
+        for (time in 0L until exit.duration step 8L) {
+            exit.currentPlayTime = time
+            assertEquals(width, shell.width * shell.scaleX, .001f)
+            assertEquals(height, shell.height * shell.scaleY, .001f)
+            assertTrue(shell.translationY <= previousY)
+            previousY = shell.translationY
+            assertEquals(0f, shell.translationX, .001f)
+        }
+        old.end()
+        assertEquals(0, completed)
+        exit.end()
+        assertEquals(1, completed)
+    }
+
+    @Test fun longFormCanMakeASmallBoundedCatchWithoutChangingItsHeight() {
+        layout(300, 40, maximum = 308)
+        shell.prepareContentArrivalFromCurrent()
+        shell.transition(184, 40, 300, 40, false, secondary = true)
+        val clock = motion()
+        var widest = 0f
+        for (time in 0L until clock.duration step 8L) {
+            clock.currentPlayTime = time
+            val width = shell.width * shell.scaleX
+            widest = maxOf(widest, width)
+            assertTrue(width <= 308f)
+            assertEquals(40f, shell.height * shell.scaleY, .001f)
+        }
+        assertTrue("The shared catch should settle past its target in the reserved space", widest > 300f)
+        clock.end()
+        assertEquals(300f, shell.width * shell.scaleX, .001f)
+    }
+
+    @Test fun albumHandoffCompletesOpacityAndRotationBeforeItsFiniteClockEnds() {
+        label("Track A", true)
+        shell.transition(184, 40, 184, 40, false)
+        motion().end()
+        for (scale in listOf(1f, .65f)) {
+            shell.motionScale = scale
+            label("Track $scale", true)
+            shell.transition(184, 40, 184, 40, false)
+            val clock = motion()
+            assertTrue(clock.duration >= (IslandMotion.ALBUM * scale).toLong())
+            clock.currentPlayTime = clock.duration - 1
+            assertTrue(shell.getChildAt(0).alpha > .98f)
+            assertEquals(0f, getField<android.widget.ImageView>(shell, "icon").rotationY, 1f)
+            clock.end()
+        }
+    }
+    @Test fun similarlySizedActivitiesExchangeContentWithoutAnyElasticSizeChange() {
+        label("Copy")
+        shell.transition(184, 40, 184, 40, false, secondary = true)
+        val clock = motion()
+        assertEquals(IslandMotion.CONTENT, clock.duration)
+        for (time in 0..220 step 8) {
+            clock.currentPlayTime = time.toLong()
+            assertEquals(184f, shell.width * shell.scaleX, .001f)
+            assertEquals(0f, shell.translationX, .001f)
+        }
+        clock.end()
+    }
+
+    @Test fun rapidReturnToTheStillDisplayedSourceCancelsTheUnseenReplacement() {
+        val originalArt = activity.getDrawable(android.R.drawable.ic_dialog_info)
+        fun bindOriginal() = shell.bind("Original", null, originalArt, false, false, false, 0, false)
+        bindOriginal()
+        shell.transition(184, 40, 184, 40, false)
+        motion().end()
+        val original = getField<Any>(shell, "displayedContent")
+        repeat(12) {
+            label("Unseen $it")
+            shell.transition(184, 40, 184, 40, false)
+            val outgoing = motion()
+            outgoing.currentPlayTime = 16
+            val opacity = shell.getChildAt(0).alpha
+            assertEquals("Original", title.text.toString())
+            assertTrue(bindOriginal())
+            assertNull("Returning before replacement must reuse the visible content",
+                getField<Any?>(shell, "pendingContent"))
+            assertSame(original, getField<Any>(shell, "displayedContent"))
+            assertEquals(opacity, shell.getChildAt(0).alpha, .001f)
+            shell.transition(184, 40, 184, 40, false)
+            val recovery = motion()
+            outgoing.end()
+            assertSame(recovery, motion())
+            recovery.currentPlayTime = 60
+            assertTrue(shell.getChildAt(0).alpha >= opacity)
+            recovery.end()
+            assertSame(original, getField<Any>(shell, "displayedContent"))
+            assertEquals(1f, shell.getChildAt(0).alpha, .001f)
+        }
+    }
     private lateinit var activity: Activity
     private lateinit var shell: IslandActivityView
     private val title get() = getField<TextView>(shell, "title")
@@ -100,8 +240,16 @@ class IslandTransitionContinuityTest {
         assertEquals("Old", title.text.toString())
         shell.transition(184, 40, 184, 40, false)
         motion().end()
-        assertEquals("Current track", title.text.toString())
+        assertEquals("Hidden compact labels must not schedule text layout", "", title.text.toString())
         assertEquals(View.GONE, shell.getChildAt(1).visibility)
+        assertTrue(shell.contentDescription.toString().contains("Current track"))
+        shell.bind("Current track", null, activity.getDrawable(android.R.drawable.ic_dialog_info),
+            true, true, true, 0, false, expanded = true)
+        shell.expanded = true
+        shell.transition(184, 40, 300, 40, false)
+        motion().end()
+        assertEquals("Current track", title.text.toString())
+        assertEquals(View.VISIBLE, shell.getChildAt(1).visibility)
     }
 
     @Test fun cancellationDiscardsPendingContentAndAStaleCompletionCannotReapplyIt() {

@@ -12,6 +12,7 @@ import android.media.session.MediaSessionManager
 import android.os.Handler
 import android.os.UserHandle
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -64,8 +65,9 @@ internal class IslandAudioSpectrum(
     } }
 
     fun start(selected: MediaController, foreground: UserHandle?) {
-        if (player === selected && user == foreground) return
-        stop()
+        if (player?.sessionToken == selected.sessionToken && user == foreground) return
+        val keepFrame = player?.packageName == selected.packageName && foreground != null && user == foreground
+        stop(clearFrame = !keepFrame)
         player = selected; user = foreground
         val epoch = generation
         job = scope.launch(io) { lifecycle.withLock {
@@ -77,12 +79,17 @@ internal class IslandAudioSpectrum(
             var failedSession: Int? = null
             val invalid = AtomicBoolean()
             try {
-                if (!backend.permitted()) { diagnostics.report("spectrum-permission-unavailable"); return@withLock }
+                if (!backend.permitted()) {
+                    diagnostics.report("spectrum-permission-unavailable")
+                    withContext(Dispatchers.Main.immediate) { if (epoch == generation) display(null) }
+                    return@withLock
+                }
                 subscription = backend.subscribe { changes.trySend(Unit) }
                 changes.trySend(Unit)
                 for (ignored in changes) {
                     ensureActive()
                     val next = backend.session(selected, foreground)?.takeIf { it > 0 }
+                    if (next == null) diagnostics.report("spectrum-no-eligible-media-track")
                     ensureActive()
                     if (epoch != generation) break
                     if (invalid.getAndSet(false)) {
@@ -93,20 +100,31 @@ internal class IslandAudioSpectrum(
                     val captureEpoch = captureGeneration.incrementAndGet()
                     timeout?.cancel(); timeout = null
                     close(capture); capture = null; audioSession = null
-                    withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
-                        if (epoch == generation) display(null)
+                    if (next == null || next == failedSession) {
+                        withContext(Dispatchers.Main.immediate) { if (epoch == generation) display(null) }
+                        continue
                     }
-                    if (next == null || next == failedSession) continue
                     failedSession = null
                     audioSession = next
                     val scratch = FloatArray(5)
                     val received = AtomicBoolean()
+                    var lastFftAt = 0L
                     capture = try {
                         backend.capture(next) { fft, rate ->
                             if (epoch == generation && captureEpoch == captureGeneration.get()) {
-                                if (AudioFftBands.five(fft, rate, scratch)) {
-                                    received.set(true)
+                                val now = android.os.SystemClock.elapsedRealtimeNanos()
+                                val dt = if (lastFftAt == 0L) .05 else ((now - lastFftAt) / 1e9).coerceIn(.016, .15)
+                                lastFftAt = now
+                                // The ROM may cap capture at 20 Hz; keep the same time response
+                                // at every supported capture rate. Display interpolation is local.
+                                val attack = (1.0 - kotlin.math.exp(-dt / .030)).toFloat()
+                                val release = (1.0 - kotlin.math.exp(-dt / .083)).toFloat()
+                                if (AudioFftBands.five(fft, rate, scratch, attack, release)) {
+                                    var changed = !received.getAndSet(true)
                                     synchronized(frameLock) {
+                                        for (index in 0..4) if (kotlin.math.abs(scratch[index] - levels[index]) >= .006f ||
+                                            scratch[index] == 0f && levels[index] != 0f) changed = true
+                                        if (!changed) return@capture
                                         System.arraycopy(scratch, 0, levels, 0, 5)
                                         pendingGeneration = epoch
                                         pendingCapture = captureEpoch
@@ -122,7 +140,8 @@ internal class IslandAudioSpectrum(
                         diagnostics.report("spectrum-capture-unavailable")
                         null
                     }
-                    if (capture != null) timeout = launch {
+                    if (capture == null) withContext(Dispatchers.Main.immediate) { if (epoch == generation) display(null) }
+                    else timeout = launch {
                         delay(1000) // One first-frame deadline, never a background polling loop.
                         if (!received.get()) { invalid.set(true); changes.trySend(Unit) }
                     }
@@ -131,6 +150,7 @@ internal class IslandAudioSpectrum(
                 FatalErrors.unwrapAndRethrowIfFatal(error)
                 if (error is kotlinx.coroutines.CancellationException) throw error
                 diagnostics.report("spectrum-session-unavailable")
+                withContext(Dispatchers.Main.immediate) { if (epoch == generation) display(null) }
             } finally {
                 withContext(NonCancellable) {
                     timeout?.cancel()
@@ -149,21 +169,25 @@ internal class IslandAudioSpectrum(
         }
     }
 
-    fun stop() {
+    fun stop() = stop(clearFrame = true)
+    fun pauseKeepingFrame() = stop(clearFrame = false)
+
+    private fun stop(clearFrame: Boolean) {
         captureGeneration.incrementAndGet()
         generation++ // Old callbacks become inert before asynchronous native release.
         player = null; user = null
         job?.cancel(); job = null
         handler.removeCallbacks(deliver); posted.set(false)
-        display(null)
+        if (clearFrame) display(null)
     }
 
     companion object {
-        fun sessionFor(uid: Int, tracks: List<Track>): Int? {
+        fun sessionFor(uid: Int, tracks: List<Track>, retained: Int? = null): Int? {
             var selected: Int? = null
-            for (track in tracks) if (track.active && track.uid == uid && track.usage == AudioAttributes.USAGE_MEDIA) {
-                if (track.session <= 0 || selected != null && selected != track.session) return null
-                selected = track.session
+            for (track in tracks) if (track.active && track.uid == uid &&
+                track.usage == AudioAttributes.USAGE_MEDIA && track.session > 0) {
+                if (track.session == retained) return retained
+                if (selected == null || track.session < selected) selected = track.session
             }
             return selected
         }
@@ -171,6 +195,8 @@ internal class IslandAudioSpectrum(
 
     class NativeBackend(private val context: Context, private val handler: Handler) : Backend {
         private val audio = context.getSystemService(AudioManager::class.java)
+        private var retainedUid = -1
+        private var retainedSession: Int? = null
         override fun permitted() = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED &&
             context.checkSelfPermission("android.permission.MODIFY_AUDIO_ROUTING") == PackageManager.PERMISSION_GRANTED
 
@@ -189,17 +215,20 @@ internal class IslandAudioSpectrum(
                 player.playbackInfo?.playbackType != MediaController.PlaybackInfo.PLAYBACK_TYPE_LOCAL) return null
             if (context.packageManager.getApplicationInfo(player.packageName, 0).uid != uid ||
                 context.packageManager.getPackagesForUid(uid)?.singleOrNull() != player.packageName) return null
-            // MediaController has no public audio-session ID. Require a unique local media
-            // session AND a unique active MEDIA audio session for this UID. Ambiguity fails.
+            // HyperOS mirrors MediaSessions. The native selection remains authoritative;
+            // its token, package, UID and user must agree. Session count is not audio count.
             val sessions = context.getSystemService(MediaSessionManager::class.java)?.getActiveSessions(null)
                 ?.filter { IslandMediaIdentity.uid(it) == uid } ?: return null
-            if (sessions.size != 1 || sessions[0].sessionToken != player.sessionToken) return null
+            if (sessions.none { it.sessionToken == player.sessionToken }) return null
             val tracks = audio?.activePlaybackConfigurations?.map { config ->
                 Track(XposedHelpers.callMethod(config, "getClientUid") as Int,
                     XposedHelpers.callMethod(config, "getSessionId") as Int,
                     XposedHelpers.callMethod(config, "isActive") as Boolean, config.audioAttributes.usage)
             } ?: return null
-            return sessionFor(uid, tracks)
+            if (retainedUid != uid) { retainedUid = uid; retainedSession = null }
+            // Pin one of this app's active MEDIA tracks until it stops. Callback order,
+            // mirrored sessions and another app starting audio cannot make it oscillate.
+            return sessionFor(uid, tracks, retainedSession).also { retainedSession = it }
         }
 
         override fun capture(session: Int, fft: (ByteArray, Int) -> Unit): AutoCloseable {
@@ -208,12 +237,20 @@ internal class IslandAudioSpectrum(
             try {
                 visualizer.enabled = false
                 val range = Visualizer.getCaptureSizeRange()
-                visualizer.captureSize = 512.coerceIn(range[0], range[1])
-                visualizer.scalingMode = Visualizer.SCALING_MODE_NORMALIZED
+                // The callback is already signed 8-bit FFT, irrespective of the file's
+                // codec, bitrate or decoded PCM depth. Use the native effect's rate.
+                // Above 102.4 kHz, a 512-point capture cannot resolve our first 200 Hz band.
+                val size = if (visualizer.samplingRate > 200_000 * 512) 1024 else 512
+                check(visualizer.setCaptureSize(size.coerceIn(range[0], range[1])) == Visualizer.SUCCESS)
+                // AS_PLAYED quantizes low-volume playback to an all-zero 8-bit FFT on
+                // fuxi. Native normalization preserves a useful display signal before
+                // quantization. User gain never changes the actual playback volume.
+                check(visualizer.setScalingMode(Visualizer.SCALING_MODE_NORMALIZED) == Visualizer.SUCCESS)
+                check(visualizer.scalingMode == Visualizer.SCALING_MODE_NORMALIZED)
                 val status = visualizer.setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
                     override fun onWaveFormDataCapture(v: Visualizer, data: ByteArray, rate: Int) = Unit
                     override fun onFftDataCapture(v: Visualizer, data: ByteArray, rate: Int) { fft(data, rate) }
-                }, minOf(20_000, Visualizer.getMaxCaptureRate()), false, true)
+                }, minOf(30_000, Visualizer.getMaxCaptureRate()), false, true)
                 check(status == Visualizer.SUCCESS)
                 visualizer.enabled = true
                 check(visualizer.enabled)

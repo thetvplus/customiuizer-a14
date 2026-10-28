@@ -7,7 +7,9 @@
 - 仅支持 HyperOS 1 / Android 14 / SDK 34、`arm64-v8a`、libxposed API 102。应用身份与 SDK 等确定值由构建配置及静态门禁维护，边界见 [COMPATIBILITY](COMPATIBILITY.md)。A14 版本、签名和发布独立。
 - 优先级：正确性 / 安全 / A14 兼容 > 宿主稳定与生命周期 > 功能与交互 / 动画 > CPU / GPU / 长期内存 > 可维护性 > 体积与形式简洁。
 - 优先复用既有机制，允许有证据的局部升级、成熟依赖和有界资源交换；说明收益、成本、所有者、失效 / 释放与回退，不以代码行数或最低内存作目标。无测量不宣称性能收益。
+- 关键路径采用 **Predictive Preparation + Lazy Activation + Incremental Execution（提前准备、按需激活、增量执行）**：按真实频率与成本选择改动，准备不阻塞交互、有效结果不重复、未启用功能不耗业务资源；执行规则见[优化门禁](docs/OPTIMIZATION_GATES.md#关键路径优化原则)，不以预热扩大常驻工作。
 - 保持 Hook 调用 / 异常语义、单次安装、生命周期及设置进程与 compileOnly API 的 R8 边界；运行时合同只维护在 [ARCHITECTURE](ARCHITECTURE.md#运行时不变量)。保留 Dynamic Island / Dock 视觉与布局契约。
+- 后续同类自绘圆角统一遵循共享 G4 规则，原生组件保持系统外形；曲率缓存及单一材质所有权见上述运行时合同。
 
 ## Git 与协作
 

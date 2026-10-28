@@ -38,6 +38,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -109,6 +110,19 @@ class PreferenceNavigationUiTest {
     }
 
     @Test
+    fun pageAnimatorsLeaveSystemDurationScalingToAndroid() {
+        val page = currentPage() as MainFragment
+        for (scale in listOf(0f, .5f, 1f, 2f, 10f)) {
+            Settings.Global.putFloat(activity.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, scale)
+            for (resource in listOf(R.animator.fragment_open_enter, R.animator.fragment_open_exit,
+                R.animator.fragment_close_enter, R.animator.fragment_close_exit)) {
+                val animator = requireNotNull(page.onCreateAnimator(0, true, resource))
+                assertEquals("Android applies $scale itself; the requested duration stays unscaled", 350L, animator.duration)
+            }
+        }
+    }
+
+    @Test
     fun collectingAnAnimatorPreservesTheFrameworksPendingVisibility() {
         val page = currentPage() as MainFragment
         val view = page.requireView()
@@ -124,9 +138,11 @@ class PreferenceNavigationUiTest {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun everyHomeCategoryAndAllItsSettingsPagesAreVisible() {
+        requireNotNull(AppHelper.appPrefs).edit().putString("pref_key_system_strong_toast_mode", "3")
+            .putBoolean("pref_key_system_island_media", true).apply()
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries must be indexed", 27, standaloneKeys.size)
+        assertEquals("All standalone page entries, including shared effects, must be indexed", 31, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -140,20 +156,17 @@ class PreferenceNavigationUiTest {
             val keys = directoryKeys(category.preferenceScreen)
             for (settingKey in keys) {
                 val selector = currentPage() as SubFragment
-                requireNotNull(selector.findPreference<Preference>(settingKey)).performClick()
+                val settingsEntry = requireNotNull(selector.findPreference<Preference>(settingKey))
+                assertEquals("Directories use a navigation disclosure", R.layout.preference_widget_disclosure, settingsEntry.widgetLayoutResource)
+                settingsEntry.performClick()
                 settleNavigation()
                 assertTrue("$settingKey must open a fresh settings page", currentPage() !== selector)
                 assertPreferencePageVisible(currentPage())
                 capturePage(settingKey)
-                if (settingKey == "pref_key_system_cat_island") {
-                    val island = currentPage() as SubFragment
-                    val mode = requireNotNull(island.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
-                    assertTrue(mode.callChangeListener("3")); mode.value = "3"
-                    requireNotNull(island.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
-                }
                 for (entryKey in standaloneKeys) {
                     val parent = currentPage() as SubFragment
                     val entry = parent.findPreference<Preference>(entryKey) ?: continue
+                    assertEquals("Standalone pages use the same navigation disclosure", R.layout.preference_widget_disclosure, entry.widgetLayoutResource)
                     entry.performClick()
                     settleNavigation()
                     assertTrue("$entryKey must open its standalone page", currentPage() !== parent)
@@ -246,98 +259,191 @@ class PreferenceNavigationUiTest {
 
     private fun resourcesDensity() = activity.resources.displayMetrics.density
 
-    @Test
-    fun musicSwipeSettingFollowsTheIslandModeAndMediaIntegration() {
+    private fun openIslandPage(style: String = "3"): SubFragment {
         openSettingsPage("pref_key_system", "pref_key_system_cat_island")
         val page = currentPage() as SubFragment
         val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        assertTrue(mode.callChangeListener(style)); mode.value = style
+        assertEquals(style == "3", requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).parent!!.isVisible)
+        return page
+    }
+
+    private fun openIslandMusic(): SubFragment {
+        val island = openIslandPage()
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_music_cat")).performClick()
+        settleNavigation()
+        return currentPage() as SubFragment
+    }
+
+    @Test fun musicSwipeSettingFollowsTheIslandModeAndMediaIntegration() {
+        val page = openIslandMusic()
         val media = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media"))
         val swipe = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe"))
-        assertTrue(swipe.isChecked)
-        assertFalse(swipe.isEnabled)
-        assertTrue(mode.callChangeListener("3"))
-        mode.value = "3"
-        assertTrue(media.isEnabled)
-        assertFalse(swipe.isEnabled)
-        media.isChecked = true
-        assertTrue(swipe.isEnabled)
-        media.isChecked = false
-        assertFalse(swipe.isEnabled)
-        assertTrue(mode.callChangeListener("0"))
-        mode.value = "0"
-        assertFalse(media.isEnabled)
-        assertFalse(swipe.isEnabled)
+        val floating = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_hide_in_floating_window"))
+        assertTrue(media.isEnabled); assertTrue(swipe.isChecked); assertFalse(swipe.isEnabled)
+        assertFalse(floating.isEnabled)
+        assertTrue(media.widgetLayoutResource != R.layout.preference_widget_disclosure)
+        media.isChecked = true; assertTrue(swipe.isEnabled); assertTrue(floating.isEnabled)
+        media.isChecked = false; assertFalse(swipe.isEnabled); assertFalse(floating.isEnabled)
+        pressToolbarBack(); pressToolbarBack(); pressToolbarBack()
+        val disabled = openIslandPage("0")
+        assertFalse(requireNotNull(disabled.findPreference<Preference>("pref_key_system_island_music_cat")).isEnabled)
+        assertFalse(requireNotNull(disabled.findPreference<Preference>("pref_key_system_island_layout_cat")).isEnabled)
     }
 
     @Test fun musicReturnRequiresTheModeMediaSwitchAndManualAppSelection() {
-        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
+        val island = openIslandPage()
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
         val page = currentPage() as SubFragment
-        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
-        val media = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media"))
         val returning = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
         val apps = requireNotNull(page.findPreference<Preference>("pref_key_system_island_media_return_apps"))
         assertFalse(returning.isChecked); assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
-        assertTrue(mode.callChangeListener("3")); mode.value = "3"
-        assertFalse(returning.isEnabled); media.isChecked = true
-        assertTrue(returning.isEnabled); assertFalse(apps.isEnabled)
-        returning.isChecked = true; assertTrue(apps.isEnabled)
-        assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(apps.key, emptySet())!!.isEmpty())
-        apps.performClick(); settleNavigation()
-        assertTrue(currentPage() is tv.withaibuild.customiuizer.subs.AppSelector)
-        assertEquals(apps.key, currentPage().arguments?.getString("key"))
-        assertTrue(currentPage().arguments?.getBoolean("multi") == true)
+        assertTrue(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_return")).isChecked)
         pressToolbarBack()
-        media.isChecked = false
-        assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
-        assertTrue(mode.callChangeListener("0")); mode.value = "0"
-        assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
+        requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        pressToolbarBack()
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
+        val gestures = currentPage() as SubFragment
+        val enabled = requireNotNull(gestures.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
+        assertTrue(enabled.isEnabled); enabled.isChecked = true
+        val choices = requireNotNull(gestures.findPreference<Preference>("pref_key_system_island_media_return_apps"))
+        assertTrue(choices.isEnabled)
+        assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(choices.key, emptySet())!!.isEmpty())
+        choices.performClick(); settleNavigation()
+        assertTrue(currentPage() is tv.withaibuild.customiuizer.subs.AppSelector)
+        assertEquals(choices.key, currentPage().arguments?.getString("key"))
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun applicationSearchStaysAboveTheScrollingListWhenTheViewportShrinks() {
+        val page = openIslandMusic()
+        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        pressToolbarBack()
+        val island = currentPage() as SubFragment
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
+        val gestures = currentPage() as SubFragment
+        requireNotNull(gestures.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return")).isChecked = true
+        requireNotNull(gestures.findPreference<Preference>("pref_key_system_island_media_return_apps")).performClick()
+        settleNavigation()
+        val selector = currentPage() as tv.withaibuild.customiuizer.subs.AppSelector
+        val fields = requireNotNull(selector.view).findViewById<View>(R.id.fields)
+        val header = fields.findViewById<View>(R.id.searchView)
+        val list = requireNotNull(selector.listView)
+        list.adapter = android.widget.ArrayAdapter(activity, android.R.layout.simple_list_item_1,
+            (1..120).map { "Application $it" })
+        val originalHeader = android.graphics.Rect()
+        for (height in listOf(640, 310)) {
+            fields.measure(View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            fields.layout(0, 0, 320, height)
+            list.setSelection(80)
+            fields.measure(View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            fields.layout(0, 0, 320, height)
+            val headerBounds = android.graphics.Rect(); header.getGlobalVisibleRect(headerBounds)
+            val listPosition = IntArray(2); list.getLocationOnScreen(listPosition)
+            assertTrue("Rows must stay below the fixed search field", listPosition[1] >= headerBounds.bottom)
+            assertTrue("Only the list viewport shrinks for the keyboard", list.height in 1 until height)
+            assertTrue("The regression must exercise a scrolled list", list.firstVisiblePosition > 0)
+            if (originalHeader.isEmpty) originalHeader.set(headerBounds)
+            else assertEquals("Scrolling and resizing must leave search in place", originalHeader, headerBounds)
+            assertTrue("Overscrolled children must remain inside the list viewport",
+                (list.parent as android.view.ViewGroup).clipChildren)
+        }
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")
     fun waveformModeKeepsItsCurrentValueAndAVisibleFallbackExplanation() {
-        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
+        val island = openIslandPage()
+        assertFalse(requireNotNull(AppHelper.appPrefs).getBoolean("pref_key_system_island_media", false))
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_effects_cat")).performClick()
+        settleNavigation()
         val page = currentPage() as SubFragment
-        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
-        assertTrue(mode.callChangeListener("3")); mode.value = "3"
-        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
         val wave = requireNotNull(page.findPreference<ListPreference>("pref_key_system_island_waveform_mode"))
+        val gain = requireNotNull(page.findPreference<Preference>("pref_key_system_island_waveform_gain"))
+        assertTrue("Recording can configure the shared waveform without enabling media", wave.isEnabled)
         assertEquals("1", wave.value)
+        assertFalse(gain.isEnabled)
+        assertTrue(wave.callChangeListener("2"))
         wave.value = "2"
+        assertTrue(gain.isEnabled)
         val waveRow = LayoutInflater.from(activity).inflate(wave.layoutResource, null)
         wave.onBindViewHolder(PreferenceViewHolder.createInstanceForTests(waveRow))
         assertEquals(activity.getString(R.string.system_island_waveform_real),
             waveRow.findViewById<TextView>(android.R.id.hint).text.toString())
         val expected = activity.getString(R.string.system_island_waveform_mode_summ)
-        fun explanation(group: PreferenceGroup): Preference? {
-            for (index in 0 until group.preferenceCount) {
-                val preference = group.getPreference(index)
-                if (!preference.isSelectable && preference.summary?.toString() == expected) return preference
-                if (preference is PreferenceGroup) explanation(preference)?.let { return it }
-            }
-            return null
+        val detail = waveRow.findViewById<TextView>(android.R.id.summary)
+        assertEquals(View.VISIBLE, detail.visibility)
+        assertEquals(expected, detail.text.toString())
+        waveRow.measure(View.MeasureSpec.makeMeasureSpec((320 * activity.resources.displayMetrics.density).toInt(), View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        waveRow.layout(0, 0, waveRow.measuredWidth, waveRow.measuredHeight)
+        fun bounds(view: View) = android.graphics.Rect(0, 0, view.width, view.height).also {
+            (waveRow as android.view.ViewGroup).offsetDescendantRectToMyCoords(view, it)
         }
-        val detail = requireNotNull(explanation(page.preferenceScreen))
-        val detailRow = LayoutInflater.from(activity).inflate(detail.layoutResource, null)
-        detail.onBindViewHolder(PreferenceViewHolder.createInstanceForTests(detailRow))
-        assertEquals(View.VISIBLE, detailRow.findViewById<TextView>(android.R.id.summary).visibility)
-        assertEquals(expected, detailRow.findViewById<TextView>(android.R.id.summary).text.toString())
+        val descriptionBounds = bounds(detail)
+        assertTrue(descriptionBounds.top >= bounds(waveRow.findViewById(android.R.id.title)).bottom)
+        assertTrue(descriptionBounds.bottom <= waveRow.height)
+        assertTrue(descriptionBounds.right <= bounds(waveRow.findViewById(android.R.id.hint)).left)
         val adapter = page.listView.adapter as androidx.preference.PreferenceGroupAdapter
         page.listView.scrollToPosition(adapter.getPreferenceAdapterPosition(wave))
         settleNavigation()
         capturePage("island-waveform-320-zh")
     }
 
+    @Test fun mediaDownActionStaysEditableAndLegacyExpansionHasNoControl() {
+        requireNotNull(AppHelper.appPrefs).edit().putInt("pref_key_system_island_music_down_action", 85).apply()
+        val mediaPage = openIslandMusic()
+        requireNotNull(mediaPage.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
+        pressToolbarBack()
+        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_island_actions_cat")).performClick()
+        settleNavigation()
+        val page = currentPage() as SubFragment
+        assertNull(page.findPreference<Preference>("pref_key_system_island_expand_down"))
+        val down = requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_down"))
+        val double = requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_double"))
+        assertTrue(down.isEnabled)
+        assertTrue(double.isEnabled)
+        assertEquals(85, requireNotNull(AppHelper.appPrefs).getInt("pref_key_system_island_music_down_action", -1))
+    }
+
+    @Test fun islandGroupsFollowContentAppearanceAndInteractionAndDisableAsAWhole() {
+        val page = openIslandPage()
+        fun pref(suffix: String) = requireNotNull(page.findPreference<Preference>("pref_key_system_island_$suffix"))
+        val content = requireNotNull(pref("music_cat").parent)
+        val appearance = requireNotNull(pref("layout_cat").parent)
+        val interaction = requireNotNull(pref("actions_cat").parent)
+        assertSame(content, pref("excluded_apps").parent)
+        assertEquals(null, page.findPreference<Preference>("pref_key_system_island_hide_in_floating_window"))
+        assertSame(appearance, pref("effects_cat").parent)
+        assertSame(interaction, pref("idle").parent)
+        assertTrue(setOf(content, appearance, interaction).size == 3)
+        for (suffix in listOf("waveform_mode", "entrance_style", "simplified"))
+            assertEquals(null, page.findPreference<Preference>("pref_key_system_island_$suffix"))
+        val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
+        assertTrue(mode.callChangeListener("0")); mode.value = "0"
+        for (group in listOf(content, appearance, interaction)) {
+            assertFalse(group.isVisible)
+        }
+        for (suffix in listOf("music_cat", "effects_cat", "idle")) assertFalse(pref(suffix).isEnabled)
+        assertTrue(mode.callChangeListener("3")); mode.value = "3"
+        for (group in listOf(content, appearance, interaction)) {
+            assertTrue(group.isVisible)
+        }
+        for (suffix in listOf("music_cat", "effects_cat", "idle")) assertTrue(pref(suffix).isEnabled)
+    }
+
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")
     fun musicEditorUsesCurrentDefaultsAndKeepsIndependentActionsWhenTrackSwipesAreOff() {
-        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
-        val page=currentPage() as SubFragment
-        val mode=requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
-        assertTrue(mode.callChangeListener("3")); mode.value="3"
-        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked=true
-        requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
+        val mediaPage = openIslandMusic()
+        requireNotNull(mediaPage.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked=true
+        pressToolbarBack()
+        val islandPage = currentPage() as SubFragment
+        requireNotNull(islandPage.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
         val musicPage = currentPage() as SubFragment
         val key="pref_key_system_island_music_left"
         val left=requireNotNull(musicPage.findPreference<Preference>(key))
@@ -354,17 +460,29 @@ class PreferenceNavigationUiTest {
         assertSame(musicPage,currentPage())
         assertEquals(18,requireNotNull(AppHelper.appPrefs).getInt(key+"_action",-1))
         assertEquals(activity.getString(R.string.array_global_actions_volume_up),left.summary.toString())
+        requireNotNull(AppHelper.appPrefs).edit().putBoolean("pref_key_system_island_media_swipe", false).apply()
+        assertTrue(left.isEnabled)
+        val idleDown = requireNotNull(musicPage.findPreference<Preference>("pref_key_system_island_idle_down"))
+        assertEquals(activity.resources.getStringArray(R.array.global_actions_island_music)[activity.resources.getIntArray(R.array.global_actions_island_music_val).indexOf(2)], idleDown.summary.toString())
         pressToolbarBack()
-        assertSame(page, currentPage())
-        requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe")).isChecked=false
-        requireNotNull(page.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
-        assertTrue(requireNotNull((currentPage() as SubFragment).findPreference<Preference>(key)).isEnabled)
-        pressToolbarBack()
+        val page = currentPage() as SubFragment
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()
         assertFalse(requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
+        val sources = requireNotNull((currentPage() as SubFragment)
+            .findPreference<androidx.preference.MultiSelectListPreference>("pref_key_system_island_live_kinds"))
+        assertEquals(6, sources.entryValues.size)
+        assertFalse(sources.entryValues.any { it.toString() in setOf("sms", "calendar") })
+        assertEquals(activity.getString(R.string.system_island_live_sources_summary), sources.summary)
+        assertTrue(sources.callChangeListener(setOf("recorder")))
+        sources.values = setOf("recorder")
+        assertEquals(setOf("recorder"), AppHelper.appPrefs!!.getStringSet("pref_key_system_island_live_kinds", emptySet()))
+        assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_island_live_return"))
+        assertFalse(AppHelper.appPrefs!!.contains("pref_key_system_island_live_kinds_recorder"))
         pressToolbarBack()
-        val chat=requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_chat"))
-        val allowed=requireNotNull(page.findPreference<Preference>("pref_key_system_island_notification_apps"))
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_notifications_cat")).performClick(); settleNavigation()
+        val notifications = currentPage() as SubFragment
+        val chat=requireNotNull(notifications.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_chat"))
+        val allowed=requireNotNull(notifications.findPreference<Preference>("pref_key_system_island_notification_apps"))
         assertFalse(allowed.isEnabled); chat.isChecked=true; assertTrue(allowed.isEnabled)
         assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(allowed.key,emptySet())!!.isEmpty())
     }
@@ -376,6 +494,31 @@ class PreferenceNavigationUiTest {
         requireNotNull((currentPage() as SubFragment).findPreference<Preference>(pageKey)).performClick()
         settleNavigation()
         assertPreferencePageVisible(currentPage())
+    }
+
+    @Test
+    fun aboutCommunityOpensTheCanonicalUrlOnlyOnClick() {
+        val home = currentPage() as MainFragment
+        val about = PopupMenu(activity, home.requireView()).menu.add(0, R.id.about, 0, "About")
+        home.onOptionsItemSelected(about)
+        settleNavigation()
+        val page = currentPage() as AboutFragment
+        assertEquals(null, shadowOf(activity).nextStartedActivity)
+        val view = page.requireView()
+        view.measure(View.MeasureSpec.makeMeasureSpec(view.width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(view.height, View.MeasureSpec.EXACTLY))
+        view.layout(view.left, view.top, view.right, view.bottom)
+        val community = view.findViewById<View>(R.id.about_community_row)
+        assertTrue(community.isShown)
+        assertTrue(community.width > 0 && community.height > 0)
+        assertEquals(BuildConfig.COMMUNITY_URL.removePrefix("https://"),
+            view.findViewById<TextView>(R.id.about_community_summary).text.toString())
+        capturePage("about-community", view)
+        community.performClick()
+        val intent = requireNotNull(shadowOf(activity).nextStartedActivity)
+        assertEquals(Intent.ACTION_VIEW, intent.action)
+        assertEquals(BuildConfig.COMMUNITY_URL, intent.dataString)
+        assertEquals(null, shadowOf(activity).nextStartedActivity)
     }
 
     @Test
@@ -861,10 +1004,9 @@ class PreferenceNavigationUiTest {
         }
     }
 
-    private fun capturePage(name: String) {
+    private fun capturePage(name: String, view: View = activity.window.decorView) {
         val directory = System.getenv("A14_SETTINGS_RENDER_DIR")?.let(::File) ?: return
         check(directory.isDirectory || directory.mkdirs())
-        val view = activity.window.decorView
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         try {
             view.draw(Canvas(bitmap))

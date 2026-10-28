@@ -18,26 +18,18 @@ object SystemSecurityHooks {
 
     @JvmStatic
     fun NoAccessDeviceLogsRequest(lpparam: SystemServerStartingParam) {
-        ModuleHelper.hookAllMethods("com.android.server.logcat.LogcatManagerService", lpparam.classLoader, "onLogAccessRequested", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.thisObject
-                try {
+        ModuleHelper.hookAllMethods("com.android.server.logcat.LogcatManagerService", lpparam.classLoader,
+            "onLogAccessRequested", noAccessDeviceLogsRequestHook())
+    }
 
-                    XposedHelpers.callMethod(thisObject, "declineRequest", chain.getArg(0))
-                    skipped = true; result = null; throwable = null
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun noAccessDeviceLogsRequestHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val declined = ModuleHelper.guarded(false) {
+                XposedHelpers.callMethod(chain.thisObject, "declineRequest", chain.getArg(0))
+                true
             }
-        })
+            return if (declined) null else chain.proceed()
+        }
     }
 
     @JvmStatic

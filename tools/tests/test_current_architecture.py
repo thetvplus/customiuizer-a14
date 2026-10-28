@@ -449,12 +449,14 @@ class CurrentArchitectureTest(unittest.TestCase):
         expected = [
             "app/src/main/java/org/apache/commons/lang3/reflect/MemberUtilsX.java",
             "app/src/main/java/tv/withaibuild/customiuizer/MainModule.java",
+            # Direct signature-polymorphic VarHandle invokes keep shared progress scalar-only.
+            "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandReturnProgress.java",
             "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/XposedHelpers.java",
         ]
         self.assertEqual(
             expected,
             java_files,
-            "only the three allowed Java files may exist in the module",
+            "only the explicitly allowed Java files may exist in the module",
         )
 
         self.assertIn(

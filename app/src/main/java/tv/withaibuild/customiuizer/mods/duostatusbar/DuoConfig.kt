@@ -38,11 +38,11 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
 }
 
 internal object DuoSizing {
-    /** Automatic sizing adds half a dp before pixel rounding; drawing remains bounded by the native row. */
+    /** Add another half dp to the former automatic size, before rounding. Native row bounds win. */
     fun pixels(config: DuoConfig, nativeHeight: Int, density: Float): Int {
         val dp = if (!config.autoSize) config.sizeDp.toFloat()
             else (if (nativeHeight > 0) (nativeHeight / density * 1.14345f).coerceIn(19.8f, 23.76f)
-                else 22.869f) + 0.5f
+                else 22.869f) + 1f
         return (dp * density + 0.5f).toInt().coerceAtLeast(1)
     }
 
@@ -54,6 +54,15 @@ internal object DuoSizing {
 
     fun drawingSize(width: Int, height: Int, offset: Float): Float =
         minOf(width.toFloat(), (height - 2f * kotlin.math.abs(offset)).coerceAtLeast(0f))
+
+    /** Blend the visible-ink box with the ring's perceived center; only use spare row
+     * space. This never changes the chosen size or overrides the user's manual shift. */
+    fun opticalShift(size: Float, row: Int, userOffset: Float, inkCenter: Float): Float {
+        val center = inkCenter * .65f + 61.5f * .35f
+        val wanted = (60f - center) * size / 120f
+        val spare = ((row - size) * .5f - kotlin.math.abs(userOffset)).coerceAtLeast(0f)
+        return wanted.coerceIn(-spare, spare)
+    }
 
     /** Use the actual source row, not the smaller stock icon resource. */
     fun sharedHeight(height: Int, sourceHeight: Int): Int =

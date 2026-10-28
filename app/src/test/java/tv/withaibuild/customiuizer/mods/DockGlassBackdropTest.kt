@@ -63,6 +63,81 @@ class DockGlassBackdropTest {
     private fun controller(live: Boolean = false, source: DockWallpaperSampler = sampler) =
         DockGlassBackdrop(view, source, 90, live, Dispatchers.Unconfined).also { controllers.add(it) }
 
+    @Test fun wallpaperReplacementRefreshesStaticLivePolicyAndRetiresThePreviousClock() {
+        val controller = controller()
+        controller.onFrame(true)
+        val first = lastBitmap!!
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        controller.invalidateSource(liveWallpaper = true)
+        assertTrue(first.isRecycled)
+        controller.onFrame(true)
+        assertEquals(2, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(35))
+        controller.onFrame(true)
+        assertEquals(3, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(35))
+        controller.invalidateSource(liveWallpaper = false)
+        controller.onFrame(true)
+        assertEquals(4, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        repeat(120) { controller.onFrame(true) }
+        assertEquals("Static wallpaper no longer inherits the live refresh clock", 4, captures)
+    }
+
+    @Test fun offscreenNativeFramesDoNotCaptureOrCreateTheirOwnRetryLoop() {
+        val controller = controller()
+        controller.setLegacyTransform(Matrix().apply { setTranslate(0f, 2000f) })
+        repeat(120) {
+            controller.onFrame(true)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+        }
+        assertEquals("A visible owner outside the wallpaper viewport has no pixels to sample", 0, captures)
+        controller.setLegacyTransform(null)
+        controller.onFrame(true)
+        assertEquals("Reentry can immediately acquire the current wallpaper", 1, captures)
+        assertFalse(lastBitmap!!.isRecycled)
+    }
+
+    @Test fun anOffscreenResultCannotReplenishTheFiniteRecoveryBudget() {
+        val controller = controller()
+        controller.onFrame(true)
+        val previous = lastBitmap!!
+        controller.setLegacyTransform(Matrix().apply { setTranslate(0f, 2000f) })
+        controller.accept(Bitmap.createBitmap(previous.width, previous.height, Bitmap.Config.ARGB_8888),
+            Rect(lastCrop), 0, lastScale)
+        assertTrue("Unusable alignment belongs to bounded recovery", ReflectionHelpers.getField(controller, "sourceUnavailable"))
+        repeat(120) {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+            controller.onFrame(true)
+        }
+        assertEquals(1, captures)
+        assertFalse("A reusable real texture survives temporary offscreen motion", previous.isRecycled)
+    }
+
+    @Test
+    fun appAreaMetricsCannotTruncateTheWallpaperDisplayOrItsLowerDockCrop() {
+        val metrics = view.resources.displayMetrics
+        val original = metrics.heightPixels
+        val full = activity.get().getSystemService(android.view.WindowManager::class.java).maximumWindowMetrics.bounds
+        val viewport = IntArray(2)
+        val source = object : DockWallpaperSampler {
+            override fun capture(crop: Rect, scale: Float): Bitmap? = error("Full-display proof is required")
+            override fun capture(crop: Rect, scale: Float, viewportWidth: Int, viewportHeight: Int): Bitmap? {
+                viewport[0] = viewportWidth; viewport[1] = viewportHeight
+                return sampler.capture(crop, scale)
+            }
+        }
+        try {
+            metrics.heightPixels = 700 // Activity resources can exclude the system bars.
+            val controller = controller(source = source)
+            controller.onFrame(true)
+            assertArrayEquals(intArrayOf(full.width(), full.height()), viewport)
+            assertTrue("The lower dock remains inside its actual wallpaper crop", lastCrop.bottom > 700)
+            assertFalse(lastBitmap!!.isRecycled)
+            controller.release()
+        } finally { metrics.heightPixels = original }
+    }
+
     @Test
     fun ownCompletionDrawCannotStartAStaticCaptureLoopAndNativeFramesStillRefresh() {
         val controller = controller()
@@ -79,9 +154,25 @@ class DockGlassBackdropTest {
             lastCrop.contains(Rect(position[0], position[1], position[0] + 300, position[1] + 80)))
         assertTrue(lastBitmap!!.width <= DockGlassBackdrop.MAX_WIDTH)
         assertTrue(lastBitmap!!.height <= DockGlassBackdrop.MAX_HEIGHT)
+        assertTrue(lastBitmap!!.width.toLong() * lastBitmap!!.height <= DockGlassBackdrop.MAX_PIXELS)
         controller.release()
         assertTrue(lastBitmap!!.isRecycled)
         controller.onFrame(true)
+        assertEquals(2, captures)
+    }
+
+    @Test
+    fun settledStaticWallpaperIgnoresUnrelatedNativeDrawsUntilItsSourceChanges() {
+        val controller = controller()
+        controller.onFrame(true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        repeat(60) { controller.onFrame(true) }
+        assertEquals(1, captures)
+        controller.invalidateSource()
+        controller.onFrame(true)
+        assertEquals(2, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        repeat(60) { controller.onFrame(true) }
         assertEquals(2, captures)
     }
 
@@ -103,16 +194,69 @@ class DockGlassBackdropTest {
         assertTrue(lastBitmap!!.isRecycled)
     }
 
+    @Test fun nativeZeroAlphaPausesSamplingWithoutReplacingTheCurrentMaterial() {
+        val controller = controller(live = true)
+        controller.onFrame(true)
+        val first = lastBitmap!!
+        controller.onFrame(true, rendering = false)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertFalse("A transparent animation frame is not a detach", first.isRecycled)
+        assertEquals(1, captures)
+        controller.onFrame(true)
+        assertEquals(1, captures)
+        controller.onFrame(false)
+        assertTrue(first.isRecycled)
+    }
+
     @Test
-    fun unavailableCaptureRetiresOnceAndDoesNotRetryOnEveryNativeFrame() {
+    fun unavailableFirstFrameHasABoundedCompositorRecoveryWindow() {
         val controller = controller(source = DockWallpaperSampler { _, _ -> captures++; null })
         controller.onFrame(true)
-        repeat(12) {
+        repeat(30) {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+            controller.onFrame(true)
+        }
+        assertEquals(4, captures)
+        assertFalse(controller.draw(Canvas(Bitmap.createBitmap(300, 80, Bitmap.Config.ARGB_8888)), Rect(0, 0, 300, 80), 20f, 1f))
+        controller.invalidateSource()
+        controller.onFrame(true)
+        assertEquals(5, captures)
+    }
+
+    @Test fun aTransientCaptureFailureRecoversWithoutRetiringTheLensOrStartingAnIdleLoop() {
+        var attempts = 0
+        val controller = controller(source = DockWallpaperSampler { crop, scale ->
+            if (++attempts == 1) throw IllegalStateException("compositor frame pending")
+            sampler.capture(crop, scale)
+        })
+        controller.onFrame(true)
+        assertEquals(1, attempts)
+        assertFalse(ReflectionHelpers.getField(controller, "broken"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(64))
+        controller.onFrame(true)
+        assertEquals(2, attempts)
+        assertFalse(lastBitmap!!.isRecycled)
+        assertFalse(ReflectionHelpers.getField(controller, "broken"))
+        controller.onFrame(false)
+        assertTrue(lastBitmap!!.isRecycled)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
+        assertEquals(2, attempts)
+    }
+
+    @Test fun powerSaverReleasesTheTextureAndStopsLiveCaptureUntilItChangesAgain() {
+        val controller = controller(live = true)
+        controller.onFrame(true)
+        val first = lastBitmap!!
+        controller.setPowerSave(true)
+        assertTrue(first.isRecycled)
+        repeat(20) {
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
             controller.onFrame(true)
         }
         assertEquals(1, captures)
-        assertFalse(controller.draw(Canvas(Bitmap.createBitmap(300, 80, Bitmap.Config.ARGB_8888)), Rect(0, 0, 300, 80), 20f, 1f))
+        controller.setPowerSave(false)
+        controller.onFrame(true)
+        assertEquals(2, captures)
     }
 
     @Test
@@ -179,7 +323,58 @@ class DockGlassBackdropTest {
         val bad = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
         controller.accept(bad, Rect(lastCrop), 1, lastScale)
         assertTrue(bad.isRecycled)
-        assertTrue(lastBitmap!!.isRecycled)
+        assertFalse("A valid aligned texture survives a transient bad replacement", lastBitmap!!.isRecycled)
+        assertFalse(ReflectionHelpers.getField(controller, "broken"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(64))
+        controller.onFrame(true)
+        assertEquals(3, captures)
+        assertFalse(lastBitmap!!.isRecycled)
+    }
+
+    @Test fun nativePinchMidpointKeepsRealWallpaperPixelsWhileTheNextCaptureIsPending() {
+        val controller = controller()
+        controller.onFrame(true)
+        val first = lastBitmap!!
+        val node = RenderNode("dock-native-pinch-midpoint").apply { setPosition(0, 0, 300, 80) }
+        val canvas = node.beginRecording()
+        try {
+            // The current draw receives a legacy matrix after pre-draw. A replacement
+            // compositor frame cannot have completed yet; the retained crop must cover it.
+            for (dy in listOf(-40f, -80f, -120f, -320f, -520f, -320f, -80f, 0f)) {
+                controller.setLegacyTransform(Matrix().apply { setTranslate(0f, dy) })
+                assertTrue("Native editing midpoint dy=$dy", controller.prepare(canvas, Rect(0, 0, 300, 80), 20f, 1f))
+                assertSame(first, lastBitmap)
+                assertFalse(first.isRecycled)
+            }
+            assertEquals("No synchronous capture is needed during drawing", 1, captures)
+        } finally { node.endRecording(); controller.release() }
+    }
+
+    @Test fun badReplacementFramesCannotEvictCoveredWallpaperOrRestartRecoveryOnUnrelatedDraws() {
+        for (live in listOf(false, true)) {
+            view.translationY = 0f
+            var attempts = 0
+            val controller = controller(live = live, source = DockWallpaperSampler { crop, scale ->
+                if (++attempts == 1) sampler.capture(crop, scale)
+                else Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+            })
+            controller.onFrame(true)
+            assertEquals(1, attempts)
+            view.translationY = -320f // leave the old fixed crop during native editing
+            val node = RenderNode("dock-exhausted-recovery").apply { setPosition(0, 0, 300, 80) }
+            val canvas = node.beginRecording()
+            try {
+                repeat(60) {
+                    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+                    controller.onFrame(true)
+                    assertTrue("A bad replacement must not switch a covered lens to native blur",
+                        controller.prepare(canvas, Rect(0, 0, 300, 80), 20f, 1f))
+                }
+                assertEquals("One failure and three bounded retries; drawing cannot replenish them", 5, attempts)
+                assertFalse(ReflectionHelpers.getField(controller, "broken"))
+            } finally { node.endRecording(); controller.onFrame(false); controller.release() }
+            assertTrue(lastBitmap!!.isRecycled)
+        }
     }
 
     @Test
@@ -254,7 +449,8 @@ class DockGlassBackdropTest {
         controller.setLegacyTransform(Matrix().apply { setTranslate(0f, -120f) })
         controller.onFrame(true)
         assertTrue("crop=$lastCrop position=${position.contentToString()}", lastCrop.contains(Rect(position[0], position[1] - 120, position[0] + 300, position[1] - 40)))
-        assertFalse(lastCrop.contains(Rect(position[0], position[1], position[0] + 300, position[1] + 80)))
+        assertTrue("The real native position and its next sweep share one retained crop",
+            lastCrop.contains(Rect(position[0], position[1], position[0] + 300, position[1] + 80)))
         val values = ReflectionHelpers.getField<Matrix>(controller, "world")
         val mapped = floatArrayOf(150f, 40f)
         values.mapPoints(mapped)

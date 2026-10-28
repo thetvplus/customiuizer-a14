@@ -48,6 +48,59 @@ class IslandMusicGestureTest {
         shell.onGesture = { gestures.add(it) }; shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
     }
     @After fun cleanup() { host.finish() }
+    @Test fun anOffsetCameraCannotTranslateTheWholeIslandDuringASymmetricDrag() {
+        shell.simplified = false
+        shell.cameraAnchor(4f, 16f)
+        fun center() = shell.pivotY * (1f - shell.scaleY) + shell.translationY + shell.height * shell.scaleY * .5f
+        val resting = center()
+        touch(MotionEvent.ACTION_DOWN)
+        for (y in listOf(45f, 70f, 120f, 70f)) {
+            touch(MotionEvent.ACTION_MOVE, y = y)
+            assertEquals("The body deforms about its own stable centre", resting, center(), .001f)
+        }
+        touch(MotionEvent.ACTION_UP, y = 70f)
+        val rebound = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        for (t in 0..16) {
+            rebound.currentPlayTime = rebound.duration * t / 16
+            assertEquals(resting, center(), .001f)
+        }
+        rebound.end()
+    }
+    @Test fun downwardDragRetainsTheInterruptedCameraRelativeOrigin() {
+        shell.simplified = false
+        shell.cameraAnchor(20f, 16f)
+        shell.scaleY = .6f
+        shell.translationY = -8f
+        touch(MotionEvent.ACTION_DOWN, 140f, 20f)
+        val origin = shell.translationY
+        touch(MotionEvent.ACTION_MOVE, 140f, 90f)
+        assertEquals("A drag cannot snap an already visible capsule to a new camera bound", origin, shell.translationY, .001f)
+        val height = shell.scaleY
+        touch(MotionEvent.ACTION_CANCEL, 140f, 90f)
+        val rebound = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        rebound.currentPlayTime = 0L
+        assertEquals("The rebound also starts at the actual drag position", origin, shell.translationY, .001f)
+        assertEquals(height, shell.scaleY, .001f)
+        rebound.end()
+    }
+    @Test fun downUsesTheStoredMediaActionAndNeverExpandsAnySource() {
+        shell.configureGestures(identity, IslandMusicActions(down = 85, doubleTap = 85), true)
+        swipe(140f, 100f)
+        assertEquals(listOf(IslandMusicGesture.DOWN), gestures)
+        assertFalse(shell.expanded)
+        val node = shell.createAccessibilityNodeInfo()
+        assertFalse(node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND })
+        assertFalse(shell.performAccessibilityAction(AccessibilityNodeInfo.ACTION_EXPAND, null))
+        tap(); advance(80); tap()
+        advance(ViewConfiguration.getDoubleTapTimeout().toLong() + 1)
+        assertEquals(listOf(IslandMusicGesture.DOWN, IslandMusicGesture.DOUBLE_TAP), gestures)
+        swipe(140f, 100f)
+        assertEquals(listOf(IslandMusicGesture.DOWN, IslandMusicGesture.DOUBLE_TAP, IslandMusicGesture.DOWN), gestures)
+        shell.bind("Notice", "Body", null, false, false, false, 0, false)
+        swipe(140f, 100f)
+        assertFalse(shell.expanded)
+        assertEquals(3, gestures.size)
+    }
     private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
     private fun touch(action: Int, x: Float = 140f, y: Float = 20f) {
         if (action == MotionEvent.ACTION_DOWN) downTime = SystemClock.uptimeMillis()
@@ -64,6 +117,55 @@ class IslandMusicGestureTest {
         swipe(10f); swipe(270f); swipe(140f, 100f)
         assertEquals(listOf(IslandMusicGesture.LEFT, IslandMusicGesture.RIGHT), gestures)
         swipe(140f, -100f); assertEquals(1, dismissed)
+        assertEquals(1, opened)
+    }
+
+    @Test fun shortUpwardIntentCancelsClickEvenWithoutMoveAndReboundsBelowRecallDistance() {
+        // 3.5 px is upward intent in this 40 px capsule, but below the recall threshold.
+        val distance = 3.5f
+        for (withMove in listOf(false, true)) {
+            touch(MotionEvent.ACTION_DOWN)
+            advance(50)
+            if (withMove) touch(MotionEvent.ACTION_MOVE, y = 20f - distance)
+            touch(MotionEvent.ACTION_UP, y = 20f - distance)
+            advance(400)
+            assertEquals(0, opened)
+            assertEquals(0, dismissed)
+        }
+        tap()
+        assertEquals(1, opened)
+    }
+
+    @Test fun upFlickWithoutMoveDismissesOnceAndNeverOpens() {
+        touch(MotionEvent.ACTION_DOWN)
+        advance(40)
+        touch(MotionEvent.ACTION_UP, y = -30f)
+        advance(400)
+        assertEquals(1, dismissed)
+        assertEquals(0, opened)
+        assertTrue(gestures.isEmpty())
+    }
+
+    @Test fun idleIslandDoesNotAdvertiseOrRunAnImplicitClickAction() {
+        shell.idle = true
+        assertFalse(shell.createAccessibilityNodeInfo().isClickable)
+        tap()
+        shell.performClick()
+        assertEquals(0, opened)
+    }
+
+    @Test fun idleGesturesAreExplicitAndDoNotReuseTheMediaDownAction() {
+        shell.idle = true
+        shell.configureGestures(Any(), IslandMusicActions(left = 30, right = 1, down = 2, longPress = 18), true)
+        swipe(10f)
+        swipe(140f, 100f)
+        touch(MotionEvent.ACTION_DOWN)
+        advance(ViewConfiguration.getLongPressTimeout().toLong() + 100)
+        touch(MotionEvent.ACTION_UP)
+        assertEquals(listOf(IslandMusicGesture.LEFT, IslandMusicGesture.DOWN, IslandMusicGesture.LONG_PRESS), gestures)
+        assertEquals(0, opened)
+        shell.idleTapAction = 2
+        tap()
         assertEquals(1, opened)
     }
 

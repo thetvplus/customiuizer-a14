@@ -26,3 +26,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Additional implementation study: user-provided AyuGram vanilla-AyuGram-full-20261005.apk,
+SHA-256 2ce48d69be32a6374c0168b27a0f063612ce82be0c5f9ebb7a31c5952d12f883.
+LiquidGlassEffect and GlassEngine informed the standard Snell-law surface mapping and
+source/position-driven invalidation. This module uses its own shared G4 normal field,
+bounded wallpaper texture and lifecycle; no AyuGram APK resources or library are bundled.

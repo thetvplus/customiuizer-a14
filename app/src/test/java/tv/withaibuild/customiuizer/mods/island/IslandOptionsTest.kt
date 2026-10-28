@@ -5,6 +5,80 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun boardingDefaultsToNativeAndOnlyTheExplicitAbsorptionValueEnablesCapture() {
+        val prefs = PrefMap()
+        assertFalse(IslandOptions.read(prefs).absorption)
+        for (value in listOf("0", "1", "2", "-1")) {
+            prefs.put("system_island_return_effect", value)
+            assertEquals(value == "1", IslandOptions.read(prefs).absorption)
+            assertFalse(IslandOptions.read(prefs).mediaReturn)
+        }
+    }
+
+    @Test fun measuredWaveformGainHasABoundedDefaultAndDoesNotEnableCapture() {
+        val prefs = PrefMap()
+        assertEquals(200, IslandOptions.read(prefs).waveformGain)
+        for ((stored, expected) in listOf(-1 to 100, 125 to 125, 5000 to 800)) {
+            prefs.put("system_island_waveform_gain", stored)
+            val options = IslandOptions.read(prefs)
+            assertEquals(expected, options.waveformGain)
+            assertFalse(options.enabled)
+            assertFalse(options.media)
+            assertEquals(1, options.waveformMode)
+        }
+    }
+    @Test fun returnAdmissionUsesEnabledSelectionsAndExclusionWinsForMediaAndNativeActivities() {
+        val options = IslandOptions(true, true, true, mediaReturn = true,
+            mediaReturnApps = setOf("music.app", "blocked.app"), excludedApps = setOf("blocked.app", IslandLiveKind.CLOCK_PACKAGE),
+            liveKinds = setOf(IslandLiveKind.TIMER, IslandLiveKind.RECORDER, IslandLiveKind.PRIVACY))
+        assertTrue(options.returnsMedia("music.app"))
+        assertFalse(options.returnsMedia("blocked.app"))
+        assertFalse(options.returnsMedia("unknown.app"))
+        assertTrue(options.returnsLive(IslandLiveKind.RECORDER, IslandLiveKind.RECORDER_PACKAGE))
+        assertFalse(options.returnsLive(IslandLiveKind.TIMER, IslandLiveKind.CLOCK_PACKAGE))
+        assertFalse(options.returnsLive(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE))
+        assertFalse(options.returnsLive(IslandLiveKind.PRIVACY, IslandLiveKind.RECORDER_PACKAGE))
+        assertEquals(setOf("music.app", IslandLiveKind.RECORDER_PACKAGE), options.returnPackages())
+        val onlyNative = options.copy(mediaReturn = false)
+        assertFalse(onlyNative.returnsMedia("music.app"))
+        assertTrue(onlyNative.returnsLive(IslandLiveKind.RECORDER, IslandLiveKind.RECORDER_PACKAGE))
+        assertEquals(setOf(IslandLiveKind.RECORDER_PACKAGE), onlyNative.returnPackages())
+        assertTrue(options.copy(enabled = false).returnPackages().isEmpty())
+        assertFalse(options.copy(liveReturn = false).returnsLive(IslandLiveKind.RECORDER, IslandLiveKind.RECORDER_PACKAGE))
+    }
+
+    @Test fun notificationAdmissionNeverBroadensAnEmptyPositiveSelectionAndPreservesNativeSources() {
+        val options = IslandOptions(true, true, false, chat = true,
+            notificationApps = setOf("chosen.app", "blocked.app"), chatExcludedApps = setOf("blocked.app"))
+        assertTrue(options.acceptsNotification("chosen.app", null))
+        assertFalse(options.acceptsNotification("blocked.app", null))
+        assertFalse(options.acceptsNotification("unknown.app", null))
+        assertFalse(options.copy(chat = false).acceptsNotification("com.android.mms", android.app.Notification.CATEGORY_MESSAGE))
+        assertFalse(options.copy(chat = false).acceptsNotification("unknown.app", android.app.Notification.CATEGORY_MESSAGE))
+        assertFalse(options.copy(excludedApps = setOf("com.android.mms"))
+            .acceptsNotification("com.android.mms", android.app.Notification.CATEGORY_MESSAGE))
+        assertFalse(options.copy(notificationApps = emptySet()).acceptsNotification("chosen.app", null))
+        assertFalse(options.copy(enabled = false).acceptsNotification("chosen.app", null))
+    }
+
+    @Test fun selectedAndExcludedPackageCollectionsAreSnapshotsForAnInFlightOperation() {
+        val excluded = mutableSetOf("blocked.app")
+        val chatExcluded = mutableSetOf("native.app")
+        val allowed = mutableSetOf("chosen.app")
+        val prefs = PrefMap().apply {
+            put("system_strong_toast_mode", "3"); put("system_island_chat", true)
+            put("system_island_excluded_apps", excluded)
+            put("system_island_chat_excluded_apps", chatExcluded)
+            put("system_island_notification_apps", allowed)
+        }
+        val options = IslandOptions.read(prefs)
+        excluded.clear(); chatExcluded.clear(); allowed.add("unknown.app")
+        assertEquals(setOf("blocked.app"), options.excludedApps)
+        assertEquals(setOf("native.app"), options.chatExcludedApps)
+        assertTrue(options.acceptsNotification("chosen.app", null))
+        assertFalse(options.acceptsNotification("unknown.app", null))
+    }
+
     @Test fun hidingWithFloatingWindowsIsIndependentAndDefaultsOff() {
         val prefs = PrefMap()
         assertFalse(IslandOptions.read(prefs).hideInFloatingWindow)

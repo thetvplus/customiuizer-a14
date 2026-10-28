@@ -48,7 +48,7 @@ open class PreferenceEx(context: Context, attrs: AttributeSet?) : Preference(con
         // Bind from this preference, including clearing an absent summary.
         val currentSummary = this.summary
         summary?.text = currentSummary
-        summary?.visibility = if (customSummary != null || countAsSummary || currentSummary.isNullOrEmpty()) View.GONE else View.VISIBLE
+        summary?.visibility = if (currentSummary.isNullOrEmpty()) View.GONE else View.VISIBLE
         valSummary?.visibility = if (customSummary != null || countAsSummary) View.VISIBLE else View.GONE
         if (customSummary != null || countAsSummary) {
             val secondary = res.getColor(R.color.preference_secondary_text, context.theme)
@@ -66,6 +66,8 @@ open class PreferenceEx(context: Context, attrs: AttributeSet?) : Preference(con
         }
         if (warning) {
             title?.setTextColor(Helpers.markColor)
+        } else {
+            title?.setTextColor(res.getColorStateList(R.color.preference_primary_text_color, context.theme))
         }
         Helpers.bindPreferenceTitle(title, this.title, unsupported, dynamic)
         if (newmod) title?.let { Helpers.applyNewMod(it) }
@@ -101,7 +103,7 @@ open class PreferenceEx(context: Context, attrs: AttributeSet?) : Preference(con
 
         val summary = holder.findViewById(android.R.id.summary) as? TextView
         var valSummary = holder.itemView.findViewById<TextView>(android.R.id.hint)
-        if (valSummary == null) {
+        if (valSummary == null && (customSummary != null || countAsSummary)) {
             valSummary = TextView(context).apply {
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, summary?.textSize ?: textSize)
                 setPadding(summary?.paddingLeft ?: 0, summary?.paddingTop ?: 0, context.resources.getDimensionPixelSize(R.dimen.preference_summary_padding_right), summary?.paddingBottom ?: 0)
