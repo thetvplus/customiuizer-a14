@@ -19,7 +19,11 @@ class IslandAbsorptionContinuityTest {
     @Test fun theEntireNeckAndItsEdgeGuardFitInsideTheActualIslandAtEverySupportedHeight() {
         for (height in listOf(32f, 36f, 40f, 64f, 100f, 192f)) {
             val shell = RectF(300f, 20f, 700f, 20f + height)
-            val landing = RectF(shell).apply { inset(shell.width() * .08f, height * .07f) }
+            val frame = IslandMusicReturnSignal.Frame("chosen.music", android.os.Process.myUserHandle(),
+                shell.left, shell.top, shell.right, shell.bottom, 1080, 2400)
+            val landing = frame.landingRectangle(absorption = true)
+            assertTrue(landing.height() < frame.landingRectangle().height() * .6f)
+            assertTrue(landing.centerY() > shell.centerY())
             val intake = IslandAbsorptionMesh.intakeY(shell, landing)
             val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
             val bounds = RectF()
@@ -78,7 +82,7 @@ class IslandAbsorptionContinuityTest {
         assertTrue(bounds.bottom < 1770f)
     }
 
-    @Test fun theRecoilStartsOnlyAfterThePageDisappearsAndUsesTheSharedWeightedCatchAtDifferentRefreshRates() {
+    @Test fun intakeAndRecoilHappenDuringTravelAndSettleContinuouslyAtDifferentRefreshRates() {
         for (hz in listOf(60, 90, 120)) {
             val response = IslandMotion.AbsorptionResponse(154f, 240f, 40f, 248f, 6f, 0f, .8f)
             var maximum = 0f
@@ -92,15 +96,40 @@ class IslandAbsorptionContinuityTest {
                 assertTrue("No release-frame jump at $hz Hz", kotlin.math.abs(width - last) < 12f)
                 if (width > maximum) { maximum = width; maximumProgress = page }
                 last = width
-                if (page < 1f) assertTrue("No outward bounce before swallowing", width <= 240.001f)
                 if (page == 1f && time < 1.04f) assertFalse(response.settled(time))
             }
-            assertEquals("The page must be fully swallowed before the peak at $hz Hz", 1f, maximumProgress, 0f)
-            assertEquals(246f, maximum, .15f)
+            assertTrue("The receiving body must react early at $hz Hz", maximumProgress in .18f.. .35f)
+            assertTrue("Early recoil retains its bounded weight", maximum in 245.5f..246.01f)
             response.sample(1f, 1.2f)
             assertTrue(response.settled(1.2f)); assertEquals(240f, response.value, 0f)
             assertEquals(0f, response.velocity, 0f)
         }
+    }
+
+    @Test fun aFullSizeIslandGripsImmediatelyEvenWithoutOutwardSafeSpaceAndCompletionCannotJump() {
+        val response = IslandMotion.AbsorptionResponse(240f, 240f, 40f, 240f, 6f, 0f, .5f)
+        assertEquals(240f, response.sample(0f, 0f), 0f)
+        val gripping = response.sample(.06f, .03f)
+        assertTrue("An existing shell must not stay motionless during intake", gripping < 238f)
+        val velocity = response.velocity
+        assertEquals(gripping, response.sample(1f, .04f), .0001f)
+        assertEquals(velocity, response.velocity, .0001f)
+        assertFalse(response.settled(.04f))
+        assertEquals(240f, response.sample(1f, .31f), 0f)
+        assertTrue(response.settled(.31f))
+    }
+
+    @Test fun thePageLeadingEdgeGripsTheSmallLowerMouthInTheFirstEightPercentOfTravel() {
+        val shell = RectF(300f, 20f, 700f, 60f)
+        val frame = IslandMusicReturnSignal.Frame("chosen.music", android.os.Process.myUserHandle(),
+            shell.left, shell.top, shell.right, shell.bottom, 1080, 2400)
+        val landing = frame.landingRectangle(absorption = true)
+        val intake = IslandAbsorptionMesh.intakeY(shell, landing)
+        val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
+        IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), landing, .08f, intakeY = intake)
+        assertTrue("The leading edge is already at the island, not halfway through the page", vertices[1] < shell.bottom)
+        assertTrue(vertices[2] - vertices[0] < shell.width() * .1f)
+        assertTrue("The trailing body still has volume", vertices.last() > 1700f)
     }
 
     @Test fun aLateChannelStartsAtTheAlreadyVisibleWidthInsteadOfReplayingAnEntireArrival() {

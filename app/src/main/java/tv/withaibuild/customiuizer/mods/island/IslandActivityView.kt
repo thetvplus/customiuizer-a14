@@ -789,13 +789,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     val vertical = IslandMotion.resistance(dy, dp(48).toFloat())
                     if (!dragCaptured) {
                         if (motion != null) {
-                            downScaleX = scaleX - if (dragAxis == 1) .04f * abs(horizontal) else 0f
+                            downScaleX = scaleX - if (dragAxis == 1) IslandMotion.DRAG_STRETCH * abs(horizontal) else 0f
                             downScaleY = IslandMotion.compressionOrigin(scaleY,
-                                if (dragAxis == 2) .04f * vertical else -.015f * abs(horizontal),
+                                if (dragAxis == 2) IslandMotion.DRAG_STRETCH * vertical else -IslandMotion.DRAG_SQUEEZE * abs(horizontal),
                                 if (cameraGap > 0) cameraMinimumHeight() / geometryHeight.coerceAtLeast(1) else 0f)
-                            val room = ((maximumWidth - geometryWidth * scaleX) * .5f).coerceAtLeast(0f)
-                            downTranslationX = translationX - if (dragAxis == 1 && alignment == 1)
-                                (dp(4) * horizontal).coerceIn(-room, room) else 0f
+                            downTranslationX = translationX
                             downTranslationY = translationY
                         }
                         motion?.cancel(); motion = null
@@ -817,15 +815,13 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         return true
                     }
                     scaleX = if (dragAxis == 1)
-                        minOf(downScaleX + .04f * abs(horizontal),
+                        minOf(downScaleX + IslandMotion.DRAG_STRETCH * abs(horizontal),
                             maxOf(maximumWidth / geometryWidth, downScaleX)) else downScaleX
                     val compressionLimit = if (cameraGap > 0)
                         minOf(downScaleY, cameraMinimumHeight() / geometryHeight.coerceAtLeast(1)) else 0f
                     scaleY = IslandMotion.compressedScale(downScaleY,
-                        if (dragAxis == 2) .04f * vertical else -.015f * abs(horizontal), compressionLimit)
-                    val sideRoom = ((maximumWidth - geometryWidth * scaleX) * .5f).coerceAtLeast(0f)
-                    translationX = downTranslationX + if (dragAxis == 1 && alignment == 1)
-                        (dp(4) * horizontal).coerceIn(-sideRoom, sideRoom) else 0f
+                        if (dragAxis == 2) IslandMotion.DRAG_STRETCH * vertical else -IslandMotion.DRAG_SQUEEZE * abs(horizontal), compressionLimit)
+                    translationX = downTranslationX
                     // Deform about the body's own centre. Camera clearance must
                     // never translate the whole island during a gesture.
                     translationY = downTranslationY
@@ -846,18 +842,21 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val tracker = velocityTracker ?: return
         tracker.computeCurrentVelocity(1000, dp(8000).toFloat())
         val pointer = event.getPointerId(0)
-        val horizontal = .3f * IslandMotion.resistanceVelocity(dx, tracker.getXVelocity(pointer), dp(56).toFloat())
-        val vertical = .3f * IslandMotion.resistanceVelocity(dy, tracker.getYVelocity(pointer), dp(48).toFloat())
+        val horizontal = IslandMotion.resistanceVelocity(dx, tracker.getXVelocity(pointer), dp(56).toFloat())
+        val vertical = IslandMotion.resistanceVelocity(dy, tracker.getYVelocity(pointer), dp(48).toFloat())
         val direction = if (dx < 0f) -1f else 1f
         val bound = dp(1200).toFloat()
-        breadth.setVelocity(if (dragAxis == 1) (geometryWidth * .04f * horizontal * direction).coerceIn(-bound, bound) else 0f)
-        val heightDelta = if (dragAxis == 2) .04f * IslandMotion.resistance(dy, dp(48).toFloat())
-            else -.015f * abs(IslandMotion.resistance(dx, dp(56).toFloat()))
+        val widthVelocity = geometryWidth * IslandMotion.DRAG_STRETCH * horizontal * direction
+        val capped = downScaleX + IslandMotion.DRAG_STRETCH * abs(IslandMotion.resistance(dx, dp(56).toFloat())) >=
+            maxOf(maximumWidth / geometryWidth, downScaleX)
+        breadth.setVelocity(if (dragAxis != 1 || capped && widthVelocity > 0f) 0f else widthVelocity.coerceIn(-bound, bound))
+        val heightDelta = if (dragAxis == 2) IslandMotion.DRAG_STRETCH * IslandMotion.resistance(dy, dp(48).toFloat())
+            else -IslandMotion.DRAG_SQUEEZE * abs(IslandMotion.resistance(dx, dp(56).toFloat()))
         val heightVelocity = IslandMotion.compressionVelocity(downScaleY, heightDelta,
             if (cameraGap > 0) minOf(downScaleY, cameraMinimumHeight() / geometryHeight.coerceAtLeast(1)) else 0f)
-        depth.setVelocity(((if (dragAxis == 2) geometryHeight * .04f * vertical
-            else if (dragAxis == 1) -geometryHeight * .015f * horizontal * direction else 0f) * heightVelocity).coerceIn(-bound, bound))
-        shiftX.setVelocity(if (dragAxis == 1 && alignment == 1) (dp(4) * horizontal).coerceIn(-bound, bound) else 0f)
+        depth.setVelocity(((if (dragAxis == 2) geometryHeight * IslandMotion.DRAG_STRETCH * vertical
+            else if (dragAxis == 1) -geometryHeight * IslandMotion.DRAG_SQUEEZE * horizontal * direction else 0f) * heightVelocity).coerceIn(-bound, bound))
+        shiftX.setVelocity(0f)
         shiftY.setVelocity(0f)
         breadthExtraVelocity = 0f
     }
@@ -900,17 +899,22 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Side placements cap their target at its new width. Keep the already visible
         // breadth admissible while shrinking instead of clamping it on the first frame.
         val maximumBreadth = maxOf(maximumWidth, geometryWidth * scaleX)
+        val initialNativeProgress = if (nativeDriven) returnProgress?.read()?.takeIf { it >= 0f }?.coerceIn(0f, 1f) ?: 1f else 1f
         val absorptionResponse = if (nativeDriven && absorption) IslandMotion.AbsorptionResponse(
             geometryWidth * scaleX, geometryWidth * x, minOf(compactWidth(), geometryWidth * scaleX), maximumBreadth,
             geometryWidth * catchWeight * (.99f + .02f * returnStrength), breadth.velocity, seconds,
-            returnProgress?.read()?.takeIf { it >= 0f }?.coerceIn(0f, 1f) ?: 1f) else null
+            initialNativeProgress) else null
         // Braking after a reversal needs the remaining safe space, not the old/new
         // target envelope. Clamping that envelope drops velocity before a real edge.
         val maximumHeight = maxOf(maxOf(dp(44), geometryHeight) * 1.14f, geometryHeight * scaleY)
         // The camera seed must not override the shared configured height, or clamp
         // a smaller current height when a geometry change is being interrupted.
-        val minimumHeight = if (rebound && cameraGap > 0) minOf(cameraMinimumHeight(), geometryHeight * scaleY)
+        val minimumHeight = if ((rebound || absorptionResponse != null) && cameraGap > 0) minOf(cameraMinimumHeight(), geometryHeight * scaleY)
             else minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
+        val absorptionDepth = if (absorptionResponse != null) IslandMotion.AbsorptionResponse(
+            geometryHeight * scaleY, geometryHeight * y, minimumHeight, maximumHeight,
+            -minOf(dp(2).toFloat(), geometryHeight * .06f), depth.velocity, seconds,
+            initialNativeProgress) else null
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         // A content handoff may interrupt a top exit. Keep its visible origin,
         // without inheriting the old exit's upward travel into a new activity.
@@ -933,9 +937,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     if (motion !== animation) return@guarded
                     val time = animation.currentPlayTime / 1000f
                     val nativeProgress = if (nativeDriven) returnProgress?.read() else null
-                    scaleY = depth.sample(time, minimumHeight, maximumHeight) / geometryHeight.coerceAtLeast(1)
                     val progress = if (nativeDriven) nativeProgress?.takeIf { p -> p >= 0f }?.coerceIn(0f, 1f) ?: 1f
                         else (animation.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                    val physicalDepth = if (absorptionDepth != null) {
+                        val height = absorptionDepth.sample(progress, time)
+                        depth.setVelocity(absorptionDepth.velocity)
+                        height
+                    } else depth.sample(time, minimumHeight, maximumHeight)
+                    scaleY = physicalDepth / geometryHeight.coerceAtLeast(1)
                     val physicalBreadth = if (absorptionResponse != null) {
                         val width = absorptionResponse.sample(progress, time)
                         breadth.setVelocity(absorptionResponse.velocity)

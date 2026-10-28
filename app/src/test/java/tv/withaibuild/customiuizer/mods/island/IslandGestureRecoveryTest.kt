@@ -24,6 +24,28 @@ import org.robolectric.util.ReflectionHelpers.getField
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGestureRecoveryTest {
+    @Test fun horizontalKneadingDeformsAroundTheAnchorWithIncreasingResistanceInBothDirections() {
+        for (sign in listOf(-1f, 1f)) {
+            motion()?.end()
+            shell.geometry(240, 40, 40, 260); layout(240, 40)
+            shell.cameraAnchor(20f, 16f)
+            touch(MotionEvent.ACTION_DOWN)
+            touch(MotionEvent.ACTION_MOVE, x = 120f + sign * 28f)
+            val first = shell.scaleX
+            touch(MotionEvent.ACTION_MOVE, x = 120f + sign * 56f)
+            val second = shell.scaleX
+            touch(MotionEvent.ACTION_MOVE, x = 120f + sign * 112f)
+            assertTrue(first > 1.02f)
+            assertTrue(second > first && shell.scaleX > second)
+            assertTrue("Equal extra travel yields less stretch", shell.scaleX - second < second - 1f)
+            assertEquals("Kneading must not slide the body away from its anchor", 0f, shell.translationX, 0f)
+            assertTrue(shell.scaleY < .985f)
+            assertTrue(shell.width * shell.scaleX <= 260f)
+            touch(MotionEvent.ACTION_CANCEL)
+            motion()!!.end()
+        }
+    }
+
     @Test fun aThinConfiguredIslandKeepsTheRealCameraHeightCoveredDuringDragAndRecoil() {
         shell.geometry(240, 32, 40, 280); layout(240, 32)
         shell.cameraAnchor(16f, 28f, 27f)
@@ -43,6 +65,22 @@ class IslandGestureRecoveryTest {
         for (at in 0..260 step 8) { clock.currentPlayTime = at.toLong(); covered() }
         clock.end()
         assertEquals(1f, shell.scaleY, 0f); assertEquals(0f, shell.translationY, 0f)
+    }
+
+    @Test fun aWidthLimitStopsOutwardReleaseVelocityWithoutMovingTheAnchor() {
+        shell.geometry(240, 40, 40, 244); layout(240, 40)
+        touch(MotionEvent.ACTION_DOWN)
+        touch(MotionEvent.ACTION_MOVE, x = 176f)
+        assertEquals(244f, shell.width * shell.scaleX, .001f)
+        assertEquals(0f, getField<IslandMotion.Spring>(shell, "breadth").velocity, 0f)
+        assertEquals(0f, shell.translationX, 0f)
+        touch(MotionEvent.ACTION_UP, x = 176f)
+        val clock = motion()!!
+        for (at in 0..260 step 8) {
+            clock.currentPlayTime = at.toLong()
+            assertTrue(shell.width * shell.scaleX <= 244.001f)
+            assertEquals(0f, shell.translationX, 0f)
+        }
     }
 
     @Test fun nativeRecentVelocityChangesRecoilWithoutTurningTravelDistanceIntoADuration() {
@@ -77,9 +115,13 @@ class IslandGestureRecoveryTest {
         touch(MotionEvent.ACTION_MOVE, x = 150f)
         assertNull(motion())
         assertEquals("Capture retains the actually presented width", physicalWidth, shell.width * shell.scaleX, .01f)
-        val first = shell.translationX
+        val first = shell.scaleX
+        touch(MotionEvent.ACTION_MOVE, x = 120f)
+        val reversed = shell.scaleX
+        assertTrue("Reversal immediately releases the stretch", reversed < first)
         touch(MotionEvent.ACTION_MOVE, x = 90f)
-        assertTrue(shell.translationX < first)
+        assertTrue("Pulling the other way deforms the same body", shell.scaleX > reversed)
+        assertEquals(0f, shell.translationX, 0f)
         touch(MotionEvent.ACTION_CANCEL)
         assertNotSame(previous, motion())
         motion()!!.end()

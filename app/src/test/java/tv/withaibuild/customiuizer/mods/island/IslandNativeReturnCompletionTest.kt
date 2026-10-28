@@ -23,6 +23,45 @@ import java.nio.ByteOrder
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandNativeReturnCompletionTest {
+    @Test fun absorptionRespondsDuringIntakeAfterBothAFirstLaunchAndReopeningFromTheIsland() {
+        for (existing in listOf(false, true)) {
+            val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+            val memory = SharedMemory.create("island-return-intake", 4)
+            val writer = memory.mapReadWrite().order(ByteOrder.nativeOrder())
+            val shell = IslandActivityView(host).apply { absorption = true }
+            host.setContentView(shell, FrameLayout.LayoutParams(240, 40))
+            ShadowChoreographer.setPaused(true)
+            try {
+                shell.bind("Music", null, ColorDrawable(Color.RED), true, false, false, 0, false)
+                shell.geometry(240, 40, 40, 260)
+                shell.cameraAnchor(20f, 16f)
+                if (existing) {
+                    shell.prepareEntry()
+                    shell.transition(240, 40, 240, 40, entering = true)
+                    getField<ValueAnimator>(shell, "motion").end()
+                }
+                shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
+                if (existing) shell.prepareReturnFromCurrent() else shell.prepareEntry(mediaReturn = true)
+                shell.transition(240, 40, 240, 40, entering = !existing)
+                val clock = getField<ValueAnimator>(shell, "motion")
+                val origin = shell.scaleX
+                writer.putInt(0, 60_000)
+                clock.currentPlayTime = 40L
+                assertTrue("Intake must move the island before page completion; existing=$existing",
+                    kotlin.math.abs(shell.scaleX - origin) * 240f > 1f)
+                writer.putInt(0, 240_000)
+                clock.currentPlayTime = 140L
+                assertTrue("The body also reacts while the page is still travelling", shell.scaleY < .99f)
+                assertEquals(.24f, getField<Float>(shell, "mediaReturnProgress"), .00001f)
+            } finally {
+                getField<ValueAnimator?>(shell, "motion")?.cancel()
+                shell.cancelMediaReturn()
+                SharedMemory.unmap(writer); memory.close(); host.finish()
+                ShadowChoreographer.setPaused(false)
+            }
+        }
+    }
+
     @Test fun anArrivalInterruptingATopExitCannotCarryItsUpwardVelocityIntoTheNewIsland() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val memory = SharedMemory.create("island-return-origin", 4)

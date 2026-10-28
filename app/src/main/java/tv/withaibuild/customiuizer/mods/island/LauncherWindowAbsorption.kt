@@ -109,7 +109,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
             if (root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) return null
             api.surface(element, copy)?.takeIf { it.isValid } ?: return null
         } else null
-        val active = Session(element, copy, root, surface, frame.landingRectangle(), frame.rectangle(), mesh)
+        val active = Session(element, copy, root, surface, frame.landingRectangle(captureWindow), frame.rectangle(), mesh)
         session = active
         val generation = epoch
         if (surface != null) captureJob = scope.launch(Dispatchers.Default) {
@@ -153,7 +153,11 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         }
         active.progress = IslandAbsorptionMesh.returnProgress(progress, active.atCommit)
         active.nativeAlpha = alpha.coerceIn(0f, 1f)
-        if (!active.mesh) { active.progressChannel.write(active.progress); return }
+        // The receiving shell must react from the first native frames, even while
+        // its optional texture is still being prepared. Tail compression is local
+        // mesh geometry, not a second clock for the island's physical response.
+        active.progressChannel.write(active.progress)
+        if (!active.mesh) return
         if (active.texture == null) return
         if (!active.installed) {
             if (!IslandAbsorptionMesh.mayReplaceNative(active.progress, active.nativeAlpha)) { cancel(); return }
@@ -169,12 +173,11 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         active.shellDestination.offset(-active.location[0].toFloat(), -active.location[1].toFloat())
         val intakeY = IslandAbsorptionMesh.intakeY(active.shellDestination, active.destination)
         active.radius = radius.coerceAtLeast(0f)
-        val tail = IslandAbsorptionMesh.fill(active.vertices, active.handoff.source, active.destination, remaining, active.rect, intakeY)
+        IslandAbsorptionMesh.fill(active.vertices, active.handoff.source, active.destination, remaining, active.rect, intakeY)
         IslandAbsorptionMesh.contactColors(active.colors, active.vertices, active.destination, remaining, intakeY)
         // Keep release opacity until the entire page lies inside the island. Then
         // reveal the real island underneath, rather than leave a separately coloured dot.
         active.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.mergeOpacity(active.rect, active.shellDestination)).toInt().coerceIn(0, 255)
-        if (active.presented) active.progressChannel.write(tail)
         active.setBounds(0, 0, root.width, root.height)
         active.invalidateSelf()
         if (!active.presented && active.committed == null) {

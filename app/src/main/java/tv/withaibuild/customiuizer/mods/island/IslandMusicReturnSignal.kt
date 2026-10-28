@@ -39,9 +39,15 @@ internal object IslandMusicReturnSignal {
             left >= 0 && top >= 0 && right > left && bottom > top &&
             right <= screenWidth && bottom <= screenHeight
         fun rectangle() = RectF(left, top, right, bottom)
-        fun landingRectangle() = rectangle().apply {
-            inset((width() - IslandMotion.landingWidth(width(), height())) * .5f,
-                height() * (1f - IslandMotion.LANDING_HEIGHT_RATIO) * .5f)
+        fun landingRectangle(absorption: Boolean = false) = rectangle().apply {
+            val shellHeight = height()
+            if (absorption) {
+                val targetHeight = shellHeight * IslandMotion.ABSORPTION_LANDING_HEIGHT_RATIO
+                val targetWidth = maxOf(width() * IslandMotion.ABSORPTION_LANDING_WIDTH_RATIO, targetHeight).coerceAtMost(width())
+                inset((width() - targetWidth) * .5f, (shellHeight - targetHeight) * .5f)
+                offset(0f, shellHeight * IslandMotion.ABSORPTION_LANDING_OFFSET)
+            } else inset((width() - IslandMotion.landingWidth(width(), shellHeight)) * .5f,
+                shellHeight * (1f - IslandMotion.LANDING_HEIGHT_RATIO) * .5f)
         }
     }
 

@@ -117,7 +117,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
 
     /** Called once at committed return, never from an animation update. Preserve the original
      * params, callbacks, task leash, velocity and finish/cancel policy in a separate native copy. */
-    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame): Any? {
+    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = false): Any? {
         if (!params.isInstance(original) || !frame.valid()) return null
         if ((fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
@@ -131,10 +131,10 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         val target = selectedApps.single() ?: return null
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
-        return copyTarget(original, owner, frame)
+        return copyTarget(original, owner, frame, absorption)
     }
 
-    fun retargetHome(original: Any, owner: Any, selected: Any, frame: IslandMusicReturnSignal.Frame): Any? {
+    fun retargetHome(original: Any, owner: Any, selected: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = false): Any? {
         val home = home ?: return null
         if (!params.isInstance(original) || !home.eligible(selected, frame) ||
             (fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
@@ -143,12 +143,12 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
             fields[11].get(original) != null) return null
         val targets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
         if ((apps.get(targets) as? Array<*>)?.singleOrNull() !== selected) return null
-        return copyTarget(original, owner, frame)
+        return copyTarget(original, owner, frame, absorption)
     }
 
-    private fun copyTarget(original: Any, owner: Any, frame: IslandMusicReturnSignal.Frame): Any? {
+    private fun copyTarget(original: Any, owner: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean): Any? {
         val values = fields.map { it.get(original) }.toTypedArray()
-        val landing = frame.landingRectangle()
+        val landing = frame.landingRectangle(absorption)
         values[2] = landing
         values[4] = landing.height() * .5f
         // Hold the opacity established at release. A partially faded gesture must

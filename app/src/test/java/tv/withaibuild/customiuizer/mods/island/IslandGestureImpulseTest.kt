@@ -19,7 +19,10 @@ class IslandGestureImpulseTest {
             val fast = IslandMotion.returnDuration(1f, absorption)
             assertTrue(slow - fast <= 60L)
             assertTrue(slow > fast)
-            assertTrue(fast >= 500L && slow <= 810L)
+            if (absorption) {
+                assertTrue("Absorption grips promptly within its own bounded tempo", fast >= 475L && slow <= 486L)
+                assertTrue(slow < IslandMotion.returnDuration(0f, false))
+            } else assertTrue("Default return tempo is preserved", fast >= 528L && slow <= 540L)
         }
     }
 

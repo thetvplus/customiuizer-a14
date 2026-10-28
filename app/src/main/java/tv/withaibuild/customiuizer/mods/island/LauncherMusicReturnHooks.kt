@@ -369,8 +369,8 @@ internal object LauncherMusicReturnHooks {
             val host = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
             if (host.display?.rotation != android.view.Surface.ROTATION_0) return null
             val selected = homeTarget.get()
-            val result = if (selected != null) access.retargetHome(original, element, selected, frame)
-                else navigation.get()?.takeIf { it.isAttachedToWindow }?.let { access.retarget(original, element, it, frame) }
+            val result = if (selected != null) access.retargetHome(original, element, selected, frame, options.absorption)
+                else navigation.get()?.takeIf { it.isAttachedToWindow }?.let { access.retarget(original, element, it, frame, options.absorption) }
             if (result == null) return null
             if (epoch != gesture.get()) return null
             return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.recentStrength(SystemClock.uptimeMillis()))

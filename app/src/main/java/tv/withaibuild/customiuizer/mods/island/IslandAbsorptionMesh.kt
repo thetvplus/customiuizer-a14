@@ -58,7 +58,7 @@ internal object IslandAbsorptionMesh {
         val t = progress.coerceIn(0f, 1f)
         // Keep the captured page's aspect while the leading edge enters first. The
         // native spring supplies the only clock; the trailing edge compresses later.
-        val grip = (t / .14f).coerceIn(0f, 1f)
+        val grip = (t / .08f).coerceIn(0f, 1f)
         val leading = grip * grip * (3f - 2f * grip)
         val trailing = t.pow(2.25f)
         val holeHeight = maxOf(1f, destination.height() * .08f)

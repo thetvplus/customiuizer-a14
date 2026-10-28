@@ -112,6 +112,21 @@ class LauncherMusicReturnAccessTest {
         assertNotNull(quick.retarget(params(targets = null), owner, Nav(), frame))
     }
 
+    @Test fun absorptionHasASmallerLowerLandingWithoutChangingDefaultOrNativeParams() {
+        val original = params()
+        val nativeTarget = RectF(original.targetRect)
+        val ordinary = access.retarget(original, Element(), Nav(), frame) as Params
+        val absorption = access.retarget(original, Element(), Nav(), frame, absorption = true) as Params
+        assertEquals(frame.landingRectangle(), ordinary.targetRect)
+        assertEquals(frame.landingRectangle(absorption = true), absorption.targetRect)
+        assertTrue(absorption.targetRect.width() < ordinary.targetRect.width() * .6f)
+        assertTrue(absorption.targetRect.height() < ordinary.targetRect.height() * .6f)
+        assertTrue(absorption.targetRect.centerY() > ordinary.targetRect.centerY())
+        assertTrue(frame.rectangle().contains(absorption.targetRect))
+        assertEquals(nativeTarget, original.targetRect)
+        assertEquals(original.startRect, absorption.startRect)
+    }
+
     @Test fun quickOpeningCanPrefetchBeforeItsRemoteTargetsArriveWithoutChangingTheWindow() {
         val quick = LauncherMusicReturnAccess(Nav::class.java, Element::class.java, Params::class.java,
             Targets::class.java, Remote::class.java, DeviceConfig::class.java, FastElement::class.java)
