@@ -1077,3 +1077,8 @@ data object LauncherFolderIconBlurFeatureId : FeatureId {
     override val id = 260
     override val name = "launcher_folder_icon_blur"
 }
+
+data object PocoFolderIconBlurFeatureId : FeatureId {
+    override val id = 261
+    override val name = "poco_folder_icon_blur"
+}

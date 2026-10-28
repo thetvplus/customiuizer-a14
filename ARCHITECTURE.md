@@ -43,6 +43,7 @@
 - SystemUI、Settings、PermissionController 只接受各自主进程。SecurityCenter 的常规功能也只在主进程安装；精确的 `com.miui.securitycenter.remote` 电源进程只安装已有低电量策略，提前返回，不安装主进程 UI 或 GenericApp 功能；其它 secondary / bootaware 继续拒绝。fused location 与 networkstack 进程拒绝。
 - `miui.systemui.plugin` 不单独加入 scope；SystemUI 从 `PluginFactory.createPlugin` 取得插件 ClassLoader，安装 / 释放由插件 runtime 持有。
 - 键盘包必须在静态 scope；`ProcessRouter` 交给 InputMethodInstaller，scope 外无回调。Launcher 还可按用户选择安装 GenericApp 的 post-attach 功能。
+- POCO 的 `com.mi.android.globallauncher` 仍是 GENERIC_APP；只有该包主进程且明确启用文件夹图标模糊时，才复用 Application.attach 安装单独 Feature。不得把整个 Launcher catalog 扩至 POCO；MIUI 的 Launcher 路由不变。
 - `StatusBarHeightFeature` 虽为 ANY，仍限资源包集合和高度开关；窗口几何归 system_server 的 Insets Feature。`AlarmCompatFeature` 另受应用名单控制。
 - SystemUI bootstrap 与 Launcher 在安装派发前维护 ReflectionCache 安全生命周期；GuardProvider / Media 按需加载并关闭 DexKit，目标始终用实际加载器解析。
 
@@ -84,6 +85,8 @@ R8 保留入口、Hooker、JNI、ServiceLoader 及设置进程与 compileOnly AP
 动态岛来源元数据归 IslandLiveKind，配置集合及正选 / 排除规则归不可变 IslandOptions 快照；异步读取不观察原集合后续突变。小窗身份只筛对应媒体槽，不负责全局窗口隐藏。Controller 仍分别核验通知提交、原生窗口返回和安全生命周期；媒体返回取消不得清除其他活动的内容接入进度，绘制继续共用同一有限时钟。具体入口与资源边界见[来源规则](docs/features/island/README.md#来源规则与复用)。
 
 持续系统活动仍由同一个岛 controller 选择，每类最多一个当前状态。时钟 / 录音生产者只在明确作用域与来源开启时安装，跨进程状态先验证原生发送者再读载荷；每个生产包最多一个匿名存活令牌，死亡、替换与 detach 释放旧所有者，不轮询进程或保留活动历史。系统原生提醒与权限状态不由岛改写。
+
+TimerService 销毁先撤销匹配的当前 owner，再发布剩余状态；应用进程仍存活不构成服务继续计时的依据。到期三秒交接与正在响铃的提醒独立保留，旧服务销毁不能撤销新 owner。Launcher 返回主 Hook 组先完整解析，任一安装失败停止并逆序撤回；可选吸入网格独立回退，不能留下只有目标覆盖或只有 owner 的半安装。
 
 录音可附加一个仅 SystemUI UID 可读的峰值令牌，接口只返回标量，不提供命令或音频。可见后台录音由单个 owner 限速读取，所有隐藏 / 暂停 / 配置失效取消；前台录音 UI 保留其原生峰值读取。音乐与系统活动共用 Launcher 返回所有权和单窗口形变，每次原生提交独立标识，旧尝试在新打开 / 触摸 / 停用后失效。
 

@@ -35,6 +35,46 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.lang.reflect.Method
 
+/** A target override cannot outlive a missing owner, cancellation or animation hook. */
+internal fun installIslandReturnHooks(install: ((Method, MethodHook) -> CustomMethodUnhooker) -> Unit) {
+    val handles = ArrayList<CustomMethodUnhooker>()
+    var complete = false
+    var failure: Throwable? = null
+    try {
+        install { method, callback ->
+            checkNotNull(ModuleHelper.hookMethod(method, callback)) { "Island return hook unavailable: $method" }
+                .also(handles::add)
+        }
+        complete = true
+    } catch (error: Throwable) {
+        failure = error
+        throw error
+    } finally {
+        if (!complete) {
+            var cleanupFailure: Throwable? = null
+            for (handle in handles.asReversed()) {
+                try { ModuleHelper.guarded { handle.unhook() } }
+                catch (error: Throwable) {
+                    val previous = cleanupFailure
+                    if (previous == null) cleanupFailure = error
+                    else if (previous !== error) previous.addSuppressed(error)
+                }
+            }
+            cleanupFailure?.let { cleanup ->
+                failure?.let { primary ->
+                    try { FatalErrors.unwrapAndRethrowIfFatal(primary) }
+                    catch (fatal: Throwable) {
+                        if (fatal !== cleanup) fatal.addSuppressed(cleanup)
+                        throw fatal
+                    }
+                    if (primary !== cleanup) cleanup.addSuppressed(primary)
+                }
+                throw cleanup
+            }
+        }
+    }
+}
+
 /** The optional mesh needs every ending hook before an owner may activate it. */
 internal fun installIslandAbsorptionHooks(update: Method, frameHook: MethodHook,
     cancellations: List<Method>, endingHook: (Method) -> MethodHook): Boolean {
@@ -76,85 +116,86 @@ internal object LauncherMusicReturnHooks {
         val access = LauncherMusicReturnAccess(param.classLoader)
         val absorption = LauncherWindowAbsorption.resolve(param.classLoader, Handler(Looper.getMainLooper()))
         var absorptionInstalled = false
-        val targetHook = ModuleHelper.hookMethod(access.closingTarget, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                val nav = chain.thisObject ?: return chain.proceed()
-                val selected = ModuleHelper.guarded(false) { active.get()?.selectWindowTarget(nav) == true }
-                return if (selected) null else chain.proceed()
-            }
-        })
-        if (targetHook == null) return
-        access.home?.let { home ->
-            ModuleHelper.hookMethod(home.attached, object : MethodHook() {
-                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
-                    val activity = callback.getThisObject() as? Activity ?: return@guarded
-                    if (callback.getThrowable() != null || XposedHelpers.getAdditionalInstanceField(activity, OWNER) != null) return@guarded
-                    val old = active.get()
-                    val nav = old?.navigationView()
-                    old?.dispose()
-                    val owner = Owner(activity.window.decorView, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
-                    nav?.let { owner.bindNavigation(it); XposedHelpers.setAdditionalInstanceField(it, OWNER, owner) }
-                    XposedHelpers.setAdditionalInstanceField(activity, OWNER, owner)
-                    active = WeakReference(owner)
-                }
-            })
-            ModuleHelper.hookMethod(home.destroyed, object : MethodHook() {
-                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
-                    (XposedHelpers.removeAdditionalInstanceField(callback.getThisObject(), OWNER) as? Owner)?.dispose()
-                }
-            })
-            ModuleHelper.hookMethod(home.closingTarget, object : MethodHook() {
+        installIslandReturnHooks { hook ->
+            hook(access.closingTarget, object : MethodHook() {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
-                    val selected = ModuleHelper.guarded(false) { chain.getArg(1)?.let { active.get()?.selectHomeTarget(it) } == true }
+                    val nav = chain.thisObject ?: return chain.proceed()
+                    val selected = ModuleHelper.guarded(false) { active.get()?.selectWindowTarget(nav) == true }
                     return if (selected) null else chain.proceed()
                 }
             })
-        }
-        ModuleHelper.hookMethod(access.attached, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
-                val view = callback.getThisObject() as? View ?: return@guarded
-                if (callback.getThrowable() != null || !view.isAttachedToWindow ||
-                    XposedHelpers.getAdditionalInstanceField(view, OWNER) != null) return@guarded
-                val owner = active.get()?.takeIf { !it.disposed } ?: Owner(view, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
-                owner.bindNavigation(view)
-                XposedHelpers.setAdditionalInstanceField(view, OWNER, owner)
-                active = WeakReference(owner)
+            access.home?.let { home ->
+                hook(home.attached, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                        val activity = callback.getThisObject() as? Activity ?: return@guarded
+                        if (callback.getThrowable() != null || XposedHelpers.getAdditionalInstanceField(activity, OWNER) != null) return@guarded
+                        val old = active.get()
+                        val nav = old?.navigationView()
+                        old?.dispose()
+                        val owner = Owner(activity.window.decorView, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
+                        nav?.let { owner.bindNavigation(it); XposedHelpers.setAdditionalInstanceField(it, OWNER, owner) }
+                        XposedHelpers.setAdditionalInstanceField(activity, OWNER, owner)
+                        active = WeakReference(owner)
+                    }
+                })
+                hook(home.destroyed, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                        (XposedHelpers.removeAdditionalInstanceField(callback.getThisObject(), OWNER) as? Owner)?.dispose()
+                    }
+                })
+                hook(home.closingTarget, object : MethodHook() {
+                    override fun intercept(chain: XposedInterface.Chain): Any? {
+                        val selected = ModuleHelper.guarded(false) { chain.getArg(1)?.let { active.get()?.selectHomeTarget(it) } == true }
+                        return if (selected) null else chain.proceed()
+                    }
+                })
             }
-        })
-        ModuleHelper.hookMethod(access.detached, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
-                val view = callback.getThisObject() ?: return@guarded
-                (XposedHelpers.removeAdditionalInstanceField(view, OWNER) as? Owner)?.detachNavigation(view)
-            }
-        })
-        ModuleHelper.hookMethod(access.touch, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
-                // NavStubView can rewrite a MOVE to DOWN internally; inspect the original event.
-                (callback.getArg(0) as? MotionEvent)?.let { active.get()?.touch(it) }
-            }
-        })
-        var fastInstalled = false
-        fun animationHook(method: java.lang.reflect.Method) = object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                if (access.animationEntry(chain.thisObject, fastInstalled) != method) return chain.proceed()
-                val original = chain.getArg(0) ?: return chain.proceed()
-                val owner = active.get()
-                val attempt = ModuleHelper.guarded<Attempt?>(null) {
-                    val element = chain.thisObject ?: return@guarded null
-                    access.restoreReturnTiming(element)
-                    owner?.prefetchOpening(original, element)
-                    owner?.retarget(original, element)
+            hook(access.attached, object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    val view = callback.getThisObject() as? View ?: return@guarded
+                    if (callback.getThrowable() != null || !view.isAttachedToWindow ||
+                        XposedHelpers.getAdditionalInstanceField(view, OWNER) != null) return@guarded
+                    val owner = active.get()?.takeIf { !it.disposed } ?: Owner(view, prefs, access, absorption?.second?.takeIf { absorptionInstalled })
+                    owner.bindNavigation(view)
+                    XposedHelpers.setAdditionalInstanceField(view, OWNER, owner)
+                    active = WeakReference(owner)
                 }
-                if (attempt == null) return chain.proceed()
-                // Native null-target cleanup retires the floating icon before the spring.
-                // Keep its task leash, listeners, velocity and cancellation policy intact.
-                val result = if (attempt.params === original) chain.proceed() else chain.proceed(arrayOf(attempt.params))
-                ModuleHelper.guarded { owner?.committed(attempt, chain.thisObject!!) }
-                return result
+            })
+            hook(access.detached, object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    val view = callback.getThisObject() ?: return@guarded
+                    (XposedHelpers.removeAdditionalInstanceField(view, OWNER) as? Owner)?.detachNavigation(view)
+                }
+            })
+            hook(access.touch, object : MethodHook() {
+                override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
+                    // NavStubView can rewrite a MOVE to DOWN internally; inspect the original event.
+                    (callback.getArg(0) as? MotionEvent)?.let { active.get()?.touch(it) }
+                }
+            })
+            var fastInstalled = false
+            fun animationHook(method: java.lang.reflect.Method) = object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    if (access.animationEntry(chain.thisObject, fastInstalled) != method) return chain.proceed()
+                    val original = chain.getArg(0) ?: return chain.proceed()
+                    val owner = active.get()
+                    val attempt = ModuleHelper.guarded<Attempt?>(null) {
+                        val element = chain.thisObject ?: return@guarded null
+                        access.restoreReturnTiming(element)
+                        owner?.prefetchOpening(original, element)
+                        owner?.retarget(original, element)
+                    }
+                    if (attempt == null) return chain.proceed()
+                    // Native null-target cleanup retires the floating icon before the spring.
+                    // Keep its task leash, listeners, velocity and cancellation policy intact.
+                    val result = if (attempt.params === original) chain.proceed() else chain.proceed(arrayOf(attempt.params))
+                    ModuleHelper.guarded { owner?.committed(attempt, chain.thisObject!!) }
+                    return result
+                }
             }
+            access.fastAnimate?.let { hook(it, animationHook(it)); fastInstalled = true }
+            hook(access.animate, animationHook(access.animate))
         }
-        access.fastAnimate?.let { fastInstalled = ModuleHelper.hookMethod(it, animationHook(it)) != null }
-        ModuleHelper.hookMethod(access.animate, animationHook(access.animate))
         if (absorption != null) {
             val (meshAccess, mesh) = absorption
             val frameHook = object : MethodHook() {

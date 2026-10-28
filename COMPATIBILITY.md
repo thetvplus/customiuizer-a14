@@ -40,6 +40,7 @@ r14.23.3 起最低要求 API 102，直接使用原生 Hook 安装和 Service 能
 ## 当前功能边界
 
 - Dock 的宿主安装点、两区相同 Launcher 样本与材质限制统一见 [Dock 说明](docs/features/dock/README.md)。这些静态结果不等于动画、编辑或动态壁纸已通过设备验收。
+- 文件夹图标模糊分别接入 MIUI 与 POCO，POCO 仅限 `com.mi.android.globallauncher` 主进程的独立开关，不获得其他 Launcher 功能。已核实的两种文件夹 ABI 保留原生硬件、系统模糊与默认图标限制，未知声明不安装；文件夹展开背景是另一功能。完整决策链、样本身份及尚未实测的深浅色 / 壁纸 / 主题 / 省电 / 动态切换矩阵见[候选审计](docs/maintenance/A14_REFINEMENT_ROADMAP.md#poco-文件夹模糊完整性)，不能宣称所有 POCO ROM 完整兼容。
 - 隐藏输入法收回键只处理 SystemUI 当前 NavigationBarView 的返回按钮：原生图标更新成功、手势导航模式 2、IME BACK_ALT 位 1 且原生按钮可见时设为 INVISIBLE。保留原生隐藏、三键 / 两键、主页 / 最近任务、导航区域及输入法窗口布局。上述 CN / TW 样本的两字段、四方法及图标更新 Smali 一致，原生 QuickStepContract 也确认模式 2；安装前完整核对实例签名，允许同一所有者的基类实现，缺失则仅跳过本功能。该证据不覆盖所有地区 / 机型或输入法自行绘制导航按钮的实现；原件 SHA 和查询见[当前精修记录](docs/maintenance/A14_REFINEMENT_ROADMAP.md#功能边界与输入法收回键)。
 - 隐藏导航栏只覆盖主屏，原生窗口状态准备仅处理主屏导航窗口；CN / TW 样本确认 `OverviewProxyService$6.setWindowState(III)` 和唯一三参数创建方法，缺少完整合同则保留原生。光标控制沿用已授权且被框架识别的输入法进程，判断当前编辑器，不依赖 SystemUI 前台监控；应用状态自定义菜单必须与当前包 / UID / Context 用户匹配，未知或跨用户不猜测写入。具体回退和待实机范围见[本批边界记录](docs/maintenance/A14_REFINEMENT_ROADMAP.md#音量键全面屏导航与应用管理边界)。
 

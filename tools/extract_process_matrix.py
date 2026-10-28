@@ -223,6 +223,8 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
                 "com.tencent.wetype",
             ], ["packages outside scope.list (no callback with static scope)"]
         if installer_base == "GenericAppFeatures":
+            if pref == "launcher_folder_icon_blur":
+                return ["com.mi.android.globallauncher"], ["secondary processes; other Launcher features"]
             return ["com.miui.home + selected packages"], []
         if installer_base == "AndroidPackageFeatures":
             return ["android"], []

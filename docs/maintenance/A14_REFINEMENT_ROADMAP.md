@@ -2,11 +2,79 @@
 
 本页只维护当前决定、未决问题与证据入口。任务认领和交接用 [AGENTS](../../AGENTS.md#git-与协作) 及 GitHub，不在这里复制分支数据库或开发流水账。
 
-工程执行策略仅在 A14 试点，分级与验证选择统一在 [TESTING](../TESTING.md#执行分级)；配置审计、测量和未验证范围见[试点证据](A14_EXECUTION_PILOT.md)。本专项不修改业务功能或正式发布工作流，执行规则和验证路径的首轮验收已完成；整体任务效率仍保留试点证据边界。
+工程执行策略仅在 A14 试点，分级与验证选择统一在 [TESTING](../TESTING.md#执行分级)；配置审计、测量和未验证范围见[试点证据](A14_EXECUTION_PILOT.md)。执行规则和验证路径的首轮验收保留在试点证据中；业务候选与本次结论以下方当前审计为准，历史试点不替代新候选验收。
 
 任务启动与续接采用一次初始化、同一聊天持续继承上下文、按风险增量核验；重新发现仅用于新任务、实际写入冲突或上下文失效。main 合并、推送、发布及破坏性操作保留必要的实时来源和安全检查，不重跑任务发现；规则与技能入口已对齐，未新增状态管理机制或声称未经测量的耗时收益。
 
 已授权开发成果在必要验证后默认提交并推送任务工作分支，以远端完整 SHA 读回确认保存；main / Tag / Release 仍需相应授权。代理优先级、有限重试和网络故障恢复统一维护在 [Git 协作规范](../DEVELOPMENT.md#本地-git-网络与失败恢复)，本机代理配置仅留在仓库 Git 元数据中。
+
+## 全局 RC 审计与候选收口
+
+安全对照为双仓实际公开的 r14.25.5 / 254，源码 `df83993f6ac7633044a59794e32ff8718c0dd4cf`。接续的有效 HEAD 为 `090184096f8f1c21aafaad1c0ee2b2433c1f2af3`，已含动态岛 `4e690103` 与 Dock 最新审查修复；本地 / 远端一致，没有待合入的专项源码。独立 ROM Catalog Worktree 只作只读工具 / 证据来源，不混入应用候选。原有七份暂存原生技能文件保持原样并排除在候选提交之外。对照范围是稳定版到候选的完整有效差异，已有专项源码与可信记录按输入哈希复用，新增集成修复补验。
+
+**当前发布结论：CONDITIONAL。** 当前没有已知未修复 P0；最终同 APK 的实际 Hook 命中、录屏、POCO 模糊与跨模块设备验收未完成，不能直接晋升正式发行。公开晋升的 exact main CI 与双仓候选收据仍是后续条件；用户已授权的本地历史证书签名包单独交付。本次只准备并保存工作分支，未授权 main 合并、正式 Tag 或公开 Release。
+
+当前候选身份为 **r14.25.7 / 256**，直接累计 r14.25.5 后仍生效的变化；r14.25.6 的既有本地试用证据保留原身份，不晋升旧包。本节是当前结论，后续专题中的旧 SHA / APK 及当时通过范围按原输入保留。
+
+### 已留存更新的评估
+
+| 留存成果 | 本候选决定 |
+| --- | --- |
+| 动态岛、Dock 与早期动画 / 性能分支成果 | 4e690103、09018409 及旧 Worktree 的 b6eac396 / 013d5894 均已是当前祖先；保留已核实修复及失败反例，不重复 cherry-pick 或恢复旧代码 |
+| r14.25.6 本地签名试用包与设备记录 | 仅证明各自 exact 输入和已测场景；故障包及后续已替代候选不晋升，不将旧录屏 / 短采样扩为最终 APK 通过 |
+| ROM Catalog / Agent context 工具分支 | 349642d 为独立离线工具成果，尚非当前祖先；本轮复用已存在索引 / 原始样本作只读取证，不把工具分支整体混入产品 RC，也不借其自报证明应用通过 |
+| 七份原生界面技能暂存文件 | 工程指导资料，与本次运行修复不同；保持原字节与暂存状态，不打包、不据此宣称视觉或设备验收 |
+| 延后 / 撤销方案 | 不恢复故障时钟递归、POCO 全局身份伪装、无来源的宽泛 Hook、无限采样重试、未经证明的总几何缓存或额外常驻调度；有效用户变化已并入双语候选记录 |
+
+### 问题与修正
+
+| 级别 / 状态 | 触发、证据与影响 | 候选处理 |
+| --- | --- | --- |
+| P0 · 既有修复纳入 | 早期候选在共享进度回调内同步 end，设备 mapping / 堆栈和实际 A14 ValueAnimator 回归确认递归栈溢出；原生媒体卡片缺口还曾在 Main 同步枚举会话 | 保留终止前解绑自身更新回调、既有可取消 IO 快照及安全发布；不以旧 APK 的实机结果代替本候选验收，详见原动态岛证据段 |
+| P1 · POCO 接入修复 | POCO 包不在静态 scope，且 ProcessRouter / LauncherPostAttachFeature 只把 com.miui.home 送入 Launcher catalog；此前“共用 Launcher 目标包含 POCO”的说明不成立 | 仅新增 com.mi.android.globallauncher 的主进程、显式开关入口。复用 Application.attach 与唯一的新 Feature ID 261，仍走 GENERIC_APP，绝不扩大整个 Launcher catalog；路由及矩阵回归覆盖关闭、子进程与其他桌面 |
+| P1 · 计时 owner 修复 | TimerService.onDestroy 的真实 DEX 不清 mTimer；模块先 snapshot 再清 owner，随后无 owner 的 snapshot 又不撤销 TIMER，进程存活时残留计时状态。修前行为回归确认销毁后仍发布旧计时 | 先清当前 Service owner，再发布无计时状态；过期旧 owner 不影响新 owner。保留到期三秒交接和已经响铃的提醒，覆盖运行、暂停、旧 owner 及提醒衔接 |
+| P1 · 返回主 Hook 组修复 | 目标覆盖成功后，attach / detach / touch / animTo 安装返回 null 原先被忽略；可能只创建 owner 却缺少取消、释放或动画配套。此前可选吸入网格的回滚不覆盖主组 | 主组安装失败即停止并逆序撤回全部新增 handle；fatal 保持身份且继续清理。可选吸入网格仍独立回退。逐位置拒绝及 fatal 清理回归验证，未修改动画参数或原调用次数 |
+| P1 · 发布准备修复 | 源码已为 r14.25.6 / 255，但 release-policy 仍只允许 r14.25.5 / 254；近期条目在 Unreleased 中，正式 Notes 生成器不会收录 | 下一目标明确为 r14.25.7 / 256，说明与安全基线为 r14.25.5；保留旧版累计基线。双语候选章节收纳有效变化及本次修复，历史记录不改写；工作流、签名和 main 门禁不放宽 |
+| P2 · 已有 Dock / 岛修复纳入 | 屏外采样自续、透明全宽帧监听、相同内容重复提交、旧 alpha / key 租约、斜滑仲裁与 attach listener 反向持有 | 复用上一轮完整源码哈希、Host 反例与修复证据；本轮只复核共享接入及失败回退，不二次改造几何、材质或帧时钟 |
+| P2 · 保留的成本风险 | 全局 Animation.applyTransformation 入口与有视觉模式的 PreDraw 仍需跟随原生帧；文件夹局部门禁仍读取预解析反射成员 | 无新的窄回调或设备净收益证据，不猜测移除、不新增轮询或预热；不把静态预算、Host 次数当作设备 CPU / GPU、帧时间或续航收益 |
+
+### Hook 精准度与 ROM 边界
+
+完整功能路由继续使用既有 [255 项进程矩阵](../rom-intelligence/A14_PROCESS_MATRIX.csv)，逐项保留 ID、包 / scope、阶段、开关与 installHook。它证明 SOURCE 路由，不代表 255 项均已取得 ROM 或运行时证据。当前 Hook / 反射调用点归属扫描、完整功能语义、类加载 / 异常边界与 Host 回归交叉校验；未命中样本的项保持 UNKNOWN，不批量标成兼容。以下为高风险集成层的人工审查矩阵，完整描述符、静态标志、定义来源及调用者保留在外部证据目录。
+
+| 功能 / owner | 实际包、加载器与阶段 | 精确合同、安装 / 回退与证据边界 |
+| --- | --- | --- |
+| 基础安装 | system_server 启动；SystemUI 主进程 package-ready；Application.attach 后按功能选择 | 固定 ID systemui.init / systemui.plugin.create / application.attach；同 executable 的 ID 回读不替代 Feature 单次安装。PASSTHROUGH、原异常与 proceed 次数保持；R8 / settings 类加载边界单独检查 |
+| SystemUI / 插件 | com.android.systemui 主加载器；PluginFactory 返回的实际插件加载器 | 插件不单独加入静态 scope；init / createPlugin 声明及 ClassLoader 分离沿用已有证据。状态栏、通知与控制中心不共用可变 View owner |
+| 动态岛媒体 / 通知 | SystemUI；NotificationMediaManager / Heads-up / Keyguard 原生 owner | 核验 token、用户、UID、会话、安全状态与 generation；卡片缺口 IO 结果不得复活过期来源。新快照保留逻辑租约，通知接管失败保留原生；已有专题 ARTIFACT / Host 证据复用，最终运行命中待验 |
+| 原生时钟 / 录音来源 | com.android.deskclock 主进程；com.android.soundrecorder:remote；各自真实加载器，package-ready 安装 | 时钟只 Hook 已声明服务和状态入口；录音按语义字符串与完整签名唯一定位，DexKit 总是关闭。先校验框架发送 UID / 包再解包，PendingIntent creator 与存活 Binder 受限；服务、进程死亡和 SystemUI 关闭分别释放，不新增音频权限 |
+| Launcher 返回 / 吸入 | 仅 com.miui.home 的 post-attach | WindowElement.animTo(Object)、NavStubView 原生目标 / touch / attach / detach、可用 Home owner 全部预解析并按组安装；可选网格另有回滚。POCO 样本缺 WindowElement，维持原生返回，不声称吸入支持 |
+| Dock | com.miui.home post-attach；HotSeats / 内容 / 原生动画 owner | 已核实 CN / TW 及 munch 声明不等于给 POCO 安装 Dock；容量 666 仍参与布局解析和拖放容量语义，不替换。材质只有一个可见填充、采样 generation / 有限重试与 detach 释放保持 |
+| MIUI 文件夹图标 | com.miui.home post-attach | Feature 260；BlurUtilities.isBlurSupported()Z 与八个文件夹入口；先核验精确参数、返回、静态性、继承和两个 Consumer / lambda ABI，最后安装门禁，失败逆序回滚 |
+| POCO 文件夹图标 | 仅 com.mi.android.globallauncher 主进程，原应用加载器，post-attach | Feature 261，仅复用文件夹图标实现。静态 scope 与开关都须满足；不安装 Dock、返回吸入或文件夹展开背景 Feature，不伪装全局身份 |
+| 控制中心 / 锁屏 / 输入法键 | SystemUI 宿主加载器；各自 Feature 开关 | 四份 SystemUI 样本均核实 QSTileImpl 的 click / longClick / secondaryClick(View)、NavigationBarView 及 ButtonDispatcher 返回、KeyguardBottomAreaInjector 图标更新、shouldShowChargeAnim()Z；锁后重新核验展开请求，弱 owner 观察者不续持旧 View |
+| 状态栏 / 日期 / Duo | SystemUI 主加载器；各自可见 View / controller | 四份 SystemUI 的日期 / Clock ABI 和资源取证沿用相同输入记录；日期单独启用也准备格式能力，秒钟任务仍按可见需求运行。Insets / 避让分别恢复当前所有者的原生基线 |
+| system_server 输入 / 安全 | boot / services 实际加载器，SYSTEM_SERVER_STARTING | 音量策略、分享过滤、应用锁等按原用户 / token / 锁和失败语义核验；新增代码不扩大 Handler / View 通用 Hook。未变化且已有可信 ROM 合同复用，未覆盖厂商组合保持待验 |
+
+### POCO 文件夹模糊完整性
+
+fuxi CN / TW MiuiHome `RELEASE-4.39.30.8604-08262248` 同 SHA-256 `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`；munch MiLauncherGlobal `RELEASE-4.39.14.7603-03051601` 为 `1b1eb43b4279ab6b6e7ec1712c74b7e7e45c5e00cee4df497aa6bf4b55ab81f6`。只复用及补查这两种已知 ABI，不全量反编译 ROM。它们的原生决策链均为：硬件属性 `persist.sys.background_blur_supported` → IS_BACKGROUND_BLUR_SUPPORTED；Launcher.onCreate 读取 Secure.background_blur_enable → IS_BACKGROUND_BLUR_ENABLED；随后核验 isMiuiLauncher 与 DeviceConfig.sIsDefaultIcon。模块只在八个已核实文件夹入口的当前线程范围内略过身份条件，不更改系统值、默认图标或能力字段。
+
+1×1 / 2×2 的原生准备、布局、绘制、壁纸回调与动画状态入口均已覆盖；dark / light 的颜色混合、主题限制和 native drawable 恢复继续由 ROM 执行。硬件或系统开关为 false、主题非默认、普通异常、其他线程及部分安装失败均回到原生路径。原生门禁没有独立省电分支，系统渲染引擎的省电行为未取得设备证据，不宣称已验证。样本的系统模糊标志仅从 onCreate 初始化；不新增猜测式动态切换 Hook，系统开关变更后的即时效果和重启行为须实机确认。
+
+文件夹展开背景使用另一个 Feature 及 BlurUtils.fastBlurWhenOpenOrCloseFolder / fastBlur / getLauncherBlur；设置键、安装条件、范围及 owner 与图标 BlurUtilities 门禁分离。POCO 仅接入图标功能，未授予展开背景的安装路径。源码与 Host 可以证明这两项开关独立，不能证明实际壁纸合成后的视觉效果。
+
+**支持结论限于已核实 ABI 的静态接入与原生回退。** MIUI / POCO 的 1×1 / 2×2、深浅色、亮暗壁纸、主题图标、系统模糊 / 省电切换、重复进出、拖拽及异常恢复，均须在最终同一 APK 实机验收；未知 ROM 不声称完整兼容。
+
+### 候选与证据
+
+本轮业务实现 Deep 已完成 428 套件 / 3,865 项 Host 回归，零失败 / 错误、2 项既定跳过，Debug lint 通过；全量工具 679 项通过、5 项既定跳过。随后按用户要求升为 r14.25.7 / 256，应用差异仅两条版本声明；业务实现和行为测试不变，复用其完整结果，补验新版本的入口编译、路由、112 项发布工具回归与文档 / 元数据。最终 APK / R8、独立 mutation 和签名只以冻结提交后的实际收据为准，不把已执行范围扩大到未完成检查。
+
+Deep 验证覆盖完整 Host / Debug lint、全量工具、当前矩阵确定性与必需独立 mutation，以及唯一候选的未签名 Develop / R8 / fatal lint、SDK 34 / arm64 / API 102、设置进程边界、同产物 mapping、来源与 16 KiB 对齐。最终 RC 完整 SHA、实际退出结果、JUnit 汇总、APK / mapping 摘要和远端读回统一保留在仓库外 `customiuizer-a14-evidence/rc-global-audit-20261028/`；本段不把计划范围写成执行通过结果。七份原暂存技能文件的 EOL 问题以外部 HEAD 索引隔离验证，本次源码正常纳入；不覆盖原修改。
+
+已核对公开稳定版 metadata 的历史证书 `c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70` 与既有策略。用户追加授权从最终冻结提交生成本地正式签名 Release APK 供自行试用；仅使用仓库外既有配置，核验同产物来源、V2 签名与证书，不输出或提交密钥 / 密码。远端三个工作流启用，签名 / 发布环境均只允许 main branch、没有人工等待规则；没有修改环境或派发发行。公开晋升仍需 exact main CI、正式签名与双端收据；本地签名包不代表已经公开发行或完成实机验收。
+
+ADB 无连接；没有安装、重启或新录屏。设备验收与帧时间、CPU / GPU、PSS、功耗均未完成。保留前轮 Host 可复核操作次数：屏外 120 帧捕获 120→0、两图标 120 帧叶坐标入口 720→0、重复透明度提交 120→0；这些输入未受本轮修复改变，不能外推为设备性能收益。最终同 APK 的活动 / 通知 / 媒体交接、Home / PiP、锁屏、旋转、手势取消与文件夹矩阵是正式晋升前的必要条件。
 
 ## 松手衔接、Dock 连续性与文件夹背景
 

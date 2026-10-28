@@ -6,13 +6,9 @@ Changes for maintained releases. Valid changes from the retired r14.25.1 and r14
 
 ## Unreleased
 
-- Unify continuous island dragging and velocity inheritance, automatically contract manually expanded details, and refine text hierarchy for music, notifications and operation feedback.
-- Keep absorbed pages clearer with a gentler native spring response. Recover from transient Dock wallpaper crop mismatches instead of permanently retiring the lens.
-- Centralize return-to-island gestures, route SMS and calendar through notification app selection, and clarify boarding names, size groups and app Toast feedback.
+## r14.25.7 — 2026-10-28
 
-## r14.25.6 — 2026-10-25
-
-versionCode 255. Changes since r14.25.5:
+versionCode 256. Changes since r14.25.5:
 
 ### User changes
 
@@ -23,17 +19,26 @@ versionCode 255. Changes since r14.25.5:
 - Follow the ROM audio capture limit, interpolate the waveform at about 30 Hz, and reject small noise changes. Support mirrored Telegram / HyperOS media sessions, retain one same-app audio track while it remains active, and reduce handoff flicker.
 - Exclude confirmed floating-app media sources rather than hiding every activity. Other music, approved messages and system feedback remain eligible.
 - Add optional charging and low-battery feedback. Suppress the native low-battery dialog only after the replacement is visibly acknowledged.
-- Keep one visible Dock material, with shared cached G4 clipping and optical edges; reduce repeated static-wallpaper captures. Add another 0.5 dp to Duo automatic sizing and balance native row height with optical centering.
+- Keep one visible Dock material with a shared native rounded-rectangle contour and analytic optical edges; reserve G4 for inset decoration and reduce repeated static-wallpaper captures. Add another 0.5 dp to Duo automatic sizing and balance native row height with optical centering.
 - Fix asymmetric morphs and diagonal unlock motion with one stable canvas, preserving current position and velocity. Similar sizes exchange content without extra bounce; the notification shade retains a still idle island with its touch region disabled.
 - Resolve upward intent before clicks; short upward drags only rebound. Tapping the idle island no longer implicitly opens notifications; its documented downward gesture remains.
 - Preserve current artwork and a still waveform while the same player buffers or loads a track. Commit new content after playback starts, with bounded grace for ambiguous pauses.
 - Simplify Island names and its main page, with dedicated size, music, message and system-feedback pages. Return the global prompt style to the system directory; app and action selection follow native components and view lifecycles.
 
+- Unify continuous dragging and velocity handoff, contract manually expanded details on the existing deadline, and refine text hierarchy for music, notifications and feedback. Use a gentler native spring response for absorbed pages and group return gestures together.
+- Open notifications with distinct body text directly in the long form. Preserve the current window and visibility across Home, media and system-activity handoffs; fix recursion when the shared progress clock ends and clear stale timer activity when its service is destroyed.
+- Add an independent folder-icon background blur switch, off by default and requiring a Launcher restart after changes. MIUI and POCO use their verified native folder paths while retaining hardware, system-blur and default-icon restrictions; appearance on each ROM still requires device acceptance.
+- Stop invalid Dock captures outside the visible region and prepare again on return. Refresh capture policy when wallpaper type changes, and remove stable transparent full-width backgrounds from frame observation.
+- Prevent vertically dominant diagonal swipes from triggering Dock horizontal actions. Roll back a partially installed Hook group and preserve native touch calls when an observer fails.
+- Refine independent notification-shade and Control Center date formats, app-lock timeout, installer app details, volume-key and IME dismiss-button boundaries, retaining native behavior on failure.
+- Keep preference descriptions visible beside current values and fix recycled warning colors and separators. Unify subpage arrows, search routes, page return and numeric-input boundaries.
+- Restore native widget spacing and title parameters at default settings. Refresh only relevant content for app renaming and theme or configuration updates, retaining icon and touch bounds.
+
 ### Engineering notes
 
 - Native window events publish bounded current snapshots. Audio, notification and animation resources retain explicit owners and release paths; no new recording permission, polling service or animation library.
 - Power saver stops Island capture and optional motion. Static Dock capture stops after its bounded native-animation catch-up period.
-- r14.25.6 is a locally signed official-build trial. Public release and device acceptance are tracked separately in the refinement roadmap; brief samples do not establish long-term battery life.
+- r14.25.7 / 256 is a release candidate. Earlier locally signed trials do not identify the final candidate binary. Actual Hook hits, animation recordings, POCO appearance and sustained performance still require acceptance on the same final APK.
 
 ## r14.25.5 — 2026-10-25
 

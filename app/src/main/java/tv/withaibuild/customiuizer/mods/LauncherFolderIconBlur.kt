@@ -11,6 +11,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 /** Opt in to the ROM's existing folder-only blur path. No launcher-identity spoof,
  * global property change, bitmap sampling, extra material or animation owner. */
@@ -29,6 +30,8 @@ internal object LauncherFolderIconBlur {
         val enabled = blur.getDeclaredField("IS_BACKGROUND_BLUR_ENABLED").apply { isAccessible = true }
         val defaultIcon = device.getDeclaredMethod("isDefaultIcon")
         val gate = blur.getDeclaredMethod("isBlurSupported")
+        require(ViewGroup::class.java.isAssignableFrom(folder) && folder.isAssignableFrom(small) &&
+            folder.isAssignableFrom(large) && View::class.java.isAssignableFrom(image))
         val entries = listOf(
             folder.getDeclaredMethod("fromXml", Int::class.javaPrimitiveType, launcher, ViewGroup::class.java, info),
             folder.getDeclaredMethod("onLayout", Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType,
@@ -40,7 +43,15 @@ internal object LauncherFolderIconBlur {
             image.getDeclaredMethod("resetDrawableToNormalState"),
             image.getDeclaredMethod("settingDrawableToAnimState"))
         require(gate.returnType == Boolean::class.javaPrimitiveType && supported.type == Boolean::class.javaPrimitiveType &&
-            enabled.type == Boolean::class.javaPrimitiveType && defaultIcon.returnType == Boolean::class.javaPrimitiveType)
+            enabled.type == Boolean::class.javaPrimitiveType && defaultIcon.returnType == Boolean::class.javaPrimitiveType &&
+            Modifier.isStatic(gate.modifiers) && Modifier.isStatic(defaultIcon.modifiers) &&
+            Modifier.isStatic(supported.modifiers) && Modifier.isStatic(enabled.modifiers))
+        val returns = listOf(folder, Void.TYPE, Void.TYPE, Boolean::class.javaPrimitiveType,
+            Boolean::class.javaPrimitiveType, Void.TYPE, Void.TYPE, Void.TYPE)
+        for ((index, entry) in entries.withIndex()) {
+            require(entry.returnType == returns[index] && Modifier.isStatic(entry.modifiers) ==
+                (index == 0 || index == 2 || (index == 5 && entry.declaringClass == small)))
+        }
         installFolderIconBlurHooks(gate, entries) {
             // Keep hardware, system blur and theme restrictions. Only the native
             // isMiuiLauncher product-name restriction is omitted inside folder work.

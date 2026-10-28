@@ -1,18 +1,22 @@
 {
   "repository": "thetvplus/customiuizer-a14",
-  "trusted_branches": ["main"],
+  "trusted_branches": [
+    "main"
+  ],
   "certificate_sha256": "c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70",
   "download_repository": "Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14",
   "community_url": "https://t.me/customiuizerA14",
   "repository_description": "米客 A14｜CustoMIUIzer A14｜HyperOS 1 / Android 14",
   "release_target": {
-    "version_name": "r14.25.5",
-    "minimum_version_code": 254,
-    "unpublished_source": "r14.25.6"
+    "version_name": "r14.25.7",
+    "minimum_version_code": 256
   },
   "cumulative_releases": {
     "r14.25.5": {
       "notes_base": "r14.24.1"
+    },
+    "r14.25.7": {
+      "notes_base": "r14.25.5"
     }
   }
 }

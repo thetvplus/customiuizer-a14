@@ -10,6 +10,7 @@ com.google.android.permissioncontroller
 com.miui.gallery
 com.miui.guardprovider
 com.miui.home
+com.mi.android.globallauncher
 com.miui.miwallpaper
 com.miui.packageinstaller
 com.miui.powerkeeper

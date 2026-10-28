@@ -2267,7 +2267,7 @@
       "defaultValue": "false",
       "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt",
       "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
-      "targetPackage": "com.miui.home",
+      "targetPackage": "com.miui.home; com.mi.android.globallauncher (main process only)",
       "installPhase": "APPLICATION_ATTACH",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
       "enableEffect": "Enables the existing ROM folder icon blur path within verified folder preparation and draw calls",
@@ -2276,8 +2276,8 @@
       "restartTarget": "LAUNCHER",
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
-      "evidence": "LauncherFolderIconBlur.install / installFolderIconBlurHooks; FolderIconBlurTest; LauncherPostAttachFeatures.LauncherFolderIconBlurFeature",
-      "notes": "Shared Launcher target includes com.miui.home and com.mi.android.globallauncher. Opt-in, native hardware support / background blur enabled / default icon gates remain. No global launcher identity or system setting changes. CN/TW and munch POCO APK declarations verified; device appearance pending."
+      "evidence": "LauncherFolderIconBlur.install / installFolderIconBlurHooks; FolderIconBlurTest; PocoFolderBlurRoutingTest; LauncherPostAttachFeatures.LauncherFolderIconBlurFeature; GenericAppFeatures.PocoFolderIconBlurFeature",
+      "notes": "MIUI uses the Launcher catalog; POCO uses only PocoFolderIconBlurFeature in its main process through GenericAppInstaller. Both packages are in static scope. Opt-in, native hardware support / background blur enabled / default icon gates remain. No global launcher identity or system setting changes. CN/TW and munch POCO APK declarations verified; device appearance pending."
     },
     {
       "featureId": "launcher_folderblur_opacity",

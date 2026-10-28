@@ -61,6 +61,40 @@ class IslandAbsorptionInstallationTest {
     private fun install(endings: List<Method> = methods.drop(1)) = installIslandAbsorptionHooks(
         methods[0], object : MethodHook() {}, endings) { object : MethodHook() {} }
 
+    private fun installReturn() = installIslandReturnHooks { hook ->
+        for (method in methods) hook(method, object : MethodHook() {})
+    }
+
+    @Test fun mandatoryReturnGroupRejectsPartialOwnerAndAnimationInstallation() {
+        for (index in methods.indices) {
+            attempts.clear(); removed.clear(); callbacks.clear()
+            rejected = methods[index]
+            assertThrows(IllegalStateException::class.java) { installReturn() }
+            assertEquals(methods.take(index + 1), attempts)
+            assertEquals(methods.take(index).reversed(), removed)
+            assertTrue(callbacks.isEmpty())
+        }
+        rejected = null; attempts.clear(); removed.clear()
+        installReturn()
+        assertEquals(methods.toSet(), callbacks.keys)
+        assertTrue(removed.isEmpty())
+    }
+
+    @Test fun mandatoryReturnRollbackPreservesFatalIdentityAndFinishesCleanup() {
+        rejected = methods.last()
+        val cleanup = OutOfMemoryError("return cleanup")
+        fatalCleanup = cleanup
+        assertSame(cleanup, assertThrows(Throwable::class.java) { installReturn() })
+        assertTrue(callbacks.isEmpty())
+        assertEquals(methods.take(2).reversed(), removed)
+        removed.clear()
+        val original = ThreadDeath()
+        fatal = original
+        assertSame(original, assertThrows(Throwable::class.java) { installReturn() })
+        assertTrue(original.suppressed.contains(cleanup))
+        assertEquals(methods.take(2).reversed(), removed)
+    }
+
     @Test fun everyRejectedInstallationRetiresItsPartialGroupAndStopsInstalling() {
         for (index in methods.indices) {
             attempts.clear(); removed.clear(); callbacks.clear()

@@ -3301,6 +3301,19 @@
       "enableCondition": "prefs.getBoolean(\"launcher_folder_icon_blur\")",
       "allowedProcess": "com.miui.home",
       "deniedProcess": "third-party launchers (unless selected app sets)"
+    },
+    {
+      "featureIdInt": 261,
+      "featureIdName": "poco_folder_icon_blur",
+      "name": "POCO Folder Icon Blur",
+      "preferenceKey": "launcher_folder_icon_blur",
+      "target": "ANY",
+      "phase": "APPLICATION_ATTACHED",
+      "installer": "GenericAppFeatures",
+      "installHook": "LauncherFolderIconBlur.install(lpparam.classLoader)",
+      "enableCondition": "packageName == \"com.mi.android.globallauncher\" && prefs.getBoolean(\"launcher_folder_icon_blur\")",
+      "allowedProcess": "com.mi.android.globallauncher",
+      "deniedProcess": "secondary processes; other Launcher features"
     }
   ],
   "scope": [
@@ -3317,6 +3330,7 @@
     "com.google.android.permissioncontroller",
     "com.iflytek.inputmethod",
     "com.iflytek.inputmethod.miui",
+    "com.mi.android.globallauncher",
     "com.miui.gallery",
     "com.miui.guardprovider",
     "com.miui.home",

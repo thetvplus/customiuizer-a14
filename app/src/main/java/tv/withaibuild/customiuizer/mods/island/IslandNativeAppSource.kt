@@ -176,7 +176,7 @@ internal object IslandNativeAppSource {
                     timerOwner = WeakReference(callback.getThisObject() as Service); queue()
             }
             after(timerDestroy) { callback ->
-                if (timerOwner.get() === callback.getThisObject()) { snapshot(); timerOwner.clear() }
+                timerDestroyed(callback.getThisObject())
             }
             // play() is reached only after native validity/space checks, for both alarm and timer.
             after(play) { callback ->
@@ -192,6 +192,9 @@ internal object IslandNativeAppSource {
                 }
             }
         }
+        private fun timerDestroyed(owner: Any?) {
+            if (timerOwner.get() === owner) { timerOwner.clear(); snapshot() }
+        }
         private fun snapshot() {
             val output = publisher ?: return
             val now = SystemClock.elapsedRealtime()
@@ -203,8 +206,8 @@ internal object IslandNativeAppSource {
                 output.update(IslandLiveKind.STOPWATCH, clock, clock != null && (active || duration != 0L))
             }
             if (ringing == IslandLiveKind.TIMER) output.update(IslandLiveKind.TIMER, null, true, alert = true)
-            else timerOwner.get()?.let { owner ->
-                val timer = model.get(owner)
+            else {
+                val timer = timerOwner.get()?.let { model.get(it) }
                 val state = timer?.let { getState.invoke(it) as Int }
                 val clock = when (state) {
                     running -> IslandLiveTime.deadline(getTime.invoke(timer) as Long, System.currentTimeMillis(), now)

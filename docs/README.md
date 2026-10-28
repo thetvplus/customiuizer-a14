@@ -23,7 +23,7 @@
 | Java / Kotlin 调用边界 | [Java 调用边界](JAVA_BOUNDARY_ALLOWLIST.md) |
 | 遗留功能语义契约 | [遗留语义契约](maintenance/LEGACY_SEMANTIC_CALIBRATION.md) |
 | A14 功能退役与旧偏好清理 | [功能退役与偏好清理](maintenance/A14_FEATURE_RETIREMENTS.md) |
-| 当前精修、未决问题与证据恢复 | [当前精修状态](maintenance/A14_REFINEMENT_ROADMAP.md) |
+| 当前候选审计、有效更新与待验收 | [当前精修状态](maintenance/A14_REFINEMENT_ROADMAP.md#全局-rc-审计与候选收口) |
 | 进程矩阵生成与 ROM 证据边界 | [进程矩阵与 ROM 证据](rom-intelligence/README.md) |
 | DexSQL 方法、来源与局限 | [DexSQL 取证方法](rom-intelligence/DEXSQL.md) |
 | 通知事务、Heads-up、频道和 Count/Fold | [M03 ROM 合同](rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |

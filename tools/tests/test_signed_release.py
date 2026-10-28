@@ -30,6 +30,19 @@ native-code: 'arm64-v8a'
 SIGNATURE = f"Verified using v2 scheme (APK Signature Scheme v2): true\nSigner #1 certificate SHA-256 digest: {release.CERT}\n"
 
 
+def setUpModule():
+    # These API/asset fixtures model the published r14.25.5 release. Keep that
+    # identity explicit so advancing the repository target does not rewrite them.
+    global historical_target
+    historical_target = patch.dict(release.POLICY, release_target={
+        "version_name": "r14.25.5", "minimum_version_code": 254})
+    historical_target.start()
+
+
+def tearDownModule():
+    historical_target.stop()
+
+
 def build_run():
     return {"id": 42, "run_attempt": 1, "workflow_id": 7, "path": release.WORKFLOW,
             "head_repository": {"full_name": release.REPO}, "head_sha": COMMIT,
@@ -1257,6 +1270,19 @@ class ProtectedWorkflowTest(unittest.TestCase):
 
 
 class FormalTargetAndNotesTest(unittest.TestCase):
+    def test_repository_target_matches_the_next_source_and_preserves_both_notes_baselines(self):
+        policy = json.loads((REPO_ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
+        name, code = release.source_version((REPO_ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
+        self.assertEqual("r14.25.7", name)
+        self.assertEqual(256, code)
+        with patch.object(release, "POLICY", policy):
+            release.release_target(name, code)
+            for retired in (("r14.25.5", 254), ("r14.25.6", 255), (name, 255)):
+                with self.assertRaisesRegex(ValueError, "designated formal"):
+                    release.release_target(*retired)
+        self.assertEqual({"notes_base": "r14.25.5"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.24.1"}, policy["cumulative_releases"]["r14.25.5"])
+
     def test_trial_and_retired_candidate_cannot_be_formal_release(self):
         release.release_target("r14.25.5",254)
         for name,code in (("r14.25.5",250),("r14.25.5",253),("r14.25.6",253),("r14.25.4",254)):
