@@ -405,7 +405,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         expanded: Boolean = false): Boolean {
         val room = captionRoom(width, cameraGap, height, split = false)
         if (room <= 0) return false
-        val paint = TextPaint(statusPaint).apply { textSize = baseTextSize * if (expanded) .94f else 1f }
+        return fitsToast(value, room, height, expanded, toastPaint(expanded))
+    }
+
+    private fun toastPaint(expanded: Boolean) = TextPaint(statusPaint).apply {
+        textSize = baseTextSize * if (expanded) .94f else 1f
+    }
+
+    private fun fitsToast(value: String, room: Int, height: Int, expanded: Boolean, paint: TextPaint): Boolean {
         val layout = StaticLayout.Builder.obtain(value, 0, value.length, paint, room)
             .setIncludePad(false).setMaxLines(if (expanded) 2 else 1).build()
         return layout.height <= height - dp(4) && layout.getLineEnd(layout.lineCount - 1) == value.length &&
@@ -425,10 +432,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             toastTextSize == baseTextSize && measuredToastExpanded == expanded) return measuredToastWidth
         var low = minimum.coerceAtMost(maximum)
         var high = maximum
+        var preparedPaint: TextPaint? = null
         // Pixel-space monotone fit, at most fourteen layouts even at the supported 10k screen bound.
         while (low < high) {
             val middle = (low + high) ushr 1
-            if (fitsToast(value, middle, gap, height, expanded)) high = middle else low = middle + 1
+            val room = captionRoom(middle, gap, height, split = false)
+            val fits = room > 0 && fitsToast(value, room, height, expanded,
+                preparedPaint ?: toastPaint(expanded).also { preparedPaint = it })
+            if (fits) high = middle else low = middle + 1
         }
         measuredToast = value; measuredToastWidth = high; toastTextSize = baseTextSize
         measuredToastExpanded = expanded

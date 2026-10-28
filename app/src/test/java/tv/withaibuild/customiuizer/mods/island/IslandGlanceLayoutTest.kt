@@ -14,9 +14,50 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class, qualifiers = "mdpi")
+@Config(sdk = [34], application = android.app.Application::class, qualifiers = "mdpi", shadows = [IslandTextLayoutShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandGlanceLayoutTest {
+    @Test fun oneWidthSearchPreparesOnePaintAndCachedWidthDoesNoNewLayoutWork() {
+        val shell = IslandActivityView(RuntimeEnvironment.getApplication())
+        IslandTextLayoutShadow.reset()
+        val width = shell.toastWidth("已删除", 96, 400, 40, 40, expanded = false)
+        assertTrue(IslandTextLayoutShadow.probes in 2..14)
+        assertEquals("One width search must share its prepared paint across real layout probes",
+            1, IslandTextLayoutShadow.paints.size)
+        val probes = IslandTextLayoutShadow.probes
+        val firstPaint = IslandTextLayoutShadow.paints.single()
+        assertEquals(width, shell.toastWidth("已删除", 96, 400, 40, 40, expanded = false))
+        assertEquals(probes, IslandTextLayoutShadow.probes)
+        assertSame(firstPaint, IslandTextLayoutShadow.paints.single())
+        shell.contentHeight(64)
+        shell.toastWidth("已删除", 96, 400, 40, 64, expanded = true)
+        assertTrue(IslandTextLayoutShadow.probes > probes)
+        assertEquals("A new font/shape query owns a fresh local paint", 2, IslandTextLayoutShadow.paints.size)
+    }
+
+    @Test fun nativeFitBoundariesRemainMinimalAcrossLocalesFontScalesAndFeedbackForms() {
+        val app = RuntimeEnvironment.getApplication()
+        for (locale in listOf("zh-CN", "en", "ar")) for (scale in listOf(1f, 2f)) {
+            val config = Configuration(app.resources.configuration).apply { setLocale(Locale.forLanguageTag(locale)); fontScale = scale }
+            val shell = IslandActivityView(app.createConfigurationContext(config))
+            for (expanded in listOf(false, true)) {
+                val height = if (expanded) 64 else 40
+                shell.contentHeight(height)
+                for (text in listOf("已删除", "Saved to gallery", "تم الحفظ", "👨‍👩‍👧‍👦 saved", "This feedback needs two lines to fit")) {
+                    val width = shell.toastWidth(text, 96, 360, 40, height, expanded)
+                    val fits = shell.fitsToast(text, width, 40, height, expanded)
+                    if (fits && width > 96) assertFalse("$locale $scale $expanded $text $width",
+                        shell.fitsToast(text, width - 1, 40, height, expanded))
+                    if (!fits) assertEquals(360, width)
+                }
+            }
+        }
+        IslandTextLayoutShadow.reset()
+        val shell = IslandActivityView(app)
+        assertEquals(8, shell.toastWidth("Saved", 1, 8, 40, 40, expanded = false))
+        assertEquals(0, IslandTextLayoutShadow.probes)
+    }
+
     @Test fun repeatedGeometryKeepsTextLayoutSettledAndRealRowChangesStillApply() {
         val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { simplified = true }
         shell.bind("Notice", "Public message", null, false, false, false, 0, false, expanded = true)
