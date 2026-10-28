@@ -1313,4 +1313,6 @@
     <string name="system_island_return_effect_absorption">Vtažení</string>
     <string name="system_island_width_group">Šířka</string>
     <string name="system_island_return_group">Při návratu na plochu</string>
+    <string name="launcher_folder_icon_blur_title">Rozmazání pozadí ikon složek</string>
+    <string name="launcher_folder_icon_blur_summ">Použije nativní rozmazání ikon složek. Vyžaduje systémové rozmazání pozadí a výchozí ikony. Pro použití restartujte launcher.</string>
 </resources>

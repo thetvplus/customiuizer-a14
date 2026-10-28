@@ -2257,6 +2257,29 @@
       "notes": ""
     },
     {
+      "featureId": "launcher_folder_icon_blur",
+      "featureName": "Launcher Folder Icon Blur",
+      "preferenceKeys": [
+        "launcher_folder_icon_blur",
+        "pref_key_launcher_folder_icon_blur"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_launcher.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/LauncherPostAttachFeatures.kt:installHook",
+      "targetPackage": "com.miui.home",
+      "installPhase": "APPLICATION_ATTACH",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Enables the existing ROM folder icon blur path within verified folder preparation and draw calls",
+      "disableEffect": "Restart Launcher to restore the native product gate",
+      "valueChangeEffect": "Restart Launcher to install or remove the folder-scoped gate",
+      "restartTarget": "LAUNCHER",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "LauncherFolderIconBlur.install / installFolderIconBlurHooks; FolderIconBlurTest; LauncherPostAttachFeatures.LauncherFolderIconBlurFeature",
+      "notes": "Shared Launcher target includes com.miui.home and com.mi.android.globallauncher. Opt-in, native hardware support / background blur enabled / default icon gates remain. No global launcher identity or system setting changes. CN/TW and munch POCO APK declarations verified; device appearance pending."
+    },
+    {
       "featureId": "launcher_folderblur_opacity",
       "featureName": "Launcher Folder Blur",
       "preferenceKeys": [

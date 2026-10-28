@@ -372,6 +372,12 @@
 					android:summary="@string/launcher_folderblur_disable_summ"
 					android:defaultValue="false" />
 
+				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+					android:key="pref_key_launcher_folder_icon_blur"
+					android:title="@string/launcher_folder_icon_blur_title"
+					android:summary="@string/launcher_folder_icon_blur_summ"
+					android:defaultValue="false" />
+
 			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
 
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx

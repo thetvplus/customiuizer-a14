@@ -1312,4 +1312,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_return_effect_absorption">İçine çekme</string>
     <string name="system_island_width_group">Genişlik</string>
     <string name="system_island_return_group">Ana ekrana dönerken</string>
+    <string name="launcher_folder_icon_blur_title">Klasör simgesi arka plan bulanıklığı</string>
+    <string name="launcher_folder_icon_blur_summ">Klasörlerde yerel bulanıklığı kullanır. Sistem arka plan bulanıklığı ve varsayılan simgeler gerektirir. Uygulamak için başlatıcıyı yeniden başlatın.</string>
 </resources>

@@ -1306,4 +1306,6 @@
     <string name="system_island_return_effect_absorption">Absorção</string>
     <string name="system_island_width_group">Largura</string>
     <string name="system_island_return_group">Ao voltar à tela inicial</string>
+    <string name="launcher_folder_icon_blur_title">Desfoque do fundo dos ícones de pastas</string>
+    <string name="launcher_folder_icon_blur_summ">Usa o desfoque nativo nas pastas. Requer desfoque do sistema e ícones padrão. Reinicie o launcher para aplicar.</string>
 </resources>

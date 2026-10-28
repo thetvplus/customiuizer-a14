@@ -1306,4 +1306,6 @@
     <string name="system_island_return_effect_absorption">吸入</string>
     <string name="system_island_width_group">寬度</string>
     <string name="system_island_return_group">返回桌面時上島</string>
+    <string name="launcher_folder_icon_blur_title">資料夾圖示背景模糊</string>
+    <string name="launcher_folder_icon_blur_summ">使用桌面原生模糊繪製資料夾圖示背景。需系統支援並啟用背景模糊及預設圖示，重新啟動桌面後生效。</string>
 </resources>

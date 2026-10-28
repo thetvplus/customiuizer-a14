@@ -5,6 +5,7 @@ import tv.withaibuild.customiuizer.mods.Controls
 import tv.withaibuild.customiuizer.mods.Launcher
 import tv.withaibuild.customiuizer.mods.LauncherAnimationHooks
 import tv.withaibuild.customiuizer.mods.LauncherFolderHooks
+import tv.withaibuild.customiuizer.mods.LauncherFolderIconBlur
 import tv.withaibuild.customiuizer.mods.LauncherGestureHooks
 import tv.withaibuild.customiuizer.mods.LauncherIconHooks
 import tv.withaibuild.customiuizer.mods.LauncherLayoutHooks
@@ -334,6 +335,15 @@ object LauncherPostAttachFeatures {
             phase = InstallPhase.APPLICATION_ATTACHED,
             enabled = { prefs -> LauncherFolderBlurFeature.evaluateEnabled(prefs) },
             factory = { LauncherFolderBlurFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
+            id = LauncherFolderIconBlurFeatureId,
+            name = "Launcher Folder Icon Blur",
+            preferenceKey = "launcher_folder_icon_blur",
+            target = FeatureTarget.LAUNCHER,
+            phase = InstallPhase.APPLICATION_ATTACHED,
+            enabled = { prefs -> LauncherFolderIconBlurFeature.evaluateEnabled(prefs) },
+            factory = { LauncherFolderIconBlurFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
             id = LauncherNoUnlockAnimationFeatureId,
@@ -1114,6 +1124,17 @@ internal class LauncherFolderBlurFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = LauncherFolderHooks.FolderBlurHook(lpparam)
+}
+
+internal class LauncherFolderIconBlurFeature(lpparam: PackageReadyParam, mPrefs: PrefMap) : BaseApplicationAttachedFeature(
+    lpparam, mPrefs, LauncherFolderIconBlurFeatureId, "Launcher Folder Icon Blur",
+    "launcher_folder_icon_blur", FeatureTarget.LAUNCHER,
+) {
+    companion object {
+        @JvmStatic fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("launcher_folder_icon_blur")
+    }
+    override fun isEnabledCondition(prefs: PrefMap) = evaluateEnabled(prefs)
+    override fun installHook() = LauncherFolderIconBlur.install(lpparam.classLoader)
 }
 
 internal class LauncherNoUnlockAnimationFeature(

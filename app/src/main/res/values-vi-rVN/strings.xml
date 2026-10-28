@@ -1306,4 +1306,6 @@
     <string name="system_island_return_effect_absorption">Hút vào</string>
     <string name="system_island_width_group">Chiều rộng</string>
     <string name="system_island_return_group">Khi trở về màn hình chính</string>
+    <string name="launcher_folder_icon_blur_title">Làm mờ nền biểu tượng thư mục</string>
+    <string name="launcher_folder_icon_blur_summ">Dùng hiệu ứng mờ gốc cho thư mục. Cần làm mờ nền hệ thống và biểu tượng mặc định. Khởi động lại trình khởi chạy để áp dụng.</string>
 </resources>

@@ -1305,4 +1305,6 @@
     <string name="system_island_return_effect_absorption">Втягивание</string>
     <string name="system_island_width_group">Ширина</string>
     <string name="system_island_return_group">При возврате на рабочий стол</string>
+    <string name="launcher_folder_icon_blur_title">Размытие фона значков папок</string>
+    <string name="launcher_folder_icon_blur_summ">Использует штатное размытие папок. Требуются системное размытие фона и стандартные значки. Для применения перезапустите рабочий стол.</string>
 </resources>

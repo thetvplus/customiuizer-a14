@@ -3288,6 +3288,19 @@
       "enableCondition": "{ prefs -> IslandNativeAppSource.enabled(prefs, lpparam.packageName.orEmpty()) }",
       "allowedProcess": "any scoped package where hasEnabledFeature() is true",
       "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 260,
+      "featureIdName": "launcher_folder_icon_blur",
+      "name": "Launcher Folder Icon Blur",
+      "preferenceKey": "launcher_folder_icon_blur",
+      "target": "LAUNCHER",
+      "phase": "APPLICATION_ATTACHED",
+      "installer": "LauncherPostAttachFeatures",
+      "installHook": "LauncherFolderIconBlur.install(lpparam.classLoader)",
+      "enableCondition": "prefs.getBoolean(\"launcher_folder_icon_blur\")",
+      "allowedProcess": "com.miui.home",
+      "deniedProcess": "third-party launchers (unless selected app sets)"
     }
   ],
   "scope": [

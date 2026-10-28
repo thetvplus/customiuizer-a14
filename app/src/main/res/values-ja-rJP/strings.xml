@@ -1306,4 +1306,6 @@
     <string name="system_island_return_effect_absorption">吸い込み</string>
     <string name="system_island_width_group">幅</string>
     <string name="system_island_return_group">ホームに戻るときにアイランドへ</string>
+    <string name="launcher_folder_icon_blur_title">フォルダアイコンの背景ぼかし</string>
+    <string name="launcher_folder_icon_blur_summ">ランチャー標準のぼかしを使用します。システムの背景ぼかしと標準アイコンが必要です。適用するにはランチャーを再起動してください。</string>
 </resources>

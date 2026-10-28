@@ -1339,4 +1339,6 @@
     <string name="system_island_return_effect_absorption">Absorption</string>
     <string name="system_island_width_group">Width</string>
     <string name="system_island_return_group">Return to island on Home</string>
+    <string name="launcher_folder_icon_blur_title">Folder icon background blur</string>
+    <string name="launcher_folder_icon_blur_summ">Use native launcher blur for folder icons. Requires system background blur and default icons. Restart the launcher to apply.</string>
 </resources>
