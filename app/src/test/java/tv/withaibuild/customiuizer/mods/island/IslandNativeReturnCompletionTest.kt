@@ -49,10 +49,10 @@ class IslandNativeReturnCompletionTest {
                 clock.currentPlayTime = 40L
                 assertTrue("Intake must move the island before page completion; existing=$existing",
                     kotlin.math.abs(shell.scaleX - origin) * 240f > 1f)
-                writer.putInt(0, 240_000)
-                clock.currentPlayTime = 140L
+                writer.putInt(0, 550_000)
+                clock.currentPlayTime = 320L
                 assertTrue("The body also reacts while the page is still travelling", shell.scaleY < .99f)
-                assertEquals(.24f, getField<Float>(shell, "mediaReturnProgress"), .00001f)
+                assertEquals(.55f, getField<Float>(shell, "mediaReturnProgress"), .00001f)
             } finally {
                 getField<ValueAnimator?>(shell, "motion")?.cancel()
                 shell.cancelMediaReturn()
@@ -132,10 +132,10 @@ class IslandNativeReturnCompletionTest {
                 if (absorption && terminal > 0) {
                     assertEquals("Page completion must not cut off the island's damped settling", 0, endings)
                     assertSame(clock, getField<Any?>(shell, "motion"))
-                    clock!!.currentPlayTime = 700L
+                    clock!!.currentPlayTime = 850L
                 }
                 assertEquals("Exactly one terminal callback", 1, endings)
-                clock!!.currentPlayTime = 800L // A stale pulse cannot resume the retired owner.
+                clock!!.currentPlayTime = 950L // A stale pulse cannot resume the retired owner.
                 assertNull(getField<Any?>(shell, "motion"))
                 assertNull(getField<Any?>(shell, "returnProgress"))
                 assertEquals(1f, shell.scaleX, 0f)

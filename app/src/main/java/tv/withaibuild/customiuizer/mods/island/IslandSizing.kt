@@ -83,7 +83,7 @@ internal object IslandSizing {
 
     /** A small catch may borrow free space, while keeping both physical edges safe. */
     fun elasticMaximum(width: Int, left: Int, safeLeft: Int, safeRight: Int, density: Float): Int =
-        width + minOf((8 * density).roundToInt(),
+        width + minOf((20 * density).roundToInt(), (width * .12f).roundToInt(),
             2 * minOf(left - safeLeft, safeRight - left - width).coerceAtLeast(0))
 
     fun horizontalOffsetLimit(short: Int, smallest: Int, gap: Int, contentInset: Int): Int =

@@ -26,7 +26,8 @@ class IslandSizingTest {
     }
 
     @Test fun elasticTravelUsesOnlyTheRemainingSafeSpaceOnBothSides() {
-        assertEquals(328, IslandSizing.elasticMaximum(320, 40, 24, 376, 1f))
+        assertEquals(340, IslandSizing.elasticMaximum(320, 40, 24, 376, 1f))
+        assertEquals(112, IslandSizing.elasticMaximum(100, 120, 24, 376, 1f))
         assertEquals(320, IslandSizing.elasticMaximum(320, 24, 24, 376, 1f))
         assertEquals(324, IslandSizing.elasticMaximum(320, 54, 24, 376, 1f))
         assertEquals(320, IslandSizing.elasticMaximum(320, 40, 40, 360, 1f))

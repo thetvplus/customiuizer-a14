@@ -7,18 +7,19 @@ import kotlin.math.sin
 
 /** Damped step response: prompt travel followed by one small, decaying overshoot. */
 internal object IslandMotion {
-    const val ENTER = 360L
-    const val MORPH = 320L
-    const val REBOUND = 260L
-    const val EXIT = 300L
-    const val SECONDARY = 380L
-    const val CONTENT = 220L
-    const val CONTENT_ARRIVAL = 300L
-    const val ALBUM = 300L
+    const val ENTER = 420L
+    const val MORPH = 400L
+    const val REBOUND = 400L
+    const val EXIT = 320L
+    const val SECONDARY = 440L
+    const val CONTENT = 240L
+    const val CONTENT_ARRIVAL = 420L
+    const val ALBUM = 380L
     const val MEDIA_DELAY = 750L
     const val MEDIA_RETURN = 540L
     const val RETURN_TIMEOUT = 1600L
-    const val ABSORPTION_TIME_SCALE = .9f
+    const val ABSORPTION_TIME_SCALE = 1.2f
+    const val ABSORPTION_BODY = 760L
     const val ABSORPTION_LANDING_WIDTH_RATIO = .38f
     const val ABSORPTION_LANDING_HEIGHT_RATIO = .44f
     const val ABSORPTION_LANDING_OFFSET = .22f
@@ -103,23 +104,22 @@ internal object IslandMotion {
     fun boundedCatchWeight(width: Float, maximum: Float, requested: Float, nativeWindow: Boolean = true): Float =
         minOf(requested, (maximum - width).coerceAtLeast(0f) /
             (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else CONTENT_CATCH_PEAK)).coerceAtLeast(0f)
-    /** The mouth grips immediately, then yields and recovers while the page travels.
-     * Both first arrival and an already full-size shell use this same response.
-     * Completion settles from the last physical position/velocity, without replay. */
+    /** Native progress owns acceptance/completion; elapsed time owns the body's mass.
+     * A fast page must not squeeze the entire receiving response into a few frames.
+     * One analytic receiving gesture runs on the existing finite View clock. */
     class AbsorptionResponse(private val from: Float, private val target: Float,
         private val minimum: Float, private val maximum: Float, amplitude: Float,
-        initialVelocity: Float, seconds: Float, private val initialProgress: Float = 0f) {
+        initialVelocity: Float, seconds: Float, initialProgress: Float = 0f) {
         private val outward = amplitude.coerceIn(minimum - target, maximum - target)
-        private val inward = (-amplitude * .65f).coerceIn(minimum - target, maximum - target)
-        private val slope = initialVelocity * seconds * .28f
+        private val inward = (-amplitude * .3f).coerceIn(minimum - target, maximum - target)
         private val late = initialProgress >= .9f
+        private val duration = if (late) CONTENT_ARRIVAL / 1000f else seconds.coerceIn(.3f, 1f)
         private val spring = Spring().apply {
             setVelocity(initialVelocity)
-            retarget(from, target, CONTENT_ARRIVAL / 1000f, true)
+            retarget(from, target, duration, true)
         }
-        private var swallowedAt = Float.NaN
+        private var completed = false
         private var lastTime = 0f
-        private var lastProgress = initialProgress
         var value = from
             private set
         var velocity = initialVelocity
@@ -127,38 +127,33 @@ internal object IslandMotion {
 
         fun sample(progress: Float, elapsed: Float): Float {
             val time = maxOf(lastTime, elapsed)
-            val p = maxOf(lastProgress, progress.coerceIn(initialProgress, 1f))
-            if (!late && swallowedAt.isNaN() && p >= 1f) {
-                swallowedAt = time
-                spring.setVelocity(velocity)
-                spring.retarget(value, target, REBOUND / 1000f, true)
+            if (progress >= 1f) completed = true
+            value = spring.sample(time, minimum, maximum)
+            velocity = spring.velocity
+            if (!late) {
+                val phase = time / duration
+                val grip = phase / .32f
+                val receive = (phase - .12f) / .88f
+                value += inward * pulse(grip) + outward * pulse(receive)
+                velocity += inward * pulseDerivative(grip) / (.32f * duration) +
+                    outward * pulseDerivative(receive) / (.88f * duration)
             }
-            val previous = value
-            value = if (late) spring.sample(time, minimum, maximum) else if (swallowedAt.isFinite()) {
-                spring.sample(time - swallowedAt, minimum, maximum)
-            } else {
-                val phase = ((p - initialProgress) / (1f - initialProgress).coerceAtLeast(.01f)).coerceIn(0f, 1f)
-                val t = (phase / .28f).coerceAtMost(1f)
-                val t2 = t * t
-                val base = from + (target - from) * t2 * (3f - 2f * t) + slope * t * (1f - t) * (1f - t)
-                base + inward * pulse(phase / .18f) + outward * pulse(phase / .72f)
-            }
-            velocity = if (late || swallowedAt.isFinite()) spring.velocity
-                else if (time > lastTime) (value - previous) / (time - lastTime) else velocity
             if (settled(time)) { value = target; velocity = 0f }
             if (value < minimum) { value = minimum; velocity = maxOf(0f, velocity) }
             if (value > maximum) { value = maximum; velocity = minOf(0f, velocity) }
             lastTime = time
-            lastProgress = p
             return value
         }
         private fun pulse(progress: Float): Float {
             val t = progress.coerceIn(0f, 1f)
             val tail = 1f - t
-            return 45.5625f * t * t * tail * tail * tail * tail
+            return 16f * t * t * tail * tail
         }
-        fun settled(time: Float) = if (late) time >= CONTENT_ARRIVAL / 1000f
-            else swallowedAt.isFinite() && time - swallowedAt >= REBOUND / 1000f
+        private fun pulseDerivative(progress: Float): Float {
+            val t = progress.coerceIn(0f, 1f)
+            return 32f * t * (1f - t) * (1f - 2f * t)
+        }
+        fun settled(time: Float) = completed && time >= duration
     }
 
     /** Compression approaches the physical height limit without a flat clamp. */
@@ -216,7 +211,7 @@ internal object IslandMotion {
             target = destination
             if (!carry) velocity = 0f
             velocityAtStart = velocity
-            omega = (if (elastic) 12.5 else 10.5) / seconds.coerceIn(.1f, 1f)
+            omega = 10.5 / seconds.coerceIn(.1f, 1f)
             this.elastic = elastic
             displacement = (current - destination).toDouble()
             impulse = velocity + omega * displacement

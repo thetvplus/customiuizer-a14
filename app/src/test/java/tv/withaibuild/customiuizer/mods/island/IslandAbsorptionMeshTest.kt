@@ -70,7 +70,7 @@ class IslandAbsorptionMeshTest {
         IslandAbsorptionMesh.fill(vertices, rect, target, 0f)
         assertEquals(rect.left, vertices[0], .001f)
         assertEquals(rect.right, vertices[2], .001f)
-        for (t in listOf(.14f, .3f, .6f, 1f)) {
+        for (t in listOf(.16f, .3f, .6f, 1f)) {
             IslandAbsorptionMesh.fill(vertices, rect, target, t)
             assertEquals(target.centerY() - target.height() * .04f, vertices[1], .001f)
             assertEquals(target.centerX(), (vertices[0] + vertices[2]) * .5f, .001f)

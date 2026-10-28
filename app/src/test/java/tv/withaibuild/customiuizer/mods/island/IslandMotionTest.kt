@@ -61,8 +61,8 @@ class IslandMotionTest {
         spring.retarget(110f, 100f, seconds, false, elastic = true)
         // The longer elastic tail retains visible first-frame travel. The same physical
         // undershoot is reached later on the shared clock, rather than by changing damping.
-        assertTrue(spring.sample(1f / 60f) in 107f..108f)
-        assertTrue(spring.sample(seconds * .3125f) in 98.8f..99.3f)
+        assertTrue("Release responds in the first frame without rushing through its whole travel", spring.sample(1f / 60f) in 109f..109.5f)
+        assertTrue(spring.sample(seconds * .4f) in 98.8f..99.3f)
         val current = spring.sample(.065f)
         val velocity = spring.velocity
         spring.retarget(current, 108f, seconds, true, elastic = true)
@@ -90,8 +90,8 @@ class IslandMotionTest {
         }
         assertTrue(peak > 1f)
         assertEquals(1, turns)
-        assertTrue(IslandMotion.ENTER in 300L..400L)
-        assertTrue(IslandMotion.MORPH in 250L..350L)
+        assertTrue(IslandMotion.ENTER in 400L..480L)
+        assertTrue(IslandMotion.MORPH in 360L..440L)
         assertEquals(750L, IslandMotion.MEDIA_DELAY)
         assertEquals(2000L, IslandMotion.PAUSE_LIFETIME)
     }

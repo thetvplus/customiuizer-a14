@@ -96,10 +96,10 @@ class IslandAbsorptionContinuityTest {
                 assertTrue("No release-frame jump at $hz Hz", kotlin.math.abs(width - last) < 12f)
                 if (width > maximum) { maximum = width; maximumProgress = page }
                 last = width
-                if (page == 1f && time < 1.04f) assertFalse(response.settled(time))
+                if (time < .8f) assertFalse(response.settled(time))
             }
-            assertTrue("The receiving body must react early at $hz Hz", maximumProgress in .18f.. .35f)
-            assertTrue("Early recoil retains its bounded weight", maximum in 245.5f..246.01f)
+            assertTrue("The receiving crest has readable travel at $hz Hz", maximumProgress in .4f.. .8f)
+            assertTrue("The receiving gesture stays within its physical weight", maximum in 243f..246.01f)
             response.sample(1f, 1.2f)
             assertTrue(response.settled(1.2f)); assertEquals(240f, response.value, 0f)
             assertEquals(0f, response.velocity, 0f)
@@ -107,26 +107,26 @@ class IslandAbsorptionContinuityTest {
     }
 
     @Test fun aFullSizeIslandGripsImmediatelyEvenWithoutOutwardSafeSpaceAndCompletionCannotJump() {
-        val response = IslandMotion.AbsorptionResponse(240f, 240f, 40f, 240f, 6f, 0f, .5f)
+        val response = IslandMotion.AbsorptionResponse(240f, 240f, 40f, 240f, 12f, 0f, .76f)
         assertEquals(240f, response.sample(0f, 0f), 0f)
-        val gripping = response.sample(.06f, .03f)
+        val gripping = response.sample(.2f, .1f)
         assertTrue("An existing shell must not stay motionless during intake", gripping < 238f)
         val velocity = response.velocity
-        assertEquals(gripping, response.sample(1f, .04f), .0001f)
+        assertEquals(gripping, response.sample(1f, .1f), .0001f)
         assertEquals(velocity, response.velocity, .0001f)
-        assertFalse(response.settled(.04f))
-        assertEquals(240f, response.sample(1f, .31f), 0f)
-        assertTrue(response.settled(.31f))
+        assertFalse(response.settled(.1f))
+        assertEquals(240f, response.sample(1f, .76f), 0f)
+        assertTrue(response.settled(.76f))
     }
 
-    @Test fun thePageLeadingEdgeGripsTheSmallLowerMouthInTheFirstEightPercentOfTravel() {
+    @Test fun thePageLeadingEdgeGripsTheSmallLowerMouthInTheFirstSixteenPercentOfTravel() {
         val shell = RectF(300f, 20f, 700f, 60f)
         val frame = IslandMusicReturnSignal.Frame("chosen.music", android.os.Process.myUserHandle(),
             shell.left, shell.top, shell.right, shell.bottom, 1080, 2400)
         val landing = frame.landingRectangle(absorption = true)
         val intake = IslandAbsorptionMesh.intakeY(shell, landing)
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
-        IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), landing, .08f, intakeY = intake)
+        IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), landing, .16f, intakeY = intake)
         assertTrue("The leading edge is already at the island, not halfway through the page", vertices[1] < shell.bottom)
         assertTrue(vertices[2] - vertices[0] < shell.width() * .1f)
         assertTrue("The trailing body still has volume", vertices.last() > 1700f)
@@ -136,8 +136,8 @@ class IslandAbsorptionContinuityTest {
         val response = IslandMotion.AbsorptionResponse(180f, 240f, 40f, 248f, 6f, 0f, .8f, .98f)
         assertEquals(180f, response.sample(1f, 0f), 0f)
         assertTrue(response.sample(1f, .1f) in 180f..240f)
-        assertEquals(240f, response.sample(1f, .3f), 0f)
-        assertTrue(response.settled(.3f))
+        assertEquals(240f, response.sample(1f, IslandMotion.CONTENT_ARRIVAL / 1000f), 0f)
+        assertTrue(response.settled(IslandMotion.CONTENT_ARRIVAL / 1000f))
     }
 
     @Test fun theMeshSoftensOnlyItsContactEdgeAndKeepsThePageBodyOpaque() {

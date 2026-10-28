@@ -33,7 +33,7 @@ class LauncherReturnTimingTest {
         assertTrue(timing.apply(current))
         timing.restore(current, oldLease)
         assertTrue("An old completion cannot restore a successor adjustment", current.tracks.getValue("Width").force < 900f)
-        for (track in current.tracks.values) assertEquals(404.77695f, track.force, .01f)
+        for (track in current.tracks.values) assertEquals(227.68701f, track.force, .01f)
         for (track in unrelated.tracks.values) assertEquals(900f, track.force, 0f)
         timing.restore(unrelated)
         assertTrue(current.tracks.getValue("Width").force < 900f)

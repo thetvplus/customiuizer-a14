@@ -20,8 +20,8 @@ class IslandGestureImpulseTest {
             assertTrue(slow - fast <= 60L)
             assertTrue(slow > fast)
             if (absorption) {
-                assertTrue("Absorption grips promptly within its own bounded tempo", fast >= 475L && slow <= 486L)
-                assertTrue(slow < IslandMotion.returnDuration(0f, false))
+                assertTrue("The page has a deliberate, bounded return tempo", fast >= 633L && slow <= 648L)
+                assertTrue(slow < IslandMotion.ABSORPTION_BODY)
             } else assertTrue("Default return tempo is preserved", fast >= 528L && slow <= 540L)
         }
     }

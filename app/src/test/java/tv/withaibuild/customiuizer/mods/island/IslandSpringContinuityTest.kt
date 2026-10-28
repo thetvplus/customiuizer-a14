@@ -43,9 +43,9 @@ class IslandSpringContinuityTest {
     }
 
     @Test fun finiteDeadlineHasLessThanAThirdPixelOfRemainingTravel() {
-        for (duration in listOf(.195f, .3f, .32f, .36f)) {
+        for (duration in listOf(.195f, .3f, .32f, .36f, .42f, .76f)) for (elastic in listOf(false, true)) {
             val spring = IslandMotion.Spring()
-            spring.retarget(16f, 840f, duration, false)
+            spring.retarget(16f, 840f, duration, false, elastic = elastic)
             assertEquals(840f, spring.sample(duration), .3f)
             spring.finish()
             assertEquals(840f, spring.value, 0f)

@@ -12,9 +12,11 @@ import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.text.LineBreaker
 import android.media.session.PlaybackState
 import android.text.TextUtils
 import android.text.TextPaint
+import android.text.Layout
 import android.text.StaticLayout
 import android.util.TypedValue
 import android.view.Gravity
@@ -45,6 +47,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         ellipsize = TextUtils.TruncateAt.END
         gravity = Gravity.END or Gravity.CENTER_VERTICAL
         includeFontPadding = false
+        breakStrategy = LineBreaker.BREAK_STRATEGY_BALANCED
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         fontFeatureSettings = "tnum"
         setOnChronometerTickListener {
@@ -633,7 +637,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val startWidth = (if (entering) geometryWidth else fromWidth) * scaleX
         val startHeight = (if (entering) geometryHeight else fromHeight) * scaleY
         val catchAmount = maxOf(IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat()),
-            if (mediaReturnProgress == 0f) if (nativeArrival) dp(6).toFloat() / width.coerceAtLeast(1) else .055f else 0f)
+            if (mediaReturnProgress == 0f) if (nativeArrival) {
+                val pixels = if (absorption) maxOf(dp(12).toFloat(), width * .09f).coerceAtMost(dp(18).toFloat()) else dp(8).toFloat()
+                pixels / width.coerceAtLeast(1)
+            } else .055f else 0f)
         if (!entering) {
             scaleX *= fromWidth.toFloat() / width.coerceAtLeast(1)
             scaleY *= fromHeight.toFloat() / height.coerceAtLeast(1)
@@ -649,7 +656,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
         animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
             returning = mediaReturnProgress == 0f,
-            catchWeight = catchAmount)
+            catchWeight = catchAmount, rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival)
     }
 
     private fun requestDismiss() {
@@ -891,7 +898,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val nativeDriven = returning && nativeArrival && returnProgress != null
         val milliseconds = if (nativeDriven) duration + if (absorption) IslandMotion.REBOUND else 0L
             else (duration * motionScale.coerceIn(.65f, 1f)).toLong()
-        val seconds = (if (nativeDriven) IslandMotion.returnDuration(returnStrength, absorption) else milliseconds) / 1000f
+        val seconds = (if (nativeDriven && absorption) IslandMotion.ABSORPTION_BODY
+            else if (nativeDriven) IslandMotion.returnDuration(returnStrength, false) else milliseconds) / 1000f
         if (carry && !rigid) breadth.addVelocity(breadthExtraVelocity)
         breadthExtraVelocity = 0f
         breadth.retarget(geometryWidth * scaleX, geometryWidth * x, seconds, carry && !rigid, rebound)
@@ -913,7 +921,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             else minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
         val absorptionDepth = if (absorptionResponse != null) IslandMotion.AbsorptionResponse(
             geometryHeight * scaleY, geometryHeight * y, minimumHeight, maximumHeight,
-            -minOf(dp(2).toFloat(), geometryHeight * .06f), depth.velocity, seconds,
+            -minOf(dp(3).toFloat(), geometryHeight * catchWeight / (1f + catchWeight)), depth.velocity, seconds,
             initialNativeProgress) else null
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         // A content handoff may interrupt a top exit. Keep its visible origin,
@@ -923,10 +931,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         this.opacity.retarget(alpha, opacity, seconds, carry)
         var layerFrom = layerReveal
         val fadeOut = if (pendingContent != null) minOf(contentFadeRemaining, milliseconds * 46 / 100) else 0L
-        val fadeIn = minOf(160L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
-        val flipIn = minOf(140L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
+        val fadeIn = minOf(180L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
+        val flipIn = minOf(160L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
         var revealAt = 0L
-        var textAt: Long? = if (contentFits() && text.alpha > 0f) -100L else null
+        var textAt: Long? = if (contentFits() && text.alpha > 0f) -130L else null
         var lastCatch = 0f
         var lastCatchTime = 0f
         ValueAnimator.ofFloat(0f, 1f).apply {
@@ -995,7 +1003,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     if (contentFits()) {
                         val start = textAt ?: animation.currentPlayTime.also { began -> textAt = began }
                         textReveal = ((animation.currentPlayTime - start).toFloat() /
-                            minOf(100L, milliseconds - start).coerceAtLeast(1L)).coerceIn(0f, 1f)
+                            minOf(130L, milliseconds - start).coerceAtLeast(1L)).coerceIn(0f, 1f)
                     } else { textAt = null; textReveal = 0f }
                     updateContour()
                     if (nativeDriven && progress >= 1f && pendingContent == null && layerReveal >= 1f &&
@@ -1071,7 +1079,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val identityRoom = identityLane - identityInset
         identityTitle.alpha = if (identityRoom + .01f >= minOf(identityWidth,
                 (left.width - identityInset).coerceAtLeast(0).toFloat())) reveal * textReveal else 0f
-        if (nativeArrival && mediaReturnProgress < 1f) left.alpha *= ((mediaReturnProgress - .64f) / .3f).coerceIn(0f, 1f)
+        if (nativeArrival && mediaReturnProgress < 1f) {
+            val start = if (absorption) .28f else .64f
+            val span = if (absorption) .42f else .3f
+            left.alpha *= ((mediaReturnProgress - start) / span).coerceIn(0f, 1f)
+        }
         text.alpha = if (contentFits()) reveal * textReveal else 0f
         val nextBlur = if (text.visibility == VISIBLE && allowTextBlur && !simplified && isHardwareAccelerated && text.alpha in .01f..0.99f)
             ((1f - layerReveal) * 4).toInt().coerceIn(0, 4) - 1 else -1
