@@ -23,6 +23,21 @@ import org.robolectric.util.ReflectionHelpers.setField
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandTransitionContinuityTest {
+    @Test fun aGeometryHandoffAfterNativePageCompletionCannotResetTheStillVisibleShellTransform() {
+        shell.prepareReturnFromCurrent()
+        setField(shell, "mediaReturnProgress", 1f)
+        shell.scaleX = .95f
+        shell.translationY = -3f
+        val left = shell.pivotX * (1f - shell.scaleX) + shell.translationX
+        val top = shell.pivotY * (1f - shell.scaleY) + shell.translationY
+        layout(280, 40)
+        shell.transition(184, 40, 280, 40, false, secondary = true, visualLeft = left, visualTop = top)
+        assertEquals("A completed page is not a completed shell", top,
+            shell.pivotY * (1f - shell.scaleY) + shell.translationY, .001f)
+        assertEquals(184f * .95f, 280f * shell.scaleX, .001f)
+        motion().end()
+    }
+
     @Test fun cameraSeedCannotMakeTheSelectedHeightJumpDuringContentArrivalOrRigidExit() {
         layout(240, 32)
         shell.cameraAnchor(16f, 40f)

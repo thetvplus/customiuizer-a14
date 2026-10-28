@@ -54,15 +54,38 @@ internal data class IslandLiveActivity(val kind: IslandLiveKind, val packageName
 }
 
 /** Fixed at one current snapshot per type. An explicit dismissal lasts until its source ends. */
-internal class IslandLiveRegistry(private val dismissal: Dismissal = Dismissal()) {
+internal class IslandLiveRegistry(private val dismissal: Dismissal = Dismissal(), private val nextOrder: (() -> Long)? = null) {
     class Dismissal { internal val keys = HashSet<IslandLiveKey>() }
-    private val current = java.util.EnumMap<IslandLiveKind, IslandLiveActivity>(IslandLiveKind::class.java)
+    private data class Entry(val activity: IslandLiveActivity, val order: Long)
+    private val current = java.util.EnumMap<IslandLiveKind, Entry>(IslandLiveKind::class.java)
+    private var sequence = 0L
     private var selected: IslandLiveKey? = null
 
     fun update(kind: IslandLiveKind, value: IslandLiveActivity?) {
         require(value == null || value.kind == kind)
         dismissal.keys.removeAll { it.kind == kind && it != value?.key }
-        if (value == null) current.remove(kind) else current[kind] = value
+        if (value == null) current.remove(kind) else {
+            val old = current[kind]
+            if (old?.activity == value) return
+            val activated = old?.activity?.let {
+                it.key != value.key || it.clock?.pausedMillis != null && value.clock?.pausedMillis == null ||
+                    !it.alert && value.alert
+            } ?: true
+            current[kind] = Entry(value, if (activated) nextOrder?.invoke() ?: ++sequence else old!!.order)
+        }
+    }
+
+    fun order(key: IslandLiveKey) = current[key.kind]?.takeIf { it.activity.key == key }?.order ?: 0L
+    fun activate(key: IslandLiveKey) {
+        val old = current[key.kind]?.takeIf { it.activity.key == key } ?: return
+        current[key.kind] = old.copy(order = nextOrder?.invoke() ?: ++sequence)
+    }
+    fun urgent(value: IslandLiveActivity) = value.kind == IslandLiveKind.CALL || value.kind == IslandLiveKind.ALARM || value.alert
+    private fun rank(value: IslandLiveActivity) = when {
+        value.kind == IslandLiveKind.CALL -> 3
+        urgent(value) -> 2
+        value.kind == IslandLiveKind.PRIVACY -> 0
+        else -> 1
     }
 
     fun select(kinds: Set<IslandLiveKind>, excluded: Set<String>, user: Int,
@@ -77,21 +100,24 @@ internal class IslandLiveRegistry(private val dismissal: Dismissal = Dismissal()
 
     private fun choose(kinds: Set<IslandLiveKind>, excluded: Set<String>, user: Int,
         privacyIsSecondary: Boolean, elapsed: Long, foregroundPackage: String?, requiredPackage: String?): IslandLiveActivity? {
-        var best: IslandLiveActivity? = null
-        for (candidate in current.values) {
+        var best: Entry? = null
+        for (entry in current.values) {
+            val candidate = entry.activity
             if (candidate.kind !in kinds || candidate.packageName in excluded || candidate.uid / 100000 != user ||
                 candidate.packageName == foregroundPackage || requiredPackage != null && candidate.packageName != requiredPackage ||
                 candidate.key in dismissal.keys || privacyIsSecondary && candidate.kind == IslandLiveKind.PRIVACY ||
                 candidate.clock?.let { it.countdown && it.pausedMillis == null && elapsed - it.base >= 3000 } == true) continue
             val old = best
-            if (old == null || candidate.kind.priority > old.kind.priority ||
-                candidate.kind.priority == old.kind.priority && candidate.key == selected) best = candidate
+            if (old == null || rank(candidate) > rank(old.activity) || rank(candidate) == rank(old.activity) &&
+                (entry.order > old.order || entry.order == old.order &&
+                    (candidate.kind.priority > old.activity.kind.priority ||
+                        candidate.kind.priority == old.activity.kind.priority && candidate.key == selected))) best = entry
         }
-        return best
+        return best?.activity
     }
 
-    fun dismiss(key: IslandLiveKey) { if (current[key.kind]?.key == key) dismissal.keys.add(key) }
-    fun privacy(user: Int) = current[IslandLiveKind.PRIVACY]?.takeIf { it.uid / 100000 == user }?.privacy ?: 0
+    fun dismiss(key: IslandLiveKey) { if (current[key.kind]?.activity?.key == key) dismissal.keys.add(key) }
+    fun privacy(user: Int) = current[IslandLiveKind.PRIVACY]?.activity?.takeIf { it.uid / 100000 == user }?.privacy ?: 0
     fun clear(preserveDismissal: Boolean = false) {
         current.clear(); selected = null
         if (!preserveDismissal) dismissal.keys.clear()

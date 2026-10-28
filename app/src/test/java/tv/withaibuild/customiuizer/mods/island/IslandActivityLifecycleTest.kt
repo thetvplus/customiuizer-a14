@@ -58,6 +58,77 @@ class IslandActivityLifecycleTest {
     private var metricsReads = 0
     private var metricsInsets = WindowInsets.Builder().build()
 
+    @Test fun musicStartedAfterAClockTakesOverAndPauseHandsBackWithoutRemovingOrMovingTheWindow() {
+        val controller = controller(media = true, liveKinds = setOf("stopwatch"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 45)
+        registry.update(watch.kind, watch)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")?.end()
+        val top = latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY
+        val player = launchablePlayer("music-after-clock")
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        registry.update(watch.kind, watch.copy(clock = IslandLiveClock(-1000, false)))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertTrue("Clock metadata cannot steal newer music",
+            org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 0, 0f).build())
+        controller.updateFromNative(native); drain()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.PAUSE_LIFETIME + 10)); drain()
+        assertEquals(watch.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(controller, "lastContent").liveActivity!!.key)
+        val transition = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")
+        transition?.let { clock ->
+            for (time in 0L until clock.duration step 16L) {
+                clock.currentPlayTime = time
+                assertEquals(top, latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY, .001f)
+            }
+            clock.end()
+        }
+        assertFalse(org.robolectric.util.ReflectionHelpers.getField(controller, "exiting"))
+        assertEquals(1, adds); assertEquals(0, removes)
+        shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+        controller.updateFromNative(native); drain()
+        assertTrue("Real playback resume takes the same shell back",
+            org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
+    @Test fun aSecondNativeActivityKeepsTheFirstIslandsScreenTopThroughoutItsReturn() {
+        val controller = controller(media = true, liveKinds = setOf("stopwatch"))
+        native.player = launchablePlayer("music-before-second-return")
+        controller.updateFromNative(native); revealMedia()
+        val top = latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 46)
+        controller.foregroundChanged(watch.packageName)
+        registry.update(watch.kind, watch)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        val target = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))!!
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        val committedAt = android.os.SystemClock.uptimeMillis()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertFalse("Waiting for confirmation must not start exiting the first activity",
+            org.robolectric.util.ReflectionHelpers.getField(controller, "exiting"))
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        val prepared = org.robolectric.util.ReflectionHelpers.callInstanceMethod<IslandMusicReturnSignal.Frame?>(controller,
+            "liveReturnFrame", org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.lang.Long.TYPE, android.os.SystemClock.uptimeMillis()))!!
+        assertEquals("Waiting preserves the closing activity's prepared target", target, prepared)
+        controller.nativeMusicReturn(target, committedAt); drain()
+        val clock = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        for (time in 0L until clock.duration step 8L) {
+            clock.currentPlayTime = time
+            assertEquals("Second activity must not translate the whole island", top,
+                latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY, .001f)
+        }
+        clock.end()
+        assertEquals(1, adds); assertEquals(0, removes)
+    }
+
     @Test fun aVisibleClockAndKnownPlayingMediaCanSwitchRepeatedlyWithoutARevealDelayOrWindowExit() {
         val controller = controller(media = true, liveKinds = setOf("stopwatch"))
         val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
@@ -1498,6 +1569,29 @@ class IslandActivityLifecycleTest {
         val afterSourceEdge = packets().size
         controller.foregroundChanged("another.app"); drain()
         assertEquals("Unrelated foreground changes do not renew the packet", afterSourceEdge, packets().size)
+    }
+
+    @Test fun aClockInTheBackgroundCannotReplaceTheForegroundPlayersPreparedHomeTarget() {
+        val application: android.app.Application = RuntimeEnvironment.getApplication()
+        val controller = controller(media = true, mediaReturn = true,
+            mediaReturnApps = setOf(context.packageName), liveKinds = setOf("stopwatch"))
+        native.player = launchablePlayer("clock-cannot-take-player-return")
+        controller.updateFromNative(native); revealMedia()
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 47)
+        registry.update(watch.kind, watch)
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        controller.foregroundChanged(context.packageName); drain()
+        val packet = shadowOf(application).broadcastIntents.last {
+            it.action == IslandMusicReturnSignal.STATE && it.getBooleanExtra("active", false)
+        }
+        assertEquals(context.packageName, IslandMusicReturnSignal.decode(packet, android.os.SystemClock.uptimeMillis())!!.frame!!.packageName)
+        val target = IslandMusicReturnSignal.decode(packet, android.os.SystemClock.uptimeMillis())!!.frame!!
+        controller.nativeMusicReturn(target); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertTrue(org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "lastContent") is IslandMediaContent)
+        assertEquals(1, adds); assertEquals(0, removes)
     }
 
     @Test fun lateNativeCommitsCannotCrossAnotherAppSwitchOrReenterThePlayer() {

@@ -601,7 +601,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (dragCaptured) cancelInputs()
         recall = IslandRecallGesture.onCancel()
         leaving = false
-        if (nativeArrival && mediaReturnProgress >= 1f) {
+        // Native page completion can precede the shell's recoil. An attached shell
+        // still owns a visible transform which a new activity must inherit.
+        if (entering && nativeArrival && mediaReturnProgress >= 1f) {
             motion?.cancel(); motion = null
             commitContent(); clearContentEffects(); resetTransform()
             cancelMediaReturn()

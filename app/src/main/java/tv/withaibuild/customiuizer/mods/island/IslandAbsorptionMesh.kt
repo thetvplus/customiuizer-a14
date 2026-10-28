@@ -9,6 +9,16 @@ internal object IslandAbsorptionMesh {
     const val FLOATS = (ROWS + 1) * 4
     private val rowWidths = FloatArray(ROWS + 1) { (it.toFloat() / ROWS).pow(.85f) }
 
+    /** The lower mouth includes its full footprint and an antialias guard. A short
+     * shell may pull it upward; a fixed percentage must never put the neck outside. */
+    fun intakeY(shell: RectF, destination: RectF): Float {
+        val half = maxOf(1f, destination.height() * .08f) * .5f
+        val guard = maxOf(1f, half * 2f)
+        val low = maxOf(shell.top, destination.top) + half + guard
+        val high = minOf(shell.bottom, destination.bottom) - half - guard
+        return if (low <= high) (shell.top + shell.height() * .9f).coerceIn(low, high) else shell.centerY()
+    }
+
     /** A late or faded frame stays native: overlapping translucent layers during
      * commit would briefly increase opacity. Opaque mid-screen releases are admitted. */
     fun mayReplaceNative(progress: Float, alpha: Float) = progress >= 0f && progress < .55f && alpha >= .98f && alpha <= 1f
@@ -43,7 +53,7 @@ internal object IslandAbsorptionMesh {
         ((progress - atCommit) / (1f - atCommit).coerceAtLeast(.01f)).coerceIn(0f, 1f)
 
     fun fill(output: FloatArray, rect: RectF, destination: RectF, progress: Float, bounds: RectF? = null,
-        intakeY: Float = destination.centerY()) {
+        intakeY: Float = destination.centerY()): Float {
         require(output.size == FLOATS)
         val t = progress.coerceIn(0f, 1f)
         // Keep the captured page's aspect while the leading edge enters first. The
@@ -63,11 +73,12 @@ internal object IslandAbsorptionMesh {
         val bottomCenter = rect.centerX() + (destination.centerX() - rect.centerX()) * trailing
         var left = Float.POSITIVE_INFINITY
         var right = Float.NEGATIVE_INFINITY
+        val bend = 1f + 2.6f * t * (1f - t)
         for (row in 0..ROWS) {
             val v = row.toFloat() / ROWS
             val width = topWidth + (bottomWidth - topWidth) * rowWidths[row]
             val center = topCenter + (bottomCenter - topCenter) * v
-            val y = top + (bottom - top) * v.pow(1f + 2.6f * t * (1f - t))
+            val y = top + (bottom - top) * v.pow(bend)
             val index = row * 4
             output[index] = center - width * .5f; output[index + 1] = y
             output[index + 2] = center + width * .5f; output[index + 3] = y
@@ -76,6 +87,7 @@ internal object IslandAbsorptionMesh {
         // Off-centre releases can have their widest edge on an interior row.
         // Test the whole drawn mesh before it is allowed to merge with the island.
         bounds?.set(left, top, right, bottom)
+        return trailing
     }
 
     /** Remaining trailing-body travel, measured in the same geometry used to draw. */

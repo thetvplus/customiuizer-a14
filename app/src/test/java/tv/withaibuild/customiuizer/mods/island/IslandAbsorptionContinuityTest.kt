@@ -16,15 +16,31 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandAbsorptionContinuityTest {
-    @Test fun theNeckEndsAtHorizontalCentreAndNinetyPercentOfTheActualIslandHeight() {
+    @Test fun theEntireNeckAndItsEdgeGuardFitInsideTheActualIslandAtEverySupportedHeight() {
+        for (height in listOf(32f, 36f, 40f, 64f, 100f, 192f)) {
+            val shell = RectF(300f, 20f, 700f, 20f + height)
+            val landing = RectF(shell).apply { inset(shell.width() * .08f, height * .07f) }
+            val intake = IslandAbsorptionMesh.intakeY(shell, landing)
+            val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
+            val bounds = RectF()
+            IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), landing, 1f, bounds, intake)
+            assertEquals(shell.centerX(), bounds.centerX(), .0001f)
+            assertTrue(landing.contains(bounds))
+            assertTrue(bounds.bottom < shell.bottom - 1f)
+            assertTrue(intake < shell.top + height * .9f)
+            assertEquals(0f, IslandAbsorptionMesh.mergeOpacity(bounds, shell), .00001f)
+        }
+    }
+
+    @Test fun theNeckCannotLeaveAnOpaqueEndpoint() {
         val shell = RectF(300f, 20f, 700f, 120f)
         val landing = RectF(332f, 27f, 668f, 113f)
-        val intake = shell.top + shell.height() * .9f
+        val intake = IslandAbsorptionMesh.intakeY(shell, landing)
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
         val bounds = RectF()
         IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), landing, 1f, bounds, intake)
         assertEquals(shell.centerX(), bounds.centerX(), .0001f)
-        assertEquals(110f, bounds.centerY(), .0001f)
+        assertEquals(intake, bounds.centerY(), .0001f)
         assertTrue(shell.contains(bounds))
         assertEquals("The lower entry cannot leave an opaque endpoint", 0f,
             IslandAbsorptionMesh.mergeOpacity(bounds, shell), .00001f)
@@ -43,20 +59,32 @@ class IslandAbsorptionContinuityTest {
         }
         val committed = RectF(handoff.source)
         val progress = handoff.progress(.3f, RectF(180f, 200f, 820f, 1300f), presented = true)
-        assertEquals(committed, handoff.source)
+        assertEquals(RectF(180f, 200f, 820f, 1300f), handoff.source)
         assertEquals(.125f, progress, .00001f)
         IslandAbsorptionMesh.fill(vertices, handoff.source, target, progress, bounds)
         assertTrue(bounds.top < committed.top)
         assertTrue(bounds.bottom > target.bottom)
     }
 
-    @Test fun theActualRecoilWidthPeaksNearTheLastTenPercentAndSettlesAfterPageCompletionAtDifferentRefreshRates() {
+    @Test fun theFirstDeformingFrameKeepsTheNativePagesReleaseTravelInsteadOfStoppingAtAFrozenRect() {
+        val handoff = IslandAbsorptionHandoff()
+        val target = RectF(360f, 20f, 640f, 100f)
+        handoff.progress(.2f, RectF(80f, 400f, 920f, 1800f), false)
+        val native = RectF(85f, 385f, 915f, 1760f)
+        val p = handoff.progress(.21f, native, true)
+        val bounds = RectF()
+        IslandAbsorptionMesh.fill(FloatArray(IslandAbsorptionMesh.FLOATS), handoff.source, target, p, bounds)
+        assertTrue("The trailing edge must keep the native frame's motion", bounds.bottom <= native.bottom)
+        assertTrue(bounds.bottom < 1770f)
+    }
+
+    @Test fun theRecoilStartsOnlyAfterThePageDisappearsAndUsesTheSharedWeightedCatchAtDifferentRefreshRates() {
         for (hz in listOf(60, 90, 120)) {
             val response = IslandMotion.AbsorptionResponse(154f, 240f, 40f, 248f, 6f, 0f, .8f)
             var maximum = 0f
             var maximumProgress = 0f
             var last = 154f
-            for (i in 0..hz) {
+            for (i in 0..(hz * 1.2f).toInt()) {
                 val time = i / hz.toFloat()
                 val page = (time / .8f).coerceAtMost(1f)
                 val width = response.sample(page, time)
@@ -64,9 +92,10 @@ class IslandAbsorptionContinuityTest {
                 assertTrue("No release-frame jump at $hz Hz", kotlin.math.abs(width - last) < 12f)
                 if (width > maximum) { maximum = width; maximumProgress = page }
                 last = width
-                if (page == 1f && time < .95f) assertFalse(response.settled(time))
+                if (page < 1f) assertTrue("No outward bounce before swallowing", width <= 240.001f)
+                if (page == 1f && time < 1.04f) assertFalse(response.settled(time))
             }
-            assertTrue("Recoil peak belongs to the page tail at $hz Hz: $maximumProgress", maximumProgress in .87f.. .94f)
+            assertEquals("The page must be fully swallowed before the peak at $hz Hz", 1f, maximumProgress, 0f)
             assertEquals(246f, maximum, .15f)
             response.sample(1f, 1.2f)
             assertTrue(response.settled(1.2f)); assertEquals(240f, response.value, 0f)

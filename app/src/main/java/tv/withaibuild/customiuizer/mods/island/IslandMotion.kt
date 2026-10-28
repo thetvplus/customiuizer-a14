@@ -95,12 +95,12 @@ internal object IslandMotion {
         return 5.5f * (1f - t) * (1f - t) * (1f - 4f * t) / span
     }
     const val CATCH_PEAK = .580078125f
+    private const val CONTENT_CATCH_PEAK = .45f
     fun boundedCatchWeight(width: Float, maximum: Float, requested: Float, nativeWindow: Boolean = true): Float =
         minOf(requested, (maximum - width).coerceAtLeast(0f) /
-            (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else .45f)).coerceAtLeast(0f)
-    /** Spatially coordinate the incoming form with the real page tail, then let
-     * the existing finite clock settle a physical spring after the 90% peak.
-     * Page completion cannot truncate this recoil. No extra animator or polling. */
+            (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else CONTENT_CATCH_PEAK)).coerceAtLeast(0f)
+    /** Prepare the receiving form during travel. Once the page is fully swallowed,
+     * use the existing weighted content catch on the same finite clock. */
     class AbsorptionResponse(private val from: Float, private val target: Float,
         private val minimum: Float, private val maximum: Float, amplitude: Float,
         initialVelocity: Float, seconds: Float, private val initialProgress: Float = 0f) {
@@ -108,15 +108,13 @@ internal object IslandMotion {
         private val slope = initialVelocity * seconds * .55f
         private val late = initialProgress >= .9f
         private val baseEnd = if (initialProgress < .55f) .55f
-            else initialProgress + (.9f - initialProgress) * .65f
+            else initialProgress + (1f - initialProgress) * .65f
         private val spring = Spring().apply {
-            setVelocity(if (late) initialVelocity else 0f)
-            retarget(if (late) from else 1f, if (late) target else 0f,
-                (if (late) CONTENT_ARRIVAL else REBOUND) / 1000f, late, elastic = !late)
+            setVelocity(initialVelocity)
+            retarget(from, target, CONTENT_ARRIVAL / 1000f, true)
         }
-        private var peakAt = Float.NaN
+        private var swallowedAt = Float.NaN
         private var lastTime = 0f
-        private var lastProgress = initialProgress
         var value = from
             private set
         var velocity = initialVelocity
@@ -125,31 +123,28 @@ internal object IslandMotion {
         fun sample(progress: Float, elapsed: Float): Float {
             val time = maxOf(lastTime, elapsed)
             val p = progress.coerceIn(initialProgress, 1f)
-            if (!late && peakAt.isNaN() && p >= .9f) {
-                val fraction = if (p > lastProgress) ((.9f - lastProgress) / (p - lastProgress)).coerceIn(0f, 1f) else 1f
-                peakAt = lastTime + (time - lastTime) * fraction
-            }
+            if (!late && swallowedAt.isNaN() && p >= 1f) swallowedAt = time
             val previous = value
-            value = if (late) spring.sample(time, minimum, maximum) else if (peakAt.isFinite()) {
-                target + amplitude * spring.sample(time - peakAt)
+            val recoil = if (swallowedAt.isFinite()) (time - swallowedAt) / (REBOUND / 1000f) else 0f
+            value = if (late) spring.sample(time, minimum, maximum) else if (swallowedAt.isFinite()) {
+                target + amplitude * mediaReturnCatch(recoil, nativeWindow = false) / CONTENT_CATCH_PEAK
             } else {
                 val t = ((p - initialProgress) / (baseEnd - initialProgress).coerceAtLeast(.01f)).coerceIn(0f, 1f)
                 val t2 = t * t
                 val base = from + (target - from) * t2 * (3f - 2f * t) + slope * t * (1f - t) * (1f - t)
-                val contact = maxOf(.55f, initialProgress)
-                val catch = ((p - contact) / (.9f - contact).coerceAtLeast(.01f)).coerceIn(0f, 1f)
-                base + amplitude * catch * catch * (3f - 2f * catch)
+                base
             }
-            velocity = if (late) spring.velocity else if (peakAt.isFinite()) amplitude * spring.velocity
+            velocity = if (late) spring.velocity else if (swallowedAt.isFinite())
+                amplitude * catchDerivative(recoil, nativeWindow = false) / (CONTENT_CATCH_PEAK * REBOUND / 1000f)
                 else if (time > lastTime) (value - previous) / (time - lastTime) else velocity
             if (settled(time)) { value = target; velocity = 0f }
             if (value < minimum) { value = minimum; velocity = maxOf(0f, velocity) }
             if (value > maximum) { value = maximum; velocity = minOf(0f, velocity) }
-            lastTime = time; lastProgress = p
+            lastTime = time
             return value
         }
         fun settled(time: Float) = if (late) time >= CONTENT_ARRIVAL / 1000f
-            else peakAt.isFinite() && time - peakAt >= REBOUND / 1000f
+            else swallowedAt.isFinite() && time - swallowedAt >= REBOUND / 1000f
     }
 
     /** Compression approaches the physical height limit without a flat clamp. */

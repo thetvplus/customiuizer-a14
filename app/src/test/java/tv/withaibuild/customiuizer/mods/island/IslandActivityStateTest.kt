@@ -4,6 +4,30 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandActivityStateTest {
+    @Test fun newerPersistentActivityWinsAndEndingItRevealsThePreviousSlotWithoutClearingIt() {
+        val state = IslandActivityState<String, String>()
+        state.setActivity("clock", "00:12")
+        state.setMedia("player", "music")
+        assertNull(state.activity(0)); assertEquals("music", state.media(0))
+        state.setActivity("clock", "00:13")
+        state.setMedia("player", "track metadata")
+        assertEquals("player", state.identity(1))
+        state.mediaEligible = false
+        assertEquals("00:13", state.activity(2))
+        state.mediaEligible = true
+        assertEquals("player", state.identity(3))
+        state.setMedia("player", null)
+        assertEquals("clock", state.identity(4)); assertEquals("00:13", state.activity(4))
+        state.setMedia("player", "resumed"); state.activateMedia("player")
+        assertEquals("player", state.identity(5))
+        state.setActivity("alarm", "ringing", urgent = true)
+        state.activateMedia("player")
+        assertEquals("alarm", state.identity(6))
+        state.setActivity(null, null)
+        assertEquals("resumed", state.media(7))
+        state.dismiss(); assertNull(state.media(8)); assertNull(state.identity(8))
+    }
+
     @Test fun liveActivityPreemptsMediaButTemporaryFeedbackRestoresTheSameLiveIdentity() {
         val state = IslandActivityState<String, String>()
         state.setMedia("player", "music")
