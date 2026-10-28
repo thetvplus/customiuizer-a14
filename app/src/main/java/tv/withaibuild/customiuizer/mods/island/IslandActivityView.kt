@@ -318,7 +318,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val previous = pendingContent ?: displayedContent
         val changed = recordingChanged || previous?.matches(caption, drawable, media, waveform, avatar, status, expanded, photo, clock, detail) != true
         var visualChanged = changed
-        if (changed) {
+        if (changed && !recordingChanged && !albumFlip && pendingContent != null &&
+            displayedContent?.matches(caption, drawable, media, waveform, avatar, status, expanded, photo, clock, detail) == true) {
+            // A -> B -> A before B becomes visible: keep A's prepared views and
+            // recover from the current opacity instead of fading out/rebinding A.
+            pendingContent = null; contentFadeRemaining = 0L; albumFlip = false
+        } else if (changed) {
             val content = Content(caption, drawable, media, waveform, avatar, status, expanded, photo, clock, detail)
             if (previous != null && content.sameCompactVisual(previous)) {
                 // Compact media has no visible label. Metadata-only updates, including

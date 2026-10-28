@@ -132,6 +132,37 @@ class IslandTransitionContinuityTest {
         }
         clock.end()
     }
+
+    @Test fun rapidReturnToTheStillDisplayedSourceCancelsTheUnseenReplacement() {
+        val originalArt = activity.getDrawable(android.R.drawable.ic_dialog_info)
+        fun bindOriginal() = shell.bind("Original", null, originalArt, false, false, false, 0, false)
+        bindOriginal()
+        shell.transition(184, 40, 184, 40, false)
+        motion().end()
+        val original = getField<Any>(shell, "displayedContent")
+        repeat(12) {
+            label("Unseen $it")
+            shell.transition(184, 40, 184, 40, false)
+            val outgoing = motion()
+            outgoing.currentPlayTime = 16
+            val opacity = shell.getChildAt(0).alpha
+            assertEquals("Original", title.text.toString())
+            assertTrue(bindOriginal())
+            assertNull("Returning before replacement must reuse the visible content",
+                getField<Any?>(shell, "pendingContent"))
+            assertSame(original, getField<Any>(shell, "displayedContent"))
+            assertEquals(opacity, shell.getChildAt(0).alpha, .001f)
+            shell.transition(184, 40, 184, 40, false)
+            val recovery = motion()
+            outgoing.end()
+            assertSame(recovery, motion())
+            recovery.currentPlayTime = 60
+            assertTrue(shell.getChildAt(0).alpha >= opacity)
+            recovery.end()
+            assertSame(original, getField<Any>(shell, "displayedContent"))
+            assertEquals(1f, shell.getChildAt(0).alpha, .001f)
+        }
+    }
     private lateinit var activity: Activity
     private lateinit var shell: IslandActivityView
     private val title get() = getField<TextView>(shell, "title")
