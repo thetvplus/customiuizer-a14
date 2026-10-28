@@ -20,7 +20,9 @@ Dock 的固定扩边取样在更大捏合位移下失去覆盖，已由修前失
 
 本轮证据在仓库外 `customiuizer-a14-evidence/island-motion-20261028/`，设备基线在 `island-device-20261028/`。完整验证及候选产物以最终收据为准；新效果尚未安装、缺少候选实机录屏，白闪、吸入中心融合、Dock 捏合 / 解锁与 POCO 模糊仍待验。ADB 授权窗口已结束，没有继续设备操作；原倒计时未停止 / 重置、已自然到时。临时秒表、常亮和设备侧采集文件缺少最终恢复读回，不能写作已清理或已锁屏。
 
-Deep 的完整 `verify.py full` 与 Debug lint 已通过；最后只补齐 MIUI 类内 lambda / POCO Consumer 两个已核实的壁纸回调 ABI，由全套源码契约及两个关联套件 15 项复验通过。全量工具 677 项通过、5 项既定跳过；两个矩阵输出确定性通过。既有独立 DEX 解析器与 DexSQL 交叉核验 MIUI 13 / POCO 12 个必需声明，均无缺失。压缩候选、API 边界及必需独立 mutation 另以最终收据更新，不把本机检查替代设备录屏。用户后续明确跳过手机测试及手机收尾，本轮不再尝试连接。
+Deep 的完整 `verify.py full` 与 Debug lint 已通过；最后只补齐 MIUI 类内 lambda / POCO Consumer 两个已核实的壁纸回调 ABI，由全套源码契约及两个关联套件 15 项复验通过。全量工具 677 项通过、5 项既定跳过；两个矩阵输出确定性及 11 / 11 必需独立 mutation 通过，无存活、门禁或清理错误。既有独立 DEX 解析器与 DexSQL 交叉核验 MIUI 13 / POCO 12 个必需声明，均无缺失。用户后续明确跳过手机测试及手机收尾，本轮不再尝试连接。
+
+源码 `975e2331abb10053b6b62e0bb2397331028464cb` 已生成原证书签名的本地 Develop 试用包 `CustoMIUIzer-A14-r14.25.6-975e23-develop.apk`，4,298,634 字节，SHA-256 `cde617fb61720fb95215f8db713f3358cdfbbfdcd51ac999308b3320daeab62a`，已复制到本机下载目录，旧包保留。R8、fatal lint、SDK 34 / arm64 / 非调试、V2 历史证书、ZIP / ELF 16 KiB 与工程 revision 来源通过；同 APK 的 Hook API 定义及八个设置入口直接 API 引用为零，setId / getId 各一、replaceHook 为零，成员级 mapping 归属共享 HookInstallation 策略。APK、mapping、SQL 与最终收据在上述证据的 `candidate-975e2331/`；Develop 内嵌八位 revision，完整源码 SHA 由外部收据关联，不冒充公开正式发行。手机没有安装本候选；本地临时视频依赖和检查索引已移除，保留必要录屏与日志，手机侧恢复 / 锁屏保持未确认。
 
 上轮完整 Host、Debug lint、677 项工具及签名 / R8 门禁曾通过，但缺少共享进度终止帧的行为覆盖。本地包 `1ce847ab` 在实机触发 SystemUI `StackOverflowError`：自身帧回调内调用 `ValueAnimator.end()`，A14 同步发出终止帧，重复进入同一回调。使用该 APK 的 mapping 已对齐设备堆栈，故障包已撤回，手机先回退升级前的 `03fb76b7` 正式包并保留设置；回退在用户补充“先修代码”之前已完成。
 
