@@ -98,11 +98,77 @@ internal object IslandMotion {
     fun boundedCatchWeight(width: Float, maximum: Float, requested: Float, nativeWindow: Boolean = true): Float =
         minOf(requested, (maximum - width).coerceAtLeast(0f) /
             (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else .45f)).coerceAtLeast(0f)
-    /** Peak at 90% of the trailing edge's physical travel, with zero endpoint velocity. */
-    fun absorptionCatch(tailProgress: Float): Float {
-        val t = tailProgress.coerceIn(0f, 1f)
-        val phase = if (t <= .9f) ((t - .55f) / .35f).coerceIn(0f, 1f) else (1f - t) / .1f
-        return phase * phase * (3f - 2f * phase)
+    /** Spatially coordinate the incoming form with the real page tail, then let
+     * the existing finite clock settle a physical spring after the 90% peak.
+     * Page completion cannot truncate this recoil. No extra animator or polling. */
+    class AbsorptionResponse(private val from: Float, private val target: Float,
+        private val minimum: Float, private val maximum: Float, amplitude: Float,
+        initialVelocity: Float, seconds: Float, private val initialProgress: Float = 0f) {
+        private val amplitude = amplitude.coerceIn(0f, (maximum - target).coerceAtLeast(0f))
+        private val slope = initialVelocity * seconds * .55f
+        private val late = initialProgress >= .9f
+        private val baseEnd = if (initialProgress < .55f) .55f
+            else initialProgress + (.9f - initialProgress) * .65f
+        private val spring = Spring().apply {
+            setVelocity(if (late) initialVelocity else 0f)
+            retarget(if (late) from else 1f, if (late) target else 0f,
+                (if (late) CONTENT_ARRIVAL else REBOUND) / 1000f, late, elastic = !late)
+        }
+        private var peakAt = Float.NaN
+        private var lastTime = 0f
+        private var lastProgress = initialProgress
+        var value = from
+            private set
+        var velocity = initialVelocity
+            private set
+
+        fun sample(progress: Float, elapsed: Float): Float {
+            val time = maxOf(lastTime, elapsed)
+            val p = progress.coerceIn(initialProgress, 1f)
+            if (!late && peakAt.isNaN() && p >= .9f) {
+                val fraction = if (p > lastProgress) ((.9f - lastProgress) / (p - lastProgress)).coerceIn(0f, 1f) else 1f
+                peakAt = lastTime + (time - lastTime) * fraction
+            }
+            val previous = value
+            value = if (late) spring.sample(time, minimum, maximum) else if (peakAt.isFinite()) {
+                target + amplitude * spring.sample(time - peakAt)
+            } else {
+                val t = ((p - initialProgress) / (baseEnd - initialProgress).coerceAtLeast(.01f)).coerceIn(0f, 1f)
+                val t2 = t * t
+                val base = from + (target - from) * t2 * (3f - 2f * t) + slope * t * (1f - t) * (1f - t)
+                val contact = maxOf(.55f, initialProgress)
+                val catch = ((p - contact) / (.9f - contact).coerceAtLeast(.01f)).coerceIn(0f, 1f)
+                base + amplitude * catch * catch * (3f - 2f * catch)
+            }
+            velocity = if (late) spring.velocity else if (peakAt.isFinite()) amplitude * spring.velocity
+                else if (time > lastTime) (value - previous) / (time - lastTime) else velocity
+            if (settled(time)) { value = target; velocity = 0f }
+            if (value < minimum) { value = minimum; velocity = maxOf(0f, velocity) }
+            if (value > maximum) { value = maximum; velocity = minOf(0f, velocity) }
+            lastTime = time; lastProgress = p
+            return value
+        }
+        fun settled(time: Float) = if (late) time >= CONTENT_ARRIVAL / 1000f
+            else peakAt.isFinite() && time - peakAt >= REBOUND / 1000f
+    }
+
+    /** Compression approaches the physical height limit without a flat clamp. */
+    fun compressedScale(origin: Float, delta: Float, minimum: Float): Float {
+        if (delta >= 0f) return origin + delta
+        val room = (origin - minimum).coerceAtLeast(0f)
+        return if (room == 0f) origin else origin + room * delta / (room - delta)
+    }
+    fun compressionOrigin(current: Float, delta: Float, minimum: Float): Float {
+        if (delta >= 0f) return current - delta
+        val height = (current - minimum).coerceAtLeast(0f)
+        return if (height == 0f) current else minimum +
+            (height + kotlin.math.sqrt(height * height - 4f * height * delta)) * .5f
+    }
+    fun compressionVelocity(origin: Float, delta: Float, minimum: Float): Float {
+        if (delta >= 0f) return 1f
+        val room = (origin - minimum).coerceAtLeast(0f)
+        val ratio = if (room > 0f) room / (room - delta) else 0f
+        return ratio * ratio
     }
 
     fun arrivalScale(progress: Float): Float = .96f + .04f *

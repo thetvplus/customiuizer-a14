@@ -23,6 +23,45 @@ import java.nio.ByteOrder
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandNativeReturnCompletionTest {
+    @Test fun anArrivalInterruptingATopExitCannotCarryItsUpwardVelocityIntoTheNewIsland() {
+        val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val memory = SharedMemory.create("island-return-origin", 4)
+        val writer = memory.mapReadWrite().order(ByteOrder.nativeOrder())
+        val shell = IslandActivityView(host).apply { absorption = true }
+        host.setContentView(shell, FrameLayout.LayoutParams(240, 40))
+        ShadowChoreographer.setPaused(true)
+        try {
+            shell.bind("Music", null, ColorDrawable(Color.RED), true, false, false, 0, false)
+            shell.geometry(240, 40, 40)
+            shell.prepareEntry()
+            shell.transition(240, 40, 240, 40, entering = true)
+            getField<ValueAnimator>(shell, "motion").end()
+            shell.exit {}
+            getField<ValueAnimator>(shell, "motion").currentPlayTime = 55L
+            val origin = shell.translationY + shell.pivotY * (1f - shell.scaleY)
+            assertTrue(origin < 0f)
+            shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
+            shell.resumeEntry()
+            shell.prepareReturnFromCurrent()
+            shell.transition(240, 40, 240, 40, entering = false)
+            val clock = getField<ValueAnimator>(shell, "motion")
+            var previous = origin
+            for (step in 0..10) {
+                writer.putInt(0, step * 100_000)
+                clock.currentPlayTime = step * 25L
+                val top = shell.translationY + shell.pivotY * (1f - shell.scaleY)
+                assertTrue("The new arrival cannot continue travelling up", top >= previous - .0001f)
+                assertTrue(top <= .0001f)
+                previous = top
+            }
+        } finally {
+            getField<ValueAnimator?>(shell, "motion")?.cancel()
+            shell.cancelMediaReturn()
+            SharedMemory.unmap(writer); memory.close(); host.finish()
+            ShadowChoreographer.setPaused(false)
+        }
+    }
+
     @Test fun nativeCompletionAndCancellationEndOnceWithoutReenteringTheFrameCallback() {
         for (absorption in listOf(false, true)) for (terminal in intArrayOf(1_000_000, -1_000_000)) {
             val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
@@ -51,6 +90,11 @@ class IslandNativeReturnCompletionTest {
                 assertEquals(0, endings)
                 writer.putInt(0, terminal)
                 clock!!.currentPlayTime = 400L
+                if (absorption && terminal > 0) {
+                    assertEquals("Page completion must not cut off the island's damped settling", 0, endings)
+                    assertSame(clock, getField<Any?>(shell, "motion"))
+                    clock!!.currentPlayTime = 700L
+                }
                 assertEquals("Exactly one terminal callback", 1, endings)
                 clock!!.currentPlayTime = 800L // A stale pulse cannot resume the retired owner.
                 assertNull(getField<Any?>(shell, "motion"))

@@ -48,6 +48,24 @@ class IslandMusicGestureTest {
         shell.onGesture = { gestures.add(it) }; shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
     }
     @After fun cleanup() { host.finish() }
+    @Test fun anOffsetCameraCannotTranslateTheWholeIslandDuringASymmetricDrag() {
+        shell.simplified = false
+        shell.cameraAnchor(4f, 16f)
+        fun center() = shell.pivotY * (1f - shell.scaleY) + shell.translationY + shell.height * shell.scaleY * .5f
+        val resting = center()
+        touch(MotionEvent.ACTION_DOWN)
+        for (y in listOf(45f, 70f, 120f, 70f)) {
+            touch(MotionEvent.ACTION_MOVE, y = y)
+            assertEquals("The body deforms about its own stable centre", resting, center(), .001f)
+        }
+        touch(MotionEvent.ACTION_UP, y = 70f)
+        val rebound = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        for (t in 0..16) {
+            rebound.currentPlayTime = rebound.duration * t / 16
+            assertEquals(resting, center(), .001f)
+        }
+        rebound.end()
+    }
     @Test fun downwardDragRetainsTheInterruptedCameraRelativeOrigin() {
         shell.simplified = false
         shell.cameraAnchor(20f, 16f)

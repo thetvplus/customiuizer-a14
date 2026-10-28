@@ -21,12 +21,29 @@ internal object IslandAbsorptionMesh {
         return remaining * remaining * (3f - 2f * remaining)
     }
 
+    /** At most 6% softer at the neck, after takeover, never across the page body.
+     * Spatial contact and the first 14% of travel both ease in from zero. */
+    fun contactColors(colors: IntArray, vertices: FloatArray, destination: RectF, progress: Float,
+        contactY: Float = destination.centerY()) {
+        val phase = (progress / .14f).coerceIn(0f, 1f)
+        val strength = .06f * phase * phase * (3f - 2f * phase)
+        for (row in 0..ROWS) {
+            val neck = (1f - row / (ROWS * .16f)).coerceIn(0f, 1f)
+            val contact = (1f - kotlin.math.abs(vertices[row * 4 + 1] - contactY) /
+                destination.height().coerceAtLeast(1f)).coerceIn(0f, 1f)
+            val alpha = (255f * (1f - strength * neck * neck * contact)).toInt().coerceIn(0, 255)
+            val color = (alpha shl 24) or 0x00ffffff
+            colors[row * 2] = color; colors[row * 2 + 1] = color
+        }
+    }
+
     /** Native progress includes the drag before release. Admission and mesh travel
      * belong to the accepted return, including a release from an already small page. */
     fun returnProgress(progress: Float, atCommit: Float): Float =
         ((progress - atCommit) / (1f - atCommit).coerceAtLeast(.01f)).coerceIn(0f, 1f)
 
-    fun fill(output: FloatArray, rect: RectF, destination: RectF, progress: Float, bounds: RectF? = null) {
+    fun fill(output: FloatArray, rect: RectF, destination: RectF, progress: Float, bounds: RectF? = null,
+        intakeY: Float = destination.centerY()) {
         require(output.size == FLOATS)
         val t = progress.coerceIn(0f, 1f)
         // Keep the captured page's aspect while the leading edge enters first. The
@@ -35,8 +52,8 @@ internal object IslandAbsorptionMesh {
         val leading = grip * grip * (3f - 2f * grip)
         val trailing = t.pow(2.25f)
         val holeHeight = maxOf(1f, destination.height() * .08f)
-        val holeTop = destination.centerY() - holeHeight * .5f
-        val holeBottom = destination.centerY() + holeHeight * .5f
+        val holeTop = intakeY - holeHeight * .5f
+        val holeBottom = intakeY + holeHeight * .5f
         val neck = minOf(destination.width() * .28f, destination.height() * .8f)
         val top = rect.top + (holeTop - rect.top) * leading
         val bottom = rect.bottom + (holeBottom - rect.bottom) * trailing

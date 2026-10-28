@@ -57,6 +57,37 @@ class IslandActivityLifecycleTest {
     private var metricsHeight = 2400
     private var metricsReads = 0
     private var metricsInsets = WindowInsets.Builder().build()
+
+    @Test fun aVisibleClockAndKnownPlayingMediaCanSwitchRepeatedlyWithoutARevealDelayOrWindowExit() {
+        val controller = controller(media = true, liveKinds = setOf("stopwatch"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val activity = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 44)
+        val session = MediaSession(context, "clock-music-continuity")
+        try {
+            val player = MediaController(context, session.sessionToken)
+            shadowOf(player).setPackageName(context.packageName)
+            shadowOf(player).setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+            native.player = player
+            controller.updateFromNative(native); revealMedia()
+            registry.update(activity.kind, activity)
+            controller.foregroundChanged(context.packageName); drain()
+            assertEquals(activity.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(controller, "lastContent").liveActivity!!.key)
+            repeat(12) {
+                controller.foregroundChanged(activity.packageName)
+                // No advancing time, IO or drawing is necessary to select the known source.
+                val current = org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "lastContent")
+                assertTrue("Music must be ready at the activity foreground edge", current is IslandMediaContent)
+                assertEquals(player.sessionToken, (current as IslandMediaContent).token)
+                assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(controller, "mediaRevealAt"))
+                assertFalse(org.robolectric.util.ReflectionHelpers.getField(controller, "exiting"))
+                drain()
+                controller.foregroundChanged(context.packageName); drain()
+                assertEquals(activity.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(controller, "lastContent").liveActivity!!.key)
+            }
+            assertEquals(1, adds - removes)
+        } finally { session.release() }
+    }
     private val window = Proxy.newProxyInstance(WindowManager::class.java.classLoader,
         arrayOf(WindowManager::class.java)) { _, method, args ->
         when (method.name) {

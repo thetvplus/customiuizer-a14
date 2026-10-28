@@ -675,6 +675,18 @@ internal class IslandActivityController(
     fun foregroundChanged(packageName: String?) = onMain {
         if (foregroundPackage == packageName) return@onMain
         val previous = foregroundPackage
+        // A visible, still-current activity is handing this same island to an
+        // already verified playing session. Keep that presentation while its
+        // normal asynchronous native refresh revalidates it; hidden/shade/user
+        // baselines and new sessions still require their existing admission.
+        val activitySwitch = !disposed && state.allowed && attached && !exiting &&
+            !foregroundBaseline && !shadeBaseline && presentation.phase == IslandWindowPresentation.Phase.VISIBLE &&
+            (lastContent as? IslandToastContent)?.liveActivity?.let {
+                it.packageName == packageName && liveForPackage(packageName)?.key == it.key
+            } == true && media?.let {
+                it.playing && it.packageName == previous && selected?.sessionToken == it.token &&
+                    state.uncoveredMedia()?.token == it.token && !mediaSourceExcluded(it)
+            } == true
         // Feedback seen in the recording UI hands back to that same recording on
         // departure. This is a presentation handoff, not suppression of ringer events.
         liveForPackage(previous)?.takeIf { it.kind == IslandLiveKind.RECORDER }?.let { recording ->
@@ -723,14 +735,14 @@ internal class IslandActivityController(
                 val returning = committed != null && state.allowed && options.returnsMedia(it.packageName) && it.playing &&
                     !reducedMotion() && ValueAnimator.areAnimatorsEnabled()
                 if (returning) mediaReturn = MediaReturn(it.token, now + IslandMotion.RETURN_TIMEOUT)
-                mediaRevealAt = if (returning) null else now + IslandMotion.MEDIA_DELAY
+                mediaRevealAt = if (returning || activitySwitch) null else now + IslandMotion.MEDIA_DELAY
             }
         }
         if (pendingRead || sourceChanged) {
             val manager = nativeManager.get()
             if (manager == null) clearMedia()
             else if (options.media && state.allowed) {
-                foregroundBaseline = true
+                if (!activitySwitch) foregroundBaseline = true
                 updateFromNative(manager)
             }
         }

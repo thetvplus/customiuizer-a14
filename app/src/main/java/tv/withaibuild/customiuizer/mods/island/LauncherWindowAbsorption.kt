@@ -109,7 +109,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
             if (root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) return null
             api.surface(element, copy)?.takeIf { it.isValid } ?: return null
         } else null
-        val active = Session(element, copy, root, surface, frame.landingRectangle(), mesh)
+        val active = Session(element, copy, root, surface, frame.landingRectangle(), frame.rectangle(), mesh)
         session = active
         val generation = epoch
         if (surface != null) captureJob = scope.launch(Dispatchers.Default) {
@@ -157,21 +157,23 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         if (active.texture == null) return
         if (!active.installed) {
             if (!IslandAbsorptionMesh.mayReplaceNative(active.progress, active.nativeAlpha)) { cancel(); return }
-            active.firstProgress = active.progress
             active.installed = true
             root.overlay.add(active)
             root.addOnAttachStateChangeListener(active)
         }
-        val remaining = ((active.progress - active.firstProgress) / (1f - active.firstProgress).coerceAtLeast(.01f)).coerceIn(0f, 1f)
         root.getLocationOnScreen(active.location)
         active.rect.set(rect); active.rect.offset(-active.location[0].toFloat(), -active.location[1].toFloat())
-        if (active.sourceRect.isEmpty) active.sourceRect.set(active.rect)
+        val remaining = active.handoff.progress(active.progress, active.rect, active.presented)
         active.destination.set(active.target); active.destination.offset(-active.location[0].toFloat(), -active.location[1].toFloat())
+        active.shellDestination.set(active.shellTarget)
+        active.shellDestination.offset(-active.location[0].toFloat(), -active.location[1].toFloat())
+        val intakeY = active.shellDestination.top + active.shellDestination.height() * .9f
         active.radius = radius.coerceAtLeast(0f)
-        IslandAbsorptionMesh.fill(active.vertices, active.sourceRect, active.destination, remaining, active.rect)
+        IslandAbsorptionMesh.fill(active.vertices, active.handoff.source, active.destination, remaining, active.rect, intakeY)
+        IslandAbsorptionMesh.contactColors(active.colors, active.vertices, active.destination, remaining, intakeY)
         // Keep release opacity until the entire page lies inside the island. Then
         // reveal the real island underneath, rather than leave a separately coloured dot.
-        active.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.mergeOpacity(active.rect, active.destination)).toInt().coerceIn(0, 255)
+        active.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.mergeOpacity(active.rect, active.shellDestination)).toInt().coerceIn(0, 255)
         if (active.presented) active.progressChannel.write(IslandAbsorptionMesh.tailProgress(remaining))
         active.setBounds(0, 0, root.width, root.height)
         active.invalidateSelf()
@@ -204,7 +206,12 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
 
     fun lease(element: Any): Any? = session?.takeIf { it.element.get() === element }
     fun end(element: Any, lease: Any? = session, completed: Boolean = false) {
-        if (lease != null && session === lease && session?.element?.get() === element) cancel(restoreNative = !completed)
+        if (lease != null && session === lease && session?.element?.get() === element) {
+            // Native completion can follow a rounded final progress sample. Preserve
+            // completion across unmapping so SystemUI can finish its own recoil.
+            if (completed) session?.progressChannel?.write(1f)
+            cancel(restoreNative = !completed)
+        }
     }
     fun cancel(restoreNative: Boolean = true) {
         epoch++
@@ -226,19 +233,21 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
     }
 
     private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl?,
-        val target: RectF, val mesh: Boolean) : Drawable(), View.OnAttachStateChangeListener {
+        val target: RectF, val shellTarget: RectF, val mesh: Boolean) : Drawable(), View.OnAttachStateChangeListener {
         val element = WeakReference(element)
         val rootWidth = root.width
         val rootHeight = root.height
         val root = WeakReference(root)
         val progressChannel = IslandReturnProgress.Producer()
+        val handoff = IslandAbsorptionHandoff()
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
+        val colors = IntArray((IslandAbsorptionMesh.ROWS + 1) * 2)
         val location = IntArray(2)
-        val rect = RectF(); val destination = RectF(); val sourceRect = RectF()
+        val rect = RectF(); val destination = RectF(); val shellDestination = RectF()
         val path = Path()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         var texture: Bitmap? = null
-        var progress = 0f; var firstProgress = 0f; var radius = 0f
+        var progress = 0f; var radius = 0f
         var atCommit = Float.NaN
         var nativeAlpha = 1f
         var installed = false; var queuedHide = false
@@ -249,30 +258,34 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
             val bitmap = texture ?: return
             if (session !== this || !canvas.isHardwareAccelerated || rect.isEmpty) return
             path.rewind()
-            // Mesh-edge clipping retains native rounded end caps without a rectangular
-            // screenshot outline appearing while the middle is visibly deforming.
-            val topLeft = vertices[0]; val topRight = vertices[2]
-            val corner = minOf(radius, (topRight - topLeft) * .5f, rect.height() * .2f)
-            path.moveTo(topLeft + corner, rect.top)
-            path.lineTo(topRight - corner, rect.top); path.quadTo(topRight, rect.top, topRight, rect.top + corner)
-            val bottomLeft = vertices[IslandAbsorptionMesh.ROWS * 4]
-            val bottomRight = vertices[IslandAbsorptionMesh.ROWS * 4 + 2]
-            val bottomCorner = minOf(radius, (bottomRight - bottomLeft) * .5f, rect.height() * .2f)
-            for (row in 1 until IslandAbsorptionMesh.ROWS) {
-                if (vertices[row * 4 + 3] > rect.top + corner && vertices[row * 4 + 3] < rect.bottom - bottomCorner)
-                    path.lineTo(vertices[row * 4 + 2], vertices[row * 4 + 3])
+            if (!presented) {
+                path.addRoundRect(rect, minOf(radius, rect.width() * .5f), minOf(radius, rect.height() * .5f), Path.Direction.CW)
+            } else {
+                // Mesh-edge clipping retains native rounded end caps without a rectangular
+                // screenshot outline appearing while the middle is visibly deforming.
+                val topLeft = vertices[0]; val topRight = vertices[2]
+                val corner = minOf(radius, (topRight - topLeft) * .5f, rect.height() * .2f)
+                path.moveTo(topLeft + corner, rect.top)
+                path.lineTo(topRight - corner, rect.top); path.quadTo(topRight, rect.top, topRight, rect.top + corner)
+                val bottomLeft = vertices[IslandAbsorptionMesh.ROWS * 4]
+                val bottomRight = vertices[IslandAbsorptionMesh.ROWS * 4 + 2]
+                val bottomCorner = minOf(radius, (bottomRight - bottomLeft) * .5f, rect.height() * .2f)
+                for (row in 1 until IslandAbsorptionMesh.ROWS) {
+                    if (vertices[row * 4 + 3] > rect.top + corner && vertices[row * 4 + 3] < rect.bottom - bottomCorner)
+                        path.lineTo(vertices[row * 4 + 2], vertices[row * 4 + 3])
+                }
+                path.lineTo(bottomRight, rect.bottom - bottomCorner)
+                path.quadTo(bottomRight, rect.bottom, bottomRight - bottomCorner, rect.bottom)
+                path.lineTo(bottomLeft + bottomCorner, rect.bottom)
+                path.quadTo(bottomLeft, rect.bottom, bottomLeft, rect.bottom - bottomCorner)
+                for (row in IslandAbsorptionMesh.ROWS - 1 downTo 1) {
+                    if (vertices[row * 4 + 1] < rect.bottom - bottomCorner && vertices[row * 4 + 1] > rect.top + corner)
+                        path.lineTo(vertices[row * 4], vertices[row * 4 + 1])
+                }
+                path.lineTo(topLeft, rect.top + corner); path.quadTo(topLeft, rect.top, topLeft + corner, rect.top); path.close()
             }
-            path.lineTo(bottomRight, rect.bottom - bottomCorner)
-            path.quadTo(bottomRight, rect.bottom, bottomRight - bottomCorner, rect.bottom)
-            path.lineTo(bottomLeft + bottomCorner, rect.bottom)
-            path.quadTo(bottomLeft, rect.bottom, bottomLeft, rect.bottom - bottomCorner)
-            for (row in IslandAbsorptionMesh.ROWS - 1 downTo 1) {
-                if (vertices[row * 4 + 1] < rect.bottom - bottomCorner && vertices[row * 4 + 1] > rect.top + corner)
-                    path.lineTo(vertices[row * 4], vertices[row * 4 + 1])
-            }
-            path.lineTo(topLeft, rect.top + corner); path.quadTo(topLeft, rect.top, topLeft + corner, rect.top); path.close()
             val save = canvas.save()
-            try { canvas.clipPath(path); canvas.drawBitmapMesh(bitmap, 1, IslandAbsorptionMesh.ROWS, vertices, 0, null, 0, paint) }
+            try { canvas.clipPath(path); canvas.drawBitmapMesh(bitmap, 1, IslandAbsorptionMesh.ROWS, vertices, 0, colors, 0, paint) }
             finally { canvas.restoreToCount(save) }
         }
         override fun setAlpha(alpha: Int) = Unit

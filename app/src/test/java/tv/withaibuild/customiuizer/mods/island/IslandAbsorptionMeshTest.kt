@@ -82,20 +82,18 @@ class IslandAbsorptionMeshTest {
         }
     }
 
-    @Test fun islandRecoilPeaksWhenTheActualPageTailHasOnlyTenPercentRemaining() {
-        assertEquals(0f, IslandMotion.absorptionCatch(.55f), 0f)
-        assertEquals(1f, IslandMotion.absorptionCatch(.9f), .00001f)
-        assertEquals(0f, IslandMotion.absorptionCatch(1f), 0f)
-        val delta = .0001f
-        for (boundary in listOf(.55f, .9f, 1f)) {
-            val slope = (IslandMotion.absorptionCatch(boundary + delta) -
-                IslandMotion.absorptionCatch(boundary - delta)) / (2 * delta)
-            assertEquals("No velocity cusp at $boundary", 0f, slope, .025f)
-        }
+    @Test fun islandProgressTracksTheDrawnPageTailRatherThanItsLeadingEdge() {
+        val source = RectF(100f, 400f, 900f, 1800f)
+        val target = RectF(300f, 20f, 700f, 100f)
+        val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
+        val bounds = RectF()
+        val finalBottom = target.centerY() + target.height() * .04f
         var previous = 0f
         for (i in 0..1000) {
             val tail = IslandAbsorptionMesh.tailProgress(i / 1000f)
             assertTrue(tail >= previous && tail in 0f..1f)
+            IslandAbsorptionMesh.fill(vertices, source, target, i / 1000f, bounds)
+            assertEquals((source.bottom - bounds.bottom) / (source.bottom - finalBottom), tail, .00001f)
             previous = tail
         }
         assertEquals(1f, previous, 0f)
