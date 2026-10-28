@@ -26,7 +26,7 @@ Deep 的完整 `verify.py full` 与 Debug lint 已通过；最后只补齐 MIUI 
 
 上轮完整 Host、Debug lint、677 项工具及签名 / R8 门禁曾通过，但缺少共享进度终止帧的行为覆盖。本地包 `1ce847ab` 在实机触发 SystemUI `StackOverflowError`：自身帧回调内调用 `ValueAnimator.end()`，A14 同步发出终止帧，重复进入同一回调。使用该 APK 的 mapping 已对齐设备堆栈，故障包已撤回，手机先回退升级前的 `03fb76b7` 正式包并保留设置；回退在用户补充“先修代码”之前已完成。
 
-当前源码在终止前只解绑本次时钟自身的更新回调，再执行正常结束和资源释放；不加异步完成任务，也不吞栈溢出。新增回归使用实际 A14 ValueAnimator 与 SharedMemory，在旧代码复现同一栈溢出，修复后正常完成、取消进度、单次结束、迟到帧及映射释放通过。关联五类 154 项回归零失败，Debug lint、文档链接与功能地图检查通过。遵循用户最新要求，本轮先修代码，不再替换手机包；修复包尚未构建，未作新的 R8 / 实机验收。故障包、retrace、修前失败 / 修后通过的 JUnit 与日志保留在仓库外 `customiuizer-a14-evidence/island-home-20261027/`，本次不重新作动画或 CPU / GPU 通过结论。
+终止帧修复只在结束前解绑本次时钟自身的更新回调，再执行正常结束和资源释放；不加异步完成任务，也不吞栈溢出。实际 A14 ValueAnimator 与 SharedMemory 回归在旧代码复现同一栈溢出，修复后正常完成、取消进度、单次结束、迟到帧及映射释放通过。此前五类 154 项回归、Debug lint、文档与功能地图检查通过；后续完整验证及本地候选状态以上述最新收据为准。故障包、retrace、修前失败 / 修后通过的 JUnit 与日志保留在仓库外 `customiuizer-a14-evidence/island-home-20261027/`；候选尚无实机动画或 CPU / GPU 通过结论。
 
 A14 独立 ART 进度探针完成 1000 次映射生命周期、121000 组读写，文件句柄 54→54；它不代表真实返回的 CPU / GPU 或帧率。用户已取消 Develop 覆盖试用与真实千次返回压力测试，本轮不作动画观感、整机功耗或 GPU 成本通过结论。POCO MiLauncherGlobal 使用不同包名和直接 RectFSpringAnim 路径，缺少 WindowElement；维持原生返回，POCO 吸入仍待适配和设备验收。参考项目的运动规律与转译边界见[动态岛说明](../features/island/README.md#动画实现与验收)。
 
