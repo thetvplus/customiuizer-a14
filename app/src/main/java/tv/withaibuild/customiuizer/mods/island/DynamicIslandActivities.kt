@@ -21,7 +21,38 @@ import tv.withaibuild.customiuizer.mods.SystemPipActions
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
+import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+
+/** Install the notification policy observer and its dependent heads-up takeover together. */
+internal fun installIslandNotificationTakeover(
+    privacyUpdated: Method?,
+    onBindFinished: Method,
+    privacyHook: MethodHook,
+    bindHook: MethodHook,
+): Boolean {
+    val method = privacyUpdated ?: return false
+    val observer = ModuleHelper.hookMethod(method, privacyHook) ?: return false
+    var installed = false
+    var failure: Throwable? = null
+    try {
+        installed = ModuleHelper.hookMethod(onBindFinished, bindHook) != null
+        return installed
+    } catch (error: Throwable) {
+        failure = error
+        throw error
+    } finally {
+        if (!installed) {
+            try {
+                ModuleHelper.guarded { observer.unhook() }
+            } catch (cleanup: Throwable) {
+                val original = failure
+                if (original == null) throw cleanup
+                if (cleanup !== original) original.addSuppressed(cleanup)
+            }
+        }
+    }
+}
 
 internal data class IslandOptions(
     val enabled: Boolean, val toast: Boolean, val media: Boolean,
@@ -257,27 +288,27 @@ internal object DynamicIslandActivities {
             // ranking or the notification-center entry. A missing contract stays native.
             ModuleHelper.guarded {
                 val notifications = IslandNotificationAccess(param.classLoader)
-                notifications.onPrivacyUpdated?.let { method ->
-                    ModuleHelper.hookMethod(method, object : MethodHook() {
+                installIslandNotificationTakeover(
+                    notifications.onPrivacyUpdated, notifications.onBindFinished,
+                    object : MethodHook() {
                         override fun after(callback: AfterHookCallback) {
                             if (callback.getThrowable() == null) active.get()?.notificationPrivacyChanged()
                         }
-                    })
-                }
-                ModuleHelper.hookMethod(notifications.onBindFinished, object : MethodHook() {
-                    override fun intercept(chain: XposedInterface.Chain): Any? {
-                        val entry = chain.getArg(0) ?: return chain.proceed()
-                        val controller = active.get() ?: return chain.proceed()
-                        val accepted = try {
-                            notifications.take(chain.thisObject!!, entry, controller::takeNotification, controller::cancelNotificationTakeover)
-                        } catch (error: Throwable) {
-                            FatalErrors.unwrapAndRethrowIfFatal(error)
-                            XposedHelpers.log("Dynamic Island: retaining native heads-up", error)
-                            false
+                    }, object : MethodHook() {
+                        override fun intercept(chain: XposedInterface.Chain): Any? {
+                            val entry = chain.getArg(0) ?: return chain.proceed()
+                            val controller = active.get() ?: return chain.proceed()
+                            val accepted = try {
+                                notifications.take(chain.thisObject!!, entry, controller::takeNotification, controller::cancelNotificationTakeover)
+                            } catch (error: Throwable) {
+                                FatalErrors.unwrapAndRethrowIfFatal(error)
+                                XposedHelpers.log("Dynamic Island: retaining native heads-up", error)
+                                false
+                            }
+                            return if (accepted) null else chain.proceed()
                         }
-                        return if (accepted) null else chain.proceed()
-                    }
-                })
+                    },
+                )
             }
             ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.collection.NotifCollection\$1",
                 param.classLoader, "onNotificationPosted", StatusBarNotification::class.java, RankingMap::class.java,
