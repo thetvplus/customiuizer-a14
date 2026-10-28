@@ -44,3 +44,4 @@
 | ROM 目标 / 最终 DEX 需要取证时 | [DexSQL](docs/rom-intelligence/DEXSQL.md)，不因读取或普通文档任务启动 |
 | 测量与资源预算 | [优化门禁](docs/OPTIMIZATION_GATES.md) |
 | 安全实施 / 只读独立审查 | [.agents/skills](.agents/skills) 中的两个 SKILL.md |
+| 原生界面、动效、手势与窗口几何 | [A14 原生界面工艺](.agents/skills/a14-native-craft/SKILL.md) |

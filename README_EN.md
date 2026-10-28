@@ -31,7 +31,7 @@ The [documentation index](docs/README.md) covers development, testing, releases 
 
 Current source version: `r14.25.7` (versionCode 256). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
 
-The current source is a pre-release candidate. A locally signed trial does not establish public release. See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md#全局-rc-审计与候选收口) for retained changes, the candidate audit and pending device checks; official downloads follow the actual releases in both repositories.
+r14.25.7 is released. See the [concise release notes](docs/releases/r14.25.7.md#english) for highlights and the [changelog](CHANGELOG_EN.md) for full details. ROM acceptance coverage and pending checks remain in the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md#全局-rc-审计与候选收口).
 
 ## Support and License
 

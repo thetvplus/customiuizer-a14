@@ -41,7 +41,7 @@ versionCode 256. Changes since r14.25.5:
 
 - Native window events publish bounded current snapshots. Audio, notification and animation resources retain explicit owners and release paths; no new recording permission, polling service or animation library.
 - Power saver stops Island capture and optional motion. Static Dock capture stops after its bounded native-animation catch-up period.
-- r14.25.7 / 256 is a release candidate. Earlier locally signed trials do not identify the final candidate binary. Actual Hook hits, animation recordings, POCO appearance and sustained performance still require acceptance on the same final APK.
+- r14.25.7 / 256 is released; the APK and build metadata in both Releases identify the official binary. Earlier local trials retain their own identities. Unverified landscape, POCO appearance, other-ROM and sustained-performance coverage remains documented separately.
 
 ## r14.25.5 — 2026-10-25
 

@@ -31,7 +31,7 @@
 
 当前源码版本：`r14.25.7`（versionCode 256）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
 
-当前源码为预候选版本，本地签名试用包不代表已公开发行。已留存的有效更新、候选审计与待实机事项见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md#全局-rc-审计与候选收口)；正式下载以两仓库实际 Release 为准。
+r14.25.7 已正式发布，主要变化见[简版发行说明](docs/releases/r14.25.7.md)，完整细项见[更新记录](CHANGELOG.md)。ROM 验收范围及待确认事项见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md#全局-rc-审计与候选收口)。
 
 ## 支持与许可
 

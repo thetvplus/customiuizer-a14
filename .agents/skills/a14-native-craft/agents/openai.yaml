@@ -1,0 +1,4 @@
+interface:
+  display_name: "A14 原生界面工艺"
+  short_description: "A14 原生界面、动效与手势质量；兼顾窗口几何、性能、生命周期和无障碍"
+  default_prompt: "使用 $a14-native-craft 检查当前 A14 原生界面的视觉、动效、手势与工程质量，先给出有证据的只读结论。"
