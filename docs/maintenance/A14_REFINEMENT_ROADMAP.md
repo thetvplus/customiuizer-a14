@@ -24,9 +24,9 @@ Dock 的固定扩边取样在更大捏合位移下失去覆盖，已由修前失
 
 前轮 Dock / 文件夹 ROM 证据与候选在 `island-motion-20261028/`，设备基线在 `island-device-20261028/`。候选缺少对应实机录屏，松手细微闪动、90% 接入融合、回弹及音乐 / 秒表快速轮换仍待验，Dock 捏合 / 解锁与 POCO 模糊沿用待验状态。用户明确 ADB 未连接并跳过手机测试与收尾，本轮没有连接、安装、操作计时或更改手机设置。原设备临时秒表、常亮、采集文件和锁屏状态缺少最终读回，不能写作已恢复。
 
-Deep 的完整 `verify.py full` 与 Debug lint 已通过；最后只补齐 MIUI 类内 lambda / POCO Consumer 两个已核实的壁纸回调 ABI，由全套源码契约及两个关联套件 15 项复验通过。全量工具 677 项通过、5 项既定跳过；两个矩阵输出确定性及 11 / 11 必需独立 mutation 通过，无存活、门禁或清理错误。既有独立 DEX 解析器与 DexSQL 交叉核验 MIUI 13 / POCO 12 个必需声明，均无缺失。用户后续明确跳过手机测试及手机收尾，本轮不再尝试连接。
+未改动的 Dock / POCO ROM 合同复用前轮证据：MIUI 类内 lambda / POCO Consumer 两个壁纸回调 ABI、独立 DEX 解析器与 DexSQL 核对的 MIUI 13 / POCO 12 个必需声明均无缺失；两个矩阵输出确定性及 11 / 11 必需独立 mutation 通过，无存活、门禁或清理错误。当前完整 Host 与工具回归重新执行，矩阵 / 工具输入未改，不因收口重跑该组 mutation。
 
-源码 `975e2331abb10053b6b62e0bb2397331028464cb` 已生成原证书签名的本地 Develop 试用包 `CustoMIUIzer-A14-r14.25.6-975e23-develop.apk`，4,298,634 字节，SHA-256 `cde617fb61720fb95215f8db713f3358cdfbbfdcd51ac999308b3320daeab62a`，已复制到本机下载目录，旧包保留。R8、fatal lint、SDK 34 / arm64 / 非调试、V2 历史证书、ZIP / ELF 16 KiB 与工程 revision 来源通过；同 APK 的 Hook API 定义及八个设置入口直接 API 引用为零，setId / getId 各一、replaceHook 为零，成员级 mapping 归属共享 HookInstallation 策略。APK、mapping、SQL 与最终收据在上述证据的 `candidate-975e2331/`；Develop 内嵌八位 revision，完整源码 SHA 由外部收据关联，不冒充公开正式发行。手机没有安装本候选；本地临时视频依赖和检查索引已移除，保留必要录屏与日志，手机侧恢复 / 锁屏保持未确认。
+源码 `c02dedeb5f9f25ff8e407be72c7e60c352051c80` 已生成原证书签名的本地 Develop 试用包 `CustoMIUIzer-A14-r14.25.6-c02ded-develop.apk`，4,298,634 字节，SHA-256 `9447927dee48a7df84c665b94630c9b036d2cb9e0cbb24815f792a715277403e`，已复制到本机下载目录的 `CustoMIUIzer-A14-r14.25.6-c02dedeb/`，旧包保留。R8、fatal lint、SDK 34 / arm64 / 非调试、V2 历史证书、ZIP / ELF 16 KiB 与工程 revision 来源通过；同 APK 的 Hook API 定义及八个设置入口直接 API 引用为零，setId / getId 各一、replaceHook 为零，成员级 mapping 归属共享 HookInstallation 策略。APK、mapping、SQL、完整 JUnit 与最终收据保留在当前衔接证据的 `candidate-c02dedeb/` 及其上级目录；Develop 内嵌八位 revision，完整源码 SHA 由外部收据关联，不冒充公开正式发行。本轮没有手机安装或录屏，没有新建手机测试负载；本地检查进程和临时索引在收尾时释放，必要证据保留。
 
 上轮完整 Host、Debug lint、677 项工具及签名 / R8 门禁曾通过，但缺少共享进度终止帧的行为覆盖。本地包 `1ce847ab` 在实机触发 SystemUI `StackOverflowError`：自身帧回调内调用 `ValueAnimator.end()`，A14 同步发出终止帧，重复进入同一回调。使用该 APK 的 mapping 已对齐设备堆栈，故障包已撤回，手机先回退升级前的 `03fb76b7` 正式包并保留设置；回退在用户补充“先修代码”之前已完成。
 
