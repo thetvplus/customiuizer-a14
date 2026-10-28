@@ -29,6 +29,23 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
+    @Test fun anExistingIslandMorphsWhenNativeReturnHasNoCaptureChannel() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell = IslandActivityView(activity)
+        activity.setContentView(shell, FrameLayout.LayoutParams(240, 40))
+        shell.geometry(240, 40, 40, 280); shell.layout(0, 0, 240, 40)
+        shell.cameraAnchor(20f, 16f); shell.absorption = true
+        shadowOf(Looper.getMainLooper()).idle()
+        ShadowChoreographer.setPaused(true)
+        try {
+            shell.prepareReturnFromCurrent()
+            shell.transition(154, 40, 240, 40, false)
+            assertEquals("Retain the visible music width before morphing to the clock", 154f, 240 * shell.scaleX, .01f)
+            val motion = getField<ValueAnimator>(shell, "motion")
+            motion.end()
+            assertEquals(240f, 240 * shell.scaleX, .01f)
+        } finally { ShadowChoreographer.setPaused(false); activity.finish() }
+    }
     @Test fun expandedMetadataGlyphsStayInTheirOwnPhysicalLaneDuringTheWholeMorph() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)

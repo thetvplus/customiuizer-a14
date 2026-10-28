@@ -103,6 +103,7 @@ class DockGlassBackdropTest {
             lastCrop.contains(Rect(position[0], position[1], position[0] + 300, position[1] + 80)))
         assertTrue(lastBitmap!!.width <= DockGlassBackdrop.MAX_WIDTH)
         assertTrue(lastBitmap!!.height <= DockGlassBackdrop.MAX_HEIGHT)
+        assertTrue(lastBitmap!!.width.toLong() * lastBitmap!!.height <= DockGlassBackdrop.MAX_PIXELS)
         controller.release()
         assertTrue(lastBitmap!!.isRecycled)
         controller.onFrame(true)
@@ -140,6 +141,20 @@ class DockGlassBackdropTest {
         assertEquals(2, captures)
         controller.onFrame(false)
         assertTrue(lastBitmap!!.isRecycled)
+    }
+
+    @Test fun nativeZeroAlphaPausesSamplingWithoutReplacingTheCurrentMaterial() {
+        val controller = controller(live = true)
+        controller.onFrame(true)
+        val first = lastBitmap!!
+        controller.onFrame(true, rendering = false)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertFalse("A transparent animation frame is not a detach", first.isRecycled)
+        assertEquals(1, captures)
+        controller.onFrame(true)
+        assertEquals(1, captures)
+        controller.onFrame(false)
+        assertTrue(first.isRecycled)
     }
 
     @Test
@@ -274,7 +289,7 @@ class DockGlassBackdropTest {
         try {
             // The current draw receives a legacy matrix after pre-draw. A replacement
             // compositor frame cannot have completed yet; the retained crop must cover it.
-            for (dy in listOf(-40f, -80f, -120f, -80f, 0f)) {
+            for (dy in listOf(-40f, -80f, -120f, -320f, -520f, -320f, -80f, 0f)) {
                 controller.setLegacyTransform(Matrix().apply { setTranslate(0f, dy) })
                 assertTrue("Native editing midpoint dy=$dy", controller.prepare(canvas, Rect(0, 0, 300, 80), 20f, 1f))
                 assertSame(first, lastBitmap)
@@ -284,7 +299,7 @@ class DockGlassBackdropTest {
         } finally { node.endRecording(); controller.release() }
     }
 
-    @Test fun uncoveredOldPixelsCannotRestartExhaustedBadFrameRecoveryOnUnrelatedDraws() {
+    @Test fun badReplacementFramesCannotEvictCoveredWallpaperOrRestartRecoveryOnUnrelatedDraws() {
         for (live in listOf(false, true)) {
             view.translationY = 0f
             var attempts = 0
@@ -294,14 +309,15 @@ class DockGlassBackdropTest {
             })
             controller.onFrame(true)
             assertEquals(1, attempts)
-            view.translationY = -320f // leave even the reserved native-animation sweep
+            view.translationY = -320f // leave the old fixed crop during native editing
             val node = RenderNode("dock-exhausted-recovery").apply { setPosition(0, 0, 300, 80) }
             val canvas = node.beginRecording()
             try {
                 repeat(60) {
                     shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
                     controller.onFrame(true)
-                    assertFalse(controller.prepare(canvas, Rect(0, 0, 300, 80), 20f, 1f))
+                    assertTrue("A bad replacement must not switch a covered lens to native blur",
+                        controller.prepare(canvas, Rect(0, 0, 300, 80), 20f, 1f))
                 }
                 assertEquals("One failure and three bounded retries; drawing cannot replenish them", 5, attempts)
                 assertFalse(ReflectionHelpers.getField(controller, "broken"))

@@ -45,6 +45,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     private val currentParams = element.getDeclaredField("currentRectFParams").apply { isAccessible = true }
     private val animation = element.getDeclaredField("mAnim").apply { isAccessible = true }
     private val animationTarget = animation.type.getMethod("getTargetRect")
+    private val animationAlpha = animation.type.getMethod("getCurrentAlpha")
     private val returnTiming = ModuleHelper.guarded<LauncherReturnTiming?>(null) { LauncherReturnTiming(animation.type) }
     private val running = element.getMethod("isRunning")
     private val apps = targets.getDeclaredField("apps").apply { isAccessible = true }
@@ -69,7 +70,8 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
             fastPackage?.returnType == String::class.java)
         require(!closingTarget.returnType.isPrimitive && closingRect.type == Rect::class.java &&
             defaultRect.returnType == Rect::class.java && java.lang.reflect.Modifier.isStatic(defaultRect.modifiers))
-        require(animationTarget.returnType == RectF::class.java && running.returnType == Boolean::class.javaPrimitiveType)
+        require(animationTarget.returnType == RectF::class.java && animationAlpha.returnType == Float::class.javaPrimitiveType &&
+            running.returnType == Boolean::class.javaPrimitiveType)
         require(component.type == ComponentName::class.java && taskId.type == Int::class.javaPrimitiveType &&
             taskUser.type == Int::class.javaPrimitiveType && fields[7].type.isEnum)
     }
@@ -115,41 +117,51 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
 
     /** Called once at committed return, never from an animation update. Preserve the original
      * params, callbacks, task leash, velocity and finish/cancel policy in a separate native copy. */
-    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = true): Any? {
+    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame): Any? {
         if (!params.isInstance(original) || !frame.valid()) return null
         if ((fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
             fields[15].getInt(original) != 0 || fields[16].getInt(original) != 0) return null
         // A late fresh snapshot must never hijack an already-selected desktop icon.
         // Auto-PiP stays native before Shell can publish its pinned task.
-        if (absorption && fields[11].get(original) != null || !eligibleTask(nav, frame)) return null
+        if (fields[11].get(original) != null || !eligibleTask(nav, frame)) return null
         val selectedTargets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
         val selectedApps = apps.get(selectedTargets) as? Array<*> ?: return null
         if (selectedApps.size != 1) return null
         val target = selectedApps.single() ?: return null
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
-        return if (absorption) copyTarget(original, frame) else original
+        return copyTarget(original, owner, frame)
     }
 
-    fun retargetHome(original: Any, owner: Any, selected: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean): Any? {
+    fun retargetHome(original: Any, owner: Any, selected: Any, frame: IslandMusicReturnSignal.Frame): Any? {
         val home = home ?: return null
         if (!params.isInstance(original) || !home.eligible(selected, frame) ||
             (fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
             fields[15].getInt(original) != 0 || fields[16].getInt(original) != 0 ||
-            absorption && fields[11].get(original) != null) return null
+            fields[11].get(original) != null) return null
         val targets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
         if ((apps.get(targets) as? Array<*>)?.singleOrNull() !== selected) return null
-        return if (absorption) copyTarget(original, frame) else original
+        return copyTarget(original, owner, frame)
     }
 
-    private fun copyTarget(original: Any, frame: IslandMusicReturnSignal.Frame): Any {
+    private fun copyTarget(original: Any, owner: Any, frame: IslandMusicReturnSignal.Frame): Any? {
         val values = fields.map { it.get(original) }.toTypedArray()
         val landing = frame.landingRectangle()
         values[2] = landing
         values[4] = landing.height() * .5f
-        // Both alpha endpoints belong to the ROM, including translucent tasks.
+        // Hold the opacity established at release. A partially faded gesture must
+        // neither flash opaque nor keep fading on its way to the island. Truly
+        // translucent tasks retain the ROM's alpha contract and cannot use the mesh.
+        if (!fields[20].getBoolean(original)) {
+            // An interrupted native spring, rather than a default/sentinel start
+            // parameter, owns the page currently on screen. Read it only at submission.
+            val current = if (currentParams.get(owner) != null) animationAlpha.invoke(animation.get(owner)) as Float else Float.NaN
+            val release = current.takeIf { it.isFinite() && it in 0f..1f }
+                ?: (values[5] as Float).takeIf { it.isFinite() && it in 0f..1f } ?: return null
+            values[5] = release; values[6] = release
+        }
         // A14's frame callback draws any *already initialized* floating icon without
         // consulting ignoreIcon. A null target makes native initTargetView retire that
         // icon before the window spring starts, restoring its real desktop owner once.

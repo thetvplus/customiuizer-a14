@@ -44,6 +44,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         private val retained = element.getDeclaredField("remoteAnimationTargetSet").apply { isAccessible = true }
         private val params = XposedHelpers.findClass("com.miui.home.recents.anim.RectFParams", loader)
         private val targets = params.getDeclaredField("targetApps").apply { isAccessible = true }
+        private val translucent = params.getDeclaredField("isUseTranslucentAnim").apply { isAccessible = true }
         private val apps = retained.type.getDeclaredField("apps").apply { isAccessible = true }
         private val remote = XposedHelpers.findClass("com.android.systemui.shared.recents.system.RemoteAnimationTargetCompat", loader)
         private val leash = remote.getDeclaredField("leash").apply { isAccessible = true }
@@ -67,6 +68,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
 
         init { require(update.returnType == Void.TYPE && cancellations.isNotEmpty()) }
         fun current(element: Any, copy: Any) = current.get(element) === copy
+        fun translucent(copy: Any) = translucent.getBoolean(copy)
         fun surface(element: Any, copy: Any): SurfaceControl? {
             val set = targets.get(copy) ?: retained.get(element) ?: return null
             val target = (apps.get(set) as? Array<*>)?.singleOrNull() ?: return null
@@ -95,18 +97,22 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
     private var captureJob: Job? = null
     private val captureMutex = Mutex()
 
-    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame): IslandReturnProgress.Producer? {
+    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame,
+        captureWindow: Boolean = true): IslandReturnProgress.Producer? {
         if (!handler.looper.isCurrentThread) return null
         cancel()
         val root = api.root()?.takeIf { it.isAttachedToWindow && it.isHardwareAccelerated && it.isShown &&
             it.width == frame.screenWidth && it.height == frame.screenHeight && it.scaleX == 1f && it.scaleY == 1f &&
             it.alpha == 1f && it.display?.displayId == android.view.Display.DEFAULT_DISPLAY } ?: return null
-        if (root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) return null
-        val surface = api.surface(element, copy)?.takeIf { it.isValid } ?: return null
-        val active = Session(element, copy, root, surface, frame.landingRectangle())
+        val mesh = captureWindow && !api.translucent(copy)
+        val surface = if (mesh) {
+            if (root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) return null
+            api.surface(element, copy)?.takeIf { it.isValid } ?: return null
+        } else null
+        val active = Session(element, copy, root, surface, frame.landingRectangle(), mesh)
         session = active
         val generation = epoch
-        captureJob = scope.launch(Dispatchers.Default) {
+        if (surface != null) captureJob = scope.launch(Dispatchers.Default) {
             var texture: Bitmap? = null
             try {
                 texture = captureMutex.withLock {
@@ -147,6 +153,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         }
         active.progress = IslandAbsorptionMesh.returnProgress(progress, active.atCommit)
         active.nativeAlpha = alpha.coerceIn(0f, 1f)
+        if (!active.mesh) { active.progressChannel.write(active.progress); return }
         if (active.texture == null) return
         if (!active.installed) {
             if (!IslandAbsorptionMesh.mayReplaceNative(active.progress, active.nativeAlpha)) { cancel(); return }
@@ -161,11 +168,10 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         if (active.sourceRect.isEmpty) active.sourceRect.set(active.rect)
         active.destination.set(active.target); active.destination.offset(-active.location[0].toFloat(), -active.location[1].toFloat())
         active.radius = radius.coerceAtLeast(0f)
-        IslandAbsorptionMesh.fill(active.vertices, active.sourceRect, active.destination, remaining)
-        val last = IslandAbsorptionMesh.ROWS * 4
-        active.rect.set(minOf(active.vertices[0], active.vertices[last]), active.vertices[1],
-            maxOf(active.vertices[2], active.vertices[last + 2]), active.vertices[last + 1])
-        active.paint.alpha = (255f * active.nativeAlpha).toInt().coerceIn(0, 255)
+        IslandAbsorptionMesh.fill(active.vertices, active.sourceRect, active.destination, remaining, active.rect)
+        // Keep release opacity until the entire page lies inside the island. Then
+        // reveal the real island underneath, rather than leave a separately coloured dot.
+        active.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.mergeOpacity(active.rect, active.destination)).toInt().coerceIn(0, 255)
         if (active.presented) active.progressChannel.write(IslandAbsorptionMesh.tailProgress(remaining))
         active.setBounds(0, 0, root.width, root.height)
         active.invalidateSelf()
@@ -176,7 +182,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                 ModuleHelper.guarded {
                     // A later mesh frame does not invalidate an earlier submitted one.
                     // Re-arming per frame can starve this handoff during a fast return.
-                    if (session === active && active.installed && active.surface.isValid &&
+                    if (session === active && active.installed && active.surface?.isValid == true &&
                         active.element.get()?.let { api.current(it, active.copy) } == true && root.isAttachedToWindow) {
                         try {
                             active.queuedHide = true
@@ -197,8 +203,10 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
     }
 
     fun lease(element: Any): Any? = session?.takeIf { it.element.get() === element }
-    fun end(element: Any, lease: Any? = session) { if (lease != null && session === lease && session?.element?.get() === element) cancel() }
-    fun cancel() {
+    fun end(element: Any, lease: Any? = session, completed: Boolean = false) {
+        if (lease != null && session === lease && session?.element?.get() === element) cancel(restoreNative = !completed)
+    }
+    fun cancel(restoreNative: Boolean = true) {
         epoch++
         captureJob?.cancel(); captureJob = null
         val old = session ?: return
@@ -212,13 +220,13 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                     if (old.installed) root.overlay.remove(old)
                 }
             }
-            if (old.queuedHide && old.surface.isValid && old.element.get()?.let { api.current(it, old.copy) } == true)
+            if (restoreNative && old.queuedHide && old.surface?.isValid == true && old.element.get()?.let { api.current(it, old.copy) } == true)
                 SurfaceControl.Transaction().use { it.setAlpha(old.surface, old.nativeAlpha).apply() }
         } finally { old.progressChannel.close(); old.texture?.recycle(); old.texture = null }
     }
 
-    private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl,
-        val target: RectF) : Drawable(), View.OnAttachStateChangeListener {
+    private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl?,
+        val target: RectF, val mesh: Boolean) : Drawable(), View.OnAttachStateChangeListener {
         val element = WeakReference(element)
         val rootWidth = root.width
         val rootHeight = root.height

@@ -25,14 +25,14 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.ref.WeakReference
-import kotlin.math.ceil
-import kotlin.math.floor
+import kotlin.math.sqrt
 
 /** One decoration owns one texture, one shader and at most one pending wallpaper-only capture.
  * Static wallpaper follows native rendered frames, with the completion draw excluded to avoid
  * feedback. Live wallpaper alone needs a visible, 30 Hz maximum refresh; hidden/transparent
  * owners stop it. No full-display screenshot, CPU pixel readback/blur, file decode or capture
- * of the Launcher tree. The sampler returns only the cropped wallpaper compositor layer.
+ * of the Launcher tree. One bounded wallpaper-only viewport survives the whole native
+ * pinch/unlock transform; changing the Dock's position cannot change material ownership.
  */
 internal class DockGlassBackdrop(
     view: View,
@@ -122,7 +122,7 @@ internal class DockGlassBackdrop(
         clearTexture()
     }
 
-    fun onFrame(isVisible: Boolean) {
+    fun onFrame(isVisible: Boolean, rendering: Boolean = true) {
         val view = owner.get() ?: return
         if (visible != isVisible) {
             visible = isVisible
@@ -133,6 +133,9 @@ internal class DockGlassBackdrop(
             }
         }
         if (!visible || powerSave || broken || released || !view.isAttachedToWindow || view.width <= 0 || view.height <= 0) return
+        // A native animation can pass through zero alpha while the owner is still
+        // visible. Pause sampling but retain its material until it really hides.
+        if (!rendering) { view.removeCallbacks(tick); tickRequested = false; return }
         // The ROM extension has no display selector. Never substitute default-display pixels on
         // a secondary display. Unknown/non-affine transforms also keep the native material.
         if (view.display?.displayId != Display.DEFAULT_DISPLAY || !prepareMatrix(view)) return
@@ -199,27 +202,13 @@ internal class DockGlassBackdrop(
             viewportWidth = viewport.width(); viewportHeight = viewport.height()
             viewportDirty = false
         }
-        points[0] = 0f; points[1] = 0f
-        points[2] = view.width.toFloat(); points[3] = 0f
-        points[4] = view.width.toFloat(); points[5] = view.height.toFloat()
-        points[6] = 0f; points[7] = view.height.toFloat()
-        world.mapPoints(points)
-        val margin = 32f * view.resources.displayMetrics.density
-        // Reserve a bounded vertical sweep before editing/unlock starts. The native
-        // legacy matrix arrives during drawing, after pre-draw; a small instantaneous
-        // crop otherwise loses coverage before a new compositor frame can arrive.
-        // Output remains one <=1024x384 texture, with the same real-screen mapping.
-        val verticalMargin = maxOf(margin, view.height * 2f)
-        val requestCrop = Rect(
-            floor((minOf(points[0], points[2], points[4], points[6]) - margin).coerceAtLeast(0f) / 4f).toInt() * 4,
-            floor((minOf(points[1], points[3], points[5], points[7]) - verticalMargin).coerceAtLeast(0f) / 4f).toInt() * 4,
-            minOf(viewportWidth, ceil((maxOf(points[0], points[2], points[4], points[6]) + margin) / 4f).toInt() * 4),
-            minOf(viewportHeight, ceil((maxOf(points[1], points[3], points[5], points[7]) + verticalMargin) / 4f).toInt() * 4))
-        if (requestCrop.isEmpty || maxOf(points[0], points[2], points[4], points[6]) <= 0f ||
-            minOf(points[0], points[2], points[4], points[6]) >= viewportWidth ||
-            maxOf(points[1], points[3], points[5], points[7]) <= 0f ||
-            minOf(points[1], points[3], points[5], points[7]) >= viewportHeight) return false
-        val scale = minOf(1f, MAX_WIDTH.toFloat() / requestCrop.width(), MAX_HEIGHT.toFloat() / requestCrop.height())
+        // A crop based on the previous draw cannot predict a legacy matrix delivered
+        // during this draw. Sample the wallpaper viewport once at a bounded pixel
+        // budget instead of alternating lens/native blur whenever that crop is left.
+        // This contains wallpaper only, never application or Launcher pixels.
+        val requestCrop = Rect(0, 0, viewportWidth, viewportHeight)
+        val scale = minOf(1f, MAX_WIDTH.toFloat() / viewportWidth, MAX_HEIGHT.toFloat() / viewportHeight,
+            sqrt((MAX_PIXELS - MAX_WIDTH - MAX_HEIGHT).toDouble() / (viewportWidth.toDouble() * viewportHeight)).toFloat())
         val requestEpoch = epoch
         busy = true
         lastRequest = now
@@ -270,7 +259,8 @@ internal class DockGlassBackdrop(
             unavailable()
             return
         }
-        if (frame.isRecycled || frame.width > MAX_WIDTH + 1 || frame.height > MAX_HEIGHT + 1 || frameCrop.isEmpty ||
+        if (frame.isRecycled || frame.width > MAX_WIDTH || frame.height > MAX_HEIGHT ||
+            frame.width.toLong() * frame.height > MAX_PIXELS || frameCrop.isEmpty ||
             kotlin.math.abs(frame.width - frameCrop.width() * scale) > 1f || kotlin.math.abs(frame.height - frameCrop.height() * scale) > 1f) {
             frame?.recycle()
             // Size/crop readiness belongs to this compositor request, not GPU capability.
@@ -461,6 +451,7 @@ internal class DockGlassBackdrop(
     companion object {
         private const val FRAME_MS = 34L
         internal const val MAX_WIDTH = 1024
-        internal const val MAX_HEIGHT = 384
+        internal const val MAX_HEIGHT = 1024
+        internal const val MAX_PIXELS = 1024 * 384
     }
 }

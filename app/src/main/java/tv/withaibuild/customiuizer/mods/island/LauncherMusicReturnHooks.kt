@@ -148,9 +148,12 @@ internal object LauncherMusicReturnHooks {
                         val element = chain.thisObject ?: return chain.proceed()
                         val meshLease = mesh.lease(element)
                         val timingLease = ModuleHelper.guarded<Any?>(null) { access.returnTimingLease(element) }
-                        return try { chain.proceed() } finally { ModuleHelper.guarded {
+                        var completed = false
+                        return try {
+                            chain.proceed().also { completed = method.name == "onFinishCompleted" }
+                        } finally { ModuleHelper.guarded {
                             if (timingLease != null) access.restoreReturnTiming(element, timingLease)
-                            mesh.end(element, meshLease)
+                            mesh.end(element, meshLease, completed)
                         } }
                     }
                 }) == null) endingsInstalled = false
@@ -294,9 +297,8 @@ internal object LauncherMusicReturnHooks {
             val host = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
             if (host.display?.rotation != android.view.Surface.ROTATION_0) return null
             val selected = homeTarget.get()
-            val useMesh = options.absorption && absorption != null
-            val result = if (selected != null) access.retargetHome(original, element, selected, frame, useMesh)
-                else navigation.get()?.takeIf { it.isAttachedToWindow }?.let { access.retarget(original, element, it, frame, useMesh) }
+            val result = if (selected != null) access.retargetHome(original, element, selected, frame)
+                else navigation.get()?.takeIf { it.isAttachedToWindow }?.let { access.retarget(original, element, it, frame) }
             if (result == null) return null
             if (epoch != gesture.get()) return null
             return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.recentStrength(SystemClock.uptimeMillis()))
@@ -315,7 +317,7 @@ internal object LauncherMusicReturnHooks {
             val current = snapshot ?: run { diagnostics.report("music-return-target-not-ready"); return false }
             val frame = current.frame ?: run { diagnostics.report("music-return-target-inactive"); return false }
             if (frame.packageName !in returnPackages) return false
-            return options.absorption && absorption != null && access.selectWindowTarget(nav, frame)
+            return access.selectWindowTarget(nav, frame)
         }
         fun selectHomeTarget(target: Any): Boolean {
             homeTarget.clear()
@@ -324,7 +326,7 @@ internal object LauncherMusicReturnHooks {
             val frame = snapshot?.frame ?: return false
             if (frame.packageName !in returnPackages || access.home?.eligible(target, frame) != true) return false
             homeTarget = WeakReference(target)
-            return options.absorption && absorption != null
+            return true
         }
         fun committed(attempt: Attempt, element: Any, deferred: Boolean = false) {
             val tasks = scope ?: return
@@ -337,8 +339,9 @@ internal object LauncherMusicReturnHooks {
                 return
             }
             committedAttempt = attempt.sequence
-            val progress = if (options.absorption && absorption != null) attempt.snapshot.frame?.let { frame ->
-                ModuleHelper.guarded<IslandReturnProgress.Producer?>(null) { absorption.begin(tasks, element, attempt.params, frame) }
+            access.timeReturn(element, attempt.impulse, options.absorption)
+            val progress = if (absorption != null) attempt.snapshot.frame?.let { frame ->
+                ModuleHelper.guarded<IslandReturnProgress.Producer?>(null) { absorption.begin(tasks, element, attempt.params, frame, options.absorption) }
             } else null
             val current = attempt.snapshot
             val message = IslandMusicReturnSignal.encode(current.frame, SystemClock.uptimeMillis(), current.sequence)

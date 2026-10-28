@@ -16,12 +16,36 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandAbsorptionMeshTest {
-    @Test fun aFastLateOrAlreadyTranslucentWindowStaysNativeInsteadOfFlashingIntoAMesh() {
+    @Test fun aLateWindowStaysNativeAndAnAdmittedWindowKeepsItsReleaseOpacity() {
         assertTrue(IslandAbsorptionMesh.mayReplaceNative(.04f, 1f))
         assertTrue(IslandAbsorptionMesh.mayReplaceNative(.3f, .99f))
         assertFalse(IslandAbsorptionMesh.mayReplaceNative(.04f, .8f))
+        assertFalse(IslandAbsorptionMesh.mayReplaceNative(.04f, 0f))
         assertFalse(IslandAbsorptionMesh.mayReplaceNative(.6f, 1f))
         assertFalse(IslandAbsorptionMesh.mayReplaceNative(Float.NaN, 1f))
+    }
+    @Test fun theWholePageStaysOpaqueUntilItFitsInsideTheIslandThenLeavesNoEndpointDot() {
+        val rect = RectF(50f, 400f, 650f, 1800f) // off-centre, middle-of-screen release
+        val target = RectF(350f, 20f, 650f, 100f)
+        val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
+        val bounds = RectF()
+        var previous = 1f
+        for (step in 0..1000) {
+            IslandAbsorptionMesh.fill(vertices, rect, target, step / 1000f, bounds)
+            val opacity = IslandAbsorptionMesh.mergeOpacity(bounds, target)
+            if (!target.contains(bounds)) assertEquals(1f, opacity, 0f)
+            for (row in 0..IslandAbsorptionMesh.ROWS) {
+                val index = row * 4
+                assertTrue(vertices[index] >= bounds.left && vertices[index + 2] <= bounds.right)
+                if (opacity < 1f) {
+                    assertTrue(target.contains(vertices[index], vertices[index + 1]))
+                    assertTrue(target.contains(vertices[index + 2], vertices[index + 3]))
+                }
+            }
+            assertTrue(opacity in 0f..previous + .00001f)
+            previous = opacity
+        }
+        assertEquals("Reveal the real island instead of retaining a separately coloured tip", 0f, previous, .00001f)
     }
     @Test fun pageRetainsATrailingBodyWhileTheLeadingEdgeArrivesAndRowsNeverFold() {
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)

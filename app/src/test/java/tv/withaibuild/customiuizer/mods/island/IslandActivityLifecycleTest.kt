@@ -140,7 +140,7 @@ class IslandActivityLifecycleTest {
         assertEquals(0, adds)
     }
 
-    @Test fun foregroundActivityKeepsItsLandingTargetAndConfirmedDefaultReturnAppearsDirectly() {
+    @Test fun foregroundActivityKeepsItsLandingTargetAndMorphsFromTheExistingIslandWithoutCapture() {
         val controller = controller(idle = true, liveKinds = setOf("stopwatch"))
         val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
         val activity = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE, 10345,
@@ -158,9 +158,14 @@ class IslandActivityLifecycleTest {
         controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
         assertFalse(shell!!.idle)
         assertEquals(1, adds)
-        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
-        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        assertNotNull("The already-visible idle island must morph to the activity", arrival)
+        assertEquals(IslandMotion.CONTENT_ARRIVAL, arrival.duration)
+        assertEquals(0f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertSame("A repeated render cannot restart the same arrival", arrival,
+            org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        arrival.end()
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
         registry.update(activity.kind, activity.copy(clock = activity.clock!!.copy(base = activity.clock.base - 1000)))
         org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
@@ -184,10 +189,15 @@ class IslandActivityLifecycleTest {
         assertTrue("Home is not confirmed while the source is only transitioning", shell!!.idle)
         controller.nativeMusicReturn(target, committedAt); drain()
         assertFalse(shell!!.idle)
-        assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        val arrival = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        assertNotNull(arrival)
         controller.nativeMusicReturn(target, committedAt); drain()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(5))
-        controller.nativeMusicReturn(target); drain()
+        controller.nativeMusicReturn(target, committedAt); drain()
+        assertSame("Duplicate confirmations cannot replace an in-flight arrival", arrival,
+            org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+        arrival.end()
+        controller.nativeMusicReturn(target, committedAt); drain()
         assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
         assertEquals(1f, shell!!.scaleX, 0f)
         assertEquals(1, adds)

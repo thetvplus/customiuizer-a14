@@ -48,6 +48,23 @@ class IslandMusicGestureTest {
         shell.onGesture = { gestures.add(it) }; shell.onOpen = { opened++ }; shell.onDismiss = { dismissed++ }
     }
     @After fun cleanup() { host.finish() }
+    @Test fun downwardDragRetainsTheInterruptedCameraRelativeOrigin() {
+        shell.simplified = false
+        shell.cameraAnchor(20f, 16f)
+        shell.scaleY = .6f
+        shell.translationY = -8f
+        touch(MotionEvent.ACTION_DOWN, 140f, 20f)
+        val origin = shell.translationY
+        touch(MotionEvent.ACTION_MOVE, 140f, 90f)
+        assertEquals("A drag cannot snap an already visible capsule to a new camera bound", origin, shell.translationY, .001f)
+        val height = shell.scaleY
+        touch(MotionEvent.ACTION_CANCEL, 140f, 90f)
+        val rebound = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+        rebound.currentPlayTime = 0L
+        assertEquals("The rebound also starts at the actual drag position", origin, shell.translationY, .001f)
+        assertEquals(height, shell.scaleY, .001f)
+        rebound.end()
+    }
     @Test fun downUsesTheStoredMediaActionAndNeverExpandsAnySource() {
         shell.configureGestures(identity, IslandMusicActions(down = 85, doubleTap = 85), true)
         swipe(140f, 100f)

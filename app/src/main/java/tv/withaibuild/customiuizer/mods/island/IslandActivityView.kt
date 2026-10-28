@@ -553,10 +553,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         clearContentEffects()
         disposed = false; leaving = false
         nativeArrival = mediaReturn
-        mediaReturnProgress = if (mediaReturn && absorption && returnProgress != null &&
+        mediaReturnProgress = if (mediaReturn && returnProgress != null &&
             !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
-        if (mediaReturn || simplified || !ValueAnimator.areAnimatorsEnabled()) resetTransform(preserveReturn = mediaReturn)
-        else {
+        if (mediaReturn || simplified || !ValueAnimator.areAnimatorsEnabled()) {
+            resetTransform(preserveReturn = mediaReturn)
+            if (mediaReturnProgress == 0f) {
+                pivotY = cameraY
+                scaleX = compactWidth() / geometryWidth.coerceAtLeast(1)
+                updateContour()
+            }
+        } else {
             alpha = 0f
             entryCameraAnchor = mediaReturnProgress == 0f || entranceStyle == IslandEntranceStyle.CENTER
             pivotY = if (entryCameraAnchor) cameraY else 0f
@@ -576,8 +582,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     /** A visible idle capsule is already the source object. Do not reset its opacity,
      * breadth or pivot when the native app window hands music back to it. */
     fun prepareReturnFromCurrent() {
+        // An existing capsule must still morph when capture/progress is unavailable.
+        // Only a real native channel owns the longer window-arrival clock.
         nativeArrival = true
-        mediaReturnProgress = if (absorption && returnProgress != null && !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
+        mediaReturnProgress = if (!simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
     }
 
     fun prepareContentArrivalFromCurrent() {
@@ -610,7 +618,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             visualTop?.let { translationY = it - pivotY * (1f - scaleY) }
         }
         val travel = if (mediaReturnProgress == 0f) {
-            if (nativeArrival) IslandMotion.RETURN_TIMEOUT else IslandMotion.CONTENT_ARRIVAL
+            if (nativeArrival && returnProgress != null) IslandMotion.RETURN_TIMEOUT else IslandMotion.CONTENT_ARRIVAL
         }
             else if (entering) IslandMotion.ENTER
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
@@ -787,13 +795,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                             maxOf(maximumWidth / geometryWidth, downScaleX)) else downScaleX
                     scaleY = if (dragAxis == 2) downScaleY + .04f * vertical * freedom
                         else downScaleY - .015f * abs(horizontal) * freedom
-                    if (cameraGap > 0) scaleY = maxOf(scaleY, cameraMinimumHeight() / geometryHeight.coerceAtLeast(1))
+                    if (cameraGap > 0) scaleY = maxOf(scaleY,
+                        minOf(downScaleY, cameraMinimumHeight() / geometryHeight.coerceAtLeast(1)))
                     val sideRoom = ((maximumWidth - geometryWidth * scaleX) * .5f).coerceAtLeast(0f)
                     translationX = downTranslationX + if (dragAxis == 1 && alignment == 1)
                         (dp(4) * horizontal * freedom).coerceIn(-sideRoom, sideRoom) else 0f
                     // Stretch about the camera; a downward expansion must not drag the
                     // entire status-band object away from its established anchor.
-                    translationY = cameraSafeTranslation(downTranslationY)
+                    translationY = downTranslationY
                     updateContour()
                     return true
                 }
@@ -832,12 +841,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
     }
 
-    private fun cameraSafeTranslation(value: Float): Float {
+    private fun cameraSafeTranslation(value: Float, origin: Float): Float {
         if (cameraGap == 0) return value
         val top = pivotY * (1f - scaleY)
         val minimum = cameraY + cameraHeight * .5f + dp(2) - top - geometryHeight * scaleY
         val maximum = cameraY - cameraHeight * .5f - dp(2) - top
-        return if (minimum <= maximum) value.coerceIn(minimum, maximum) else value
+        // An interrupted presentation may start outside the final camera bounds.
+        // Converge from that real origin; enforcing a new bound on frame one snaps.
+        return if (minimum <= maximum) value.coerceIn(minOf(minimum, origin), maxOf(maximum, origin)) else value
     }
 
     private fun cameraMinimumHeight() = minOf(geometryHeight.toFloat(), cameraHeight + dp(4))
@@ -860,7 +871,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
         val nativeDriven = returning && nativeArrival && returnProgress != null
         val milliseconds = if (nativeDriven) duration else (duration * motionScale.coerceIn(.65f, 1f)).toLong()
-        val seconds = (if (nativeDriven) IslandMotion.returnDuration(returnStrength, true) else milliseconds) / 1000f
+        val seconds = (if (nativeDriven) IslandMotion.returnDuration(returnStrength, absorption) else milliseconds) / 1000f
         if (carry && !rigid) breadth.addVelocity(breadthExtraVelocity)
         breadthExtraVelocity = 0f
         breadth.retarget(geometryWidth * scaleX, geometryWidth * x, seconds, carry && !rigid, rebound)
@@ -873,10 +884,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val maximumHeight = maxOf(maxOf(dp(44), geometryHeight) * 1.14f, geometryHeight * scaleY)
         // The camera seed must not override the shared configured height, or clamp
         // a smaller current height when a geometry change is being interrupted.
-        val minimumHeight = if (rebound && cameraGap > 0) cameraMinimumHeight()
+        val minimumHeight = if (rebound && cameraGap > 0) minOf(cameraMinimumHeight(), geometryHeight * scaleY)
             else minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         shiftY.retarget(translationY, ty, seconds, carry && !rigid, rebound)
+        val originY = translationY
         this.opacity.retarget(alpha, opacity, seconds, carry)
         var layerFrom = layerReveal
         val fadeOut = if (pendingContent != null) minOf(contentFadeRemaining, milliseconds * 46 / 100) else 0L
@@ -899,7 +911,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     val progress = if (nativeDriven) returnProgress?.read()?.takeIf { p -> p >= 0f }?.coerceIn(0f, 1f) ?: 1f
                         else (animation.currentPlayTime.toFloat() / milliseconds.coerceAtLeast(1L)).coerceIn(0f, 1f)
                     val weight = catchWeight * if (returning && nativeArrival) .99f + .02f * returnStrength else 1f
-                    val catchValue = if (nativeDriven) IslandMotion.absorptionCatch(progress) else IslandMotion.mediaReturnCatch(progress, nativeArrival)
+                    val catchValue = if (nativeDriven && absorption) IslandMotion.absorptionCatch(progress) else IslandMotion.mediaReturnCatch(progress, nativeArrival)
                     val effectiveWeight = if (nativeDriven) minOf(weight, ((maximumBreadth - geometryWidth) / geometryWidth.coerceAtLeast(1)).coerceAtLeast(0f))
                         else if (catchValue >= 0f)
                         IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival) else weight
@@ -916,7 +928,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     }
                     translationX = shiftX.sample(time)
                     val nextY = shiftY.sample(time)
-                    translationY = if (rebound) cameraSafeTranslation(nextY) else nextY
+                    translationY = if (rebound) cameraSafeTranslation(nextY, originY) else nextY
                     if (opacity > 0f) {
                         if (pendingContent != null) {
                             contentFadeRemaining = (fadeOut - animation.currentPlayTime).coerceAtLeast(0L)

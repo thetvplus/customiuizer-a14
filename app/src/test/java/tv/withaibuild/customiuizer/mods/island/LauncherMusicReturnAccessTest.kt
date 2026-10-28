@@ -45,7 +45,7 @@ class LauncherMusicReturnAccessTest {
         @JvmField var activityType = ACTIVITY_TYPE_STANDARD
     }
     class Targets(@JvmField val apps: Array<Remote>)
-    class Animation(var targetRect: RectF = RectF())
+    class Animation(var targetRect: RectF = RectF(), var currentAlpha: Float = Float.NaN)
     open class Element(@JvmField var remoteAnimationTargetSet: Targets? = null) {
         @JvmField var currentRectFParams: Any? = null
         @JvmField val mAnim = Animation()
@@ -128,9 +128,9 @@ class LauncherMusicReturnAccessTest {
     }
     private fun params(type: Type = Type.CLOSE_TO_HOME, quick: Boolean = false, split: Boolean = false,
         rotation: Int = 0, targets: Targets? = Targets(arrayOf(Remote())),
-        targetView: View? = null) = Params(targets,
-        RectF(0f, 0f, 1080f, 2400f), RectF(200f, 1800f, 300f, 1900f), 32f, 20f, 1f, 0f,
-        type, false, true, quick, targetView, Any(), Any(), true, rotation, 0, true, 0, split, false)
+        targetView: View? = null, startAlpha: Float = 1f, translucent: Boolean = false) = Params(targets,
+        RectF(0f, 0f, 1080f, 2400f), RectF(200f, 1800f, 300f, 1900f), 32f, 20f, startAlpha, 0f,
+        type, false, true, quick, targetView, Any(), Any(), true, rotation, 0, true, 0, split, translucent)
 
     @Test fun closingWindowUsesNativeNoIconTargetWithoutChangingTheOriginal() {
         val source = params()
@@ -139,13 +139,13 @@ class LauncherMusicReturnAccessTest {
         assertEquals(frame.landingRectangle(), result.targetRect)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
         assertEquals(result.targetRect.height() * .5f, result.endRadius, 0f)
-        assertEquals("The ROM owns page opacity", source.endAlpha, result.endAlpha, 0f)
+        assertEquals("Keep the release opacity throughout the return", source.startAlpha, result.endAlpha, 0f)
         assertEquals(0f, source.endAlpha, 0f)
         assertTrue(result.ignoreIcon); assertFalse(source.ignoreIcon)
         assertNull("The window return must not borrow or animate the desktop icon", result.targetView)
         assertNull(source.targetView)
         for (field in Params::class.java.declaredFields) {
-            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView")) continue
+            if (field.name in setOf("targetRect", "endRadius", "ignoreIcon", "targetView", "endAlpha")) continue
             field.isAccessible = true
             assertEquals("Preserve native ${field.name}", field.get(source), field.get(result))
         }
@@ -154,15 +154,35 @@ class LauncherMusicReturnAccessTest {
         assertSame(source.targetApps, result.targetApps)
     }
 
-    @Test fun standardBoardingObservesNativeConfirmationWithoutRetargetingOrChangingOpacity() {
-        val source = params()
-        val result = access.retarget(source, Element(), Nav(), frame, absorption = false) as Params
-        assertSame(source, result)
-        assertEquals(source.targetRect, result.targetRect)
-        assertEquals(source.startAlpha, result.startAlpha, 0f)
-        assertEquals(source.endAlpha, result.endAlpha, 0f)
-        assertSame(source.animListener, result.animListener)
-        assertNull(result.targetView)
+    @Test fun bothBoardingEffectsUseTheIslandInsteadOfAnIconAndRetainTheActualReleaseOpacity() {
+        for (alpha in listOf(1f, .8f, .4f)) {
+            val source = params(startAlpha = alpha)
+            val result = access.retarget(source, Element(), Nav(), frame) as Params
+            assertNotSame(source, result)
+            assertEquals(frame.landingRectangle(), result.targetRect)
+            assertEquals(alpha, result.startAlpha, 0f)
+            assertEquals(alpha, result.endAlpha, 0f)
+            assertSame("The release rectangle belongs to the ROM", source.startRect, result.startRect)
+            assertSame(source.animListener, result.animListener)
+            assertTrue(result.ignoreIcon)
+            assertNull(result.targetView)
+        }
+        val translucent = params(startAlpha = .6f, translucent = true)
+        val result = access.retarget(translucent, Element(), Nav(), frame) as Params
+        assertEquals("A translucent task keeps its native fade contract", translucent.endAlpha, result.endAlpha, 0f)
+    }
+
+    @Test fun anInterruptedReturnUsesPresentedAlphaInsteadOfAStartDefaultOrSentinel() {
+        for (start in listOf(1f, -1f, Float.NaN)) {
+            val source = params(startAlpha = start)
+            val owner = Element().apply { currentRectFParams = Any(); mAnim.currentAlpha = .75f }
+            val copy = access.retarget(source, owner, Nav(), frame) as Params
+            assertEquals(.75f, copy.endAlpha, 0f)
+            assertEquals(.75f, copy.startAlpha, 0f)
+            assertEquals(start, source.startAlpha, 0f)
+            assertEquals(0f, source.endAlpha, 0f)
+        }
+        assertNull("Unknown opacity must retain the native path", access.retarget(params(startAlpha = -1f), Element(), Nav(), frame))
     }
 
     @Test fun returnFromAnotherPageKeepsTheNativeAbsentIconTarget() {

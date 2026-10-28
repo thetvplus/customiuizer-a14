@@ -24,11 +24,11 @@ import java.nio.ByteOrder
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandNativeReturnCompletionTest {
     @Test fun nativeCompletionAndCancellationEndOnceWithoutReenteringTheFrameCallback() {
-        for (terminal in intArrayOf(1_000_000, -1_000_000)) {
+        for (absorption in listOf(false, true)) for (terminal in intArrayOf(1_000_000, -1_000_000)) {
             val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
             val memory = SharedMemory.create("island-return-completion", 4)
             val writer = memory.mapReadWrite().order(ByteOrder.nativeOrder())
-            val shell = IslandActivityView(host).apply { absorption = true }
+            val shell = IslandActivityView(host).apply { this.absorption = absorption }
             host.setContentView(shell, FrameLayout.LayoutParams(240, 40))
             ShadowChoreographer.setPaused(true)
             var clock: ValueAnimator? = null
@@ -40,10 +40,15 @@ class IslandNativeReturnCompletionTest {
                 shell.transition(240, 40, 240, 40, entering = true)
                 clock = getField(shell, "motion")
                 assertNotNull("Exercise the native-driven clock, including its terminal frame", clock)
+                assertTrue("Both effects start with a camera seed instead of a full-size jump", shell.scaleX < 1f)
                 var endings = 0
                 clock!!.addListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) { endings++ }
                 })
+                writer.putInt(0, 400_000)
+                clock!!.currentPlayTime = 200L
+                assertEquals(.4f, getField<Float>(shell, "mediaReturnProgress"), .00001f)
+                assertEquals(0, endings)
                 writer.putInt(0, terminal)
                 clock!!.currentPlayTime = 400L
                 assertEquals("Exactly one terminal callback", 1, endings)

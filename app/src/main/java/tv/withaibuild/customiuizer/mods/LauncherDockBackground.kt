@@ -550,7 +550,7 @@ internal class DockBackgroundView(
             if (!isVisible) cancelWidthAnimation()
             if (isVisible) scheduleGeometry() else if (editingAnimation == null) cancelGeometry()
             val drawingAnimation = editingAnimation != null
-            glassBackdrop?.onFrame((isVisible || drawingAnimation) && nativeBlurAlpha() > 0)
+            glassBackdrop?.onFrame(isVisible || drawingAnimation, nativeBlurAlpha() > 0)
             if (!isVisible && drawingAnimation) nativeMaterial?.onVisibilityAggregated(true)
             syncNativeMaterialVisibility(isVisible || drawingAnimation)
         }
@@ -739,7 +739,7 @@ internal class DockBackgroundView(
             // Google blur regions have their own compositor opacity. Follow native rendered frames;
             // never start a frame loop, animate separately or traverse icon bounds on idle frames.
             syncNativeOpacity()
-            glassBackdrop?.onFrame((isShown || editingAnimation != null) && nativeBlurAlpha() > 0)
+            glassBackdrop?.onFrame(isShown || editingAnimation != null, nativeBlurAlpha() > 0)
             val host = fullWidthHost.get() ?: parent as? FrameLayout ?: return@guarded
             if (config.fullWidth) {
                 syncNativeMaterialVisibility(isShown && nativeBlurAlpha() > 0)
