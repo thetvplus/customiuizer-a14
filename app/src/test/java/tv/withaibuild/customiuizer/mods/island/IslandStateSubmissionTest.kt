@@ -6,7 +6,12 @@ import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.media.session.PlaybackState
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.View
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,6 +28,46 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "en-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandStateSubmissionTest {
+    @Test fun compactTrackUpdatesDoNotResubmitIdenticalHiddenTextButRealTextAndClockChangesStillApply() {
+        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { simplified = true }
+        shell.bind("Track", "Artist", null, true, true, false, 0, false)
+        shell.geometry(280, 40, 40)
+        val identity = (shell.getChildAt(0) as LinearLayout).getChildAt(1) as TextView
+        val detail = (shell.getChildAt(1) as LinearLayout).getChildAt(1) as TextView
+        var textSubmissions = 0
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) { textSubmissions++ }
+        }
+        identity.addTextChangedListener(watcher)
+        detail.addTextChangedListener(watcher)
+        fun settle() {
+            shell.measure(View.MeasureSpec.makeMeasureSpec(280, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(40, View.MeasureSpec.EXACTLY))
+            shell.layout(0, 0, 280, 40)
+        }
+        settle()
+        repeat(120) {
+            shell.bind("Track $it", "Artist", null, true, true, false, 0, false)
+            settle()
+        }
+        assertEquals("Unchanged hidden text must not be submitted again", 0, textSubmissions)
+        shell.bind("Track 119", "Next artist", null, true, true, false, 0, false)
+        assertEquals("Next artist", detail.text.toString())
+        assertEquals(1, textSubmissions)
+        shell.bind("Track 119", "Next artist", null, true, true, false, 0, false, expanded = true)
+        assertEquals("Track 119", identity.text.toString())
+        assertEquals(View.VISIBLE, identity.visibility)
+        assertEquals(2, textSubmissions)
+        shell.bind("Recorder", "Paused", null, false, false, false, 0, false,
+            expanded = true, clock = IslandLiveClock(0, false, pausedMillis = 62_000))
+        val clock = (shell.getChildAt(1) as LinearLayout).getChildAt(0) as TextView
+        assertEquals(IslandLiveLabels.time(62_000), clock.text.toString())
+        assertEquals("", identity.text.toString())
+        assertEquals("Paused", detail.text.toString())
+    }
+
     @Test fun unchangedGeometryAndCompactMetadataDoNotInvalidateTheMaskButShapeAndSizeStillDo() {
         val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { simplified = true }
         shell.bind("Track", "Artist", null, true, true, false, 0, false)

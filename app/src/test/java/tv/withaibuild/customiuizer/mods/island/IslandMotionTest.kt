@@ -34,7 +34,6 @@ class IslandMotionTest {
         assertEquals(-.2f, IslandMotion.mediaReturnCatch(.325f), .0001f)
         assertEquals(0f, IslandMotion.mediaReturnCatch(.5f), 0f)
         assertTrue(IslandMotion.mediaReturnCatch(.72f) > 0f)
-        assertTrue(IslandMotion.MEDIA_RETURN_DELAY < IslandMotion.MEDIA_DELAY)
         assertTrue(IslandMotion.MEDIA_RETURN < 1000)
     }
 

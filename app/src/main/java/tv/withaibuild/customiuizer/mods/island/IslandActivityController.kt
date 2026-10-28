@@ -1391,7 +1391,7 @@ internal class IslandActivityController(
             else safeWidth
         val density = context.resources.displayMetrics.density
         val expanded = !idle && !mediaOnly && (feedbackExpanded || label == null &&
-            (if (returnActivity != null) IslandMotionCoordinator.prefersLong(returnActivity, options.automaticWidth) else forms.expanded))
+            (if (returnActivity != null) IslandMotionCoordinator.prefersLong(returnActivity) else forms.expanded))
         val compactMaximumWidth = IslandSizing.maximumWidth(density, bounds.width, clearance,
             shortDp = options.shortWidth, longDp = options.longWidth, manual = !options.automaticWidth,
             heightDp = heightDp, centered = centered)
@@ -1571,7 +1571,7 @@ internal class IslandActivityController(
         val showingMedia = toast == null && current != null
         val motionSource = IslandFormState.source(toast, showingMedia)
         forms.select(if (toast != null || current != null) state.identity(now) else null,
-            IslandMotionCoordinator.prefersLong(toast, options.automaticWidth), motionSource)
+            IslandMotionCoordinator.prefersLong(toast), motionSource)
         forms.expireExpansion(now)
         val idle = options.idle && !forms.idleSuppressed && (state.allowed || shadeIdle) && toast == null && current == null
         val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null

@@ -16,7 +16,6 @@ internal object IslandMotion {
     const val CONTENT_ARRIVAL = 300L
     const val ALBUM = 300L
     const val MEDIA_DELAY = 750L
-    const val MEDIA_RETURN_DELAY = 80L
     const val MEDIA_RETURN = 540L
     const val RETURN_TIMEOUT = 1600L
     const val ABSORPTION_TIME_SCALE = 1.5f

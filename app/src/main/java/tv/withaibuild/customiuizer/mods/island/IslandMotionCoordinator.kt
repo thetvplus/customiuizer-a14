@@ -23,7 +23,7 @@ internal class IslandMotionCoordinator {
 
     companion object {
         /** A message body needs its own line; manual sizing still uses the chosen long width. */
-        fun prefersLong(content: IslandToastContent?, automaticWidth: Boolean = true): Boolean {
+        fun prefersLong(content: IslandToastContent?): Boolean {
             content ?: return false
             val notification = content.notificationKey != null
             if (content.liveActivity != null) return true

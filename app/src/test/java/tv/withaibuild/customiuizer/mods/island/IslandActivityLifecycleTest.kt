@@ -1048,7 +1048,6 @@ class IslandActivityLifecycleTest {
         assertEquals(0, adds)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1)); drain()
         nativeReturn(controller); drain()
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
         assertEquals(1, adds)
     }
 
@@ -1988,7 +1987,6 @@ class IslandActivityLifecycleTest {
         controller.updateFromNative(native); drain()
         nativeReturn(controller)
         controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(IslandMotion.MEDIA_RETURN_DELAY)); drain()
         assertEquals(1, queries)
         assertEquals(1, adds)
     }

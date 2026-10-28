@@ -361,9 +361,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val twoLevels = content.expanded && !content.status && content.clock != null && detail != null
         title.gravity = Gravity.END or Gravity.CENTER_VERTICAL
         applyTextSizes(content, split)
-        identityTitle.text = if (split) content.label else ""
+        val identityLabel = if (split) content.label else ""
+        if (!TextUtils.equals(identityTitle.text, identityLabel)) identityTitle.text = identityLabel
         identityTitle.visibility = if (split) VISIBLE else GONE
-        subtitle.text = detail.orEmpty()
+        val detailLabel = detail.orEmpty()
+        if (!TextUtils.equals(subtitle.text, detailLabel)) subtitle.text = detailLabel
         subtitle.visibility = if (twoLevels) VISIBLE else GONE
         fitTextRows()
         val visibleLabel = if (content.media && !content.expanded) "" else if (split) detail.orEmpty() else content.label
