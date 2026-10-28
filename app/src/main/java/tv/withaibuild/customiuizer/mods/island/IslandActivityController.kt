@@ -997,17 +997,9 @@ internal class IslandActivityController(
         // session. Retain our exact OS session through a bounded pause as well, so
         // the existing callback can observe playback returning after the alarm.
         val now = SystemClock.uptimeMillis()
-        val nativePlayer = nativeSelection ?: selected?.takeIf { candidate ->
-            media?.loading == true && loadingDeadline?.let { it > now } == true ||
-                ModuleHelper.guarded(false) {
-                    val playback = candidate.playbackState?.state
-                    (playback == PlaybackState.STATE_PLAYING || playback == PlaybackState.STATE_PAUSED &&
-                        nativeCardGapDeadline?.let { it > now } != false) &&
-                        context.getSystemService(android.media.session.MediaSessionManager::class.java)
-                            ?.getActiveSessions(null)?.any { it.sessionToken == candidate.sessionToken &&
-                                it.packageName == candidate.packageName } == true
-                }
-        }
+        val retainLoading = media?.loading == true && loadingDeadline?.let { it > now } == true
+        val gapDeadline = nativeCardGapDeadline
+        val nativePlayer = nativeSelection ?: selected
         if (nativePlayer == null || nativePlayer.sessionToken == destroyedToken) {
             clearMedia()
             render()
@@ -1036,7 +1028,8 @@ internal class IslandActivityController(
         }
         nativeCardGapDeadline = if (nativeSelection != null || independent != null) null
             else nativeCardGapDeadline ?: Long.MAX_VALUE
-        val metadata = if (independent == null && nativeSelection != null) access.metadata(owner) else controller.metadata
+        val metadata = if (independent == null && nativeSelection != null) access.metadata(owner) else null
+        val readUser = foregroundUser
         val readOptions = options
         val currentIconEpoch = iconEpoch
         val retained = media?.takeIf { it.token == controller.sessionToken }
@@ -1046,13 +1039,28 @@ internal class IslandActivityController(
             val prepared = withContext(ioDispatcher) {
                 snapshotMutex.withLock {
                     ensureActive()
+                    // Native-card loss is an event, not permission to run synchronous Binder
+                    // queries on Main. Keep the exact selected candidate and existing loading /
+                    // paused-gap policy; a newer native selection cancels this same read job.
+                    val valid = nativeSelection != null || retainLoading || ModuleHelper.guarded(false) {
+                        val playback = nativePlayer.playbackState?.state
+                        (playback == PlaybackState.STATE_PLAYING || playback == PlaybackState.STATE_PAUSED &&
+                            gapDeadline?.let { it > now } != false) &&
+                            context.getSystemService(android.media.session.MediaSessionManager::class.java)
+                                ?.getActiveSessions(null)?.any { it.sessionToken == nativePlayer.sessionToken &&
+                                    it.packageName == nativePlayer.packageName } == true
+                    }
+                    ensureActive()
+                    if (!valid) return@withLock null
                     val playback = controller.playbackState?.state
                     if (independent != null && playback != PlaybackState.STATE_PLAYING &&
                         !(retained != null && playback != null && IslandMediaPolicy.loading(playback))) null
-                    else prepare(controller, if (independent != null) controller.metadata else metadata, readOptions, currentIconEpoch, retained)
+                    else prepare(controller, if (independent != null || nativeSelection == null) controller.metadata else metadata,
+                        readOptions, currentIconEpoch, retained)
                 }
             }
-            if (disposed || !state.allowed || generation != readGeneration ||
+            if (disposed || !state.allowed || generation != readGeneration || readUser != foregroundUser ||
+                nativeManager.get() !== owner ||
                 selected?.sessionToken != controller.sessionToken) return@launch
             val now = SystemClock.uptimeMillis()
             foregroundBaseline = false

@@ -290,6 +290,28 @@ Toast 首次量宽在一次同步搜索内按需准备同一 TextPaint，未增�
 
 源码 `06044aa04a21f41be9ad72a051f78b52db8a0930`：Deep 的完整 3,575 项回归零失败（2 项既定跳过）、Debug lint 和全量工具 673 项通过（5 项既定跳过）；未签名 Develop 压缩构建、fatal lint、同 APK 的来源 / R8 mapping / API 102、SDK 34 / arm64 与 16 KiB 对齐通过，APK SHA-256 `852e3c7851f55af71c6f51e201c2d79300b2d6f2b9f2ecb5e63747c7424dc534`。证据位于既有仓库外目录，前缀 `power-audit-`，包括旧行为失败 / 修正后 XML、完整验证与缓存录音机 DexSQL 结果。未安装，动画仍须实机录屏，同设备同负载的采集 / 绘制 / CPU / GPU / 帧时间 / 电量对照仍待验。此前连续中断返回的 2 / 20 漏接未被本轮主机检查闭环。
 
+## 动态岛全链路审查与关键路径优化
+
+2026-10-28 沿 `codex/island-r14-25-6` 的真实本地 / 远端基准 `7099c1fcb5c34b9eb3fb444cbbfcdd3aa13ace61` 续审，而非回到 `main` 或较旧的 `6559cdf`。核对来源事件、ActivityState 仲裁、FormState 形态、MotionCoordinator 决策、几何 / View、WindowPresentation 首帧提交及反向释放，并检查通知、系统反馈、媒体、充电、勿扰、隐私、录音、计时、PiP、浮窗和排除规则的交接。保留各层实际职责、单窗口 / 单有限时钟、既有弹簧与手势参数；没有新增功能、调度器、缓存层、轮询或预热任务。
+
+| 级别 / 路径 | 原触发与频率 | 完成的修正、机制收益与失效条件 |
+| --- | --- | --- |
+| P0 / `IslandActivityController.refreshFromNative` | 原生卡片临时消失时，每次合并后的媒体事件仍在 Main 读取播放状态、调用 `getActiveSessions(null)`；取消后续快照也无法避免已经发生的同步查询 | 将有效性检查和回退 metadata 读取移入现有 IO 快照 / Mutex；保留原生选中顺序、精确 token / 包、loading 与有限暂停期限。沿用 readGeneration / Job，发布另核对用户和 manager owner；新选择、用户切换、锁屏、停用和 dispose 淘汰迟到结果。收益是移除这段 Main 同步 Binder 工作，未测设备延迟 |
+| P1 / `IslandWindowPresentation.prepare` | 同一持续活动的新快照生成值相同的新 key；原先按对象引用判定不同，每次更新都会释放可见租约、状态栏占用并停止采集 | 按逻辑身份判断，保留原可见租约；真实新活动及 EXITING 后恢复仍重新等待首帧。与状态、形态和动画层的身份语义一致，不合并独立通知 / Toast 租约 |
+| P1 / `IslandStatusBarCompact.updateOcclusion` | 岛体在场的每次 PreDraw / 位置更新，对每个叶图标重复读取同一窗口的屏幕偏移 | 每次检查读取一组 host 屏幕 / 窗口偏移，继续逐图标读取当前裁切后边界。两图标 120 帧的 Host 叶坐标方法进入次数从 720 降为零；宿主偏移仍每次重读，原生矩阵、滚动、窗口移动及布局替换继续失效，无跨帧坐标缓存 |
+| P1 / `IslandStatusBarCompact.positionKept` | 宽岛每帧重复提交时钟 / 电量 alpha=0；隐藏期间的原生新 alpha 又被覆盖，恢复时仍写入最初值 | 相同 alpha 不提交；抑制期间观察到原生非零值就更新既有恢复值，仍只恢复自身持有的零值。120 帧重复提交从 120 降为零，原生 .7→隐藏→.4 的恢复保留 .4；位移和父容器裁切原有所有权不变 |
+| P1 / `LauncherMusicReturnHooks` 可选吸入安装 | update 或任一结束 Hook 安装失败后，功能虽不激活，已经成功安装的帧 / 结束回调仍留在原生调用链 | 本地安装组遇失败即停止并按逆序撤销已取得句柄；只有完整成功才允许 owner 激活。普通异常沿原生回退，清理继续尝试其余句柄，原始 fatal 身份及附带清理错误保留。仅安装期持有有界句柄列表，无新运行期注册表；不改变私有 ABI、原生调用或完成 / 取消时序 |
+
+原生事件 Hook 仍在所属 A14 ClassLoader 冷解析；通知接管 / 隐私配对、PiP 与原生活动生产者已有失败回滚，本轮保留。未增加新 ROM 定位或宽泛猜测 Hook，也未以其他 Android / HyperOS 样本证明 A14。两份 PreDraw 分属岛窗口准入与原生状态栏避让，不能按同帧重复工作直接合并；PiP 拒绝后沿用一个合并的 Main 重检并隐藏 / 重新选择。原生图标属性动画不一定触发布局，故保留每帧相交检查。继续保留终止帧先移除更新监听再 end、旧时钟身份检查、exitGeneration、内容单槽及 SharedMemory / Bitmap / Visualizer / Controller 的原释放路径。
+
+未实施 P2：为 render 的事件级几何 / 文字测量再建总缓存、按“无布局变化”跳过原生图标检测、合并来源状态管理器、统一缩短动效，以及扩大核心 Hook 安装重构。现有有界扫描和文字准备已有复用；缺少净成本测量，或会扩大失效、首帧安全和原生时序风险。没有以少量源码或更多测试作为收益。
+
+五项旧行为回归分别检出 Main 同步查询、取消前已执行查询、逐叶偏移查询、相同 alpha 提交及等值 key 释放租约；修正后另覆盖闹钟卡片间隙、暂停恢复、真正的新来源、用户切换、dispose、原生透明度更新及可选 Hook 逐阶段失败 / fatal 清理。JDK 25 的 Deep full、Debug lint 与源码 / 生命周期 / 热路径门禁通过：424 个套件、3,846 项 Host 测试零失败 / 错误，2 项既定跳过；677 项工具测试通过，5 项既定跳过。工具测试首轮误继承临时验证索引而中断，已在清除该变量后完整重跑通过；该轮不计成功。验证索引仅排除原有七份暂存 Skill 的既存换行问题，原工作副本字节和暂存 patch 均原样保留。
+
+同源码内容的未签名 Develop / R8 / fatal lint 通过；DexSQL 0.1.1 对该 APK 的 compileOnly 定义、八个设置入口直接 API 引用均为零，setId / getId 各一并核对同产物成员 mapping，replaceHook 为零。SDK 34、arm64、API 102 静态元数据、非调试和 ZIP / ELF 16 KiB 对齐通过。工程包嵌入基准 revision `7099c1fc`，仓库外收据按完整源码哈希绑定本任务工作副本，不作正式发行来源声明。APK SHA-256 `e6a076f664d5089009e5a49cee21b2794d2d3b1cbc4af892c76949dc8500c192`。反例 / 通过 JUnit、日志、输入哈希、APK / SQL / mapping 和收据保存在仓库外 `customiuizer-a14-evidence/island-full-review-20261028/`；回退单位为本轮四处生产文件及对应回归，不涉及既有暂存 Skill、Dock 或发布系统。
+
+ADB 无连接，未安装、签名或执行设备操作。连续活动与通知 / 媒体交接、闹钟抢占及暂停恢复、PiP、锁屏、旋转、Home 快进出、上滑关闭、动画中断和真实资源清理仍待目标 HyperOS 1 / Android 14 设备验收；动画须录屏，性能须同设备 / 刷新率 / 场景做前后对照。本轮操作次数与快照边界证据不代表设备帧率、CPU / GPU、PSS、功耗或视觉通过。
+
 ## 原生组件取舍
 
 本轮将设置 App 的组件与 SystemUI / Launcher 内的持续功能分开审查。设置页采用 AndroidX PreferenceFragmentCompat / RecyclerView、AppCompat 对话框和 Android View，并非自行实现整套控件，也不是直接加载系统设置 APK 的私有页面。保留官方推荐的 [AndroidX Preference](https://developer.android.com/develop/ui/views/components/settings)，不为「更底层」迁回已废弃的 android.preference；ROM 私有能力继续限于已有目标证据、宿主内使用及有回退的接入。

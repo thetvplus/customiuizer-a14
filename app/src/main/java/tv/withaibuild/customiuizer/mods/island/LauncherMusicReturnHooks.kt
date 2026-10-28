@@ -27,11 +27,44 @@ import tv.withaibuild.customiuizer.mods.utils.ScreenStateController
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
+import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.CustomMethodUnhooker
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.lang.reflect.Method
+
+/** The optional mesh needs every ending hook before an owner may activate it. */
+internal fun installIslandAbsorptionHooks(update: Method, frameHook: MethodHook,
+    cancellations: List<Method>, endingHook: (Method) -> MethodHook): Boolean {
+    if (cancellations.isEmpty()) return false
+    val handles = ArrayList<CustomMethodUnhooker>()
+    var complete = false
+    var failure: Throwable? = null
+    try {
+        handles.add(ModuleHelper.hookMethod(update, frameHook) ?: return false)
+        for (method in cancellations) handles.add(ModuleHelper.hookMethod(method, endingHook(method)) ?: return false)
+        complete = true
+        return true
+    } catch (error: Throwable) {
+        failure = error
+        throw error
+    } finally {
+        if (!complete) {
+            var cleanupFailure = failure
+            for (handle in handles.asReversed()) {
+                try { ModuleHelper.guarded { handle.unhook() } }
+                catch (error: Throwable) {
+                    val previous = cleanupFailure
+                    if (previous == null) cleanupFailure = error
+                    else if (previous !== error) previous.addSuppressed(error)
+                }
+            }
+            if (failure == null) cleanupFailure?.let { throw it }
+        }
+    }
+}
 
 internal object LauncherMusicReturnHooks {
     private const val OWNER = "customiuizer_music_return_owner"
@@ -124,7 +157,7 @@ internal object LauncherMusicReturnHooks {
         ModuleHelper.hookMethod(access.animate, animationHook(access.animate))
         if (absorption != null) {
             val (meshAccess, mesh) = absorption
-            val frameHook = ModuleHelper.hookMethod(meshAccess.update, object : MethodHook() {
+            val frameHook = object : MethodHook() {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
                     val element = chain.thisObject ?: return chain.proceed()
                     if (!mesh.owns(element)) return chain.proceed()
@@ -140,10 +173,9 @@ internal object LauncherMusicReturnHooks {
                     }
                     return result
                 }
-            })
-            var endingsInstalled = frameHook != null
-            for (method in meshAccess.cancellations) {
-                if (ModuleHelper.hookMethod(method, object : MethodHook() {
+            }
+            absorptionInstalled = installIslandAbsorptionHooks(meshAccess.update, frameHook, meshAccess.cancellations) { method ->
+                object : MethodHook() {
                     override fun intercept(chain: XposedInterface.Chain): Any? {
                         val element = chain.thisObject ?: return chain.proceed()
                         val meshLease = mesh.lease(element)
@@ -156,9 +188,8 @@ internal object LauncherMusicReturnHooks {
                             mesh.end(element, meshLease, completed)
                         } }
                     }
-                }) == null) endingsInstalled = false
+                }
             }
-            absorptionInstalled = endingsInstalled
         }
     }
 

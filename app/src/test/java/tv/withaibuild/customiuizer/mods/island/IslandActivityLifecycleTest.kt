@@ -57,6 +57,17 @@ class IslandActivityLifecycleTest {
     private var metricsHeight = 2400
     private var metricsReads = 0
     private var metricsInsets = WindowInsets.Builder().build()
+    private var snapshotIo = false
+    private var mediaManagerReads = 0
+    private var mediaManagerReadsOutsideIo = 0
+    private val markedIo = object : kotlinx.coroutines.CoroutineDispatcher() {
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+            dispatcher.dispatch(context, Runnable {
+                snapshotIo = true
+                try { block.run() } finally { snapshotIo = false }
+            })
+        }
+    }
 
     @Test fun musicStartedAfterAClockTakesOverAndPauseHandsBackWithoutRemovingOrMovingTheWindow() {
         val controller = controller(media = true, liveKinds = setOf("stopwatch"))
@@ -175,7 +186,14 @@ class IslandActivityLifecycleTest {
         }
     } as WindowManager
     private val context get() = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
-        override fun getSystemService(name: String): Any? = if (name == Context.WINDOW_SERVICE) window else super.getSystemService(name)
+        override fun getSystemService(name: String): Any? {
+            if (name == Context.WINDOW_SERVICE) return window
+            if (name == Context.MEDIA_SESSION_SERVICE) {
+                mediaManagerReads++
+                if (!snapshotIo) mediaManagerReadsOutsideIo++
+            }
+            return super.getSystemService(name)
+        }
     }
 
     @Before fun setup() {
@@ -912,6 +930,48 @@ class IslandActivityLifecycleTest {
         assertEquals(1f, shell!!.getChildAt(0).alpha, .001f)
     }
 
+    @Test fun nativeCardGapValidationWaitsForTheSnapshotWorkerAndNeverQueriesMain() {
+        val controller = controller(media = true, simplified = true, io = markedIo)
+        val player = launchablePlayer("worker-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(player)
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        mediaManagerReads = 0; mediaManagerReadsOutsideIo = 0
+        native.player = null
+        controller.updateFromNative(native)
+        shadowOf(Looper.getMainLooper()).idle() // Deliver nativeRefresh, but do not run the IO queue.
+        assertEquals("Native card loss cannot synchronously enumerate sessions", 0, mediaManagerReads)
+        drain()
+        assertEquals(1, mediaManagerReads)
+        assertEquals("The snapshot worker owns session enumeration", 0, mediaManagerReadsOutsideIo)
+        assertSame(player, org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertTrue(shell!!.isAttachedToWindow)
+    }
+
+    @Test fun aPendingCardGapCannotOverrideANewerNativeSelectionOrSurviveDisposal() {
+        val controller = controller(media = true, simplified = true, io = markedIo)
+        val old = launchablePlayer("old-card-gap")
+        val manager = requireNotNull(context.getSystemService(android.media.session.MediaSessionManager::class.java))
+        shadowOf(manager).addController(old)
+        native.player = old
+        controller.updateFromNative(native); revealMedia()
+        val next = launchablePlayer("new-native-selection")
+        mediaManagerReads = 0; mediaManagerReadsOutsideIo = 0
+        native.player = null
+        controller.updateFromNative(native); shadowOf(Looper.getMainLooper()).idle()
+        native.player = next
+        controller.updateFromNative(native); drain()
+        assertSame(next, org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertEquals("Cancelled gap work must not enumerate sessions", 0, mediaManagerReads)
+        native.player = null
+        controller.updateFromNative(native); shadowOf(Looper.getMainLooper()).idle()
+        controller.dispose(); drain()
+        assertEquals(0, mediaManagerReads)
+        assertTrue(shadowOf(old).callbacks.isEmpty()); assertTrue(shadowOf(next).callbacks.isEmpty())
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+    }
+
     @Test fun anAlarmNativeCardGapCannotDismissTheStillActiveMusicSession() {
         val controller = controller(media = true, simplified = true)
         val player = launchablePlayer("alarm-native-card-gap")
@@ -929,6 +989,25 @@ class IslandActivityLifecycleTest {
         controller.updateFromNative(native); drain()
         assertFalse(original.isAttachedToWindow)
         assertTrue(shadowOf(player).callbacks.isEmpty())
+    }
+
+    @Test fun userSwitchCancelsPendingCardGapValidationAndRetiresTheOldSession() {
+        val controller = controller(media = true, simplified = true, io = markedIo)
+        val player = launchablePlayer("user-switch-card-gap")
+        native.player = player
+        controller.updateFromNative(native); revealMedia()
+        mediaManagerReads = 0; mediaManagerReadsOutsideIo = 0
+        native.player = null
+        controller.updateFromNative(native); shadowOf(Looper.getMainLooper()).idle()
+        val receiver = org.robolectric.util.ReflectionHelpers.getField<android.content.BroadcastReceiver>(controller, "userReceiver")
+        receiver.onReceive(context, android.content.Intent("android.intent.action.USER_SWITCHED")
+            .putExtra("android.intent.extra.user_handle", 10))
+        drain()
+        assertEquals(0, mediaManagerReads)
+        assertTrue(shadowOf(player).callbacks.isEmpty())
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "selected"))
+        assertNull(org.robolectric.util.ReflectionHelpers.getField(controller, "lastContent"))
+        assertFalse(shell!!.isAttachedToWindow)
     }
 
     @Test fun anAlarmPauseWithoutANativeCardCanResumeThroughTheExistingCallback() {

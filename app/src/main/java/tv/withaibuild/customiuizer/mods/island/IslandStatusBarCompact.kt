@@ -165,9 +165,16 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
     }
 
     private fun updateOcclusion() {
+        val host = root.get() ?: return
         occlusionBounds.set(island)
-        val margin = root.get()?.resources?.displayMetrics?.density?.let { kotlin.math.ceil(4f * it).toInt() } ?: 0
+        val margin = kotlin.math.ceil(4f * host.resources.displayMetrics.density).toInt()
         occlusionBounds.inset(-margin, -margin)
+        // All collected leaves belong to this window. Its screen offset is common even
+        // while native child matrices animate; retain each leaf's current clipped bounds.
+        host.getLocationOnScreen(position)
+        host.getLocationInWindow(windowPosition)
+        val offsetX = position[0] - windowPosition[0]
+        val offsetY = position[1] - windowPosition[1]
         var changed = false
         for (entry in hidden) {
             val view = entry.view.get()
@@ -175,9 +182,7 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
             if (view != null && view.isShown && view.getGlobalVisibleRect(visibleBounds)) {
                 // Global visible bounds are in the ViewRoot coordinate space; the island
                 // lives in another window, so compare both in physical screen coordinates.
-                view.getLocationOnScreen(position)
-                view.getLocationInWindow(windowPosition)
-                visibleBounds.offset(position[0] - windowPosition[0], position[1] - windowPosition[1])
+                visibleBounds.offset(offsetX, offsetY)
                 overlaps = Rect.intersects(occlusionBounds, visibleBounds)
             }
             if (entry.occluded != overlaps) { entry.occluded = overlaps; changed = true }
@@ -309,6 +314,8 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
         val islandRight = island.right + gap
         for (item in kept) {
             val view = item.view.get() ?: continue
+            // Suppression owns zero, not the native animation's latest nonzero target.
+            if (!item.suppressed || view.alpha != 0f) item.alpha = view.alpha
             if (abs(view.translationX - item.baseTranslation - item.shift) > .01f) {
                 item.baseTranslation = view.translationX
                 item.shift = 0f
@@ -320,7 +327,7 @@ internal class IslandStatusBarCompact internal constructor(root: ViewGroup, cloc
             val desired = if (!overlaps) baseLeft else if (item.left) minOf(baseLeft, islandLeft - view.width).coerceAtLeast(outerLeft)
                 else maxOf(baseLeft, islandRight).coerceAtMost(outerRight - view.width)
             val fits = !overlaps || if (item.left) desired + view.width <= islandLeft else desired >= islandRight
-            if (!fits) { view.alpha = 0f; item.suppressed = true }
+            if (!fits) { if (view.alpha != 0f) view.alpha = 0f; item.suppressed = true }
             else if (item.suppressed) { view.alpha = item.alpha; item.suppressed = false }
             item.shift = (desired - baseLeft).roundToInt().toFloat()
             if (item.shift != 0f) allowTranslation(view)

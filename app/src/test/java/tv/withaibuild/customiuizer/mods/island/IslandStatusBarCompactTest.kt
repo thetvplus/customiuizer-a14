@@ -24,6 +24,71 @@ import java.time.Duration
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandStatusBarCompactTest {
+    @Test fun frameChecksShareTheWindowOffsetAndStillFollowNativeIconTransforms() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val root = FrameLayout(activity)
+        val clock = View(activity); val battery = View(activity)
+        class Icon : View(activity) {
+            var coordinateReads = 0
+            override fun getLocationOnScreen(out: IntArray) { coordinateReads++; super.getLocationOnScreen(out) }
+            override fun getLocationInWindow(out: IntArray) { coordinateReads++; super.getLocationInWindow(out) }
+        }
+        val covered = Icon().apply { alpha = .6f }
+        val clear = Icon().apply { alpha = .8f }
+        val icons = FrameLayout(activity)
+        root.addView(clock); root.addView(battery); root.addView(icons)
+        icons.addView(covered); icons.addView(clear)
+        activity.setContentView(root)
+        root.layout(0, 0, 400, 50); icons.layout(0, 0, 400, 50)
+        clock.layout(12, 0, 70, 50); battery.layout(340, 0, 388, 50)
+        covered.layout(140, 0, 160, 50); clear.layout(300, 0, 320, 50)
+        val compact = IslandStatusBarCompact(root, clock, battery, animationsEnabled = { false })
+        try {
+            compact.show(180)
+            covered.coordinateReads = 0; clear.coordinateReads = 0
+            repeat(120) { root.viewTreeObserver.dispatchOnPreDraw() }
+            assertEquals("Per-icon screen/window queries duplicate the window's common offset", 0,
+                covered.coordinateReads + clear.coordinateReads)
+            assertEquals(0f, covered.alpha); assertEquals(.8f, clear.alpha)
+            // RenderNode translation does not require a layout callback. Keep checking it each frame.
+            icons.translationX = 160f
+            root.viewTreeObserver.dispatchOnPreDraw()
+            assertEquals(.6f, covered.alpha)
+            icons.translationX = 0f
+            root.translationY = 100f
+            root.viewTreeObserver.dispatchOnPreDraw()
+            assertEquals(.6f, covered.alpha)
+            root.translationY = 0f
+            root.viewTreeObserver.dispatchOnPreDraw()
+            assertEquals(0f, covered.alpha)
+        } finally { compact.restore(); activity.finish() }
+    }
+
+    @Test fun suppressedEssentialsRestoreTheLatestNativeAlphaAndAvoidUnchangedWrites() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val root = FrameLayout(activity)
+        val clock = object : View(activity) {
+            var writes = 0
+            override fun setAlpha(value: Float) { writes++; super.setAlpha(value) }
+        }.apply { alpha = .7f }
+        val battery = View(activity)
+        root.addView(clock); root.addView(battery); activity.setContentView(root)
+        root.layout(0, 0, 400, 50); clock.layout(8, 0, 60, 50); battery.layout(340, 0, 392, 50)
+        val compact = IslandStatusBarCompact(root, clock, battery, animationsEnabled = { false })
+        try {
+            val origin = IntArray(2); root.getLocationOnScreen(origin)
+            compact.show(Rect(origin[0] + 20, origin[1], origin[0] + 380, origin[1] + 50))
+            val writes = clock.writes
+            repeat(120) { root.viewTreeObserver.dispatchOnPreDraw() }
+            assertEquals("Stable suppression needs no alpha resubmission", writes, clock.writes)
+            clock.alpha = .4f // Native animation changes its target while the island owns suppression.
+            root.viewTreeObserver.dispatchOnPreDraw()
+            assertEquals(0f, clock.alpha)
+            compact.restore()
+            assertEquals("Teardown must restore the latest native value", .4f, clock.alpha)
+        } finally { compact.restore(); activity.finish() }
+    }
+
     @Test fun shortIslandKeepsNativeEssentialsClearAndRestoresEveryOwnedProperty() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val root = FrameLayout(activity).apply { setPadding(12, 0, 12, 0) }

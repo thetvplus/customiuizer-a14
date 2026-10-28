@@ -55,6 +55,25 @@ class IslandWindowPresentationTest {
         root.layout(0, 0, 400, 100)
     }
 
+    @Test fun anUpdatedSnapshotOfTheSameActivityKeepsItsVisibleLease() {
+        val activity = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE, 1000,
+            IslandLiveClock(10, false), session = 7)
+        lease.prepare(activity.key, 184); lease.onPreDraw()
+        val updated = activity.copy(clock = IslandLiveClock(11, false))
+        assertNotSame(activity.key, updated.key)
+        lease.prepare(updated.key, 240)
+        assertEquals("Metadata is still the same logical activity", IslandWindowPresentation.Phase.VISIBLE, lease.phase)
+        assertEquals("No resource stop or status-bar reveal between snapshots", 0, hides)
+        assertSame(activity.key, DynamicIslandStatusBarFade.ownerRef?.get())
+        lease.onPreDraw()
+        assertEquals(1, shows)
+        lease.prepare(updated.copy(session = 8).key, 240)
+        assertEquals(IslandWindowPresentation.Phase.PREPARED, lease.phase)
+        assertEquals(1, hides)
+        lease.onPreDraw()
+        assertEquals(2, shows)
+    }
+
     @Test fun shellStateChangingAfterPrepareVetoesTheFirstFrameWithoutShowingOrReservingSpace() {
         lease.cancel()
         var canDraw = true
