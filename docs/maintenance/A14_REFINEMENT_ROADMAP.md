@@ -290,6 +290,41 @@ Toast 首次量宽在一次同步搜索内按需准备同一 TextPaint，未增�
 
 源码 `06044aa04a21f41be9ad72a051f78b52db8a0930`：Deep 的完整 3,575 项回归零失败（2 项既定跳过）、Debug lint 和全量工具 673 项通过（5 项既定跳过）；未签名 Develop 压缩构建、fatal lint、同 APK 的来源 / R8 mapping / API 102、SDK 34 / arm64 与 16 KiB 对齐通过，APK SHA-256 `852e3c7851f55af71c6f51e201c2d79300b2d6f2b9f2ecb5e63747c7424dc534`。证据位于既有仓库外目录，前缀 `power-audit-`，包括旧行为失败 / 修正后 XML、完整验证与缓存录音机 DexSQL 结果。未安装，动画仍须实机录屏，同设备同负载的采集 / 绘制 / CPU / GPU / 帧时间 / 电量对照仍待验。此前连续中断返回的 2 / 20 漏接未被本轮主机检查闭环。
 
+## Dock 全链路审查与资源边界
+
+2026-10-28 接续同一工作分支 `codex/island-r14-25-6`，基准为本地 / 真实远端一致的 `4e69010308c3088819d2191551f7dbc0d0f9307f`，已包含 `7099c1f` 后的岛体成果。另一个 ROM Catalog Worktree 没有未提交 Dock 成果；两个失效的 detached Worktree 注册未清理。原有七份暂存原生工艺 Skill 原样保留，不纳入本任务。审查覆盖 HotSeats 安装、内容 / 拖放布局、编辑 / 解锁参与者、全宽继承、三种材质、Shader / 壁纸采集、手势、独立高度 / 边距 / 标题 / 容量、Feature 门禁及设置页。
+
+### 问题、修正与回退
+
+暂无已证实 P0；以下 P1 有明确源码触发路径，P2 为稳定状态的重复工作。没有据已有测试通过降低审查强度。
+
+| 级别 / 路径 | 触发与根因 | 实施、失效 / 回退及证据 |
+| --- | --- | --- |
+| P1 · DockGlassBackdrop | 装饰仍为 visible、整块被原生矩阵移出屏幕时，accept 的未覆盖分支设 sourceDirty 并请求重绘，绕过有限恢复，形成自身反馈 | request 在已确认的完整视口内先核验可见覆盖；无可见像素不捕获。未覆盖完成帧使用相同有限恢复预算，真实 Matrix / 来源变化仍允许恢复，已有有效纹理保留。修前 120 个 40 ms 屏外帧捕获 120 次，修后为零，回屏立即取一帧；不改变分辨率、30 Hz 上限或折射光学 |
+| P1 · 壁纸来源策略 | liveWallpaper 是 attach 时冻结的值，静态与动态切换后继续使用旧刷新策略 | 原生 appearance 事件重新读取 WallpaperInfo，并与纹理 generation 一起失效；读取失败保留旧策略。类型变化清掉旧 tick，静态稳定后无周期捕获；没有逐帧 Binder 查询、新 Receiver 或轮询 |
+| P1 · Hook 安装 | 每个 findAndHookMethod 的失败返回被忽略；例如全局编辑帧 Hook 已安装，Launcher 绑定入口失败后仍留下部分回调 | 先解析全部现有精确声明，再按组安装，最后才安装 updateContent 激活入口；任一失败停止并逆序撤销已得句柄，fatal 保持身份且继续清理其余句柄。沿用 FeatureRegistry 单次安装；不增猜测式 fallback / 私有 ABI |
+| P1 · 横滑仲裁与触摸失败 | 原横滑只检验横向距离 / 速度；detector 创建或处理异常又会跳过 chain.proceed，妨碍原生触摸 | 位移与速度都须横向占优，保留原有距离 / 速度阈值与左右动作；可选观察的普通异常隔离，原生 dispatch 仍恰好一次，原生返回及异常不变。纵向占优 / 等轴斜滑、真实左右横滑和 detector / native fatal 有回归 |
+| P1 · 全宽首次 attach 所有权 | 未 attach 的 host 以自身为弱 key，将捕获 host 的 listener 存入全局额外字段；value 反向强持有 key，未出现 attach 时无法回收 | listener 只从回调参数取得 FrameLayout，不捕获 host；仍保留重复 attach 标记和正常激活 / detach 清理。修前捕获字段反例实际失败，修后还核验首次 attach 正常替换为 DockBackgroundView owner；不增加新监听或弱引用注册表 |
+| P2 · 透明全宽与重复提交 | opacity=0 仍因 fullWidth 永久保留 PreDraw；全宽可见材质每个宿主绘制重复提交相同 drawable alpha / visibility，并重复同步 opacity | 透明背景只处理布局事件，稳定后取消 PreDraw；有视觉的全宽、Google blur / lens 保留必要原生帧同步。状态相同不重复提交，恢复透明到可见仍刷新原生 region bounds；未增加动画器 / 缓存 / 帧时钟 |
+
+以上回退单位为 Dock 装饰 / 采集与横滑各自的生产文件及关联回归；恢复旧实现不改偏好、持久化、图标位置 / 大小 / 顺序 / 点击和拖拽区域、原生动画曲线或圆角契约。
+
+### 保留设计与证据边界
+
+- `AnimationSet.getTransformation` 的实际设备频率未知。CN / TW 的 `showBottomAreaEditPanelIfNeed(View, boolean)` 使用原生 Animation 并直接 startAnimation，没有可代替已求值矩阵的窄逐帧 Launcher 回调；两份目标中没有 Launcher 自定义 getTransformation 声明。保留先原调用、后弱 owner、最后读单项参数的路径；无 owner 的 120 次调用仍保留 120 次原生执行、零 Transformation 参数读取，不改原生调用次数 / 返回 / 异常 / 终帧。缺少 ART 对照，不增加另一套全局 owner 计数或动画系统。
+- 完整视口纹理覆盖 Dock 几何变化，理论上几何只需 uniform；但原生编辑 / Home / 解锁也可能同时驱动合成器壁纸缩放。目标样本还存在 SuperDraglayer 异步 setWallpaperOffsets，POCO 另有 WallpaperZoomManager，事件并不等同于颜色变化。尚无完整 compositor 变换信号及设备逐帧对照，故不直接删掉现有 Matrix 触发和 450 ms 有界跟随，不把“静态壁纸”误作“合成器静止”。材质半径 / uniform、纹理来源和视口各自沿用现有 owner。
+- `getHotseatMaxCount=666` 在 MIUI / POCO 的已查直接调用者均包括 HotSeatsList.isFull、HotSeatsScreenViewContent.isSeatsFull / pushDragItem、BaseAutoInstallsLayout.get 和 OthersInRomConfigParser.get。它会参与初始布局资源名 / 配置选择，作用域确实较宽；未见按 666 直接申请数组的证据。缩窄需要保留恰好达到原生容量时的替换 / 文件夹 / 插入语义，以及既有超容量数据；目前没有实机 / 数据证据支持安全变更，因此保留并列为容量压力待验，不声称已修复容量风险。
+- 三材质共用 DockCornerGeometry 原生圆角矩形与 DockBackgroundGeometry；背景是无触摸装饰。全宽容器继承 HotSeats 至共同 root 的变换，原生解锁属性仍由独立 child 持有；不松开图标祖先裁切。有视觉的 fullWidth / Google region / lens 必须观察父属性，现有事件不足以完全解除监听；监听本身不创建空闲帧循环。
+- BitmapShader / RuntimeShader 仍各由单装饰持有，单张最多 393,216 像素 / 最长边 1,024、单个在途请求；HardwareBuffer 在 finally 关闭，worker 结果按 generation 拒旧，隐藏 / 省电 / detach 释放资源。零 alpha 原生过渡只暂停捕获。Shader 不可用 / 真正 GPU 失败沿原生材质及纯色回退，重建装饰重新尝试；系统全局模糊不由 Dock 重新启用。未发现需要新常驻线程、监控或缓存框架的证据。
+
+ROM ARTIFACT：DexSQL 0.1.1 对 fuxi CN / TW 相同 MiuiHome `RELEASE-4.39.30.8604-08262248`（SHA-256 `a6546d51d9220039ed7ac143de249e9014202cfafeafd715237eb49f8f5a3f7b`）及 munch MiLauncherGlobal `RELEASE-4.39.14.7603-03051601`（`1b1eb43b4279ab6b6e7ec1712c74b7e7e45c5e00cee4df497aa6bf4b55ab81f6`）保存声明 / 调用者；CN 关键 Smali 核验编辑启动、容量、壁纸偏移和 native material detach 委托。定义与调用者不证明设备执行频率或 ClassLoader 运行成功。
+
+### 验证与待实机对照
+
+修前四项反例在旧生产代码实际失败；续审的未 attach host 反向持有反例也实际失败，修后 16 个关联套件 / 122 项通过，另有 Hook 各阶段失败回滚、fatal 清理、来源策略切换与原生触摸失败回归。最终 Deep 完整 Host 为 426 套件 / 3,858 项，零失败 / 错误、2 项既定跳过，Debug lint 与源码门禁通过；677 项工具测试通过、5 项既定跳过。原生所有权续修后重新覆盖完整 Host，最终新增反例已执行通过。未签名 Develop / R8 / fatal lint 与同产物 API 102 元数据、compileOnly 定义零泄漏、八个设置入口直接 Hook API 引用为零、setId / getId 成员 mapping、replaceHook 为零、SDK 34 / arm64 / 非调试及 ZIP / ELF 16 KiB 对齐检查通过。APK SHA-256 `02b11141eab37137331f92772310ab2bec700a3cf96ece7df6a67d79be9c1cd1`，嵌入的工程 revision 为基准 `4e690103`，完整源码哈希绑定已验证工作副本与最终提交，不作正式发行来源声明。既有暂存 Skill 的 CRLF 不属于本任务；验证使用从 HEAD 建立、包含本次新测试的独立 Git index，原暂存字节和真实 index 保留。
+
+ADB 无连接，没有安装、重启、修改手机设置或执行设备命令采样。屏外捕获次数与重复提交次数只是 Host 操作计数；CPU / ART 调用成本、GPU / RenderThread 纹理替换、帧时间 / 丢帧、Graphics / PSS / 长期内存及功耗均没有本轮前后设备数据。设备对照须固定 APK / ROM、刷新率、亮度、温度与操作轨迹，分别采集背景关 / 开、原生高斯 / 原生玻璃 / 液态、静态 / 动态壁纸、普通 / 全宽，覆盖静止、编辑 / 捏合 / 解锁、快速反向 / 中断、Home / 最近任务 / 文件夹 / 拖放，以及熄屏 / 亮屏、省电 / 恢复、Launcher 重建。动效必须录屏逐帧核对位置、速度、尺寸、alpha 和材质连续性；Perfetto / gfxinfo、CPU、GPU、PSS / Graphics 和功耗分别报告，不由 Host 数字换算。证据集中在仓库外 `customiuizer-a14-evidence/dock-full-review-20261028/`，不保存 ROM / APK / mapping / trace 入库。
+
 ## 动态岛全链路审查与关键路径优化
 
 2026-10-28 沿 `codex/island-r14-25-6` 的真实本地 / 远端基准 `7099c1fcb5c34b9eb3fb444cbbfcdd3aa13ace61` 续审，而非回到 `main` 或较旧的 `6559cdf`。核对来源事件、ActivityState 仲裁、FormState 形态、MotionCoordinator 决策、几何 / View、WindowPresentation 首帧提交及反向释放，并检查通知、系统反馈、媒体、充电、勿扰、隐私、录音、计时、PiP、浮窗和排除规则的交接。保留各层实际职责、单窗口 / 单有限时钟、既有弹簧与手势参数；没有新增功能、调度器、缓存层、轮询或预热任务。

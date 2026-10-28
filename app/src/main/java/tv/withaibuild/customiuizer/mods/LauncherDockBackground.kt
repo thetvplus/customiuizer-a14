@@ -37,11 +37,13 @@ import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
+import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.CustomMethodUnhooker
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.reflect.Constructor
+import java.lang.reflect.Method
 import java.lang.ref.WeakReference
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -61,15 +63,18 @@ object LauncherDockBackground {
         val material = XposedHelpers.findClassIfExists(
             "com.miui.blur.sdk.backdrop.BackdropBlurRelativeLayout", lpparam.classLoader
         )?.constructors?.firstOrNull { it.parameterTypes.contentEquals(arrayOf(Context::class.java)) }
-        ModuleHelper.findAndHookMethod(hotseats, "updateContent", object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val host = callback.getThisObject() as FrameLayout
-                attach(host, config, material, content, wallpaper)
-            }
-        })
-        ModuleHelper.findAndHookMethod(hotseats, "onMeasure", Int::class.javaPrimitiveType,
+        // Resolve every declaration before registering any callback. Attachment is last so
+        // no decoration can activate with an incomplete native frame/lifecycle mesh.
+        val hooks = ArrayList<Pair<Method, MethodHook>>()
+        fun prepare(type: Class<*>, name: String, vararg signatureAndHook: Any?) {
+            val callback = signatureAndHook.last() as MethodHook
+            val method = XposedHelpers.findMethodExact(type, name, *signatureAndHook.copyOf(signatureAndHook.size - 1))
+            hooks.add(method to callback)
+        }
+        prepare(hotseats, "onMeasure", Int::class.javaPrimitiveType,
             Int::class.javaPrimitiveType, object : MethodHook() {
                 override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) return
                     findBackground(callback.getThisObject() as FrameLayout)?.scheduleGeometry()
                 }
             })
@@ -77,27 +82,30 @@ object LauncherDockBackground {
         // An OnLayoutChangeListener on mContent cannot observe that layout.
         XposedHelpers.findClassIfExists("com.miui.home.launcher.hotseats.HotSeatsScreenViewContent",
             lpparam.classLoader)?.let { row ->
-            ModuleHelper.findAndHookMethod(row, "onLayout", Boolean::class.javaPrimitiveType,
+            prepare(row, "onLayout", Boolean::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType, Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, object : MethodHook() {
                     override fun after(callback: AfterHookCallback) {
+                        if (callback.getThrowable() != null) return
                         onContentLayout(callback.getThisObject() as View)
                     }
                 })
         }
         content?.dragControllerType?.let { controller ->
-            ModuleHelper.findAndHookMethod(controller, "endDrag", object : MethodHook() {
+            prepare(controller, "endDrag", object : MethodHook() {
                 override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) return
                     callback.getThisObject()?.let { onDragFinished(it, content) }
                 }
             })
         }
-        ModuleHelper.findAndHookMethod(hotseats, "onWallpaperColorChanged", object : MethodHook() {
+        prepare(hotseats, "onWallpaperColorChanged", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
                 findBackground(callback.getThisObject() as FrameLayout)?.refreshAppearance()
             }
         })
-        ModuleHelper.findAndHookMethod(hotseats, "getUserPresentAnimationChildList", object : MethodHook() {
+        prepare(hotseats, "getUserPresentAnimationChildList", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
                 val children = callback.getResult() as? List<*> ?: return
@@ -105,22 +113,31 @@ object LauncherDockBackground {
                 callback.setResult(userPresentChildren(children, background))
             }
         })
-        if (config.opacity == 0) return
-        // Only the two native editing AnimationSets receive an owner. Read their already-computed
-        // transformation; do not invoke getTransformation again or replace a native listener.
-        ModuleHelper.findAndHookMethod(AnimationSet::class.java, "getTransformation",
-            Long::class.javaPrimitiveType, Transformation::class.java, editingTransformationHook())
-        val launcher = XposedHelpers.findClass("com.miui.home.launcher.Launcher", lpparam.classLoader)
-        ModuleHelper.findAndHookMethod(launcher, "showBottomAreaEditPanelIfNeed", View::class.java,
-            Boolean::class.javaPrimitiveType, object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    if (callback.getThrowable() != null) return
-                    val host = callback.getArg(0) as? FrameLayout ?: return
-                    if (!hotseats.isInstance(host)) return
-                    val animation = host.animation as? AnimationSet ?: return
-                    findBackground(host)?.bindEditingAnimation(animation, callback.getArg(1) != true)
-                }
-            })
+        if (config.opacity > 0) {
+            // Only the two native editing AnimationSets receive an owner. Read their already-computed
+            // transformation; do not invoke getTransformation again or replace a native listener.
+            prepare(AnimationSet::class.java, "getTransformation",
+                Long::class.javaPrimitiveType, Transformation::class.java, editingTransformationHook())
+            val launcher = XposedHelpers.findClass("com.miui.home.launcher.Launcher", lpparam.classLoader)
+            prepare(launcher, "showBottomAreaEditPanelIfNeed", View::class.java,
+                Boolean::class.javaPrimitiveType, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) {
+                        if (callback.getThrowable() != null) return
+                        val host = callback.getArg(0) as? FrameLayout ?: return
+                        if (!hotseats.isInstance(host)) return
+                        val animation = host.animation as? AnimationSet ?: return
+                        findBackground(host)?.bindEditingAnimation(animation, callback.getArg(1) != true)
+                    }
+                })
+        }
+        prepare(hotseats, "updateContent", object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val host = callback.getThisObject() as FrameLayout
+                attach(host, config, material, content, wallpaper)
+            }
+        })
+        check(installDockBackgroundHooks(hooks)) { "Dock background Hook group incomplete" }
     }
 
     internal fun editingTransformationHook() = object : MethodHook() {
@@ -148,7 +165,9 @@ object LauncherDockBackground {
                 override fun onViewAttachedToWindow(v: View) {
                     v.removeOnAttachStateChangeListener(this)
                     XposedHelpers.removeAdditionalInstanceField(v, FULL_WIDTH_OWNER)
-                    attach(host, config, material, content, wallpaper)
+                    // This listener is also a value in the global weak-key field table.
+                    // Use the callback owner so its value cannot keep its own key alive.
+                    attach(v as FrameLayout, config, material, content, wallpaper)
                 }
                 override fun onViewDetachedFromWindow(v: View) = Unit
             }
@@ -221,6 +240,34 @@ object LauncherDockBackground {
     internal fun clearEditingOwner(animation: AnimationSet, owner: DockBackgroundView) {
         if ((XposedHelpers.getAdditionalInstanceField(animation, EDITING_OWNER) as? WeakReference<*>)?.get() === owner)
             setEditingOwner(animation, null)
+    }
+}
+
+/** A failed optional mesh leaves no background/frame Hook installed. */
+internal fun installDockBackgroundHooks(hooks: List<Pair<Method, MethodHook>>): Boolean {
+    val handles = ArrayList<CustomMethodUnhooker>(hooks.size)
+    var complete = false
+    var failure: Throwable? = null
+    try {
+        for ((method, callback) in hooks) handles.add(ModuleHelper.hookMethod(method, callback) ?: return false)
+        complete = true
+        return true
+    } catch (error: Throwable) {
+        failure = error
+        throw error
+    } finally {
+        if (!complete) {
+            var cleanupFailure = failure
+            for (handle in handles.asReversed()) {
+                try { ModuleHelper.guarded { handle.unhook() } }
+                catch (error: Throwable) {
+                    val previous = cleanupFailure
+                    if (previous == null) cleanupFailure = error
+                    else if (previous !== error) previous.addSuppressed(error)
+                }
+            }
+            if (failure == null) cleanupFailure?.let { throw it }
+        }
     }
 }
 
@@ -605,7 +652,7 @@ internal class DockBackgroundView(
             val fallbackAllowed = config.material != 3 || !powerSave && config.blurAllowed && (!googleBlur || crossWindowBlur)
             val isVisible = requestedVisible && !tint.lensActive && fallbackAllowed
             // Retire the Google region before the SDK clears its background; disable the MIUI binder too.
-            if (!isVisible) material.background?.alpha = 0
+            if (!isVisible) material.background?.let { if (it.alpha != 0) it.alpha = 0 }
             if (materialEnabled != isVisible) {
                 if (isVisible) {
                     // setBlurEnabled(false) also resets the SDK's saved radius to zero.
@@ -615,10 +662,12 @@ internal class DockBackgroundView(
                 materialEnabled = isVisible
                 if (isVisible) configureGlassBlend(material)
             }
-            material.visibility = if (isVisible) VISIBLE else INVISIBLE
+            val visibility = if (isVisible) VISIBLE else INVISIBLE
+            if (material.visibility != visibility) material.visibility = visibility
             if (isVisible) material.background?.let { drawable ->
                 val wasTransparent = drawable.alpha == 0
-                drawable.alpha = if (googleBlur) nativeBlurAlpha() else (config.opacity * 2.55f).roundToInt()
+                val alpha = if (googleBlur) nativeBlurAlpha() else (config.opacity * 2.55f).roundToInt()
+                if (drawable.alpha != alpha) drawable.alpha = alpha
                 if (wasTransparent && drawable.alpha > 0) {
                     val bounds = drawable.bounds
                     drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
@@ -735,16 +784,17 @@ internal class DockBackgroundView(
         ModuleHelper.guarded {
             if (editingAnimation != null && (fullWidthHost.get() ?: parent as? View)?.animation !== editingAnimation)
                 finishEditingAnimation()
-            syncFullWidthHost()
-            // Google blur regions have their own compositor opacity. Follow native rendered frames;
-            // never start a frame loop, animate separately or traverse icon bounds on idle frames.
-            syncNativeOpacity()
-            glassBackdrop?.onFrame(isShown || editingAnimation != null, nativeBlurAlpha() > 0)
-            val host = fullWidthHost.get() ?: parent as? FrameLayout ?: return@guarded
-            if (config.fullWidth) {
-                syncNativeMaterialVisibility(isShown && nativeBlurAlpha() > 0)
-                syncNativeOpacity()
+            if (config.opacity > 0) {
+                syncFullWidthHost()
+                // Google blur regions have independent compositor opacity. Keep following native
+                // rendered properties without starting a frame loop or reading icon bounds.
+                glassBackdrop?.onFrame(isShown || editingAnimation != null, nativeBlurAlpha() > 0)
             }
+            val host = fullWidthHost.get() ?: parent as? FrameLayout ?: return@guarded
+            if (config.opacity > 0 && config.fullWidth) {
+                syncNativeMaterialVisibility(isShown && nativeBlurAlpha() > 0)
+            }
+            syncNativeOpacity()
             if (!geometryPending) return@guarded
             geometryPending = false
             if (!isShown || host.height <= 0) return@guarded
@@ -854,7 +904,8 @@ internal class DockBackgroundView(
             }
             updateGeometry()
         }
-        if (!geometryPending && !config.fullWidth && !(googleBlur && materialEnabled) && glassBackdrop == null) cancelGeometry()
+        if (!geometryPending && (config.opacity == 0 ||
+                !config.fullWidth && !(googleBlur && materialEnabled) && glassBackdrop == null)) cancelGeometry()
         return ready
     }
 
@@ -912,7 +963,12 @@ internal class DockBackgroundView(
         }
         tint.color = if (night || lightWallpaper) Color.rgb(24, 26, 30) else Color.WHITE
         tint.alpha = (config.opacity * if (config.material == 3) 0.2f else 0.85f).roundToInt()
-        glassBackdrop?.invalidateSource()
+        glassBackdrop?.let { backdrop ->
+            // Wallpaper replacement may also switch static/live policy. Resolve only on this
+            // native appearance event; never ask WallpaperManager from a frame/draw callback.
+            val live = ModuleHelper.guarded<Boolean?>(null) { WallpaperManager.getInstance(context).wallpaperInfo != null }
+            if (live == null) backdrop.invalidateSource() else backdrop.invalidateSource(live)
+        }
         updateGeometry()
         scheduleGeometry()
     }

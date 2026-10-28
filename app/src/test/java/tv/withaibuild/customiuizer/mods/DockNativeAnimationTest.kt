@@ -16,6 +16,42 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class, shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockNativeAnimationTest {
+    @Test fun settledFullWidthNativeMaterialSkipsEqualOpacitySubmissionsButFollowsChangedParents() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        DockBackgroundTest.NativeMaterial.googleSupported = true
+        try {
+            val root = FrameLayout(activity.get())
+            activity.get().setContentView(root)
+            val host = FrameLayout(activity.get())
+            root.addView(host, FrameLayout.LayoutParams(320, 80).apply { topMargin = 600 })
+            LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true),
+                DockBackgroundTest.NativeMaterial::class.java.getConstructor(android.content.Context::class.java))
+            val decor = host.rootView as FrameLayout
+            val layer = (0 until decor.childCount).map { decor.getChildAt(it) }.filterIsInstance<DockFullWidthContainer>().single()
+            val panel = layer.getChildAt(0) as DockBackgroundView
+            repeat(4) {
+                decor.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY))
+                decor.layout(0, 0, 360, 800); panel.onPreDraw()
+            }
+            val material = panel.getChildAt(0) as DockBackgroundTest.NativeMaterial
+            material.alphaSubmissions = 0
+            repeat(120) { panel.onPreDraw() }
+            assertEquals(0, material.alphaSubmissions)
+            host.alpha = .5f
+            panel.onPreDraw()
+            assertEquals(115, material.background.alpha)
+            assertEquals(1, material.alphaSubmissions)
+            host.alpha = 0f
+            panel.onPreDraw()
+            assertFalse(material.appliedEnabled)
+            host.alpha = 1f
+            panel.onPreDraw()
+            assertTrue(material.appliedEnabled)
+            assertEquals(230, material.background.alpha)
+        } finally { activity.pause().stop().destroy(); DockBackgroundTest.NativeMaterial.googleSupported = false }
+    }
+
     @Test fun nativeTerminalEditingFrameRetainsItsTransformUntilTheHostFinishesDrawing() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
         val root = FrameLayout(activity.get())

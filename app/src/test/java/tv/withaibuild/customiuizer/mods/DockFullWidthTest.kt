@@ -13,6 +13,47 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "w360dp-h800dp")
 class DockFullWidthTest {
+    @Test fun pendingAttachmentMarkerCannotStronglyRetainItsOwnWeakKey() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val key = "customiuizer_dock_full_width_owner"
+        val host = FrameLayout(activity.get())
+        try {
+            LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true), null)
+            val listener = tv.withaibuild.customiuizer.mods.utils.XposedHelpers.getAdditionalInstanceField(host, key)
+            assertTrue(listener is View.OnAttachStateChangeListener)
+            assertFalse("The global weak-key map's value must not capture its own host",
+                listener.javaClass.declaredFields.any { it.isAccessible = true; it.get(listener) === host })
+            activity.get().setContentView(host)
+            assertTrue(tv.withaibuild.customiuizer.mods.utils.XposedHelpers.getAdditionalInstanceField(host, key) is DockBackgroundView)
+        } finally {
+            activity.pause().stop().destroy()
+            tv.withaibuild.customiuizer.mods.utils.XposedHelpers.removeAdditionalInstanceField(host, key)
+        }
+    }
+
+    @Test fun transparentStripReleasesItsFrameObserverAfterGeometrySettles() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        try {
+            val root = FrameLayout(activity.get())
+            activity.get().setContentView(root)
+            val host = FrameLayout(activity.get())
+            root.addView(host, FrameLayout.LayoutParams(320, 80).apply { topMargin = 600 })
+            LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true, opacity = 0), null)
+            val decor = host.rootView as FrameLayout
+            val layer = (0 until decor.childCount).map { decor.getChildAt(it) }.filterIsInstance<DockFullWidthContainer>().single()
+            val panel = layer.getChildAt(0) as DockBackgroundView
+            repeat(4) {
+                decor.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY))
+                decor.layout(0, 0, 360, 800)
+                panel.onPreDraw()
+            }
+            assertFalse(org.robolectric.util.ReflectionHelpers.getField(panel, "geometryPending"))
+            assertNull("Zero opacity has no visual frame synchronization work",
+                org.robolectric.util.ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+        } finally { activity.pause().stop().destroy() }
+    }
+
     @Test fun stripOwnsOnlyTheBackgroundAndTracksItsNativeHostUntilDetach() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
         val root = FrameLayout(activity.get())

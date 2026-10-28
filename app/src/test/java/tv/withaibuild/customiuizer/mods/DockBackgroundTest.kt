@@ -1549,13 +1549,14 @@ class DockBackgroundTest {
         var appliedCornerRadius = 0f
         var enableCalls = 0
         var cornerCalls = 0
+        var alphaSubmissions = 0
         @JvmField val mBlurLayerHolder = BlendLayer()
         init {
             // BackgroundBlurDrawable keeps exact alpha; ColorDrawable quantizes low alpha twice.
             background = object : ColorDrawable(Color.WHITE) {
                 private var opacity = 255
                 override fun getAlpha() = opacity
-                override fun setAlpha(value: Int) { opacity = value; super.setAlpha(value) }
+                override fun setAlpha(value: Int) { alphaSubmissions++; opacity = value; super.setAlpha(value) }
             }
         }
         private var retainedBackground = background

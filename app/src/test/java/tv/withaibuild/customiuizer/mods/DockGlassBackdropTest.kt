@@ -63,6 +63,57 @@ class DockGlassBackdropTest {
     private fun controller(live: Boolean = false, source: DockWallpaperSampler = sampler) =
         DockGlassBackdrop(view, source, 90, live, Dispatchers.Unconfined).also { controllers.add(it) }
 
+    @Test fun wallpaperReplacementRefreshesStaticLivePolicyAndRetiresThePreviousClock() {
+        val controller = controller()
+        controller.onFrame(true)
+        val first = lastBitmap!!
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        controller.invalidateSource(liveWallpaper = true)
+        assertTrue(first.isRecycled)
+        controller.onFrame(true)
+        assertEquals(2, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(35))
+        controller.onFrame(true)
+        assertEquals(3, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(35))
+        controller.invalidateSource(liveWallpaper = false)
+        controller.onFrame(true)
+        assertEquals(4, captures)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        repeat(120) { controller.onFrame(true) }
+        assertEquals("Static wallpaper no longer inherits the live refresh clock", 4, captures)
+    }
+
+    @Test fun offscreenNativeFramesDoNotCaptureOrCreateTheirOwnRetryLoop() {
+        val controller = controller()
+        controller.setLegacyTransform(Matrix().apply { setTranslate(0f, 2000f) })
+        repeat(120) {
+            controller.onFrame(true)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+        }
+        assertEquals("A visible owner outside the wallpaper viewport has no pixels to sample", 0, captures)
+        controller.setLegacyTransform(null)
+        controller.onFrame(true)
+        assertEquals("Reentry can immediately acquire the current wallpaper", 1, captures)
+        assertFalse(lastBitmap!!.isRecycled)
+    }
+
+    @Test fun anOffscreenResultCannotReplenishTheFiniteRecoveryBudget() {
+        val controller = controller()
+        controller.onFrame(true)
+        val previous = lastBitmap!!
+        controller.setLegacyTransform(Matrix().apply { setTranslate(0f, 2000f) })
+        controller.accept(Bitmap.createBitmap(previous.width, previous.height, Bitmap.Config.ARGB_8888),
+            Rect(lastCrop), 0, lastScale)
+        assertTrue("Unusable alignment belongs to bounded recovery", ReflectionHelpers.getField(controller, "sourceUnavailable"))
+        repeat(120) {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(40))
+            controller.onFrame(true)
+        }
+        assertEquals(1, captures)
+        assertFalse("A reusable real texture survives temporary offscreen motion", previous.isRecycled)
+    }
+
     @Test
     fun appAreaMetricsCannotTruncateTheWallpaperDisplayOrItsLowerDockCrop() {
         val metrics = view.resources.displayMetrics

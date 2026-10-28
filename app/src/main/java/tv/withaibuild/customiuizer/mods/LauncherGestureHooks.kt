@@ -334,28 +334,20 @@ object LauncherGestureHooks {
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
-        ModuleHelper.findAndHookMethod("com.miui.home.launcher.hotseats.HotSeats", lpparam.classLoader, "dispatchTouchEvent", MotionEvent::class.java, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                val thisObject = chain.getThisObject()
-                try {
+        ModuleHelper.findAndHookMethod("com.miui.home.launcher.hotseats.HotSeats", lpparam.classLoader, "dispatchTouchEvent", MotionEvent::class.java, hotSeatTouchHook())
+    }
 
-                    val ev = chain.getArg(0) as MotionEvent?
-                    if (ev == null) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-
-                    val detector = obtainHotSeatDetector(thisObject) as GestureDetector
-                    detector.onTouchEvent(ev)
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+    internal fun hotSeatTouchHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            ModuleHelper.guarded {
+                val ev = chain.getArg(0) as? MotionEvent ?: return@guarded
+                val detector = obtainHotSeatDetector(chain.getThisObject()) as GestureDetector
+                detector.onTouchEvent(ev)
             }
-        })
+            // Optional gesture observation cannot skip native dispatch after a module error.
+            // The native call remains outside the guard, with its result/exception intact.
+            return chain.proceed()
+        }
     }
 
     private class SwipeListenerHorizontal(cellLayout: Any) : GestureDetector.SimpleOnGestureListener() {
@@ -378,11 +370,14 @@ object LauncherGestureHooks {
             if (e1 == null) return false
             val owner = ownerRef.get() ?: return false
             val context = owner.context
+            val dx = e2.x - e1.x
+            val dy = e2.y - e1.y
+            if (Math.abs(dx) <= Math.abs(dy) || Math.abs(velocityX) <= Math.abs(velocityY)) return false
 
-            if (e2.x - e1.x > SWIPE_MIN_DISTANCE_HORIZ && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY)
+            if (dx > SWIPE_MIN_DISTANCE_HORIZ && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY)
                 return GlobalActions.handleAction(context, "launcher_swiperight")
 
-            if (e1.x - e2.x > SWIPE_MIN_DISTANCE_HORIZ && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY)
+            if (-dx > SWIPE_MIN_DISTANCE_HORIZ && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY)
                 return GlobalActions.handleAction(context, "launcher_swipeleft")
 
             return false

@@ -38,7 +38,7 @@ internal class DockGlassBackdrop(
     view: View,
     private val sampler: DockWallpaperSampler,
     opacity: Int,
-    private val liveWallpaper: Boolean,
+    private var liveWallpaper: Boolean,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val lensPath = Path()
@@ -112,7 +112,10 @@ internal class DockGlassBackdrop(
         owner.get()?.let { view -> view.removeCallbacks(tick); tickRequested = false; view.invalidate() }
     }
 
-    fun invalidateSource() {
+    fun invalidateSource(liveWallpaper: Boolean = this.liveWallpaper) {
+        this.liveWallpaper = liveWallpaper
+        owner.get()?.removeCallbacks(tick)
+        tickRequested = false
         nativeMotionUntil = SystemClock.uptimeMillis() + 450L
         epoch++
         sourceDirty = true
@@ -207,6 +210,9 @@ internal class DockGlassBackdrop(
         // budget instead of alternating lens/native blur whenever that crop is left.
         // This contains wallpaper only, never application or Launcher pixels.
         val requestCrop = Rect(0, 0, viewportWidth, viewportHeight)
+        // Native visibility can stay true while the whole panel is beyond the display.
+        // There are no visible wallpaper pixels to acquire; reentry is observed by onFrame.
+        if (!coveredBy(view, requestCrop)) return false
         val scale = minOf(1f, MAX_WIDTH.toFloat() / viewportWidth, MAX_HEIGHT.toFloat() / viewportHeight,
             sqrt((MAX_PIXELS - MAX_WIDTH - MAX_HEIGHT).toDouble() / (viewportWidth.toDouble() * viewportHeight)).toFloat())
         val requestEpoch = epoch
@@ -273,8 +279,9 @@ internal class DockGlassBackdrop(
         val view = owner.get()
         if (view == null || !prepareMatrix(view) || !coveredBy(view, frameCrop)) {
             frame.recycle()
-            sourceDirty = true
-            view?.postInvalidateOnAnimation()
+            // An unusable result must share the same finite budget as null/size failures.
+            // Otherwise its own completion invalidation can sustain captures forever.
+            unavailable()
             return
         }
         try {
