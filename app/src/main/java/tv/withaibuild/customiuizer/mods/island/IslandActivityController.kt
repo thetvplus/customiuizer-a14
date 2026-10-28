@@ -241,8 +241,8 @@ internal class IslandActivityController(
     private var configurationRegistered = false
     private val geometryView = WeakReference(geometryHost)
     private val hasGeometryHost = geometryHost != null
-    private var portraitDisplay = !hasGeometryHost || ModuleHelper.guarded(false) {
-        geometryHost?.display?.rotation.let { it == Surface.ROTATION_0 || it == Surface.ROTATION_180 }
+    private var nativeReturnRotationSupported = !hasGeometryHost || ModuleHelper.guarded(false) {
+        geometryHost?.display?.rotation == Surface.ROTATION_0
     }
     private var compactObserver: android.view.ViewTreeObserver? = null
     private var lastCompactClearance = -1
@@ -254,10 +254,10 @@ internal class IslandActivityController(
             if (clearance != lastCompactClearance) { lastCompactClearance = clearance; render() }
         }
     }
-    private val geometryLayout = View.OnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+    private val geometryLayout = View.OnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
         // StatusBar's actual window can rotate without a resource Configuration callback.
-        // Only width changes do work; ordinary layout/animation frames do not query native state.
-        if (right - left != oldRight - oldLeft) onMain { refreshWindowGeometry() }
+        // Only size changes do work; ordinary layout/animation frames do not query native state.
+        if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) onMain { refreshWindowGeometry() }
     }
     private val params = WindowManager.LayoutParams(1, 1, 2017,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -526,18 +526,23 @@ internal class IslandActivityController(
     }
 
     private fun presentationAllowed(): Boolean = !disposed && options.enabled && ScreenStateController.isScreenOn() &&
-        portraitDisplay &&
         safetyOwner?.let { ModuleHelper.guarded(false) { access.isAllowed(it) } } == true
 
     private fun idleShadeAllowed(): Boolean = !disposed && options.enabled && options.idle && !forms.idleSuppressed &&
-        shadeBlocked && portraitDisplay && ScreenStateController.isScreenOn() &&
+        shadeBlocked && ScreenStateController.isScreenOn() &&
         safetyOwner?.let { ModuleHelper.guarded(false) { access.isShadeBlocked(it) } } == true
 
     private fun refreshWindowGeometry() {
-        if (hasGeometryHost) portraitDisplay = ModuleHelper.guarded(false) {
-            geometryView.get()?.display?.rotation.let { it == Surface.ROTATION_0 || it == Surface.ROTATION_180 }
+        if (hasGeometryHost) nativeReturnRotationSupported = ModuleHelper.guarded(false) {
+            geometryView.get()?.display?.rotation == Surface.ROTATION_0
         }
         readGeneration++
+        // The old App/Home intent and native target belong to the old geometry.
+        // A real foreground edge will prepare a new one; rotation itself must not wait for a commit.
+        if (foregroundPackage == IslandMusicReturnSignal.LAUNCHER) previousForegroundPackage = null
+        mediaReturnInvalidatedAt = SystemClock.uptimeMillis()
+        liveReturn = null
+        cancelMediaReturn()
         invalidateIcon()
         media = null
         state.setMedia(null, null)
@@ -732,7 +737,7 @@ internal class IslandActivityController(
             else if (previous == it.packageName && it.playbackState != PlaybackState.STATE_PAUSED)
             {
                 val now = SystemClock.uptimeMillis()
-                val returning = committed != null && state.allowed && options.returnsMedia(it.packageName) && it.playing &&
+                val returning = committed != null && nativeReturnAvailable() && state.allowed && options.returnsMedia(it.packageName) && it.playing &&
                     !reducedMotion() && ValueAnimator.areAnimatorsEnabled()
                 if (returning) mediaReturn = MediaReturn(it.token, now + IslandMotion.RETURN_TIMEOUT)
                 mediaRevealAt = if (returning || activitySwitch) null else now + IslandMotion.MEDIA_DELAY
@@ -754,7 +759,10 @@ internal class IslandActivityController(
             musicReturnPublisher?.publish(force = true)
     }
 
-    private fun awaitingHome(packageName: String?) = packageName != null && foregroundPackage == IslandMusicReturnSignal.LAUNCHER &&
+    private fun nativeReturnAvailable(): Boolean = nativeReturnRotationSupported &&
+        screen?.let { it.width < it.height } == true
+
+    private fun awaitingHome(packageName: String?) = nativeReturnAvailable() && packageName != null && foregroundPackage == IslandMusicReturnSignal.LAUNCHER &&
         previousForegroundPackage == packageName && packageName in options.returnPackages() && confirmedHomePackage != packageName &&
         !reducedMotion() && ValueAnimator.areAnimatorsEnabled()
 
@@ -767,7 +775,7 @@ internal class IslandActivityController(
         ModuleHelper.guarded {
             var accepted = false
             try {
-                if (disposed || Looper.myLooper() != Looper.getMainLooper()) return@guarded
+                if (disposed || Looper.myLooper() != Looper.getMainLooper() || !nativeReturnAvailable()) return@guarded
                 pipStateReader?.invoke()?.let(::applyPipSnapshot)
                 val activity = liveForPackage(frame.packageName)
                 if (activity != null && options.returnsLive(activity.kind, activity.packageName) && frame.packageName == activity.packageName &&
@@ -1356,7 +1364,8 @@ internal class IslandActivityController(
                 geometryMutex.withLock {
                     ensureActive()
                     val metrics = manager.currentWindowMetrics
-                    val hole = metrics.windowInsets.displayCutout?.boundingRectTop
+                    val cutout = metrics.windowInsets.displayCutout
+                    val hole = cutout?.boundingRectTop
                     val safe = metrics.windowInsets.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.systemBars() or
                         android.view.WindowInsets.Type.displayCutout())
                     // Rounded corners are not display-cutout insets. Use their physical
@@ -1366,7 +1375,8 @@ internal class IslandActivityController(
                     Screen(metrics.bounds.width(), metrics.bounds.height(), hole?.width() ?: 0,
                         if (hole != null && !hole.isEmpty) hole.bottom - minOf(hole.width(), hole.height()) else -1,
                         if (hole != null && !hole.isEmpty) hole.bottom - minOf(hole.width(), hole.height()) * .5f else -1f,
-                        maxOf(safe.left, leftCorner), metrics.bounds.width() - maxOf(safe.right, rightCorner),
+                        maxOf(safe.left, cutout?.safeInsetLeft ?: 0, leftCorner),
+                        metrics.bounds.width() - maxOf(safe.right, cutout?.safeInsetRight ?: 0, rightCorner),
                         hole?.left ?: 0, hole?.right ?: 0, hole?.bottom ?: 0, hole?.top ?: 0, safe.top)
                 }
             }
@@ -1378,8 +1388,6 @@ internal class IslandActivityController(
         returnActivity: IslandToastContent? = null, feedbackExpanded: Boolean = false): Geometry? {
         if (!touchWindow.inputRegionAvailable) return null
         val bounds = screen ?: return null
-        // Landscape cutouts are at a side; keep that layout entirely native.
-        if (bounds.width >= bounds.height) return null
         val now = SystemClock.uptimeMillis()
         val feedback = (returnActivity ?: state.toast(now) ?: state.activity(now))?.takeIf { label == null && !mediaOnly }
         val heightDp = if (options.automaticHeight) IslandSizing.automaticHeight(
@@ -1388,15 +1396,19 @@ internal class IslandActivityController(
         shell.contentHeight(heightDp)
         val caption = label ?: feedback?.text
         val centered = options.position == 1
-        val safeLeft = if (centered) maxOf(bounds.safeLeft, dp(IslandSizing.SCREEN_EDGE_DP)) else bounds.safeLeft
-        val safeRight = if (centered) minOf(bounds.safeRight, bounds.width - dp(IslandSizing.SCREEN_EDGE_DP)) else bounds.safeRight
+        val landscape = bounds.width >= bounds.height
+        val edge = if (landscape) dp(IslandSizing.LANDSCAPE_EDGE_DP) else if (centered) dp(IslandSizing.SCREEN_EDGE_DP) else 0
+        val insetMargin = if (landscape) dp(IslandSizing.LANDSCAPE_SAFE_MARGIN_DP) else 0
+        val safeLeft = maxOf(bounds.safeLeft + insetMargin, edge)
+        val safeRight = minOf(bounds.safeRight - insetMargin, bounds.width - edge)
         val safeWidth = (safeRight - safeLeft).coerceAtLeast(0)
+        val contentWidth = if (landscape) minOf(safeWidth, dp(IslandSizing.LANDSCAPE_MAX_WIDTH_DP)) else safeWidth
         val gap = if (centered) maxOf(dp(40), bounds.holeWidth + dp(16)) else 0
         val center = if (bounds.holeWidth > 0) (bounds.holeLeft + bounds.holeRight) * .5f else bounds.width * .5f
         val nativeClearance = if (centered && options.automaticWidth)
             DynamicIslandStatusBarFade.measuredCompactClearance(bounds.width, center) else null
-        val clearance = if (centered && options.automaticWidth) minOf(nativeClearance ?: dp(IslandSizing.SHORT_DP), safeWidth)
-            else safeWidth
+        val clearance = if (centered && options.automaticWidth) minOf(nativeClearance ?: dp(IslandSizing.SHORT_DP), contentWidth)
+            else contentWidth
         val density = context.resources.displayMetrics.density
         val expanded = !idle && !mediaOnly && (feedbackExpanded || label == null &&
             (if (returnActivity != null) IslandMotionCoordinator.prefersLong(returnActivity) else forms.expanded))
@@ -1405,7 +1417,7 @@ internal class IslandActivityController(
             heightDp = heightDp, centered = centered)
         val naturalShortWidth = IslandSizing.collapsed(density, bounds.width, clearance, gap, dp(24).toFloat(),
             dp(24).toFloat(), shortDp = options.shortWidth, longDp = options.longWidth,
-            manual = !options.automaticWidth, heightDp = heightDp, centered = centered).coerceAtMost((safeWidth - dp(IslandSizing.FORM_GAP_DP)).coerceAtLeast(0))
+            manual = !options.automaticWidth, heightDp = heightDp, centered = centered).coerceAtMost((contentWidth - dp(IslandSizing.FORM_GAP_DP)).coerceAtLeast(0))
         val plainFeedback = label != null || feedback?.let {
             !it.status && it.notificationKey == null && it.liveActivity == null && it.detail.isNullOrBlank()
         } == true
@@ -1420,14 +1432,14 @@ internal class IslandActivityController(
             val content = if (split) maxOf(shell.textWidth(primary) * .94f + dp(32),
                 shell.textWidth(detail) * if (feedback == null) .82f else .94f)
                 else maxOf(shell.textWidth(primary) * .94f, shell.textWidth(detail) * .82f)
-            val maximum = IslandSizing.expanded(density, bounds.width, safeWidth, gap,
+            val maximum = IslandSizing.expanded(density, bounds.width, contentWidth, gap,
                 content, heightDp, centered, shortWidth)
             if (plainFeedback && !caption.isNullOrBlank()) {
-                val minimum = IslandSizing.expanded(density, bounds.width, safeWidth, gap,
+                val minimum = IslandSizing.expanded(density, bounds.width, contentWidth, gap,
                     0f, heightDp, centered, shortWidth)
                 shell.toastWidth(caption, minimum, maximum, gap, dp(heightDp))
             } else maximum
-        } else if (expanded) maxOf(compactMaximumWidth, shortWidth + dp(IslandSizing.FORM_GAP_DP)).coerceAtMost(safeWidth)
+        } else if (expanded) maxOf(compactMaximumWidth, shortWidth + dp(IslandSizing.FORM_GAP_DP)).coerceAtMost(contentWidth)
         else compactMaximumWidth
         val width = when {
             idle -> IslandSizing.idleWidth(density, dp(heightDp), bounds.holeWidth, shortWidth, options.idleWidth)
@@ -1457,13 +1469,14 @@ internal class IslandActivityController(
             shell.statusHeight(feedback.text, placement.width, placement.gap, dp(heightDp)) ?: return null
             else dp(heightDp)
         val elasticMaximum = IslandSizing.elasticMaximum(placement.width, placement.left,
-            safeLeft, safeRight, density)
+            safeLeft, safeRight, density).let { if (landscape) minOf(it, contentWidth) else it }
         val animationMaximum = if (!centered) placement.width else if (expanded && options.automaticWidth)
             elasticMaximum else minOf(maximumWidth, elasticMaximum)
         return Geometry(placement.width, height, placement.top, placement.gap, animationMaximum, placement.left)
     }
 
     private fun liveReturnFrame(now: Long): IslandMusicReturnSignal.Frame? {
+        if (!nativeReturnAvailable()) return null
         val current = liveForPackage(returnSourcePackage()) ?: state.activity(now)?.liveActivity ?: return null
         val bounds = screen ?: return null
         if (!options.returnsLive(current.kind, current.packageName) ||
@@ -1476,7 +1489,7 @@ internal class IslandActivityController(
 
     private fun publishMusicReturn() {
         val activity = liveForPackage(returnSourcePackage()) ?: state.activity(SystemClock.uptimeMillis())?.liveActivity
-        val enabled = !disposed && options.enabled && options.returnPackages().isNotEmpty() &&
+        val enabled = !disposed && options.enabled && nativeReturnAvailable() && options.returnPackages().isNotEmpty() &&
             !reducedMotion() && ValueAnimator.areAnimatorsEnabled() &&
             (!mediaSourceExcluded() || activity?.let { options.returnsLive(it.kind, it.packageName) } == true)
         if (!enabled) {

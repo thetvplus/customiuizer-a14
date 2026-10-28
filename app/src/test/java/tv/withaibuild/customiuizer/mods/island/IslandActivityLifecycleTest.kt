@@ -57,6 +57,91 @@ class IslandActivityLifecycleTest {
     private var metricsHeight = 2400
     private var metricsReads = 0
     private var metricsInsets = WindowInsets.Builder().build()
+    @Test fun everySystemActivityUsesTheConfiguredShortWidthWithoutAnIntermediateLongForm() {
+        val controller = controller(liveKinds = IslandLiveKind.entries.mapTo(linkedSetOf()) { it.value },
+            automaticWidth = false, shortWidth = 184, longWidth = 320, simplified = true)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        onAdd = { assertFalse("The first visible frame must already be short", shell!!.expanded) }
+        for (kind in IslandLiveKind.entries) {
+            registry.clear()
+            val activity = IslandLiveActivity(kind, kind.windowPackage ?: "native.source", context.applicationInfo.uid,
+                clock = if (kind == IslandLiveKind.TIMER) IslandLiveClock(android.os.SystemClock.elapsedRealtime() + 60000, true)
+                    else if (kind in setOf(IslandLiveKind.RECORDER, IslandLiveKind.STOPWATCH)) IslandLiveClock(0, false) else null,
+                session = 100L + kind.ordinal)
+            registry.update(kind, activity)
+            org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+            assertTrue(kind.name, shell!!.isAttachedToWindow)
+            assertFalse(kind.name, shell!!.expanded)
+            assertTrue(kind.name, shell!!.width <= 184)
+            assertEquals(activity.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(
+                controller, "lastContent").liveActivity!!.key)
+        }
+    }
+
+    @Test fun landscapeMediaAndActivitiesAppearWithoutWaitingForPortraitOnlyNativeReturn() {
+        metricsWidth = 2400; metricsHeight = 1080
+        val controller = controller(media = true, mediaReturn = true, mediaReturnApps = setOf(context.packageName),
+            liveKinds = setOf("stopwatch"), simplified = true)
+        native.player = launchablePlayer("landscape-return")
+        controller.updateFromNative(native); revealMedia()
+        controller.foregroundChanged(context.packageName); drain()
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain(); revealMedia()
+        assertTrue(shell!!.isAttachedToWindow)
+        assertTrue(shell!!.isMedia)
+        val stale = IslandReturnProgress(java.nio.ByteBuffer.allocateDirect(4))
+        controller.nativeMusicReturn(IslandMusicReturnSignal.Frame(context.packageName,
+            android.os.UserHandle.getUserHandleForUid(context.applicationInfo.uid),
+            100f, 10f, 284f, 50f, 1080, 2400), progress = stale)
+        assertEquals("A portrait return cannot retarget the landscape window", -1f, stale.read(), 0f)
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        val watch = IslandLiveActivity(IslandLiveKind.STOPWATCH, IslandLiveKind.CLOCK_PACKAGE,
+            context.applicationInfo.uid, IslandLiveClock(0, false), session = 400)
+        controller.foregroundChanged(watch.packageName)
+        registry.update(watch.kind, watch)
+        controller.foregroundChanged(IslandMusicReturnSignal.LAUNCHER); drain()
+        assertEquals(watch.key, org.robolectric.util.ReflectionHelpers.getField<IslandToastContent>(
+            controller, "lastContent").liveActivity!!.key)
+        assertFalse(shell!!.expanded)
+        metricsWidth = 1080; metricsHeight = 2400
+        org.robolectric.util.ReflectionHelpers.getField<android.content.ComponentCallbacks>(controller, "configuration")
+            .onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain()
+        assertTrue("Returning to portrait must not revive an obsolete Home confirmation wait", shell!!.isAttachedToWindow)
+        assertFalse(shell!!.expanded)
+        native.allowed = false; native.changed!!(); drain()
+        assertFalse("Landscape cannot bypass lockscreen/privacy safety", shell!!.isAttachedToWindow)
+    }
+
+    @Test @Config(qualifiers = "xxhdpi")
+    fun landscapeLongNotificationsRespectTheCapSafeEdgesAndElasticFramesForEveryAlignment() {
+        metricsWidth = 2400; metricsHeight = 1080
+        metricsInsets = WindowInsets.Builder().setDisplayCutout(android.view.DisplayCutout(
+            android.graphics.Insets.of(180, 0, 0, 0), Rect(0, 400, 180, 500), null, null, null)).build()
+        val controller = controller(chat = true, automaticWidth = false, shortWidth = 320, longWidth = 400)
+        val prefs = org.robolectric.util.ReflectionHelpers.getField<PrefMap>(controller, "prefs")
+        val observer = org.robolectric.util.ReflectionHelpers.getField<tv.withaibuild.customiuizer.mods.utils.ModuleHelper.PreferenceObserver>(controller, "preferenceObserver")
+        val density = context.resources.displayMetrics.density
+        val cap = 240 * density
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        for (automatic in listOf(false, true)) for (alignment in listOf(0, 1, 2)) {
+            prefs.put("system_island_position", alignment.toString())
+            prefs.put("system_island_width_auto", automatic)
+            observer.onChange(null); drain()
+            assertTrue(controller.takeNotification(message(900 + alignment + if (automatic) 10 else 0))); drain()
+            assertTrue(shell!!.expanded)
+            assertTrue("Manual and automatic targets share the landscape cap", shell!!.width <= cap)
+            val left = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + shell!!.left
+            assertTrue("Leave extra room outside the physical side cutout", left >= 180 + 16 * density)
+            assertTrue("Keep the opposite landscape edge clear", left + shell!!.width <= metricsWidth - 48 * density)
+            org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")?.let { motion ->
+                for (time in 0L until motion.duration step 16L) {
+                    motion.currentPlayTime = time
+                    assertTrue("Elastic motion cannot widen past the landscape cap", shell!!.width * shell!!.scaleX <= cap + 1f)
+                }
+                motion.end()
+            }
+        }
+    }
+
     private var snapshotIo = false
     private var mediaManagerReads = 0
     private var mediaManagerReadsOutsideIo = 0
@@ -534,7 +619,7 @@ class IslandActivityLifecycleTest {
         }
     }
 
-    @Test fun actualWindowRotationWithoutResourceConfigurationHidesAndRestoresTheIsland() {
+    @Test fun actualWindowRotationWithoutResourceConfigurationKeepsTheIslandInBothDirections() {
         val geometry = View(host)
         frame.addView(geometry, FrameLayout.LayoutParams(1080, 133))
         geometry.layout(0, 0, 1080, 133)
@@ -545,20 +630,24 @@ class IslandActivityLifecycleTest {
         drain()
         assertTrue(shell!!.isAttachedToWindow)
         try {
-            display.setRotation(Surface.ROTATION_90)
-            geometry.layoutParams.width = 2400
-            geometry.layout(0, 0, 2400, 133)
-            shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
-            assertEquals("This path must not depend on a resource callback", orientation, context.resources.configuration.orientation)
-            assertFalse(shell!!.isAttachedToWindow)
-            assertNull(controller.showToast(IslandToastContent("Landscape", context.packageName, null), 1000))
-            display.setRotation(Surface.ROTATION_0)
-            geometry.layoutParams.width = 1080
-            geometry.layout(0, 0, 1080, 133)
-            shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
-            assertNotNull(controller.showToast(IslandToastContent("Portrait", context.packageName, null), 1000))
-            drain()
-            assertTrue(shell!!.isAttachedToWindow)
+            for (rotation in listOf(Surface.ROTATION_90, Surface.ROTATION_270)) {
+                display.setRotation(rotation)
+                metricsWidth = 2400; metricsHeight = 1080
+                geometry.layoutParams.width = 2400
+                geometry.layout(0, 0, 2400, 133)
+                shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+                assertEquals("This path must not depend on a resource callback", orientation, context.resources.configuration.orientation)
+                assertTrue(shell!!.isAttachedToWindow)
+                assertNotNull(controller.showToast(IslandToastContent("Landscape", context.packageName, null), 1000))
+                display.setRotation(Surface.ROTATION_0)
+                metricsWidth = 1080; metricsHeight = 2400
+                geometry.layoutParams.width = 1080
+                geometry.layout(0, 0, 1080, 133)
+                shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
+                assertNotNull(controller.showToast(IslandToastContent("Portrait", context.packageName, null), 1000))
+                drain()
+                assertTrue(shell!!.isAttachedToWindow)
+            }
         } finally { display.setRotation(Surface.ROTATION_0) }
     }
 
@@ -2785,10 +2874,22 @@ class IslandActivityLifecycleTest {
         }
         val config = org.robolectric.util.ReflectionHelpers.getField<android.content.ComponentCallbacks>(controller, "configuration")
         metricsWidth = 2400; metricsHeight = 1080
-        config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain()
-        assertFalse(shell!!.isAttachedToWindow)
-        assertNull((shell!!.parent as IslandTouchWindow).parent)
+        for (leftSide in listOf(true, false)) {
+            metricsInsets = WindowInsets.Builder().setDisplayCutout(android.view.DisplayCutout(
+                android.graphics.Insets.of(if (leftSide) 120 else 0, 0, if (leftSide) 0 else 120, 0),
+                if (leftSide) Rect(0, 492, 120, 588) else null, null,
+                if (leftSide) null else Rect(2280, 492, 2400, 588), null)).build()
+            config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain(); revealMedia()
+            assertTrue(shell!!.isAttachedToWindow)
+            val visualLeft = latestParams!!.x + (metricsWidth - latestParams!!.width) / 2 + shell!!.left
+            assertTrue(visualLeft >= if (leftSide) 120 else 0)
+            assertTrue("side=$leftSide left=$visualLeft width=${shell!!.width}",
+                visualLeft + shell!!.width <= if (leftSide) 2400 else 2280)
+            assertEquals(1, (shell!!.parent as IslandTouchWindow).childCount)
+        }
         metricsWidth = 1080; metricsHeight = 2400
+        metricsInsets = WindowInsets.Builder().setDisplayCutout(android.view.DisplayCutout(
+            android.graphics.Insets.of(0, 120, 0, 0), null, camera, null, null)).build()
         config.onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain(); revealMedia()
         assertNotNull(shell!!.parent)
         assertEquals(1, (shell!!.parent as IslandTouchWindow).childCount)

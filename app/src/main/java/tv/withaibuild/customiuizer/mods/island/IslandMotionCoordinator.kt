@@ -26,7 +26,7 @@ internal class IslandMotionCoordinator {
         fun prefersLong(content: IslandToastContent?): Boolean {
             content ?: return false
             val notification = content.notificationKey != null
-            if (content.liveActivity != null) return true
+            if (content.liveActivity != null) return false
             val detail = content.detail?.trim()
             if (detail.isNullOrEmpty() || detail == content.text) return false
             if (notification) return true

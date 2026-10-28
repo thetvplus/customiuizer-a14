@@ -10,6 +10,9 @@ internal object IslandSizing {
     const val COLLAPSED_HEIGHT_DP = 40
     const val EDGE_DP = 16
     const val SCREEN_EDGE_DP = 24
+    const val LANDSCAPE_EDGE_DP = 48
+    const val LANDSCAPE_SAFE_MARGIN_DP = 16
+    const val LANDSCAPE_MAX_WIDTH_DP = 240
     const val HEIGHT_MIN_DP = 32
     const val HEIGHT_MAX_DP = 64
     const val SHORT_MIN_DP = 96

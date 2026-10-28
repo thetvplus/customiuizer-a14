@@ -9,6 +9,18 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class IslandMotionCoordinatorTest {
+    @Test fun allSystemActivitiesStayShortWhileNotificationBodiesStillSelectLong() {
+        for (kind in IslandLiveKind.entries) {
+            val activity = IslandLiveActivity(kind, kind.windowPackage ?: "native.source", 1000,
+                clock = if (kind == IslandLiveKind.TIMER) IslandLiveClock(60000, true) else null)
+            assertFalse(kind.name, IslandMotionCoordinator.prefersLong(
+                IslandToastContent("Current activity", activity.packageName, null,
+                    detail = "State or timer details", liveActivity = activity)))
+        }
+        assertTrue(IslandMotionCoordinator.prefersLong(IslandToastContent("Sender", "native.message", null,
+            notificationKey = "current", detail = "Body")))
+    }
+
     @Test fun mediaAndNotificationHandoffsUseTheSharedArrivalInBothDirections() {
         val policy = IslandMotionCoordinator()
         policy.commit("music", IslandFormState.Source.MEDIA)
