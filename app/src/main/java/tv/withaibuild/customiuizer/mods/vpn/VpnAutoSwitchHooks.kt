@@ -5,10 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.SystemClock
-import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.ContextResolver
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
@@ -31,23 +29,16 @@ internal object VpnAutoSwitchHooks {
         val activity = Class.forName("com.android.server.wm.ActivityRecord", false, loader)
         val state = Class.forName("com.android.server.wm.ActivityRecord\$State", false, loader)
         val task = Class.forName("com.android.server.wm.Task", false, loader)
-        val process = Class.forName("com.android.server.am.ProcessRecord", false, loader)
-        val ams = Class.forName("com.android.server.am.ActivityManagerService", false, loader)
         val vpn = Class.forName("com.android.server.connectivity.Vpn", false, loader)
         val resumed = state.enumConstants.single { (it as Enum<*>).name == "RESUMED" }
         val pkgField = VpnAutoSwitchAccess.field(activity, "packageName")
         val userField = VpnAutoSwitchAccess.field(activity, "mUserId")
-        val appField = VpnAutoSwitchAccess.field(activity, "app")
         val taskId = VpnAutoSwitchAccess.field(task, "mTaskId")
         val taskUser = VpnAutoSwitchAccess.field(task, "mUserId")
-        val info = VpnAutoSwitchAccess.field(process, "info")
-        val processName = VpnAutoSwitchAccess.field(process, "processName")
-        val processOwner = VpnAutoSwitchAccess.field(process, "mWindowProcessController")
         val vpnUser = VpnAutoSwitchAccess.field(vpn, "mUserId")
         val getTask = activity.getDeclaredMethod("getTask").apply { isAccessible = true }
         val resumeMethod = activity.getDeclaredMethod("setState", state, String::class.java).apply { isAccessible = true }
         val removeMethod = task.getDeclaredMethod("removedFromRecents").apply { isAccessible = true }
-        val deathMethod = ams.declaredMethods.single { it.name == "handleAppDiedLocked" && it.parameterTypes.firstOrNull() == process }
         val updateMethod = vpn.getDeclaredMethod("updateState", Class.forName("android.net.NetworkInfo\$DetailedState", false, loader), String::class.java)
             .apply { isAccessible = true }
         val handler = backgroundHandler(loader)
@@ -66,10 +57,11 @@ internal object VpnAutoSwitchHooks {
                     if (pkg !in config.apps) return@guarded
                     val nativeTask = getTask.invoke(record) ?: return@guarded
                     val id = taskId.getInt(nativeTask)
-                    val owner = appField.get(record) ?: return@guarded
                     handler.post { ModuleHelper.guarded {
-                        current(config, loader)?.let {
-                            if (it.policy.resumed(pkg, 0, id, owner)) it.check()
+                        val latest = options ?: return@guarded
+                        if (!latest.acceptsResumeFrom(config, pkg)) return@guarded
+                        current(latest, loader)?.let {
+                            if (it.policy.resumed(pkg, 0, id, nativeTask)) it.check()
                         }
                     } }
                 }
@@ -82,36 +74,10 @@ internal object VpnAutoSwitchHooks {
                     if (taskUser.getInt(removed) != 0) return@guarded
                     val id = taskId.getInt(removed)
                     handler.post { ModuleHelper.guarded {
-                        if (options === config) runtime?.let {
-                            if (it.policy.removed(id, 0, SystemClock.elapsedRealtime())) it.check()
+                        runtime?.let {
+                            if (it.policy.removed(id, 0, SystemClock.elapsedRealtime(), removed)) it.check()
                         }
                     } }
-                }
-            })
-            hook(deathMethod, object : MethodHook() {
-                override fun intercept(chain: XposedInterface.Chain): Any? {
-                    val config = options
-                    var pkg: String? = null
-                    var owner: Any? = null
-                    ModuleHelper.guarded {
-                        if (config?.configured == true) {
-                            val record = chain.getArg(0) ?: return@guarded
-                            val app = info.get(record) as ApplicationInfo
-                            if (app.uid / 100000 == 0 && app.packageName in config.apps && processName.get(record) == app.packageName) {
-                                pkg = app.packageName
-                                owner = processOwner.get(record)
-                            }
-                        }
-                    }
-                    val result = chain.proceed()
-                    val deadPackage = pkg
-                    val deadOwner = owner
-                    if (deadPackage != null && deadOwner != null) handler.post { ModuleHelper.guarded {
-                        if (options === config) runtime?.let {
-                            if (it.policy.died(deadPackage, deadOwner, SystemClock.elapsedRealtime())) it.check()
-                        }
-                    } }
-                    return result
                 }
             })
             hook(updateMethod, object : MethodHook() {
@@ -128,16 +94,13 @@ internal object VpnAutoSwitchHooks {
         PreferenceObserverRegistry.observePreferenceChange(object : PreferenceObserverRegistry.PreferenceObserver {
             override fun onChange(key: String?) {
                 if (key != null && !key.startsWith(Settings.PREFIX)) return
-                val updated = Settings.Options.read(MainModule.mPrefs)
                 handler.post { ModuleHelper.guarded {
+                    // Read at delivery time so reordered listener threads cannot restore an older snapshot.
+                    val updated = Settings.Options.read(MainModule.mPrefs)
                     if (updated == options) return@guarded
-                    val current = runtime
-                    val retained = current != null && updated.configured && current.policy.options.target == updated.target
-                    if (retained) current!!.policy.update(updated, SystemClock.elapsedRealtime())
-                    else { current?.close(); runtime = null }
                     options = updated
-                    status = if (updated.enabled) "READY" else "DISABLED"
-                    if (retained) current!!.check()
+                    runtime?.configure(updated)
+                    if (runtime == null) status = if (updated.enabled) "READY" else "DISABLED"
                 } }
             }
         })
@@ -155,8 +118,9 @@ internal object VpnAutoSwitchHooks {
         XposedHelpers.findClass("com.android.internal.os.BackgroundThread", loader), "getHandler") as Handler
 
     private class Runtime(private val context: Context, loader: ClassLoader, config: Settings.Options) {
-        val policy = VpnAutoSwitchPolicy(config)
         private val access = VpnAutoSwitchAccess(context, loader)
+        private val coordinator = VpnAutoSwitchCoordinator(config, access)
+        val policy: VpnAutoSwitchPolicy get() = coordinator.policy
         private val handler = backgroundHandler(loader)
         private val currentUser = ActivityManager::class.java.getDeclaredMethod("getCurrentUser")
         @Volatile private var closed = false
@@ -167,7 +131,7 @@ internal object VpnAutoSwitchHooks {
             override fun onReceive(context: Context, intent: Intent) {
                 // A different user's session must never inherit primary-user app tracking.
                 if (intent.action == "android.intent.action.USER_SWITCHED") handler.post { ModuleHelper.guarded {
-                    policy.relinquish()
+                    coordinator.abandon()
                     close()
                     if (runtime === this@Runtime) runtime = null
                 } }
@@ -183,32 +147,37 @@ internal object VpnAutoSwitchHooks {
             if (!closed && queued.compareAndSet(false, true)) handler.post(reconcile)
         }
 
+        fun configure(updated: Settings.Options) {
+            if (closed) return
+            if (currentUser.invoke(null) != 0) {
+                coordinator.abandon()
+                close()
+                if (runtime === this) runtime = null
+                return
+            }
+            coordinator.configure(updated, SystemClock.elapsedRealtime())
+            check()
+        }
+
         fun check() {
             if (closed) return
             handler.removeCallbacks(timer)
             if (currentUser.invoke(null) != 0) {
-                policy.relinquish()
+                coordinator.abandon()
                 close()
                 if (runtime === this) runtime = null
                 status = "UNAVAILABLE"
                 return
             }
-            val snapshot = access.snapshot()
-            when (policy.evaluate(snapshot, SystemClock.elapsedRealtime())) {
-                VpnAutoSwitchPolicy.Action.START -> {
-                    val started = ModuleHelper.guarded(false) { access.start(policy.options.target) }
-                    if (!started) policy.startFailed() else signal()
-                }
-                VpnAutoSwitchPolicy.Action.STOP -> {
-                    val session = policy.owned
-                    policy.relinquish()
-                    if (session != null) access.stop(session)
-                }
-                VpnAutoSwitchPolicy.Action.NONE -> Unit
+            val startedAt = SystemClock.elapsedRealtime()
+            val next = coordinator.reconcile(startedAt)
+            status = coordinator.status.name
+            if (!coordinator.active) {
+                close()
+                if (runtime === this) runtime = null
+                return
             }
-            status = policy.status.name
-            // Unknown backend state must not turn an expired deadline into a 1 ms retry loop.
-            policy.nextDelay(snapshot, SystemClock.elapsedRealtime())?.let { handler.postDelayed(timer, it) }
+            next?.let { handler.postDelayed(timer, (it - (SystemClock.elapsedRealtime() - startedAt)).coerceAtLeast(0L)) }
         }
 
         fun close() {
@@ -216,9 +185,7 @@ internal object VpnAutoSwitchHooks {
             closed = true
             handler.removeCallbacks(reconcile)
             handler.removeCallbacks(timer)
-            val session = policy.owned
-            policy.relinquish()
-            if (session != null && policy.options.autoClose) ModuleHelper.guarded { access.stop(session) }
+            coordinator.abandon()
             ModuleHelper.unregisterModuleReceiver("vpnAutoUserSwitch", userSwitch)
         }
     }

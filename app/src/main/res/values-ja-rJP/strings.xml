@@ -1324,7 +1324,7 @@
     <string name="system_vpnauto_apps">VPN を起動するアプリ</string>
     <string name="system_vpnauto_apps_summary">複数のアプリを選択できます。ホームに戻ったり、別のアプリに切り替えたりしても接続を維持します。</string>
     <string name="system_vpnauto_close">すべてのアプリの終了後に切断</string>
-    <string name="system_vpnauto_close_summary">選択したすべてのアプリを最近のタスクから削除するか、メインプロセスが終了してから 3 秒待って切断します。この機能が開始した接続のみを切断します。</string>
+    <string name="system_vpnauto_close_summary">選択したすべてのアプリを最近のタスクから削除した後、設定した時間を待って切断します。この機能が開始した接続のみを切断します。</string>
     <string name="system_vpnauto_status">現在の状態</string>
     <string name="system_vpnauto_loading">システムの VPN 設定を読み取り中…</string>
     <string name="system_vpnauto_no_profiles">対応する保存済みプロファイルがありません。先にシステムの VPN 設定で IKEv2 プロファイルを追加してください。</string>
@@ -1340,4 +1340,6 @@
     <string name="system_vpnauto_disabled">VPN の自動切り替えは無効です</string>
     <string name="system_vpnauto_unavailable">利用できません。モジュールの有効化を確認し、初回の有効化後に端末を再起動してください。</string>
     <string name="system_vpnauto_configure">接続先 VPN と、起動条件にするアプリを 1〜256 個選択してください。</string>
+    <string name="system_vpnauto_delay">自動切断までの時間</string>
+    <string name="system_vpnauto_delay_summary">初期値は 3 秒です。0 秒は即時切断です。選択したアプリを開き直すと切断を取り消します。時間の変更時は、すでに待機した時間を含めて計算します。</string>
 </resources>

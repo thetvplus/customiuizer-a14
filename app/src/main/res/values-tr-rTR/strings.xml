@@ -1330,7 +1330,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_vpnauto_apps">VPN başlatan uygulamalar</string>
     <string name="system_vpnauto_apps_summary">Birden fazla uygulama seçilebilir. Ana ekrana dönmek veya uygulamalar arasında geçiş yapmak bağlantıyı kesmez.</string>
     <string name="system_vpnauto_close">Tüm uygulamalar kapanınca bağlantıyı kes</string>
-    <string name="system_vpnauto_close_summary">Seçilen tüm uygulamalar son görevlerden kaldırıldığında veya ana işlemleri sonlandığında 3 saniye bekler. Yalnızca bu özelliğin başlattığı bağlantıyı keser.</string>
+    <string name="system_vpnauto_close_summary">Seçilen tüm uygulamalar son görevlerden kaldırıldığında ayarlanan gecikmeyle bağlantıyı keser. Yalnızca bu özelliğin başlattığı bağlantıyı keser.</string>
     <string name="system_vpnauto_status">Geçerli durum</string>
     <string name="system_vpnauto_loading">Sistem VPN seçenekleri okunuyor…</string>
     <string name="system_vpnauto_no_profiles">Desteklenen kayıtlı profil yok. Önce sistem VPN ayarlarından bir IKEv2 profili ekleyin.</string>
@@ -1346,4 +1346,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_vpnauto_disabled">Otomatik VPN kapalı</string>
     <string name="system_vpnauto_unavailable">Kullanılamıyor. Modülün etkinliğini kontrol edin ve ilk etkinleştirmeden sonra cihazı yeniden başlatın.</string>
     <string name="system_vpnauto_configure">Bir VPN hedefi ve 1 ile 256 arasında tetikleyici uygulama seçin.</string>
+    <string name="system_vpnauto_delay">Bağlantı kesme gecikmesi</string>
+    <string name="system_vpnauto_delay_summary">Varsayılan: 3 saniye. 0 hemen keser. Seçilen bir uygulamayı yeniden açmak geri sayımı iptal eder. Gecikme değişince beklenen süre hesaba katılır.</string>
 </resources>

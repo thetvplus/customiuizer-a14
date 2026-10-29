@@ -1334,7 +1334,7 @@
     <string name="system_vpnauto_apps">触发应用</string>
     <string name="system_vpnauto_apps_summary">可以选择多个应用，返回桌面或临时切换应用时保持连接。</string>
     <string name="system_vpnauto_close">应用全部退出后断开</string>
-    <string name="system_vpnauto_close_summary">所有选中应用从最近任务划掉或主进程退出后，等待 3 秒再断开。仅关闭本功能启动的连接。</string>
+    <string name="system_vpnauto_close_summary">所有选中应用从最近任务移除后，按设定延迟断开。仅关闭本功能启动的连接。</string>
     <string name="system_vpnauto_status">当前状态</string>
     <string name="system_vpnauto_loading">正在读取系统 VPN 选项…</string>
     <string name="system_vpnauto_no_profiles">暂无支持的已保存配置，请先在系统 VPN 设置中添加 IKEv2 配置。</string>
@@ -1350,4 +1350,6 @@
     <string name="system_vpnauto_disabled">VPN 自动开关已关闭</string>
     <string name="system_vpnauto_unavailable">当前不可用，请检查模块激活状态，首次启用后需重启设备。</string>
     <string name="system_vpnauto_configure">请选择有效的 VPN 目标，以及 1–256 个触发应用。</string>
+    <string name="system_vpnauto_delay">自动断开延迟</string>
+    <string name="system_vpnauto_delay_summary">默认 3 秒，0 秒立即断开。等待期间重新打开触发应用会取消断开；修改延迟时计入已经等待的时间。</string>
 </resources>

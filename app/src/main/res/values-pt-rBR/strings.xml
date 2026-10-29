@@ -1324,7 +1324,7 @@
     <string name="system_vpnauto_apps">Aplicativos que ativam a VPN</string>
     <string name="system_vpnauto_apps_summary">Selecione vários aplicativos. Voltar à tela inicial ou alternar entre aplicativos mantém a conexão.</string>
     <string name="system_vpnauto_close">Desconectar ao encerrar todos os aplicativos</string>
-    <string name="system_vpnauto_close_summary">Aguardar 3 segundos após remover todos os aplicativos selecionados das tarefas recentes ou encerrar seus processos principais. Desconecta apenas uma sessão iniciada por esta função.</string>
+    <string name="system_vpnauto_close_summary">Após remover todos os aplicativos selecionados das tarefas recentes, desconectar com o atraso configurado. Desconecta apenas uma sessão iniciada por esta função.</string>
     <string name="system_vpnauto_status">Estado atual</string>
     <string name="system_vpnauto_loading">Lendo as opções de VPN do sistema…</string>
     <string name="system_vpnauto_no_profiles">Nenhum perfil salvo compatível. Primeiro adicione um perfil IKEv2 nas configurações de VPN do sistema.</string>
@@ -1340,4 +1340,6 @@
     <string name="system_vpnauto_disabled">VPN automática desativada</string>
     <string name="system_vpnauto_unavailable">Indisponível. Verifique a ativação do módulo e reinicie após ativar pela primeira vez.</string>
     <string name="system_vpnauto_configure">Selecione um destino VPN e entre 1 e 256 aplicativos para ativá-la.</string>
+    <string name="system_vpnauto_delay">Atraso para desconectar</string>
+    <string name="system_vpnauto_delay_summary">Padrão: 3 segundos. 0 desconecta imediatamente. Reabrir um aplicativo selecionado cancela a contagem. Alterações no atraso incluem o tempo já esperado.</string>
 </resources>

@@ -1331,7 +1331,7 @@
     <string name="system_vpnauto_apps">Spouštěcí aplikace</string>
     <string name="system_vpnauto_apps_summary">Lze vybrat více aplikací. Návrat na plochu ani přepnutí aplikace VPN neodpojí.</string>
     <string name="system_vpnauto_close">Odpojit po ukončení aplikací</string>
-    <string name="system_vpnauto_close_summary">Po odstranění všech vybraných aplikací z posledních úloh nebo ukončení jejich hlavních procesů počkat 3 sekundy. Odpojí se pouze spojení zahájené touto funkcí.</string>
+    <string name="system_vpnauto_close_summary">Po odstranění všech vybraných aplikací z posledních úloh odpojit po nastavené prodlevě. Odpojí se pouze spojení zahájené touto funkcí.</string>
     <string name="system_vpnauto_status">Aktuální stav</string>
     <string name="system_vpnauto_loading">Načítání systémových možností VPN…</string>
     <string name="system_vpnauto_no_profiles">Žádný podporovaný uložený profil. Nejprve přidejte profil IKEv2 v systémovém nastavení VPN.</string>
@@ -1347,4 +1347,6 @@
     <string name="system_vpnauto_disabled">Automatická VPN je vypnutá</string>
     <string name="system_vpnauto_unavailable">Nedostupné. Zkontrolujte aktivaci modulu a po prvním zapnutí restartujte zařízení.</string>
     <string name="system_vpnauto_configure">Vyberte cíl VPN a 1 až 256 spouštěcích aplikací.</string>
+    <string name="system_vpnauto_delay">Prodleva odpojení</string>
+    <string name="system_vpnauto_delay_summary">Výchozí hodnota: 3 sekundy. 0 odpojí okamžitě. Opětovné otevření vybrané aplikace zruší odpojení. Změna prodlevy započítá již uplynulý čas.</string>
 </resources>

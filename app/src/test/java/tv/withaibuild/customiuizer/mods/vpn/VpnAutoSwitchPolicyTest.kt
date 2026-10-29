@@ -10,13 +10,13 @@ import tv.withaibuild.customiuizer.utils.VpnAutoSwitchSettings as Settings
 
 class VpnAutoSwitchPolicyTest {
     private val target = Settings.Target("app", "vpn.client")
-    private val processA = Any()
-    private val processB = Any()
+    private val taskA = Any()
+    private val taskB = Any()
     private val down = Snapshot(true)
     private fun policy(close: Boolean = true, selected: Settings.Target = target) = VpnAutoSwitchPolicy(
         Settings.Options(true, selected, setOf("app.a", "app.b"), close))
-    private fun opened(p: VpnAutoSwitchPolicy, pkg: String = "app.a", id: Int = 1, process: Any = processA) {
-        assertTrue(p.resumed(pkg, 0, id, process))
+    private fun opened(p: VpnAutoSwitchPolicy, pkg: String = "app.a", id: Int = 1, owner: Any = taskA) {
+        assertTrue(p.resumed(pkg, 0, id, owner))
     }
     private fun connected(p: VpnAutoSwitchPolicy, token: Any = Any()): Snapshot {
         assertEquals(START, p.evaluate(down, 100))
@@ -34,7 +34,7 @@ class VpnAutoSwitchPolicyTest {
         opened(p)
         val up = connected(p)
         opened(p, "app.a", 2)
-        opened(p, "app.b", 3, processB)
+        opened(p, "app.b", 3, taskB)
         p.removed(1, 0, 300)
         p.removed(2, 0, 400)
         assertEquals(NONE, p.evaluate(up, 10_000))
@@ -47,7 +47,7 @@ class VpnAutoSwitchPolicyTest {
     @Test fun repeatedResumeIsDeduplicatedAndHomeDoesNotDisconnect() {
         val p = policy(); opened(p)
         val up = connected(p)
-        assertFalse(p.resumed("app.a", 0, 1, processA))
+        assertFalse(p.resumed("app.a", 0, 1, taskA))
         assertFalse(p.resumed("launcher", 0, 2, Any()))
         assertEquals(NONE, p.evaluate(up, 80_000))
         assertEquals(0L, p.deadline)
@@ -63,31 +63,31 @@ class VpnAutoSwitchPolicyTest {
         assertEquals(0L, p.deadline)
     }
 
-    @Test fun mainProcessDeathRemovesOnlyItsTasks() {
+    @Test fun closingOneTaskDoesNotCloseAnotherTask() {
         val p = policy(); opened(p)
         val up = connected(p)
-        opened(p, "app.b", 2, processB)
-        assertTrue(p.died("app.a", processA, 500))
+        opened(p, "app.b", 2, taskB)
+        assertTrue(p.removed(1, 0, 500))
         assertEquals(NONE, p.evaluate(up, 10_000))
-        assertTrue(p.died("app.b", processB, 11_000))
+        assertTrue(p.removed(2, 0, 11_000))
         assertEquals(STOP, p.evaluate(up, 14_000))
     }
 
-    @Test fun oldProcessDeathCannotRemoveReopenedTask() {
+    @Test fun oldTaskRemovalCannotRemoveReopenedTask() {
         val p = policy(); opened(p)
         val up = connected(p)
         val replacement = Any()
         assertTrue(p.resumed("app.a", 0, 1, replacement))
-        assertFalse(p.died("app.a", processA, 500))
+        assertFalse(p.removed(1, 0, 500, taskA))
         assertEquals(NONE, p.evaluate(up, 50_000))
-        assertTrue(p.died("app.a", replacement, 51_000))
+        assertTrue(p.removed(1, 0, 51_000, replacement))
         assertEquals(STOP, p.evaluate(up, 54_000))
     }
 
     @Test fun otherUsersAndUnselectedAppsNeverTriggerOrRemove() {
         val p = policy()
-        assertFalse(p.resumed("app.a", 10, 1, processA))
-        assertFalse(p.resumed("vpn.client", 0, 1, processA))
+        assertFalse(p.resumed("app.a", 10, 1, taskA))
+        assertFalse(p.resumed("vpn.client", 0, 1, taskA))
         assertEquals(NONE, p.evaluate(down, 1))
         opened(p); val up = connected(p)
         assertFalse(p.removed(1, 10, 400))
@@ -116,7 +116,7 @@ class VpnAutoSwitchPolicyTest {
     @Test fun manualDisconnectStaysPausedUntilAllAppsCloseAndReopen() {
         val p = policy(); opened(p); connected(p)
         assertEquals(NONE, p.evaluate(down, 300))
-        opened(p, "app.b", 2, processB)
+        opened(p, "app.b", 2, taskB)
         assertEquals(NONE, p.evaluate(down, 400))
         p.removed(1, 0, 500)
         assertEquals(NONE, p.evaluate(down, 600))
@@ -207,7 +207,7 @@ class VpnAutoSwitchPolicyTest {
     @Test fun taskOverflowFailsConservativelyWithoutEvictingLiveOwners() {
         val p = policy(); opened(p); val up = connected(p)
         for (id in 2..Settings.MAX_TASKS) opened(p, id = id)
-        assertFalse(p.resumed("app.a", 0, 129, processA))
+        assertFalse(p.resumed("app.a", 0, 129, taskA))
         for (id in 1..Settings.MAX_TASKS) p.removed(id, 0, 300)
         assertEquals(NONE, p.evaluate(up, 20_000))
         assertEquals(0L, p.deadline)
@@ -237,7 +237,7 @@ class VpnAutoSwitchPolicyTest {
 
     @Test fun ruleUpdateRetainsUnchangedSessionAndOnlyRemovesUnselectedTasks() {
         val p = policy(); opened(p); val up = connected(p)
-        opened(p, "app.b", 2, processB)
+        opened(p, "app.b", 2, taskB)
         p.update(p.options.copy(apps = setOf("app.b")), 300)
         assertTrue(p.owned!!.same(up.session))
         assertEquals(NONE, p.evaluate(up, 10_000))
@@ -279,5 +279,69 @@ class VpnAutoSwitchPolicyTest {
         }
         assertEquals(setOf("app.a"), Settings.Options.read(prefs).apps)
         assertTrue(Settings.Options.read(prefs).configured)
+    }
+
+    @Test fun sharedTaskRetainsOtherSelectedAppWhenRulesChange() {
+        val p = policy(); opened(p); val up = connected(p)
+        opened(p, "app.b", 1, taskA)
+        p.update(p.options.copy(apps = setOf("app.a")), 300)
+        assertEquals(NONE, p.evaluate(up, 10_000))
+        assertTrue(p.removed(1, 0, 11_000, taskA))
+        assertEquals(STOP, p.evaluate(up, 14_000))
+    }
+
+    @Test fun configurableDelaySupportsImmediateAndThirtySecondBoundaries() {
+        for (seconds in listOf(0, 1, 3, 30)) {
+            val p = policy(); p.update(p.options.copy(closeDelaySeconds = seconds), 0)
+            opened(p); val up = connected(p)
+            p.removed(1, 0, 500)
+            val at = 500 + seconds * 1_000L
+            if (seconds > 0) assertEquals(NONE, p.evaluate(up, at - 1))
+            assertEquals(STOP, p.evaluate(up, at))
+        }
+    }
+
+    @Test fun delayUpdatesKeepElapsedIdleTimeAndReopenCancelsTheTimer() {
+        val p = policy(); opened(p); val up = connected(p)
+        p.removed(1, 0, 500)
+        p.update(p.options.copy(closeDelaySeconds = 30), 1_000)
+        assertEquals(30_500L, p.deadline)
+        assertEquals(NONE, p.evaluate(up, 30_499))
+        p.update(p.options.copy(closeDelaySeconds = 1), 30_499)
+        assertEquals(STOP, p.evaluate(up, 30_499))
+        opened(p, id = 2)
+        assertEquals(NONE, p.evaluate(up, 30_500))
+        assertEquals(0L, p.deadline)
+    }
+
+    @Test fun disablingCloseCancelsTheTimerAndReenablingStartsANewGrace() {
+        val p = policy(); opened(p); val up = connected(p)
+        p.removed(1, 0, 500)
+        p.update(p.options.copy(autoClose = false), 1_000)
+        assertEquals(0L, p.deadline)
+        assertEquals(NONE, p.evaluate(up, 10_000))
+        p.update(p.options.copy(autoClose = true), 11_000)
+        assertEquals(14_000L, p.deadline)
+        assertEquals(NONE, p.evaluate(up, 13_999))
+        assertEquals(STOP, p.evaluate(up, 14_000))
+    }
+
+    @Test fun delayPreferenceDefaultsClampsAndRejectsMalformedTypes() {
+        val prefs = PrefMap()
+        assertEquals(3_000L, Settings.Options.read(prefs).closeDelayMs)
+        for ((raw, expected) in listOf(-1 to 0L, 0 to 0L, 30 to 30_000L, Int.MAX_VALUE to 30_000L)) {
+            prefs.put("system_vpnauto_delay", raw)
+            assertEquals(expected, Settings.Options.read(prefs).closeDelayMs)
+        }
+        prefs.put("system_vpnauto_delay", "30")
+        assertEquals(3_000L, Settings.Options.read(prefs).closeDelayMs)
+    }
+
+    @Test fun queuedResumeSurvivesDelayChangesButRejectsReplacedTargets() {
+        val old = policy().options
+        val latest = old.copy(closeDelaySeconds = 30)
+        assertTrue(latest.acceptsResumeFrom(old, "app.a"))
+        assertFalse(latest.copy(target = Settings.Target("app", "other.vpn")).acceptsResumeFrom(old, "app.a"))
+        assertFalse(latest.copy(apps = setOf("app.b")).acceptsResumeFrom(old, "app.a"))
     }
 }

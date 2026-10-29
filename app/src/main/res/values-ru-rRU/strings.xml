@@ -1323,7 +1323,7 @@
     <string name="system_vpnauto_apps">Приложения для запуска VPN</string>
     <string name="system_vpnauto_apps_summary">Можно выбрать несколько приложений. При переходе на главный экран или переключении приложений соединение сохраняется.</string>
     <string name="system_vpnauto_close">Отключать после выхода из всех приложений</string>
-    <string name="system_vpnauto_close_summary">Подождать 3 секунды после удаления всех выбранных приложений из недавних задач или завершения их основных процессов. Отключается только соединение, запущенное этой функцией.</string>
+    <string name="system_vpnauto_close_summary">После удаления всех выбранных приложений из недавних задач отключить VPN с заданной задержкой. Отключается только соединение, запущенное этой функцией.</string>
     <string name="system_vpnauto_status">Текущее состояние</string>
     <string name="system_vpnauto_loading">Чтение системных параметров VPN…</string>
     <string name="system_vpnauto_no_profiles">Нет поддерживаемых сохранённых профилей. Сначала добавьте профиль IKEv2 в системных настройках VPN.</string>
@@ -1339,4 +1339,6 @@
     <string name="system_vpnauto_disabled">Автопереключение VPN выключено</string>
     <string name="system_vpnauto_unavailable">Недоступно. Проверьте активацию модуля и перезагрузите устройство после первого включения.</string>
     <string name="system_vpnauto_configure">Выберите VPN и от 1 до 256 приложений для её запуска.</string>
+    <string name="system_vpnauto_delay">Задержка отключения</string>
+    <string name="system_vpnauto_delay_summary">По умолчанию: 3 секунды. 0 отключает сразу. Повторное открытие выбранного приложения отменяет отсчёт. При изменении задержки учитывается уже прошедшее время.</string>
 </resources>

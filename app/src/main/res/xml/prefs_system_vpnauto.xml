@@ -35,6 +35,15 @@
             android:title="@string/system_vpnauto_close"
             android:summary="@string/system_vpnauto_close_summary"
             android:defaultValue="true" miuizer:dynamic="true" />
+        <tv.withaibuild.customiuizer.prefs.SeekBarPreference
+            android:key="pref_key_system_vpnauto_delay"
+            android:title="@string/system_vpnauto_delay"
+            android:summary="@string/system_vpnauto_delay_summary"
+            android:dependency="pref_key_system_vpnauto_close"
+            android:defaultValue="3"
+            miuizer:minValue="0" miuizer:maxValue="30" miuizer:stepValue="1"
+            miuizer:format="@string/format_d_s"
+            miuizer:indentLevel="1" miuizer:dynamic="true" />
     </tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
     <tv.withaibuild.customiuizer.prefs.PreferenceEx
         android:key="pref_key_system_vpnauto_status"

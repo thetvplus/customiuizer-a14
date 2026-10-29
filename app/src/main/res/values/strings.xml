@@ -1357,7 +1357,7 @@
     <string name="system_vpnauto_apps">Trigger apps</string>
     <string name="system_vpnauto_apps_summary">Select multiple apps. Returning home or switching apps keeps the VPN connected.</string>
     <string name="system_vpnauto_close">Disconnect after apps exit</string>
-    <string name="system_vpnauto_close_summary">Wait 3 seconds after all selected apps are removed from recents or their main processes exit. Only disconnect a session started by this feature.</string>
+    <string name="system_vpnauto_close_summary">Wait until all selected apps are removed from recents, then disconnect after the configured delay. Only close a connection started by this feature.</string>
     <string name="system_vpnauto_status">Current status</string>
     <string name="system_vpnauto_loading">Reading system VPN options…</string>
     <string name="system_vpnauto_no_profiles">No supported saved profile. Add an IKEv2 profile in system VPN settings first.</string>
@@ -1373,4 +1373,6 @@
     <string name="system_vpnauto_disabled">Automatic VPN is off</string>
     <string name="system_vpnauto_unavailable">Unavailable. Check module activation and restart after first enabling.</string>
     <string name="system_vpnauto_configure">Select a VPN target and between 1 and 256 trigger apps.</string>
+    <string name="system_vpnauto_delay">Disconnect delay</string>
+    <string name="system_vpnauto_delay_summary">Default: 3 seconds. 0 disconnects immediately. Reopening a trigger app cancels the countdown. Delay changes include time already waited.</string>
 </resources>

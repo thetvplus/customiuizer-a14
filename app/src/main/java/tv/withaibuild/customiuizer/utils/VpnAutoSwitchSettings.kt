@@ -5,7 +5,8 @@ internal object VpnAutoSwitchSettings {
     const val PREFIX = "system_vpnauto_"
     const val OPTIONS = "tv.withaibuild.customiuizer.r14.action.VPN_AUTO_OPTIONS"
     const val LEGACY = "[Legacy VPN]"
-    const val CLOSE_DELAY = 3_000L
+    const val DEFAULT_CLOSE_DELAY_SECONDS = 3
+    const val MAX_CLOSE_DELAY_SECONDS = 30
     const val START_TIMEOUT = 20_000L
     const val MAX_APPS = 256
     const val MAX_TASKS = 128
@@ -14,8 +15,13 @@ internal object VpnAutoSwitchSettings {
         val valid: Boolean get() = id.isNotBlank() && id.length <= 256 && (kind == "app" || kind == "system")
     }
 
-    data class Options(val enabled: Boolean, val target: Target, val apps: Set<String>, val autoClose: Boolean) {
+    data class Options(val enabled: Boolean, val target: Target, val apps: Set<String>, val autoClose: Boolean,
+        val closeDelaySeconds: Int = DEFAULT_CLOSE_DELAY_SECONDS) {
         val configured: Boolean = enabled && target.valid && apps.isNotEmpty() && apps.size <= MAX_APPS
+        val closeDelayMs: Long = closeDelaySeconds.coerceIn(0, MAX_CLOSE_DELAY_SECONDS) * 1_000L
+
+        fun acceptsResumeFrom(observed: Options, pkg: String): Boolean =
+            configured && target == observed.target && pkg in apps
         companion object {
             fun read(prefs: PrefMap): Options {
                 val values = prefs.getAll()
@@ -27,7 +33,8 @@ internal object VpnAutoSwitchSettings {
                 }
                 return Options(values["${PREFIX}enabled"] as? Boolean ?: false,
                     target, selected,
-                    values["${PREFIX}close"] as? Boolean ?: true)
+                    values["${PREFIX}close"] as? Boolean ?: true,
+                    (values["${PREFIX}delay"] as? Int ?: DEFAULT_CLOSE_DELAY_SECONDS).coerceIn(0, MAX_CLOSE_DELAY_SECONDS))
             }
         }
     }

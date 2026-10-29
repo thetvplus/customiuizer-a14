@@ -14,9 +14,10 @@ import android.os.Binder
 import android.util.SparseArray
 import tv.withaibuild.customiuizer.utils.VpnAutoSwitchSettings as Settings
 import java.lang.reflect.Field
+import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 
 /** Resolved once per system_server loader; all calls happen on the native background handler. */
-internal class VpnAutoSwitchAccess(private val context: Context, loader: ClassLoader) {
+internal class VpnAutoSwitchAccess(private val context: Context, loader: ClassLoader) : VpnAutoSwitchCoordinator.Backend {
     private val managerClass = Class.forName("com.android.server.VpnManagerService", false, loader)
     private val vpnClass = Class.forName("com.android.server.connectivity.Vpn", false, loader)
     private val profileClass = Class.forName("com.android.internal.net.VpnProfile", false, loader)
@@ -43,8 +44,9 @@ internal class VpnAutoSwitchAccess(private val context: Context, loader: ClassLo
     private val startLegacy = vpnClass.getDeclaredMethod("startLegacyVpn", profileClass, Network::class.java, LinkProperties::class.java)
     private val prepare = vpnClass.getDeclaredMethod("prepare", String::class.java, String::class.java, Int::class.javaPrimitiveType)
 
-    fun snapshot(): VpnAutoSwitchPolicy.Snapshot = withVpn { manager, vpn -> snapshotOf(manager, vpn) }
-        ?: VpnAutoSwitchPolicy.Snapshot(false)
+    override fun snapshot(): VpnAutoSwitchPolicy.Snapshot = ModuleHelper.guarded(VpnAutoSwitchPolicy.Snapshot(false)) {
+        withVpn { manager, vpn -> snapshotOf(manager, vpn) } ?: VpnAutoSwitchPolicy.Snapshot(false)
+    }
 
     private fun snapshotOf(manager: Any, vpn: Any): VpnAutoSwitchPolicy.Snapshot {
         val pkg = owner.get(vpn) as String
@@ -55,15 +57,15 @@ internal class VpnAutoSwitchAccess(private val context: Context, loader: ClassLo
             token?.let { VpnAutoSwitchPolicy.Session(target, it) }, (networkInfo.get(vpn) as NetworkInfo).isConnected)
     }
 
-    fun stop(expected: VpnAutoSwitchPolicy.Session): Boolean = identity {
+    override fun stop(expected: VpnAutoSwitchPolicy.Session): Boolean = ModuleHelper.guarded(false) { identity {
         withVpn { manager, vpn ->
             val current = snapshotOf(manager, vpn)
             if (current.protected || !expected.same(current.session)) false
             else prepare.invoke(vpn, expected.target.let { if (it.kind == "system") Settings.LEGACY else it.id }, Settings.LEGACY, 1) == true
         } ?: false
-    }
+    } }
 
-    fun start(target: Settings.Target): Boolean = identity {
+    override fun start(target: Settings.Target): Boolean = ModuleHelper.guarded(false) { identity {
         if (!target.valid) return@identity false
         if (target.kind == "system") {
             val manager = serviceManager.invoke(null, "vpn_management")?.takeIf(managerClass::isInstance) ?: return@identity false
@@ -105,7 +107,7 @@ internal class VpnAutoSwitchAccess(private val context: Context, loader: ClassLo
                 context.startService(Intent(VpnService.SERVICE_INTERFACE).setComponent(ComponentName(target.id, service.name))) != null
             }
         }
-    }
+    } }
 
     /** Only profile identifiers and labels cross IPC. Credentials remain in the system store. */
     fun profiles(): List<Pair<String, String>> = identity {

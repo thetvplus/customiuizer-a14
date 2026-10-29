@@ -19063,7 +19063,7 @@
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
-      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+      "notes": "Recent-task lifetime only; preserve manual/existing and protected VPNs. One retiring start lease and one next deadline, no polling. Device/client acceptance remains pending."
     },
     {
       "featureId": "system_vpnauto_client",
@@ -19086,7 +19086,7 @@
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
-      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+      "notes": "Recent-task lifetime only; preserve manual/existing and protected VPNs. One retiring start lease and one next deadline, no polling. Device/client acceptance remains pending."
     },
     {
       "featureId": "system_vpnauto_close",
@@ -19109,7 +19109,7 @@
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
-      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+      "notes": "Recent-task lifetime only; preserve manual/existing and protected VPNs. One retiring start lease and one next deadline, no polling. Device/client acceptance remains pending."
     },
     {
       "featureId": "system_vpnauto_enabled",
@@ -19126,13 +19126,13 @@
       "installPhase": "SYSTEM_SERVER_START",
       "runtimeReadMode": "CAPTURED_AT_INSTALL",
       "enableEffect": "Enable event-driven primary-user app-to-VPN rules for one selected app or system IKEv2 profile",
-      "disableEffect": "Release runtime callbacks and stop only a still-owned session when auto-close is enabled",
+      "disableEffect": "If auto-close is enabled, stop only a still-owned session and finish bounded cleanup for an already-dispatched start; otherwise preserve the connection",
       "valueChangeEffect": "First enable requires device reboot to install hooks; once installed, observer updates can disable and resume without reinstalling hooks",
       "restartTarget": "REBOOT",
       "hotReloadable": false,
       "confidence": "CODE_VERIFIED",
       "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
-      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+      "notes": "Recent-task lifetime only; preserve manual/existing and protected VPNs. One retiring start lease and one next deadline, no polling. Device/client acceptance remains pending."
     },
     {
       "featureId": "system_vpnauto_kind",
@@ -19155,7 +19155,7 @@
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
-      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+      "notes": "Recent-task lifetime only; preserve manual/existing and protected VPNs. One retiring start lease and one next deadline, no polling. Device/client acceptance remains pending."
     },
     {
       "featureId": "system_vpnauto_profile",
@@ -19178,7 +19178,30 @@
       "hotReloadable": true,
       "confidence": "CODE_VERIFIED",
       "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
-      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+      "notes": "Recent-task lifetime only; preserve manual/existing and protected VPNs. One retiring start lease and one next deadline, no polling. Device/client acceptance remains pending."
+    },
+    {
+      "featureId": "system_vpnauto_delay",
+      "featureName": "VPN disconnect delay",
+      "preferenceKeys": [
+        "pref_key_system_vpnauto_delay",
+        "system_vpnauto_delay"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_vpnauto.xml",
+      "defaultValue": "3",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/vpn/VpnAutoSwitchPolicy.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:VpnAutoSwitchFeature",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Delay automatic disconnect 0..30 seconds after the last selected recent task is removed",
+      "disableEffect": "The independent auto-close switch cancels this deadline and preserves the connection",
+      "valueChangeEffect": "Recompute the one-shot deadline from original task exit; reopening cancels it. Enabling auto-close starts a fresh grace.",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "VpnAutoSwitchPolicyTest, VpnAutoSwitchCoordinatorTest and PreferenceNavigationUiTest",
+      "notes": "Recent-task lifetime only; preserve manual/existing and protected VPNs. One retiring start lease and one next deadline, no polling. Device/client acceptance remains pending."
     }
   ]
 }

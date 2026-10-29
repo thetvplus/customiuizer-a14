@@ -502,7 +502,19 @@ class PreferenceNavigationUiTest {
         kind.value = "system"
         assertFalse(client.isVisible)
         assertTrue(profile.isVisible)
-        assertTrue(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_vpnauto_close")).isChecked)
+        val autoClose = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_vpnauto_close"))
+        val delay = requireNotNull(page.findPreference<SeekBarPreference>("pref_key_system_vpnauto_delay"))
+        assertTrue(autoClose.isChecked)
+        assertTrue(delay.isEnabled)
+        assertEquals(3, delay.getValue())
+        delay.setValue(30, true)
+        assertEquals(30, AppHelper.appPrefs!!.getInt("pref_key_system_vpnauto_delay", -1))
+        delay.setValue(0, true)
+        assertEquals(0, delay.getValue())
+        autoClose.isChecked = false
+        assertFalse(delay.isEnabled)
+        autoClose.isChecked = true
+        assertTrue(delay.isEnabled)
         requireNotNull(page.findPreference<Preference>("pref_key_system_vpnauto_apps")).performClick()
         settleNavigation()
         val picker = currentPage() as tv.withaibuild.customiuizer.subs.AppSelector

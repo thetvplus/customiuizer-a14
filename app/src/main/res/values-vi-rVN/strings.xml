@@ -1324,7 +1324,7 @@
     <string name="system_vpnauto_apps">Ứng dụng kích hoạt VPN</string>
     <string name="system_vpnauto_apps_summary">Có thể chọn nhiều ứng dụng. Về màn hình chính hoặc chuyển ứng dụng vẫn giữ kết nối.</string>
     <string name="system_vpnauto_close">Ngắt khi tất cả ứng dụng kết thúc</string>
-    <string name="system_vpnauto_close_summary">Chờ 3 giây sau khi mọi ứng dụng đã chọn bị xóa khỏi tác vụ gần đây hoặc tiến trình chính kết thúc. Chỉ ngắt phiên do tính năng này khởi tạo.</string>
+    <string name="system_vpnauto_close_summary">Sau khi mọi ứng dụng đã chọn bị xóa khỏi tác vụ gần đây, ngắt theo thời gian trì hoãn đã đặt. Chỉ ngắt phiên do tính năng này khởi tạo.</string>
     <string name="system_vpnauto_status">Trạng thái hiện tại</string>
     <string name="system_vpnauto_loading">Đang đọc tùy chọn VPN hệ thống…</string>
     <string name="system_vpnauto_no_profiles">Không có hồ sơ đã lưu được hỗ trợ. Hãy thêm hồ sơ IKEv2 trong cài đặt VPN hệ thống trước.</string>
@@ -1340,4 +1340,6 @@
     <string name="system_vpnauto_disabled">VPN tự động đã tắt</string>
     <string name="system_vpnauto_unavailable">Không khả dụng. Kiểm tra kích hoạt mô-đun và khởi động lại sau lần bật đầu tiên.</string>
     <string name="system_vpnauto_configure">Chọn một đích VPN và từ 1 đến 256 ứng dụng kích hoạt.</string>
+    <string name="system_vpnauto_delay">Thời gian chờ ngắt VPN</string>
+    <string name="system_vpnauto_delay_summary">Mặc định: 3 giây. 0 ngắt ngay. Mở lại một ứng dụng đã chọn sẽ hủy đếm ngược. Khi đổi thời gian chờ, thời gian đã chờ vẫn được tính.</string>
 </resources>

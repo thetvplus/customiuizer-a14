@@ -12,63 +12,74 @@ internal class VpnAutoSwitchPolicy(options: Settings.Options) {
     data class Snapshot(val known: Boolean, val protected: Boolean = false, val session: Session? = null, val connected: Boolean = true)
     enum class Action { NONE, START, STOP }
     enum class Status { READY, CONNECTING, OWNED, EXISTING, PROTECTED, PAUSED, FAILED, UNAVAILABLE }
-    private data class Task(val pkg: String, val process: Any)
-    private val tasks = HashMap<Int, Task>()
+    private data class TaskKey(val id: Int, val pkg: String)
+    private val tasks = HashMap<TaskKey, Any>()
     private var overflow = false
     private var suppressed = false
     private var pendingUntil = 0L
-    private var closeAt = 0L
+    private var idleSince: Long? = null
+    val pendingStartDeadline: Long get() = pendingUntil
     var owned: Session? = null
         private set
     var status = Status.READY
         private set
+    val hasTasks: Boolean get() = tasks.isNotEmpty()
+
+    fun forOptions(updated: Settings.Options): VpnAutoSwitchPolicy = VpnAutoSwitchPolicy(updated).also { next ->
+        if (options.configured && updated.configured) {
+            tasks.forEach { (key, owner) -> if (key.pkg in updated.apps) next.tasks[key] = owner }
+            next.overflow = overflow
+        }
+    }
+
+    fun continuePendingStart(until: Long) {
+        check(owned == null && pendingUntil == 0L)
+        pendingUntil = until
+    }
 
     fun update(updated: Settings.Options, now: Long) {
         require(updated.configured && updated.target == options.target)
+        val rearmed = !options.autoClose && updated.autoClose
         options = updated
-        tasks.entries.removeIf { it.value.pkg !in updated.apps }
+        tasks.entries.removeIf { it.key.pkg !in updated.apps }
         if (tasks.isEmpty()) {
             suppressed = false
-            if (closeAt == 0L) closeAt = now + Settings.CLOSE_DELAY
+            if (idleSince == null || rearmed) idleSince = now
         }
     }
 
     val deadline: Long get() = when {
         pendingUntil > 0 -> pendingUntil
-        owned != null && tasks.isEmpty() && !overflow && options.autoClose -> closeAt
+        owned != null && tasks.isEmpty() && !overflow && options.autoClose -> (idleSince ?: 0L) + options.closeDelayMs
         else -> 0
     }
 
     fun nextDelay(snapshot: Snapshot, now: Long): Long? = deadline.takeIf { snapshot.known && it > now }?.minus(now)
 
-    fun resumed(pkg: String, user: Int, taskId: Int, process: Any): Boolean {
+    fun resumed(pkg: String, user: Int, taskId: Int, taskOwner: Any): Boolean {
         if (!options.configured || user != 0 || taskId < 0 || pkg !in options.apps) return false
-        val task = Task(pkg, process)
-        if (tasks[taskId] == task) return false
-        if (tasks.size >= Settings.MAX_TASKS && taskId !in tasks) {
+        val key = TaskKey(taskId, pkg)
+        if (tasks[key] === taskOwner) return false
+        tasks.entries.removeIf { it.key.id == taskId && it.value !== taskOwner }
+        if (tasks.size >= Settings.MAX_TASKS && key !in tasks) {
             // Unknown live tasks must never cause a premature automatic disconnect.
             overflow = true
             return false
         }
-        tasks[taskId] = task
-        closeAt = 0
+        tasks[key] = taskOwner
+        idleSince = null
         return true
     }
 
-    fun removed(taskId: Int, user: Int, now: Long): Boolean {
-        if (user != 0 || tasks.remove(taskId) == null) return false
+    fun removed(taskId: Int, user: Int, now: Long, taskOwner: Any? = null): Boolean {
+        if (user != 0 || !tasks.entries.removeIf { it.key.id == taskId && (taskOwner == null || it.value === taskOwner) }) return false
         return afterRemoval(now)
-    }
-
-    fun died(pkg: String, process: Any, now: Long): Boolean {
-        val changed = tasks.entries.removeIf { it.value.pkg == pkg && it.value.process === process }
-        return changed && afterRemoval(now)
     }
 
     private fun afterRemoval(now: Long): Boolean {
         if (tasks.isEmpty()) {
             suppressed = false
-            closeAt = now + Settings.CLOSE_DELAY
+            idleSince = now
         }
         return true
     }
@@ -98,7 +109,10 @@ internal class VpnAutoSwitchPolicy(options: Settings.Options) {
             }
         }
         if (tasks.isEmpty() && !overflow) {
-            if (owned != null && options.autoClose && now >= closeAt) { status = Status.READY; return Action.STOP }
+            if (owned != null && options.autoClose && now >= (idleSince ?: now) + options.closeDelayMs) {
+                status = Status.READY
+                return Action.STOP
+            }
             status = when {
                 owned != null && snapshot.connected -> Status.OWNED
                 owned != null || pendingUntil > 0 -> Status.CONNECTING
@@ -122,4 +136,5 @@ internal class VpnAutoSwitchPolicy(options: Settings.Options) {
 
     fun startFailed() { pendingUntil = 0; suppressed = true; status = Status.FAILED }
     fun relinquish() { owned = null; pendingUntil = 0 }
+
 }
