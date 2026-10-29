@@ -1,0 +1,48 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:miuizer="http://schemas.android.com/apk/res-auto"
+    android:key="pref_key_system_vpnauto">
+    <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+        android:key="pref_key_system_vpnauto_enabled"
+        android:title="@string/system_vpnauto_title"
+        android:summary="@string/system_vpnauto_enable_summary"
+        android:defaultValue="false" />
+    <tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_vpnauto_target">
+        <tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+            android:key="pref_key_system_vpnauto_kind"
+            android:title="@string/system_vpnauto_source"
+            android:entries="@array/system_vpnauto_kinds"
+            android:entryValues="@array/system_vpnauto_kind_values"
+            android:defaultValue="app" miuizer:valueAsSummary="true" miuizer:dynamic="true" />
+        <tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+            android:key="pref_key_system_vpnauto_client"
+            android:title="@string/system_vpnauto_client"
+            android:summary="@string/system_vpnauto_client_summary"
+            android:defaultValue="" miuizer:valueAsSummary="true" miuizer:dynamic="true" />
+        <tv.withaibuild.customiuizer.prefs.ListPreferenceEx
+            android:key="pref_key_system_vpnauto_profile"
+            android:title="@string/system_vpnauto_profile"
+            android:summary="@string/system_vpnauto_profile_summary"
+            android:defaultValue="" miuizer:valueAsSummary="true" miuizer:dynamic="true" />
+    </tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+    <tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx android:title="@string/system_vpnauto_rules">
+        <tv.withaibuild.customiuizer.prefs.PreferenceEx
+            android:key="pref_key_system_vpnauto_apps"
+            android:title="@string/system_vpnauto_apps"
+            android:summary="@string/system_vpnauto_apps_summary"
+            miuizer:countAsSummary="true" miuizer:dynamic="true" />
+        <tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
+            android:key="pref_key_system_vpnauto_close"
+            android:title="@string/system_vpnauto_close"
+            android:summary="@string/system_vpnauto_close_summary"
+            android:defaultValue="true" miuizer:dynamic="true" />
+    </tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+    <tv.withaibuild.customiuizer.prefs.PreferenceEx
+        android:key="pref_key_system_vpnauto_status"
+        android:title="@string/system_vpnauto_status"
+        android:summary="@string/system_vpnauto_loading"
+        android:selectable="false" android:persistent="false" />
+    <tv.withaibuild.customiuizer.prefs.PreferenceEx
+        android:title="@string/system_vpnauto_protection"
+        android:summary="@string/system_vpnauto_protection_summary"
+        android:selectable="false" android:persistent="false" />
+</PreferenceScreen>

@@ -1421,6 +1421,15 @@
 			android:title="@string/system_mods_other">
 
 			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
+				android:title="@string/system_vpnauto_group">
+				<tv.withaibuild.customiuizer.prefs.PreferenceEx
+					android:key="pref_key_system_vpnauto_cat"
+					android:title="@string/system_vpnauto_title"
+					android:summary="@string/system_vpnauto_summary"
+					android:widgetLayout="@layout/preference_widget_disclosure" />
+			</tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx>
+
+			<tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx
 				android:title="@string/prefs_group_sharing">
 
 				<tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx

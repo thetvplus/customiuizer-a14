@@ -1308,4 +1308,36 @@
     <string name="system_island_return_group">返回桌面時上島</string>
     <string name="launcher_folder_icon_blur_title">資料夾圖示背景模糊</string>
     <string name="launcher_folder_icon_blur_summ">使用桌面原生模糊繪製資料夾圖示背景。需系統支援並啟用背景模糊及預設圖示，重新啟動桌面後生效。</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">網路連線</string>
+    <string name="system_vpnauto_title">VPN 自動開關</string>
+    <string name="system_vpnauto_summary">開啟指定應用程式時，自動連線至一個指定 VPN</string>
+    <string name="system_vpnauto_enable_summary">首次啟用後需重新啟動裝置，之後修改規則無需重新啟動。</string>
+    <string name="system_vpnauto_target">單一 VPN 目標</string>
+    <string name="system_vpnauto_source">VPN 來源</string>
+    <string name="system_vpnauto_client">VPN 應用程式</string>
+    <string name="system_vpnauto_client_summary">只能選擇一個應用程式。請先完成用戶端設定並手動連線一次。需要支援背景連線；部分用戶端會短暫顯示連線畫面。</string>
+    <string name="system_vpnauto_profile">系統 VPN 設定檔</string>
+    <string name="system_vpnauto_profile_summary">選擇系統 VPN 設定中已儲存的一項 IKEv2 設定檔</string>
+    <string name="system_vpnauto_rules">應用程式規則</string>
+    <string name="system_vpnauto_apps">觸發應用程式</string>
+    <string name="system_vpnauto_apps_summary">可以選擇多個應用程式，返回桌面或暫時切換應用程式時保持連線。</string>
+    <string name="system_vpnauto_close">應用程式全部結束後中斷</string>
+    <string name="system_vpnauto_close_summary">所有選取的應用程式從最近任務移除或主程序結束後，等待 3 秒再中斷。僅關閉本功能啟動的連線。</string>
+    <string name="system_vpnauto_status">目前狀態</string>
+    <string name="system_vpnauto_loading">正在讀取系統 VPN 選項…</string>
+    <string name="system_vpnauto_no_profiles">尚無支援的已儲存設定檔，請先在系統 VPN 設定中新增 IKEv2 設定檔。</string>
+    <string name="system_vpnauto_protection">連線保護</string>
+    <string name="system_vpnauto_protection_summary">僅作用於主要使用者。保留現有連線，不接管永久連線或鎖定模式 VPN。手動中斷後，需結束全部觸發應用程式並重新開啟才恢復自動連線。本功能不會等待 VPN 連通後才啟動應用程式。</string>
+    <string name="system_vpnauto_ready">等待開啟指定應用程式</string>
+    <string name="system_vpnauto_connecting">已要求連線，等待 VPN 建立</string>
+    <string name="system_vpnauto_owned">已由本功能連線</string>
+    <string name="system_vpnauto_existing">已保留原有 VPN 連線</string>
+    <string name="system_vpnauto_protected">已保留系統永久連線或鎖定模式 VPN</string>
+    <string name="system_vpnauto_paused">已保留手動操作，結束全部觸發應用程式並重新開啟後恢復</string>
+    <string name="system_vpnauto_failed">無法連線，請檢查所選設定檔、用戶端設定及背景連線支援。</string>
+    <string name="system_vpnauto_disabled">VPN 自動開關已關閉</string>
+    <string name="system_vpnauto_unavailable">目前無法使用，請檢查模組啟用狀態，首次啟用後需重新啟動裝置。</string>
+    <string name="system_vpnauto_configure">請選擇有效的 VPN 目標，以及 1–256 個觸發應用程式。</string>
 </resources>

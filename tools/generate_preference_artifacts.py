@@ -77,6 +77,7 @@ STANDALONE_PAGES = (
     ("pref_key_system_lsalarm_cat", "prefs_system_alarmonlock", "SubFragment", False),
     ("pref_key_system_secureqs_cat", "prefs_system_secureqs", "SubFragment", False),
     ("pref_key_system_screenshot_cat", "prefs_system_screenshot", "System_ScreenshotConfig", False),
+    ("pref_key_system_vpnauto_cat", "prefs_system_vpnauto", "System_VpnAutoSwitch", False),
     ("pref_key_various_calluibright_cat", "prefs_various_calluibright", "Various_CallUIBright", False),
     ("pref_key_various_hiddenfeatures_cat", "prefs_various_hiddenfeatures", "Various_HiddenFeatures", False),
 )

@@ -1308,4 +1308,36 @@
     <string name="system_island_return_group">Ao voltar à tela inicial</string>
     <string name="launcher_folder_icon_blur_title">Desfoque do fundo dos ícones de pastas</string>
     <string name="launcher_folder_icon_blur_summ">Usa o desfoque nativo nas pastas. Requer desfoque do sistema e ícones padrão. Reinicie o launcher para aplicar.</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">Conexões de rede</string>
+    <string name="system_vpnauto_title">VPN automática</string>
+    <string name="system_vpnauto_summary">Conectar uma VPN ao abrir qualquer aplicativo selecionado</string>
+    <string name="system_vpnauto_enable_summary">Reinicie o dispositivo após ativar pela primeira vez. Depois, as regras podem ser alteradas sem reiniciar.</string>
+    <string name="system_vpnauto_target">Um único destino VPN</string>
+    <string name="system_vpnauto_source">Origem da VPN</string>
+    <string name="system_vpnauto_client">Aplicativo VPN</string>
+    <string name="system_vpnauto_client_summary">Selecione um aplicativo. Configure e conecte manualmente uma vez primeiro. É necessário suporte à conexão em segundo plano; alguns clientes exibem brevemente a tela de conexão.</string>
+    <string name="system_vpnauto_profile">Perfil VPN do sistema</string>
+    <string name="system_vpnauto_profile_summary">Selecione um perfil IKEv2 salvo nas configurações de VPN do sistema</string>
+    <string name="system_vpnauto_rules">Regras de aplicativos</string>
+    <string name="system_vpnauto_apps">Aplicativos que ativam a VPN</string>
+    <string name="system_vpnauto_apps_summary">Selecione vários aplicativos. Voltar à tela inicial ou alternar entre aplicativos mantém a conexão.</string>
+    <string name="system_vpnauto_close">Desconectar ao encerrar todos os aplicativos</string>
+    <string name="system_vpnauto_close_summary">Aguardar 3 segundos após remover todos os aplicativos selecionados das tarefas recentes ou encerrar seus processos principais. Desconecta apenas uma sessão iniciada por esta função.</string>
+    <string name="system_vpnauto_status">Estado atual</string>
+    <string name="system_vpnauto_loading">Lendo as opções de VPN do sistema…</string>
+    <string name="system_vpnauto_no_profiles">Nenhum perfil salvo compatível. Primeiro adicione um perfil IKEv2 nas configurações de VPN do sistema.</string>
+    <string name="system_vpnauto_protection">Proteção da conexão</string>
+    <string name="system_vpnauto_protection_summary">Apenas para o usuário principal. Conexões existentes, VPN sempre ativa e modo de bloqueio têm prioridade. Após desconectar manualmente, a conexão automática só retorna ao encerrar todos os aplicativos selecionados e reabrir um deles. Não aguarda a conexão da VPN para abrir o aplicativo.</string>
+    <string name="system_vpnauto_ready">Aguardando a abertura de um aplicativo selecionado</string>
+    <string name="system_vpnauto_connecting">Conexão solicitada; aguardando a VPN</string>
+    <string name="system_vpnauto_owned">Conectada por esta função</string>
+    <string name="system_vpnauto_existing">Conexão VPN existente preservada</string>
+    <string name="system_vpnauto_protected">VPN sempre ativa ou modo de bloqueio do sistema preservados</string>
+    <string name="system_vpnauto_paused">Alteração manual respeitada; encerre todos os aplicativos selecionados e reabra um deles</string>
+    <string name="system_vpnauto_failed">Não foi possível conectar. Verifique o perfil, a configuração do cliente e o suporte à conexão em segundo plano.</string>
+    <string name="system_vpnauto_disabled">VPN automática desativada</string>
+    <string name="system_vpnauto_unavailable">Indisponível. Verifique a ativação do módulo e reinicie após ativar pela primeira vez.</string>
+    <string name="system_vpnauto_configure">Selecione um destino VPN e entre 1 e 256 aplicativos para ativá-la.</string>
 </resources>

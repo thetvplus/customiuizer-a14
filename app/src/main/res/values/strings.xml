@@ -1341,4 +1341,36 @@
     <string name="system_island_return_group">Return to island on Home</string>
     <string name="launcher_folder_icon_blur_title">Folder icon background blur</string>
     <string name="launcher_folder_icon_blur_summ">Use native launcher blur for folder icons. Requires system background blur and default icons. Restart the launcher to apply.</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">Connectivity</string>
+    <string name="system_vpnauto_title">Automatic VPN</string>
+    <string name="system_vpnauto_summary">Connect one VPN when any selected app opens</string>
+    <string name="system_vpnauto_enable_summary">Restart the device after first enabling. Rules can then be changed without restarting.</string>
+    <string name="system_vpnauto_target">One VPN target</string>
+    <string name="system_vpnauto_source">VPN source</string>
+    <string name="system_vpnauto_client">VPN app</string>
+    <string name="system_vpnauto_client_summary">Select one app. Configure it and connect manually once first. Requires background connection support; some clients briefly show their connection screen.</string>
+    <string name="system_vpnauto_profile">System VPN profile</string>
+    <string name="system_vpnauto_profile_summary">Select one IKEv2 profile already saved in system VPN settings</string>
+    <string name="system_vpnauto_rules">App rules</string>
+    <string name="system_vpnauto_apps">Trigger apps</string>
+    <string name="system_vpnauto_apps_summary">Select multiple apps. Returning home or switching apps keeps the VPN connected.</string>
+    <string name="system_vpnauto_close">Disconnect after apps exit</string>
+    <string name="system_vpnauto_close_summary">Wait 3 seconds after all selected apps are removed from recents or their main processes exit. Only disconnect a session started by this feature.</string>
+    <string name="system_vpnauto_status">Current status</string>
+    <string name="system_vpnauto_loading">Reading system VPN options…</string>
+    <string name="system_vpnauto_no_profiles">No supported saved profile. Add an IKEv2 profile in system VPN settings first.</string>
+    <string name="system_vpnauto_protection">Connection protection</string>
+    <string name="system_vpnauto_protection_summary">Primary user only. Existing connections, always-on VPN and lockdown take priority. A manual disconnect pauses automatic reconnection until all trigger apps exit and one is reopened. Does not wait for the VPN before launching an app.</string>
+    <string name="system_vpnauto_ready">Waiting for a selected app</string>
+    <string name="system_vpnauto_connecting">Connection requested; waiting for the VPN</string>
+    <string name="system_vpnauto_owned">Connected by this feature</string>
+    <string name="system_vpnauto_existing">Existing VPN preserved</string>
+    <string name="system_vpnauto_protected">System always-on or lockdown VPN preserved</string>
+    <string name="system_vpnauto_paused">Manual change preserved; reopen a trigger app after all trigger apps exit</string>
+    <string name="system_vpnauto_failed">Could not connect. Check the selected profile, client setup and background connection support.</string>
+    <string name="system_vpnauto_disabled">Automatic VPN is off</string>
+    <string name="system_vpnauto_unavailable">Unavailable. Check module activation and restart after first enabling.</string>
+    <string name="system_vpnauto_configure">Select a VPN target and between 1 and 256 trigger apps.</string>
 </resources>

@@ -142,7 +142,7 @@ class PreferenceNavigationUiTest {
             .putBoolean("pref_key_system_island_media", true).apply()
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries, including shared effects, must be indexed", 31, standaloneKeys.size)
+        assertEquals("All standalone page entries, including automatic VPN, must be indexed", 32, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -485,6 +485,31 @@ class PreferenceNavigationUiTest {
         val allowed=requireNotNull(notifications.findPreference<Preference>("pref_key_system_island_notification_apps"))
         assertFalse(allowed.isEnabled); chat.isChecked=true; assertTrue(allowed.isEnabled)
         assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(allowed.key,emptySet())!!.isEmpty())
+    }
+
+    @Test fun vpnRulesUseOneClientOrProfileAndAMultiAppSelector() {
+        openSettingsPage("pref_key_system", "pref_key_system_cat_other")
+        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_vpnauto_cat")).performClick()
+        settleNavigation()
+        val page = currentPage() as tv.withaibuild.customiuizer.subs.System_VpnAutoSwitch
+        assertPreferencePageVisible(page)
+        val kind = requireNotNull(page.findPreference<ListPreference>("pref_key_system_vpnauto_kind"))
+        val client = requireNotNull(page.findPreference<ListPreference>("pref_key_system_vpnauto_client"))
+        val profile = requireNotNull(page.findPreference<ListPreference>("pref_key_system_vpnauto_profile"))
+        assertTrue(client.isVisible)
+        assertFalse(profile.isVisible)
+        assertTrue(kind.callChangeListener("system"))
+        kind.value = "system"
+        assertFalse(client.isVisible)
+        assertTrue(profile.isVisible)
+        assertTrue(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_vpnauto_close")).isChecked)
+        requireNotNull(page.findPreference<Preference>("pref_key_system_vpnauto_apps")).performClick()
+        settleNavigation()
+        val picker = currentPage() as tv.withaibuild.customiuizer.subs.AppSelector
+        assertTrue(requireNotNull(picker.arguments).getBoolean("multi"))
+        assertEquals("pref_key_system_vpnauto_apps", picker.arguments?.getString("key"))
+        pressToolbarBack()
+        assertPreferencePageVisible(currentPage())
     }
 
     private fun openSettingsPage(categoryKey: String, pageKey: String) {

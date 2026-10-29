@@ -72,6 +72,7 @@ R8 保留入口、Hooker、JNI、ServiceLoader 及设置进程与 compileOnly AP
 | `MainModule`、`installers`、`mods/utils/feature` | 入口、路由、稳定 ID 和安装目录 |
 | `mods/island` | `DynamicIslandActivities` ROM 接入；Controller 持有安全 / 会话 / 租约，View / Motion / Sizing 呈现；输入容器只管 touchableRegion |
 | `mods/duostatusbar`、`clock`、`battery` | 独立功能状态与 View |
+| `mods/vpn` | system_server 原生应用 / VPN 事件、单目标连接所有权；设置只读桥不传输 VPN 凭据 |
 | Launcher Dock Hook / 装饰 / 采样 / 材质 | HotSeats 所有权及背景；共享模糊仍在公共层 |
 | `mods/utils` | 跨功能 Hook、安全、ClassLoader 缓存及生命周期机制 |
 | `utils`、`prefs`、`subs` | 设置界面、持久化、页面控制器 |
@@ -97,6 +98,8 @@ Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，
 状态栏几何 Binding 跟随实际 View / Window，保留最新原生基线，仅恢复自己仍持有的属性；配置和 detach 不改写其他 owner 的新值。变更不得扩大到通用 View setter 或全局窗口缓存。
 
 ## 设置、生成与持久化
+
+VPN 自动开关仅在首次启用后安装系统 Hook，之后复用偏好观察者及系统 BackgroundThread。主用户任务按 taskId 和原生进程身份跟踪；同一目标的规则更新保留当前会话，目标替换 / 停用释放旧 owner。启动前已有、始终开启或 lockdown 连接不认领；仅认领请求后 20 秒内出现的匹配目标会话，原生 Connection / VpnRunner 身份变化即放弃。最后任务移除或主进程退出后给 3 秒交接，只在同一会话仍属于当前 owner 时调用系统断开；用户切换不继承主用户跟踪。最多 256 个触发应用、128 个活动任务，溢出时保守保留连接；无轮询、force-stop、always-on 改写或新建线程。系统侧只列出 A14 支持的已存 IKEv2 配置，第三方连接取决于客户端响应系统启动 / 已公开外部控制入口。
 
 `res/xml/prefs_*.xml` 是页面源；`generatePreferenceArtifacts` 生成分页、搜索和当前偏好目录到 `app/build/generated/`。搜索保留控制器、目标键和导航元数据；恢复按当前偏好契约校准，生成输入与 AGP 依赖见 [DEVELOPMENT](docs/DEVELOPMENT.md#构建与生成物)。当前页面与稳定键导航见[功能地图](docs/FEATURE_MAP.md)，其独立生成不改变运行时产物。
 

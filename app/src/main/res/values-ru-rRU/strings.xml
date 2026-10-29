@@ -1307,4 +1307,36 @@
     <string name="system_island_return_group">При возврате на рабочий стол</string>
     <string name="launcher_folder_icon_blur_title">Размытие фона значков папок</string>
     <string name="launcher_folder_icon_blur_summ">Использует штатное размытие папок. Требуются системное размытие фона и стандартные значки. Для применения перезапустите рабочий стол.</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">Сетевые подключения</string>
+    <string name="system_vpnauto_title">Автопереключение VPN</string>
+    <string name="system_vpnauto_summary">Подключать одну VPN при открытии выбранных приложений</string>
+    <string name="system_vpnauto_enable_summary">После первого включения перезагрузите устройство. Затем правила можно менять без перезагрузки.</string>
+    <string name="system_vpnauto_target">Одна целевая VPN</string>
+    <string name="system_vpnauto_source">Источник VPN</string>
+    <string name="system_vpnauto_client">Приложение VPN</string>
+    <string name="system_vpnauto_client_summary">Выберите одно приложение. Сначала настройте его и один раз подключитесь вручную. Нужна поддержка фонового подключения; некоторые клиенты ненадолго показывают экран подключения.</string>
+    <string name="system_vpnauto_profile">Системный профиль VPN</string>
+    <string name="system_vpnauto_profile_summary">Выберите один профиль IKEv2, сохранённый в системных настройках VPN</string>
+    <string name="system_vpnauto_rules">Правила приложений</string>
+    <string name="system_vpnauto_apps">Приложения для запуска VPN</string>
+    <string name="system_vpnauto_apps_summary">Можно выбрать несколько приложений. При переходе на главный экран или переключении приложений соединение сохраняется.</string>
+    <string name="system_vpnauto_close">Отключать после выхода из всех приложений</string>
+    <string name="system_vpnauto_close_summary">Подождать 3 секунды после удаления всех выбранных приложений из недавних задач или завершения их основных процессов. Отключается только соединение, запущенное этой функцией.</string>
+    <string name="system_vpnauto_status">Текущее состояние</string>
+    <string name="system_vpnauto_loading">Чтение системных параметров VPN…</string>
+    <string name="system_vpnauto_no_profiles">Нет поддерживаемых сохранённых профилей. Сначала добавьте профиль IKEv2 в системных настройках VPN.</string>
+    <string name="system_vpnauto_protection">Защита соединения</string>
+    <string name="system_vpnauto_protection_summary">Только для основного пользователя. Существующие соединения, постоянная VPN и режим блокировки имеют приоритет. После ручного отключения автоподключение возобновится, когда вы закроете все выбранные приложения и снова откроете одно из них. Запуск приложения не ждёт подключения VPN.</string>
+    <string name="system_vpnauto_ready">Ожидание запуска выбранного приложения</string>
+    <string name="system_vpnauto_connecting">Подключение запрошено; ожидание VPN</string>
+    <string name="system_vpnauto_owned">Подключено этой функцией</string>
+    <string name="system_vpnauto_existing">Существующее соединение VPN сохранено</string>
+    <string name="system_vpnauto_protected">Постоянная VPN или режим блокировки системы сохранены</string>
+    <string name="system_vpnauto_paused">Ручное изменение сохранено; закройте все выбранные приложения и снова откройте одно из них</string>
+    <string name="system_vpnauto_failed">Не удалось подключиться. Проверьте профиль, настройки клиента и поддержку фонового подключения.</string>
+    <string name="system_vpnauto_disabled">Автопереключение VPN выключено</string>
+    <string name="system_vpnauto_unavailable">Недоступно. Проверьте активацию модуля и перезагрузите устройство после первого включения.</string>
+    <string name="system_vpnauto_configure">Выберите VPN и от 1 до 256 приложений для её запуска.</string>
 </resources>

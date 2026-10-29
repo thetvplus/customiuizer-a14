@@ -3314,6 +3314,19 @@
       "enableCondition": "packageName == \"com.mi.android.globallauncher\" && prefs.getBoolean(\"launcher_folder_icon_blur\")",
       "allowedProcess": "com.mi.android.globallauncher",
       "deniedProcess": "secondary processes; other Launcher features"
+    },
+    {
+      "featureIdInt": 262,
+      "featureIdName": "system_vpn_auto_switch",
+      "name": "VPN Auto Switch",
+      "preferenceKey": "system_vpnauto_enabled",
+      "target": "SYSTEM_SERVER",
+      "phase": "SYSTEM_SERVER_STARTING",
+      "installer": "SystemServerFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.vpn.VpnAutoSwitchHooks.install(lpparam.classLoader)",
+      "enableCondition": "{ prefs -> prefs.getBoolean(\"system_vpnauto_enabled\") }",
+      "allowedProcess": "system_server",
+      "deniedProcess": ""
     }
   ],
   "scope": [

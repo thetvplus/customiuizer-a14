@@ -591,6 +591,7 @@ object GlobalActionSystemServerHooks {
             override fun after(callback: AfterHookCallback) {
                 val thisObject = callback.getThisObject()!!
                 val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
+                ModuleHelper.guarded { tv.withaibuild.customiuizer.mods.vpn.VpnAutoSwitchBridge.install(mContext, lpparam.classLoader) }
                 MainModule.sPreferenceBootstrap?.let { bootstrap ->
                     SystemServerPreferenceInvalidation.install(mContext, bootstrap)
                     bootstrap.bootstrap()

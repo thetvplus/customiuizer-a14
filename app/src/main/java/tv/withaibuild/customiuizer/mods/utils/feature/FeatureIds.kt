@@ -1082,3 +1082,8 @@ data object PocoFolderIconBlurFeatureId : FeatureId {
     override val id = 261
     override val name = "poco_folder_icon_blur"
 }
+
+data object VpnAutoSwitchFeatureId : FeatureId {
+    override val id = 262
+    override val name = "system_vpn_auto_switch"
+}

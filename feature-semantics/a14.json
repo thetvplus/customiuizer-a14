@@ -55,6 +55,18 @@
     {
       "preferenceKey": "system_island_actions_cat",
       "reason": "Navigation-only shared media/idle gesture page; action payload keys retain their existing contract."
+    },
+    {
+      "preferenceKey": "system_vpnauto",
+      "reason": "VPN settings navigation or read-only status; no persisted business preference."
+    },
+    {
+      "preferenceKey": "system_vpnauto_cat",
+      "reason": "VPN settings navigation or read-only status; no persisted business preference."
+    },
+    {
+      "preferenceKey": "system_vpnauto_status",
+      "reason": "VPN settings navigation or read-only status; no persisted business preference."
     }
   ],
   "entries": [
@@ -19029,6 +19041,144 @@
       "confidence": "CODE_VERIFIED",
       "evidence": "IslandOptionsTest; LauncherMusicReturnAccessTest; IslandAbsorptionMeshTest",
       "notes": "Does not enable a source, change its whitelist or restore unrelated r14.25.5 behavior"
+    },
+    {
+      "featureId": "system_vpnauto_apps",
+      "featureName": "system_vpnauto_apps",
+      "preferenceKeys": [
+        "pref_key_system_vpnauto_apps",
+        "system_vpnauto_apps"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_vpnauto.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/vpn/VpnAutoSwitchHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:VpnAutoSwitchFeature",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Enable event-driven primary-user app-to-VPN rules for one selected app or system IKEv2 profile",
+      "disableEffect": "Release runtime callbacks and stop only a still-owned session when auto-close is enabled",
+      "valueChangeEffect": "Publish a new immutable configuration; retain current ownership for unchanged targets and revalidate affected tasks",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
+      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+    },
+    {
+      "featureId": "system_vpnauto_client",
+      "featureName": "system_vpnauto_client",
+      "preferenceKeys": [
+        "pref_key_system_vpnauto_client",
+        "system_vpnauto_client"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_vpnauto.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/vpn/VpnAutoSwitchHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:VpnAutoSwitchFeature",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Enable event-driven primary-user app-to-VPN rules for one selected app or system IKEv2 profile",
+      "disableEffect": "Release runtime callbacks and stop only a still-owned session when auto-close is enabled",
+      "valueChangeEffect": "Publish a new immutable configuration; retain current ownership for unchanged targets and revalidate affected tasks",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
+      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+    },
+    {
+      "featureId": "system_vpnauto_close",
+      "featureName": "system_vpnauto_close",
+      "preferenceKeys": [
+        "pref_key_system_vpnauto_close",
+        "system_vpnauto_close"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_vpnauto.xml",
+      "defaultValue": "true",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/vpn/VpnAutoSwitchHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:VpnAutoSwitchFeature",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Enable event-driven primary-user app-to-VPN rules for one selected app or system IKEv2 profile",
+      "disableEffect": "Release runtime callbacks and stop only a still-owned session when auto-close is enabled",
+      "valueChangeEffect": "Publish a new immutable configuration; retain current ownership for unchanged targets and revalidate affected tasks",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
+      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+    },
+    {
+      "featureId": "system_vpnauto_enabled",
+      "featureName": "VPN Auto Switch",
+      "preferenceKeys": [
+        "system_vpnauto_enabled",
+        "pref_key_system_vpnauto_enabled"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_vpnauto.xml",
+      "defaultValue": "false",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/vpn/VpnAutoSwitchHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:VpnAutoSwitchFeature",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "CAPTURED_AT_INSTALL",
+      "enableEffect": "Enable event-driven primary-user app-to-VPN rules for one selected app or system IKEv2 profile",
+      "disableEffect": "Release runtime callbacks and stop only a still-owned session when auto-close is enabled",
+      "valueChangeEffect": "First enable requires device reboot to install hooks; once installed, observer updates can disable and resume without reinstalling hooks",
+      "restartTarget": "REBOOT",
+      "hotReloadable": false,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
+      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+    },
+    {
+      "featureId": "system_vpnauto_kind",
+      "featureName": "system_vpnauto_kind",
+      "preferenceKeys": [
+        "pref_key_system_vpnauto_kind",
+        "system_vpnauto_kind"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_vpnauto.xml",
+      "defaultValue": "app",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/vpn/VpnAutoSwitchHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:VpnAutoSwitchFeature",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Enable event-driven primary-user app-to-VPN rules for one selected app or system IKEv2 profile",
+      "disableEffect": "Release runtime callbacks and stop only a still-owned session when auto-close is enabled",
+      "valueChangeEffect": "Publish a new immutable configuration; retain current ownership for unchanged targets and revalidate affected tasks",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
+      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
+    },
+    {
+      "featureId": "system_vpnauto_profile",
+      "featureName": "system_vpnauto_profile",
+      "preferenceKeys": [
+        "pref_key_system_vpnauto_profile",
+        "system_vpnauto_profile"
+      ],
+      "xmlSource": "app/src/main/res/xml/prefs_system_vpnauto.xml",
+      "defaultValue": "",
+      "sourceFile": "app/src/main/java/tv/withaibuild/customiuizer/mods/vpn/VpnAutoSwitchHooks.kt",
+      "installer": "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemServerFeatures.kt:VpnAutoSwitchFeature",
+      "targetPackage": "android",
+      "installPhase": "SYSTEM_SERVER_START",
+      "runtimeReadMode": "OBSERVER_PUSH",
+      "enableEffect": "Enable event-driven primary-user app-to-VPN rules for one selected app or system IKEv2 profile",
+      "disableEffect": "Release runtime callbacks and stop only a still-owned session when auto-close is enabled",
+      "valueChangeEffect": "Publish a new immutable configuration; retain current ownership for unchanged targets and revalidate affected tasks",
+      "restartTarget": "NONE",
+      "hotReloadable": true,
+      "confidence": "CODE_VERIFIED",
+      "evidence": "VpnAutoSwitchPolicyTest; CN/TW A14 services.jar native signatures and lifecycle decode",
+      "notes": "No always-on/lockdown writes, force-stop, polling or new thread. Startup timeout and close grace are bounded. Device/client acceptance remains pending."
     }
   ]
 }

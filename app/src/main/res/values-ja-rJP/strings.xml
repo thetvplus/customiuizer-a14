@@ -1308,4 +1308,36 @@
     <string name="system_island_return_group">ホームに戻るときにアイランドへ</string>
     <string name="launcher_folder_icon_blur_title">フォルダアイコンの背景ぼかし</string>
     <string name="launcher_folder_icon_blur_summ">ランチャー標準のぼかしを使用します。システムの背景ぼかしと標準アイコンが必要です。適用するにはランチャーを再起動してください。</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">ネットワーク接続</string>
+    <string name="system_vpnauto_title">VPN の自動切り替え</string>
+    <string name="system_vpnauto_summary">選択したアプリを開くと、指定した VPN に接続</string>
+    <string name="system_vpnauto_enable_summary">初めて有効にした後は端末を再起動してください。その後のルール変更では再起動は不要です。</string>
+    <string name="system_vpnauto_target">接続先 VPN は 1 つ</string>
+    <string name="system_vpnauto_source">VPN の種類</string>
+    <string name="system_vpnauto_client">VPN アプリ</string>
+    <string name="system_vpnauto_client_summary">アプリを 1 つ選択します。先に設定を済ませ、一度手動で接続してください。バックグラウンド接続への対応が必要です。一部のアプリは接続画面を一時的に表示します。</string>
+    <string name="system_vpnauto_profile">システムの VPN プロファイル</string>
+    <string name="system_vpnauto_profile_summary">システムの VPN 設定に保存済みの IKEv2 プロファイルを 1 つ選択</string>
+    <string name="system_vpnauto_rules">アプリのルール</string>
+    <string name="system_vpnauto_apps">VPN を起動するアプリ</string>
+    <string name="system_vpnauto_apps_summary">複数のアプリを選択できます。ホームに戻ったり、別のアプリに切り替えたりしても接続を維持します。</string>
+    <string name="system_vpnauto_close">すべてのアプリの終了後に切断</string>
+    <string name="system_vpnauto_close_summary">選択したすべてのアプリを最近のタスクから削除するか、メインプロセスが終了してから 3 秒待って切断します。この機能が開始した接続のみを切断します。</string>
+    <string name="system_vpnauto_status">現在の状態</string>
+    <string name="system_vpnauto_loading">システムの VPN 設定を読み取り中…</string>
+    <string name="system_vpnauto_no_profiles">対応する保存済みプロファイルがありません。先にシステムの VPN 設定で IKEv2 プロファイルを追加してください。</string>
+    <string name="system_vpnauto_protection">接続の保護</string>
+    <string name="system_vpnauto_protection_summary">メインユーザーのみが対象です。既存の接続、常時接続 VPN、ロックダウンを優先します。手動で切断した後は、選択したすべてのアプリを終了してから 1 つ開き直すと自動接続を再開します。アプリの起動は VPN の接続完了を待ちません。</string>
+    <string name="system_vpnauto_ready">選択したアプリの起動を待機中</string>
+    <string name="system_vpnauto_connecting">接続を要求しました。VPN の確立を待機中</string>
+    <string name="system_vpnauto_owned">この機能により接続済み</string>
+    <string name="system_vpnauto_existing">既存の VPN 接続を維持</string>
+    <string name="system_vpnauto_protected">システムの常時接続 VPN またはロックダウンを維持</string>
+    <string name="system_vpnauto_paused">手動操作を優先しています。選択したすべてのアプリを終了してから開き直してください</string>
+    <string name="system_vpnauto_failed">接続できませんでした。プロファイル、クライアントの設定、バックグラウンド接続への対応を確認してください。</string>
+    <string name="system_vpnauto_disabled">VPN の自動切り替えは無効です</string>
+    <string name="system_vpnauto_unavailable">利用できません。モジュールの有効化を確認し、初回の有効化後に端末を再起動してください。</string>
+    <string name="system_vpnauto_configure">接続先 VPN と、起動条件にするアプリを 1〜256 個選択してください。</string>
 </resources>

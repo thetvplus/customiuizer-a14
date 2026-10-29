@@ -64,13 +64,15 @@ class SystemServerFeaturesWiringTest {
         val features = SystemServerFeatures.all(fakeSystemServerStartingParam())
 
         assertEquals(
-            "All 54 supported system_server features should be present",
-            54,
+            "All 55 supported system_server features should be present",
+            55,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
         assertTrue("Application overlay lifecycle must have its own system_server feature",
             features.any { it.id == IslandApplicationOverlayFeatureId })
+        assertTrue("VPN automation must have its own preference-gated system_server feature",
+            features.any { it.id == VpnAutoSwitchFeatureId })
         assertEquals("Every feature must have a unique FeatureId", features.size, uniqueIds.size)
         assertFalse("Global notification policy feature 38 is retired", features.any { it.id.id == 38 })
 
@@ -78,6 +80,19 @@ class SystemServerFeaturesWiringTest {
             assertEquals(FeatureTarget.SYSTEM_SERVER, feature.target)
             assertEquals(InstallPhase.SYSTEM_SERVER_STARTING, feature.phase)
         }
+    }
+
+    @Test fun vpnAutomationIsOptInEvenWhenRulesAreAlreadyConfigured() {
+        val feature = VpnAutoSwitchFeature(fakeSystemServerStartingParam())
+        val prefs = PrefMap().apply {
+            put("system_vpnauto_client", "vpn.client")
+            put("system_vpnauto_apps", setOf("app.a"))
+        }
+        assertFalse(feature.isEnabled(prefs))
+        prefs.put("system_vpnauto_enabled", true)
+        assertTrue(feature.isEnabled(prefs))
+        prefs.put("system_vpnauto_enabled", false)
+        assertFalse(feature.isEnabled(prefs))
     }
 
     @Test

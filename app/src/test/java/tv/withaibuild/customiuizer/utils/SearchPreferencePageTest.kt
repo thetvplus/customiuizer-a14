@@ -11,7 +11,7 @@ class SearchPreferencePageTest {
         for (controller in listOf(
             "System", "SubFragment", "System_AutoBrightness", "System_Visualizer",
             "System_VibrationAmp", "System_BatteryIndicator", "System_NoScreenLock",
-            "System_ScreenshotConfig", "Various_CallUIBright", "Various_HiddenFeatures",
+            "System_ScreenshotConfig", "System_VpnAutoSwitch", "Various_CallUIBright", "Various_HiddenFeatures",
         )) {
             val page = SearchPreferencePage(1, "Page", controller, false)
             val first = page.createFragment()

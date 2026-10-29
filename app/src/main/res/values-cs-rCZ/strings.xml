@@ -1315,4 +1315,36 @@
     <string name="system_island_return_group">Při návratu na plochu</string>
     <string name="launcher_folder_icon_blur_title">Rozmazání pozadí ikon složek</string>
     <string name="launcher_folder_icon_blur_summ">Použije nativní rozmazání ikon složek. Vyžaduje systémové rozmazání pozadí a výchozí ikony. Pro použití restartujte launcher.</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">Síťová připojení</string>
+    <string name="system_vpnauto_title">Automatická VPN</string>
+    <string name="system_vpnauto_summary">Připojit jednu VPN při otevření vybrané aplikace</string>
+    <string name="system_vpnauto_enable_summary">Po prvním zapnutí restartujte zařízení. Další změny pravidel nevyžadují restart.</string>
+    <string name="system_vpnauto_target">Jeden cíl VPN</string>
+    <string name="system_vpnauto_source">Zdroj VPN</string>
+    <string name="system_vpnauto_client">Aplikace VPN</string>
+    <string name="system_vpnauto_client_summary">Vyberte jednu aplikaci. Nejprve ji nastavte a jednou se připojte ručně. Musí podporovat připojení na pozadí; některé aplikace krátce zobrazí obrazovku připojení.</string>
+    <string name="system_vpnauto_profile">Systémový profil VPN</string>
+    <string name="system_vpnauto_profile_summary">Vyberte jeden profil IKEv2 uložený v systémovém nastavení VPN</string>
+    <string name="system_vpnauto_rules">Pravidla aplikací</string>
+    <string name="system_vpnauto_apps">Spouštěcí aplikace</string>
+    <string name="system_vpnauto_apps_summary">Lze vybrat více aplikací. Návrat na plochu ani přepnutí aplikace VPN neodpojí.</string>
+    <string name="system_vpnauto_close">Odpojit po ukončení aplikací</string>
+    <string name="system_vpnauto_close_summary">Po odstranění všech vybraných aplikací z posledních úloh nebo ukončení jejich hlavních procesů počkat 3 sekundy. Odpojí se pouze spojení zahájené touto funkcí.</string>
+    <string name="system_vpnauto_status">Aktuální stav</string>
+    <string name="system_vpnauto_loading">Načítání systémových možností VPN…</string>
+    <string name="system_vpnauto_no_profiles">Žádný podporovaný uložený profil. Nejprve přidejte profil IKEv2 v systémovém nastavení VPN.</string>
+    <string name="system_vpnauto_protection">Ochrana připojení</string>
+    <string name="system_vpnauto_protection_summary">Pouze hlavní uživatel. Stávající připojení, trvalá VPN a režim uzamčení mají přednost. Po ručním odpojení se automatika obnoví až po ukončení všech vybraných aplikací a opětovném otevření jedné z nich. Spuštění aplikace nečeká na připojení VPN.</string>
+    <string name="system_vpnauto_ready">Čeká se na otevření vybrané aplikace</string>
+    <string name="system_vpnauto_connecting">Připojení vyžádáno; čeká se na VPN</string>
+    <string name="system_vpnauto_owned">Připojeno touto funkcí</string>
+    <string name="system_vpnauto_existing">Stávající připojení VPN zachováno</string>
+    <string name="system_vpnauto_protected">Systémová trvalá VPN nebo režim uzamčení zachován</string>
+    <string name="system_vpnauto_paused">Ruční změna zachována; ukončete všechny vybrané aplikace a jednu znovu otevřete</string>
+    <string name="system_vpnauto_failed">Připojení se nezdařilo. Zkontrolujte profil, nastavení klienta a podporu připojení na pozadí.</string>
+    <string name="system_vpnauto_disabled">Automatická VPN je vypnutá</string>
+    <string name="system_vpnauto_unavailable">Nedostupné. Zkontrolujte aktivaci modulu a po prvním zapnutí restartujte zařízení.</string>
+    <string name="system_vpnauto_configure">Vyberte cíl VPN a 1 až 256 spouštěcích aplikací.</string>
 </resources>

@@ -1314,4 +1314,36 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_return_group">Ana ekrana dönerken</string>
     <string name="launcher_folder_icon_blur_title">Klasör simgesi arka plan bulanıklığı</string>
     <string name="launcher_folder_icon_blur_summ">Klasörlerde yerel bulanıklığı kullanır. Sistem arka plan bulanıklığı ve varsayılan simgeler gerektirir. Uygulamak için başlatıcıyı yeniden başlatın.</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">Ağ bağlantıları</string>
+    <string name="system_vpnauto_title">Otomatik VPN</string>
+    <string name="system_vpnauto_summary">Seçilen bir uygulama açıldığında tek bir VPN bağla</string>
+    <string name="system_vpnauto_enable_summary">İlk etkinleştirmeden sonra cihazı yeniden başlatın. Sonrasında kurallar yeniden başlatmadan değiştirilebilir.</string>
+    <string name="system_vpnauto_target">Tek VPN hedefi</string>
+    <string name="system_vpnauto_source">VPN kaynağı</string>
+    <string name="system_vpnauto_client">VPN uygulaması</string>
+    <string name="system_vpnauto_client_summary">Bir uygulama seçin. Önce yapılandırın ve bir kez elle bağlanın. Arka planda bağlantı desteği gerekir; bazı istemciler bağlantı ekranını kısa süre gösterebilir.</string>
+    <string name="system_vpnauto_profile">Sistem VPN profili</string>
+    <string name="system_vpnauto_profile_summary">Sistem VPN ayarlarında kayıtlı bir IKEv2 profili seçin</string>
+    <string name="system_vpnauto_rules">Uygulama kuralları</string>
+    <string name="system_vpnauto_apps">VPN başlatan uygulamalar</string>
+    <string name="system_vpnauto_apps_summary">Birden fazla uygulama seçilebilir. Ana ekrana dönmek veya uygulamalar arasında geçiş yapmak bağlantıyı kesmez.</string>
+    <string name="system_vpnauto_close">Tüm uygulamalar kapanınca bağlantıyı kes</string>
+    <string name="system_vpnauto_close_summary">Seçilen tüm uygulamalar son görevlerden kaldırıldığında veya ana işlemleri sonlandığında 3 saniye bekler. Yalnızca bu özelliğin başlattığı bağlantıyı keser.</string>
+    <string name="system_vpnauto_status">Geçerli durum</string>
+    <string name="system_vpnauto_loading">Sistem VPN seçenekleri okunuyor…</string>
+    <string name="system_vpnauto_no_profiles">Desteklenen kayıtlı profil yok. Önce sistem VPN ayarlarından bir IKEv2 profili ekleyin.</string>
+    <string name="system_vpnauto_protection">Bağlantı koruması</string>
+    <string name="system_vpnauto_protection_summary">Yalnızca ana kullanıcı için. Mevcut bağlantılar, her zaman açık VPN ve kilitleme modu önceliklidir. Elle bağlantı kesildikten sonra otomatik bağlantı, seçilen tüm uygulamalar kapanıp biri yeniden açılınca devam eder. Uygulamayı açmak için VPN bağlantısı beklenmez.</string>
+    <string name="system_vpnauto_ready">Seçilen bir uygulamanın açılması bekleniyor</string>
+    <string name="system_vpnauto_connecting">Bağlantı istendi; VPN bekleniyor</string>
+    <string name="system_vpnauto_owned">Bu özellik tarafından bağlandı</string>
+    <string name="system_vpnauto_existing">Mevcut VPN bağlantısı korundu</string>
+    <string name="system_vpnauto_protected">Sistemin her zaman açık VPN veya kilitleme modu korundu</string>
+    <string name="system_vpnauto_paused">Elle yapılan değişiklik korundu; seçilen tüm uygulamaları kapatıp birini yeniden açın</string>
+    <string name="system_vpnauto_failed">Bağlanılamadı. Profili, istemci ayarlarını ve arka planda bağlantı desteğini kontrol edin.</string>
+    <string name="system_vpnauto_disabled">Otomatik VPN kapalı</string>
+    <string name="system_vpnauto_unavailable">Kullanılamıyor. Modülün etkinliğini kontrol edin ve ilk etkinleştirmeden sonra cihazı yeniden başlatın.</string>
+    <string name="system_vpnauto_configure">Bir VPN hedefi ve 1 ile 256 arasında tetikleyici uygulama seçin.</string>
 </resources>

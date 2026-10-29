@@ -1,0 +1,10 @@
+<resources>
+    <string-array name="system_vpnauto_kinds">
+        <item>@string/system_vpnauto_client</item>
+        <item>@string/system_vpnauto_profile</item>
+    </string-array>
+    <string-array name="system_vpnauto_kind_values" translatable="false">
+        <item>app</item>
+        <item>system</item>
+    </string-array>
+</resources>

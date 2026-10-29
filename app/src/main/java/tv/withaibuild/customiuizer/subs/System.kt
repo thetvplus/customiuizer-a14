@@ -419,6 +419,11 @@ class System : SubFragment() {
             }
             "pref_key_system_lockscreenshortcuts_cat" -> findPreference<Preference>("pref_key_system_lockscreenshortcuts_right")?.setOnPreferenceClickListener(openLockScreenActions)
             "pref_key_system_cat_other" -> {
+                findPreference<Preference>("pref_key_system_vpnauto_cat")?.setOnPreferenceClickListener {
+                    openSubFragment(System_VpnAutoSwitch(), null, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp,
+                        R.string.system_vpnauto_title, R.xml.prefs_system_vpnauto)
+                    true
+                }
                 findPreference<Preference>("pref_key_system_forceclose_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_nooverscroll_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_cleanshare_apps")?.setOnPreferenceClickListener(openShareEdit)

@@ -1308,4 +1308,36 @@
     <string name="system_island_return_group">Khi trở về màn hình chính</string>
     <string name="launcher_folder_icon_blur_title">Làm mờ nền biểu tượng thư mục</string>
     <string name="launcher_folder_icon_blur_summ">Dùng hiệu ứng mờ gốc cho thư mục. Cần làm mờ nền hệ thống và biểu tượng mặc định. Khởi động lại trình khởi chạy để áp dụng.</string>
+
+    <!-- Automatic VPN -->
+    <string name="system_vpnauto_group">Kết nối mạng</string>
+    <string name="system_vpnauto_title">VPN tự động</string>
+    <string name="system_vpnauto_summary">Kết nối một VPN khi mở ứng dụng đã chọn</string>
+    <string name="system_vpnauto_enable_summary">Khởi động lại thiết bị sau lần bật đầu tiên. Sau đó có thể đổi quy tắc mà không cần khởi động lại.</string>
+    <string name="system_vpnauto_target">Một đích VPN</string>
+    <string name="system_vpnauto_source">Nguồn VPN</string>
+    <string name="system_vpnauto_client">Ứng dụng VPN</string>
+    <string name="system_vpnauto_client_summary">Chọn một ứng dụng. Trước tiên hãy cấu hình và kết nối thủ công một lần. Cần hỗ trợ kết nối nền; một số ứng dụng có thể hiển thị nhanh màn hình kết nối.</string>
+    <string name="system_vpnauto_profile">Hồ sơ VPN hệ thống</string>
+    <string name="system_vpnauto_profile_summary">Chọn một hồ sơ IKEv2 đã lưu trong cài đặt VPN hệ thống</string>
+    <string name="system_vpnauto_rules">Quy tắc ứng dụng</string>
+    <string name="system_vpnauto_apps">Ứng dụng kích hoạt VPN</string>
+    <string name="system_vpnauto_apps_summary">Có thể chọn nhiều ứng dụng. Về màn hình chính hoặc chuyển ứng dụng vẫn giữ kết nối.</string>
+    <string name="system_vpnauto_close">Ngắt khi tất cả ứng dụng kết thúc</string>
+    <string name="system_vpnauto_close_summary">Chờ 3 giây sau khi mọi ứng dụng đã chọn bị xóa khỏi tác vụ gần đây hoặc tiến trình chính kết thúc. Chỉ ngắt phiên do tính năng này khởi tạo.</string>
+    <string name="system_vpnauto_status">Trạng thái hiện tại</string>
+    <string name="system_vpnauto_loading">Đang đọc tùy chọn VPN hệ thống…</string>
+    <string name="system_vpnauto_no_profiles">Không có hồ sơ đã lưu được hỗ trợ. Hãy thêm hồ sơ IKEv2 trong cài đặt VPN hệ thống trước.</string>
+    <string name="system_vpnauto_protection">Bảo vệ kết nối</string>
+    <string name="system_vpnauto_protection_summary">Chỉ áp dụng cho người dùng chính. Ưu tiên kết nối hiện có, VPN luôn bật và chế độ khóa. Sau khi ngắt thủ công, chỉ kết nối tự động trở lại khi mọi ứng dụng đã chọn được đóng và một ứng dụng được mở lại. Việc mở ứng dụng không chờ VPN kết nối xong.</string>
+    <string name="system_vpnauto_ready">Đang chờ mở ứng dụng đã chọn</string>
+    <string name="system_vpnauto_connecting">Đã yêu cầu kết nối; đang chờ VPN</string>
+    <string name="system_vpnauto_owned">Đã kết nối bằng tính năng này</string>
+    <string name="system_vpnauto_existing">Đã giữ nguyên kết nối VPN hiện có</string>
+    <string name="system_vpnauto_protected">Đã giữ nguyên VPN luôn bật hoặc chế độ khóa của hệ thống</string>
+    <string name="system_vpnauto_paused">Đã giữ thay đổi thủ công; đóng mọi ứng dụng đã chọn rồi mở lại một ứng dụng</string>
+    <string name="system_vpnauto_failed">Không thể kết nối. Kiểm tra hồ sơ, cài đặt ứng dụng VPN và hỗ trợ kết nối nền.</string>
+    <string name="system_vpnauto_disabled">VPN tự động đã tắt</string>
+    <string name="system_vpnauto_unavailable">Không khả dụng. Kiểm tra kích hoạt mô-đun và khởi động lại sau lần bật đầu tiên.</string>
+    <string name="system_vpnauto_configure">Chọn một đích VPN và từ 1 đến 256 ứng dụng kích hoạt.</string>
 </resources>

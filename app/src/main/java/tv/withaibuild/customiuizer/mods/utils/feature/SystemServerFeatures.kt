@@ -1418,7 +1418,23 @@ object SystemServerFeatures {
             enabled = { true },
             factory = { UsbDefaultFunctionFeature(lpparam) },
         ),
+        LazyFeatureSpec(
+            id = VpnAutoSwitchFeatureId,
+            name = "VPN Auto Switch",
+            preferenceKey = "system_vpnauto_enabled",
+            target = FeatureTarget.SYSTEM_SERVER,
+            phase = InstallPhase.SYSTEM_SERVER_STARTING,
+            enabled = { prefs -> prefs.getBoolean("system_vpnauto_enabled") },
+            factory = { VpnAutoSwitchFeature(lpparam) },
+        ),
 )
+}
+
+internal class VpnAutoSwitchFeature(lpparam: XposedModuleInterface.SystemServerStartingParam) : BaseSystemServerFeature(
+    lpparam, VpnAutoSwitchFeatureId, "VPN Auto Switch", "system_vpnauto_enabled"
+) {
+    override fun isEnabledCondition(prefs: PrefMap) = prefs.getBoolean("system_vpnauto_enabled")
+    override fun installHook() = tv.withaibuild.customiuizer.mods.vpn.VpnAutoSwitchHooks.install(lpparam.classLoader)
 }
 
 internal class AnimationScaleBridgeFeature(
