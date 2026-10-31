@@ -37,7 +37,9 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 ### 当前正式版本
 
-当前已公开正式版为 **r14.26.5 / 265**，说明基线为 **r14.25.9**；双仓稳定版、Latest、两份附件与下载文档均已读回核验。原构建源码标识为 `2037b6da9195fbf406113ded89698a3812be81d2`，对应匿名快照 `313defbd7b1f50892d3cbd48e72f228844ded5d5`；原 CI / 签名证据私有归档，APK 保持原签名和二进制。APK 为 5,979,909 字节，SHA-256 为 `37d0a445199083f4ff56ab3562c0200c5ba4db03dda3d2abbef90b5dc05581ca`；历史证书、对齐、来源与最终 DEX 边界通过。Develop 实机验收已通过；正式 APK 的身份、证书、对齐和 DEX 已离线验收，未做最终安装复验；r14.26.3 的旧页面、附件与标签已按授权从两端删除。验收范围见[原路线图](maintenance/A14_REFINEMENT_ROADMAP.md)。
+当前已公开正式版为 **r14.26.7 / 267**，说明基线为 **r14.26.5**；双仓稳定版、Latest、两份附件与下载文档均已读回核验。源码为 `8a9ce0d8dcbd3c16601b3e543247674677c69f3e`，对应 [exact main CI](https://github.com/thetvplus/customiuizer-a14/actions/runs/41195474626) 与 [自动签名 / 发布](https://github.com/thetvplus/customiuizer-a14/actions/runs/41196550714)。APK 为 5,997,909 字节，SHA-256 为 `80f32bd50fec08a8a0ffbdfea46878fc2a9a5e0d54a15b883b95d4286824b031`；历史证书、SDK / ABI、签名、对齐和来源门禁通过。Develop 实机验收范围与未追加边界见[原路线图](maintenance/A14_REFINEMENT_ROADMAP.md)，正式 APK 未另行安装复验。
+
+上一轮 **r14.26.5 / 265** 的历史发行记录：，说明基线为 **r14.25.9**；双仓稳定版、Latest、两份附件与下载文档均已读回核验。原构建源码标识为 `2037b6da9195fbf406113ded89698a3812be81d2`，对应匿名快照 `313defbd7b1f50892d3cbd48e72f228844ded5d5`；原 CI / 签名证据私有归档，APK 保持原签名和二进制。APK 为 5,979,909 字节，SHA-256 为 `37d0a445199083f4ff56ab3562c0200c5ba4db03dda3d2abbef90b5dc05581ca`；历史证书、对齐、来源与最终 DEX 边界通过。Develop 实机验收已通过；正式 APK 的身份、证书、对齐和 DEX 已离线验收，未做最终安装复验；r14.26.3 的旧页面、附件与标签已按授权从两端删除。验收范围见[原路线图](maintenance/A14_REFINEMENT_ROADMAP.md)。
 
 2026-10-29 的 r14.25.9 双仓发行已完成；r14.25.8 / 257 仅为未公开本地候选，其有效变化已累计进入 r14.25.9，不发布或晋升旧候选。旧 r14.25.5 / 250 候选仍不得晋升，不移动或覆盖历史标签。
 
