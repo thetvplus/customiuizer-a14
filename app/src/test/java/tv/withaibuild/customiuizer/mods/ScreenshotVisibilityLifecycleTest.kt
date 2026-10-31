@@ -182,6 +182,9 @@ class ScreenshotVisibilityLifecycleTest {
             registerReceiver(receiver, filter, null, null, flags)
         override fun registerReceiver(receiver: BroadcastReceiver?, filter: IntentFilter?, permission: String?,
             scheduler: Handler?, flags: Int): Intent? {
+            assertEquals("native screenshot broadcasts require their sender's signature permission",
+                "android.permission.READ_FRAME_BUFFER", permission)
+            assertEquals(Context.RECEIVER_EXPORTED, flags)
             registerCalls++
             if (failRegistration) throw IllegalStateException("injected registration failure")
             receiver?.let { receivers.add(it) }

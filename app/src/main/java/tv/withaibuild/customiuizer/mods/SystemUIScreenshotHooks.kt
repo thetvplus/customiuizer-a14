@@ -25,6 +25,8 @@ object SystemUIScreenshotHooks {
     private val screenshotReceiverTag = ResourceHooks.getFakeResId("screenshot_visibility_receiver")
 
     private const val SCREENSHOT_ACTION = "miui.intent.TAKE_SCREENSHOT"
+    // The A14 screenshot app sends without shared identity and holds this signature permission.
+    private const val SCREENSHOT_PERMISSION = "android.permission.READ_FRAME_BUFFER"
 
     @JvmStatic
     fun TempHideOverlaySystemUIHook(lpparam: PackageReadyParam) {
@@ -59,7 +61,7 @@ object SystemUIScreenshotHooks {
                                 }
                             }
                         }
-                    }, intentFilter, Context.RECEIVER_EXPORTED)
+                    }, intentFilter, Context.RECEIVER_EXPORTED, SCREENSHOT_PERMISSION)
                     if (registered) receiverContext = WeakReference(mContext)
                 }
             }
@@ -79,6 +81,8 @@ object SystemUIScreenshotHooks {
             view.context.registerReceiver(
                 this,
                 IntentFilter(SCREENSHOT_ACTION),
+                SCREENSHOT_PERMISSION,
+                null,
                 Context.RECEIVER_EXPORTED
             )
             registered = true
@@ -112,6 +116,8 @@ object SystemUIScreenshotHooks {
             v.context.registerReceiver(
                 this,
                 IntentFilter(SCREENSHOT_ACTION),
+                SCREENSHOT_PERMISSION,
+                null,
                 Context.RECEIVER_EXPORTED
             )
             registered = true

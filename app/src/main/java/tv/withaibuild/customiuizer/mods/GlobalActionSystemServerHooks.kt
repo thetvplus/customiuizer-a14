@@ -841,6 +841,8 @@ object GlobalActionSystemServerHooks {
                             if (intent.action == null) return@guarded
                             val action = intent.action
                             if (action == GlobalActions.ACTION_PREFIX + "PinningWindow") {
+                                if (!ModuleHelper.isTrustedBroadcast(this, Helpers.modulePkg, "android", "com.android.systemui", "com.miui.home",
+                                        rejectionResultCode = GlobalActions.ACTION_FAILED)) return@guarded
                                 val foregroundInfo = ProcessManager.getForegroundInfo()
                                 if (foregroundInfo != null) {
                                     val topPackage = foregroundInfo.mForegroundPackageName
@@ -893,6 +895,8 @@ object GlobalActionSystemServerHooks {
                             if (intent.action == null) return@guarded
                             val action = intent.action
                             if (action == GlobalActions.ACTION_PREFIX + "SplitScreen") {
+                                if (!ModuleHelper.isTrustedBroadcast(this, Helpers.modulePkg, "android", "com.android.systemui", "com.miui.home",
+                                        rejectionResultCode = GlobalActions.ACTION_FAILED)) return@guarded
                                 val foregroundInfo = ProcessManager.getForegroundInfo()
                                 if (foregroundInfo != null) {
                                     val topPackage = foregroundInfo.mForegroundPackageName
@@ -933,6 +937,8 @@ object GlobalActionSystemServerHooks {
                             if (intent.action == null) return@guarded
                             val action = intent.action
                             if (action == GlobalActions.ACTION_PREFIX + "ToggleAutoBrightness") {
+                                if (!ModuleHelper.isTrustedBroadcast(this, Helpers.modulePkg, "android", "com.android.systemui", "com.miui.home",
+                                        rejectionResultCode = GlobalActions.ACTION_FAILED)) return@guarded
                                 val modRes = ModuleHelper.getModuleRes(mContext)
                                 val enabled = XposedHelpers.getBooleanField(thisObject, "enabled")
                                 XposedHelpers.callMethod(thisObject, "toggleAutoBrightness")

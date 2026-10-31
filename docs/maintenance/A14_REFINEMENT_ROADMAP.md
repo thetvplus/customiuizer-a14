@@ -2,6 +2,30 @@
 
 本页只维护当前决定、未决问题与证据入口。任务认领和交接用 [AGENTS](../../AGENTS.md#git-与协作) 及 GitHub，不在这里复制分支数据库或开发流水账。
 
+## 仓库安全与 A14 边界续审（2026-10-31）
+
+从本地有效实现 `626e22e63929a68a9fec393c834acc5697e8b53c` 继续，不回退到远端 main。当前账户具备仓库管理权限；GitHub 状态由 REST API 读取并在更新后复核，不把 404 或不可读状态当成关闭。
+
+| 项目 | 当前结果与边界 |
+| --- | --- |
+| Security Policy | 新增根 SECURITY.md 和私密报告导航；GitHub 默认分支上的识别需等待正常审核合入，本轮不合并 |
+| Private Vulnerability Reporting | 已由关闭改为启用并读回，官方私密报告入口可用；未创建无依据 Advisory |
+| Dependabot | Alerts 原已启用，Security Updates 已启用且未暂停；配置覆盖 Gradle、tools 的 pip 及 Actions，仅安全更新，普通版本 PR 上限为零，不自动合并 |
+| Dependency Graph | 原已启用，但默认分支 SBOM 仅八个包，未覆盖 Gradle；新增独立手动 main-only 生成 / 提交工作流，生成只读、提交仅处理同次运行数据，不运行仓库构建代码。合入默认分支后才可首次手动验证提交，不冒充已生成完整远端图 |
+| Code Scanning | default setup 明确为 not-configured，analysis API 返回 no analysis found；没有 Kotlin / Java 扫描结果可报告。官方目前只列 Java 至 26、Kotlin 至 2.4.20，当前 JDK 27 / Kotlin 2.4.21 超出支持；本机 CodeQL / Semgrep CLI 亦未安装，不降 JDK、不用 none 模式跳过 Kotlin，也不部署明知无效的扫描工作流 |
+| Secret Scanning / Push Protection | 两者原已启用并保留；两条命中为导入教学资料中的明确虚构格式示例，已核验为 false positive 并改用符号占位符；未使用凭据、撤销密钥、改写历史或全局排除扫描。非提供方模式和 validity checks 仍为 disabled，不能据此宣称所有秘密类型都被覆盖 |
+| Advisories / Alerts | 当前无发布 Advisory、无 Dependabot 告警；后者受原 Gradle 图缺口限制，不作为依赖无漏洞的证据 |
+
+**依赖实查：** 基于实际解析的生产运行、compileOnly、Host 测试和构建插件查询 OSV / GitHub Reviewed Advisory，初始 298 个坐标中两个 Guava 版本命中 CVE-2026-102554 / GHSA-xxph-c9ww-hj94。仅在既有构建 / 测试约束中升级至 33.7.2-jre，未改 AGP、Kotlin、API 102 或生产依赖集合；修复后 295 个坐标未再命中。生产运行仍为 132 个解析组件，不含完整 Guava；新版 JRE JAR 与 Maven Central 原字节核对一致。进一步检查 Gradle 发行包中有 Maven 元数据的 282 个坐标，发现其内置 Guava 33.4.6-jre 仍在同一公告范围内；当前最新稳定 Gradle 仍为 9.8.2。该 Host 风险保留追踪，未确认项目存在不可信 Java 对象反序列化入口，不改写固定摘要的发行包或把项目约束误报为覆盖 Gradle 内部库。现有依赖校验仍只覆盖既定 libxposed 范围，不冒充所有构件均已固定摘要。
+
+**已修复边界：** P2：三个自定义特权动作接收器遗漏来源认证，现复用现有共享身份和合法发送方白名单，在宿主操作前拒绝无来源及无关应用。同根因扩查确认 P2 截图通知和 P3 电量预览：截图信号本身不是保护广播，改为要求原生截图应用确实持有的 READ_FRAME_BUFFER 签名权限；预览使用模块签名权限。原生截图应用不是 system UID，且不共享身份，因此不能机械改非导出或要求发送包名。电量条仅在需要截图隐藏时增加一个独立权限注册，两个注册均随原 View owner 释放，无新增轮询、线程或业务任务。Wi-Fi / 电话 / 飞行模式 / 无线状态等已确认的保护广播保留原合同。
+
+**审查限度：** 入口还覆盖 API 102 安装 / 类加载、Provider UID 与窄白名单、Tasker 确认绑定、不可变 PendingIntent、SAF / 路径与受限备份解码、实际网络调用和已有日志 / 隐私规则；未确认新增 P0 / P1、路径穿越或生产凭据。三个原签名 / 发布工作流均使用固定 Actions SHA、受限 token、原生 main 来源及原 artifact 摘要校验，未改签名与双仓流程；没有 AI agent action，专用 agentic 审计不扩张为通用扫描结论。新依赖图 Action 默认关闭依赖校验的行为经独立审查识别，追加参数显式恢复 strict，不能把上游默认行为当作保留本仓库门禁。
+
+CodeQL 后续只在上游支持现有工具链后评估独立 Advanced / manual build：强制实际生产 Kotlin / Java 编译，检查提取文件数、关键 Hook 文件及数据流模型，再判断扫描结果；不得同时启用重复 default setup 或把它接入签名关键路径。现阶段无 CodeQL 数据库、覆盖率或零漏洞结论。设备在只读 ROM / 权限取证后断开，原生截图实际收发及修复后的设备效果保持待验；本轮未改手机配置、安装候选或启动设备采集。原始取证和扫描输出只保存在仓库外本轮安全证据目录。
+
+Deep 的 Full 通过：4,255 项应用测试零失败 / 错误 / 跳过，Debug Lint 零错误 / 1,411 条既有告警；Develop、R8 与 fatal lint 通过。官方 DexSQL 核对同产物：Hook API 定义、设置入口直接 API 引用及测试 / 探针定义为零，三个固定 ID 保留，setId / getId 各一次且 mapping 仍归属 HookInstallation；技能未打包。744 项工具回归仅保留原有 16 个第三方文档链接失败（68 条诊断），没有新生成差异；两输出确定性、四个工作流契约、strict 参数真实生效断言及独立 diff Review 通过。普通 CI 与签名流程未新增步骤，额外依赖图工作流仅手动运行，首次远端耗时尚未知；未新增生产扫描依赖、监控服务或轮询。
+
 ## 动态岛帧率与吸入成本实测（2026-10-31）
 
 以本地 `7b542817` 和设备 r14.26.7 为基准；应用、测试与构建输入和正式源码 `8a9ce0d8` 无差异，未回退到远端 main。安装包摘要与原正式附件一致。HyperOS 1 / Android 14、1080×2400、120Hz 档、动画比例 1×，七类合成场景各五次；Perfetto v58.3 的锁定处理器、FrameTimeline、调度和 HWUI 联合取证，录屏单独核验。私有证据入口为仓库外 `island-fps-20261031/report.json` 与 `cleanup-receipt.json`，原始 trace、查询、场景边界和有限视频不入库。
