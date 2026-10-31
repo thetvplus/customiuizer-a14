@@ -56,8 +56,9 @@ object Helpers {
     @JvmField
     var launchableAppsList: ArrayList<AppData>? = null
 
-    @JvmField
-    val allModsList = ArrayList<ModData>()
+    @Volatile
+    var allModsList: List<ModData> = emptyList()
+        private set
 
     @JvmField
     val markColor = Color.rgb(205, 73, 97)
@@ -167,16 +168,6 @@ object Helpers {
             .setMessage(text)
             .setPositiveButton(android.R.string.ok, null)
             .show()
-    }
-
-    @JvmStatic
-    fun checkPermAndRequest(act: AppCompatActivity, perm: String, action: Int): Boolean {
-        return if (act.checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
-            act.requestPermissions(arrayOf(perm), action)
-            false
-        } else {
-            true
-        }
     }
 
     @JvmStatic
@@ -487,7 +478,7 @@ object Helpers {
         }
     }
 
-    private fun parseModSearchIndex(context: Context) {
+    private fun parseModSearchIndex(context: Context, entries: MutableList<ModData>) {
         val res = context.resources
         try {
             res.getXml(R.xml.mod_search_index).use { xml ->
@@ -562,7 +553,7 @@ object Helpers {
                                         modData.sub = routeSub
                                         modData.page = searchPage
                                         modData.order = xml.getAttributeIntValue(null, "order", 0)
-                                        allModsList.add(modData)
+                                        entries.add(modData)
                                     }
                                 }
                             }
@@ -589,11 +580,18 @@ object Helpers {
      * every keystroke.
      */
     @JvmStatic
+    @Synchronized
     fun getAllMods(context: Context, force: Boolean) {
-        if (force) allModsList.clear()
-        else if (allModsList.size > 0) return
-        parseModSearchIndex(context)
-        allModsList.sortWith(MOD_DISPLAY_ORDER)
+        if (!force && allModsList.isNotEmpty()) return
+        val snapshot = context.createConfigurationContext(android.content.res.Configuration(context.resources.configuration))
+        val entries = ArrayList<ModData>()
+        parseModSearchIndex(snapshot, entries)
+        entries.sortWith(MOD_DISPLAY_ORDER)
+        // Readers see only complete indexes. A locale changed during preparation
+        // invalidates this result; the configuration callback owns the next rebuild.
+        if (snapshot.resources.configuration.locales == context.resources.configuration.locales) {
+            allModsList = entries
+        }
     }
 
     /** Breadcrumb first, then title; both case-insensitive. */

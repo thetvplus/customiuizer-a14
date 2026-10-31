@@ -70,6 +70,11 @@ class CredentialsLifecycleTest {
         assertNull(shadowOf(controller.get()).nextStartedActivityForResult)
         controller.pause().stop().destroy()
     }
+    @Test fun unrelatedSavedStateDoesNotLeaveAnEmptyTransparentActivity() {
+        val controller = Robolectric.buildActivity(Credentials::class.java).create(Bundle()).start().resume()
+        assertNotNull(shadowOf(controller.get()).nextStartedActivityForResult)
+        controller.pause().stop().destroy()
+    }
     @Test fun unsecuredDeviceOpensSystemSetupAndFinishes() {
         shadowOf(RuntimeEnvironment.getApplication().getSystemService(KeyguardManager::class.java)).apply { setIsKeyguardSecure(false); setIsDeviceSecure(false) }
         val controller = Robolectric.buildActivity(Credentials::class.java).setup()

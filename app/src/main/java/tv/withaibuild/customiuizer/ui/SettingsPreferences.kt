@@ -214,6 +214,51 @@ private fun PreferenceContent(preference: Preference, revision: Int, onDialog: (
 }
 
 @Composable
+internal fun SettingsPreferenceEditor(preference: Preference, dismiss: () -> Unit) {
+    key(preference.key ?: preference) { SettingsPreferenceDialog(preference, dismiss) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsInputDialog(
+    title: String,
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    text: @Composable () -> Unit,
+) {
+    BasicAlertDialog(onDismissRequest = onDismissRequest,
+        modifier = Modifier.imePadding().safeDrawingPadding().padding(vertical = 12.dp),
+        properties = DialogProperties(decorFitsSystemWindows = false)) {
+        SettingsInputForm(title, onDismissRequest, confirmButton, text)
+    }
+}
+
+@Composable
+internal fun SettingsInputForm(
+    title: String,
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    text: @Composable () -> Unit,
+) {
+    Surface(shape = AlertDialogDefaults.shape, color = AlertDialogDefaults.containerColor,
+        tonalElevation = AlertDialogDefaults.TonalElevation) {
+        // In landscape the IME may leave less room than the title and buttons.
+        // Scroll the complete form so focused input and actions remain reachable.
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(title, style = MaterialTheme.typography.headlineSmall, color = AlertDialogDefaults.titleContentColor)
+            CompositionLocalProvider(LocalContentColor provides AlertDialogDefaults.textContentColor) {
+                ProvideTextStyle(MaterialTheme.typography.bodyMedium, text)
+            }
+            Row(Modifier.align(Alignment.End), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onDismissRequest) { Text(stringResource(android.R.string.cancel)) }
+                confirmButton()
+            }
+        }
+    }
+}
+
+@Composable
 internal fun SettingsPreferenceDialog(preference: Preference, dismiss: () -> Unit) {
     val title = ((preference as? DialogPreference)?.dialogTitle?.takeIf { it.isNotBlank() }
         ?: preference.title)?.toString().orEmpty()
@@ -240,17 +285,15 @@ internal fun SettingsPreferenceDialog(preference: Preference, dismiss: () -> Uni
             }, confirmButton = {}, dismissButton = { TextButton(onClick = dismiss) { Text(stringResource(android.R.string.cancel)) } })
         is EditTextPreference -> {
             var text by rememberSaveable(preference.key) { mutableStateOf(preference.text.orEmpty()) }
-            AlertDialog(onDismissRequest = dismiss, modifier = Modifier.imePadding().safeDrawingPadding().padding(vertical = 12.dp),
-                properties = DialogProperties(decorFitsSystemWindows = false),
-                title = { Text(title) }, text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
+            SettingsInputDialog(title = title, onDismissRequest = dismiss, text = {
+                Column {
                     preference.dialogMessage?.let { Text(it.toString()) }
                     OutlinedTextField(text, { text = it }, modifier = Modifier.fillMaxWidth())
                 }
             }, confirmButton = { TextButton(onClick = {
                 if (preference.callChangeListener(text)) preference.text = text
                 dismiss()
-            }) { Text(stringResource(android.R.string.ok)) } }, dismissButton = { TextButton(onClick = dismiss) { Text(stringResource(android.R.string.cancel)) } })
+            }) { Text(stringResource(android.R.string.ok)) } })
         }
         is MultiSelectListPreference -> {
             var selected by rememberSaveable(preference.key) { mutableStateOf(ArrayList(preference.values)) }
@@ -285,10 +328,8 @@ internal fun SettingsPreferenceDialog(preference: Preference, dismiss: () -> Uni
             var error by remember { mutableStateOf(false) }
             val focus = remember { FocusRequester() }
             val submit = { if (preference.submitComposeInput(text.text)) dismiss() else error = true }
-            AlertDialog(onDismissRequest = dismiss, modifier = Modifier.imePadding().safeDrawingPadding().padding(vertical = 12.dp),
-                properties = DialogProperties(decorFitsSystemWindows = false),
-                title = { Text(title) }, text = {
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SettingsInputDialog(title = title, onDismissRequest = dismiss, text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(preference.composeGuidance, style = MaterialTheme.typography.bodyMedium)
                     OutlinedTextField(text, { if (it.text.length <= 64) { text = it; error = false } else error = true },
                         modifier = Modifier.fillMaxWidth().testTag("setting.input").focusRequester(focus),
@@ -307,7 +348,7 @@ internal fun SettingsPreferenceDialog(preference: Preference, dismiss: () -> Uni
                         }
                     }
                 }
-            }, confirmButton = { TextButton(onClick = submit) { Text(stringResource(android.R.string.ok)) } }, dismissButton = { TextButton(onClick = dismiss) { Text(stringResource(android.R.string.cancel)) } })
+            }, confirmButton = { TextButton(onClick = submit) { Text(stringResource(android.R.string.ok)) } })
         }
     }
 }

@@ -34,6 +34,14 @@ class DiagnosticSummaryTests(unittest.TestCase):
         self.assertEqual(1, summary.count(warning))
         self.assertIn("[REVIEW] WARNING: Restricted methods", summary)
 
+    def test_unique_diagnostics_are_bounded_and_review_is_prioritized(self):
+        output = "\n".join(["task"] * 5 + [f"warning: unique {i}" for i in range(300)] +
+                           ["warning: Missing class example.Required"] + ["ok"] * 15)
+        summary = _verify._summarize(output)
+        self.assertLessEqual(len(summary.splitlines()), 100)
+        self.assertIn("[REVIEW] warning: Missing class example.Required", summary)
+        self.assertIn("221 diagnostic groups omitted (0 REVIEW)", summary)
+
     def test_short_output_and_failure_output_are_not_abbreviated(self):
         self.assertEqual("warning: short", _verify._summarize("warning: short\n"))
         output = "\n".join(str(i) for i in range(60))

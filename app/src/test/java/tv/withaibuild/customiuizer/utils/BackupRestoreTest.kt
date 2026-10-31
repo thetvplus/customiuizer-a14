@@ -764,12 +764,17 @@ class BackupRestoreTest {
             put("pref_key_miuizer_launchericon", 1.5)
         }
 
+        var closed = false
+        val output = object : ByteArrayOutputStream() {
+            override fun close() { closed = true; super.close() }
+        }
         try {
-            BackupRestore.performBackup(prefs, ByteArrayOutputStream())
+            BackupRestore.performBackup(prefs, output)
             fail("Expected BackupFormatV2.BackupFormatException")
         } catch (e: BackupFormatV2.BackupFormatException) {
             assertTrue(e.message?.contains("Unsupported") == true)
         }
+        assertTrue("Output must close even when encoding fails", closed)
     }
 
     @Test

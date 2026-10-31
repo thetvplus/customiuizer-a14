@@ -38,6 +38,8 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
+import java.util.concurrent.ConcurrentHashMap
+import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.StepCounterController
@@ -1034,7 +1036,8 @@ object SystemUIControlCenterHooks {
             }
         })
 
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "setUseSeparatedPanels", Boolean::class.java, object : MethodHook() {
+        // The A14 plugin accepts nullable java.lang.Boolean, not primitive boolean.
+        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.MainPanelController", pluginLoader, "setUseSeparatedPanels", Boolean::class.javaObjectType, object : MethodHook() {
             override fun before(param: BeforeHookCallback) {
                 if (param.getArgs().isEmpty() || param.getArg(0) == null) {
                     param.returnAndSkip(null)
@@ -1136,24 +1139,19 @@ object SystemUIControlCenterHooks {
             }
         }
 
-        ModuleHelper.hookAllMethods("miui.systemui.controlcenter.panel.main.recyclerview.MainPanelAdapter\$Factory", pluginLoader, "create", object : MethodHook() {
-            private var hooked = false
-            override fun after(param: AfterHookCallback) {
-                if (!hooked) {
-                    hooked = true
-                    XposedHelpers.setAdditionalInstanceField(param.getResult(), "leftAdapter", true)
-                    val layoutManager = XposedHelpers.getObjectField(param.getResult(), "layoutManager")
-                    XposedHelpers.callMethod(layoutManager, "setSpanCount", cols)
-                    val spanSizeLookup = XposedHelpers.callMethod(layoutManager, "getSpanSizeLookup")
-                    ModuleHelper.findAndHookMethod(spanSizeLookup.javaClass, "getSpanSize", Int::class.javaPrimitiveType!!, spanSizeHook)
+        val spanHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
+        ModuleHelper.hookAllConstructors("miui.systemui.controlcenter.panel.main.MainPanelContentDistributor", pluginLoader, object : MethodHook() {
+            override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (param.getThrowable() != null) return
+                configureLeftPanelColumns(param.getThisObject() ?: return, cols) { lookupClass ->
+                    spanHooks.getOrPut(lookupClass) { HookInstallStateMachine() }.install {
+                        ModuleHelper.findAndHookMethod(lookupClass, "getSpanSize", Int::class.javaPrimitiveType!!, spanSizeHook) != null
+                    }
                 }
             }
         })
-
         val columnsReplaceHook = object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                param.returnAndSkip(cols)
-            }
+            override fun before(param: BeforeHookCallback) { param.returnAndSkip(cols) }
         }
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.HeaderSpaceController", pluginLoader, "getSpanSize", columnsReplaceHook)
         ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.security.SecurityFooterController", pluginLoader, "getSpanSize", columnsReplaceHook)
@@ -1635,6 +1633,17 @@ object SystemUIControlCenterHooks {
     private val mPct: TextView?
         get() = mPctRef?.get()
 
+    internal fun configureLeftPanelColumns(distributor: Any, columns: Int, prepareLookup: (Class<*>) -> Unit) {
+        // A14 distributor owns explicit left/right adapters. Bind every left instance,
+        // independently from once-per-class method installation and factory call order.
+        val left = XposedHelpers.getObjectField(distributor, "leftAdapter")
+        XposedHelpers.setAdditionalInstanceField(left, "leftAdapter", true)
+        val manager = XposedHelpers.getObjectField(left, "layoutManager")
+        val lookup = XposedHelpers.callMethod(manager, "getSpanSizeLookup")
+        prepareLookup(lookup.javaClass)
+        XposedHelpers.callMethod(manager, "setSpanCount", columns)
+    }
+
     private const val PCT_SOURCE_BRIGHTNESS = 2
     private const val PCT_SOURCE_VOLUME = 3
 
@@ -1751,26 +1760,25 @@ object SystemUIControlCenterHooks {
             }
         })
 
+        val sliderHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
         ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "setToggleSliderBase", object : MethodHook() {
-            private var inited = false
-            override fun after(param: AfterHookCallback) {
-                if (!inited && param.getArg(0) != null) {
-                    inited = true
-                    val className = param.getArg(0)!!.javaClass.simpleName
-                    if ("ToggleSliderViewHolder" == className) return
-                    val sliderRef = WeakReference(param.getArg(0))
-                    val ownerRef = WeakReference(param.getThisObject())
-                    val brightnessSeekBar = sliderRef.get() ?: return
-                    val mOnSeekBarChangeListener = XposedHelpers.getObjectField(brightnessSeekBar, "mOnSeekBarChangeListener") ?: return
-                    ModuleHelper.findAndHookMethod(mOnSeekBarChangeListener.javaClass, "onStartTrackingTouch", SeekBar::class.java, object : MethodHook() {
-                        override fun before(param: BeforeHookCallback) {
-                            val thisObject = XposedHelpers.getSurroundingThis(param.getThisObject())
-                            if (sliderRef.get() !== thisObject) return
-                            val owner = ownerRef.get() ?: return
-                            val mContext = XposedHelpers.getObjectField(owner, "mContext") as Context
-                            startShowPct(lpparam, mContext, owner)
+            override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (param.getThrowable() != null) return
+                val slider = param.getArg(0) ?: return
+                if (slider.javaClass.simpleName == "ToggleSliderViewHolder") return
+                val listener = XposedHelpers.getObjectField(slider, "mOnSeekBarChangeListener") ?: return
+                // Each listener belongs to its current controller; the class-wide hook
+                // never captures the first slider/controller or ignores replacements.
+                XposedHelpers.setAdditionalInstanceField(listener, "a14.brightnessOwner", WeakReference(param.getThisObject()))
+                sliderHooks.getOrPut(listener.javaClass) { HookInstallStateMachine() }.install {
+                    ModuleHelper.findAndHookMethod(listener.javaClass, "onStartTrackingTouch", SeekBar::class.java, object : MethodHook() {
+                        override fun before(param: BeforeHookCallback): Unit = ModuleHelper.guarded {
+                            val reference = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "a14.brightnessOwner") as? WeakReference<*>
+                            val owner = reference?.get() ?: return
+                            val context = XposedHelpers.getObjectField(owner, "mContext") as Context
+                            startShowPct(lpparam, context, owner)
                         }
-                    })
+                    }) != null
                 }
             }
         })

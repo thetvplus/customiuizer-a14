@@ -1307,4 +1307,5 @@
     <string name="a14_reorder_item">並べ替え</string>
     <string name="wifi_refresh">ネットワークを更新</string>
     <string name="wifi_scan_unavailable">スキャンできません。保存済みのネットワークを表示しています。しばらくしてから再試行してください。</string>
+    <string name="screenshot_directory_invalid">ローカルストレージの利用可能なフォルダを選択してください</string>
 </resources>

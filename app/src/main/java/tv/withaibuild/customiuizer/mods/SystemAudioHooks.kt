@@ -20,6 +20,8 @@ import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
+import java.util.concurrent.ConcurrentHashMap
+import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.AudioVisualizer
@@ -210,6 +212,9 @@ object SystemAudioHooks {
 
     @JvmStatic
     fun AudioVisualizerHook(lpparam: PackageReadyParam) {
+        val screenOffHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
+        val screenOnHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
+
         val screenAndDoze = booleanArrayOf(false, false)
         ModuleHelper.findAndHookMethod("com.android.systemui.shade.MiuiNotificationPanelViewController", lpparam.classLoader, "onViewAttachedToWindow", View::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
@@ -289,7 +294,8 @@ object SystemAudioHooks {
 
                     val mScreenObserver = XposedHelpers.getObjectField(thisObject, "mScreenObserver")
                     val ScreenObserverCls = mScreenObserver.javaClass
-                    ModuleHelper.findAndHookMethod(ScreenObserverCls, "onScreenTurnedOff", object : MethodHook() {
+                    screenOffHooks.getOrPut(ScreenObserverCls) { HookInstallStateMachine() }.install {
+                        ModuleHelper.findAndHookMethod(ScreenObserverCls, "onScreenTurnedOff", object : MethodHook() {
                         override fun intercept(chain: XposedInterface.Chain): Any? {
                             var result: Any?
                             var throwable: Throwable? = null
@@ -309,9 +315,11 @@ object SystemAudioHooks {
                             }
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
-                    })
+                    }) != null
+                    }
 
-                    ModuleHelper.findAndHookMethod(ScreenObserverCls, "onScreenTurnedOn", object : MethodHook() {
+                    screenOnHooks.getOrPut(ScreenObserverCls) { HookInstallStateMachine() }.install {
+                        ModuleHelper.findAndHookMethod(ScreenObserverCls, "onScreenTurnedOn", object : MethodHook() {
                         override fun intercept(chain: XposedInterface.Chain): Any? {
                             var result: Any?
                             var throwable: Throwable? = null
@@ -331,7 +339,8 @@ object SystemAudioHooks {
                             }
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
-                    })
+                    }) != null
+                    }
 
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)

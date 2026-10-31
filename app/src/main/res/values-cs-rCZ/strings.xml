@@ -1314,4 +1314,5 @@
     <string name="a14_reorder_item">Změnit pořadí</string>
     <string name="wifi_refresh">Obnovit sítě</string>
     <string name="wifi_scan_unavailable">Skenování není dostupné. Zobrazeny jsou uložené sítě; zkuste to později.</string>
+    <string name="screenshot_directory_invalid">Vyberte dostupnou složku v místním úložišti</string>
 </resources>

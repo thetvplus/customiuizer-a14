@@ -14,6 +14,8 @@ import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
+import java.util.concurrent.ConcurrentHashMap
+import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
@@ -206,6 +208,9 @@ object SystemStatusBarIconHooks {
 
     @JvmStatic
     fun HideIconsSelectiveAlarmHook(lpparam: PackageReadyParam) {
+        val alarmHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
+        val nextAlarmHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
+
         ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarPolicy", lpparam.classLoader, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -241,7 +246,8 @@ object SystemStatusBarIconHooks {
                     val mNextAlarmCallback = XposedHelpers.getObjectField(thisObject, "mNextAlarmCallback")
                     XposedHelpers.setAdditionalInstanceField(mNextAlarmCallback, ALARM_POLICY_OWNER, WeakReference(thisObject))
 
-                    ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onAlarmChanged", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
+                    alarmHooks.getOrPut(mNextAlarmCallback.javaClass) { HookInstallStateMachine() }.install {
+                        ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onAlarmChanged", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
                         override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
                             val callback = param.getThisObject() ?: return
                             val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
@@ -255,8 +261,10 @@ object SystemStatusBarIconHooks {
 
                             updateAlarmVisibility(policy)
                         }
-                    })
-                    ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onNextAlarmChanged", AlarmManager.AlarmClockInfo::class.java, object : MethodHook() {
+                    }) != null
+                    }
+                    nextAlarmHooks.getOrPut(mNextAlarmCallback.javaClass) { HookInstallStateMachine() }.install {
+                        ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onNextAlarmChanged", AlarmManager.AlarmClockInfo::class.java, object : MethodHook() {
                         override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
                             val callback = param.getThisObject() ?: return
                             val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
@@ -271,7 +279,8 @@ object SystemStatusBarIconHooks {
 
                             updateAlarmVisibility(policy)
                         }
-                    })
+                    }) != null
+                    }
 
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)

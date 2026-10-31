@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.utils.HookInstallation
+import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallRegistry
 import tv.withaibuild.customiuizer.mods.utils.FeatureSpec
 import tv.withaibuild.customiuizer.mods.utils.FeatureTarget
@@ -23,6 +24,9 @@ import tv.withaibuild.customiuizer.utils.PrefMap
  * target application has a live context.
  */
 object GenericAppInstaller {
+    // Application.attach is a single boot-class method in each process, shared
+    // by package ClassLoaders. FeatureInstallState still owns individual features.
+    private val attachHook = HookInstallStateMachine()
 
     @JvmStatic
     @JvmOverloads
@@ -35,39 +39,41 @@ object GenericAppInstaller {
         controlMedia: Boolean,
         pocoFolderIconBlur: Boolean = false,
     ) {
-        ModuleHelper.findAndHookMethodWithId(
-            Application::class.java.name,
-            Application::class.java.classLoader,
-            "attach",
-            HookInstallation.STABLE_ID_APPLICATION_ATTACH,
-            Context::class.java,
-            object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    val registry = FeatureInstallRegistry()
-                    for (feature: FeatureSpec in GenericAppFeatures.selected(
-                        lpparam,
-                        mPrefs,
-                        isLauncherPkg,
-                        isStatusBarColor,
-                        isNoOverscroll,
-                        controlMedia,
-                        pocoFolderIconBlur,
-                        param.getArg(0) as? Context,
-                    )) {
-                        registry.register(feature)
-                    }
+        attachHook.install {
+            ModuleHelper.findAndHookMethodWithId(
+                Application::class.java.name,
+                Application::class.java.classLoader,
+                "attach",
+                HookInstallation.STABLE_ID_APPLICATION_ATTACH,
+                Context::class.java,
+                object : MethodHook() {
+                    override fun after(param: AfterHookCallback) {
+                        val registry = FeatureInstallRegistry()
+                        for (feature: FeatureSpec in GenericAppFeatures.selected(
+                            lpparam,
+                            mPrefs,
+                            isLauncherPkg,
+                            isStatusBarColor,
+                            isNoOverscroll,
+                            controlMedia,
+                            pocoFolderIconBlur,
+                            param.getArg(0) as? Context,
+                        )) {
+                            registry.register(feature)
+                        }
 
-                    if (isLauncherPkg) {
-                        registry.installAll(FeatureTarget.LAUNCHER, InstallPhase.APPLICATION_ATTACHED, mPrefs)
-                    }
+                        if (isLauncherPkg) {
+                            registry.installAll(FeatureTarget.LAUNCHER, InstallPhase.APPLICATION_ATTACHED, mPrefs)
+                        }
 
-                    if (isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur) {
-                        registry.installAll(FeatureTarget.ANY, InstallPhase.APPLICATION_ATTACHED, mPrefs)
-                    }
+                        if (isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur) {
+                            registry.installAll(FeatureTarget.ANY, InstallPhase.APPLICATION_ATTACHED, mPrefs)
+                        }
 
-                    HookDiagnostics.printSummaryForStage("post-attach")
+                        HookDiagnostics.printSummaryForStage("post-attach")
+                    }
                 }
-            }
-        )
+            ) != null
+        }
     }
 }

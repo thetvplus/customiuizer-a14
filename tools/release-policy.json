@@ -8,8 +8,8 @@
   "community_url": "https://t.me/customiuizerA14",
   "repository_description": "米客 A14｜CustoMIUIzer A14｜HyperOS 1 / Android 14",
   "release_target": {
-    "version_name": "r14.26.5",
-    "minimum_version_code": 265
+    "version_name": "r14.26.7",
+    "minimum_version_code": 267
   },
   "cumulative_releases": {
     "r14.25.5": {
@@ -32,6 +32,9 @@
     },
     "r14.26.5": {
       "notes_base": "r14.25.9"
+    },
+    "r14.26.7": {
+      "notes_base": "r14.26.5"
     }
   },
   "commit_identity": {

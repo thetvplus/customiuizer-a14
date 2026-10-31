@@ -7,6 +7,7 @@ import android.content.Intent
 import android.location.LocationManager
 import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
+import android.net.wifi.WifiSsid
 import android.os.Bundle
 import android.os.Looper
 import android.os.SystemClock
@@ -47,6 +48,7 @@ class WifiListLifecycleTest {
     private lateinit var page: WiFiList
 
     @Before fun prepare() {
+        WiFiList::class.java.getDeclaredField("lastScanAttempt").apply { isAccessible = true }.set(null, null)
         val app = RuntimeEnvironment.getApplication()
         shadowOf(app).grantPermissions(Manifest.permission.ACCESS_FINE_LOCATION)
         AppHelper.appPrefs = app.getSharedPreferences("wifi-test", Context.MODE_PRIVATE)
@@ -67,7 +69,7 @@ class WifiListLifecycleTest {
         controller.get().supportFragmentManager.beginTransaction().add(android.R.id.content, page).commitNow()
     }
     private fun result(id: String) = ScanResult().apply { BSSID = id; timestamp = SystemClock.elapsedRealtime() * 1000 }
-    private fun refresh() = WiFiList::class.java.getDeclaredMethod("requestScan").apply { isAccessible = true }.invoke(page)
+    private fun refresh() = WiFiList::class.java.getDeclaredMethod("requestScan", Boolean::class.javaPrimitiveType).apply { isAccessible = true }.invoke(page, true)
     @Suppress("UNCHECKED_CAST")
     private fun rows() = WiFiList::class.java.getDeclaredMethod("getRows").apply { isAccessible = true }.invoke(page) as List<NetworkSelectionRow>
     private fun broadcast() {
@@ -83,6 +85,21 @@ class WifiListLifecycleTest {
         shadow.setScanResults(listOf(result("00:11:22:33:44:66")))
         broadcast()
         assertEquals("00:11:22:33:44:66", rows().single().id)
+        assertEquals(0, shadow.scans)
+    }
+    @Test fun nativeSsidDecodingPreservesUnicodeQuotesAndHiddenIdentity() {
+        val names = listOf("测试网络", "", "\"quoted\"", "name|with|separator")
+        shadow.setScanResults(names.mapIndexed { i, name ->
+            result("02:00:00:00:00:0$i").apply {
+                javaClass.getDeclaredMethod("setWifiSsid", WifiSsid::class.java).invoke(this, WifiSsid.fromBytes(name.toByteArray(Charsets.UTF_8)))
+            }
+        } + result("02:00:00:00:00:10").apply {
+            javaClass.getDeclaredMethod("setWifiSsid", WifiSsid::class.java).invoke(this, WifiSsid.fromBytes(byteArrayOf(0xff.toByte())))
+        })
+        launch()
+        assertEquals(names, rows().take(4).map { it.name })
+        assertEquals("02:00:00:00:00:01", rows()[1].id)
+        assertEquals("ff", rows().last().name)
         assertEquals(0, shadow.scans)
     }
     @Test fun emptyCacheScansOnceManualRefreshDoesNotOverlapAndPauseStopsAllWork() {
@@ -108,6 +125,23 @@ class WifiListLifecycleTest {
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.ACCESS_FINE_LOCATION)
         shadow.setStartScanSucceeds(false)
         refresh(); refresh()
+        assertEquals(1, shadow.scans)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
+        refresh()
+        assertEquals(2, shadow.scans)
+    }
+
+    @Test fun timeoutAndRapidPageReplacementDoNotResetAutomaticCooldown() {
+        launch()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(13))
+        val manager = controller.get().supportFragmentManager
+        manager.beginTransaction().remove(page).commitNow()
+        page = WiFiList().apply { arguments = Bundle().apply { putString("key", "test_networks"); putInt("contentResId", R.id.prefs_system); putInt("settingsType", AppHelper.SettingsType.Edit.ordinal) } }
+        manager.beginTransaction().add(android.R.id.content, page).commitNow()
+        assertEquals(1, shadow.scans)
+        controller.pause()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(18))
+        controller.resume()
         assertEquals(2, shadow.scans)
     }
 }

@@ -429,6 +429,7 @@ object System {
 
                     displayName = displayName.replace(".png", "").replace(".jpg", "").replace(".webp", "") + ext
                     contentValues.put("_display_name", displayName)
+                    contentValues.put(MediaStore.MediaColumns.MIME_TYPE, if (format <= 2) "image/jpeg" else if (format == 3) "image/png" else "image/webp")
                 }
 
                 result = chain.proceed()
@@ -442,40 +443,37 @@ object System {
 
     internal fun screenshotInsertHook() = object : MethodHook() {
         override fun intercept(chain: XposedInterface.Chain): Any? {
-            var result: Any? = null
-            var throwable: Throwable? = null
-            val args = chain.args
-            try {
-
-                val imgUri = args[0] as Uri
-                val contentValues = args[1] as ContentValues
-                var displayName = contentValues.getAsString("_display_name")
-                if (MediaStore.Images.Media.EXTERNAL_CONTENT_URI == imgUri && displayName != null && displayName.contains("Screenshot")) {
-                    val folder = systemMiscConfig.screenshotPath
-                    val dir = systemMiscConfig.screenshotMyPath
-                    val format = systemMiscConfig.screenshotFormat
-                    val ext = if (format <= 2) ".jpg" else if (format == 3) ".png" else ".webp"
-
-                    var mScreenshotDir: File? = null
-                    displayName = displayName.replace(".png", "").replace(".jpg", "").replace(".webp", "") + ext
-                    if (folder > 1) {
-                        mScreenshotDir = if (folder == 4 && !TextUtils.isEmpty(dir)) File(dir) else File(Environment.getExternalStoragePublicDirectory(if (folder == 2) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DCIM), "Screenshots")
-                        if (!mScreenshotDir.exists()) mScreenshotDir.mkdirs()
-                        val relativePath = mScreenshotDir.path.replace(Environment.getExternalStorageDirectory().path + File.separator, "")
-                        contentValues.put("relative_path", relativePath)
-                        if (contentValues.getAsString("_data") != null) {
-                            contentValues.put("_data", mScreenshotDir.path + "/" + displayName)
-                        }
+            val original = chain.args
+            val prepared = ModuleHelper.guarded<Array<Any?>?>(null) {
+                val uri = original[0] as? Uri ?: return@guarded null
+                val values = original[1] as? ContentValues ?: return@guarded null
+                val name = values.getAsString(MediaStore.MediaColumns.DISPLAY_NAME) ?: return@guarded null
+                if (uri != MediaStore.Images.Media.EXTERNAL_CONTENT_URI || !name.contains("Screenshot")) return@guarded null
+                val config = systemMiscConfig
+                val ext = if (config.screenshotFormat <= 2) ".jpg" else if (config.screenshotFormat == 3) ".png" else ".webp"
+                val displayName = name.removeSuffix(".png").removeSuffix(".jpg").removeSuffix(".webp") + ext
+                val updated = ContentValues(values)
+                var destination = uri
+                if (config.screenshotPath > 1) {
+                    val directory = if (config.screenshotPath == 4) config.screenshotMyPath else
+                        File(Environment.getExternalStoragePublicDirectory(if (config.screenshotPath == 2) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DCIM), "Screenshots").path
+                    val context = XposedHelpers.getObjectField(chain.thisObject, "mContext") as Context
+                    val location = tv.withaibuild.customiuizer.utils.GetPathUtils.imageLocation(context, directory)
+                    if (location != null) {
+                        destination = location.first
+                        updated.put(MediaStore.MediaColumns.RELATIVE_PATH, location.second)
+                        // Preserve the privileged ROM's existing direct-path contract.
+                        // Never add DATA to an insertion which only uses scoped storage.
+                        if (values.containsKey(MediaStore.MediaColumns.DATA)) updated.put(MediaStore.MediaColumns.DATA, File(directory, displayName).path)
                     }
-                    contentValues.put("_display_name", displayName)
                 }
-
-                result = chain.proceed()
-            } catch (t: Throwable) {
-                throwable = t
-                result = null
+                updated.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                updated.put(MediaStore.MediaColumns.MIME_TYPE, if (config.screenshotFormat <= 2) "image/jpeg" else if (config.screenshotFormat == 3) "image/png" else "image/webp")
+                arrayOf(destination, updated)
             }
-            return XposedHelpers.throwOrReturn(throwable, result)
+            // Preparation failure falls back to the untouched native request. A native
+            // provider failure retains its identity and is never retried or swallowed.
+            return if (prepared == null) chain.proceed() else chain.proceed(prepared)
         }
     }
 

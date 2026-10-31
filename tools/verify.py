@@ -74,6 +74,14 @@ def _summarize(output: str, tail_lines: int = 12) -> str:
     high_risk = re.compile(r"will become an error|Missing class|Unsupported class file|will be blocked in a future release", re.IGNORECASE)
     summary = [("[REVIEW] " if high_risk.search(line) else "") + line +
                (f" [x{count}]" if count > 1 else "") for line, count in diagnostics.values()]
+    # Bound successful output even when every diagnostic is unique. Review entries
+    # come first and omitted counts stay explicit; failures still print full output.
+    summary.sort(key=lambda line: not line.startswith("[REVIEW]"))
+    limit = 80
+    omitted = summary[limit:]
+    if omitted:
+        reviews = sum(line.startswith("[REVIEW]") for line in omitted)
+        summary = summary[:limit] + [f"... {len(omitted)} diagnostic groups omitted ({reviews} REVIEW); rerun the displayed command for complete output"]
     return "\n".join(lines[:4] + ["..."] + summary + ["..."] + lines[-tail_lines:])
 
 

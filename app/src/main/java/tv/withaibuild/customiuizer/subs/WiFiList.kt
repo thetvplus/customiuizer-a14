@@ -54,7 +54,7 @@ class WiFiList : SubFragment() {
                 WifiManager.WIFI_STATE_CHANGED_ACTION, LocationManager.MODE_CHANGED_ACTION -> {
                     readResults()
                     if (!canScan()) stopWaiting()
-                    else if (!hasRecentResults()) requestScan()
+                    else if (!hasRecentResults()) requestScan(false)
                 }
             }
         }
@@ -90,13 +90,20 @@ class WiFiList : SubFragment() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun requestScan() {
+    private fun requestScan(manual: Boolean = true) {
         if (!receiverRegistered || loading) return
         if (!canScan()) {
             Toast.makeText(requireContext(), if (wifiManager.isWifiEnabled) R.string.request_location else R.string.request_wifi,
                 Toast.LENGTH_LONG).show()
             return
         }
+        val now = SystemClock.elapsedRealtime()
+        val interval = if (manual) 10_000L else 30_000L
+        val previous = lastScanAttempt
+        if (previous != null && now - previous in 0 until interval) return
+        // Count attempts, including rejected scans. The process-wide timestamp survives
+        // navigation/recreation; the 12s UI wait never schedules another request.
+        lastScanAttempt = now
         // A14 has no public replacement for an on-demand scan; other updates are passive.
         @Suppress("DEPRECATION")
         val accepted = try { wifiManager.startScan() } catch (_: SecurityException) { false }
@@ -127,14 +134,14 @@ class WiFiList : SubFragment() {
             receiverRegistered = true
         }
         readResults()
-        if (!hasRecentResults()) requestScan()
+        if (!hasRecentResults()) requestScan(false)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View = settingsView {
         SettingsNetworkList(getString(R.string.wifi_location_title),
             getString(R.string.wifi_location_summ), { startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) },
             getString(R.string.wifi_category1), getString(R.string.wifi_category2), rows, loading, ::toggleNetwork,
-            refresh = ::requestScan)
+            refresh = { requestScan() })
     }
 
     @SuppressLint("MissingPermission")
@@ -163,5 +170,9 @@ class WiFiList : SubFragment() {
         else AppHelper.addStringPair(bssids, row.id, row.name)
         AppHelper.appPrefs?.edit()?.putStringSet(key, bssids.takeIf { it.isNotEmpty() })?.apply()
         refreshRows()
+    }
+
+    companion object {
+        private var lastScanAttempt: Long? = null
     }
 }

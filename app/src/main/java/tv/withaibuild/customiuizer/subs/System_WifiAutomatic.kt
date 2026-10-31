@@ -34,13 +34,25 @@ import java.util.UUID
 class System_WifiAutomatic : SubFragment() {
     private val prefix = "pref_key_system_wifiauto_"
     private var dialog: AlertDialog? = null
+    private var permissionContinuation: (() -> Unit)? = null
+    private var pendingCurrentAdd = false
     private fun rules() = Config.decode(AppHelper.appPrefs?.getString(prefix + "rules", "").orEmpty())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        pendingCurrentAdd = savedInstanceState?.getBoolean("wifi.pendingCurrentAdd") ?: false
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("wifi.pendingCurrentAdd", pendingCurrentAdd)
+        super.onSaveInstanceState(outState)
+    }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         findPreference<Preference>(prefix + "add")?.setOnPreferenceClickListener { edit(null); true }
         findPreference<Preference>(prefix + "current")?.setOnPreferenceClickListener {
-            current()?.let { edit(Config.Rule(UUID.randomUUID().toString(), it.ssid, it.ssid)) }
+            addCurrent()
             true
         }
         findPreference<Preference>(prefix + "dnd_access")?.setOnPreferenceClickListener {
@@ -80,10 +92,11 @@ class System_WifiAutomatic : SubFragment() {
 
     @SuppressLint("MissingPermission")
     @Suppress("DEPRECATION")
-    private fun current(): Config.Identity? {
+    private fun current(onGranted: () -> Unit): Config.Identity? {
         val ctx = requireContext()
         if (ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
             ctx.checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+            permissionContinuation = onGranted
             requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.NEARBY_WIFI_DEVICES), 771)
             return null
@@ -93,6 +106,28 @@ class System_WifiAutomatic : SubFragment() {
         val identity = Config.identity(info?.ssid, info?.bssid)
         if (identity == null) message()
         return identity
+    }
+
+    private fun addCurrent() {
+        pendingCurrentAdd = false
+        current(::addCurrent)?.let { edit(Config.Rule(UUID.randomUUID().toString(), it.ssid, it.ssid)) }
+        pendingCurrentAdd = permissionContinuation != null
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != 771) return
+        val continuation = permissionContinuation
+        val addCurrentAfterGrant = pendingCurrentAdd
+        permissionContinuation = null
+        pendingCurrentAdd = false
+        if (!isAdded || view == null || parentFragmentManager.isStateSaved) return
+        val ctx = requireContext()
+        if (ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+            ctx.checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
+            if (addCurrentAfterGrant) addCurrent() else continuation?.invoke()
+        }
+        else message()
     }
 
     private fun message() { AlertDialog.Builder(requireContext()).setMessage(R.string.wifiauto_unavailable).setPositiveButton(android.R.string.ok, null).show() }
@@ -117,11 +152,14 @@ class System_WifiAutomatic : SubFragment() {
         val bssid = text(R.string.wifiauto_bssid, original.bssid, "bssid", 17)
         layout.addView(Button(ctx).apply {
             setText(R.string.wifi_networks)
-            setOnClickListener {
-                val networks = (rules().map { it.ssid } + listOfNotNull(current()?.ssid)).distinct()
+            fun choose() {
+                val identity = current { choose() }
+                if (permissionContinuation != null) return
+                val networks = (rules().map { it.ssid } + listOfNotNull(identity?.ssid)).distinct()
                 if (networks.isNotEmpty()) AlertDialog.Builder(ctx).setTitle(R.string.wifi_networks)
                     .setItems(networks.toTypedArray()) { _, which -> ssid.setText(networks[which]) }.show()
             }
+            setOnClickListener { choose() }
         })
         val priority = text(R.string.wifiauto_priority, original.priority.toString(), "priority", 3).apply { inputType = InputType.TYPE_CLASS_NUMBER }
         val enabled = CheckBox(ctx).apply { setText(R.string.system_island_state_enabled); isChecked = original.enabled; layout.addView(this) }
@@ -173,5 +211,10 @@ class System_WifiAutomatic : SubFragment() {
     }
 
     private fun save(rules: List<Config.Rule>) { AppHelper.appPrefs?.edit()?.putString(prefix + "rules", Config.encode(rules))?.apply(); rebuild() }
-    override fun onDestroyView() { dialog?.dismiss(); dialog = null; super.onDestroyView() }
+    override fun onDestroyView() {
+        permissionContinuation = null
+        if (isRemoving) pendingCurrentAdd = false
+        dialog?.dismiss(); dialog = null
+        super.onDestroyView()
+    }
 }

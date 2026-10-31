@@ -1306,4 +1306,5 @@
     <string name="a14_reorder_item">Reordenar elemento</string>
     <string name="wifi_refresh">Actualizar redes</string>
     <string name="wifi_scan_unavailable">Escaneo no disponible. Se muestran redes guardadas; inténtalo más tarde.</string>
+    <string name="screenshot_directory_invalid">Elige una carpeta disponible en el almacenamiento local</string>
 </resources>

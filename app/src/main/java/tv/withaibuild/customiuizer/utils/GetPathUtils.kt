@@ -3,64 +3,58 @@ package tv.withaibuild.customiuizer.utils
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import android.os.storage.StorageManager
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import java.io.File
+import java.nio.file.InvalidPathException
 
 object GetPathUtils {
-
-    private const val PATH_TREE = "tree"
-    private const val PRIMARY_TYPE = "primary"
-    private const val RAW_TYPE = "raw"
-
+    // Cloud providers can use local-looking IDs without filesystem semantics.
+    // Keep local file/raw results, but validate their actual storage-volume boundary.
     fun getDirectoryPathFromUri(context: Context, uri: Uri?): String? {
-        if (uri == null) return null
+        if (uri?.scheme == "file") return uri.path?.takeIf { volumeLocation(context, it) != null }
+        if (uri?.scheme != "content" || uri.authority !in setOf("com.android.externalstorage.documents", "com.android.providers.downloads.documents") ||
+            !DocumentsContract.isTreeUri(uri)) return null
+        val id = try { DocumentsContract.getTreeDocumentId(uri) } catch (_: IllegalArgumentException) { return null }
+        if (id.startsWith("raw:")) return id.substring(4).takeIf { volumeLocation(context, it) != null }
+        if (uri.authority != "com.android.externalstorage.documents") return null
+        val parts = id.split(":", limit = 2)
+        if (parts.size != 2) return null
+        val root = if (parts[0].equals("primary", true)) Environment.getExternalStorageDirectory()
+            else context.getSystemService(StorageManager::class.java).storageVolumes
+                .firstOrNull { it.uuid.equals(parts[0], true) }?.directory ?: return null
+        val relative = parts[1]
+        if (File(relative).isAbsolute || relative.split('/').any { it == ".." || it == "." }) return null
+        return File(root, relative).path
+    }
 
-        if ("file" == uri.scheme) return uri.path
+    fun imageLocation(context: Context, directory: String): Pair<Uri, String>? {
+        val location = volumeLocation(context, directory) ?: return null
+        val topLevel = location.second.substringBefore('/')
+        // HyperOS 1 MediaProvider enforces this for the actual screenshot UID too.
+        // Reject before changing the native request; no provider retry or mkdirs.
+        return location.takeIf { topLevel == Environment.DIRECTORY_PICTURES || topLevel == Environment.DIRECTORY_DCIM }
+    }
 
-        if (!isTreeUri(uri)) return null
-
-        val treeId = getTreeDocumentId(uri) ?: return null
-        val paths = treeId.split(":")
-        val type = paths[0]
-        val subPath = if (paths.size == 2) paths[1] else ""
-
-        return when {
-            type.equals(RAW_TYPE, ignoreCase = true) -> treeId.substring(treeId.indexOf(File.separator))
-            type.equals(PRIMARY_TYPE, ignoreCase = true) -> Environment.getExternalStorageDirectory().path + File.separator + subPath
-            else -> {
-                val pathSegment = treeId.split(":")
-                val rootPath = getRemovableStorageRootPath(context, paths[0])
-                if (pathSegment.size == 1) rootPath else "$rootPath${File.separator}${pathSegment[1]}"
-            }
+    private fun volumeLocation(context: Context, directory: String): Pair<Uri, String>? {
+        if (!File(directory).isAbsolute) return null
+        val path = try { File(directory).toPath().normalize() } catch (_: InvalidPathException) { return null }
+        val primary = Environment.getExternalStorageDirectory().toPath().normalize()
+        val root: java.nio.file.Path
+        val collection: Uri
+        if (path.startsWith(primary)) {
+            root = primary
+            collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        } else {
+            val volume = context.getSystemService(StorageManager::class.java).storageVolumes.firstOrNull {
+                it.directory?.toPath()?.normalize()?.let(path::startsWith) == true
+            } ?: return null
+            root = volume.directory?.toPath()?.normalize() ?: return null
+            collection = MediaStore.Images.Media.getContentUri(volume.mediaStoreVolumeName ?: return null)
         }
-    }
-
-    private fun getRemovableStorageRootPath(context: Context, storageId: String): String {
-        val rootPath = StringBuilder()
-        val externalFilesDirs = context.getExternalFilesDirs(null)
-        for (fileDir in externalFilesDirs) {
-            if (fileDir?.path?.contains(storageId) == true) {
-                val pathSegment = fileDir.path.split(File.separator)
-                for (segment in pathSegment) {
-                    if (segment == storageId) {
-                        rootPath.append(storageId)
-                        break
-                    }
-                    rootPath.append(segment).append(File.separator)
-                }
-                break
-            }
-        }
-        return rootPath.toString()
-    }
-
-    private fun getTreeDocumentId(uri: Uri): String? {
-        val paths = uri.pathSegments
-        return if (paths.size >= 2 && paths[0] == PATH_TREE) paths[1] else null
-    }
-
-    private fun isTreeUri(uri: Uri): Boolean {
-        val paths = uri.pathSegments
-        return paths.size == 2 && paths[0] == PATH_TREE
+        val relative = root.relativize(path).toString().replace(File.separatorChar, '/')
+        if (relative.isEmpty()) return null
+        return collection to "$relative/"
     }
 }

@@ -1306,4 +1306,5 @@
     <string name="a14_reorder_item">Изменить порядок</string>
     <string name="wifi_refresh">Обновить сети</string>
     <string name="wifi_scan_unavailable">Сканирование недоступно. Показаны сохранённые сети; повторите попытку позже.</string>
+    <string name="screenshot_directory_invalid">Выберите доступную папку в локальном хранилище</string>
 </resources>

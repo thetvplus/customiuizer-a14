@@ -1273,14 +1273,15 @@ class FormalTargetAndNotesTest(unittest.TestCase):
     def test_repository_target_matches_the_next_source_and_preserves_both_notes_baselines(self):
         policy = json.loads((REPO_ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
         name, code = release.source_version((REPO_ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
-        self.assertEqual("r14.26.5", name)
-        self.assertEqual(265, code)
+        self.assertEqual("r14.26.7", name)
+        self.assertEqual(267, code)
         with patch.object(release, "POLICY", policy):
             release.release_target(name, code)
-            for retired in (("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257), ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263), (name, 264)):
+            for retired in (("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257), ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263), ("r14.26.5", 265), (name, 266)):
                 with self.assertRaisesRegex(ValueError, "designated formal"):
                     release.release_target(*retired)
-        self.assertEqual({"notes_base": "r14.25.9"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.26.5"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.25.9"}, policy["cumulative_releases"]["r14.26.5"])
         self.assertEqual({"notes_base": "r14.25.7"}, policy["cumulative_releases"]["r14.25.9"])
         self.assertEqual({"notes_base": "r14.25.5"}, policy["cumulative_releases"]["r14.25.7"])
         self.assertEqual({"notes_base": "r14.24.1"}, policy["cumulative_releases"]["r14.25.5"])

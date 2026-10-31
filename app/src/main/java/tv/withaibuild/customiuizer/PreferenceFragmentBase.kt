@@ -30,6 +30,9 @@ import androidx.preference.ListPreference
 import androidx.preference.PreferenceManager
 import java.util.Collections
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.Dispatchers
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.delay
@@ -105,7 +108,7 @@ open class PreferenceFragmentBase : Fragment() {
             row?.revision?.intValue
             if (row == null || !preference.isEnabled || !preference.isVisible) {
                 LaunchedEffect(preference) { dialogPreference = null }
-            } else key(preference) { SettingsPreferenceDialog(preference) { dialogPreference = null } }
+            } else SettingsPreferenceEditor(preference) { dialogPreference = null }
         }
     }
 
@@ -593,15 +596,36 @@ open class PreferenceFragmentBase : Fragment() {
         }
     }
 
+    private var reloadPending = false
+
+    override fun onResume() {
+        super.onResume()
+        if (reloadPending) lifecycleScope.launch {
+            // FragmentManager may still be dispatching resume. No persistent callback.
+            yield()
+            if (isResumed && reloadPending) reloadPreferences()
+        }
+    }
+
     open fun reloadPreferences() {
         if (!isAdded) return
+        if (parentFragmentManager.isStateSaved) {
+            reloadPending = true
+            return
+        }
+        reloadPending = false
+        val dialogKey = dialogPreference?.key
+        val hierarchy = Bundle()
+        preferenceManager.preferenceScreen?.saveHierarchyState(hierarchy)
         if (preferencesAttached) preferenceManager.preferenceScreen?.onDetached()
         preferencesAttached = false
         preferenceManager.setPreferences(null)
         onCreatePreferences(null, null)
+        preferenceManager.preferenceScreen?.restoreHierarchyState(hierarchy)
         // Separate transactions are required to actually recreate the Compose view.
-        parentFragmentManager.beginTransaction().detach(this).commitNowAllowingStateLoss()
-        parentFragmentManager.beginTransaction().attach(this).commitNowAllowingStateLoss()
+        parentFragmentManager.beginTransaction().detach(this).commitNow()
+        dialogPreference = dialogKey?.let { findPreference(it) }
+        parentFragmentManager.beginTransaction().attach(this).commitNow()
     }
 
     override fun onDetach() {
@@ -626,25 +650,37 @@ open class PreferenceFragmentBase : Fragment() {
     }
 
     private fun saveBackup(uri: Uri) {
-        try {
-            val outputStream = getValidContext().contentResolver
-                .openOutputStream(uri)
-                ?: throw IllegalStateException("Backup output stream unavailable")
-            BackupRestore.performBackup(AppHelper.appPrefs!!, outputStream)
-
-            AlertDialog.Builder(getValidContext())
-                .setTitle(R.string.do_backup)
-                .setMessage(R.string.backup_ok)
-                .setPositiveButton(android.R.string.ok) { _, _ -> }
-                .show()
-        } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
-            t.printStackTrace()
-            AlertDialog.Builder(getValidContext())
-                .setTitle(R.string.warning)
-                .setMessage(getString(R.string.storage_cannot_backup) + "\n" + t.message)
-                .setPositiveButton(android.R.string.ok) { _, _ -> }
-                .show()
+        val owner = activity as? AppCompatActivity ?: return
+        val app = owner.applicationContext
+        lifecycleScope.launch {
+            try {
+                val completed = BackupRestore.runDocumentOperation {
+                    val prefs = AppHelper.appPrefs ?: error("Preferences unavailable")
+                    val output = app.contentResolver.openOutputStream(uri)
+                        ?: error("Backup output stream unavailable")
+                    BackupRestore.performBackup(prefs, output)
+                } ?: return@launch
+                if (completed && isAdded && !owner.isFinishing && !owner.isDestroyed) {
+                    AlertDialog.Builder(owner)
+                        .setTitle(R.string.do_backup)
+                        .setMessage(R.string.backup_ok)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (t: Throwable) {
+                FatalErrors.rethrowIfFatal(t)
+                coroutineContext.ensureActive()
+                Log.e("BackupRestore", "Backup failed", t)
+                if (isAdded && !owner.isFinishing && !owner.isDestroyed) {
+                    AlertDialog.Builder(owner)
+                        .setTitle(R.string.warning)
+                        .setMessage(R.string.storage_cannot_backup)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            }
         }
     }
 
@@ -660,19 +696,22 @@ open class PreferenceFragmentBase : Fragment() {
     open fun doRestoreSettings(uri: Uri?) {
         val validAct = activity as? AppCompatActivity ?: return
         val validUri = uri ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
+        val app = validAct.applicationContext
+        lifecycleScope.launch {
             try {
-                val inputStream = validAct.contentResolver.openInputStream(validUri)
-                    ?: throw IllegalStateException("Backup input stream unavailable")
-                val prefs = AppHelper.appPrefs
-                    ?: throw IllegalStateException("Preferences unavailable")
-                val componentName = ComponentName(validAct, Helpers.LAUNCHER_ALIAS_NAME)
-                val result = BackupRestore.performRestore(
-                    inputStream,
-                    validAct.packageManager,
-                    prefs,
-                    componentName,
-                )
+                val result = BackupRestore.runDocumentOperation {
+                    val prefs = AppHelper.appPrefs
+                        ?: throw IllegalStateException("Preferences unavailable")
+                    val inputStream = app.contentResolver.openInputStream(validUri)
+                        ?: throw IllegalStateException("Backup input stream unavailable")
+                    val componentName = ComponentName(app, Helpers.LAUNCHER_ALIAS_NAME)
+                    BackupRestore.performRestore(
+                        inputStream,
+                        app.packageManager,
+                        prefs,
+                        componentName,
+                    )
+                } ?: return@launch
 
                 withContext(Dispatchers.Main) {
                     if (validAct.isFinishing || validAct.isDestroyed || !isAdded) return@withContext
@@ -704,9 +743,12 @@ open class PreferenceFragmentBase : Fragment() {
                         }
                     }
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (t: Throwable) {
                 FatalErrors.rethrowIfFatal(t)
-                t.printStackTrace()
+                coroutineContext.ensureActive()
+                Log.e("BackupRestore", "Restore failed", t)
                 withContext(Dispatchers.Main) {
                     if (validAct.isFinishing || validAct.isDestroyed || !isAdded) return@withContext
                     AlertDialog.Builder(validAct)

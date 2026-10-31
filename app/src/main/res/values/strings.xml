@@ -1341,4 +1341,5 @@
     <string name="a14_move_up">Move up</string>
     <string name="a14_move_down">Move down</string>
     <string name="a14_reorder_item">Reorder item</string>
+    <string name="screenshot_directory_invalid">Choose an available folder on local storage</string>
 </resources>

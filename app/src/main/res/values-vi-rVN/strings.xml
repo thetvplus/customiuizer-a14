@@ -1307,4 +1307,5 @@
     <string name="a14_reorder_item">Sắp xếp mục</string>
     <string name="wifi_refresh">Làm mới mạng</string>
     <string name="wifi_scan_unavailable">Không thể quét. Đang hiển thị các mạng đã lưu; hãy thử lại sau.</string>
+    <string name="screenshot_directory_invalid">Chọn thư mục khả dụng trên bộ nhớ cục bộ</string>
 </resources>

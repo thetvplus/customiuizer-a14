@@ -30,6 +30,21 @@ class RestoreResultPage : PreferenceFragmentBase() {
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class DocumentResultRoutingTest {
+    @Test fun savedFragmentStateDefersReloadUntilResume() {
+        val controller = Robolectric.buildActivity(AppCompatActivity::class.java)
+        controller.get().setTheme(R.style.AppTheme)
+        controller.setup()
+        val page = RestoreResultPage()
+        controller.get().supportFragmentManager.beginTransaction().add(android.R.id.content, page).commitNow()
+        controller.pause().saveInstanceState(Bundle()).stop()
+        page.reloadPreferences()
+        assertEquals(1, page.viewCreations)
+        controller.start().resume()
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertEquals(2, page.viewCreations)
+        controller.pause().stop().destroy()
+    }
+
     @Test fun documentResultKeepsUriAndCancelDoesNotRestore() {
         val controller = Robolectric.buildActivity(AppCompatActivity::class.java)
         controller.get().setTheme(R.style.AppTheme)

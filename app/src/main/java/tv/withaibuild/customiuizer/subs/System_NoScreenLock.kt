@@ -2,7 +2,7 @@ package tv.withaibuild.customiuizer.subs
 
 import android.Manifest
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
+import android.content.pm.PackageManager
 import androidx.preference.Preference
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.SubFragment
@@ -26,13 +26,19 @@ class System_NoScreenLock : SubFragment() {
         }
 
         findPreference<Preference>("pref_key_system_noscreenlock_wifi")?.setOnPreferenceClickListener {
-            if (!Helpers.checkPermAndRequest(activity as? AppCompatActivity ?: return@setOnPreferenceClickListener false, Manifest.permission.ACCESS_FINE_LOCATION, Helpers.REQUEST_PERMISSIONS_WIFI)) return@setOnPreferenceClickListener false
+            if (requireContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION), Helpers.REQUEST_PERMISSIONS_WIFI)
+                return@setOnPreferenceClickListener true
+            }
             openWifiNetworks()
             true
         }
 
         findPreference<Preference>("pref_key_system_noscreenlock_bt")?.setOnPreferenceClickListener {
-            if (!Helpers.checkPermAndRequest(activity as? AppCompatActivity ?: return@setOnPreferenceClickListener false, Manifest.permission.BLUETOOTH_CONNECT, Helpers.REQUEST_PERMISSIONS_BLUETOOTH)) return@setOnPreferenceClickListener false
+            if (requireContext().checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), Helpers.REQUEST_PERMISSIONS_BLUETOOTH)
+                return@setOnPreferenceClickListener true
+            }
             openBtNetworks()
             true
         }
@@ -42,6 +48,19 @@ class System_NoScreenLock : SubFragment() {
             req?.setValue("3")
             req?.isEnabled = false
         }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (!isAdded || parentFragmentManager.isStateSaved) return
+        val permission = when (requestCode) {
+            Helpers.REQUEST_PERMISSIONS_WIFI -> Manifest.permission.ACCESS_FINE_LOCATION
+            Helpers.REQUEST_PERMISSIONS_BLUETOOTH -> Manifest.permission.BLUETOOTH_CONNECT
+            else -> return
+        }
+        if (requireContext().checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
+            if (requestCode == Helpers.REQUEST_PERMISSIONS_WIFI) openWifiNetworks() else openBtNetworks()
+        } else android.widget.Toast.makeText(requireContext(), R.string.permission_scan, android.widget.Toast.LENGTH_LONG).show()
     }
 
     fun openWifiNetworks() {

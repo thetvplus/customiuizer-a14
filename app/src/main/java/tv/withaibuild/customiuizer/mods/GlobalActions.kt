@@ -37,6 +37,7 @@ import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
@@ -613,84 +614,48 @@ object GlobalActions {
     @JvmStatic
     fun setupForegroundMonitor(lpparam: PackageReadyParam) {
         installGlobalActionsSnapshot()
+        // FeatureRegistry installs this once in the SystemUI process/loader. Instance
+        // creation only supplies the latest host resources, never installs global hooks.
+        val host = java.util.concurrent.atomic.AtomicReference<Pair<Context, Handler>?>()
         ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.getThisObject()
-
-                    val mContext = chain.getArgs()[0] as Context
-                    val mBgHandler = XposedHelpers.getObjectField(thisObject, "mBgHandler") as Handler
-                    ModuleHelper.findAndHookMethod("com.miui.systemui.functions.MiuiTopActivityObserver", lpparam.classLoader, "updateTopActivity", object : MethodHook() {
-                        private var pkgName = ""
-                        override fun intercept(chain: XposedInterface.Chain): Any? {
-                            var result2: Any?
-                            var throwable2: Throwable? = null
-                            try {
-                                result2 = chain.proceed()
-                            } catch (t: Throwable) {
-                                throwable2 = t
-                                result2 = null
-                            }
-                            try {
-                                val thisObject2 = chain.getThisObject()
-
-                                val mTopActivity = XposedHelpers.getObjectField(thisObject2, "mTopActivity") as ComponentName?
-                                if (mTopActivity != null && pkgName != mTopActivity.packageName) {
-                                    pkgName = mTopActivity.packageName!!
-                                    Settings.Global.putString(mContext.contentResolver, Helpers.modulePkg + ".foreground.package", pkgName)
-                                }
-                            } catch (t: Throwable) {
-                                XposedHelpers.log(t)
-                            }
-                            return XposedHelpers.throwOrReturn(throwable2, result2)
-                        }
-                    })
-                    if (Various.variousConfig.showCallUi > 0) {
-                        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.classLoader, "onSystemBarAttributesChanged", object : MethodHook() {
-                            private var fullScreen = false
-                            override fun intercept(chain: XposedInterface.Chain): Any? {
-                                var result2: Any?
-                                var throwable2: Throwable? = null
-                                try {
-                                    result2 = chain.proceed()
-                                } catch (t: Throwable) {
-                                    throwable2 = t
-                                    result2 = null
-                                }
-                                try {
-                                    val thisObject2 = chain.getThisObject()
-
-                                    val statusBarStateController = XposedHelpers.getObjectField(thisObject2, "statusBarStateController")
-                                    val isFullScreen = XposedHelpers.getBooleanField(statusBarStateController, "mIsFullscreen")
-                                    if (fullScreen != isFullScreen) {
-                                        mBgHandler.post {
-                                            ModuleHelper.guarded {
-                                                Settings.Global.putInt(mContext.contentResolver, Helpers.modulePkg + ".foreground.fullscreen", if (fullScreen) 1 else 0)
-                                            }
-                                        }
-                                    }
-                                    fullScreen = isFullScreen
-                                } catch (t: Throwable) {
-                                    XposedHelpers.log(t)
-                                }
-                                return XposedHelpers.throwOrReturn(throwable2, result2)
-                            }
-                        })
-                    }
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+            override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (param.getThrowable() != null) return
+                val context = (param.getArg(0) as Context).applicationContext
+                val handler = XposedHelpers.getObjectField(param.getThisObject(), "mBgHandler") as Handler
+                host.set(context to handler)
             }
         })
+        ModuleHelper.findAndHookMethod("com.miui.systemui.functions.MiuiTopActivityObserver", lpparam.classLoader, "updateTopActivity", object : MethodHook() {
+            private var packageName: String? = null
+            override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (param.getThrowable() != null) return
+                val context = host.get()?.first ?: return
+                val top = XposedHelpers.getObjectField(param.getThisObject(), "mTopActivity") as? ComponentName ?: return
+                if (packageName != top.packageName) {
+                    Settings.Global.putString(context.contentResolver, Helpers.modulePkg + ".foreground.package", top.packageName)
+                    packageName = top.packageName
+                }
+            }
+        })
+        if (Various.variousConfig.showCallUi > 0) {
+            ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.classLoader, "onSystemBarAttributesChanged", object : MethodHook() {
+                private var fullScreen: Boolean? = null
+                override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
+                    if (param.getThrowable() != null) return
+                    val (context, handler) = host.get() ?: return
+                    val controller = XposedHelpers.getObjectField(param.getThisObject(), "statusBarStateController")
+                    val current = XposedHelpers.getBooleanField(controller, "mIsFullscreen")
+                    if (fullScreen != current) {
+                        fullScreen = current
+                        // Capture this event's value. Reading the mutable previous state
+                        // later could write a newer event's value for both callbacks.
+                        handler.post { ModuleHelper.guarded {
+                            Settings.Global.putInt(context.contentResolver, Helpers.modulePkg + ".foreground.fullscreen", if (current) 1 else 0)
+                        } }
+                    }
+                }
+            })
+        }
     }
 
     private fun showSidebar(context: Context, bundle: Bundle?): Boolean {

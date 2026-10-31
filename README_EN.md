@@ -29,7 +29,7 @@ Availability depends on the ROM and system-app versions. Do not enable this modu
 
 The [documentation index](docs/README.md) covers development, testing, releases and feature contracts. Start with the [shared engineering rules](AGENTS.md) before contributing.
 
-Current source version: `r14.26.5` (versionCode 265). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
+Current source version: `r14.26.7` (versionCode 267). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
 
 r14.26.5 combines the Compose and API 102 refinements with motion-aware text, clearer choices and page feedback cleanup, and removes Dock light glass; see the [changelog](CHANGELOG_EN.md). Full CI, official signing and both releases are verified. Develop device checks passed; further ADB installation checks are outside the completed scope. Valid r14.26.3 changes are included, and its superseded release has been retired. See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for validation boundaries.
 

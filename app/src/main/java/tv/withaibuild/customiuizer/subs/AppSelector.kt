@@ -59,9 +59,15 @@ class AppSelector : SubFragmentWithSearch() {
             if (!ModuleHelper.isTrustedBroadcast(this, "com.miui.home", rejectionResultCode = GlobalActions.ACTION_FAILED)) return
             val datatype = intent.getStringExtra("DATATYPE")
             if (datatype == "privacy") {
+                val received = intent.getSerializableExtra("privacyAppsMap", HashMap::class.java) ?: return
+                val validated = HashMap<Int, ArrayList<String>>()
+                for ((user, apps) in received) {
+                    if (user !is Int || apps !is List<*> || apps.any { it !is String }) return
+                    validated[user] = ArrayList(apps.filterIsInstance<String>())
+                }
                 configFetched = true
                 initialized = true
-                mPrivacyAppsMap = intent.getSerializableExtra("privacyAppsMap") as? HashMap<Int, ArrayList<String>>
+                mPrivacyAppsMap = validated
                 if (view != null) viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     if (isAdded) setupList()
                 }

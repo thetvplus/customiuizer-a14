@@ -190,7 +190,7 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             Helpers.REQUEST_PERMISSIONS_WIFI -> {
                 if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION))
+                    if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION))
                         Toast.makeText(this, R.string.permission_scan, Toast.LENGTH_LONG).show()
                     else
                         Toast.makeText(this, R.string.permission_permanent, Toast.LENGTH_LONG).show()
