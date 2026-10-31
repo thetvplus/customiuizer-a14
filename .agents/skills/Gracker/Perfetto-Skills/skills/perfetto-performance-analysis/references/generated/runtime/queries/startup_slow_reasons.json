@@ -1,0 +1,274 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "fixtures": [
+              "startup-api31-cold"
+            ],
+            "status": "verified"
+          },
+          "32": {
+            "fixtures": [
+              "startup-api32-warm-smoke"
+            ],
+            "status": "verified"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "fixtures": [
+              "startup-api34-cold"
+            ],
+            "status": "verified"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "fixtures": [
+              "startup-light-api36"
+            ],
+            "status": "verified"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "startup_slow_reasons/startup_overview",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/startup_slow_reasons/startup_overview.sql",
+      "sha256": "82def617168696524ae0a2eec863c41eb273bd2b0af737833bfde3f5e9feb118",
+      "signal_patterns": [
+        "bindApplication",
+        "handleRelaunchActivity*",
+        "performCreate:*",
+        "relaunchActivity*"
+      ],
+      "skill_id": "startup_slow_reasons",
+      "source": {
+        "path": "backend/skills/atomic/startup_slow_reasons.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cb20c2647635bf0ce38dcf0c37c60e5e49521b2ea7d4bbd75ed108c97535e0c8"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.startup.startups",
+          "android.startup.time_to_display"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "startup_overview",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "verified",
+        "execution_verified": true,
+        "fixtures": [
+          "startup-light-api36",
+          "startup-api24-cold",
+          "startup-api31-cold",
+          "startup-api32-warm-smoke",
+          "startup-api34-cold"
+        ],
+        "runtime_compatible": true,
+        "semantic_verified": true,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "startup_slow_reasons/slow_reason_checks",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/startup_slow_reasons/slow_reason_checks.sql",
+      "sha256": "b335ce72968d606a6ece74a958e565f7843ab187781868f30a57f2be5db2c64e",
+      "signal_patterns": [
+        "*GC*",
+        "*Lock contention*",
+        "*WebView*",
+        "*art::Monitor*",
+        "*broadcastReceiveReg*",
+        "*contentProviderCreate*",
+        "*dex2oat*",
+        "*dex2oatd*",
+        "*monitor contention*",
+        "*webview*",
+        "JIT compiling*",
+        "Lock contention*",
+        "VerifyClass*",
+        "bindApplication",
+        "cpufreq",
+        "dlopen:*",
+        "dlopen:*chromium*",
+        "dlopen:*webview*",
+        "inflate*",
+        "monitor contention*",
+        "system_server",
+        "verifyClass*"
+      ],
+      "skill_id": "startup_slow_reasons",
+      "source": {
+        "path": "backend/skills/atomic/startup_slow_reasons.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cb20c2647635bf0ce38dcf0c37c60e5e49521b2ea7d4bbd75ed108c97535e0c8"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.startup.startups",
+          "android.startup.time_to_display"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "slow_reason_checks",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/art_gc_names.sql",
+            "source_sha256": "2e50cd240ecb068815a92c13ff38fe2ea843172eece9818b3ed8bfd05f43dfd5"
+          }
+        ],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [
+          "startup_overview"
+        ],
+        "result_references": [
+          "startup_overview"
+        ],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "startup_slow_reasons"
+}

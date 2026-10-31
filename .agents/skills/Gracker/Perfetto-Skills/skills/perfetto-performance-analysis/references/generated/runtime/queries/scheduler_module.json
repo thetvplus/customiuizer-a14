@@ -1,0 +1,393 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "status": "supported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "scheduler_module/runnable_analysis",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/scheduler_module/runnable_analysis.sql",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "sha256": "8cabf3e36ceec723d0f65326d29ccb61262ad873c8e5bac9dba231e8b5f6ae43",
+      "signal_patterns": [
+        "${package}:*"
+      ],
+      "skill_id": "scheduler_module",
+      "source": {
+        "path": "backend/skills/modules/kernel/scheduler_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "67ddcf3a040cfc8fb5ace854ca824d699330c03bfd3894272d6df7d804f91677"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "linux.cpu.frequency"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "runnable_analysis",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/effective_target_processes.sql",
+            "source_sha256": "3176b87558e516c66bdca036137bb4b0782c6a6972a6924d7f22b10b9829a5fa"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/system_thread_state_spans.sql",
+            "source_sha256": "40a17843f23e9cd7a249735450ff58accb11c2ecb13ac8c22f3f9ff31bcadaa1"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts",
+          "tid"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": [
+          "__process_scope.upid"
+        ]
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "status": "supported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "scheduler_module/cpu_frequency",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/scheduler_module/cpu_frequency.sql",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "sha256": "90ef5545dc0e49b4b15e301f5df95230d4f57bd3e7c50d38011ea5d21b4598c9",
+      "signal_patterns": [],
+      "skill_id": "scheduler_module",
+      "source": {
+        "path": "backend/skills/modules/kernel/scheduler_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "67ddcf3a040cfc8fb5ace854ca824d699330c03bfd3894272d6df7d804f91677"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "linux.cpu.frequency"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "cpu_frequency",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/system_sched_spans.sql",
+            "source_sha256": "ebcdcc6f476c4109051e817bcd107b1e45351faea14ff238ba76fb3f53b0b032"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/system_cpu_frequency_spans.sql",
+            "source_sha256": "b874887b2a598182d29b088ea7b350d89687142dc07e8fb1c9dbc771c54b48b1"
+          }
+        ],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "status": "supported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "scheduler_module/core_distribution",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/scheduler_module/core_distribution.sql",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "sha256": "d9f927a0e64a3c3f41d7ca3cd84d9efb236710943b6925df129616ab39294d71",
+      "signal_patterns": [
+        "${package}:*"
+      ],
+      "skill_id": "scheduler_module",
+      "source": {
+        "path": "backend/skills/modules/kernel/scheduler_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "67ddcf3a040cfc8fb5ace854ca824d699330c03bfd3894272d6df7d804f91677"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "linux.cpu.frequency"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "core_distribution",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/effective_target_processes.sql",
+            "source_sha256": "3176b87558e516c66bdca036137bb4b0782c6a6972a6924d7f22b10b9829a5fa"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/system_sched_spans.sql",
+            "source_sha256": "ebcdcc6f476c4109051e817bcd107b1e45351faea14ff238ba76fb3f53b0b032"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts",
+          "tid"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": [
+          "__process_scope.upid"
+        ]
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "scheduler_module"
+}

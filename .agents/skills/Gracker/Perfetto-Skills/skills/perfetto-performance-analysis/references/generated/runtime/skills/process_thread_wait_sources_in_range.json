@@ -1,0 +1,172 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*"
+    ]
+  },
+  "id": "process_thread_wait_sources_in_range",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标进程名/包名",
+      "name": "package",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "可选：精确 upid，用于在同名多进程时消歧",
+      "name": "upid",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "可选：精确 pid，用于在同名多进程时消歧",
+      "name": "pid",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "汇总与明细的最大返回行数",
+      "name": "top_k",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.network_packets"
+    ],
+    "required_tables": [
+      "thread_state",
+      "thread",
+      "process"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/process_thread_wait_sources_in_range.skill.yaml",
+    "sha256": "61e2aa322937a94978c62f45418e45cb8ae7f2efd784c0e6fde242f860fdae8c"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "wake_evidence_scope",
+      "name": "唤醒证据可用性",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "process_thread_wait_sources_in_range/wake_evidence_scope",
+      "result_dependencies": [],
+      "save_as": "wake_evidence_scope",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "role_state_summary",
+      "name": "按角色的线程状态分布",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "process_thread_wait_sources_in_range/role_state_summary",
+      "result_dependencies": [],
+      "save_as": "role_state_summary",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "wait_class_summary",
+      "name": "等待类别分布",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "process_thread_wait_sources_in_range/wait_class_summary",
+      "result_dependencies": [],
+      "save_as": "wait_class_summary",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "top_waits",
+      "name": "最长等待明细",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "process_thread_wait_sources_in_range/top_waits",
+      "result_dependencies": [],
+      "save_as": "top_waits",
+      "type": "atomic"
+    },
+    {
+      "id": "packet_check",
+      "name": "检查网络包数据",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "process_thread_wait_sources_in_range/packet_check",
+      "result_dependencies": [],
+      "save_as": "packet_check",
+      "type": "atomic"
+    },
+    {
+      "condition": "packet_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "network_packet_correlation",
+      "name": "收包时间相关",
+      "process_scope": {
+        "binding": "native_upid",
+        "limitations": [
+          "收包行只按 socket uid 归属：同 uid 的进程（同包 :worker 等）共享收包证据，无法按 upid 区分"
+        ],
+        "role": "target"
+      },
+      "query_id": "process_thread_wait_sources_in_range/network_packet_correlation",
+      "result_dependencies": [],
+      "save_as": "network_packet_correlation",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "anr-blocking"
+}

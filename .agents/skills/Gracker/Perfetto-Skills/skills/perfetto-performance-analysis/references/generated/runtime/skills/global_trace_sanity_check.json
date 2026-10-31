@@ -1,0 +1,141 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "global_trace_sanity_check",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns)，默认 trace_start()",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)，默认 trace_end()",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 20,
+      "description": "每个明细表最大返回行数",
+      "name": "max_rows",
+      "required": false,
+      "type": "integer"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "sched.thread_level_parallelism"
+    ],
+    "required_tables": [
+      "slice",
+      "thread_state",
+      "sched_slice"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/global_trace_sanity_check.skill.yaml",
+    "sha256": "1adb4b390eb80646b03d2994e975e118a1077859bf5dd960f70edeb33b0084e0"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "trace_window",
+      "name": "Trace 时间窗",
+      "query_id": "global_trace_sanity_check/trace_window",
+      "result_dependencies": [],
+      "save_as": "trace_window",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "trace_diagnostics",
+      "name": "Trace Doctor 诊断",
+      "query_id": "global_trace_sanity_check/trace_diagnostics",
+      "result_dependencies": [],
+      "save_as": "trace_diagnostics",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "data_loss_stats",
+      "name": "数据丢失统计",
+      "query_id": "global_trace_sanity_check/data_loss_stats",
+      "result_dependencies": [],
+      "save_as": "data_loss_stats",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "top_long_slices",
+      "name": "最长 Slice",
+      "params": {
+        "end_ts": "${end_ts}",
+        "max_rows": "${max_rows}",
+        "start_ts": "${start_ts}"
+      },
+      "save_as": "top_long_slices",
+      "skill": "longest_process_slices",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "top_d_state_threads",
+      "name": "D 状态线程",
+      "query_id": "global_trace_sanity_check/top_d_state_threads",
+      "result_dependencies": [],
+      "save_as": "top_d_state_threads",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "top_runnable_waits",
+      "name": "Runnable 等待线程",
+      "query_id": "global_trace_sanity_check/top_runnable_waits",
+      "result_dependencies": [],
+      "save_as": "top_runnable_waits",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "runqueue_pressure",
+      "name": "Runqueue 压力",
+      "query_id": "global_trace_sanity_check/runqueue_pressure",
+      "result_dependencies": [],
+      "save_as": "runqueue_pressure",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "top_cpu_processes",
+      "name": "CPU 热点进程",
+      "query_id": "global_trace_sanity_check/top_cpu_processes",
+      "result_dependencies": [],
+      "save_as": "top_cpu_processes",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "trace-overview"
+}

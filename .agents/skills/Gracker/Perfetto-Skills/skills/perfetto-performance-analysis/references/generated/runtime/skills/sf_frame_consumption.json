@@ -1,0 +1,91 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*"
+    ]
+  },
+  "id": "sf_frame_consumption",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "layer_name",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.frames.timeline"
+    ],
+    "required_tables": [
+      "actual_frame_timeline_slice"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/sf_frame_consumption.skill.yaml",
+    "sha256": "d9d6fa18825a0a3ea0776b5dec7a84068698de8832cfecc979234287383dacde"
+  },
+  "steps": [
+    {
+      "id": "sf_consumption_stats",
+      "name": "SF 帧消费统计",
+      "query_id": "sf_frame_consumption/sf_consumption_stats",
+      "result_dependencies": [],
+      "save_as": "sf_consumption",
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "gpu-rendering"
+}

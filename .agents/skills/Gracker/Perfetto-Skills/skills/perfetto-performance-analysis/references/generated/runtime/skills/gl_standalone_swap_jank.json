@@ -1,0 +1,101 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "*ANativeWindow_queueBuffer*",
+      "*SwapBuffers*",
+      "*eglSwapBuffers*",
+      "*vkQueuePresent*"
+    ]
+  },
+  "id": "gl_standalone_swap_jank",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标进程名（精确匹配，含 name:* 子进程）",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "目标进程名别名；当 package 为空时使用",
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "slices.with_context"
+    ],
+    "required_tables": [
+      "slice",
+      "thread_track",
+      "thread",
+      "process"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/gl_standalone_swap_jank.skill.yaml",
+    "sha256": "fb80d72459a0595df8c59974682e5b59c2b3d5afd3ec9ce2c832fe9180d9d6af"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "swap_interval_summary",
+      "name": "Swap 间隔汇总",
+      "query_id": "gl_standalone_swap_jank/swap_interval_summary",
+      "result_dependencies": [],
+      "save_as": "swap_interval_summary",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "slow_swap_events",
+      "name": "慢 Swap 事件",
+      "query_id": "gl_standalone_swap_jank/slow_swap_events",
+      "result_dependencies": [],
+      "save_as": "slow_swap_events",
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "scrolling"
+}

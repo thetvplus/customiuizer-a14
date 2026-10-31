@@ -1,0 +1,224 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "code_pinpoint/hot_slices",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/code_pinpoint/hot_slices.sql",
+      "sha256": "43ee1f9145d3f72980a0e63614acc420bef5ae06279816b3afa1a30c64ba9a06",
+      "signal_patterns": [],
+      "skill_id": "code_pinpoint",
+      "source": {
+        "path": "backend/skills/composite/code_pinpoint.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "c2560c8a63a870cc090ef0176632c2c572fd52bb4301adaa16342cbb651204ce"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "slices.with_context",
+          "android.process_metadata"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "hot_slices",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "code_pinpoint/native_symbols",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/code_pinpoint/native_symbols.sql",
+      "sha256": "f5fa3de4445ed6f1496b508a6b47c036355047505f1bf02b40146d6521d30f34",
+      "signal_patterns": [],
+      "skill_id": "code_pinpoint",
+      "source": {
+        "path": "backend/skills/composite/code_pinpoint.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "c2560c8a63a870cc090ef0176632c2c572fd52bb4301adaa16342cbb651204ce"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "slices.with_context",
+          "android.process_metadata"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "native_symbols",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "code_pinpoint"
+}

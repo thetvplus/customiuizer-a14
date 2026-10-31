@@ -1,0 +1,116 @@
+-- GENERATED FILE - DO NOT EDIT.
+-- Source: backend/skills/composite/scrolling_analysis.skill.yaml
+-- Source SHA-256: 03591cddcd2bd4a278369cc8089e92f224d405b0e9adf66f618e4e44a72056fd
+
+WITH
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- Copyright (C) 2024-2026 Gracker (Chris)
+-- This file is part of SmartPerfetto. See LICENSE for details.
+
+-- Keep the process table available for global/peer joins. Only an explicitly
+-- authored target relation consumes this trusted execution scope.
+effective_target_processes AS (
+  SELECT * FROM process
+  WHERE ${__process_scope.upid} IS NULL OR upid = ${__process_scope.upid}
+)
+,
+-- Fragment: vsync_config
+-- Estimates VSync period using scoped then trace-wide VSYNC/FrameTimeline evidence.
+-- The explicit 16.67ms default is used only when the trace has no usable timing evidence.
+-- Snaps to nearest standard refresh rate (30/60/90/120/144/165 Hz) to avoid
+-- half-period toggle contamination and jitter-induced miscalculation.
+-- Params: ${start_ts}, ${end_ts}
+vsync_ticks AS (
+  SELECT c.ts, c.ts - LAG(c.ts) OVER (ORDER BY c.ts) as interval_ns
+  FROM counter c
+  JOIN counter_track t ON c.track_id = t.id
+  WHERE t.name = 'VSYNC-sf'
+    AND (${start_ts} IS NULL OR c.ts >= ${start_ts} - 100000000)
+    AND (${end_ts} IS NULL OR c.ts < ${end_ts} + 100000000)
+),
+trace_vsync_ticks AS (
+  SELECT c.ts, c.ts - LAG(c.ts) OVER (ORDER BY c.ts) as interval_ns
+  FROM counter c
+  JOIN counter_track t ON c.track_id = t.id
+  WHERE t.name = 'VSYNC-sf'
+),
+expected_frame_vsync AS (
+  SELECT CAST(PERCENTILE(dur, 50) AS INTEGER) as period_ns
+  FROM expected_frame_timeline_slice
+  WHERE dur > 5000000 AND dur < 50000000
+    AND (${start_ts} IS NULL OR ts >= ${start_ts})
+    AND (${end_ts} IS NULL OR ts < ${end_ts})
+),
+trace_expected_frame_vsync AS (
+  SELECT CAST(PERCENTILE(dur, 50) AS INTEGER) as period_ns
+  FROM expected_frame_timeline_slice
+  WHERE dur > 5000000 AND dur < 50000000
+),
+raw_vsync_config AS (
+  SELECT
+    CAST(COALESCE(
+      (SELECT PERCENTILE(interval_ns, 50)
+       FROM vsync_ticks
+       WHERE interval_ns > 5500000 AND interval_ns < 50000000),
+      (SELECT period_ns FROM expected_frame_vsync WHERE period_ns > 0),
+      (SELECT PERCENTILE(interval_ns, 50)
+       FROM trace_vsync_ticks
+       WHERE interval_ns > 5500000 AND interval_ns < 50000000),
+      (SELECT period_ns FROM trace_expected_frame_vsync WHERE period_ns > 0),
+      16666667
+    ) AS INTEGER) as raw_ns,
+    CASE
+      WHEN (SELECT COUNT(*) FROM vsync_ticks WHERE interval_ns > 5500000 AND interval_ns < 50000000) > 0
+        THEN CASE
+          WHEN ${start_ts} IS NULL OR ${end_ts} IS NULL THEN 'trace_wide_vsync_counter'
+          ELSE 'scoped_vsync_counter'
+        END
+      WHEN (SELECT period_ns FROM expected_frame_vsync WHERE period_ns > 0) IS NOT NULL
+        THEN CASE
+          WHEN ${start_ts} IS NULL OR ${end_ts} IS NULL THEN 'trace_wide_expected_frame'
+          ELSE 'scoped_expected_frame'
+        END
+      WHEN (SELECT COUNT(*) FROM trace_vsync_ticks WHERE interval_ns > 5500000 AND interval_ns < 50000000) > 0
+        THEN 'trace_wide_vsync_counter'
+      WHEN (SELECT period_ns FROM trace_expected_frame_vsync WHERE period_ns > 0) IS NOT NULL
+        THEN 'trace_wide_expected_frame'
+      ELSE 'default_60hz_no_trace_timing'
+    END as vsync_source
+),
+vsync_config AS (
+  SELECT
+    CASE
+      WHEN raw_ns BETWEEN 5500000 AND 6500000 THEN 6060606
+      WHEN raw_ns BETWEEN 6500001 AND 7500000 THEN 6944444
+      WHEN raw_ns BETWEEN 7500001 AND 9500000 THEN 8333333
+      WHEN raw_ns BETWEEN 9500001 AND 12500000 THEN 11111111
+      WHEN raw_ns BETWEEN 12500001 AND 20000000 THEN 16666667
+      WHEN raw_ns BETWEEN 20000001 AND 35000000 THEN 33333333
+      ELSE raw_ns
+    END AS vsync_period_ns,
+    vsync_source
+  FROM raw_vsync_config
+)
+,
+frame_count AS (
+  SELECT COUNT(*) as total_frames
+  FROM actual_frame_timeline_slice a
+  JOIN effective_target_processes p ON a.upid = p.upid
+  WHERE (
+      ${__process_scope.upid} IS NOT NULL OR '${package}' = ''
+      OR p.name = '${package}'
+      OR p.name GLOB '${package}:*'
+    )
+    AND p.name NOT LIKE '/system/%'
+    AND (${start_ts} IS NULL OR a.ts >= ${start_ts})
+    AND (${end_ts} IS NULL OR a.ts < ${end_ts})
+    AND COALESCE(a.display_frame_token, a.surface_frame_token) IS NOT NULL
+)
+SELECT
+  vsync_period_ns,
+  CAST(ROUND(1e9 / vsync_period_ns) AS INTEGER) as refresh_rate_hz,
+  ROUND(vsync_period_ns / 1e6, 2) as vsync_period_ms,
+  vsync_source,
+  (SELECT total_frames FROM frame_count) as total_frames,
+  CASE WHEN (SELECT total_frames FROM frame_count) > 0 THEN 1 ELSE 0 END as has_data
+FROM vsync_config

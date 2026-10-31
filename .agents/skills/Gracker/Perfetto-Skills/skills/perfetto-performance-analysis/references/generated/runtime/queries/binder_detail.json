@@ -1,0 +1,469 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "binder_detail/binder_info",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/binder_detail/binder_info.sql",
+      "sha256": "265c4836d457493a4ddd1b0c401d965164a0388e441c27227c189d8f3edb2544",
+      "signal_patterns": [],
+      "skill_id": "binder_detail",
+      "source": {
+        "path": "backend/skills/composite/binder_detail.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "eeadbc879f3b3e4118c66913d5a022ebec45f310e3ea34a03306d58cb80b9141"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "binder_info",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "aidl_name",
+          "binder_end_ts",
+          "binder_ts",
+          "dur_ms",
+          "perfetto_end",
+          "perfetto_start",
+          "process_name",
+          "server_process"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "binder_detail/cpu_core_analysis",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/binder_detail/cpu_core_analysis.sql",
+      "sha256": "22e612f2f83d9983cd25ae557148c9bf38dc8875315fd616c41c013e51f20332",
+      "signal_patterns": [
+        "${process_name}",
+        "${process_name}:*"
+      ],
+      "skill_id": "binder_detail",
+      "source": {
+        "path": "backend/skills/composite/binder_detail.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "eeadbc879f3b3e4118c66913d5a022ebec45f310e3ea34a03306d58cb80b9141"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice"
+        ],
+        "requires": [
+          "_cpu_topology"
+        ],
+        "setup_queries": [
+          "cpu_topology_view/create_topology_view"
+        ]
+      },
+      "step_id": "cpu_core_analysis",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "binder_end_ts",
+          "binder_ts",
+          "dur_ms",
+          "process_name"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "binder_detail/quadrant_analysis",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/binder_detail/quadrant_analysis.sql",
+      "sha256": "21635ac3f38fc90613c6acc46b0d208225fbe5691323e8f1c8cff3f8f4e62722",
+      "signal_patterns": [
+        "${process_name}",
+        "${process_name}:*"
+      ],
+      "skill_id": "binder_detail",
+      "source": {
+        "path": "backend/skills/composite/binder_detail.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "eeadbc879f3b3e4118c66913d5a022ebec45f310e3ea34a03306d58cb80b9141"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice"
+        ],
+        "requires": [
+          "_cpu_topology"
+        ],
+        "setup_queries": [
+          "cpu_topology_view/create_topology_view"
+        ]
+      },
+      "step_id": "quadrant_analysis",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "binder_end_ts",
+          "binder_ts",
+          "process_name"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "binder_detail/blocking_analysis",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/binder_detail/blocking_analysis.sql",
+      "sha256": "a97f41f4a09b7f46207fe6df7b69f1376b3fd5ca570d281a9d84465aba9dd10a",
+      "signal_patterns": [
+        "${process_name}",
+        "${process_name}:*"
+      ],
+      "skill_id": "binder_detail",
+      "source": {
+        "path": "backend/skills/composite/binder_detail.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "eeadbc879f3b3e4118c66913d5a022ebec45f310e3ea34a03306d58cb80b9141"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "blocking_analysis",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "binder_end_ts",
+          "binder_ts",
+          "process_name"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "binder_detail"
+}

@@ -1,0 +1,77 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}:*"
+    ]
+  },
+  "id": "startup_cpu_placement_timeline",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "name": "bucket_ms",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "process_scope": {
+    "binding": "effective_target_processes",
+    "role": "target"
+  },
+  "query_id": "startup_cpu_placement_timeline/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/startup_cpu_placement_timeline.skill.yaml",
+    "sha256": "cecd3d6c3184a9109e8cb875c1a3f894fc9e7fa798be1d648b0651fbb2a29be8"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "startup"
+}

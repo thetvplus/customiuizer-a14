@@ -1,0 +1,301 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "input_module/click_response_overview",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/input_module/click_response_overview.sql",
+      "sha256": "b42ae7cd25eadb653992b2927ea5a7fee1f809be3292ba30b5b21c5ca6239534",
+      "signal_patterns": [
+        "%deliverInputEvent%",
+        "%dispatchTouchEvent%"
+      ],
+      "skill_id": "input_module",
+      "source": {
+        "path": "backend/skills/modules/framework/input_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "e514d3ba027d776732f4f451e54e709f259d7b79e371ab403971fb4925dfa977"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.input"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "click_response_overview",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "input_module/slow_input_events",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/input_module/slow_input_events.sql",
+      "sha256": "7c17fbbbee8c36b90cb060b3ce36d0c800f301db4b65857bb7d6f1bb2d642ec7",
+      "signal_patterns": [
+        "%deliverInputEvent%",
+        "%dispatchTouchEvent%"
+      ],
+      "skill_id": "input_module",
+      "source": {
+        "path": "backend/skills/modules/framework/input_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "e514d3ba027d776732f4f451e54e709f259d7b79e371ab403971fb4925dfa977"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.input"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "slow_input_events",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "input_module/input_dispatch_timing",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/input_module/input_dispatch_timing.sql",
+      "sha256": "5e7354b87ffe95d619832bc66645bfd2152a1c2cc5acb8091b4bae5340b8f965",
+      "signal_patterns": [
+        "%InputDispatcher%",
+        "%InputReader%",
+        "%deliverInputEvent%"
+      ],
+      "skill_id": "input_module",
+      "source": {
+        "path": "backend/skills/modules/framework/input_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "e514d3ba027d776732f4f451e54e709f259d7b79e371ab403971fb4925dfa977"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.input"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "input_dispatch_timing",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "input_module"
+}

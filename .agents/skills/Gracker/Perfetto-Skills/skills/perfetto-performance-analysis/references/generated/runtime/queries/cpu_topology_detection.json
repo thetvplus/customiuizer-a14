@@ -1,0 +1,297 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "cpu_topology_detection/detect_cpu_clusters",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/cpu_topology_detection/detect_cpu_clusters.sql",
+      "sha256": "fbfbfcd247801fa63a91381cee46daf56aba9a52d42c7d8a804c6b4e65df34f9",
+      "signal_patterns": [],
+      "skill_id": "cpu_topology_detection",
+      "source": {
+        "path": "backend/skills/atomic/cpu_topology_detection.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "539074112cd1527ea174f211bee7834c523e137e7c052281ce81e1a3832ca6d0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [],
+        "requires": [
+          "_cpu_topology"
+        ],
+        "setup_queries": [
+          "cpu_topology_view/create_topology_view"
+        ]
+      },
+      "step_id": "detect_cpu_clusters",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "cpu_topology_detection/cluster_summary",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/cpu_topology_detection/cluster_summary.sql",
+      "sha256": "6c915b1eadc6c552b0c2c359a1d415b4be1f01cc714e2b237291bc5b0554291f",
+      "signal_patterns": [],
+      "skill_id": "cpu_topology_detection",
+      "source": {
+        "path": "backend/skills/atomic/cpu_topology_detection.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "539074112cd1527ea174f211bee7834c523e137e7c052281ce81e1a3832ca6d0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [],
+        "requires": [
+          "_cpu_topology"
+        ],
+        "setup_queries": [
+          "cpu_topology_view/create_topology_view"
+        ]
+      },
+      "step_id": "cluster_summary",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "cpu_topology_detection/cluster_mapping",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/cpu_topology_detection/cluster_mapping.sql",
+      "sha256": "f50cfecf0e7b03cbb0b3102b6ebab7960fdf8bc532426a976ebd40cf15796432",
+      "signal_patterns": [],
+      "skill_id": "cpu_topology_detection",
+      "source": {
+        "path": "backend/skills/atomic/cpu_topology_detection.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "539074112cd1527ea174f211bee7834c523e137e7c052281ce81e1a3832ca6d0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [],
+        "requires": [
+          "_cpu_topology"
+        ],
+        "setup_queries": [
+          "cpu_topology_view/create_topology_view"
+        ]
+      },
+      "step_id": "cluster_mapping",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "cpu_topology_detection"
+}

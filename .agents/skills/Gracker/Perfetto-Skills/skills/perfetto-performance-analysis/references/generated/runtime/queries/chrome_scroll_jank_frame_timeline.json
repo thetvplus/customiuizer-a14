@@ -1,0 +1,419 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "chrome_scroll_jank_frame_timeline/chrome_trace_availability",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/chrome_scroll_jank_frame_timeline/chrome_trace_availability.sql",
+      "sha256": "1ef31f6e2f74cacac6792af841a386a7f136ed0fb95742b870d421a685ae1208",
+      "signal_patterns": [
+        "Extend_VSync"
+      ],
+      "skill_id": "chrome_scroll_jank_frame_timeline",
+      "source": {
+        "path": "backend/skills/atomic/chrome_scroll_jank_frame_timeline.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "2aa88e4f3cc40101c7a97eefeb3cfa517026c5c827e22d0cd8894af2a57da2a4"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "chrome.chrome_scrolls",
+          "chrome.chrome_scrolls_v4",
+          "chrome.scroll_jank.scroll_jank_intervals",
+          "chrome.scroll_jank_v4",
+          "chrome.scroll_jank_tagging"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "chrome_trace_availability",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "chrome_scroll_jank_frame_timeline/chrome_scroll_v3_summary",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/chrome_scroll_jank_frame_timeline/chrome_scroll_v3_summary.sql",
+      "sha256": "12eb9bd3c8823c3e862acf1997f97e0f19315d8ce65654e66103bb1ed268950a",
+      "signal_patterns": [],
+      "skill_id": "chrome_scroll_jank_frame_timeline",
+      "source": {
+        "path": "backend/skills/atomic/chrome_scroll_jank_frame_timeline.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "2aa88e4f3cc40101c7a97eefeb3cfa517026c5c827e22d0cd8894af2a57da2a4"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "chrome.chrome_scrolls",
+          "chrome.chrome_scrolls_v4",
+          "chrome.scroll_jank.scroll_jank_intervals",
+          "chrome.scroll_jank_v4",
+          "chrome.scroll_jank_tagging"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "chrome_scroll_v3_summary",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "min_janky_frames",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "chrome_scroll_jank_frame_timeline/chrome_scroll_v4_janky_frames",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/chrome_scroll_jank_frame_timeline/chrome_scroll_v4_janky_frames.sql",
+      "sha256": "27a08680a5f5edb51c2093d8ed2ada771fab2f7d4da25ebac1e930f0397e2c3f",
+      "signal_patterns": [],
+      "skill_id": "chrome_scroll_jank_frame_timeline",
+      "source": {
+        "path": "backend/skills/atomic/chrome_scroll_jank_frame_timeline.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "2aa88e4f3cc40101c7a97eefeb3cfa517026c5c827e22d0cd8894af2a57da2a4"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "chrome.chrome_scrolls",
+          "chrome.chrome_scrolls_v4",
+          "chrome.scroll_jank.scroll_jank_intervals",
+          "chrome.scroll_jank_v4",
+          "chrome.scroll_jank_tagging"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "chrome_scroll_v4_janky_frames",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "chrome_scroll_jank_frame_timeline/chrome_preferred_frame_timeline",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/chrome_scroll_jank_frame_timeline/chrome_preferred_frame_timeline.sql",
+      "sha256": "9eafc92f2a7cbfc53b17bea6625aab1b285d1db81c3d93372b0ae890b2499ed1",
+      "signal_patterns": [
+        "Extend_VSync"
+      ],
+      "skill_id": "chrome_scroll_jank_frame_timeline",
+      "source": {
+        "path": "backend/skills/atomic/chrome_scroll_jank_frame_timeline.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "2aa88e4f3cc40101c7a97eefeb3cfa517026c5c827e22d0cd8894af2a57da2a4"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "chrome.chrome_scrolls",
+          "chrome.chrome_scrolls_v4",
+          "chrome.scroll_jank.scroll_jank_intervals",
+          "chrome.scroll_jank_v4",
+          "chrome.scroll_jank_tagging"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "chrome_preferred_frame_timeline",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "chrome_scroll_jank_frame_timeline"
+}

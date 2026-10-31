@@ -1,0 +1,140 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "status": "supported"
+        },
+        "probe_capabilities": [
+          "scheduling"
+        ]
+      },
+      "id": "thread_affinity_violation/root",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/thread_affinity_violation/query.sql",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "sha256": "1cbb6c7ccd1e54622c0ca2c420b52ad3ffd8830dda1e2816734346794eb605f6",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "*Hwui*",
+        "RenderThread"
+      ],
+      "skill_id": "thread_affinity_violation",
+      "source": {
+        "path": "backend/skills/atomic/thread_affinity_violation.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "c6d2edaaa916a159e69330f72fc2845056d18fd1bc2df190b2cec25c01962309"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "sched",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "root",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/effective_target_processes.sql",
+            "source_sha256": "3176b87558e516c66bdca036137bb4b0782c6a6972a6924d7f22b10b9829a5fa"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "migration_ratio_threshold",
+          "package",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": [
+          "__process_scope.upid"
+        ]
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "thread_affinity_violation"
+}

@@ -1,0 +1,82 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "sf_layer_count_in_range",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "聚焦进程名（可选，用于区分前台 App Layer 和其他 Layer）",
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "actual_frame_timeline_slice"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/sf_layer_count_in_range.skill.yaml",
+    "sha256": "bd1dfbbd617cd15f656facb8bdab2c3253d3f40df6f7fd2413c8bd7fc9cea540"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "layer_summary",
+      "name": "活跃图层统计",
+      "query_id": "sf_layer_count_in_range/layer_summary",
+      "result_dependencies": [],
+      "save_as": "sf_layer_summary",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "layer_list",
+      "name": "图层列表",
+      "query_id": "sf_layer_count_in_range/layer_list",
+      "result_dependencies": [],
+      "save_as": "sf_layer_list",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "gpu-rendering"
+}

@@ -1,0 +1,44 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "cpu_utilization_per_period",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [],
+  "prerequisites": {
+    "modules": [
+      "linux.cpu.utilization.system"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/cpu_utilization_per_period.skill.yaml",
+    "sha256": "9920c14a1dfb568ab235f8ad07dc05900335274cf3a7715383808227764b30a7"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "system_util",
+      "name": "系统 CPU 利用率",
+      "query_id": "cpu_utilization_per_period/system_util",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "cpu-scheduling"
+}

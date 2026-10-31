@@ -1,0 +1,137 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "fixtures": [
+              "startup-heavy-api36",
+              "startup-heavy-api36"
+            ],
+            "status": "verified"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "main_thread_handler_callback_slices/callback_slices",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/main_thread_handler_callback_slices/callback_slices.sql",
+      "sha256": "c1e0102f747215cf12d007dace7e5e383409eaaf7cbec5374d460796ea8db744",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "*Handler: *"
+      ],
+      "skill_id": "main_thread_handler_callback_slices",
+      "source": {
+        "path": "backend/skills/atomic/main_thread_handler_callback_slices.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "33502513a6be13a722153be01a9eebf84781088e428b1ccd383a3b8f72f0d1de"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.slices"
+        ],
+        "drops": [],
+        "required_tables": [
+          "slice",
+          "thread_track",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "callback_slices",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "min_dur_ns",
+          "package",
+          "start_ts",
+          "top_k"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "verified",
+        "execution_verified": true,
+        "fixtures": [
+          "startup-heavy-api36"
+        ],
+        "runtime_compatible": true,
+        "semantic_verified": true,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "main_thread_handler_callback_slices"
+}

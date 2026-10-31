@@ -1,0 +1,128 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${process_name}",
+      "${process_name}:*"
+    ]
+  },
+  "id": "blocking_chain_analysis",
+  "identity": {
+    "aliases": [
+      "process_name",
+      "package"
+    ],
+    "minConfidence": 50,
+    "policy": "required",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标进程名",
+      "name": "process_name",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "多跳唤醒链追踪的最小等待时长(ms)",
+      "name": "min_wait_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "唤醒链最大跳数",
+      "name": "max_hops",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "追踪的等待区间数（按时长降序）",
+      "name": "top_waits",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "thread_state",
+      "thread",
+      "process"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/blocking_chain_analysis.skill.yaml",
+    "sha256": "ec3db5b12031c8cedf7480f0e7496dd03c5a0e7ecad513cc72cd26cf8e68c0a2"
+  },
+  "steps": [
+    {
+      "id": "thread_state_distribution",
+      "name": "主线程状态分布",
+      "query_id": "blocking_chain_analysis/thread_state_distribution",
+      "result_dependencies": [],
+      "save_as": "thread_state_distribution",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "waker_chain",
+      "name": "唤醒链分析",
+      "optional": true,
+      "query_id": "blocking_chain_analysis/waker_chain",
+      "result_dependencies": [],
+      "save_as": "waker_chain",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "wakeup_chain_trace",
+      "name": "多跳唤醒链追踪",
+      "optional": true,
+      "query_id": "blocking_chain_analysis/wakeup_chain_trace",
+      "result_dependencies": [],
+      "save_as": "wakeup_chain_trace",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "blocked_function_summary",
+      "name": "阻塞函数汇总",
+      "optional": true,
+      "query_id": "blocking_chain_analysis/blocked_function_summary",
+      "result_dependencies": [],
+      "save_as": "blocked_function_summary",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.3",
+  "workflow": "anr-blocking"
+}

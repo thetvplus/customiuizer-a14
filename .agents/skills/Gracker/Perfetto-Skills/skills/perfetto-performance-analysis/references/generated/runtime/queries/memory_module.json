@@ -1,0 +1,935 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/memory_overview",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/memory_overview.sql",
+      "sha256": "d19298a56ba2ffdab978868269aec35d69122c0ab054d5e2256f2698f4310447",
+      "signal_patterns": [
+        "%Buffers%",
+        "%Cached%",
+        "%Mem%",
+        "%MemAvailable%",
+        "%MemFree%",
+        "%Memory%",
+        "%SwapFree%",
+        "%mem%",
+        "%memory%"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "memory_overview",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/lmk_events",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/lmk_events.sql",
+      "sha256": "7d29e92edb5686c3ac64bd9cccbd61cd6c826f2291997a8c40128054da9192f2",
+      "signal_patterns": [
+        "*LMK*",
+        "*OOM*",
+        "*kill*memory*",
+        "*lmk*",
+        "*lowmemory*",
+        "*oom*"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "lmk_events",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/dmabuf_usage",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/dmabuf_usage.sql",
+      "sha256": "858675b4cc60e9521f604cfa5ae78da49eed401b25231bdb0613e90b7eac8bdc",
+      "signal_patterns": [
+        "*dmabuf*",
+        "*gpu*mem*",
+        "*graphics*",
+        "*ion*"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "dmabuf_usage",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/memory_psi",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/memory_psi.sql",
+      "sha256": "8b274dfedabe4de817b887f4a593fa15efb409bfc691662f161492317669b012",
+      "signal_patterns": [
+        "*PSI*",
+        "*pressure*",
+        "*psi*"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "memory_psi",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/process_memory",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/process_memory.sql",
+      "sha256": "e25aa9e5f2a7055e44b7180befbf5a22940d5d006d9d8667290bc1580acb4410",
+      "signal_patterns": [
+        "%RSS%",
+        "%heap%",
+        "%mem%",
+        "%rss%"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "process_memory",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/memory_timeline",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/memory_timeline.sql",
+      "sha256": "748f47fa664c2e09ce38ef45cab008a858e6cd2a056252fe2e1bff9da281afa6",
+      "signal_patterns": [
+        "%MemAvailable%",
+        "%MemFree%"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "memory_timeline",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/page_fault_analysis",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/page_fault_analysis.sql",
+      "sha256": "5f0ef537b4d5df01cec1953072936d5361a0af19998264bf020e30317117d16b",
+      "signal_patterns": [
+        "*fault*",
+        "*page*fault*",
+        "*pgfault*"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "page_fault_analysis",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "counters"
+        ]
+      },
+      "id": "memory_module/allocation_events",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/memory_module/allocation_events.sql",
+      "sha256": "c9eaa7ea1a3058400b4599c16f1e2719af8d7266b03258ede6267e853571d9e9",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "*Alloc*",
+        "*alloc*",
+        "*malloc*",
+        "*mmap*"
+      ],
+      "skill_id": "memory_module",
+      "source": {
+        "path": "backend/skills/modules/hardware/memory_module.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "b987a26840357de829425e1b7deba3e412dee91d2541ade4ad72e4866c5c38ff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "counter",
+          "counter_track"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "allocation_events",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "package"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "memory_module"
+}

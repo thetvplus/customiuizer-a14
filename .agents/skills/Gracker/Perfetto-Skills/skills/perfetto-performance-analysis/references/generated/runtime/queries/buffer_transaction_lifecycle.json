@@ -1,0 +1,363 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "buffer_transaction_lifecycle/apply_transaction_summary",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/buffer_transaction_lifecycle/apply_transaction_summary.sql",
+      "sha256": "b1af372dce63a62e84a465840078cb3a3578df16180878d44ce87197003b2b07",
+      "signal_patterns": [
+        "*BLASTBufferQueue*",
+        "*acquireBuffer*",
+        "*applyTransaction*",
+        "*latchBuffer*",
+        "*queueBuffer*",
+        "*setTransactionState*",
+        "surfaceflinger"
+      ],
+      "skill_id": "buffer_transaction_lifecycle",
+      "source": {
+        "path": "backend/skills/atomic/buffer_transaction_lifecycle.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "38cb7cb1b6874a31a2da8e82406e81c04fade5230ec56e948f7bfd2539a6a85b"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "apply_transaction_summary",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "buffer_transaction_lifecycle/queue_to_transaction_delay",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/buffer_transaction_lifecycle/queue_to_transaction_delay.sql",
+      "sha256": "1990bef78e38913269aa6a30d77f05c59807b388dba3636f8a3170dee92cab66",
+      "signal_patterns": [
+        "*applyTransaction*",
+        "*queueBuffer*",
+        "surfaceflinger"
+      ],
+      "skill_id": "buffer_transaction_lifecycle",
+      "source": {
+        "path": "backend/skills/atomic/buffer_transaction_lifecycle.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "38cb7cb1b6874a31a2da8e82406e81c04fade5230ec56e948f7bfd2539a6a85b"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "queue_to_transaction_delay",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "buffer_transaction_lifecycle/per_layer_transactions",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/buffer_transaction_lifecycle/per_layer_transactions.sql",
+      "sha256": "2e9d4cb92181f6ff70883e0d2704d6f61a31daaddce6eca003c59c485720e37a",
+      "signal_patterns": [],
+      "skill_id": "buffer_transaction_lifecycle",
+      "source": {
+        "path": "backend/skills/atomic/buffer_transaction_lifecycle.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "38cb7cb1b6874a31a2da8e82406e81c04fade5230ec56e948f7bfd2539a6a85b"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "per_layer_transactions",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "buffer_transaction_lifecycle"
+}

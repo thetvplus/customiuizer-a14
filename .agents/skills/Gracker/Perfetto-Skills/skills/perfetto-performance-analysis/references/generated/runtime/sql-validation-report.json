@@ -1,0 +1,37 @@
+{
+  "execution_verified_queries": [
+    "callstack_analysis/check_samples",
+    "main_thread_handler_callback_slices/callback_slices",
+    "rendering_pipeline_detection/active_rendering_processes",
+    "rendering_pipeline_detection/bufferqueue_path_signals",
+    "scrolling_analysis/frame_timeline_check",
+    "startup_slow_reasons/startup_overview"
+  ],
+  "perfetto": {
+    "reported_version": "v58.3",
+    "revision": "99234d73fe356bf7edf6b2cb7afcf2a9eefc5368",
+    "rpc_api_version": 14,
+    "stdlib_tree": "c4ed7bdb0dfc5c21fb00e3982220d39abe2911bf"
+  },
+  "policy": {
+    "capability_gated_queries_may_not_support_causal_claims": true,
+    "static_valid_is_not_semantic_proof": true,
+    "unknown_or_unsupported_requires_explicit_override": true
+  },
+  "schema_version": 1,
+  "semantic_verified_queries": [
+    "callstack_analysis/check_samples",
+    "main_thread_handler_callback_slices/callback_slices",
+    "rendering_pipeline_detection/active_rendering_processes",
+    "rendering_pipeline_detection/bufferqueue_path_signals",
+    "scrolling_analysis/frame_timeline_check",
+    "startup_slow_reasons/startup_overview"
+  ],
+  "summary": {
+    "capability_gated": 737,
+    "execution_verified": 6,
+    "queries": 743,
+    "semantic_verified": 6,
+    "static_valid": 743
+  }
+}

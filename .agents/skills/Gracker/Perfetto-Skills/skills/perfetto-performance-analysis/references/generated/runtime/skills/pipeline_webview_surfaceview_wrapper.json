@@ -1,0 +1,33 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "pipeline_webview_surfaceview_wrapper",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "knowledge_only",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/pipelines/webview_surfaceview_wrapper.skill.yaml",
+    "sha256": "15a526a010a329ca90a47f84637259669b5a7aa7aa2fa97415db686588282080"
+  },
+  "steps": [],
+  "type": "pipeline_definition",
+  "version": "1.0",
+  "workflow": "rendering-pipeline"
+}

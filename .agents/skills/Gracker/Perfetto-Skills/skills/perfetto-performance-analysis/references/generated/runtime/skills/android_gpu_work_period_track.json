@@ -1,0 +1,72 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "android_gpu_work_period_track",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.gpu.work_period"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/android_gpu_work_period_track.skill.yaml",
+    "sha256": "dad0f300552c8a78618be018d8930c345109988d414c37fcef819ee4752758f5"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "gpu_work",
+      "name": "GPU 工作区间",
+      "query_id": "android_gpu_work_period_track/gpu_work",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "gpu-rendering"
+}

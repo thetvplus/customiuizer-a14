@@ -1,0 +1,98 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}:*",
+      "*FinalizerDaemon*",
+      "*HeapTaskDaemon*",
+      "Binder:*",
+      "Jit thread pool*"
+    ]
+  },
+  "id": "startup_thread_blocking_graph",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "name": "min_block_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "name": "top_k",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "process_scope": {
+    "binding": "effective_target_processes",
+    "context_fields": {
+      "peer_context": [
+        "waker_utid",
+        "waker_upid",
+        "observed_waker_utid",
+        "waker_thread",
+        "waker_process",
+        "waker_current_slice",
+        "waker_slice_id",
+        "waker_slice_status"
+      ]
+    },
+    "role": "target"
+  },
+  "query_id": "startup_thread_blocking_graph/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/startup_thread_blocking_graph.skill.yaml",
+    "sha256": "77123b3a58b09e2f5dffec6e40d9f3f6fcde05ecbd76db6aa935f4d3640f9456"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "startup"
+}

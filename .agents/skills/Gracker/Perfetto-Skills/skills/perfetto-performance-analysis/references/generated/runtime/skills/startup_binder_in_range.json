@@ -1,0 +1,89 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "branches": [
+          "api<=28",
+          "api29-32",
+          "api>=33"
+        ],
+        "id": "official_android_startup_tags",
+        "source": "perfetto stdlib android/startup/startups.sql"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "startup_binder_in_range",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "startup_id",
+      "required": false,
+      "type": "integer"
+    },
+    {
+      "name": "startup_type",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "top_k",
+      "required": false,
+      "type": "integer"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.startup.startups",
+      "android.binder"
+    ],
+    "required_tables": []
+  },
+  "query_id": "startup_binder_in_range/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/startup_binder_in_range.skill.yaml",
+    "sha256": "a546066985e0bfb6759477f01c6d4881ac8395de9f9d0d6be1b08a658225bd8e"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "startup"
+}

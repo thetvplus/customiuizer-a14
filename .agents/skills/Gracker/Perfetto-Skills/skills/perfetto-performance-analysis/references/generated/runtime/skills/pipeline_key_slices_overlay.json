@@ -1,0 +1,88 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*",
+      "%HWC%",
+      "%surfaceflinger%",
+      "RenderThread",
+      "system_server"
+    ]
+  },
+  "id": "pipeline_key_slices_overlay",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "Portable binding: pass a JSON array through --param; do not pass a preformatted SQL list.",
+      "name": "slice_names",
+      "required": true,
+      "source_description": "SQL IN 列表格式的 Slice 名称，如 'Choreographer#doFrame','DrawFrame','syncFrameState'",
+      "source_type": "string",
+      "type": "json_array"
+    },
+    {
+      "description": "可选包名/进程名前缀；为空时不过滤 App 进程，始终保留 SurfaceFlinger/system_server",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "可选时间窗起点(ns)，用于把 overlay 限定在 selection 或 visible window",
+      "name": "start_ts",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "可选时间窗终点(ns)，用于把 overlay 限定在 selection 或 visible window",
+      "name": "end_ts",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/pipeline_key_slices_overlay.skill.yaml",
+    "sha256": "254612bd358826352dc175fa3530bb7f926ca3dd77c3d6a5965e2891f5f9e262"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "pipeline_key_slices_overlay",
+      "name": "管线关键 Slice 查询",
+      "query_id": "pipeline_key_slices_overlay/pipeline_key_slices_overlay",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "rendering-pipeline"
+}

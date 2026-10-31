@@ -1,0 +1,122 @@
+---
+name: release-kotlin-library
+description: Use when preparing, publishing, or checking readiness for a Kotlin library release, including verifying its gradle-maven-publish-plugin prerequisite, reconciling changelogs and API snapshots, and checking publication.
+---
+
+# Release Kotlin library
+
+## Core principle
+
+Publish the prepared, validated, user-approved release commit and call the release complete
+only after verifying its artifacts and Git state.
+
+## Prerequisite
+
+This skill relies on `gradle-maven-publish-plugin` (`com.vanniktech.maven.publish`)
+for library publication, whether run locally or through tag-triggered CI.
+API snapshot support assumes Metalava-generated `api/api.txt` files; disable
+snapshots when the repository does not maintain them.
+
+## Procedure
+
+1. Route standalone changelog maintenance to
+   [changelog](../changelog/SKILL.md) and finish that task
+   without applying this skill's publishing prerequisite or release answer forms.
+   For release work, establish scope and inspect repository instructions, Git
+   state, release history, version properties, publishing configuration and required checks.
+   If the user limits review to supplied state, run no commands and mark
+   unsupplied state unknown. Confirm, from build files or supplied repository facts, that published
+   modules apply `com.vanniktech.maven.publish` directly or via a convention
+   plugin; declaration alone is insufficient. If absent
+   or unverified, report it and stop before release mutations; do not install
+   or migrate publishing plugins.
+   Distinguish readiness review, preparation and explicit release authorization;
+   select the matching finish path before proceeding.
+   For recovery or recovery review, select and read the
+   [recovery answer form](references/recovery-output.md) before analysis. For
+   changelog-related review, also load
+   [changelog](../changelog/SKILL.md) in read-only mode.
+   For release preparation, including its changelog portion, read the
+   [preparation answer form](references/preparation-output.md) completely, in
+   its own call, before analysis.
+   Keep reviews read-only, including credentials. Follow the existing local or
+   CI publishing mechanism; do not migrate it. Read the
+   [helper contract](references/helper.md) before configuring the bundled script.
+   Stop before mutation on unsupported layouts or ambiguous destinations.
+2. Before preparation, use [changelog](../changelog/SKILL.md)
+   for specified-release notes. If that skill is unavailable, report the missing
+   dependency and stop changelog preparation rather than inventing a substitute.
+   Supply the target version, repository heading
+   conventions and authorized scope; consume its reviewed baseline, notes,
+   coverage or skip result, and gaps. Leave heading finalization to the release helper
+   unless the request is explicitly limited to finalizing the changelog.
+   Resolve coverage gaps before publication. Use supplied release and
+   next-development versions; propose and confirm missing values before release
+   mutation, never silently incrementing a prerelease to a patch snapshot.
+   The caller owns any authorized changelog-correction commit needed before
+   helper preparation's clean-worktree gate.
+3. Identify repository release checks, including tests and Metalava API
+   generation and compatibility checks where configured. Confirm that API files
+   are current before snapshotting; the helper copies them without running
+   Metalava. Do not treat other API dump formats as Metalava snapshots.
+   Require passing evidence for the release code; a green
+   parent commit is insufficient after relevant changes. For Gradle execution,
+   use [gradle-run](../gradle-run/SKILL.md), with `--no-scan` unless a scan is
+   explicitly authorized. Fix failed checks within authorized scope; otherwise
+   stop with the failing gate and next action.
+4. Configure and preflight the helper with explicit versions, paths, heading
+   style, API snapshot applicability, branch, remote, tag and command arguments.
+   Keep configuration and evidence outside tracked release files. Check the
+   index, snapshot collisions and local/remote destinations before writes. Load
+   `~/.env` for local publication as data, never by shell sourcing or printing it.
+   Preserve explicit process environment values. Missing required credentials
+   block local publication; do not request or log their values. For tag-triggered
+   CI, use existing Git authentication and CI-managed publishing secrets without
+   loading or requiring local dotenv values.
+5. Prepare the release: update the version, finalize the changelog heading and
+   applicable published-module API snapshots, run configured checks, and commit
+   only release files. Recheck the finalized changelog against the
+   `changelog` coverage result; return to that skill if finalization
+   changes notes or history. Inspect the resulting commit. Bind validation to
+   this state and invalidate it if relevant code changes. The helper must not
+   publish during preparation.
+6. Present the prepared release for explicit user approval before publication:
+   release version and tag, finalized changelog (or its absence), next development
+   version, release commit, artifact coordinates and destination, publishing
+   mechanism, and validation results. Provide the actual notes or a directly
+   reviewable diff, not just a claim that they are ready. Explain that this
+   approval gate is required by this skill and wait for the user's decision;
+   a general request to release does not approve unseen release details.
+   Reuse approval already given for this exact prepared release. If the code,
+   versions, notes or publishing scope change, prepare and validate the revised
+   release and obtain approval again. Preparation-only and readiness requests
+   stop at their requested scope without soliciting publication approval.
+7. Once the prepared release is approved and all gates pass, publish from that
+   commit via the repository's selected mechanism. Local publication and
+   tag-triggered CI are alternatives; do not run both. Do not publish artifacts,
+   push a release tag or trigger publishing CI before approval.
+8. Verify all expected artifact coordinates and versions at the configured
+   destination, along with CI completion when applicable. Verify the remote tag
+   resolves to the prepared commit. A successful command or tag alone is not
+   artifact evidence. Only then advance, commit, push and verify the agreed
+   next development version. Create and read back a GitHub Release only when
+   repository conventions call for it, using the finalized release notes.
+9. On partial or uncertain success, stop dependent mutations and report verified,
+   failed and unknown stages without secrets. Inspect live artifact, workflow,
+   tag and branch state before recovery; never blindly repeat publication,
+   overwrite remote tags, delete published artifacts or claim rollback. Resume
+   only a proven remaining action within existing authorization.
+
+## Finish paths
+
+- **Release preparation, including its changelog portion:** Fill the selected
+  preparation answer form. Show actual reviewable notes or diff, remaining checks, and the
+  explicit later publication-approval gate; do not request approval now.
+- **Recovery/recovery review:** Fill the selected recovery answer form as
+  numbered sections; check every applicable disposition before replying.
+- **Completed release:** Report release version, commit/tag, validation,
+  artifact readback, next development commit, and conditional GitHub Release
+  URL. Claim completion only when every applicable check passes.
+
+For a readiness review or blocker, state that narrower outcome and remaining
+gate. Do not expose credential contents or raw sensitive command output.

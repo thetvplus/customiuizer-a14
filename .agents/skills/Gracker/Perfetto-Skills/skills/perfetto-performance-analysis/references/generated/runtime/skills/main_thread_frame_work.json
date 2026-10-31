@@ -1,0 +1,178 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "main_thread_frame_work",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "应用包名；经身份解析可绑定精确 UPID",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "整个动画/交互窗口起点(ns)，缺省使用 trace 起点",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "整个动画/交互窗口终点(ns)，缺省使用 trace 终点",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 20,
+      "description": "任务与观测间隔输出上限，1～100；不截断窗口合计",
+      "name": "main_thread_top_k",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "slice",
+      "thread_track",
+      "thread_state",
+      "thread",
+      "process",
+      "trace_bounds"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/main_thread_frame_work.skill.yaml",
+    "sha256": "335e554b31f16b090c6d224e21718bd9e2c194ef268a06f9efdf4a36c9ec79d0"
+  },
+  "steps": [
+    {
+      "id": "system_context_window",
+      "name": "系统证据窗口",
+      "process_scope": {
+        "role": "identity_metadata"
+      },
+      "query_id": "main_thread_frame_work/system_context_window",
+      "result_dependencies": [],
+      "save_as": "system_context_window",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "system_cpu_context",
+      "name": "窗口 CPU 系统上下文",
+      "optional": true,
+      "params": {
+        "end_ts": "${system_context_window.data[0].end_ts}",
+        "start_ts": "${system_context_window.data[0].start_ts}"
+      },
+      "save_as": "system_cpu_context",
+      "skill": "cpu_system_context_in_range",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "system_task_summary",
+      "name": "目标任务系统状态",
+      "optional": true,
+      "params": {
+        "end_ts": "${system_context_window.data[0].end_ts}",
+        "package": "${package}",
+        "start_ts": "${system_context_window.data[0].start_ts}"
+      },
+      "save_as": "system_task_summary",
+      "skill": "thread_system_summary_in_range",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "system_task_handoffs",
+      "name": "目标任务调度交接",
+      "optional": true,
+      "params": {
+        "end_ts": "${system_context_window.data[0].end_ts}",
+        "package": "${package}",
+        "start_ts": "${system_context_window.data[0].start_ts}"
+      },
+      "save_as": "system_task_handoffs",
+      "skill": "thread_preemption_handoffs_in_range",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "main_thread_work_summary",
+      "name": "主线程全窗口与帧内外状态",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "query_id": "main_thread_frame_work/main_thread_work_summary",
+      "result_dependencies": [],
+      "save_as": "main_thread_work_summary",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "main_thread_work_tasks",
+      "name": "主线程任务与来源定位",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "query_id": "main_thread_frame_work/main_thread_work_tasks",
+      "result_dependencies": [],
+      "save_as": "main_thread_work_tasks",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "main_thread_work_sources",
+      "name": "主线程任务的热点与等待来源",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "query_id": "main_thread_frame_work/main_thread_work_sources",
+      "result_dependencies": [],
+      "save_as": "main_thread_work_sources",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "main_thread_work_cadence",
+      "name": "doFrame观测起点间隔",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "query_id": "main_thread_frame_work/main_thread_work_cadence",
+      "result_dependencies": [],
+      "save_as": "main_thread_work_cadence",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "scrolling"
+}

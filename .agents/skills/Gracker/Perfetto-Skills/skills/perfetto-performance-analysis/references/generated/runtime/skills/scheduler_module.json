@@ -1,0 +1,178 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}:*"
+    ]
+  },
+  "id": "scheduler_module",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "Target package name",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "Target thread ID",
+      "name": "tid",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "Analysis start timestamp",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "Analysis end timestamp",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "linux.cpu.frequency"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/modules/kernel/scheduler_module.skill.yaml",
+    "sha256": "67ddcf3a040cfc8fb5ace854ca824d699330c03bfd3894272d6df7d804f91677"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "init_cpu_topology",
+      "name": "初始化 CPU 拓扑",
+      "optional": true,
+      "skill": "cpu_topology_view",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "runnable_analysis",
+      "name": "Runnable 状态分析",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "query_id": "scheduler_module/runnable_analysis",
+      "result_dependencies": [],
+      "save_as": "runnable_data",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "cpu_frequency",
+      "name": "CPU 频率分析",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "scheduler_module/cpu_frequency",
+      "result_dependencies": [],
+      "save_as": "freq_data",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "core_distribution",
+      "name": "大小核分布",
+      "process_scope": {
+        "binding": "effective_target_processes",
+        "role": "target"
+      },
+      "query_id": "scheduler_module/core_distribution",
+      "result_dependencies": [],
+      "save_as": "core_data",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "scheduling_diagnosis",
+      "inputs": [
+        "runnable_data",
+        "freq_data",
+        "core_data"
+      ],
+      "name": "调度诊断",
+      "rules": [
+        {
+          "condition": "runnable_data.data[0]?.runnable_ms > 50",
+          "confidence": "high",
+          "diagnosis": "线程 ${runnable_data.data[0]?.thread_name} Runnable 等待时间过长 (${runnable_data.data[0]?.runnable_ms}ms)；需结合交接任务与唤醒证据确定原因",
+          "evidence_fields": [
+            "runnable_data.data[0].thread_name",
+            "runnable_data.data[0].runnable_ms"
+          ],
+          "suggestions": [
+            "检查是否有后台线程占用 CPU",
+            "核对已采集的调度策略、优先级与对端任务"
+          ]
+        },
+        {
+          "condition": "freq_data.data.find(f => f.core_type === 'big')?.avg_freq_mhz < 1500",
+          "confidence": "medium",
+          "diagnosis": "观测大核窗口均频 ${freq_data.data.find(f => f.core_type === 'big')?.avg_freq_mhz}MHz；需结合覆盖、容量和直接限频/策略证据解释",
+          "evidence_fields": [
+            "freq_data.data[0].avg_freq_mhz",
+            "freq_data.data[0].max_freq_mhz"
+          ],
+          "suggestions": [
+            "是否限频以同窗口的 CPU 限频证据（cpu_throttling_in_range）为准",
+            "检查电池状态和功耗策略"
+          ]
+        },
+        {
+          "condition": "core_data.data[0]?.small_core_pct > 50",
+          "confidence": "medium",
+          "diagnosis": "目标线程大部分时间运行在小核 (${core_data.data[0]?.small_core_pct}%)；单凭驻留比例不能确定性能损失",
+          "evidence_fields": [
+            "core_data.data[0].thread_name",
+            "core_data.data[0].small_core_pct"
+          ],
+          "suggestions": [
+            "检查 CPU 亲和性设置",
+            "若采集缺少 affinity/cgroup/uclamp，明确证据缺口，不据此修改调度策略"
+          ]
+        }
+      ],
+      "type": "diagnostic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "cpu-scheduling"
+}

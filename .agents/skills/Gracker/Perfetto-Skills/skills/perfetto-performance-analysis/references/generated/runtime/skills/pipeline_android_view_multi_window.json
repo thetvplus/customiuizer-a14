@@ -1,0 +1,33 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "pipeline_android_view_multi_window",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "knowledge_only",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/pipelines/android_view_multi_window.skill.yaml",
+    "sha256": "ffbbe1125236b1c0dc17d4f0b0c2221c8aa5ade3a3aeab26dd7056142f39f04f"
+  },
+  "steps": [],
+  "type": "pipeline_definition",
+  "version": "1.0",
+  "workflow": "rendering-pipeline"
+}

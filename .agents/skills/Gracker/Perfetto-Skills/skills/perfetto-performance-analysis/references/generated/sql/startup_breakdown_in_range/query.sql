@@ -1,0 +1,65 @@
+-- GENERATED FILE - DO NOT EDIT.
+-- Source: backend/skills/atomic/startup_breakdown_in_range.skill.yaml
+-- Source SHA-256: 7c9a0f3b53bc7b0ee86695eed3190733910353eb4499b62b6d16ea65dbff9a70
+
+-- reason is a closed set: the stdlib names a startup slice
+-- (_normalize_android_string), blames io_wait as io and irq as irq, and
+-- otherwise uses the main thread state. Each maps to one category by its
+-- exact value; a reason not listed here is Other, never a substring guess
+-- (bind_application and every *_contention used to read as IO).
+-- category_percent is the whole category, before top_k drops rows.
+WITH scoped_startups AS (
+  SELECT startup_id FROM android_startups
+  WHERE ('${package}' = '' OR package = '${package}' OR package GLOB '${package}:*')
+    AND (${startup_id} IS NULL OR startup_id = ${startup_id})
+    AND (${start_ts} IS NULL OR ts >= ${start_ts})
+    AND (${end_ts} IS NULL OR ts + dur <= ${end_ts})
+),
+reason_category(reason, category) AS (
+  VALUES
+    ('binder', 'IPC'),
+    ('io', 'IO'), ('dlopen', 'IO'),
+    ('userspace_memory_reclaim', 'Memory'), ('kernel_memory_reclaim', 'Memory'),
+    ('monitor_contention', 'Lock'), ('art_lock_contention', 'Lock'), ('mutex_contention', 'Lock'),
+    ('inflate', 'Layout'),
+    ('verify_class', 'ClassLoading'), ('open_dex_files_from_oat', 'ClassLoading'),
+    ('bind_application', 'AppPhase'), ('activity_start', 'AppPhase'),
+    ('activity_resume', 'AppPhase'), ('activity_restart', 'AppPhase'),
+    ('client_transaction_executed', 'AppPhase'), ('choreographer_do_frame', 'AppPhase'),
+    ('resources_manager_get_resources', 'AppPhase'),
+    ('Running', 'Running'),
+    ('R', 'Runnable'), ('R+', 'Runnable'),
+    ('S', 'Sleep'),
+    ('D', 'Uninterruptible'), ('DK', 'Uninterruptible'),
+    ('irq', 'IRQ'),
+    ('launch_delay', 'LaunchDelay')
+),
+by_reason AS (
+  SELECT
+    b.reason,
+    COUNT(*) AS count,
+    SUM(b.dur) AS total_ns,
+    AVG(b.dur) AS avg_ns,
+    MAX(b.dur) AS max_ns
+  FROM android_startup_opinionated_breakdown b
+  JOIN scoped_startups USING (startup_id)
+  GROUP BY b.reason
+),
+categorized AS (
+  SELECT r.*, COALESCE(c.category, 'Other') AS category
+  FROM by_reason r
+  LEFT JOIN reason_category c USING (reason)
+),
+total AS (SELECT SUM(total_ns) AS ns FROM by_reason)
+SELECT
+  reason,
+  count,
+  total_ns / 1e6 AS total_dur_ms,
+  ROUND(avg_ns / 1e6, 2) AS avg_dur_ms,
+  ROUND(max_ns / 1e6, 2) AS max_dur_ms,
+  ROUND(100.0 * total_ns / total.ns, 1) AS percent,
+  category,
+  ROUND(100.0 * SUM(total_ns) OVER (PARTITION BY category) / total.ns, 1) AS category_percent
+FROM categorized, total
+ORDER BY total_ns DESC, reason
+LIMIT ${top_k|15}

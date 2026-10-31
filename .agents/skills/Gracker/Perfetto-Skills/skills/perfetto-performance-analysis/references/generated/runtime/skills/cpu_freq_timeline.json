@@ -1,0 +1,77 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "cpufreq"
+    ]
+  },
+  "id": "cpu_freq_timeline",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "开始时间戳 (纳秒)",
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "结束时间戳 (纳秒)",
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "cpu_counter_track",
+      "counter"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/cpu_freq_timeline.skill.yaml",
+    "sha256": "b3b383db99879dcd16010de03b51abaac56a2cbf7df1973e994af4f7ac7aeb61"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "init_cpu_topology",
+      "name": "初始化 CPU 拓扑",
+      "optional": true,
+      "skill": "cpu_topology_view",
+      "type": "skill"
+    },
+    {
+      "id": "cpu_freq_changes",
+      "name": "CPU 频率变化",
+      "query_id": "cpu_freq_timeline/cpu_freq_changes",
+      "result_dependencies": [],
+      "save_as": "freq_changes",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "cpu_freq_summary",
+      "name": "CPU 频率汇总",
+      "query_id": "cpu_freq_timeline/cpu_freq_summary",
+      "result_dependencies": [],
+      "save_as": "freq_summary",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "2.0",
+  "workflow": "cpu-scheduling"
+}

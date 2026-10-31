@@ -1,0 +1,260 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "gl_standalone_swap_jank/swap_interval_summary",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gl_standalone_swap_jank/swap_interval_summary.sql",
+      "sha256": "97f1ff4b2906a787e1d2fb1ed80e123a7f7f761da5a30d6d65d382d759805513",
+      "signal_patterns": [
+        "*ANativeWindow_queueBuffer*",
+        "*SwapBuffers*",
+        "*eglSwapBuffers*",
+        "*vkQueuePresent*"
+      ],
+      "skill_id": "gl_standalone_swap_jank",
+      "source": {
+        "path": "backend/skills/atomic/gl_standalone_swap_jank.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "fb80d72459a0595df8c59974682e5b59c2b3d5afd3ec9ce2c832fe9180d9d6af"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "slices.with_context"
+        ],
+        "drops": [],
+        "required_tables": [
+          "slice",
+          "thread_track",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "swap_interval_summary",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package",
+          "process_name"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "process_name",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "slices"
+        ]
+      },
+      "id": "gl_standalone_swap_jank/slow_swap_events",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gl_standalone_swap_jank/slow_swap_events.sql",
+      "sha256": "dec872a1f43386842f72995814b843ea45e19e651729f5d52b9de0cb4ca73383",
+      "signal_patterns": [
+        "*ANativeWindow_queueBuffer*",
+        "*SwapBuffers*",
+        "*eglSwapBuffers*",
+        "*vkQueuePresent*"
+      ],
+      "skill_id": "gl_standalone_swap_jank",
+      "source": {
+        "path": "backend/skills/atomic/gl_standalone_swap_jank.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "fb80d72459a0595df8c59974682e5b59c2b3d5afd3ec9ce2c832fe9180d9d6af"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "slices.with_context"
+        ],
+        "drops": [],
+        "required_tables": [
+          "slice",
+          "thread_track",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "slow_swap_events",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package",
+          "process_name"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "process_name",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "gl_standalone_swap_jank"
+}

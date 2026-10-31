@@ -1,0 +1,1136 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/check_suspend_data",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/check_suspend_data.sql",
+      "sha256": "f0d097f4bae745e6ed8aedd37f598b1d317832b2fac313c3830f38a7ae1877c6",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "check_suspend_data",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/check_wakeup_data",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/check_wakeup_data.sql",
+      "sha256": "fee9f2b8ade8d2be87559ffdcfc61eb2b88c098b4a569fcadc5c2174bfb65e73",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "check_wakeup_data",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts",
+          "wakeup_source"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/check_suspend_slices",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/check_suspend_slices.sql",
+      "sha256": "92d44e00246112c8b4a107478b6eba9276c5d4d4b45a51beb5e9d12b07bc4157",
+      "signal_patterns": [
+        "*Suspend*",
+        "*WakeLock*",
+        "*Wakeup*",
+        "*power_state*",
+        "*suspend*",
+        "*wake_lock*",
+        "*wakeup*"
+      ],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "check_suspend_slices",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/suspend_overview",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/suspend_overview.sql",
+      "sha256": "8d78a46b1e5d2c88ed3360cd62b6826a8bce03bf52e9b66a09c5071c1f60e0d8",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "suspend_overview",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/suspend_quality_assessment",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/suspend_quality_assessment.sql",
+      "sha256": "63df1e780b0058373e9472d6c7a38ba11e29ed84376d4aec3685f611d79ed046",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "suspend_quality_assessment",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/wakeup_type_overview",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/wakeup_type_overview.sql",
+      "sha256": "8cc6ce6c266a9168c0ea96324aadba6f9e2c95b2ba60013b902d7df9f3d4a1f1",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "wakeup_type_overview",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/wakeup_source_ranking",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/wakeup_source_ranking.sql",
+      "sha256": "7fcd8af1153a85eeea92ed9a0613cfd81431f0106cfde9a7b7c28a2bb64f2408",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "wakeup_source_ranking",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts",
+          "wakeup_source"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/suspend_backoff",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/suspend_backoff.sql",
+      "sha256": "884152c9cad3ea180216b0cd23b29325659a812f5e589d82e8cfa0ea244bc9ef",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "suspend_backoff",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/wakeup_timeline",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/wakeup_timeline.sql",
+      "sha256": "e4bd45e7c16d063d65906ea37afeea89e675ccfd1d949d84452c86041e477f65",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "wakeup_timeline",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts",
+          "wakeup_source"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/long_suspend_events",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/long_suspend_events.sql",
+      "sha256": "09f3b88ec100861ea70ea4dc97f27545177f77e8a1a8ab03066c3749da8268cc",
+      "signal_patterns": [],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "long_suspend_events",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "suspend_wakeup_analysis/suspend_slice_overview",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/suspend_wakeup_analysis/suspend_slice_overview.sql",
+      "sha256": "8f770add1c7baafad2dd7061d03ea20de3e15ef050cdef5a55e5ba08e0f2083c",
+      "signal_patterns": [
+        "*Suspend*",
+        "*WakeLock*",
+        "*Wakeup*",
+        "*power_state*",
+        "*suspend*",
+        "*wake_lock*",
+        "*wakeup*"
+      ],
+      "skill_id": "suspend_wakeup_analysis",
+      "source": {
+        "path": "backend/skills/composite/suspend_wakeup_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cf54dd26038da1a8e319353fce7eef8b92cc4962e217cb1873d6bc9f74fa70ee"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.suspend",
+          "android.wakeups"
+        ],
+        "drops": [],
+        "required_tables": [
+          "sched_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "suspend_slice_overview",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "suspend_wakeup_analysis"
+}

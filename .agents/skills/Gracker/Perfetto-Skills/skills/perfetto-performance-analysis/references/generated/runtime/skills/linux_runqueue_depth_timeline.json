@@ -1,0 +1,80 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "linux_runqueue_depth_timeline",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "高压 runnable 线程数阈值，默认 4",
+      "name": "pressure_threshold",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "sched.thread_level_parallelism"
+    ],
+    "required_tables": [
+      "thread_state"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/linux_runqueue_depth_timeline.skill.yaml",
+    "sha256": "df8e54081665caab0f1d374c13f7ceb343c0f20209e1e1b699da6ee24688ba35"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "runqueue_pressure_summary",
+      "name": "Runqueue 压力汇总",
+      "query_id": "linux_runqueue_depth_timeline/runqueue_pressure_summary",
+      "result_dependencies": [],
+      "save_as": "runqueue_pressure_summary",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "runqueue_pressure_windows",
+      "name": "Runqueue 高压点",
+      "query_id": "linux_runqueue_depth_timeline/runqueue_pressure_windows",
+      "result_dependencies": [],
+      "save_as": "runqueue_pressure_windows",
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "cpu-scheduling"
+}

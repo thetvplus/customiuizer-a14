@@ -1,0 +1,181 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      },
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*",
+      "*BLASTBufferQueue*",
+      "*Choreographer#doFrame*",
+      "*Chrome*",
+      "*Engine::BeginFrame*",
+      "*EntityPass*",
+      "*FramePacing*",
+      "*FrameTimeline*",
+      "*Rasterizer::DrawToSurfaces*",
+      "*Swappy*",
+      "*applyTransaction*",
+      "*dequeueBuffer*",
+      "*eglSwapBuffers*",
+      "*lockCanvas*",
+      "*queueBuffer*",
+      "*unlockCanvasAndPost*",
+      "*updateTexImage*",
+      "*vkQueuePresentKHR*",
+      "CrRendererMain*",
+      "DrawFrame*",
+      "GameThread*",
+      "GodotMain*",
+      "RHIThread*",
+      "RenderThread",
+      "UnityMain*",
+      "VizCompositor",
+      "VizCompositor*",
+      "VizCompositorThread",
+      "VizCompositorThread*",
+      "main",
+      "surfaceflinger"
+    ]
+  },
+  "id": "rendering_pipeline_detection",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "应用包名 (可选，用于过滤)",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "slices.with_context",
+      "android.frames.timeline"
+    ],
+    "required_tables": [
+      "slice",
+      "thread_track",
+      "thread",
+      "process"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/rendering_pipeline_detection.skill.yaml",
+    "sha256": "87f939ac151574036322b3c254144ce82fb5750075efcb49168175f093ad5569"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "score_pipelines",
+      "name": "计算管线类型评分 (YAML 驱动)",
+      "query_id": "rendering_pipeline_detection/score_pipelines",
+      "result_dependencies": [],
+      "save_as": "pipeline_scores",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "determine_pipeline",
+      "name": "确定主管线 (YAML 驱动)",
+      "query_id": "rendering_pipeline_detection/determine_pipeline",
+      "result_dependencies": [
+        "pipeline_scores"
+      ],
+      "save_as": "pipeline_result",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "subvariants",
+      "name": "确定子变体",
+      "query_id": "rendering_pipeline_detection/subvariants",
+      "result_dependencies": [],
+      "save_as": "subvariants",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "trace_requirements",
+      "name": "检查采集完整性",
+      "query_id": "rendering_pipeline_detection/trace_requirements",
+      "result_dependencies": [],
+      "save_as": "trace_requirements",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "active_rendering_processes",
+      "name": "识别活跃渲染进程",
+      "query_id": "rendering_pipeline_detection/active_rendering_processes",
+      "result_dependencies": [],
+      "save_as": "active_rendering_processes",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "layer_signals",
+      "name": "SF Layer 数与名字模式 (辅助证据)",
+      "query_id": "rendering_pipeline_detection/layer_signals",
+      "result_dependencies": [],
+      "save_as": "layer_signals",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "extra_rhythm_signals",
+      "name": "额外节奏源 (辅助证据)",
+      "query_id": "rendering_pipeline_detection/extra_rhythm_signals",
+      "result_dependencies": [],
+      "save_as": "extra_rhythm_signals",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "bufferqueue_path_signals",
+      "name": "BufferQueue 路径证据",
+      "query_id": "rendering_pipeline_detection/bufferqueue_path_signals",
+      "result_dependencies": [],
+      "save_as": "bufferqueue_path_signals",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "4.0",
+  "workflow": "rendering-pipeline"
+}

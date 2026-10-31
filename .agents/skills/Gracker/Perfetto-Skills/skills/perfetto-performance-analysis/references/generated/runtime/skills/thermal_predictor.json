@@ -1,0 +1,86 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "cpufreq"
+    ]
+  },
+  "id": "thermal_predictor",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "default": 30,
+      "description": "平均频率降幅高风险阈值（%）",
+      "name": "high_drop_threshold_pct",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 15,
+      "description": "平均频率降幅中风险阈值（%）",
+      "name": "medium_drop_threshold_pct",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 50,
+      "description": "频率大幅下降核心占比高风险阈值（%）",
+      "name": "high_core_ratio_threshold_pct",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 25,
+      "description": "频率大幅下降核心占比中风险阈值（%）",
+      "name": "medium_core_ratio_threshold_pct",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 30,
+      "description": "单核心频率大幅下降判定阈值（%）",
+      "name": "core_drop_threshold_pct",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "counter",
+      "cpu_counter_track"
+    ]
+  },
+  "query_id": "thermal_predictor/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/thermal_predictor.skill.yaml",
+    "sha256": "ba31bdaed9a46dcc8234edf52e0b5fb92c1d869542ae6e78dcca0e79f5e33422"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "power-thermal"
+}

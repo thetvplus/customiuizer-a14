@@ -1,0 +1,209 @@
+GENERATED FILE - DO NOT EDIT.
+Source: backend/skills/pipelines/variable_refresh_rate.skill.yaml
+Source SHA-256: edd77a4cea13be86568ffc8a2e5ef058b0b41ed2341850531c2c9cb8a23b2a23
+# 可变刷新率 (VRR)
+
+This reference is the portable Agent Skill projection of the source definition. Execute SQL with `perfetto_query.py`; bind declared scalar or JSON-array inputs through `--param`, load prerequisites through `--module`, and pass non-empty saved rows from prior steps through `--result`; dotted fields and numeric indexes select saved scalar values. Evaluate conditions and dependent Skill calls in the listed order.
+
+## Overview
+
+```yaml
+name: pipeline_variable_refresh_rate
+version: '1.0'
+type: pipeline_definition
+category: rendering
+```
+
+## Metadata
+
+```yaml
+pipeline_id: VARIABLE_REFRESH_RATE
+display_name: 可变刷新率 (VRR)
+description: VRR/ARR + FrameTimeline 动态刷新率
+icon: refresh
+family: specialized
+doc_path: rendering_pipelines/S01_rendering_types_overview.md
+s_article_ref: S01
+four_features:
+  producer_threads: []
+  expected_layer_count: any
+  bufferqueue_path: ANY
+  extra_rhythm_sources:
+  - setFrameRate_API
+  - setFrameRateCategory_API
+  - ARR_hardware_support
+deviation_anchors: cross_cutting_feature_at_anchor_7_to_12
+non_primary_note: '此 pipeline_id 已在 NON_PRIMARY_PIPELINE_IDS 中，且使用 GLOBAL_SCOPE_PIPELINE_IDS（信号在 SF 进程而不是 App 进程）。
+
+  Detection 改动只影响 features list。
+
+  '
+api_evolution: '版本演进：
+
+  - Android 11+: Surface.setFrameRate（声明 surface 期望帧率）
+
+  - Android 14+: View.setRequestedFrameRate / Compose Modifier.requestedFrameRate（View 级帧率优先级）
+
+  - Android 16+: Display.hasArrSupport / Display.getSuggestedFrameRate（主动查询 ARR 能力）
+
+  '
+jank_decoupling: 'VRR/ARR 节省的是功耗、抖动和高频段浪费，不是 deadline。
+
+  一帧已经 miss deadline 时改变刷新率不能救它（FrameTimeline expected_frame_timeline_slice 仍按当前刷新率算 deadline）。
+
+  '
+```
+
+## Detection
+
+```yaml
+required_signals:
+- thread: SurfaceFlinger
+  min_count: 1
+scoring_signals:
+- signal: has_frame_timeline
+  slice_pattern: '*FrameTimeline*'
+  min_count: 5
+  weight: 40
+- signal: has_set_frame_rate
+  slice_pattern: '*setFrameRate*'
+  weight: 15
+- signal: has_frame_rate_vote
+  slice_pattern: '*FrameRateVote*'
+  weight: 5
+- signal: has_set_frame_rate_category
+  slice_pattern: '*setFrameRateCategory*'
+  weight: 6
+- signal: has_frame_rate_category
+  slice_pattern: '*FRAME_RATE_CATEGORY*'
+  weight: 6
+- signal: has_display_mode
+  slice_pattern: '*DisplayMode*'
+  weight: 8
+- signal: has_refresh_rate
+  slice_pattern: '*RefreshRate*'
+  weight: 7
+```
+
+## Teaching model
+
+```yaml
+source: rendering_pipelines/S01_rendering_types_overview.md
+```
+
+## Analysis guidance
+
+```yaml
+common_issues:
+- id: vrr_miss
+  name: VRR 目标未达
+  description: 帧率低于 VRR 目标刷新率
+  detection_skill: jank_frame_detail
+- id: vrr_does_not_save_jank
+  name: VRR 不能救 missed deadline 的帧
+  description: 'VRR/ARR 改的是显示策略（功耗/抖动/高频段浪费），不改单帧的 deadline。
+
+    FrameTimeline expected_frame_timeline_slice 仍按当前刷新率算 deadline，
+
+    生产或合成超 budget 时 jank 该出现还是出现。
+
+    '
+  detection_skill: jank_frame_detail
+- id: setframerate_called_excessively
+  name: setFrameRate 调用过频
+  description: 'setFrameRate 是声明性 API（一次性表达期望帧率），频繁调用引发 SurfaceFlinger 反复重投票 DisplayMode，
+
+    增加 SF 开销。设计上应一次性声明，仅在场景切换时调整。
+
+    '
+  detection_skill: sf_frame_consumption
+- id: framerate_vote_competition_multi_layer
+  name: 多 layer 帧率投票竞争
+  description: '多 layer 同时活跃时（视频 30fps + UI 60fps + IME 120Hz）SF 需协调最终 DisplayMode。
+
+    投票策略由 SF 决定，可能不是简单取最高。S01 §"应用侧能影响刷新率的入口"。
+
+    '
+  detection_skill: sf_layer_count_in_range
+recommended_skills:
+- scrolling_analysis
+- jank_frame_detail
+- vrr_detection
+```
+
+## Optional UI metadata
+
+The following auto-pin instructions are SmartPerfetto UI hints. They are optional in a portable agent workflow.
+
+```yaml
+instructions:
+- pattern: ^VSYNC-app$
+  match_by: name
+  priority: 1
+  reason: VSync (App 开始生产帧)
+- pattern: ^main(\s+\d+)?$
+  match_by: name
+  priority: 2
+  reason: UI 构建 (生产)
+  expand: true
+  smart_filter:
+    enabled: true
+    description: 仅 Pin 活跃渲染进程的 main 线程
+    detection_sql: "SELECT DISTINCT p.name as process_name, COUNT(*) as frame_count\nFROM slice s\nJOIN thread_track tt ON\
+      \ s.track_id = tt.id\nJOIN thread t ON tt.utid = t.utid\nJOIN process p ON t.upid = p.upid\nWHERE t.name = 'RenderThread'\n\
+      \  AND s.name GLOB 'DrawFrame*'\n  AND p.name IS NOT NULL\n  AND p.name NOT LIKE 'com.android.systemui%'\n  AND p.name\
+      \ NOT LIKE 'system_server%'\n  AND p.name NOT LIKE '/system/%'\nGROUP BY p.upid\nHAVING frame_count > 5\nORDER BY frame_count\
+      \ DESC\nLIMIT 10\n"
+    fallback_sql: 'SELECT DISTINCT p.name as process_name, COUNT(*) as slice_count
+
+      FROM slice s
+
+      JOIN thread_track tt ON s.track_id = tt.id
+
+      JOIN thread t ON tt.utid = t.utid
+
+      JOIN process p ON t.upid = p.upid
+
+      WHERE t.name = ''main''
+
+      GROUP BY p.upid
+
+      HAVING slice_count > 10
+
+      ORDER BY slice_count DESC
+
+      LIMIT 10
+
+      '
+- pattern: ^RenderThread(\s+\d+)?$
+  match_by: name
+  priority: 3
+  reason: 帧渲染 (传输)
+  expand: true
+  smart_filter:
+    enabled: true
+    detection_sql: "SELECT DISTINCT p.name as process_name, COUNT(*) as frame_count\nFROM slice s\nJOIN thread_track tt ON\
+      \ s.track_id = tt.id\nJOIN thread t ON tt.utid = t.utid\nJOIN process p ON t.upid = p.upid\nWHERE t.name = 'RenderThread'\n\
+      \  AND s.name GLOB 'DrawFrame*'\n  AND p.name IS NOT NULL\nGROUP BY p.upid\nHAVING frame_count > 5\n"
+- pattern: VSYNC
+  match_by: name
+  priority: 4
+  reason: 动态刷新率
+- pattern: FrameTimeline
+  match_by: name
+  priority: 5
+  reason: 帧时间线
+- pattern: ^VSYNC-sf$
+  match_by: name
+  priority: 5.5
+  reason: VSync (SurfaceFlinger 消费/合成)
+- pattern: ^BufferTX
+  match_by: name
+  priority: 6
+  reason: BufferTX (SurfaceFlinger 事务)
+- pattern: ^[sS]urface[fF]linger
+  match_by: name
+  priority: 7
+  reason: VRR 合成/显示
+  main_thread_only: true
+```

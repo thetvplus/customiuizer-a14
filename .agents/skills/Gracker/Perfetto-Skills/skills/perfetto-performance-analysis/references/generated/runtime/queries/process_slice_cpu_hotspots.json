@@ -1,0 +1,139 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "status": "supported"
+        },
+        "probe_capabilities": [
+          "slices",
+          "thread_states"
+        ]
+      },
+      "id": "process_slice_cpu_hotspots/root",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/process_slice_cpu_hotspots/query.sql",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "sha256": "22ad4dffb30af1c4558a3a563d053af2a5ae2e3f4c3cb7e316d71fb815bf5d47",
+      "signal_patterns": [
+        "%",
+        "GPU completion",
+        "RenderThread",
+        "[0-9]*.raster",
+        "[0-9]*.ui"
+      ],
+      "skill_id": "process_slice_cpu_hotspots",
+      "source": {
+        "path": "backend/skills/atomic/process_slice_cpu_hotspots.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "fea05288f19596170a55ed5350e9ae1fe2f1a6a3eda249948f57db8b1c894236"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "slice",
+          "thread_track",
+          "thread",
+          "process",
+          "thread_state"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "root",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "package",
+          "process_name"
+        ],
+        "parameters": [
+          "end_ts",
+          "min_cpu_ns",
+          "package",
+          "process_name",
+          "slice_name",
+          "start_ts",
+          "thread_scope",
+          "top_k",
+          "upid"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": [
+          "__process_scope.upid"
+        ]
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "process_slice_cpu_hotspots"
+}

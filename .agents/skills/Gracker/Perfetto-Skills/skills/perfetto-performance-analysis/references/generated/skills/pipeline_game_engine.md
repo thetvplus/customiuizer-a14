@@ -1,0 +1,216 @@
+GENERATED FILE - DO NOT EDIT.
+Source: backend/skills/pipelines/game_engine.skill.yaml
+Source SHA-256: f757768862f521ac5c841eea741273b89f3bf3b80090a1bf2f18b605d629e7bd
+# 游戏引擎
+
+This reference is the portable Agent Skill projection of the source definition. Execute SQL with `perfetto_query.py`; bind declared scalar or JSON-array inputs through `--param`, load prerequisites through `--module`, and pass non-empty saved rows from prior steps through `--result`; dotted fields and numeric indexes select saved scalar values. Evaluate conditions and dependent Skill calls in the listed order.
+
+## Overview
+
+```yaml
+name: pipeline_game_engine
+version: '1.0'
+type: pipeline_definition
+category: rendering
+```
+
+## Metadata
+
+```yaml
+pipeline_id: GAME_ENGINE
+display_name: 游戏引擎
+description: Unity/Unreal/Godot 等游戏引擎渲染
+icon: gamepad
+family: specialized
+doc_path: rendering_pipelines/S13_game_type.md
+s_article_ref: S13
+four_features:
+  producer_threads:
+  - UnityMain
+  - UnityGfx*
+  - GameThread
+  - RenderThread
+  - RHIThread
+  - GodotMain
+  - TaskGraph*
+  expected_layer_count: 1
+  bufferqueue_path: ENGINE_SWAPCHAIN_TO_INDEPENDENT_SURFACE
+  extra_rhythm_sources:
+  - swappy_frame_pacing
+  - engine_loop
+  - achoreographer
+deviation_anchors: engine_main_loop_anchor_2_3_4_5_6
+subvariants_note: '文章 S13 把 Game 类型拆为 6 个子变种：
+
+  - NATIVE_ENGINE_VULKAN（重度 3D 引擎，Vulkan swapchain）
+
+  - NATIVE_ENGINE_GLES（GLES 路径）
+
+  - NATIVE_ENGINE_SWAPPY（Swappy frame pacing 包装）
+
+  - MINIGAME_CONTAINER（微信/抖音小游戏，JS + GLES）
+
+  - CLOUD_GAME_DECODER（本地是解码 + SurfaceView，等同 S12）
+
+  - XR_GAME_TIMEWARP（AR/VR，引擎 + Camera + SLAM + timewarp）
+
+  当前 variant 主要覆盖 NATIVE_ENGINE_*；其余形态按 S13 的子路径解释，
+
+  不因单一引擎或显示特征自动升级为新的主类型。
+
+  '
+cross_frame_lag: 'Game/Render/RHI 三线程跨帧 lag（通常 1-3 帧）：每个时刻三线程在处理不同帧，
+
+  不能按 wall-clock 对齐到"同一帧"，要用 frame_id marker 跨线程关联。
+
+  '
+```
+
+## Detection
+
+```yaml
+scoring_signals:
+- signal: has_unity_main
+  thread_pattern: UnityMain*
+  weight: 85
+- signal: has_unity_gfx
+  thread_pattern: UnityGfx*
+  weight: 85
+- signal: has_unreal_game
+  thread_pattern: GameThread*
+  weight: 85
+- signal: has_unreal_rhi
+  thread_pattern: RHIThread*
+  weight: 85
+- signal: has_godot
+  thread_pattern: GodotMain*
+  weight: 80
+- signal: has_cocos_lower
+  thread_pattern: '*cocos*'
+  weight: 35
+- signal: has_cocos_upper
+  thread_pattern: '*Cocos*'
+  weight: 40
+- signal: has_unity_slice
+  slice_pattern: '*Unity*'
+  weight: 45
+- signal: has_player_loop
+  slice_pattern: '*PlayerLoop*'
+  weight: 30
+- signal: has_unreal_slice
+  slice_pattern: '*Unreal*'
+  weight: 75
+- signal: has_swappy
+  slice_pattern: '*Swappy*'
+  weight: 10
+- signal: has_frame_pacing
+  slice_pattern: '*FramePacing*'
+  weight: 5
+```
+
+## Teaching model
+
+```yaml
+source: rendering_pipelines/S13_game_type.md
+```
+
+## Analysis guidance
+
+```yaml
+common_issues:
+- id: cpu_bound
+  name: CPU 瓶颈
+  description: 游戏逻辑/物理/AI 过载
+  detection_skill: cpu_analysis
+- id: gpu_bound
+  name: GPU 瓶颈
+  description: DrawCall 过多或 Shader 复杂
+  detection_skill: gpu_analysis
+- id: triple_thread_attribution_required
+  name: Game/Render/RHI 三线程归因
+  description: 'UE: GameThread / RenderThread / RHIThread 三线程并行处理不同帧（cross-frame lag 通常 1-3 帧）。
+
+    Unity: UnityMain / UnityGfx 双线程模型。任一线程超 budget 都拖整体 FPS。
+
+    归因要按 frame_id marker 跨线程关联，不能按 wall-clock 对齐。
+
+    '
+  detection_skill: game_fps_analysis
+- id: vk_acquire_next_image_blocked
+  name: vkAcquireNextImageKHR 长等
+  description: 'Native Vulkan 路径下 vkAcquireNextImageKHR 长等通常不是 GPU 慢——
+
+    是 release fence 晚（HWC 消费慢）或 swapchain image 用完。
+
+    '
+  detection_skill: present_fence_timing
+- id: swappy_frame_pacing_force_skip
+  name: Swappy 强制跳帧到下个 vsync
+  description: 'Swappy(SwappyVk_queuePresent / SwappyGL_swap) 检测到帧超 budget 时强制推迟到下个 vsync——
+
+    这是设计行为，但导致有效帧率从 60→30。Trace 中表现为帧间隔从 16.67ms 突变 33.33ms。
+
+    '
+  detection_skill: vsync_phase_alignment
+- id: pipeline_state_object_creation_jank
+  name: PSO/pipeline 创建首帧卡顿
+  description: 'Vulkan vkCreateGraphicsPipelines / GLES first-use shader compilation 引发首帧或首场景卡顿。
+
+    缓解：pipeline cache、shader warmup、PSO 预热表。
+
+    '
+  detection_skill: jank_frame_detail
+- id: hwc_client_fallback_due_to_overlay_competition
+  name: 系统浮层挤占触发 HWC client composition
+  description: 'Dialog/IME/Toast/system overlay 增加同屏 layer 数 → HWC plane 不够 → game layer 被打回 client composition →
+
+    SF GPU 合成成本上升，挤占 game 自己的 GPU 预算。
+
+    '
+  detection_skill: sf_layer_count_in_range
+recommended_skills:
+- game_fps_analysis
+- cpu_analysis
+- gpu_analysis
+- present_fence_timing
+```
+
+## Optional UI metadata
+
+The following auto-pin instructions are SmartPerfetto UI hints. They are optional in a portable agent workflow.
+
+```yaml
+instructions:
+- pattern: ^VSYNC-app$
+  match_by: name
+  priority: 1
+  reason: VSync (开始生产帧)
+- pattern: UnityMain|UnityGfx|GameThread
+  match_by: name
+  priority: 2
+  reason: 游戏引擎线程 (生产)
+  smart_filter:
+    enabled: true
+    description: 仅 Pin 活跃渲染进程的游戏引擎线程
+- pattern: ^RenderThread(\s+\d+)?$
+  match_by: name
+  priority: 3
+  reason: GPU 渲染 (传输)
+  expand: true
+  smart_filter:
+    enabled: true
+    description: 仅 Pin 活跃渲染进程的 RenderThread（部分引擎可能不使用）
+- pattern: ^VSYNC-sf$
+  match_by: name
+  priority: 5.5
+  reason: VSync (SurfaceFlinger 消费/合成)
+- pattern: ^BufferTX
+  match_by: name
+  priority: 6
+  reason: BufferTX (SurfaceFlinger 事务)
+- pattern: ^[sS]urface[fF]linger
+  match_by: name
+  priority: 7
+  reason: 最终合成/显示
+  main_thread_only: true
+```

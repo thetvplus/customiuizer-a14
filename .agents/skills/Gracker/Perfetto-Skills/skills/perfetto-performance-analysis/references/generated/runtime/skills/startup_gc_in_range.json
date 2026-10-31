@@ -1,0 +1,76 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "branches": [
+          "api<=28",
+          "api29-32",
+          "api>=33"
+        ],
+        "id": "official_android_startup_tags",
+        "source": "perfetto stdlib android/startup/startups.sql"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "startup_gc_in_range",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "startup_id",
+      "required": false,
+      "type": "integer"
+    },
+    {
+      "name": "startup_type",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "top_k",
+      "required": false,
+      "type": "integer"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.startup.startups"
+    ],
+    "required_tables": []
+  },
+  "query_id": "startup_gc_in_range/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/startup_gc_in_range.skill.yaml",
+    "sha256": "7dce1b22485cd556843bf0cd7c97fe97cd4c0fa80467c795a47511d397edcf34"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "startup"
+}
