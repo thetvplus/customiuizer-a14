@@ -28,10 +28,6 @@ This index maps a developer's symptom or API of interest to the skill that resol
 | Stability regressions slip into `main` | No CI gate on stability output | [stability/enforcing-stability-in-ci](stability/enforcing-stability-in-ci/SKILL.md) |
 | Why is class X classified as `runtime` / `unknown` / `unstable`? | Compiler inference subtleties (generics, cycles, separate compilation) | [stability/understanding-stability-inference](stability/understanding-stability-inference/SKILL.md) |
 | Performance degrades but no clear starting point | Need an end-to-end audit | [audit/auditing-compose-performance](audit/auditing-compose-performance/SKILL.md) |
-| Want instant UI feedback on a real device without rebuilds | HotSwan not installed or configured | [hot-reload/setting-up-compose-hotswan](hot-reload/setting-up-compose-hotswan/SKILL.md) |
-| Hot reload triggered a full rebuild instead of swapping classes | Schema change (parameter add, constructor edit, inline function, new resource ID) | [hot-reload/understanding-hot-reload-limits](hot-reload/understanding-hot-reload-limits/SKILL.md) |
-| Scroll position or dialog state lost after a hot reload | Reload escalated to tier 2 or tier 3; local `remember` not Saveable | [hot-reload/preserving-state-across-reloads](hot-reload/preserving-state-across-reloads/SKILL.md) |
-| AI agent should edit, reload, and screenshot the device autonomously | No MCP loop wired up | [hot-reload/iterating-with-ai-and-mcp](hot-reload/iterating-with-ai-and-mcp/SKILL.md) |
 | Want stability feedback while editing without running a Gradle build | Compose Stability Analyzer IDEA plugin not installed or disabled | [stability/using-stability-analyzer-ide-plugin](stability/using-stability-analyzer-ide-plugin/SKILL.md) |
 | Need to see which composables a single change would invalidate downstream | No call-graph visualization in place | [stability/visualizing-recomposition-cascades](stability/visualizing-recomposition-cascades/SKILL.md) |
 | Want a live in-IDE heatmap of recomposition counts during interaction | Heatmap toggle off or `@TraceRecomposition` not applied | [stability/visualizing-recomposition-cascades](stability/visualizing-recomposition-cascades/SKILL.md), [measurement/tracing-recompositions-at-runtime](measurement/tracing-recompositions-at-runtime/SKILL.md) |
@@ -62,10 +58,6 @@ This index maps a developer's symptom or API of interest to the skill that resol
 | R8 full mode, `proguard-android-optimize.txt`, Compose consumer rules | [build/configuring-r8-for-compose](build/configuring-r8-for-compose/SKILL.md) |
 | Live Literals, debug vs release Compose perf, interpreted mode | [measurement/testing-compose-in-release-mode](measurement/testing-compose-in-release-mode/SKILL.md) |
 | End-to-end audit orchestration | [audit/auditing-compose-performance](audit/auditing-compose-performance/SKILL.md) |
-| `com.github.skydoves.compose.hotswan.compiler` Gradle plugin, `hotSwanCompiler { enabled, debugOnly }` DSL, HotSwan IDE plugin | [hot-reload/setting-up-compose-hotswan](hot-reload/setting-up-compose-hotswan/SKILL.md) |
-| ART class redefinition limits, supported vs unsupported change types | [hot-reload/understanding-hot-reload-limits](hot-reload/understanding-hot-reload-limits/SKILL.md) |
-| Three tier recomposition (targeted, composition reset, Activity recreate), `rememberSaveable`, `LazyListState` saveability | [hot-reload/preserving-state-across-reloads](hot-reload/preserving-state-across-reloads/SKILL.md) |
-| `hotswan_get_status`, `hotswan_reload`, `hotswan_take_screenshot`, `hotswan_start_snapshot`, `hotswan_stop_snapshot`, `hotswan_select_variant`, `hotswan_build_and_install` MCP tools | [hot-reload/iterating-with-ai-and-mcp](hot-reload/iterating-with-ai-and-mcp/SKILL.md) |
 | Compose Stability Analyzer IDEA plugin: `StabilityLineMarkerProvider` gutter icons, `StabilityDocumentationProvider` hover tooltips, `StabilityInlayHintsProvider` inline hints, `StabilityInspection` inspection (`UnstableComposable`), `AddTraceRecompositionIntention` quick fix | [stability/using-stability-analyzer-ide-plugin](stability/using-stability-analyzer-ide-plugin/SKILL.md) |
 | Compose Stability Analyzer tool window (Explorer, Cascade, Heatmap tabs), `AnalyzeCascadeAction`, `ToggleHeatmapAction`, `ClearHeatmapDataAction`, `AdbLogcatService`, `HeatmapInlayManager` | [stability/visualizing-recomposition-cascades](stability/visualizing-recomposition-cascades/SKILL.md) |
 | `Settings → Tools → Compose Stability Analyzer` configurable: `isStabilityCheckEnabled`, `isStrongSkippingEnabled`, `showGutterIcons`, `showInlineHints`, `showOnlyUnstableHints`, RGB color overrides, `stabilityConfigurationPath` | [stability/using-stability-analyzer-ide-plugin](stability/using-stability-analyzer-ide-plugin/SKILL.md) |
@@ -119,10 +111,6 @@ Confirm the fix landed and lock it in so regressions cannot slip back. Build con
 
 A development time loop separate from the production performance loop. Use these skills during active UI work to compress the edit, build, install, navigate, observe cycle into one save.
 
-- [hot-reload/setting-up-compose-hotswan](hot-reload/setting-up-compose-hotswan/SKILL.md)
-- [hot-reload/understanding-hot-reload-limits](hot-reload/understanding-hot-reload-limits/SKILL.md)
-- [hot-reload/preserving-state-across-reloads](hot-reload/preserving-state-across-reloads/SKILL.md)
-- [hot-reload/iterating-with-ai-and-mcp](hot-reload/iterating-with-ai-and-mcp/SKILL.md)
 
 ## End-to-end audit
 

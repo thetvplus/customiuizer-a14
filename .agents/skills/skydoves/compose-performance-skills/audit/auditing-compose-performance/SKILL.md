@@ -1,6 +1,6 @@
 ---
 name: auditing-compose-performance
-description: Use this skill to run an end-to-end Jetpack Compose performance audit when the symptom is broad ("the app feels sluggish", "scroll is rough everywhere", "we're starting a perf sprint", "what should we fix first?"). Orchestrates the four-phase Measure → Diagnose → Fix → Verify loop by sequencing the 25 focused skills (release-mode setup, R8, Baseline Profiles, Compose Compiler reports, stability inference, Layout Inspector, `@TraceRecomposition`, stabilization, strong skipping, phase-deferral, derivedStateOf, lazy layouts, lazy prefetch, Modifier.Node, modifier ordering, flow collection, effects, CI gates, hot-reload) and produces a written audit report with Before/After Macrobenchmark numbers. Use when the developer wants a perf sprint kickoff, a pre-release perf gate, onboarding to a perf-troubled codebase, or a written deliverable. Use when the user mentions "audit", "perf review", "perf sprint", "where do I start", or has no specific symptom yet.
+description: Use this skill to run an end-to-end Jetpack Compose performance audit when the symptom is broad ("the app feels sluggish", "scroll is rough everywhere", "we're starting a perf sprint", "what should we fix first?"). Orchestrates the four-phase Measure → Diagnose → Fix → Verify loop by sequencing the retained focused skills (release-mode setup, R8, Baseline Profiles, Compose Compiler reports, stability inference, Layout Inspector, `@TraceRecomposition`, stabilization, strong skipping, phase-deferral, derivedStateOf, lazy layouts, lazy prefetch, Modifier.Node, modifier ordering, flow collection, effects, CI gates) and produces a written audit report with Before/After Macrobenchmark numbers. Use when the developer wants a perf sprint kickoff, a pre-release perf gate, onboarding to a perf-troubled codebase, or a written deliverable. Use when the user mentions "audit", "perf review", "perf sprint", "where do I start", or has no specific symptom yet.
 license: Apache-2.0. See LICENSE for complete terms.
 metadata:
   author: Jaewoong Eum (skydoves)
@@ -19,7 +19,7 @@ metadata:
 
 # Auditing Compose Performance — the Measure → Diagnose → Fix → Verify orchestrator
 
-This is the highest-level entry point in the `compose-performance-skills` library. When the developer's symptom is broad — "the app feels sluggish", "scroll is rough everywhere", "we're starting a perf sprint", "where do we even start?" — Claude enters here. The orchestrator does **NOT** replace the 25 focused skills; it sequences them through a four-phase loop and produces a written audit report at the end.
+This is the highest-level entry point in the `compose-performance-skills` library. When the developer's symptom is broad — "the app feels sluggish", "scroll is rough everywhere", "we're starting a perf sprint", "where do we even start?" — Claude enters here. The orchestrator does **NOT** replace the retained focused skills; it sequences them through a four-phase loop and produces a written audit report at the end.
 
 The phases are **Measure → Diagnose → Fix → Verify**, run in order, never skipped. Phase 1 establishes baseline numbers from a release + R8 build on a real device, because anything else is fiction. Phase 2 turns symptoms into named causes from the Compose Compiler reports, Layout Inspector, and runtime tracing. Phase 3 applies one targeted fix at a time, re-measuring between fixes so the delta of each change is provable. Phase 4 regenerates the Baseline Profile, locks in a CI stability gate, and commits the baseline files so regressions cannot slip back.
 
@@ -241,7 +241,7 @@ RIGHT: "Scroll P90 dropped from 18ms to 11ms. Cold startup median dropped from
 
 ## References
 
-### Sibling skills (the 25 focused skills this orchestrator sequences)
+### Sibling skills (the retained focused skills this orchestrator sequences)
 
 Phase 1 — Measure:
 - [`../../measurement/testing-compose-in-release-mode/SKILL.md`](../../measurement/testing-compose-in-release-mode/SKILL.md) — debug builds lie; measure release + R8.
@@ -274,10 +274,6 @@ Phase 4 — Verify:
 - [`../../measurement/generating-baseline-profiles/SKILL.md`](../../measurement/generating-baseline-profiles/SKILL.md) — regenerate after fixes; commit `baseline-prof.txt`.
 
 Hot-reload (developer-loop velocity, optional but recommended):
-- [`../../hot-reload/setting-up-compose-hotswan/SKILL.md`](../../hot-reload/setting-up-compose-hotswan/SKILL.md) — install and configure HotSwan for sub-second iteration.
-- [`../../hot-reload/preserving-state-across-reloads/SKILL.md`](../../hot-reload/preserving-state-across-reloads/SKILL.md) — keep `remember`/`rememberSaveable` state through a reload.
-- [`../../hot-reload/understanding-hot-reload-limits/SKILL.md`](../../hot-reload/understanding-hot-reload-limits/SKILL.md) — what reloads cleanly vs what forces a full rebuild.
-- [`../../hot-reload/iterating-with-ai-and-mcp/SKILL.md`](../../hot-reload/iterating-with-ai-and-mcp/SKILL.md) — pair HotSwan with an MCP-aware AI tool for tight loops.
 
 Symptom and API lookup: [`../../INDEX.md`](../../INDEX.md).
 

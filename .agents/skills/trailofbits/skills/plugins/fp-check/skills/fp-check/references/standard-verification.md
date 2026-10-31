@@ -4,7 +4,7 @@ Linear single-pass checklist for straightforward bugs. No task tracking — work
 
 ## Escalation Checkpoints
 
-Two points in this checklist may trigger escalation to [deep-verification.md]({baseDir}/references/deep-verification.md):
+Two points in this checklist may trigger escalation to [deep-verification.md](deep-verification.md):
 
 1. **After Step 1 (Data Flow)**: Escalate if 3+ trust boundaries, callbacks/async control flow, or ambiguous validation chain
 2. **After Step 5 (Devil's Advocate)**: Escalate if any question produces genuine uncertainty you cannot resolve
@@ -21,7 +21,7 @@ Trace data from source to the alleged vulnerability sink.
 - Identify all validation and sanitization between source and sink
 - Check API contracts — many APIs have built-in bounds protection that prevents the alleged issue
 - Check for environmental protections (compiler, runtime, OS, framework) that prevent exploitation entirely (not just raise the bar)
-- Apply class-specific checks from [bug-class-verification.md]({baseDir}/references/bug-class-verification.md)
+- Apply class-specific checks from [bug-class-verification.md](bug-class-verification.md)
 
 **Key pitfall**: Analyzing the vulnerable code in isolation. Conditional logic upstream may make the vulnerability mathematically unreachable. Trace the full validation chain.
 
@@ -32,7 +32,7 @@ Trace data from source to the alleged vulnerability sink.
 Prove the attacker can trigger the vulnerability.
 
 - **Attacker control**: Prove the attacker controls data reaching the vulnerable operation. Internal storage set by trusted components is not attacker-controlled.
-- **Bounds proof**: For integer/bounds issues, create an explicit algebraic proof using the template in [evidence-templates.md]({baseDir}/references/evidence-templates.md). Verify: IF validation_check_passes THEN bounds_guarantee_holds.
+- **Bounds proof**: For integer/bounds issues, create an explicit algebraic proof using the template in [evidence-templates.md](evidence-templates.md). Verify: IF validation_check_passes THEN bounds_guarantee_holds.
 - **Race feasibility**: For race conditions, prove concurrent access is actually possible. Single-threaded initialization and synchronized contexts cannot have races.
 
 ### Step 3: Impact
@@ -52,7 +52,7 @@ Attacker controls: [what input, how]
 Trigger: [pseudocode showing the exploit path]
 ```
 
-See [evidence-templates.md]({baseDir}/references/evidence-templates.md) for the full PoC template.
+See [evidence-templates.md](evidence-templates.md) for the full PoC template.
 
 ### Step 5: Devil's Advocate Spot-Check
 
@@ -75,4 +75,4 @@ Answer these 7 questions. If any produces genuine uncertainty, escalate to deep 
 
 ### Step 6: Gate Review
 
-Apply all six gates from [gate-reviews.md]({baseDir}/references/gate-reviews.md) and all 13 items from [false-positive-patterns.md]({baseDir}/references/false-positive-patterns.md) to reach a verdict.
+Apply all six gates from [gate-reviews.md](gate-reviews.md) and all 13 items from [false-positive-patterns.md](false-positive-patterns.md) to reach a verdict.

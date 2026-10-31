@@ -76,9 +76,9 @@ Resolve severity in this order (SARIF 2.1.0 section 3.27.10):
 4. `"warning"`, the SARIF default
 
 Every severity query in this skill starts from that resolution. In jq it is the
-`LEVEL_FN` definition in [{baseDir}/resources/jq-queries.md]({baseDir}/resources/jq-queries.md);
+`LEVEL_FN` definition in [{baseDir}/resources/jq-queries.md](resources/jq-queries.md);
 in Python it is `resolve_level(result, run)` in
-[{baseDir}/resources/sarif_helpers.py]({baseDir}/resources/sarif_helpers.py).
+[{baseDir}/resources/sarif_helpers.py](resources/sarif_helpers.py).
 
 ### Why Fingerprinting Matters
 
@@ -467,18 +467,18 @@ def check_for_regressions(baseline: str, current: str) -> int:
 
 ## Skill Resources
 
-For ready-to-use query templates, see [{baseDir}/resources/jq-queries.md]({baseDir}/resources/jq-queries.md):
+For ready-to-use query templates, see [{baseDir}/resources/jq-queries.md](resources/jq-queries.md):
 - 40+ jq queries for common SARIF operations
 - `LEVEL_FN` - the severity resolution every filtering query starts from
 - Severity filtering, rule extraction, aggregation patterns
 
-For Python utilities, see [{baseDir}/resources/sarif_helpers.py]({baseDir}/resources/sarif_helpers.py):
+For Python utilities, see [{baseDir}/resources/sarif_helpers.py](resources/sarif_helpers.py):
 - `resolve_level()` - Severity from the result or the rule it inherits from
 - `normalize_path()` - Handle tool-specific path formats
 - `compute_fingerprint()` - Rule, normalized path, line, and message
 - `deduplicate()` - Remove duplicates across runs
 
-Two SARIF fixtures live in [{baseDir}/resources/fixtures]({baseDir}/resources/fixtures),
+Two SARIF fixtures live in [{baseDir}/resources/fixtures](resources/fixtures),
 one with severity on the rules only and one with severity on the results. Each contains
 exactly one error, so a gate can be checked against a known answer before it is trusted.
 

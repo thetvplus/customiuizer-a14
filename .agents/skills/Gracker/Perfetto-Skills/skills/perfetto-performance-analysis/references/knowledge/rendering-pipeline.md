@@ -2,7 +2,7 @@
 
 Pipeline detection is architecture classification, not root-cause proof. Use
 required signals, exclusions, and weighted signals from the generated
-[pipeline definitions](../generated/pipelines/docs/index.md), then verify the
+[pipeline definitions](../generated/pipelines/docs/S01_rendering_types_overview.md), then verify the
 selected producer, buffer, compositor, fence, and display anchors in the trace.
 
 Keep these boundaries distinct:

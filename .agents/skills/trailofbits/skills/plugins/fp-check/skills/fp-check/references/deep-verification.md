@@ -57,7 +57,7 @@ For each bug (Bug #N), create one task per phase with the dependency structure b
 - Mark each task as in-progress when starting, completed only with concrete evidence
 - **Parallel sub-phases**: Launch independent sub-phases concurrently using the plugin's agents. Collect all results before proceeding to the next dependency gate.
 - **Dependency gates**: Never start a phase until all tasks it depends on are completed.
-- Apply all 13 checklist items from [false-positive-patterns.md]({baseDir}/references/false-positive-patterns.md) to each bug
+- Apply all 13 checklist items from [false-positive-patterns.md](false-positive-patterns.md) to each bug
 
 ## Agents
 
@@ -77,7 +77,7 @@ The task list above names every phase. Below are the key pitfalls and decision c
 
 ### Phase 1: Data Flow Analysis
 
-**1.1**: Map trust boundaries (internal/trusted vs external/untrusted) and trace data from source to alleged vulnerability. Apply class-specific verification from [bug-class-verification.md]({baseDir}/references/bug-class-verification.md). **Key pitfall**: Analyzing code in isolation without tracing the full validation chain. Conditional logic upstream may make the vulnerable code mathematically unreachable (see [false-positive-patterns.md]({baseDir}/references/false-positive-patterns.md) items 1 and 1a).
+**1.1**: Map trust boundaries (internal/trusted vs external/untrusted) and trace data from source to alleged vulnerability. Apply class-specific verification from [bug-class-verification.md](bug-class-verification.md). **Key pitfall**: Analyzing code in isolation without tracing the full validation chain. Conditional logic upstream may make the vulnerable code mathematically unreachable (see [false-positive-patterns.md](false-positive-patterns.md) items 1 and 1a).
 
 **1.2**: Check API contracts before claiming overflows — many APIs have built-in bounds protection that prevents the alleged issue regardless of inputs.
 
@@ -89,7 +89,7 @@ The task list above names every phase. Below are the key pitfalls and decision c
 
 **2.1**: Prove attacker controls the data reaching the vulnerability. **Key pitfall**: Assuming network/external data reaches the operation without tracing the actual path — internal storage set by trusted components is not attacker-controlled.
 
-**2.2**: Create explicit algebraic proofs for bounds-related issues. Use the template in [evidence-templates.md]({baseDir}/references/evidence-templates.md). Verify: IF validation_check_passes THEN bounds_guarantee_holds.
+**2.2**: Create explicit algebraic proofs for bounds-related issues. Use the template in [evidence-templates.md](evidence-templates.md). Verify: IF validation_check_passes THEN bounds_guarantee_holds.
 
 **2.3**: For race conditions, prove concurrent access is actually possible. **Key pitfall**: Assuming race conditions in single-threaded initialization or synchronized contexts.
 
@@ -109,7 +109,7 @@ The task list above names every phase. Below are the key pitfalls and decision c
 2. **Executable PoC** in the target language demonstrating the vulnerability (if feasible)
 3. **Unit test PoC** exercising the vulnerable code path with crafted inputs (if feasible)
 
-See [evidence-templates.md]({baseDir}/references/evidence-templates.md) for PoC templates.
+See [evidence-templates.md](evidence-templates.md) for PoC templates.
 
 **Negative PoC (Phase 4.4)**: Demonstrate the gap between normal operation and the exploit path — what preconditions must hold for the vulnerability to trigger, and why they don't hold under normal conditions.
 
@@ -136,8 +136,8 @@ Before final verdict, systematically challenge the vulnerability claim. Assume y
 12. Am I dismissing a real vulnerability because the exploit seems complex or unlikely?
 13. Am I inventing mitigations or validation logic that I haven't verified in the actual source code? Re-read the code after reaching a conclusion.
 
-See [evidence-templates.md]({baseDir}/references/evidence-templates.md) for the devil's advocate documentation template.
+See [evidence-templates.md](evidence-templates.md) for the devil's advocate documentation template.
 
 ## Gate Review
 
-Apply the six gates from [gate-reviews.md]({baseDir}/references/gate-reviews.md) to reach a verdict.
+Apply the six gates from [gate-reviews.md](gate-reviews.md) to reach a verdict.

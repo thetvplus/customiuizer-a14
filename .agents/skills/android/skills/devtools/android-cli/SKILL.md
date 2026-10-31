@@ -121,21 +121,24 @@ Use `adb shell input` for interacting with Android devices.
 Refer to the `"interactions"` property of an element for what interactions can be performed on a particular element.
 
 Interact with UI elements with their `center` coordinate or their `bounds` coordinates:
-`json
+```json
 {
 "key": -248568265,
 "class": "android.widget.Button",
 "bounds": "[138,9][167,38]",
 "center": "[152,23]"
-}`
+}
+```
 To tap on this button, you would execute `adb shell input tap 152 23`. This taps the center.
 
-    {
-      "key": 12487234,
-      "class": "com.example.ui.ScrollableList",
-      "bounds": "[100,200][400,600]",
-      "center": "[250,400]"
-    }
+```json
+{
+  "key": 12487234,
+  "class": "com.example.ui.ScrollableList",
+  "bounds": "[100,200][400,600]",
+  "center": "[250,400]"
+}
+```
 
 To scroll down on this list, you would execute `adb shell input swipe 250 400 250 200 500`. This swipes from the center to the top over 500ms.
 
@@ -161,7 +164,7 @@ screen` commands to evaluate Journeys. The instructions for device interaction
 apply here as well.
 
 A journey is an XML-specified test of an Android app's behavior. It consists of a list of `<action>` elements. For example:
-`xml
+```xml
 <journey name="My Journey">
 <description>
 A sample journey to illustrate the format
@@ -174,7 +177,8 @@ Tap the "Home" icon
 Verify that the app is on its Home screen
 </action>
 </actions>
-</journey>`
+</journey>
+```
 
 Evaluate a journey by proceeding through the `<actions>` list in sequential order. Evaluate each `<action>` block individually.
 A journey succeeds if all elements in the `<actions>` list succeed.
@@ -238,6 +242,7 @@ After evaluating the whole journey, output a markdown (.md) file describing the 
 
 The file should have the following format:
 
+```markdown
     # Journey: <Name of the journey>
 
     ## Results
@@ -261,6 +266,8 @@ The file should have the following format:
 
     <!-- Append nothing to the action header if the action was not evaluated because the journey execution ended early -->
     ### Action: Swipe down to view active notifications
+
+```
 
 ## Doc searching
 
@@ -296,6 +303,7 @@ Update the Android CLI using the `android update` command.
 
 ## `android help` output
 
+```text
     Usage: android [-Vhv] [--sdk=PARAM] [COMMAND]
       -h, --help       Shows the help message for the specified command
           --sdk=PARAM  Path to the Android SDK
@@ -861,3 +869,4 @@ Update the Android CLI using the `android update` command.
                     --sdk=PARAM  Path to the Android SDK
                 -v, --verbose    Enable verbose output for troubleshooting
                 -V, --version    Print version information and exit
+```

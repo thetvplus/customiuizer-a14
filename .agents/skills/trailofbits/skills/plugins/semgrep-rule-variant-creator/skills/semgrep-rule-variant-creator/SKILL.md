@@ -125,7 +125,7 @@ act on it. Answered separately, by running Semgrep: can Semgrep read this langua
 Perl has no frontend and Elixir's parser is Pro-only, and in both cases the bug class is
 present while the rule is ungradeable — a different finding from `NOT_APPLICABLE`, which
 claims the bug class is absent. See
-[applicability-analysis.md]({baseDir}/references/applicability-analysis.md)
+[applicability-analysis.md](references/applicability-analysis.md)
 for worked examples of each verdict.
 
 **2. Test creation** — write the test file first, in idiomatic target-language code. At
@@ -137,13 +137,13 @@ doing the thing correctly, since that is the false positive a port most often in
 it shows, because pattern shape follows AST shape rather than source resemblance. Keep the
 original's detection intent and mode; change the id to `<original-id>-<language>`, the
 `languages` key, and add `original-rule` and `ported-from` metadata. See
-[language-syntax-guide.md]({baseDir}/references/language-syntax-guide.md).
+[language-syntax-guide.md](references/language-syntax-guide.md).
 
 **4. Validation** — `semgrep --test` is the acceptance criterion, and it must report that
 all tests passed. Missed lines mean the pattern is narrower than the vulnerability;
 incorrect lines mean it is broader. The test file is the specification, so fix the rule to
 satisfy it. Stopping while tests still fail leaves the language unfinished, not done. See
-[workflow.md]({baseDir}/references/workflow.md) for reading a test failure and for
+[workflow.md](references/workflow.md) for reading a test failure and for
 troubleshooting when a pattern will not match or taint will not propagate.
 
 The acceptance criterion is one specific Semgrep: the version recorded when the rule was
