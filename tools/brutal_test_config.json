@@ -2,12 +2,11 @@
   "name": "A14",
   "schema_version": 2,
   "expected_branch": "main",
-  "coverage_target": 74,
-  "minimum_independent_kills": 11,
+  "coverage_target": 73,
+  "minimum_independent_kills": 10,
   "required_independent_mutations": [
     "observer pref key",
     "source test seam",
-    "feature semantics",
     "process matrix",
     "release metadata",
     "remove fetch-depth",
@@ -127,11 +126,6 @@
       "python",
       "tools/check_main_source_cleanliness.py"
     ],
-    "semantics": [
-      "python",
-      "tools/audit-feature-semantics.py",
-      "--validate"
-    ],
     "release": [
       "python",
       "tools/check_release_metadata.py"
@@ -161,14 +155,6 @@
       "mutator": "source_test_seam",
       "apply_check": null,
       "kill_gate": "cleanliness",
-      "required_independent": true,
-      "coverage_status": "ACTIVE_INDEPENDENT"
-    },
-    {
-      "name": "feature semantics",
-      "mutator": "feature_semantics",
-      "apply_check": null,
-      "kill_gate": "semantics",
       "required_independent": true,
       "coverage_status": "ACTIVE_INDEPENDENT"
     },
@@ -677,13 +663,6 @@
       "id": "source test seam",
       "status": "ACTIVE_INDEPENDENT",
       "mutator": "source_test_seam",
-      "reason": "Executable mutation in current configuration",
-      "requiredFollowUp": null
-    },
-    {
-      "id": "feature semantics",
-      "status": "ACTIVE_INDEPENDENT",
-      "mutator": "feature_semantics",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
     },

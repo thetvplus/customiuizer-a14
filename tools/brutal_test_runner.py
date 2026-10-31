@@ -486,17 +486,6 @@ def mutate_source_test_seam(root: Path, cfg: dict) -> None:
     path.write_text(text + "\nfun resetForTest() {}\n", encoding="utf-8")
 
 
-def mutate_feature_semantics(root: Path, cfg: dict) -> None:
-    path = root / "feature-semantics/a14.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
-    entries = data.get("entries")
-    if not isinstance(entries, list) or not entries:
-        raise RuntimeError("feature-semantics/a14.json has no entries")
-    first = entries[0]
-    if not isinstance(first, dict):
-        raise RuntimeError("feature-semantics/a14.json first entry is not an object")
-    first["installPhase"] = "BRUTAL_INVALID_PHASE"
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def mutate_process_matrix(root: Path, cfg: dict) -> None:
@@ -534,7 +523,6 @@ MUTATORS: dict[str, Callable[[Path, dict], None]] = {
     "progress_json_tamper": mutate_progress_tamper,
     "observer_pref_key": mutate_observer_pref_key,
     "source_test_seam": mutate_source_test_seam,
-    "feature_semantics": mutate_feature_semantics,
     "process_matrix": mutate_process_matrix,
     "release_readme": mutate_release_readme,
     "remove_fetch_depth": mutate_remove_fetch_depth,

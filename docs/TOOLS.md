@@ -11,20 +11,19 @@
 | 当前页面功能地图、文档质量 | `generate_feature_map.py` / `--check`（显式运行，不进 APK 构建）、`check_docs.py`（本地链接 / 锚点 / 图片） |
 | CI 范围、安全与发布元数据 | `ci_scope.py`、`ci_contract_scan.py`、`check_ci_portability.py`、`check_release_metadata.py`、`ci_install_android_sdk.sh` |
 | 独立缺陷注入、确定性及无写入检查 | `brutal_test_runner.py`、`brutal_test_config.json`；同前缀的 policy / protocol / mutator / apply-check 模块由 runner 使用 |
-| Feature 路由、语义与所有权 | `catalog_contract_probe.py`、`audit-feature-semantics.py`、`audit_hook_ownership.py` |
 | 大型辅助数据摘要、筛选与分页 | `query_aux_data.py`，直接读取原文件，见下方查询入口 |
 | 当前源码进程矩阵 | `extract_process_matrix.py`，生成 [rom-intelligence](rom-intelligence/README.md) 下的 JSON / CSV 矩阵 |
+| Feature catalog 与 Hook 所有权 | `catalog_contract_probe.py`、`audit_hook_ownership.py` |
 | 发版准备、正式基线审查、同一 APK 发布 / 文档恢复 | `prepare_release.py`、`signed_release.py`、`release_docs.py`、`release_workflow_contract.py`，见 [发布流程](RELEASE.md) |
 | 诊断构建及产物来源 | `build_debug_apk.py`、`build_revision.py`、`verify_apk_provenance.py` |
 | APK 归因与预算比较 | `apk_size_report.py`；需要多变体、显式源码来源及 Markdown 报告时用 `apk_size_delta.py` |
 | APK 内容与 R8 可重复性 | `apk_semantic_diff.py`，用于按需隔离双构建比较 |
 | ROM 样本清单、smali 契约与目标差异 | `rom_inventory.py`、`rom-contract-scan.py`、`rom_target_diff.py` 及测试 fixtures |
-| 继承功能语义对照 | `legacy_semantic_compare.py`，见 [语义契约](maintenance/LEGACY_SEMANTIC_CALIBRATION.md) |
 | 离线运行日志分析 | `analyze_lsposed_log.py` |
 | ROM 持久清单与精确检索 | `rom_catalog.py` 的 `status / locate / search / compare`；[缓存、更新与测量](rom-intelligence/DEXSQL.md#离线-rom-知识库)，复杂 SQL 复用[官方查询集](../tools/dexsql/README.md) |
 | Windows 正式签名预检 | `scripts/check-signing-config.ps1`、`scripts/test-check-signing-config.ps1` |
 
-`feature-semantics/` 和 `rom-contracts/` 是当前校验输入；进程矩阵是源码生成物。ROM 原件、APK、mapping、日志、临时评估和设备原始证据放忽略目录或仓库外，不建立重复的状态报告或未接入工具的证据模板。
+`rom-contracts/` 是当前校验输入；进程矩阵是源码生成物。ROM 原件、APK、mapping、日志、临时评估和设备原始证据放忽略目录或仓库外，不建立重复的状态报告或未接入工具的证据模板。
 
 `rom_inventory.py` 的 APK Manifest 复用 `rom_catalog.manifest_attributes` 的离线读取，JAR ABI 继续直接读取 class；不依赖可选 pyaxmlparser，不启动无效 javap 或无人使用的 JADX 路径。只有 Manifest 读取失败时可使用已有 apkanalyzer 回退。最终 APK 的 DEX / Smali 取证仍使用官方 DexSQL。
 
@@ -35,9 +34,6 @@
 先查摘要，再按键、Feature、目标或源码筛选；不要默认加载完整 JSON。
 
 ```powershell
-python tools/query_aux_data.py semantics
-python tools/query_aux_data.py semantics --key pref_key_system_charginginfo_fontsize --full
-python tools/query_aux_data.py semantics --confidence UNKNOWN --summary
 python tools/query_aux_data.py matrix --target SYSTEM_UI --limit 5
 python tools/query_aux_data.py rom --target launcher --full
 python tools/query_aux_data.py hazards --source SystemUi --limit 5
@@ -51,11 +47,10 @@ python tools/query_aux_data.py context --key launcher_dock_background --full
 
 | 数据集 | 权威输入与维护方式 | 证据边界 |
 | --- | --- | --- |
-| `semantics` | `feature-semantics/a14.json`；Schema 与 `audit-feature-semantics.py --validate` 校验 | 提取和人工校准并存，保留逐项 confidence / evidence；UNKNOWN 不是已支持或无需重启 |
-| `matrix` | `extract_process_matrix.py` 生成 JSON / CSV，确定性门禁检查 | 静态 catalog / routing 视图；`featureIdName` / 整数 ID 与语义目录的 ID 不同 |
+| `matrix` | `extract_process_matrix.py` 生成 JSON / CSV，确定性门禁检查 | 静态 catalog / routing 视图；`featureIdName` / 整数 ID 与源码 Feature ID 对应 |
 | `rom` | `rom-contracts/hyperos1-a14-core.json` 与同目录 Schema | 部分源码契约；coverage 按目标条目计数，optional 仍须真实样本取证 |
 | `hazards` | `tools/SOURCE_HAZARD_BASELINE.json` | 已存基线，查询不重新扫描或接受新增风险 |
-| `context` | 上述语义、Process Matrix、当前源码与 XML、既有 ROM Catalog；`agent_context.py` 仅为此入口的实现模块 | 原设置键精确关联，次级键与词法依赖标为 CANDIDATE；引用实际源码行号，保留语义 confidence，不把候选调用图或 DEX 当实机证据 |
+| `context` | Process Matrix、当前源码与 XML、既有 ROM Catalog；`agent_context.py` 仅为此入口的实现模块 | 原设置键精确关联，次级键与词法依赖标为 CANDIDATE；引用实际源码行号，不把候选调用图或 DEX 当实机证据 |
 
 `context` 默认读取当前工作区；`--repo-root` 可指定最新有效源码，不能默认为远端 main。
 它在既有外部 Catalog SQLite 中按工作区、文件状态及提取器哈希增量保存源码事实，不另建数据库 / MCP。
@@ -70,6 +65,5 @@ ROM 默认只选 fuxi CN 主基准，`--device munch` 或 `--region TW` 按元�
 仅在目标已收敛时添加 `--dex-class <完整描述符>` 或 `--dex-method <完整方法描述符>`，可用 `--dex-calls callers/callees` 追加直接 invoke 证据；返回文件哈希与 DEX 来源。
 其他情况复用结果里的现有 SQL 入口，再通过官方 DexSQL MCP / Smali 按需深入。`context` 始终不接受跨版本参考输入；显式设计研究只能走[隔离入口](rom-intelligence/DEXSQL.md#跨版本参考隔离)。
 
-`audit-feature-semantics.py --init` 仅用于新目录；已有目录不会被覆盖。需要重新提取时用 `--output <新临时路径>` 生成候选，审查后合入逐项变化，保留排除理由与人工校准，不将候选当成新的事实来源。`--repo-root` 同时决定读取的源码、目录与 Schema。
 
-云端只检查 ROM 契约结构可运行 `python tools/rom-contract-scan.py --contract rom-contracts/hyperos1-a14-core.json --validate-only`；不读取样本，不证明 ROM 兼容。带日期的历史采样维持在[原证据入口](rom-intelligence/README.md)，不批量迁移成当前已验证数据。
+云端只检查 ROM 契约结构可运行 `python tools/rom-contract-scan.py --contract rom-contracts/hyperos1-a14-core.json --validate-only`；不读取样本，不证明 ROM 兼容。实际取证入口见 [ROM 检索说明](rom-intelligence/README.md)，旧采样不作为当前已验证数据。

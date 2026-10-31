@@ -56,7 +56,7 @@ A14 以高性能、低开销、快速响应为核心工程目标。**总体偏�
 | 任务 | 权威入口 |
 | --- | --- |
 | 功能入口 / 文档治理 | [功能结构](docs/FEATURE_MAP_SIMPLE.md) / [设置键](docs/FEATURE_MAP.md) / [文档规范](docs/DOCS_STYLE.md) |
-| 需求 / 设置键 / Hook 反查 | 先用 `python tools/query_aux_data.py context --key <键>` 或 `--contains <名称/符号>` 获取源码、Owner、进程和 ROM 摘要；`--full` / `--fields` 再取所需证据，见 [检索关联](docs/TOOLS.md#辅助数据按需查询)。已知精确路径直接查源码，不重复初始化 |
+| 需求 / 设置键 / Hook 反查 | 先用 `rg` 查设置键、Feature / Installer 及实际源码；已知路径直接读取。需要关联摘要时可按需用 `query_aux_data.py context`；仅私有接口、Hook 签名或 ClassLoader 不确定时调用 [DexSQL](docs/rom-intelligence/DEXSQL.md)，不在启动时扫描 ROM 或初始化大型索引 |
 | 环境、生成与构建 | [开发与构建](docs/DEVELOPMENT.md) |
 | 分级、必要检查、复用与停止条件 | [测试与验证](docs/TESTING.md#执行分级) |
 | 大型辅助 JSON / 机读数据 | [摘要、筛选与分页](docs/TOOLS.md#辅助数据按需查询)，先查询再按需读原记录 |

@@ -1,6 +1,6 @@
 # M03 通知链路：ROM 精校交接
 
-本页承接[精修路线图 M03](../maintenance/A14_REFINEMENT_ROADMAP.md#通知与媒体)，只保存定位合同与验证边界；完成状态、代码历史和取舍仍在路线图原页。查询入口为 [notification_m03_contract.sql](../../tools/dexsql/notification_m03_contract.sql)。
+本页承接[精修路线图 M03](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)，只保存定位合同与验证边界；完成状态、代码历史和取舍仍在路线图原页。查询入口为 [notification_m03_contract.sql](../../tools/dexsql/notification_m03_contract.sql)。
 
 ## 证据与输入
 
@@ -70,7 +70,7 @@ Landroid/app/INotificationManager$Stub$Proxy;->buzzBeepBlinkForNotification(Ljav
 
 待精校：CN/TW 的输入激活 / 结束、旧 alert entry 复用和 reset、无障碍超时、锁屏与旋转，及动态岛成功 / 拒绝接管时的原生 Heads-up 数量。静态相同签名不能证明没有重复展示。
 
-2026-10-24 接管边界补充见[通知与媒体安全状态](../maintenance/A14_REFINEMENT_ROADMAP.md#通知与媒体)。
+2026-10-24 接管边界补充见[通知与媒体安全状态](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 复用已提取实机 SystemUI（SHA-256 `5d8f2fe0b65d8a1a947b4280f8053b524f8c5de73f48a74f8792d415ae76e513`）与 CN/TW 参考样本：
 `KeyguardNotificationVisibilityProviderImpl.isLockedOrLocking()` 读取 `KeyguardStateControllerImpl.mShowing` 和 `StatusBarStateControllerImpl.mUpcomingState`，不能仅以 `mState=0` 推断解锁。
 动态岛沿用 `Dependency.get(KeyguardStateController.class)` 和 native Callback，在现有 owner 的连接 / 释放边界注册 / 移除，事件边界拒绝 Showing、GoingAway、FadingAway、Bouncer、LaunchTransitionFadingAway、KeyguardRequested、Dozing / Dreaming 及未知状态。

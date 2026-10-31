@@ -201,10 +201,6 @@ def check_eol() -> int:
     return eol_check.check()
 
 
-def check_feature_semantics() -> int:
-    """Validate feature-semantics/a14.json against schema and current source."""
-    cmd = [sys.executable, str(REPO_ROOT / "tools" / "audit-feature-semantics.py"), "--validate"]
-    return run(cmd)
 
 
 def check_observer_key_contract() -> int:
@@ -318,7 +314,7 @@ def check_source(changed: bool = False, staged: bool = False) -> int:
         check_java_runtime, check_static_rules, check_eol, check_observer_key_contract,
         check_hook_body_prefmap, check_hotpath_alloc_budget,
         lambda: check_main_source_cleanliness(changed=changed, staged=staged),
-        lambda: check_invariants(changed=changed, staged=staged), check_feature_semantics,
+        lambda: check_invariants(changed=changed, staged=staged),
     ):
         code = check()
         if code:
