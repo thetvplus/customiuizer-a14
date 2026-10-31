@@ -47,7 +47,7 @@ object GenericAppInstaller {
                 HookInstallation.STABLE_ID_APPLICATION_ATTACH,
                 Context::class.java,
                 object : MethodHook() {
-                    override fun after(param: AfterHookCallback) {
+                    override fun after(callback: AfterHookCallback) {
                         val registry = FeatureInstallRegistry()
                         for (feature: FeatureSpec in GenericAppFeatures.selected(
                             lpparam,
@@ -57,7 +57,7 @@ object GenericAppInstaller {
                             isNoOverscroll,
                             controlMedia,
                             pocoFolderIconBlur,
-                            param.getArg(0) as? Context,
+                            callback.getArg(0) as? Context,
                         )) {
                             registry.register(feature)
                         }

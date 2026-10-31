@@ -320,7 +320,7 @@ class AppSelector : SubFragmentWithSearch() {
         val act = activity ?: return
         try {
             val mSecurityManager = act.getSystemService("security") ?: return
-            val smClass = (mSecurityManager as Any)::class.java
+            val smClass = mSecurityManager::class.java
             val getApplicationAccessControlEnabledAsUser: Method = smClass.getDeclaredMethod("getApplicationAccessControlEnabledAsUser", String::class.java, Int::class.javaPrimitiveType)
             getApplicationAccessControlEnabledAsUser.isAccessible = true
             val setApplicationAccessControlEnabledForUser: Method = smClass.getDeclaredMethod("setApplicationAccessControlEnabledForUser", String::class.java, Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType)

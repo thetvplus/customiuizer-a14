@@ -552,7 +552,7 @@ object Controls {
 
     private fun reposNavBarButtons(navbar: FrameLayout) {
         val mContext = navbar.context
-        val displayRotation = navbar.context.display!!.rotation
+        val displayRotation = navbar.context.display.rotation
         val density = mContext.resources.displayMetrics.density
         val margin = Math.round(controlsConfig.navbarMargin * density)
         if (displayRotation == Surface.ROTATION_0) {
@@ -610,8 +610,8 @@ object Controls {
         val dot1: Drawable
         val dot2: Drawable
         try {
-            val modCtx = ModuleHelper.getModuleContext(mContext)!!
-            val modRes = ModuleHelper.getModuleRes(mContext)!!
+            val modCtx = ModuleHelper.getModuleContext(mContext)
+            val modRes = ModuleHelper.getModuleRes(mContext)
             dot1 = modRes.getDrawable(R.drawable.ic_sysbar_dot_bottomleft, modCtx.theme)!!
             dot2 = modRes.getDrawable(R.drawable.ic_sysbar_dot_topright, modCtx.theme)!!
         } catch (t: Throwable) {
@@ -764,8 +764,8 @@ object Controls {
                         return XposedHelpers.throwOrReturn(throwable, result)
                     }
 
-                    val modCtx = ModuleHelper.getModuleContext(navbar.context)!!
-                    val modRes = ModuleHelper.getModuleRes(navbar.context)!!
+                    val modCtx = ModuleHelper.getModuleContext(navbar.context)
+                    val modRes = ModuleHelper.getModuleRes(navbar.context)
                     if (isDark) {
                         val darkImg1 = modRes.getDrawable(R.drawable.ic_sysbar_dot_bottomleft_dark, modCtx.theme)!!
                         val darkImg2 = modRes.getDrawable(R.drawable.ic_sysbar_dot_topright_dark, modCtx.theme)!!

@@ -887,7 +887,7 @@ internal class StatusBarHeightInsetsFeature(
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() {
         SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook(lpparam)
-        lpparam.classLoader?.let(StatusBarHeightResources::install)
+        lpparam.classLoader.let(StatusBarHeightResources::install)
     }
 }
 
@@ -900,7 +900,7 @@ internal class IslandApplicationOverlayFeature(lpparam: XposedModuleInterface.Sy
             prefs.getBoolean("system_island_hide_in_floating_window")
     }
     override fun isEnabledCondition(prefs: PrefMap) = evaluateEnabled(prefs)
-    override fun installHook() { lpparam.classLoader?.let(IslandApplicationOverlayHooks::install) }
+    override fun installHook() { lpparam.classLoader.let(IslandApplicationOverlayHooks::install) }
 }
 
 /** Always installed because the default-off switch must still be available after a restart. */

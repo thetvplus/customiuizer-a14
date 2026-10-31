@@ -89,6 +89,17 @@ class IslandAudioSpectrumTest {
         assertTrue(frames.all { it == null })
     }
 
+    @Test fun unavailableSessionKeepsSubscriptionForTheNextPlaybackEvent() {
+        backend.session = null
+        start()
+        assertEquals(1, backend.subscriptions)
+        assertTrue(backend.opened.isEmpty())
+        backend.session = 42
+        backend.changed!!(); drain()
+        assertEquals(listOf(42), backend.opened)
+        assertEquals(1, backend.subscriptions)
+    }
+
     @Test fun realFftProducesFiveBandsAndStopImmediatelyInvalidatesOldCallbacks() {
         start()
         val listener = backend.listener!!

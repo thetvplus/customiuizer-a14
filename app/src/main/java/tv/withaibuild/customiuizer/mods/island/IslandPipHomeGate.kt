@@ -78,7 +78,7 @@ internal class IslandPipHomeGate(private val scope: CoroutineScope, private val 
         }
     }
 
-    fun matches(media: IslandMediaContent?) = source?.let { it.packageName == media?.packageName && it.user == media?.user } == true
+    fun matches(media: IslandMediaContent?) = source?.let { it.packageName == media?.packageName && it.user == media.user } == true
 
     fun begin(packageName: String, user: UserHandle) {
         if (closed) return

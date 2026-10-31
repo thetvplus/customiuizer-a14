@@ -77,7 +77,7 @@ class ModuleHelper private constructor() {
                     HookDiagnostics.record(
                         PreferenceObserverRegistry.processName(),
                         HookDiagnostics.Kind.METHOD,
-                        method.declaringClass?.name ?: "?",
+                        method.declaringClass.name,
                         method.name,
                         method.descriptor(),
                         HookDiagnostics.Status.INSTALLED,
@@ -86,7 +86,7 @@ class ModuleHelper private constructor() {
                     HookDiagnostics.record(
                         PreferenceObserverRegistry.processName(),
                         HookDiagnostics.Kind.METHOD,
-                        method.declaringClass?.name ?: "?",
+                        method.declaringClass.name,
                         method.name,
                         method.descriptor(),
                         HookDiagnostics.Status.INSTALL_FAILED,
@@ -102,7 +102,7 @@ class ModuleHelper private constructor() {
                 HookDiagnostics.record(
                     PreferenceObserverRegistry.processName(),
                     HookDiagnostics.Kind.METHOD,
-                    method.declaringClass?.name ?: "?",
+                    method.declaringClass.name,
                     method.name,
                     method.descriptor(),
                     HookDiagnostics.Status.INSTALL_FAILED,
@@ -842,6 +842,7 @@ class ModuleHelper private constructor() {
                     if (pkgName == topPackage) return null
                 }
                 val freeFormStackInfoList = MiuiFreeFormManager.getAllFreeFormStackInfosOnDisplay(
+                    // A14's default-display lookup can fail despite the non-null annotation.
                     mContext.display?.displayId ?: 0
                 )
                 val freeFormCount = freeFormStackInfoList?.size ?: 0

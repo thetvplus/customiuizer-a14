@@ -187,11 +187,11 @@ open class ControlCenterPluginRuntimeEngine(
             onInstallCreatePluginHook(
                 classLoader,
                 object : MethodHook() {
-                    override fun before(param: BeforeHookCallback) {
+                    override fun before(callback: BeforeHookCallback) {
                         val lease = activeLease
                         // A failed plugin lease must not disable discovery of its replacement loader.
                         if (lease != null && !lease.active && installState != InstallState.FAILED_PARTIAL) return
-                        val loader = SystemUIControlCenterHooks.extractPluginLoader(param.getThisObject()) ?: return
+                        val loader = SystemUIControlCenterHooks.extractPluginLoader(callback.getThisObject()) ?: return
                         bind(loader)
                     }
                 },
@@ -253,12 +253,12 @@ open class ControlCenterPluginRuntimeEngine(
         lease: RuntimeLease,
     ): ControlCenterGestureHooks {
         val controlCenterHook = object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
+            override fun before(callback: BeforeHookCallback) {
                 if (!lease.active) return
-                if (param.getArgs().size >= 2 && (param.getArg(1) as? Boolean) == true) return
-                if (param.getArgs().isEmpty()) return
-                val event = param.getArg(0) as? MotionEvent ?: return
-                val thisObject = param.getThisObject() as? View ?: return
+                if (callback.getArgs().size >= 2 && (callback.getArg(1) as? Boolean) == true) return
+                if (callback.getArgs().isEmpty()) return
+                val event = callback.getArg(0) as? MotionEvent ?: return
+                val thisObject = callback.getThisObject() as? View ?: return
                 val statusBarStateController = XposedHelpers.getObjectField(thisObject, "statusBarStateController")
                 val state = XposedHelpers.callMethod(statusBarStateController, "getState") as Int
                 if (state == 1 || state == 2) return
@@ -280,18 +280,18 @@ open class ControlCenterPluginRuntimeEngine(
             }
         }
         val onAttachedHook = object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
+            override fun before(callback: BeforeHookCallback) {
                 if (!lease.active) return
-                val thisObject = param.getThisObject() as? View ?: return
+                val thisObject = callback.getThisObject() as? View ?: return
                 ModuleHelper.guarded {
                     controlCenterMachine.prepare(System.identityHashCode(thisObject), thisObject)
                 }
             }
         }
         val destroyHook = object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
+            override fun before(callback: BeforeHookCallback) {
                 if (!lease.active) return
-                val thisObject = param.getThisObject() as? View ?: return
+                val thisObject = callback.getThisObject() as? View ?: return
                 ModuleHelper.guarded {
                     controlCenterMachine.clear(System.identityHashCode(thisObject))
                 }

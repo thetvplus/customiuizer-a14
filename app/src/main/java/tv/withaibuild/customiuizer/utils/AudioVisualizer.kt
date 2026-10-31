@@ -187,9 +187,9 @@ class AudioVisualizer @JvmOverloads constructor(
     var showOnCustom = false
     private var animDur = 0
     private var transparency = 0
-    private lateinit var colorMode: ColorMode
-    private lateinit var barStyle: BarStyle
-    private lateinit var renderType: RenderType
+    private var colorMode: ColorMode
+    private var barStyle: BarStyle
+    private var renderType: RenderType
     private var glowLevel = 0
     private var customColor = 0
     private var randomizeInterval = 0

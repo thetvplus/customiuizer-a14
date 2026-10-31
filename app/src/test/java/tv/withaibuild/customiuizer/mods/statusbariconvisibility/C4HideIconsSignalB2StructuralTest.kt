@@ -40,9 +40,9 @@ class C4HideIconsSignalB2StructuralTest {
 
         // Callback in this hook delegates to the captured Effect.
         assertEquals(
-            "MethodHook.before in HideIconsSignalHook must delegate to effect.before(param)",
+            "MethodHook.before in HideIconsSignalHook must delegate to effect.before(callback)",
             1,
-            body.occurrenceCount("effect.before(param)"),
+            body.occurrenceCount("effect.before(callback)"),
         )
 
         // Both methods are installed via hookAllMethods on the StatusBarMobileView hook surface.

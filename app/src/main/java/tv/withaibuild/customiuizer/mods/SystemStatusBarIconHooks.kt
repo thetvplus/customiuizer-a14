@@ -248,12 +248,12 @@ object SystemStatusBarIconHooks {
 
                     alarmHooks.getOrPut(mNextAlarmCallback.javaClass) { HookInstallStateMachine() }.install {
                         ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onAlarmChanged", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-                        override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
-                            val callback = param.getThisObject() ?: return
-                            val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
+                        override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                            val ownerCallback = callback.getThisObject() ?: return
+                            val policyRef = XposedHelpers.getAdditionalInstanceField(ownerCallback, ALARM_POLICY_OWNER) as? WeakReference<*>
                             val policy = policyRef?.get() ?: return
 
-                            val newState = param.getArg(0) as Boolean
+                            val newState = callback.getArg(0) as Boolean
                             XposedHelpers.setAdditionalInstanceField(policy, ALARM_LAST_STATE, newState)
 
                             val mContext = XposedHelpers.getObjectField(policy, "mContext") as Context
@@ -265,12 +265,12 @@ object SystemStatusBarIconHooks {
                     }
                     nextAlarmHooks.getOrPut(mNextAlarmCallback.javaClass) { HookInstallStateMachine() }.install {
                         ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onNextAlarmChanged", AlarmManager.AlarmClockInfo::class.java, object : MethodHook() {
-                        override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
-                            val callback = param.getThisObject() ?: return
-                            val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
+                        override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                            val ownerCallback = callback.getThisObject() ?: return
+                            val policyRef = XposedHelpers.getAdditionalInstanceField(ownerCallback, ALARM_POLICY_OWNER) as? WeakReference<*>
                             val policy = policyRef?.get() ?: return
 
-                            if (param.getArg(0) == null) {
+                            if (callback.getArg(0) == null) {
                                 XposedHelpers.setAdditionalInstanceField(policy, ALARM_LAST_STATE, false)
                             }
 

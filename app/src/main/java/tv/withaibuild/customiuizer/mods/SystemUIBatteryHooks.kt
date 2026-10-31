@@ -140,19 +140,19 @@ object SystemUIBatteryHooks {
     @JvmStatic
     fun BatteryIndicatorHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod(StatusBarCls, lpparam.classLoader, "start", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
-                val sbWindowController = XposedHelpers.getObjectField(param.getThisObject(), "mStatusBarWindowController")
+            override fun after(callback: AfterHookCallback) {
+                val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
+                val sbWindowController = XposedHelpers.getObjectField(callback.getThisObject(), "mStatusBarWindowController")
                 val mStatusBarWindow = XposedHelpers.getObjectField(sbWindowController, "mStatusBarWindowView") as ViewGroup
 
                 val indicator = BatteryIndicator(mContext)
                 mStatusBarWindow.addView(indicator)
                 indicator.setAdjustViewBounds(false)
-                indicator.init(param.getThisObject())
-                XposedHelpers.setAdditionalInstanceField(param.getThisObject(), "mBatteryIndicator", indicator)
-                val mNotificationIconAreaController = XposedHelpers.getObjectField(param.getThisObject(), "mNotificationIconAreaController")
+                indicator.init(callback.getThisObject())
+                XposedHelpers.setAdditionalInstanceField(callback.getThisObject(), "mBatteryIndicator", indicator)
+                val mNotificationIconAreaController = XposedHelpers.getObjectField(callback.getThisObject(), "mNotificationIconAreaController")
                 XposedHelpers.setAdditionalInstanceField(mNotificationIconAreaController, "mBatteryIndicator", indicator)
-                val mBatteryController = XposedHelpers.getObjectField(param.getThisObject(), "mBatteryController")
+                val mBatteryController = XposedHelpers.getObjectField(callback.getThisObject(), "mBatteryController")
                 XposedHelpers.setAdditionalInstanceField(mBatteryController, "mBatteryIndicator", indicator)
                 XposedHelpers.callMethod(mBatteryController, "fireBatteryLevelChanged")
                 XposedHelpers.callMethod(mBatteryController, "firePowerSaveChanged")
@@ -160,44 +160,44 @@ object SystemUIBatteryHooks {
         })
 
         ModuleHelper.findAndHookMethod("com.android.systemui.shade.MiuiNotificationPanelViewController", lpparam.classLoader, "updatePanelExpanded", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val mPanelExpanded = XposedHelpers.getBooleanField(param.getThisObject(), "mPanelExpanded")
-                val isKeyguardShowing = XposedHelpers.callMethod(param.getThisObject(), "isKeyguardShowing") as Boolean
-                val mStatusBar = XposedHelpers.getObjectField(param.getThisObject(), "mCentralSurfaces")
+            override fun after(callback: AfterHookCallback) {
+                val mPanelExpanded = XposedHelpers.getBooleanField(callback.getThisObject(), "mPanelExpanded")
+                val isKeyguardShowing = XposedHelpers.callMethod(callback.getThisObject(), "isKeyguardShowing") as Boolean
+                val mStatusBar = XposedHelpers.getObjectField(callback.getThisObject(), "mCentralSurfaces")
                 val indicator = XposedHelpers.getAdditionalInstanceField(mStatusBar, "mBatteryIndicator") as BatteryIndicator?
                 indicator?.onExpandingChanged(!isKeyguardShowing && mPanelExpanded)
             }
         })
 
         ModuleHelper.findAndHookMethod(StatusBarCls, lpparam.classLoader, "updateIsKeyguard", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val isKeyguardShowing = XposedHelpers.callMethod(param.getThisObject(), "isKeyguardShowing") as Boolean
-                val indicator = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
+            override fun after(callback: AfterHookCallback) {
+                val isKeyguardShowing = XposedHelpers.callMethod(callback.getThisObject(), "isKeyguardShowing") as Boolean
+                val indicator = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
                 indicator?.onKeyguardStateChanged(isKeyguardShowing)
             }
         })
 
         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.NotificationIconAreaController", lpparam.classLoader, "onDarkChanged", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val indicator = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
-                indicator?.onDarkModeChanged(param.getArg(1) as Float, param.getArg(2) as Int)
+            override fun after(callback: AfterHookCallback) {
+                val indicator = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
+                indicator?.onDarkModeChanged(callback.getArg(1) as Float, callback.getArg(2) as Int)
             }
         })
 
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.policy.MiuiBatteryControllerImpl", lpparam.classLoader, "fireBatteryLevelChanged", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val indicator = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
-                val mLevel = XposedHelpers.getIntField(param.getThisObject(), "mLevel")
-                val mCharging = XposedHelpers.getBooleanField(param.getThisObject(), "mCharging")
-                val mCharged = XposedHelpers.getBooleanField(param.getThisObject(), "mCharged")
+            override fun after(callback: AfterHookCallback) {
+                val indicator = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
+                val mLevel = XposedHelpers.getIntField(callback.getThisObject(), "mLevel")
+                val mCharging = XposedHelpers.getBooleanField(callback.getThisObject(), "mCharging")
+                val mCharged = XposedHelpers.getBooleanField(callback.getThisObject(), "mCharged")
                 indicator?.onBatteryLevelChanged(mLevel, mCharging, mCharged)
             }
         })
 
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.policy.BatteryControllerImpl", lpparam.classLoader, "firePowerSaveChanged", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val indicator = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
-                indicator?.onPowerSaveChanged(XposedHelpers.getBooleanField(param.getThisObject(), "mPowerSave"))
+            override fun after(callback: AfterHookCallback) {
+                val indicator = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
+                indicator?.onPowerSaveChanged(XposedHelpers.getBooleanField(callback.getThisObject(), "mPowerSave"))
             }
         })
     }
@@ -208,9 +208,9 @@ object SystemUIBatteryHooks {
         val abi = BatteryStyleResolver.resolve(lpparam.classLoader)
         val effect = BatteryStyleEffect(abi)
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.views.MiuiBatteryMeterView", lpparam.classLoader, "updateAll", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
+            override fun after(callback: AfterHookCallback) {
                 val style = batteryStyle ?: return
-                val owner = param.getThisObject() ?: return
+                val owner = callback.getThisObject() ?: return
                 val batteryView = owner as? ViewGroup ?: return
                 val state = getOrCreateBatteryViewState(owner)
                 reconcileBatteryView(batteryView, style, state, effect)

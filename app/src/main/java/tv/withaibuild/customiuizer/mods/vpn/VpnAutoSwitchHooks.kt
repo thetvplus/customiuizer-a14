@@ -33,7 +33,9 @@ internal object VpnAutoSwitchHooks {
         val state = Class.forName("com.android.server.wm.ActivityRecord\$State", false, loader)
         val task = Class.forName("com.android.server.wm.Task", false, loader)
         val vpn = Class.forName("com.android.server.connectivity.Vpn", false, loader)
-        val resumed = state.enumConstants.single { (it as Enum<*>).name == "RESUMED" }
+        val resumed = checkNotNull(state.enumConstants) { "ActivityRecord.State is not an enum" }
+            .singleOrNull { (it as Enum<*>).name == "RESUMED" }
+            ?: error("ActivityRecord.State is missing RESUMED")
         val pkgField = VpnAutoSwitchAccess.field(activity, "packageName")
         val userField = VpnAutoSwitchAccess.field(activity, "mUserId")
         val taskId = VpnAutoSwitchAccess.field(task, "mTaskId")

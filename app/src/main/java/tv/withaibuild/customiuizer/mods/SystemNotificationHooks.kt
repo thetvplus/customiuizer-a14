@@ -99,8 +99,8 @@ object SystemNotificationHooks {
             }
         })
         val cancel = object : MethodHook() {
-            override fun before(param: tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback) {
-                expansion.cancel(param.getThisObject() as View)
+            override fun before(callback: tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback) {
+                expansion.cancel(callback.getThisObject() as View)
             }
         }
         ModuleHelper.findAndHookMethod(row, "setEntry",

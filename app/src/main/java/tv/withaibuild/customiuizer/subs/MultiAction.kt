@@ -71,7 +71,7 @@ class MultiAction : SubFragment() {
         shortcutValue = savedInstanceState?.getString("draft.shortcut") ?: AppHelper.getStringOfAppPrefs(key + "_shortcut", null)
         shortcutName = savedInstanceState?.getString("draft.shortcutName") ?: AppHelper.getStringOfAppPrefs(key + "_shortcut_name", null)
         shortcutIcon = savedInstanceState?.getString("draft.shortcutIcon")
-        shortcutIntent = savedInstanceState?.getParcelable("draft.shortcutIntent")
+        shortcutIntent = savedInstanceState?.getParcelable("draft.shortcutIntent", Intent::class.java)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

@@ -31,9 +31,9 @@ object SystemUIScreenshotHooks {
         ModuleHelper.hookAllMethods("com.android.wm.shell.pip.PipTaskOrganizer", lpparam.classLoader, "onTaskAppeared", object : MethodHook() {
             @Volatile private var owner = WeakReference<Any>(null)
             private var receiverContext = WeakReference<Context>(null)
-            override fun after(param: AfterHookCallback) {
-                if (param.getThrowable() != null) return
-                val native = param.getThisObject() ?: return
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val native = callback.getThisObject() ?: return
                 owner = WeakReference(native)
                 val mContext = XposedHelpers.getObjectField(native, "mContext") as Context
                 if (receiverContext.get() !== mContext) {
@@ -135,8 +135,8 @@ object SystemUIScreenshotHooks {
     @JvmStatic
     fun HideStatusBarWhenCaptureHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment", lpparam.classLoader, "onViewCreated", View::class.java, Bundle::class.java, object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val view = param.getArg(0) as View
+            override fun after(callback: AfterHookCallback) {
+                val view = callback.getArg(0) as View
                 bindScreenshotVisibility(view, false)
             }
         })
@@ -145,8 +145,8 @@ object SystemUIScreenshotHooks {
     @JvmStatic
     fun HideNavBarBeforeScreenshotHook(lpparam: PackageReadyParam) {
         val hideNavHook = object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val view = XposedHelpers.getObjectField(param.getThisObject(), "mView") as View
+            override fun after(callback: AfterHookCallback) {
+                val view = XposedHelpers.getObjectField(callback.getThisObject(), "mView") as View
                 bindScreenshotVisibility(view, true)
             }
         }

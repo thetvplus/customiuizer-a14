@@ -24,7 +24,6 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceConstants
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.util.ArrayList
-import java.util.List
 
 /**
  * Window, rotation and free-form hooks.
@@ -266,7 +265,10 @@ object SystemWindowHooks {
     @JvmStatic
     fun BetterPopupsAllowFloatHook(lpparam: PackageReadyParam) {
         installWindowSnapshot()
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiExpandableNotificationRow", lpparam.classLoader, "updateMiniWindowBar", object : MethodHook() {
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiExpandableNotificationRow", lpparam.classLoader, "updateMiniWindowBar", notificationSlideHook())
+    }
+
+    internal fun notificationSlideHook(): MethodHook = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
@@ -278,10 +280,10 @@ object SystemWindowHooks {
                     val selectedAppsBlack = windowConfig.floatAppsBlack
                     val mAppMiniWindowManager = XposedHelpers.callMethod(thisObject, "getMAppMiniWindowManager")
                     val notificationSettingsManager = XposedHelpers.getObjectField(mAppMiniWindowManager, "notificationSettingsManager")
-                    val mAllowNotificationSlide = XposedHelpers.getObjectField(notificationSettingsManager, "mAllowNotificationSlide") as List<String>
-                    if (selectedApps?.contains(pkgName) == true) {
-                        mAllowNotificationSlide.add(pkgName)
-                    } else if (selectedAppsBlack?.contains(pkgName) == true) {
+                    val mAllowNotificationSlide = XposedHelpers.getObjectField(notificationSettingsManager, "mAllowNotificationSlide") as MutableList<String>
+                    if (selectedApps.contains(pkgName) == true) {
+                        if (!mAllowNotificationSlide.contains(pkgName)) mAllowNotificationSlide.add(pkgName)
+                    } else if (selectedAppsBlack.contains(pkgName) == true) {
                         mAllowNotificationSlide.remove(pkgName)
                     }
 
@@ -292,37 +294,26 @@ object SystemWindowHooks {
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
-        })
+    }
+
+    internal fun floatingWindowBlacklistHook(): MethodHook = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            // Native failures retain their identity; only a successful result is edited.
+            val result = chain.proceed()
+            ModuleHelper.guarded {
+                val blackList = result as MutableList<String>?
+                if (blackList != null) {
+                    blackList.clear()
+                    blackList.add("com.android.camera")
+                }
+            }
+            return result
+        }
     }
 
     @JvmStatic
     private fun DisableFloatingWindowBlacklistHook(cl: ClassLoader) {
-        val clearHook = object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-
-                    val blackList = result as List<String>?
-                    if (blackList != null) {
-                        blackList.clear()
-                        blackList.add("com.android.camera")
-                    }
-                    result = blackList
-                    throwable = null
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        }
+        val clearHook = floatingWindowBlacklistHook()
         ModuleHelper.hookAllMethodsSilently("android.util.MiuiMultiWindowAdapter", cl, "getListFromCloudData", clearHook)
         ModuleHelper.hookAllMethodsSilently("android.util.MiuiMultiWindowAdapter", cl, "getStartFromFreeformBlackListFromCloud", clearHook)
         ModuleHelper.hookAllMethods("android.util.MiuiMultiWindowAdapter", cl, "getFreeformBlackList", clearHook)
@@ -375,7 +366,7 @@ object SystemWindowHooks {
         val compClassName = intent.component!!.className
         if (openFwWhenShare) {
             val whitelist = MainModule.mPrefs.getBoolean("system_fw_forcein_actionsend_in_whitelist")
-            val appInList = MainModule.mPrefs.getStringSet("system_fw_forcein_actionsend_apps")?.contains(pkgName) == true
+            val appInList = MainModule.mPrefs.getStringSet("system_fw_forcein_actionsend_apps").contains(pkgName) == true
             if (whitelist xor appInList) {
                 return false
             }

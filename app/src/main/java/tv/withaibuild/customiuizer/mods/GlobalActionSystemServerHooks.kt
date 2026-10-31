@@ -780,8 +780,8 @@ object GlobalActionSystemServerHooks {
         if (statusBarClass == null) return
         ModuleHelper.findAndHookMethod(statusBarClass, "start", object : MethodHook() {
             @SuppressLint("UnspecifiedRegisterReceiverFlag")
-            override fun after(param: AfterHookCallback) {
-                val thisObject = param.getThisObject()
+            override fun after(callback: AfterHookCallback) {
+                val thisObject = callback.getThisObject()
                 val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                 val intentfilter = IntentFilter()
 
@@ -831,8 +831,8 @@ object GlobalActionSystemServerHooks {
 
         if (hasConfiguredActionCode(28)) {
             ModuleHelper.findAndHookMethod("com.android.wm.shell.miuifreeform.MiuiFreeformModeController", lpparam.classLoader, "onInit", object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    val thisObject = param.getThisObject()
+                override fun after(callback: AfterHookCallback) {
+                    val thisObject = callback.getThisObject()
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                     val intentfilter = IntentFilter()
                     intentfilter.addAction(GlobalActions.ACTION_PREFIX + "PinningWindow")
@@ -883,8 +883,8 @@ object GlobalActionSystemServerHooks {
         }
         if (hasConfiguredActionCode(29)) {
             ModuleHelper.findAndHookMethod("com.android.wm.shell.sosc.SoScSplitScreenController", lpparam.classLoader, "onInit", object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    val thisObject = param.getThisObject()
+                override fun after(callback: AfterHookCallback) {
+                    val thisObject = callback.getThisObject()
                     val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
                     val intentfilter = IntentFilter()
                     intentfilter.addAction(GlobalActions.ACTION_PREFIX + "SplitScreen")

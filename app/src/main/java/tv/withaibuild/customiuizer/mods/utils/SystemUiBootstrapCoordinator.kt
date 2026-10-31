@@ -51,11 +51,11 @@ object SystemUiBootstrapCoordinator {
                     private var isHooked = false
 
                     @Throws(Throwable::class)
-                    override fun before(param: HookerClassHelper.BeforeHookCallback) {
-                        if (isHooked || param.getThisObject() == null) return
+                    override fun before(callback: HookerClassHelper.BeforeHookCallback) {
+                        if (isHooked || callback.getThisObject() == null) return
 
                         val mContextField: Any? = try {
-                            XposedHelpers.getObjectField(param.getThisObject(), "mContext")
+                            XposedHelpers.getObjectField(callback.getThisObject(), "mContext")
                         } catch (oom: OutOfMemoryError) {
                             throw oom
                         } catch (t: Throwable) {

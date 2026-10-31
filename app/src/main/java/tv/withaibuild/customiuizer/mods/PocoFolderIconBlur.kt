@@ -63,11 +63,11 @@ internal object PocoFolderIconBlur {
             checkedFolderBlurMethod(type("folder.LauncherFolder2x2IconImageView\$onDragContainerBgAnimAlpha\$1\$1"),
                 "onUpdate", Void.TYPE, false, Any::class.java, Collection::class.java),
             image.getDeclaredConstructor(Context::class.java, AttributeSet::class.java, int),
-            checkedFolderBlurMethod(image, "getDrawableAlpha", java.lang.Float::class.java, false, Drawable::class.java),
+            checkedFolderBlurMethod(image, "getDrawableAlpha", Float::class.javaObjectType, false, Drawable::class.java),
             checkedFolderBlurMethod(image, "setAnimState", Void.TYPE, false, boolean),
             checkedFolderBlurMethod(type("BaseProgressShortcutIcon"), "showFolderCreateBackground", Void.TYPE, false, boolean),
             checkedFolderBlurMethod(type("DragView"), "calcAndStartAnimate", Void.TYPE, false, boolean),
-            checkedFolderBlurMethod(type("DragView"), "setBlur", Void.TYPE, false, View::class.java, java.lang.Boolean::class.java),
+            checkedFolderBlurMethod(type("DragView"), "setBlur", Void.TYPE, false, View::class.java, Boolean::class.javaObjectType),
             checkedFolderBlurMethod(type("FolderCling"), "initAnimFolderIcon", Void.TYPE, false, type("FolderInfo")),
             checkedFolderBlurMethod(type("anim.FolderCreateBgAnim\$1"), "onBegin", Void.TYPE, false, Any::class.java),
             checkedFolderBlurMethod(type("anim.FolderCreateBgAnim\$2"), "onComplete", Void.TYPE, false, Any::class.java),
@@ -179,7 +179,7 @@ internal fun installPocoFolderBlurHooks(
                     this[4] = (this[4] as Int) and 0xff000000.toInt()
                 } else null
                 val result = if (args == null) chain.proceed() else chain.proceed(args)
-                if (tint && view != null && view.width > 0 && view.height > 0) diagnostic.once(2) {
+                if (tint && view.width > 0 && view.height > 0) diagnostic.once(2) {
                     "native-render-returned size=${view.width}x${view.height} attached=${view.isAttachedToWindow} " +
                         "hardware=${view.isHardwareAccelerated} material=black visible=unverified"
                 }
