@@ -136,7 +136,7 @@ class MultiAction : SubFragment() {
             0 -> { appValue = data.getStringExtra("app"); appUser = data.getIntExtra("user", 0) }
             1 -> {
                 shortcutValue = data.getStringExtra("shortcut_contents"); shortcutName = data.getStringExtra("shortcut_name")
-                shortcutIcon = data.getStringExtra("shortcut_icon"); shortcutIntent = data.getParcelableExtra("shortcut_intent")
+                shortcutIcon = data.getStringExtra("shortcut_icon"); shortcutIntent = data.getParcelableExtra("shortcut_intent", Intent::class.java)
             }
             2 -> { activityValue = data.getStringExtra("activity"); activityUser = data.getIntExtra("user", 0) }
         }

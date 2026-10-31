@@ -1305,4 +1305,6 @@
     <string name="a14_move_up">Mover para cima</string>
     <string name="a14_move_down">Mover para baixo</string>
     <string name="a14_reorder_item">Reordenar item</string>
+    <string name="wifi_refresh">Atualizar redes</string>
+    <string name="wifi_scan_unavailable">Busca indisponível. Exibindo redes salvas; tente novamente mais tarde.</string>
 </resources>

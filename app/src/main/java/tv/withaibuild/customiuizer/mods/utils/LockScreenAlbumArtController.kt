@@ -11,7 +11,6 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
-import android.os.Build
 import android.util.LruCache
 import android.view.View
 import android.view.WindowManager
@@ -304,16 +303,12 @@ object LockScreenAlbumArtController {
             val processed = process(context, art, blur, rescale, grayscale, targetWidth, targetHeight, generation)
             if (processed == null || !isCurrent(generation)) return@launch
 
-            val wallpaperColors = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                try {
-                    WallpaperColors.fromBitmap(processed)
-                } catch (oom: OutOfMemoryError) {
-                    throw oom
-                } catch (t: Throwable) {
-                    FatalErrors.unwrapAndRethrowIfFatal(t)
-                    null
-                }
-            } else {
+            val wallpaperColors = try {
+                WallpaperColors.fromBitmap(processed)
+            } catch (oom: OutOfMemoryError) {
+                throw oom
+            } catch (t: Throwable) {
+                FatalErrors.unwrapAndRethrowIfFatal(t)
                 null
             }
             if (!isCurrent(generation)) return@launch
@@ -488,7 +483,7 @@ object LockScreenAlbumArtController {
         XposedHelpers.setAdditionalStaticField(cls, "mAlbumArt", processed)
         sendUpdateBroadcast(context)
 
-        if (processed != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1 && wallpaperColors != null) {
+        if (processed != null && wallpaperColors != null) {
             val updateFakeWallpaper = Intent("miui.intent.action.LOCK_WALLPAPER_CHANGED")
             updateFakeWallpaper.setPackage("com.android.systemui")
             val isWallpaperColorLight = (wallpaperColors.colorHints and 1) == 1

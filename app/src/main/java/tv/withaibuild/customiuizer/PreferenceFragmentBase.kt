@@ -23,6 +23,7 @@ import android.widget.Toast
 import tv.withaibuild.customiuizer.ui.SettingsActionBar as ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
@@ -44,6 +45,13 @@ import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.utils.XposedServiceManager
 
 open class PreferenceFragmentBase : Fragment() {
+
+    private val restoreDocument = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) result.data?.data?.let { doRestoreSettings(it) }
+    }
+    private val backupDocument = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) result.data?.data?.let { saveBackup(it) }
+    }
 
     private var actContext: Context? = null
     lateinit var preferenceManager: PreferenceManager
@@ -591,12 +599,9 @@ open class PreferenceFragmentBase : Fragment() {
         preferencesAttached = false
         preferenceManager.setPreferences(null)
         onCreatePreferences(null, null)
-        parentFragmentManager.beginTransaction()
-            .setReorderingAllowed(true)
-            .detach(this)
-            .attach(this)
-            .commitNowAllowingStateLoss()
-        initFragment()
+        // Separate transactions are required to actually recreate the Compose view.
+        parentFragmentManager.beginTransaction().detach(this).commitNowAllowingStateLoss()
+        parentFragmentManager.beginTransaction().attach(this).commitNowAllowingStateLoss()
     }
 
     override fun onDetach() {
@@ -613,51 +618,43 @@ open class PreferenceFragmentBase : Fragment() {
 
     @Suppress("UNUSED_PARAMETER")
     open fun backupSettings(act: AppCompatActivity) {
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-        intent.addCategory(Intent.CATEGORY_OPENABLE)
-        intent.type = "application/octet-stream"
-        intent.putExtra(
-            Intent.EXTRA_TITLE,
-            BackupRestore.generateBackupFilename()
-        )
-        startActivityForResult(intent, SAVE_BACKFILE)
+        backupDocument.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/octet-stream"
+            putExtra(Intent.EXTRA_TITLE, BackupRestore.generateBackupFilename())
+        })
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == PICK_BACKFILE && resultCode == Activity.RESULT_OK) {
-            if (data != null) {
-                doRestoreSettings(data.data)
-            }
-        } else if (requestCode == SAVE_BACKFILE && resultCode == Activity.RESULT_OK) {
-            try {
-                val outputStream = getValidContext().contentResolver
-                    .openOutputStream(data!!.data!!)
-                    ?: throw IllegalStateException("Backup output stream unavailable")
-                BackupRestore.performBackup(AppHelper.appPrefs!!, outputStream)
+    private fun saveBackup(uri: Uri) {
+        try {
+            val outputStream = getValidContext().contentResolver
+                .openOutputStream(uri)
+                ?: throw IllegalStateException("Backup output stream unavailable")
+            BackupRestore.performBackup(AppHelper.appPrefs!!, outputStream)
 
-                AlertDialog.Builder(getValidContext())
-                    .setTitle(R.string.do_backup)
-                    .setMessage(R.string.backup_ok)
-                    .setPositiveButton(android.R.string.ok) { _, _ -> }
-                    .show()
-            } catch (t: Throwable) {
-                FatalErrors.rethrowIfFatal(t)
-                t.printStackTrace()
-                AlertDialog.Builder(getValidContext())
-                    .setTitle(R.string.warning)
-                    .setMessage(getString(R.string.storage_cannot_backup) + "\n" + t.message)
-                    .setPositiveButton(android.R.string.ok) { _, _ -> }
-                    .show()
-            }
+            AlertDialog.Builder(getValidContext())
+                .setTitle(R.string.do_backup)
+                .setMessage(R.string.backup_ok)
+                .setPositiveButton(android.R.string.ok) { _, _ -> }
+                .show()
+        } catch (t: Throwable) {
+            FatalErrors.rethrowIfFatal(t)
+            t.printStackTrace()
+            AlertDialog.Builder(getValidContext())
+                .setTitle(R.string.warning)
+                .setMessage(getString(R.string.storage_cannot_backup) + "\n" + t.message)
+                .setPositiveButton(android.R.string.ok) { _, _ -> }
+                .show()
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     open fun restoreSettings(act: AppCompatActivity) {
-        if (!Helpers.checkStorageReadable(act)) return
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-        intent.addCategory(Intent.CATEGORY_OPENABLE)
-        intent.type = "application/octet-stream"
-        startActivityForResult(intent, PICK_BACKFILE)
+        // SAF providers own availability, including cloud and internal storage.
+        restoreDocument.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/octet-stream"
+        })
     }
 
     open fun doRestoreSettings(uri: Uri?) {
@@ -726,8 +723,6 @@ open class PreferenceFragmentBase : Fragment() {
         private val RESTART_MENU_IDS = intArrayOf(
             R.id.restartlauncher, R.id.restartsystemui, R.id.restartsecuritycenter, R.id.softreboot,
         )
-        const val PICK_BACKFILE = 11
-        const val SAVE_BACKFILE = 12
 
         @JvmField
         protected val MAP_KEYS: Map<Int, String>

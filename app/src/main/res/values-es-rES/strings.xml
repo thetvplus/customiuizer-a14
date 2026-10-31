@@ -1304,4 +1304,6 @@
     <string name="a14_move_up">Subir</string>
     <string name="a14_move_down">Bajar</string>
     <string name="a14_reorder_item">Reordenar elemento</string>
+    <string name="wifi_refresh">Actualizar redes</string>
+    <string name="wifi_scan_unavailable">Escaneo no disponible. Se muestran redes guardadas; inténtalo más tarde.</string>
 </resources>

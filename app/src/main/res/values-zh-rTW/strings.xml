@@ -1306,4 +1306,6 @@
     <string name="a14_move_up">上移</string>
     <string name="a14_move_down">下移</string>
     <string name="a14_reorder_item">調整順序</string>
+    <string name="wifi_refresh">重新整理網路</string>
+    <string name="wifi_scan_unavailable">暫時無法掃描。正在顯示快取網路，請稍後再試。</string>
 </resources>

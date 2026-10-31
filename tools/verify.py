@@ -58,11 +58,23 @@ def fail(message: str) -> None:
 
 
 def _summarize(output: str, tail_lines: int = 12) -> str:
-    """Return the first and last few lines of a long output."""
+    """Keep build diagnostics visible while abbreviating successful task output."""
     lines = output.rstrip().splitlines()
     if len(lines) <= tail_lines * 2:
         return "\n".join(lines)
-    return "\n".join(lines[:4] + ["..."] + lines[-tail_lines:])
+    diagnostics: dict[str, tuple[str, int]] = {}
+    for line in lines[4:-tail_lines]:
+        if re.search(r"^\s*(?:w:|warning:|note:|Missing class|Unsupported class file)|\b(?:Warning|deprecated|obsolete)\b", line, re.IGNORECASE):
+            # One representative location per file/message, including generated code.
+            key = re.sub(r":\d+:\d+(?=\s)", "", line)
+            first, count = diagnostics.get(key, (line, 0))
+            diagnostics[key] = (first, count + 1)
+    # No accepted high-risk diagnostics: surface future compiler errors and unsafe
+    # bytecode/JDK behavior for review, without failing reasonable A14 deprecations.
+    high_risk = re.compile(r"will become an error|Missing class|Unsupported class file|will be blocked in a future release", re.IGNORECASE)
+    summary = [("[REVIEW] " if high_risk.search(line) else "") + line +
+               (f" [x{count}]" if count > 1 else "") for line, count in diagnostics.values()]
+    return "\n".join(lines[:4] + ["..."] + summary + ["..."] + lines[-tail_lines:])
 
 
 def command_environment(source: dict[str, str] | None = None) -> dict[str, str]:

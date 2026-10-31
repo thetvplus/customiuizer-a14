@@ -1,6 +1,5 @@
 package tv.withaibuild.customiuizer
 
-import android.annotation.SuppressLint
 import androidx.compose.runtime.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -61,7 +60,6 @@ class MainFragment : PreferenceFragmentBase() {
         return act != null && !act.isFinishing && isAdded
     }
 
-    @SuppressLint("MissingSuperCall")
     override fun onCreate(savedInstanceState: Bundle?) {
         toolbarMenu = true
         activeMenus = "all"

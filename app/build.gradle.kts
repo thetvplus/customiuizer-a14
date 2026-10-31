@@ -250,6 +250,8 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.jvmArgs(
+                    // Robolectric's Conscrypt provider loads JNI under JDK 27.
+                    "--enable-native-access=ALL-UNNAMED",
                     "--add-opens=java.base/java.lang=ALL-UNNAMED",
                     "--add-opens=java.base/java.util=ALL-UNNAMED",
                     "--add-opens=java.base/java.io=ALL-UNNAMED",

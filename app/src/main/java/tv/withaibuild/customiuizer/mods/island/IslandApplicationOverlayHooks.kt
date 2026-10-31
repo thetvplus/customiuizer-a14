@@ -132,7 +132,7 @@ internal class IslandApplicationOverlayAccess(
     private val win = XposedHelpers.findField(animator, "mWin")
     private val display = window.getDeclaredMethod("getDisplayId").apply { isAccessible = true }
 
-    fun snapshot(owner: Any): IslandApplicationOverlaySignal.Snapshot = synchronized(lock.get(owner)) {
+    fun snapshot(owner: Any): IslandApplicationOverlaySignal.Snapshot = synchronized(requireNotNull(lock.get(owner))) {
         val users = linkedSetOf<Int>()
         val uids = linkedSetOf<Int>()
         var remaining = 4096

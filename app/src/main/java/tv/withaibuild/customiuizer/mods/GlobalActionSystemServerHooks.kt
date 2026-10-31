@@ -357,7 +357,6 @@ object GlobalActionSystemServerHooks {
         return XposedHelpers.callMethod(context, "createContextAsUser", requested, 0) as? Context
     }
 
-    @Suppress("DEPRECATION")
     private fun applyXiaomiComponentStates(
         context: Context,
         packageNames: Array<String>,
@@ -485,7 +484,6 @@ object GlobalActionSystemServerHooks {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun isSystemApplication(packageManager: PackageManager, packageName: String): Boolean {
         return try {
             packageManager.getApplicationInfo(
@@ -497,7 +495,6 @@ object GlobalActionSystemServerHooks {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun applyUpdaterServiceStates(
         context: Context,
         names: Array<String>,

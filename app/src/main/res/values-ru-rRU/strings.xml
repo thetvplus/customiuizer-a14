@@ -1304,4 +1304,6 @@
     <string name="a14_move_up">Переместить вверх</string>
     <string name="a14_move_down">Переместить вниз</string>
     <string name="a14_reorder_item">Изменить порядок</string>
+    <string name="wifi_refresh">Обновить сети</string>
+    <string name="wifi_scan_unavailable">Сканирование недоступно. Показаны сохранённые сети; повторите попытку позже.</string>
 </resources>

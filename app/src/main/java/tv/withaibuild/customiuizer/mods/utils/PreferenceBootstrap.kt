@@ -162,18 +162,6 @@ class PreferenceBootstrap private constructor(
     }
 
     /**
-     * Old public entry points kept for binary compatibility, but [MainModule] should not call them
-     * directly.  They delegate to [bootstrap].
-     */
-    @Deprecated("Use bootstrap() instead.", ReplaceWith("bootstrap()"))
-    fun init() {
-        bootstrap()
-    }
-
-    @Deprecated("Use bootstrap() instead.", ReplaceWith("bootstrap()"))
-    fun installListener(): Boolean = bootstrap()
-
-    /**
      * Performs the stable snapshot sequence under [lock].
      *
      * The snapshot is not published until after the listener is registered, and the second

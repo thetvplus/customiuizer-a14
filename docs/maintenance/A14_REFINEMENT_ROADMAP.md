@@ -2,6 +2,25 @@
 
 本页只维护当前决定、未决问题与证据入口。任务认领和交接用 [AGENTS](../../AGENTS.md#git-与协作) 及 GitHub，不在这里复制分支数据库或开发流水账。
 
+## 编译警告与 A14 API 治理（2026-10-31）
+
+基线为本地干净工作树 `3e562a158bb7b86c1c1747c218d60982be21ad92`，与当时远端 main 一致；任务在独立工作分支实施，不合并或发布。读取同 SHA 的完整 [普通 CI 日志](https://github.com/thetvplus/customiuizer-a14/actions/runs/41170226245) 与 [签名工作流日志](https://github.com/thetvplus/customiuizer-a14/actions/runs/41171169774)，没有触发新 CI。普通 CI 的 Develop 编译可见 537 条 Kotlin 诊断，按文件与消息归并为 161 组、99 种消息模板；生成设置代码的冗余转换占 168 条，Hook 回调参数名占 159 条。旧验证器截断了成功的 Debug 输出，签名运行复用了原产物，因此这些数目不代表全部 Debug / Java / lint 警告。
+
+| 分类 | 判断与处理 |
+| --- | --- |
+| A：实际风险 | 认证不再用临时密钥生成推断解锁，不吞致命异常；透明主题 Activity 改用已有 ComponentActivity。恢复文档去掉外部卷状态前置条件；语言变化时使用两个事务实际重建设置 View。11 处反射 / Java 空值边界显式核验，保留原有失败隔离与宿主锁所有权。 |
+| B：低风险收益 | Wi-Fi 移除 15 秒循环，读取缓存、被动接收系统扫描广播，仅在缓存超过 30 秒的页面进入 / 状态恢复或手动刷新时请求一次；等待不重叠、12 秒结束，暂停注销并取消等待。移除 168 处生成代码冗余转换、6 条未来 Kotlin 编译错误诊断、两个恒真的旧 SDK 分支、四个无效 alias 属性、无消费者的 bootstrap 包装和存储辅助函数。 |
+| C：合理保留 | A14 系统凭据确认 Intent、按需 startScan 与单次 connectionInfo、ROM 广播 NetworkInfo、系统进程无线开关 / 任务查询、目标 Fragment 的内部返回协议、框架要求的 Drawable.getOpacity 和既有菜单 / 生命周期桥。私有接口、权限与进程 Context 抑制以现有 owner 为依据；移除八处不必要的弃用抑制和已调用 super 的 MissingSuperCall 抑制，没有整文件弃用抑制。 |
+| D：工具链 | SDK 安装器弃用提示与 Service SDK 测试的 Java 弃用提示保留。测试允许 Conscrypt 所需的 JNI native access；final AtomicReference 更新其内容，故障测试在 test 源码集替换观察者行为，不改写 final 字段或放开 final-field-mutation。 |
+
+备份 / 恢复和认证使用既有 Activity Result 注册机制，恢复文档保留原 ACTION、OPENABLE 与精确 MIME 类型；快捷方式的旧返回协议继续保留。Parcelable 使用 SDK 33 已提供的类型参数重载，外部页面动画改在启动时传入原生 ActivityOptions。没有引入运行依赖或跨版本辅助框架。[系统扫描结果广播](https://developer.android.com/develop/connectivity/wifi/wifi-scan)可复用其他来源的完整扫描；[凭据确认](https://developer.android.com/reference/android/app/KeyguardManager#createConfirmDeviceCredentialIntent(java.lang.CharSequence,%20java.lang.CharSequence))在 A14 继续使用原系统流程，暂不增加 BiometricPrompt 的取消与重建所有权。
+
+保留 AGP 9.5 的 OptimizeResourcesTask 后处理：紧凑编码在 R8 的 proto→binary 转换后需要重新应用，当前公开 artifact API 没有等效的优化后资源表入口。APK 级公开变换会扩大解包、重打包和签名前顺序责任；本轮不重建这一流程。同一实际资源包的 AAPT2 往返验证：proto→binary 的 resources.arsc 为 1,096,628 字节，compact 后为 920,464 字节，与实际优化输出一致；差值 176,164 字节只证明资源表编码收益，不代表 APK 总体积或设备性能。该内部 API 耦合仍须随 AGP 升级复核，不能声称已消除升级风险。
+
+成功构建的既有输出现在按文件 / 消息归并，保留首个定位与次数，汇总区的未来编译错误、缺失类及未来 JDK 拒绝行为标为 REVIEW；合理弃用不使构建失败，不重复执行 Gradle。该轻量观察基线不接受高风险豁免，也不是全量告警失败门禁。首次完整 Debug lint 有 1420 条 Warning / 31 类，主要是 UnusedResources 1084、UseKtx 112、DiscouragedApi 65、PrivateApi 41；不按这些命中批量删除资源、迁移语法或替换 ROM 接口。
+
+验证采用 Deep：JDK 27 的 Full 通过，4216 项应用回归零失败 / 零跳过；后续 103 项关联验证中的文档筛选差异已修复并定向复验，13 项新增 / 故障用例通过，导入 / 导出精确 MIME、OPENABLE、取消与重建再次通过。743 项工具回归范围的两项失败修复后，73 项相关工具复验通过，另有 25 项架构 / R8 / 地图检查通过；确定性与 11/11 必需独立 mutation 通过。完整 Debug lint 更新为 1411 条 Warning / 27 类、零错误，四类无效属性 / 旧 SDK 分支 / 缺翻译 / 无效 detach-attach 命中已清零；不表示其他 lint 均已治理。本地 Develop 首次增量编译可见 159 条诊断、69 个文件 / 消息组，增量范围与 CI 的 537 条不同，不能据此推断总计消除了 378 条。最终未签名 Develop 的 R8 / fatal lint 通过，mapping、usage 与 configuration 产物齐全。官方 DexSQL 核对最终 APK：Hook API 定义、Manifest 设置入口直接 API 引用、JUnit / Robolectric 定义均为零；setId / getId 各一个 invoke 指令，同产物方法映射仍归属 HookInstallation，replaceHook 为零，三个既有固定 ID 均保留。R8 合并后的容器类名不能代替调用归属，也不能由指令数推断设备安装次数。当前没有可用设备，真实 HyperOS 1 的凭据解锁、Wi-Fi 扫描节流 / 权限恢复、输入法和外部页面动画保持待验。只确认移除周期请求和重复工作，不宣称设备 CPU / GPU、内存、帧率或功耗的数值提升。原始日志与产物仅本地留存。
+
 ## 项目历史与 Actions 隐私整理（2026-10-31）
 
 经明确授权，开发过程提交合并到九个保留正式版的匿名源码快照，当前维护成果统一收口。每个快照的 app、Gradle 及构建输入与原对应版本逐项一致；署名与许可文件保留。旧引用、发布资料和必要日志仅私有备份，不放回公开仓库。

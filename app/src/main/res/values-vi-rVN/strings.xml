@@ -1305,4 +1305,6 @@
     <string name="a14_move_up">Di chuyển lên</string>
     <string name="a14_move_down">Di chuyển xuống</string>
     <string name="a14_reorder_item">Sắp xếp mục</string>
+    <string name="wifi_refresh">Làm mới mạng</string>
+    <string name="wifi_scan_unavailable">Không thể quét. Đang hiển thị các mạng đã lưu; hãy thử lại sau.</string>
 </resources>

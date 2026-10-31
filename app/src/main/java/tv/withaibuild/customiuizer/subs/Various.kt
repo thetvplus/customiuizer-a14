@@ -195,7 +195,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupPermissionControllerScopeRequests() {
         val scopeContext = context?.applicationContext ?: return
         val packageManager = scopeContext.packageManager
@@ -259,7 +258,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupMiuiDaemonControl() {
         val preference = findPreference<CheckBoxPreferenceEx>(MIUI_DAEMON_PREF) ?: return
         configureMaintenancePreference(preference)
@@ -329,7 +327,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupComponentTrimProfile(
         preferenceKey: String,
         knownComponents: List<ComponentName>,
@@ -415,7 +412,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupPackageTrimProfile(
         preferenceKey: String,
         knownPackages: List<String>,
@@ -658,7 +654,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun declaredUpdaterServices(): Pair<Array<String>, IntArray>? {
         val context = context ?: return null
         return try {

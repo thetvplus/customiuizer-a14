@@ -25,6 +25,24 @@ _audit = importlib.util.module_from_spec(_spec_audit)
 _spec_audit.loader.exec_module(_audit)
 
 
+class DiagnosticSummaryTests(unittest.TestCase):
+    def test_warnings_survive_success_truncation_and_duplicates_are_counted(self):
+        warning = "w: file:///repo/Feature.kt:2:8 API is deprecated"
+        output = "\n".join(["task"] * 20 + [warning, warning.replace(":2:8", ":4:2"), "WARNING: Restricted methods will be blocked in a future release"] + ["ok"] * 20)
+        summary = _verify._summarize(output)
+        self.assertIn(warning + " [x2]", summary)
+        self.assertEqual(1, summary.count(warning))
+        self.assertIn("[REVIEW] WARNING: Restricted methods", summary)
+
+    def test_short_output_and_failure_output_are_not_abbreviated(self):
+        self.assertEqual("warning: short", _verify._summarize("warning: short\n"))
+        output = "\n".join(str(i) for i in range(60))
+        result = subprocess.CompletedProcess([], 1, stdout=output, stderr="")
+        with patch.object(_verify.subprocess, "run", return_value=result), redirect_stdout(io.StringIO()) as stream:
+            self.assertEqual(1, _verify.run(["example"]))
+        self.assertIn(output, stream.getvalue())
+
+
 class BehaviorGateTests(unittest.TestCase):
     def run_gate(self, code, report=None, stale=False):
         with tempfile.TemporaryDirectory() as td:

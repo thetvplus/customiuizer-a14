@@ -3,20 +3,42 @@ package tv.withaibuild.customiuizer.mods.island
 import android.view.ViewTreeObserver
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.Before
+import org.robolectric.annotation.Implements
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.ClassName
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
 
+@Implements(ViewTreeObserver::class)
+class FailingInsetsObserverShadow {
+    @Implementation fun addOnComputeInternalInsetsListener(
+        @ClassName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener") listener: Any
+    ) { addFailure?.let { throw it } }
+    @Implementation fun removeOnComputeInternalInsetsListener(
+        @ClassName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener") listener: Any
+    ) { removeFailure?.let { throw it } }
+    companion object {
+        var addFailure: Throwable? = null
+        var removeFailure: Throwable? = null
+    }
+}
+
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], shadows = [FailingInsetsObserverShadow::class])
 class IslandInsetsFailureTest {
+    @Before fun resetFailures() {
+        FailingInsetsObserverShadow.addFailure = null
+        FailingInsetsObserverShadow.removeFailure = null
+    }
     @Test fun failedAttachDisablesInputAndRepeatedAttachDoesNotRetry() {
         val root = root()
         var failures = 0
         root.onUnavailable = { failures++ }
-        replaceBridge(root, "fail")
+        FailingInsetsObserverShadow.addFailure = IllegalStateException("injected")
         attach(root)
         assertFalse(root.inputRegionAvailable)
         attach(root)
@@ -27,7 +49,7 @@ class IslandInsetsFailureTest {
 
     @Test fun failedRemovalStillClearsOwnerAndCancelsPendingInput() {
         val root = root()
-        replaceBridge(root, "accept", "fail")
+        FailingInsetsObserverShadow.removeFailure = IllegalStateException("injected")
         attach(root)
         ReflectionHelpers.setField(root, "tracking", true)
         detach(root)
@@ -39,7 +61,7 @@ class IslandInsetsFailureTest {
 
     @Test fun fatalReflectionFailuresPropagateAfterDetachCleanup() {
         val root = root()
-        replaceBridge(root, "accept", "fatal")
+        FailingInsetsObserverShadow.removeFailure = OutOfMemoryError("injected")
         attach(root)
         try {
             detach(root)
@@ -68,17 +90,4 @@ class IslandInsetsFailureTest {
     private fun root() = IslandTouchWindow(IslandActivityView(RuntimeEnvironment.getApplication()))
     private fun attach(root: IslandTouchWindow) = ReflectionHelpers.callInstanceMethod<Unit>(root, "onAttachedToWindow")
     private fun detach(root: IslandTouchWindow) = ReflectionHelpers.callInstanceMethod<Unit>(root, "onDetachedFromWindow")
-    private fun replaceBridge(root: IslandTouchWindow, add: String, remove: String = "accept") {
-        val type = Class.forName("tv.withaibuild.customiuizer.mods.island.IslandTouchWindow\$Insets")
-        val constructor = type.declaredConstructors.single().apply { isAccessible = true }
-        ReflectionHelpers.setField(root, "insets", constructor.newInstance(Any(),
-            IslandInsetsFailureTest::class.java.getMethod(add, Any::class.java),
-            IslandInsetsFailureTest::class.java.getMethod(remove, Any::class.java)))
-    }
-
-    companion object {
-        @JvmStatic fun accept(listener: Any) = Unit
-        @JvmStatic fun fail(listener: Any): Unit = throw IllegalStateException("injected")
-        @JvmStatic fun fatal(listener: Any): Unit = throw OutOfMemoryError("injected")
-    }
 }

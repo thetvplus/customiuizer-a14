@@ -155,9 +155,9 @@ internal object StatusBarHeightResources {
             if (applied == height && registered && retired.isEmpty()) return@guarded
             val token = android.os.Binder.clearCallingIdentity()
             try {
-                synchronized(abi.lock.get(service)) {
-                    val impl = abi.impl.get(service)
-                    val settings = abi.settings.get(service)
+                synchronized(requireNotNull(abi.lock.get(service))) {
+                    val impl = requireNotNull(abi.impl.get(service))
+                    val settings = requireNotNull(abi.settings.get(service))
                     // Failed native retirement must not let preference changes accumulate files.
                     val iterator = retired.iterator()
                     while (iterator.hasNext()) {
@@ -282,7 +282,7 @@ internal object StatusBarHeightResources {
             for (dimension in dimensions) setValue.invoke(instance, "android:dimen/$dimension", TypedValue.TYPE_INT_DEC, complex)
             // This ROM's public builder accepts integers only. Change the newly built entries,
             // never a framework static or shared object, to the actual dimension wire type.
-            val result = contents.get(build.invoke(instance))
+            val result = requireNotNull(contents.get(build.invoke(instance)))
             for (value in entries.get(result) as List<*>) dataType.setInt(value, TypedValue.TYPE_DIMENSION)
             return result
         }

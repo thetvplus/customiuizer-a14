@@ -46,7 +46,7 @@ internal object NotificationAlertHook {
                     val nativeOwner = owner.get(chain.thisObject)
                     val power = (context.get(nativeOwner) as Context).getSystemService(PowerManager::class.java)
                     if (power?.isInteractive != true) null
-                    else Alert(manager.get(nativeOwner), key.get(entry.get(chain.thisObject)) as String)
+                    else Alert(requireNotNull(manager.get(nativeOwner)), key.get(entry.get(chain.thisObject)) as String)
                 }
                 return scope.within(alert) { chain.proceed() }
             }

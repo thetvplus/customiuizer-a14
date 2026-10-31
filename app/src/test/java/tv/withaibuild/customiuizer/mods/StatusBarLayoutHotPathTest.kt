@@ -55,7 +55,8 @@ class StatusBarLayoutHotPathTest {
         val prefs = PrefMap().apply { clear() }
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
 
         SystemUIStatusBarHooks.buildStatusBarLayoutSnapshot(prefs)
 
@@ -69,7 +70,8 @@ class StatusBarLayoutHotPathTest {
         val countingMap = LayoutCountingMap()
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(MainModule.mPrefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(countingMap)
         countingMap.reset()
 
         repeat(100) { index ->
@@ -171,10 +173,12 @@ class StatusBarLayoutHotPathTest {
         values["system_statusbar_mobile_showname"] = mobileShownName
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(values))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(values)
         // Build through production so field mapping stays in one place.
         MainModule.mPrefs.clear()
-        snapshotField.set(MainModule.mPrefs, AtomicReference<Map<String, Any>>(values))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(values)
         val built = SystemUIStatusBarHooks.buildStatusBarLayoutSnapshot(MainModule.mPrefs)
         return built.copy(id = idGenerator.get(), convert4gToLte = convert4gToLte, mobileShownName = mobileShownName)
     }

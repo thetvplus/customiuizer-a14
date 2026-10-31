@@ -181,7 +181,7 @@ object SystemStatusBarIconHooks {
     private const val ALARM_NEXT_TIME = "customiuizer_alarmNextTime"
     private const val ALARM_POLICY_OWNER = "customiuizer_alarmPolicyOwner"
 
-    private fun updateAlarmVisibility(thisObject: Any) = ModuleHelper.guarded {
+    private fun updateAlarmVisibility(thisObject: Any): Unit = ModuleHelper.guarded {
         val mIconController = XposedHelpers.getObjectField(thisObject, "mIconController")
         val lastState = XposedHelpers.getAdditionalInstanceField(thisObject, ALARM_LAST_STATE) as? Boolean ?: false
         if (!lastState) {
@@ -242,7 +242,7 @@ object SystemStatusBarIconHooks {
                     XposedHelpers.setAdditionalInstanceField(mNextAlarmCallback, ALARM_POLICY_OWNER, WeakReference(thisObject))
 
                     ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onAlarmChanged", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-                        override fun after(param: AfterHookCallback) = ModuleHelper.guarded {
+                        override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
                             val callback = param.getThisObject() ?: return
                             val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
                             val policy = policyRef?.get() ?: return
@@ -257,7 +257,7 @@ object SystemStatusBarIconHooks {
                         }
                     })
                     ModuleHelper.findAndHookMethod(mNextAlarmCallback.javaClass, "onNextAlarmChanged", AlarmManager.AlarmClockInfo::class.java, object : MethodHook() {
-                        override fun after(param: AfterHookCallback) = ModuleHelper.guarded {
+                        override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
                             val callback = param.getThisObject() ?: return
                             val policyRef = XposedHelpers.getAdditionalInstanceField(callback, ALARM_POLICY_OWNER) as? WeakReference<Any>
                             val policy = policyRef?.get() ?: return

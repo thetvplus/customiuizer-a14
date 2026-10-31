@@ -1312,4 +1312,6 @@
     <string name="a14_move_up">Přesunout nahoru</string>
     <string name="a14_move_down">Přesunout dolů</string>
     <string name="a14_reorder_item">Změnit pořadí</string>
+    <string name="wifi_refresh">Obnovit sítě</string>
+    <string name="wifi_scan_unavailable">Skenování není dostupné. Zobrazeny jsou uložené sítě; zkuste to později.</string>
 </resources>

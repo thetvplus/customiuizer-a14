@@ -28,8 +28,9 @@ class Various_HiddenFeatures : SubFragment() {
                 val bundle = Bundle().apply { putString("classname", "com.android.settings.Settings\$HighPowerApplicationsActivity") }
                 putExtra(":settings:show_fragment_args", bundle)
             }
-            act.startActivity(intent)
-            act.overridePendingTransition(R.anim.activity_open_enter, R.anim.activity_open_exit)
+            act.startActivity(intent, android.app.ActivityOptions.makeCustomAnimation(
+                act, R.anim.activity_open_enter, R.anim.activity_open_exit
+            ).toBundle())
             true
         }
 
@@ -42,8 +43,9 @@ class Various_HiddenFeatures : SubFragment() {
                 component = ComponentName("com.android.settings", "com.android.settings.SubSettings")
                 putExtra(":settings:show_fragment", "com.android.settings.applications.RunningServices")
             }
-            act.startActivity(intent)
-            act.overridePendingTransition(R.anim.activity_open_enter, R.anim.activity_open_exit)
+            act.startActivity(intent, android.app.ActivityOptions.makeCustomAnimation(
+                act, R.anim.activity_open_enter, R.anim.activity_open_exit
+            ).toBundle())
             true
         }
 

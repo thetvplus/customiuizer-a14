@@ -1311,4 +1311,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="a14_move_up">Yukarı taşı</string>
     <string name="a14_move_down">Aşağı taşı</string>
     <string name="a14_reorder_item">Sırayı değiştir</string>
+    <string name="wifi_refresh">Ağları yenile</string>
+    <string name="wifi_scan_unavailable">Tarama kullanılamıyor. Kayıtlı ağlar gösteriliyor; daha sonra tekrar deneyin.</string>
 </resources>

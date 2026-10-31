@@ -495,7 +495,7 @@ object GlobalActions {
                         XposedHelpers.callMethod(mCommandQueue, "showGlobalActionsMenu")
                     }
                     ACTION_PREFIX + "LaunchIntent" -> {
-                        val launchIntent = intent.getParcelableExtra<Intent>("intent")
+                        val launchIntent = intent.getParcelableExtra("intent", Intent::class.java)
                         if (launchIntent != null) {
                             var user = 0
                             if (launchIntent.hasExtra("user")) {
