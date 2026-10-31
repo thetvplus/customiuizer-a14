@@ -64,7 +64,7 @@ class SortableList : SubFragment() {
                     val name = AppHelper.getActionNameLocal(context, "${key}_$id")
                     val label = if (activities) Helpers.getAppName(context,
                         AppHelper.getStringOfAppPrefs("${key}_${id}_activity", "").orEmpty(), true) else name?.first
-                    Item(id, label?.toString() ?: context.getString(R.string.notselected), name?.second?.toString().orEmpty())
+                    Item(id, label?.toString() ?: context.getString(R.string.notselected), name?.second.orEmpty())
                 }
             }
         }

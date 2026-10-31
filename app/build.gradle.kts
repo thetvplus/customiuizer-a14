@@ -383,6 +383,9 @@ dependencies {
     testImplementation(libs.compose.ui.test)
     debugImplementation(libs.compose.test.manifest)
     constraints {
+        testImplementation("com.google.guava:guava:33.7.2-jre") {
+            because("CVE-2026-102554; Robolectric's host-only transitive dependency")
+        }
         implementation(libs.androidx.fragment.ktx) {
             because("Keep the transitive Fragment KTX companion aligned with Fragment")
         }

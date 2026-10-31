@@ -281,9 +281,9 @@ object DeviceInfoMonitor {
             "com.android.systemui.statusbar.policy.NetworkSpeedController",
             lpparam.classLoader,
             object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
+                override fun after(callback: AfterHookCallback) {
                     val iconController = XposedHelpers.getObjectField(
-                        param.getThisObject(),
+                        callback.getThisObject(),
                         "mStatusBarIconController"
                     ) ?: return
                     val iconList = XposedHelpers.getObjectField(iconController, "mStatusBarIconList") ?: return
@@ -314,7 +314,7 @@ object DeviceInfoMonitor {
             lpparam.classLoader,
             "addHolder",
             object : MethodHook() {
-                override fun before(param: BeforeHookCallback) = interceptAddHolder(param)
+                override fun before(callback: BeforeHookCallback) = interceptAddHolder(callback)
             }
         )
     }
@@ -436,11 +436,11 @@ object DeviceInfoMonitor {
             lpparam.classLoader,
             "getSlot",
             object : MethodHook() {
-                override fun before(param: BeforeHookCallback) {
-                    val nsView = param.getThisObject() as? View ?: return
+                override fun before(callback: BeforeHookCallback) {
+                    val nsView = callback.getThisObject() as? View ?: return
                     val tagData = nsView.getTag(SystemUIStatusBarHooks.textIconTagId)
                     if (tagData != null) {
-                        param.returnAndSkip(SystemUIStatusBarHooks.getSlotNameByType(tagData as Int))
+                        callback.returnAndSkip(SystemUIStatusBarHooks.getSlotNameByType(tagData as Int))
                     }
                 }
             }
@@ -463,8 +463,8 @@ object DeviceInfoMonitor {
             "com.android.systemui.statusbar.policy.NetworkSpeedController",
             lpparam.classLoader,
             object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    val args = param.getArgs()
+                override fun after(callback: AfterHookCallback) {
+                    val args = callback.getArgs()
                     if (firstConstructorLog.compareAndSet(false, true)) {
                         val argClasses = args.mapIndexed { index, value ->
                             "ARG${index}_CLASS=${value?.javaClass?.name ?: "null"}"
@@ -476,7 +476,7 @@ object DeviceInfoMonitor {
                     }
                     val mContext = resolveNetworkSpeedControllerContext(args) ?: return
                     val bgHandler = try {
-                        XposedHelpers.getObjectField(param.getThisObject(), "mBgHandler") as? Handler
+                        XposedHelpers.getObjectField(callback.getThisObject(), "mBgHandler") as? Handler
                     } catch (oom: OutOfMemoryError) {
                         throw oom
                     } catch (t: Throwable) {

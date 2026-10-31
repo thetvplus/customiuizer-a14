@@ -1,0 +1,113 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*",
+      "*acquireBuffer*",
+      "*dequeueBuffer*",
+      "*latchBuffer*",
+      "*presentDisplay*",
+      "surfaceflinger"
+    ]
+  },
+  "id": "fence_wait_decomposition",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "description": "应用包名（可选，用于过滤 dequeueBuffer 等待）",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "slice",
+      "thread",
+      "process"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/fence_wait_decomposition.skill.yaml",
+    "sha256": "75f359793eed661eb1be28d6514d7eca7a9defec4fa11b309b3166f25d9ee94a"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "acquire_fence_wait",
+      "name": "Acquire Fence 等待（SF latch）",
+      "query_id": "fence_wait_decomposition/acquire_fence_wait",
+      "result_dependencies": [],
+      "save_as": "acquire_fence_wait",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "present_fence_timing",
+      "name": "Present Fence 时机（HWC presentDisplay）",
+      "query_id": "fence_wait_decomposition/present_fence_timing",
+      "result_dependencies": [],
+      "save_as": "present_fence_timing",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "release_fence_impact",
+      "name": "Release Fence 影响（App dequeueBuffer 等待）",
+      "query_id": "fence_wait_decomposition/release_fence_impact",
+      "result_dependencies": [],
+      "save_as": "release_fence_impact",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "fence_attribution_hint",
+      "name": "Fence 三分归因提示",
+      "query_id": "fence_wait_decomposition/fence_attribution_hint",
+      "result_dependencies": [],
+      "save_as": "fence_attribution_hint",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "gpu-rendering"
+}

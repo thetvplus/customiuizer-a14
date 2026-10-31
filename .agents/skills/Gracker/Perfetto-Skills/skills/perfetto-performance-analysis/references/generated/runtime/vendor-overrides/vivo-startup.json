@@ -1,0 +1,63 @@
+{
+  "application_mode": "advisory_only",
+  "definition": {
+    "additional_steps": [
+      {
+        "description": "检查 Jovi 和 OriginOS 优化是否生效",
+        "for_each": "startups",
+        "id": "vivo_smart_optimization",
+        "name": "vivo 智能优化检测",
+        "sql": "SELECT\n  s.name as optimization_event,\n  s.dur / 1e6 as dur_ms,\n  (s.ts - (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})) / 1e6 as relative_ts_ms\nFROM slice s\nWHERE (s.name GLOB '*Jovi*'\n       OR s.name GLOB '*OriginOS*'\n       OR s.name GLOB '*vivo*Boost*'\n       OR s.name GLOB '*SmartEngine*')\n  AND s.ts >= (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})\n  AND s.ts <= (SELECT ts + dur FROM android_startups WHERE startup_id = ${item.startup_id})\nORDER BY s.ts ASC\n"
+      },
+      {
+        "for_each": "startups",
+        "id": "vivo_system_services",
+        "name": "vivo 系统服务调用",
+        "sql": "SELECT\n  server_process,\n  client_dur / 1e6 as dur_ms,\n  COUNT(*) as call_count\nFROM android_binder_txns\nWHERE ('${package}' = '' OR client_process = '${package}' OR client_process GLOB '${package}:*')\n  AND (server_process GLOB '*vivo*'\n       OR server_process GLOB '*bbk*'\n       OR server_process GLOB '*jovi*')\n  AND client_ts >= (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})\n  AND client_ts <= (SELECT ts + dur FROM android_startups WHERE startup_id = ${item.startup_id})\nGROUP BY server_process\nORDER BY SUM(client_dur) DESC\n"
+      },
+      {
+        "for_each": "startups",
+        "id": "memory_optimization",
+        "name": "内存优化状态",
+        "sql": "SELECT\n  s.name as memory_event,\n  s.dur / 1e6 as dur_ms\nFROM slice s\nWHERE (s.name GLOB '*MemoryOptimiz*'\n       OR s.name GLOB '*freeze*'\n       OR s.name GLOB '*Freeze*')\n  AND s.ts >= (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})\n  AND s.ts <= (SELECT ts + dur FROM android_startups WHERE startup_id = ${item.startup_id})\nORDER BY s.ts ASC\n"
+      }
+    ],
+    "extends": "composite/startup_analysis",
+    "meta": {
+      "description": "针对 vivo OriginOS 优化的启动分析，包含 Jovi 智能优化检测",
+      "display_name": "vivo OriginOS 启动分析",
+      "os": "OriginOS",
+      "vendor": "vivo"
+    },
+    "vendor_detection": {
+      "signatures": [
+        {
+          "confidence": "high",
+          "pattern": "*OriginOS*"
+        },
+        {
+          "confidence": "high",
+          "pattern": "*vivo*"
+        },
+        {
+          "confidence": "high",
+          "pattern": "*Jovi*"
+        },
+        {
+          "confidence": "medium",
+          "pattern": "*Funtouch*"
+        },
+        {
+          "confidence": "medium",
+          "pattern": "*bbk*"
+        }
+      ]
+    },
+    "version": "1.0.0"
+  },
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/vendors/vivo/startup.override.yaml",
+    "sha256": "61ae04030b65f2804478eef6e1663a31f76c7b466bd6dcc28fc301d2976d35f5"
+  }
+}

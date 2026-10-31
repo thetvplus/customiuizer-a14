@@ -1,0 +1,419 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "branches": [
+          "api<=28",
+          "api29-32",
+          "api>=33"
+        ],
+        "id": "official_android_startup_tags",
+        "source": "perfetto stdlib android/startup/startups.sql"
+      },
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      },
+      {
+        "id": "android_input_source",
+        "selection": "data-source descriptor, build type, config, then rows",
+        "version_hint": {
+          "proto_input_min_api_hint": 34
+        }
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "% %",
+      "%:%",
+      "%MemFree%",
+      "%SwapFree%",
+      "%battery%charge%",
+      "%battery%plugged%",
+      "%charge%",
+      "%current%",
+      "%mem%pressure%",
+      "%plugged%",
+      "%thermal_zone%",
+      "%voltage%",
+      "*.*",
+      "*AlarmManager*",
+      "*AppTransition*",
+      "*AppTransitionReady*",
+      "*BackGesture*",
+      "*BackPanel*",
+      "*BroadcastQueue*",
+      "*InputMethodManager*hide*",
+      "*InputMethodManager*show*",
+      "*InputMethodService*hide*",
+      "*InputMethodService*show*",
+      "*RecentsAnimation*",
+      "*Shell transition*",
+      "*SwipeToHome*",
+      "*activityDestroy*",
+      "*activityPause*",
+      "*activityResume*",
+      "*activityStart*",
+      "*activityStop*",
+      "*broadcastReceive*",
+      "*closeAnimation*",
+      "*goToHome*",
+      "*hideSoftInput*",
+      "*launcher*",
+      "*launcher*goHome*",
+      "*onBackGesture*",
+      "*openAnimation*",
+      "*performCreate*",
+      "*performDestroy*",
+      "*performPause*",
+      "*performResume*",
+      "*performStop*",
+      "*show*",
+      "*showSoftInput*",
+      "*startRecentsActivity*",
+      "*startingWindow*",
+      "RV Scroll",
+      "batt.%",
+      "battery_stats.top",
+      "bindApplication",
+      "com.android.systemui*",
+      "com.android.wm.shell*",
+      "cpufreq",
+      "oom_score_adj",
+      "system_server"
+    ]
+  },
+  "id": "scene_reconstruction",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "trace_id",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "default": 4096,
+      "name": "scene_row_limit",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.input",
+      "android.binder",
+      "android.screen_state",
+      "android.battery_stats",
+      "android.startup.startups",
+      "android.frames.timeline",
+      "android.anrs"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/scene_reconstruction.skill.yaml",
+    "sha256": "59b4122937e29b04987a3c415c69cc1ce8120d970dcdd14b005ed5a34adbc22e"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "input_coverage",
+      "name": "输入事实覆盖范围",
+      "optional": true,
+      "query_id": "scene_reconstruction/input_coverage",
+      "result_dependencies": [],
+      "save_as": "input_coverage",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "trace_time_range",
+      "name": "Trace 时间范围",
+      "query_id": "scene_reconstruction/trace_time_range",
+      "result_dependencies": [],
+      "save_as": "time_range",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "table_availability",
+      "name": "可用数据表探测",
+      "query_id": "scene_reconstruction/table_availability",
+      "result_dependencies": [],
+      "save_as": "table_availability",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_screen_state === 1",
+      "displayed": true,
+      "id": "screen_state_changes",
+      "name": "屏幕状态变化",
+      "optional": true,
+      "query_id": "scene_reconstruction/screen_state_changes",
+      "result_dependencies": [],
+      "save_as": "screen_events",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_battery_top === 1",
+      "displayed": true,
+      "id": "top_app_changes",
+      "name": "Top App 切换",
+      "optional": true,
+      "query_id": "scene_reconstruction/top_app_changes",
+      "result_dependencies": [],
+      "save_as": "app_switches",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "activity_lifecycle",
+      "name": "Activity 生命周期",
+      "optional": true,
+      "query_id": "scene_reconstruction/activity_lifecycle",
+      "result_dependencies": [],
+      "save_as": "activity_lifecycle",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_input_events === 1",
+      "displayed": true,
+      "id": "user_gestures",
+      "name": "用户手势识别",
+      "optional": true,
+      "query_id": "scene_reconstruction/user_gestures",
+      "result_dependencies": [],
+      "save_as": "gestures",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_input_events === 1",
+      "displayed": true,
+      "id": "scroll_initiation",
+      "name": "滚动处理区间",
+      "optional": true,
+      "query_id": "scene_reconstruction/scroll_initiation",
+      "result_dependencies": [],
+      "save_as": "scroll_starts",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_key_events === 1",
+      "displayed": true,
+      "id": "navigation_keys",
+      "name": "导航按键",
+      "optional": true,
+      "query_id": "scene_reconstruction/navigation_keys",
+      "result_dependencies": [],
+      "save_as": "nav_keys",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "gesture_navigation",
+      "name": "手势导航",
+      "optional": true,
+      "query_id": "scene_reconstruction/gesture_navigation",
+      "result_dependencies": [],
+      "save_as": "gesture_nav",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "window_transitions",
+      "name": "窗口转场",
+      "optional": true,
+      "query_id": "scene_reconstruction/window_transitions",
+      "result_dependencies": [],
+      "save_as": "win_transitions",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_anrs === 1",
+      "displayed": true,
+      "id": "anr_events",
+      "name": "ANR 事件",
+      "optional": true,
+      "query_id": "scene_reconstruction/anr_events",
+      "result_dependencies": [],
+      "save_as": "anr_events",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "ime_events",
+      "name": "输入法事件",
+      "optional": true,
+      "query_id": "scene_reconstruction/ime_events",
+      "result_dependencies": [],
+      "save_as": "ime_events",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_input_events === 1 && table_availability.data[0]?.has_frame_timeline === 1",
+      "displayed": true,
+      "id": "inertial_scrolls",
+      "name": "惯性滑动",
+      "optional": true,
+      "query_id": "scene_reconstruction/inertial_scrolls",
+      "result_dependencies": [],
+      "save_as": "inertial_scrolls",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_input_events === 1",
+      "displayed": true,
+      "id": "idle_periods",
+      "name": "未观测到输入的区间（采集完整性未确认）",
+      "optional": true,
+      "query_id": "scene_reconstruction/idle_periods",
+      "result_dependencies": [],
+      "save_as": "idle_periods",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_startups === 1",
+      "displayed": true,
+      "id": "app_launches",
+      "name": "App 启动事件",
+      "optional": true,
+      "query_id": "scene_reconstruction/app_launches",
+      "result_dependencies": [],
+      "save_as": "launches",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "system_events",
+      "name": "系统事件",
+      "optional": true,
+      "query_id": "scene_reconstruction/system_events",
+      "result_dependencies": [],
+      "save_as": "sys_events",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "broadcast_events",
+      "name": "广播事件",
+      "optional": true,
+      "query_id": "scene_reconstruction/broadcast_events",
+      "result_dependencies": [],
+      "save_as": "broadcast_events",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "cross_process_interactions",
+      "name": "跨进程交互",
+      "optional": true,
+      "query_id": "scene_reconstruction/cross_process_interactions",
+      "result_dependencies": [],
+      "save_as": "cross_process_interactions",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_frame_timeline === 1",
+      "displayed": true,
+      "id": "jank_events",
+      "name": "掉帧事件",
+      "optional": true,
+      "query_id": "scene_reconstruction/jank_events",
+      "result_dependencies": [],
+      "save_as": "janks",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "device_state",
+      "name": "设备状态",
+      "optional": true,
+      "query_id": "scene_reconstruction/device_state",
+      "result_dependencies": [],
+      "save_as": "device_state",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "app_state_tracking",
+      "name": "App 状态跟踪",
+      "optional": true,
+      "query_id": "scene_reconstruction/app_state_tracking",
+      "result_dependencies": [],
+      "save_as": "app_states",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "operation_chain",
+      "name": "操作链",
+      "optional": true,
+      "query_id": "scene_reconstruction/operation_chain",
+      "result_dependencies": [],
+      "save_as": "operation_chain",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_input_events === 1 || table_availability.data[0]?.has_startups === 1 || table_availability.data[0]?.has_key_events === 1 || table_availability.data[0]?.has_anrs === 1",
+      "displayed": true,
+      "id": "clean_timeline",
+      "name": "场景时间线",
+      "optional": true,
+      "query_id": "scene_reconstruction/clean_timeline",
+      "result_dependencies": [],
+      "save_as": "clean_timeline",
+      "type": "atomic"
+    },
+    {
+      "condition": "table_availability.data[0]?.has_screen_state === 1 || table_availability.data[0]?.has_input_events === 1 || table_availability.data[0]?.has_startups === 1 || table_availability.data[0]?.has_frame_timeline === 1",
+      "displayed": true,
+      "id": "merged_timeline",
+      "name": "合并时间线",
+      "optional": true,
+      "query_id": "scene_reconstruction/merged_timeline",
+      "result_dependencies": [],
+      "save_as": "timeline",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.1",
+  "workflow": "scene-reconstruction"
+}

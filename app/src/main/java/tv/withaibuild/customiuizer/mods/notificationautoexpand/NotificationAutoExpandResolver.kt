@@ -103,7 +103,7 @@ internal object NotificationAutoExpandResolver {
             // Match the legacy XposedHelpers.callMethod(thisObject, "setSystemExpanded", true),
             // where the Kotlin literal `true` is boxed to java.lang.Boolean and resolved with
             // Boolean.class parameter-type semantics.
-            XposedHelpers.findMethodBestMatch(resolutionRootClass, METHOD_SET_SYSTEM_EXPANDED, java.lang.Boolean::class.java)
+            XposedHelpers.findMethodBestMatch(resolutionRootClass, METHOD_SET_SYSTEM_EXPANDED, Boolean::class.javaObjectType)
         } catch (t: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(t)
             null

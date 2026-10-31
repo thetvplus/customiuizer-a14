@@ -545,7 +545,7 @@ object System {
 
                     val mContext = XposedHelpers.callMethod(thisObject, "getContext") as Context?
                     val mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler?
-                    val mToastQueue = XposedHelpers.getObjectField(thisObject, "mToastQueue") as ArrayList<Any>?
+                    val mToastQueue = XposedHelpers.getObjectField(thisObject, "mToastQueue") as ArrayList<*>?
                     if (mContext == null || mHandler == null || mToastQueue == null || mToastQueue.size == 0) { return XposedHelpers.throwOrReturn(throwable, result) }
                     val mod = (systemMiscConfig.toastTime - 4) * 1000
                     for (record in mToastQueue)

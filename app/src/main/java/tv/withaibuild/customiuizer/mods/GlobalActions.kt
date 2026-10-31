@@ -618,19 +618,19 @@ object GlobalActions {
         // creation only supplies the latest host resources, never installs global hooks.
         val host = java.util.concurrent.atomic.AtomicReference<Pair<Context, Handler>?>()
         ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader, object : MethodHook() {
-            override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
-                if (param.getThrowable() != null) return
-                val context = (param.getArg(0) as Context).applicationContext
-                val handler = XposedHelpers.getObjectField(param.getThisObject(), "mBgHandler") as Handler
+            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (callback.getThrowable() != null) return
+                val context = (callback.getArg(0) as Context).applicationContext
+                val handler = XposedHelpers.getObjectField(callback.getThisObject(), "mBgHandler") as Handler
                 host.set(context to handler)
             }
         })
         ModuleHelper.findAndHookMethod("com.miui.systemui.functions.MiuiTopActivityObserver", lpparam.classLoader, "updateTopActivity", object : MethodHook() {
             private var packageName: String? = null
-            override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
-                if (param.getThrowable() != null) return
+            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (callback.getThrowable() != null) return
                 val context = host.get()?.first ?: return
-                val top = XposedHelpers.getObjectField(param.getThisObject(), "mTopActivity") as? ComponentName ?: return
+                val top = XposedHelpers.getObjectField(callback.getThisObject(), "mTopActivity") as? ComponentName ?: return
                 if (packageName != top.packageName) {
                     Settings.Global.putString(context.contentResolver, Helpers.modulePkg + ".foreground.package", top.packageName)
                     packageName = top.packageName
@@ -640,10 +640,10 @@ object GlobalActions {
         if (Various.variousConfig.showCallUi > 0) {
             ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.classLoader, "onSystemBarAttributesChanged", object : MethodHook() {
                 private var fullScreen: Boolean? = null
-                override fun after(param: AfterHookCallback): Unit = ModuleHelper.guarded {
-                    if (param.getThrowable() != null) return
+                override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                    if (callback.getThrowable() != null) return
                     val (context, handler) = host.get() ?: return
-                    val controller = XposedHelpers.getObjectField(param.getThisObject(), "statusBarStateController")
+                    val controller = XposedHelpers.getObjectField(callback.getThisObject(), "statusBarStateController")
                     val current = XposedHelpers.getBooleanField(controller, "mIsFullscreen")
                     if (fullScreen != current) {
                         fullScreen = current

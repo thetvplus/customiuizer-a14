@@ -1,0 +1,31 @@
+version = 1
+revision = 5
+requires-python = ">=3.11"
+
+[[package]]
+name = "yara-x"
+version = "1.22.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/bb/22b5cb8b57d60a258196ff46392be59f9261c7dd33a237960059de5c9d55/yara_x-1.22.0-cp39-abi3-macosx_14_0_arm64.whl", hash = "sha256:eb6d4812e73614643f3c10a2592692b544ca7db43eacb2c8c649a1c9658382c3", size = 8561901, upload-time = "2026-10-20T12:01:15.975Z" },
+    { url = "https://files.pythonhosted.org/packages/69/19/0365004e652a44dfccaa2fc73916b6c8e5ac0e64bbae1c0dfc301c5bdd63/yara_x-1.22.0-cp39-abi3-macosx_14_0_x86_64.whl", hash = "sha256:1472591e7ec4a07be0e63383235fc2e8908b6d7d510b98d210068ffde30bbe10", size = 9335193, upload-time = "2026-10-20T12:01:18.668Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/71/bfc58b9d8afbc2e25a1fd0ce72a69c48fc9cb554238cde33c89787d84ff2/yara_x-1.22.0-cp39-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:066e86533b7143ee96bb80e36b683eb25dad8bc4c064603802d3a8cbbd97f03e", size = 9956892, upload-time = "2026-10-20T12:01:21.231Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/ee/f8beabcc6ca804749c5dd91b943a81d75314ebb12ef471ad3eff7631c5f6/yara_x-1.22.0-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:a9a9a4b213b980d6b05231ea5b835c03d40e304d99ed05d18ac5e7a801de3c81", size = 10061900, upload-time = "2026-10-20T12:01:23.384Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/3e/53b5ba3fd391e2977204d00a95f5696f32815be6495fb64283f5f0d741c4/yara_x-1.22.0-cp39-abi3-win_amd64.whl", hash = "sha256:a0e889ad5377634d1ce759c8823fe1784519733de44da683da02eb0a8771b1a9", size = 8764078, upload-time = "2026-10-20T12:01:25.697Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/5c/164081becb6210f68fed75da9c5777afbb34b0252ae2bfdfa5a6ee55fd6f/yara_x-1.22.0-pp311-pypy311_pp80-macosx_14_0_arm64.whl", hash = "sha256:d2b6ec0dee512c1b035b8b9ddd6b0fe5c78c9ec22e2ee237926edce1782d5d56", size = 8557319, upload-time = "2026-10-20T12:01:28.171Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/5c/495d56a680de7618b8426b3c1732a41695febebb27d40be97823027a4cd7/yara_x-1.22.0-pp311-pypy311_pp80-macosx_14_0_x86_64.whl", hash = "sha256:89057972c4fec99e42761d264a74d84caaebe0dab99ec49dfe86bfc89a35afd3", size = 9336126, upload-time = "2026-10-20T12:01:30.429Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/69/f18603efe4d75fa728182100db46a80feb507708893389819b83e1a26f6b/yara_x-1.22.0-pp311-pypy311_pp80-manylinux_2_28_aarch64.whl", hash = "sha256:f34301eaedfa467ab87da8d121916a666caa1c8f2a1d6fa71e1e4f1cc58d4733", size = 9942701, upload-time = "2026-10-20T12:01:32.314Z" },
+    { url = "https://files.pythonhosted.org/packages/26/d4/64132100947fc2d0fd1dbb631e08118667eab88a21017aac3f18bd92ca7f/yara_x-1.22.0-pp311-pypy311_pp80-manylinux_2_28_x86_64.whl", hash = "sha256:27ca2eba9b5922b6b0abf372b8ed0d06621b7df6c738b80ba505e113c6393350", size = 10056510, upload-time = "2026-10-20T12:01:34.488Z" },
+    { url = "https://files.pythonhosted.org/packages/26/6a/8382111661394ace7692bac28ddb1f429f5fcebfc8789d02fa2d966091f3/yara_x-1.22.0-pp311-pypy311_pp80-win_amd64.whl", hash = "sha256:96fb99c4581eaf452bc0d38294b443946b833798e2fa126053d6cfd287868627", size = 8452638, upload-time = "2026-10-20T12:01:37.059Z" },
+]
+
+[[package]]
+name = "yara-x-authoring-scripts"
+version = "2.0.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "yara-x" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "yara-x", specifier = ">=0.10.0" }]

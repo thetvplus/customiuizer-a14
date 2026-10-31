@@ -1,0 +1,19 @@
+version: 2
+# Security fixes only. Version-update PRs are disabled, including toolchain chasing.
+# Security updates have GitHub's separate PR limit and still require A14 validation.
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+  - package-ecosystem: pip
+    directory: /tools
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0

@@ -3102,7 +3102,7 @@
       "target": "SYSTEM_SERVER",
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
-      "installHook": "{ SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook(lpparam) lpparam.classLoader?.let(StatusBarHeightResources::install) }",
+      "installHook": "{ SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook(lpparam) lpparam.classLoader.let(StatusBarHeightResources::install) }",
       "enableCondition": "StatusBarHeightConfig.isEnabled(prefs)",
       "allowedProcess": "system_server",
       "deniedProcess": ""
@@ -3271,7 +3271,7 @@
       "target": "SYSTEM_SERVER",
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
-      "installHook": "{ lpparam.classLoader?.let(IslandApplicationOverlayHooks::install) }",
+      "installHook": "{ lpparam.classLoader.let(IslandApplicationOverlayHooks::install) }",
       "enableCondition": "{ prefs -> IslandApplicationOverlayFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "system_server",
       "deniedProcess": ""

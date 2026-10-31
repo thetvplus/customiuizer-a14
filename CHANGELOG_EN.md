@@ -6,6 +6,9 @@ Changes for maintained releases. Valid r14.26.1 and r14.26.3 changes are consoli
 
 ## Unreleased
 
+- Tighten sender boundaries for system actions, screenshot notifications and battery previews while retaining the A14 screenshot sender's signature-permission contract. Restart the host or device after updating to register the new boundaries.
+- Address a known Guava vulnerability in build and test dependencies without adding production runtime dependencies.
+
 ## r14.26.7 — 2026-10-31
 
 versionCode 267. Changes since r14.26.5:

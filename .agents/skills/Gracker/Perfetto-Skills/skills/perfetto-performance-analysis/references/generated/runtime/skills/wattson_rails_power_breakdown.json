@@ -1,0 +1,64 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "wattson_rails_power_breakdown",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 20,
+      "description": "返回前 N 条 rail（按能耗排序）",
+      "name": "top_n",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "wattson.aggregation"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/wattson_rails_power_breakdown.skill.yaml",
+    "sha256": "9e2ae8ad5f92ade41fd691813c04bca6d79989977357e0f8f778201ac65a98bf"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "rails_aggregation",
+      "name": "Power Rails 能耗聚合",
+      "query_id": "wattson_rails_power_breakdown/rails_aggregation",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "power-thermal"
+}

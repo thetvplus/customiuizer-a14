@@ -41,6 +41,7 @@ class BatteryIndicator @JvmOverloads constructor(
 
     private companion object {
         const val RECEIVER_KEY = "batteryIndicator"
+        const val PREVIEW_RECEIVER_KEY = "batteryIndicatorPreview"
     }
 
     protected var mDisplayWidth = 0
@@ -99,6 +100,7 @@ class BatteryIndicator @JvmOverloads constructor(
         }
     }
     private var broadcastReceiver: android.content.BroadcastReceiver? = null
+    private var previewReceiver: android.content.BroadcastReceiver? = null
 
     enum class ColorMode {
         DUMMY, DISCRETE, GRADUAL, RAINBOW
@@ -136,18 +138,24 @@ class BatteryIndicator @JvmOverloads constructor(
             this
         )
 
-        val intentFilter = IntentFilter()
-        intentFilter.addAction("tv.withaibuild.customiuizer.mods.BatteryIndicatorTest")
-        if (MainModule.mPrefs.getBoolean("system_hidestatusbar_whenscreenshot")) {
-            intentFilter.addAction("miui.intent.TAKE_SCREENSHOT")
+        if (previewReceiver == null) {
+            previewReceiver = ModuleHelper.registerOwnedReceiver(
+                context, this, PREVIEW_RECEIVER_KEY,
+                IntentFilter("tv.withaibuild.customiuizer.mods.BatteryIndicatorTest"),
+                Context.RECEIVER_EXPORTED, "${Helpers.modulePkg}.permission.BROADCAST"
+            ) { _, owner, _, intent ->
+                (owner as BatteryIndicator).handleBroadcast(intent)
+            }
         }
-        if (broadcastReceiver == null) {
+        // Native screenshots do not share sender identity. Keep their permission boundary
+        // separate from the settings app's signed preview command.
+        if (MainModule.mPrefs.getBoolean("system_hidestatusbar_whenscreenshot") && broadcastReceiver == null) {
             broadcastReceiver = ModuleHelper.registerOwnedReceiver(
                 context,
                 this,
                 RECEIVER_KEY,
-                intentFilter,
-                Context.RECEIVER_EXPORTED
+                IntentFilter("miui.intent.TAKE_SCREENSHOT"),
+                Context.RECEIVER_EXPORTED, "android.permission.READ_FRAME_BUFFER"
             ) { _, owner, _, intent ->
                 (owner as BatteryIndicator).handleBroadcast(intent)
             }
@@ -260,6 +268,8 @@ class BatteryIndicator @JvmOverloads constructor(
             ModuleHelper.unregisterPreferenceObserver(this)
             ModuleHelper.unregisterOwnedReceiver(this, RECEIVER_KEY, broadcastReceiver)
             broadcastReceiver = null
+            ModuleHelper.unregisterOwnedReceiver(this, PREVIEW_RECEIVER_KEY, previewReceiver)
+            previewReceiver = null
             mStatusBar = null
             viewScope.cancel()
         }

@@ -1,0 +1,143 @@
+GENERATED FILE - DO NOT EDIT.
+Source: backend/skills/atomic/thermal_predictor.skill.yaml
+Source SHA-256: ba31bdaed9a46dcc8234edf52e0b5fb92c1d869542ae6e78dcca0e79f5e33422
+# CPU 频率趋势观察
+
+This reference is the portable Agent Skill projection of the source definition. Execute SQL with `perfetto_query.py`; bind declared scalar or JSON-array inputs through `--param`, load prerequisites through `--module`, and pass non-empty saved rows from prior steps through `--result`; dotted fields and numeric indexes select saved scalar values. Evaluate conditions and dependent Skill calls in the listed order.
+
+## Overview
+
+```yaml
+name: thermal_predictor
+version: '1.0'
+type: atomic
+category: thermal
+tier: B
+```
+
+## Metadata
+
+```yaml
+display_name: CPU 频率趋势观察
+display_name_i18n:
+  en: CPU Frequency Trend
+description: CPU 频率趋势观察；未提供温度或限频证据时不预测热机制
+description_i18n:
+  en: Observes the CPU frequency trend; it reads no temperature or frequency-limit evidence and names no cause
+icon: thermostat
+tags:
+- thermal
+- throttling
+- prediction
+- cpu
+```
+
+## Triggers
+
+```yaml
+keywords:
+  zh:
+  - 热风险
+  - 热控
+  - 限频预测
+  - 温度趋势
+  en:
+  - thermal risk
+  - thermal predictor
+  - throttling prediction
+patterns:
+- .*thermal.*(predict|risk).*
+- .*(热控|限频).*(预测|风险).*
+```
+
+## Prerequisites
+
+```yaml
+required_tables:
+- counter
+- cpu_counter_track
+```
+
+## Inputs
+
+```yaml
+- name: start_ts
+  type: timestamp
+  required: true
+  description: 分析起始时间戳(ns)
+- name: end_ts
+  type: timestamp
+  required: true
+  description: 分析结束时间戳(ns)
+- name: high_drop_threshold_pct
+  type: number
+  required: false
+  default: 30
+  description: 平均频率降幅高风险阈值（%）
+- name: medium_drop_threshold_pct
+  type: number
+  required: false
+  default: 15
+  description: 平均频率降幅中风险阈值（%）
+- name: high_core_ratio_threshold_pct
+  type: number
+  required: false
+  default: 50
+  description: 频率大幅下降核心占比高风险阈值（%）
+- name: medium_core_ratio_threshold_pct
+  type: number
+  required: false
+  default: 25
+  description: 频率大幅下降核心占比中风险阈值（%）
+- name: core_drop_threshold_pct
+  type: number
+  required: false
+  default: 30
+  description: 单核心频率大幅下降判定阈值（%）
+```
+
+## Query
+
+Run [`../sql/thermal_predictor/query.sql`](../sql/thermal_predictor/query.sql) with the declared inputs.
+
+## Output and evidence contract
+
+```yaml
+format: structured
+```
+
+## Display metadata
+
+```yaml
+level: summary
+layer: overview
+title: CPU 频率趋势
+columns:
+- name: avg_start_freq_mhz
+  label: 区间初段频率
+  type: number
+- name: avg_end_freq_mhz
+  label: 区间末段频率
+  type: number
+- name: avg_drop_pct
+  label: 平均降幅
+  type: percentage
+  format: percentage
+- name: throttled_core_ratio_pct
+  label: 频率变化核心占比
+  label_i18n:
+    en: Frequency-drop core ratio (%)
+  type: percentage
+  format: percentage
+- name: frequency_trend_risk
+  label: 频率变化信号
+  type: string
+- name: thermal_risk
+  label: 热原因证据
+  label_i18n:
+    en: Heat-cause evidence
+  type: string
+- name: prediction
+  label: 预测
+  type: string
+```

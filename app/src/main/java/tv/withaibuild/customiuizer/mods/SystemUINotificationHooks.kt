@@ -47,11 +47,11 @@ object SystemUINotificationHooks {
     @JvmStatic
     fun HideDismissViewHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.shade.MiuiNotificationPanelViewController", lpparam.classLoader, "updateDismissView", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val mDismissView = XposedHelpers.getObjectField(param.getThisObject(), "mDismissView") as View?
+            override fun before(callback: BeforeHookCallback) {
+                val mDismissView = XposedHelpers.getObjectField(callback.getThisObject(), "mDismissView") as View?
                 if (mDismissView != null) {
                     mDismissView.visibility = View.GONE
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         })
@@ -60,11 +60,11 @@ object SystemUINotificationHooks {
     @JvmStatic
     fun HideNoficationAccessIconHook(lpparam: PackageReadyParam) {
         val hideViewHook = object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val mShortCut = XposedHelpers.getObjectField(param.getThisObject(), "mShortCut") as View?
+            override fun before(callback: BeforeHookCallback) {
+                val mShortCut = XposedHelpers.getObjectField(callback.getThisObject(), "mShortCut") as View?
                 if (mShortCut != null) {
                     mShortCut.visibility = View.GONE
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         }
@@ -75,13 +75,13 @@ object SystemUINotificationHooks {
     @JvmStatic
     fun HideNoNotificationsHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayout", lpparam.classLoader, "updateEmptyShadeView", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                param.getArgs()[1] = 0
-                param.getArgs()[2] = 0
-                val mEmptyShadeView = XposedHelpers.getObjectField(param.getThisObject(), "mEmptyShadeView") as View
+            override fun before(callback: BeforeHookCallback) {
+                callback.getArgs()[1] = 0
+                callback.getArgs()[2] = 0
+                val mEmptyShadeView = XposedHelpers.getObjectField(callback.getThisObject(), "mEmptyShadeView") as View
                 mEmptyShadeView.setOnClickListener(null)
                 XposedHelpers.callMethod(mEmptyShadeView, "setVisible", false, false)
-                param.returnAndSkip(null)
+                callback.returnAndSkip(null)
             }
         })
     }
@@ -121,10 +121,10 @@ object SystemUINotificationHooks {
         val clearFold = XposedHelpers.findMethodExact(util, "setFold", entry, Boolean::class.javaPrimitiveType!!)
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.collection.coordinator.FoldCoordinator\$collectionListener\$1", lpparam.classLoader,
             "onEntryAdded", entry, object : MethodHook() {
-                override fun before(param: BeforeHookCallback) {
+                override fun before(callback: BeforeHookCallback) {
                     // The suppressed/international branch omits this reset. Keep both native
                     // entry.isFold and the notification extra consistent, including on repost.
-                    clearFold.invoke(null, param.getArg(0), false)
+                    clearFold.invoke(null, callback.getArg(0), false)
                 }
             })
         // Preserve collection removal, user/configuration callbacks and pipeline initialization.
@@ -148,9 +148,9 @@ object SystemUINotificationHooks {
             }
         })
         val disableHeadsUpHook = object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
+            override fun before(callback: BeforeHookCallback) {
                 if (state.enabled && state.muted) {
-                    param.returnAndSkip(false)
+                    callback.returnAndSkip(false)
                 }
             }
         }
@@ -159,8 +159,8 @@ object SystemUINotificationHooks {
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.interruption.NotificationInterruptStateProviderImpl", lpparam.classLoader,
             "canAlertHeadsUpCommon", entry, Boolean::class.javaPrimitiveType!!, disableHeadsUpHook)
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarPolicy", lpparam.classLoader, "updateVolumeZen", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                state.muted = XposedHelpers.getBooleanField(param.getThisObject(), "mMuteVisible")
+            override fun after(callback: AfterHookCallback) {
+                state.muted = XposedHelpers.getBooleanField(callback.getThisObject(), "mMuteVisible")
             }
         })
     }

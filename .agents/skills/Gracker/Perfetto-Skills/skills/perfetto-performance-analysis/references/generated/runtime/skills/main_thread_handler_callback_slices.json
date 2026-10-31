@@ -1,0 +1,101 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*",
+      "*Handler: *"
+    ]
+  },
+  "id": "main_thread_handler_callback_slices",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "default": "",
+      "description": "目标进程/包名前缀；为空时覆盖所有进程",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "default": 0,
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 0,
+      "description": "分析结束时间戳(ns)；0 表示 trace 结束",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 100000,
+      "description": "最小回调执行时长(ns)，默认 0.1ms",
+      "name": "min_dur_ns",
+      "required": false,
+      "type": "integer"
+    },
+    {
+      "default": 20,
+      "description": "返回的回调类型数量",
+      "name": "top_k",
+      "required": false,
+      "type": "integer"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.slices"
+    ],
+    "required_tables": [
+      "slice",
+      "thread_track",
+      "thread",
+      "process"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/main_thread_handler_callback_slices.skill.yaml",
+    "sha256": "33502513a6be13a722153be01a9eebf84781088e428b1ccd383a3b8f72f0d1de"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "callback_slices",
+      "name": "主线程 Handler 回调执行",
+      "query_id": "main_thread_handler_callback_slices/callback_slices",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "interaction"
+}

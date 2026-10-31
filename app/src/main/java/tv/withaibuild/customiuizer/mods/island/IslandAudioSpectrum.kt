@@ -219,6 +219,7 @@ internal class IslandAudioSpectrum(
         override fun session(player: MediaController, user: UserHandle?): Int? {
             val uid = IslandMediaIdentity.uid(player) ?: return null
             if (!IslandMediaIdentity.sameUser(uid, user) ||
+                // A14 returns null after RemoteException despite the SDK non-null annotation.
                 player.playbackInfo?.playbackType != MediaController.PlaybackInfo.PLAYBACK_TYPE_LOCAL) return null
             if (context.packageManager.getApplicationInfo(player.packageName, 0).uid != uid ||
                 context.packageManager.getPackagesForUid(uid)?.singleOrNull() != player.packageName) return null

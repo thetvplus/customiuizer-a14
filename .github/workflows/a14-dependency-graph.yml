@@ -1,0 +1,52 @@
+name: A14 Dependency Graph
+
+# Deliberately manual: dependency resolution is separate from CI and signing.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a14-dependency-graph
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '27'
+          force-download: true
+          verify-signature: true
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+      - run: bash tools/ci_install_android_sdk.sh
+      - uses: gradle/actions/dependency-submission@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          dependency-graph: generate-and-upload
+          # The upstream action prepends verification=off; the final property retains our gate.
+          additional-arguments: --no-configuration-cache -Dorg.gradle.dependency.verification=strict
+
+  submit:
+    needs: generate
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    # This job executes no repository code and downloads only this run's graph.
+    steps:
+      - uses: gradle/actions/dependency-submission@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          dependency-graph: download-and-submit

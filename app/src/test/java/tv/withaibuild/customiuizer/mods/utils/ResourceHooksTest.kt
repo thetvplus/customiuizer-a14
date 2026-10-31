@@ -42,7 +42,6 @@ class ResourceHooksTest {
         hooks = ResourceHooks()
         setField("resourceIdReplacements", FakeSparseArray<ResourceHooks.ResourceValue>())
         setField("fakes", FakeSparseIntArray())
-        setField("lastFailureLogTimes", LongArray(resourceFailureDomainCount()) { -1L })
     }
 
     @After
@@ -563,13 +562,6 @@ class ResourceHooksTest {
             isAccessible = true
             set(hooks, value)
         }
-    }
-
-    private fun resourceFailureDomainCount(): Int {
-        val clazz = ResourceHooks::class.java.declaredClasses.single { it.simpleName == "ResourceFailureDomain" }
-        @Suppress("UNCHECKED_CAST")
-        val constants = clazz.enumConstants as Array<Enum<*>>
-        return constants.size
     }
 
     private fun domainOrdinal(kind: ResourceHooks.ResourceGetterKind): Int {

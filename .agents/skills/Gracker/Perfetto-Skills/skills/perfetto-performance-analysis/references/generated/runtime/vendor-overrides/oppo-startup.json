@@ -1,0 +1,60 @@
+{
+  "application_mode": "advisory_only",
+  "definition": {
+    "additional_steps": [
+      {
+        "description": "检查 HyperBoost 是否在启动期间生效",
+        "for_each": "startups",
+        "id": "coloross_boost_engine",
+        "name": "ColorOS 加速引擎检测",
+        "sql": "SELECT\n  s.name as boost_event,\n  s.dur / 1e6 as dur_ms,\n  (s.ts - (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})) / 1e6 as relative_ts_ms\nFROM slice s\nWHERE (s.name GLOB '*HyperBoost*'\n       OR s.name GLOB '*ColorOS*Boost*'\n       OR s.name GLOB '*oplus*boost*')\n  AND s.ts >= (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})\n  AND s.ts <= (SELECT ts + dur FROM android_startups WHERE startup_id = ${item.startup_id})\nORDER BY s.ts ASC\n"
+      },
+      {
+        "for_each": "startups",
+        "id": "oppo_system_services",
+        "name": "OPPO 系统服务调用",
+        "sql": "SELECT\n  server_process,\n  client_dur / 1e6 as dur_ms,\n  COUNT(*) as call_count\nFROM android_binder_txns\nWHERE ('${package}' = '' OR client_process = '${package}' OR client_process GLOB '${package}:*')\n  AND (server_process GLOB '*oppo*'\n       OR server_process GLOB '*oplus*'\n       OR server_process GLOB '*color*')\n  AND client_ts >= (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})\n  AND client_ts <= (SELECT ts + dur FROM android_startups WHERE startup_id = ${item.startup_id})\nGROUP BY server_process\nORDER BY SUM(client_dur) DESC\n"
+      },
+      {
+        "description": "检查应用是否从冻结状态恢复",
+        "for_each": "startups",
+        "id": "app_freeze_state",
+        "name": "应用冻结状态检测",
+        "sql": "SELECT\n  s.name as freeze_event,\n  s.dur / 1e6 as dur_ms,\n  (s.ts - (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})) / 1e6 as relative_ts_ms\nFROM slice s\nWHERE (s.name GLOB '*freeze*'\n       OR s.name GLOB '*Freeze*'\n       OR s.name GLOB '*thaw*')\n  AND s.ts >= (SELECT ts FROM android_startups WHERE startup_id = ${item.startup_id})\n  AND s.ts <= (SELECT ts + dur FROM android_startups WHERE startup_id = ${item.startup_id})\nORDER BY s.ts ASC\n"
+      }
+    ],
+    "extends": "composite/startup_analysis",
+    "meta": {
+      "description": "针对 OPPO ColorOS 优化的启动分析，包含 HyperBoost 检测",
+      "display_name": "OPPO ColorOS 启动分析",
+      "os": "ColorOS",
+      "vendor": "oppo"
+    },
+    "vendor_detection": {
+      "signatures": [
+        {
+          "confidence": "high",
+          "pattern": "*ColorOS*"
+        },
+        {
+          "confidence": "high",
+          "pattern": "*OPPO*"
+        },
+        {
+          "confidence": "high",
+          "pattern": "*HyperBoost*"
+        },
+        {
+          "confidence": "medium",
+          "pattern": "*oplus*"
+        }
+      ]
+    },
+    "version": "1.0.0"
+  },
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/vendors/oppo/startup.override.yaml",
+    "sha256": "5343e6c7a0260baf378fd1010412892f2eafbbd622ccb5fb7a380e869107e8d9"
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "android_heap_dominator_path_extract",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "Optional stable process identity",
+      "name": "upid",
+      "required": false,
+      "type": "integer"
+    },
+    {
+      "description": "Optional process name, exact or name:* subprocess (fragments/heap_target_process.sql); when nothing matches, dumps without a process name (e.g. .hprof) are used and flagged process_name_unavailable_upid_fallback",
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "Optional heap dump sample timestamp",
+      "name": "graph_sample_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 500,
+      "description": "Maximum dominator rows returned per trace, clamped to 500",
+      "name": "max_rows",
+      "required": false,
+      "type": "integer"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.memory.heap_graph.dominator_class_tree",
+      "graphs.scan",
+      "graphs.hierarchy"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/android_heap_dominator_path_extract.skill.yaml",
+    "sha256": "79a6054d4d6744e18381baa97106c13e0a4e11f4c8655ba9ade28004904aab52"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "data_check",
+      "name": "Heap graph availability",
+      "query_id": "android_heap_dominator_path_extract/data_check",
+      "result_dependencies": [],
+      "save_as": "data_check",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "dominator_tree_pass",
+      "name": "Dominator tree pass",
+      "optional": true,
+      "query_id": "android_heap_dominator_path_extract/dominator_tree_pass",
+      "result_dependencies": [],
+      "save_as": "dominator_tree_pass",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "dominator_paths",
+      "name": "Bounded dominator paths",
+      "optional": true,
+      "query_id": "android_heap_dominator_path_extract/dominator_paths",
+      "result_dependencies": [],
+      "save_as": "dominator_paths",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.1",
+  "workflow": "memory"
+}

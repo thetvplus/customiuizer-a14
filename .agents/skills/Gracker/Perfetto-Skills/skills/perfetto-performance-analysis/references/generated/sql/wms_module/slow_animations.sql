@@ -1,0 +1,20 @@
+-- GENERATED FILE - DO NOT EDIT.
+-- Source: backend/skills/modules/framework/wms_module.skill.yaml
+-- Source SHA-256: 4bd2c147a32250b3c3ae71af00fb8bbfb8b99256c68cc8fa44a0131ebe25d794
+
+SELECT
+  s.ts,
+  s.name AS animation_type,
+  CAST(s.dur / 1e6 AS REAL) AS dur_ms,
+  300 AS threshold_ms,
+  CAST((s.dur / 1e6 - 300) AS INTEGER) AS exceed_ms
+FROM slice s
+JOIN thread_track tt ON s.track_id = tt.id
+JOIN thread t ON tt.utid = t.utid
+JOIN process p ON t.upid = p.upid
+WHERE (p.name = 'system_server' OR p.name LIKE '%systemui%')
+  AND (s.name GLOB '*Animation*'
+       OR s.name GLOB '*Transition*')
+  AND s.dur > 300000000  -- > 300ms
+ORDER BY s.dur DESC
+LIMIT 20

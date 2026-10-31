@@ -53,7 +53,6 @@ import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.ArrayList
 import java.util.Calendar
-import java.util.Collection
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.Locale

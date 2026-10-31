@@ -1,0 +1,93 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "branches": [
+          "api<=28",
+          "api29-32",
+          "api>=33"
+        ],
+        "id": "official_android_startup_tags",
+        "source": "perfetto stdlib android/startup/startups.sql"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "OpenDexFilesFromOat*",
+      "PostFork",
+      "bindApplication",
+      "handleRelaunchActivity*",
+      "performCreate:*",
+      "performRestart*",
+      "relaunchActivity*"
+    ]
+  },
+  "id": "startup_events_in_range",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "startup_id",
+      "required": false,
+      "type": "integer"
+    },
+    {
+      "name": "startup_type",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.startup.startups",
+      "android.startup.time_to_display",
+      "android.startup.startup_events"
+    ],
+    "required_tables": []
+  },
+  "query_id": "startup_events_in_range/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/startup_events_in_range.skill.yaml",
+    "sha256": "038e6baef3bea018d57ff5db83ee6b30d4f089f339989e7aeaac6cd804ee108d"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "startup"
+}

@@ -1,0 +1,27 @@
+-- GENERATED FILE - DO NOT EDIT.
+-- Source: backend/skills/composite/click_response_detail.skill.yaml
+-- Source SHA-256: 9e44f27b6343d60763ebf83af07b3dd5c2d9c22a357c8f8527c54a3f67b5e497
+
+SELECT
+  '${event_type}' as event_type,
+  '${event_action}' as event_action,
+  '${process_name}' as process_name,
+  ROUND(${total_ms}, 2) as total_ms,
+  ROUND(COALESCE(${dispatch_ms}, 0), 2) as dispatch_ms,
+  ROUND(COALESCE(${handling_ms}, 0), 2) as handling_ms,
+  printf('%d', ${event_ts}) as event_ts,
+  printf('%d', ${event_end_ts}) as event_end_ts,
+  -- Perfetto 跳转链接参数
+  printf('%d', COALESCE(${perfetto_start}, ${event_ts})) as perfetto_start,
+  printf('%d', COALESCE(${perfetto_end}, ${event_end_ts})) as perfetto_end,
+  -- 延迟主要来源
+  CASE
+    WHEN COALESCE(${dispatch_ms}, 0) > COALESCE(${handling_ms}, 0) THEN '系统分发'
+    ELSE '应用处理'
+  END as main_bottleneck,
+  -- 评级
+  CASE
+    WHEN ${total_ms} > 200 THEN '严重'
+    WHEN ${total_ms} > 100 THEN '较慢'
+    ELSE '偏慢'
+  END as rating

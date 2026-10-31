@@ -71,7 +71,7 @@ internal class IslandLiveRegistry(private val dismissal: Dismissal = Dismissal()
                 it.key != value.key || it.clock?.pausedMillis != null && value.clock?.pausedMillis == null ||
                     !it.alert && value.alert
             } ?: true
-            current[kind] = Entry(value, if (activated) nextOrder?.invoke() ?: ++sequence else old!!.order)
+            current[kind] = Entry(value, if (activated) nextOrder?.invoke() ?: ++sequence else old.order)
         }
     }
 

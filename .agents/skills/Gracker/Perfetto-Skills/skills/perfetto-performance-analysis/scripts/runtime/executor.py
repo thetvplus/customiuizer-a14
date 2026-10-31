@@ -1,0 +1,677 @@
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+import hashlib
+import json
+import math
+from typing import Any
+from _common import reject_process_scope_names
+from process_identity import DEFAULT_PROCESS_IDENTITY_ALIASES, consumable_selectors, extract_target
+
+from .expressions import evaluate, interpolate, is_expression_param, validate, validate_template
+
+
+QueryExecutor = Callable[..., list[dict[str, Any]]]
+
+
+def _canonical(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+
+
+class SkillInputError(ValueError):
+    """A Skill call whose parameters do not satisfy the Skill's input contract."""
+
+
+def _declared_inputs(skill: Mapping[str, Any]) -> list[str]:
+    return [str(spec["name"]) for spec in skill.get("inputs", []) or []]
+
+
+_EXPECTED_TYPES = {
+    "string": str,
+    "number": (int, float),
+    "integer": int,
+    "boolean": bool,
+    "timestamp": (int, float),
+    "duration": (int, float),
+    "array": list,
+    "json_array": list,
+    "object": dict,
+}
+_NUMERIC_TYPES = frozenset({"number", "integer", "timestamp", "duration"})
+
+
+def _reject_undeclared(skill_id: str, skill: Mapping[str, Any], declared: list[str], names: list[str]) -> None:
+    message = (
+        f"{skill_id} rejects undeclared input(s): {', '.join(names)}; "
+        f"declared inputs: {', '.join(sorted(declared)) or 'none'}"
+    )
+    aliases = [str(name) for name in (skill.get("identity", {}) or {}).get("aliases", []) or []]
+    bound = [name for name in aliases if name in declared]
+    for name in sorted(set(names) & set(aliases)):
+        # Aliases only select the process for identity verification; SQL reads
+        # the declared input, so an alias alone would run the query unscoped.
+        message += (
+            f"; identity alias {name} only verifies the target process and is not bound into SQL; "
+            + (f"pass the value as {' or '.join(bound)}" if bound else "this Skill binds no process name input")
+        )
+    raise SkillInputError(message)
+
+
+def resolve_inputs(skill_id: str, skill: Mapping[str, Any], supplied: Mapping[str, Any]) -> dict[str, Any]:
+    """Apply the Skill's input contract; a supplied name it does not declare is never ignored."""
+    return _resolve_inputs(skill_id, skill, supplied)[0]
+
+
+def _resolve_inputs(
+    skill_id: str, skill: Mapping[str, Any], supplied: Mapping[str, Any]
+) -> tuple[dict[str, Any], set[str]]:
+    """The resolved inputs and the optional ones the caller left unset.
+
+    An unset optional input reads as null in SQL (its `|default`, else NULL)
+    but binds no name, so it does not hide a value the caller passed down.
+    """
+    unset: set[str] = set()
+    declared = _declared_inputs(skill)
+    undeclared = sorted(set(supplied) - set(declared))
+    if undeclared:
+        _reject_undeclared(skill_id, skill, declared, undeclared)
+    result = dict(supplied)
+    for spec in skill.get("inputs", []) or []:
+        name = str(spec["name"])
+        if name not in result and "default" in spec:
+            result[name] = spec["default"]
+        if spec.get("required") and name not in result:
+            raise SkillInputError(f"{skill_id} missing required input: {name}")
+        if name not in result and not spec.get("required"):
+            result[name] = None
+            unset.add(name)
+        if name in result and spec.get("type") in _EXPECTED_TYPES:
+            value = result[name]
+            if value is None and not spec.get("required"):
+                continue
+            if (isinstance(value, bool) and spec["type"] in _NUMERIC_TYPES) or not isinstance(
+                value, _EXPECTED_TYPES[spec["type"]]
+            ):
+                raise SkillInputError(f"{skill_id} invalid {spec['type']} input: {name}")
+    return result, unset
+
+
+def precheck_inputs(
+    skill_id: str, skill: Mapping[str, Any], supplied: Mapping[str, Any], inherited: Mapping[str, Any] | None = None,
+) -> None:
+    """Refuse, before any trace work, a name that is neither a declared input
+    nor a process selector the identity gate consumes. The full contract
+    (types, required inputs) applies to the parameters the gate returns."""
+    early = sorted(set(supplied) - set(_declared_inputs(skill)) - consumable_selectors({"id": skill_id, **skill}))
+    if early:
+        _reject_undeclared(skill_id, skill, _declared_inputs(skill), early)
+    # A missing required input is refused here too, unless it is an identity
+    # alias the gate fills from a supplied process name.
+    config = skill.get("identity") or {}
+    gated = config.get("policy") in {"required", "verify_if_present"}
+    aliases = set(config.get("aliases") or DEFAULT_PROCESS_IDENTITY_ALIASES) if gated else set()
+    named = gated and bool(extract_target(supplied, inherited or {}, config).get("requestedName"))
+    for spec in skill.get("inputs", []) or []:
+        name = str(spec["name"])
+        if spec.get("required") and name not in supplied and "default" not in spec and not (named and name in aliases):
+            raise SkillInputError(f"{skill_id} missing required input: {name}")
+
+
+def without_consumed_selectors(skill_id: str, skill: Mapping[str, Any], params: Mapping[str, Any]) -> dict[str, Any]:
+    """The gate consumed every process selector the Skill does not declare;
+    SmartPerfetto ignores those names after its gate, and so does this runtime."""
+    declared = set(_declared_inputs(skill))
+    consumed = consumable_selectors({"id": skill_id, **skill})
+    return {name: value for name, value in params.items() if name in declared or name not in consumed}
+
+
+def _child_failed(step: Mapping[str, Any]) -> bool:
+    """Whether a Skill reference step ran a child Skill that failed."""
+    return (step.get("child") or {}).get("success") is False
+
+
+def _stops_skill(step: Mapping[str, Any]) -> bool:
+    """A required query or Skill reference that failed; SmartPerfetto runs no later step."""
+    if step.get("optional"):
+        return False
+    if step.get("type") == "atomic":
+        return step.get("status") == "error"
+    return step.get("type") == "skill" and _child_failed(step)
+
+
+def _has_meaningful_data(step: Mapping[str, Any]) -> bool:
+    """Whether SmartPerfetto counts the step's result as data when selecting a child step.
+
+    A Skill reference's result is the child's run, not rows: it counts only
+    when the child emitted diagnostics, which an identity-blocked run does.
+    """
+    step_type = step.get("type")
+    if step_type == "atomic":
+        return step.get("status") == "observed"
+    if step_type == "skill":
+        child = step.get("child") or {}
+        return child.get("status") == "identity_blocked" or any(item.get("diagnostics") for item in child.get("steps", []))
+    return bool(step.get("diagnostics") or step.get("items"))
+
+
+def _holds_data(step: Mapping[str, Any], spec: Mapping[str, Any]) -> bool:
+    """Whether SmartPerfetto records a result value for the step, even an empty one.
+
+    A step skipped by its condition, and a failed query, hold `[]` only when
+    optional; a skipped empty dependency is the empty result SmartPerfetto's
+    lenient rendering would return.
+    """
+    status = step.get("status")
+    if status == "skipped_condition":
+        return bool(spec.get("optional"))
+    if step.get("type") == "atomic":
+        return status != "error" or bool(spec.get("optional"))
+    return step.get("type") in {"skill", "diagnostic", "iterator"}
+
+
+_RULE_CONFIDENCE = {"high": 0.9, "medium": 0.7, "low": 0.5}
+
+
+def rule_confidence(value: Any) -> float:
+    """A diagnostic rule's confidence; it is published as authored, never interpolated."""
+    if isinstance(value, str) and value in _RULE_CONFIDENCE:
+        return _RULE_CONFIDENCE[value]
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+        return value
+    raise ValueError(f"unsupported rule confidence {value!r}: expected high, medium, low or a number")
+
+
+def step_expressions(step: Mapping[str, Any]) -> list[tuple[str, Any, Callable[[Any], Any]]]:
+    """Every value `SkillRunner.run` evaluates or interpolates for this step, as
+    (field, value, check): each check raises ValueError where the run would."""
+    checks: list[tuple[str, Any, Callable[[Any], Any]]] = []
+    if isinstance(step.get("condition"), str):
+        checks.append(("condition", step["condition"], validate))
+    if isinstance(step.get("filter"), str):
+        checks.append(("filter", step["filter"], validate))
+    for name, value in (step.get("params") or {}).items():
+        if is_expression_param(value):
+            checks.append((f"params.{name}", value, validate))
+    for index, rule in enumerate(step.get("rules") or []):
+        field = f"rules[{index}]"
+        checks.append((f"{field}.condition", str(rule.get("condition", "")), validate))
+        checks.append((f"{field}.diagnosis", str(rule.get("diagnosis", "")), validate_template))
+        for position, suggestion in enumerate(rule.get("suggestions") or []):
+            checks.append((f"{field}.suggestions[{position}]", str(suggestion), validate_template))
+        checks.append((f"{field}.confidence", rule.get("confidence", "medium"), rule_confidence))
+    return checks
+
+
+class SkillRunner:
+    def __init__(
+        self,
+        manifest: Mapping[str, Any],
+        query_executor: QueryExecutor,
+        *,
+        max_depth: int = 12,
+        identity_gate: Any | None = None,
+        prerequisite_checker: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+        process_scope_enabled: bool = False,
+    ):
+        raw_skills = manifest.get("skills", {})
+        self.skills = (
+            {str(item["id"]): item for item in raw_skills}
+            if isinstance(raw_skills, list)
+            else dict(raw_skills)
+        )
+        self.query_executor = query_executor
+        self.max_depth = max_depth
+        # process_identity.IdentityGate (or a test double with the same apply()).
+        self.identity_gate = identity_gate
+        # skill_id -> SmartPerfetto's exact-UPID refusal text, or None when the
+        # Skill's SQL can run under an exact scope.
+        self.exact_admission: Callable[[str], str | None] | None = None
+        self.prerequisite_checker = prerequisite_checker
+        self.process_scope_enabled = process_scope_enabled
+
+    def _evidence(self, skill_id: str, step_id: str, query_id: str | None, params: Mapping[str, Any], status: str, rows: Any, error: str | None = None) -> dict[str, Any]:
+        payload = {
+            "skill_id": skill_id,
+            "step_id": step_id,
+            "query_id": query_id,
+            "params": params,
+            "status": status,
+            "rows": rows,
+            "error": error,
+        }
+        return {
+            "evidence_id": "ev_" + hashlib.sha256(_canonical(payload)).hexdigest()[:24],
+            **payload,
+            "row_count": len(rows) if isinstance(rows, list) else None,
+        }
+
+    def _default_child_rows(self, result: Mapping[str, Any]) -> list[dict[str, Any]]:
+        """Rows of the child step a Skill reference exposes without `save_from`.
+
+        SmartPerfetto's selection, over the steps that ran up to the first
+        required failure (where SmartPerfetto stops): the root step, else the
+        first displayed step with meaningful data, else the first step with
+        meaningful data, else the last step holding data. A nested Skill
+        reference is meaningful only through its child's diagnostics, never its
+        rows, so a setup reference such as cpu_topology_view never hides the
+        read step; once selected it reads as its own default rows. A selected
+        diagnostic or iterator step has no rows.
+        """
+        specs = {str(spec["id"]): spec for spec in self.skills.get(str(result.get("skill_id")), {}).get("steps", []) or []}
+        ran: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+        for step in result.get("steps", []):
+            ran.append((step, specs.get(str(step.get("step_id")), {})))
+            if _stops_skill(step):
+                break
+        selected = (
+            next((step for step, spec in ran if step.get("step_id") == "root" and _holds_data(step, spec)), None)
+            or next((
+                step for step, spec in ran
+                if spec.get("displayed") and _has_meaningful_data(step) and not _child_failed(step)
+            ), None)
+            or next((step for step, _ in ran if _has_meaningful_data(step)), None)
+            or next((step for step, spec in reversed(ran) if _holds_data(step, spec)), None)
+        )
+        return selected.get("rows", []) if selected else []
+
+    @staticmethod
+    def _named_child_rows(result: Mapping[str, Any], step_id: str) -> list[dict[str, Any]] | None:
+        """Rows of one named child step, or None when that step observed nothing.
+
+        A nested Skill that failed after returning some rows is marked observed;
+        its partial rows are not a result of the named step.
+        """
+        for step in result.get("steps", []):
+            rows = step.get("rows")
+            if (
+                step.get("step_id") == step_id
+                and step.get("status") in {"observed", "empty"}
+                and not _child_failed(step)
+                and isinstance(rows, list)
+            ):
+                return rows
+        return None
+
+    def _resolve_param(self, value: Any, context: Mapping[str, Any]) -> Any:
+        if is_expression_param(value):
+            return evaluate(value, context)
+        return value
+
+    def _run_child(
+        self, skill_id: str, params: Mapping[str, Any], *, depth: int, inherited: Mapping[str, Any], scope: Any = None,
+    ) -> dict[str, Any]:
+        try:
+            return self.run(skill_id, params, _depth=depth, _inherited=inherited, _scope=scope)
+        except SkillInputError as exc:
+            # A manifest-authored call that breaks the child's input contract is
+            # a visible step failure; optional/required handling decides the parent.
+            return {
+                "schema_version": 1,
+                "skill_id": skill_id,
+                "success": False,
+                "status": "input_rejected",
+                "error": str(exc),
+                "params": dict(params),
+                "steps": [],
+                "evidence": [],
+            }
+
+    def run(
+        self, skill_id: str, params: Mapping[str, Any] | None = None, *, _depth: int = 0,
+        _inherited: Mapping[str, Any] | None = None, _scope: Any = None,
+    ) -> dict[str, Any]:
+        if _depth > self.max_depth:
+            raise RuntimeError(f"Skill recursion depth exceeds {self.max_depth}")
+        if skill_id not in self.skills:
+            raise KeyError(f"unknown Skill: {skill_id}")
+        skill = self.skills[skill_id]
+        runtime_status = skill.get("runtime_status", "executable")
+        if runtime_status != "executable":
+            return {"skill_id": skill_id, "success": False, "status": runtime_status, "steps": [], "evidence": []}
+        reject_process_scope_names(params or {})
+        reject_process_scope_names(_inherited or {})
+        for step in skill.get("steps", []) or []:
+            reject_process_scope_names({name: None for name in (step.get("id"), step.get("save_as")) if name is not None})
+        precheck_inputs(skill_id, skill, params or {}, _inherited or {})
+        # SmartPerfetto gates the raw call first: the gate consumes identity
+        # aliases and rewrites them to the verified process name, and only the
+        # rewritten parameters meet the input contract.
+        gate = (
+            self.identity_gate.apply({"id": skill_id, **skill}, params or {}, _inherited or {}, _scope)
+            if self.identity_gate is not None
+            else None
+        )
+        if gate is not None and gate.allowed and getattr(gate.scope, "mode", None) == "exact_upid":
+            admission = self.exact_admission(skill_id) if self.exact_admission is not None else (
+                "Exact UPID scope is unsupported: no exact-scope admission is configured"
+            )
+            if admission:
+                gate.allowed, gate.error = False, admission
+        if gate is not None and not gate.allowed:
+            return {
+                "schema_version": 1,
+                "skill_id": skill_id,
+                "success": False,
+                "status": "identity_blocked",
+                "error": gate.error,
+                "params": dict(params or {}),
+                "identity": gate.evidence(),
+                "steps": [],
+                "evidence": [],
+            }
+        if gate is not None:
+            params = without_consumed_selectors(skill_id, skill, gate.params)
+        identity_policy = skill.get("identity", {}) or {"policy": "none"}
+        identity = (
+            gate.evidence() if gate is not None
+            else {"status": "not_checked", "policy": identity_policy.get("policy", "none")}
+        )
+        child_scope = gate.scope if gate is not None else None
+        inputs, unset_inputs = _resolve_inputs(skill_id, skill, params or {})
+        prerequisite = (
+            dict(self.prerequisite_checker(skill))
+            if self.prerequisite_checker is not None
+            else {"status": "satisfied", "missing": []}
+        )
+        if prerequisite.get("status") != "satisfied":
+            return {
+                "schema_version": 1,
+                "skill_id": skill_id,
+                "success": False,
+                "status": "missing_evidence",
+                "params": inputs,
+                "prerequisite": prerequisite,
+                "steps": [],
+                "evidence": [],
+            }
+        # A name resolves to this Skill's own step results and save_as bindings,
+        # then its bound inputs, then what the caller passed down. `variables`
+        # is what children inherit, so it keeps every caller value; `results`
+        # (SQL, dependencies, iterator sources) and `context` (expressions)
+        # drop the caller values a bound input shadows. Steps bind only their
+        # own names, never the inherited ones again.
+        inherited = _inherited or {}
+        bound_inputs = inputs.keys() - unset_inputs
+        variables: dict[str, Any] = dict(inherited)
+        results: dict[str, Any] = {name: value for name, value in inherited.items() if name not in bound_inputs}
+        context: dict[str, Any] = {**inputs, **results, "inputs": inputs}
+
+        # Names this Skill's own steps have bound, with or without data.
+        declared: set[str] = set()
+
+        def bind(name: str, value: Any) -> None:
+            variables[name] = context[name] = results[name] = value
+            declared.add(name)
+
+        def bind_no_data(name: str) -> None:
+            # The name stays this Skill's: a same-named input or caller value
+            # is not offered in its place. SQL that reads it lists it in
+            # result_dependencies and is skipped before rendering.
+            for scope in (variables, context, results):
+                scope.pop(name, None)
+            declared.add(name)
+
+        def bind_unobserved(step: Mapping[str, Any], *, skipped: bool) -> None:
+            # A step that observed nothing: an optional step's result is empty,
+            # any other step's has no data. A skipped step did not run, so it
+            # leaves a name an earlier step of this Skill already bound.
+            names = [str(step["id"])] + ([str(step["save_as"])] if step.get("save_as") else [])
+            for name in names:
+                if skipped and name in declared:
+                    continue
+                if step.get("optional"):
+                    bind(name, {"data": []})
+                else:
+                    bind_no_data(name)
+
+        steps = list(skill.get("steps", []) or [])
+        if skill.get("type") == "atomic" and skill.get("query_id"):
+            steps = [{"id": "root", "type": "atomic", "query_id": skill["query_id"],
+                      **({"exact": skill["exact"]} if skill.get("exact") else {})}]
+        output_steps: list[dict[str, Any]] = []
+        evidence: list[dict[str, Any]] = []
+        required_error = False
+        # An exact UPID scope runs each step's exact_sql variant, whose result
+        # dependencies may differ (SmartPerfetto's selectProcessScopeSql).
+        exact_scope = getattr(child_scope, "mode", None) == "exact_upid"
+        # SmartPerfetto's resultScopeLimitations: authored limitations of the SQL
+        # that ran, exact-unavailable reasons, and those of child and item
+        # Skills. Any limitation makes the result partial.
+        limitations: list[str] = []
+
+        def limit(values: Any) -> None:
+            for value in values or []:
+                if isinstance(value, str) and value not in limitations:
+                    limitations.append(value)
+
+        for step in steps:
+            step_id = str(step["id"])
+            step_type = str(step.get("type") or ("skill" if step.get("skill") else "atomic"))
+            condition = step.get("condition")
+            if isinstance(condition, str) and not bool(evaluate(condition, context)):
+                output_steps.append({"step_id": step_id, "type": step_type, "status": "skipped_condition"})
+                bind_unobserved(step, skipped=True)
+                continue
+            if step_type == "atomic":
+                query_id = step.get("query_id")
+                dependencies = (
+                    (step.get("exact") or {}).get("result_dependencies", [])
+                    if exact_scope and step.get("exact") else step.get("result_dependencies", [])
+                )
+                empty_dependencies = [
+                    dependency
+                    for dependency in dependencies
+                    if not isinstance(results.get(str(dependency)), Mapping)
+                    or not results[str(dependency)].get("data")
+                ]
+                if empty_dependencies:
+                    output_steps.append(
+                        {
+                            "step_id": step_id,
+                            "type": step_type,
+                            "status": "skipped_empty_dependency",
+                            "dependencies": empty_dependencies,
+                        }
+                    )
+                    bind_unobserved(step, skipped=True)
+                    continue
+                try:
+                    scope_context = (
+                        {"identity_result": identity, "supplied_parameters": dict(params or {}),
+                         "identity_scope": child_scope}
+                        if self.process_scope_enabled or skill.get("process_scope") or step.get("process_scope")
+                        else {}
+                    )
+                    query_output = self.query_executor(
+                        query_id,
+                        params=inputs,
+                        results=results,
+                        prelude=step.get("setup_queries", []),
+                        **scope_context,
+                    )
+                    metadata: dict[str, Any] = {}
+                    if isinstance(query_output, Mapping) and isinstance(query_output.get("rows"), list):
+                        rows = query_output["rows"]
+                        metadata = dict(query_output.get("metadata", {}))
+                    else:
+                        rows = query_output
+                    status = "observed" if rows else "empty"
+                    result = {"step_id": step_id, "type": step_type, "status": status, "rows": rows}
+                    if not rows and step.get("on_empty"):
+                        result["message"] = step["on_empty"]
+                    bind(step_id, {"data": rows})
+                    if step.get("save_as"):
+                        bind(str(step["save_as"]), {"data": rows})
+                    item = self._evidence(skill_id, step_id, str(query_id), inputs, status, rows)
+                    item.update(metadata)
+                    item.setdefault("identity", identity)
+                    limit(metadata.get("scope_limitations"))
+                except Exception as exc:
+                    optional = bool(step.get("optional"))
+                    if getattr(exc, "code", None) == "exact_scope_unavailable":
+                        # The author declared this evidence unavailable under an
+                        # exact scope: SmartPerfetto records it, runs no SQL,
+                        # continues, and marks the result partial. Its names
+                        # stay unobserved so no caller value stands in for it.
+                        result = {"step_id": step_id, "type": step_type, "status": "unavailable",
+                                  "code": exc.code, "error": str(exc), "optional": optional}
+                        item = self._evidence(skill_id, step_id, str(query_id), inputs, "unavailable", [], str(exc))
+                        item.update(getattr(exc, "metadata", {}) or {})
+                        limit(item.get("scope_limitations"))
+                        limit([str(exc)])
+                        bind_no_data(step_id)
+                        if step.get("save_as"):
+                            bind_no_data(str(step["save_as"]))
+                        if skill.get("type") == "atomic" and skill.get("query_id"):
+                            required_error = True
+                        output_steps.append(result)
+                        evidence.append(item)
+                        continue
+                    result = {"step_id": step_id, "type": step_type, "status": "error", "error": str(exc), "optional": optional}
+                    if getattr(exc, "code", None):
+                        result["code"] = exc.code
+                    item = self._evidence(skill_id, step_id, str(query_id), inputs, "error", [], str(exc))
+                    if optional:
+                        # SmartPerfetto keeps an optional step's scope evidence,
+                        # unavailable with the error; a required error throws.
+                        item.update(getattr(exc, "scope_metadata", {}) or {})
+                        limit(item.get("scope_limitations"))
+                    bind_unobserved(step, skipped=False)
+                    if not optional:
+                        required_error = True
+                output_steps.append(result)
+                evidence.append(item)
+                continue
+            if step_type == "skill":
+                child_params = {
+                    key: self._resolve_param(value, context)
+                    for key, value in (step.get("params", {}) or {}).items()
+                }
+                child = self._run_child(
+                    str(step["skill"]), child_params, depth=_depth + 1, inherited=variables, scope=child_scope,
+                )
+                rows = self._default_child_rows(child)
+                status = "observed" if rows else ("empty" if child.get("success") else "error")
+                optional = bool(step.get("optional"))
+                result = {
+                    "step_id": step_id,
+                    "type": "skill",
+                    "status": status,
+                    "optional": optional,
+                    "rows": rows,
+                    "child": child,
+                }
+                if not rows and step.get("on_empty"):
+                    result["message"] = step["on_empty"]
+                if status == "error" and not optional:
+                    required_error = True
+                # A failed child exposes no data through the step id or save_as,
+                # even with partial rows or an observed save_from step; they stay
+                # in the output step record. save_from otherwise binds exactly
+                # one child step. Nothing falls back to another step's rows, an
+                # earlier value, an input or a caller value.
+                failed = not child.get("success")
+                if failed:
+                    bind_no_data(step_id)
+                else:
+                    bind(step_id, {"data": rows})
+                if step.get("save_as"):
+                    saved = (
+                        None if failed
+                        else rows if "save_from" not in step
+                        else self._named_child_rows(child, str(step["save_from"]))
+                    )
+                    if saved is None:
+                        bind_no_data(str(step["save_as"]))
+                    else:
+                        bind(str(step["save_as"]), {"data": saved})
+                output_steps.append(result)
+                evidence.extend(child.get("evidence", []))
+                limit(child.get("scope_limitations"))
+                continue
+            if step_type == "iterator":
+                source = results.get(str(step.get("source")), {})
+                items = source.get("data", []) if isinstance(source, Mapping) else []
+                filter_expression = step.get("filter")
+                if isinstance(filter_expression, str):
+                    items = [
+                        item
+                        for item in items
+                        if isinstance(item, Mapping)
+                        and bool(evaluate(filter_expression, {**context, **item, "item": item}))
+                    ]
+                maximum = int(step.get("max_items") or 100)
+                item_results = []
+                mappings = step.get("item_params", {}) or {}
+                # Without explicit mappings, a row binds only its fields that the
+                # child declares; extra result columns are data, not requested inputs.
+                row_inputs = set(_declared_inputs(self.skills.get(str(step["item_skill"]), {})))
+                for index, item in enumerate(items[:maximum]):
+                    child_params = {
+                        key: item.get(path, path) if isinstance(item, Mapping) else path
+                        for key, path in mappings.items()
+                    }
+                    if not mappings and isinstance(item, Mapping):
+                        child_params = {key: value for key, value in item.items() if key in row_inputs}
+                    child = self._run_child(
+                        str(step["item_skill"]), child_params,
+                        depth=_depth + 1, inherited={**variables, "item": item}, scope=child_scope,
+                    )
+                    item_results.append({"index": index, "item": item, "result": child})
+                    evidence.extend(child.get("evidence", []))
+                    limit(child.get("scope_limitations"))
+                failed_items = sum(
+                    1 for item_result in item_results
+                    if not item_result["result"].get("success")
+                )
+                optional = bool(step.get("optional"))
+                status = (
+                    "error" if failed_items
+                    else "observed" if item_results
+                    else "empty"
+                )
+                if failed_items and not optional:
+                    required_error = True
+                output_steps.append({
+                    "step_id": step_id,
+                    "type": "iterator",
+                    "status": status,
+                    "optional": optional,
+                    "failed_items": failed_items,
+                    "items": item_results,
+                })
+                continue
+            if step_type == "diagnostic":
+                diagnostics = []
+                for rule in step.get("rules", []) or []:
+                    if bool(evaluate(str(rule["condition"]), context)):
+                        confidence = rule_confidence(rule.get("confidence", "medium"))
+                        diagnostics.append(
+                            {
+                                "diagnosis": interpolate(str(rule["diagnosis"]), context),
+                                "confidence": confidence,
+                                "severity": rule.get("severity"),
+                                "suggestions": [interpolate(str(value), context) for value in rule.get("suggestions", [])],
+                            }
+                        )
+                status = "observed" if diagnostics else ("agent_action_required" if step.get("ai_assist") else "empty")
+                output_steps.append({"step_id": step_id, "type": "diagnostic", "status": status, "diagnostics": diagnostics})
+                continue
+            if step_type in {"ai_summary", "ai_decision"}:
+                output_steps.append({"step_id": step_id, "type": step_type, "status": "agent_action_required"})
+                continue
+            output_steps.append({"step_id": step_id, "type": step_type, "status": "unsupported"})
+            required_error = True
+
+        return {
+            "schema_version": 1,
+            "skill_id": skill_id,
+            "success": not required_error,
+            "status": "completed" if not required_error else "error",
+            "params": inputs,
+            "prerequisite": prerequisite,
+            "identity": identity,
+            "steps": output_steps,
+            "evidence": evidence,
+            **({"partial": True, "scope_limitations": limitations} if limitations else {}),
+        }

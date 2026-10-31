@@ -31,7 +31,7 @@ internal class WifiSettingLease {
             val restore = original
             val changed = owned && restore != null && current != restore
             if (changed) {
-                val result = write(restore!!)
+                val result = write(restore)
                 if (result == restore) abandon(false)
                 else observe(result) // Unknown/unchanged: retain the one bounded restoration anchor.
             } else abandon(false)
