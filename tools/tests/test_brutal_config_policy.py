@@ -23,7 +23,7 @@ class BrutalConfigPolicyTest(unittest.TestCase):
 
     def test_lower_coverage_target_fails(self):
         cfg = self._base()
-        cfg['coverage_target'] = 73
+        cfg['coverage_target'] = policy.REQUIRED_COVERAGE_TARGET - 1
         with self.assertRaises(Exception):
             validate_config(cfg)
 

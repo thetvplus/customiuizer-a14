@@ -1307,4 +1307,9 @@
     <string name="wifi_refresh">Actualizar redes</string>
     <string name="wifi_scan_unavailable">Escaneo no disponible. Se muestran redes guardadas; inténtalo más tarde.</string>
     <string name="screenshot_directory_invalid">Elige una carpeta disponible en el almacenamiento local</string>
+    <string name="various_disable_system_app_updater_title">Desactivar y ocultar el actualizador de aplicaciones del sistema</string>
+    <string name="various_disable_system_app_updater_summ">Desactiva el actualizador de aplicaciones del sistema para el usuario actual y oculta su entrada en Ajustes. Al desactivar esta opción, restaura el estado original. Reinicia Ajustes para aplicar la ocultación.</string>
+    <string name="various_disable_system_app_updater_confirm">¿Desactivar el paquete del actualizador de aplicaciones del sistema (%1$d)? No afecta a las actualizaciones OTA de la ROM, al instalador ni a los servicios de seguridad. Se guardará el estado original para restaurarlo.</string>
+    <string name="various_hide_enterprise_mode_title">Ocultar la entrada del modo empresarial</string>
+    <string name="various_hide_enterprise_mode_summ">Elimina el modo empresarial de Ajustes adicionales. La gestión empresarial y los perfiles de trabajo siguen disponibles. Reinicia Ajustes para aplicar el cambio.</string>
 </resources>

@@ -1308,4 +1308,9 @@
     <string name="wifi_refresh">Atualizar redes</string>
     <string name="wifi_scan_unavailable">Busca indisponível. Exibindo redes salvas; tente novamente mais tarde.</string>
     <string name="screenshot_directory_invalid">Escolha uma pasta disponível no armazenamento local</string>
+    <string name="various_disable_system_app_updater_title">Desativar e ocultar o atualizador de apps do sistema</string>
+    <string name="various_disable_system_app_updater_summ">Desativa o atualizador de apps do sistema para o usuário atual e oculta sua entrada nas Configurações. Ao desligar a opção, restaura o estado original. Reinicie as Configurações para aplicar a ocultação.</string>
+    <string name="various_disable_system_app_updater_confirm">Desativar o pacote do atualizador de apps do sistema (%1$d)? As atualizações OTA da ROM, o instalador e os serviços de segurança não serão afetados. O estado original será salvo para restauração.</string>
+    <string name="various_hide_enterprise_mode_title">Ocultar entrada do modo empresarial</string>
+    <string name="various_hide_enterprise_mode_summ">Remove o modo empresarial das Configurações adicionais. O gerenciamento empresarial e os perfis de trabalho continuam disponíveis. Reinicie as Configurações para aplicar.</string>
 </resources>

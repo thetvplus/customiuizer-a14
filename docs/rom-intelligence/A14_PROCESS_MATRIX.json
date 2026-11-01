@@ -2595,8 +2595,8 @@
       "target": "SYSTEM_PACKAGE",
       "phase": "PACKAGE_READY",
       "installer": "SettingsFeatures",
-      "installHook": "GlobalActions.miuizerSettingsHook(lpparam)",
-      "enableCondition": "prefs.getStringAsInt(\"miuizer_settingsiconpos\", 1) > 0",
+      "installHook": "GlobalActions.miuizerSettingsHook( lpparam, mPrefs.getBoolean(\"various_disable_system_app_updater\"), mPrefs.getBoolean(\"various_hide_enterprise_mode\") )",
+      "enableCondition": "prefs.getStringAsInt(\"miuizer_settingsiconpos\", 1) > 0 || prefs.getBoolean(\"various_disable_system_app_updater\") || prefs.getBoolean(\"various_hide_enterprise_mode\")",
       "allowedProcess": "com.android.settings",
       "deniedProcess": "com.android.settings:remote"
     },

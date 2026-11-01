@@ -1308,4 +1308,9 @@
     <string name="wifi_refresh">ネットワークを更新</string>
     <string name="wifi_scan_unavailable">スキャンできません。保存済みのネットワークを表示しています。しばらくしてから再試行してください。</string>
     <string name="screenshot_directory_invalid">ローカルストレージの利用可能なフォルダを選択してください</string>
+    <string name="various_disable_system_app_updater_title">システムアプリアップデーターを無効化して非表示</string>
+    <string name="various_disable_system_app_updater_summ">現在のユーザーのシステムアプリアップデーターを無効化し、設定の項目を非表示にします。オフにすると元の有効状態に戻します。非表示を反映するには設定を再起動してください。</string>
+    <string name="various_disable_system_app_updater_confirm">システムアプリアップデーターのパッケージ（%1$d 個）を無効化しますか？ ROM の OTA 更新、インストーラー、セキュリティサービスには影響しません。復元用に元の有効状態を保存します。</string>
+    <string name="various_hide_enterprise_mode_title">エンタープライズモードの項目を非表示</string>
+    <string name="various_hide_enterprise_mode_summ">追加設定からエンタープライズモードの項目を削除します。企業管理と仕事用プロファイルは引き続き利用できます。反映するには設定を再起動してください。</string>
 </resources>

@@ -1315,4 +1315,9 @@
     <string name="wifi_refresh">Obnovit sítě</string>
     <string name="wifi_scan_unavailable">Skenování není dostupné. Zobrazeny jsou uložené sítě; zkuste to později.</string>
     <string name="screenshot_directory_invalid">Vyberte dostupnou složku v místním úložišti</string>
+    <string name="various_disable_system_app_updater_title">Zakázat a skrýt aktualizátor systémových aplikací</string>
+    <string name="various_disable_system_app_updater_summ">Zakáže aktualizátor systémových aplikací pro aktuálního uživatele a skryje jeho položku v Nastavení. Po vypnutí obnoví původní stav. Změnu skrytí použijete restartováním Nastavení.</string>
+    <string name="various_disable_system_app_updater_confirm">Zakázat balíček aktualizátoru systémových aplikací (%1$d)? Aktualizace ROM OTA, instalátor a bezpečnostní služby zůstanou beze změny. Původní stav bude uložen pro obnovení.</string>
+    <string name="various_hide_enterprise_mode_title">Skrýt položku podnikového režimu</string>
+    <string name="various_hide_enterprise_mode_summ">Odstraní podnikový režim z Dalších nastavení. Správa podniku a pracovní profily zůstanou dostupné. Změnu použijete restartováním Nastavení.</string>
 </resources>
