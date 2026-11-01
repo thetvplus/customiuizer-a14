@@ -87,7 +87,7 @@ internal class NotificationAutoExpandEffect(
         if (!mOnKeyguard) {
             val notification = XposedHelpers.getObjectField(XposedHelpers.callMethod(thisObject, "getEntry"), "mSbn")
             val pkgName = XposedHelpers.callMethod(notification, "getPackageName") as String
-            val opt = Integer.parseInt(MainModule.mPrefs.getString("system_expandnotifs", "1") ?: "1")
+            val opt = Integer.parseInt(MainModule.mPrefs.getString("system_expandnotifs", "1"))
             val isSelected = MainModule.mPrefs.getStringSet("system_expandnotifs_apps").contains(pkgName)
             if ((opt == 2 && !isSelected) || (opt == 3 && isSelected)) {
                 XposedHelpers.callMethod(thisObject, "setSystemExpanded", true)

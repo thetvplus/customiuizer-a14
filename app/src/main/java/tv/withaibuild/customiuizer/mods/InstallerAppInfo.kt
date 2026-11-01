@@ -68,7 +68,7 @@ internal class InstallerAppInfo private constructor(
 
     companion object {
         fun prepare(owner: Class<*>, holder: Class<*>, apk: Class<*>, labels: (Context) -> Labels? = { context ->
-            ModuleHelper.getModuleRes(context)?.let {
+            ModuleHelper.getModuleRes(context).let {
                 Labels(it.getString(R.string.various_installappinfo_vername), it.getString(R.string.various_installappinfo_vercode), it.getString(R.string.various_installappinfo_sdk))
             }
         }): InstallerAppInfo? {

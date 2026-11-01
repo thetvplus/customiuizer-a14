@@ -5,12 +5,14 @@ import android.content.ContentValues
 import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.MediaStore
+import android.os.Environment
 import io.github.libxposed.api.XposedInterface
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.CustomMethodUnhooker
@@ -100,10 +102,53 @@ class ScreenshotInstallationTest {
         val chain = Chain(listOf(Bitmap.CompressFormat.JPEG, 100, object : OutputStream() { override fun write(b: Int) = Unit }))
         assertSame(chain.result, System.screenshotCompressHook().intercept(chain)); assertEquals(Bitmap.CompressFormat.PNG, chain.received!![0]); assertEquals(100, chain.received!![1]); assertEquals(1, chain.calls)
     }
-    private class Chain(val arguments: List<Any?>, val failure: Throwable? = null) : XposedInterface.Chain {
+    @Test fun customInsertionUsesRelativePathAndKeepsDataAbsentWhenNativeRequestUsesScopedStorage() {
+        config(3)
+        val folder = java.io.File(Environment.getExternalStorageDirectory(), "Pictures/SyntheticScreenshots").path
+        System.systemMiscConfig = System.systemMiscConfig.copy(screenshotPath = 4, screenshotMyPath = folder)
+        val original = ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, "Screenshot_test.jpg") }
+        val chain = Chain(listOf(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, original), owner = RuntimeEnvironment.getApplication().contentResolver)
+        assertSame(chain.result, System.screenshotInsertHook().intercept(chain))
+        val result = chain.received!![1] as ContentValues
+        assertEquals("Pictures/SyntheticScreenshots/", result.getAsString(MediaStore.MediaColumns.RELATIVE_PATH))
+        assertEquals("Screenshot_test.png", result.getAsString(MediaStore.MediaColumns.DISPLAY_NAME))
+        assertEquals("image/png", result.getAsString(MediaStore.MediaColumns.MIME_TYPE))
+        assertFalse(result.containsKey(MediaStore.MediaColumns.DATA))
+        assertFalse(original.containsKey(MediaStore.MediaColumns.RELATIVE_PATH))
+        assertEquals(1, chain.calls)
+    }
+    @Test fun providerRejectedTopLevelDirectoryKeepsTheNativeDestination() {
+        config(3)
+        val folder = java.io.File(Environment.getExternalStorageDirectory(), "Documents/SyntheticScreenshots").path
+        System.systemMiscConfig = System.systemMiscConfig.copy(screenshotPath = 4, screenshotMyPath = folder)
+        val original = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, "Screenshot_test.png")
+            put(MediaStore.MediaColumns.DATA, "/native/Screenshot_test.png")
+        }
+        val chain = Chain(listOf(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, original))
+        System.screenshotInsertHook().intercept(chain)
+        val result = chain.received!![1] as ContentValues
+        assertEquals("/native/Screenshot_test.png", result.getAsString(MediaStore.MediaColumns.DATA))
+        assertFalse(result.containsKey(MediaStore.MediaColumns.RELATIVE_PATH))
+        assertEquals(1, chain.calls)
+    }
+    @Test fun invalidCustomFolderKeepsNativeLocationAndNativeFailureIsNeverRetried() {
+        config(4)
+        System.systemMiscConfig = System.systemMiscConfig.copy(screenshotPath = 4, screenshotMyPath = "/not-a-storage-volume/Pictures/Test")
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, "Screenshot_test.png")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Screenshots/")
+        }
+        val failure = IllegalArgumentException("Synthetic provider rejection")
+        val chain = Chain(listOf(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values), failure, RuntimeEnvironment.getApplication().contentResolver)
+        assertSame(failure, assertThrows(IllegalArgumentException::class.java) { System.screenshotInsertHook().intercept(chain) })
+        assertEquals("DCIM/Screenshots/", (chain.received!![1] as ContentValues).getAsString(MediaStore.MediaColumns.RELATIVE_PATH))
+        assertEquals(1, chain.calls)
+    }
+    private class Chain(val arguments: List<Any?>, val failure: Throwable? = null, val owner: Any? = null) : XposedInterface.Chain {
         val result = Any(); var calls = 0; var received: List<Any?>? = null
         override fun getExecutable(): Executable = error("No reflective native method access")
-        override fun getThisObject(): Any = error("No owner access")
+        override fun getThisObject(): Any = owner ?: error("No owner access")
         override fun getArgs(): List<Any?> = arguments
         override fun getArg(index: Int): Any? = arguments[index]
         override fun proceed(): Any? { calls++; received = arguments; failure?.let { throw it }; return result }

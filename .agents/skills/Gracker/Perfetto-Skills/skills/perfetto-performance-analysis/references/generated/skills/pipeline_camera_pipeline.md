@@ -1,0 +1,186 @@
+GENERATED FILE - DO NOT EDIT.
+Source: backend/skills/pipelines/camera_pipeline.skill.yaml
+Source SHA-256: 71e8231904220fd671deda7e3eee30333fcfc609394f91dc11f4e400127739af
+# 相机管线
+
+This reference is the portable Agent Skill projection of the source definition. Execute SQL with `perfetto_query.py`; bind declared scalar or JSON-array inputs through `--param`, load prerequisites through `--module`, and pass non-empty saved rows from prior steps through `--result`; dotted fields and numeric indexes select saved scalar values. Evaluate conditions and dependent Skill calls in the listed order.
+
+## Overview
+
+```yaml
+name: pipeline_camera_pipeline
+version: '1.0'
+type: pipeline_definition
+category: rendering
+```
+
+## Metadata
+
+```yaml
+pipeline_id: CAMERA_PIPELINE
+display_name: 相机管线
+description: Camera2/HAL3 多流相机渲染
+icon: camera
+family: specialized
+doc_path: rendering_pipelines/S11_camera_type.md
+s_article_ref: S11
+four_features:
+  producer_threads:
+  - cameraserver
+  - camera HAL
+  - Camera*
+  - RequestThread
+  - CaptureSession
+  optional_consumer_threads:
+  - RenderThread
+  - ImageReader
+  - media.codec
+  expected_layer_count: 1
+  bufferqueue_path: HAL_PRODUCED_TO_PREVIEW_SURFACE_OR_IMAGEREADER
+  extra_rhythm_sources:
+  - camera_request_activity
+deviation_anchors: no_vsync_app_camera_request_activity_candidate
+subvariants_note: '文章 S11 把 Camera 类型拆为 4 个子变种：
+
+  - CAMERA_PREVIEW_SURFACEVIEW（预览独立 SV，zero-copy overlay 理想路径）
+
+  - CAMERA_PREVIEW_TEXTUREVIEW（预览回宿主 TV，宿主采样路径）
+
+  - CAMERA_IMAGEANALYSIS_READER（分析路径 ImageReader）
+
+  - CAMERA_VIDEORECORD_SURFACE（录像 Surface）
+
+  当前 variant 对应 S11；预览、分析与录像作为同一类型下的检测子路径一并输出。
+
+  '
+multi_output_back_pressure: 'Camera 多路输出（preview/analysis/record）可能共享硬件与 buffer 资源。
+
+  只有存在 buffer ownership、acquire/release 或 fence 等证据时，才能把某一路消费慢报告为
+
+  整体 pipeline back-pressure；仅凭 PSS/RSS 增长不能判定 ImageReader 泄漏。
+
+  '
+```
+
+## Detection
+
+```yaml
+scoring_signals:
+- signal: has_camera_thread
+  thread_pattern: '*Camera*'
+  weight: 30
+- signal: has_cam_abbrev_thread
+  thread_pattern: '*Cam*'
+  weight: 10
+- signal: has_camera_slice
+  slice_pattern: '*Camera*'
+  weight: 30
+- signal: has_capture_session
+  slice_pattern: '*CaptureSession*'
+  weight: 30
+```
+
+## Teaching model
+
+```yaml
+source: rendering_pipelines/S11_camera_type.md
+```
+
+## Analysis guidance
+
+```yaml
+common_issues:
+- id: preview_jank
+  name: 预览卡顿
+  description: 相机预览帧率不稳定
+  detection_skill: sf_frame_consumption
+- id: multi_output_back_pressure
+  name: 多路输出 back-pressure 拖慢预览
+  description: 'Camera 多路输出（preview/analysis/record）可能竞争共享硬件与 buffer 资源。
+
+    ImageReader 未及时 release / Codec 堆积导致 HAL back-pressure 只能作为候选解释；
+
+    需要 buffer ownership、acquire/release 或 fence 证据支持，不能仅凭 PSS/RSS 增长判定泄漏。
+
+    '
+- id: release_fence_late_blocks_hal
+  name: Release fence 晚回阻塞 HAL
+  description: '消费侧 release fence 晚回（HWC/SurfaceFlinger/宿主采样/Codec 编码） →
+
+    HAL 拿不到新 buffer → request pipeline 整体 back-pressure。必须有 Camera buffer ownership、
+
+    acquire/release 与 fence 的同一生命周期关联；display present fence 不能替代 Camera completion。
+
+    '
+- id: textureview_extra_resample_overhead
+  name: TextureView 模式宿主 RT 采样开销
+  description: '预览承载若是 TextureView，宿主 RT updateTexImage acquire + GPU 重采样可能引入额外延迟。
+
+    SurfaceView 模式在设备与合成条件允许时可走 device composition 避免此开销。
+
+    '
+  detection_skill: render_thread_slices
+- id: camera_request_activity_not_vsync_aligned
+  name: Camera request activity candidate 不对齐 vsync
+  description: 'Camera 帧率不等于显示刷新率（典型 30fps 视频拍摄在 60Hz 屏）。
+
+    `processCaptureRequest*` 等名称匹配只能标记 Camera request activity candidate，不能证明 sensor trigger。
+
+    分析卡顿要分别看有明确 identity 的 request/result/buffer 证据与 preview presentation 频率。
+
+    '
+  detection_skill: vsync_alignment_in_range
+recommended_skills:
+- sf_frame_consumption
+- cpu_analysis
+- present_fence_timing
+```
+
+## Optional UI metadata
+
+The following auto-pin instructions are SmartPerfetto UI hints. They are optional in a portable agent workflow.
+
+```yaml
+instructions:
+- pattern: ^VSYNC-app$
+  match_by: name
+  priority: 1
+  reason: VSync (宿主 UI/控制层节奏，不证明相机像素生产)
+- pattern: ^main(\s+\d+)?$
+  match_by: name
+  priority: 2
+  reason: 相机 UI/业务逻辑 (生产)
+  expand: true
+  smart_filter:
+    enabled: true
+    description: 仅 Pin 活跃渲染进程的主线程（避免 pin 到系统/其他 app 的 main）
+- pattern: ^RenderThread(\s+\d+)?$
+  match_by: name
+  priority: 3
+  reason: 预览 UI 渲染 (传输)
+  expand: true
+  smart_filter:
+    enabled: true
+    description: 仅 Pin 活跃渲染进程的 RenderThread（若预览走纯 SurfaceView 可能为空）
+- pattern: CaptureSession
+  match_by: name
+  priority: 4
+  reason: 采集会话 (生产)
+- pattern: Camera
+  match_by: name
+  priority: 5
+  reason: Camera 服务 (传输)
+- pattern: ^VSYNC-sf$
+  match_by: name
+  priority: 5.5
+  reason: VSync (SurfaceFlinger 消费/合成)
+- pattern: ^BufferTX
+  match_by: name
+  priority: 6
+  reason: BufferTX (SurfaceFlinger 事务)
+- pattern: ^[sS]urface[fF]linger
+  match_by: name
+  priority: 7
+  reason: 预览合成/显示
+  main_thread_only: true
+```

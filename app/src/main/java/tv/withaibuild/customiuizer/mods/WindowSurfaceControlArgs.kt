@@ -20,7 +20,7 @@ internal object WindowSurfaceControlArgs {
     private val INT = Int::class.javaPrimitiveType!!
 
     fun parameterTypes(chain: XposedInterface.Chain): Array<Class<*>>? {
-        val member = chain.executable ?: return null
+        val member = chain.executable
         return (member as? Constructor<*>)?.parameterTypes
     }
 

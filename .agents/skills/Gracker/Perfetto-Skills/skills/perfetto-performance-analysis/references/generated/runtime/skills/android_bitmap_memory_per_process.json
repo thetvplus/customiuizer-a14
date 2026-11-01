@@ -1,0 +1,106 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "heap_graph_bitmaps"
+    ]
+  },
+  "id": "android_bitmap_memory_per_process",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标进程名（精确或 name:* 子进程，见 fragments/heap_target_process.sql）；为空则统计全部进程；无匹配时回退到没有进程名的 dump（如 .hprof）",
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "目标包名（精确或 name:* 子进程）；process_name 为空时使用",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "可选的稳定进程身份；进程名不可用时（.hprof）用它限定进程",
+      "name": "upid",
+      "required": false,
+      "type": "integer"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.bitmaps",
+      "android.memory.heap_graph.bitmap"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/android_bitmap_memory_per_process.skill.yaml",
+    "sha256": "c60050ad32c18950da78069dabe941919f7dd55aa3df9ac7ad86d51254da582d"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "bitmap_memory",
+      "name": "Bitmap 内存按进程",
+      "query_id": "android_bitmap_memory_per_process/bitmap_memory",
+      "result_dependencies": [],
+      "type": "atomic"
+    },
+    {
+      "id": "heap_bitmap_availability",
+      "name": "Heap Graph Bitmap 数据可用性",
+      "query_id": "android_bitmap_memory_per_process/heap_bitmap_availability",
+      "result_dependencies": [],
+      "save_as": "heap_bitmap_availability",
+      "type": "atomic"
+    },
+    {
+      "condition": "heap_bitmap_availability.data[0]?.has_heap_graph_bitmaps == 1",
+      "displayed": true,
+      "id": "heap_bitmap_metadata",
+      "name": "Heap Graph Bitmap 元数据",
+      "optional": true,
+      "query_id": "android_bitmap_memory_per_process/heap_bitmap_metadata",
+      "result_dependencies": [],
+      "type": "atomic"
+    },
+    {
+      "condition": "heap_bitmap_availability.data[0]?.has_heap_graph_bitmaps == 1",
+      "displayed": true,
+      "id": "heap_bitmap_sender_attribution",
+      "name": "跨进程 Bitmap 来源归因",
+      "optional": true,
+      "query_id": "android_bitmap_memory_per_process/heap_bitmap_sender_attribution",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.2",
+  "workflow": "memory"
+}

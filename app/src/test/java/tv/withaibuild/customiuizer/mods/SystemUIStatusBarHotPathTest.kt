@@ -64,7 +64,8 @@ private fun countingPrefMap(values: Map<String, Any>): Pair<PrefMap, CountingMap
 
     val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
     snapshotField.isAccessible = true
-    snapshotField.set(prefMap, AtomicReference<Map<String, Any>>(countingMap))
+    @Suppress("UNCHECKED_CAST")
+    (snapshotField.get(prefMap) as AtomicReference<Map<String, Any>>).set(countingMap)
 
     return prefMap to countingMap
 }
@@ -74,7 +75,8 @@ private fun countingMainPrefs(values: Map<String, Any>): CountingMap {
     MainModule.mPrefs.clear()
     val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
     snapshotField.isAccessible = true
-    snapshotField.set(MainModule.mPrefs, AtomicReference<Map<String, Any>>(countingMap))
+    @Suppress("UNCHECKED_CAST")
+    (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(countingMap)
     return countingMap
 }
 

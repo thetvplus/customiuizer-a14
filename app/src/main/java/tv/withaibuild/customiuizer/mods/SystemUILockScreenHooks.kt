@@ -146,24 +146,24 @@ object SystemUILockScreenHooks {
     fun LockScreenTopMarginHook(lpparam: PackageReadyParam) {
         val statusBarPaddingTop = IntArray(1)
         ModuleHelper.findAndHookMethod("com.android.systemui.SystemUIApplication", lpparam.classLoader, "onCreate", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val mContext = XposedHelpers.callMethod(param.getThisObject(), "getApplicationContext") as Context
+            override fun after(callback: AfterHookCallback) {
+                val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getApplicationContext") as Context
                 val dimenResId = mContext.resources.getIdentifier("status_bar_padding_top", "dimen", lpparam.packageName)
                 statusBarPaddingTop[0] = mContext.resources.getDimensionPixelSize(dimenResId)
             }
         })
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.MiuiKeyguardStatusBarView", lpparam.classLoader, "updateViewStatusBarPaddingTop", View::class.java, object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val view = param.getArg(0) as View?
+            override fun before(callback: BeforeHookCallback) {
+                val view = callback.getArg(0) as View?
                 if (view != null) {
                     view.setPadding(view.paddingLeft, statusBarPaddingTop[0], view.paddingRight, view.paddingBottom)
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         })
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.MiuiKeyguardStatusBarView", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                XposedHelpers.callMethod(param.getThisObject(), "onDensityOrFontScaleChanged")
+            override fun after(callback: AfterHookCallback) {
+                XposedHelpers.callMethod(callback.getThisObject(), "onDensityOrFontScaleChanged")
             }
         })
     }
@@ -209,16 +209,16 @@ object SystemUILockScreenHooks {
             val screenStates = booleanArrayOf(false) // isAod
 
             ModuleHelper.hookAllConstructors(panelClass, object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
+                override fun after(callback: AfterHookCallback) {
                     try {
                         if (!isDefaultLockScreenTheme(MiuiThemeUtilsClass)) return
-                        val mBlurRatioChangedListener = XposedHelpers.getObjectField(param.getThisObject(), "mBlurRatioChangedListener")
-                        val notificationShadeDepthController = XposedHelpers.getObjectField(param.getThisObject(), "mDepthController")
-                        val listeners = XposedHelpers.getObjectField(notificationShadeDepthController, "listeners") as ArrayList<Any>
+                        val mBlurRatioChangedListener = XposedHelpers.getObjectField(callback.getThisObject(), "mBlurRatioChangedListener")
+                        val notificationShadeDepthController = XposedHelpers.getObjectField(callback.getThisObject(), "mDepthController")
+                        val listeners = XposedHelpers.getObjectField(notificationShadeDepthController, "listeners") as ArrayList<*>
                         listeners.remove(mBlurRatioChangedListener)
-                        val view = XposedHelpers.getObjectField(param.getThisObject(), "mThemeBackgroundView") as View
+                        val view = XposedHelpers.getObjectField(callback.getThisObject(), "mThemeBackgroundView") as View
                         view.alpha = 1.0f
-                        registerLockScreenAlbumArtReceiver(view.context, param.getThisObject() ?: return)
+                        registerLockScreenAlbumArtReceiver(view.context, callback.getThisObject() ?: return)
                     } catch (t: Throwable) {
                         FatalErrors.rethrowIfFatal(t)
                         XposedHelpers.log(t)
@@ -227,18 +227,18 @@ object SystemUILockScreenHooks {
             })
 
             val updateLockscreenHook = object : MethodHook() {
-                override fun before(param: BeforeHookCallback) {
+                override fun before(callback: BeforeHookCallback) {
                     try {
                         if (!isDefaultLockScreenTheme(MiuiThemeUtilsClass)) return
-                        val view = XposedHelpers.getObjectField(param.getThisObject(), "mThemeBackgroundView") as View
-                        val isOnShade = XposedHelpers.callMethod(param.getThisObject(), "isOnShade") as Boolean
+                        val view = XposedHelpers.getObjectField(callback.getThisObject(), "mThemeBackgroundView") as View
+                        val isOnShade = XposedHelpers.callMethod(callback.getThisObject(), "isOnShade") as Boolean
                         if (isOnShade || screenStates[0]) {
                             view.visibility = View.GONE
                         } else {
                             val applied = LockScreenAlbumArtController.applyTo(view)
                             view.visibility = if (applied) View.VISIBLE else View.GONE
                         }
-                        param.returnAndSkip(null)
+                        callback.returnAndSkip(null)
                     } catch (t: Throwable) {
                         FatalErrors.rethrowIfFatal(t)
                         XposedHelpers.log(t)
@@ -249,12 +249,12 @@ object SystemUILockScreenHooks {
             ModuleHelper.findAndHookMethodSilently(panelClass, "updateThemeBackgroundVisibility", updateLockscreenHook)
 
             ModuleHelper.findAndHookMethodSilently(panelClass, "linkageViewAnim", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
+                override fun after(callback: AfterHookCallback) {
                     try {
-                        val screenOn = param.getArg(0) as Boolean
+                        val screenOn = callback.getArg(0) as Boolean
                         screenStates[0] = !screenOn
                         LockScreenAlbumArtController.setAod(!screenOn)
-                        XposedHelpers.callMethod(param.getThisObject(), "updateThemeBackgroundVisibility")
+                        XposedHelpers.callMethod(callback.getThisObject(), "updateThemeBackgroundVisibility")
                     } catch (t: Throwable) {
                         FatalErrors.rethrowIfFatal(t)
                         XposedHelpers.log(t)
@@ -264,9 +264,9 @@ object SystemUILockScreenHooks {
         }
 
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.NotificationMediaManager", lpparam.classLoader, "updateMediaMetaData", Boolean::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
+            override fun after(callback: AfterHookCallback) {
                 try {
-                    val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
+                    val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
                     if (!isDefaultLockScreenTheme(MiuiThemeUtilsClass)) {
                         XposedHelpers.setAdditionalStaticField(MiuiThemeUtilsClass, "mAlbumArtSource", null)
                         XposedHelpers.setAdditionalStaticField(MiuiThemeUtilsClass, "mAlbumArt", null)
@@ -276,7 +276,7 @@ object SystemUILockScreenHooks {
                         LockScreenAlbumArtController.clear()
                         return
                     }
-                    val mMediaMetadata = XposedHelpers.getObjectField(param.getThisObject(), "mMediaMetadata") as MediaMetadata?
+                    val mMediaMetadata = XposedHelpers.getObjectField(callback.getThisObject(), "mMediaMetadata") as MediaMetadata?
                     var art: Bitmap? = null
                     if (mMediaMetadata != null) {
                         art = mMediaMetadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
@@ -329,9 +329,9 @@ object SystemUILockScreenHooks {
     fun LockScreenShortcutHook(lpparam: PackageReadyParam) {
         installLockScreenConfigSnapshot()
         ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateLeftIcon", object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                if (param.getThrowable() != null) return
-                val thisObject = param.getThisObject()
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val thisObject = callback.getThisObject()
                 val mLeftButton = XposedHelpers.getObjectField(thisObject, "mLeftButton") as ImageView?
                 if (mLeftButton == null) return
                 val config = lockScreenConfig
@@ -351,9 +351,9 @@ object SystemUILockScreenHooks {
         })
         if (lockScreenConfig.leftTapAction) {
             ModuleHelper.hookAllConstructors("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    if (param.getThrowable() != null) return
-                    val owner = param.getThisObject() ?: return
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) return
+                    val owner = callback.getThisObject() ?: return
                     val mContext = XposedHelpers.getObjectField(owner, "mContext") as Context
                     val resolver = mContext.contentResolver
                     // Handler() without a Looper binds to whichever thread ran the constructor
@@ -368,9 +368,9 @@ object SystemUILockScreenHooks {
         }
 
         val updateRightButtonHook = object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                if (param.getThrowable() != null) return
-                val thisObject = param.getThisObject()
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val thisObject = callback.getThisObject()
                 val mRightButton = XposedHelpers.getObjectField(thisObject, "mRightButton") as ImageView?
                 if (mRightButton == null) return
                 val config = lockScreenConfig
@@ -393,9 +393,9 @@ object SystemUILockScreenHooks {
 
         if (leftAction || rightAction) {
             ModuleHelper.findAndHookMethod("com.android.keyguard.injector.KeyguardBottomAreaInjector", lpparam.classLoader, "updateIcons", object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    if (param.getThrowable() != null) return
-                    val mLeftButton = XposedHelpers.getObjectField(param.getThisObject(), "mLeftButton") as View?
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) return
+                    val mLeftButton = XposedHelpers.getObjectField(callback.getThisObject(), "mLeftButton") as View?
                     if (mLeftButton == null) {
                         return
                     }
@@ -411,7 +411,7 @@ object SystemUILockScreenHooks {
                         mLeftButton.setOnClickListener(null)
                     }
                     if (rightAction) {
-                        val mRightButton = XposedHelpers.getObjectField(param.getThisObject(), "mRightButton") as View
+                        val mRightButton = XposedHelpers.getObjectField(callback.getThisObject(), "mRightButton") as View
                         mRightButton.setOnLongClickListener { v: View ->
                             ModuleHelper.guarded {
                                 GlobalActions.handleAction(v.context, "system_lockscreenshortcuts_right", true)
@@ -427,28 +427,28 @@ object SystemUILockScreenHooks {
         installSwipeSuppressionSnapshot()
 
         ModuleHelper.findAndHookMethod("com.android.keyguard.KeyguardMoveHelper", lpparam.classLoader, "setTranslation", Float::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
+            override fun before(callback: BeforeHookCallback) {
                 val rightOff = swipeRightOff
                 val leftOff = swipeLeftOff
-                onKeyguardMoveHelperSetTranslationBefore(param, rightOff, leftOff)
+                onKeyguardMoveHelperSetTranslationBefore(callback, rightOff, leftOff)
             }
         })
 
         ModuleHelper.findAndHookMethod("com.android.keyguard.KeyguardMoveHelper", lpparam.classLoader, "endMotion", Float::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                onKeyguardMoveHelperEndMotionBefore(param)
+            override fun before(callback: BeforeHookCallback) {
+                onKeyguardMoveHelperEndMotionBefore(callback)
             }
         })
 
         ModuleHelper.hookAllMethods("com.android.keyguard.KeyguardMoveRightController", lpparam.classLoader, "onTouchDown", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                onKeyguardMoveRightControllerOnTouchDownBefore(param)
+            override fun before(callback: BeforeHookCallback) {
+                onKeyguardMoveRightControllerOnTouchDownBefore(callback)
             }
         })
 
         ModuleHelper.hookAllMethods("com.android.keyguard.KeyguardMoveRightController", lpparam.classLoader, "onTouchMove", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                onKeyguardMoveRightControllerOnTouchMoveBefore(param)
+            override fun before(callback: BeforeHookCallback) {
+                onKeyguardMoveRightControllerOnTouchMoveBefore(callback)
             }
         })
     }
@@ -502,8 +502,8 @@ object SystemUILockScreenHooks {
     @JvmStatic
     fun LockScreenSecureLaunchHook() {
         ModuleHelper.findAndHookMethod(Activity::class.java, "onCreate", Bundle::class.java, object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val act = param.getThisObject() as Activity? ?: return
+            override fun after(callback: AfterHookCallback) {
+                val act = callback.getThisObject() as Activity? ?: return
                 val intent = act.intent
                 if (intent == null) return
                 val mFromSecureKeyguard = intent.getBooleanExtra("StartActivityWhenLocked", false)
@@ -526,12 +526,12 @@ object SystemUILockScreenHooks {
     fun ReplaceShortcutAppHook(lpparam: PackageReadyParam) {
         installLockScreenConfigSnapshot()
         val openAppHook = object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
+            override fun before(callback: BeforeHookCallback) {
                 val mContext = ModuleHelper.findContext(lpparam)
                 var user = 0
                 var pkgAppName = ""
                 val config = lockScreenConfig
-                when (param.getMember().name) {
+                when (callback.getMember().name) {
                     "startCalendarApp" -> {
                         user = config.calendarAppUser
                         pkgAppName = config.calendarApp
@@ -563,7 +563,7 @@ object SystemUILockScreenHooks {
                         val activityStarter = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.plugins.ActivityStarter")
                         XposedHelpers.callMethod(activityStarter, "startActivity", intent, true)
                     }
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         }
@@ -579,11 +579,11 @@ object SystemUILockScreenHooks {
     @JvmStatic
     fun DisableKeyguardEditorHook(lpparam: PackageReadyParam) {
         ModuleHelper.hookAllConstructors("com.android.keyguard.KeyguardEditorHelper", lpparam.classLoader, object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                val mMiuiKeyguardUpdateMonitorCallback = XposedHelpers.getObjectField(param.getThisObject(), "mMiuiKeyguardUpdateMonitorCallback")
+            override fun after(callback: AfterHookCallback) {
+                val mMiuiKeyguardUpdateMonitorCallback = XposedHelpers.getObjectField(callback.getThisObject(), "mMiuiKeyguardUpdateMonitorCallback")
                 val keyguardUpdateMonitorInjector = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.keyguard.injector.KeyguardUpdateMonitorInjector")
                 XposedHelpers.callMethod(keyguardUpdateMonitorInjector, "removeCallback", mMiuiKeyguardUpdateMonitorCallback)
-                XposedHelpers.setObjectField(param.getThisObject(), "mIsMagazinePreViewVisibility", true)
+                XposedHelpers.setObjectField(callback.getThisObject(), "mIsMagazinePreViewVisibility", true)
             }
         })
     }
@@ -592,12 +592,12 @@ object SystemUILockScreenHooks {
     fun HideLockscreenZenModeHook(lpparam: PackageReadyParam) {
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.zen.ZenModeViewController", lpparam.classLoader, "updateVisibility", object : MethodHook() {
             private var manuallyDismissed = false
-            override fun before(param: BeforeHookCallback) {
-                manuallyDismissed = XposedHelpers.getBooleanField(param.getThisObject(), "manuallyDismissed")
-                XposedHelpers.setObjectField(param.getThisObject(), "manuallyDismissed", true)
+            override fun before(callback: BeforeHookCallback) {
+                manuallyDismissed = XposedHelpers.getBooleanField(callback.getThisObject(), "manuallyDismissed")
+                XposedHelpers.setObjectField(callback.getThisObject(), "manuallyDismissed", true)
             }
-            override fun after(param: AfterHookCallback) {
-                XposedHelpers.setObjectField(param.getThisObject(), "manuallyDismissed", manuallyDismissed)
+            override fun after(callback: AfterHookCallback) {
+                XposedHelpers.setObjectField(callback.getThisObject(), "manuallyDismissed", manuallyDismissed)
             }
         })
     }

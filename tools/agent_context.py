@@ -18,18 +18,20 @@ try:
     from . import rom_catalog as rom
     from .catalog_contract_probe import balanced_blocks, field, symbol_field
     from .extract_process_matrix import extract_class_body, parse_install_hooks
+    from .settings_schema import read_element, ANDROID_NS
 except ImportError:
     import rom_catalog as rom
     from catalog_contract_probe import balanced_blocks, field, symbol_field
     from extract_process_matrix import extract_class_body, parse_install_hooks
+    from settings_schema import read_element, ANDROID_NS
 
-VERSION = 7
+VERSION = 8
 JAVA = "app/src/main/java"
 FEATURES = "mods/utils/feature/"
 SOURCE_PATHS = [JAVA, "app/settings", "app/src/main/res/xml", "app/src/main/res/values/strings.xml",
                 "app/src/main/res/values-zh-rCN/strings.xml", "app/src/test/java",
                 "app/src/main/res/values/arrays.xml",
-                "feature-semantics/a14.json", "docs/rom-intelligence/A14_PROCESS_MATRIX.json",
+                "docs/rom-intelligence/A14_PROCESS_MATRIX.json",
                 "rom-contracts/hyperos1-a14-core.json", "tools/dexsql"]
 
 
@@ -109,7 +111,6 @@ def snapshot(db, root, refresh=False):
             continue
         text = file.read_text(encoding="utf-8")
         if path.startswith("app/settings/"):
-            from settings_schema import read_element, ANDROID_NS
             tree = read_element(file)
             ns = "{" + ANDROID_NS + "}"
             payload = [dict(key=n.get(ns + "key"), title=n.get(ns + "title"), entries=n.get(ns + "entries"))
@@ -192,11 +193,9 @@ def query(args):
             raise ValueError("ROM Catalog metadata missing; initialize the existing Catalog with update")
         rom.outside_sources(args.index_dir.resolve(), Path(saved[0]))
         data, reuse = snapshot(db, root, args.refresh)
-        for name in ("feature-semantics/a14.json", "rom-contracts/hyperos1-a14-core.json"):
-            if data[name].get("androidApi") != 34:
-                raise ValueError("context accepts A14 source catalogs only; cross-version reference cannot enter production links")
+        if data["rom-contracts/hyperos1-a14-core.json"].get("androidApi") != 34:
+            raise ValueError("context accepts A14 source catalogs only; cross-version reference cannot enter production links")
         matrix = data["docs/rom-intelligence/A14_PROCESS_MATRIX.json"]["features"]
-        semantics = data["feature-semantics/a14.json"]["entries"]
         code = {p: f for p, f in data.items() if p.startswith(JAVA) and p.endswith((".kt", ".java"))}
         definitions = {}
         for path, f in code.items():
@@ -236,20 +235,18 @@ def query(args):
             owner_paths = {p for owner in owners for p, _ in definitions.get(owner, []) if FEATURES not in p}
             dependency_names = {call["owner"] for p in owner_paths for call in code[p]["calls"]}
             related = owners | dependency_names
-            sem = [s for s in semantics if key in s.get("preferenceKeys", [])]
             linked_keys = {k for p in owner_paths for k in code[p]["preferences"]}
-            searchable = json.dumps([row, list(related), labels.get(key, []), [s.get("featureName") for s in sem],
+            searchable = json.dumps([row, list(related), labels.get(key, []),
                 [labels.get(k, []) for k in linked_keys],
                 [[s["name"] for s in code[p]["symbols"]] for p in owner_paths],
                 [code[p]["targets"] for p in owner_paths]], ensure_ascii=False).casefold()
             if args.key and args.key.removeprefix("pref_key_") != key:
                 # Secondary preference keys can map via the exact source file of a resolved owner.
-                secondary = {s["sourceFile"] for s in semantics if canonical in s.get("preferenceKeys", []) and FEATURES not in s["sourceFile"]}
-                if canonical not in linked_keys and not secondary.intersection(owner_paths):
+                if canonical not in linked_keys:
                     continue
             if needle and needle not in searchable and not any(needle in p.casefold() for p in owner_paths):
                 continue
-            selected.append((row, match_specs, owner_calls, owner_paths, sem))
+            selected.append((row, match_specs, owner_calls, owner_paths))
         summary = args.summary or not any((args.key, args.feature, args.contains, args.source))
         result = dict(dataset="context", repo=str(root), evidence="SOURCE_FACT; lexical dependencies are CANDIDATE; no runtime validation",
                       matched=len(selected), offset=args.offset, nextOffset=None, index=reuse, records=[])
@@ -263,7 +260,7 @@ def query(args):
         page = selected[args.offset:args.offset + args.limit]
         if len(selected) > args.offset + len(page):
             result["nextOffset"] = args.offset + len(page)
-        for row, match_specs, calls, paths, sem in page:
+        for row, match_specs, calls, paths in page:
             related_paths = set(paths)
             for p in paths:
                 for call in code[p]["calls"]:
@@ -288,7 +285,6 @@ def query(args):
                 source=[compact_fact(code[p], args.full) for p in sorted(paths) if not FEATURES in p],
                 dependencies=[dict(path=p, evidence="CANDIDATE_LEXICAL") for p in sorted(related_paths)[:(20 if args.full else 5)]],
                 dependenciesMore=max(0, len(related_paths) - (20 if args.full else 5)),
-                semantics=[{k:s.get(k) for k in ("featureId", "runtimeReadMode", "confidence", "evidence")} for s in sem[:2]],
                 contracts=contracts[:3], rom=select_rom(db, row["target"], args.device, args.region),
                 verification=dict(level="Quick initially; Standard for generator/shared data consumers; Deep for runtime/ownership changes",
                     candidates=tests[:5], evidence="CANDIDATE: choose affected tests after reading actual diff; do not run APK for retrieval", more=max(0,len(tests)-5)),

@@ -41,8 +41,8 @@ object StatusBarContentGeometryHooks {
     fun hook(lpparam: PackageReadyParam) {
         ModuleHelper.observePreferenceChange(preferenceObserver, this)
         val afterBind = object : MethodHook() {
-            override fun after(param: AfterHookCallback) {
-                (param.getThisObject() as? View)?.let { bind(it) }
+            override fun after(callback: AfterHookCallback) {
+                (callback.getThisObject() as? View)?.let { bind(it) }
             }
         }
         for (method in arrayOf("onFinishInflate", "onAttachedToWindow")) {
@@ -60,9 +60,9 @@ object StatusBarContentGeometryHooks {
     }
 
     internal class NativeHeightCallback : MethodHook() {
-        override fun after(param: AfterHookCallback) {
-            if (param.isSkipped || param.getThrowable() != null) return
-            (param.getThisObject() as? View)?.let { nativeHeightChanged(it) }
+        override fun after(callback: AfterHookCallback) {
+            if (callback.isSkipped || callback.getThrowable() != null) return
+            (callback.getThisObject() as? View)?.let { nativeHeightChanged(it) }
         }
     }
 

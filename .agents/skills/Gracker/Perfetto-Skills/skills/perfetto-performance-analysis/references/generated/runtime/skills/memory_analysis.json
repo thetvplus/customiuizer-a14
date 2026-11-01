@@ -1,0 +1,397 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*"
+    ]
+  },
+  "id": "memory_analysis",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "应用包名（可选）",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳（纳秒，可选）",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳（纳秒，可选）",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 100,
+      "description": "GC 次数严重阈值",
+      "name": "gc_count_critical",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 50,
+      "description": "GC 次数警告阈值",
+      "name": "gc_count_warning",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 2000,
+      "description": "GC 总耗时严重阈值（ms）",
+      "name": "gc_total_time_critical_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 10,
+      "description": "主线程 GC 次数严重阈值",
+      "name": "main_thread_gc_critical",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 50,
+      "description": "主线程等待 GC 完成的总时长警告阈值 (ms)",
+      "name": "main_thread_gc_wait_warning_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 50,
+      "description": "单次 GC 告警阈值（ms）",
+      "name": "single_gc_warning_ms",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/memory_analysis.skill.yaml",
+    "sha256": "1fb350c1d3eb4af09e605373da275721d9521ff7f20b34a245513f545b5b6dd1"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "get_process",
+      "name": "获取目标进程",
+      "on_empty": "未找到目标进程",
+      "query_id": "memory_analysis/get_process",
+      "result_dependencies": [],
+      "save_as": "target_process",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "get_vsync_period",
+      "name": "检测 VSync 周期",
+      "optional": true,
+      "params": {
+        "end_ts": "${end_ts}",
+        "start_ts": "${start_ts}"
+      },
+      "save_as": "vsync_info",
+      "skill": "vsync_period_detection",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "memory_growth_summary",
+      "name": "RSS/Swap 增长检测",
+      "optional": true,
+      "params": {
+        "end_ts": "${end_ts}",
+        "package": "${package}",
+        "start_ts": "${start_ts}"
+      },
+      "save_as": "memory_growth_summary",
+      "skill": "memory_growth_detector",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "rss_swap_peaks",
+      "name": "RSS/Swap 峰值",
+      "optional": true,
+      "params": {
+        "end_ts": "${end_ts}",
+        "package": "${package}",
+        "start_ts": "${start_ts}"
+      },
+      "save_as": "rss_swap_peaks",
+      "skill": "linux_process_rss_swap_timeline",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "heap_graph_summary",
+      "name": "Heap Graph 总览",
+      "optional": true,
+      "params": {
+        "max_rows": 30,
+        "process_name": "${package}"
+      },
+      "save_as": "heap_graph_summary",
+      "skill": "android_heap_graph_summary",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "heap_graph_leak_candidates",
+      "name": "Heap Graph 泄漏候选",
+      "optional": true,
+      "params": {
+        "max_candidates": 20,
+        "max_reference_edges": 50,
+        "process_name": "${package}"
+      },
+      "save_as": "heap_graph_leak_candidates",
+      "skill": "android_heap_graph_leak_candidates",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "bitmap_memory",
+      "name": "Bitmap 内存",
+      "optional": true,
+      "params": {
+        "package": "${package}"
+      },
+      "save_as": "bitmap_memory",
+      "skill": "android_bitmap_memory_per_process",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "native_heap_hotspots",
+      "name": "全 Trace Native Heap 热点",
+      "optional": true,
+      "params": {
+        "max_rows": 100,
+        "min_alloc_mb": 20,
+        "min_size_mb": 1
+      },
+      "save_as": "native_heap_hotspots",
+      "skill": "native_heap_breakdown",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "lmk_events",
+      "name": "LMK 事件",
+      "optional": true,
+      "params": {
+        "end_ts": "${end_ts}",
+        "process_name": "${package}",
+        "start_ts": "${start_ts}"
+      },
+      "save_as": "lmk_events",
+      "skill": "lmk_kill_attribution",
+      "type": "skill"
+    },
+    {
+      "condition": "target_process.data.length > 0",
+      "displayed": true,
+      "id": "gc_overview",
+      "name": "GC 概览",
+      "query_id": "memory_analysis/gc_overview",
+      "result_dependencies": [],
+      "save_as": "gc_overview",
+      "type": "atomic"
+    },
+    {
+      "condition": "target_process.data.length > 0",
+      "displayed": true,
+      "id": "gc_stats",
+      "name": "GC 事件统计",
+      "query_id": "memory_analysis/gc_stats",
+      "result_dependencies": [],
+      "save_as": "gc_stats",
+      "type": "atomic"
+    },
+    {
+      "condition": "target_process.data.length > 0",
+      "displayed": true,
+      "id": "gc_frame_impact",
+      "name": "GC 与帧关联",
+      "optional": true,
+      "query_id": "memory_analysis/gc_frame_impact",
+      "result_dependencies": [],
+      "save_as": "gc_frame_impact",
+      "type": "atomic"
+    },
+    {
+      "condition": "target_process.data.length > 0",
+      "displayed": true,
+      "id": "main_thread_gc",
+      "name": "主线程 GC",
+      "query_id": "memory_analysis/main_thread_gc",
+      "result_dependencies": [],
+      "save_as": "main_thread_gc",
+      "type": "atomic"
+    },
+    {
+      "condition": "target_process.data.length > 0",
+      "displayed": true,
+      "id": "gc_thread_state",
+      "name": "GC 期间主线程状态",
+      "optional": true,
+      "query_id": "memory_analysis/gc_thread_state",
+      "result_dependencies": [],
+      "save_as": "gc_thread_state",
+      "type": "atomic"
+    },
+    {
+      "condition": "target_process.data.length > 0",
+      "displayed": true,
+      "id": "gc_interval_analysis",
+      "name": "GC 间隔分析",
+      "query_id": "memory_analysis/gc_interval_analysis",
+      "result_dependencies": [],
+      "save_as": "gc_intervals",
+      "type": "atomic"
+    },
+    {
+      "condition": "target_process.data.length > 0",
+      "displayed": true,
+      "id": "long_gc_events",
+      "name": "长时间 GC",
+      "query_id": "memory_analysis/long_gc_events",
+      "result_dependencies": [],
+      "save_as": "long_gc",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "memory_diagnosis",
+      "inputs": [
+        "gc_overview",
+        "gc_stats",
+        "main_thread_gc",
+        "long_gc",
+        "gc_intervals"
+      ],
+      "name": "内存诊断",
+      "rules": [
+        {
+          "condition": "gc_overview.data[0]?.total_gc_count > (gc_count_critical ?? 100)",
+          "confidence": "high",
+          "diagnosis": "GC 频率过高 (${gc_overview.data[0].total_gc_count} 次)",
+          "severity": "critical",
+          "suggestions": [
+            "检查是否有频繁的对象创建和销毁",
+            "使用对象池重用对象",
+            "避免在循环中创建对象"
+          ]
+        },
+        {
+          "condition": "gc_overview.data[0]?.total_gc_count > (gc_count_warning ?? 50)",
+          "confidence": "medium",
+          "diagnosis": "GC 频率较高 (${gc_overview.data[0].total_gc_count} 次)",
+          "severity": "warning",
+          "suggestions": [
+            "检查内存分配热点",
+            "优化临时对象使用"
+          ]
+        },
+        {
+          "condition": "gc_overview.data[0]?.total_gc_time_ms > (gc_total_time_critical_ms ?? 2000)",
+          "confidence": "high",
+          "diagnosis": "GC 总耗时过长 (${gc_overview.data[0].total_gc_time_ms}ms)",
+          "severity": "critical",
+          "suggestions": [
+            "减少内存分配频率",
+            "检查大对象分配",
+            "考虑调整堆大小"
+          ]
+        },
+        {
+          "condition": "gc_overview.data[0]?.main_thread_gc_count > (main_thread_gc_critical ?? 10)",
+          "confidence": "high",
+          "diagnosis": "主线程发生 ${gc_overview.data[0].main_thread_gc_count} 次 GC",
+          "severity": "critical",
+          "suggestions": [
+            "将内存密集型操作移到后台线程",
+            "避免在 UI 线程分配大量内存"
+          ]
+        },
+        {
+          "condition": "gc_overview.data[0]?.main_thread_gc_wait_ms > (main_thread_gc_wait_warning_ms ?? 50)",
+          "confidence": "high",
+          "diagnosis": "主线程等待 GC 完成 ${gc_overview.data[0].main_thread_gc_wait_count} 次，共 ${gc_overview.data[0].main_thread_gc_wait_ms}ms",
+          "severity": "warning",
+          "suggestions": [
+            "减少主线程分配，避免触发 Alloc GC 后同步等待",
+            "检查 ProfileSaver 等 GC 临界区与主线程的重叠"
+          ]
+        },
+        {
+          "condition": "long_gc.data[0]?.dur_ms > (single_gc_warning_ms ?? 50)",
+          "confidence": "medium",
+          "diagnosis": "单次 GC 回收过长 (${long_gc.data[0].dur_ms}ms)",
+          "severity": "warning",
+          "suggestions": [
+            "检查大对象分配",
+            "考虑调整堆大小"
+          ]
+        },
+        {
+          "condition": "gc_intervals.data.find(i => i.interval_bucket === '<100ms (频繁)')?.count > 10",
+          "confidence": "high",
+          "diagnosis": "检测到内存抖动（GC 间隔 <100ms）",
+          "severity": "critical",
+          "suggestions": [
+            "检查是否有频繁的对象创建销毁",
+            "使用 Memory Profiler 分析分配热点",
+            "考虑使用对象池"
+          ]
+        }
+      ],
+      "type": "diagnostic"
+    }
+  ],
+  "type": "composite",
+  "version": "2.1",
+  "workflow": "memory"
+}

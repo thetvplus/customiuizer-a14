@@ -72,11 +72,7 @@
             android:name="tv.withaibuild.customiuizer.GateWayLauncher"
             android:label="@string/title_activity_main"
             android:targetActivity="tv.withaibuild.customiuizer.MainActivity"
-            android:taskAffinity="com.android.settings.customiuizer"
-            android:allowTaskReparenting="true"
-            android:clearTaskOnLaunch="true"
-            android:enabled="true"
-            android:excludeFromRecents="true">
+            android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

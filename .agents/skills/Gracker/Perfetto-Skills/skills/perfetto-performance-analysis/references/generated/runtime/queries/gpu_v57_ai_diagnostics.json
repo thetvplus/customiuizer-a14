@@ -1,0 +1,902 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "gpu"
+        ]
+      },
+      "id": "gpu_v57_ai_diagnostics/data_check",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/data_check.sql",
+      "sha256": "615ed174ce50ca1855f92c227cbc7a41d56304f940947881e10137c060618fee",
+      "signal_patterns": [
+        "architecture",
+        "dimension_arg_set_id",
+        "gpufreq",
+        "machine_id",
+        "ugpu"
+      ],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "data_check",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/gpu_frequency_intervals.sql",
+            "source_sha256": "2bd8dac125b274ab3a3966e9f43ed780d0eef389b2eb5c0ee60e82fbfb5d6cba"
+          }
+        ],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "gpu_v57_ai_diagnostics/gpu_inventory",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/gpu_inventory.sql",
+      "sha256": "880ea360e02332a406fd5cbbbfc3a4bda89e7317ca6d7d364cae4e22ede931a4",
+      "signal_patterns": [],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "gpu_inventory",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "ugpu"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "gpu"
+        ]
+      },
+      "id": "gpu_v57_ai_diagnostics/timeline_occupancy",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/timeline_occupancy.sql",
+      "sha256": "8ccd93da0097523802ac8c3f536bcee4ada01cd737c2cc86f7996abff4e41bff",
+      "signal_patterns": [],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [
+          {
+            "kind": "table",
+            "name": "__sp_v57_gpu_work"
+          },
+          {
+            "kind": "table",
+            "name": "__sp_v57_gpu_busy"
+          }
+        ],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "timeline_occupancy",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts",
+          "ugpu"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "gpu_v57_ai_diagnostics/idle_gaps",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/idle_gaps.sql",
+      "sha256": "faa0f23e9ee1787851051f93a2c70c24cfc3f9f5b3a0a86413d085cab42fe70f",
+      "signal_patterns": [],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [
+          "__sp_v57_gpu_busy"
+        ],
+        "setup_queries": [
+          "gpu_v57_ai_diagnostics/timeline_occupancy"
+        ]
+      },
+      "step_id": "idle_gaps",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [
+          "max_rows"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "gpu_v57_ai_diagnostics/frequency_residency",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/frequency_residency.sql",
+      "sha256": "7250a8e604cb34a694872b777d6e7d969613a4efce9cd4111160f7d1c860eb70",
+      "signal_patterns": [
+        "gpufreq"
+      ],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [
+          "__sp_v57_gpu_busy"
+        ],
+        "setup_queries": [
+          "gpu_v57_ai_diagnostics/timeline_occupancy"
+        ]
+      },
+      "step_id": "frequency_residency",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/gpu_frequency_intervals.sql",
+            "source_sha256": "2bd8dac125b274ab3a3966e9f43ed780d0eef389b2eb5c0ee60e82fbfb5d6cba"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/gpu_frequency_window.sql",
+            "source_sha256": "f615d9d238a1c9aa1382d69f35e6adc7cb087cfefb0aad8cc117d774a1f6b17f"
+          },
+          {
+            "order": 2,
+            "source_path": "backend/skills/fragments/gpu_frequency_by_ugpu.sql",
+            "source_sha256": "7d414ae09c0a1ceb09674f166d981a52570b194ca6dd50aef388931b6b952848"
+          }
+        ],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "start_ts",
+          "ugpu"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "gpu_v57_ai_diagnostics/dvfs_ramp_events",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/dvfs_ramp_events.sql",
+      "sha256": "946bcf6a1da335a4ce33740589042e6a971b70a313dcef5c4dc9ec88df874f2b",
+      "signal_patterns": [
+        "gpufreq"
+      ],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [
+          "__sp_v57_gpu_busy"
+        ],
+        "setup_queries": [
+          "gpu_v57_ai_diagnostics/timeline_occupancy"
+        ]
+      },
+      "step_id": "dvfs_ramp_events",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/gpu_frequency_intervals.sql",
+            "source_sha256": "2bd8dac125b274ab3a3966e9f43ed780d0eef389b2eb5c0ee60e82fbfb5d6cba"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/gpu_frequency_window.sql",
+            "source_sha256": "f615d9d238a1c9aa1382d69f35e6adc7cb087cfefb0aad8cc117d774a1f6b17f"
+          },
+          {
+            "order": 2,
+            "source_path": "backend/skills/fragments/gpu_frequency_by_ugpu.sql",
+            "source_sha256": "7d414ae09c0a1ceb09674f166d981a52570b194ca6dd50aef388931b6b952848"
+          }
+        ],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "max_rows",
+          "start_ts",
+          "target_freq_ratio",
+          "ugpu"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "gpu_v57_ai_diagnostics/sustained_below_target_events",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/sustained_below_target_events.sql",
+      "sha256": "7ce075a1c80028c7596a4c30dd11c8d278ec8174387247fda4776eea376402e0",
+      "signal_patterns": [
+        "Power",
+        "Temperature",
+        "gpufreq"
+      ],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [
+          "__sp_v57_gpu_busy"
+        ],
+        "setup_queries": [
+          "gpu_v57_ai_diagnostics/timeline_occupancy"
+        ]
+      },
+      "step_id": "sustained_below_target_events",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/gpu_frequency_intervals.sql",
+            "source_sha256": "2bd8dac125b274ab3a3966e9f43ed780d0eef389b2eb5c0ee60e82fbfb5d6cba"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/gpu_frequency_window.sql",
+            "source_sha256": "f615d9d238a1c9aa1382d69f35e6adc7cb087cfefb0aad8cc117d774a1f6b17f"
+          },
+          {
+            "order": 2,
+            "source_path": "backend/skills/fragments/gpu_frequency_by_ugpu.sql",
+            "source_sha256": "7d414ae09c0a1ceb09674f166d981a52570b194ca6dd50aef388931b6b952848"
+          }
+        ],
+        "name_parameters": [],
+        "parameters": [
+          "end_ts",
+          "max_rows",
+          "min_below_target_ns",
+          "start_ts",
+          "target_freq_ratio",
+          "ugpu"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "gpu_v57_ai_diagnostics/no_data_contract",
+      "identity": {
+        "policy": "none"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/gpu_v57_ai_diagnostics/no_data_contract.sql",
+      "sha256": "554e7fc4ba8859a32181885fe33385b643cd28175577b8f8b94cddcb3c659063",
+      "signal_patterns": [],
+      "skill_id": "gpu_v57_ai_diagnostics",
+      "source": {
+        "path": "backend/skills/composite/gpu_v57_ai_diagnostics.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "cc0be719cf724cb2c0f128f806abaa4a1cd942f6381a0b8e28a83ca9c4a876ab"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "intervals.overlap",
+          "intervals.intersect"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": [
+          "gpu_v57_ai_diagnostics/timeline_occupancy"
+        ]
+      },
+      "step_id": "no_data_contract",
+      "template": {
+        "fragments": [],
+        "name_parameters": [],
+        "parameters": [],
+        "result_dependencies": [
+          "data_check"
+        ],
+        "result_references": [
+          "data_check"
+        ],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "gpu_v57_ai_diagnostics"
+}

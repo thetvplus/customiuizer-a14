@@ -2,11 +2,7 @@
 
 当前 A14 源码是实现事实基准。上游 [MonwF/customiuizer v24.10.12](https://github.com/MonwF/customiuizer/releases/tag/v24.10.12)（`d8f162653c413674f36a7d8d2b05cbd8543cf40c`）仅用于核对继承功能的用户语义，不能覆盖明确的 A14 产品差异。
 
-比较单位是一项用户功能：偏好 → 选项 → 安装开关 → 进程 → Hook → 数据来源 → 格式 / 放置 → 更新与释放。编译成功不等于语义保持。原始差异可由当前代码重新生成：
-
-```powershell
-python tools/legacy_semantic_compare.py --upstream <MonwF-customiuizer路径>
-```
+比较单位仍为偏好、选项、安装开关、进程、Hook、数据与释放；当前源码及下列实际行为回归是依据，不维护重复镜像。
 
 ## 需保留的行为
 

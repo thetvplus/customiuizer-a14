@@ -16,6 +16,10 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class AppRestrictionInfoBoundaryTest {
     class VendorInfo : ApplicationInfo()
+    @Test fun incompletePackageWithApplicationInfoIsRejected() {
+        val info = PackageInfo().apply { applicationInfo = ApplicationInfo().apply { uid = 10001 } }
+        assertNull(Various.resolveAppStateTarget(info, 0))
+    }
     @Test fun targetValidationUsesTheActualActivityContextUser() {
         val controller = Robolectric.buildActivity(Activity::class.java).setup()
         try {

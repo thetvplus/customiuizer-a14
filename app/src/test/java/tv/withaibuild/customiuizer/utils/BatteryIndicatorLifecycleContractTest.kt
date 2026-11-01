@@ -33,6 +33,23 @@ class BatteryIndicatorLifecycleContractTest {
         assertTrue(source.contains("ModuleHelper.unregisterOwnedReceiver(this, RECEIVER_KEY, broadcastReceiver)"))
         assertTrue(source.contains("mStatusBar = null"))
         assertFalse(source.contains("context.registerReceiver(broadcastReceiver"))
+        assertTrue(source.contains("ModuleHelper.unregisterOwnedReceiver(this, PREVIEW_RECEIVER_KEY, previewReceiver)"))
+        assertTrue(source.contains("previewReceiver = null"))
+    }
+
+    @Test
+    fun previewAndNativeScreenshotUseSeparateSenderPermissions() {
+        val source = source()
+        val preview = source.substringAfter("previewReceiver = ModuleHelper.registerOwnedReceiver(")
+            .substringBefore("(owner as BatteryIndicator).handleBroadcast")
+        val screenshot = source.substringAfter("broadcastReceiver = ModuleHelper.registerOwnedReceiver(")
+            .substringBefore("(owner as BatteryIndicator).handleBroadcast")
+        assertTrue(preview.contains("BatteryIndicatorTest"))
+        assertTrue(preview.contains("permission.BROADCAST"))
+        assertFalse(preview.contains("TAKE_SCREENSHOT"))
+        assertTrue(screenshot.contains("TAKE_SCREENSHOT"))
+        assertTrue(screenshot.contains("android.permission.READ_FRAME_BUFFER"))
+        assertFalse(screenshot.contains("BatteryIndicatorTest"))
     }
 
     @Test

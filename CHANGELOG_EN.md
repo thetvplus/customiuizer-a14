@@ -2,9 +2,35 @@
 
 English | [简体中文](CHANGELOG.md)
 
-Changes for maintained releases. Valid r14.26.1 changes are consolidated into r14.26.3, and the superseded release has been retired. Valid changes from the retired r14.25.1 and r14.25.3 releases are consolidated into r14.25.5; the original records remain in Git history.
+Changes for maintained releases. Valid r14.26.7 changes are consolidated into r14.26.9; the original records remain in Git history. Valid r14.26.1 and r14.26.3 changes are consolidated into r14.26.5, and the superseded releases have been retired. Valid changes from the retired r14.25.1 and r14.25.3 releases are consolidated into r14.25.5; the original records remain in Git history.
 
 ## Unreleased
+
+## r14.26.9 — 2026-11-01
+
+versionCode 269. Changes since r14.26.5:
+
+### User changes
+
+- Trusted Wi-Fi networks now use cached scans, system broadcasts and on-demand refresh, with request cooldowns across rapid navigation, rejected scans and wait timeouts. Trusted Bluetooth devices replace the 15-second loop with page entry, system events and manual cache requests; empty results also end the wait.
+- Move backup filtering, encoding and file writes off the UI thread and share a single operation slot with restore. Finish started file work and close streams when a page is destroyed, preventing overlapping writes and stale success messages while retaining the backup format and system document picker.
+- Defer language refresh while Fragment state is saved and publish search indexes only after preparation completes. Restore editor drafts by stable preference keys and allow complete text and numeric forms to scroll when the landscape keyboard occupies most of the screen.
+- Continue opening trusted-network lists after their permissions are granted, and resume adding the current network in Wi-Fi automatic settings. Directory selection accepts confirmed local storage folders; cancellation or invalid selection preserves the previous setting.
+- Report credential-confirmation success only from the system result and restore pending requests without relaunching them. Ordinary saved Activity state no longer implies authentication is pending.
+- Foreground monitoring no longer installs global Hooks from each network-speed controller constructor. Base initialization and Application.attach share ownership of the actual target, while audio, alarm and brightness callbacks follow their current instances. Correct the nullable Boolean signature that could hide Control Center tiles with custom columns, and rebind each actual left adapter after recreation. Restart the device after updating.
+- Validate screenshot folders against their actual storage volume and MediaStore image-directory rules, letting the system create child folders. Unsupported custom folders retain the native destination. Preserve existing privileged host paths and keep filename extensions and MIME types consistent.
+- Add independent disable and restore controls for the system app updater, reusing original-state snapshots and failure readback. Keep ROM system updates separate and do not reinstall removed apps.
+- Hide the exact native system app updater and enterprise-mode entries, including their Settings search results. Both options default to off and work independently of the module icon position. Disabling them and restarting Settings restores entries. Preserve adjacent entries and nonempty categories; restart the device after updating and enabling.
+- Tighten sender boundaries for system actions, screenshot notifications and battery previews while retaining the A14 screenshot sender's signature-permission contract. Restart the device after updating to register the new boundaries.
+- Correct reflection-result, nullable-data and native-exception boundaries across notification lists, floating windows, media information and VPN state, preserving native execution and failure isolation.
+
+### Engineering notes
+
+- Retain Android 14 / HyperOS 1, SDK 34, arm64-v8a, libxposed API 102 and the historical signing identity. Preserve compact-resource processing and existing failure isolation.
+- Bound successful-build diagnostic summaries, prioritize entries requiring review and report omitted counts. Failed commands still retain full output; zero warnings or deprecations is not a goal.
+- Add regressions for request counts, file-operation ownership and method installation. Host results and reduced source work do not establish device CPU, GPU or power gains.
+- Address a known Guava vulnerability in build and test dependencies without adding production runtime dependencies. Continue tracking the remaining Host risk in Gradle's bundled dependency separately.
+- Add private security reporting, security-only update configuration and a separate manual dependency-graph workflow. Remove the retired manual semantic mirror and its dedicated tooling while retaining source contracts, process matrices and behavior regressions.
 
 ## r14.26.5 — 2026-10-31
 
@@ -39,39 +65,6 @@ versionCode 265. Changes since r14.25.9:
 - Remove duplicate search state, the obsolete state machine and four unused backgrounds. Preserve AndroidX persistence, dependency notifications and host resources.
 - Use API 102 Chain directly for Dock measurement and content-layout hooks, removing per-call before / after wrappers while preserving single native execution, exception identity, fatal propagation and installation lifetime.
 - Remove lightweight-glass paths, unused G4 path construction and tests of the retired behavior, while retaining the shared Island curvature integral. Use native TextMotion and release ripple nodes with Fragment lifecycle changes; add no persistent work, extra layers or third-party UI library.
-
-## r14.26.3 — 2026-10-31
-
-versionCode 263. Changes since r14.25.9:
-
-### User changes
-
-- Migrate the settings interface to Compose with consistent lists, search, selectors, sliders, color and action editors, and state feedback. Preserve settings keys, backups and feature behavior. Group app behavior, Wi-Fi and VPN automation under “System → Apps & automation”.
-- Keep home search collapsed by default, with a dedicated search view, automatic focus and highlighted matches. Fix intermittent focus loss and keyboard flashing, and release focus on exit and navigation return. App selectors share search input and clear actions.
-- Use consistent neutral light / dark pages, toolbars and cards, with Material 3 dynamic colors for buttons, switches and sliders. Match system bars to the page background, align overflow typography and colors, add a restrained restart-submenu transition, and fix incorrect pressed feedback when it opens.
-- Fix “null” titles in language, Settings-entry and other selection dialogs. The shared title fallback also covers text and multi-selection editors.
-- Select the current numeric value when manual input opens, leave space above the keyboard, and allow long dialog content to scroll. Cancel continues to discard edits.
-- Add the missing section heading for Apps & automation and align settings grouping. Remove edge stretching so text keeps its shape when scrolling past the end.
-- Restore native Dock blur opacity after hiding or locking, and stop resubmitting identical opacity in a stable state.
-- Add “System → Apps & automation → Wi-Fi automatic settings”: use SSID, optional BSSID and priority to control Do Not Disturb, ringer mode, auto rotation and VPN. Restore only owned state on exit and respect observed manual changes. Grant the network-identity permissions and restart the device after first enabling.
-- Add “System → Apps & automation → App behavior”: enable sensor rotation, media-volume memory, fixed or system-controlled brightness, and limits on or suppression of app brightness requests for selected apps, with exact Activity exceptions. Each option is off by default; restart the device after first enabling.
-- Replace Dock “Liquid glass” with “Light glass”: reuse Launcher blur with a simple translucent fallback; remove custom wallpaper capture and refraction. Keep the stored material value, layout, editing, dragging and unlock-animation entries. Restart Launcher after updating.
-- Retain bounded Wi-Fi setting restoration records after a failed scene exit until readback confirms success; respect manual changes and user switches. Recover network tracking after overflow through a complete trusted snapshot, and prepare rotation and brightness Hook interfaces independently. Fix app-behavior and Wi-Fi changes remaining stale on frameworks that cache old settings.
-- Restore smoother Island waveforms with display updates synchronized to screen frames and the earlier music / recorder sampling cadence. Preserve hidden-state capture release, measured-silence / stable-state frame suspension, pause and power-saving guards. Fix lightweight waveforms remaining frozen after system animations are re-enabled.
-- Maintain Island opacity only for occluded nodes, skip repeated occlusion queries when geometry is unchanged, and tighten the texture budget for full transition surfaces. Preserve native gestures and animation handoffs.
-- Stop weather-specific subscriptions and queries when no clock uses weather content, and skip updates for a hidden second clock.
-- Coalesce duplicate status-bar network-speed mirror deliveries and update charging-text layout only when content or layout conditions change. Avoid unrelated brightness reads and argument-array copies in touch handling.
-- Clear stale recording activity levels after silence and reset the previous envelope after a failed read instead of retaining an incorrect peak.
-
-### Engineering notes
-
-- Use stable Kotlin 2.4.21, JDK 27 and Java / Kotlin bytecode 26, with updated Gradle / AGP and compileSdk 37. Runtime support remains Android 14 / HyperOS 1 without raising minSdk or targetSdk.
-- Remove settings layout XML, legacy list adapters, View binding and custom color widgets. Generate typed settings models from validated JSON while preserving AndroidX Preference persistence and dependency semantics.
-- Commit authentication state only after native success. Preserve native exception boundaries and activate screenshot and input-method Hook groups atomically so failures do not leave partial installations.
-- Remove installation sampling, unused reflection helpers, an obsolete threshold implementation and unreachable resources. Keep test helpers and temporary samples in test sources, preserve useful behavior regressions. Only settings activate Compose; host Hooks retain native View / Canvas rendering, and Release excludes test dependencies.
-- Keep Android 14 / HyperOS 1 support, the existing app identity and signing certificate; new rules are off by default. Performance conclusions are limited to measured scenarios; Host tests and reduced source work do not establish device CPU / GPU or power gains.
-- Remove duplicate search state, the obsolete state machine and four unused backgrounds. Preserve AndroidX persistence, dependency notifications and host resources.
-- Use API 102 Chain directly for Dock measurement and content-layout hooks, removing per-call before / after wrappers while preserving single native execution, exception identity, fatal propagation and installation lifetime.
 
 ## r14.25.9 — 2026-10-29
 

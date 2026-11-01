@@ -37,8 +37,7 @@ class CIScopeTest(unittest.TestCase):
                 self.assertTrue(ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path])["tools"])
 
     def test_auxiliary_contract_and_schema_changes_include_tool_gates(self):
-        for path in ("feature-semantics/a14.json", "feature-semantics/schema.json",
-                     "rom-contracts/hyperos1-a14-core.json", "rom-contracts/schema.json"):
+        for path in ("rom-contracts/hyperos1-a14-core.json", "rom-contracts/schema.json"):
             with self.subTest(path=path):
                 self.assertEqual({"tools": True, "full": True},
                                  ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path]))

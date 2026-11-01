@@ -831,6 +831,8 @@
     <string name="request_bt">Turn on Bluetooth first</string>
     <string name="request_wifi">Turn on Wi-Fi first</string>
     <string name="request_location">Cannot scan without Location access</string>
+    <string name="wifi_refresh">Refresh networks</string>
+    <string name="wifi_scan_unavailable">Scan unavailable. Showing cached networks; try again later.</string>
     <string name="force_closed">Force closed %s</string>
     <string name="credentials_ok">Credentials are already unlocked</string>
     <string name="credentials_unlock">Unlock credentials</string>
@@ -1339,4 +1341,10 @@
     <string name="a14_move_up">Move up</string>
     <string name="a14_move_down">Move down</string>
     <string name="a14_reorder_item">Reorder item</string>
+    <string name="screenshot_directory_invalid">Choose an available folder on local storage</string>
+    <string name="various_disable_system_app_updater_title">Disable and hide system app updater</string>
+    <string name="various_disable_system_app_updater_summ">Disable the system app updater for the current user and hide its Settings entry. Restore its original enabled state when turned off. Restart Settings to apply hiding.</string>
+    <string name="various_disable_system_app_updater_confirm">Disable the %1$d system app updater package? ROM OTA, the installer and security services are unaffected. Its original enabled state will be saved for restoration.</string>
+    <string name="various_hide_enterprise_mode_title">Hide enterprise mode entry</string>
+    <string name="various_hide_enterprise_mode_summ">Remove enterprise mode from Additional settings. Enterprise management and work profiles remain available. Restart Settings to apply.</string>
 </resources>

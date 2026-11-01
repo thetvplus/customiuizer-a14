@@ -58,11 +58,31 @@ def fail(message: str) -> None:
 
 
 def _summarize(output: str, tail_lines: int = 12) -> str:
-    """Return the first and last few lines of a long output."""
+    """Keep build diagnostics visible while abbreviating successful task output."""
     lines = output.rstrip().splitlines()
     if len(lines) <= tail_lines * 2:
         return "\n".join(lines)
-    return "\n".join(lines[:4] + ["..."] + lines[-tail_lines:])
+    diagnostics: dict[str, tuple[str, int]] = {}
+    for line in lines[4:-tail_lines]:
+        if re.search(r"^\s*(?:w:|warning:|note:|Missing class|Unsupported class file)|\b(?:Warning|deprecated|obsolete)\b", line, re.IGNORECASE):
+            # One representative location per file/message, including generated code.
+            key = re.sub(r":\d+:\d+(?=\s)", "", line)
+            first, count = diagnostics.get(key, (line, 0))
+            diagnostics[key] = (first, count + 1)
+    # No accepted high-risk diagnostics: surface future compiler errors and unsafe
+    # bytecode/JDK behavior for review, without failing reasonable A14 deprecations.
+    high_risk = re.compile(r"will become an error|Missing class|Unsupported class file|will be blocked in a future release", re.IGNORECASE)
+    summary = [("[REVIEW] " if high_risk.search(line) else "") + line +
+               (f" [x{count}]" if count > 1 else "") for line, count in diagnostics.values()]
+    # Bound successful output even when every diagnostic is unique. Review entries
+    # come first and omitted counts stay explicit; failures still print full output.
+    summary.sort(key=lambda line: not line.startswith("[REVIEW]"))
+    limit = 80
+    omitted = summary[limit:]
+    if omitted:
+        reviews = sum(line.startswith("[REVIEW]") for line in omitted)
+        summary = summary[:limit] + [f"... {len(omitted)} diagnostic groups omitted ({reviews} REVIEW); rerun the displayed command for complete output"]
+    return "\n".join(lines[:4] + ["..."] + summary + ["..."] + lines[-tail_lines:])
 
 
 def command_environment(source: dict[str, str] | None = None) -> dict[str, str]:
@@ -181,10 +201,6 @@ def check_eol() -> int:
     return eol_check.check()
 
 
-def check_feature_semantics() -> int:
-    """Validate feature-semantics/a14.json against schema and current source."""
-    cmd = [sys.executable, str(REPO_ROOT / "tools" / "audit-feature-semantics.py"), "--validate"]
-    return run(cmd)
 
 
 def check_observer_key_contract() -> int:
@@ -298,7 +314,7 @@ def check_source(changed: bool = False, staged: bool = False) -> int:
         check_java_runtime, check_static_rules, check_eol, check_observer_key_contract,
         check_hook_body_prefmap, check_hotpath_alloc_budget,
         lambda: check_main_source_cleanliness(changed=changed, staged=staged),
-        lambda: check_invariants(changed=changed, staged=staged), check_feature_semantics,
+        lambda: check_invariants(changed=changed, staged=staged),
     ):
         code = check()
         if code:

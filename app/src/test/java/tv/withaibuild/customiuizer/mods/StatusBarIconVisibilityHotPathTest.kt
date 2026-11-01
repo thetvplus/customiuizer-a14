@@ -41,7 +41,8 @@ private fun countingMainPrefs(values: Map<String, Any>): StatusBarCountingMap {
     MainModule.mPrefs.clear()
     val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
     snapshotField.isAccessible = true
-    snapshotField.set(MainModule.mPrefs, AtomicReference<Map<String, Any>>(countingMap))
+    @Suppress("UNCHECKED_CAST")
+    (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(countingMap)
     return countingMap
 }
 
@@ -136,7 +137,8 @@ class StatusBarIconVisibilityHotPathTest {
         val prefs = PrefMap().apply { clear() }
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
         return SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
     }
 
@@ -241,7 +243,8 @@ class StatusBarIconVisibilityHotPathTest {
         val prefs = PrefMap().apply { clear() }
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
 
         SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
 
@@ -483,7 +486,8 @@ class StatusBarIconVisibilityHotPathTest {
         val prefs = PrefMap().apply { clear() }
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
 
         val snapshot = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         assertTrue(snapshot.hideWifi)
@@ -502,7 +506,8 @@ class StatusBarIconVisibilityHotPathTest {
         val prefs = PrefMap().apply { clear() }
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
 
         val snapshot = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         assertTrue(snapshot.hideWifi)
@@ -562,7 +567,8 @@ class StatusBarIconVisibilityHotPathTest {
         val prefs = PrefMap().apply { clear() }
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
 
         val first = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         val second = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
@@ -603,7 +609,8 @@ class StatusBarIconVisibilityHotPathTest {
         val prefs = PrefMap().apply { clear() }
         val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
         snapshotField.isAccessible = true
-        snapshotField.set(prefs, AtomicReference<Map<String, Any>>(countingMap))
+        @Suppress("UNCHECKED_CAST")
+        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
 
         val first = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         resetStatusBarIconVisibilitySnapshot()

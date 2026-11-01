@@ -1,0 +1,527 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "thread_states"
+        ]
+      },
+      "id": "blocking_chain_analysis/thread_state_distribution",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/blocking_chain_analysis/thread_state_distribution.sql",
+      "sha256": "454a372c2b3f9732d71e2096b8dc5aae2533205800e3c75f000c1c40d95bc037",
+      "signal_patterns": [
+        "${process_name}",
+        "${process_name}:*"
+      ],
+      "skill_id": "blocking_chain_analysis",
+      "source": {
+        "path": "backend/skills/atomic/blocking_chain_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "ec3db5b12031c8cedf7480f0e7496dd03c5a0e7ecad513cc72cd26cf8e68c0a2"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "thread_state",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "thread_state_distribution",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "end_ts",
+          "process_name",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "thread_states"
+        ]
+      },
+      "id": "blocking_chain_analysis/waker_chain",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/blocking_chain_analysis/waker_chain.sql",
+      "sha256": "340d8ed1c36b729a88abde0857b00e0389187cea5ff3aa46e6757e0f4d9532f5",
+      "signal_patterns": [
+        "${process_name}",
+        "${process_name}:*",
+        "*Decode*",
+        "*Dispatcher*",
+        "*Executor*",
+        "*Network*",
+        "*Worker*",
+        "*decode*",
+        "*netd",
+        "*surfaceflinger",
+        "/vendor/bin/*",
+        "1.raster",
+        "1.ui",
+        "AsyncTask*",
+        "Binder:*",
+        "ChromiumNet*",
+        "Coil*",
+        "CrRendererMain*",
+        "Cronet*",
+        "DefaultDispatcher*",
+        "Dispatchers.Default*",
+        "FinalizerDaemon*",
+        "Fresco*",
+        "Glide*",
+        "HeapTaskDaemon*",
+        "HwBinder:*",
+        "Jit thread pool*",
+        "NetworkThread*",
+        "OkHttp*",
+        "Okio*",
+        "Profile Saver*",
+        "ReferenceQueueD*",
+        "RenderThread*",
+        "RxCached*",
+        "Signal Catcher*",
+        "android.hardware.*",
+        "arch_disk_io*",
+        "binder:*",
+        "glide*",
+        "hwbinder:*",
+        "pool-*",
+        "swapper*",
+        "system_server",
+        "vendor.*"
+      ],
+      "skill_id": "blocking_chain_analysis",
+      "source": {
+        "path": "backend/skills/atomic/blocking_chain_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "ec3db5b12031c8cedf7480f0e7496dd03c5a0e7ecad513cc72cd26cf8e68c0a2"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "thread_state",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "waker_chain",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/thread_role.sql",
+            "source_sha256": "8e6239fd0742fc970ad20fcf7b8586fed7f684f6dc227516b5fdfae5f47944fa"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/sleep_wake_source.sql",
+            "source_sha256": "6d03353d2ae3fad6663a5cc89c2e8e5c93396a561d94b7024240fcb657f34536"
+          },
+          {
+            "order": 2,
+            "source_path": "backend/skills/fragments/sleep_wake_source_labels.sql",
+            "source_sha256": "7a69e442e55ca34f719c45c80f7982a46097b63e5164e482fbb191db8e7059d4"
+          }
+        ],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "end_ts",
+          "process_name",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "thread_states"
+        ]
+      },
+      "id": "blocking_chain_analysis/wakeup_chain_trace",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/blocking_chain_analysis/wakeup_chain_trace.sql",
+      "sha256": "43d7e4de8c877fdc07adaa47fd6c557b448736ef466007e17e5cd0da45248b04",
+      "signal_patterns": [
+        "${process_name}",
+        "${process_name}:*"
+      ],
+      "skill_id": "blocking_chain_analysis",
+      "source": {
+        "path": "backend/skills/atomic/blocking_chain_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "ec3db5b12031c8cedf7480f0e7496dd03c5a0e7ecad513cc72cd26cf8e68c0a2"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "thread_state",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "wakeup_chain_trace",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "end_ts",
+          "max_hops",
+          "min_wait_ms",
+          "process_name",
+          "start_ts",
+          "top_waits"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "thread_states"
+        ]
+      },
+      "id": "blocking_chain_analysis/blocked_function_summary",
+      "identity": {
+        "aliases": [
+          "process_name",
+          "package"
+        ],
+        "minConfidence": 50,
+        "policy": "required",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/blocking_chain_analysis/blocked_function_summary.sql",
+      "sha256": "d5d4d77a563be09a5e6ee35827f5f70db1f7fee514b057bcb3632a3dd81da91c",
+      "signal_patterns": [
+        "${process_name}",
+        "${process_name}:*"
+      ],
+      "skill_id": "blocking_chain_analysis",
+      "source": {
+        "path": "backend/skills/atomic/blocking_chain_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "ec3db5b12031c8cedf7480f0e7496dd03c5a0e7ecad513cc72cd26cf8e68c0a2"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [],
+        "drops": [],
+        "required_tables": [
+          "thread_state",
+          "thread",
+          "process"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "blocked_function_summary",
+      "template": {
+        "fragments": [],
+        "name_parameters": [
+          "process_name"
+        ],
+        "parameters": [
+          "end_ts",
+          "process_name",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "blocking_chain_analysis"
+}

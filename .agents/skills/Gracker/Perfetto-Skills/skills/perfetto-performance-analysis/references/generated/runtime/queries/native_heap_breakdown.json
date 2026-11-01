@@ -1,0 +1,269 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "native_heap_breakdown/heap_profile_inventory",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/native_heap_breakdown/heap_profile_inventory.sql",
+      "sha256": "fb4c3ddab45d6cebfd85a8ecb27e03ff43ca9daed5ceb78912aa50544e35c2a5",
+      "signal_patterns": [
+        "heapprofd*",
+        "heapprofd_malformed_packet"
+      ],
+      "skill_id": "native_heap_breakdown",
+      "source": {
+        "path": "backend/skills/atomic/native_heap_breakdown.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "c60782edef05f79ebd9a79e7f0f8f3f2dfec35cd35c839c661f0f34a68681fff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "callstacks.stack_profile"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "heap_profile_inventory",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/heap_target_process.sql",
+            "source_sha256": "e6dc119ff332e00bd847e30c45172809b69fd93bbc3e625282be768db242c90a"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/heap_profile_scope.sql",
+            "source_sha256": "ee5ac709013c98ee37aa1129e129963c8487ff5bc7a15f55ca0845981103577f"
+          }
+        ],
+        "name_parameters": [
+          "package",
+          "process_name"
+        ],
+        "parameters": [
+          "package",
+          "process_name",
+          "upid"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": []
+      },
+      "id": "native_heap_breakdown/native_heap_hotspots",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/native_heap_breakdown/native_heap_hotspots.sql",
+      "sha256": "329755f54949b0aacd8abd01ba8a27faebcfc19b893a1b282434dac0074cdac5",
+      "signal_patterns": [
+        "/[[]anon_shmem:dalvik-jit-code-cache]*",
+        "/apex/com.android.art/*",
+        "/apex/com.android.runtime/*",
+        "/system/lib*/libart.so",
+        "/system/lib*/libc++.so",
+        "/system/lib*/libc.so"
+      ],
+      "skill_id": "native_heap_breakdown",
+      "source": {
+        "path": "backend/skills/atomic/native_heap_breakdown.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "c60782edef05f79ebd9a79e7f0f8f3f2dfec35cd35c839c661f0f34a68681fff"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "callstacks.stack_profile"
+        ],
+        "drops": [],
+        "required_tables": [],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "native_heap_hotspots",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/heap_target_process.sql",
+            "source_sha256": "e6dc119ff332e00bd847e30c45172809b69fd93bbc3e625282be768db242c90a"
+          },
+          {
+            "order": 1,
+            "source_path": "backend/skills/fragments/heap_profile_scope.sql",
+            "source_sha256": "ee5ac709013c98ee37aa1129e129963c8487ff5bc7a15f55ca0845981103577f"
+          }
+        ],
+        "name_parameters": [
+          "package",
+          "process_name"
+        ],
+        "parameters": [
+          "max_rows",
+          "min_alloc_mb",
+          "min_size_mb",
+          "package",
+          "process_name",
+          "upid"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "native_heap_breakdown"
+}

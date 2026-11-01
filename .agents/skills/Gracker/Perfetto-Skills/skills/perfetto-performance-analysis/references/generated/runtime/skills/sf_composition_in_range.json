@@ -1,0 +1,76 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "*Commit*",
+      "*Composite*",
+      "*Latch*",
+      "*Present*",
+      "*commit*",
+      "*composite*",
+      "*latchBuffer*",
+      "*onMessageInvalidate*",
+      "*onMessageRefresh*",
+      "*postComposition*",
+      "*present*",
+      "*updateTexImage*",
+      "/system/bin/surfaceflinger",
+      "surfaceflinger"
+    ]
+  },
+  "id": "sf_composition_in_range",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns，可选)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns，可选)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "process_scope": {
+    "role": "peer_context"
+  },
+  "query_id": "sf_composition_in_range/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/sf_composition_in_range.skill.yaml",
+    "sha256": "5dc13944bfe44aee46c4837d9878849d127dfb191206259dadec031bc26bbeb6"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "gpu-rendering"
+}

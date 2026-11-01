@@ -53,7 +53,6 @@ import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.ArrayList
 import java.util.Calendar
-import java.util.Collection
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.Locale
@@ -544,7 +543,7 @@ object SystemLockScreenHooks {
                                 if (forcedOption == 1) isTrusted = true
                                 else if (forcedOption != 0 && noScreenLockConfig.mode == 3) {
                                     if (action == WifiManager.NETWORK_STATE_CHANGED_ACTION) {
-                                        val netInfo = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
+                                        val netInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO, NetworkInfo::class.java)
                                         if (netInfo == null) return@guarded
                                         if (netInfo.state != NetworkInfo.State.CONNECTED && netInfo.state != NetworkInfo.State.DISCONNECTED)
                                             return@guarded

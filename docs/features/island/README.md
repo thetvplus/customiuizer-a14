@@ -148,7 +148,7 @@ IslandOptions 在偏好读取时复制应用集合，异步操作持有的旧快
 
 实现和测试位于 `mods/island`。ROM 接入、会话 / 安全 owner、View / Motion / Sizing 分责，通用 Hook、安全、偏好与 StrongToast 快照仍在共享层。没有新增线程池、无界缓存、轮询或动画库。
 
-Host 60 / 120 Hz View / Path 采样只验证连续性与比例，不是设备 FPS。尺寸、手势、native 返回、波形及通知设备项目归[路线图](../../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。历史设计研究、第三方参考与未复制代码 / 素材的说明可从[整合检查点原页](https://github.com/thetvplus/customiuizer-a14/blob/c9843589416efdbeba2d0f6d651c1c9e136e9fef/docs/features/island/README.md)恢复；时长和弹幅为本项目候选，不是 iOS 官方参数。
+Host 60 / 120 Hz View / Path 采样只验证连续性与比例，不是设备 FPS。尺寸、手势、native 返回、波形及通知设备项目归[路线图](../../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。历史设计研究、第三方参考与未复制代码 / 素材的说明可从[整合检查点原页](https://github.com/thetvplus/customiuizer-a14/releases)恢复；时长和弹幅为本项目候选，不是 iOS 官方参数。
 
 实时音乐采用原生归一化采集，避免低音量在 8 位 FFT 前被量化为零；它表达可视化信号起伏，不是客观响度计。FFT 源端过滤量化噪声，显示端不再先抛弃弱音乐频点。录音采用真实 S16 线性峰值，不做前置开方放大；公共增益随后平滑压缩，减少高增益时的平顶。实时采集不可用时保持静止，轻量模式仍保留轻量动效。
 

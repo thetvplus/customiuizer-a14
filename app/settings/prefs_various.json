@@ -195,6 +195,15 @@
                 "app:valueAsSummary": "true",
                 "app:dynamic": "true"
               }
+            },
+            {
+              "type": "toggle",
+              "attributes": {
+                "android:key": "pref_key_various_hide_enterprise_mode",
+                "android:title": "@string/various_hide_enterprise_mode_title",
+                "android:summary": "@string/various_hide_enterprise_mode_summ",
+                "android:defaultValue": "false"
+              }
             }
           ]
         }
@@ -381,6 +390,15 @@
                 "android:title": "@string/prefs_group_updates"
               },
               "children": [
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_various_disable_system_app_updater",
+                    "android:title": "@string/various_disable_system_app_updater_title",
+                    "android:summary": "@string/various_disable_system_app_updater_summ",
+                    "android:defaultValue": "false"
+                  }
+                },
                 {
                   "type": "toggle",
                   "attributes": {

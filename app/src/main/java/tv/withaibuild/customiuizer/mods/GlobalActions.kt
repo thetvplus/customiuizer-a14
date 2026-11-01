@@ -37,6 +37,7 @@ import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
@@ -495,7 +496,7 @@ object GlobalActions {
                         XposedHelpers.callMethod(mCommandQueue, "showGlobalActionsMenu")
                     }
                     ACTION_PREFIX + "LaunchIntent" -> {
-                        val launchIntent = intent.getParcelableExtra<Intent>("intent")
+                        val launchIntent = intent.getParcelableExtra("intent", Intent::class.java)
                         if (launchIntent != null) {
                             var user = 0
                             if (launchIntent.hasExtra("user")) {
@@ -519,9 +520,13 @@ object GlobalActions {
     }
 
     @JvmStatic
-    fun miuizerSettingsHook(lpparam: PackageReadyParam) {
-        installGlobalActionsSnapshot()
-        val settingsIconResId = MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable")
+    fun miuizerSettingsHook(lpparam: PackageReadyParam, hideUpdater: Boolean, hideEnterprise: Boolean) {
+        refreshGlobalActionsSnapshot()
+        if (settingsIconPos > 0) installGlobalActionsSnapshot()
+        if (hideUpdater || hideEnterprise) SettingsEntryHooks.hideSearchEntries(lpparam, hideUpdater, hideEnterprise)
+        if (hideEnterprise) SettingsEntryHooks.hideEnterpriseMode(lpparam)
+        if (settingsIconPos <= 0 && !hideUpdater) return
+        val settingsIconResId = if (settingsIconPos > 0) MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable") else 0
         ModuleHelper.findAndHookMethod("com.android.settings.MiuiSettings", lpparam.classLoader, "updateHeaderList", List::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -533,10 +538,13 @@ object GlobalActions {
                     result = null
                 }
                 try {
-                    if (chain.getArgs()[0] == null) return XposedHelpers.throwOrReturn(throwable, result)
+                    if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
+                    val headers = chain.getArg(0) as? MutableList<*> ?: return result
+                    if (hideUpdater) SettingsEntryHooks.removeSystemAppUpdaterHeaders(headers)
 
                     val mContext = (chain.getThisObject() as Activity).baseContext
                     val opt = settingsIconPos
+                    if (opt <= 0 || settingsIconResId == 0) return result
 
                     val headerCls = XposedHelpers.findClassIfExists("com.android.settingslib.miuisettings.preference.PreferenceActivity\$Header", lpparam.classLoader)
                     if (headerCls == null) return XposedHelpers.throwOrReturn(throwable, result)
@@ -559,31 +567,33 @@ object GlobalActions {
                     val themes = mContext.resources.getIdentifier("launcher_settings", "id", mContext.packageName)
                     val special = mContext.resources.getIdentifier("other_special_feature_settings", "id", mContext.packageName)
 
-                    val headers = chain.getArgs()[0] as MutableList<Any>
+                    @Suppress("UNCHECKED_CAST")
+                    val iconHeaders = headers as MutableList<Any>
                     var position = 0
                     for (head in headers) {
                         position++
                         val id = XposedHelpers.getLongField(head, "id")
                         if (opt == 1 && id == -1L) {
-                            headers.add(position - 1, header)
+                            iconHeaders.add(position - 1, header)
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
                         if (opt == 2 && id == themes.toLong()) {
-                            headers.add(position, header)
+                            iconHeaders.add(position, header)
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
                         if (opt == 3 && id == special.toLong()) {
-                            headers.add(position, header)
+                            iconHeaders.add(position, header)
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
                     }
-                    if (headers.size > 25) headers.add(25, header) else headers.add(header)
+                    if (headers.size > 25) iconHeaders.add(25, header) else iconHeaders.add(header)
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
+        if (settingsIconResId == 0) return
         ModuleHelper.hookAllMethods("com.android.settings.MiuiSettings\$HeaderAdapter", lpparam.classLoader, "setIcon", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -613,84 +623,48 @@ object GlobalActions {
     @JvmStatic
     fun setupForegroundMonitor(lpparam: PackageReadyParam) {
         installGlobalActionsSnapshot()
+        // FeatureRegistry installs this once in the SystemUI process/loader. Instance
+        // creation only supplies the latest host resources, never installs global hooks.
+        val host = java.util.concurrent.atomic.AtomicReference<Pair<Context, Handler>?>()
         ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.classLoader, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.getThisObject()
-
-                    val mContext = chain.getArgs()[0] as Context
-                    val mBgHandler = XposedHelpers.getObjectField(thisObject, "mBgHandler") as Handler
-                    ModuleHelper.findAndHookMethod("com.miui.systemui.functions.MiuiTopActivityObserver", lpparam.classLoader, "updateTopActivity", object : MethodHook() {
-                        private var pkgName = ""
-                        override fun intercept(chain: XposedInterface.Chain): Any? {
-                            var result2: Any?
-                            var throwable2: Throwable? = null
-                            try {
-                                result2 = chain.proceed()
-                            } catch (t: Throwable) {
-                                throwable2 = t
-                                result2 = null
-                            }
-                            try {
-                                val thisObject2 = chain.getThisObject()
-
-                                val mTopActivity = XposedHelpers.getObjectField(thisObject2, "mTopActivity") as ComponentName?
-                                if (mTopActivity != null && pkgName != mTopActivity.packageName) {
-                                    pkgName = mTopActivity.packageName!!
-                                    Settings.Global.putString(mContext.contentResolver, Helpers.modulePkg + ".foreground.package", pkgName)
-                                }
-                            } catch (t: Throwable) {
-                                XposedHelpers.log(t)
-                            }
-                            return XposedHelpers.throwOrReturn(throwable2, result2)
-                        }
-                    })
-                    if (Various.variousConfig.showCallUi > 0) {
-                        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.classLoader, "onSystemBarAttributesChanged", object : MethodHook() {
-                            private var fullScreen = false
-                            override fun intercept(chain: XposedInterface.Chain): Any? {
-                                var result2: Any?
-                                var throwable2: Throwable? = null
-                                try {
-                                    result2 = chain.proceed()
-                                } catch (t: Throwable) {
-                                    throwable2 = t
-                                    result2 = null
-                                }
-                                try {
-                                    val thisObject2 = chain.getThisObject()
-
-                                    val statusBarStateController = XposedHelpers.getObjectField(thisObject2, "statusBarStateController")
-                                    val isFullScreen = XposedHelpers.getBooleanField(statusBarStateController, "mIsFullscreen")
-                                    if (fullScreen != isFullScreen) {
-                                        mBgHandler.post {
-                                            ModuleHelper.guarded {
-                                                Settings.Global.putInt(mContext.contentResolver, Helpers.modulePkg + ".foreground.fullscreen", if (fullScreen) 1 else 0)
-                                            }
-                                        }
-                                    }
-                                    fullScreen = isFullScreen
-                                } catch (t: Throwable) {
-                                    XposedHelpers.log(t)
-                                }
-                                return XposedHelpers.throwOrReturn(throwable2, result2)
-                            }
-                        })
-                    }
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (callback.getThrowable() != null) return
+                val context = (callback.getArg(0) as Context).applicationContext
+                val handler = XposedHelpers.getObjectField(callback.getThisObject(), "mBgHandler") as Handler
+                host.set(context to handler)
             }
         })
+        ModuleHelper.findAndHookMethod("com.miui.systemui.functions.MiuiTopActivityObserver", lpparam.classLoader, "updateTopActivity", object : MethodHook() {
+            private var packageName: String? = null
+            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                if (callback.getThrowable() != null) return
+                val context = host.get()?.first ?: return
+                val top = XposedHelpers.getObjectField(callback.getThisObject(), "mTopActivity") as? ComponentName ?: return
+                if (packageName != top.packageName) {
+                    Settings.Global.putString(context.contentResolver, Helpers.modulePkg + ".foreground.package", top.packageName)
+                    packageName = top.packageName
+                }
+            }
+        })
+        if (Various.variousConfig.showCallUi > 0) {
+            ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.classLoader, "onSystemBarAttributesChanged", object : MethodHook() {
+                private var fullScreen: Boolean? = null
+                override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
+                    if (callback.getThrowable() != null) return
+                    val (context, handler) = host.get() ?: return
+                    val controller = XposedHelpers.getObjectField(callback.getThisObject(), "statusBarStateController")
+                    val current = XposedHelpers.getBooleanField(controller, "mIsFullscreen")
+                    if (fullScreen != current) {
+                        fullScreen = current
+                        // Capture this event's value. Reading the mutable previous state
+                        // later could write a newer event's value for both callbacks.
+                        handler.post { ModuleHelper.guarded {
+                            Settings.Global.putInt(context.contentResolver, Helpers.modulePkg + ".foreground.fullscreen", if (current) 1 else 0)
+                        } }
+                    }
+                }
+            })
+        }
     }
 
     private fun showSidebar(context: Context, bundle: Bundle?): Boolean {

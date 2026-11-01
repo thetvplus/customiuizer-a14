@@ -55,7 +55,9 @@ object SystemColorizeNotificationHooks {
         val loader = lpparam.classLoader
         val scheme = XposedHelpers.findClass("com.android.systemui.monet.ColorScheme", loader)
         val style = XposedHelpers.findClass("com.android.systemui.monet.Style", loader)
-        val contentStyle = style.enumConstants!!.single { it.toString() == "CONTENT" }
+        val contentStyle = checkNotNull(style.enumConstants) { "Monet Style is not an enum" }
+            .singleOrNull { (it as Enum<*>).name == "CONTENT" }
+            ?: error("Monet Style is missing CONTENT")
         val schemeConstructor = XposedHelpers.findConstructorExact(scheme, Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, style)
         val accent = XposedHelpers.findField(scheme, "accent1")
         val neutral1 = XposedHelpers.findField(scheme, "neutral1")

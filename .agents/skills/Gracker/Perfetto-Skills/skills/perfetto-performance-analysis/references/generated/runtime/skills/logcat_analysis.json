@@ -1,0 +1,59 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "logcat_analysis",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "目标进程名",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "android_logs"
+    ]
+  },
+  "query_id": "logcat_analysis/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/logcat_analysis.skill.yaml",
+    "sha256": "4c006bf2fd2861d2f647a5ad1a5b282ebec951cf2ec824f792431262fb8769cb"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "io-network-media"
+}

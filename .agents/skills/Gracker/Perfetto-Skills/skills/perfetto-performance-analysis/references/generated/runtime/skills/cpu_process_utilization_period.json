@@ -1,0 +1,75 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${process_name}",
+      "${process_name}:*"
+    ]
+  },
+  "id": "cpu_process_utilization_period",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "linux.cpu.utilization.process"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/cpu_process_utilization_period.skill.yaml",
+    "sha256": "78a91e3d2a1f6e5640cfab917092a5c5463f08cb7051b7ab9d63f4f4e8258524"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "process_util",
+      "name": "进程 CPU 利用率",
+      "query_id": "cpu_process_utilization_period/process_util",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "cpu-scheduling"
+}

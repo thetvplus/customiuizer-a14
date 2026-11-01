@@ -304,10 +304,10 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
         val hooks = ArrayList<CustomMethodUnhooker>(5)
         try {
             val constructorHook = object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    if (failed || param.getThrowable() != null) return
+                override fun after(callback: AfterHookCallback) {
+                    if (failed || callback.getThrowable() != null) return
                     protectAudio {
-                        val policy = param.getThisObject() ?: return@protectAudio
+                        val policy = callback.getThisObject() ?: return@protectAudio
                         audioPolicy = WeakReference(policy)
                         readWired(policy, false)
                     }
@@ -321,19 +321,19 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
                 ?: error("Duo: audio policy hook failed"))
             for (method in arrayOf(fields.connectionChanged, fields.activeChanged, fields.enabledChanged)) {
                 hooks.add(ModuleHelper.hookMethod(method, object : MethodHook() {
-                    override fun after(param: AfterHookCallback) {
-                        if (!failed && param.getThrowable() == null) {
-                            param.getThisObject()?.let { readBluetooth(it, true) }
+                    override fun after(callback: AfterHookCallback) {
+                        if (!failed && callback.getThrowable() == null) {
+                            callback.getThisObject()?.let { readBluetooth(it, true) }
                         }
                     }
                 }) ?: error("Duo: Bluetooth hook failed"))
             }
             hooks.add(ModuleHelper.hookMethod(fields.headsetChanged, object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    if (failed || audioFailed || param.getThrowable() != null) return
+                override fun after(callback: AfterHookCallback) {
+                    if (failed || audioFailed || callback.getThrowable() != null) return
                     protectAudio {
-                        if ((param.getArg(1) as? Intent)?.action != Intent.ACTION_HEADSET_PLUG) return@protectAudio
-                        param.getThisObject()?.let { receiver ->
+                        if ((callback.getArg(1) as? Intent)?.action != Intent.ACTION_HEADSET_PLUG) return@protectAudio
+                        callback.getThisObject()?.let { receiver ->
                             fields.receiverOwner.get(receiver)?.let { readWired(it, true) }
                         }
                     }
@@ -349,8 +349,8 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
         val battery = fields.battery ?: return
         try {
             val unhooker = ModuleHelper.hookMethod(battery.changed, object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    if (param.getThrowable() == null) param.getThisObject()?.let { readBluetoothBattery(it, true) }
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() == null) callback.getThisObject()?.let { readBluetoothBattery(it, true) }
                 }
             }) ?: error("Duo: Bluetooth battery hook failed")
             installed.add(unhooker)
@@ -368,30 +368,30 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
         }
         fun after(method: Method, action: (Any) -> Unit) {
             hook(method, object : MethodHook(XposedInterface.PRIORITY_HIGHEST) {
-                override fun after(param: AfterHookCallback) {
-                    if (failed || param.getThrowable() != null) return
-                    protect { param.getThisObject()?.let(action) }
+                override fun after(callback: AfterHookCallback) {
+                    if (failed || callback.getThrowable() != null) return
+                    protect { callback.getThisObject()?.let(action) }
                 }
             })
         }
         try {
             after(abi.attach) { attach(it as ViewGroup) }
             hook(abi.detach, object : MethodHook() {
-                override fun after(param: AfterHookCallback) {
-                    protect { (param.getThisObject() as? ViewGroup)?.let { detach(it) } }
+                override fun after(callback: AfterHookCallback) {
+                    protect { (callback.getThisObject() as? ViewGroup)?.let { detach(it) } }
                 }
             })
             hook(abi.updateBattery, object : MethodHook(XposedInterface.PRIORITY_HIGHEST) {
-                override fun before(param: BeforeHookCallback) {
-                    if (!failed) protect { child(param.getThisObject() as ViewGroup)?.binding?.restoreBattery() }
+                override fun before(callback: BeforeHookCallback) {
+                    if (!failed) protect { child(callback.getThisObject() as ViewGroup)?.binding?.restoreBattery() }
                 }
-                override fun after(param: AfterHookCallback) {
-                    if (param.getThrowable() != null) {
-                        protect { child(param.getThisObject() as ViewGroup)?.binding?.restore() }
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) {
+                        protect { child(callback.getThisObject() as ViewGroup)?.binding?.restore() }
                         return
                     }
                     if (!failed) protect {
-                        child(param.getThisObject() as ViewGroup)?.binding?.let(::reconcile)
+                        child(callback.getThisObject() as ViewGroup)?.binding?.let(::reconcile)
                     }
                 }
             })
@@ -410,27 +410,27 @@ internal class DuoStatusBarHooks(private val abi: DuoAbi, private val config: Du
                 }
             })
             hook(abi.airplaneChanged, object : MethodHook() {
-                override fun before(param: BeforeHookCallback) {
+                override fun before(callback: BeforeHookCallback) {
                     if (!failed) protect {
-                        val icon = param.getArg(0) ?: return@protect
+                        val icon = callback.getArg(0) ?: return@protect
                         if (network.airplane(abi.airplaneVisible.getBoolean(icon))) queueRefresh()
                     }
                 }
             })
             hook(abi.subscriptionsChanged, object : MethodHook() {
-                override fun before(param: BeforeHookCallback) {
-                    if (!failed) protect { (param.getArg(0) as? List<*>)?.let(::readSubscriptions) }
+                override fun before(callback: BeforeHookCallback) {
+                    if (!failed) protect { (callback.getArg(0) as? List<*>)?.let(::readSubscriptions) }
                 }
             })
             after(abi.applyWifi) { stockChanged(it as View, false) }
             after(abi.applyMobile) { stockChanged(it as View, false) }
             after(abi.updateMobile) { stockChanged(it as View, false) }
             val visibilityHook = object : MethodHook(XposedInterface.PRIORITY_HIGHEST) {
-                override fun before(param: BeforeHookCallback) {
-                    if (!failed) protect { stockChanged(param.getThisObject() as View, true) }
+                override fun before(callback: BeforeHookCallback) {
+                    if (!failed) protect { stockChanged(callback.getThisObject() as View, true) }
                 }
-                override fun after(param: AfterHookCallback) {
-                    if (!failed) protect { stockChanged(param.getThisObject() as View, false) }
+                override fun after(callback: AfterHookCallback) {
+                    if (!failed) protect { stockChanged(callback.getThisObject() as View, false) }
                 }
             }
             hook(abi.wifiVisibleState, visibilityHook)

@@ -1,0 +1,115 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "_cpu_topology",
+      "cpufreq"
+    ]
+  },
+  "id": "cpu_topology_view",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间（可选，保留兼容参数，拓扑使用全 trace 元数据）",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间（可选，保留兼容参数，拓扑使用全 trace 元数据）",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/cpu_topology_view.skill.yaml",
+    "sha256": "8e7da2b8aae3dfcf076d784d1dde661efb18385e3c1d951ae6cd2ffa7978a8e6"
+  },
+  "steps": [
+    {
+      "id": "inspect_existing_topology_object",
+      "name": "检查旧 CPU 拓扑对象",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_topology_view/inspect_existing_topology_object",
+      "result_dependencies": [],
+      "save_as": "existing_topology_object",
+      "type": "atomic"
+    },
+    {
+      "condition": "existing_topology_object.data?.[0]?.type === 'view'",
+      "displayed": true,
+      "id": "drop_existing_topology_view",
+      "name": "清理旧 CPU 拓扑视图",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_topology_view/drop_existing_topology_view",
+      "result_dependencies": [],
+      "type": "atomic"
+    },
+    {
+      "condition": "existing_topology_object.data?.[0]?.type === 'table'",
+      "displayed": true,
+      "id": "drop_existing_topology_table",
+      "name": "清理旧 CPU 拓扑表",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_topology_view/drop_existing_topology_table",
+      "result_dependencies": [],
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "create_topology_view",
+      "name": "创建 CPU 拓扑关系",
+      "optional": true,
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_topology_view/create_topology_view",
+      "result_dependencies": [],
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "read_topology",
+      "name": "读取 CPU 拓扑",
+      "optional": true,
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_topology_view/read_topology",
+      "result_dependencies": [],
+      "save_as": "cpu_topology",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "cpu-scheduling"
+}

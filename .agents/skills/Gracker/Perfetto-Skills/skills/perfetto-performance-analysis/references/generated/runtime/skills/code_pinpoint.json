@@ -1,0 +1,81 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "code_pinpoint",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "应用包名或进程名（可选）",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳（纳秒，可选）",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳（纳秒，可选）",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "slices.with_context",
+      "android.process_metadata"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/code_pinpoint.skill.yaml",
+    "sha256": "c2560c8a63a870cc090ef0176632c2c572fd52bb4301adaa16342cbb651204ce"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "hot_slices",
+      "name": "代码定位候选 slice",
+      "query_id": "code_pinpoint/hot_slices",
+      "result_dependencies": [],
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "native_symbols",
+      "name": "Native symbol / module / build-id anchors",
+      "on_empty": "no_symbol_data: no CPU profiling symbols match the selected process and time window",
+      "optional": true,
+      "query_id": "code_pinpoint/native_symbols",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.1",
+  "workflow": "trace-overview"
+}

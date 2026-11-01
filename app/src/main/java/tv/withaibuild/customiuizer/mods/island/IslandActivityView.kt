@@ -630,7 +630,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         displayedContent?.let { content ->
             val split = identityTitle.visibility == VISIBLE
             applyTextSizes(content, split)
-            labelWidth = maxOf(title.text.lineSequence().maxOfOrNull { title.paint.measureText(it.toString()) } ?: 0f,
+            labelWidth = maxOf(title.text.lineSequence().maxOfOrNull { title.paint.measureText(it) } ?: 0f,
                 if (subtitle.visibility == VISIBLE) subtitle.paint.measureText(subtitle.text.toString()) else 0f)
             identityWidth = if (split) identityTitle.paint.measureText(content.label) else 0f
         }

@@ -12,6 +12,19 @@ from tools import generate_preference_artifacts as production_generator
 from pathlib import Path
 
 
+class ComposeStringArgumentsTest(unittest.TestCase):
+    def test_slider_strings_are_typed_without_redundant_literal_conversion(self):
+        from tools.compose_preferences import _page_body
+        root = ET.fromstring('''<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"><SeekBarPreference android:key="test"
+            app:format="%d" app:offtext="@string/app_name" app:note="@android:string/ok" /></PreferenceScreen>''')
+        output = "\n".join(_page_body(root))
+        self.assertIn('"%d"', output)
+        self.assertIn('context.getString(R.string.app_name)', output)
+        self.assertIn('context.getString(android.R.string.ok)', output)
+        self.assertNotIn('.toString()', output)
+
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SOURCE_DIR = REPO_ROOT / "app" / "src" / "main" / "res" / "xml"
 GENERATOR = REPO_ROOT / "tools" / "generate_preference_artifacts.py"

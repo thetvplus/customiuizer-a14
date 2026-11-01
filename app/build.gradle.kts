@@ -64,8 +64,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 265
-val lastVersionName = "r14.26.5"
+val lastVersion = 269
+val lastVersionName = "r14.26.9"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -250,6 +250,8 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.jvmArgs(
+                    // Robolectric's Conscrypt provider loads JNI under JDK 27.
+                    "--enable-native-access=ALL-UNNAMED",
                     "--add-opens=java.base/java.lang=ALL-UNNAMED",
                     "--add-opens=java.base/java.util=ALL-UNNAMED",
                     "--add-opens=java.base/java.io=ALL-UNNAMED",
@@ -381,6 +383,9 @@ dependencies {
     testImplementation(libs.compose.ui.test)
     debugImplementation(libs.compose.test.manifest)
     constraints {
+        testImplementation("com.google.guava:guava:33.7.2-jre") {
+            because("CVE-2026-102554; Robolectric's host-only transitive dependency")
+        }
         implementation(libs.androidx.fragment.ktx) {
             because("Keep the transitive Fragment KTX companion aligned with Fragment")
         }

@@ -1,0 +1,71 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${process_name}",
+      "${process_name}:*"
+    ]
+  },
+  "id": "memory_rss_high_watermark",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "default": 30,
+      "name": "top_n",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "linux.memory.high_watermark"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/memory_rss_high_watermark.skill.yaml",
+    "sha256": "37166099200b6eb3dfaa4d62fc6e08bb63e5baa6671f7d1a9dc8530a3a6a36b9"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "rss_peaks",
+      "name": "RSS 内存峰值排行",
+      "query_id": "memory_rss_high_watermark/rss_peaks",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "memory"
+}

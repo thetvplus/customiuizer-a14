@@ -66,11 +66,17 @@ internal class SettingsMiuizerIconFeature(
 ) {
     companion object {
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getStringAsInt("miuizer_settingsiconpos", 1) > 0
+        fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getStringAsInt("miuizer_settingsiconpos", 1) > 0 ||
+            prefs.getBoolean("various_disable_system_app_updater") ||
+            prefs.getBoolean("various_hide_enterprise_mode")
     }
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = GlobalActions.miuizerSettingsHook(lpparam)
+    // One owner for Settings list construction, independent of the module icon option.
+    override fun installHook() = GlobalActions.miuizerSettingsHook(
+        lpparam, mPrefs.getBoolean("various_disable_system_app_updater"),
+        mPrefs.getBoolean("various_hide_enterprise_mode")
+    )
 }
 
 internal class SettingsDisableAnyNotificationFeature(

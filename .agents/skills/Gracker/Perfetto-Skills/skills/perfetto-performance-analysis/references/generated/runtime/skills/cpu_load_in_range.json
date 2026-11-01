@@ -1,0 +1,91 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "runqueue_length"
+    ]
+  },
+  "id": "cpu_load_in_range",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "sched_slice"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/cpu_load_in_range.skill.yaml",
+    "sha256": "1b8c48740c33db268d4dd30f2d4e9d0bdcb254f3439852bbaaec2ff0a373ba48"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "cpu_utilization",
+      "name": "CPU 利用率",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_load_in_range/cpu_utilization",
+      "result_dependencies": [],
+      "save_as": "utilization",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "runqueue_depth",
+      "name": "运行队列深度",
+      "optional": true,
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_load_in_range/runqueue_depth",
+      "result_dependencies": [],
+      "save_as": "runqueue",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "thread_migrations",
+      "name": "线程迁移",
+      "process_scope": {
+        "role": "global_context"
+      },
+      "query_id": "cpu_load_in_range/thread_migrations",
+      "result_dependencies": [],
+      "save_as": "migrations",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "2.0",
+  "workflow": "cpu-scheduling"
+}

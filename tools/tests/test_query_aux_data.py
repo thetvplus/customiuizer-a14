@@ -29,30 +29,6 @@ class AuxiliaryDataQueryTest(unittest.TestCase):
                 self.assertEqual(spec["path"], result["source"])
                 self.assertEqual(before, path.read_bytes())
 
-    def test_storage_alias_and_runtime_key_return_same_evidence(self):
-        short = self.run_query("semantics", "--key", "system_charginginfo_fontsize", "--full")
-        storage = self.run_query("semantics", "--key", "pref_key_system_charginginfo_fontsize", "--full")
-        self.assertEqual(short, storage)
-        self.assertEqual(1, short["matched"])
-        record = short["records"][0]
-        original = json.loads((tool.ROOT / short["source"]).read_text(encoding="utf-8"))["entries"]
-        self.assertIn(record, original)
-        self.assertIn("evidence", record)
-        self.assertIn("confidence", record)
-        self.assertEqual(0, self.run_query("semantics", "--key", "system_charginginfo_font")["matched"])
-
-    def test_filters_compose_and_unknown_is_not_promoted(self):
-        result = self.run_query("semantics", "--target", "com.android.systemui", "--confidence", "UNKNOWN",
-                                "--contains", "SYSTEM", "--limit", "2")
-        self.assertGreater(result["matched"], 2)
-        self.assertEqual(2, result["returned"])
-        for record in result["records"]:
-            self.assertEqual("UNKNOWN", record["confidence"])
-            self.assertEqual("com.android.systemui", record["targetPackage"])
-        summary = self.run_query("semantics", "--target", "com.android.systemui", "--confidence", "UNKNOWN",
-                                 "--contains", "SYSTEM", "--summary")
-        self.assertEqual(result["matched"], summary["matched"])
-        self.assertEqual([], summary["records"])
 
     def test_pagination_and_projection_preserve_source_order(self):
         first = self.run_query("matrix", "--fields", "featureIdInt,featureIdName", "--limit", "3")
@@ -80,32 +56,24 @@ class AuxiliaryDataQueryTest(unittest.TestCase):
         self.assertEqual(1, hazards["returned"])
         self.assertIn("mods", hazards["records"][0]["path"])
 
-    def test_excluded_navigation_keys_remain_distinguishable_from_missing_keys(self):
-        excluded = self.run_query("semantics", "--key", "pref_key_system_island_music_cat")
-        self.assertEqual(0, excluded["matched"])
-        self.assertEqual(1, len(excluded["exclusions"]))
-        self.assertIn("reason", excluded["exclusions"][0])
-        missing = self.run_query("semantics", "--key", "does_not_exist")
-        self.assertEqual(0, missing["matched"])
-        self.assertEqual([], missing["exclusions"])
 
     def test_invalid_arguments_and_input_fail_without_dumping_records(self):
         for arguments in (("matrix", "--fields", "typo"), ("matrix", "--confidence", "UNKNOWN"),
                           ("rom", "--key", "foo"), ("hazards", "--target", "foo"),
-                          ("rom", "--feature", "foo"), ("semantics", "--offset", "-1"),
-                          ("semantics", "--limit", "0"), ("semantics", "--limit", "101")):
+                          ("rom", "--feature", "foo"), ("matrix", "--offset", "-1"),
+                          ("matrix", "--limit", "0"), ("matrix", "--limit", "101")):
             with self.subTest(arguments=arguments), contextlib.redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit) as failure:
                     tool.main(list(arguments))
                 self.assertEqual(2, failure.exception.code)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            path = root / "feature-semantics/a14.json"
-            path.parent.mkdir()
-            for payload in ("{broken", "[]", '{"entries": [null]}'):
+            path = root / "docs/rom-intelligence/A14_PROCESS_MATRIX.json"
+            path.parent.mkdir(parents=True)
+            for payload in ("{broken", "[]", '{"features": [null]}'):
                 path.write_text(payload, encoding="utf-8")
                 with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as failure:
-                    tool.main(["semantics", "--repo-root", str(root)])
+                    tool.main(["matrix", "--repo-root", str(root)])
                 self.assertEqual(2, failure.exception.code)
 
 

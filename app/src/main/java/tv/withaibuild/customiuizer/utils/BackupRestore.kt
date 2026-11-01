@@ -15,6 +15,12 @@ import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.Locale
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
 
 /**
  * M2 backup / restore owner.
@@ -29,6 +35,20 @@ import tv.withaibuild.customiuizer.mods.utils.FatalErrors
  * - Legacy reader is a focused restricted decoder; no `ObjectInputStream` / `ObjectInputFilter`.
  */
 object BackupRestore {
+    private val documentOperation = Mutex()
+
+    // One user operation at a time, including across page/activity replacement. Once
+    // started, finish the bounded file transaction and close it before releasing the
+    // slot. Cancellation suppresses delivery to the destroyed UI, not half a write.
+    internal suspend fun <T : Any> runDocumentOperation(operation: () -> T): T? {
+        coroutineContext.ensureActive()
+        if (!documentOperation.tryLock()) return null
+        try {
+            return withContext(Dispatchers.IO + NonCancellable) { operation() }
+        } finally {
+            documentOperation.unlock()
+        }
+    }
 
     /** Default backup filename prefix + MMddHHmmss local wall-clock timestamp. */
     private val BACKUP_FILENAME_FORMATTER =
@@ -176,9 +196,9 @@ object BackupRestore {
         prefs: SharedPreferences,
         output: OutputStream,
     ): Boolean {
-        val entries = filterBackupEntries(prefs)
-        val encoded = BackupFormatV2.encode(entries)
         output.use { out ->
+            val entries = filterBackupEntries(prefs)
+            val encoded = BackupFormatV2.encode(entries)
             out.write(encoded)
             out.flush()
         }
@@ -647,15 +667,15 @@ object BackupRestore {
     ): RestoreResult {
         val installedPackages = try {
             AppSelectionSanitizer.queryInstalledPackageNames(packageManager)
-        } catch (oom: OutOfMemoryError) {
-            throw oom
         } catch (t: Throwable) {
-            FatalErrors.rethrowIfFatal(t)
-            return RestoreResult(
-                status = Status.FAILURE,
-                commitSucceeded = false,
-                commitConfirmedDurable = false,
-            )
+            inputStream.use {
+                FatalErrors.rethrowIfFatal(t)
+                return RestoreResult(
+                    status = Status.FAILURE,
+                    commitSucceeded = false,
+                    commitConfirmedDurable = false,
+                )
+            }
         }
 
         val reconciler: ((Boolean?) -> Boolean)? = if (componentName != null) { enabled ->

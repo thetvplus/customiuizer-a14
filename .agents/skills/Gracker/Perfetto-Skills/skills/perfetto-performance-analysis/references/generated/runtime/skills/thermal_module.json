@@ -1,0 +1,196 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "*Temp*",
+      "*temp*",
+      "*temperature*",
+      "*thermal*",
+      "*tsens*",
+      "cpufreq"
+    ]
+  },
+  "id": "thermal_module",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "Analysis start timestamp",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "Analysis end timestamp",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "counter",
+      "counter_track"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/modules/hardware/thermal_module.skill.yaml",
+    "sha256": "704e180a6465afd151d94ae86efccee580680462a62262896290e7844e46f481"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "temperature_overview",
+      "name": "温度概览",
+      "on_empty": "窗口内未找到温度样本；检查 trace 是否包含 thermal/temperature 计数器。缺少单位时不进行摄氏温度阈值判断。",
+      "query_id": "thermal_module/temperature_overview",
+      "result_dependencies": [],
+      "save_as": "temp_overview",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "temperature_timeline",
+      "name": "温度时间线",
+      "query_id": "thermal_module/temperature_timeline",
+      "result_dependencies": [],
+      "save_as": "temp_timeline",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "high_temp_periods",
+      "name": "高温时段",
+      "query_id": "thermal_module/high_temp_periods",
+      "result_dependencies": [],
+      "save_as": "high_temp_periods",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "throttling_events",
+      "name": "频率骤降事件",
+      "query_id": "thermal_module/throttling_events",
+      "result_dependencies": [],
+      "save_as": "throttling_events",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "cooling_activity",
+      "name": "散热设备活动",
+      "optional": true,
+      "query_id": "thermal_module/cooling_activity",
+      "result_dependencies": [],
+      "save_as": "cooling_activity",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "thermal_cpu_correlation",
+      "name": "温度-频率相关性",
+      "query_id": "thermal_module/thermal_cpu_correlation",
+      "result_dependencies": [],
+      "save_as": "thermal_cpu_correlation",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "thermal_diagnosis",
+      "inputs": [
+        "temp_overview",
+        "high_temp_periods",
+        "throttling_events",
+        "thermal_cpu_correlation"
+      ],
+      "name": "热管理诊断",
+      "rules": [
+        {
+          "condition": "temp_overview.data.filter(t => t.status === 'critical').length > 0",
+          "confidence": "high",
+          "diagnosis": "检测到严重高温: ${temp_overview.data.filter(t => t.status === 'critical')[0]?.sensor_name} 最高 ${temp_overview.data.filter(t => t.status === 'critical')[0]?.max_temp}°C",
+          "evidence_fields": [
+            "temp_overview.data[0]?.sensor_name",
+            "temp_overview.data[0]?.max_temp"
+          ],
+          "severity": "critical",
+          "suggestions": [
+            "检查设备散热条件",
+            "减少 CPU/GPU 密集型操作",
+            "考虑添加冷却间隔"
+          ]
+        },
+        {
+          "condition": "throttling_events.data.length > 10",
+          "confidence": "high",
+          "diagnosis": "检测到 ${throttling_events.data.length} 次频率骤降；尚不能据此确定热节流或性能影响",
+          "evidence_fields": [
+            "throttling_events.data.length",
+            "throttling_events.data[0]?.drop_pct"
+          ],
+          "suggestions": [
+            "降频原因需结合直接 thermal throttling/cooling 事件和同窗口工作负载判断",
+            "考虑分散计算任务",
+            "优化算法减少 CPU 使用"
+          ]
+        },
+        {
+          "condition": "high_temp_periods.data[0]?.duration_sec > 30",
+          "confidence": "high",
+          "diagnosis": "高温样本首尾跨度 ${high_temp_periods.data[0]?.duration_sec} 秒；不代表连续高温或散热不足",
+          "evidence_fields": [
+            "high_temp_periods.data[0]?.sensor_name",
+            "high_temp_periods.data[0]?.duration_sec",
+            "high_temp_periods.data[0]?.peak_temp"
+          ],
+          "suggestions": [
+            "持续高温时是否已触发频率上限，以 cpufreq 限频证据为准",
+            "检查设备是否被遮挡",
+            "考虑降低持续性能需求"
+          ]
+        },
+        {
+          "condition": "thermal_cpu_correlation.data.filter(t => t.status === 'high_temperature_with_low_sampled_frequency').length > 5",
+          "confidence": "high",
+          "diagnosis": "同一秒内观测到高温和较低的频率样本；这种并存不能证明热节流或负相关",
+          "evidence_fields": [
+            "thermal_cpu_correlation.data.filter(t => t.status === 'high_temperature_with_low_sampled_frequency').length"
+          ],
+          "suggestions": [
+            "查找温控限制、冷却状态或限频事件的直接证据",
+            "结合目标任务窗口和负载变化检验性能影响"
+          ]
+        },
+        {
+          "condition": "temp_overview.data[0]?.temp_range > 20",
+          "confidence": "medium",
+          "diagnosis": "温度计数器样本变化范围 ${temp_overview.data[0]?.temp_range}，原始单位 ${temp_overview.data[0]?.source_unit}",
+          "evidence_fields": [
+            "temp_overview.data[0]?.sensor_name",
+            "temp_overview.data[0]?.temp_range"
+          ],
+          "suggestions": [
+            "工作负载不均匀",
+            "检查是否有突发计算任务"
+          ]
+        }
+      ],
+      "type": "diagnostic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "power-thermal"
+}

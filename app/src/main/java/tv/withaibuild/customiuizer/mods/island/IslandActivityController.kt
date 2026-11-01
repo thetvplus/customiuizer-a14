@@ -308,7 +308,7 @@ internal class IslandActivityController(
                 if (previousOptions.musicActions != options.musicActions || previousOptions.mediaSwipe != options.mediaSwipe ||
                     previousOptions.media != options.media || previousOptions.enabled != options.enabled ||
                     previousOptions.excludedApps != options.excludedApps || key == null ||
-                    key?.startsWith("system_island_music_") == true || key?.startsWith("system_island_idle_") == true) invalidateActions()
+                    key.startsWith("system_island_music_") == true || key.startsWith("system_island_idle_") == true) invalidateActions()
                 if (!options.media) recentMedia = null
                 if (previousOptions.position != options.position || previousOptions.horizontalOffset != options.horizontalOffset ||
                     previousOptions.height != options.height || previousOptions.shortWidth != options.shortWidth ||
@@ -1646,7 +1646,7 @@ internal class IslandActivityController(
         shell.idleTapAction = options.idleActions.tap
         shell.expanded = forms.expanded
         if (showingMedia != (lastContent is IslandMediaContent) ||
-            showingMedia && (lastContent as? IslandMediaContent)?.token != current?.token ||
+            showingMedia && (lastContent as? IslandMediaContent)?.token != current.token ||
             !showingMedia && lastContent !== toast &&
                 (toast?.liveActivity?.key == null || toast.liveActivity.key != (lastContent as? IslandToastContent)?.liveActivity?.key ||
                     toast.launch != (lastContent as? IslandToastContent)?.launch)) invalidateActions()
@@ -1654,13 +1654,13 @@ internal class IslandActivityController(
         val secondary = attached && motionCoordinator.replacement(motionIdentity)
         val visualLeft = shell.pivotX * (1f - shell.scaleX) + shell.translationX
         val visualTop = shell.pivotY * (1f - shell.scaleY) + shell.translationY
-        val contentChanged = shell.bind(toast?.text ?: current?.title.orEmpty(), if (showingMedia) current?.artist else toast?.detail,
+        val contentChanged = shell.bind(toast?.text ?: current?.title.orEmpty(), if (showingMedia) current.artist else toast?.detail,
             toast?.icon ?: current?.icon,
-            showingMedia && current?.playing == true,
-            showingMedia, options.waveform, if (showingMedia) current?.actions ?: 0L else 0L, showingMedia && options.mediaSwipe,
+            showingMedia && current.playing == true,
+            showingMedia, options.waveform, if (showingMedia) current.actions ?: 0L else 0L, showingMedia && options.mediaSwipe,
             current?.playbackState ?: PlaybackState.STATE_NONE, toast?.avatar == true, toast?.status == true,
-            expanded = forms.expanded, loading = showingMedia && current?.loading == true,
-            photo = if (showingMedia) current?.artwork == true else toast?.avatar == true,
+            expanded = forms.expanded, loading = showingMedia && current.loading == true,
+            photo = if (showingMedia) current.artwork == true else toast?.avatar == true,
             clock = toast?.liveActivity?.clock,
             clockKey = toast?.liveActivity?.key,
             recording = options.waveformMode == 2 && toast?.liveActivity?.let { it.kind == IslandLiveKind.RECORDER && it.meter != null } == true)
@@ -1690,8 +1690,8 @@ internal class IslandActivityController(
         params.x = 0
         return try {
             val entering = !attached
-            val returningLive = toast?.liveActivity?.key?.let { it == liveReturn?.key } == true && foregroundPackage != toast?.packageName
-            val returning = returningLive || showingMedia && current?.playing == true &&
+            val returningLive = toast?.liveActivity?.key?.let { it == liveReturn?.key } == true && foregroundPackage != toast.packageName
+            val returning = returningLive || showingMedia && current.playing == true &&
                 options.returnsMedia(current.packageName) && mediaReturn?.token == current.token
             val arrival = motionCoordinator.arrival(motionIdentity, motionSource, entering, resumingExit, returning, forms.expanded)
             if (showingMedia) mediaReturn = null // One foreground edge can animate only once.

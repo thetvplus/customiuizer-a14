@@ -1,0 +1,82 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "%alloc_pages%",
+      "%compact%",
+      "%direct_reclaim%",
+      "%lmkd%",
+      "%lowmemory%",
+      "%memory_pressure%",
+      "%oom_adj%",
+      "%page_alloc%",
+      "%reclaim%alloc%",
+      "kswapd%",
+      "mem.%psi%",
+      "mm_filemap_add_to_page_cache",
+      "mm_filemap_delete_from_page_cache"
+    ]
+  },
+  "id": "memory_pressure_in_range",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "Start timestamp in nanoseconds",
+      "name": "start_ts",
+      "required": true,
+      "type": "number"
+    },
+    {
+      "description": "End timestamp in nanoseconds",
+      "name": "end_ts",
+      "required": true,
+      "type": "number"
+    },
+    {
+      "description": "Package name to filter (optional)",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "process_scope": {
+    "limitations": [
+      "Memory pressure events are system context; package does not restrict these aggregates to target-process stalls."
+    ],
+    "role": "global_context"
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/memory_pressure_in_range.skill.yaml",
+    "sha256": "1d1b1b7b513c1ebbeb083c893261b659bc336ab81d34c49d025e7421e80a3976"
+  },
+  "steps": [
+    {
+      "description": "Analyze memory pressure indicators in the given time range",
+      "displayed": true,
+      "id": "memory_pressure_analysis",
+      "optional": true,
+      "query_id": "memory_pressure_in_range/memory_pressure_analysis",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0.0",
+  "workflow": "memory"
+}

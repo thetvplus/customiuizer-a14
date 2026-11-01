@@ -1,0 +1,66 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": []
+  },
+  "id": "cache_miss_impact",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "分析起始时间戳(ns，可选)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns，可选)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 500000,
+      "description": "高影响阈值（平均增量）",
+      "name": "high_impact_threshold",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "default": 100000,
+      "description": "中影响阈值（平均增量）",
+      "name": "medium_impact_threshold",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "counter",
+      "counter_track"
+    ]
+  },
+  "process_scope": {
+    "role": "global_context"
+  },
+  "query_id": "cache_miss_impact/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/cache_miss_impact.skill.yaml",
+    "sha256": "a5e9c2ce0744ad86c74e38152e285cb285995961d91fb7b32c43d5f68844dad6"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "cpu-scheduling"
+}

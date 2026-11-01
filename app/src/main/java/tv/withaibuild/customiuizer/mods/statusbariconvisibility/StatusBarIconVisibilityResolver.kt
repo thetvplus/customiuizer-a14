@@ -126,7 +126,7 @@ internal object StatusBarIconVisibilityResolver {
             null
         }
         val mStateType = mStateField?.type
-        if (mStateType != null && !mStateType.isPrimitive && mStateType != Any::class.java && mStateType != Object::class.java) {
+        if (mStateType != null && !mStateType.isPrimitive && mStateType != Any::class.java) {
             if (paramTypes.isEmpty() || paramTypes.any { it == mStateType }) return mStateType
         }
 
@@ -190,7 +190,7 @@ internal object StatusBarIconVisibilityResolver {
      */
     private fun resolveIntOrIntegerField(clazz: Class<*>, fieldName: String): Field? {
         val field = XposedHelpers.findFieldIfExists(clazz, fieldName) ?: return null
-        return if (field.type == Int::class.javaPrimitiveType || field.type == Integer::class.java) field else null
+        return if (field.type == Int::class.javaPrimitiveType || field.type == Int::class.javaObjectType) field else null
     }
 
     /**

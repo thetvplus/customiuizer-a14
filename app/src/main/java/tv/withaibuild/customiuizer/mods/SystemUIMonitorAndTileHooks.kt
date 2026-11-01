@@ -40,10 +40,10 @@ object SystemUIMonitorAndTileHooks {
         val enableFloatingTime = MainModule.mPrefs.getBoolean("system_cc_floatingtimetile")
         ModuleHelper.findAndHookMethod("com.android.systemui.SystemUIApplication", lpparam.classLoader, "onCreate", object : MethodHook() {
             private var isListened = false
-            override fun after(param: AfterHookCallback) {
+            override fun after(callback: AfterHookCallback) {
                 if (!isListened) {
                     isListened = true
-                    val mContext = XposedHelpers.callMethod(param.getThisObject(), "getApplicationContext") as Context
+                    val mContext = XposedHelpers.callMethod(callback.getThisObject(), "getApplicationContext") as Context
                     val stockTilesResId = mContext.resources.getIdentifier("miui_quick_settings_tiles_stock", "string", lpparam.packageName)
                     val stockTiles = mContext.getString(stockTilesResId)
                     val sb = StringBuilder(stockTiles)
@@ -56,60 +56,60 @@ object SystemUIMonitorAndTileHooks {
         })
         val ResourceIconClass = XposedHelpers.findClass("com.android.systemui.qs.tileimpl.QSTileImpl\$ResourceIcon", lpparam.classLoader)
         ModuleHelper.findAndHookMethod("com.android.systemui.qs.tileimpl.MiuiQSFactory", lpparam.classLoader, "createTile", String::class.java, object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = param.getArg(0) as String
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = callback.getArg(0) as String
                 if (tileName.startsWith("custom_")) {
                     val nfcField = "nfcTileProvider"
-                    val provider = XposedHelpers.getObjectField(param.getThisObject(), nfcField)
+                    val provider = XposedHelpers.getObjectField(callback.getThisObject(), nfcField)
                     val tile = XposedHelpers.callMethod(provider, "get")
                     XposedHelpers.setAdditionalInstanceField(tile, "customName", tileName)
                     XposedHelpers.callMethod(tile, "handleInitialize")
                     XposedHelpers.callMethod(tile, "handleStale")
-                    param.returnAndSkip(tile)
+                    callback.returnAndSkip(tile)
                 }
             }
         })
         val NfcTileCls = "com.android.systemui.qs.tiles.MiuiNfcTile"
         ModuleHelper.findAndHookMethod(NfcTileCls, lpparam.classLoader, "isAvailable", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "customName") as String?
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
                 if (tileName != null) {
                     when (tileName) {
-                        "custom_5G" -> param.returnAndSkip(enable5G)
-                        "custom_FPS" -> param.returnAndSkip(enableFps)
-                        "custom_floatingtime" -> param.returnAndSkip(enableFloatingTime)
-                        else -> param.returnAndSkip(false)
+                        "custom_5G" -> callback.returnAndSkip(enable5G)
+                        "custom_FPS" -> callback.returnAndSkip(enableFps)
+                        "custom_floatingtime" -> callback.returnAndSkip(enableFloatingTime)
+                        else -> callback.returnAndSkip(false)
                     }
                 }
             }
         })
         ModuleHelper.findAndHookMethod(NfcTileCls, lpparam.classLoader, "getTileLabel", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "customName") as String?
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
                 if (tileName != null) {
-                    val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
+                    val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
                     val modRes = ModuleHelper.getModuleRes(mContext)
                     when (tileName) {
-                        "custom_5G" -> param.returnAndSkip(modRes.getString(R.string.qs_toggle_5g))
-                        "custom_FPS" -> param.returnAndSkip(modRes.getString(R.string.qs_toggle_fps))
-                        "custom_floatingtime" -> param.returnAndSkip(modRes.getString(R.string.qs_toggle_floatingtime))
+                        "custom_5G" -> callback.returnAndSkip(modRes.getString(R.string.qs_toggle_5g))
+                        "custom_FPS" -> callback.returnAndSkip(modRes.getString(R.string.qs_toggle_fps))
+                        "custom_floatingtime" -> callback.returnAndSkip(modRes.getString(R.string.qs_toggle_floatingtime))
                     }
                 }
             }
         })
         ModuleHelper.findAndHookMethod(NfcTileCls, lpparam.classLoader, "handleSetListening", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "customName") as String?
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
                 if (tileName != null) {
-                    val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
-                    val mListening = param.getArg(0) as Boolean
+                    val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
+                    val mListening = callback.getArg(0) as Boolean
                     when (tileName) {
                         "custom_5G" -> {
                             val resolver = mContext.contentResolver
                             if (mListening) {
                                 val contentObserver = object : ContentObserver(Handler(mContext.mainLooper)) {
                                     override fun onChange(selfChange: Boolean) = ModuleHelper.guarded {
-                                        XposedHelpers.callMethod(param.getThisObject(), "refreshState")
+                                        XposedHelpers.callMethod(callback.getThisObject(), "refreshState")
                                     }
                                 }
                                 resolver.registerContentObserver(Settings.Global.getUriFor("fiveg_user_enable"), false, contentObserver)
@@ -123,9 +123,9 @@ object SystemUIMonitorAndTileHooks {
                             if (mListening) {
                                 val ServiceManager = XposedHelpers.findClass("android.os.ServiceManager", lpparam.classLoader)
                                 val mSurfaceFlinger = XposedHelpers.callStaticMethod(ServiceManager, "getService", "SurfaceFlinger")
-                                XposedHelpers.setAdditionalInstanceField(param.getThisObject(), "mSurfaceFlinger", mSurfaceFlinger)
+                                XposedHelpers.setAdditionalInstanceField(callback.getThisObject(), "mSurfaceFlinger", mSurfaceFlinger)
                             } else {
-                                XposedHelpers.removeAdditionalInstanceField(param.getThisObject(), "mSurfaceFlinger")
+                                XposedHelpers.removeAdditionalInstanceField(callback.getThisObject(), "mSurfaceFlinger")
                             }
                         }
                         "custom_floatingtime" -> {
@@ -133,7 +133,7 @@ object SystemUIMonitorAndTileHooks {
                             if (mListening) {
                                 val contentObserver = object : ContentObserver(Handler(mContext.mainLooper)) {
                                     override fun onChange(selfChange: Boolean) = ModuleHelper.guarded {
-                                        XposedHelpers.callMethod(param.getThisObject(), "refreshState")
+                                        XposedHelpers.callMethod(callback.getThisObject(), "refreshState")
                                     }
                                 }
                                 resolver.registerContentObserver(Settings.System.getUriFor("miui_time_floating_window"), false, contentObserver)
@@ -143,34 +143,34 @@ object SystemUIMonitorAndTileHooks {
                             }
                         }
                     }
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         })
         ModuleHelper.findAndHookMethod(NfcTileCls, lpparam.classLoader, "handleShowStateMessage", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "customName") as String?
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
                 if (tileName != null) {
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         })
         ModuleHelper.findAndHookMethod(NfcTileCls, lpparam.classLoader, "getLongClickIntent", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "customName") as String?
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
                 if (tileName == "custom_5G") {
                     val intent = Intent(Intent.ACTION_MAIN)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                     intent.component = ComponentName("com.android.phone", "com.android.phone.settings.MiuiFiveGNetworkSetting")
-                    param.returnAndSkip(intent)
+                    callback.returnAndSkip(intent)
                 } else if (tileName != null) {
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         })
         ModuleHelper.findAndHookMethod(NfcTileCls, lpparam.classLoader, "handleClick", View::class.java, object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "customName") as String?
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
                 if (tileName != null) {
                     when (tileName) {
                         "custom_5G" -> {
@@ -178,25 +178,25 @@ object SystemUIMonitorAndTileHooks {
                             manager.setUserFiveGEnabled(!manager.isUserFiveGEnabled())
                         }
                         "custom_FPS" -> {
-                            val mSurfaceFlinger = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "mSurfaceFlinger") as IBinder?
+                            val mSurfaceFlinger = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "mSurfaceFlinger") as IBinder?
                             if (mSurfaceFlinger != null) {
-                                val mState = XposedHelpers.getObjectField(param.getThisObject(), "mState")
+                                val mState = XposedHelpers.getObjectField(callback.getThisObject(), "mState")
                                 val enabled = XposedHelpers.getBooleanField(mState, "value")
                                 val obtain = Parcel.obtain()
                                 obtain.writeInterfaceToken("android.ui.ISurfaceComposer")
                                 obtain.writeInt(if (enabled) 0 else 1)
                                 mSurfaceFlinger.transact(1034, obtain, null, 0)
                                 obtain.recycle()
-                                XposedHelpers.callMethod(param.getThisObject(), "refreshState")
+                                XposedHelpers.callMethod(callback.getThisObject(), "refreshState")
                             }
                         }
                         "custom_floatingtime" -> {
-                            val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
+                            val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
                             val isEnable = (XposedHelpers.callStaticMethod(Settings.System::class.java, "getIntForUser", mContext.contentResolver, "miui_time_floating_window", 0, -2) as Int) != 0
                             XposedHelpers.callStaticMethod(Settings.System::class.java, "putIntForUser", mContext.contentResolver, "miui_time_floating_window", if (isEnable) 0 else 1, -2)
                         }
                     }
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         })
@@ -216,8 +216,8 @@ object SystemUIMonitorAndTileHooks {
             tileOffResMap["custom_floatingtime"] = MainModule.resHooks.addFakeResource("ic_qs_mfloatingtime_off", R.drawable.ic_qs_second_on, "drawable")
         }
         ModuleHelper.hookAllMethods(NfcTileCls, lpparam.classLoader, "handleUpdateState", object : MethodHook() {
-            override fun before(param: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "customName") as String?
+            override fun before(callback: BeforeHookCallback) {
+                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
                 if (tileName != null) {
                     var isEnable = false
                     when (tileName) {
@@ -226,7 +226,7 @@ object SystemUIMonitorAndTileHooks {
                             isEnable = manager.isUserFiveGEnabled()
                         }
                         "custom_FPS" -> {
-                            val mSurfaceFlinger = XposedHelpers.getAdditionalInstanceField(param.getThisObject(), "mSurfaceFlinger") as IBinder?
+                            val mSurfaceFlinger = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "mSurfaceFlinger") as IBinder?
                             if (mSurfaceFlinger != null) {
                                 val obtain = Parcel.obtain()
                                 val obtain2 = Parcel.obtain()
@@ -239,15 +239,15 @@ object SystemUIMonitorAndTileHooks {
                             }
                         }
                         "custom_floatingtime" -> {
-                            val mContext = XposedHelpers.getObjectField(param.getThisObject(), "mContext") as Context
+                            val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
                             isEnable = (XposedHelpers.callStaticMethod(Settings.System::class.java, "getIntForUser", mContext.contentResolver, "miui_time_floating_window", 0, -2) as Int) != 0
                         }
                     }
                     if (tileName.startsWith("custom_")) {
-                        val booleanState = param.getArg(0)
+                        val booleanState = callback.getArg(0)
                         XposedHelpers.setObjectField(booleanState, "value", isEnable)
                         XposedHelpers.setObjectField(booleanState, "state", if (isEnable) 2 else 1)
-                        val tileLabel = XposedHelpers.callMethod(param.getThisObject(), "getTileLabel") as String
+                        val tileLabel = XposedHelpers.callMethod(callback.getThisObject(), "getTileLabel") as String
                         XposedHelpers.setObjectField(booleanState, "label", tileLabel)
                         XposedHelpers.setObjectField(booleanState, "contentDescription", tileLabel)
                         XposedHelpers.setObjectField(booleanState, "expandedAccessibilityClassName", Switch::class.java.name)
@@ -255,7 +255,7 @@ object SystemUIMonitorAndTileHooks {
                         val mIcon = XposedHelpers.callStaticMethod(ResourceIconClass, "get", iconResId)
                         XposedHelpers.setObjectField(booleanState, "icon", mIcon)
                     }
-                    param.returnAndSkip(null)
+                    callback.returnAndSkip(null)
                 }
             }
         })

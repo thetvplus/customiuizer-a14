@@ -163,12 +163,12 @@ internal class IslandSystemActivities(
                 if (IslandSystemKind.TORCH in enabledKinds) ModuleHelper.guarded {
                     camera = context.getSystemService(CameraManager::class.java)
                     val id = camera?.cameraIdList?.take(32)?.firstOrNull { id ->
-                        val info = camera!!.getCameraCharacteristics(id)
+                        val info = camera.getCameraCharacteristics(id)
                         info.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK &&
                             info.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
                     }
                     withContext(Dispatchers.Main.immediate) { if (!disposed) torchId = id }
-                    if (id != null) { camera!!.registerTorchCallback(torch, handler); torchRegistered = true }
+                    if (id != null) { camera.registerTorchCallback(torch, handler); torchRegistered = true }
                 }
                 withContext(Dispatchers.Main.immediate) { if (!disposed) readSettings() }
                 awaitCancellation()

@@ -1,6 +1,5 @@
 import importlib.util
 import io
-import json
 import subprocess
 import sys
 import tempfile
@@ -12,17 +11,36 @@ from unittest.mock import patch
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
 _VERIFY_PATH = _REPO_ROOT / "tools" / "verify.py"
-_AUDIT_PATH = _REPO_ROOT / "tools" / "audit-feature-semantics.py"
-_INVENTORY_PATH = _REPO_ROOT / "feature-semantics" / "a14.json"
-_SCHEMA_PATH = _REPO_ROOT / "feature-semantics" / "schema.json"
 
 _spec_verify = importlib.util.spec_from_file_location("verify_local", _VERIFY_PATH)
 _verify = importlib.util.module_from_spec(_spec_verify)
 _spec_verify.loader.exec_module(_verify)
 
-_spec_audit = importlib.util.spec_from_file_location("audit_feature_semantics", _AUDIT_PATH)
-_audit = importlib.util.module_from_spec(_spec_audit)
-_spec_audit.loader.exec_module(_audit)
+
+class DiagnosticSummaryTests(unittest.TestCase):
+    def test_warnings_survive_success_truncation_and_duplicates_are_counted(self):
+        warning = "w: file:///repo/Feature.kt:2:8 API is deprecated"
+        output = "\n".join(["task"] * 20 + [warning, warning.replace(":2:8", ":4:2"), "WARNING: Restricted methods will be blocked in a future release"] + ["ok"] * 20)
+        summary = _verify._summarize(output)
+        self.assertIn(warning + " [x2]", summary)
+        self.assertEqual(1, summary.count(warning))
+        self.assertIn("[REVIEW] WARNING: Restricted methods", summary)
+
+    def test_unique_diagnostics_are_bounded_and_review_is_prioritized(self):
+        output = "\n".join(["task"] * 5 + [f"warning: unique {i}" for i in range(300)] +
+                           ["warning: Missing class example.Required"] + ["ok"] * 15)
+        summary = _verify._summarize(output)
+        self.assertLessEqual(len(summary.splitlines()), 100)
+        self.assertIn("[REVIEW] warning: Missing class example.Required", summary)
+        self.assertIn("221 diagnostic groups omitted (0 REVIEW)", summary)
+
+    def test_short_output_and_failure_output_are_not_abbreviated(self):
+        self.assertEqual("warning: short", _verify._summarize("warning: short\n"))
+        output = "\n".join(str(i) for i in range(60))
+        result = subprocess.CompletedProcess([], 1, stdout=output, stderr="")
+        with patch.object(_verify.subprocess, "run", return_value=result), redirect_stdout(io.StringIO()) as stream:
+            self.assertEqual(1, _verify.run(["example"]))
+        self.assertIn(output, stream.getvalue())
 
 
 class BehaviorGateTests(unittest.TestCase):
@@ -61,7 +79,7 @@ class VerifyChangedInputsTests(unittest.TestCase):
             "check_java_runtime", "check_static_rules", "check_eol",
             "check_observer_key_contract", "check_hook_body_prefmap",
             "check_hotpath_alloc_budget", "check_main_source_cleanliness",
-            "check_invariants", "check_feature_semantics",
+            "check_invariants",
         )
         with ExitStack() as stack:
             for name in checks:
@@ -261,20 +279,8 @@ class VerifyJvmTargetTests(unittest.TestCase):
             self.check_config(build, daemon_version=21)
 
 
-class VerifyFeatureSemanticsTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.repo_root = _REPO_ROOT
-        cls.schema = _audit.load_schema(_SCHEMA_PATH)
+class VerifyEnvironmentTests(unittest.TestCase):
 
-    def _load_inventory(self):
-        with _INVENTORY_PATH.open("r", encoding="utf-8") as f:
-            return json.load(f)
-
-    def test_verifyRunsFeatureSemanticsValidation(self):
-        """verify.check_feature_semantics runs audit-feature-semantics.py --validate."""
-        code = _verify.check_feature_semantics()
-        self.assertEqual(code, 0)
 
     def test_javaVersionParserAcceptsJdk25(self):
         self.assertEqual(
@@ -306,107 +312,6 @@ class VerifyFeatureSemanticsTests(unittest.TestCase):
             (binary_dir / java_name).touch()
             env = _verify.command_environment({"JAVA_HOME": str(binary_dir)})
             self.assertEqual(env["JAVA_HOME"], str(root))
-
-    def test_successfulValidationReturnsZero(self):
-        """audit-feature-semantics --validate exits 0 on the real inventory."""
-        code = _audit.main(["--validate"])
-        self.assertEqual(code, 0)
-
-    def test_missingDiscoveredPreferenceFails(self):
-        """A discovered preference absent from the inventory and exclusions fails validation."""
-        inventory = self._load_inventory()
-        # Remove the system_charginginfo_fontsize entry so the real discovery fails.
-        before = len(inventory["entries"])
-        inventory["entries"] = [
-            e for e in inventory["entries"]
-            if "system_charginginfo_fontsize" not in e.get("preferenceKeys", [])
-        ]
-        self.assertLess(len(inventory["entries"]), before)
-
-        discovered = {"system_charginginfo_fontsize"}
-        code, errors = _audit.validate_inventory(
-            self.repo_root, inventory, self.schema, discovered=discovered
-        )
-        self.assertEqual(code, 1)
-        self.assertTrue(
-            any("discovered" in e.lower() and "not in inventory" in e.lower() for e in errors),
-            f"expected missing discovered key error, got: {errors}"
-        )
-
-    def test_chargingFontSizePreferenceIsCovered(self):
-        """The real inventory covers the charging info font size preference
-        as a single semantic feature linking the runtime canonical key and
-        its XML storage alias."""
-        inventory = self._load_inventory()
-        entries = inventory["entries"]
-
-        found_code = [e for e in entries if "system_charginginfo_fontsize" in e.get("preferenceKeys", [])]
-        self.assertEqual(len(found_code), 1, "system_charginginfo_fontsize must appear exactly once")
-        entry = found_code[0]
-
-        self.assertEqual(entry.get("defaultValue"), "16")
-        self.assertEqual(entry.get("xmlSource"), "app/settings/prefs_system_charginginfo.json")
-        self.assertIn("SystemLockScreenHooks.kt", entry.get("sourceFile", ""))
-        self.assertEqual(entry.get("targetPackage"), "com.android.systemui")
-        self.assertEqual(entry.get("installPhase"), "PACKAGE_READY")
-        # The value is live-applied by the in-hook PreferenceObserver, so no
-        # process restart is required for a value change to take effect.
-        self.assertEqual(entry.get("restartTarget"), "NONE")
-        self.assertEqual(entry.get("hotReloadable"), True)
-        self.assertEqual(entry.get("runtimeReadMode"), "OBSERVER_PUSH")
-
-        # The XML storage key is an alias within the same feature.
-        self.assertIn("pref_key_system_charginginfo_fontsize", entry.get("preferenceKeys", []))
-
-    def test_observerInferenceIsPerKeyNotPerFile(self):
-        """A PreferenceObserver in a source file must not mark unrelated keys
-        in the same file as OBSERVER_PUSH / hot reloadable."""
-        inventory = self._load_inventory()
-        entries = inventory["entries"]
-
-        # Charging info observer lives in SystemLockScreenHooks.kt and explicitly
-        # observes system_charginginfo, system_charginginfo_fontsize,
-        # system_charginginfo_view.
-        charging = [e for e in entries if "system_charginginfo_fontsize" in e.get("preferenceKeys", [])]
-        self.assertEqual(len(charging), 1)
-        self.assertEqual(charging[0].get("runtimeReadMode"), "OBSERVER_PUSH")
-        self.assertEqual(charging[0].get("hotReloadable"), True)
-
-        # system_noscreenlock is also used in SystemLockScreenHooks.kt (isUnlocked),
-        # but is NOT in the charging info observer set, so it must not inherit
-        # OBSERVER_PUSH semantics from the same file.
-        no_screen = [e for e in entries if "system_noscreenlock" in e.get("preferenceKeys", [])]
-        # It may be merged with the master act key or standalone; either way it
-        # must not claim observer push.
-        for entry in no_screen:
-            self.assertNotEqual(
-                entry.get("runtimeReadMode"), "OBSERVER_PUSH",
-                f"system_noscreenlock must not inherit observer semantics: {entry}"
-            )
-            self.assertEqual(
-                entry.get("hotReloadable"), False,
-                f"system_noscreenlock must not be marked hot reloadable: {entry}"
-            )
-
-    def test_hotReloadableValueDoesNotRequireRestart(self):
-        """An observer-backed preference has restartTarget=NONE; no observer
-        does not fabricate a restart target from the host process."""
-        inventory = self._load_inventory()
-        entries = inventory["entries"]
-
-        charging_view = [e for e in entries if "system_charginginfo_view" in e.get("preferenceKeys", [])]
-        self.assertEqual(len(charging_view), 1)
-        self.assertEqual(charging_view[0].get("hotReloadable"), True)
-        self.assertEqual(charging_view[0].get("restartTarget"), "NONE")
-
-        # A non-master, non-observed key must not have its restartTarget
-        # fabricated from FeatureTarget (e.g. SYSTEMUI).
-        noscreen = [e for e in entries if "system_noscreenlock" in e.get("preferenceKeys", [])]
-        for entry in noscreen:
-            self.assertEqual(
-                entry.get("restartTarget"), "UNKNOWN",
-                f"restartTarget must be UNKNOWN without evidence: {entry}"
-            )
 
 
 if __name__ == "__main__":

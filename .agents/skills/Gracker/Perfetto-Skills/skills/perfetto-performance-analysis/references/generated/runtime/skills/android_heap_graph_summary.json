@@ -1,0 +1,128 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "*Activity*",
+      "*Fragment*",
+      "truncated"
+    ]
+  },
+  "id": "android_heap_graph_summary",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标进程名（精确或 name:* 子进程）；留空分析全部 heap graph sample；无匹配时回退到没有进程名的 dump（如 .hprof）",
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "可选的稳定进程身份；进程名不可用时（.hprof）用它限定 dump",
+      "name": "upid",
+      "required": false,
+      "type": "integer"
+    },
+    {
+      "description": "指定 heap graph sample 时间戳；留空使用全部 sample",
+      "name": "graph_sample_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 30,
+      "description": "top class retainer 返回行数",
+      "name": "max_rows",
+      "required": false,
+      "type": "integer"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.memory.heap_graph.heap_graph_stats",
+      "android.memory.heap_graph.class_summary_tree"
+    ],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/android_heap_graph_summary.skill.yaml",
+    "sha256": "de6251b10137d1d773f7eef2c440c14fbe12fc4312d3dee7872e20ec632eb0e8"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "heap_graph_dump_sizes",
+      "name": "Heap Graph dump 大小",
+      "query_id": "android_heap_graph_summary/heap_graph_dump_sizes",
+      "result_dependencies": [],
+      "save_as": "heap_graph_dump_sizes",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "heap_graph_availability",
+      "name": "Heap Graph 数据可用性",
+      "query_id": "android_heap_graph_summary/heap_graph_availability",
+      "result_dependencies": [],
+      "save_as": "heap_graph_availability",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "heap_graph_samples",
+      "name": "Heap Graph Samples",
+      "optional": true,
+      "query_id": "android_heap_graph_summary/heap_graph_samples",
+      "result_dependencies": [],
+      "save_as": "heap_graph_samples",
+      "type": "atomic"
+    },
+    {
+      "condition": "heap_graph_availability.data[0]?.has_truncated_column === 1",
+      "displayed": true,
+      "id": "heap_graph_truncation",
+      "name": "Heap Dump 截断标记",
+      "optional": true,
+      "query_id": "android_heap_graph_summary/heap_graph_truncation",
+      "result_dependencies": [],
+      "save_as": "heap_graph_truncation",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "top_retained_classes",
+      "name": "Top Retained Classes",
+      "optional": true,
+      "query_id": "android_heap_graph_summary/top_retained_classes",
+      "result_dependencies": [],
+      "save_as": "top_retained_classes",
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.1",
+  "workflow": "memory"
+}

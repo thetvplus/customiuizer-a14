@@ -41,6 +41,28 @@ def metadata_bytes(asset_id: int) -> bytes:
     return result.stdout
 
 
+def published_source(metadata: dict, raw: bytes) -> str:
+    """Resolve only the pinned, already-signed releases predating privacy consolidation."""
+    original = metadata["source_sha"]
+    snapshot = release.POLICY.get("archived_source_snapshots", {}).get(metadata["version_name"])
+    if snapshot is None:
+        return original
+    release.require(set(snapshot) == {"build_source_sha", "source_sha", "metadata_sha256", "apk_sha256", "app_tree"}
+                    and snapshot["build_source_sha"] == original
+                    and snapshot["metadata_sha256"] == hashlib.sha256(raw).hexdigest()
+                    and snapshot["apk_sha256"] == metadata["apk_sha256"]
+                    and release.SHA.fullmatch(snapshot["source_sha"]) is not None
+                    and release.SHA.fullmatch(snapshot["app_tree"]) is not None,
+                    "Archived source binding differs from the original signed release")
+    sha = snapshot["source_sha"]
+    commit = release.api(f"repos/{release.REPO}/git/commits/{sha}")
+    tree = release.api(f"repos/{release.REPO}/git/trees/{commit['tree']['sha']}")
+    app = [item for item in tree["tree"] if item["path"] == "app"]
+    release.require(not tree.get("truncated") and len(app) == 1 and app[0].get("type") == "tree"
+                    and app[0]["sha"] == snapshot["app_tree"], "Archived application source tree changed")
+    return sha
+
+
 def published_version(version: str | None = None, *, download_env: dict | None = None,
                       require_download: bool = True, latest_only: bool = True) -> dict:
     """Read current stable releases and independently match public asset digests and tags."""
@@ -75,6 +97,7 @@ def published_version(version: str | None = None, *, download_env: dict | None =
                     metadata["application_id"] == "tv.withaibuild.customiuizer.r14" and
                     metadata["min_sdk"] == metadata["target_sdk"] == 34 and metadata["abi"] == "arm64-v8a" and
                     metadata["debuggable"] is False, "Published metadata violates the A14 release contract")
+    sha = published_source(metadata, data)
     target = None
     repositories = [(release.REPO, source, name, None)]
     if require_download:
@@ -84,7 +107,10 @@ def published_version(version: str | None = None, *, download_env: dict | None =
                         target.get("tag_name") == tag, "Both repositories must publish the same latest stable version")
         repositories.append((DOWNLOAD, target, tag, download_env))
     for repository, record, expected_tag, env in repositories:
-        release.check_release_identity(record, record["id"], expected_tag, sha)
+        # Metadata keeps the actual build identity. Archived release records may
+        # retain that commitish or use the pinned snapshot; the Git tag must use it.
+        commitish = sha if record.get("target_commitish") == sha else metadata["source_sha"]
+        release.check_release_identity(record, record["id"], expected_tag, commitish)
         release.check_tag(repository, expected_tag, sha, must_exist=True, env=env)
         entries = {item["name"]: item for item in record["assets"]}
         release.require(len(entries) == len(record["assets"]) and apk in entries and
@@ -93,12 +119,13 @@ def published_version(version: str | None = None, *, download_env: dict | None =
                         entries.get("build-metadata.json", {}).get("digest") == metadata_asset["digest"] and
                         entries["build-metadata.json"]["size"] == metadata_asset["size"],
                         "The two published APK/metadata assets differ")
-    return dict(metadata=metadata, source=source, download=target)
+    return dict(metadata=metadata, source=source, download=target, source_sha=sha)
 
 
 def documents(published: dict) -> dict[str, str]:
     meta, record = published["metadata"], published["source"]
     name, code, sha, apk = (meta[key] for key in ("version_name", "version_code", "source_sha", "apk"))
+    sha = published.get("source_sha", sha)
     root = release.api(f"repos/{release.REPO}/contents?ref={sha}")
     layout = source_changelogs({item["name"] for item in root if item.get("type") == "file"})
     scope = [line.strip() for line in source_text("app/src/main/resources/META-INF/xposed/scope.list", sha).splitlines()
@@ -156,6 +183,11 @@ def documents(published: dict) -> dict[str, str]:
                          f"[{'兼容矩阵' if chinese else 'Compatibility'}]({source_url}/blob/{sha}/COMPATIBILITY.md)\n\n"
                          + ("此仓库只维护正式下载说明。开发分支的未发布内容不代表本 APK 的功能或验收结果。\n" if chinese else
                             "This repository documents published downloads. Unreleased development changes do not describe this APK or its device acceptance.\n"))
+        if sha != meta["source_sha"]:
+            label = "匿名源码快照" if chinese else "Anonymized source snapshot"
+            result[readme] = result[readme].replace("源码提交" if chinese else "Source commit", label)
+            result[readme] += (f"\n原构建源码标识：`{meta['source_sha']}`。签名 APK 与原始 metadata 未修改；快照仅整理历史及文档隐私。\n" if chinese else
+                               f"\nOriginal build source identifier: `{meta['source_sha']}`. The signed APK and original metadata are unchanged; the snapshot consolidates history and redacts private documentation.\n")
     release.require(set(result) == FILES, "Unexpected download document path")
     return result
 
@@ -191,7 +223,8 @@ def sync_published(version: str | None, *, apply: bool, env: dict | None = None)
                                                for path, text in sorted(changed.items())]}
     new_tree = write_api(f"repos/{DOWNLOAD}/git/trees", payload, env)
     new_commit = write_api(f"repos/{DOWNLOAD}/git/commits", {"message": f"docs: synchronize verified {published['metadata']['version_name']}",
-                           "tree": new_tree["sha"], "parents": [head]}, env)
+                           "tree": new_tree["sha"], "parents": [head],
+                           "author": release.POLICY["commit_identity"], "committer": release.POLICY["commit_identity"]}, env)
     # Recheck Latest and compare-and-swap ancestry before the only public mutation.
     published_version(published["metadata"]["version_name"], download_env=env)
     release.require(release.api(f"repos/{DOWNLOAD}/git/ref/heads/main", env=env)["object"]["sha"] == head,
@@ -230,6 +263,7 @@ def review_candidate(name: str, code: int, sha: str) -> str:
     """Keep publication safety and cumulative user-content comparisons independent."""
     safety = published_version(require_download=False)
     safe_meta = safety["metadata"]
+    safe_sha = safety.get("source_sha", safe_meta["source_sha"])
     release.require(code > safe_meta["version_code"], "Candidate versionCode must exceed the published safety baseline")
     release.require(tuple(map(int, name[1:].split("."))) > tuple(map(int, safe_meta["version_name"][1:].split("."))),
                     "Candidate versionName must exceed the published safety baseline")
@@ -240,10 +274,11 @@ def review_candidate(name: str, code: int, sha: str) -> str:
     else:
         baseline = safety
     meta = baseline["metadata"]
+    base_sha = baseline.get("source_sha", meta["source_sha"])
     release.require(meta["version_code"] <= safe_meta["version_code"], "Notes baseline cannot be newer than the safety baseline")
-    release.run("git", "merge-base", "--is-ancestor", meta["source_sha"], safe_meta["source_sha"])
-    release.run("git", "merge-base", "--is-ancestor", safe_meta["source_sha"], sha)
-    changes = release.run("git", "diff", "--name-status", meta["source_sha"], sha, "--").strip()
+    release.run("git", "merge-base", "--is-ancestor", base_sha, safe_sha)
+    release.run("git", "merge-base", "--is-ancestor", safe_sha, sha)
+    changes = release.run("git", "diff", "--name-status", base_sha, sha, "--").strip()
     release.require(bool(changes), "Candidate has no changes from its notes baseline")
     counts = []
     for filename, language in release.CURRENT_CHANGELOGS:
@@ -255,10 +290,10 @@ def review_candidate(name: str, code: int, sha: str) -> str:
         counts.append(len(re.findall(r"^[-*] \S", public, re.M)))
     release.require(counts[0] == counts[1], "Bilingual public notes must cover the same number of core changes")
     return (f"### Release baselines and complete change review\n\n"
-            f"Published safety baseline: [{safe_meta['version_name']}]({safety['source']['html_url']}) · `{safe_meta['source_sha']}`\n\n"
-            f"Cumulative notes baseline: [{meta['version_name']}]({baseline['source']['html_url']}) · `{meta['source_sha']}`\n\n"
+            f"Published safety baseline: [{safe_meta['version_name']}]({safety['source']['html_url']}) · `{safe_sha}`\n\n"
+            f"Cumulative notes baseline: [{meta['version_name']}]({baseline['source']['html_url']}) · `{base_sha}`\n\n"
             f"Candidate: `{sha}`\n\n"
-            f"[Complete cumulative source comparison](https://github.com/{release.REPO}/compare/{meta['source_sha']}...{sha})\n\n"
-            "Both historical releases and Git tags remain intact. The bilingual Changelog is reviewed as source; "
+            f"[Complete cumulative source comparison](https://github.com/{release.REPO}/compare/{base_sha}...{sha})\n\n"
+            "Published assets remain unchanged; archived builds use their pinned source snapshots. The bilingual Changelog is reviewed as source; "
             "this inventory checks identity and coverage structure, not device acceptance or semantic equivalence.\n\n"
             f"```text\n{changes}\n```\n\n")

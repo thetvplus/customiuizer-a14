@@ -1304,4 +1304,12 @@
     <string name="a14_move_up">Переместить вверх</string>
     <string name="a14_move_down">Переместить вниз</string>
     <string name="a14_reorder_item">Изменить порядок</string>
+    <string name="wifi_refresh">Обновить сети</string>
+    <string name="wifi_scan_unavailable">Сканирование недоступно. Показаны сохранённые сети; повторите попытку позже.</string>
+    <string name="screenshot_directory_invalid">Выберите доступную папку в локальном хранилище</string>
+    <string name="various_disable_system_app_updater_title">Отключить и скрыть обновление системных приложений</string>
+    <string name="various_disable_system_app_updater_summ">Отключает обновление системных приложений для текущего пользователя и скрывает его пункт в настройках. При выключении опции восстанавливается исходное состояние. Для применения перезапустите настройки.</string>
+    <string name="various_disable_system_app_updater_confirm">Отключить пакет обновления системных приложений (%1$d)? Обновления ROM по OTA, установщик и службы безопасности не затрагиваются. Исходное состояние будет сохранено для восстановления.</string>
+    <string name="various_hide_enterprise_mode_title">Скрыть пункт корпоративного режима</string>
+    <string name="various_hide_enterprise_mode_summ">Удаляет корпоративный режим из дополнительных настроек. Корпоративное управление и рабочие профили остаются доступны. Для применения перезапустите настройки.</string>
 </resources>

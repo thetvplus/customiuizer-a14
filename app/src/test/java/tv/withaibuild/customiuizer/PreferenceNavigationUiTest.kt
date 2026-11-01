@@ -1189,6 +1189,53 @@ class PreferenceNavigationUiTest {
         assertEquals(0, activity.packageManager.getApplicationEnabledSetting("com.miui.daemon"))
     }
 
+    @Test
+    fun systemAppUpdaterUsesVerifiedMaintenanceAndRestoresItsExactOriginalState() {
+        installSystemPackage("com.xiaomi.discover")
+        installSystemPackage("com.android.updater")
+        activity.packageManager.setApplicationEnabledSetting("com.xiaomi.discover", 1, 0)
+        installMaintenanceBridge()
+        val toggle = requireNotNull(openExclusivePage().findPreference<CheckBoxPreferenceEx>(
+            "pref_key_various_disable_system_app_updater"))
+        toggle.callChangeListener(true)
+        confirmLatestDialog()
+        assertTrue(toggle.isChecked)
+        assertEquals(3, activity.packageManager.getApplicationEnabledSetting("com.xiaomi.discover"))
+        assertEquals(0, activity.packageManager.getApplicationEnabledSetting("com.android.updater"))
+        toggle.callChangeListener(false)
+        settleNavigation()
+        assertFalse(toggle.isChecked)
+        assertEquals(1, activity.packageManager.getApplicationEnabledSetting("com.xiaomi.discover"))
+        assertFalse(tv.withaibuild.customiuizer.utils.MaintenanceJournal.open(activity).contains(toggle.key))
+    }
+
+    @Test
+    fun rejectedSystemAppUpdaterChangeDoesNotReportSuccess() {
+        installSystemPackage("com.xiaomi.discover")
+        activity.packageManager.setApplicationEnabledSetting("com.xiaomi.discover", 1, 0)
+        installMaintenanceBridge().failure = SecurityException("bridge unavailable")
+        val toggle = requireNotNull(openExclusivePage().findPreference<CheckBoxPreferenceEx>(
+            "pref_key_various_disable_system_app_updater"))
+        toggle.callChangeListener(true)
+        confirmLatestDialog()
+        assertFalse(toggle.isChecked)
+        assertFalse(requireNotNull(AppHelper.appPrefs).getBoolean(toggle.key, false))
+        assertEquals(1, activity.packageManager.getApplicationEnabledSetting("com.xiaomi.discover"))
+    }
+
+    @Test
+    fun updaterHideOnlyRestoreDoesNotChangeAReinstalledPackageWithoutASnapshot() {
+        installSystemPackage("com.xiaomi.discover")
+        activity.packageManager.setApplicationEnabledSetting("com.xiaomi.discover", 1, 0)
+        requireNotNull(AppHelper.appPrefs).edit()
+            .putBoolean("pref_key_various_disable_system_app_updater", true).commit()
+        val toggle = requireNotNull(openExclusivePage().findPreference<CheckBoxPreferenceEx>(
+            "pref_key_various_disable_system_app_updater"))
+        toggle.callChangeListener(false)
+        assertFalse(toggle.isChecked)
+        assertEquals(1, activity.packageManager.getApplicationEnabledSetting("com.xiaomi.discover"))
+    }
+
     @Suppress("DEPRECATION")
     private fun installSystemPackage(packageId: String, service: String? = null, receiver: String? = null) {
         val app = ApplicationInfo().apply {
@@ -1263,6 +1310,17 @@ class PreferenceNavigationUiTest {
                         resultCode = if (handled) GlobalActions.ACTION_HANDLED else GlobalActions.ACTION_FAILED
                         return
                     }
+                    GlobalActions.SET_XIAOMI_PACKAGES_ACTION -> {
+                        val apply = GlobalActionSystemServerHooks::class.java.getDeclaredMethod(
+                            "applyXiaomiPackageStates", Context::class.java, Array<String>::class.java,
+                            IntArray::class.java,
+                        ).apply { isAccessible = true }
+                        val handled = apply.invoke(GlobalActionSystemServerHooks, context,
+                            intent.getStringArrayExtra(GlobalActions.EXTRA_PACKAGE_NAMES),
+                            intent.getIntArrayExtra(GlobalActions.EXTRA_COMPONENT_STATES)) == true
+                        resultCode = if (handled) GlobalActions.ACTION_HANDLED else GlobalActions.ACTION_FAILED
+                        return
+                    }
                 }
                 resultCode = GlobalActions.ACTION_HANDLED
             }
@@ -1271,6 +1329,7 @@ class PreferenceNavigationUiTest {
             addAction(GlobalActions.SET_UPDATER_SERVICES_ACTION)
             addAction(GlobalActions.CLEAR_UPDATER_STATE_ACTION)
             addAction(GlobalActions.SET_XIAOMI_COMPONENTS_ACTION)
+            addAction(GlobalActions.SET_XIAOMI_PACKAGES_ACTION)
         }, Context.RECEIVER_EXPORTED)
         maintenanceReceiver = receiver
         return transport

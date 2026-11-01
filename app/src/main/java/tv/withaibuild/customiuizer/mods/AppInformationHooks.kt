@@ -27,6 +27,7 @@ internal object AppInformationHooks {
 
     internal fun target(info: PackageInfo?, arguments: Bundle?): Target? {
         val app = info?.applicationInfo ?: return null
+        // Parcelled/incomplete PackageInfo can lack a name despite the SDK annotation.
         val pkg = info.packageName ?: return null
         val uid = arguments?.getInt("am_app_uid", -1) ?: return null
         if (uid < 0 || uid != app.uid || pkg != app.packageName || pkg != arguments.getString("am_app_pkgname")) return null

@@ -1,0 +1,91 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*"
+    ]
+  },
+  "id": "cpu_slice_analysis",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "开始时间戳(ns，可选)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "结束时间戳(ns，可选)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "应用包名（可选）",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "sched_slice"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/cpu_slice_analysis.skill.yaml",
+    "sha256": "f7ca8aba38689433e1c2b672a706b0a6a761e7ca0186bbc2280ed92591369b4d"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "init_cpu_topology",
+      "name": "初始化 CPU 拓扑",
+      "optional": true,
+      "skill": "cpu_topology_view",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "cpu_time_by_core",
+      "name": "CPU 时间片分布",
+      "query_id": "cpu_slice_analysis/cpu_time_by_core",
+      "result_dependencies": [],
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "2.0",
+  "workflow": "cpu-scheduling"
+}

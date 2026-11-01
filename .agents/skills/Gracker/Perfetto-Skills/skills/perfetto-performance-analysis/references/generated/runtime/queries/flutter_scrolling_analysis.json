@@ -1,0 +1,818 @@
+{
+  "queries": [
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "frame_timeline"
+        ]
+      },
+      "id": "flutter_scrolling_analysis/flutter_frame_overview",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/flutter_scrolling_analysis/flutter_frame_overview.sql",
+      "sha256": "761349e468bca9835062fb0720f5de215773bb90d77fcf8273991d5120e8c78f",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "DartWorker*",
+        "VSYNC-sf",
+        "[0-9]*.io",
+        "[0-9]*.raster",
+        "[0-9]*.ui"
+      ],
+      "skill_id": "flutter_scrolling_analysis",
+      "source": {
+        "path": "backend/skills/composite/flutter_scrolling_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "1f345fc088535bbce0d3edac849ed979ebf199178b142f2f24cc08d716a5a5f0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.frames.timeline",
+          "android.frames.jank_type"
+        ],
+        "drops": [],
+        "required_tables": [
+          "actual_frame_timeline_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "flutter_frame_overview",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/flutter_process_identity.sql",
+            "source_sha256": "64bea70d0bef4cf8162cf6b4bde15949d6dd59739ca25ff30bd8ed970396a95c"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts",
+          "vsync_period_ns"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "frame_timeline"
+        ]
+      },
+      "id": "flutter_scrolling_analysis/flutter_thread_analysis",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/flutter_scrolling_analysis/flutter_thread_analysis.sql",
+      "sha256": "4e89fbc61ad55eaac7619ba2488a438e574a93ccd598efa755292c1def0c248b",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "*1.io*",
+        "*1.raster*",
+        "*1.ui*",
+        "*DrawFrame*",
+        "*SurfaceTexture*",
+        "*queueBuffer*",
+        "*updateTexImage*",
+        "DartWorker*",
+        "RenderThread",
+        "[0-9]*.io",
+        "[0-9]*.raster",
+        "[0-9]*.ui"
+      ],
+      "skill_id": "flutter_scrolling_analysis",
+      "source": {
+        "path": "backend/skills/composite/flutter_scrolling_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "1f345fc088535bbce0d3edac849ed979ebf199178b142f2f24cc08d716a5a5f0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.frames.timeline",
+          "android.frames.jank_type"
+        ],
+        "drops": [],
+        "required_tables": [
+          "actual_frame_timeline_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "flutter_thread_analysis",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/flutter_process_identity.sql",
+            "source_sha256": "64bea70d0bef4cf8162cf6b4bde15949d6dd59739ca25ff30bd8ed970396a95c"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts",
+          "vsync_period_ns"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "frame_timeline"
+        ]
+      },
+      "id": "flutter_scrolling_analysis/flutter_consumer_jank",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/flutter_scrolling_analysis/flutter_consumer_jank.sql",
+      "sha256": "a165cfc0cc872ebe9befbbfd69445f3768f9cad01d36c229940d9899a4da9c63",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "DartWorker*",
+        "VSYNC-sf",
+        "[0-9]*.io",
+        "[0-9]*.raster",
+        "[0-9]*.ui"
+      ],
+      "skill_id": "flutter_scrolling_analysis",
+      "source": {
+        "path": "backend/skills/composite/flutter_scrolling_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "1f345fc088535bbce0d3edac849ed979ebf199178b142f2f24cc08d716a5a5f0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.frames.timeline",
+          "android.frames.jank_type"
+        ],
+        "drops": [],
+        "required_tables": [
+          "actual_frame_timeline_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "flutter_consumer_jank",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/flutter_process_identity.sql",
+            "source_sha256": "64bea70d0bef4cf8162cf6b4bde15949d6dd59739ca25ff30bd8ed970396a95c"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "frame_timeline"
+        ]
+      },
+      "id": "flutter_scrolling_analysis/flutter_jank_frames",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/flutter_scrolling_analysis/flutter_jank_frames.sql",
+      "sha256": "6ad5a864f06fa18070779d2375c5c52acef8c9de2d84052b773451de44fb6de9",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "DartWorker*",
+        "[0-9]*.io",
+        "[0-9]*.raster",
+        "[0-9]*.ui"
+      ],
+      "skill_id": "flutter_scrolling_analysis",
+      "source": {
+        "path": "backend/skills/composite/flutter_scrolling_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "1f345fc088535bbce0d3edac849ed979ebf199178b142f2f24cc08d716a5a5f0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.frames.timeline",
+          "android.frames.jank_type"
+        ],
+        "drops": [],
+        "required_tables": [
+          "actual_frame_timeline_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "flutter_jank_frames",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/flutter_process_identity.sql",
+            "source_sha256": "64bea70d0bef4cf8162cf6b4bde15949d6dd59739ca25ff30bd8ed970396a95c"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts",
+          "vsync_period_ns"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "frame_timeline"
+        ]
+      },
+      "id": "flutter_scrolling_analysis/flutter_ui_thread_long_slices",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/flutter_scrolling_analysis/flutter_ui_thread_long_slices.sql",
+      "sha256": "21e0f3f6c5a2cbae306a9646e07c08980e935123f596203204649d073ad476c8",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "%BeginFrame%",
+        "%Build%",
+        "%Layout%",
+        "%Paint%",
+        "%Semantics%",
+        "*1.ui*",
+        "DartWorker*",
+        "[0-9]*.io",
+        "[0-9]*.raster",
+        "[0-9]*.ui"
+      ],
+      "skill_id": "flutter_scrolling_analysis",
+      "source": {
+        "path": "backend/skills/composite/flutter_scrolling_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "1f345fc088535bbce0d3edac849ed979ebf199178b142f2f24cc08d716a5a5f0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.frames.timeline",
+          "android.frames.jank_type"
+        ],
+        "drops": [],
+        "required_tables": [
+          "actual_frame_timeline_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "flutter_ui_thread_long_slices",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/flutter_process_identity.sql",
+            "source_sha256": "64bea70d0bef4cf8162cf6b4bde15949d6dd59739ca25ff30bd8ed970396a95c"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts",
+          "vsync_period_ns"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    },
+    {
+      "compatibility": {
+        "android": {
+          "28": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "29": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "30": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "31": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "32": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "33": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "34": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "35": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "36": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          },
+          "37": {
+            "reason": "No exact API semantic fixture; runtime capability proof required",
+            "status": "capability_gated"
+          }
+        },
+        "exact_scope": {
+          "reason": "SQL has no process_scope declaration",
+          "status": "unsupported"
+        },
+        "probe_capabilities": [
+          "frame_timeline"
+        ]
+      },
+      "id": "flutter_scrolling_analysis/flutter_raster_thread_long_slices",
+      "identity": {
+        "aliases": [
+          "package",
+          "process_name",
+          "package_name",
+          "target_package",
+          "app_package",
+          "packageName",
+          "processName"
+        ],
+        "minConfidence": 50,
+        "policy": "verify_if_present",
+        "rewriteTo": "recommended_process_name_param",
+        "scope": "process"
+      },
+      "license": {
+        "origin": "smartperfetto",
+        "spdx": "AGPL-3.0-or-later"
+      },
+      "path": "sql/flutter_scrolling_analysis/flutter_raster_thread_long_slices.sql",
+      "sha256": "7b5fb2b915e417abc230860dadc4ac4f05f29577e2f7ebbb16132778aac7dae1",
+      "signal_patterns": [
+        "${package}",
+        "${package}:*",
+        "%Compositor%",
+        "%DrawToSurface%",
+        "%EntityPass%",
+        "%SkGpu%",
+        "*1.raster*",
+        "DartWorker*",
+        "[0-9]*.io",
+        "[0-9]*.raster",
+        "[0-9]*.ui"
+      ],
+      "skill_id": "flutter_scrolling_analysis",
+      "source": {
+        "path": "backend/skills/composite/flutter_scrolling_analysis.skill.yaml",
+        "repository": "https://github.com/Gracker/SmartPerfetto",
+        "sha256": "1f345fc088535bbce0d3edac849ed979ebf199178b142f2f24cc08d716a5a5f0"
+      },
+      "sql_dependencies": {
+        "creates": [],
+        "declared_modules": [
+          "android.frames.timeline",
+          "android.frames.jank_type"
+        ],
+        "drops": [],
+        "required_tables": [
+          "actual_frame_timeline_slice"
+        ],
+        "requires": [],
+        "setup_queries": []
+      },
+      "step_id": "flutter_raster_thread_long_slices",
+      "template": {
+        "fragments": [
+          {
+            "order": 0,
+            "source_path": "backend/skills/fragments/flutter_process_identity.sql",
+            "source_sha256": "64bea70d0bef4cf8162cf6b4bde15949d6dd59739ca25ff30bd8ed970396a95c"
+          }
+        ],
+        "name_parameters": [
+          "package"
+        ],
+        "parameters": [
+          "end_ts",
+          "package",
+          "start_ts",
+          "vsync_period_ns"
+        ],
+        "result_dependencies": [],
+        "result_references": [],
+        "runtime_bindings": []
+      },
+      "validation": {
+        "default_execution": "capability_gate_required",
+        "execution_verified": false,
+        "fixtures": [],
+        "runtime_compatible": null,
+        "semantic_verified": false,
+        "static_valid": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "skill_id": "flutter_scrolling_analysis"
+}

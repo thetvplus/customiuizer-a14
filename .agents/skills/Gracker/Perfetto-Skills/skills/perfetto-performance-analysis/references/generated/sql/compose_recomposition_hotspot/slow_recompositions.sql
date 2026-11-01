@@ -1,0 +1,24 @@
+-- GENERATED FILE - DO NOT EDIT.
+-- Source: backend/skills/atomic/compose_recomposition_hotspot.skill.yaml
+-- Source SHA-256: ba394bc6522c94269f377cc156491c1e086d8b56f93d0b139390c08f76100b3b
+
+SELECT
+  printf('%d', s.ts) as ts,
+  s.name as slice_name,
+  s.process_name,
+  s.thread_name,
+  ROUND(s.dur / 1e6, 2) as dur_ms,
+  printf('%d', s.dur) as dur_ns,
+  CASE
+    WHEN s.dur / 1e6 > 32 THEN 'critical'
+    WHEN s.dur / 1e6 > 16 THEN 'warning'
+    ELSE 'notice'
+  END as severity
+FROM thread_slice s
+WHERE (('${package}' = '' OR s.process_name = '${package}' OR s.process_name GLOB '${package}:*') OR '${package}' = '')
+  AND (${start_ts} IS NULL OR s.ts >= ${start_ts})
+  AND (${end_ts} IS NULL OR s.ts + s.dur <= ${end_ts})
+  AND (s.name GLOB 'Recompos*' OR s.name GLOB 'Compose:*' OR s.name GLOB '*CompositionLocal*')
+  AND s.dur > 8000000
+ORDER BY s.dur DESC
+LIMIT 50

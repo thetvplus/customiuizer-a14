@@ -4,6 +4,12 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.preference.Preference
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.widget.Toast
+import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.SubFragment
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.GetPathUtils
@@ -42,10 +48,20 @@ class System_ScreenshotConfig : SubFragment() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (resultCode == Activity.RESULT_OK && requestCode == 0) {
-            var dir = GetPathUtils.getDirectoryPathFromUri(activity ?: return, data?.data)
-            if (dir == null) dir = ""
-            findPreference<Preference>("pref_key_system_screenshot_mypath")?.summary = dir
-            AppHelper.appPrefs!!.edit().putString("pref_key_system_screenshot_mypath", dir).apply()
+            val app = requireContext().applicationContext
+            val uri = data?.data
+            lifecycleScope.launch {
+                val directory = withContext(Dispatchers.IO) {
+                    GetPathUtils.getDirectoryPathFromUri(app, uri)?.takeIf { GetPathUtils.imageLocation(app, it) != null }
+                }
+                if (!isAdded) return@launch
+                if (directory == null) {
+                    Toast.makeText(requireContext(), R.string.screenshot_directory_invalid, Toast.LENGTH_LONG).show()
+                } else {
+                    findPreference<Preference>("pref_key_system_screenshot_mypath")?.summary = directory
+                    AppHelper.appPrefs?.edit()?.putString("pref_key_system_screenshot_mypath", directory)?.apply()
+                }
+            }
         }
         super.onActivityResult(requestCode, resultCode, data)
     }

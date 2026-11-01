@@ -740,7 +740,7 @@ object LauncherGestureHooks {
 
         val inDirection = intArrayOf(0)
 
-        ModuleHelper.hookAllMethods(FsGestureHelper!!, "handleTouchEvent", object : MethodHook() {
+        ModuleHelper.hookAllMethods(FsGestureHelper, "handleTouchEvent", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
@@ -794,16 +794,11 @@ object LauncherGestureHooks {
         installHomescreenSwipeSnapshot()
         val ReadyStateEnum = XposedHelpers.findClassIfExists("com.miui.home.recents.GestureBackArrowView\$ReadyState", lpparam.classLoader)
         if (ReadyStateEnum == null) return
-        val states = ReadyStateEnum.enumConstants ?: return
-        var recentState: Any? = null
-        var backState: Any? = null
-        for (o in states) {
-            val enumStr = o.toString()
-            if ("READY_STATE_RECENT" == enumStr) recentState = o
-            else if ("READY_STATE_BACK" == enumStr) backState = o
-        }
-        val finalBackState = backState
-        val finalRecentState = recentState
+        val states = checkNotNull(ReadyStateEnum.enumConstants) { "ReadyState is not an enum" }
+        val finalBackState = states.singleOrNull { (it as Enum<*>).name == "READY_STATE_BACK" }
+            ?: error("ReadyState is missing READY_STATE_BACK")
+        val finalRecentState = states.singleOrNull { (it as Enum<*>).name == "READY_STATE_RECENT" }
+            ?: error("ReadyState is missing READY_STATE_RECENT")
         ModuleHelper.findAndHookMethod("com.miui.home.recents.GestureBackArrowView", lpparam.classLoader, "setReadyFinish", ReadyStateEnum, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null

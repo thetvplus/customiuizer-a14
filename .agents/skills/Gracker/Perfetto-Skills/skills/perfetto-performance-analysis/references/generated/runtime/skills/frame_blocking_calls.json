@@ -1,0 +1,78 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${process_name}",
+      "${process_name}:*",
+      "*Binder*",
+      "*RenderThread*",
+      "Binder:*",
+      "RenderThread"
+    ]
+  },
+  "id": "frame_blocking_calls",
+  "identity": {
+    "aliases": [
+      "process_name",
+      "package"
+    ],
+    "minConfidence": 50,
+    "policy": "required",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标进程名",
+      "name": "process_name",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳(ns，可选)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns，可选)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.frames.timeline",
+      "android.critical_blocking_calls"
+    ],
+    "required_tables": []
+  },
+  "query_id": "frame_blocking_calls/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/frame_blocking_calls.skill.yaml",
+    "sha256": "f50aec9da16055b40141764cc3668c04f17cc70cceddcf65c2cff8c9ae89a062"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "scrolling"
+}

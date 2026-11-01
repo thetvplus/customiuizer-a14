@@ -32,6 +32,12 @@ class AppInformationOwnershipTest {
     }
     private fun access() = AppInformationHooks.Access(Fragment::class.java, Activity::class.java)
 
+    @Test fun incompletePackageWithMatchingNullNamesIsRejected() {
+        val info = PackageInfo().apply { applicationInfo = ApplicationInfo().apply { uid = 10001 } }
+        val arguments = Bundle().apply { putInt("am_app_uid", 10001) }
+        assertNull(AppInformationHooks.target(info, arguments))
+    }
+
     @Test fun twoPagesCopyTheirOwnPackageAndRepeatedCreationDoesNotAppendDuplicates() {
         Robolectric.buildActivity(Activity::class.java).setup().use { host ->
             val a = Fragment(host.get(), "first.app", 10001); val b = Fragment(host.get(), "second.app", 10002)

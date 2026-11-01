@@ -55,6 +55,14 @@ class SourceContextTest(unittest.TestCase):
         self.assertTrue(row["verification"]["candidates"])
         self.assertTrue(all(e["evidence"] == "CANDIDATE_LEXICAL" for e in row["dependencies"]))
 
+    def test_secondary_key_uses_current_owner_source_and_storage_alias(self):
+        short = self.query("--key", "system_charginginfo_fontsize", "--fields", "feature,source")
+        storage = self.query("--key", "pref_key_system_charginginfo_fontsize", "--fields", "feature,source")
+        self.assertGreater(short["matched"], 0)
+        self.assertEqual(short["records"], storage["records"])
+        self.assertTrue(any("SystemLockScreenHooks.kt" in source["path"]
+                            for row in short["records"] for source in row["source"]))
+
     def test_reverse_hook_class_method_and_chinese_ui_choice(self):
         by_class = self.query("--contains", "LauncherMusicReturnHooks")
         self.assertEqual(by_class["matched"], 1)

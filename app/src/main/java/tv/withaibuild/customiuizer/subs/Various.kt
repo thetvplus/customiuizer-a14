@@ -46,6 +46,7 @@ class Various : SubFragment() {
     private companion object {
         const val UPDATER_PACKAGE = "com.android.updater"
         const val UPDATE_SERVICES_PREF = "pref_key_various_disable_update_services"
+        const val SYSTEM_APP_UPDATER_PREF = "pref_key_various_disable_system_app_updater"
         const val UPDATE_SERVICE_NAMES_SNAPSHOT = "internal_updater_service_names"
         const val UPDATE_SERVICE_STATES_SNAPSHOT = "internal_updater_service_states"
         const val CLEAR_UPDATE_PREF = "pref_key_various_clear_update_state"
@@ -159,6 +160,7 @@ class Various : SubFragment() {
         }
 
         setupUpdaterServiceControl()
+        setupSystemAppUpdaterControl()
         setupUpdaterStateCleaner()
         setupMiuiDaemonControl()
         setupComponentTrimProfile(
@@ -195,7 +197,34 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
+    private fun setupSystemAppUpdaterControl() {
+        val preference = findPreference<CheckBoxPreferenceEx>(SYSTEM_APP_UPDATER_PREF) ?: return
+        val info = try {
+            maintenanceContext.packageManager.getApplicationInfo("com.xiaomi.discover",
+                PackageManager.MATCH_DISABLED_COMPONENTS or PackageManager.MATCH_UNINSTALLED_PACKAGES)
+        } catch (_: PackageManager.NameNotFoundException) { null }
+        if (info != null && info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0 &&
+            info.flags and android.content.pm.ApplicationInfo.FLAG_INSTALLED == 0 &&
+            !maintenanceJournal.contains(SYSTEM_APP_UPDATER_PREF)) {
+            // Already removed for this user: hide only. Never reinstall it or invent an
+            // enabled-state snapshot. Turning off restores the native entry alone.
+            return
+        }
+        setupPackageTrimProfile(SYSTEM_APP_UPDATER_PREF, listOf("com.xiaomi.discover"),
+            R.string.various_disable_system_app_updater_confirm)
+        val maintenanceListener = preference.onPreferenceChangeListener
+        preference.setOnPreferenceChangeListener { pref, value ->
+            if (value == false && !maintenanceJournal.contains(SYSTEM_APP_UPDATER_PREF) &&
+                readPackageProfileSnapshot(SYSTEM_APP_UPDATER_PREF) == null) {
+                // The app may have been reinstalled since hide-only activation. There
+                // is no owned package state to restore in that case.
+                check(AppHelper.appPrefs?.edit()?.putBoolean(SYSTEM_APP_UPDATER_PREF, false)?.commit() == true)
+                preference.isChecked = false
+                false
+            } else maintenanceListener?.onPreferenceChange(pref, value) ?: false
+        }
+    }
+
     private fun setupPermissionControllerScopeRequests() {
         val scopeContext = context?.applicationContext ?: return
         val packageManager = scopeContext.packageManager
@@ -259,7 +288,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupMiuiDaemonControl() {
         val preference = findPreference<CheckBoxPreferenceEx>(MIUI_DAEMON_PREF) ?: return
         configureMaintenancePreference(preference)
@@ -329,7 +357,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupComponentTrimProfile(
         preferenceKey: String,
         knownComponents: List<ComponentName>,
@@ -415,7 +442,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setupPackageTrimProfile(
         preferenceKey: String,
         knownPackages: List<String>,
@@ -658,7 +684,6 @@ class Various : SubFragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun declaredUpdaterServices(): Pair<Array<String>, IntArray>? {
         val context = context ?: return null
         return try {

@@ -1,0 +1,626 @@
+[
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/android-benchmark-comparison",
+    "installed_path": "chrisbanes/skills/skills/android-benchmark-comparison",
+    "name": "android-benchmark-comparison"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/compose-animations",
+    "installed_path": "chrisbanes/skills/skills/compose-animations",
+    "name": "compose-animations"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/compose-component-design",
+    "installed_path": "chrisbanes/skills/skills/compose-component-design",
+    "name": "compose-component-design"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/compose-focus-navigation",
+    "installed_path": "chrisbanes/skills/skills/compose-focus-navigation",
+    "name": "compose-focus-navigation"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/compose-performance",
+    "installed_path": "chrisbanes/skills/skills/compose-performance",
+    "name": "compose-performance"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/compose-state-and-effects",
+    "installed_path": "chrisbanes/skills/skills/compose-state-and-effects",
+    "name": "compose-state-and-effects"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/compose-ui-testing-patterns",
+    "installed_path": "chrisbanes/skills/skills/compose-ui-testing-patterns",
+    "name": "compose-ui-testing-patterns"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/gradle-run",
+    "installed_path": "chrisbanes/skills/skills/gradle-run",
+    "name": "gradle-run"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/kotlin-api-design",
+    "installed_path": "chrisbanes/skills/skills/kotlin-api-design",
+    "name": "kotlin-api-design"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/kotlin-concurrency-and-flow",
+    "installed_path": "chrisbanes/skills/skills/kotlin-concurrency-and-flow",
+    "name": "kotlin-concurrency-and-flow"
+  },
+  {
+    "repository": "chrisbanes/skills",
+    "revision": "7e37ab2b7388bd58ee93c03d0c0737ee4005ea12",
+    "source_path": "skills/kotlin-control-flow",
+    "installed_path": "chrisbanes/skills/skills/kotlin-control-flow",
+    "name": "kotlin-control-flow"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "devtools/android-cli",
+    "installed_path": "android/skills/devtools/android-cli",
+    "name": "android-cli"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "jetpack-compose/adaptive",
+    "installed_path": "android/skills/jetpack-compose/adaptive",
+    "name": "adaptive"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "jetpack-compose/jetpack-compose-performance",
+    "installed_path": "android/skills/jetpack-compose/jetpack-compose-performance",
+    "name": "jetpack-compose-performance"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "navigation/navigation-event",
+    "installed_path": "android/skills/navigation/navigation-event",
+    "name": "navigation-event"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "performance/anr-audit-and-fix",
+    "installed_path": "android/skills/performance/anr-audit-and-fix",
+    "name": "anr-audit-and-fix"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "performance/r8-analyzer",
+    "installed_path": "android/skills/performance/r8-analyzer",
+    "name": "r8-analyzer"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "profilers/android-profiler",
+    "installed_path": "android/skills/profilers/android-profiler",
+    "name": "android-profiler"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "security/android-intent-security",
+    "installed_path": "android/skills/security/android-intent-security",
+    "name": "android-intent-security"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "security/android-permissions-security",
+    "installed_path": "android/skills/security/android-permissions-security",
+    "name": "android-permissions-security"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "system/edge-to-edge",
+    "installed_path": "android/skills/system/edge-to-edge",
+    "name": "edge-to-edge"
+  },
+  {
+    "repository": "android/skills",
+    "revision": "6daa53ef27fa2aa87827d183a85c06cedceca833",
+    "source_path": "testing/testing-setup",
+    "installed_path": "android/skills/testing/testing-setup",
+    "name": "testing-setup"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "audit/auditing-compose-performance",
+    "installed_path": "skydoves/compose-performance-skills/audit/auditing-compose-performance",
+    "name": "auditing-compose-performance"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "build/configuring-r8-for-compose",
+    "installed_path": "skydoves/compose-performance-skills/build/configuring-r8-for-compose",
+    "name": "configuring-r8-for-compose"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "lists/configuring-lazy-prefetch",
+    "installed_path": "skydoves/compose-performance-skills/lists/configuring-lazy-prefetch",
+    "name": "configuring-lazy-prefetch"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "lists/optimizing-lazy-layouts",
+    "installed_path": "skydoves/compose-performance-skills/lists/optimizing-lazy-layouts",
+    "name": "optimizing-lazy-layouts"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "measurement/generating-baseline-profiles",
+    "installed_path": "skydoves/compose-performance-skills/measurement/generating-baseline-profiles",
+    "name": "generating-baseline-profiles"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "measurement/testing-compose-in-release-mode",
+    "installed_path": "skydoves/compose-performance-skills/measurement/testing-compose-in-release-mode",
+    "name": "testing-compose-in-release-mode"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "measurement/tracing-recompositions-at-runtime",
+    "installed_path": "skydoves/compose-performance-skills/measurement/tracing-recompositions-at-runtime",
+    "name": "tracing-recompositions-at-runtime"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "modifiers/migrating-to-modifier-node",
+    "installed_path": "skydoves/compose-performance-skills/modifiers/migrating-to-modifier-node",
+    "name": "migrating-to-modifier-node"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "modifiers/ordering-modifier-chains",
+    "installed_path": "skydoves/compose-performance-skills/modifiers/ordering-modifier-chains",
+    "name": "ordering-modifier-chains"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "recomposition/avoiding-subcomposition-pitfalls",
+    "installed_path": "skydoves/compose-performance-skills/recomposition/avoiding-subcomposition-pitfalls",
+    "name": "avoiding-subcomposition-pitfalls"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "recomposition/choosing-derivedstateof",
+    "installed_path": "skydoves/compose-performance-skills/recomposition/choosing-derivedstateof",
+    "name": "choosing-derivedstateof"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "recomposition/debugging-recompositions",
+    "installed_path": "skydoves/compose-performance-skills/recomposition/debugging-recompositions",
+    "name": "debugging-recompositions"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "recomposition/deferring-state-reads",
+    "installed_path": "skydoves/compose-performance-skills/recomposition/deferring-state-reads",
+    "name": "deferring-state-reads"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "recomposition/using-strong-skipping-correctly",
+    "installed_path": "skydoves/compose-performance-skills/recomposition/using-strong-skipping-correctly",
+    "name": "using-strong-skipping-correctly"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "side-effects/collecting-flows-safely",
+    "installed_path": "skydoves/compose-performance-skills/side-effects/collecting-flows-safely",
+    "name": "collecting-flows-safely"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "side-effects/using-efficient-effects",
+    "installed_path": "skydoves/compose-performance-skills/side-effects/using-efficient-effects",
+    "name": "using-efficient-effects"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "stability/diagnosing-compose-stability",
+    "installed_path": "skydoves/compose-performance-skills/stability/diagnosing-compose-stability",
+    "name": "diagnosing-compose-stability"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "stability/enforcing-stability-in-ci",
+    "installed_path": "skydoves/compose-performance-skills/stability/enforcing-stability-in-ci",
+    "name": "enforcing-stability-in-ci"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "stability/stabilizing-compose-types",
+    "installed_path": "skydoves/compose-performance-skills/stability/stabilizing-compose-types",
+    "name": "stabilizing-compose-types"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "stability/understanding-stability-inference",
+    "installed_path": "skydoves/compose-performance-skills/stability/understanding-stability-inference",
+    "name": "understanding-stability-inference"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "stability/using-stability-analyzer-ide-plugin",
+    "installed_path": "skydoves/compose-performance-skills/stability/using-stability-analyzer-ide-plugin",
+    "name": "using-stability-analyzer-ide-plugin"
+  },
+  {
+    "repository": "skydoves/compose-performance-skills",
+    "revision": "1b32f81724c0d71fe9ef093ca44697f559fdab6e",
+    "source_path": "stability/visualizing-recomposition-cascades",
+    "installed_path": "skydoves/compose-performance-skills/stability/visualizing-recomposition-cascades",
+    "name": "visualizing-recomposition-cascades"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/compose-screens-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/compose-screens-footguns",
+    "name": "compose-screens-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/compose-visuals-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/compose-visuals-footguns",
+    "name": "compose-visuals-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/data-layer-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/data-layer-footguns",
+    "name": "data-layer-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/desktop-and-build-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/desktop-and-build-footguns",
+    "name": "desktop-and-build-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/engineering-method-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/engineering-method-footguns",
+    "name": "engineering-method-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/footgun-scan",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/footgun-scan",
+    "name": "footgun-scan"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/kmp-architecture-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/kmp-architecture-footguns",
+    "name": "kmp-architecture-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/media-playback-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/media-playback-footguns",
+    "name": "media-playback-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/remote-api-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/remote-api-footguns",
+    "name": "remote-api-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/state-and-background-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/state-and-background-footguns",
+    "name": "state-and-background-footguns"
+  },
+  {
+    "repository": "maxrave-dev/kotlin-footguns",
+    "revision": "2c391bc9c9f873580aa855d7a7b1c3a2ed9e68ae",
+    "source_path": "skills/webview-footguns",
+    "installed_path": "maxrave-dev/kotlin-footguns/skills/webview-footguns",
+    "name": "webview-footguns"
+  },
+  {
+    "repository": "mattpocock/skills",
+    "revision": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
+    "source_path": "skills/engineering/codebase-design",
+    "installed_path": "mattpocock/skills/skills/engineering/codebase-design",
+    "name": "codebase-design"
+  },
+  {
+    "repository": "mattpocock/skills",
+    "revision": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
+    "source_path": "skills/engineering/diagnosing-bugs",
+    "installed_path": "mattpocock/skills/skills/engineering/diagnosing-bugs",
+    "name": "diagnosing-bugs"
+  },
+  {
+    "repository": "mattpocock/skills",
+    "revision": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
+    "source_path": "skills/engineering/research",
+    "installed_path": "mattpocock/skills/skills/engineering/research",
+    "name": "research"
+  },
+  {
+    "repository": "mattpocock/skills",
+    "revision": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
+    "source_path": "skills/productivity/writing-for-agents",
+    "installed_path": "mattpocock/skills/skills/productivity/writing-for-agents",
+    "name": "writing-for-agents"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor",
+    "installed_path": "trailofbits/skills/plugins/agentic-actions-auditor/skills/agentic-actions-auditor",
+    "name": "agentic-actions-auditor"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/audit-context-building/skills/audit-context-building",
+    "installed_path": "trailofbits/skills/plugins/audit-context-building/skills/audit-context-building",
+    "name": "audit-context-building"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/differential-review/skills/differential-review",
+    "installed_path": "trailofbits/skills/plugins/differential-review/skills/differential-review",
+    "name": "differential-review"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/fp-check/skills/fp-check",
+    "installed_path": "trailofbits/skills/plugins/fp-check/skills/fp-check",
+    "name": "fp-check"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/gh-cli/skills/gh-cli",
+    "installed_path": "trailofbits/skills/plugins/gh-cli/skills/gh-cli",
+    "name": "gh-cli"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/property-based-testing/skills/property-based-testing",
+    "installed_path": "trailofbits/skills/plugins/property-based-testing/skills/property-based-testing",
+    "name": "property-based-testing"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/semgrep-rule-creator/skills/semgrep-rule-creator",
+    "installed_path": "trailofbits/skills/plugins/semgrep-rule-creator/skills/semgrep-rule-creator",
+    "name": "semgrep-rule-creator"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/semgrep-rule-variant-creator/skills/semgrep-rule-variant-creator",
+    "installed_path": "trailofbits/skills/plugins/semgrep-rule-variant-creator/skills/semgrep-rule-variant-creator",
+    "name": "semgrep-rule-variant-creator"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/sharp-edges/skills/sharp-edges",
+    "installed_path": "trailofbits/skills/plugins/sharp-edges/skills/sharp-edges",
+    "name": "sharp-edges"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/spec-to-code-compliance/skills/spec-to-code-compliance",
+    "installed_path": "trailofbits/skills/plugins/spec-to-code-compliance/skills/spec-to-code-compliance",
+    "name": "spec-to-code-compliance"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/static-analysis/skills/codeql",
+    "installed_path": "trailofbits/skills/plugins/static-analysis/skills/codeql",
+    "name": "codeql"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/static-analysis/skills/sarif-parsing",
+    "installed_path": "trailofbits/skills/plugins/static-analysis/skills/sarif-parsing",
+    "name": "sarif-parsing"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/static-analysis/skills/semgrep",
+    "installed_path": "trailofbits/skills/plugins/static-analysis/skills/semgrep",
+    "name": "semgrep"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor",
+    "installed_path": "trailofbits/skills/plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor",
+    "name": "supply-chain-risk-auditor"
+  },
+  {
+    "repository": "trailofbits/skills",
+    "revision": "2be6433b39e009cd2b6fd3be1895f6b1faa5af9a",
+    "source_path": "plugins/variant-analysis/skills/variant-analysis",
+    "installed_path": "trailofbits/skills/plugins/variant-analysis/skills/variant-analysis",
+    "name": "variant-analysis"
+  },
+  {
+    "repository": "Gracker/Perfetto-Skills",
+    "revision": "f4be45ced0508036269585de5b9e742bce74475e",
+    "source_path": "skills/perfetto-performance-analysis",
+    "installed_path": "Gracker/Perfetto-Skills/skills/perfetto-performance-analysis",
+    "name": "perfetto-performance-analysis"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/android-code-review",
+    "installed_path": "siifii/android-agent-engineering/skills/android-code-review",
+    "name": "android-code-review"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/android-security",
+    "installed_path": "siifii/android-agent-engineering/skills/android-security",
+    "name": "android-security"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/android-testing",
+    "installed_path": "siifii/android-agent-engineering/skills/android-testing",
+    "name": "siifii-android-testing"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/compose-development",
+    "installed_path": "siifii/android-agent-engineering/skills/compose-development",
+    "name": "compose-development"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/compose-theming",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/compose-theming",
+    "name": "compose-theming"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/design-system-accessibility",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/design-system-accessibility",
+    "name": "design-system-accessibility"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/design-system-boundary",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/design-system-boundary",
+    "name": "design-system-boundary"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/design-system-component-authoring",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/design-system-component-authoring",
+    "name": "design-system-component-authoring"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/design-system-consumer",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/design-system-consumer",
+    "name": "design-system-consumer"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/design-system-review",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/design-system-review",
+    "name": "design-system-review"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/design-tokens",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/design-tokens",
+    "name": "design-tokens"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/design-system/rtl-localization",
+    "installed_path": "siifii/android-agent-engineering/skills/design-system/rtl-localization",
+    "name": "rtl-localization"
+  },
+  {
+    "repository": "siifii/android-agent-engineering",
+    "revision": "1dc314ad0ebd3815926b0f24de89716033c78d69",
+    "source_path": "skills/gradle-build",
+    "installed_path": "siifii/android-agent-engineering/skills/gradle-build",
+    "name": "gradle-build"
+  },
+  {
+    "repository": "abhixv/google-m3-expressive-design-skill",
+    "revision": "797764c24eb5f96d601f022bb9d3c8167140af7f",
+    "source_path": "skills/m3-expressive",
+    "installed_path": "abhixv/google-m3-expressive-design-skill/skills/m3-expressive",
+    "variant": "text-only; visual media omitted by request",
+    "name": "m3-expressive"
+  }
+]

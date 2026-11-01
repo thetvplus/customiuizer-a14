@@ -80,7 +80,7 @@ class ShortcutSelector : SubFragmentWithSearch() {
                 var delivered = false
                 try {
                     val iconPath = withContext(Dispatchers.IO) {
-                        val resource = data.getParcelableExtra<Intent.ShortcutIconResource>(Intent.EXTRA_SHORTCUT_ICON_RESOURCE)
+                        val resource = data.getParcelableExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE, Intent.ShortcutIconResource::class.java)
                         var owned = false
                         val bitmap = try {
                             resource?.let {
@@ -92,7 +92,7 @@ class ShortcutSelector : SubFragmentWithSearch() {
                                     while (bounds.outWidth / inSampleSize > 256 || bounds.outHeight / inSampleSize > 256) inSampleSize *= 2
                                 }
                                 BitmapFactory.decodeResource(provider.resources, id, options)?.also { owned = true }
-                            } ?: data.getParcelableExtra<Bitmap>(Intent.EXTRA_SHORTCUT_ICON)
+                            } ?: data.getParcelableExtra(Intent.EXTRA_SHORTCUT_ICON, Bitmap::class.java)
                         } catch (failure: Exception) { null }
                         if (bitmap == null || key == null) return@withContext null
                         val scale = minOf(1f, 256f / maxOf(bitmap.width, bitmap.height))
@@ -116,7 +116,7 @@ class ShortcutSelector : SubFragmentWithSearch() {
                     if (!isAdded || !receiver.isAdded) return@launch
                     val result = Intent().putExtra("shortcut_contents", contents)
                         .putExtra("shortcut_name", data.getStringExtra(Intent.EXTRA_SHORTCUT_NAME))
-                        .putExtra("shortcut_intent", data.getParcelableExtra<Intent>(Intent.EXTRA_SHORTCUT_INTENT))
+                        .putExtra("shortcut_intent", data.getParcelableExtra(Intent.EXTRA_SHORTCUT_INTENT, Intent::class.java))
                     iconPath?.let { result.putExtra("shortcut_icon", it) }
                     receiver.onActivityResult(request, Activity.RESULT_OK, result)
                     delivered = true

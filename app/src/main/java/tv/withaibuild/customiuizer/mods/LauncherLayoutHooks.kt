@@ -162,9 +162,9 @@ object LauncherLayoutHooks {
                     val mCurrentScreenIndex = XposedHelpers.getIntField(thisObject, if (lpparam.packageName == "com.miui.home") "mCurrentScreenIndex" else "mCurrentScreen")
                     if (mCurrentScreenIndex != result as Int) { return XposedHelpers.throwOrReturn(throwable, result) }
                     val screenCount = XposedHelpers.callMethod(thisObject, "getScreenCount") as Int
-                    if (result as Int == 0)
+                    if (result == 0)
                     { result = screenCount; throwable = null }
-                    else if (result as Int == screenCount - 1)
+                    else if (result == screenCount - 1)
                     { result = 0; throwable = null }
 
                 } catch (t: Throwable) {

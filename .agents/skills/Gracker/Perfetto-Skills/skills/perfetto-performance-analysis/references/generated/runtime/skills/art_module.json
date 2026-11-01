@@ -1,0 +1,180 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "%JIT%",
+      "%compile%"
+    ]
+  },
+  "id": "art_module",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "Target package name",
+      "name": "package",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "description": "Analysis start timestamp",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "Analysis end timestamp",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/modules/framework/art_module.skill.yaml",
+    "sha256": "420e56403b3df38fd4f2d2f938b611c484252d3bc7f733ba7b956813c7a02fcf"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "gc_overview",
+      "name": "GC 概览",
+      "query_id": "art_module/gc_overview",
+      "result_dependencies": [],
+      "save_as": "gc_overview",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "gc_totals",
+      "name": "GC 合计",
+      "query_id": "art_module/gc_totals",
+      "result_dependencies": [],
+      "save_as": "gc_totals",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "gc_events",
+      "name": "GC 事件列表",
+      "query_id": "art_module/gc_events",
+      "result_dependencies": [],
+      "save_as": "gc_events",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "gc_during_main_thread",
+      "name": "主线程 GC",
+      "query_id": "art_module/gc_during_main_thread",
+      "result_dependencies": [],
+      "save_as": "main_thread_gc",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "jit_events",
+      "name": "JIT 编译事件",
+      "query_id": "art_module/jit_events",
+      "result_dependencies": [],
+      "save_as": "jit_events",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "art_diagnosis",
+      "inputs": [
+        "gc_overview",
+        "gc_totals",
+        "gc_events",
+        "main_thread_gc",
+        "jit_events"
+      ],
+      "name": "ART 诊断",
+      "rules": [
+        {
+          "condition": "(gc_totals.data[0]?.main_thread_collection_count || 0) + (gc_totals.data[0]?.main_thread_wait_count || 0) > 0",
+          "confidence": "high",
+          "diagnosis": "主线程执行 GC 回收 ${gc_totals.data[0].main_thread_collection_count} 次、等待 GC 完成 ${gc_totals.data[0].main_thread_wait_count} 次，共 ${gc_totals.data[0].main_thread_gc_ms}ms，可能导致卡顿",
+          "evidence_fields": [
+            "gc_totals.data[0].main_thread_collection_count",
+            "gc_totals.data[0].main_thread_wait_count",
+            "gc_totals.data[0].main_thread_gc_ms"
+          ],
+          "suggestions": [
+            "减少临时对象分配",
+            "使用对象池复用对象"
+          ]
+        },
+        {
+          "condition": "(gc_totals.data[0]?.collection_ms || 0) > 100",
+          "confidence": "high",
+          "diagnosis": "GC 回收总耗时过长 (${gc_totals.data[0].collection_ms}ms，${gc_totals.data[0].collection_count} 次)，内存压力大",
+          "evidence_fields": [
+            "gc_totals.data[0].collection_ms",
+            "gc_totals.data[0].collection_count"
+          ],
+          "suggestions": [
+            "检查是否有内存泄漏",
+            "优化数据结构减少内存使用"
+          ]
+        },
+        {
+          "condition": "gc_events.data[0]?.gc_kind === 'collection' && gc_events.data[0]?.dur_ms > 10",
+          "confidence": "medium",
+          "diagnosis": "存在长 GC 回收 (${gc_events.data[0]?.dur_ms}ms)",
+          "evidence_fields": [
+            "gc_events.data[0].dur_ms",
+            "gc_events.data[0].gc_type"
+          ],
+          "suggestions": [
+            "增加堆大小",
+            "避免在关键路径分配大对象"
+          ]
+        },
+        {
+          "condition": "jit_events.data[0]?.total_ms > 50",
+          "confidence": "low",
+          "diagnosis": "JIT 编译耗时较长 (${jit_events.data[0]?.total_ms}ms)",
+          "evidence_fields": [
+            "jit_events.data[0].total_ms"
+          ],
+          "suggestions": [
+            "考虑 AOT 编译优化",
+            "检查是否有热点方法未被编译"
+          ]
+        }
+      ],
+      "type": "diagnostic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "memory"
+}

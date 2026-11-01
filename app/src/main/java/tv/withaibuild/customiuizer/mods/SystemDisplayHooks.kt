@@ -180,7 +180,7 @@ object SystemDisplayHooks {
                         mColorFadeOffAnimator.duration = value.toLong()
                     }
                     ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
-                        override fun onChange(key: String?) = ModuleHelper.guarded {
+                        override fun onChange(key: String?): Unit = ModuleHelper.guarded {
                             if (key == "system_screenanim_duration") {
                                 if (mColorFadeOffAnimator == null) return
                                 refreshDisplaySnapshot()

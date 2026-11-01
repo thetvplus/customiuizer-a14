@@ -1,0 +1,1296 @@
+{
+  "schema_version": 1,
+  "strategies": [
+    {
+      "destination": "references/generated/strategies/anr.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/anr.strategy.md",
+      "source_sha256": "618a27841cbc74ff326f318963c297125d39fdcabd7911f3da34e603ea0031a9",
+      "status": "portable_transformed",
+      "workflow": "anr-blocking"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Case Library retrieval and runtime localization",
+      "source_path": "backend/strategies/case-background-case-line-en.template.md",
+      "source_sha256": "8102c8c6846016621099f0c39bf926755ab2892497b61eae5479324e60e07b49",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Case Library retrieval and runtime localization",
+      "source_path": "backend/strategies/case-background-case-line.template.md",
+      "source_sha256": "10d9b0e453fc41d2717476cba710801b54d3c1e90d1c136c7e634f0c39499f33",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Case Library retrieval and runtime localization",
+      "source_path": "backend/strategies/case-background-context-en.template.md",
+      "source_sha256": "906f92f74d086f1c9e9027d43d45c55ba34344914048a2aeb724746a4688ab50",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/case-background-context.template.md",
+      "source_sha256": "5af896039c0bca7a7f8cda4f4068fa9378a02c324c34d3f74ff9a4408ecbde43",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/comparison-conclusion.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/comparison-conclusion.template.md",
+      "source_sha256": "10ee3b7133bcb7f8903af771be4dd3ee41748b117e995cfa052889e5da1b2e7e",
+      "status": "portable_transformed",
+      "workflow": "trace-comparison"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto feedback sessions, provider pinning, review attestation, and draft-only GitHub handoff",
+      "source_path": "backend/strategies/external-issue-triage.template.md",
+      "source_sha256": "a9015372847ff1ab85eedf7373992be777251f7f9ffd01263ff89b834a51a116",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/game.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/game.strategy.md",
+      "source_sha256": "bf79124f20f00d3a74c57dbae05915cd39d554116803611cfdb2a2a1b6912c9f",
+      "status": "portable_transformed",
+      "workflow": "frameworks-games"
+    },
+    {
+      "destination": "references/generated/strategies/general.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/general.strategy.md",
+      "source_sha256": "20653ab254503073227200e5be19bde8f30e59b66e5a91f0b32a6bf88d6fa920",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/strategies/interaction.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/interaction.strategy.md",
+      "source_sha256": "e3c710af622d1e64c23c43d1c6e1a40788c8b81f0446a6c7a79ff26323b4a02a",
+      "status": "portable_transformed",
+      "workflow": "interaction"
+    },
+    {
+      "destination": "references/generated/strategies/investigation-profiles.yaml.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/investigation-profiles.yaml",
+      "source_sha256": "a6bd593f1a512a72d61da7c61cf80e9f7aee0b927d6aed49e940f11acbaf41b9",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/strategies/io.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/io.strategy.md",
+      "source_sha256": "7712d6ee0e1bfe670171efa799a4e5dfbe3ff1855107ed9cdd5da3582bb30cf7",
+      "status": "portable_transformed",
+      "workflow": "io-network-media"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-binder-ipc.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-binder-ipc.template.md",
+      "source_sha256": "1a258a801d3887493277d935ebd3481cf722a229aca59becdff071acd586d3dc",
+      "status": "portable_transformed",
+      "workflow": "anr-blocking"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-cpu-scheduler.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-cpu-scheduler.template.md",
+      "source_sha256": "bb7e66ee8fc345d946283c69a1fcafbd2857e90a318eeeb297d35c9bda4c2655",
+      "status": "portable_transformed",
+      "workflow": "cpu-scheduling"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-data-sources.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-data-sources.template.md",
+      "source_sha256": "51011b2777df9a4f602bc7866194ee41530d7fa1cc1223f31af616bae0cb400e",
+      "status": "portable_transformed",
+      "workflow": "memory"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-evidence-provenance.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-evidence-provenance.template.md",
+      "source_sha256": "78a4a2cad8088a577a3bcda968061077fc53847813730c439d43f6a753450c25",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": null,
+      "replacement": "Interprets the runtime trace_context.focusApp hypothesis, package source and default Skill scoping",
+      "source_path": "backend/strategies/knowledge-focus-app-context.template.md",
+      "source_sha256": "b8f0fa07fcf83efa441e40aaf5bb5f19701451d62663d397410fb28822ce66d9",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-gc-dynamics.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-gc-dynamics.template.md",
+      "source_sha256": "9f83ec01efe0397edad2c5a9db81ecac67b6d7813cf7ead1fecb1e07a0ca6f84",
+      "status": "portable_transformed",
+      "workflow": "memory"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-harmonyos-rendering.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-harmonyos-rendering.template.md",
+      "source_sha256": "a35f16d1313d5eb713799b17d3f0876ac83e0c3af1fa8f139d943e9845bd3b2e",
+      "status": "portable_transformed",
+      "workflow": "rendering-pipeline"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-harmonyos-tools.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-harmonyos-tools.template.md",
+      "source_sha256": "6e2d08433c55123070f50bc80d0c7f2df4d4a8df156d3c86157d09cc03a2cb2e",
+      "status": "portable_transformed",
+      "workflow": "frameworks-games"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-lock-contention.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-lock-contention.template.md",
+      "source_sha256": "6cfd4a03ea657ae1cc6ddee22f9dc76a3b4d4a2af314bc7454348ec22a46fc70",
+      "status": "portable_transformed",
+      "workflow": "anr-blocking"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-network-evidence.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-network-evidence.template.md",
+      "source_sha256": "8d756db95fe1725ed9b0bc37c0284264153bb208a1f24cb17caa2dc6d8878840",
+      "status": "portable_transformed",
+      "workflow": "io-network-media"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-observability-diagnostics.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-observability-diagnostics.template.md",
+      "source_sha256": "3493c6dce3f2cb2399f1c75f3147768c329cdf69f7821e3c410f0da73e0c972f",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/strategies/knowledge-perfetto-sql.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-perfetto-sql.template.md",
+      "source_sha256": "eacb05011e18376a86667f44c168cd1de900b897605a50fe9a4d91447ac799f9",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-pipeline-anchors.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-pipeline-anchors.template.md",
+      "source_sha256": "398f2233633ac13b9932f6bf6563ea6b68ae20615868ed42d4ba205dc0970c56",
+      "status": "portable_transformed",
+      "workflow": "rendering-pipeline"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-pipeline-fences.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-pipeline-fences.template.md",
+      "source_sha256": "671197e51887f96bd62dccd0b635960eabd12ec16ce38c7b264e20987532ceaf",
+      "status": "portable_transformed",
+      "workflow": "rendering-pipeline"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-rendering-pipeline.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-rendering-pipeline.template.md",
+      "source_sha256": "dba840a804afc4f6e53df4c8194211fd1e01ae041696e09a8c3c3c8b60afc4bb",
+      "status": "portable_transformed",
+      "workflow": "rendering-pipeline"
+    },
+    {
+      "destination": "references/generated/strategies/knowledge-selection-scope.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-selection-scope.template.md",
+      "source_sha256": "ed1f850a10c1636dd9d1f71fca34afbad4d82de0f1d16e0aa24bdeeeea6326d9",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-startup-root-causes.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-startup-root-causes.template.md",
+      "source_sha256": "ee6dfdb05712a63bb7eff37c1072e9139aaa59b598a23a7467ba0a9c0b969126",
+      "status": "portable_transformed",
+      "workflow": "startup"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-thermal-throttling.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-thermal-throttling.template.md",
+      "source_sha256": "a92a7fe823ea7914698e3c643b0dbbb0d1aedd019180f406ca67c3845ed72f1a",
+      "status": "portable_transformed",
+      "workflow": "power-thermal"
+    },
+    {
+      "destination": "references/generated/knowledge/knowledge-thread-state-blocked-reason.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-thread-state-blocked-reason.template.md",
+      "source_sha256": "0c0562e3618d430b7d4f1f9dbb32424cc56ebfe4a4e49e5d13c239c6a4f6667c",
+      "status": "portable_transformed",
+      "workflow": "anr-blocking"
+    },
+    {
+      "destination": "references/generated/strategies/knowledge-trace-comparison.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/knowledge-trace-comparison.template.md",
+      "source_sha256": "fcf732b8f1e0d71fcd611d247546129334ab569193c5aa2946a9cc9945412901",
+      "status": "portable_transformed",
+      "workflow": "trace-comparison"
+    },
+    {
+      "destination": "references/generated/strategies/linux.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/linux.strategy.md",
+      "source_sha256": "ea6c15dd398fff318bb92d96fc3e09d94f05a2cd424cf43386da0d7981a67a9b",
+      "status": "portable_transformed",
+      "workflow": "cpu-scheduling"
+    },
+    {
+      "destination": "references/generated/strategies/media.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/media.strategy.md",
+      "source_sha256": "741df6a282da351455c783692f856cca062c2f3bcc462cf2224def0d350930a4",
+      "status": "portable_transformed",
+      "workflow": "io-network-media"
+    },
+    {
+      "destination": "references/generated/strategies/memory.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/memory.strategy.md",
+      "source_sha256": "b6b2da177191645c3aacb9a44d7f8a78be21eefcec7b5a1e669f449eaa311176",
+      "status": "portable_transformed",
+      "workflow": "memory"
+    },
+    {
+      "destination": "references/generated/strategies/multi-trace-result-comparison.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/multi-trace-result-comparison.strategy.md",
+      "source_sha256": "46b894b8ba88cf71c7f8132180915ad67eeccec6409c5913400018f0bbbf49e6",
+      "status": "portable_transformed",
+      "workflow": "trace-comparison"
+    },
+    {
+      "destination": "references/generated/strategies/network.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/network.strategy.md",
+      "source_sha256": "94f092fedee04da64eb9cf396b60ccba41e1efd65a5b42e5308367ec2106e103",
+      "status": "portable_transformed",
+      "workflow": "io-network-media"
+    },
+    {
+      "destination": "references/generated/strategies/overview.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/overview.strategy.md",
+      "source_sha256": "2a04b013e838e4438e2ec257698bd5e00a9ca869ae3e4049ba44c45dc7265885",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/strategies/pipeline.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/pipeline.strategy.md",
+      "source_sha256": "c5e2812baf359102bc6a0224f385315a57fcd2193d69548601e08bb16058d4a8",
+      "status": "portable_transformed",
+      "workflow": "rendering-pipeline"
+    },
+    {
+      "destination": "references/generated/strategies/power.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/power.strategy.md",
+      "source_sha256": "f76bc14650a8408b1ef076b9f3f778a1c9ce3ed7c47d1f5032dedb2ea1e7c70d",
+      "status": "portable_transformed",
+      "workflow": "power-thermal"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto structured candidate recovery protocol",
+      "source_path": "backend/strategies/prompt-analysis-correction-en.template.md",
+      "source_sha256": "4dc0d1053f6a95ed6bb2b6cc74b38dbb533eb6dd1eec37e1a6f6562d77c8ae16",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto structured candidate recovery protocol",
+      "source_path": "backend/strategies/prompt-analysis-correction-zh.template.md",
+      "source_sha256": "3c1768b33d55e4742d48baba4d4e9abc8f4ecde961339ec9ebb687128b63d3f5",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto intent classification of the source depth a codebase-aware run needs",
+      "source_path": "backend/strategies/prompt-analysis-turn-intent-source-need.template.md",
+      "source_sha256": "b4d3ac3841acd9e49e3a9e19d76cb5a4395122cb92dc17d2f72f283cae222dff",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto native runtime intent classification protocol",
+      "source_path": "backend/strategies/prompt-analysis-turn-intent.template.md",
+      "source_sha256": "5140ce7e5a0ab8d90be5d7178a63007b758233cfde7d9280d2838b40c4fc125b",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto analyze_wait_chain MCP tool contract",
+      "source_path": "backend/strategies/prompt-analyze-wait-chain-tool-description.template.md",
+      "source_sha256": "7591c80ee9af4092b1b3d304076bb6972fe8c5a66bc952049494342eb299c9a7",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "Runtime artifact access policy and preview interpretation",
+      "source_path": "backend/strategies/prompt-artifact-result-guidance.template.md",
+      "source_sha256": "45e9f4c320c5e108fec4d17db234266c85413dcad02ef8dfd3bdc11c7e13f898",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto execute_sql refusal of artifact pseudo-tables (English)",
+      "source_path": "backend/strategies/prompt-artifact-sql-misuse-en.template.md",
+      "source_sha256": "ef9cf1101bf0b35cc88c634a20f2a8beab0357bf18b44e88e09e05aef2c76720",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto execute_sql hint toward fetch_artifact for artifact references",
+      "source_path": "backend/strategies/prompt-artifact-sql-misuse-hint.template.md",
+      "source_sha256": "30728791135493104b2869386bbd88970a6061c65c276d12e069766f7ff37432",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto execute_sql refusal of artifact pseudo-tables (Chinese)",
+      "source_path": "backend/strategies/prompt-artifact-sql-misuse-zh.template.md",
+      "source_sha256": "08be14b922a5ebe4f64346f111e546617f993b29731fd7c99b4b2092b01275cc",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto source lookup tools and codebase-aware report orchestration",
+      "source_path": "backend/strategies/prompt-code-reference-contract-en.template.md",
+      "source_sha256": "8f2940eec22adee76d93f2ed12f09dcf4638d4810093f465e37b394555e1f5bd",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto source lookup tools and codebase-aware report orchestration",
+      "source_path": "backend/strategies/prompt-code-reference-contract-zh.template.md",
+      "source_sha256": "c9711231303bda4459e53aeb449e01b2786e6cf24849716392a08a2917f512b9",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-complexity-classifier.template.md",
+      "source_sha256": "952f2dd4a2df522bc1e7d2d2eecf98a45a63a06617a0e8f5feddc1d2c023de9c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto conclusion declarations and captured evidence identifiers",
+      "source_path": "backend/strategies/prompt-conclusion-contract-schema.template.md",
+      "source_sha256": "2a9a4bbb18b803454b19939dcd4333ddc0544c3f0f488c0b37c87cd5305ef82d",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto conversation artifact retention and authorization",
+      "source_path": "backend/strategies/prompt-conversation-evidence-context.template.md",
+      "source_sha256": "5d83aab905e25a2933f08428b1fe964f7dc97c43c10031bc59abd01dcd5fb4a8",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session and conversation orchestration",
+      "source_path": "backend/strategies/prompt-conversation.template.md",
+      "source_sha256": "1e556e6fbd52a4612fc73a9dbec603f2bcc1f237b397cdedf1bdf29b08010bd1",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto critical-path route one-shot summary over its engine payload",
+      "source_path": "backend/strategies/prompt-critical-path-summary-en.template.md",
+      "source_sha256": "5e8f3d587de7f350d0f9d7e841be9f1d78a95a018a8c3d9f571c87af56c1933c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto critical-path route one-shot summary over its engine payload",
+      "source_path": "backend/strategies/prompt-critical-path-summary-zh.template.md",
+      "source_sha256": "8a261023e085aa74227f7b4bbe92fc88b2acd10c7cf615f6cc8cb881d38a550d",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto draft diagnostic result guidance over authorized product evidence captures",
+      "source_path": "backend/strategies/prompt-draft-declaration-diagnostics-feedback.template.md",
+      "source_sha256": "0001eb553bba00a3880a61a8664d3ba29418b0e54c87a7e92e1b1e6a7ae68b67",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto draft diagnostic MCP tool over authorized product evidence captures",
+      "source_path": "backend/strategies/prompt-draft-declaration-diagnostics-tool-description.template.md",
+      "source_sha256": "d19ba46756b1f8a4c234cb584a5ed569747b8d3e14aa166bccf2f72e7b06c544",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto comparison MCP tool description and runtime schema lookup",
+      "source_path": "backend/strategies/prompt-execute-sql-on-tool-description.template.md",
+      "source_sha256": "8eb61e9053e9ca3a7107e7b85fa35dc9a38f0ea1614b05f03f6ae36e36fb8dce",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto current-trace MCP tool description and runtime schema lookup",
+      "source_path": "backend/strategies/prompt-execute-sql-tool-description.template.md",
+      "source_sha256": "5da49d431db710fa4f4aa7be019643a7280f2dfca25574d8f5049e458bef9549",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto final-report runtime orchestration",
+      "source_path": "backend/strategies/prompt-final-report-correction-system-en.template.md",
+      "source_sha256": "dbfe65ad846806d8bc42917745d0fcd635f962e74d799566de1d9d2edffc3bd2",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto final-report runtime orchestration",
+      "source_path": "backend/strategies/prompt-final-report-correction-system-zh.template.md",
+      "source_sha256": "e88757c9573ae09061b945311e854caea22f70df22d1180280a9f1b569d6b446",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-final-report-missing-sections-en.template.md",
+      "source_sha256": "b286d25f44e70777112f45cb8b4699af40922cac94a85391d79b73d137cd912e",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-final-report-missing-sections-zh.template.md",
+      "source_sha256": "492fadf8b3d6641697355a061bc62925711ac2329fa1649f6ee36fa1f43220aa",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto final-report runtime orchestration",
+      "source_path": "backend/strategies/prompt-final-report-quality-issue-en.template.md",
+      "source_sha256": "a6e2e9fc88ae0ca5aa721c8019911814de6735463dd6ba8804b5b6eb1bd4c59c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto final-report runtime orchestration",
+      "source_path": "backend/strategies/prompt-final-report-quality-issue-zh.template.md",
+      "source_sha256": "e3e7df54410c37e2da18dfe77f479326618f70661844be3315f339836529290b",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto finalization semantic assessment protocol",
+      "source_path": "backend/strategies/prompt-final-semantic-assessment.template.md",
+      "source_sha256": "3a7ff445b473b64ebbc7f898ba90a0e0e340dc58ff1f7e599e665d5733bbf4de",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto on-demand codebase file-find MCP tool contract",
+      "source_path": "backend/strategies/prompt-find-codebase-files-tool-description.template.md",
+      "source_sha256": "42cbc60985aa9ced7a463d1c97e18f94f4a90d8cd885da9a16fc62130741f229",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto flamegraph route one-shot summary over its analyzer payload",
+      "source_path": "backend/strategies/prompt-flamegraph-summary.template.md",
+      "source_sha256": "00a71959fc26f89130c617639e77a856d86b3427c1d1d0c71f0e8ee0239b1543",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto typed-turn finding presentation and runtime strategy discovery",
+      "source_path": "backend/strategies/prompt-investigation-findings.template.md",
+      "source_sha256": "efdf2f1db653908c29321501f16f2d5f3fa6fa3a34ad118a25fb669814dbfa7c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto MCP artifact projection and exact process handoff guidance",
+      "source_path": "backend/strategies/prompt-invoke-skill-tool-description.template.md",
+      "source_sha256": "c05a2a3cf67ecc8353ed30ad1fa4e871eea10ce47ab6e052a9ef00271638ca53",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto selected document knowledge bases, their tools and citation contract",
+      "source_path": "backend/strategies/prompt-knowledge-use-en.template.md",
+      "source_sha256": "bf1c8ad3f947d155442b87f353e4d9e2aa5402391851a691d8cd8cbecd9f6a65",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto selected document knowledge bases, their tools and citation contract",
+      "source_path": "backend/strategies/prompt-knowledge-use-zh.template.md",
+      "source_sha256": "13363c9edceacf1bad4b9836743d42e93cdedf4746cea0f46dd57862fc80a1d3",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-language-en.template.md",
+      "source_sha256": "82fe961b8104c927675bad447569926438407b1f4d5c8043583cf63799620df0",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-language-zh.template.md",
+      "source_sha256": "72043611e8cbe1200f72fc4b01cd9f931c8b6adfc3d56c68aaf4c7a25c830435",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto trace-anchor source locate MCP tool contract",
+      "source_path": "backend/strategies/prompt-locate-trace-anchor-tool-description.template.md",
+      "source_sha256": "ad604dca6146697d0def35cfc8857f8021a00e5830f08d45c5ac028ecd785aaf",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto native conclusion declaration delivery orchestration",
+      "source_path": "backend/strategies/prompt-native-declaration-completion-en.template.md",
+      "source_sha256": "7904c1e98d9c7db9f843215c97bcb25ca66219db2d4507d5af7522659c8d9473",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto native conclusion declaration delivery orchestration",
+      "source_path": "backend/strategies/prompt-native-declaration-completion-zh.template.md",
+      "source_sha256": "dbce8c3084321746f36ae1eae933c34ab7ea5a65556e728bc1f0fd0cdbe4cd3c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto native output-limit delivery recovery orchestration",
+      "source_path": "backend/strategies/prompt-native-output-completion-en.template.md",
+      "source_sha256": "e87726c70d89d635524ce5bed3e580af3f871ef40d1cadd8f3e36269484c00d0",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto native output-limit delivery recovery orchestration",
+      "source_path": "backend/strategies/prompt-native-output-completion-zh.template.md",
+      "source_sha256": "3a8b510836f04e14df59767bedc22335d2de229363a7a49a82c9d3c2211c9798",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-openai-final-report-continuation-en.template.md",
+      "source_sha256": "75460c73dedb1999ee9625e480d177cb99caf582c859c35ac48a07eb30f5caf1",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-openai-final-report-continuation-zh.template.md",
+      "source_sha256": "1ea0c868d1fa19a2fa968687363df47b0b1f83463aee09e3dc7ef6f3bd95ed91",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto provider-consented codebase patch proposal tool contract",
+      "source_path": "backend/strategies/prompt-propose-patch-tool-description.template.md",
+      "source_sha256": "ef2b64f64982115fb5db8f5a66ba1378e63b2a35555bd10d626085c2a3083192",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto on-demand codebase read MCP tool contract",
+      "source_path": "backend/strategies/prompt-read-codebase-file-tool-description.template.md",
+      "source_sha256": "8abee688d8be4fc82c72f7450ee92e14c18a6915ef535a538238a20c77f145e9",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto document knowledge base section read MCP tool contract",
+      "source_path": "backend/strategies/prompt-read-knowledge-section-tool-description.template.md",
+      "source_sha256": "454f8be22044a4149fb831a2950414d0da41c7be66c8d88fc13a36d3f6f8fa82",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto MCP data-tool result reasoning reminder (English)",
+      "source_path": "backend/strategies/prompt-reasoning-nudge-en.template.md",
+      "source_sha256": "d3e24790053f83035647aab520dc64d27b780fa4d4ebf785c7af4844f1945ad1",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto MCP data-tool result reasoning reminder (Chinese)",
+      "source_path": "backend/strategies/prompt-reasoning-nudge-zh.template.md",
+      "source_sha256": "1facdcf077062909f4f30c4461cc1234a873308ef044d933385b66fede4d4dd1",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/prompt-recent-sql-results.template.md",
+      "source_sha256": "c970de6d485dc0a0bcdfa7a3abc726c8b2908e016014a41299f8d0081d2a9dc7",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto native evidence relation candidate recovery protocol",
+      "source_path": "backend/strategies/prompt-relation-proposal-recovery-en.template.md",
+      "source_sha256": "65ff6c2a512b5a5700ba89ec88b06b5e262aa504439d14e11c96eb54515758fc",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto native evidence relation candidate recovery protocol",
+      "source_path": "backend/strategies/prompt-relation-proposal-recovery-zh.template.md",
+      "source_sha256": "a7c9ec0678f5e34c408af05b2748f9cf8a30f08f2a1525f3a38309e27980235b",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session and conversation orchestration",
+      "source_path": "backend/strategies/prompt-runtime-conversation-context-en.template.md",
+      "source_sha256": "54e0f4c764dcc64d05544d6b84a634e139d7098a5c37e9fda6037c309c3c6715",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session and conversation orchestration",
+      "source_path": "backend/strategies/prompt-runtime-conversation-context-zh.template.md",
+      "source_sha256": "905879bcd881514acda705e61292cda0997c1f1eed7f68927937d3ad5d053876",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session and conversation orchestration",
+      "source_path": "backend/strategies/prompt-runtime-conversation-turn-en.template.md",
+      "source_sha256": "5db873c09bb3478e701ed294cf268b716f0a569586473d2a1224f9ffe103e789",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session and conversation orchestration",
+      "source_path": "backend/strategies/prompt-runtime-conversation-turn-zh.template.md",
+      "source_sha256": "20fb9d2bd0856152a7217d80240f6ab24853b866f35c3543940794dbaf1f821a",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime empty-body delivery continuation",
+      "source_path": "backend/strategies/prompt-runtime-empty-body-continuation-en.template.md",
+      "source_sha256": "b633b3ec16e763ac62e920c46cc63465553883d631d3b6a22751e9cd71c4544a",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime empty-body delivery continuation",
+      "source_path": "backend/strategies/prompt-runtime-empty-body-continuation-zh.template.md",
+      "source_sha256": "070129a52c32cd0e96ed489aa4f93259f230eed62ab37554f98e7f1a8842dfd3",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session and memory orchestration",
+      "source_path": "backend/strategies/prompt-runtime-fast-memory-en.template.md",
+      "source_sha256": "76deb4351039be4c7e486a576b393cacd528cecc6999bb00cc02f06ee369a4b6",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session and memory orchestration",
+      "source_path": "backend/strategies/prompt-runtime-fast-memory-zh.template.md",
+      "source_sha256": "ab28943e9977e62a72e47c9db8d5aed2c85570104ce879e20f9f858f1689ce06",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session history projection",
+      "source_path": "backend/strategies/prompt-runtime-history-en.template.md",
+      "source_sha256": "1e1628e10b2a386ec77e1f9bb3c5abf1061572cc4bd71cf0cfa0f3cd09c2f108",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session tool-history projection",
+      "source_path": "backend/strategies/prompt-runtime-history-tool-en.template.md",
+      "source_sha256": "c48609045894a078d16b8f0dbbb45050de644d0ee2cbaf3aefc7b86404631c9e",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session tool-history projection",
+      "source_path": "backend/strategies/prompt-runtime-history-tool-zh.template.md",
+      "source_sha256": "2e04e5e8e37a957902ac7dabbd48b94106944ee1ced4fb722d924312142b8d16",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime session history projection",
+      "source_path": "backend/strategies/prompt-runtime-history-zh.template.md",
+      "source_sha256": "e3a13243133b8abafdbd02c27796178d975457f011aae7aa0ae667e50c6011ed",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime memory and SQL retry orchestration",
+      "source_path": "backend/strategies/prompt-runtime-sql-pitfalls-en.template.md",
+      "source_sha256": "09b28a6cd009be0e1ba03882eceb3382f38b834ccc892c42c209c89d6acbd253",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime memory and SQL retry orchestration",
+      "source_path": "backend/strategies/prompt-runtime-sql-pitfalls-zh.template.md",
+      "source_sha256": "d3400b25209918bfe582ebc0d1da800eddc905b669b499a50419b337735c267c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto frontend pre-query and evidence-reference orchestration",
+      "source_path": "backend/strategies/prompt-runtime-trace-context-en.template.md",
+      "source_sha256": "80399d034d90ce05daf42b62148440e702b1d479d32f2f5de89a2c1d26cbb023",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto frontend pre-query and evidence-reference orchestration",
+      "source_path": "backend/strategies/prompt-runtime-trace-context-zh.template.md",
+      "source_sha256": "d1480c4e134e5017f86055f92ccc766688c92459b8348a560dc01fc9ba32d3f6",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime turn completion and session continuity orchestration",
+      "source_path": "backend/strategies/prompt-runtime-turn-closeout-en.template.md",
+      "source_sha256": "d16ec886d8c2d59be43d3757ba0f6a6bfe611746f5ce1e5342e94941ccc450de",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime turn completion and session continuity orchestration",
+      "source_path": "backend/strategies/prompt-runtime-turn-closeout-zh.template.md",
+      "source_sha256": "6cffb7770bf6ef0d03b182799f1c19fe62924d591608fd607ed790331cd35e63",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto product-owned scene entry evidence prompt segment",
+      "source_path": "backend/strategies/prompt-scene-evidence.template.md",
+      "source_sha256": "ae4ac53ce34799facf5e4f17f326962ae86218131bd18d96ebe1232b5e5f8be2",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto scene button task input",
+      "source_path": "backend/strategies/prompt-scene-reconstruction-query-en.template.md",
+      "source_sha256": "947210ee390e27088ed0c80470366b21c12ac45c3f7ed5dc02bcd405ca6c2d1c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto scene button task input",
+      "source_path": "backend/strategies/prompt-scene-reconstruction-query-zh.template.md",
+      "source_sha256": "c4ecdceea0f4207a5210dc13fc0ef404ac3b7e73ebc48b5b69bd2eb2b28c69c5",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/prompt-scene-stage3-summary.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/prompt-scene-stage3-summary.template.md",
+      "source_sha256": "9df5009730c6fe906516e24d05da602e533e81e10713b7d93e28c6daf5016b7d",
+      "status": "portable_transformed",
+      "workflow": "scene-reconstruction"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto on-demand codebase search MCP tool contract",
+      "source_path": "backend/strategies/prompt-search-codebase-tool-description.template.md",
+      "source_sha256": "31089c3e783f3b401a3c619959b0a9a82ca57f3fa742479f2795d2bc272bffa6",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto document knowledge base search MCP tool contract",
+      "source_path": "backend/strategies/prompt-search-knowledge-tool-description.template.md",
+      "source_sha256": "4871aeedf4faf06bb2957ffe8e23ecb5f5b678ef5034e5315c6ebc0c23714384",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto locate-depth source recipe for its codebase-aware tools",
+      "source_path": "backend/strategies/prompt-source-recipe-locate.template.md",
+      "source_sha256": "ceb26a615c2f8ebb0220aac5c4360cf58db290e406497cce796126ac52090d5e",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto mechanism-depth source recipe for its codebase-aware tools",
+      "source_path": "backend/strategies/prompt-source-recipe-mechanism.template.md",
+      "source_sha256": "31ede932ff11d8e943efd24a24a11db78581e6d5f547fcfdee1efcdcd09cfc4a",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto selected-codebase capabilities, provider consent, and codebase-aware orchestration",
+      "source_path": "backend/strategies/prompt-source-use-en.template.md",
+      "source_sha256": "11855fb0e649e63cc28513fb0fe38695a62753a5473b4afd2a4ab960c6992e3f",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto selected-codebase capabilities, provider consent, and codebase-aware orchestration",
+      "source_path": "backend/strategies/prompt-source-use-zh.template.md",
+      "source_sha256": "d43c73ee9ae43febc01d97866aaf07bd0a9ebbfd7681172880ee6738e208fefd",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Skill and MCP evidence acquisition contract",
+      "source_path": "backend/strategies/prompt-sql-evidence-guidance.template.md",
+      "source_sha256": "9ebc57148d66c6151478496a470cca6e6e34fc08b4dbac8bc9811198965c94ef",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto MCP strategy catalog and detail tool description",
+      "source_path": "backend/strategies/prompt-strategy-detail-tool-description.template.md",
+      "source_sha256": "7523411b21fe4b7c56b72fb9e90904df8884b9aa566629e8de4dab2b8d78fc6b",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto submit_plan MCP tool description",
+      "source_path": "backend/strategies/prompt-submit-plan-tool-description.template.md",
+      "source_sha256": "43623a3f52f989fb725ce68a6059987630e7794ee69f6ee1f5d1d4a0a09acf70",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto resolved turn policy and source authorization",
+      "source_path": "backend/strategies/prompt-turn-policy.template.md",
+      "source_sha256": "dceff9353f240eeaa772cf144306ac4c995403cbca26422fd5c08cd2048d729b",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-contract-section-en.template.md",
+      "source_sha256": "f9eb9b906f029961c03436df82f5583cb2b352e83bd831883ab1949e125809f3",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-contract-section-zh.template.md",
+      "source_sha256": "f9eb9b906f029961c03436df82f5583cb2b352e83bd831883ab1949e125809f3",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-hypothesis-empty-en.template.md",
+      "source_sha256": "09f635e454063fbc23f0095148dd3d692b01a336fe028bf3fb762546aa96beaa",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-hypothesis-empty-zh.template.md",
+      "source_sha256": "8a994c953f7ec0f52058c54546209f66331009c7b52b02e672cdc9c75f743c72",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-missing-contract-en.template.md",
+      "source_sha256": "76734bc964e4f6092266559abbca272b1be12598a28d9542ef2f6b7c3757f7f5",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-missing-contract-zh.template.md",
+      "source_sha256": "78082cf926878872314d695d3f0cef2b4da4545a305bd71eb6032a7c33b2fdd6",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-phase-empty-en.template.md",
+      "source_sha256": "69f8702893740ba7f7d71579b9245e25aa222e57adcc91ffc683413481734ba6",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-phase-empty-zh.template.md",
+      "source_sha256": "e6443e7e2ff7249388ef07108e8124c25dfdc028375c4aee2adcdd302d1e5aad",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-section-evidence-empty-en.template.md",
+      "source_sha256": "278a868f9a487e15907e3fda7105c1cffcd4417b0c27be56eba72144e1cf2c2f",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-section-evidence-empty-zh.template.md",
+      "source_sha256": "60d474a0f12069073286e5d1d32983ccfae7e4f6800d21c51bb44cdb97f7fd9b",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-truncation-en.template.md",
+      "source_sha256": "c708b7b40c83e834b0cfa53e1e66436edc11de4672a76a614ae26a6a9f0a2761",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto report rendering and runtime recovery surface",
+      "source_path": "backend/strategies/report-runtime-recovery-truncation-zh.template.md",
+      "source_sha256": "f65f87a0b99b4a03a8583715ed88027450a85d2af3456fd513ee9d4457b9bb11",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Smart Analysis report rendering surface",
+      "source_path": "backend/strategies/report-smart-analysis-en.template.md",
+      "source_sha256": "f77909c5fbb7a505b7b637f9c22e2fe838cbb139e758644965281e0653381738",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Smart Analysis report rendering surface",
+      "source_path": "backend/strategies/report-smart-analysis-zh.template.md",
+      "source_sha256": "31b2a50e6ff089005e6007f9abd44122340429ff4404f27615a1a846231db6d1",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Smart Analysis report rendering surface",
+      "source_path": "backend/strategies/report-smart-scene-inventory-en.template.md",
+      "source_sha256": "a98c684b4f33e762be3d3aaa38d0d4947038df8b81338046355471218dad5bf6",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto Smart Analysis report rendering surface",
+      "source_path": "backend/strategies/report-smart-scene-inventory-zh.template.md",
+      "source_sha256": "f8155c0c1bf1e57b928b3ddc4717348af07e33571d2c9e65e83c76f9d7cc7913",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/retrieved-context-safety.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/retrieved-context-safety.template.md",
+      "source_sha256": "35144cb96a99de668dacb418f21ae87fdadf769542fbee8a4e1dc9f94b983d67",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/strategies/retrieved-context-tool-safety.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/retrieved-context-tool-safety.template.md",
+      "source_sha256": "1ff134ae0f3b6366e91d48ff6cf835482fa864c4dc2eeb20980934d29c4d3a90",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto runtime, session, case, language, or codebase orchestration",
+      "source_path": "backend/strategies/runtime-correctness.strategy.md",
+      "source_sha256": "58aa31b5a270948e88f0959f6a274e418f3608891fccdf930ce2fe6e1d53bde3",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto issued run required-source scan policy and producer bindings",
+      "source_path": "backend/strategies/scene-coverage-policy.yaml",
+      "source_sha256": "9e050670f9cd1cc827da16b1425827e999cdaa2a7e46d3e65e1b099622ac6ba4",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto issued scene-run acquisition pacing notice",
+      "source_path": "backend/strategies/scene-pacing-deadline-near.template.md",
+      "source_sha256": "d5cf0a8548541001b5de43e038b6e010ce968121672dde347b1e052575600367",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto issued scene-run acquisition pacing notice",
+      "source_path": "backend/strategies/scene-pacing-first-revision-due.template.md",
+      "source_sha256": "1f6651b16870fe56d6023792437c9dfae193ace75827f1114775c080c01cbfca",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto issued scene-run acquisition pacing notice",
+      "source_path": "backend/strategies/scene-pacing-no-revision.template.md",
+      "source_sha256": "bc33788ddbeae789fb7fd8edad080cc509d7ece9d02627331456b4df8f052f67",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto issued scene-run acquisition pacing notice",
+      "source_path": "backend/strategies/scene-pacing-window-closed.template.md",
+      "source_sha256": "ab66010bc4a22fcae7ab7dd268d460b88b812841c83a459a5908c11e6ee40386",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/scene-presentation.registry.yaml.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/scene-presentation.registry.yaml",
+      "source_sha256": "fb3a53c4d0824edec666f7555b5b25fd2228be50a439713d2719f9f9d467e28a",
+      "status": "portable_transformed",
+      "workflow": "scene-reconstruction"
+    },
+    {
+      "destination": "references/generated/strategies/scene-reconstruction-verifier.template.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/scene-reconstruction-verifier.template.md",
+      "source_sha256": "71e6699b5cefbff15953bfafff875392a0e3a6b645b9af6b99448d7bc870dc8b",
+      "status": "portable_transformed",
+      "workflow": "scene-reconstruction"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto issued scene-run proposal and verification lifecycle",
+      "source_path": "backend/strategies/scene-reconstruction.strategy.md",
+      "source_sha256": "1d200378d091899cdcd4229384adcff41c4c2e31d2f5e47cb1e4c4bfe47a7bf5",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto structured scene proposal protocol",
+      "source_path": "backend/strategies/scene-tool-guidance.template.md",
+      "source_sha256": "f0acdc0602368fd85d60233d7f4b590b7c997c33a159103111bad64ec2b742a6",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/scroll-response.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/scroll-response.strategy.md",
+      "source_sha256": "4cb9824fa8afc1d9bc28026e5c2f39af9dac33f6cf231933a605f23ea0b04661",
+      "status": "portable_transformed",
+      "workflow": "scrolling"
+    },
+    {
+      "destination": "references/generated/strategies/scrolling.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/scrolling.strategy.md",
+      "source_sha256": "b272680f9210641af343747bf05167b7abe75f268ee6028aed95eaee5e91136a",
+      "status": "portable_transformed",
+      "workflow": "scrolling"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto self-evolution proposal generation, persistence, and gated overlay lifecycle",
+      "source_path": "backend/strategies/selfevolve-proposal.template.md",
+      "source_sha256": "6f0cb08d742ff10d2dc707e8d2304f21e6bcaa20989dd2effcd0f0ce57ea6f1e",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/smart.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/smart.strategy.md",
+      "source_sha256": "87cc70e82a8ee72d5e2cc98e4848163852c602b3a1774e6ce845b091907644c4",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto trace-anchor normalization and ranking for its source locate tool",
+      "source_path": "backend/strategies/source-anchor-normalization.yaml",
+      "source_sha256": "0eefb515ad773babef2e74413172a808260653a83168b43213b699a26e9c9b0c",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": null,
+      "replacement": "SmartPerfetto per-run source tool budgets by requested depth",
+      "source_path": "backend/strategies/source-depth-policy.yaml",
+      "source_sha256": "2c4217a2469c52d2cb8bf854ceacb00d8c87f99f1ac621c09b4fcfaa2a45f481",
+      "status": "product_only",
+      "workflow": null
+    },
+    {
+      "destination": "references/generated/strategies/startup.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/startup.strategy.md",
+      "source_sha256": "e2b03d0bc15f9779454cf5635359b68939981863b53eb9dbf581bc9568c70edc",
+      "status": "portable_transformed",
+      "workflow": "startup"
+    },
+    {
+      "destination": "references/generated/strategies/teaching.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/teaching.strategy.md",
+      "source_sha256": "ccada0457c74d33d3057f5d41b31458e3d435e76b0c938ecdfe7d47deb826009",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    },
+    {
+      "destination": "references/generated/strategies/touch-tracking.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/touch-tracking.strategy.md",
+      "source_sha256": "52b3c2bb17f6d7082dce681f37166c7f72618c03fd82aaa7ff29c475c2c3dca2",
+      "status": "portable_transformed",
+      "workflow": "interaction"
+    },
+    {
+      "destination": "references/generated/strategies/verifier-misdiagnosis.strategy.md",
+      "replacement": "manifest-backed Skill/query/evidence operations",
+      "source_path": "backend/strategies/verifier-misdiagnosis.strategy.md",
+      "source_sha256": "6c0740e5e9a28162c20224c99bb456425b6c18c4e617411b1928e95d6cc49da1",
+      "status": "portable_transformed",
+      "workflow": "trace-overview"
+    }
+  ],
+  "summary": {
+    "sources": 161
+  }
+}

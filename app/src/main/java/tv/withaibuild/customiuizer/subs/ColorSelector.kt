@@ -40,7 +40,7 @@ class ColorSelector : SubFragment() {
         val saved = savedInstanceState?.getFloatArray("color.hsv")
         if (saved != null && saved.size == 3) {
             hue = saved[0]; saturation = saved[1]; brightness = saved[2]
-            opacity = savedInstanceState?.getInt("color.alpha", 255) ?: 255
+            opacity = savedInstanceState.getInt("color.alpha", 255)
         } else setColor(AppHelper.getIntOfAppPrefs(key, Color.WHITE))
     }
 

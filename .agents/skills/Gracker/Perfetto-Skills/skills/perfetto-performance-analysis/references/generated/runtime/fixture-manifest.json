@@ -1,0 +1,795 @@
+{
+  "coverage_status": {
+    "covered": [
+      "startup",
+      "scrolling",
+      "flutter",
+      "callstack_sampling"
+    ],
+    "pending_real_trace": [
+      "anr",
+      "java_memory",
+      "native_memory",
+      "gpu_populated",
+      "gpu_not_recorded",
+      "capability_negative"
+    ]
+  },
+  "fixture_pack_version": "fixtures-v2",
+  "fixtures": [
+    {
+      "assertions": [
+        {
+          "field": "startup_type",
+          "id": "startup-light-type-present",
+          "kind": "non_empty",
+          "query_id": "startup_slow_reasons/startup_overview"
+        }
+      ],
+      "capabilities": [
+        "android_startup"
+      ],
+      "capture": {
+        "config": "embedded_in_trace",
+        "setup_errors": "unknown"
+      },
+      "id": "startup-light-api36",
+      "license": "AGPL-3.0-or-later",
+      "origin": {
+        "basis": "project author approval and repository license",
+        "commit": "cda248e2324a554220e15f8ce5ede39f2f53468d",
+        "path": "test-traces/launch_light.pftrace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/Gracker/SmartPerfetto"
+      },
+      "path": "traces/smart/startup-light-api36.pftrace",
+      "platform": {
+        "abi": "unknown",
+        "api": 36,
+        "build_type": "user",
+        "kernel": "6.1.129-android14-11-gdc1fbab45e9b-ab13299063",
+        "oem": "Google",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "6c5479fd1b765ee4d29692c43a8204b972bc0f97eb373aca98ea7e11e99fd8b4"
+    },
+    {
+      "assertions": [
+        {
+          "field": "callback_count",
+          "id": "startup-heavy-handler-callback-positive",
+          "kind": "field_positive",
+          "params": {
+            "end_ts": 0,
+            "min_dur_ns": 100000,
+            "package": "com.android.systemui",
+            "start_ts": 0,
+            "top_k": 20
+          },
+          "query_id": "main_thread_handler_callback_slices/callback_slices"
+        },
+        {
+          "field": "first_ts",
+          "id": "startup-heavy-handler-range-clipped-first-ts",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564165861430471,
+            "min_dur_ns": 1,
+            "package": "com.android.systemui",
+            "start_ts": 564165861330471,
+            "top_k": 20
+          },
+          "query_id": "main_thread_handler_callback_slices/callback_slices",
+          "value": 564165861330471
+        },
+        {
+          "field": "anchor_kind",
+          "id": "startup-heavy-code-pinpoint-anchor-kind",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166774418230,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166760908543
+          },
+          "query_id": "code_pinpoint/hot_slices",
+          "value": "app_trace_label"
+        },
+        {
+          "field": "source_query_hint",
+          "id": "startup-heavy-code-pinpoint-source-hint",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166774418230,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166760908543
+          },
+          "query_id": "code_pinpoint/hot_slices",
+          "value": "ChaosTask"
+        },
+        {
+          "field": "slice_id",
+          "id": "startup-heavy-code-pinpoint-stable-slice-id",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166774418230,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166760908543
+          },
+          "query_id": "code_pinpoint/hot_slices",
+          "value": 11879
+        },
+        {
+          "field": "ts",
+          "id": "startup-heavy-code-pinpoint-stable-ts",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166774418230,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166760908543
+          },
+          "query_id": "code_pinpoint/hot_slices",
+          "value": 564166760908543
+        },
+        {
+          "field": "anchor_kind",
+          "id": "startup-heavy-code-pinpoint-non-chaos-anchor",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564167555386251,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564167376544116
+          },
+          "query_id": "code_pinpoint/hot_slices",
+          "value": "app_trace_label"
+        },
+        {
+          "field": "source_query_hint",
+          "id": "startup-heavy-code-pinpoint-non-chaos-hint",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564167555386251,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564167376544116
+          },
+          "query_id": "code_pinpoint/hot_slices",
+          "value": "SimulateInflation"
+        },
+        {
+          "field": "process_name",
+          "id": "startup-heavy-mtw-summary-process",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_summary",
+          "value": "com.example.launch.aosp.heavy"
+        },
+        {
+          "field": "phase",
+          "id": "startup-heavy-mtw-summary-phase",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_summary",
+          "value": "window"
+        },
+        {
+          "field": "window_start_ts",
+          "id": "startup-heavy-mtw-summary-start",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_summary",
+          "value": 564166761908543
+        },
+        {
+          "field": "window_end_ts",
+          "id": "startup-heavy-mtw-summary-end",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_summary",
+          "value": 564166773418230
+        },
+        {
+          "field": "wall_ms",
+          "id": "startup-heavy-mtw-summary-wall",
+          "kind": "field_positive",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_summary"
+        },
+        {
+          "field": "known_state_ms",
+          "id": "startup-heavy-mtw-summary-known-state",
+          "kind": "field_positive",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_summary"
+        },
+        {
+          "field": "start_ts",
+          "id": "startup-heavy-mtw-tasks-start",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_tasks",
+          "value": 564166761908543
+        },
+        {
+          "field": "end_ts",
+          "id": "startup-heavy-mtw-tasks-end",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_tasks",
+          "value": 564166773418230
+        },
+        {
+          "field": "wall_ms",
+          "id": "startup-heavy-mtw-tasks-wall",
+          "kind": "field_positive",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_tasks"
+        },
+        {
+          "field": "source_kind",
+          "id": "startup-heavy-mtw-sources-hotspot",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_sources",
+          "value": "hotspot"
+        },
+        {
+          "field": "dur",
+          "id": "startup-heavy-mtw-sources-duration",
+          "kind": "field_positive",
+          "params": {
+            "end_ts": 564166773418230,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166761908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_sources"
+        },
+        {
+          "field": "observed_start_interval_ms",
+          "id": "startup-heavy-mtw-cadence-interval",
+          "kind": "field_positive",
+          "params": {
+            "end_ts": 564168760908543,
+            "main_thread_top_k": 1,
+            "package": "com.example.launch.aosp.heavy",
+            "start_ts": 564166760908543
+          },
+          "query_id": "main_thread_frame_work/main_thread_work_cadence"
+        }
+      ],
+      "capabilities": [
+        "android_startup"
+      ],
+      "capture": {
+        "config": "embedded_in_trace",
+        "setup_errors": "unknown"
+      },
+      "id": "startup-heavy-api36",
+      "license": "AGPL-3.0-or-later",
+      "origin": {
+        "basis": "project author approval and repository license",
+        "commit": "cda248e2324a554220e15f8ce5ede39f2f53468d",
+        "path": "test-traces/lacunh_heavy.pftrace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/Gracker/SmartPerfetto"
+      },
+      "path": "traces/smart/startup-heavy-api36.pftrace",
+      "platform": {
+        "abi": "unknown",
+        "api": 36,
+        "build_type": "user",
+        "kernel": "6.12.23-android16-5-gb23e74f69076-abogki452159376-4k",
+        "oem": "Xiaomi",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "2a0c7b85e7f4a14e43b7f8d6de21172e05eba1ed3ad8ef7df539bb5e59b6ba63"
+    },
+    {
+      "assertions": [
+        {
+          "field": "has_frame_timeline",
+          "id": "scroll-frame-timeline-present",
+          "kind": "field_equals",
+          "query_id": "scrolling_analysis/frame_timeline_check",
+          "value": 1
+        }
+      ],
+      "capabilities": [
+        "android_frame_timeline",
+        "scrolling"
+      ],
+      "capture": {
+        "config": "embedded_in_trace",
+        "setup_errors": "unknown"
+      },
+      "id": "scroll-aosp-api35",
+      "license": "AGPL-3.0-or-later",
+      "origin": {
+        "basis": "project author approval and repository license",
+        "commit": "cda248e2324a554220e15f8ce5ede39f2f53468d",
+        "path": "test-traces/scroll_Standard-AOSP-App-Without-PreAnimation.pftrace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/Gracker/SmartPerfetto"
+      },
+      "path": "traces/smart/scroll-aosp-api35.pftrace",
+      "platform": {
+        "abi": "unknown",
+        "api": 35,
+        "build_type": "user",
+        "kernel": "6.6.56-android15-8-g1b3a8e682e47-ab101-4k",
+        "oem": "Nubia",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "df7eebc5c6ff19b48331f8f1bca346612d86a5ae26eae202d46842a83f87a653"
+    },
+    {
+      "assertions": [
+        {
+          "field": "frame_count",
+          "id": "flutter-texture-rendering-process",
+          "kind": "field_positive",
+          "params": {
+            "package": "com.example.friendscircle.v27.textureview"
+          },
+          "query_id": "rendering_pipeline_detection/active_rendering_processes"
+        },
+        {
+          "field": "queue_buffer_count",
+          "id": "flutter-texture-bufferqueue",
+          "kind": "field_positive",
+          "params": {
+            "package": "com.example.friendscircle.v27.textureview"
+          },
+          "query_id": "rendering_pipeline_detection/bufferqueue_path_signals"
+        }
+      ],
+      "capabilities": [
+        "flutter",
+        "texture_view",
+        "scrolling"
+      ],
+      "capture": {
+        "config": "embedded_in_trace",
+        "setup_errors": "unknown"
+      },
+      "id": "flutter-texture-api35",
+      "license": "AGPL-3.0-or-later",
+      "origin": {
+        "basis": "project author approval and repository license",
+        "commit": "cda248e2324a554220e15f8ce5ede39f2f53468d",
+        "path": "test-traces/Scroll-Flutter-327-TextureView.pftrace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/Gracker/SmartPerfetto"
+      },
+      "path": "traces/smart/flutter-texture-api35.pftrace",
+      "platform": {
+        "abi": "unknown",
+        "api": 35,
+        "build_type": "user",
+        "kernel": "6.6.56-android15-8-g1b3a8e682e47-ab101-4k",
+        "oem": "Nubia",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "645deaa9fc564e0ea33072c83f5ecf1d0a6f53a97055cc98c640e8294deb315e"
+    },
+    {
+      "assertions": [],
+      "capabilities": [
+        "flutter",
+        "surface_view",
+        "scrolling"
+      ],
+      "capture": {
+        "config": "embedded_in_trace",
+        "setup_errors": "unknown"
+      },
+      "id": "flutter-surface-api35",
+      "license": "AGPL-3.0-or-later",
+      "origin": {
+        "basis": "project author approval and repository license",
+        "commit": "cda248e2324a554220e15f8ce5ede39f2f53468d",
+        "path": "test-traces/Scroll-Flutter-SurfaceView-Wechat-Wenyiwen.pftrace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/Gracker/SmartPerfetto"
+      },
+      "path": "traces/smart/flutter-surface-api35.pftrace",
+      "platform": {
+        "abi": "unknown",
+        "api": 35,
+        "build_type": "user",
+        "kernel": "6.6.56-android15-8-g1b3a8e682e47-ab101-4k",
+        "oem": "Nubia",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "e876c56b5d7290acda596e73929c1a127df4255e9ca6951605dad40833e67a53"
+    },
+    {
+      "assertions": [],
+      "capabilities": [
+        "scrolling",
+        "vendor_rom"
+      ],
+      "capture": {
+        "config": "embedded_in_trace",
+        "setup_errors": "unknown"
+      },
+      "id": "scroll-oppo-api36",
+      "license": "AGPL-3.0-or-later",
+      "origin": {
+        "basis": "project author approval and repository license",
+        "commit": "cda248e2324a554220e15f8ce5ede39f2f53468d",
+        "path": "test-traces/scroll-demo-customer-scroll.pftrace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/Gracker/SmartPerfetto"
+      },
+      "path": "traces/smart/scroll-oppo-api36.pftrace",
+      "platform": {
+        "abi": "unknown",
+        "api": 36,
+        "build_type": "user",
+        "kernel": "6.6.89-android15-8-g97a9aaefab9a-ab14519050-4k",
+        "oem": "OPPO",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "1015ba963c49cd57d08d8997c4c48027026f2d6e41f7eb72b4b1356e39f7af3a"
+    },
+    {
+      "assertions": [
+        {
+          "field": "startup_id",
+          "id": "startup-api24-id-present",
+          "kind": "non_empty",
+          "query_id": "startup_slow_reasons/startup_overview"
+        }
+      ],
+      "capabilities": [
+        "android_startup"
+      ],
+      "capture": {
+        "config": "upstream_diff_test",
+        "setup_errors": "unknown"
+      },
+      "id": "startup-api24-cold",
+      "license": "Apache-2.0",
+      "origin": {
+        "basis": "Apache-2.0 upstream test data",
+        "commit": "da1d152cff27890903d158fe96751de3aab883cc",
+        "path": "test/data/api24_startup_cold.perfetto-trace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/google/perfetto"
+      },
+      "path": "traces/google/startup-api24-cold.perfetto-trace",
+      "platform": {
+        "abi": "unknown",
+        "api": 24,
+        "build_type": "unknown",
+        "kernel": "unknown",
+        "oem": "AOSP",
+        "qpr": "not_applicable"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "ac006a3ec74fac70feb58c2cfad840c552af0ebd25f03bdfbf14d5f77148764b"
+    },
+    {
+      "assertions": [
+        {
+          "field": "startup_type",
+          "id": "startup-api31-cold-type",
+          "kind": "field_equals",
+          "query_id": "startup_slow_reasons/startup_overview",
+          "value": "cold"
+        }
+      ],
+      "capabilities": [
+        "android_startup"
+      ],
+      "capture": {
+        "config": "upstream_diff_test",
+        "setup_errors": "unknown"
+      },
+      "id": "startup-api31-cold",
+      "license": "Apache-2.0",
+      "origin": {
+        "basis": "Apache-2.0 upstream test data",
+        "commit": "da1d152cff27890903d158fe96751de3aab883cc",
+        "path": "test/data/api31_startup_cold.perfetto-trace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/google/perfetto"
+      },
+      "path": "traces/google/startup-api31-cold.perfetto-trace",
+      "platform": {
+        "abi": "unknown",
+        "api": 31,
+        "build_type": "unknown",
+        "kernel": "unknown",
+        "oem": "AOSP",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "aadf4a141dc0249abd4d7080a7d94bd614949eb0e7398fa6f3c75b503c70dade"
+    },
+    {
+      "assertions": [
+        {
+          "field": "startup_type",
+          "id": "startup-api32-warm-type",
+          "kind": "field_equals",
+          "query_id": "startup_slow_reasons/startup_overview",
+          "value": "warm"
+        }
+      ],
+      "capabilities": [
+        "android_startup",
+        "offline_smoke"
+      ],
+      "capture": {
+        "config": "upstream_diff_test",
+        "setup_errors": "unknown"
+      },
+      "id": "startup-api32-warm-smoke",
+      "license": "Apache-2.0",
+      "origin": {
+        "basis": "Apache-2.0 upstream test data",
+        "commit": "da1d152cff27890903d158fe96751de3aab883cc",
+        "path": "test/data/api32_startup_warm.perfetto-trace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/google/perfetto"
+      },
+      "path": "smoke/api32_startup_warm.perfetto-trace",
+      "platform": {
+        "abi": "unknown",
+        "api": 32,
+        "build_type": "unknown",
+        "kernel": "unknown",
+        "oem": "AOSP",
+        "qpr": "unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "776122b5660c5d6e738950031fdb4992a64e3224e9e82bbaed474a0a281ed7e3"
+    },
+    {
+      "assertions": [
+        {
+          "field": "startup_id",
+          "id": "startup-api34-id-present",
+          "kind": "non_empty",
+          "query_id": "startup_slow_reasons/startup_overview"
+        }
+      ],
+      "capabilities": [
+        "android_startup"
+      ],
+      "capture": {
+        "config": "upstream_diff_test",
+        "setup_errors": "unknown"
+      },
+      "id": "startup-api34-cold",
+      "license": "Apache-2.0",
+      "origin": {
+        "basis": "Apache-2.0 upstream test data",
+        "commit": "da1d152cff27890903d158fe96751de3aab883cc",
+        "path": "test/data/api34_startup_cold.perfetto-trace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/google/perfetto"
+      },
+      "path": "traces/google/startup-api34-cold.perfetto-trace",
+      "platform": {
+        "abi": "unknown",
+        "api": 34,
+        "build_type": "unknown",
+        "kernel": "unknown",
+        "oem": "AOSP",
+        "qpr": "base_or_unknown"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "1958521dc5128cd4eadd1df281e19987aded718750e6883f82ffd3b5eb529bd6"
+    },
+    {
+      "assertions": [
+        {
+          "field": "total_samples",
+          "id": "callstack-total-samples",
+          "kind": "field_positive",
+          "query_id": "callstack_analysis/check_samples"
+        },
+        {
+          "field": "function_name",
+          "id": "callstack-code-pinpoint-function",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 7679560427522,
+            "package": "system_server",
+            "start_ts": 7679560427522
+          },
+          "query_id": "code_pinpoint/native_symbols",
+          "value": "_ZN5scudo9AllocatorINS_13AndroidConfigEXadL_Z21scudo_malloc_postinitEEE27quarantineOrDeallocateChunkENS_7OptionsEPvPNS_5Chunk14UnpackedHeaderEm"
+        },
+        {
+          "field": "module_name",
+          "id": "callstack-code-pinpoint-module",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 7679560427522,
+            "package": "system_server",
+            "start_ts": 7679560427522
+          },
+          "query_id": "code_pinpoint/native_symbols",
+          "value": "/apex/com.android.runtime/lib64/bionic/libc.so"
+        },
+        {
+          "field": "build_id",
+          "id": "callstack-code-pinpoint-build-id",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 7679560427522,
+            "package": "system_server",
+            "start_ts": 7679560427522
+          },
+          "query_id": "code_pinpoint/native_symbols",
+          "value": "ba489d4985c0cf173209da67405662f9"
+        },
+        {
+          "field": "sample_count",
+          "id": "callstack-code-pinpoint-sample-count",
+          "kind": "field_equals",
+          "params": {
+            "end_ts": 7679560427522,
+            "package": "system_server",
+            "start_ts": 7679560427522
+          },
+          "query_id": "code_pinpoint/native_symbols",
+          "value": 1
+        }
+      ],
+      "capabilities": [
+        "callstack_sampling"
+      ],
+      "capture": {
+        "config": "upstream_diff_test",
+        "setup_errors": "unknown"
+      },
+      "id": "callstack-sampling",
+      "license": "Apache-2.0",
+      "origin": {
+        "basis": "Apache-2.0 upstream test data",
+        "commit": "da1d152cff27890903d158fe96751de3aab883cc",
+        "path": "test/data/callstack_sampling.pftrace",
+        "redistribution_review": "approved",
+        "repository": "https://github.com/google/perfetto"
+      },
+      "path": "traces/google/callstack-sampling.pftrace",
+      "platform": {
+        "abi": "unknown",
+        "api": "not_applicable",
+        "build_type": "unknown",
+        "kernel": "unknown",
+        "oem": "not_applicable",
+        "qpr": "not_applicable"
+      },
+      "privacy_review": {
+        "evidence": "privacy-scan-v2.json",
+        "reviewed_at": "2026-07-12",
+        "scanner": "fixture-privacy-v2",
+        "status": "passed"
+      },
+      "real": true,
+      "sha256": "0ef35902380a75c52cd83afdb4165b545a5810bde16bad954872994ca21c5ae7"
+    }
+  ],
+  "schema_version": 1
+}

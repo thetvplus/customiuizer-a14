@@ -1,0 +1,123 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "VSYNC-sf"
+    ]
+  },
+  "id": "consumer_jank_detection",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "description": "应用包名",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "Layer 名称（可选，用于精确匹配）",
+      "name": "layer_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "Pipeline ID (Phase F: pipeline-aware optional input; 当前实现 pipeline-agnostic, 未来按 pipeline 切换 SQL)",
+      "name": "pipeline_id",
+      "required": false,
+      "type": "string"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.frames.timeline",
+      "android.frames.jank_type"
+    ],
+    "required_tables": [
+      "actual_frame_timeline_slice"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/consumer_jank_detection.skill.yaml",
+    "sha256": "1cabbcaffac2059d6095ba3df586dcd0990a0a9879057a8e8d44f7c3bf3756fc"
+  },
+  "steps": [
+    {
+      "id": "vsync_config",
+      "name": "VSync 配置",
+      "query_id": "consumer_jank_detection/vsync_config",
+      "result_dependencies": [],
+      "save_as": "vsync_config",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "presentation_cadence_audit",
+      "name": "呈现节奏与晚拍交叉核验",
+      "query_id": "consumer_jank_detection/presentation_cadence_audit",
+      "result_dependencies": [],
+      "save_as": "presentation_cadence_audit",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "consumer_jank_frames",
+      "name": "消费端掉帧检测",
+      "query_id": "consumer_jank_detection/consumer_jank_frames",
+      "result_dependencies": [],
+      "save_as": "consumer_jank_frames",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "consumer_jank_summary",
+      "name": "消费端混合呈现信号汇总",
+      "query_id": "consumer_jank_detection/consumer_jank_summary",
+      "result_dependencies": [],
+      "save_as": "consumer_jank_summary",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "jank_severity_distribution",
+      "name": "掉帧严重程度分布",
+      "query_id": "consumer_jank_detection/jank_severity_distribution",
+      "result_dependencies": [],
+      "save_as": "jank_severity_distribution",
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.2",
+  "workflow": "scrolling"
+}

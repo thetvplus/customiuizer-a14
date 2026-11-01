@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -184,6 +185,85 @@ class DownloadDocumentsTest(unittest.TestCase):
             self.assertEqual(writes, len(server.writes))
         self.assertEqual("preserve", server.new_tree["LICENSE"]["sha"])
         self.assertEqual(1, sum(method == "PATCH" for _, _, method in server.writes))
+        commit = next(payload for endpoint, payload, _ in server.writes if endpoint.endswith("/git/commits"))
+        self.assertEqual(release.POLICY["commit_identity"], commit["author"])
+        self.assertEqual(commit["author"], commit["committer"])
+        self.assertTrue(commit["author"]["email"].endswith("@users.noreply.github.com"))
+
+    def archived_source(self, server):
+        canonical, app_tree = "9" * 40, "8" * 40
+        binding = {"build_source_sha": SHA, "source_sha": canonical,
+                   "metadata_sha256": hashlib.sha256(server.raw.encode()).hexdigest(),
+                   "apk_sha256": server.metadata["apk_sha256"], "app_tree": app_tree}
+        def api(endpoint, **kwargs):
+            if "/git/ref/tags/" in endpoint:
+                return {"object": {"type": "commit", "sha": canonical}}
+            if endpoint == f"repos/{release.REPO}/git/commits/{canonical}":
+                return {"tree": {"sha": "snapshot-tree"}}
+            if endpoint == f"repos/{release.REPO}/git/trees/snapshot-tree":
+                return {"tree": [{"path": "app", "type": "tree", "sha": app_tree}]}
+            return server.api(endpoint.replace("?ref=" + canonical, "?ref=" + SHA), **kwargs)
+        return binding, api
+
+    def test_pinned_snapshot_keeps_original_metadata_and_labels_the_source_honestly(self):
+        server = Server(); binding, endpoint = self.archived_source(server)
+        original = copy.deepcopy(server.metadata)
+        with self.context(server), patch.object(release, "api", side_effect=endpoint), \
+                patch.object(release, "optional_api", side_effect=endpoint), patch.dict(release.POLICY, archived_source_snapshots={VERSION: binding}):
+            published = docs.published_version(VERSION)
+            result = docs.documents(published)
+        self.assertEqual(original, published["metadata"])
+        self.assertEqual(binding["source_sha"], published["source_sha"])
+        self.assertIn("Anonymized source snapshot", result["README_EN.md"])
+        self.assertIn("/commit/" + binding["source_sha"], result["README_EN.md"])
+        self.assertIn("Original build source identifier: `" + SHA, result["README_EN.md"])
+
+    def test_archived_snapshot_rejects_binding_or_application_tree_changes_without_writes(self):
+        for field, value in (("build_source_sha", "f" * 40), ("metadata_sha256", "f" * 64),
+                             ("apk_sha256", "f" * 64), ("source_sha", "invalid"),
+                             ("app_tree", "f" * 40), ("unexpected", True)):
+            server = Server(); binding, endpoint = self.archived_source(server); binding[field] = value
+            with self.subTest(field=field), self.context(server), patch.object(release, "api", side_effect=endpoint), \
+                    patch.object(release, "optional_api", side_effect=endpoint), patch.dict(release.POLICY, archived_source_snapshots={VERSION: binding}), self.assertRaises(ValueError):
+                docs.sync_published(VERSION, apply=True)
+            self.assertEqual([], server.writes)
+
+    def test_archived_release_commitish_is_limited_to_the_original_build_or_pinned_snapshot(self):
+        for commitish in (SHA, "9" * 40, "f" * 40):
+            server = Server(); binding, endpoint = self.archived_source(server)
+            server.source["target_commitish"] = commitish
+            with self.subTest(commitish=commitish), self.context(server), \
+                    patch.object(release, "api", side_effect=endpoint), \
+                    patch.object(release, "optional_api", side_effect=endpoint), \
+                    patch.dict(release.POLICY, archived_source_snapshots={VERSION: binding}):
+                if commitish == "f" * 40:
+                    with self.assertRaisesRegex(ValueError, "source identity"):
+                        docs.published_version(VERSION)
+                else:
+                    self.assertEqual("9" * 40, docs.published_version(VERSION)["source_sha"])
+
+    def test_archived_snapshot_rejects_replaced_metadata_even_with_a_matching_asset_digest(self):
+        server = Server(); binding, endpoint = self.archived_source(server)
+        server.raw = server.raw.rstrip() + "\n\n"
+        for record in (server.source, server.download):
+            record["assets"][1].update(size=len(server.raw.encode()),
+                digest="sha256:" + hashlib.sha256(server.raw.encode()).hexdigest())
+        with self.context(server), patch.object(release, "api", side_effect=endpoint), \
+                patch.object(release, "optional_api", side_effect=endpoint), patch.dict(release.POLICY, archived_source_snapshots={VERSION: binding}), \
+                self.assertRaisesRegex(ValueError, "binding differs"):
+            docs.sync_published(VERSION, apply=True)
+        self.assertEqual([], server.writes)
+
+    def test_repository_snapshot_bindings_resolve_the_declared_version_and_application_tree(self):
+        for version, binding in release.POLICY["archived_source_snapshots"].items():
+            with self.subTest(version=version):
+                source = subprocess.check_output(["git", "show", binding["source_sha"] + ":app/build.gradle.kts"],
+                                                  cwd=release.ROOT, text=True, encoding="utf-8")
+                self.assertEqual(version, release.source_version(source)[0])
+                tree = subprocess.check_output(["git", "rev-parse", binding["source_sha"] + ":app"],
+                                                cwd=release.ROOT, text=True).strip()
+                self.assertEqual(binding["app_tree"], tree)
+                self.assertNotEqual(binding["build_source_sha"], binding["source_sha"])
 
     def test_unknown_patch_outcome_recovers_by_readback_without_a_second_commit(self):
         server = Server(); server.fail_after_patch = True
@@ -283,3 +363,19 @@ class BaselineReviewTest(unittest.TestCase):
                  "GITHUB_REF":ref,"GITHUB_SHA":SHA,"GITHUB_WORKFLOW_REF":"attacker/untrusted.yml@refs/heads/main"}
             with patch.dict(os.environ,env),patch("sys.argv",["signed_release.py","sync-docs","--version",VERSION,"--apply"]),patch.object(docs,"sync_published") as sync:
                 self.assertEqual(1,release.main());sync.assert_not_called()
+
+    def test_candidate_comparison_uses_the_pinned_snapshot_without_relabeling_the_old_build(self):
+        server = Server(); canonical = "9" * 40
+        published = {"metadata": server.metadata, "source": server.source, "source_sha": canonical}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for filename, language in release.CURRENT_CHANGELOGS:
+                marker = "自 r14.25.3 起的变更：" if language == "简体中文" else "Changes since r14.25.3:"
+                (root / filename).write_text(f"## r14.25.4\n\nversionCode 249. {marker}\n\n- Reviewed user change.\n", encoding="utf-8")
+            with patch.object(release, "ROOT", root), patch.object(docs, "published_version", return_value=published), \
+                    patch.object(release, "run", return_value="M\tapp/Actual.kt") as command:
+                docs.review_candidate("r14.25.4", 249, "f" * 40)
+            self.assertEqual(("git", "merge-base", "--is-ancestor", canonical, canonical), command.call_args_list[0].args)
+            self.assertEqual(("git", "merge-base", "--is-ancestor", canonical, "f" * 40), command.call_args_list[1].args)
+            self.assertEqual(("git", "diff", "--name-status", canonical, "f" * 40, "--"), command.call_args_list[2].args)
+        self.assertEqual(SHA, server.metadata["source_sha"])

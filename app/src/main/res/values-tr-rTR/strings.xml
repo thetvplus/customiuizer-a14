@@ -1311,4 +1311,12 @@ ss - iki basamaklı saniye(09)</string>
     <string name="a14_move_up">Yukarı taşı</string>
     <string name="a14_move_down">Aşağı taşı</string>
     <string name="a14_reorder_item">Sırayı değiştir</string>
+    <string name="wifi_refresh">Ağları yenile</string>
+    <string name="wifi_scan_unavailable">Tarama kullanılamıyor. Kayıtlı ağlar gösteriliyor; daha sonra tekrar deneyin.</string>
+    <string name="screenshot_directory_invalid">Yerel depolamada kullanılabilir bir klasör seçin</string>
+    <string name="various_disable_system_app_updater_title">Sistem uygulaması güncelleyicisini devre dışı bırak ve gizle</string>
+    <string name="various_disable_system_app_updater_summ">Geçerli kullanıcı için sistem uygulaması güncelleyicisini devre dışı bırakır ve Ayarlar girişini gizler. Seçenek kapatıldığında önceki etkinlik durumu geri yüklenir. Gizlemeyi uygulamak için Ayarları yeniden başlatın.</string>
+    <string name="various_disable_system_app_updater_confirm">Sistem uygulaması güncelleyici paketi (%1$d) devre dışı bırakılsın mı? ROM OTA, yükleyici ve güvenlik hizmetleri etkilenmez. Önceki etkinlik durumu geri yüklemek için kaydedilir.</string>
+    <string name="various_hide_enterprise_mode_title">Kurumsal mod girişini gizle</string>
+    <string name="various_hide_enterprise_mode_summ">Kurumsal modu Ek ayarlardan kaldırır. Kurumsal yönetim ve iş profilleri kullanılabilir durumda kalır. Uygulamak için Ayarları yeniden başlatın.</string>
 </resources>

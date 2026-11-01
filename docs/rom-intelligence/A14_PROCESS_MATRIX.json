@@ -2595,8 +2595,8 @@
       "target": "SYSTEM_PACKAGE",
       "phase": "PACKAGE_READY",
       "installer": "SettingsFeatures",
-      "installHook": "GlobalActions.miuizerSettingsHook(lpparam)",
-      "enableCondition": "prefs.getStringAsInt(\"miuizer_settingsiconpos\", 1) > 0",
+      "installHook": "GlobalActions.miuizerSettingsHook( lpparam, mPrefs.getBoolean(\"various_disable_system_app_updater\"), mPrefs.getBoolean(\"various_hide_enterprise_mode\") )",
+      "enableCondition": "prefs.getStringAsInt(\"miuizer_settingsiconpos\", 1) > 0 || prefs.getBoolean(\"various_disable_system_app_updater\") || prefs.getBoolean(\"various_hide_enterprise_mode\")",
       "allowedProcess": "com.android.settings",
       "deniedProcess": "com.android.settings:remote"
     },
@@ -3102,7 +3102,7 @@
       "target": "SYSTEM_SERVER",
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
-      "installHook": "{ SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook(lpparam) lpparam.classLoader?.let(StatusBarHeightResources::install) }",
+      "installHook": "{ SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook(lpparam) lpparam.classLoader.let(StatusBarHeightResources::install) }",
       "enableCondition": "StatusBarHeightConfig.isEnabled(prefs)",
       "allowedProcess": "system_server",
       "deniedProcess": ""
@@ -3271,7 +3271,7 @@
       "target": "SYSTEM_SERVER",
       "phase": "SYSTEM_SERVER_STARTING",
       "installer": "SystemServerFeatures",
-      "installHook": "{ lpparam.classLoader?.let(IslandApplicationOverlayHooks::install) }",
+      "installHook": "{ lpparam.classLoader.let(IslandApplicationOverlayHooks::install) }",
       "enableCondition": "{ prefs -> IslandApplicationOverlayFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "system_server",
       "deniedProcess": ""

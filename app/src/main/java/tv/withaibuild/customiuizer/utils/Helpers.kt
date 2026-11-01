@@ -17,7 +17,6 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
-import android.os.Environment
 import android.provider.Settings
 import android.util.LruCache
 import android.view.View
@@ -57,8 +56,9 @@ object Helpers {
     @JvmField
     var launchableAppsList: ArrayList<AppData>? = null
 
-    @JvmField
-    val allModsList = ArrayList<ModData>()
+    @Volatile
+    var allModsList: List<ModData> = emptyList()
+        private set
 
     @JvmField
     val markColor = Color.rgb(205, 73, 97)
@@ -136,8 +136,9 @@ object Helpers {
             intent.addCategory(Intent.CATEGORY_DEFAULT)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
             intent.component = ComponentName(pkg, cmp)
-            act.startActivity(intent)
-            act.overridePendingTransition(R.anim.activity_open_enter, R.anim.activity_open_exit)
+            act.startActivity(intent, android.app.ActivityOptions.makeCustomAnimation(
+                act, R.anim.activity_open_enter, R.anim.activity_open_exit
+            ).toBundle())
             true
         } catch (t: Throwable) {
             FatalErrors.rethrowIfFatal(t)
@@ -152,8 +153,8 @@ object Helpers {
         try {
             val context = act ?: view.context
             val inputManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
-            val token = (act?.currentFocus ?: view).windowToken
-            if (token != null) inputManager.hideSoftInputFromWindow(token, InputMethodManager.HIDE_NOT_ALWAYS)
+            val token = act?.currentFocus?.windowToken ?: view.windowToken ?: return
+            inputManager.hideSoftInputFromWindow(token, 0)
         } catch (t: Throwable) {
             FatalErrors.rethrowIfFatal(t)
             XposedHelpers.log(t)
@@ -167,27 +168,6 @@ object Helpers {
             .setMessage(text)
             .setPositiveButton(android.R.string.ok, null)
             .show()
-    }
-
-    @JvmStatic
-    fun checkStorageReadable(context: Context): Boolean {
-        val state = Environment.getExternalStorageState()
-        return if (state == Environment.MEDIA_MOUNTED_READ_ONLY || state == Environment.MEDIA_MOUNTED) {
-            true
-        } else {
-            showOKDialog(context, R.string.warning, R.string.storage_unavailable)
-            false
-        }
-    }
-
-    @JvmStatic
-    fun checkPermAndRequest(act: AppCompatActivity, perm: String, action: Int): Boolean {
-        return if (act.checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
-            act.requestPermissions(arrayOf(perm), action)
-            false
-        } else {
-            true
-        }
     }
 
     @JvmStatic
@@ -498,7 +478,7 @@ object Helpers {
         }
     }
 
-    private fun parseModSearchIndex(context: Context) {
+    private fun parseModSearchIndex(context: Context, entries: MutableList<ModData>) {
         val res = context.resources
         try {
             res.getXml(R.xml.mod_search_index).use { xml ->
@@ -573,7 +553,7 @@ object Helpers {
                                         modData.sub = routeSub
                                         modData.page = searchPage
                                         modData.order = xml.getAttributeIntValue(null, "order", 0)
-                                        allModsList.add(modData)
+                                        entries.add(modData)
                                     }
                                 }
                             }
@@ -600,11 +580,18 @@ object Helpers {
      * every keystroke.
      */
     @JvmStatic
+    @Synchronized
     fun getAllMods(context: Context, force: Boolean) {
-        if (force) allModsList.clear()
-        else if (allModsList.size > 0) return
-        parseModSearchIndex(context)
-        allModsList.sortWith(MOD_DISPLAY_ORDER)
+        if (!force && allModsList.isNotEmpty()) return
+        val snapshot = context.createConfigurationContext(android.content.res.Configuration(context.resources.configuration))
+        val entries = ArrayList<ModData>()
+        parseModSearchIndex(snapshot, entries)
+        entries.sortWith(MOD_DISPLAY_ORDER)
+        // Readers see only complete indexes. A locale changed during preparation
+        // invalidates this result; the configuration callback owns the next rebuild.
+        if (snapshot.resources.configuration.locales == context.resources.configuration.locales) {
+            allModsList = entries
+        }
     }
 
     /** Breadcrumb first, then title; both case-insensitive. */

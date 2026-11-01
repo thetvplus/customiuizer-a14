@@ -197,6 +197,7 @@ object Various {
 
     internal fun resolveAppStateTarget(info: PackageInfo?, contextUser: Int): AppStateTarget? {
         val application = info?.applicationInfo ?: return null
+        // A default or parcelled PackageInfo can still contain a null package name.
         val name = info.packageName ?: return null
         if (name.isBlank() || application.packageName != name || application.uid < 0 || contextUser < 0 ||
             application.uid / 100000 != contextUser) return null
@@ -226,7 +227,7 @@ object Various {
                 item.setTitle(act.resources.getIdentifier(if (enable) "app_manager_disable_text" else "app_manager_enable_text", "string", "com.miui.securitycenter"))
                 Toast.makeText(act, act.resources.getIdentifier(if (enable) "app_manager_enabled" else "app_manager_disabled", "string", "com.miui.securitycenter"), Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(act, ModuleHelper.getModuleRes(act)!!.getString(R.string.disable_app_fail), Toast.LENGTH_LONG).show()
+                Toast.makeText(act, ModuleHelper.getModuleRes(act).getString(R.string.disable_app_fail), Toast.LENGTH_LONG).show()
             }
             Handler(Looper.getMainLooper()).postDelayed({ ModuleHelper.guarded {
                 if (!act.isFinishing && !act.isDestroyed) act.invalidateOptionsMenu()
@@ -309,7 +310,7 @@ object Various {
                     val target = XposedHelpers.getAdditionalInstanceField(item, APP_STATE_TARGET) as? AppStateTarget ?: return result
 
                     val act = thisObject as Activity
-                    val modRes = ModuleHelper.getModuleRes(act)!!
+                    val modRes = ModuleHelper.getModuleRes(act)
                     val piField = XposedHelpers.findFirstFieldByExactType(act.javaClass, PackageInfo::class.java)
                     val mPackageInfo = piField.get(act) as PackageInfo
                     if (appStateTarget(act, mPackageInfo) != target) return result

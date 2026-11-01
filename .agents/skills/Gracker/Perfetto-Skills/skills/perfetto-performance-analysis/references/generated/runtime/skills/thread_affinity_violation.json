@@ -1,0 +1,89 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*",
+      "*Hwui*",
+      "RenderThread"
+    ]
+  },
+  "id": "thread_affinity_violation",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "应用包名(可选)",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳(ns，可选)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns，可选)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "default": 25,
+      "description": "迁核占比阈值(%)",
+      "name": "migration_ratio_threshold",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": [
+      "sched",
+      "thread",
+      "process"
+    ]
+  },
+  "process_scope": {
+    "binding": "effective_target_processes",
+    "role": "target"
+  },
+  "query_id": "thread_affinity_violation/root",
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/thread_affinity_violation.skill.yaml",
+    "sha256": "c6d2edaaa916a159e69330f72fc2845056d18fd1bc2df190b2cec25c01962309"
+  },
+  "steps": [],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "cpu-scheduling"
+}

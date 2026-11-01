@@ -19,11 +19,12 @@ def literal(value: str) -> str:
     return json.dumps(value, ensure_ascii=False).replace("$", "\\$")
 
 
-def text(value: str) -> str:
+def text(value: str, *, as_string: bool = False) -> str:
+    getter = "getString" if as_string else "getText"
     if value.startswith("@string/"):
-        return f"context.getText(R.string.{value.split('/', 1)[1]})"
+        return f"context.{getter}(R.string.{value.split('/', 1)[1]})"
     if value.startswith("@android:string/"):
-        return f"context.getText(android.R.string.{value.split('/', 1)[1]})"
+        return f"context.{getter}(android.R.string.{value.split('/', 1)[1]})"
     return literal(value)
 
 
@@ -80,7 +81,7 @@ def _page_body(root: ET.Element) -> list[str]:
             strings = [attributes.pop(U + name, None) for name in ("format", "offtext", "note")]
             show_plus = attributes.pop(U + "showplus", "false")
             arguments = [*numbers[:3], default or "0", *numbers[3:], str(has_divider).lower(),
-                         *("null" if value is None else text(value) + ".toString()" for value in strings), show_plus]
+                         *("null" if value is None else text(value, as_string=True) for value in strings), show_plus]
             lines.append(f"{indent}configureComposeValues({', '.join(arguments)})")
         elif default is not None:
             if kind == "CheckBoxPreferenceEx":

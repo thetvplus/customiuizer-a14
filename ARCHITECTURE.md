@@ -103,7 +103,7 @@ Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，
 
 生产路径仅保留实际功能、失败隔离及有界故障诊断。安装器直接构建阶段 Catalog、注册并交由 FeatureInstallRegistry 安装，不嵌入性能采样。临时测量使用宿主工具及外部 trace；长期需要的调试实现放独立源码集，不能依赖 Release R8 消除。JVM / Robolectric 与替身归 `src/test`，开发脚本归 `tools` / `scripts`，不加入 main sources、assets 或运行依赖图。`PrefsProvider` 的 `test/*` 和五个样本资产是用户“打开方式”功能，属于生产资源。
 
-FeatureSpec 的元数据 / 惰性工厂、FeatureDefinition 的安装行为和 Registry 的安装状态各有实际职责；不合并成预先创建所有业务对象的通用注册表。XposedHelpers 是模块内部辅助面，保留实际消费者与匹配 / 异常语义，不恢复无人使用的上游 API 全集。工程精简依据与产物证据见[原路线图](docs/maintenance/A14_REFINEMENT_ROADMAP.md#工程精简与生产隔离2026-10-30)。
+FeatureSpec 的元数据 / 惰性工厂、FeatureDefinition 的安装行为和 Registry 的安装状态各有实际职责；不合并成预先创建所有业务对象的通用注册表。XposedHelpers 是模块内部辅助面，保留实际消费者与匹配 / 异常语义，不恢复无人使用的上游 API 全集。工程精简依据与产物证据见[原路线图](docs/maintenance/A14_REFINEMENT_ROADMAP.md#当前维护边界)。
 
 ## 设置、生成与持久化
 

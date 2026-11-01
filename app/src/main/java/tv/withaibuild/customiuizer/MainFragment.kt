@@ -1,6 +1,5 @@
 package tv.withaibuild.customiuizer
 
-import android.annotation.SuppressLint
 import androidx.compose.runtime.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,6 +26,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.lifecycle.lifecycleScope
 
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,7 +61,6 @@ class MainFragment : PreferenceFragmentBase() {
         return act != null && !act.isFinishing && isAdded
     }
 
-    @SuppressLint("MissingSuperCall")
     override fun onCreate(savedInstanceState: Bundle?) {
         toolbarMenu = true
         activeMenus = "all"
@@ -122,13 +121,17 @@ class MainFragment : PreferenceFragmentBase() {
         setSettingsPage(R.id.prefs_main)
     }
 
+    private var reloadJob: Job? = null
+
     private fun doBaseReload() = super.reloadPreferences()
 
     override fun reloadPreferences() {
         val act = activity as? AppCompatActivity ?: return super.reloadPreferences()
-        lifecycleScope.launch(Dispatchers.IO) {
+        reloadJob?.cancel()
+        reloadJob = lifecycleScope.launch(Dispatchers.IO) {
             Helpers.getAllMods(act, true)
             withContext(Dispatchers.Main) {
+                indexRevision++
                 doBaseReload()
             }
         }

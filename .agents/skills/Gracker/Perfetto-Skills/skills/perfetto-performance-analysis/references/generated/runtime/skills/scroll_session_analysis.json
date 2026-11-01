@@ -1,0 +1,318 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${package}",
+      "${package}:*",
+      "*Choreographer#doFrame*",
+      "*DrawFrame*",
+      "*doFrame*"
+    ]
+  },
+  "id": "scroll_session_analysis",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标应用包名（精确匹配，含 name:* 子进程）；为空且无进程作用域时统计所有进程",
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "session_id",
+      "required": true,
+      "type": "number"
+    },
+    {
+      "name": "start_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": true,
+      "type": "timestamp"
+    },
+    {
+      "name": "duration_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "name": "frame_count",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "name": "touch_start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "touch_end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "touch_duration_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "name": "fling_start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "fling_end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "fling_duration_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "name": "has_fling",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [],
+    "required_tables": []
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/scroll_session_analysis.skill.yaml",
+    "sha256": "59e06a212efc4660c3d1eb10335f4fc1f33c7120448effb115823ec96915d9b5"
+  },
+  "steps": [
+    {
+      "id": "system_context_window",
+      "name": "系统证据窗口",
+      "process_scope": {
+        "role": "identity_metadata"
+      },
+      "query_id": "scroll_session_analysis/system_context_window",
+      "result_dependencies": [],
+      "save_as": "system_context_window",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "system_cpu_context",
+      "name": "窗口 CPU 系统上下文",
+      "optional": true,
+      "params": {
+        "end_ts": "${system_context_window.data[0].end_ts}",
+        "start_ts": "${system_context_window.data[0].start_ts}"
+      },
+      "save_as": "system_cpu_context",
+      "skill": "cpu_system_context_in_range",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "system_task_summary",
+      "name": "目标任务系统状态",
+      "optional": true,
+      "params": {
+        "end_ts": "${system_context_window.data[0].end_ts}",
+        "package": "${package}",
+        "start_ts": "${system_context_window.data[0].start_ts}"
+      },
+      "save_as": "system_task_summary",
+      "skill": "thread_system_summary_in_range",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "system_task_handoffs",
+      "name": "目标任务调度交接",
+      "optional": true,
+      "params": {
+        "end_ts": "${system_context_window.data[0].end_ts}",
+        "package": "${package}",
+        "start_ts": "${system_context_window.data[0].start_ts}"
+      },
+      "save_as": "system_task_handoffs",
+      "skill": "thread_preemption_handoffs_in_range",
+      "type": "skill"
+    },
+    {
+      "displayed": true,
+      "id": "full_session_stats",
+      "name": "完整区间统计",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "scroll_session_analysis/full_session_stats",
+      "result_dependencies": [],
+      "save_as": "full_stats",
+      "type": "atomic"
+    },
+    {
+      "condition": "touch_start_ts != null",
+      "displayed": true,
+      "id": "touch_phase_stats",
+      "name": "按压滑动阶段统计",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "scroll_session_analysis/touch_phase_stats",
+      "result_dependencies": [],
+      "save_as": "touch_stats",
+      "type": "atomic"
+    },
+    {
+      "condition": "has_fling == 1",
+      "displayed": true,
+      "id": "fling_phase_stats",
+      "name": "Fling 阶段统计",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "scroll_session_analysis/fling_phase_stats",
+      "result_dependencies": [],
+      "save_as": "fling_stats",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "identify_janky_frames",
+      "name": "识别掉帧",
+      "process_scope": {
+        "binding": "native_upid",
+        "role": "target"
+      },
+      "query_id": "scroll_session_analysis/identify_janky_frames",
+      "result_dependencies": [],
+      "save_as": "janky_frames",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "filter": "jank_level == 'severe' || jank_level == 'bad'",
+      "id": "analyze_janky_frames",
+      "item_params": {
+        "dur_ms": "dur_ms",
+        "end_ts": "end_ts_str",
+        "start_ts": "ts_str"
+      },
+      "item_skill": "jank_frame_detail",
+      "max_items": 10,
+      "name": "掉帧原因分析",
+      "save_as": "frame_diagnostics",
+      "source": "janky_frames",
+      "type": "iterator"
+    },
+    {
+      "displayed": true,
+      "id": "session_diagnosis",
+      "inputs": [
+        "full_stats",
+        "touch_stats",
+        "fling_stats",
+        "janky_frames"
+      ],
+      "name": "区间诊断",
+      "rules": [
+        {
+          "condition": "full_stats.data[0].jank_rate > 15",
+          "confidence": "high",
+          "diagnosis": "滑动掉帧率过高 (${full_stats.data[0].jank_rate}%)",
+          "severity": "critical",
+          "suggestions": [
+            "检查主线程耗时操作",
+            "优化列表项布局复杂度",
+            "使用 RecyclerView 的 setHasFixedSize 和 setItemViewCacheSize"
+          ]
+        },
+        {
+          "condition": "full_stats.data[0].jank_rate > 5",
+          "confidence": "medium",
+          "diagnosis": "滑动存在掉帧 (${full_stats.data[0].jank_rate}%)",
+          "severity": "warning",
+          "suggestions": [
+            "检查 onBindViewHolder 耗时",
+            "避免在滑动时加载图片"
+          ]
+        },
+        {
+          "condition": "full_stats.data[0].max_frame_ms > 100",
+          "confidence": "high",
+          "diagnosis": "存在严重卡顿帧 (最大 ${full_stats.data[0].max_frame_ms}ms)",
+          "severity": "critical",
+          "suggestions": [
+            "检查是否有 IO 操作在主线程",
+            "检查是否有同步 Binder 调用",
+            "分析可能的 ANR 风险"
+          ]
+        },
+        {
+          "condition": "touch_stats.data[0].jank_rate > ${fling_stats.data[0].jank_rate} * 2",
+          "confidence": "medium",
+          "diagnosis": "按压滑动阶段掉帧更严重",
+          "severity": "warning",
+          "suggestions": [
+            "检查 dispatchTouchEvent 链路",
+            "优化手势响应代码"
+          ]
+        },
+        {
+          "condition": "fling_stats.data[0].jank_rate > ${touch_stats.data[0].jank_rate} * 2",
+          "confidence": "medium",
+          "diagnosis": "Fling 阶段掉帧更严重",
+          "severity": "warning",
+          "suggestions": [
+            "检查 Fling 动画计算",
+            "优化滑动曲线计算逻辑"
+          ]
+        },
+        {
+          "condition": "full_stats.data[0].estimated_fps < 50",
+          "confidence": "medium",
+          "diagnosis": "帧率偏低 (${full_stats.data[0].estimated_fps} fps)",
+          "severity": "warning",
+          "suggestions": [
+            "优化 onDraw 方法",
+            "减少过度绘制",
+            "使用硬件加速"
+          ]
+        }
+      ],
+      "type": "diagnostic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.0",
+  "workflow": "scrolling"
+}

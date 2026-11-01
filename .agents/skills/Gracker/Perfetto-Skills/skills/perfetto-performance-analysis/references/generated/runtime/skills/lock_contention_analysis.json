@@ -1,0 +1,231 @@
+{
+  "android": {
+    "adapters": [],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${process_name}",
+      "${process_name}:*",
+      "*_lock_held",
+      "*monitor*",
+      "*mutex*",
+      "Lock contention*(owner tid: *)*",
+      "android_lock_held"
+    ]
+  },
+  "id": "lock_contention_analysis",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "description": "目标进程名，留空分析所有锁竞争",
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "default": 10,
+      "description": "最小锁等待时间阈值（毫秒）",
+      "name": "min_duration_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "分析起始时间戳（纳秒，可选）",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳（纳秒，可选）",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.monitor_contention",
+      "android.lock_held",
+      "slices.with_context"
+    ],
+    "required_tables": [
+      "thread_state"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/composite/lock_contention_analysis.skill.yaml",
+    "sha256": "6cc30df6302970712dcfa515969800f74b30e65154d9f53f2cfcb10587191188"
+  },
+  "steps": [
+    {
+      "id": "data_check",
+      "name": "锁竞争数据检查",
+      "optional": true,
+      "query_id": "lock_contention_analysis/data_check",
+      "result_dependencies": [],
+      "save_as": "data_check",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "owner_contention_events",
+      "name": "持锁线程归因事件",
+      "optional": true,
+      "query_id": "lock_contention_analysis/owner_contention_events",
+      "result_dependencies": [],
+      "save_as": "owner_contention_events",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "contention_overview",
+      "name": "锁竞争概览",
+      "query_id": "lock_contention_analysis/contention_overview",
+      "result_dependencies": [],
+      "save_as": "contention_overview",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "main_thread_contentions",
+      "name": "主线程锁竞争",
+      "query_id": "lock_contention_analysis/main_thread_contentions",
+      "result_dependencies": [],
+      "save_as": "main_thread_contentions",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "hot_locks",
+      "name": "热点锁分析",
+      "query_id": "lock_contention_analysis/hot_locks",
+      "result_dependencies": [],
+      "save_as": "hot_locks",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "lock_chain_analysis",
+      "name": "锁链分析",
+      "optional": true,
+      "query_id": "lock_contention_analysis/lock_chain_analysis",
+      "result_dependencies": [],
+      "save_as": "lock_chain_analysis",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "blocking_thread_state",
+      "name": "持锁线程状态",
+      "optional": true,
+      "query_id": "lock_contention_analysis/blocking_thread_state",
+      "result_dependencies": [],
+      "save_as": "blocking_thread_state",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "blocking_functions",
+      "name": "持锁时阻塞函数",
+      "optional": true,
+      "query_id": "lock_contention_analysis/blocking_functions",
+      "result_dependencies": [],
+      "save_as": "blocking_functions",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "contention_binder_correlation",
+      "name": "锁竞争与 Binder 关联",
+      "optional": true,
+      "query_id": "lock_contention_analysis/contention_binder_correlation",
+      "result_dependencies": [],
+      "save_as": "contention_binder_correlation",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "lock_held_capability",
+      "name": "持锁区间数据检查",
+      "optional": true,
+      "query_id": "lock_contention_analysis/lock_held_capability",
+      "result_dependencies": [],
+      "save_as": "lock_held_capability",
+      "type": "atomic"
+    },
+    {
+      "condition": "lock_held_capability.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "lock_held_owner_summary",
+      "name": "持锁时长汇总",
+      "optional": true,
+      "query_id": "lock_contention_analysis/lock_held_owner_summary",
+      "result_dependencies": [],
+      "save_as": "lock_held_owner_summary",
+      "type": "atomic"
+    },
+    {
+      "condition": "lock_held_capability.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "lock_held_long_holds",
+      "name": "长时间持锁",
+      "optional": true,
+      "query_id": "lock_contention_analysis/lock_held_long_holds",
+      "result_dependencies": [],
+      "save_as": "lock_held_long_holds",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'available'",
+      "displayed": true,
+      "id": "root_cause_classification",
+      "name": "根因分类",
+      "query_id": "lock_contention_analysis/root_cause_classification",
+      "result_dependencies": [],
+      "save_as": "root_cause",
+      "type": "atomic"
+    },
+    {
+      "condition": "data_check.data[0]?.status === 'unavailable'",
+      "displayed": true,
+      "id": "fallback_no_data",
+      "name": "数据不可用提示",
+      "query_id": "lock_contention_analysis/fallback_no_data",
+      "result_dependencies": [],
+      "save_as": "fallback_info",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "3.0",
+  "workflow": "anr-blocking"
+}

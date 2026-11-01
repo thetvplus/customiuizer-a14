@@ -1,0 +1,155 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "kernel_tracepoints",
+        "selection": "available events, trace config/setup errors, schema, then rows"
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "${process_name}",
+      "${process_name}:*",
+      "*futex*"
+    ]
+  },
+  "id": "anr_main_thread_blocking",
+  "identity": {
+    "aliases": [
+      "package",
+      "process_name",
+      "package_name",
+      "target_package",
+      "app_package",
+      "packageName",
+      "processName"
+    ],
+    "minConfidence": 50,
+    "policy": "verify_if_present",
+    "rewriteTo": "recommended_process_name_param",
+    "scope": "process"
+  },
+  "inputs": [
+    {
+      "default": "",
+      "description": "目标进程名；省略时仅通过 wakeup_chain 发现各应用主线程最长等待候选，不判定 ANR",
+      "name": "process_name",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "description": "分析起始时间戳(ns)",
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "分析结束时间戳(ns)",
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "ANR 事件时间戳(ns)，用于自动计算分析窗口",
+      "name": "anr_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "description": "无目标发现模式的最短单段等待毫秒数，默认 3000",
+      "name": "min_wait_ms",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "无目标发现模式的候选条数，默认 20，上限 100",
+      "name": "top_n",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "description": "无目标发现模式的分页偏移，默认 0",
+      "name": "offset",
+      "required": false,
+      "type": "number"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.binder",
+      "android.monitor_contention"
+    ],
+    "required_tables": [
+      "thread_state",
+      "thread",
+      "process"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/anr_main_thread_blocking.skill.yaml",
+    "sha256": "e19ece9595a2bf2bd22ead9b8e4c2236e061a672b7f6e76c0c5cd4cf94478349"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "main_thread_state",
+      "name": "主线程状态分布",
+      "query_id": "anr_main_thread_blocking/main_thread_state",
+      "result_dependencies": [],
+      "save_as": "main_thread_state",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "blocked_functions",
+      "name": "阻塞函数分析",
+      "optional": true,
+      "query_id": "anr_main_thread_blocking/blocked_functions",
+      "result_dependencies": [],
+      "save_as": "blocked_functions",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "wakeup_chain",
+      "name": "唤醒链分析",
+      "optional": true,
+      "query_id": "anr_main_thread_blocking/wakeup_chain",
+      "result_dependencies": [],
+      "save_as": "wakeup_chain",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "binder_blocking",
+      "name": "Binder 阻塞分析",
+      "optional": true,
+      "query_id": "anr_main_thread_blocking/binder_blocking",
+      "result_dependencies": [],
+      "save_as": "binder_blocking",
+      "type": "atomic"
+    },
+    {
+      "displayed": true,
+      "id": "lock_contention",
+      "name": "锁竞争分析",
+      "optional": true,
+      "query_id": "anr_main_thread_blocking/lock_contention",
+      "result_dependencies": [],
+      "save_as": "lock_contention",
+      "type": "atomic"
+    }
+  ],
+  "type": "composite",
+  "version": "1.1",
+  "workflow": "anr-blocking"
+}

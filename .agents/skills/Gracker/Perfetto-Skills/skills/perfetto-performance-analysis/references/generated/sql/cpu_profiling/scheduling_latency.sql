@@ -1,0 +1,41 @@
+-- GENERATED FILE - DO NOT EDIT.
+-- Source: backend/skills/deep/cpu_profiling.skill.yaml
+-- Source SHA-256: dce6ebab0c0096f73bc2707459de6af2cb7fefc55f171def6d1303d371c504ae
+
+WITH
+runnable_slices AS (
+  SELECT
+    ts.utid,
+    ts.dur / 1e6 as latency_ms
+  FROM thread_state ts
+  WHERE
+    ts.state = 'R'  -- Runnable but not running
+    AND ts.dur > 0
+),
+thread_latency AS (
+  SELECT
+    t.name as thread_name,
+    t.tid,
+    p.name as process_name,
+    COUNT(*) as runnable_count,
+    SUM(rs.latency_ms) as total_latency_ms,
+    AVG(rs.latency_ms) as avg_latency_ms,
+    MAX(rs.latency_ms) as max_latency_ms
+  FROM runnable_slices rs
+  JOIN thread t ON rs.utid = t.utid
+  JOIN process p ON t.upid = p.upid
+  WHERE '${package}' = '' OR ('${package}' = '' OR p.name = '${package}' OR p.name GLOB '${package}:*')
+  GROUP BY rs.utid
+)
+SELECT
+  thread_name,
+  tid,
+  process_name,
+  runnable_count,
+  ROUND(total_latency_ms, 2) as total_latency_ms,
+  ROUND(avg_latency_ms, 3) as avg_latency_ms,
+  ROUND(max_latency_ms, 2) as max_latency_ms
+FROM thread_latency
+WHERE total_latency_ms > 1  -- 至少 1ms 总延迟
+ORDER BY total_latency_ms DESC
+LIMIT 20

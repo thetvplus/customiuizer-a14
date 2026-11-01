@@ -1,0 +1,80 @@
+{
+  "android": {
+    "adapters": [
+      {
+        "id": "official_frame_timeline_or_legacy",
+        "selection": "actual rows first; legacy Choreographer/DrawFrame fallback",
+        "source": "perfetto stdlib android/frames/timeline.sql",
+        "version_hint": {
+          "frame_timeline_min_api": 31
+        }
+      }
+    ],
+    "selection_order": [
+      "device_capability",
+      "trace_config_and_setup_errors",
+      "engine_module_and_schema",
+      "target_range_row_coverage",
+      "api_hint"
+    ],
+    "signal_patterns": [
+      "*GPU completion*",
+      "*PresentFence*",
+      "*Waiting for GPU*",
+      "*present*fence*",
+      "*waiting for GPU*",
+      "VSYNC-sf"
+    ]
+  },
+  "id": "present_fence_timing",
+  "identity": {
+    "policy": "none"
+  },
+  "inputs": [
+    {
+      "name": "package",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "start_ts",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "name": "end_ts",
+      "required": false,
+      "type": "timestamp"
+    }
+  ],
+  "prerequisites": {
+    "modules": [
+      "android.frames.timeline"
+    ],
+    "required_tables": [
+      "slice"
+    ]
+  },
+  "query_id": null,
+  "runtime_status": "executable",
+  "schema_version": 1,
+  "source": {
+    "path": "backend/skills/atomic/present_fence_timing.skill.yaml",
+    "sha256": "9e5adfaae742b5ab37687acc966a57565c867df82c5a3c63c794d89bf486b258"
+  },
+  "steps": [
+    {
+      "displayed": true,
+      "id": "present_fence_stats",
+      "name": "Present Fence 统计",
+      "optional": true,
+      "query_id": "present_fence_timing/present_fence_stats",
+      "result_dependencies": [],
+      "save_as": "fence_stats",
+      "type": "atomic"
+    }
+  ],
+  "type": "atomic",
+  "version": "1.0",
+  "workflow": "gpu-rendering"
+}

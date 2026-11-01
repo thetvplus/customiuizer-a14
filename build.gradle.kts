@@ -29,6 +29,9 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
         // Host build tools only: these constraints do not enter the APK.
         constraints {
+            add("classpath", "com.google.guava:guava:33.7.2-jre") {
+                because("CVE-2026-102554; host deserialization allocation bounds")
+            }
             add("classpath", "org.apache.commons:commons-lang3:3.21.0") {
                 because("CVE-2025-48924; use the already validated Commons version")
             }

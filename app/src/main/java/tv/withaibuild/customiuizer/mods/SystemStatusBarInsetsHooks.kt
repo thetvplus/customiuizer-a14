@@ -122,10 +122,7 @@ object SystemStatusBarInsetsHooks {
     fun StatusBarInsetsHeightHook(lpparam: SystemServerStartingParam) {
         if (hookInstalled) return
 
-        val classLoader = lpparam.classLoader ?: run {
-            logInstall("no classLoader")
-            return
-        }
+        val classLoader = lpparam.classLoader
 
         // Resolve the full cold ABI once through the Architecture C resolver.
         val abi = StatusBarHeightResolver.resolveCore(classLoader)

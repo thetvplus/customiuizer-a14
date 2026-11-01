@@ -66,7 +66,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     init {
         require(attached.returnType == Void.TYPE && detached.returnType == Void.TYPE && touch.returnType == Boolean::class.javaPrimitiveType)
         require(animate.returnType == Void.TYPE && fields[2].type == RectF::class.java)
-        require(fastAnimate == null || element.isAssignableFrom(fastElement) && fastAnimate.returnType == Void.TYPE &&
+        require(fastAnimate == null || fastElement != null && element.isAssignableFrom(fastElement) && fastAnimate.returnType == Void.TYPE &&
             fastPackage?.returnType == String::class.java)
         require(!closingTarget.returnType.isPrimitive && closingRect.type == Rect::class.java &&
             defaultRect.returnType == Rect::class.java && java.lang.reflect.Modifier.isStatic(defaultRect.modifiers))
@@ -177,9 +177,9 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         running.invoke(owner) == true && animationTarget.invoke(animation.get(owner)) == fields[2].get(copy)
 
     fun timeReturn(owner: Any, strength: Float, absorption: Boolean) {
-        returnTiming?.apply(animation.get(owner), strength, absorption)
+        returnTiming?.apply(requireNotNull(animation.get(owner)), strength, absorption)
     }
-    fun returnTimingLease(owner: Any): Any? = returnTiming?.lease(animation.get(owner))
+    fun returnTimingLease(owner: Any): Any? = returnTiming?.lease(requireNotNull(animation.get(owner)))
     fun restoreReturnTiming(owner: Any? = null, lease: Any? = null) { returnTiming?.restore(owner?.let { animation.get(it) }, lease) }
 }
 
