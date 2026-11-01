@@ -6,8 +6,31 @@ Changes for maintained releases. Valid r14.26.1 and r14.26.3 changes are consoli
 
 ## Unreleased
 
-- Tighten sender boundaries for system actions, screenshot notifications and battery previews while retaining the A14 screenshot sender's signature-permission contract. Restart the host or device after updating to register the new boundaries.
-- Address a known Guava vulnerability in build and test dependencies without adding production runtime dependencies.
+## r14.26.9 — 2026-11-01
+
+versionCode 269. Changes since r14.26.5:
+
+### User changes
+
+- Trusted Wi-Fi networks now use cached scans, system broadcasts and on-demand refresh, with request cooldowns across rapid navigation, rejected scans and wait timeouts. Trusted Bluetooth devices replace the 15-second loop with page entry, system events and manual cache requests; empty results also end the wait.
+- Move backup filtering, encoding and file writes off the UI thread and share a single operation slot with restore. Finish started file work and close streams when a page is destroyed, preventing overlapping writes and stale success messages while retaining the backup format and system document picker.
+- Defer language refresh while Fragment state is saved and publish search indexes only after preparation completes. Restore editor drafts by stable preference keys and allow complete text and numeric forms to scroll when the landscape keyboard occupies most of the screen.
+- Continue opening trusted-network lists after their permissions are granted, and resume adding the current network in Wi-Fi automatic settings. Directory selection accepts confirmed local storage folders; cancellation or invalid selection preserves the previous setting.
+- Report credential-confirmation success only from the system result and restore pending requests without relaunching them. Ordinary saved Activity state no longer implies authentication is pending.
+- Foreground monitoring no longer installs global Hooks from each network-speed controller constructor. Base initialization and Application.attach share ownership of the actual target, while audio, alarm and brightness callbacks follow their current instances. Correct the nullable Boolean signature that could hide Control Center tiles with custom columns, and rebind each actual left adapter after recreation. Restart the device after updating.
+- Validate screenshot folders against their actual storage volume and MediaStore image-directory rules, letting the system create child folders. Unsupported custom folders retain the native destination. Preserve existing privileged host paths and keep filename extensions and MIME types consistent.
+- Add independent disable and restore controls for the system app updater, reusing original-state snapshots and failure readback. Keep ROM system updates separate and do not reinstall removed apps.
+- Hide the exact native system app updater and enterprise-mode entries, including their Settings search results. Both options default to off and work independently of the module icon position. Disabling them and restarting Settings restores entries. Preserve adjacent entries and nonempty categories; restart the device after updating and enabling.
+- Tighten sender boundaries for system actions, screenshot notifications and battery previews while retaining the A14 screenshot sender's signature-permission contract. Restart the device after updating to register the new boundaries.
+- Correct reflection-result, nullable-data and native-exception boundaries across notification lists, floating windows, media information and VPN state, preserving native execution and failure isolation.
+
+### Engineering notes
+
+- Retain Android 14 / HyperOS 1, SDK 34, arm64-v8a, libxposed API 102 and the historical signing identity. Preserve compact-resource processing and existing failure isolation.
+- Bound successful-build diagnostic summaries, prioritize entries requiring review and report omitted counts. Failed commands still retain full output; zero warnings or deprecations is not a goal.
+- Add regressions for request counts, file-operation ownership and method installation. Host results and reduced source work do not establish device CPU, GPU or power gains.
+- Address a known Guava vulnerability in build and test dependencies without adding production runtime dependencies. Continue tracking the remaining Host risk in Gradle's bundled dependency separately.
+- Add private security reporting, security-only update configuration and a separate manual dependency-graph workflow. Remove the retired manual semantic mirror and its dedicated tooling while retaining source contracts, process matrices and behavior regressions.
 
 ## r14.26.7 — 2026-10-31
 
