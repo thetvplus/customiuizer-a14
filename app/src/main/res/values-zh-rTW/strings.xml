@@ -1309,4 +1309,9 @@
     <string name="wifi_refresh">重新整理網路</string>
     <string name="wifi_scan_unavailable">暫時無法掃描。正在顯示快取網路，請稍後再試。</string>
     <string name="screenshot_directory_invalid">請選擇可用的本機儲存資料夾</string>
+    <string name="various_disable_system_app_updater_title">停用並隱藏系統應用升級器</string>
+    <string name="various_disable_system_app_updater_summ">停用目前使用者的系統應用升級器並隱藏設定入口；關閉後還原原啟用狀態。隱藏變更需重新啟動系統設定。</string>
+    <string name="various_disable_system_app_updater_confirm">停用 %1$d 個系統應用升級器套件？不影響 ROM OTA、安裝程式與安全服務，將儲存原啟用狀態供還原。</string>
+    <string name="various_hide_enterprise_mode_title">隱藏企業模式入口</string>
+    <string name="various_hide_enterprise_mode_summ">從更多設定中移除企業模式入口，保留企業管理與工作資料功能。變更需重新啟動系統設定。</string>
 </resources>

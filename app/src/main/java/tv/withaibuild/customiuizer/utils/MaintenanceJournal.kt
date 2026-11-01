@@ -107,7 +107,8 @@ internal class MaintenanceJournal(private val storage: SharedPreferences, privat
         const val EXTRA_IDENTITY = "maintenance_identity"
         private val PROFILES = setOf("pref_key_various_disable_update_services", "pref_key_various_disable_miui_daemon",
             "pref_key_various_trim_miui_daemon_network", "pref_key_various_disable_xiaomi_analytics",
-            "pref_key_various_trim_security_center_marketing", "pref_key_various_remove_security_center_antivirus")
+            "pref_key_various_trim_security_center_marketing", "pref_key_various_remove_security_center_antivirus",
+            "pref_key_various_disable_system_app_updater")
 
         fun open(context: Context) = MaintenanceJournal(context.getSharedPreferences("maintenance_recovery", Context.MODE_PRIVATE),
             NativeBackend(context))

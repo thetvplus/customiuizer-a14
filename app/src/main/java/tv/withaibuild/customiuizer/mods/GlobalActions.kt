@@ -520,9 +520,13 @@ object GlobalActions {
     }
 
     @JvmStatic
-    fun miuizerSettingsHook(lpparam: PackageReadyParam) {
-        installGlobalActionsSnapshot()
-        val settingsIconResId = MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable")
+    fun miuizerSettingsHook(lpparam: PackageReadyParam, hideUpdater: Boolean, hideEnterprise: Boolean) {
+        refreshGlobalActionsSnapshot()
+        if (settingsIconPos > 0) installGlobalActionsSnapshot()
+        if (hideUpdater || hideEnterprise) SettingsEntryHooks.hideSearchEntries(lpparam, hideUpdater, hideEnterprise)
+        if (hideEnterprise) SettingsEntryHooks.hideEnterpriseMode(lpparam)
+        if (settingsIconPos <= 0 && !hideUpdater) return
+        val settingsIconResId = if (settingsIconPos > 0) MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable") else 0
         ModuleHelper.findAndHookMethod("com.android.settings.MiuiSettings", lpparam.classLoader, "updateHeaderList", List::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
@@ -534,10 +538,13 @@ object GlobalActions {
                     result = null
                 }
                 try {
-                    if (chain.getArgs()[0] == null) return XposedHelpers.throwOrReturn(throwable, result)
+                    if (throwable != null) return XposedHelpers.throwOrReturn(throwable, result)
+                    val headers = chain.getArg(0) as? MutableList<*> ?: return result
+                    if (hideUpdater) SettingsEntryHooks.removeSystemAppUpdaterHeaders(headers)
 
                     val mContext = (chain.getThisObject() as Activity).baseContext
                     val opt = settingsIconPos
+                    if (opt <= 0 || settingsIconResId == 0) return result
 
                     val headerCls = XposedHelpers.findClassIfExists("com.android.settingslib.miuisettings.preference.PreferenceActivity\$Header", lpparam.classLoader)
                     if (headerCls == null) return XposedHelpers.throwOrReturn(throwable, result)
@@ -560,31 +567,33 @@ object GlobalActions {
                     val themes = mContext.resources.getIdentifier("launcher_settings", "id", mContext.packageName)
                     val special = mContext.resources.getIdentifier("other_special_feature_settings", "id", mContext.packageName)
 
-                    val headers = chain.getArgs()[0] as MutableList<Any>
+                    @Suppress("UNCHECKED_CAST")
+                    val iconHeaders = headers as MutableList<Any>
                     var position = 0
                     for (head in headers) {
                         position++
                         val id = XposedHelpers.getLongField(head, "id")
                         if (opt == 1 && id == -1L) {
-                            headers.add(position - 1, header)
+                            iconHeaders.add(position - 1, header)
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
                         if (opt == 2 && id == themes.toLong()) {
-                            headers.add(position, header)
+                            iconHeaders.add(position, header)
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
                         if (opt == 3 && id == special.toLong()) {
-                            headers.add(position, header)
+                            iconHeaders.add(position, header)
                             return XposedHelpers.throwOrReturn(throwable, result)
                         }
                     }
-                    if (headers.size > 25) headers.add(25, header) else headers.add(header)
+                    if (headers.size > 25) iconHeaders.add(25, header) else iconHeaders.add(header)
                 } catch (t: Throwable) {
                     XposedHelpers.log(t)
                 }
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         })
+        if (settingsIconResId == 0) return
         ModuleHelper.hookAllMethods("com.android.settings.MiuiSettings\$HeaderAdapter", lpparam.classLoader, "setIcon", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?

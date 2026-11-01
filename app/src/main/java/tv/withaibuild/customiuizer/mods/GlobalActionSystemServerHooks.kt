@@ -83,6 +83,7 @@ object GlobalActionSystemServerHooks {
     )
 
     private val XIAOMI_TRIM_PACKAGES = setOf(
+        "com.xiaomi.discover",
         "com.miui.analytics",
         "com.miui.msa.global"
     )
