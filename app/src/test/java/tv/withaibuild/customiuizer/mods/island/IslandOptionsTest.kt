@@ -5,12 +5,33 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandOptionsTest {
+    @Test fun mediaEffectsUseTheOnlyDisplaySelectionAndIgnoreRetiredSecondLists() {
+        val prefs = PrefMap().apply {
+            put("system_strong_toast_mode", "3"); put("system_island_media", true)
+            put("system_island_media_return", true)
+        }
+        assertFalse(IslandOptions.read(prefs).acceptsMedia("music.any"))
+        assertTrue(IslandOptions.read(prefs).returnPackages().isEmpty())
+        val selected = mutableSetOf("chosen.media", "other.media")
+        prefs.put("system_island_media_apps", selected)
+        val options = IslandOptions.read(prefs); selected.add("late.media")
+        assertEquals(setOf("chosen.media", "other.media"), options.returnPackages())
+        prefs.put("system_island_media_return_apps", emptySet<String>())
+        prefs.put("system_island_media_effect_scope", "custom")
+        assertEquals(selected, IslandOptions.read(prefs).returnPackages())
+        assertFalse(options.copy(excludedApps = setOf("chosen.media")).returnsMedia("chosen.media"))
+        assertTrue(options.copy(mediaReturn = false).acceptsMedia("chosen.media"))
+        assertTrue(options.copy(mediaReturn = false).returnPackages().isEmpty())
+        assertFalse(options.copy(mediaApps = emptySet()).acceptsMedia("chosen.media"))
+        assertEquals(options.returnPackages(), options.copy(returnEffect = IslandReturnEffect.ABSORPTION).returnPackages())
+    }
+
     @Test fun boardingDefaultsToNativeAndOnlyTheExplicitAbsorptionValueEnablesCapture() {
         val prefs = PrefMap()
-        assertFalse(IslandOptions.read(prefs).absorption)
-        for (value in listOf("0", "1", "2", "-1")) {
+        assertFalse((IslandOptions.read(prefs).returnEffect == IslandReturnEffect.ABSORPTION))
+        for (value in listOf("0", "1", "2", "-1", false, true, 0, 1)) {
             prefs.put("system_island_return_effect", value)
-            assertEquals(value == "1", IslandOptions.read(prefs).absorption)
+            assertEquals(value == "1" || value == true || value == 1, (IslandOptions.read(prefs).returnEffect == IslandReturnEffect.ABSORPTION))
             assertFalse(IslandOptions.read(prefs).mediaReturn)
         }
     }
@@ -29,7 +50,7 @@ class IslandOptionsTest {
     }
     @Test fun returnAdmissionUsesEnabledSelectionsAndExclusionWinsForMediaAndNativeActivities() {
         val options = IslandOptions(true, true, true, mediaReturn = true,
-            mediaReturnApps = setOf("music.app", "blocked.app"), excludedApps = setOf("blocked.app", IslandLiveKind.CLOCK_PACKAGE),
+            mediaApps = setOf("music.app", "blocked.app"), excludedApps = setOf("blocked.app", IslandLiveKind.CLOCK_PACKAGE),
             liveKinds = setOf(IslandLiveKind.TIMER, IslandLiveKind.RECORDER, IslandLiveKind.PRIVACY))
         assertTrue(options.returnsMedia("music.app"))
         assertFalse(options.returnsMedia("blocked.app"))
@@ -87,7 +108,7 @@ class IslandOptionsTest {
         assertFalse(IslandOptions.read(prefs).media)
         assertFalse(IslandOptions.read(prefs).mediaReturn)
         prefs.put("system_island_media_return", true)
-        prefs.put("system_island_media_return_apps", setOf("music.app"))
+        prefs.put("system_island_media_apps", setOf("music.app"))
         assertTrue(IslandOptions.read(prefs).hideInFloatingWindow)
     }
 
@@ -97,12 +118,14 @@ class IslandOptionsTest {
         assertFalse(active())
         prefs.put("system_strong_toast_mode", "3")
         prefs.put("system_island_media_return", true)
-        prefs.put("system_island_media_return_apps", setOf("chosen.music"))
+        prefs.put("system_island_media_apps", setOf("chosen.music"))
         assertFalse(active())
-        prefs.put("system_island_media", true); assertTrue(active())
-        prefs.put("system_island_media_return_apps", emptySet<String>()); assertFalse(active())
-        prefs.put("system_island_media_return_apps", setOf("chosen.music"))
-        prefs.put("system_island_simplified", true); assertFalse(active())
+        prefs.put("system_island_media", true); assertFalse(active())
+        prefs.put("system_island_media_apps", setOf("chosen.music")); assertFalse(active())
+        prefs.put("system_island_return_effect", "absorption"); assertTrue(active())
+        prefs.put("system_island_media_apps", emptySet<String>()); assertFalse(active())
+        prefs.put("system_island_media_apps", setOf("chosen.music"))
+        prefs.put("system_island_simplified", true); assertTrue(active())
         prefs.put("system_island_simplified", false); assertTrue(active())
         prefs.put("system_strong_toast_mode", "0"); assertFalse(active())
     }
@@ -110,17 +133,17 @@ class IslandOptionsTest {
     @Test fun musicReturnIsOptInAndNeverTreatsAnEmptySelectionAsAllApps() {
         val prefs = PrefMap()
         assertFalse(IslandOptions.read(prefs).mediaReturn)
-        assertTrue(IslandOptions.read(prefs).mediaReturnApps.isEmpty())
+        assertTrue(IslandOptions.read(prefs).mediaApps.isEmpty())
         prefs.put("system_island_media_return", true)
-        assertTrue(IslandOptions.read(prefs).mediaReturnApps.isEmpty())
+        assertTrue(IslandOptions.read(prefs).mediaApps.isEmpty())
         val selected = mutableSetOf("music.selected")
-        prefs.put("system_island_media_return_apps", selected)
+        prefs.put("system_island_media_apps", selected)
         val options = IslandOptions.read(prefs)
         selected.add("music.other")
-        assertEquals(setOf("music.selected"), options.mediaReturnApps)
+        assertEquals(setOf("music.selected"), options.mediaApps)
         prefs.put("system_island_media_return", false)
         assertFalse(IslandOptions.read(prefs).mediaReturn)
-        assertEquals(selected, IslandOptions.read(prefs).mediaReturnApps)
+        assertEquals(selected, IslandOptions.read(prefs).mediaApps)
     }
 
     @Test fun musicSwipeDefaultsOnAndIsIndependentOfRetiredGesturePreferences() {
@@ -149,7 +172,7 @@ class IslandOptionsTest {
         assertEquals(false, prefs.getBoolean("system_island_waveform", true))
     }
 
-    @Test fun entranceStyleDefaultsSafelyAndRetainsItsChoiceWithSimplifiedAnimation() {
+    @Test fun entranceStyleDefaultsSafelyAndIgnoresRetiredMotionPreference() {
         val prefs = PrefMap()
         assertEquals(IslandEntranceStyle.TOP, IslandOptions.read(prefs).entranceStyle)
         for (stored in listOf<Any>(-1, "2", "invalid", true)) {
@@ -165,7 +188,6 @@ class IslandOptionsTest {
             assertFalse(options.enabled)
         }
         prefs.put("system_island_simplified", true)
-        assertTrue(IslandOptions.read(prefs).simplified)
         assertEquals(IslandEntranceStyle.TOP, IslandOptions.read(prefs).entranceStyle)
         prefs.put("system_island_simplified", false)
         prefs.put("system_strong_toast_mode", "3")

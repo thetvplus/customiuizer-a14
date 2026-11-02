@@ -50,10 +50,36 @@ class LauncherMusicReturnLifecycleTest {
     }
     private fun dispose(owner: Any) { owner.javaClass.getDeclaredMethod("dispose").apply { isAccessible = true }.invoke(owner) }
 
+    @Test fun absorptionOffDoesNotRetargetNativeIconsOrKeepReturnReceivers() {
+        val context = ContextSpy()
+        val prefs = PrefMap().apply {
+            put("system_strong_toast_mode", "3"); put("system_island_media", true); put("system_island_media_apps", setOf("chosen.music"))
+            put("system_island_media_return", true)
+            put("system_island_return_effect", false)
+        }
+        val owner = owner(context, prefs)
+        try {
+            assertTrue(context.business.isEmpty())
+            assertNull(ReflectionHelpers.getField<Any?>(owner, "scope"))
+            val observer = ReflectionHelpers.getField<ModuleHelper.PreferenceObserver>(owner, "observer")
+            prefs.put("system_island_return_effect", true); observer.onChange("system_island_return_effect")
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(1, context.business.size)
+            prefs.put("system_island_return_effect", false); observer.onChange("system_island_return_effect")
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(context.business.isEmpty())
+            assertNull(ReflectionHelpers.getField<Any?>(owner, "scope"))
+            assertNull(ReflectionHelpers.getField<Any?>(owner, "snapshot"))
+            val nav = LauncherMusicReturnAccessTest.Nav()
+            val select = owner.javaClass.getDeclaredMethod("selectWindowTarget", Any::class.java).apply { isAccessible = true }
+            assertEquals(false, select.invoke(owner, nav))
+        } finally { dispose(owner) }
+    }
+
     @Test fun repeatedNativeClosesWithoutNewTouchCommitIndependentlyAndOldCallbacksCannotStealTheNextReturn() {
         val prefs = PrefMap().apply {
-            put("system_strong_toast_mode", "3"); put("system_island_media", true)
-            put("system_island_media_return", true); put("system_island_media_return_apps", setOf("chosen.music"))
+            put("system_island_return_effect", true); put("system_strong_toast_mode", "3"); put("system_island_media", true); put("system_island_media_apps", setOf("chosen.music"))
+            put("system_island_media_return", true)
         }
         val owner = owner(ContextSpy(), prefs)
         try {
@@ -94,8 +120,8 @@ class LauncherMusicReturnLifecycleTest {
     @Test fun disablingAndDetachingReleaseTheReceiverAndScopeWithoutDroppingFrameworkDeliveries() {
         val context = ContextSpy()
         val prefs = PrefMap().apply {
-            put("system_strong_toast_mode", "3"); put("system_island_media", true)
-            put("system_island_media_return", true); put("system_island_media_return_apps", setOf("chosen.music"))
+            put("system_island_return_effect", true); put("system_strong_toast_mode", "3"); put("system_island_media", true); put("system_island_media_apps", setOf("chosen.music"))
+            put("system_island_media_return", true)
         }
         val owner = owner(context, prefs)
         try {

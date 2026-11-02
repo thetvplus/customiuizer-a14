@@ -1,6 +1,7 @@
 package tv.withaibuild.customiuizer.ui
 
 import android.annotation.SuppressLint
+import android.util.LongSparseArray
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.window.DialogProperties
@@ -27,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -46,21 +50,36 @@ import tv.withaibuild.customiuizer.utils.AppHelper
 /** Observe the existing persistence / dependency model, without constructing RecyclerView rows. */
 @SuppressLint("RestrictedApi")
 internal class SettingsPreferenceList(screen: PreferenceScreen) : AutoCloseable {
-    class Row(val preference: Preference, val id: Long, val input: PreferenceGroupChrome.InputRow) {
+    class Row(val preference: Preference, val id: Long, input: PreferenceGroupChrome.InputRow) {
+        var input = input
+            private set
         val revision = mutableIntStateOf(0)
+        fun refreshInput(): Boolean {
+            val next = preferenceGroupInputRow(preference, input)
+            if (next === input) return false
+            input = next
+            return true
+        }
     }
     private val adapter = PreferenceGroupAdapter(screen)
     var rows by mutableStateOf<List<Row>>(emptyList())
         private set
     var chrome by mutableStateOf<List<PreferenceGroupChrome.Chrome>>(emptyList())
         private set
+    private var chromeInputs = emptyList<PreferenceGroupChrome.InputRow>()
+    private var closed = false
     private val observer = object : RecyclerView.AdapterDataObserver() {
         override fun onChanged() = rebuild()
         override fun onItemRangeChanged(positionStart: Int, itemCount: Int) {
+            if (closed) return
             val end = (positionStart + itemCount).coerceAtMost(rows.size)
-            if ((positionStart until end).any { rows[it].input != preferenceGroupInputRow(rows[it].preference) }) {
-                rebuild()
-            } else for (index in positionStart until end) rows[index].revision.intValue++
+            var layoutChanged = false
+            for (index in positionStart until end) {
+                val row = rows[index]
+                if (row.refreshInput()) layoutChanged = true
+                row.revision.intValue++
+            }
+            if (layoutChanged) updateChrome()
         }
         override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) =
             onItemRangeChanged(positionStart, itemCount)
@@ -70,13 +89,32 @@ internal class SettingsPreferenceList(screen: PreferenceScreen) : AutoCloseable 
     }
     init { adapter.registerAdapterDataObserver(observer); rebuild() }
     private fun rebuild() {
+        if (closed) return
+        // Reuse the visible owners across native hierarchy changes. The temporary primitive
+        // index avoids boxed keys and keeps removed/hidden preferences out of a permanent cache.
+        val previous = if (rows.isEmpty()) null else LongSparseArray<Row>(rows.size).apply {
+            rows.forEach { put(it.id, it) }
+        }
         rows = List(adapter.itemCount) { index ->
             val preference = requireNotNull(adapter.getItem(index))
-            Row(preference, adapter.getItemId(index), preferenceGroupInputRow(preference))
+            val id = adapter.getItemId(index)
+            previous?.get(id)?.takeIf { it.preference === preference }?.also {
+                if (it.refreshInput()) it.revision.intValue++
+            } ?: Row(preference, id, preferenceGroupInputRow(preference))
         }
-        chrome = PreferenceGroupChrome.layout(rows.map { it.input })
+        updateChrome()
     }
-    override fun close() { adapter.unregisterAdapterDataObserver(observer) }
+    private fun updateChrome() {
+        if (rows.size == chromeInputs.size && rows.indices.all { rows[it].input == chromeInputs[it] }) return
+        val inputs = rows.map { it.input }
+        chromeInputs = inputs
+        chrome = PreferenceGroupChrome.layout(inputs, chrome)
+    }
+    override fun close() {
+        if (closed) return
+        closed = true
+        adapter.unregisterAdapterDataObserver(observer)
+    }
 }
 
 @Composable
@@ -112,8 +150,9 @@ private fun PreferenceRow(preference: Preference, revision: Int, chrome: Prefere
         SettingsSection(preference.title?.toString().orEmpty())
         return
     }
-    val top = if (chrome.cardStart) 20.dp else 0.dp
-    val bottom = if (chrome.cardEnd) 20.dp else 0.dp
+    val radius = dimensionResource(R.dimen.preference_group_radius)
+    val top = if (chrome.cardStart) radius else 0.dp
+    val bottom = if (chrome.cardEnd) radius else 0.dp
     val extras = preference.extras
     var highlighted by remember(preference) { mutableStateOf(false) }
     LaunchedEffect(revision, preference) {
@@ -169,8 +208,10 @@ private fun PreferenceContent(preference: Preference, revision: Int, onDialog: (
         preference.isSelectable -> modifier.clickable(enabled = enabled, onClick = click)
         else -> modifier
     }
-    Column(modifier.padding(start = indent, end = 16.dp, top = 14.dp, bottom = 14.dp)
-        .alpha(if (enabled) 1f else .45f)) {
+    Column(modifier.heightIn(min = 56.dp).padding(start = indent, end = 16.dp,
+        top = dimensionResource(R.dimen.preference_item_padding_top),
+        bottom = dimensionResource(R.dimen.preference_item_padding_bottom))
+        .alpha(if (enabled) 1f else .45f), verticalArrangement = Arrangement.Center) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
                 val title = buildString {
@@ -186,14 +227,21 @@ private fun PreferenceContent(preference: Preference, revision: Int, onDialog: (
                     color = if (extras.getBoolean("ui.warning")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                 if (summary.isNotEmpty()) Text(summary, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (value.isNotEmpty()) Text(value, style = MaterialTheme.typography.bodyMedium,
+                if (summary.isNotEmpty() && value.isNotEmpty()) Text(value, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            if (summary.isEmpty() && value.isNotEmpty()) Text(value, Modifier.weight(.55f),
+                style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End,
+                maxLines = 2, overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (extras.getBoolean("ui.new")) Text(stringResource(R.string.miuizer_new_mod),
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             when (preference) {
                 is TwoStatePreference -> Switch(preference.isChecked, onCheckedChange = null, enabled = enabled)
-                is SeekBarPreference -> TextButton(onClick = click, enabled = enabled) { Text(preference.composeDisplay()) }
+                is SeekBarPreference -> TextButton(onClick = click, enabled = enabled, modifier = Modifier.weight(.55f)) {
+                    Text(preference.composeDisplay(), Modifier.fillMaxWidth(), textAlign = TextAlign.End,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
                 else -> {
                     if (preference.isSelectable) SettingsChevron()
                 }
@@ -296,7 +344,7 @@ internal fun SettingsPreferenceDialog(preference: Preference, dismiss: () -> Uni
             }) { Text(stringResource(android.R.string.ok)) } })
         }
         is MultiSelectListPreference -> {
-            var selected by rememberSaveable(preference.key) { mutableStateOf(ArrayList(preference.values)) }
+            var selected by rememberSaveable(preference.key) { mutableStateOf<List<String>>(preference.values.toList()) }
             AlertDialog(onDismissRequest = dismiss, title = { Text(title) },
                 textContentColor = MaterialTheme.colorScheme.onSurface, text = {
                 LazyColumn(Modifier.heightIn(max = 420.dp)) {
@@ -305,7 +353,7 @@ internal fun SettingsPreferenceDialog(preference: Preference, dismiss: () -> Uni
                         val value = preference.entryValues?.getOrNull(index)?.toString()
                         Row(Modifier.fillMaxWidth().toggleable(value in selected, enabled = value != null,
                             role = Role.Checkbox, onValueChange = { checked -> if (value != null) {
-                                selected = ArrayList(selected).apply { if (checked) add(value) else remove(value) }
+                                selected = if (checked) selected + value else selected - value
                             } }).heightIn(min = 48.dp).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(value in selected, null)
                             Text(entries[index].toString(), Modifier.padding(start = 12.dp),

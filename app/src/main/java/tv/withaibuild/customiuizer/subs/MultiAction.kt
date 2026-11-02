@@ -86,7 +86,9 @@ class MultiAction : SubFragment() {
     override fun loadSharedPrefs() = Unit
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View = settingsView {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = 720.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionChoice(getString(R.string.launcher_gestures_action), entries, entryValues, action) { action = it }
             when (action) {
                 8 -> TargetRow(getString(R.string.launcher_gestures_launch), appValue, appUser) {
@@ -111,6 +113,7 @@ class MultiAction : SubFragment() {
             }
             if (action == 33 || action == 34) Text(getString(R.string.pip_action_hint), Modifier.padding(16.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         }
     }
 

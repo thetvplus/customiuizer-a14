@@ -2,7 +2,6 @@ package tv.withaibuild.customiuizer
 
 import android.os.Bundle
 import android.view.View
-import androidx.annotation.Nullable
 import tv.withaibuild.customiuizer.ui.SettingsActionBar as ActionBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -145,7 +144,7 @@ open class SubFragment : PreferenceFragmentBase() {
         }
     }
 
-    override fun onCreatePreferences(@Nullable savedInstanceState: Bundle?, @Nullable rootKey: String?) {
+    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         if (settingsType == AppHelper.SettingsType.Preference) {
             super.onCreatePreferences(savedInstanceState, rootKey)
             setSettingsPage(contentResId)

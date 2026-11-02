@@ -1,0 +1,85 @@
+{
+  "type": "screen",
+  "attributes": {
+    "android:key": "pref_key_system_island_live_cat"
+  },
+  "children": [
+    {
+      "type": "multi",
+      "attributes": {
+        "android:key": "pref_key_system_island_live_kinds",
+        "android:title": "@string/system_island_live_choose",
+        "android:summary": "@string/system_island_live_sources_summary",
+        "android:entries": "@array/system_island_live_entries",
+        "android:entryValues": "@array/system_island_live_values",
+        "app:iconSpaceReserved": "false",
+        "app:isPreferenceVisible": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_live_call",
+        "android:title": "@string/system_island_live_call",
+        "android:persistent": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_live_alarm",
+        "android:title": "@string/system_island_live_alarm",
+        "android:persistent": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_live_timer",
+        "android:title": "@string/system_island_live_timer",
+        "android:persistent": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_live_stopwatch",
+        "android:title": "@string/system_island_live_stopwatch",
+        "android:persistent": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_live_recorder",
+        "android:title": "@string/system_island_live_recorder",
+        "android:persistent": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_live_privacy",
+        "android:title": "@string/system_island_live_privacy",
+        "android:persistent": "false"
+      }
+    },
+    {
+      "type": "section",
+      "attributes": {
+        "android:title": "@string/system_island_return_group"
+      },
+      "children": [
+        {
+          "type": "toggle",
+          "attributes": {
+            "android:key": "pref_key_system_island_live_return",
+            "android:title": "@string/system_island_live_return",
+            "android:summary": "@string/system_island_live_return_summary",
+            "android:defaultValue": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

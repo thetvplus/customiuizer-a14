@@ -113,6 +113,10 @@ internal object LauncherMusicReturnHooks {
         val epoch: Long, val sequence: Long, val impulse: Float)
 
     fun install(param: PackageReadyParam, prefs: PrefMap) {
+        if (XposedHelpers.findClassIfExists("com.miui.home.recents.anim.WindowElement", param.classLoader) == null) {
+            LegacyLauncherIslandReturn.install(param, prefs)
+            return
+        }
         val access = LauncherMusicReturnAccess(param.classLoader)
         val absorption = LauncherWindowAbsorption.resolve(param.classLoader, Handler(Looper.getMainLooper()))
         var absorptionInstalled = false
@@ -299,8 +303,8 @@ internal object LauncherMusicReturnHooks {
                 throw error
             }
         }
-        private fun enabled() = !disposed && options.enabled && returnPackages.isNotEmpty() &&
-            !options.simplified && ValueAnimator.areAnimatorsEnabled()
+        private fun enabled() = !disposed && options.enabled && options.returnEffectEnabled && returnPackages.isNotEmpty() &&
+            ValueAnimator.areAnimatorsEnabled()
 
         fun bindNavigation(nav: View) { navigation = WeakReference(nav) }
         fun navigationView() = navigation.get()?.takeIf { it !== view.get() || access.attached.declaringClass.isInstance(it) }
@@ -369,8 +373,8 @@ internal object LauncherMusicReturnHooks {
             val host = view.get()?.takeIf { it.isAttachedToWindow } ?: return null
             if (host.display?.rotation != android.view.Surface.ROTATION_0) return null
             val selected = homeTarget.get()
-            val result = if (selected != null) access.retargetHome(original, element, selected, frame, options.absorption)
-                else navigation.get()?.takeIf { it.isAttachedToWindow }?.let { access.retarget(original, element, it, frame, options.absorption) }
+            val result = if (selected != null) access.retargetHome(original, element, selected, frame)
+                else navigation.get()?.takeIf { it.isAttachedToWindow }?.let { access.retarget(original, element, it, frame) }
             if (result == null) return null
             if (epoch != gesture.get()) return null
             return Attempt(result, current, epoch, IslandApplicationOverlaySignal.nextSequence(), impulse.recentStrength(SystemClock.uptimeMillis()))
@@ -411,9 +415,9 @@ internal object LauncherMusicReturnHooks {
                 return
             }
             committedAttempt = attempt.sequence
-            access.timeReturn(element, attempt.impulse, options.absorption)
+            access.timeReturn(element, attempt.impulse)
             val progress = if (absorption != null) attempt.snapshot.frame?.let { frame ->
-                ModuleHelper.guarded<IslandReturnProgress.Producer?>(null) { absorption.begin(tasks, element, attempt.params, frame, options.absorption) }
+                ModuleHelper.guarded<IslandReturnProgress.Producer?>(null) { absorption.begin(tasks, element, attempt.params, frame, options.returnEffect == IslandReturnEffect.INSTANT) }
             } else null
             val current = attempt.snapshot
             val message = IslandMusicReturnSignal.encode(current.frame, SystemClock.uptimeMillis(), current.sequence)

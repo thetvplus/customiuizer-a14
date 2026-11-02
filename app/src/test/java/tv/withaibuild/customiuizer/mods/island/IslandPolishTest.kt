@@ -78,11 +78,11 @@ class IslandPolishTest {
         assertEquals(0f,getField<FloatArray>(wave,"energies")[0],0f)
         advanceDisplayFrames()
         assertTrue(getField<FloatArray>(wave,"energies")[0] in .1f.. .99f)
-        advanceDisplayFrames(18)
+        advanceDisplayFrames(90)
         assertEquals(.8944272f,getField<FloatArray>(wave,"energies")[0],.006f)
         assertFalse(getField(wave,"scheduled"))
         wave.spectrum(FloatArray(5))
-        advanceDisplayFrames(18)
+        advanceDisplayFrames(90)
         assertEquals(0f,getField<FloatArray>(wave,"energies")[0],.006f)
         assertFalse(getField(wave,"scheduled"))
         wave.spectrum(null)
@@ -126,7 +126,7 @@ class IslandPolishTest {
 
     @Test fun compactFeedbackKeepsOneVerticalCentreAndContainsNoHiddenControlPanel() {
         val activity=Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell=IslandActivityView(activity).apply { simplified=true }
+        val shell=IslandActivityView(activity).apply { powerSaveMotion=true }
         activity.setContentView(shell)
         val art=BitmapDrawable(activity.resources,Bitmap.createBitmap(40,40,Bitmap.Config.ARGB_8888))
         for (height in 38..44) {
@@ -151,7 +151,7 @@ class IslandPolishTest {
 
     @Test fun swipesAreAlwaysAvailableButUnsupportedTrackActionsRemainBlocked() {
         val activity=Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell=IslandActivityView(activity).apply { simplified=true }
+        val shell=IslandActivityView(activity).apply { powerSaveMotion=true }
         activity.setContentView(shell)
         shell.bind("Track",null,null,true,true,true,PlaybackState.ACTION_SKIP_TO_NEXT,true)
         shell.geometry(280,40,40); layout(shell,280,40)

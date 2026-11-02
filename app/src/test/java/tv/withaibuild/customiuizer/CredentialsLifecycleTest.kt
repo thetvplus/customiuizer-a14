@@ -30,6 +30,22 @@ class UnavailableCredentialShadow : ShadowKeyguardManager() {
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class CredentialsLifecycleTest {
+    @Test fun manifestShortcutTargetsTheInstalledA14CredentialActivity() {
+        val context = RuntimeEnvironment.getApplication()
+        context.resources.getXml(R.xml.shortcuts).use { parser ->
+            while (parser.next() != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                if (parser.eventType == org.xmlpull.v1.XmlPullParser.START_TAG && parser.name == "intent") {
+                    val intent = Intent.parseIntent(context.resources, parser, android.util.Xml.asAttributeSet(parser))
+                    assertEquals(context.packageName, intent.component!!.packageName)
+                    assertEquals(Credentials::class.java.name, intent.component!!.className)
+                    assertEquals(Credentials::class.java.name, context.packageManager.getActivityInfo(intent.component!!, 0).name)
+                    return
+                }
+            }
+        }
+        fail("The declared credential shortcut must contain its explicit activity intent")
+    }
+
     @Before fun secure() {
         shadowOf(RuntimeEnvironment.getApplication().getSystemService(KeyguardManager::class.java)).apply { setIsKeyguardSecure(true); setIsDeviceSecure(true) }
         ShadowToast.reset()

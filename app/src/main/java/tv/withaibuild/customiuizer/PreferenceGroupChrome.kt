@@ -35,7 +35,7 @@ internal object PreferenceGroupChrome {
         val dividerBelow: Boolean,
     )
 
-    fun layout(rows: List<InputRow>): List<Chrome> {
+    fun layout(rows: List<InputRow>, previous: List<Chrome> = emptyList()): List<Chrome> {
         if (rows.isEmpty()) return emptyList()
         val result = ArrayList<Chrome>(rows.size)
         var index = 0
@@ -48,24 +48,23 @@ internal object PreferenceGroupChrome {
                 while (bodyEnd < rows.size && !isTopLevelCategory(rows[bodyEnd])) {
                     bodyEnd++
                 }
-                result.add(
-                    Chrome(
-                        kind = if (row.titleVisible) Kind.SECTION_HEADER else Kind.HIDDEN_HEADER,
-                        groupId = groupId,
-                        inCard = false,
-                        cardStart = false,
-                        cardEnd = false,
-                        dividerBelow = false,
-                    )
+                append(
+                    result, previous,
+                    kind = if (row.titleVisible) Kind.SECTION_HEADER else Kind.HIDDEN_HEADER,
+                    groupId = groupId,
+                    inCard = false,
+                    cardStart = false,
+                    cardEnd = false,
+                    dividerBelow = false,
                 )
-                appendCard(result, rows, bodyStart, bodyEnd, groupId)
+                appendCard(result, previous, rows, bodyStart, bodyEnd, groupId)
                 index = bodyEnd
             } else {
                 var bodyEnd = index
                 while (bodyEnd < rows.size && !isTopLevelCategory(rows[bodyEnd])) {
                     bodyEnd++
                 }
-                appendCard(result, rows, index, bodyEnd, groupId)
+                appendCard(result, previous, rows, index, bodyEnd, groupId)
                 index = bodyEnd
             }
             groupId++
@@ -77,6 +76,7 @@ internal object PreferenceGroupChrome {
 
     private fun appendCard(
         result: MutableList<Chrome>,
+        previous: List<Chrome>,
         rows: List<InputRow>,
         start: Int,
         end: Int,
@@ -88,28 +88,48 @@ internal object PreferenceGroupChrome {
         for (i in start until end) {
             if (rows[i].isCategory) hasOwner = false
             else if (!rows[i].supportingText) hasOwner = true
-            result.add(
-                Chrome(
-                    kind = if (rows[i].isCategory) Kind.INNER_HEADER else Kind.CARD,
-                    groupId = groupId,
-                    inCard = true,
-                    cardStart = i == start,
-                    cardEnd = i == last,
-                    dividerBelow = i != last && !rows[i].isCategory && !rows[i + 1].isCategory &&
-                        !rows[i + 1].supportingText && (!rows[i].supportingText || hasOwner),
-                )
+            append(
+                result, previous,
+                kind = if (rows[i].isCategory) Kind.INNER_HEADER else Kind.CARD,
+                groupId = groupId,
+                inCard = true,
+                cardStart = i == start,
+                cardEnd = i == last,
+                dividerBelow = i != last && !rows[i].isCategory && !rows[i + 1].isCategory &&
+                    !rows[i + 1].supportingText && (!rows[i].supportingText || hasOwner),
             )
         }
     }
+
+    private fun append(
+        result: MutableList<Chrome>, previous: List<Chrome>, kind: Kind,
+        groupId: Int, inCard: Boolean, cardStart: Boolean, cardEnd: Boolean, dividerBelow: Boolean,
+    ) {
+        val old = previous.getOrNull(result.size)
+        result.add(
+            if (old != null && old.kind == kind && old.groupId == groupId && old.inCard == inCard &&
+                old.cardStart == cardStart && old.cardEnd == cardEnd && old.dividerBelow == dividerBelow) old
+            else Chrome(kind, groupId, inCard, cardStart, cardEnd, dividerBelow)
+        )
+    }
 }
 
-internal fun preferenceGroupInputRow(pref: Preference): PreferenceGroupChrome.InputRow {
+internal fun preferenceGroupInputRow(
+    pref: Preference,
+    previous: PreferenceGroupChrome.InputRow? = null,
+): PreferenceGroupChrome.InputRow {
+    val category = pref is PreferenceCategory
+    val topLevel = pref.parent is PreferenceScreen ||
+        (pref.parent as? PreferenceCategoryEx)?.isPageContainer() == true
+    val titleVisible = (pref as? PreferenceCategoryEx)?.isTitleVisible() ?: true
+    val supporting = isSupportingPreference(pref)
+    if (previous != null && previous.isCategory == category && previous.isTopLevel == topLevel &&
+        previous.titleVisible == titleVisible && previous.supportingText == supporting) return previous
     return PreferenceGroupChrome.InputRow(
-        isCategory = pref is PreferenceCategory,
-        isTopLevel = pref.parent is PreferenceScreen ||
-            (pref.parent as? PreferenceCategoryEx)?.isPageContainer() == true,
-        titleVisible = (pref as? PreferenceCategoryEx)?.isTitleVisible() ?: true,
-        supportingText = isSupportingPreference(pref),
+        isCategory = category,
+        isTopLevel = topLevel,
+        titleVisible = titleVisible,
+        supportingText = supporting,
     )
 }
 

@@ -895,7 +895,14 @@
                   "type": "action",
                   "attributes": {
                     "android:key": "pref_key_system_island_notifications_cat",
-                    "android:title": "@string/system_island_chat_title"
+                    "android:title": "@string/system_island_chat_group"
+                  }
+                },
+                {
+                  "type": "action",
+                  "attributes": {
+                    "android:key": "pref_key_system_island_live_cat",
+                    "android:title": "@string/system_island_live_title"
                   }
                 },
                 {
@@ -1638,7 +1645,6 @@
                   "attributes": {
                     "android:key": "pref_key_system_toast_top",
                     "android:title": "@string/system_toast_top_title",
-                    "android:summary": "@string/system_toast_edge_summ",
                     "android:defaultValue": "24",
                     "app:minValue": "0",
                     "app:maxValue": "800",
@@ -1664,7 +1670,6 @@
                   "attributes": {
                     "android:key": "pref_key_system_toast_bottom",
                     "android:title": "@string/system_toast_bottom_title",
-                    "android:summary": "@string/system_toast_edge_summ",
                     "android:defaultValue": "0",
                     "app:minValue": "0",
                     "app:maxValue": "800",

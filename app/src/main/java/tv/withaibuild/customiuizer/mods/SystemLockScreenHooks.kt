@@ -3,7 +3,7 @@ package tv.withaibuild.customiuizer.mods
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.app.KeyguardManager
-import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -305,7 +305,7 @@ object SystemLockScreenHooks {
     }
 
     private fun isTrusted(mContext: Context, classLoader: ClassLoader): Boolean {
-        return isTrustedWiFi(mContext) || isTrustedBt(classLoader)
+        return isTrustedWiFi(mContext) || isTrustedBt(mContext, classLoader)
     }
 
     private fun isTrustedWiFi(mContext: Context): Boolean {
@@ -317,9 +317,9 @@ object SystemLockScreenHooks {
     }
 
     @SuppressLint("MissingPermission")
-    private fun isTrustedBt(classLoader: ClassLoader): Boolean {
+    private fun isTrustedBt(mContext: Context, classLoader: ClassLoader): Boolean {
         try {
-            val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+            val mBluetoothAdapter = mContext.getSystemService(BluetoothManager::class.java)?.adapter
             if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled) return false
             val trustedDevices = MainModule.mPrefs.getStringSet("system_noscreenlock_bt")
             val mController = ModuleHelper.getDepInstance(classLoader, "com.android.systemui.statusbar.policy.BluetoothController")
@@ -549,7 +549,7 @@ object SystemLockScreenHooks {
                                             return@guarded
                                         if (netInfo.isConnected) isTrusted = isTrustedWiFi(mContext)
                                     } else if (action == GlobalActions.ACTION_PREFIX + "BTConnectionChanged") {
-                                        isTrusted = isTrustedBt(lpparam.classLoader)
+                                        isTrusted = isTrustedBt(mContext, lpparam.classLoader)
                                     }
                                 }
 

@@ -29,6 +29,19 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.utils.PrefMap
 
+/** Only the synchronous reset call owns this window; early returns and exceptions release it. */
+internal class RecentsBlurScope {
+    private val current = ThreadLocal<Window>()
+    fun matches(window: Window?): Boolean = window != null && current.get() === window
+    fun <T> withWindow(window: Window?, block: () -> T): T {
+        val previous = current.get()
+        if (window == null) current.remove() else current.set(window)
+        return try { block() } finally {
+            if (previous == null) current.remove() else current.set(previous)
+        }
+    }
+}
+
 /**
  * Launcher hooks that belong to no larger surface.
  *
@@ -270,6 +283,7 @@ object Launcher {
         })
         val endRecentsBlurSession = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
+                recentsBlurSessionActive = false
                 var result: Any? = null
                 var throwable: Throwable? = null
                 try {
@@ -279,8 +293,6 @@ object Launcher {
                     throwable = t
                     result = null
                 }
-                recentsBlurSessionActive = false
-                XposedHelpers.removeAdditionalStaticField(utilsClass, "customBlurRatio")
                 return XposedHelpers.throwOrReturn(throwable, result)
             }
         }
@@ -292,33 +304,34 @@ object Launcher {
             endRecentsBlurSession
         )
 
+        val resetScope = RecentsBlurScope()
         val markCustomRatio = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    XposedHelpers.setAdditionalStaticField(utilsClass, "customBlurRatio", true)
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    FatalErrors.rethrowIfFatal(t)
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                val window = (chain.getArg(0) as? Activity)?.window
+                return resetScope.withWindow(window) { chain.proceed() }
             }
         }
         ModuleHelper.hookAllMethods(utilsClass, "fastBlurWhenGestureResetTaskView", markCustomRatio)
-        ModuleHelper.hookAllMethodsSilently(utilsClass, "fastBlurWhenUseCompleteRecentsBlur", markCustomRatio)
+        ModuleHelper.hookAllMethodsSilently(utilsClass, "fastBlurWhenUseCompleteRecentsBlur", object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                // The native method may post a lambda, or do no blur work at all. Scale
+                // its captured progress, never leave a marker for an unrelated fastBlur.
+                val requested = chain.getArg(1) as? Float ?: return chain.proceed()
+                val applied = resolveCompleteRecentsBlurRatio(requested, recentsBlurOverrideEnabled,
+                    LauncherFolderHooks.isFolderActiveForBlur(chain.getArg(0)), recentsBlurRatio)
+                if (applied == requested) return chain.proceed()
+                val args = XposedHelpers.getArgsArray(chain)
+                args[1] = applied
+                return chain.proceed(args)
+            }
+        })
 
         ModuleHelper.hookAllMethods(utilsClass, "fastBlur", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null
                 var throwable: Throwable? = null
                 try {
-                    val pendingCustom = XposedHelpers.getAdditionalStaticField(utilsClass, "customBlurRatio") != null
-                    if (pendingCustom) {
-                        XposedHelpers.removeAdditionalStaticField(utilsClass, "customBlurRatio")
-                    }
+                    val pendingCustom = resetScope.matches(chain.getArg(1) as? Window)
                     val requested = chain.getArg(0) as? Float
                     if (requested != null) {
                         val host = launcherFromFastBlurWindow(chain)
@@ -396,12 +409,16 @@ object Launcher {
         recentsRatio: Float,
         pendingCustomRatio: Boolean
     ): Float {
-        if (folderActive) return requested
+        if (folderActive || requested <= 0f) return requested
         if (!recentsOverride) return requested
         if (pendingCustomRatio) return recentsRatio
         if (recentsSessionActive && recentsRatio == 0f) return recentsRatio
         return requested
     }
+
+    internal fun resolveCompleteRecentsBlurRatio(requested: Float, override: Boolean,
+        folderActive: Boolean, ratio: Float): Float =
+        if (override && !folderActive && requested > 0f) requested * ratio else requested
 
     @JvmStatic
     fun HideStatusBarInRecentsHook(lpparam: PackageReadyParam) {

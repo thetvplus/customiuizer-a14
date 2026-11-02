@@ -108,11 +108,13 @@ class PreferenceResourceContractTest(unittest.TestCase):
             self.assertEqual('800', control.get(f'{{{MIUIZER_NS}}}maxValue'))
             self.assertEqual('%d dp', control.get(f'{{{MIUIZER_NS}}}format'))
             self.assertNotIn(f'{{{MIUIZER_NS}}}offtext', control.attrib)
+        for mode in ('top', 'bottom'):
+            self.assertNotIn(f'{{{ANDROID_NS}}}summary', controls[f'pref_key_system_toast_{mode}'].attrib)
         self.assertEqual('400', controls['pref_key_system_toast_center'].get(f'{{{MIUIZER_NS}}}negativeShift'))
         required = {'system_toast_position_title', 'system_toast_position_summ',
                     'system_toast_position_top', 'system_toast_position_center', 'system_toast_position_bottom',
                     'system_toast_top_title', 'system_toast_center_title', 'system_toast_bottom_title',
-                    'system_toast_center_summ', 'system_toast_edge_summ'}
+                    'system_toast_center_summ'}
         for locale, strings in self.base_strings.items():
             with self.subTest(locale=locale):
                 self.assertTrue(required <= strings, required - strings)

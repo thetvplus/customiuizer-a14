@@ -44,10 +44,10 @@ class IslandTouchWindowTest {
         }
     }
 
-    @Test fun simplifiedMotionNeverStartsTheMusicCatch() {
+    @Test fun powerSaveMotionMotionNeverStartsTheMusicCatch() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         try {
-            val shell = IslandActivityView(host).apply { simplified = true }
+            val shell = IslandActivityView(host).apply { powerSaveMotion = true }
             shell.bind("Music", null, android.graphics.drawable.ColorDrawable(android.graphics.Color.RED),
                 true, true, false, 0, false)
             shell.geometry(240, 40, 40)
@@ -80,7 +80,7 @@ class IslandTouchWindowTest {
     @Test fun boundedWindowAcceptsRealEdgeStartsAndReleaseWithoutAnyMove() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         try {
-            val shell = IslandActivityView(host).apply { simplified = true }
+            val shell = IslandActivityView(host).apply { powerSaveMotion = true }
             val root = IslandTouchWindow(shell)
             host.setContentView(root)
             var dismissals = 0; var opens = 0
@@ -112,7 +112,7 @@ class IslandTouchWindowTest {
     @Test fun screenSpaceUpwardIntentWinsEvenWhenAnInterruptedAnimationRebasesLocalCoordinates() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         try {
-            val shell = IslandActivityView(host).apply { simplified = true }
+            val shell = IslandActivityView(host).apply { powerSaveMotion = true }
             host.setContentView(shell)
             shell.geometry(240, 40, 0)
             layout(shell, 240, 40)
@@ -186,8 +186,8 @@ class IslandTouchWindowTest {
                 shell.scaleX = .25f
                 val box = root.hitBounds()
                 assertTrue(box.width <= 60 + 2 * root.margin)
-                if (alignment == 0) assertEquals(0, box.left)
-                else assertEquals(root.width, box.right)
+                assertTrue(box.left > 0 && box.right < root.width)
+                assertEquals(root.width, box.left + box.right)
             }
         } finally { host.finish() }
     }

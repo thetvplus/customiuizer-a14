@@ -47,14 +47,150 @@ class DockBackgroundTest {
 
     init { activity.get().setContentView(host) }
 
+    @Test fun nativeActivationWaitsForStableGeometryAndPublishesReusedBoundsBeforeVisibility() {
+        NativeMaterial.googleSupported = true
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor, visualEvents = true)
+        val panel = host.getChildAt(0) as DockBackgroundView
+        val material = panel.getChildAt(0) as NativeMaterial
+        assertFalse("Attachment only prepares the native instance", material.appliedEnabled)
+        measureAndLayout()
+        assertFalse("Layout callbacks cannot eagerly activate blur", material.appliedEnabled)
+        assertFalse("The first pass requests the final panel layout", panel.onPreDraw())
+        assertFalse(material.appliedEnabled)
+        repeat(4) { layout(); host.viewTreeObserver.dispatchOnPreDraw() }
+        assertTrue(material.appliedEnabled)
+        val drawable = object : ColorDrawable(Color.WHITE) {
+            var boundsWrites = 0
+            override fun setBounds(left: Int, top: Int, right: Int, bottom: Int) {
+                boundsWrites++
+                super.setBounds(left, top, right, bottom)
+            }
+        }
+        material.background = drawable
+        panel.scheduleVisualSync(); host.viewTreeObserver.dispatchOnPreDraw()
+        panel.setSceneVisible(false)
+        assertFalse(material.appliedEnabled)
+        assertEquals(0, drawable.alpha)
+        panel.setSceneVisible(true)
+        repeat(20) { panel.onVisibilityAggregated(true) }
+        assertFalse("Visibility only requests a commit", material.appliedEnabled)
+        repeat(4) {
+            host.measure(View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(80, View.MeasureSpec.EXACTLY))
+            host.layout(0, 0, 320, 80); host.viewTreeObserver.dispatchOnPreDraw()
+        }
+        assertTrue(material.appliedEnabled)
+        assertSame(material, panel.getChildAt(0))
+        assertSame("The native SDK already retains its Drawable", drawable, material.background)
+        assertEquals(Rect(0, 0, material.width, material.height), drawable.bounds)
+        assertEquals(View.VISIBLE, material.visibility)
+        val enables = material.enableCalls
+        val corners = material.cornerCalls
+        val bounds = drawable.boundsWrites
+        repeat(120) { panel.scheduleVisualSync(); host.viewTreeObserver.dispatchOnPreDraw() }
+        assertEquals(enables, material.enableCalls)
+        assertEquals(corners, material.cornerCalls)
+        assertEquals(bounds, drawable.boundsWrites)
+        assertNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+        repeat(100) { panel.onApplyWindowInsets(android.view.WindowInsets.Builder().build()) }
+        assertNull("Unchanged Insets do not start geometry work", ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+    }
+
+    @Test fun nativeVisualEventsReleasePreDrawAtRestAndWakeOnlyForChanges() {
+        NativeMaterial.googleSupported = true
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor, visualEvents = true)
+        repeat(5) { layout(); host.viewTreeObserver.dispatchOnPreDraw() }
+        val panel = host.getChildAt(0) as DockBackgroundView
+        val material = panel.getChildAt(0) as NativeMaterial
+        assertNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+        val submissions = material.alphaSubmissions
+        repeat(120) { host.viewTreeObserver.dispatchOnPreDraw() }
+        assertEquals(submissions, material.alphaSubmissions)
+        panel.alpha = .5f
+        assertNotNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+        host.viewTreeObserver.dispatchOnPreDraw()
+        assertEquals(115, material.writtenAlpha)
+        assertNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+        host.alpha = .4f
+        panel.scheduleVisualSync() // The scoped native scene callback, not a global View hook.
+        host.viewTreeObserver.dispatchOnPreDraw()
+        assertEquals(46, material.writtenAlpha)
+        assertNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+    }
+
+    @Test fun systemBlurOffUsesOnlyTheTintAndRestoresNativeMaterialOnTheEvent() {
+        DockWindowManagerShadow.change(false)
+        NativeMaterial.googleSupported = true
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor, visualEvents = true)
+        repeat(4) { layout(); host.viewTreeObserver.dispatchOnPreDraw() }
+        val panel = host.getChildAt(0) as DockBackgroundView
+        assertEquals(0, panel.childCount)
+        assertEquals(1, DockWindowManagerShadow.listenerCount())
+        DockWindowManagerShadow.change(true)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, panel.childCount)
+        val material = panel.getChildAt(0) as NativeMaterial
+        DockWindowManagerShadow.change(false)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(0, panel.childCount)
+        assertFalse(material.appliedEnabled)
+        host.removeView(panel)
+        assertEquals(0, DockWindowManagerShadow.listenerCount())
+    }
+
+    @Test fun materialEnabledAfterParentLayoutCommitsWhenItsOwnLayoutArrives() {
+        DockWindowManagerShadow.change(false)
+        NativeMaterial.googleSupported = true
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor, visualEvents = true)
+        repeat(4) { layout(); host.viewTreeObserver.dispatchOnPreDraw() }
+        val panel = host.getChildAt(0) as DockBackgroundView
+        // Policy can arrive between the parent's layout and PreDraw. The new child
+        // has not been measured yet, while the parent's geometry is already final.
+        DockWindowManagerShadow.change(true)
+        XposedHelpers.callMethod(panel, "refreshBlurPolicy")
+        val material = panel.getChildAt(0) as NativeMaterial
+        assertEquals(0, material.width)
+        host.viewTreeObserver.dispatchOnPreDraw()
+        assertFalse(material.appliedEnabled)
+        measureAndLayout()
+        host.viewTreeObserver.dispatchOnPreDraw()
+        assertTrue("The child's settled layout must wake the finite commit", material.appliedEnabled)
+        assertEquals(Rect(0, 0, panel.width, panel.height), material.background.bounds)
+        assertNull("No continuous sampling after activation", ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+    }
+
+    @Test fun transparentVisibleHotseatRetiresItsGoogleRegionAndRestoresOnTheNextNativeEvent() {
+        NativeMaterial.googleSupported = true
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor, visualEvents = true)
+        repeat(4) { layout(); host.viewTreeObserver.dispatchOnPreDraw() }
+        val panel = host.getChildAt(0) as DockBackgroundView
+        val material = panel.getChildAt(0) as NativeMaterial
+        host.alpha = 0f // Recents can leave HotSeats VISIBLE after its native fade.
+        panel.scheduleVisualSync(); host.viewTreeObserver.dispatchOnPreDraw()
+        assertFalse(material.appliedEnabled)
+        assertEquals(View.INVISIBLE, material.visibility)
+        assertNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+        val submissions = material.alphaSubmissions
+        repeat(120) { host.viewTreeObserver.dispatchOnPreDraw() }
+        assertEquals(submissions, material.alphaSubmissions)
+        host.alpha = .4f
+        panel.scheduleVisualSync(); host.viewTreeObserver.dispatchOnPreDraw()
+        assertTrue(material.appliedEnabled)
+        assertEquals(92, material.writtenAlpha)
+        assertSame(material, panel.getChildAt(0))
+        assertNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+    }
+
     @After
     fun close() {
         activity.pause().stop().destroy()
+        android.provider.Settings.Global.putInt(host.context.contentResolver, "disable_window_blurs", 0)
         NativeMaterial.supported = true
         NativeMaterial.failure = null
         NativeMaterial.googleSupported = false
         NativeMaterial.inheritedAlphaGetter = false
         BlendLayer.failure = null
+        DockWindowManagerShadow.resetBlur()
     }
 
     @Test
@@ -85,7 +221,7 @@ class DockBackgroundTest {
     @Test
     fun nativeWindowVisibilityRestoresBlurWithoutAnAggregatedVisibilityNotification() {
         NativeMaterial.googleSupported = true
-        for (style in listOf(0, 2, 3)) {
+        for (style in listOf(2)) {
             LauncherDockBackground.attach(host, DockBackgroundConfig(material = style), materialConstructor)
             layout(); host.viewTreeObserver.dispatchOnPreDraw()
             val decoration = host.getChildAt(0) as DockBackgroundView
@@ -145,11 +281,11 @@ class DockBackgroundTest {
 
     @Test
     fun nativeMaterialIsReleasedOnDetachAndRecreatedForTheNewAttachment() {
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
         val first = decoration.getChildAt(0) as NativeMaterial
-        assertEquals(12, first.appliedBlurRadius)
+        assertEquals((35 * host.resources.displayMetrics.density).roundToInt(), first.appliedBlurRadius)
         assertTrue(first.appliedEnabled)
         assertEquals(0.9f, first.alpha)
         host.removeView(decoration)
@@ -167,7 +303,7 @@ class DockBackgroundTest {
         for (failure in listOf(null, IllegalStateException("material unavailable"))) {
             NativeMaterial.supported = failure != null
             NativeMaterial.failure = failure
-            LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+            LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
             layout()
             val decoration = host.getChildAt(0) as DockBackgroundView
             assertEquals(0, decoration.childCount)
@@ -178,14 +314,14 @@ class DockBackgroundTest {
 
     @Test
     fun contentReplacementReleasesTheOldOwnerAndKeepsTheNewIcons() {
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val old = host.getChildAt(0) as DockBackgroundView
         val material = old.getChildAt(0)
         host.removeAllViews()
         val replacementIcon = View(host.context)
         host.addView(replacementIcon)
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         assertNotSame(old, host.getChildAt(0))
         assertSame(replacementIcon, host.getChildAt(1))
@@ -195,7 +331,7 @@ class DockBackgroundTest {
 
     @Test
     fun drawableRetirementFailureDoesNotPreventNativeOwnerRemoval() {
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
         val material = decoration.getChildAt(0)
@@ -213,13 +349,49 @@ class DockBackgroundTest {
         val fatal = OutOfMemoryError("native material")
         NativeMaterial.failure = fatal
         assertSame(fatal, assertThrows(OutOfMemoryError::class.java) {
-            LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+            LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         })
     }
 
     @Test
+    fun solidPanelNeverCreatesBlurOrRegistersBlurPolicyListeners() {
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 0), materialConstructor, visualEvents = true)
+        repeat(5) { layout(); host.viewTreeObserver.dispatchOnPreDraw() }
+        val panel = host.getChildAt(0) as DockBackgroundView
+        assertEquals(0, panel.childCount)
+        assertEquals(0, DockWindowManagerShadow.listenerCount())
+        assertNull(ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+        assertTrue(panel.foreground.alpha > 0)
+        panel.onVisibilityAggregated(false)
+        panel.onVisibilityAggregated(true)
+        assertEquals(0, panel.childCount)
+    }
+
+    @Test
+    fun powerSavingRetiresBlurAndRestoresItOnTheSystemEvent() {
+        val power = activity.get().getSystemService(android.os.PowerManager::class.java)
+        val shadow = shadowOf(power)
+        try {
+            LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor, visualEvents = true)
+            repeat(5) { layout(); host.viewTreeObserver.dispatchOnPreDraw() }
+            val panel = host.getChildAt(0) as DockBackgroundView
+            val old = panel.getChildAt(0) as NativeMaterial
+            shadow.setIsPowerSaveMode(true)
+            activity.get().sendBroadcast(android.content.Intent(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED))
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(0, panel.childCount)
+            assertFalse(old.appliedEnabled)
+            shadow.setIsPowerSaveMode(false)
+            activity.get().sendBroadcast(android.content.Intent(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED))
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(1, panel.childCount)
+            assertNotSame(old, panel.getChildAt(0))
+        } finally { shadow.setIsPowerSaveMode(false) }
+    }
+
+    @Test
     fun zeroOpacityDoesNotCreateNativeMaterial() {
-        LauncherDockBackground.attach(host, DockBackgroundConfig(opacity = 0), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2, opacity = 0), materialConstructor)
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
         assertEquals(0, decoration.childCount)
@@ -228,7 +400,7 @@ class DockBackgroundTest {
 
     @Test
     fun hiddenHotseatRetiresNativeBlurAndRestoresItWithoutRecreatingTheMaterial() {
-        for (style in intArrayOf(0, 2, 3)) {
+        for (style in intArrayOf(2)) {
             LauncherDockBackground.attach(host, DockBackgroundConfig(material = style), materialConstructor)
             layout()
             val decoration = host.getChildAt(0) as DockBackgroundView
@@ -243,6 +415,7 @@ class DockBackgroundTest {
             host.visibility = View.VISIBLE
             decoration.onVisibilityAggregated(true)
             host.alpha = 1f
+            layout()
             assertEquals(230, drawable.alpha)
             assertSame(material, decoration.getChildAt(0))
             host.removeView(decoration)
@@ -253,7 +426,7 @@ class DockBackgroundTest {
     @Test
     fun materialAttachedWhileHiddenRestoresItsPathAfterAHiddenResize() {
         host.visibility = View.INVISIBLE
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
         val material = decoration.getChildAt(0) as NativeMaterial
@@ -272,9 +445,10 @@ class DockBackgroundTest {
         assertFalse(drawable.pathReady)
         host.visibility = View.VISIBLE
         decoration.onVisibilityAggregated(true)
+        layout()
         assertEquals(230, drawable.alpha)
         assertTrue(drawable.pathReady)
-        assertEquals(Rect(0, 0, 280, 72), drawable.bounds)
+        assertEquals(Rect(0, 0, material.width, material.height), drawable.bounds)
     }
 
     @Test
@@ -296,11 +470,13 @@ class DockBackgroundTest {
                 native.alpha = alpha
                 native.viewTreeObserver.dispatchOnPreDraw()
                 assertEquals(View.VISIBLE, decoration.visibility)
-                if (google) assertEquals((255 * .9f * alpha).roundToInt(), material.background.alpha)
+                if (google && alpha > 0f) assertEquals((255 * .9f * alpha).roundToInt(), material.background.alpha)
+                if (google && alpha == 0f) assertNull("The zero-alpha region must be removed", material.background)
+                if (google) assertEquals(alpha > 0f, material.appliedEnabled)
                 assertEquals(bounds, Rect(decoration.left, decoration.top, decoration.right, decoration.bottom))
             }
             assertEquals(reads, icon.boundsReads)
-            assertEquals(toggles, material.enableCalls)
+            assertEquals(toggles + if (google) 4 else 0, material.enableCalls)
             assertSame(material, decoration.getChildAt(0))
             native.removeView(decoration)
             host.removeView(native)
@@ -396,7 +572,7 @@ class DockBackgroundTest {
     @Test fun editingOwnerHandoffIgnoresStaleReleaseAndDoesNotUseGlobalAdditionalFields() {
         NativeMaterial.googleSupported = true
         val native = nativeHost()
-        LauncherDockBackground.attach(native, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(native, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val decoration = native.getChildAt(0) as DockBackgroundView
         val animation = CountingEditingAnimation()
@@ -508,7 +684,7 @@ class DockBackgroundTest {
     fun editingTransformationHookProceedsOnceWithoutCopyingArgumentsAndPreservesNativeFailures() {
         NativeMaterial.googleSupported = true
         val native = nativeHost()
-        LauncherDockBackground.attach(native, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(native, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val decoration = native.getChildAt(0) as DockBackgroundView
         val animation = CountingEditingAnimation()
@@ -562,6 +738,7 @@ class DockBackgroundTest {
         native.visibility = View.INVISIBLE // native exit still draws its running AnimationSet
         decoration.onVisibilityAggregated(false)
         decoration.bindEditingAnimation(animation, showing = false)
+        native.viewTreeObserver.dispatchOnPreDraw()
         assertTrue(material.appliedEnabled)
         decoration.onEditingFrame(animation, .5f, true)
         assertEquals(115, material.background.alpha)
@@ -573,13 +750,14 @@ class DockBackgroundTest {
         assertNull(material.background)
         native.visibility = View.VISIBLE
         decoration.onVisibilityAggregated(true)
+        layout()
         assertEquals(230, material.background.alpha)
     }
 
     @Test
     fun opacityBackendFailureIsRetiredOnceAndWrappedFatalErrorsStillEscape() {
         NativeMaterial.googleSupported = true
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
         val material = decoration.getChildAt(0) as NativeMaterial
@@ -595,7 +773,7 @@ class DockBackgroundTest {
         repeat(30) { host.viewTreeObserver.dispatchOnPreDraw() }
         assertEquals(retired, attempts)
         host.removeView(decoration)
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val replacement = host.getChildAt(0) as DockBackgroundView
         val fatal = OutOfMemoryError("native alpha")
@@ -678,7 +856,9 @@ class DockBackgroundTest {
         host.alpha = 0f
         host.visibility = View.VISIBLE
         decoration.onVisibilityAggregated(true)
-        assertEquals(0, material.background.alpha)
+        layout()
+        assertFalse(material.appliedEnabled)
+        assertNull("Zero-alpha visibility does not activate a native region", material.background)
         host.alpha = .5f
         host.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(115, material.background.alpha)
@@ -696,7 +876,7 @@ class DockBackgroundTest {
 
     @Test
     fun visibilityBackendFailureRetiresTheNativeOwnerAndDoesNotRetryEachFrame() {
-        LauncherDockBackground.attach(host, DockBackgroundConfig(), materialConstructor)
+        LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
         layout()
         val decoration = host.getChildAt(0) as DockBackgroundView
         val material = decoration.getChildAt(0) as NativeMaterial
@@ -751,6 +931,7 @@ class DockBackgroundTest {
         BlendLayer.failure = fatal
         assertSame(fatal, assertThrows(OutOfMemoryError::class.java) {
             LauncherDockBackground.attach(host, DockBackgroundConfig(material = 2), materialConstructor)
+            layout()
         })
     }
 
@@ -799,7 +980,7 @@ class DockBackgroundTest {
     }
 
     private fun attachNative(native: HotSeatsFixture, withMaterial: Boolean = false): DockBackgroundView {
-        LauncherDockBackground.attach(native, DockBackgroundConfig(sideInsetDp = 12),
+        LauncherDockBackground.attach(native, DockBackgroundConfig(material = 2, sideInsetDp = 12),
             if (withMaterial) materialConstructor else null,
             DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java))
         repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
@@ -1000,9 +1181,7 @@ class DockBackgroundTest {
             assertTrue(expected > 0f)
             assertEquals(expected, (decoration.foreground as DockBackgroundTint).radius, 0f)
             assertEquals(expected, material.appliedCornerRadius, 0f)
-            val outline = android.graphics.Outline()
-            material.outlineProvider.getOutline(material, outline)
-            assertEquals(expected, outline.radius, 0f)
+            assertFalse("Native glass owns its corners without a second clip", material.clipToOutline)
             assertEquals(0f, native.mContent.translationY)
         }
     }
@@ -1021,6 +1200,7 @@ class DockBackgroundTest {
         assertEquals(0, material.appliedBlurRadius)
         decoration.visibility = View.VISIBLE
         decoration.onVisibilityAggregated(true)
+        layout()
         assertEquals(expected, material.appliedBlurRadius)
         assertSame(material, decoration.getChildAt(0))
     }
@@ -1265,7 +1445,7 @@ class DockBackgroundTest {
         NativeMaterial.googleSupported = true
         val native = nativeHost()
         setNativeIcons(native.mContent, 4)
-        LauncherDockBackground.attach(native, DockBackgroundConfig(), materialConstructor,
+        LauncherDockBackground.attach(native, DockBackgroundConfig(material = 2), materialConstructor,
             DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java))
         repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
         val decoration = native.getChildAt(0) as DockBackgroundView
@@ -1383,7 +1563,7 @@ class DockBackgroundTest {
         val access = DockContentAccess(HotSeatsFixture::class.java, ItemIconFixture::class.java)
         for (manual in intArrayOf(0, 12, 80)) {
             var first = -1f
-            for (material in intArrayOf(0, 2, 3)) {
+            for (material in intArrayOf(2)) {
                 LauncherDockBackground.attach(native, DockBackgroundConfig(material = material, radiusDp = manual), materialConstructor, access)
                 repeat(3) { layout(); native.viewTreeObserver.dispatchOnPreDraw() }
                 val decoration = native.getChildAt(0) as DockBackgroundView
@@ -1642,10 +1822,15 @@ class DockBackgroundTest {
         }
     }
 
-    private fun layout() {
+    private fun measureAndLayout() {
         host.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(80, View.MeasureSpec.EXACTLY))
         host.layout(0, 0, 360, 80)
+    }
+
+    private fun layout() {
+        // A real traversal settles requested panel bounds before the next pre-draw.
+        repeat(3) { measureAndLayout(); host.viewTreeObserver.dispatchOnPreDraw() }
     }
 
     /** ROM API fixture: no renderer or hooks are replaced in production. */

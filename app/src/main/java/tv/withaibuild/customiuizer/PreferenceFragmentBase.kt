@@ -529,10 +529,10 @@ open class PreferenceFragmentBase : Fragment() {
         fragmentManager.beginTransaction()
             .setReorderingAllowed(true)
             .setCustomAnimations(
-                R.animator.fragment_open_enter,
-                R.animator.fragment_open_exit,
-                R.animator.fragment_close_enter,
-                R.animator.fragment_close_exit
+                R.animator.a14_settings_open_enter,
+                R.animator.a14_settings_open_exit,
+                R.animator.a14_settings_close_enter,
+                R.animator.a14_settings_close_exit
             )
             .replace(R.id.fragment_container, fragment)
             .addToBackStack(null)
@@ -549,19 +549,19 @@ open class PreferenceFragmentBase : Fragment() {
         val startTrans: Float
         val endTrans: Float
         when (nextAnim) {
-            R.animator.fragment_open_enter -> {
+            R.animator.a14_settings_open_enter -> {
                 startTrans = screenWidth
                 endTrans = 0.0f
             }
-            R.animator.fragment_open_exit -> {
+            R.animator.a14_settings_open_exit -> {
                 startTrans = 0.0f
                 endTrans = -screenWidth
             }
-            R.animator.fragment_close_enter -> {
+            R.animator.a14_settings_close_enter -> {
                 startTrans = -screenWidth
                 endTrans = 0.0f
             }
-            R.animator.fragment_close_exit -> {
+            R.animator.a14_settings_close_exit -> {
                 startTrans = 0.0f
                 endTrans = screenWidth
             }

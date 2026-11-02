@@ -52,8 +52,8 @@ class SurfaceCostBudgetTest {
     }
 
     @Test fun waveformCaptureIsBoundedSeparatelyFromDisplayVsync() {
-        assertEquals(30_000, IslandAudioSpectrum.REQUESTED_CAPTURE_RATE)
-        assertEquals(67L, IslandRecorderMeter.SAMPLE_INTERVAL_MS)
+        assertEquals(10_000, IslandAudioSpectrum.REQUESTED_CAPTURE_RATE)
+        assertEquals(100L, IslandRecorderMeter.SAMPLE_INTERVAL_MS)
         val wave = tv.withaibuild.customiuizer.testsupport.repositorySource(
             "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandActivityView.kt")
             .substringAfter("internal class IslandWaveView")

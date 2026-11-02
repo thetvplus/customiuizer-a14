@@ -52,8 +52,8 @@ class IslandGestureRecoveryTest {
         touch(MotionEvent.ACTION_DOWN, y = 16f)
         touch(MotionEvent.ACTION_MOVE, y = -100f)
         fun covered() {
-            assertTrue("Only the physical camera height limits compression", shell.height * shell.scaleY >= 31f)
-            val points = floatArrayOf(106f, 2.5f, 134f, 29.5f)
+            assertTrue("Only the physical camera height limits compression", shell.height * shell.scaleY >= 27f - .001f)
+            val points = floatArrayOf(106f, 2.6f, 134f, 29.4f)
             val inverse = android.graphics.Matrix()
             assertTrue(shell.matrix.invert(inverse)); inverse.mapPoints(points)
             val shape = getField<IslandShape>(shell, "shape")

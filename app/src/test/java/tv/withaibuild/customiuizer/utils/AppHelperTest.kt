@@ -75,61 +75,6 @@ class AppHelperTest {
         assertTrue(set.contains("com.other.app|Other"))
     }
 
-    @Test
-    fun syncPrefsToAnotherWritesEntriesToTarget() {
-        val entries = HashMap<String, Any>()
-        entries["pref_key_enabled"] = true
-        entries["pref_key_count"] = 5
-        entries["pref_key_label"] = "test"
-
-        val target = FakeSharedPreferences()
-        AppHelper.syncPrefsToAnother(entries, target, 0, null, true)
-
-        assertEquals(true, target.getBoolean("pref_key_enabled", false))
-        assertEquals(5, target.getInt("pref_key_count", 0))
-        assertEquals("test", target.getString("pref_key_label", null))
-    }
-
-    @Test
-    fun syncPrefsToAnotherClearsTargetWhenClearTypeIsOne() {
-        val entries = HashMap<String, Any>()
-        entries["pref_key_enabled"] = true
-
-        val target = FakeSharedPreferences()
-        target.put("pref_key_old", "keep")
-        AppHelper.syncPrefsToAnother(entries, target, 1, null, true)
-
-        assertTrue(target.getBoolean("pref_key_enabled", false))
-        assertNull(target.getString("pref_key_old", null))
-    }
-
-    @Test
-    fun syncPrefsToAnotherRemovesKeysMissingFromEntriesWhenClearTypeIsTwo() {
-        val entries = HashMap<String, Any>()
-        entries["pref_key_keep"] = true
-
-        val target = FakeSharedPreferences()
-        target.put("pref_key_keep", false)
-        target.put("pref_key_drop", true)
-        AppHelper.syncPrefsToAnother(entries, target, 2, null, true)
-
-        assertTrue(target.getBoolean("pref_key_keep", false))
-        assertNull(target.getString("pref_key_drop", null))
-    }
-
-    @Test
-    fun syncPrefsToAnotherKeepsExistingKeysWhenClearTypeIsZero() {
-        val entries = HashMap<String, Any>()
-        entries["pref_key_enabled"] = true
-
-        val target = FakeSharedPreferences()
-        target.put("pref_key_old", "keep")
-        AppHelper.syncPrefsToAnother(entries, target, 0, null, true)
-
-        assertTrue(target.getBoolean("pref_key_enabled", false))
-        assertEquals("keep", target.getString("pref_key_old", null))
-    }
-
     @Test(expected = NumberFormatException::class)
     fun getStringAsIntOfAppPrefsThrowsNumberFormatExceptionForNonNumericString() {
         fakePrefs.put("pref_key_count", "not_a_number")

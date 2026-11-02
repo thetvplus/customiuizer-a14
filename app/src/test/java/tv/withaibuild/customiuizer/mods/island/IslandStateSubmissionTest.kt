@@ -29,7 +29,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandStateSubmissionTest {
     @Test fun compactTrackUpdatesDoNotResubmitIdenticalHiddenTextButRealTextAndClockChangesStillApply() {
-        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { simplified = true }
+        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { powerSaveMotion = true }
         shell.bind("Track", "Artist", null, true, true, false, 0, false)
         shell.geometry(280, 40, 40)
         val identity = (shell.getChildAt(0) as LinearLayout).getChildAt(1) as TextView
@@ -69,7 +69,7 @@ class IslandStateSubmissionTest {
     }
 
     @Test fun unchangedGeometryAndCompactMetadataDoNotInvalidateTheMaskButShapeAndSizeStillDo() {
-        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { simplified = true }
+        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { powerSaveMotion = true }
         shell.bind("Track", "Artist", null, true, true, false, 0, false)
         shell.geometry(280, 40, 40)
         val mask = getField<GradientDrawable>(shell, "iconMask")
@@ -118,7 +118,7 @@ class IslandStateSubmissionTest {
         ModuleHelper.cachedModuleRes = resources
         ModuleHelper.cachedModuleConfig = Configuration(activity.resources.configuration)
         try {
-            val shell = IslandActivityView(activity).apply { simplified = true }
+            val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
             activity.setContentView(shell, FrameLayout.LayoutParams(280, 40))
             fun bind(label: String = "Track", detail: String? = "Artist", state: Int = PlaybackState.STATE_PLAYING,
                 media: Boolean = true) = shell.bind(label, detail, null, state == PlaybackState.STATE_PLAYING,
@@ -131,7 +131,7 @@ class IslandStateSubmissionTest {
             bind(state = PlaybackState.STATE_PAUSED)
             assertEquals("Track, Paused, Artist", shell.contentDescription.toString())
             assertEquals(1, resources.playbackReads)
-            shell.simplified = false
+            shell.powerSaveMotion = false
             bind("Next", "Other")
             assertNotNull(getField<Any?>(shell, "pendingContent"))
             assertEquals("Next, Playing, Other", shell.contentDescription.toString())
@@ -151,7 +151,7 @@ class IslandStateSubmissionTest {
 
     @Test fun configurationRefreshUpdatesTheCurrentAccessibilityLanguageWithoutANewContentEvent() {
         val app = RuntimeEnvironment.getApplication()
-        val shell = IslandActivityView(app).apply { simplified = true }
+        val shell = IslandActivityView(app).apply { powerSaveMotion = true }
         shell.bind("Track", "Artist", null, true, true, false, 0, false, playbackState = PlaybackState.STATE_PLAYING)
         assertEquals("Track, Playing, Artist", shell.contentDescription.toString())
         RuntimeEnvironment.setQualifiers("zh-rCN-mdpi")

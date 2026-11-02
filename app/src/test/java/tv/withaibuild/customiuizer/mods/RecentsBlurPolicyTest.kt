@@ -5,8 +5,42 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import android.app.Activity
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = android.app.Application::class)
 class RecentsBlurPolicyTest {
+
+    @Test fun resetThatDoesNoBlurWorkCannotMarkALaterFolderOrDesktopCall() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val window = activity.window
+        val scope = RecentsBlurScope()
+        try {
+            scope.withWindow(window) { assertTrue(scope.matches(window)) }
+            assertFalse(scope.matches(window))
+            try {
+                scope.withWindow(window) { throw IllegalStateException("interrupted reset") }
+            } catch (_: IllegalStateException) { }
+            assertFalse(scope.matches(window))
+            scope.withWindow(window) {
+                scope.withWindow(null) { assertFalse(scope.matches(window)) }
+                assertTrue(scope.matches(window))
+            }
+            assertEquals(0.7f, Launcher.resolveRecentsFastBlurRatio(
+                .7f, true, false, false, .3f, scope.matches(window)), .001f)
+        } finally { activity.finish() }
+    }
+
+    @Test fun completeAnimationPreservesZeroAndScalesCapturedProgressWithoutAStaticMarker() {
+        assertEquals(0f, Launcher.resolveCompleteRecentsBlurRatio(0f, true, false, .3f), .001f)
+        assertEquals(.15f, Launcher.resolveCompleteRecentsBlurRatio(.5f, true, false, .3f), .001f)
+        assertEquals(.7f, Launcher.resolveCompleteRecentsBlurRatio(.7f, true, true, .3f), .001f)
+        assertEquals(0f, Launcher.resolveRecentsFastBlurRatio(0f, true, true, false, .3f, true), .001f)
+    }
 
     @Test
     fun zeroPercentSkipsGestureEnterAndForcesSessionBlur() {
@@ -46,7 +80,7 @@ class RecentsBlurPolicyTest {
     }
 
     @Test
-    fun leftoverCustomRatioIsConsumedEvenOnFourArgFastBlur() {
+    fun scopedResetRatioIsIdempotentAcrossFastBlurOverloads() {
         assertEquals(
             0.3f,
             Launcher.resolveRecentsFastBlurRatio(

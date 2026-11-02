@@ -1,6 +1,5 @@
 package tv.withaibuild.customiuizer.subs
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
@@ -21,7 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@SuppressLint("ClickableViewAccessibility")
 class ShortcutSelector : SubFragmentWithSearch() {
 
     private var key: String? = null

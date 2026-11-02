@@ -134,10 +134,11 @@ class SortableList : SubFragment() {
             LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
                 itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                     val selected = dragging == item.id
-                    val layout = state.layoutInfo.visibleItemsInfo.firstOrNull { it.key == item.id }
-                    val visualY = if (selected) dragY - (layout?.offset ?: 0) else 0f
                     Surface(Modifier.fillMaxWidth().zIndex(if (selected) 1f else 0f)
-                        .graphicsLayer { translationY = visualY }
+                        .graphicsLayer {
+                            translationY = if (selected) dragY -
+                                (state.layoutInfo.visibleItemsInfo.firstOrNull { it.key == item.id }?.offset ?: 0) else 0f
+                        }
                         .semantics {
                             customActions = buildList {
                                 if (!activities && index > 0) add(CustomAccessibilityAction(up) { move(index, index - 1); true })

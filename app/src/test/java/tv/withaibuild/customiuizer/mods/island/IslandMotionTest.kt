@@ -34,7 +34,7 @@ class IslandMotionTest {
         assertEquals(-.2f, IslandMotion.mediaReturnCatch(.325f), .0001f)
         assertEquals(0f, IslandMotion.mediaReturnCatch(.5f), 0f)
         assertTrue(IslandMotion.mediaReturnCatch(.72f) > 0f)
-        assertTrue(IslandMotion.MEDIA_RETURN < 1000)
+        assertTrue(IslandMotion.ABSORPTION_BODY < 1000)
     }
 
     @Test fun theCatchPeaksEarlyAndScalesIntoTheAvailableSpaceWithoutAClippedPlateau() {

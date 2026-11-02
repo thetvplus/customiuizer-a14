@@ -25,8 +25,19 @@ internal object IslandPosition {
         }
         // Offset is applied to the selected edge before width is constrained. Narrowing
         // a right island must keep its right edge, just as narrowing a left keeps its left.
-        val edge = ((if (alignment == 0) safeLeft else safeRight).toLong() + offset)
+        var edge = ((if (alignment == 0) safeLeft else safeRight).toLong() + offset)
             .coerceIn(safeLeft.toLong(), safeRight.toLong()).toInt()
+        if (overlaps) {
+            // A manual nudge stops at the last usable slot on this side. Only a
+            // genuinely unavailable side (for example a corner cutout) moves below.
+            if (alignment == 0) {
+                val last = holeLeft - cameraMargin - minimumWidth
+                if (last >= safeLeft) edge = minOf(edge, last)
+            } else {
+                val first = holeRight + cameraMargin + minimumWidth
+                if (first <= safeRight) edge = maxOf(edge, first)
+            }
+        }
         val room = if (alignment == 0) safeRight - edge else edge - safeLeft
         w = minOf(w, room)
         if (w < minimumWidth) return null
@@ -41,6 +52,14 @@ internal object IslandPosition {
             }
         }
         return Layout(if (alignment == 0) edge else edge - w, y, w, 0)
+    }
+
+    /** Bounding-box clearance at the island top, rather than the corner radius at its equator. */
+    fun cornerInset(radius: Int, top: Int): Int {
+        if (radius <= 0 || top >= radius) return 0
+        val y = top.coerceAtLeast(0).toDouble()
+        val r = radius.toDouble()
+        return kotlin.math.ceil(r - kotlin.math.sqrt((r * r - (r - y) * (r - y)).coerceAtLeast(0.0))).toInt()
     }
 
     fun left(width: Int, safeLeft: Int, safeRight: Int, alignment: Int, offset: Int,

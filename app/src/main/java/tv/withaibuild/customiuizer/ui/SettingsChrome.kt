@@ -14,12 +14,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -173,14 +167,8 @@ fun SettingsToolbar(bar: SettingsActionBar, onBack: () -> Unit, onAction: (MenuI
                     shape = RoundedCornerShape(dimensionResource(R.dimen.preference_group_radius)),
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp, shadowElevation = 8.dp) {
-                    AnimatedContent(targetState = submenu, contentKey = { it?.itemId ?: 0 },
-                        transitionSpec = {
-                            (fadeIn(tween(120)) togetherWith fadeOut(tween(90)))
-                                .using(SizeTransform { _, _ -> tween(140) })
-                        }, label = "overflow submenu") { parent ->
-                        val ripple = LocalRippleConfiguration.current
-                        CompositionLocalProvider(LocalRippleConfiguration provides
-                            if (expanded && parent == submenu) ripple else null) {
+                    val parent = submenu
+                    key(parent?.itemId) {
                         Column {
                             val visibleItems = parent?.subMenu?.let { menu ->
                                 List(menu.size()) { menu.getItem(it) }.filter { it.isVisible }
@@ -189,14 +177,13 @@ fun SettingsToolbar(bar: SettingsActionBar, onBack: () -> Unit, onAction: (MenuI
                                 text = { Text(parent.title.toString(), style = MaterialTheme.typography.bodyLarge) },
                                 leadingIcon = { Icon(painterResource(androidx.appcompat.R.drawable.abc_ic_ab_back_material), null) },
                                 modifier = Modifier.testTag("menu.back"),
-                                enabled = parent == submenu,
                                 onClick = { submenu = null }) }
                             for (item in visibleItems) key(item.itemId) { DropdownMenuItem(
                                 text = { Text(item.title.toString(), style = MaterialTheme.typography.bodyLarge) },
                                 trailingIcon = if (item.hasSubMenu()) ({ SettingsChevron() }) else null,
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 modifier = Modifier.testTag("menu.item:" + item.itemId),
-                                enabled = parent == submenu && item.isEnabled,
+                                enabled = item.isEnabled,
                                 onClick = {
                                     if (item.hasSubMenu()) submenu = item else {
                                         expanded = false
@@ -204,7 +191,6 @@ fun SettingsToolbar(bar: SettingsActionBar, onBack: () -> Unit, onAction: (MenuI
                                         onAction(item)
                                     }
                                 }) }
-                        }
                         }
                     }
                 }

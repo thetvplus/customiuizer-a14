@@ -88,7 +88,6 @@ class IslandSystemMotionTest {
             put("system_strong_toast_mode", "3")
             put("system_toast_capsule", true)
             put("system_island_media", false)
-            put("system_island_simplified", false)
         }
         owner = IslandActivityController(context, prefs, IslandOptions.read(prefs), native, dispatcher)
         owner.connectSafety(Any())

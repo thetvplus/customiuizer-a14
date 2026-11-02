@@ -4,11 +4,18 @@ import androidx.compose.runtime.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.activity.compose.BackHandler
 import android.view.MenuItem
 import tv.withaibuild.customiuizer.ui.highlightSearchText
@@ -18,7 +25,6 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
-import androidx.annotation.Nullable
 import tv.withaibuild.customiuizer.ui.SettingsActionBar as ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -80,7 +86,7 @@ class MainFragment : PreferenceFragmentBase() {
                     AppHelper.log("AppSelection", t)
                 }
             }
-            Helpers.getAllMods(act, savedInstanceState != null)
+            Helpers.getAllMods(act, false)
             withContext(Dispatchers.Main) { indexRevision++ }
         }
 
@@ -116,7 +122,7 @@ class MainFragment : PreferenceFragmentBase() {
         }
     }
 
-    override fun onCreatePreferences(@Nullable savedInstanceState: Bundle?, @Nullable rootKey: String?) {
+    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         super.onCreatePreferences(savedInstanceState, rootKey)
         setSettingsPage(R.id.prefs_main)
     }
@@ -129,7 +135,7 @@ class MainFragment : PreferenceFragmentBase() {
         val act = activity as? AppCompatActivity ?: return super.reloadPreferences()
         reloadJob?.cancel()
         reloadJob = lifecycleScope.launch(Dispatchers.IO) {
-            Helpers.getAllMods(act, true)
+            Helpers.getAllMods(act, false)
             withContext(Dispatchers.Main) {
                 indexRevision++
                 doBaseReload()
@@ -149,25 +155,35 @@ class MainFragment : PreferenceFragmentBase() {
         BackHandler(enabled = searchExpanded) { closeSearch() }
         Column(Modifier.fillMaxSize()) {
             if (searchExpanded) SettingsSearchField(query, { query = it },
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).testTag("home.search"),
+                Modifier.widthIn(max = 720.dp).fillMaxWidth().align(Alignment.CenterHorizontally)
+                    .padding(horizontal = 12.dp, vertical = 8.dp).testTag("home.search"),
                 requestFocus = focusSearch, onClose = closeSearch)
             if (!searchExpanded) Box(Modifier.weight(1f)) { super.SettingsContent(model) }
-            else if (query.isNotBlank()) {
+            else {
                 val terms = remember(query) { tv.withaibuild.customiuizer.utils.searchTerms(query) }
                 val highlight = MaterialTheme.colorScheme.primary
                 val matches = remember(query, indexRevision) {
-                    Helpers.allModsList.filter { mod -> if (query == Helpers.NEW_MODS_SEARCH_QUERY)
+                    if (query.isBlank()) emptyList() else Helpers.allModsList.filter { mod -> if (query == Helpers.NEW_MODS_SEARCH_QUERY)
                         Helpers.newMods.contains(mod.key) else mod.matchesSearch(terms) }
                 }
-                LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
-                    items(matches.size, key = { index -> matches[index].key + ":" + index }) { index ->
-                        val mod = matches[index]
+                if (matches.isEmpty()) {
+                    Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.TopCenter) {
+                        Text(stringResource(when {
+                            query.isBlank() -> R.string.search_settings_hint
+                            Helpers.allModsList.isEmpty() -> R.string.search_settings_preparing
+                            else -> R.string.search_settings_no_results
+                        }), Modifier.testTag("search.status").semantics { liveRegion = LiveRegionMode.Polite },
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else LazyColumn(Modifier.weight(1f).widthIn(max = 720.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
+                    items(matches, key = { it.key }, contentType = { "search.result" }) { mod ->
                         Surface(Modifier.fillMaxWidth().padding(bottom = 2.dp).testTag("search.result:" + mod.key).clickable {
                             if (openSearchResult(mod)) {
                                 closeSearch()
                             }
-                        }) {
-                            Column(Modifier.padding(16.dp)) {
+                        }, shape = RoundedCornerShape(10.dp)) {
+                            Column(Modifier.heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 11.dp)) {
                                 val title = remember(mod.title, terms, highlight) { highlightSearchText(mod.title, terms, highlight) }
                                 val path = remember(mod.breadcrumbs, terms, highlight) { highlightSearchText(mod.breadcrumbs, terms, highlight) }
                                 Text(title, style = MaterialTheme.typography.bodyLarge)

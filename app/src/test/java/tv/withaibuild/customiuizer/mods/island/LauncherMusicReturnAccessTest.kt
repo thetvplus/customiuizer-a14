@@ -79,7 +79,7 @@ class LauncherMusicReturnAccessTest {
         assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
         assertTrue(target.top > frame.top)
         assertTrue(target.bottom < frame.bottom)
-        assertEquals((frame.top + frame.bottom) * .5f, target.centerY(), .001f)
+        assertEquals((frame.top + frame.bottom) * .5f + (frame.bottom - frame.top) * .22f, target.centerY(), .001f)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
     }
 
@@ -89,14 +89,14 @@ class LauncherMusicReturnAccessTest {
             val source = params(targets = Targets(arrayOf(Remote().apply { packageName = pkg })))
             val nav = Nav().apply { mRunningTaskComponentName = ComponentName(pkg, "Activity") }
             val target = (access.retarget(source, Element(), nav, current) as Params).targetRect
-            assertEquals((frame.right - frame.left) * .84f, target.width(), .001f)
+            assertEquals((frame.right - frame.left) * .38f, target.width(), .001f)
             assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
-            assertEquals((frame.bottom - frame.top) * .86f, target.height(), .001f)
+            assertEquals((frame.bottom - frame.top) * .44f, target.height(), .001f)
         }
         for (width in listOf(38f, 48f, 100f, 160f, 320f)) {
             val current = frame.copy(left = 0f, right = width, top = 0f, bottom = 38f)
             val target = current.landingRectangle()
-            assertTrue(target.width() >= 38f)
+            assertTrue(target.width() >= target.height())
             assertTrue(target.left >= current.left && target.right <= current.right)
         }
     }
@@ -115,13 +115,11 @@ class LauncherMusicReturnAccessTest {
     @Test fun absorptionHasASmallerLowerLandingWithoutChangingDefaultOrNativeParams() {
         val original = params()
         val nativeTarget = RectF(original.targetRect)
-        val ordinary = access.retarget(original, Element(), Nav(), frame) as Params
-        val absorption = access.retarget(original, Element(), Nav(), frame, absorption = true) as Params
-        assertEquals(frame.landingRectangle(), ordinary.targetRect)
-        assertEquals(frame.landingRectangle(absorption = true), absorption.targetRect)
-        assertTrue(absorption.targetRect.width() < ordinary.targetRect.width() * .6f)
-        assertTrue(absorption.targetRect.height() < ordinary.targetRect.height() * .6f)
-        assertTrue(absorption.targetRect.centerY() > ordinary.targetRect.centerY())
+        val absorption = access.retarget(original, Element(), Nav(), frame) as Params
+        assertEquals(frame.landingRectangle(), absorption.targetRect)
+        assertTrue(absorption.targetRect.width() < frame.rectangle().width() * .6f)
+        assertTrue(absorption.targetRect.height() < frame.rectangle().height() * .6f)
+        assertTrue(absorption.targetRect.centerY() > frame.rectangle().centerY())
         assertTrue(frame.rectangle().contains(absorption.targetRect))
         assertEquals(nativeTarget, original.targetRect)
         assertEquals(original.startRect, absorption.startRect)
@@ -281,17 +279,17 @@ class LauncherMusicReturnAccessTest {
     }
 
     @Test fun defaultAndAbsorptionShareAdmissionAndOnlyChooseDifferentLandingGeometry() {
-        for (absorption in listOf(false, true)) {
-            val valid = access.retarget(params(), Element(), Nav(), frame, absorption) as Params
-            assertEquals(frame.landingRectangle(absorption), valid.targetRect)
+        run {
+            val valid = access.retarget(params(), Element(), Nav(), frame) as Params
+            assertEquals(frame.landingRectangle(), valid.targetRect)
             for (invalid in listOf(frame.copy(left = Float.NaN), frame.copy(bottom = Float.POSITIVE_INFINITY),
                 frame.copy(right = frame.left), frame.copy(screenWidth = 0), frame.copy(screenWidth = 3000)))
-                assertNull(access.retarget(params(), Element(), Nav(), invalid, absorption))
+                assertNull(access.retarget(params(), Element(), Nav(), invalid))
             for (nav in listOf(Nav().apply { mRunningTaskId = 99 }, Nav().apply { mRunningTaskUserId = 10 },
                 Nav().apply { mRunningTaskInfo!!.mode = 5 }))
-                assertNull(access.retarget(params(), Element(), nav, frame, absorption))
-            assertNull(access.retarget(params(type = Type.CLOSE_TO_RECENTS), Element(), Nav(), frame, absorption))
-            assertNull(access.retarget(params(targets = Targets(arrayOf(Remote(), Remote()))), Element(), Nav(), frame, absorption))
+                assertNull(access.retarget(params(), Element(), nav, frame))
+            assertNull(access.retarget(params(type = Type.CLOSE_TO_RECENTS), Element(), Nav(), frame))
+            assertNull(access.retarget(params(targets = Targets(arrayOf(Remote(), Remote()))), Element(), Nav(), frame))
         }
     }
 

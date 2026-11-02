@@ -13,7 +13,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.animation.PathInterpolator
-import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import java.lang.ref.WeakReference
@@ -25,9 +24,9 @@ import kotlin.math.roundToInt
 /** A short island keeps the native clock and battery (including Duo), without reparenting them. */
 internal class IslandStatusBarCompact internal constructor(root: ViewGroup, clock: View, battery: View,
     private val animationsEnabled: () -> Boolean = {
-        !MainModule.mPrefs.getBoolean("system_island_simplified") && ValueAnimator.areAnimatorsEnabled()
+        ValueAnimator.areAnimatorsEnabled()
     },
-    private val blurEnabled: () -> Boolean = { !MainModule.mPrefs.getBoolean("system_disable_window_blurs") }) {
+    private val blurEnabled: () -> Boolean = { true }) {
     private val root = WeakReference(root)
     private class Kept(view: View, val left: Boolean) {
         val view = WeakReference(view)

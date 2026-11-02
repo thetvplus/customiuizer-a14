@@ -297,7 +297,7 @@
     <string name="system_screenanim_duration_title">Screen-off animation duration</string>
     <string name="system_screenanim_desc">Very low values will practically disable animation</string>
     <string name="system_disable_window_blurs_title">Disable window-level blur</string>
-    <string name="system_disable_window_blurs_summ">Also removes the volume panel and power menu backgrounds. Volume blur sliders have no effect while enabled.</string>
+    <string name="system_disable_window_blurs_summ">Globally disables system window blur, including effects used by third-party apps and the Dock. Independent content blur is unaffected. Use individual effect settings for local control.</string>
     <string name="system_blur_title">Background blur</string>
     <string name="system_mods_lockscreen">Lock screen</string>
     <string name="system_blocktoasts_title">Block Toasts</string>
@@ -572,9 +572,9 @@
     <string name="various_installappinfo_sdk">Supported SDK</string>
     <string name="various_alarmcompat_title">Alarm clock compatibility</string>
     <string name="various_alarmcompat_summ">Make selected apps display correct next alarm time set by stock HyperOS Clock app</string>
-    <string name="various_gboardpadding_port_title">Gboard bottom padding in portrait</string>
-    <string name="various_gboardpadding_land_title">Gboard bottom padding in landscape</string>
-    <string name="various_gboardpadding_summ">Applies only to Gboard; other input methods use their own layout implementation.</string>
+    <string name="various_gboardpadding_port_title">Portrait bottom spacing</string>
+    <string name="various_gboardpadding_land_title">Landscape bottom spacing</string>
+    <string name="various_gboardpadding_summ">Gboard only. 0 uses the default spacing. Restart the keyboard after changes.</string>
     <string name="various_answerinheadup_title">Keep calls in notification when answer a call</string>
     <string name="various_showcallui_title">Show call UI</string>
     <string name="various_calluibright_title">Screen brightness during call</string>
@@ -620,7 +620,7 @@
     <string name="appsort_storage">Used storage</string>
     <string name="appsort_install">Installation time</string>
 
-    <string name="gboard">Input method settings</string>
+    <string name="gboard">Keyboard layout</string>
     <string name="calls">Calls</string>
 
     <string name="array_default">Default</string>
@@ -818,6 +818,9 @@
     <string name="no_activities_found">No activities found</string>
     <string name="select_shortcut">Select shortcut</string>
     <string name="search_input_description">Search mods</string>
+    <string name="search_settings_hint">Search by setting name or category</string>
+    <string name="search_settings_preparing">Preparing settings search…</string>
+    <string name="search_settings_no_results">No matching settings. Try another name or category.</string>
     <string name="wifi_networks">Wi-Fi networks</string>
     <string name="wifi_location_title">Location settings</string>
     <string name="wifi_location_summ">Location access is required for apps to get a list of Wi-Fi networks on Android Pie</string>
@@ -834,14 +837,12 @@
     <string name="wifi_refresh">Refresh networks</string>
     <string name="wifi_scan_unavailable">Scan unavailable. Showing cached networks; try again later.</string>
     <string name="force_closed">Force closed %s</string>
-    <string name="credentials_ok">Credentials are already unlocked</string>
     <string name="credentials_unlock">Unlock credentials</string>
     <string name="credentials_success">Credentials unlocked!</string>
 
     <string name="lsposed_not_connected">Not connected to the LSPosed service yet.\nIf the module is not activated, open LSPosed, activate it and reboot.</string>
     <string name="lsposed_changes_not_delivered">Settings changed since then have not reached the module, so they are not in effect yet. They are saved and will be sent as soon as the connection is back.</string>
     <string name="needs_systemui_restart">Restart System UI to apply.</string>
-    <string name="delete_item_info">Long press item to delete</string>
     <string name="permission_scan">Do you want to get a list of networks/devices or not?</string>
     <string name="permission_permanent">You\'ll have to manually enable permission for this option now. Good job!</string>
 
@@ -987,7 +988,6 @@
     <string name="usb_default_function_ptp">Photo transfer (PTP)</string>
     <string name="system_hideicons_sim1_title">SIM 1</string>
     <string name="system_hideicons_sim2_title">SIM 2</string>
-    <string name="selectcolor_hsv">HSV</string>
     <string name="system_statusbar_lefticons_scale_title">Left icon size</string>
     <string name="system_statusbar_lefticons_adjust_summ" formatted="false">Adjust the group of icons moved to the left. 100% uses the system size. Restart System UI after changing.</string>
     <string name="system_statusbar_lefticons_verticaloffset_title">Left icon vertical offset</string>
@@ -1031,15 +1031,15 @@
     <string name="launcher_dock_background_material_title">Material</string>
     <string name="launcher_dock_background_auto_glass">Solid panel</string>
     <string name="launcher_dock_background_gaussian">Frosted glass</string>
-    <string name="launcher_dock_background_material_summ">Uses Launcher blur when available and a translucent panel as fallback. Restart Launcher to apply.</string>
+    <string name="launcher_dock_background_material_summ">Frosted glass uses launcher blur; falls back to a translucent panel when unavailable. Restart the launcher after changes.</string>
     <string name="launcher_dock_background_opacity_title">Opacity</string>
     <string name="launcher_dock_background_radius_title">Corner radius</string>
     <string name="launcher_dock_background_inset_title">Horizontal inset</string>
-    <string name="launcher_dock_background_radius_summ">Automatic balances Launcher panel corners with Dock height. You can also set a radius manually.</string>
-    <string name="launcher_dock_background_inset_summ">Automatic fits the native icons. Manual spacing sets the base width before background size adjustment.</string>
+    <string name="launcher_dock_background_radius_summ">Automatic panel corners, with manual adjustment.</string>
+    <string name="launcher_dock_background_inset_summ">Auto fits the icons; manual values set side spacing.</string>
     <string name="launcher_dock_background_geometry">Background size</string>
     <string name="launcher_dock_background_shrink_title">Background size adjustment</string>
-    <string name="launcher_dock_background_shrink_summ">Positive expands all four edges; negative contracts. Centered on Dock icons and limited evenly by available space and the navigation area.</string>
+    <string name="launcher_dock_background_shrink_summ">Positive expands, negative shrinks. Icons stay in place.</string>
     <string name="launcher_dock_background_auto">Automatic</string>
     <string name="prefs_group_display">Display</string>
     <string name="prefs_group_style">Style</string>
@@ -1051,14 +1051,13 @@
     <string name="prefs_group_workspace_gestures">Workspace gestures</string>
     <string name="prefs_group_keyboard">Keyboard</string>
     <string name="system_toast_position_title">Toast position</string>
-    <string name="system_toast_position_summ">Position within the safe screen area. Restart System UI after changes.</string>
+    <string name="system_toast_position_summ">Restart System UI after changing.</string>
     <string name="system_toast_position_top">Top</string>
     <string name="system_toast_position_center">Center</string>
     <string name="system_toast_position_bottom">Bottom</string>
     <string name="system_toast_top_title">Top spacing</string>
     <string name="system_toast_center_title">Vertical offset</string>
-    <string name="system_toast_center_summ">Positive moves down; negative moves up. Automatically kept on screen.</string>
-    <string name="system_toast_edge_summ">Distance inward from the safe edge. Automatically limited to fit the Toast.</string>
+    <string name="system_toast_center_summ">Positive moves down; negative moves up.</string>
     <string name="prefs_group_actions">Actions</string>
     <string name="prefs_group_animation">Animations</string>
     <string name="prefs_group_appearance">Layout &amp; appearance</string>
@@ -1126,35 +1125,30 @@
     <string name="restart_menu">Restart</string>
 
     <string name="needs_device_restart">Restart the device after changing this switch.</string>
-    <string name="seekbar_edit_value">%1$s: %2$s. Tap to enter a value</string>
     <string name="seekbar_value_range">Range: %1$s to %2$s. Step: %3$s %4$s</string>
-    <string name="seekbar_value_special">%1$s represents %2$s</string>
     <string name="seekbar_value_error">Enter a number within the range and step shown above.</string>
     <string name="restart_settings_sync_failed">Settings could not be synchronized. Wait for the module connection, then try again.</string>
-    <string name="system_island_title">System prompts</string>
+    <string name="system_island_title">System alerts &amp; island</string>
     <string name="system_island_intro">Restart the phone after first enabling the island or adding a source.</string>
-    <string name="system_island_media_title">Media in island</string>
-    <string name="system_island_media_return_title">Music</string>
-    <string name="system_island_media_return_summ">Selected media apps return to the island when swiping home. Restart the launcher after first enabling.</string>
-    <string name="system_island_media_return_apps_title">Return apps</string>
-    <string name="system_island_media_return_apps_summ">Choose media apps for this effect.</string>
-    <string name="system_island_media_summ">Follows the system player and stays briefly after pausing.</string>
+    <string name="system_island_media_title">Media island</string>
+    <string name="system_island_media_return_title">Use island effect</string>
+    <string name="system_island_media_return_summ">Effects are shared with live activities. Restart Launcher after first enabling.</string>
+    <string name="system_island_media_summ">Shows playback from selected apps and stays briefly after pausing.</string>
     <string name="system_island_media_swipe_title">Swipe to skip</string>
     <string name="system_island_media_swipe_summ">Turning this off blocks previous/next track on horizontal swipes. Other configured actions remain available.</string>
     <string name="system_island_waveform_title">Waveform mode</string>
     <string name="system_island_waveform_gain_title">Waveform gain</string>
-    <string name="system_island_waveform_gain_summ">Amplify live music and recording bars. This changes the display only; silence stays flat.</string>
+    <string name="system_island_waveform_gain_summ">Changes only the displayed waveform amplitude.</string>
     <string name="system_island_entrance_style_title">Entry &amp; exit</string>
     <string name="system_island_entrance_style_center">Center</string>
     <string name="system_island_entrance_style_top">Vertical</string>
-    <string name="system_island_simplified_title">Reduced motion</string>
-    <string name="system_island_simplified_summ">Reduces transitions and keeps the waveform still.</string>
     <string name="system_island_excluded_apps_title">Excluded apps</string>
-    <string name="system_island_excluded_apps_summ">These apps keep native Toasts and notifications; their media stays off the island. Exclusions take priority over the notification allowlist.</string>
+    <string name="system_island_excluded_apps_summ">Overrides source allowlists. These apps keep native notifications and Toasts; their media and activities stay off the island.</string>
     <string name="system_island_playing">Playing</string>
     <string name="system_island_paused">Paused</string>
     <string name="system_island_connecting">Connecting</string>
-    <string name="system_island_chat_title">Message notifications</string>
+    <string name="system_island_chat_group">Message notifications</string>
+    <string name="system_island_chat_title">Message island</string>
     <string name="system_island_chat_summ">Replace eligible message heads-up notifications after the island is shown. Keep the notification center and native tap behavior. Restart System UI after enabling.</string>
     <string name="launcher_dock_background_full_width_title">Full-width Dock</string>
     <string name="launcher_dock_background_full_width_summ">Extend the background across the screen to the bottom edge without moving icons. Restart Launcher.</string>
@@ -1185,7 +1179,7 @@
     <string name="system_island_position_center">Center</string>
     <string name="system_island_position_right">Right</string>
     <string name="system_island_horizontal_offset_title">Horizontal offset</string>
-    <string name="system_island_feedback_title">System activities</string>
+    <string name="system_island_feedback_title">System status</string>
     <string name="system_island_notification_apps_title">Allowed apps</string>
     <string name="system_island_notification_apps_summ">Only selected apps are taken over. App exclusions and Keep native heads-up take priority over this list.</string>
     <string name="system_island_action_play">Play</string>
@@ -1197,12 +1191,11 @@
     <string name="system_island_geometry_group">Size &amp; position</string>
     <string name="system_island_appearance_group">Appearance</string>
     <string name="system_island_feedback_group">Content</string>
-    <string name="system_island_interaction_group">Interaction</string>
-    <string name="system_island_gestures_title">Gestures and return</string>
+    <string name="system_island_gestures_title">Gestures</string>
     <string name="system_island_waveform_off">Off</string>
     <string name="system_island_waveform_light">Lightweight animation</string>
     <string name="system_island_waveform_real">Measured waveform</string>
-    <string name="system_island_waveform_mode_summ">Shared by media and recording. Live sampling runs only while visible.</string>
+    <string name="system_island_waveform_mode_summ">Shared by media and recording.</string>
     <string name="system_island_hide_in_floating_window_title">Exclude floating media</string>
     <string name="system_island_hide_in_floating_window_summ">Exclude floating-app media; other activities remain eligible. Restart the device after changes.</string>
     <string name="array_global_actions_pip_hide">Hide / restore picture-in-picture</string>
@@ -1222,10 +1215,8 @@
     <string name="system_island_battery_low">Low battery</string>
     <string name="system_island_gesture_tap">Tap</string>
     <string name="system_island_idle_gestures_summ">Only applies to the idle island. Playback actions use the most recent valid media session.</string>
-    <string name="system_island_live_sources_title">Activity sources</string>
     <string name="system_island_live_choose">Sources</string>
-    <string name="system_island_live_sources_summary">Ongoing calls, clocks, recording and privacy indicators. Restart after adding a source. Messages use the notification app selection.</string>
-    <string name="system_island_live_feedback">Instant feedback</string>
+    <string name="system_island_live_sources_summary">Choose ongoing activities. Restart after adding sources.</string>
     <string name="system_island_live_call">Call</string>
     <string name="system_island_live_alarm">Alarm</string>
     <string name="system_island_live_timer">Timer</string>
@@ -1236,18 +1227,16 @@
     <string name="system_island_live_finished">Time is up</string>
     <string name="system_island_live_camera">Camera</string>
     <string name="system_island_live_microphone">Microphone</string>
-    <string name="system_island_live_return">Ongoing activities</string>
-    <string name="system_island_live_return_summary">Return active call, Clock and Recorder windows to the island. Restart Launcher after enabling for the first time.</string>
+    <string name="system_island_live_return">Use island effect</string>
+    <string name="system_island_live_return_summary">Applies to enabled call, Clock and Recorder activities. Restart Launcher after first enabling.</string>
     <string name="system_strong_toast_mode_default">System default</string>
-    <string name="system_island_effects_title">Waveform &amp; motion</string>
+    <string name="system_island_effects_title">Motion &amp; waveform</string>
     <string name="system_island_waveform_group">Waveform</string>
     <string name="system_island_motion_group">Animation</string>
-    <string name="system_island_return_effect_title">Boarding effect</string>
-    <string name="system_island_return_effect_summ">Default follows the native window animation. Absorption draws the page into the island more gradually. Shared by music and ongoing activities.</string>
-    <string name="system_island_return_effect_standard">Default</string>
-    <string name="system_island_return_effect_absorption">Absorption</string>
+    <string name="system_island_return_effect_title">Island effect</string>
+    <string name="system_island_return_effect_summ">Instant hides the page and lets the island respond. Absorb draws the page into the island. None leaves ordinary content display.</string>
     <string name="system_island_width_group">Width</string>
-    <string name="system_island_return_group">Return to island on Home</string>
+    <string name="system_island_return_group">Island effect</string>
     <string name="launcher_folder_icon_blur_title">Folder icon background blur</string>
     <string name="launcher_folder_icon_blur_summ">Use native launcher blur for folder icons. Requires system background blur and default icons. Restart the launcher to apply.</string>
 
@@ -1347,4 +1336,11 @@
     <string name="various_disable_system_app_updater_confirm">Disable the %1$d system app updater package? ROM OTA, the installer and security services are unaffected. Its original enabled state will be saved for restoration.</string>
     <string name="various_hide_enterprise_mode_title">Hide enterprise mode entry</string>
     <string name="various_hide_enterprise_mode_summ">Remove enterprise mode from Additional settings. Enterprise management and work profiles remain available. Restart Settings to apply.</string>
+    <string name="system_island_media_apps_title">Display apps</string>
+    <string name="system_island_media_apps_summ">Choose apps allowed to show media.</string>
+    <string name="system_island_media_display_group">Media display</string>
+    <string name="system_island_live_title">Live activities</string>
+    <string-array name="island_return_effects"><item>None</item><item>Instant</item><item>Absorb</item></string-array>
+    <string-array name="island_return_effects_val" translatable="false"><item>none</item><item>instant</item><item>absorption</item></string-array>
+    <string name="system_island_interaction_group">Interaction</string>
 </resources>

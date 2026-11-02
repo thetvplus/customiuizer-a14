@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 from tools.settings_schema import read_element, preference_sources
 from tools import generate_preference_artifacts as production_generator
@@ -13,6 +14,32 @@ from pathlib import Path
 
 
 class ComposeStringArgumentsTest(unittest.TestCase):
+    def test_canonical_json_and_legacy_analyzer_paths_generate_identical_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, source in (("canonical", REPO_ROOT / "app/settings"), ("alias", SOURCE_DIR)):
+                production_generator.generate(source, root / name / "res", root / name / "kotlin")
+            files = lambda path: {str(p.relative_to(path)): p.read_bytes() for p in path.rglob("*") if p.is_file()}
+            self.assertEqual(files(root / "canonical"), files(root / "alias"))
+
+    def test_generation_reads_each_definition_once_and_preserves_input_trees(self):
+        original = production_generator.read_element
+        loaded = []
+
+        def read(path):
+            root = original(path)
+            loaded.append((path, root, _signature(root)))
+            return root
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(production_generator, "read_element", side_effect=read):
+                production_generator.generate(SOURCE_DIR, root / "res", root / "kotlin")
+            self.assertEqual(set(preference_sources(SOURCE_DIR)), {path for path, _, _ in loaded})
+            self.assertEqual(len(preference_sources(SOURCE_DIR)), len(loaded))
+            for _, element, before in loaded:
+                self.assertEqual(before, _signature(element))
+
     def test_slider_strings_are_typed_without_redundant_literal_conversion(self):
         from tools.compose_preferences import _page_body
         root = ET.fromstring('''<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
@@ -100,7 +127,7 @@ def model_page(path):
     if path.parent == SOURCE_DIR or path.suffix == ".json":
         return read_element(path)
     for category in production_generator.CATEGORY_SOURCES:
-        pages = production_generator._structured_categories(category, read_element(SOURCE_DIR / category.source_name), path.parent)
+        pages = production_generator._structured_categories(category, read_element(SOURCE_DIR / category.source_name))
         if path.stem in pages:
             return pages[path.stem]
     raise AssertionError(f"Missing generated Compose model: {path.name}")
@@ -286,6 +313,9 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         for suffix, keys in (
             ("feedback", [f"pref_key_system_island_feedback_{kind}" for kind in
                           ("dnd", "ringer", "dark", "airplane", "nfc", "hotspot", "torch", "wifi", "data", "bluetooth")]),
+            ("live", ["pref_key_system_island_live_call", "pref_key_system_island_live_return"]),
+            ("music", ["pref_key_system_island_media_apps", "pref_key_system_island_media_return"]),
+            ("effects", ["pref_key_system_island_return_effect"]),
             ("actions", [f"pref_key_system_island_music_{gesture}" for gesture in ("left", "right", "down", "double", "long")]),
         ):
             for key in keys:

@@ -132,8 +132,8 @@ class PreferenceNavigationUiTest {
         val page = currentPage() as MainFragment
         for (scale in listOf(0f, .5f, 1f, 2f, 10f)) {
             Settings.Global.putFloat(activity.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, scale)
-            for (resource in listOf(R.animator.fragment_open_enter, R.animator.fragment_open_exit,
-                R.animator.fragment_close_enter, R.animator.fragment_close_exit)) {
+            for (resource in listOf(R.animator.a14_settings_open_enter, R.animator.a14_settings_open_exit,
+                R.animator.a14_settings_close_enter, R.animator.a14_settings_close_exit)) {
                 val animator = requireNotNull(page.onCreateAnimator(0, true, resource))
                 assertEquals("Android applies $scale itself; the requested duration stays unscaled", 350L, animator.duration)
             }
@@ -146,7 +146,7 @@ class PreferenceNavigationUiTest {
         val view = page.requireView()
         view.alpha = 0f
         view.translationX = 0f
-        val animator = page.onCreateAnimator(0, true, R.animator.fragment_open_enter)
+        val animator = page.onCreateAnimator(0, true, R.animator.a14_settings_open_enter)
 
         assertTrue("The entry animation must be available", animator != null)
         assertEquals("FragmentManager uses alpha to detect the pending entry", 0f, view.alpha, 0f)
@@ -160,7 +160,7 @@ class PreferenceNavigationUiTest {
             .putBoolean("pref_key_system_island_media", true).apply()
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries, including Wi-Fi automatic settings, must be indexed", 34, standaloneKeys.size)
+        assertEquals("All standalone page entries, including Wi-Fi automatic settings, must be indexed", 35, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -319,6 +319,19 @@ class PreferenceNavigationUiTest {
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun singleLineTitlesAreCenteredInTheWholeClickableRow() {
+        val page = currentPage() as MainFragment
+        for (key in listOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various",
+            "pref_key_miuizer_locale", "pref_key_miuizer_launchericon")) {
+            val preference = requireNotNull(page.findPreference<Preference>(key))
+            val row = compose.onNodeWithTag(key).fetchSemanticsNode().boundsInRoot
+            val title = compose.onNode(hasText(preference.title.toString()) and hasAnyAncestor(hasTestTag(key)), useUnmergedTree = true)
+                .fetchSemanticsNode().boundsInRoot
+            assertEquals(key, row.center.y, title.center.y, 1f)
+        }
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun searchNavigationClearsQueryAndFocusBeforeReturningHome() {
         Helpers.getAllMods(activity, true)
         compose.onNodeWithTag("search.expand").performClick()
@@ -339,12 +352,24 @@ class PreferenceNavigationUiTest {
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun emptySearchHidesHomeContentAndClosingRestoresCategories() {
         compose.onNodeWithTag("search.expand").performClick()
+        compose.onNodeWithTag("search.status").assertTextEquals(activity.getString(R.string.search_settings_hint))
         compose.onNodeWithTag("pref_key_system").assertDoesNotExist()
         compose.onNodeWithTag("menu.expand").assertDoesNotExist()
         activity.onBackPressedDispatcher.onBackPressed()
         settleNavigation()
         compose.onNodeWithTag("pref_key_system").assertIsDisplayed()
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun noSearchResultsExplainTheEmptyStateAndClearingRestoresTheHint() {
+        Helpers.getAllMods(activity, true)
+        compose.onNodeWithTag("search.expand").performClick()
+        compose.onNodeWithTag("home.search").performTextInput("no_such_setting_4837")
+        compose.onNodeWithTag("search.status").assertTextEquals(activity.getString(R.string.search_settings_no_results))
+        compose.onNodeWithContentDescription(activity.getString(androidx.appcompat.R.string.abc_searchview_description_clear)).performClick()
+        compose.onNodeWithTag("search.status").assertTextEquals(activity.getString(R.string.search_settings_hint))
+        compose.onNodeWithTag("home.search").assertIsFocused()
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -457,54 +482,42 @@ class PreferenceNavigationUiTest {
         return currentPage() as SubFragment
     }
 
-    @Test fun musicSwipeSettingFollowsTheIslandModeAndMediaIntegration() {
-        val page = openIslandMusic()
-        val media = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media"))
-        val swipe = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_swipe"))
-        val floating = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_hide_in_floating_window"))
-        assertTrue(media.isEnabled); assertTrue(swipe.isChecked); assertFalse(swipe.isEnabled)
-        assertFalse(floating.isEnabled)
-        assertTrue(media is CheckBoxPreferenceEx)
-        media.isChecked = true; assertTrue(swipe.isEnabled); assertTrue(floating.isEnabled)
-        media.isChecked = false; assertFalse(swipe.isEnabled); assertFalse(floating.isEnabled)
-        pressToolbarBack(); pressToolbarBack(); pressToolbarBack()
-        val disabled = openIslandPage("0")
-        assertFalse(requireNotNull(disabled.findPreference<Preference>("pref_key_system_island_music_cat")).isEnabled)
-        assertFalse(requireNotNull(disabled.findPreference<Preference>("pref_key_system_island_layout_cat")).isEnabled)
+    @Test fun notificationPageKeepsItsContextTitleSeparateFromTheIslandSwitch() {
+        val island = openIslandPage()
+        val entry = requireNotNull(island.findPreference<Preference>("pref_key_system_island_notifications_cat"))
+        assertEquals(activity.getString(R.string.system_island_chat_group), entry.title)
+        assertEquals(activity.getString(R.string.system_island_music_group),
+            requireNotNull(island.findPreference<Preference>("pref_key_system_island_music_cat")).title)
+        entry.performClick(); settleNavigation()
+        val toggle = requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_chat"))
+        assertEquals(activity.getString(R.string.system_island_chat_title), toggle.title)
+        assertTrue(entry.title != toggle.title)
+        compose.onNodeWithText(activity.getString(R.string.system_island_chat_group)).assertIsDisplayed()
     }
 
-    @Test fun musicReturnRequiresTheModeMediaSwitchAndManualAppSelection() {
-        val island = openIslandPage()
-        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
-        val page = currentPage() as SubFragment
-        val returning = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
-        val apps = requireNotNull(page.findPreference<Preference>("pref_key_system_island_media_return_apps"))
-        assertFalse(returning.isChecked); assertFalse(returning.isEnabled); assertFalse(apps.isEnabled)
-        assertTrue(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_return")).isChecked)
-        pressToolbarBack()
-        requireNotNull(island.findPreference<Preference>("pref_key_system_island_music_cat")).performClick(); settleNavigation()
-        requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
-        pressToolbarBack()
-        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
-        val gestures = currentPage() as SubFragment
-        val enabled = requireNotNull(gestures.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
-        assertTrue(enabled.isEnabled); enabled.isChecked = true
-        val choices = requireNotNull(gestures.findPreference<Preference>("pref_key_system_island_media_return_apps"))
-        assertTrue(choices.isEnabled)
-        assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(choices.key, emptySet())!!.isEmpty())
-        choices.performClick(); settleNavigation()
+    @Test fun mediaAndEffectsShareOneManualApplicationSelection() {
+        val page = openIslandMusic()
+        val media = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media"))
+        val display = requireNotNull(page.findPreference<Preference>("pref_key_system_island_media_apps"))
+        val effect = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return"))
+        assertNull(page.findPreference<Preference>("pref_key_system_island_media_scope"))
+        assertNull(page.findPreference<Preference>("pref_key_system_island_media_effect_scope"))
+        assertNull(page.findPreference<Preference>("pref_key_system_island_media_return_apps"))
+        assertFalse(display.isEnabled); assertFalse(effect.isEnabled)
+        media.isChecked = true; assertTrue(display.isEnabled); assertTrue(effect.isEnabled)
+        effect.isChecked = true
+        media.isChecked = false; assertFalse(display.isEnabled)
+        media.isChecked = true; assertTrue(display.isEnabled)
+        display.performClick(); settleNavigation()
         assertTrue(currentPage() is tv.withaibuild.customiuizer.subs.AppSelector)
-        assertEquals(choices.key, currentPage().arguments?.getString("key"))
+        assertEquals(display.key, currentPage().arguments?.getString("key"))
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun applicationSearchStaysAboveTheScrollingListWhenTheViewportShrinks() {
         val page = openIslandMusic()
         requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media")).isChecked = true
-        pressToolbarBack()
-        val island = currentPage() as SubFragment
-        requireNotNull(island.findPreference<Preference>("pref_key_system_island_actions_cat")).performClick(); settleNavigation()
-        val gestures = currentPage() as SubFragment
+        val gestures = page
         requireNotNull(gestures.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_media_return")).isChecked = true
         val apps = (1..120).map { index -> tv.withaibuild.customiuizer.utils.AppData().apply {
             label = "Application $index"; pkgName = "example.$index"; enabled = true; prepareForList()
@@ -513,7 +526,7 @@ class PreferenceNavigationUiTest {
         try {
             // Feed the real async loader; replacing appRows can race its pending result.
             AppHelper.installedAppsList = ArrayList(apps)
-            requireNotNull(gestures.findPreference<Preference>("pref_key_system_island_media_return_apps")).performClick()
+            requireNotNull(gestures.findPreference<Preference>("pref_key_system_island_media_apps")).performClick()
             settleNavigation()
             val selector = currentPage() as tv.withaibuild.customiuizer.subs.AppSelector
             val rows = ReflectionHelpers.getField<androidx.compose.runtime.MutableState<List<AppSelectionRow>>>(selector, "appRows\$delegate")
@@ -596,6 +609,7 @@ class PreferenceNavigationUiTest {
         assertSame(appearance, pref("effects_cat").parent)
         assertSame(interaction, pref("idle").parent)
         assertTrue(setOf(content, appearance, interaction).size == 3)
+        assertSame(content, pref("live_cat").parent)
         for (suffix in listOf("waveform_mode", "entrance_style", "simplified"))
             assertEquals(null, page.findPreference<Preference>("pref_key_system_island_$suffix"))
         val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
@@ -603,12 +617,12 @@ class PreferenceNavigationUiTest {
         for (group in listOf(content, appearance, interaction)) {
             assertFalse(group.isVisible)
         }
-        for (suffix in listOf("music_cat", "effects_cat", "idle")) assertFalse(pref(suffix).isEnabled)
+        for (suffix in listOf("music_cat", "effects_cat", "actions_cat", "live_cat")) assertFalse(pref(suffix).isEnabled)
         assertTrue(mode.callChangeListener("3")); mode.value = "3"
         for (group in listOf(content, appearance, interaction)) {
             assertTrue(group.isVisible)
         }
-        for (suffix in listOf("music_cat", "effects_cat", "idle")) assertTrue(pref(suffix).isEnabled)
+        for (suffix in listOf("music_cat", "effects_cat", "actions_cat", "live_cat")) assertTrue(pref(suffix).isEnabled)
     }
 
     @Test
@@ -647,16 +661,15 @@ class PreferenceNavigationUiTest {
         val page = currentPage() as SubFragment
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_feedback_cat")).performClick(); settleNavigation()
         assertFalse(requireNotNull((currentPage() as SubFragment).findPreference<CheckBoxPreferenceEx>("pref_key_system_island_feedback_wifi")).isChecked)
-        val sources = requireNotNull((currentPage() as SubFragment)
-            .findPreference<androidx.preference.MultiSelectListPreference>("pref_key_system_island_live_kinds"))
-        assertEquals(6, sources.entryValues.size)
-        assertFalse(sources.entryValues.any { it.toString() in setOf("sms", "calendar") })
-        assertEquals(activity.getString(R.string.system_island_live_sources_summary), sources.summary)
-        assertTrue(sources.callChangeListener(setOf("recorder")))
-        sources.values = setOf("recorder")
+        pressToolbarBack()
+        requireNotNull(page.findPreference<Preference>("pref_key_system_island_live_cat")).performClick(); settleNavigation()
+        val live = currentPage() as SubFragment
+        val recorder = requireNotNull(live.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_recorder"))
+        recorder.isChecked = true
+        assertTrue(recorder.callChangeListener(true))
         assertEquals(setOf("recorder"), AppHelper.appPrefs!!.getStringSet("pref_key_system_island_live_kinds", emptySet()))
-        assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_island_live_return"))
-        assertFalse(AppHelper.appPrefs!!.contains("pref_key_system_island_live_kinds_recorder"))
+        requireNotNull(live.findPreference<Preference>("pref_key_system_island_live_return"))
+        assertFalse(AppHelper.appPrefs!!.contains("pref_key_system_island_live_recorder"))
         pressToolbarBack()
         requireNotNull(page.findPreference<Preference>("pref_key_system_island_notifications_cat")).performClick(); settleNavigation()
         val notifications = currentPage() as SubFragment
@@ -1024,7 +1037,7 @@ class PreferenceNavigationUiTest {
     @Test
     fun reversingAPartiallySeekedExitAnimatorRestoresItsStartPosition() {
         val page = currentPage() as MainFragment
-        val animator = requireNotNull(page.onCreateAnimator(0, false, R.animator.fragment_close_exit))
+        val animator = requireNotNull(page.onCreateAnimator(0, false, R.animator.a14_settings_close_exit))
         val set = AnimatorSet().apply { playTogether(animator) }
         set.currentPlayTime = 140L
         assertTrue(page.requireView().translationX > 0f)

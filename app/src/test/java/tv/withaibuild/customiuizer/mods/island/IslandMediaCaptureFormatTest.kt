@@ -81,11 +81,11 @@ class IslandMediaCaptureFormatTest {
         capture.close()
     }
 
-    @Test fun decorativeFftRequestsThirtyHzAndStillRespectsALowerNativeLimit() {
+    @Test fun decorativeFftRequestsTenHzAndStillRespectsALowerNativeLimit() {
         for (limit in listOf(30_000, 20_000, 5_000)) {
             FormatVisualizer.maximumRate = limit
             val capture = backend().capture(42) { _, _ -> }
-            assertEquals(minOf(30_000, limit), FormatVisualizer.requestedRate)
+            assertEquals(minOf(10_000, limit), FormatVisualizer.requestedRate)
             capture.close()
         }
     }

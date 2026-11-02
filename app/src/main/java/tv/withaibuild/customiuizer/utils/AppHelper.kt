@@ -237,45 +237,6 @@ object AppHelper {
         }
     }
 
-    @JvmStatic
-    fun syncPrefsToAnother(
-        entries: Map<String, Any?>?,
-        prefs: SharedPreferences,
-        clearType: Int,
-        ignoreKeys: Set<String>?,
-        commitAction: Boolean
-    ) {
-        if (entries.isNullOrEmpty()) return
-        val prefEdit = prefs.edit()
-        when (clearType) {
-            1 -> prefEdit.clear()
-            2 -> {
-                for (k in prefs.all.keys) {
-                    if (!entries.containsKey(k)) {
-                        prefEdit.remove(k)
-                    }
-                }
-            }
-        }
-        for ((key, value) in entries) {
-            if (ignoreKeys != null && ignoreKeys.contains(key)) continue
-            if (value == null) continue
-            when (value) {
-                is Boolean -> prefEdit.putBoolean(key, value)
-                is Float -> prefEdit.putFloat(key, value)
-                is Int -> prefEdit.putInt(key, value)
-                is Long -> prefEdit.putLong(key, value)
-                is String -> prefEdit.putString(key, value)
-                is Set<*> -> @Suppress("UNCHECKED_CAST") prefEdit.putStringSet(key, value as Set<String>)
-            }
-        }
-        if (commitAction) {
-            prefEdit.commit()
-        } else {
-            prefEdit.apply()
-        }
-    }
-
     private fun prefixKey(key: String): String {
         return if (key.startsWith("pref_key_")) key else "pref_key_$key"
     }

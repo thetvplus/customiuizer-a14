@@ -59,7 +59,7 @@ class IslandGlanceLayoutTest {
     }
 
     @Test fun repeatedGeometryKeepsTextLayoutSettledAndRealRowChangesStillApply() {
-        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { simplified = true }
+        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { powerSaveMotion = true }
         shell.bind("Notice", "Public message", null, false, false, false, 0, false, expanded = true)
         shell.geometry(280, 40, 40)
         val title = (shell.getChildAt(1) as LinearLayout).getChildAt(0) as TextView

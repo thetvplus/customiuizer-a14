@@ -8,6 +8,22 @@ import tv.withaibuild.customiuizer.utils.PrefMap
 
 class SystemServerPreferenceInvalidationTest {
 
+    @Test fun committedWindowBlurWinsOverStaleFrameworkOnToggleAndBulkWithoutWritingBack() {
+        val key = "pref_key_system_disable_window_blurs"
+        val remote = primed(key, false)
+        val prefs = PrefMap()
+        val observed = mutableListOf<Boolean>()
+        val bootstrap = PreferenceBootstrap.create(prefs, { remote }) {
+            observed.add(prefs.getBoolean("system_disable_window_blurs"))
+        }
+        bootstrap.bootstrap()
+        bootstrap.refreshRemoteKey(key, mapOf(key to true))
+        bootstrap.refreshRemoteKey(null, mapOf(key to true))
+        bootstrap.refreshRemoteKey(key, mapOf(key to false))
+        assertEquals(listOf(true, true, false), observed)
+        assertEquals(false, remote.getBoolean(key, true))
+    }
+
     @Test fun authoritativeHeightReplacesAStaleBulkCacheBeforeTheSingleObserverDispatch() {
         val key = "pref_key_system_statusbarheight"
         val remote = primed(key, 46)

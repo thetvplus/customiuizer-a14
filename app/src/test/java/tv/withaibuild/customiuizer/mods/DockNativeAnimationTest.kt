@@ -16,6 +16,46 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class, shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockNativeAnimationTest {
+    @Test fun overviewOwnsBothPanelModesEvenWhenNativeHotSeatsRemainOpaqueAndVisible() {
+        for (full in booleanArrayOf(false, true)) for (google in booleanArrayOf(false, true)) {
+            val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+            DockBackgroundTest.NativeMaterial.googleSupported = google
+            try {
+                val host = FrameLayout(activity.get())
+                activity.get().setContentView(host)
+                LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = full, material = 2),
+                    DockBackgroundTest.NativeMaterial::class.java.getConstructor(android.content.Context::class.java),
+                    visualEvents = true)
+                val decor = host.rootView as FrameLayout
+                val panel = if (full) (0 until decor.childCount).map { decor.getChildAt(it) }
+                    .filterIsInstance<DockFullWidthContainer>().single().getChildAt(0) as DockBackgroundView
+                    else host.getChildAt(0) as DockBackgroundView
+                fun settle() = repeat(4) {
+                    decor.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY))
+                    decor.layout(0, 0, 360, 800); decor.viewTreeObserver.dispatchOnPreDraw()
+                }
+                settle()
+                val material = panel.getChildAt(0) as DockBackgroundTest.NativeMaterial
+                repeat(3) {
+                    panel.setSceneVisible(false)
+                    assertEquals(View.VISIBLE, host.visibility)
+                    assertEquals(1f, host.alpha, 0f)
+                    assertEquals(View.INVISIBLE, panel.visibility)
+                    assertFalse(material.appliedEnabled)
+                    panel.bindEditingAnimation(android.view.animation.AnimationSet(false), showing = true)
+                    assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(panel, "editingAnimation"))
+                    assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+                    panel.setSceneVisible(true); settle()
+                    assertEquals(View.VISIBLE, panel.visibility)
+                    assertTrue(material.appliedEnabled)
+                    assertSame(material, panel.getChildAt(0))
+                    assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(panel, "pendingObserver"))
+                }
+            } finally { activity.pause().stop().destroy(); DockBackgroundTest.NativeMaterial.googleSupported = false }
+        }
+    }
+
     @Test fun settledFullWidthNativeMaterialSkipsEqualOpacitySubmissionsButFollowsChangedParents() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
         DockBackgroundTest.NativeMaterial.googleSupported = true
@@ -24,7 +64,7 @@ class DockNativeAnimationTest {
             activity.get().setContentView(root)
             val host = FrameLayout(activity.get())
             root.addView(host, FrameLayout.LayoutParams(320, 80).apply { topMargin = 600 })
-            LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true),
+            LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true, material = 2),
                 DockBackgroundTest.NativeMaterial::class.java.getConstructor(android.content.Context::class.java))
             val decor = host.rootView as FrameLayout
             val layer = (0 until decor.childCount).map { decor.getChildAt(it) }.filterIsInstance<DockFullWidthContainer>().single()

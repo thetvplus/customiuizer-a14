@@ -160,6 +160,20 @@ class PassiveFeatureBoundaryTest {
         }
     }
     class LabelOwner(@JvmField val mTitleContainer: FrameLayout)
+    @Test fun wallpaperTitleWithoutTheNativeResourceCannotStyleAnUnidentifiedView() {
+        val title = TextView(RuntimeEnvironment.getApplication()).apply { id = 0 }
+        val reference = TextView(title.context)
+        reference.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+        MainModule.mPrefs.put("launcher_titlefontsize", 12); refresh()
+        val hook = LauncherIconHooks.wallpaperTitleFontHook()
+        val chain = Chain(args = listOf(null, title), native = { title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f) })
+        repeat(100) { hook.intercept(chain) }
+        assertEquals(100, chain.calls)
+        assertEquals(reference.textSize, title.textSize)
+        val failure = IllegalStateException("native")
+        assertSame(failure, assertThrows(IllegalStateException::class.java) { hook.intercept(Chain(failure = failure)) })
+    }
+
     @Test fun titleDefaultsKeepNativeFontAndMarginAndSuccessfulOverridesStayInsideTheirRange() {
         val title = TextView(RuntimeEnvironment.getApplication())
         var resolutions = 0

@@ -57,7 +57,6 @@ internal fun installIslandNotificationTakeover(
 internal data class IslandOptions(
     val enabled: Boolean, val toast: Boolean, val media: Boolean,
     val waveform: Boolean = true,
-    val simplified: Boolean = false,
     val excludedApps: Set<String> = emptySet(),
     val chat: Boolean = false,
     val height: Int = 40,
@@ -74,7 +73,6 @@ internal data class IslandOptions(
     val notificationApps: Set<String> = emptySet(),
     val waveformMode: Int = if (waveform) 1 else 0,
     val mediaReturn: Boolean = false,
-    val mediaReturnApps: Set<String> = emptySet(),
     val hideInFloatingWindow: Boolean = false,
     val idle: Boolean = false,
     val idleWidth: Int = 0,
@@ -85,14 +83,18 @@ internal data class IslandOptions(
     val liveKinds: Set<IslandLiveKind> = emptySet(),
     val liveReturn: Boolean = true,
     val waveformGain: Int = 200,
-    val absorption: Boolean = false,
+    val returnEffect: IslandReturnEffect = IslandReturnEffect.NONE,
+    val mediaApps: Set<String> = emptySet(),
 ) {
+    val returnEffectEnabled: Boolean get() = returnEffect != IslandReturnEffect.NONE
     private val mediaReturningPackages: Set<String> = if (enabled && media && mediaReturn)
-        mediaReturnApps.filterTo(linkedSetOf()) { it !in excludedApps } else emptySet()
+        mediaApps.filterTo(linkedSetOf(), ::acceptsMedia) else emptySet()
     private val returningPackages: Set<String> = buildSet {
         addAll(mediaReturningPackages)
         if (enabled && liveReturn) IslandLiveKind.windowPackages(liveKinds).filterTo(this) { it !in excludedApps }
     }
+    fun acceptsMedia(pkg: String): Boolean = enabled && media && pkg !in excludedApps &&
+        pkg in mediaApps
     fun returnPackages(): Set<String> = returningPackages
     fun returnsMedia(pkg: String): Boolean = pkg in mediaReturningPackages
     fun returnsLive(kind: IslandLiveKind, pkg: String): Boolean = enabled && liveReturn && kind in liveKinds &&
@@ -112,7 +114,6 @@ internal data class IslandOptions(
             return IslandOptions(mode == StrongToastPresentationMode.DYNAMIC_ISLAND,
                 prefs.getBoolean("system_toast_capsule"), prefs.getBoolean("system_island_media"),
                 waveformMode != 0,
-                prefs.getBoolean("system_island_simplified"),
                 prefs.getStringSet("system_island_excluded_apps").toSet(),
                 prefs.getBoolean("system_island_chat"),
                 prefs.getInt("system_island_height", 40).coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP),
@@ -130,7 +131,6 @@ internal data class IslandOptions(
                 },
                 prefs.getStringSet("system_island_notification_apps").toSet(), waveformMode,
                 prefs.getBoolean("system_island_media_return"),
-                prefs.getStringSet("system_island_media_return_apps").toSet(),
                 prefs.getBoolean("system_island_hide_in_floating_window"),
                 prefs.getBoolean("system_island_idle"),
                 if (prefs.getBoolean("system_island_idle_width_auto", true)) 0 else prefs.getInt("system_island_idle_width", 100).coerceIn(48, 120),
@@ -139,7 +139,8 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_island_feedback_low_battery"), IslandIdleActions.read(prefs), IslandLiveKind.read(prefs),
                 prefs.getBoolean("system_island_live_return", true),
                 prefs.getInt("system_island_waveform_gain", 200).coerceIn(100, 800),
-                prefs.getStringAsInt("system_island_return_effect", 0) == 1)
+                IslandReturnEffect.read(prefs),
+                prefs.getStringSet("system_island_media_apps").toSet())
         }
     }
 }

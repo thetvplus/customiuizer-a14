@@ -7,19 +7,20 @@ import kotlin.math.sin
 
 /** Damped step response: prompt travel followed by one small, decaying overshoot. */
 internal object IslandMotion {
-    const val ENTER = 420L
-    const val MORPH = 400L
-    const val REBOUND = 400L
-    const val EXIT = 320L
-    const val SECONDARY = 440L
-    const val CONTENT = 240L
-    const val CONTENT_ARRIVAL = 420L
-    const val ALBUM = 380L
+    const val ENTER = 403L
+    const val MORPH = 384L
+    const val REBOUND = 384L
+    const val EXIT = 307L
+    const val SECONDARY = 422L
+    const val CONTENT = 230L
+    const val CONTENT_ARRIVAL = 403L
+    const val ALBUM = 365L
     const val MEDIA_DELAY = 750L
-    const val MEDIA_RETURN = 540L
     const val RETURN_TIMEOUT = 1600L
     const val ABSORPTION_TIME_SCALE = 1.2f
-    const val ABSORPTION_BODY = 760L
+    const val ABSORPTION_BODY = 567L
+    const val ABSORPTION_RELEASE_SCALE = 1.25f
+    const val ABSORPTION_DEPTH = 180L
     const val ABSORPTION_LANDING_WIDTH_RATIO = .38f
     const val ABSORPTION_LANDING_HEIGHT_RATIO = .44f
     const val ABSORPTION_LANDING_OFFSET = .22f
@@ -27,19 +28,13 @@ internal object IslandMotion {
     const val DRAG_SQUEEZE = .04f
     const val PAUSE_LIFETIME = 2000L
     const val LOADING_LIFETIME = 30000L
+    const val MEDIA_SWITCH_LIFETIME = 8000L
     const val NATIVE_CARD_GAP_LIFETIME = 30000L
     const val EXPANDED_DWELL = 5000L
-    const val LANDING_WIDTH_RATIO = .84f
-    const val LANDING_HEIGHT_RATIO = .86f
     /** One narrow response range for an accepted Home return. Native spring geometry,
      * damping and initial velocity remain authoritative; distance never sets the tempo. */
-    fun returnDuration(strength: Float, absorption: Boolean): Long =
-        ((MEDIA_RETURN - 12f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f).toLong()
-    fun returnResponse(strength: Float, absorption: Boolean): Float =
-        (.35f - .006f * strength.coerceIn(0f, 1f)) * if (absorption) ABSORPTION_TIME_SCALE else 1f
-    /** All accepted native content lands inside the shell, with the same centre and
-     * height. Keep at least a round end cap even for the smallest available island. */
-    fun landingWidth(width: Float, height: Float) = maxOf(width * LANDING_WIDTH_RATIO, minOf(width, height))
+    fun returnResponse(strength: Float): Float =
+        (.35f - .006f * strength.coerceIn(0f, 1f)) * ABSORPTION_TIME_SCALE * .96f
     val relaxed = TimeInterpolator { progress(it) }
     /** Committed collapse/exit and canceled drags settle without crossing their endpoint. */
     val settle = TimeInterpolator { val t = 1f - it.coerceIn(0f, 1f); 1f - t * t * t }
@@ -66,7 +61,7 @@ internal object IslandMotion {
         val change = maxOf(dw / maxOf(width, fromWidth, 1f), dh / maxOf(height, fromHeight, 1f))
         return ((change - .08f) / .42f).coerceIn(0f, 1f) * .03f
     }
-    /** A bounded contact cue, shared by both native return styles and their existing clock. */
+    /** A bounded contact cue, using the existing absorption clock. */
     fun returnFusion(progress: Float): Float {
         if (!progress.isFinite() || progress <= .12f || progress >= .88f) return 0f
         val t = (progress - .12f) / .76f
@@ -117,11 +112,18 @@ internal object IslandMotion {
      * One analytic receiving gesture runs on the existing finite View clock. */
     class AbsorptionResponse(private val from: Float, private val target: Float,
         private val minimum: Float, private val maximum: Float, amplitude: Float,
-        initialVelocity: Float, seconds: Float, initialProgress: Float = 0f) {
+        initialVelocity: Float, seconds: Float, initialProgress: Float = 0f,
+        catchStart: Float = 0f, releaseScale: Float = 1f) {
         private val outward = amplitude.coerceIn(minimum - target, maximum - target)
-        private val inward = (-amplitude * .3f).coerceIn(minimum - target, maximum - target)
+        // Breadth takes a small grip first; depth is one symmetric compression,
+        // without the opposite-direction pre-bulge that made the short catch uneven.
+        private val inward = if (amplitude > 0f) (-amplitude * .3f).coerceIn(minimum - target, maximum - target) else 0f
         private val late = initialProgress >= .9f
         private val duration = if (late) CONTENT_ARRIVAL / 1000f else seconds.coerceIn(.3f, 1f)
+        private val pulseSeconds = duration * (1f - catchStart)
+        private val pulseOffset = duration * catchStart
+        private val releaseRate = 1f / releaseScale
+        val settlingSeconds = if (late) duration else duration + .44f * pulseSeconds * (releaseScale - 1f)
         private val spring = Spring().apply {
             setVelocity(initialVelocity)
             retarget(from, target, duration, true)
@@ -139,12 +141,16 @@ internal object IslandMotion {
             value = spring.sample(time, minimum, maximum)
             velocity = spring.velocity
             if (!late) {
-                val phase = time / duration
+                val phase = (time - pulseOffset) / pulseSeconds
                 val grip = phase / .32f
                 val receive = (phase - .12f) / .88f
-                value += inward * pulse(grip) + outward * pulse(receive)
-                velocity += inward * pulseDerivative(grip) / (.32f * duration) +
-                    outward * pulseDerivative(receive) / (.88f * duration)
+                // Stretch only the descending half of this existing pulse. At its
+                // crest the derivative is zero, so position and velocity stay continuous.
+                val releasing = receive > .5f
+                val receivingPhase = if (releasing) .5f + (receive - .5f) * releaseRate else receive
+                value += inward * pulse(grip) + outward * pulse(receivingPhase)
+                velocity += inward * pulseDerivative(grip) / (.32f * pulseSeconds) +
+                    outward * pulseDerivative(receivingPhase) * (if (releasing) releaseRate else 1f) / (.88f * pulseSeconds)
             }
             if (settled(time)) { value = target; velocity = 0f }
             if (value < minimum) { value = minimum; velocity = maxOf(0f, velocity) }
@@ -161,7 +167,7 @@ internal object IslandMotion {
             val t = progress.coerceIn(0f, 1f)
             return 32f * t * (1f - t) * (1f - 2f * t)
         }
-        fun settled(time: Float) = completed && time >= duration
+        fun settled(time: Float) = completed && time >= settlingSeconds
     }
 
     /** Compression approaches the physical height limit without a flat clamp. */
@@ -228,8 +234,8 @@ internal object IslandMotion {
         fun sample(seconds: Float, minimum: Float = -Float.MAX_VALUE, maximum: Float = Float.MAX_VALUE): Float {
             val time = seconds.coerceAtLeast(0f).toDouble()
             if (elastic) {
-                val damping = .60 * omega
-                val frequency = omega * .8
+                val damping = .60328 * omega
+                val frequency = omega * .79753
                 val b = (velocityAtStart + damping * displacement) / frequency
                 val c = cos(frequency * time); val s = sin(frequency * time)
                 val offset = displacement * c + b * s

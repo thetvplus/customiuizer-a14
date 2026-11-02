@@ -10,12 +10,21 @@ internal object IslandPreferenceDefaults {
 
     const val waveformModeKey = "pref_key_system_island_waveform_mode"
     const val heightAutoKey = "pref_key_system_island_height_auto"
+    const val absorptionKey = "pref_key_system_island_return_effect"
     private const val liveKindsKey = "pref_key_system_island_live_kinds"
     private val retiredMessageKinds = setOf("sms", "calendar")
     private val initializedKeys get() = feedbackKeys + waveformModeKey + heightAutoKey
     private val waveformModes = setOf("0", "1", "2")
 
     fun migrate(entries: MutableMap<String, Any?>) {
+        if (absorptionKey in entries) {
+            val old = entries[absorptionKey]
+            entries[absorptionKey] = when {
+                old == true || old == "1" || old == 1 || old == "true" || old == "absorption" -> "absorption"
+                old == "instant" -> "instant"
+                else -> "none"
+            }
+        }
         (entries[liveKindsKey] as? Set<*>)?.let { selected ->
             if (selected.any { it in retiredMessageKinds })
                 entries[liveKindsKey] = selected.filterIsInstance<String>().filterTo(linkedSetOf()) { it !in retiredMessageKinds }
@@ -36,12 +45,16 @@ internal object IslandPreferenceDefaults {
     fun initialize(prefs: SharedPreferences) {
         val validMode = try { prefs.getString(waveformModeKey, null) in waveformModes }
             catch (_: ClassCastException) { false }
-        val oldKinds = prefs.all[liveKindsKey] as? Set<*>
-        if (initializedKeys.all(prefs::contains) && validMode && oldKinds?.any { it in retiredMessageKinds } != true) return
-        val entries = prefs.all.toMutableMap()
+        val stored = prefs.all
+        val oldKinds = stored[liveKindsKey] as? Set<*>
+        val oldAbsorption = stored[absorptionKey]
+        if (initializedKeys.all(prefs::contains) && validMode &&
+            (oldAbsorption == null || oldAbsorption in setOf("none", "instant", "absorption")) && oldKinds?.any { it in retiredMessageKinds } != true) return
+        val entries = stored.toMutableMap()
         val storedMode = entries[waveformModeKey]
         migrate(entries)
         val editor = prefs.edit()
+        if (oldAbsorption != entries[absorptionKey]) editor.putString(absorptionKey, entries[absorptionKey] as String)
         for (key in feedbackKeys) if (!prefs.contains(key)) editor.putBoolean(key, entries[key] == true)
         if (!prefs.contains(heightAutoKey)) editor.putBoolean(heightAutoKey, entries[heightAutoKey] == true)
         if (storedMode != entries[waveformModeKey]) editor.putString(waveformModeKey, entries[waveformModeKey] as String)

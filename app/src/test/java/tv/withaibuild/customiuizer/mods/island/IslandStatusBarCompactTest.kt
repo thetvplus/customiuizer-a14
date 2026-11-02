@@ -361,10 +361,12 @@ class IslandStatusBarCompactTest {
         root.layout(0, 0, 400, 50)
         clock.layout(12, 0, 70, 50); battery.layout(340, 0, 388, 50); signal.layout(300, 0, 330, 50)
         signal.layout(180, 0, 210, 50)
-        val compact = IslandStatusBarCompact(root, clock, battery,
-            animationsEnabled = { true }, blurEnabled = { true })
+        val prefs = tv.withaibuild.customiuizer.MainModule.mPrefs
+        val savedPrefs = prefs.getAll()
+        prefs.put("system_disable_window_blurs", true)
+        val compact = IslandStatusBarCompact(root, clock, battery, animationsEnabled = { true })
         assertTrue(root.isAttachedToWindow); assertTrue(root.isShown)
-        compact.show(180)
+        try { compact.show(180) } finally { prefs.replaceSnapshot(savedPrefs) }
         val hiding: View = ReflectionHelpers.getField(compact, "snapshot")
         val hidePixels: Bitmap = ReflectionHelpers.getField(hiding, "pixels")
         assertEquals(400 * 50 * 4, hidePixels.allocationByteCount)

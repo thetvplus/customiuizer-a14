@@ -58,6 +58,27 @@ class IslandWaveReducedMotionTest {
         assertFalse(ReflectionHelpers.getField(wave, "scheduled"))
     }
 
+    @Test fun measuredBarsRiseAndFallFasterWithoutChangingTheirGainOrPeak() {
+        scale(1f)
+        wave.spectrum(FloatArray(5) { 1f })
+        val peak = ReflectionHelpers.getField<FloatArray>(wave, "targets")[0]
+        var start = android.os.SystemClock.uptimeMillis()
+        advanceDisplayFrames(6)
+        var elapsed = (android.os.SystemClock.uptimeMillis() - start) / 1000.0
+        val rising = ReflectionHelpers.getField<FloatArray>(wave, "energies")[0]
+        val oldAttack = (peak * (1.0 - kotlin.math.exp(-elapsed / .080))).toFloat()
+        assertTrue("Rising levels must beat the former 80 ms response", rising > oldAttack + peak * .01f)
+        advanceDisplayFrames(90)
+        assertEquals(peak, ReflectionHelpers.getField<FloatArray>(wave, "energies")[0], 0f)
+        wave.spectrum(FloatArray(5))
+        start = android.os.SystemClock.uptimeMillis(); advanceDisplayFrames(20)
+        elapsed = (android.os.SystemClock.uptimeMillis() - start) / 1000.0
+        val oldRelease = (peak * kotlin.math.exp(-elapsed / .240)).toFloat()
+        assertTrue("Falling levels must beat the former 240 ms response",
+            ReflectionHelpers.getField<FloatArray>(wave, "energies")[0] < oldRelease - peak * .01f)
+        assertEquals(200, wave.gainPercent)
+    }
+
     @Test fun disabledAnimationsStillCommitMeasuredLevelsGainAndSilenceImmediately() {
         scale(0f)
         wave.spectrum(FloatArray(5) { .2f })
@@ -103,7 +124,7 @@ class IslandWaveReducedMotionTest {
         assertEquals(0f, ReflectionHelpers.getField<FloatArray>(wave, "energies")[0], 0f)
         advanceDisplayFrames()
         assertTrue(ReflectionHelpers.getField<FloatArray>(wave, "energies")[0] in .1f.. .99f)
-        advanceDisplayFrames(18)
+        advanceDisplayFrames(90)
         assertFalse(ReflectionHelpers.getField(wave, "scheduled"))
         assertArrayEquals(ReflectionHelpers.getField<FloatArray>(wave, "targets"),
             ReflectionHelpers.getField(wave, "energies"), .006f)

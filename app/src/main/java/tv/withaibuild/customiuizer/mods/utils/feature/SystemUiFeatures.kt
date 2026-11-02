@@ -793,7 +793,6 @@ internal data class StrongToastRuntimeSnapshot(
     val shortWidthDp: Int = 184,
     val longWidthDp: Int = 240,
     val entranceStyle: IslandEntranceStyle = IslandEntranceStyle.TOP,
-    val simplified: Boolean = false,
 ) {
     val isDynamicIsland: Boolean
         get() = mode == StrongToastPresentationMode.DYNAMIC_ISLAND
@@ -827,7 +826,7 @@ internal class StrongToastRuntimeState private constructor(
         // Legacy position / bottom-offset keys are ignored: TOP-only migration is unconditional.
         if (key != null && key != MODE_KEY && key != ISLAND_OFFSET_KEY && key != ISLAND_HEIGHT_KEY &&
             key != AUTO_WIDTH_KEY && key != SHORT_WIDTH_KEY && key != MEDIUM_WIDTH_KEY &&
-            key != ENTRANCE_STYLE_KEY && key != SIMPLIFIED_KEY) {
+            key != ENTRANCE_STYLE_KEY) {
             return
         }
         synchronized(refreshLock) {
@@ -866,7 +865,6 @@ internal class StrongToastRuntimeState private constructor(
         const val SHORT_WIDTH_KEY = "system_island_width_short"
         const val MEDIUM_WIDTH_KEY = "system_island_width_medium"
         const val ENTRANCE_STYLE_KEY = "system_island_entrance_style"
-        const val SIMPLIFIED_KEY = "system_island_simplified"
 
         /**
          * SeekBarPreference clamps its minimum to zero, so a signed range is persisted unsigned and
@@ -896,7 +894,6 @@ internal class StrongToastRuntimeState private constructor(
                 shortWidth,
                 parsePreferenceInt(source[MEDIUM_WIDTH_KEY], 240).coerceIn(IslandSizing.LONG_MIN_DP, IslandSizing.LONG_MAX_MANUAL_DP).coerceAtLeast(shortWidth),
                 IslandEntranceStyle.fromPreference(parsePreferenceInt(source[ENTRANCE_STYLE_KEY], 1)),
-                source[SIMPLIFIED_KEY] as? Boolean ?: false,
             )
         }
 

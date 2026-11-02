@@ -146,7 +146,8 @@ internal object CurrentPreferenceContract {
         val retiredIsland = arrayOf(
             "system_island_expanded_width", "system_island_icons", "system_island_concise",
             "system_island_controls", "system_island_gestures", "system_island_gestures_horizontal",
-            "system_island_gestures_vertical",
+            "system_island_gestures_vertical", "system_island_simplified",
+            "system_island_media_return_apps", "system_island_media_effect_scope",
         ).flatMap { listOf(it, "pref_key_$it") }
         if (prefs.getInt(CONTRACT_REVISION_KEY, 0) >= CONTRACT_REVISION) {
             if (retiredIsland.none(prefs::contains)) return false

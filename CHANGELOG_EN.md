@@ -6,6 +6,31 @@ Changes for maintained releases. Valid r14.26.7 changes are consolidated into r1
 
 ## Unreleased
 
+## r14.26.11 — 2026-11-02
+
+versionCode 281. Changes since r14.26.9:
+
+### User changes
+
+- Reorganize Dynamic Island settings into media, notifications, live activities and system feedback. Media display and returns share one explicitly selected app list; notifications use their selected apps. Preserve saved preferences, backups and search routes.
+- Unify return effects as None, Instant and Absorption. None retains native launcher returns, Instant captures no page, and Absorption retains native window springs and secure capture. Retire Simplified motion and the old effect scope while respecting system animation and power-saving settings.
+- Refine receiving motion, rebound, centered and side-position bounds and offsets. Give track changes a bounded loading hold for the same media session so the island does not disappear prematurely.
+- Add gesture returns and absorption to older HyperOS 1 launchers without WindowElement, preserving native returns, interruption recovery and secure-window restrictions. Recover the media island after a bounded missing handoff; late page captures no longer end accepted return progress early. Restart the device after updating.
+- Fix a native system smooth-corner crash during Recents or Home transitions with Dock backgrounds enabled, preserving the background and layout. Remove residual blur when Recents hides the Dock.
+- Solid Dock panels no longer create blur. Frosted glass reuses native materials and commits bounds, opacity and visibility after layout settles, follows system blur and power-saving availability, and stops frame synchronization at rest.
+- Apply global window blur changes promptly while retaining developer, power-saving and thermal restrictions. Scope Recents blur ratios to their actual calls and separate local island transitions from the global window blur switch.
+- Retain five measured music frequency bands with mild display compensation and smooth rise and fall. Cap music and recorder sampling at 10 Hz, retain display-frame interpolation, and stop rendering once silence settles.
+- Align spacing and corners across settings rows, groups, search and action editors, and correct single-line centering and long current values. Add search guidance, preparation and no-results messages, and switch menu subitems directly while retaining page animations and system dynamic colors.
+- Reuse unchanged settings rows and groups and reuse search indexes by language. Correct the credential shortcut target, align portrait and landscape keyboard bottom-spacing names while preserving saved values, and clarify Gboard-only support.
+- Center Duo airplane icons by their actual ink and calculate automatic sizing consistently in pixels, preserving layout and user font settings.
+
+### Engineering notes
+
+- Read settings JSON once for Compose pages, search and the preference catalog. Include generated sources in Lint and remove retired resources and feature routes while preserving ten languages, native Preference ordering, dependencies and navigation.
+- Install mutually exclusive launcher return paths with shared capture budgets and bounded lifetimes. Retain task, user, PiP, translucent-window and source checks without continuous sampling, pre-created windows or polling.
+- Remove retired island settings during startup and backup restore, and migrate legacy boolean and numeric return effects precisely. Retain Android 14 / HyperOS 1, libxposed API 102, R8, library Profiles and existing uncompressed DEX layout.
+- Do not translate reduced sampling, calls or allocations into unmeasured device frame-rate, power or startup gains. Withdrawn window-preparation, queue-removal and ART experiments are excluded from this release.
+
 ## r14.26.9 — 2026-11-01
 
 versionCode 269. Changes since r14.26.5:

@@ -2,129 +2,102 @@
   "type": "screen",
   "children": [
     {
-      "type": "section",
+      "type": "toggle",
       "attributes": {
-        "android:title": "@string/system_island_live_sources_title"
-      },
-      "children": [
-        {
-          "type": "multi",
-          "attributes": {
-            "android:key": "pref_key_system_island_live_kinds",
-            "android:title": "@string/system_island_live_choose",
-            "android:summary": "@string/system_island_live_sources_summary",
-            "android:entries": "@array/system_island_live_entries",
-            "android:entryValues": "@array/system_island_live_values",
-            "app:iconSpaceReserved": "false"
-          }
-        }
-      ]
+        "android:key": "pref_key_system_island_feedback_dnd",
+        "android:title": "@string/system_statusbaricons_dnd_title",
+        "android:defaultValue": "false"
+      }
     },
     {
-      "type": "section",
+      "type": "toggle",
       "attributes": {
-        "android:title": "@string/system_island_live_feedback"
-      },
-      "children": [
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_dnd",
-            "android:title": "@string/system_statusbaricons_dnd_title",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_ringer",
-            "android:title": "@string/system_island_feedback_ringer_title",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_dark",
-            "android:title": "@string/system_island_mode_dark",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_airplane",
-            "android:title": "@string/system_secureqs_airplane_title",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_nfc",
-            "android:title": "@string/array_global_toggle_nfc",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_hotspot",
-            "android:title": "@string/system_statusbaricons_hotspot_title",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_torch",
-            "android:title": "@string/array_global_toggle_torch",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_wifi",
-            "android:title": "@string/array_global_toggle_wifi",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_data",
-            "android:title": "@string/array_global_toggle_mobiledata",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_bluetooth",
-            "android:title": "@string/array_global_toggle_bt",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_charging",
-            "android:title": "@string/system_island_feedback_charging_title",
-            "android:summary": "@string/system_island_feedback_charging_summ",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_feedback_low_battery",
-            "android:title": "@string/system_island_feedback_low_battery_title",
-            "android:summary": "@string/system_island_feedback_low_battery_summ",
-            "android:defaultValue": "false"
-          }
-        }
-      ]
+        "android:key": "pref_key_system_island_feedback_ringer",
+        "android:title": "@string/system_island_feedback_ringer_title",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_dark",
+        "android:title": "@string/system_island_mode_dark",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_airplane",
+        "android:title": "@string/system_secureqs_airplane_title",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_nfc",
+        "android:title": "@string/array_global_toggle_nfc",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_hotspot",
+        "android:title": "@string/system_statusbaricons_hotspot_title",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_torch",
+        "android:title": "@string/array_global_toggle_torch",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_wifi",
+        "android:title": "@string/array_global_toggle_wifi",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_data",
+        "android:title": "@string/array_global_toggle_mobiledata",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_bluetooth",
+        "android:title": "@string/array_global_toggle_bt",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_charging",
+        "android:title": "@string/system_island_feedback_charging_title",
+        "android:summary": "@string/system_island_feedback_charging_summ",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_feedback_low_battery",
+        "android:title": "@string/system_island_feedback_low_battery_title",
+        "android:summary": "@string/system_island_feedback_low_battery_summ",
+        "android:defaultValue": "false"
+      }
     }
   ]
 }

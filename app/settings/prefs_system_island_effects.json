@@ -5,6 +5,18 @@
   },
   "children": [
     {
+      "type": "choice",
+      "attributes": {
+        "android:key": "pref_key_system_island_return_effect",
+        "android:title": "@string/system_island_return_effect_title",
+        "android:summary": "@string/system_island_return_effect_summ",
+        "android:defaultValue": "none",
+        "android:entries": "@array/island_return_effects",
+        "android:entryValues": "@array/island_return_effects_val",
+        "app:valueAsSummary": "true"
+      }
+    },
+    {
       "type": "section",
       "attributes": {
         "android:title": "@string/system_island_waveform_group"
@@ -52,27 +64,6 @@
             "android:entryValues": "@array/island_entrance_styles_val",
             "android:defaultValue": "1",
             "app:valueAsSummary": "true"
-          }
-        },
-        {
-          "type": "choice",
-          "attributes": {
-            "android:key": "pref_key_system_island_return_effect",
-            "android:title": "@string/system_island_return_effect_title",
-            "android:summary": "@string/system_island_return_effect_summ",
-            "android:entries": "@array/island_return_effects",
-            "android:entryValues": "@array/island_return_effects_val",
-            "android:defaultValue": "0",
-            "app:valueAsSummary": "true"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_simplified",
-            "android:title": "@string/system_island_simplified_title",
-            "android:defaultValue": "false",
-            "android:summary": "@string/system_island_simplified_summ"
           }
         }
       ]

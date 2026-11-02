@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import dataclasses
 import re
 import xml.etree.ElementTree as ET
@@ -22,8 +21,6 @@ ANDROID_NS = "http://schemas.android.com/apk/res/android"
 AUTO_NS = "http://schemas.android.com/apk/res-auto"
 ANDROID_KEY = f"{{{ANDROID_NS}}}key"
 ANDROID_TITLE = f"{{{ANDROID_NS}}}title"
-ANDROID_LAYOUT_WIDTH = f"{{{ANDROID_NS}}}layout_width"
-ANDROID_LAYOUT_HEIGHT = f"{{{ANDROID_NS}}}layout_height"
 AUTO_CHILD = f"{{{AUTO_NS}}}child"
 AUTO_VISIBLE = f"{{{AUTO_NS}}}isPreferenceVisible"
 PREFERENCE_CATEGORY = "tv.withaibuild.customiuizer.prefs.PreferenceCategoryEx"
@@ -55,6 +52,7 @@ CATEGORY_SOURCES = (
 # controller as normal navigation so dependent controls keep their behavior.
 # (entry key, XML resource, controller, dynamic title marker)
 STANDALONE_PAGES = (
+    ("pref_key_system_island_live_cat", "prefs_system_island_live", "System", False),
     ("pref_key_system_island_feedback_cat", "prefs_system_island_feedback", "System", False),
     ("pref_key_system_island_music_cat", "prefs_system_island_music", "System", False),
     ("pref_key_system_island_effects_cat", "prefs_system_island_effects", "System", False),
@@ -99,8 +97,6 @@ def _selector_screen() -> ET.Element:
     return ET.Element(
         "PreferenceScreen",
         {
-            ANDROID_LAYOUT_WIDTH: "match_parent",
-            ANDROID_LAYOUT_HEIGHT: "match_parent",
             ANDROID_KEY: "pref_key_cat",
         },
     )
@@ -122,7 +118,6 @@ def _split_name(category: CategorySource, key: str) -> str:
 def _structured_categories(
     category: CategorySource,
     source_root: ET.Element,
-    xml_dir: Path,
 ) -> dict[str, ET.Element]:
     pages: dict[str, ET.Element] = {}
     selector = _selector_screen()
@@ -142,11 +137,11 @@ def _structured_categories(
                 continue
 
             split_root = _new_screen(source_root)
-            split_root.append(copy.deepcopy(source_category))
+            # Both generation and search read this tree; neither mutates source nodes.
+            split_root.append(source_category)
             pages[_split_name(category, key).removesuffix(".xml")] = split_root
             selector_group.append(ET.Element(PREFERENCE_ITEM, {
                 ANDROID_KEY: key, ANDROID_TITLE: title,
-                f"{{{ANDROID_NS}}}widgetLayout": "@layout/preference_widget_disclosure",
             }))
             found += 1
 
@@ -203,7 +198,7 @@ def _search_entries(
 
 
 def _standalone_search_entries(
-    source_dir: Path,
+    source_pages: dict[str, ET.Element],
     category: CategorySource,
     parent_entries: list[dict[str, str]],
 ) -> list[dict[str, str]]:
@@ -213,7 +208,7 @@ def _standalone_search_entries(
         parent = parents.get(entry_key)
         if parent is None:
             continue
-        root = read_element(source_dir / f"{resource}.xml")
+        root = source_pages[resource]
         for item in _search_entries(category, root):
             section = item.get("breadcrumbSubSubTitle") or item.get("breadcrumbSubTitle", "")
             item.update(
@@ -301,32 +296,22 @@ def _storage_key(raw: str) -> str:
     return f"pref_key_{raw}"
 
 
-def collect_xml_storage_keys(xml_dir: Path) -> set[str]:
+def _storage_catalog(source_pages: dict[str, ET.Element]) -> tuple[set[str], dict[str, str]]:
     keys: set[str] = set()
-    for path in preference_sources(xml_dir):
-        root = read_element(path)
-        for element in root.iter():
-            key = element.get(ANDROID_KEY)
-            if key:
-                keys.add(_storage_key(key))
-    return keys
-
-
-def collect_xml_storage_types(xml_dir: Path) -> dict[str, str]:
     types: dict[str, str] = {}
-    for path in preference_sources(xml_dir):
-        root = read_element(path)
+    for root in source_pages.values():
         for element in root.iter():
             key = element.get(ANDROID_KEY)
             if not key:
                 continue
             storage = _storage_key(key)
+            keys.add(storage)
             tag_type = XML_VALUE_TYPES.get(element.tag)
             if tag_type is None and storage.endswith("_apps"):
                 tag_type = "STRING_SET"
             if tag_type:
                 types[storage] = tag_type
-    return types
+    return keys, types
 
 
 def collect_feature_storage_keys(java_dir: Path) -> set[str]:
@@ -385,21 +370,18 @@ def generate(
     for stale_xml in xml_dir.glob("*.xml"):
         stale_xml.unlink()
 
-    roots: dict[str, ET.Element] = {}
+    source_pages = {path.stem: read_element(path) for path in preference_sources(source_dir)}
+    roots = {category.key: source_pages[Path(category.source_name).stem] for category in CATEGORY_SOURCES}
+    pages = dict(source_pages)
     for category in CATEGORY_SOURCES:
-        source_path = source_dir / category.source_name
-        roots[category.key] = read_element(source_path)
-
-    pages = {path.stem: read_element(path) for path in preference_sources(source_dir)}
-    for category in CATEGORY_SOURCES:
-        pages.update(_structured_categories(category, roots[category.key], xml_dir))
+        pages.update(_structured_categories(category, roots[category.key]))
 
     index_root = ET.Element("mod-search-index")
     all_parent_keys: set[str] = set()
     for category in CATEGORY_SOURCES:
         entries = _search_entries(category, roots[category.key])
         all_parent_keys.update(item["key"] for item in entries)
-        entries += _standalone_search_entries(source_dir, category, entries)
+        entries += _standalone_search_entries(source_pages, category, entries)
         _append_compact_search_category(
             index_root,
             category,
@@ -418,8 +400,7 @@ def generate(
         for name in sorted(pages):
             ET.SubElement(ids, "item", {"type": "id", "name": name})
         _write_xml(values_dir / "compose_pages.xml", ids)
-        keys = collect_xml_storage_keys(source_dir)
-        types = collect_xml_storage_types(source_dir)
+        keys, types = _storage_catalog(source_pages)
         if java_dir is not None:
             feature_keys = collect_feature_storage_keys(java_dir)
             keys.update(feature_keys)

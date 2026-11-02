@@ -6,7 +6,7 @@ import android.app.ActivityManager
 import android.app.Instrumentation
 import android.app.NotificationManager
 import android.app.UiModeManager
-import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -398,7 +398,7 @@ object GlobalActions {
                         }
                     }
                     ACTION_PREFIX + "ToggleBluetooth" -> {
-                        val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+                        val mBluetoothAdapter = context.getSystemService(BluetoothManager::class.java)?.adapter ?: return
                         if (mBluetoothAdapter.isEnabled) {
                             mBluetoothAdapter.disable()
                             Toast.makeText(context, ModuleHelper.getModuleRes(context).getString(R.string.toggle_bt_off), Toast.LENGTH_SHORT).show()

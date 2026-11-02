@@ -38,12 +38,15 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
 }
 
 internal object DuoSizing {
-    /** Add another half dp to the former automatic size, before rounding. Native row bounds win. */
+    /** Calibrated affine map in pixels; clamp the final size and round only once. */
     fun pixels(config: DuoConfig, nativeHeight: Int, density: Float): Int {
-        val dp = if (!config.autoSize) config.sizeDp.toFloat()
-            else (if (nativeHeight > 0) (nativeHeight / density * 1.14345f).coerceIn(19.8f, 23.76f)
-                else 22.869f) + 1f
-        return (dp * density + 0.5f).toInt().coerceAtLeast(1)
+        val pixels = when {
+            !config.autoSize -> config.sizeDp * density
+            nativeHeight > 0 -> (nativeHeight * 1.14345f + density)
+                .coerceIn(20.8f * density, 24.76f * density)
+            else -> 23.869f * density
+        }
+        return (pixels + 0.5f).toInt().coerceAtLeast(1)
     }
 
     /** Reserve space for the requested shift inside the existing row, including double rows. */

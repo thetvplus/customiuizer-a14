@@ -102,4 +102,5 @@
     <item type="id" name="restartsystemui" />
     <item type="id" name="search_btn" />
     <item type="id" name="softreboot" />
+    <item type="id" name="prefs_system_island_live" />
 </resources>

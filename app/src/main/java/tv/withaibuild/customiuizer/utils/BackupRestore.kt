@@ -56,6 +56,9 @@ object BackupRestore {
 
     /** SharedPreferences storage keys removed in the A14/HyperOS 1 line. */
     val DROPPED_KEYS = setOf(
+        "pref_key_system_island_simplified",
+        "pref_key_system_island_media_return_apps",
+        "pref_key_system_island_media_effect_scope",
         "pref_key_system_island_icons",
         "pref_key_system_island_concise",
         "pref_key_system_island_controls",

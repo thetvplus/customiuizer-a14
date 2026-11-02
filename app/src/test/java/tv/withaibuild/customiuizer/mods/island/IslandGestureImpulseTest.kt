@@ -12,18 +12,11 @@ class IslandGestureImpulseTest {
         }
         val short = gesture(600f); val long = gesture(1800f)
         assertEquals(short.strength, long.strength, .02f)
-        assertEquals(IslandMotion.returnDuration(short.strength, false).toFloat(),
-            IslandMotion.returnDuration(long.strength, false).toFloat(), 1f)
-        for (absorption in listOf(false, true)) {
-            val slow = IslandMotion.returnDuration(0f, absorption)
-            val fast = IslandMotion.returnDuration(1f, absorption)
-            assertTrue(slow - fast <= 60L)
-            assertTrue(slow > fast)
-            if (absorption) {
-                assertTrue("The page has a deliberate, bounded return tempo", fast >= 633L && slow <= 648L)
-                assertTrue(slow < IslandMotion.ABSORPTION_BODY)
-            } else assertTrue("Default return tempo is preserved", fast >= 528L && slow <= 540L)
-        }
+        assertEquals(IslandMotion.returnResponse(short.strength), IslandMotion.returnResponse(long.strength), .001f)
+        val slow = IslandMotion.returnResponse(0f)
+        val fast = IslandMotion.returnResponse(1f)
+        assertTrue(slow > fast)
+        assertTrue(slow - fast < .01f)
     }
 
     @Test fun pauseAndReversalRemoveTheOldImpulseInsteadOfSpeedingTheNextReturn() {

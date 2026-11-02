@@ -57,6 +57,35 @@ class IslandWaveVisibilityTest {
         }
     }
 
+    @Test fun measuredPeaksRiseSmoothlyFallMoreSlowlyAndAlwaysRetireAtSilence() {
+        val savedDelay = ShadowChoreographer.getFrameDelay()
+        try {
+            for (milliseconds in listOf(16L, 8L)) {
+                ShadowChoreographer.setFrameDelay(Duration.ofMillis(milliseconds))
+                val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
+                val wave = IslandWaveView(controller.get())
+                try {
+                    controller.get().setContentView(wave, FrameLayout.LayoutParams(25, 24))
+                    advanceDisplayFrames(2, milliseconds)
+                    wave.onVisibilityAggregated(true); wave.outputVisible = true
+                    wave.spectrum(FloatArray(5)); wave.playing = true
+                    wave.spectrum(FloatArray(5) { 1f })
+                    advanceDisplayFrames((96 / milliseconds).toInt(), milliseconds)
+                    val peak = getField<FloatArray>(wave, "energies")[0]
+                    val target = getField<FloatArray>(wave, "targets")[0]
+                    assertTrue("Onset must bridge sparse samples at $milliseconds ms", peak > target * .6f && peak < target * .8f)
+                    wave.spectrum(FloatArray(5))
+                    advanceDisplayFrames((96 / milliseconds).toInt(), milliseconds)
+                    val falling = getField<FloatArray>(wave, "energies")[0]
+                    assertTrue("Release must be slower than onset", falling > peak * .55f && falling < peak * .8f)
+                    advanceDisplayFrames((1400 / milliseconds).toInt(), milliseconds)
+                    assertArrayEquals(FloatArray(5), getField(wave, "energies"), 0f)
+                    assertFalse("A longer release is finite, never a silent frame loop", getField(wave, "scheduled"))
+                } finally { controller.pause().stop().destroy() }
+            }
+        } finally { ShadowChoreographer.setFrameDelay(savedDelay) }
+    }
+
     @Test fun hiddenWaveCancelsFramesRetainsLevelsAndResumesOnItsExistingPhaseClock() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val wave = IslandWaveView(activity)

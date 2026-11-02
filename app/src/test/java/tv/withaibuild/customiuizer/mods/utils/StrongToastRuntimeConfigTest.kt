@@ -24,18 +24,6 @@ class StrongToastRuntimeConfigTest {
     }
 
     @Test
-    fun nativeMotionSimplificationRefreshesWithoutChangingAnActiveEventSnapshot() {
-        val prefs = PrefMap().apply { put("system_strong_toast_mode", "3") }
-        val state = StrongToastRuntimeState.install(prefs)
-        val first = state.snapshotRef.get()
-        assertEquals(false, first.simplified)
-        prefs.put("system_island_simplified", true)
-        state.preferenceObserver.onChange("system_island_simplified")
-        assertEquals(true, state.snapshotRef.get().simplified)
-        assertEquals(false, first.simplified)
-    }
-
-    @Test
     fun entranceStyleChangesApplyToTheNextEventWithoutChangingTheCurrentEvent() {
         val prefs = PrefMap().apply { put("system_strong_toast_mode", "3") }
         val state = StrongToastRuntimeState.install(prefs)

@@ -38,7 +38,7 @@ class IslandVisualBalanceTest {
             val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
             val memory = SharedMemory.create("island-visual-balance", 4)
             val writer = memory.mapReadWrite().order(ByteOrder.nativeOrder())
-            val shell = IslandActivityView(host).apply { absorption = true; entranceStyle = IslandEntranceStyle.CENTER }
+            val shell = IslandActivityView(host).apply { entranceStyle = IslandEntranceStyle.CENTER }
             host.setContentView(shell, FrameLayout.LayoutParams(160, 40))
             val samples = JSONArray()
             val export = hz == 60 && pageMs == 650
@@ -112,7 +112,7 @@ class IslandVisualBalanceTest {
         try {
             for ((row, item) in cases.withIndex()) for (dark in listOf(false, true)) {
                 val config = Configuration(host.resources.configuration).apply { fontScale = if (item.first == "Large type") 1.6f else 1f }
-                val shell = IslandActivityView(host.createConfigurationContext(config)).apply { simplified = true }
+                val shell = IslandActivityView(host.createConfigurationContext(config)).apply { powerSaveMotion = true }
                 host.setContentView(shell, FrameLayout.LayoutParams(280, 40))
                 shell.layoutDirection = if (item.first == "RTL") View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
                 val media = item.first in listOf("Music", "Loading")

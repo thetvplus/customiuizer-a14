@@ -67,10 +67,10 @@ class FeatureMapTest(unittest.TestCase):
                     with self.subTest(path=path.name, key=key):
                         self.assertTrue(f"`{key}`" in rendered, f"map missing {path.name}: {key}")
         self.assertIn("系统 → 状态栏 → Duo 三合一图标", rendered)
-        self.assertIn("系统 → 系统提示 → 媒体", rendered)
-        self.assertIn("系统 → 系统提示 → 位置尺寸", rendered)
-        self.assertIn("系统 → 系统提示 → 消息通知", rendered)
-        self.assertIn("系统 → 系统提示", rendered)
+        self.assertIn("系统 → 系统提示与动态岛 → 媒体", rendered)
+        self.assertIn("系统 → 系统提示与动态岛 → 位置尺寸", rendered)
+        self.assertIn("系统 → 系统提示与动态岛 → 消息通知", rendered)
+        self.assertIn("系统 → 系统提示与动态岛", rendered)
         self.assertIn("桌面 → Dock", rendered)
         self.assertNotIn("system_betterpopups_nohide", rendered)
         self.assertNotIn("状态刷新", rendered)
@@ -97,8 +97,8 @@ class FeatureMapTest(unittest.TestCase):
                 if len(stack) >= 2 and stack[0] in categories and tuple(stack) in business_paths:
                     actual.append(tuple(stack))
         self.assertEqual([page.path for page in pages], actual)
-        self.assertIn("活动来源", feature_map.render_simple(self.repo))
-        self.assertIn("即时反馈", feature_map.render_simple(self.repo))
+        self.assertIn("实时活动", feature_map.render_simple(self.repo))
+        self.assertIn("系统状态提示", feature_map.render_simple(self.repo))
 
     def test_default_cli_checks_both_maps_and_writes_only_documentation(self):
         before = {p.relative_to(self.repo): p.read_bytes() for p in self.repo.rglob("*") if p.is_file()}

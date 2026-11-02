@@ -787,8 +787,8 @@ object SystemUIControlCenterHooks {
                 val rootRef = XposedHelpers.getAdditionalInstanceField(
                     helper,
                     VOLUME_MODE_BUTTON_ROOT_FIELD
-                ) as? WeakReference<View>
-                val root = rootRef?.get() ?: return@guarded
+                ) as? WeakReference<*>
+                val root = rootRef?.get() as? View ?: return@guarded
                 val ownership = XposedHelpers.getAdditionalInstanceField(
                     helper,
                     VOLUME_MODE_BUTTON_VISIBILITY_OWNERSHIP_FIELD

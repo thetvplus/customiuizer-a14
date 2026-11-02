@@ -14,6 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowBinder
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class IslandRecorderMeterTest {
@@ -44,6 +45,33 @@ class IslandRecorderMeterTest {
             consumer.stop(); assertNull(frames.last())
         } finally { consumer.stop(); scope.cancel(); ShadowBinder.reset() }
     }
+    @Test fun sustainedVisibleRecordingBoundsIpcAndRecoversFromSilenceWithoutASecondLoop() {
+        val scheduler = TestCoroutineScheduler()
+        val dispatcher = StandardTestDispatcher(scheduler)
+        val scope = CoroutineScope(SupervisorJob() + dispatcher)
+        var reads = 0; var amplitude = 0
+        val frames = mutableListOf<FloatArray?>()
+        val consumer = IslandRecorderMeter.Consumer(scope, dispatcher) { frames.add(it?.copyOf()) }
+        try {
+            ShadowBinder.setCallingUid(1000)
+            val producer = IslandRecorderMeter.producer(1000) { reads++; amplitude }
+            consumer.start(producer); scheduler.runCurrent()
+            repeat(100) { consumer.start(producer) }
+            scheduler.advanceTimeBy(10_000); scheduler.runCurrent()
+            assertTrue("Visible sampling must stay at or below ten reads per second", reads in 100..101)
+            val quietFrames = frames.size
+            scheduler.advanceTimeBy(1000); scheduler.runCurrent()
+            assertEquals("Sampling silence must not request display frames", quietFrames, frames.size)
+            amplitude = 16384
+            scheduler.advanceTimeBy(100); scheduler.runCurrent()
+            assertTrue("Speech must resume within one source interval", frames.last()!!.last() > .49f)
+            consumer.pauseKeepingFrame()
+            val pausedReads = reads
+            scheduler.advanceTimeBy(10_000); scheduler.runCurrent()
+            assertEquals(pausedReads, reads)
+        } finally { consumer.stop(); scope.cancel(); ShadowBinder.reset() }
+    }
+
     @Test fun peakMappingKeepsSilenceQuietAndLeavesHeadroomForOrdinarySpeechAndClipping() {
         assertEquals(0f, IslandRecorderMeter.level(256), 0f)
         assertTrue(IslandRecorderMeter.level(8192) in .24f.. .25f)

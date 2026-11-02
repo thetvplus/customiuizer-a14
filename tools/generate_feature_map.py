@@ -31,12 +31,13 @@ SETTINGS_ACTION_KEYS = {
 # Kotlin conditions cannot be inferred safely from XML. Keep only their concise
 # navigation implications here; the source stamp forces review when owners change.
 PAGE_NOTES = {
+    "pref_key_system_island_live_cat": "六类实时活动开关编辑原有来源集合；参与上岛效果仅作用于已选且符合条件的通话、时钟、录音。",
     "pref_key_system_cat_toasts": "位置选项只显示对应的顶部 / 居中 / 底部偏移。",
     "pref_key_system_cat_qs": "国际版隐藏“对调控制中心与通知中心”。",
-    "pref_key_system_cat_island": "顶部选择提示样式；动态岛按内容、外观、交互分组，公共波形与动效、位置尺寸和手势各有子页。其他样式隐藏岛专用分组。",
-    "pref_key_system_island_music_cat": "需动态岛模式；回岛与小窗媒体排除依赖媒体开关，回岛另选应用。公共波形设置位于波形与动效页。",
-    "pref_key_system_island_effects_cat": "需动态岛模式；波形供媒体与录音共用，不依赖媒体开关。仅调整显示，不改变来源接入。",
-    "pref_key_system_island_feedback_cat": "需动态岛模式；八种活动来源以原生开关铺开，共用原来源集合；上滑回岛单独控制通话、时钟、录音的原生窗口返回。即时反馈分别启用。",
+    "pref_key_system_cat_island": "保留内容、外观、交互分组及首页常驻小岛开关；媒体、消息、实时活动和系统状态提示分别管理。其他样式隐藏岛专用分组。",
+    "pref_key_system_island_music_cat": "媒体显示必须手动选择应用，空名单不显示；上岛效果直接复用唯一的显示名单，无效果范围和第二次选择。小窗排除在同页，滑动切歌在手势页。",
+    "pref_key_system_island_effects_cat": "上岛效果统一选择无、瞬收或吸入；无不接管窗口，也不影响普通内容显示。波形供媒体与录音共用，实时模式启用增益。",
+    "pref_key_system_island_feedback_cat": "系统状态提示独立逐类启用，不与实时活动合并。",
     "pref_key_system_detailednetspeed_cat": "隐藏 B/s、隐藏低速及阈值只在详细样式 2 / 3 可编辑；原生样式保留存储值。",
     "pref_key_system_visualizer_cat": "自定义颜色仅在颜色模式 2 可编辑，动态颜色变化间隔仅在模式 5 可编辑。",
     "pref_key_system_batteryindicator_cat": "颜色模式 3 禁用四项自定义颜色；测试项在设置端发送既有测试请求。",

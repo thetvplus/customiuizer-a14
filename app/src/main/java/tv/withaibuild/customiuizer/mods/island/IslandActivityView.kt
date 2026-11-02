@@ -205,7 +205,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var disposed = false
     private var leaving = false
     private val iconMask = GradientDrawable().apply { setColor(Color.BLACK) }
-    var simplified = false
+    var powerSaveMotion = false
     var entranceStyle = IslandEntranceStyle.TOP
     var motionScale = 1f
     var idle = false
@@ -253,7 +253,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         set(value) { wave.gainPercent = value }
     var realtimeWaveform = false
     var returnStrength = 0f
-    var absorption = false
     var allowTextBlur = true
     var privacy = 0
         set(value) { if (field != value) { field = value; invalidate() } }
@@ -389,9 +388,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     if (!TextUtils.equals(subtitle.text, detailLabel)) subtitle.text = detailLabel
                 }
                 visualChanged = false
-            } else if (isAttachedToWindow && !leaving && !simplified && ValueAnimator.areAnimatorsEnabled() &&
+            } else if (isAttachedToWindow && !leaving && !powerSaveMotion && ValueAnimator.areAnimatorsEnabled() &&
                 displayedContent != null && alpha > .01f && layerReveal > .01f) {
-                if (allowTextBlur && !simplified && isHardwareAccelerated && (!media || expanded || text.visibility == VISIBLE)) textBlur
+                if (allowTextBlur && !powerSaveMotion && isHardwareAccelerated && (!media || expanded || text.visibility == VISIBLE)) textBlur
                 albumFlip = media && previous?.media == true && previous.drawable !== drawable &&
                     previous.expanded == expanded && previous.photo && photo && previous.drawable != null && drawable != null
                 if (pendingContent == null) contentFadeRemaining = if (albumFlip) 140L else 60L
@@ -404,8 +403,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         } else if (pendingContent == null && status) {
             title.setTextSize(TypedValue.COMPLEX_UNIT_PX, statusFit?.size ?: baseTextSize)
         }
-        wave.holding = media && loading && waveform && !simplified
-        wave.playing = (media && playing || recording && clock?.pausedMillis == null) && waveform && !simplified
+        wave.holding = media && loading && waveform && !powerSaveMotion
+        wave.playing = (media && playing || recording && clock?.pausedMillis == null) && waveform && !powerSaveMotion
         if (changed || playbackChanged || contentDescription == null) updateDescription(label, detail, media)
         return visualChanged
     }
@@ -525,9 +524,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     fun statusHeight(label: String, width: Int, gap: Int, height: Int): Int? {
-        val density = resources.displayMetrics.scaledDensity
+        val minimumTextSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 11f, resources.displayMetrics)
         statusFit = IslandStatusLayout.fit(label, statusPaint,
-            captionRoom(width, gap), baseTextSize, 11f * density, height)
+            captionRoom(width, gap), baseTextSize, minimumTextSize, height)
         return statusFit?.let { height }
     }
 
@@ -620,7 +619,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     fun contentHeight(heightDp: Int) {
         val height = heightDp.coerceIn(IslandSizing.HEIGHT_MIN_DP, IslandSizing.HEIGHT_MAX_DP)
         contentHeightDp = height
-        val size = (13f + (height - 40) * .1f) * resources.displayMetrics.scaledDensity
+        val size = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
+            13f + (height - 40) * .1f, resources.displayMetrics)
         if (abs(baseTextSize - size) <= .001f) return
         baseTextSize = size
         geometryDirty = true
@@ -654,8 +654,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         disposed = false; leaving = false
         nativeArrival = mediaReturn
         mediaReturnProgress = if (mediaReturn && returnProgress != null &&
-            !simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
-        if (mediaReturn || simplified || !ValueAnimator.areAnimatorsEnabled()) {
+            !powerSaveMotion && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
+        if (mediaReturn || powerSaveMotion || !ValueAnimator.areAnimatorsEnabled()) {
             resetTransform(preserveReturn = mediaReturn)
             if (mediaReturnProgress == 0f) {
                 pivotY = geometryHeight * .5f
@@ -686,14 +686,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Only a real native channel owns the longer window-arrival clock.
         nativeArrival = true
         changePivot(horizontalPivot(geometryWidth), geometryHeight * .5f)
-        mediaReturnProgress = if (!simplified && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
+        mediaReturnProgress = if (!powerSaveMotion && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
     }
 
     fun prepareContentArrivalFromCurrent() {
         acceptReturnProgress(null)
         nativeArrival = false
         changePivot(horizontalPivot(geometryWidth), geometryHeight * .5f)
-        if (!simplified && ValueAnimator.areAnimatorsEnabled()) mediaReturnProgress = 0f
+        if (!powerSaveMotion && ValueAnimator.areAnimatorsEnabled()) mediaReturnProgress = 0f
     }
 
     fun transition(fromWidth: Int, fromHeight: Int, width: Int, height: Int, entering: Boolean,
@@ -713,7 +713,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val startHeight = (if (entering) geometryHeight else fromHeight) * scaleY
         val catchAmount = maxOf(IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat()),
             if (mediaReturnProgress == 0f) if (nativeArrival) {
-                val pixels = if (absorption) maxOf(dp(12).toFloat(), width * .09f).coerceAtMost(dp(18).toFloat()) else dp(8).toFloat()
+                val pixels = maxOf(dp(12).toFloat(), width * .09f).coerceAtMost(dp(18).toFloat())
                 pixels / width.coerceAtLeast(1)
             } else .055f else 0f)
         if (!entering) {
@@ -731,7 +731,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
         animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
             returning = mediaReturnProgress == 0f,
-            catchWeight = catchAmount, rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival)
+            catchWeight = catchAmount * 98 / 100, rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival)
     }
 
     private fun requestDismiss() {
@@ -750,7 +750,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         isPressed = false; cancelLongPress()
         wave.playing = false
         recall = IslandRecallGesture.onCancel()
-        if (!isAttachedToWindow || simplified || !ValueAnimator.areAnimatorsEnabled()) {
+        if (!isAttachedToWindow || powerSaveMotion || !ValueAnimator.areAnimatorsEnabled()) {
             alpha = 0f
             updateContour()
             ModuleHelper.guarded { onEnd() }
@@ -952,7 +952,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     }
 
     private fun cameraMinimumHeight() = minOf(geometryHeight.toFloat(),
-        2f * abs(geometryHeight * .5f - cameraY) + cameraHeight + dp(4))
+        2f * abs(geometryHeight * .5f - cameraY) + cameraHeight)
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
         onEnd: (() -> Unit)? = null, returning: Boolean = false, catchWeight: Float = 0f, rigid: Boolean = false, rebound: Boolean = false) {
@@ -960,7 +960,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val carry = motion != null || dragCaptured
         motion?.cancel(); motion = null
         if (disposed) return
-        if (simplified || !ValueAnimator.areAnimatorsEnabled()) {
+        if (powerSaveMotion || !ValueAnimator.areAnimatorsEnabled()) {
             commitContent()
             clearContentEffects()
             cancelMediaReturn()
@@ -971,34 +971,40 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             return
         }
         val nativeDriven = returning && nativeArrival && returnProgress != null
-        val milliseconds = if (nativeDriven) duration + if (absorption) IslandMotion.REBOUND else 0L
+        val milliseconds = if (nativeDriven) duration + IslandMotion.REBOUND
             else (duration * motionScale.coerceIn(.65f, 1f)).toLong()
         val initialNativeProgress = if (nativeDriven) returnProgress?.read()?.takeIf { it >= 0f }?.coerceIn(0f, 1f) ?: 1f else 1f
         val seconds = (if (nativeDriven && initialNativeProgress >= .9f) IslandMotion.CONTENT_ARRIVAL
-            else if (nativeDriven && absorption) IslandMotion.ABSORPTION_BODY
-            else if (nativeDriven) IslandMotion.returnDuration(returnStrength, false) else milliseconds) / 1000f
+            else if (nativeDriven) IslandMotion.ABSORPTION_BODY else milliseconds) / 1000f
         if (carry && !rigid) breadth.addVelocity(breadthExtraVelocity)
         breadthExtraVelocity = 0f
         breadth.retarget(geometryWidth * scaleX, geometryWidth * x, seconds, carry && !rigid, rebound)
         depth.retarget(geometryHeight * scaleY, geometryHeight * y, seconds, carry && !rigid, rebound)
-        // Side placements cap their target at its new width. Keep the already visible
-        // breadth admissible while shrinking instead of clamping it on the first frame.
+        // Preserve an interrupted wider body instead of clamping its first frame.
         val maximumBreadth = maxOf(maximumWidth, geometryWidth * scaleX)
-        val absorptionResponse = if (nativeDriven && absorption) IslandMotion.AbsorptionResponse(
+        val absorptionResponse = if (nativeDriven) IslandMotion.AbsorptionResponse(
             geometryWidth * scaleX, geometryWidth * x, minOf(compactWidth(), geometryWidth * scaleX), maximumBreadth,
-            geometryWidth * catchWeight * (.99f + .02f * returnStrength), breadth.velocity, seconds,
-            initialNativeProgress) else null
+            geometryWidth * catchWeight * (.99f + .02f * returnStrength) * .94f, breadth.velocity, seconds,
+            initialNativeProgress, releaseScale = IslandMotion.ABSORPTION_RELEASE_SCALE) else null
         // Braking after a reversal needs the remaining safe space, not the old/new
         // target envelope. Clamping that envelope drops velocity before a real edge.
         val maximumHeight = maxOf(maxOf(dp(44), geometryHeight) * 1.14f, geometryHeight * scaleY)
         // The camera seed must not override the shared configured height, or clamp
         // a smaller current height when a geometry change is being interrupted.
-        val minimumHeight = if ((rebound || absorptionResponse != null) && cameraGap > 0) minOf(cameraMinimumHeight(), geometryHeight * scaleY)
+        val depthCatch = minOf(resources.displayMetrics.density,
+            geometryHeight * catchWeight / (1f + catchWeight))
+        val restingMinimum = if ((rebound || absorptionResponse != null) && cameraGap > 0)
+            minOf(cameraMinimumHeight(), geometryHeight * scaleY)
             else minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
+        // Only a committed receiving gesture may borrow up to 1 dp from the
+        // camera reservation. Use the same compression phase for every alignment.
+        val minimumHeight = if (nativeDriven && cameraGap > 0)
+            minOf(restingMinimum, (geometryHeight * y - depthCatch).coerceAtLeast(0f)) else restingMinimum
+        val depthStart = absorptionResponse?.settlingSeconds ?: seconds
+        val depthSeconds = depthStart + IslandMotion.ABSORPTION_DEPTH / 1000f
         val absorptionDepth = if (absorptionResponse != null) IslandMotion.AbsorptionResponse(
             geometryHeight * scaleY, geometryHeight * y, minimumHeight, maximumHeight,
-            -minOf(dp(3).toFloat(), geometryHeight * catchWeight / (1f + catchWeight)), depth.velocity, seconds,
-            initialNativeProgress) else null
+            -depthCatch, depth.velocity, depthSeconds, initialNativeProgress, catchStart = depthStart / depthSeconds) else null
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         // A content handoff may interrupt a top exit. Keep its visible origin,
         // without inheriting the old exit's upward travel into a new activity.
@@ -1088,7 +1094,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     updateContour()
                     if (nativeDriven && progress >= 1f && pendingContent == null && layerReveal >= 1f &&
                         (nativeProgress == null || nativeProgress < 0f ||
-                            (absorptionResponse?.settled(time) ?: (time >= seconds)))) {
+                            (absorptionDepth?.settled(time) ?: (time >= seconds)))) {
                         // end() synchronously emits another frame on A14. Retire this
                         // clock's update listener before entering its terminal callbacks.
                         animation.removeUpdateListener(this)
@@ -1135,8 +1141,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Compensate the drawing transform. The physical shell changes width while text,
         // square artwork and wave bars retain their own aspect ratios, including drags.
         val sx = scaleX.coerceAtLeast(.01f); val sy = scaleY.coerceAtLeast(.01f)
-        val arrival = if (mediaReturnProgress < 1f && !simplified) IslandMotion.arrivalScale(mediaReturnProgress) else 1f
-        val contentScale = (if (contentMotion && !simplified) .97f + .03f * layerReveal else 1f) * arrival
+        val arrival = if (mediaReturnProgress < 1f && !powerSaveMotion) IslandMotion.arrivalScale(mediaReturnProgress) else 1f
+        val contentScale = (if (contentMotion && !powerSaveMotion) .97f + .03f * layerReveal else 1f) * arrival
         icon.scaleX = contentScale / sx; icon.scaleY = contentScale / sy
         identityTitle.scaleX = contentScale / sx; identityTitle.scaleY = contentScale / sy
         text.scaleX = contentScale / sx; text.scaleY = contentScale / sy
@@ -1161,12 +1167,12 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         identityTitle.alpha = if (identityRoom + .01f >= minOf(identityWidth,
                 (left.width - identityInset).coerceAtLeast(0).toFloat())) reveal * textReveal else 0f
         if (nativeArrival && mediaReturnProgress < 1f) {
-            val start = if (absorption) .28f else .64f
-            val span = if (absorption) .42f else .3f
+            val start = .28f
+            val span = .42f
             left.alpha *= ((mediaReturnProgress - start) / span).coerceIn(0f, 1f)
         }
         text.alpha = if (contentFits()) reveal * textReveal else 0f
-        val nextBlur = if (text.visibility == VISIBLE && allowTextBlur && !simplified && isHardwareAccelerated && text.alpha in .01f..0.99f)
+        val nextBlur = if (text.visibility == VISIBLE && allowTextBlur && !powerSaveMotion && isHardwareAccelerated && text.alpha in .01f..0.99f)
             ((1f - layerReveal) * 4).toInt().coerceIn(0, 4) - 1 else -1
         if (nextBlur != blurLevel) {
             blurLevel = nextBlur
@@ -1174,7 +1180,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
         val waveRoom = if (recording) iconRoom else if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize else iconRoom
         wave.alpha = if (waveRoom && geometryHeight * sy >= waveHeight) reveal else 0f
-        val contact = if (nativeArrival && !simplified && motionScale > 0f && returnProgress != null) {
+        val contact = if (nativeArrival && !powerSaveMotion && motionScale > 0f && returnProgress != null) {
             val requested = IslandMotion.returnFusion(mediaReturnProgress)
             if (cameraGap > 0) {
                 // Removing a lower edge may use only half the symmetric camera
@@ -1222,7 +1228,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         IslandContentLayout.trailing(width.toFloat(), gap, cameraOffset, 0f).toInt() - dp(IslandSizing.EDGE_DP)
         else if (split) (width - dp(8)) / 2 - dp(IslandSizing.EDGE_DP)
         else width - 2 * dp(IslandSizing.EDGE_DP) - iconSizeForHeight(height) - dp(8)).coerceAtLeast(0)
-    private fun horizontalPivot(width: Int) = when (alignment) { 0 -> 0f; 2 -> width.toFloat(); else -> width * .5f }
+    private fun horizontalPivot(width: Int) = width * .5f
 
     private fun topTravel() = (windowTop + geometryHeight + dp(8)).coerceAtLeast(geometryHeight).toFloat()
     override fun onAttachedToWindow() { disposed = false; super.onAttachedToWindow() }
@@ -1362,12 +1368,15 @@ internal class IslandWaveView(context: Context) : View(context) {
             val dt = ((now - lastFrame) / 1000f).coerceIn(.001f, .1f)
             lastFrame = now
             if (real) {
-                val blend = (1.0 - kotlin.math.exp(-dt / .025)).toFloat()
+                // One finite display envelope bridges the slower source cadence.
+                val attack = (1.0 - kotlin.math.exp(-dt / .072)).toFloat()
+                val release = (1.0 - kotlin.math.exp(-dt / .216)).toFloat()
                 settling = false
                 for (index in 0..4) {
                     val difference = targets[index] - energies[index]
-                    energies[index] = if (abs(difference) < .006f) targets[index] else energies[index] + difference * blend
-                    if (abs(targets[index] - energies[index]) > .006f) settling = true
+                    val next = energies[index] + difference * (if (difference > 0f) attack else release)
+                    energies[index] = if (abs(targets[index] - next) <= .006f) targets[index] else next
+                    if (energies[index] != targets[index]) settling = true
                 }
             } else {
                 phase = (phase + (now - phaseAt) / 1000f * 4.35f) % 6.283185f

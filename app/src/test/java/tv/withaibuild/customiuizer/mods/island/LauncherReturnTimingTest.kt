@@ -33,7 +33,7 @@ class LauncherReturnTimingTest {
         assertTrue(timing.apply(current))
         timing.restore(current, oldLease)
         assertTrue("An old completion cannot restore a successor adjustment", current.tracks.getValue("Width").force < 900f)
-        for (track in current.tracks.values) assertEquals(227.68701f, track.force, .01f)
+        for (track in current.tracks.values) assertEquals(247.05624f, track.force, .01f)
         for (track in unrelated.tracks.values) assertEquals(900f, track.force, 0f)
         timing.restore(unrelated)
         assertTrue(current.tracks.getValue("Width").force < 900f)
@@ -57,14 +57,14 @@ class LauncherReturnTimingTest {
     }
 
     @Test fun acceptedSlowAndFastNativeSpringsShareABoundedWidthResponseAndRetainTrackRatios() {
-        for (absorption in listOf(false, true)) for (strength in listOf(0f, .5f, 1f)) {
+        for (strength in listOf(0f, .5f, 1f)) {
             val timing = LauncherReturnTiming(NativeSpring::class.java)
             var minimum = Float.MAX_VALUE; var maximum = 0f
             for (force in listOf(100f, 300f, 900f)) {
                 val spring = NativeSpring()
                 spring.tracks.values.forEach { it.force = force }
                 spring.tracks.getValue("centerY").force = force * .75f
-                assertTrue(timing.apply(spring, strength, absorption))
+                assertTrue(timing.apply(spring, strength))
                 val normalized = spring.tracks.getValue("Width").force
                 minimum = minOf(minimum, normalized); maximum = maxOf(maximum, normalized)
                 assertEquals(.75f, spring.tracks.getValue("centerY").force / normalized, .0001f)
@@ -78,17 +78,17 @@ class LauncherReturnTimingTest {
     }
 
     @Test fun bothStylesRejectTheSameInvalidNativeParametersWithoutLeavingATimingLease() {
-        for (absorption in listOf(false, true)) {
+        run {
             val timing = LauncherReturnTiming(NativeSpring::class.java)
             for (force in listOf(0f, -1f, Float.NaN, Float.POSITIVE_INFINITY)) {
                 val spring = NativeSpring().apply { tracks.getValue("Width").force = force }
                 val original = spring.tracks.mapValues { it.value.force }
-                assertFalse(timing.apply(spring, .5f, absorption))
+                assertFalse(timing.apply(spring, .5f))
                 assertNull(timing.lease(spring))
                 assertEquals(original, spring.tracks.mapValues { it.value.force })
             }
             val spring = NativeSpring().apply { durationRatio = Float.NaN }
-            assertFalse(timing.apply(spring, .5f, absorption))
+            assertFalse(timing.apply(spring, .5f))
             assertNull(timing.lease(spring))
             spring.tracks.values.forEach { assertEquals(900f, it.force, 0f) }
         }
@@ -100,7 +100,7 @@ class LauncherReturnTimingTest {
         for (ratio in listOf(1f, .5f, 2f)) {
             val spring = NativeSpring().apply { durationRatio = ratio }
             spring.tracks.values.forEach { it.force = 300f / (ratio * ratio) }
-            assertTrue(timing.apply(spring, .5f, false))
+            assertTrue(timing.apply(spring, .5f))
             val force = spring.tracks.getValue("Width").force
             if (ratio == 1f) baseline = force
             assertEquals(baseline / (ratio * ratio), force, .01f)

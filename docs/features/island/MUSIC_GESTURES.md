@@ -4,7 +4,7 @@
 
 ## 配置与动作
 
-入口为「系统 → 系统提示 → 手势与返回」。音乐与持续活动的上滑回岛也在此配置；媒体是否接入仍由音乐页控制。五项配置复用 MultiAction 编辑器、确认按钮及现有 payload；MUSIC 追加在枚举末尾，既有动作整数和编辑器索引保持。
+入口为「系统 → 系统提示与动态岛 → 手势」。滑动切歌、媒体动作和常驻小岛动作在此配置；媒体显示和效果应用在媒体页，实时活动是否参与效果在实时活动页。五项配置复用 MultiAction 编辑器、确认按钮及现有 payload；MUSIC 追加在枚举末尾，既有动作整数和编辑器索引保持。
 
 | 手势 | 默认 | 配置键 |
 | --- | --- | --- |
@@ -51,6 +51,8 @@ A14 MediaSession.Token 的 UID 与当前前台用户必须匹配；包入口只�
 平台依据：[PackageManager.getLaunchIntentSenderForPackage](https://developer.android.com/reference/android/content/pm/PackageManager#getLaunchIntentSenderForPackage(java.lang.String))、[AOSP A14 MediaSession.Token UID](https://android.googlesource.com/platform/frameworks/base/+/android-14.0.0_r1/media/java/android/media/session/MediaSession.java)。主机测试对 Robolectric 4.17 尚未实现的包启动 Binder 使用替身；设备上的任务栈、后台启动限制与各播放器 PendingIntent 仍须验收。
 
 ## 暂停可见性
+
+岛上上一曲 / 下一曲指令获准后，同一会话短暂加载或状态空隙可沿用当前岛体最多 8 秒。重复回调不续期，新曲播放恢复立即接续；主动播放 / 暂停取消这段保留，仍遵循普通暂停期限。会话销毁、来源替换及安全失效立即清理；只复用现有读取、回调与到期调度。
 
 Controller 从现有 IslandWindowPresentation 的预绘制取得展示证据；attach / PREPARED 不代表实际显示。未显示窗口直接移除，避免退场动画本身制造闪现。同一身份从 EXITING 重入也重新经过 PREPARED → VISIBLE。只有本次真正展示的播放活动才可在暂停后保留约两秒；重复 PAUSED、metadata、前台变化不续期，进入来源应用消费旧暂停期，回 Home 不重开。来源 App 内、入场延迟内、遮挡期间的新播放或其他提示占窗时暂停，均不建立暂停岛；真实恢复沿用普通入场延迟。
 

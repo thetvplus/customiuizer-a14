@@ -5,28 +5,28 @@
   },
   "children": [
     {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_media",
+        "android:title": "@string/system_island_media_title",
+        "android:defaultValue": "false",
+        "android:summary": "@string/system_island_media_summ"
+      }
+    },
+    {
       "type": "section",
       "attributes": {
-        "android:title": "@string/system_island_music_group"
+        "android:title": "@string/system_island_media_display_group"
       },
       "children": [
         {
-          "type": "toggle",
+          "type": "action",
           "attributes": {
-            "android:key": "pref_key_system_island_media",
-            "android:title": "@string/system_island_media_title",
-            "android:defaultValue": "false",
-            "android:summary": "@string/system_island_media_summ"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_media_swipe",
-            "android:title": "@string/system_island_media_swipe_title",
-            "android:defaultValue": "true",
-            "android:summary": "@string/system_island_media_swipe_summ",
-            "android:dependency": "pref_key_system_island_media"
+            "android:key": "pref_key_system_island_media_apps",
+            "android:title": "@string/system_island_media_apps_title",
+            "android:summary": "@string/system_island_media_apps_summ",
+            "android:dependency": "pref_key_system_island_media",
+            "app:countAsSummary": "true"
           }
         },
         {
@@ -36,6 +36,24 @@
             "android:title": "@string/system_island_hide_in_floating_window_title",
             "android:defaultValue": "false",
             "android:summary": "@string/system_island_hide_in_floating_window_summ",
+            "android:dependency": "pref_key_system_island_media"
+          }
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "attributes": {
+        "android:title": "@string/system_island_return_group"
+      },
+      "children": [
+        {
+          "type": "toggle",
+          "attributes": {
+            "android:key": "pref_key_system_island_media_return",
+            "android:title": "@string/system_island_media_return_title",
+            "android:defaultValue": "false",
+            "android:summary": "@string/system_island_media_return_summ",
             "android:dependency": "pref_key_system_island_media"
           }
         }

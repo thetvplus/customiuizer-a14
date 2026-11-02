@@ -82,17 +82,18 @@ object SystemDisplayHooks {
 
     private fun applyWindowBlurPolicy(controller: Any) {
         val context = XposedHelpers.getObjectField(controller, "mContext") as? Context ?: return
-        val systemDisabled = Settings.Global.getInt(
-            context.contentResolver,
-            DISABLE_WINDOW_BLURS_SETTING,
-            0
-        ) == 1
-        XposedHelpers.setBooleanField(
-            controller,
-            "mBlurDisabledSetting",
-            resolveWindowBlursDisabled(forceWindowBlursDisabled, systemDisabled)
-        )
-        XposedHelpers.callMethod(controller, "updateBlurEnabled")
+        val lock = XposedHelpers.getObjectField(controller, "mLock") ?: return
+        synchronized(lock) {
+            val systemDisabled = Settings.Global.getInt(
+                context.contentResolver,
+                DISABLE_WINDOW_BLURS_SETTING,
+                0
+            ) == 1
+            val disabled = resolveWindowBlursDisabled(forceWindowBlursDisabled, systemDisabled)
+            if (XposedHelpers.getBooleanField(controller, "mBlurDisabledSetting") == disabled) return
+            XposedHelpers.setBooleanField(controller, "mBlurDisabledSetting", disabled)
+            XposedHelpers.callMethod(controller, "updateBlurEnabled")
+        }
     }
 
     /**
@@ -126,12 +127,8 @@ object SystemDisplayHooks {
             object : MethodHook() {
                 override fun after(callback: HookerClassHelper.AfterHookCallback) {
                     val controller = callback.getThisObject() ?: return
-                    try {
-                        applyWindowBlurPolicy(controller)
-                    } catch (t: Throwable) {
-                        FatalErrors.unwrapAndRethrowIfFatal(t)
-                        XposedHelpers.log("DisableWindowBlurs", t)
-                    }
+                    // The native constructor already reads our hooked setting and updates
+                    // blur after initializing power/thermal/tunnel state. Do not initialize twice.
                     val controllerRef = WeakReference(controller)
                     ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
                         override fun onChange(key: String?) = ModuleHelper.guarded {

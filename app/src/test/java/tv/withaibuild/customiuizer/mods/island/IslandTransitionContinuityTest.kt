@@ -26,7 +26,7 @@ class IslandTransitionContinuityTest {
     @Test fun sameRunningClockSnapshotDoesNotRestartNativeTicks() {
         val base = android.os.SystemClock.elapsedRealtime() - 2000L
         val key = IslandLiveKey(IslandLiveKind.STOPWATCH, 10000, 9)
-        shell.simplified = true
+        shell.powerSaveMotion = true
         shell.bind("00:02", "Clock", null, false, false, false, 0, false,
             clock = IslandLiveClock(base, false), clockKey = key)
         val title = getField<android.widget.Chronometer>(shell, "title")
@@ -342,11 +342,11 @@ class IslandTransitionContinuityTest {
         motion().end()
     }
 
-    @Test fun simplifiedModeBindsImmediatelyWithoutAnAnimator() {
+    @Test fun powerSaveMotionModeBindsImmediatelyWithoutAnAnimator() {
         label("During handoff")
         shell.transition(184, 40, 184, 40, false)
         motion().currentPlayTime = 60
-        shell.simplified = true
+        shell.powerSaveMotion = true
         label("Immediate")
         shell.transition(184, 40, 184, 40, false, secondary = true)
         assertEquals("Immediate", title.text.toString())

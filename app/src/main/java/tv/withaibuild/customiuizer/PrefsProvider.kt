@@ -21,6 +21,8 @@ class PrefsProvider : ContentProvider() {
         const val COMMITTED_HEIGHT = "committed_statusbar_height"
         const val HEIGHT_DP = "height_dp"
         const val COMMITTED_AUTOMATION = "committed_automation"
+        const val COMMITTED_WINDOW_BLUR = "committed_window_blur"
+        const val WINDOW_BLUR_DISABLED = "pref_key_system_disable_window_blurs"
     }
 
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
@@ -34,9 +36,13 @@ class PrefsProvider : ContentProvider() {
      * This provider stays non-exported and exposes no complete preference map.
      */
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
-        if (method != COMMITTED_HEIGHT && method != COMMITTED_AUTOMATION) return super.call(method, arg, extras)
+        if (method != COMMITTED_HEIGHT && method != COMMITTED_AUTOMATION && method != COMMITTED_WINDOW_BLUR)
+            return super.call(method, arg, extras)
         if (Binder.getCallingUid() != 1000) throw SecurityException("System UID required")
         val remote = AppHelper.remotePrefs ?: return null
+        if (method == COMMITTED_WINDOW_BLUR) return Bundle().apply {
+            putBoolean(WINDOW_BLUR_DISABLED, remote.getBoolean(WINDOW_BLUR_DISABLED, false))
+        }
         if (method == COMMITTED_AUTOMATION) return CommittedAutomationPreferences.read(remote, arg)
         val dp = remote.getInt("pref_key_" + StatusBarHeightConfig.PREF_KEY, StatusBarHeightConfig.DEFAULT_SENTINEL)
         if (dp !in StatusBarHeightConfig.DEFAULT_SENTINEL..80) return null

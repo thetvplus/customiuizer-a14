@@ -60,6 +60,9 @@ object Helpers {
     var allModsList: List<ModData> = emptyList()
         private set
 
+    // One settings-process index; font, density and theme changes do not change its strings.
+    private var allModsLocales: String? = null
+
     @JvmField
     val markColor = Color.rgb(205, 73, 97)
 
@@ -118,7 +121,6 @@ object Helpers {
         val policyMgr = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
         val encryption = policyMgr?.storageEncryptionStatus ?: return false
         return encryption == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE ||
-            encryption == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVATING ||
             encryption == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE_PER_USER
     }
 
@@ -582,7 +584,8 @@ object Helpers {
     @JvmStatic
     @Synchronized
     fun getAllMods(context: Context, force: Boolean) {
-        if (!force && allModsList.isNotEmpty()) return
+        val locales = context.resources.configuration.locales.toLanguageTags()
+        if (!force && allModsList.isNotEmpty() && allModsLocales == locales) return
         val snapshot = context.createConfigurationContext(android.content.res.Configuration(context.resources.configuration))
         val entries = ArrayList<ModData>()
         parseModSearchIndex(snapshot, entries)
@@ -591,6 +594,7 @@ object Helpers {
         // invalidates this result; the configuration callback owns the next rebuild.
         if (snapshot.resources.configuration.locales == context.resources.configuration.locales) {
             allModsList = entries
+            allModsLocales = snapshot.resources.configuration.locales.toLanguageTags()
         }
     }
 

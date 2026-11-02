@@ -133,17 +133,14 @@ class IslandReturnFusionTest {
         }
     }
 
-    @Test fun defaultNativeReturnHasALocalLiquidContactAndCancellationRestoresTheCapsule() =
-        exerciseNativeContact(absorption = false)
-
     @Test fun absorptionHasTheSameLocalContactWithoutAnExtraClock() =
-        exerciseNativeContact(absorption = true)
+        exerciseNativeContact()
 
-    @Test fun simplifiedNativeReturnsKeepTheUnmodifiedCapsule() =
-        exerciseNativeContact(absorption = true, simplified = true)
+    @Test fun powerSaveMotionNativeReturnsKeepTheUnmodifiedCapsule() =
+        exerciseNativeContact(powerSaveMotion = true)
 
     @Test fun liquidContactPreservesTheExistingCameraMaskReservation() {
-        for (absorption in listOf(false, true)) exerciseNativeContact(absorption, tightCameraMask = true)
+        exerciseNativeContact(tightCameraMask = true)
     }
 
     @Test fun repeatedDrawsReuseTheClipUntilGeometryOrPresentationChanges() {
@@ -206,30 +203,30 @@ class IslandReturnFusionTest {
         }
     }
 
-    private fun exerciseNativeContact(absorption: Boolean, simplified: Boolean = false, tightCameraMask: Boolean = false) {
+    private fun exerciseNativeContact(powerSaveMotion: Boolean = false, tightCameraMask: Boolean = false) {
         for (hz in listOf(60, 90, 120)) {
             val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
             val memory = SharedMemory.create("return-fusion", 4)
             val writer = memory.mapReadWrite().order(ByteOrder.nativeOrder())
-            val shell = IslandActivityView(host).apply { this.absorption = absorption }
+            val shell = IslandActivityView(host)
             host.setContentView(shell, FrameLayout.LayoutParams(240, 40))
             ShadowChoreographer.setPaused(true)
             try {
                 shell.bind("Music", null, ColorDrawable(Color.RED), true, false, false, 0, false)
                 shell.geometry(240, 40, 40, 260)
-                shell.cameraAnchor(20f, if (tightCameraMask) 36f else 16f)
+                shell.cameraAnchor(20f, if (tightCameraMask) 40f else 16f)
                 shell.measure(View.MeasureSpec.makeMeasureSpec(240, View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(40, View.MeasureSpec.EXACTLY))
                 shell.layout(0, 0, 240, 40)
                 shell.prepareEntry()
                 shell.transition(240, 40, 240, 40, entering = true)
                 getField<ValueAnimator>(shell, "motion").end()
-                shell.simplified = simplified
+                shell.powerSaveMotion = powerSaveMotion
                 shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
                 shell.prepareReturnFromCurrent()
                 shell.transition(240, 40, 240, 40, entering = false)
                 val clock = getField<ValueAnimator?>(shell, "motion")
-                if (!simplified) {
+                if (!powerSaveMotion) {
                     assertNotNull(clock)
                     for (step in 0..(hz / 5)) {
                         val time = step * 1000L / hz
@@ -257,12 +254,12 @@ class IslandReturnFusionTest {
                 val clip = Region(0, 0, 240, 40)
                 val difference = Region().apply { setPath(shape.path, clip) }
                 difference.op(Region().apply { setPath(normal.path, clip) }, Region.Op.XOR)
-                assertEquals("absorption=$absorption simplified=$simplified cameraReserved=$tightCameraMask hz=$hz",
-                    simplified || tightCameraMask, difference.isEmpty)
+                assertEquals("powerSaveMotion=$powerSaveMotion cameraReserved=$tightCameraMask hz=$hz",
+                    powerSaveMotion || tightCameraMask, difference.isEmpty)
                 val bounds = RectF().also { shape.path.computeBounds(it, true) }
                 assertTrue("Contact stays inside the existing window: $bounds", bounds.left >= -.001f &&
                     bounds.top >= -.001f && bounds.right <= 240.001f && bounds.bottom <= 40.001f)
-                if (hz == 60) exportShape(shape.path, "${if (absorption) "absorption" else "default"}-${if (tightCameraMask) "camera-reserved" else if (simplified) "simplified" else "contact"}")
+                if (hz == 60) exportShape(shape.path, "absorption-${if (tightCameraMask) "camera-reserved" else if (powerSaveMotion) "powerSaveMotion" else "contact"}")
 
                 shell.cancelMediaReturn()
                 val restored = Region().apply { setPath(shape.path, clip) }
@@ -308,7 +305,7 @@ class IslandReturnFusionTest {
         val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
             300f, 20f, 700f, 60f, 1080, 2400)
         val session = sessionCtor.newInstance(owner, Any(), Any(), root, null,
-            frame.landingRectangle(mesh), frame.rectangle(), mesh)
+            frame.landingRectangle(), frame.rectangle(), mesh, false)
         val slot = LauncherWindowAbsorption::class.java.getDeclaredField("session").apply { isAccessible = true }
         slot.set(owner, session)
         try { block(session) } finally { owner.cancel() }

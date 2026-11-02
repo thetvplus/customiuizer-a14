@@ -29,9 +29,9 @@
 
 [文档目录](docs/README.md)提供开发、测试、发布和专项说明；参与维护先读[共同工程规则](AGENTS.md)。
 
-当前源码版本：`r14.26.9`（versionCode 269）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
+当前源码版本：`r14.26.11`（versionCode 281）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
 
-r14.26.5 整合此前 Compose 与 API 102 改进，并调整文本运动、选项可读性及页面按压反馈，移除 Dock 轻量玻璃，见[更新记录](CHANGELOG.md)。完整 CI、正式签名与双仓发布已通过；Develop 实机回归已通过，后续正式包安装复验按本轮范围不再执行，r14.26.3 有效变化已并入本版，旧独立发行已撤下。验证边界见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
+r14.26.11 自 r14.26.9 累计整合动态岛设置与上岛效果、Dock 原生材质、全局模糊及设置界面改进，见[更新记录](CHANGELOG.md)。正式发行与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准；已测范围及剩余问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
 
 Git 历史已匿名整合；既有签名 APK 与原始构建 metadata 保持不变，来源关系见[发行说明](docs/RELEASE.md#历史匿名化与已签名版本)。
 

@@ -188,15 +188,23 @@ class DuoGeometryTest {
         assertEquals(0f, DuoConfig.read(PrefMap()).offsetDp, 0f)
     }
 
-    @Test fun automaticSizeAddsAnotherHalfDpToThePreviousSizeBeforeDensityRounding() {
+    @Test fun automaticSizePreservesCalibratedPixelsAcrossDensitiesAndNativeHeights() {
         val config = DuoConfig(true, 24)
-        for (density in floatArrayOf(1f, 1.5f, 2f, 2.8875f, 4f)) {
-            for (nativeDp in floatArrayOf(12f, 18f, 20f, 24f, 40f)) {
-                // Both versions receive the same integer native resource, not the unrounded input.
-                val nativeHeight = (nativeDp * density).toInt()
-                val oldDp = (nativeHeight / density * 1.155f).coerceIn(20f, 24f)
-                val px = DuoSizing.pixels(config, nativeHeight, density)
-                assertEquals((oldDp * 0.99f + 1f) * density, px.toFloat(), 0.501f)
+        val densities = floatArrayOf(1f, 1.5f, 2f, 2.8875f, 3f, 4f, 6f)
+        val heights = intArrayOf(0, 10, 24, 36, 40, 48, 59, 70, 100)
+        // Frozen outputs of the visually accepted calibration, including fallback and both limits.
+        val expected = arrayOf(
+            intArrayOf(24, 21, 25, 25, 25, 25, 25, 25, 25),
+            intArrayOf(36, 31, 31, 37, 37, 37, 37, 37, 37),
+            intArrayOf(48, 42, 42, 43, 48, 50, 50, 50, 50),
+            intArrayOf(69, 60, 60, 60, 60, 60, 70, 71, 71),
+            intArrayOf(72, 62, 62, 62, 62, 62, 70, 74, 74),
+            intArrayOf(95, 83, 83, 83, 83, 83, 83, 84, 99),
+            intArrayOf(143, 125, 125, 125, 125, 125, 125, 125, 125),
+        )
+        for ((row, density) in densities.withIndex()) {
+            for ((column, height) in heights.withIndex()) {
+                assertEquals(expected[row][column], DuoSizing.pixels(config, height, density))
             }
         }
     }

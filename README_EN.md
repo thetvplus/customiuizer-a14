@@ -29,9 +29,9 @@ Availability depends on the ROM and system-app versions. Do not enable this modu
 
 The [documentation index](docs/README.md) covers development, testing, releases and feature contracts. Start with the [shared engineering rules](AGENTS.md) before contributing.
 
-Current source version: `r14.26.9` (versionCode 269). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
+Current source version: `r14.26.11` (versionCode 281). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
 
-r14.26.5 combines the Compose and API 102 refinements with motion-aware text, clearer choices and page feedback cleanup, and removes Dock light glass; see the [changelog](CHANGELOG_EN.md). Full CI, official signing and both releases are verified. Develop device checks passed; further ADB installation checks are outside the completed scope. Valid r14.26.3 changes are included, and its superseded release has been retired. See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for validation boundaries.
+r14.26.11 consolidates Dynamic Island settings and return effects, native Dock materials, global blur and settings-interface improvements since r14.26.9; see the [changelog](CHANGELOG_EN.md). Check the [release page](https://github.com/thetvplus/customiuizer-a14/releases/latest) for the published APK and the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for verified scenarios and remaining issues.
 
 Git history has been consolidated with anonymous commit metadata. Existing signed APKs and original build metadata are unchanged; see the [source correspondence](docs/RELEASE.md#历史匿名化与已签名版本).
 

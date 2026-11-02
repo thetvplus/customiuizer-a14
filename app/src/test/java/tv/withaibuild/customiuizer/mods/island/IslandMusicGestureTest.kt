@@ -37,7 +37,7 @@ class IslandMusicGestureTest {
 
     @Before fun setup() {
         host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
-        shell = IslandActivityView(host).apply { simplified = true }
+        shell = IslandActivityView(host).apply { powerSaveMotion = true }
         host.setContentView(shell, FrameLayout.LayoutParams(280, 40))
         shell.bind("Song", null, null, true, true, false, capabilities, true, PlaybackState.STATE_PLAYING)
         shell.configureGestures(identity, IslandMusicActions(), true)
@@ -49,7 +49,7 @@ class IslandMusicGestureTest {
     }
     @After fun cleanup() { host.finish() }
     @Test fun anOffsetCameraCannotTranslateTheWholeIslandDuringASymmetricDrag() {
-        shell.simplified = false
+        shell.powerSaveMotion = false
         shell.cameraAnchor(4f, 16f)
         fun center() = shell.pivotY * (1f - shell.scaleY) + shell.translationY + shell.height * shell.scaleY * .5f
         val resting = center()
@@ -67,7 +67,7 @@ class IslandMusicGestureTest {
         rebound.end()
     }
     @Test fun downwardDragRetainsTheInterruptedCameraRelativeOrigin() {
-        shell.simplified = false
+        shell.powerSaveMotion = false
         shell.cameraAnchor(20f, 16f)
         shell.scaleY = .6f
         shell.translationY = -8f

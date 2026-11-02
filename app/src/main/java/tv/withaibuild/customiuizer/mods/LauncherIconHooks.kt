@@ -524,9 +524,19 @@ object LauncherIconHooks {
         }
         ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "fromXml", resultHook)
         ModuleHelper.hookAllMethods("com.miui.home.launcher.ShortcutIcon", lpparam.classLoader, "createShortcutIcon", resultHook)
-        ModuleHelper.hookAllMethods("com.miui.home.launcher.common.Utilities", lpparam.classLoader, "adaptTitleStyleToWallpaper", titleFontHook { chain, _ ->
-            (chain.getArg(1) as? TextView)?.takeIf { it.id == it.resources.getIdentifier("icon_title", "id", "com.miui.home") }
-        })
+        ModuleHelper.hookAllMethods("com.miui.home.launcher.common.Utilities", lpparam.classLoader,
+            "adaptTitleStyleToWallpaper", wallpaperTitleFontHook())
+    }
+
+    internal fun wallpaperTitleFontHook(): MethodHook {
+        // One Launcher installation owns this ID. Theme/configuration changes do not
+        // change its resource table; a missing ID also needs no repeated lookup.
+        var titleId = -1
+        return titleFontHook { chain, _ ->
+            val title = chain.getArg(1) as? TextView ?: return@titleFontHook null
+            if (titleId < 0) titleId = title.resources.getIdentifier("icon_title", "id", "com.miui.home")
+            title.takeIf { titleId != 0 && it.id == titleId }
+        }
     }
 
     internal fun titleFontHook(title: (XposedInterface.Chain, Any?) -> TextView?) = object : MethodHook() {

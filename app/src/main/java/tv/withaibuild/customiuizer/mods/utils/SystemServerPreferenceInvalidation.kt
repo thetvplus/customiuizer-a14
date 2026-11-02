@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Binder
 import tv.withaibuild.customiuizer.PrefsProvider
+import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.utils.CommittedAutomationPreferences
 import tv.withaibuild.customiuizer.utils.Helpers
 import tv.withaibuild.customiuizer.mods.statusbarheight.StatusBarHeightResources
@@ -64,7 +65,8 @@ object SystemServerPreferenceInvalidation {
 
                 if (intent.getBooleanExtra(EXTRA_BULK, false)) {
                     val automation = committedAutomation(context, null) ?: return@guarded
-                    bootstrap.refreshRemoteKey(null, StatusBarHeightResources.committedPreference(context) + automation)
+                    bootstrap.refreshRemoteKey(null, StatusBarHeightResources.committedPreference(context) + automation +
+                        committedWindowBlur(context, null))
                     SystemServerInstaller.scheduleCatchUp(context)
                     return@guarded
                 }
@@ -74,10 +76,25 @@ object SystemServerPreferenceInvalidation {
                 val height = if (key == "pref_key_" + StatusBarHeightConfig.PREF_KEY)
                     StatusBarHeightResources.committedPreference(context) else emptyMap()
                 val automation = committedAutomation(context, key) ?: return@guarded
-                bootstrap.refreshRemoteKey(key, height + automation)
+                bootstrap.refreshRemoteKey(key, height + automation + committedWindowBlur(context, key))
                 SystemServerInstaller.scheduleCatchUp(context)
             }
         }
+    }
+
+    internal fun committedWindowBlur(context: Context, key: String?): Map<String, Any> {
+        val storageKey = PrefsProvider.WINDOW_BLUR_DISABLED
+        if (key != null && key != storageKey) return emptyMap()
+        val token = Binder.clearCallingIdentity()
+        val value = try {
+            ModuleHelper.guarded<Boolean?>(null) {
+                context.contentResolver.call(Uri.parse("content://" + PrefsProvider.AUTHORITY),
+                    PrefsProvider.COMMITTED_WINDOW_BLUR, null, null)
+                    ?.takeIf { it.containsKey(storageKey) }?.getBoolean(storageKey)
+            }
+        } finally { Binder.restoreCallingIdentity(token) }
+        // An unavailable mirror cannot restore a known-stale framework value over current policy.
+        return mapOf(storageKey to (value ?: MainModule.mPrefs.getBoolean("system_disable_window_blurs")))
     }
 
     private fun committedAutomation(context: Context, key: String?): Map<String, Any>? {

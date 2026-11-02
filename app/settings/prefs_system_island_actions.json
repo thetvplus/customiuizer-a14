@@ -7,45 +7,18 @@
     {
       "type": "section",
       "attributes": {
-        "android:title": "@string/system_island_return_group"
-      },
-      "children": [
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_media_return",
-            "android:title": "@string/system_island_media_return_title",
-            "android:defaultValue": "false",
-            "android:summary": "@string/system_island_media_return_summ"
-          }
-        },
-        {
-          "type": "action",
-          "attributes": {
-            "android:key": "pref_key_system_island_media_return_apps",
-            "android:title": "@string/system_island_media_return_apps_title",
-            "android:summary": "@string/system_island_media_return_apps_summ",
-            "android:dependency": "pref_key_system_island_media_return",
-            "app:countAsSummary": "true"
-          }
-        },
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_live_return",
-            "android:title": "@string/system_island_live_return",
-            "android:summary": "@string/system_island_live_return_summary",
-            "android:defaultValue": "true"
-          }
-        }
-      ]
-    },
-    {
-      "type": "section",
-      "attributes": {
         "android:title": "@string/system_island_music_group"
       },
       "children": [
+        {
+          "type": "toggle",
+          "attributes": {
+            "android:key": "pref_key_system_island_media_swipe",
+            "android:title": "@string/system_island_media_swipe_title",
+            "android:defaultValue": "true",
+            "android:summary": "@string/system_island_media_swipe_summ"
+          }
+        },
         {
           "type": "action",
           "attributes": {

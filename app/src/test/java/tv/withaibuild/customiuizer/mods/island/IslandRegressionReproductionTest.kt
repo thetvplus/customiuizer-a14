@@ -32,7 +32,7 @@ class IslandRegressionReproductionTest {
     @Test fun aSlowShortUpwardReleaseWorksWithoutAnIntermediateMove() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         try {
-            val shell = IslandActivityView(host).apply { simplified = true }
+            val shell = IslandActivityView(host).apply { powerSaveMotion = true }
             host.setContentView(shell)
             shell.geometry(184, 40, 40)
             shell.measure(View.MeasureSpec.makeMeasureSpec(184, View.MeasureSpec.EXACTLY),

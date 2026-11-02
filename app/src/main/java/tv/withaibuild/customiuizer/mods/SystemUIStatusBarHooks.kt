@@ -634,7 +634,7 @@ object SystemUIStatusBarHooks {
      * SystemUI main looper. This bounds the cleanup of never-bound pending owners and avoids
      * a permanent background thread.
      */
-    private lateinit var statusBarDisplayRegistry: StatusBarDisplayRegistry<View, LinearLayout>
+    private val statusBarDisplayRegistry: StatusBarDisplayRegistry<View, LinearLayout>
 
     private val statusBarMainHandler = Handler(Looper.getMainLooper())
     private var statusBarPendingPruneScheduled = false

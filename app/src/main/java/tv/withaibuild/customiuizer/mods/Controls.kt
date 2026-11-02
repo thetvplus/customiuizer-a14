@@ -44,7 +44,6 @@ import tv.withaibuild.customiuizer.utils.Helpers
 import java.lang.reflect.Field
 import tv.withaibuild.customiuizer.utils.HookUtils
 
-@SuppressLint("StaticFieldLeak")
 object Controls {
 
     private const val NAV_BAR_DARK_STATE_FIELD = "custo_nav_bar_buttons_dark"

@@ -117,7 +117,7 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
 
     /** Called once at committed return, never from an animation update. Preserve the original
      * params, callbacks, task leash, velocity and finish/cancel policy in a separate native copy. */
-    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = false): Any? {
+    fun retarget(original: Any, owner: Any, nav: Any, frame: IslandMusicReturnSignal.Frame): Any? {
         if (!params.isInstance(original) || !frame.valid()) return null
         if ((fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
             fields[10].getBoolean(original) || fields[19].getBoolean(original) ||
@@ -131,10 +131,10 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
         val target = selectedApps.single() ?: return null
         if (remotePackage.get(target) != frame.packageName || remoteTask.getInt(target) != taskId.getInt(nav) ||
             remoteMode.getInt(target) != closingMode || remoteType.getInt(target) != standardType) return null
-        return copyTarget(original, owner, frame, absorption)
+        return copyTarget(original, owner, frame)
     }
 
-    fun retargetHome(original: Any, owner: Any, selected: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean = false): Any? {
+    fun retargetHome(original: Any, owner: Any, selected: Any, frame: IslandMusicReturnSignal.Frame): Any? {
         val home = home ?: return null
         if (!params.isInstance(original) || !home.eligible(selected, frame) ||
             (fields[7].get(original) as Enum<*>).name != "CLOSE_TO_HOME" ||
@@ -143,12 +143,12 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
             fields[11].get(original) != null) return null
         val targets = fields[0].get(original) ?: retainedTargets.get(owner) ?: return null
         if ((apps.get(targets) as? Array<*>)?.singleOrNull() !== selected) return null
-        return copyTarget(original, owner, frame, absorption)
+        return copyTarget(original, owner, frame)
     }
 
-    private fun copyTarget(original: Any, owner: Any, frame: IslandMusicReturnSignal.Frame, absorption: Boolean): Any? {
+    private fun copyTarget(original: Any, owner: Any, frame: IslandMusicReturnSignal.Frame): Any? {
         val values = fields.map { it.get(original) }.toTypedArray()
-        val landing = frame.landingRectangle(absorption)
+        val landing = frame.landingRectangle()
         values[2] = landing
         values[4] = landing.height() * .5f
         // Hold the opacity established at release. A partially faded gesture must
@@ -176,8 +176,8 @@ internal class LauncherMusicReturnAccess(nav: Class<*>, element: Class<*>,
     fun accepted(copy: Any, owner: Any): Boolean = currentParams.get(owner) === copy &&
         running.invoke(owner) == true && animationTarget.invoke(animation.get(owner)) == fields[2].get(copy)
 
-    fun timeReturn(owner: Any, strength: Float, absorption: Boolean) {
-        returnTiming?.apply(requireNotNull(animation.get(owner)), strength, absorption)
+    fun timeReturn(owner: Any, strength: Float) {
+        returnTiming?.apply(requireNotNull(animation.get(owner)), strength)
     }
     fun returnTimingLease(owner: Any): Any? = returnTiming?.lease(requireNotNull(animation.get(owner)))
     fun restoreReturnTiming(owner: Any? = null, lease: Any? = null) { returnTiming?.restore(owner?.let { animation.get(it) }, lease) }
@@ -196,7 +196,7 @@ internal class LauncherReturnTiming(springType: Class<*>) {
     private var original: FloatArray? = null
     private var factor = 1f
 
-    fun apply(spring: Any, strength: Float = .5f, absorption: Boolean = true): Boolean {
+    fun apply(spring: Any, strength: Float = .5f): Boolean {
         restore()
         val tracks = arrayOfNulls<Any>(keys.size)
         val values = FloatArray(keys.size)
@@ -209,7 +209,7 @@ internal class LauncherReturnTiming(springType: Class<*>) {
             }
             // Width is the ROM progress reference. Normalize that single response,
             // applying the same factor to every native track to retain their ratios.
-            val response = modifyResponse.invoke(spring, IslandMotion.returnResponse(strength, absorption)) as Float
+            val response = modifyResponse.invoke(spring, IslandMotion.returnResponse(strength)) as Float
             if (!response.isFinite() || response <= 0f) return false
             factor = (39.478418f / (response * response * values[2])).coerceIn(.25f, 4f)
             for (i in keys.indices) {

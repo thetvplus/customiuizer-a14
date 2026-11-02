@@ -52,12 +52,7 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
             postTranslate(0f, center - 17f)
         })
     }
-    private val plane = Path().apply {
-        moveTo(60f, 43f); lineTo(65f, 59f); lineTo(83f, 69f); lineTo(83f, 75f)
-        lineTo(64f, 70f); lineTo(64f, 81f); lineTo(71f, 87f); lineTo(71f, 91f)
-        lineTo(60f, 88f); lineTo(49f, 91f); lineTo(49f, 87f); lineTo(56f, 81f)
-        lineTo(56f, 70f); lineTo(37f, 75f); lineTo(37f, 69f); lineTo(55f, 59f); close()
-    }
+    private val plane = DuoAirplane.create()
     // Config is fixed for this view; create only the audio silhouettes it can draw.
     private val headphones = if (config.showAudio && config.headphoneStyle != 3) Path().apply {
         moveTo(38.5f, 72f); lineTo(38.5f, 61f)

@@ -111,18 +111,16 @@ internal class IslandAudioSpectrum(
                     audioSession = next
                     val scratch = FloatArray(5)
                     val received = AtomicBoolean()
-                    var lastFftAt = 0L
                     capture = try {
                         backend.capture(next) { fft, rate ->
                             if (epoch == generation && captureEpoch == captureGeneration.get()) {
-                                val now = android.os.SystemClock.elapsedRealtimeNanos()
-                                val dt = if (lastFftAt == 0L) .05 else ((now - lastFftAt) / 1e9).coerceIn(.016, .15)
-                                lastFftAt = now
-                                // The ROM may cap capture at 20 Hz; keep the same time response
-                                // at every supported capture rate. Display interpolation is local.
-                                val attack = (1.0 - kotlin.math.exp(-dt / .030)).toFloat()
-                                val release = (1.0 - kotlin.math.exp(-dt / .083)).toFloat()
-                                if (AudioFftBands.five(fft, rate, scratch, attack, release)) {
+                                if (AudioFftBands.five(fft, rate, scratch)) {
+                                    // Mild display compensation only; keep measured bands and silence intact.
+                                    scratch[0] *= .85f
+                                    scratch[1] = (scratch[1] * 1.08f).coerceAtMost(1f)
+                                    scratch[2] = (scratch[2] * 1.08f).coerceAtMost(1f)
+                                    scratch[3] = (scratch[3] * 1.45f).coerceAtMost(1f)
+                                    scratch[4] = (scratch[4] * 1.7f).coerceAtMost(1f)
                                     var changed = !received.getAndSet(true)
                                     synchronized(frameLock) {
                                         for (index in 0..4) if (kotlin.math.abs(scratch[index] - levels[index]) >= .006f ||
@@ -188,7 +186,8 @@ internal class IslandAudioSpectrum(
     }
 
     companion object {
-        internal const val REQUESTED_CAPTURE_RATE = 30_000
+        // Source cadence is independent of the display-frame interpolation.
+        internal const val REQUESTED_CAPTURE_RATE = 10_000
         fun sessionFor(uid: Int, tracks: List<Track>, retained: Int? = null): Int? {
             var selected: Int? = null
             for (track in tracks) if (track.active && track.uid == uid &&
@@ -247,7 +246,7 @@ internal class IslandAudioSpectrum(
                 val range = Visualizer.getCaptureSizeRange()
                 // The callback is already signed 8-bit FFT, irrespective of the file's
                 // codec, bitrate or decoded PCM depth. Use the native effect's rate.
-                // Above 102.4 kHz, a 512-point capture cannot resolve our first 200 Hz band.
+                // Retain the existing 1024-point high-rate budget to preserve bass resolution.
                 val size = if (visualizer.samplingRate > 200_000 * 512) 1024 else 512
                 check(visualizer.setCaptureSize(size.coerceIn(range[0], range[1])) == Visualizer.SUCCESS)
                 // AS_PLAYED quantizes low-volume playback to an all-zero 8-bit FFT on

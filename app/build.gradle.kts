@@ -64,8 +64,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 269
-val lastVersionName = "r14.26.9"
+val lastVersion = 281
+val lastVersionName = "r14.26.11"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -112,7 +112,7 @@ val supportedLocales = setOf(
     "es-rES",
 )
 
-val preferenceSourceDir = layout.projectDirectory.dir("src/main/res/xml")
+val preferenceSourceDir = layout.projectDirectory.dir("settings")
 val preferenceArtifactGenerator = rootProject.layout.projectDirectory.file("tools/generate_preference_artifacts.py")
 val generatedPreferenceResourcesDir = layout.buildDirectory.dir("generated/res/preference-artifacts/main")
 val generatedPreferenceCatalogDir = layout.buildDirectory.dir("generated/source/preference-catalog/main")
@@ -126,7 +126,6 @@ val generatePreferenceArtifacts = tasks.register<GeneratePreferenceArtifacts>("g
     group = "build"
     inputs.file(preferenceArtifactGenerator)
     inputs.files(rootProject.file("tools/settings_schema.py"), rootProject.file("tools/compose_preferences.py"))
-    inputs.dir(layout.projectDirectory.dir("settings"))
     inputs.dir(preferenceSourceDir)
     inputs.files(preferenceFeatureSources).withPathSensitivity(PathSensitivity.RELATIVE)
     resourcesOutputDirectory.set(generatedPreferenceResourcesDir)
@@ -241,6 +240,9 @@ android {
         noCompress += listOf("test3.txt", "test4.zip")
     }
     lint {
+        // Generated settings pages own real resource references and must participate
+        // in analysis; skipping them misclassifies live titles and arrays as unused.
+        checkGeneratedSources = true
         // Supported translations intentionally fall back to the base strings when incomplete.
         warning += "MissingTranslation"
     }

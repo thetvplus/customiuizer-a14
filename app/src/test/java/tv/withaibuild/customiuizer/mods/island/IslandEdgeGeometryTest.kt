@@ -5,6 +5,30 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class IslandEdgeGeometryTest {
+    @Test fun inwardOffsetsStopAtTheUsableSideInsteadOfDroppingBelowTheBar() {
+        for (alignment in listOf(0, 2)) for (offset in -240..240) {
+            val placed = IslandPosition.layout(160, 40, 88, 12, 388, alignment, offset,
+                8, 0, 188, 212, 0, 32, 8)!!
+            assertEquals(8, placed.top)
+            assertTrue(placed.width >= 88)
+            assertTrue(if (alignment == 0) placed.left + placed.width <= 180 else placed.left >= 220)
+        }
+    }
+
+    @Test fun roundedCornerClearanceTracksItsActualArcAndShrinksBelowTheCorner() {
+        assertEquals(100, IslandPosition.cornerInset(100, 0))
+        assertEquals(40, IslandPosition.cornerInset(100, 20))
+        assertEquals(14, IslandPosition.cornerInset(100, 50))
+        assertEquals(0, IslandPosition.cornerInset(100, 100))
+        var previous = 100
+        for (top in 0..100) {
+            val inset = IslandPosition.cornerInset(100, top)
+            assertTrue(inset <= previous)
+            assertTrue((100 - inset).toDouble() * (100 - inset) + (100 - top).toDouble() * (100 - top) <= 10000)
+            previous = inset
+        }
+    }
+
     @Test fun centerOffsetsMoveContinuouslyToTheirCameraSafeLimitsWithoutSelectingAnotherAnchor() {
         var previous = -1
         for (offset in -80..80) {
@@ -26,8 +50,10 @@ class IslandEdgeGeometryTest {
                 val leftHole = px(200 - holeWidth / 2)
                 val rightHole = px(200 + holeWidth / 2)
                 for (alignment in listOf(0, 2)) for (offset in listOf(-80, 0, 80)) {
-                    val expectedEdge = (if (alignment == 0) px(4) + px(offset) else px(394) + px(offset))
+                    var expectedEdge = (if (alignment == 0) px(4) + px(offset) else px(394) + px(offset))
                         .coerceIn(px(4), px(394))
+                    expectedEdge = if (alignment == 0) minOf(expectedEdge, leftHole - px(8) - px(80))
+                        else maxOf(expectedEdge, rightHole + px(8) + px(80))
                     val layout = IslandPosition.layout(px(width), px(40), px(80), px(4), px(394),
                         alignment, px(offset), px(8), 0, leftHole, rightHole, 0, px(32), px(8))
                     if (if (alignment == 0) px(394) - expectedEdge < px(80) else expectedEdge - px(4) < px(80)) {

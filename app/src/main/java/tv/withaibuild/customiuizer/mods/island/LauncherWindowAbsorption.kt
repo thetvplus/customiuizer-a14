@@ -33,8 +33,15 @@ import kotlin.math.sqrt
 /** One short-lived, selected-window hardware texture in the existing Launcher window.
  * Native task/surface ownership and the ROM spring remain authoritative. Capture is
  * worker-only, secure/HDR results are declined, and no pixels are read back or saved. */
-internal class LauncherWindowAbsorption private constructor(private val api: Access, private val handler: Handler) {
-    class Access(loader: ClassLoader) {
+internal class LauncherWindowAbsorption internal constructor(private val api: NativeAccess, private val handler: Handler) {
+    internal interface NativeAccess {
+        fun current(element: Any, copy: Any): Boolean
+        fun translucent(copy: Any): Boolean
+        fun surface(element: Any, copy: Any): SurfaceControl?
+        fun root(): View?
+        fun capture(surface: SurfaceControl, width: Int, height: Int): Bitmap?
+    }
+    class Access(loader: ClassLoader) : NativeAccess {
         private val element = XposedHelpers.findClass("com.miui.home.recents.anim.WindowElement", loader)
         val update = element.getDeclaredMethod("updateElementValue", Float::class.javaPrimitiveType, RectF::class.java,
             Float::class.javaPrimitiveType, Float::class.javaPrimitiveType, Boolean::class.javaPrimitiveType, Rect::class.java, RectF::class.java)
@@ -50,6 +57,21 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         private val leash = remote.getDeclaredField("leash").apply { isAccessible = true }
         private val nativeSurface = leash.type.getDeclaredField("mSurfaceControl").apply { isAccessible = true }
         private val launcher = XposedHelpers.findClass("com.miui.home.launcher.Application", loader).getDeclaredMethod("getLauncher")
+        private val capture = Capture(loader)
+
+        init { require(update.returnType == Void.TYPE && cancellations.isNotEmpty()) }
+        override fun current(element: Any, copy: Any) = current.get(element) === copy
+        override fun translucent(copy: Any) = translucent.getBoolean(copy)
+        override fun surface(element: Any, copy: Any): SurfaceControl? {
+            val set = targets.get(copy) ?: retained.get(element) ?: return null
+            val target = (apps.get(set) as? Array<*>)?.singleOrNull() ?: return null
+            return nativeSurface.get(leash.get(target)) as? SurfaceControl
+        }
+        override fun root(): View? = (launcher.invoke(null) as? Activity)?.window?.decorView
+        override fun capture(surface: SurfaceControl, width: Int, height: Int) = capture.capture(surface, width, height)
+    }
+
+    internal class Capture(loader: ClassLoader) {
         private val captureType = Class.forName("android.window.ScreenCapture", false, loader)
         private val args = Class.forName("android.window.ScreenCapture\$LayerCaptureArgs", false, loader)
         private val builderType = Class.forName("android.window.ScreenCapture\$LayerCaptureArgs\$Builder", false, loader)
@@ -66,15 +88,6 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         private val secure = result.getMethod("containsSecureLayers")
         private val hdr = result.getMethod("containsHdrLayers")
 
-        init { require(update.returnType == Void.TYPE && cancellations.isNotEmpty()) }
-        fun current(element: Any, copy: Any) = current.get(element) === copy
-        fun translucent(copy: Any) = translucent.getBoolean(copy)
-        fun surface(element: Any, copy: Any): SurfaceControl? {
-            val set = targets.get(copy) ?: retained.get(element) ?: return null
-            val target = (apps.get(set) as? Array<*>)?.singleOrNull() ?: return null
-            return nativeSurface.get(leash.get(target)) as? SurfaceControl
-        }
-        fun root(): View? = (launcher.invoke(null) as? Activity)?.window?.decorView
         fun capture(surface: SurfaceControl, width: Int, height: Int): Bitmap? {
             if (!surface.isValid || width <= 0 || height <= 0) return null
             val factor = captureScale(width, height)
@@ -97,23 +110,27 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
     private var epoch = 0L
     private var captureJob: Job? = null
     private val captureMutex = Mutex()
+    private val diagnostics = IslandDiagnostics()
 
-    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame,
-        captureWindow: Boolean = true): IslandReturnProgress.Producer? {
+    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame, instant: Boolean = false): IslandReturnProgress.Producer? {
         if (!handler.looper.isCurrentThread) return null
         cancel()
         val root = api.root()?.takeIf { it.isAttachedToWindow && it.isHardwareAccelerated && it.isShown &&
             it.width == frame.screenWidth && it.height == frame.screenHeight && it.scaleX == 1f && it.scaleY == 1f &&
-            it.alpha == 1f && it.display?.displayId == android.view.Display.DEFAULT_DISPLAY } ?: return null
-        val mesh = captureWindow && !api.translucent(copy)
-        val surface = if (mesh) {
-            if (root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) return null
+            it.alpha == 1f && it.display?.displayId == android.view.Display.DEFAULT_DISPLAY } ?: run {
+                diagnostics.report("native-return-mesh-root-not-ready"); return null
+            }
+        val mesh = !instant && !api.translucent(copy)
+        val surface = if (mesh || instant) {
+            if (mesh && root.context.checkSelfPermission("android.permission.READ_FRAME_BUFFER") != PackageManager.PERMISSION_GRANTED) {
+                diagnostics.report("native-return-mesh-capture-denied"); return null
+            }
             api.surface(element, copy)?.takeIf { it.isValid } ?: return null
         } else null
-        val active = Session(element, copy, root, surface, frame.landingRectangle(captureWindow), if (mesh) frame.rectangle() else null, mesh)
+        val active = Session(element, copy, root, surface, frame.landingRectangle(), if (mesh) frame.rectangle() else null, mesh, instant)
         session = active
         val generation = epoch
-        if (surface != null) captureJob = scope.launch(Dispatchers.Default) {
+        if (mesh && surface != null) captureJob = scope.launch(Dispatchers.Default) {
             var texture: Bitmap? = null
             try {
                 texture = captureMutex.withLock {
@@ -125,7 +142,11 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                     if (generation == epoch && session === active && api.current(element, copy)) {
                         if (texture != null && active.progress < .55f) {
                             active.texture = texture; texture = null
-                        } else cancel()
+                        } else {
+                            diagnostics.report(if (texture == null) "native-return-mesh-no-safe-texture" else "native-return-mesh-texture-too-late")
+                            // Only the optional texture failed. Keep the admitted native
+                            // progress channel alive through its normal completion/cancel.
+                        }
                     }
                 }
             } finally { texture?.recycle() }
@@ -159,10 +180,36 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
         // its optional texture is still being prepared. Tail compression is local
         // mesh geometry, not a second clock for the island's physical response.
         active.progressChannel.write(active.progress)
+        if (active.instant) {
+            if (!active.presented) {
+                val surface = active.surface?.takeIf { it.isValid } ?: run { cancel(); return }
+                // Hide only the admitted closing page. The existing lease restores it on cancellation.
+                try {
+                    active.queuedHide = true
+                    SurfaceControl.Transaction().use { it.setAlpha(surface, 0f).apply() }
+                    active.presented = true
+                    root.addOnAttachStateChangeListener(active)
+                } catch (error: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(error)
+                    cancel()
+                    throw error
+                }
+            }
+            return
+        }
         val drawing = active.drawing ?: return
-        if (active.texture == null) return
+        if (active.texture == null) {
+            if (active.progress >= .55f) {
+                // A queued request can no longer produce an equivalent takeover frame.
+                // Cancellation also recycles an in-flight result without posting it to Main.
+                captureJob?.cancel(); captureJob = null
+            }
+            return
+        }
         if (!active.installed) {
-            if (!IslandAbsorptionMesh.mayReplaceNative(active.progress, active.nativeAlpha)) { cancel(); return }
+            if (!IslandAbsorptionMesh.mayReplaceNative(active.progress, active.nativeAlpha)) {
+                diagnostics.report("native-return-mesh-no-equivalent-frame"); cancel(); return
+            }
             active.installed = true
             root.overlay.add(active)
             root.addOnAttachStateChangeListener(active)
@@ -198,6 +245,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
                             active.queuedHide = true
                             SurfaceControl.Transaction().use { it.setAlpha(active.surface, 0f).apply() }
                             active.presented = true
+                            diagnostics.report("native-return-mesh-presented")
                         } catch (error: Throwable) {
                             FatalErrors.unwrapAndRethrowIfFatal(error)
                             cancel()
@@ -287,7 +335,7 @@ internal class LauncherWindowAbsorption private constructor(private val api: Acc
     }
 
     private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl?,
-        val target: RectF, val shellTarget: RectF?, mesh: Boolean) : Drawable(), View.OnAttachStateChangeListener {
+        val target: RectF, val shellTarget: RectF?, mesh: Boolean, val instant: Boolean) : Drawable(), View.OnAttachStateChangeListener {
         val element = WeakReference(element)
         val rootWidth = root.width
         val rootHeight = root.height

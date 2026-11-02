@@ -6,7 +6,7 @@
 
 ## 大小与颜色
 
-自动大小在原有算法上再加 0.5 dp（累计光学修正 1 dp），按原生图标与实际可用行高限幅；结合环体与顶部字形可见范围，在剩余行高内平衡几何和视觉中心，控制中心交接保持源行尺寸；关闭后可手动设置 20–40 dp。默认居中，垂直微调 ±4 dp、每档 0.5 dp，偏移与绘制范围受行高约束。左右间距默认每侧 1.5 dp，可在 0–6 dp 间按 0.5 dp 调节，不改变图形尺寸。可选加粗。百分比、尺寸与微调独立于原生电池样式。
+自动大小将原生图标高度直接映射为像素，在 20.8–24.76 dp 对应的范围内限幅，缺少原生尺寸时使用 23.869 dp，最终只取整一次；保留已校准的显示大小。实际绘制仍受宿主可用行高约束，结合环体与顶部字形可见范围，在剩余行高内平衡几何和视觉中心，控制中心交接保持源行尺寸；关闭后可手动设置 20–40 dp。默认居中，垂直微调 ±4 dp、每档 0.5 dp，偏移与绘制范围受行高约束。左右间距默认每侧 1.5 dp，可在 0–6 dp 间按 0.5 dp 调节，不改变图形尺寸。可选加粗。百分比、尺寸与微调独立于原生电池样式。
 
 普通前景跟随原生颜色和透明度；充电绿色、省电黄色、低电量红色。充电闪电与百分比沿用同一光学高度和中心，路径在绑定前准备，不逐帧测字或缩放。充电闪电独立开关默认开启，不依赖百分比开关；关闭闪电且开启百分比时，充电显示绿色数字；两者都关闭时，充电显示顶部连续的绿色圆环。未充电且关闭百分比时，上方圆环保持连续。修改后需重启系统界面。
 
@@ -32,4 +32,6 @@
 
 接口不兼容或运行异常时恢复原生显示。采用 Android 原生绘制，不增加动画运行库、轮询服务或后台线程。短时验证不能外推到全部 ROM、耳机或长期耗电。
 
-图形参考 [Duo Status Bar](https://github.com/kvmy666/duoStatusBar)、[Status Trio](https://github.com/lingyired/status-trio) 和 [DuoBar](https://github.com/Mikeli7666/DuoBar)；Wi-Fi 来源及 Apache-2.0 许可见随包 [status-trio.txt](../../app/src/main/assets/licenses/status-trio.txt)。
+设计证据优先采用 Apple [iPhone Duo 官方介绍](https://www.apple.com/newsroom/2026/09/apple-unveils-iphone-duo/)、[原版设计演示](https://developer.apple.com/videos/play/tech-talks/111466/)及[状态图标说明](https://support.apple.com/de-de/guide/iphone/iphef7bb57dc/27/ios/27)。可确认圆环组合、电池 / 充电和四点蜂窝信号的表达；没有获得完整原始 Path 或飞行、耳机等所有状态的组合规则，不宣称移植 Apple 算法。
+
+[Status Trio](https://github.com/lingyired/status-trio) 仅作坐标、墨迹居中和绘制技术参考，其 macOS 音量点与更新机制不是 iPhone 原版合同。Wi-Fi 来源及 Apache-2.0 许可见随包 [status-trio.txt](../../app/src/main/assets/licenses/status-trio.txt)。其他仿制项目不再作为设计标准。飞机使用 A14 自绘轮廓，在 View 创建时按多边形面积重心对齐圆环中心，避免只按外框居中或添加固定偏移；不在帧内测量、采样或重建 Path。飞行 + Wi-Fi、无服务、音频短提示及原生信号映射仍属 Android 适配，未经一手证据确认的原版优先级不另行推测。

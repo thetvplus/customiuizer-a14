@@ -131,6 +131,21 @@ class IslandAudioSpectrumTest {
         assertEquals(count, frames.size)
     }
 
+    @Test fun mildDisplayWeightsPreserveMeasuredBandsAndExactSilence() {
+        assertEquals("Display tuning must not increase capture cadence", 10_000, IslandAudioSpectrum.REQUESTED_CAPTURE_RATE)
+        start()
+        val fft = ByteArray(512)
+        for (bin in intArrayOf(1, 4, 16, 64, 128)) fft[bin * 2] = 32
+        backend.listener!!(fft, 48_000_000); drain()
+        val values = frames.last()!!
+        assertEquals(.85f / 1.08f, values[0] / values[1], .0001f)
+        assertEquals(1f, values[2] / values[1], .0001f)
+        assertEquals(1.45f / 1.08f, values[3] / values[1], .0001f)
+        assertEquals(1.7f / 1.08f, values[4] / values[1], .0001f)
+        backend.listener!!(ByteArray(512), 48_000_000); drain()
+        assertArrayEquals(FloatArray(5), frames.last(), 0f)
+    }
+
     @Test fun aQuietFirstFrameAfterTrackReplacementClearsThePreviousSongsLevels() {
         start()
         backend.listener!!(ByteArray(512) { 100 }, 48_000_000); drain()
@@ -149,7 +164,7 @@ class IslandAudioSpectrumTest {
         start()
         for (rate in listOf(44_100_000, 48_000_000, 96_000_000, 192_000_000)) {
             val fft = ByteArray(1024)
-            val bin = kotlin.math.round(1000f * fft.size / (rate / 1000f)).toInt()
+            val bin = kotlin.math.round(1500f * fft.size / (rate / 1000f)).toInt()
             fft[bin * 2] = 64
             backend.listener!!(fft, rate); drain()
             assertTrue("rate=$rate", frames.last()!![2] > .1f)

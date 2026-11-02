@@ -21,8 +21,8 @@ class IslandAbsorptionContinuityTest {
             val shell = RectF(300f, 20f, 700f, 20f + height)
             val frame = IslandMusicReturnSignal.Frame("chosen.music", android.os.Process.myUserHandle(),
                 shell.left, shell.top, shell.right, shell.bottom, 1080, 2400)
-            val landing = frame.landingRectangle(absorption = true)
-            assertTrue(landing.height() < frame.landingRectangle().height() * .6f)
+            val landing = frame.landingRectangle()
+            assertTrue(landing.height() < frame.rectangle().height() * .6f)
             assertTrue(landing.centerY() > shell.centerY())
             val intake = IslandAbsorptionMesh.intakeY(shell, landing)
             val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
@@ -123,7 +123,7 @@ class IslandAbsorptionContinuityTest {
         val shell = RectF(300f, 20f, 700f, 60f)
         val frame = IslandMusicReturnSignal.Frame("chosen.music", android.os.Process.myUserHandle(),
             shell.left, shell.top, shell.right, shell.bottom, 1080, 2400)
-        val landing = frame.landingRectangle(absorption = true)
+        val landing = frame.landingRectangle()
         val intake = IslandAbsorptionMesh.intakeY(shell, landing)
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
         IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), landing, .16f, intakeY = intake)

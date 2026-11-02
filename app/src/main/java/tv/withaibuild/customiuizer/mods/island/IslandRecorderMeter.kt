@@ -15,7 +15,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 
 /** Read-only scalar bridge. Never creates an AudioRecord or returns recorded samples. */
 internal object IslandRecorderMeter {
-    internal const val SAMPLE_INTERVAL_MS = 67L
+    internal const val SAMPLE_INTERVAL_MS = 100L
     private const val DESCRIPTOR = "tv.withaibuild.customiuizer.r14.RecorderLevel"
     private const val LEVEL = IBinder.FIRST_CALL_TRANSACTION
     /** Fixed speech display response to a 16-bit peak. Noise remains quiet; no per-frame AGC. */

@@ -4,18 +4,14 @@
 	<color name="color_surface_container">#1C1C1D</color>
 	<color name="color_on_surface">#FFFFFF</color>
 	<color name="color_on_surface_variant">#8A8A8A</color>
-	<color name="color_outline_variant">#14FFFFFF</color>
-	<color name="about_divider">@color/color_outline_variant</color>
 	<color name="highlight_normal_light">#6CB7F9</color>
 
-	<color name="preference_category_text_color">#8A8A8A</color>
 	<color name="preference_primary_text_color">#FFFFFF</color>
 	<color name="preference_primary_text_color_pressed">@color/color_on_surface</color>
 	<color name="preference_secondary_text_color">#8A8A8A</color>
 	<color name="preference_secondary_text_color_pressed">@color/color_on_surface_variant</color>
 	<color name="preference_secondary_text_color_checked">@color/highlight_normal_light</color>
 
-	<color name="hint_edit_text_color">@color/color_on_surface_variant</color>
 
 	<color name="list_item_bg_color_pressed">#14FFFFFF</color>
 	<color name="list_item_bg_color_longpress">#24FFFFFF</color>

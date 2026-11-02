@@ -5,41 +5,33 @@
   },
   "children": [
     {
-      "type": "section",
+      "type": "toggle",
       "attributes": {
-        "android:title": "@string/system_island_chat_title"
-      },
-      "children": [
-        {
-          "type": "toggle",
-          "attributes": {
-            "android:key": "pref_key_system_island_chat",
-            "android:title": "@string/system_island_chat_title",
-            "android:defaultValue": "false",
-            "android:summary": "@string/system_island_chat_summ"
-          }
-        },
-        {
-          "type": "action",
-          "attributes": {
-            "android:key": "pref_key_system_island_notification_apps",
-            "android:title": "@string/system_island_notification_apps_title",
-            "android:summary": "@string/system_island_notification_apps_summ",
-            "android:dependency": "pref_key_system_island_chat",
-            "app:countAsSummary": "true"
-          }
-        },
-        {
-          "type": "action",
-          "attributes": {
-            "android:key": "pref_key_system_island_chat_excluded_apps",
-            "android:title": "@string/system_island_chat_excluded_apps_title",
-            "android:summary": "@string/system_island_chat_excluded_apps_summ",
-            "android:dependency": "pref_key_system_island_chat",
-            "app:countAsSummary": "true"
-          }
-        }
-      ]
+        "android:key": "pref_key_system_island_chat",
+        "android:title": "@string/system_island_chat_title",
+        "android:defaultValue": "false",
+        "android:summary": "@string/system_island_chat_summ"
+      }
+    },
+    {
+      "type": "action",
+      "attributes": {
+        "android:key": "pref_key_system_island_notification_apps",
+        "android:title": "@string/system_island_notification_apps_title",
+        "android:summary": "@string/system_island_notification_apps_summ",
+        "android:dependency": "pref_key_system_island_chat",
+        "app:countAsSummary": "true"
+      }
+    },
+    {
+      "type": "action",
+      "attributes": {
+        "android:key": "pref_key_system_island_chat_excluded_apps",
+        "android:title": "@string/system_island_chat_excluded_apps_title",
+        "android:summary": "@string/system_island_chat_excluded_apps_summ",
+        "android:dependency": "pref_key_system_island_chat",
+        "app:countAsSummary": "true"
+      }
     }
   ]
 }

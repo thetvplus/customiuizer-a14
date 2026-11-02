@@ -2,13 +2,16 @@ package tv.withaibuild.customiuizer.mods
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.PowerManager
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Insets
 import android.graphics.Matrix
-import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
@@ -17,8 +20,8 @@ import android.graphics.drawable.Drawable
 import android.view.RoundedCorner
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewOutlineProvider
 import android.view.ViewTreeObserver
+import android.view.WindowManager
 import android.view.WindowInsets
 import android.view.animation.AnimationSet
 import android.view.animation.DecelerateInterpolator
@@ -37,6 +40,7 @@ import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
 import java.lang.ref.WeakReference
+import java.util.function.Consumer
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -66,6 +70,44 @@ object LauncherDockBackground {
             val callback = signatureAndHook.last() as MethodHook
             val method = XposedHelpers.findMethodExact(type, name, *signatureAndHook.copyOf(signatureAndHook.size - 1))
             hooks.add(method to callback)
+        }
+        val launcher = XposedHelpers.findClass("com.miui.home.launcher.Launcher", lpparam.classLoader)
+        if (content != null) {
+            // Recents can hide only the native content while HotSeats itself remains visible
+            // at alpha 1. Its state owns the decoration too, independent of blur backend.
+            val overview = XposedHelpers.findClass("com.miui.home.recents.OverviewState", lpparam.classLoader)
+            for ((name, visible) in listOf("onStateEnabled" to false, "onExitState" to true)) {
+                prepare(overview, name, launcher, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) {
+                        if (callback.getThrowable() != null) return
+                        callback.getArg(0)?.let { content.hostFromLauncher(it) }
+                            ?.let { findBackground(it)?.setSceneVisible(visible) }
+                    }
+                })
+            }
+        }
+        val sceneAlpha = XposedHelpers.findMethodExactIfExists(launcher, "setScreenContentAlpha", Float::class.javaPrimitiveType)
+        val sceneTransforms = listOf("setTranslationX", "setTranslationY", "setScaleY").map {
+            XposedHelpers.findMethodExactIfExists(hotseats, it, Float::class.javaPrimitiveType)
+                ?.takeIf { method -> method.declaringClass === hotseats }
+        }
+        // These Launcher/HotSeats declarations carry native scene changes. Never hook View setters.
+        val visualEvents = config.opacity > 0 && content != null && sceneAlpha != null && sceneTransforms.all { it != null }
+        if (visualEvents) {
+            hooks.add(sceneAlpha to object : MethodHook() {
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() != null) return
+                    callback.getThisObject()?.let { content.hostFromLauncher(it) }
+                        ?.let { findBackground(it)?.scheduleVisualSync() }
+                }
+            })
+            val visualHook = object : MethodHook() {
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() == null)
+                        findBackground(callback.getThisObject() as FrameLayout)?.scheduleVisualSync()
+                }
+            }
+            sceneTransforms.forEach { hooks.add(it!! to visualHook) }
         }
         prepare(hotseats, "onMeasure", Int::class.javaPrimitiveType,
             Int::class.javaPrimitiveType, hotseatMeasureHook())
@@ -105,7 +147,6 @@ object LauncherDockBackground {
             // transformation; do not invoke getTransformation again or replace a native listener.
             prepare(AnimationSet::class.java, "getTransformation",
                 Long::class.javaPrimitiveType, Transformation::class.java, editingTransformationHook())
-            val launcher = XposedHelpers.findClass("com.miui.home.launcher.Launcher", lpparam.classLoader)
             prepare(launcher, "showBottomAreaEditPanelIfNeed", View::class.java,
                 Boolean::class.javaPrimitiveType, object : MethodHook() {
                     override fun after(callback: AfterHookCallback) {
@@ -121,7 +162,7 @@ object LauncherDockBackground {
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
                 val host = callback.getThisObject() as FrameLayout
-                attach(host, config, material, content)
+                attach(host, config, material, content, visualEvents = visualEvents)
             }
         })
         check(installDockBackgroundHooks(hooks)) { "Dock background Hook group incomplete" }
@@ -172,6 +213,7 @@ object LauncherDockBackground {
 
     internal fun attach(host: FrameLayout, config: DockBackgroundConfig, material: Constructor<*>?,
         content: DockContentAccess? = null,
+        visualEvents: Boolean = false,
     ) {
         if (config.fullWidth && !host.isAttachedToWindow) {
             if (XposedHelpers.getAdditionalInstanceField(host, FULL_WIDTH_OWNER) != null) return
@@ -181,7 +223,7 @@ object LauncherDockBackground {
                     XposedHelpers.removeAdditionalInstanceField(v, FULL_WIDTH_OWNER)
                     // This listener is also a value in the global weak-key field table.
                     // Use the callback owner so its value cannot keep its own key alive.
-                    attach(v as FrameLayout, config, material, content)
+                    attach(v as FrameLayout, config, material, content, visualEvents)
                 }
                 override fun onViewDetachedFromWindow(v: View) = Unit
             }
@@ -196,7 +238,7 @@ object LauncherDockBackground {
         val container = if (config.fullWidth) host.rootView as? FrameLayout ?: host else host
         val full = config.fullWidth && container !== host
         val decoration = DockBackgroundView(host.context, if (full) config else config.copy(fullWidth = false),
-            material, content, if (full) host else null)
+            material, content, if (full) host else null, visualEvents)
         val inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
         val layer = if (full) DockFullWidthContainer(host.context).also {
             container.addView(it, 0, FrameLayout.LayoutParams(-1, -1))
@@ -306,6 +348,7 @@ internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Cl
     val dragControllerType: Class<*>? get() = if (hotseats != null) dragController?.type else null
 
     fun host(controller: Any): FrameLayout? = launcher?.get(controller)?.let { hotseats?.get(it) as? FrameLayout }
+    fun hostFromLauncher(owner: Any): FrameLayout? = hotseats?.get(owner) as? FrameLayout
 
     fun isDragging(host: ViewGroup): Boolean {
         val controller = dragController?.get(host) ?: return false
@@ -389,11 +432,13 @@ internal class DockBackgroundView(
     private val materialConstructor: Constructor<*>?,
     private val contentAccess: DockContentAccess? = null,
     layoutHost: FrameLayout? = null,
+    private val visualEvents: Boolean = false,
 ) : FrameLayout(context), ViewTreeObserver.OnPreDrawListener, View.OnLayoutChangeListener {
     private val fullWidthHost = WeakReference(layoutHost)
     private val tint = DockBackgroundTint()
     private var nativeMaterial: View? = null
     private var materialEnabled = false
+    private var materialUnavailable = false
     private var opacityDrawable: Drawable? = null
     private var appliedDrawableAlpha = -1
     private var googleBlur = false
@@ -417,10 +462,14 @@ internal class DockBackgroundView(
     private var pendingVisualWidth = 0f
     private var widthAnimation: ValueAnimator? = null
     private var widthStartScale = 1f
-    private val materialOutline = object : ViewOutlineProvider() {
-        override fun getOutline(view: View, outline: Outline) {
-            outline.setRoundRect(0, 0, view.width, view.height, tint.radius)
-        }
+    private var visualReady = false
+    private var sceneShown = true
+    private val windowManager = context.getSystemService(WindowManager::class.java)
+    private val powerManager = context.getSystemService(PowerManager::class.java)
+    private var observingBlur = false
+    private val blurChanged = Consumer<Boolean> { ModuleHelper.guarded { materialUnavailable = false; refreshBlurPolicy() } }
+    private val powerChanged = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) { ModuleHelper.guarded { materialUnavailable = false; refreshBlurPolicy() } }
     }
 
     init {
@@ -430,6 +479,7 @@ internal class DockBackgroundView(
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         foreground = tint
         setWillNotDraw(true)
+        visualReady = true
     }
 
     override fun onAttachedToWindow() {
@@ -437,6 +487,8 @@ internal class DockBackgroundView(
         ModuleHelper.guarded {
             readScreenRadius(rootWindowInsets)
             navigationInsets = rootWindowInsets?.getInsets(WindowInsets.Type.navigationBars()) ?: Insets.NONE
+            materialUnavailable = false
+            observeBlurPolicy(true)
             installMaterial()
             syncNativeMaterialVisibility(isShown)
             refreshAppearance()
@@ -445,30 +497,32 @@ internal class DockBackgroundView(
     }
 
     private fun installMaterial() {
-        if (nativeMaterial != null || materialConstructor == null || config.opacity == 0) return
+        if (nativeMaterial != null || materialUnavailable || materialConstructor == null || config.material != 2 || config.opacity == 0 || !blurAllowed()) return
         var candidate: View? = null
         try {
             candidate = materialConstructor.newInstance(context) as View
             googleBlur = XposedHelpers.callMethod(candidate, "isGoogleBlurSupported") == true
             val supported = googleBlur || XposedHelpers.callMethod(candidate, "isBackdropBlurSupported") == true
-            if (!supported) return
+            if (!supported) { materialUnavailable = true; return }
             candidate.isClickable = false
             candidate.isFocusable = false
             candidate.importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             candidate.alpha = config.opacity / 100f
-            // Gaussian already has native drawable corners; a second RenderNode clip is redundant.
-            if (config.material == 0) {
-                candidate.outlineProvider = materialOutline
-                candidate.clipToOutline = true
-            }
-            XposedHelpers.callMethod(candidate, "setBlurRadius", blurRadius())
+            // This decoration already owns its rounded contour. HyperOS SmoothCorner
+            // snapshots a null SkSurface when Recents draws this extra native material.
+            // Disable only our material's vendor corner pass, never the host/global flag.
+            XposedHelpers.findMethodExactIfExists(View::class.java, "setSmoothCornerEnabled",
+                Boolean::class.javaPrimitiveType)?.invoke(candidate, false)
+            candidate.visibility = INVISIBLE
             XposedHelpers.callMethod(candidate, "setCornerRadius", tint.radius)
-            XposedHelpers.callMethod(candidate, "setBlurEnabled", true)
-            configureGlassBlend(candidate)
+            XposedHelpers.callMethod(candidate, "setBlurEnabled", false)
+            candidate.addOnLayoutChangeListener(this)
             addView(candidate, LayoutParams(-1, -1))
             nativeMaterial = candidate
-            materialEnabled = true
+            materialEnabled = false
+            candidate.background?.let { applyNativeOpacity(it, 0) }
         } catch (error: Throwable) {
+            materialUnavailable = true
             googleBlur = false
             materialEnabled = false
             try {
@@ -480,10 +534,7 @@ internal class DockBackgroundView(
         }
     }
 
-    private fun blurRadius(): Int = when (config.material) {
-        2 -> (35 * resources.displayMetrics.density).roundToInt()
-        else -> 12
-    }
+    private fun blurRadius(): Int = (35 * resources.displayMetrics.density).roundToInt()
 
     private fun configureGlassBlend(material: View) {
         if (config.material != 2 || !googleBlur) return
@@ -505,6 +556,7 @@ internal class DockBackgroundView(
                 cancelGeometry()
                 observeContent(null)
                 clearEditingAnimation()
+                observeBlurPolicy(false)
                 retireMaterial()
             }
         } finally {
@@ -514,12 +566,17 @@ internal class DockBackgroundView(
 
     private fun retireMaterial() {
         val material = nativeMaterial ?: return
+        material.removeOnLayoutChangeListener(this)
+        val enabled = materialEnabled
         nativeMaterial = null
         materialEnabled = false
         googleBlur = false
         opacityDrawable = null
         appliedDrawableAlpha = -1
-        ModuleHelper.guarded { material.background?.alpha = 0 }
+        ModuleHelper.guarded {
+            material.background?.alpha = 0
+            if (enabled) XposedHelpers.callMethod(material, "setBlurEnabled", false)
+        }
         try {
             removeView(material)
         } finally {
@@ -541,8 +598,11 @@ internal class DockBackgroundView(
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
         ModuleHelper.guarded {
+            val previousRadius = screenRadius
             readScreenRadius(insets)
             val navigation = insets.getInsets(WindowInsets.Type.navigationBars())
+            val changed = navigation != navigationInsets || screenRadius != previousRadius
+            if (!changed) return@guarded
             if (navigation != navigationInsets) cancelWidthAnimation()
             navigationInsets = navigation
             updateGeometry()
@@ -562,6 +622,8 @@ internal class DockBackgroundView(
             if (!isVisible) cancelWidthAnimation()
             if (isVisible) scheduleGeometry() else if (editingAnimation == null) cancelGeometry()
             val drawingAnimation = editingAnimation != null
+            observeBlurPolicy(isVisible || drawingAnimation)
+            if (isVisible || drawingAnimation) refreshBlurPolicy()
             if (!isVisible && drawingAnimation) nativeMaterial?.onVisibilityAggregated(true)
             syncNativeMaterialVisibility(isVisible || drawingAnimation)
         }
@@ -574,10 +636,13 @@ internal class DockBackgroundView(
             // Keyguard can replace the window surface without changing View visibility.
             // Retire the old blur region while hidden and restore it once on return.
             if (visibility != VISIBLE) {
+                observeBlurPolicy(false)
                 cancelWidthAnimation()
                 cancelGeometry()
                 syncNativeMaterialVisibility(false)
             } else {
+                observeBlurPolicy(isShown)
+                refreshBlurPolicy()
                 syncNativeMaterialVisibility(isShown || editingAnimation != null)
                 scheduleGeometry()
             }
@@ -586,7 +651,7 @@ internal class DockBackgroundView(
 
     internal fun bindEditingAnimation(animation: AnimationSet, showing: Boolean) {
         cancelWidthAnimation()
-        if ((!config.fullWidth && !googleBlur) || !isAttachedToWindow) return
+        if ((!config.fullWidth && !googleBlur) || !isAttachedToWindow || !sceneShown) return
         if (editingAnimation === animation && animation.startTime != -1L) return
         clearEditingAnimation()
         editingAnimation = animation
@@ -623,12 +688,106 @@ internal class DockBackgroundView(
         syncFullWidthHost()
         nativeMaterial?.onVisibilityAggregated(isShown)
         syncNativeMaterialVisibility(isShown)
+        observeBlurPolicy(isShown)
     }
 
-    private fun syncNativeMaterialVisibility(requestedVisible: Boolean, frameOpacity: Int = -1) {
+    private fun blurAllowed(): Boolean = powerManager?.isPowerSaveMode != true &&
+        windowManager?.isCrossWindowBlurEnabled == true
+
+    private fun refreshBlurPolicy() {
+        if (!isAttachedToWindow) return
+        if (!blurAllowed()) retireMaterial()
+        else if (windowVisibility == VISIBLE && (isShown || editingAnimation != null)) installMaterial()
+        syncNativeMaterialVisibility(isShown || editingAnimation != null)
+        scheduleVisualSync()
+    }
+
+    private fun observeBlurPolicy(visible: Boolean) {
+        val needed = visible && isAttachedToWindow && windowVisibility == VISIBLE && config.opacity > 0 && config.material == 2 && materialConstructor != null
+        if (needed == observingBlur) return
+        if (needed) {
+            context.registerReceiver(powerChanged, IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED), Context.RECEIVER_NOT_EXPORTED)
+            try {
+                windowManager?.addCrossWindowBlurEnabledListener(context.mainExecutor, blurChanged)
+                observingBlur = true
+            } catch (error: Throwable) {
+                context.unregisterReceiver(powerChanged)
+                throw error
+            }
+        } else {
+            observingBlur = false
+            try { windowManager?.removeCrossWindowBlurEnabledListener(blurChanged) }
+            finally { context.unregisterReceiver(powerChanged) }
+        }
+    }
+
+    internal fun scheduleVisualSync() {
+        if (visualReady && isAttachedToWindow && windowVisibility == VISIBLE && (isShown || editingAnimation != null)) observeFrames()
+    }
+
+    internal fun setSceneVisible(visible: Boolean) {
+        if (sceneShown == visible) return
+        sceneShown = visible
+        if (!visible) {
+            clearEditingAnimation()
+            cancelWidthAnimation()
+            cancelGeometry()
+            observeBlurPolicy(false)
+            syncNativeMaterialVisibility(false)
+        }
+        visibility = if (visible) VISIBLE else INVISIBLE
+        if (visible && isAttachedToWindow) {
+            refreshBlurPolicy()
+            scheduleGeometry()
+        }
+    }
+
+    override fun setAlpha(value: Float) {
+        val changed = alpha != value
+        super.setAlpha(value)
+        if (changed) scheduleVisualSync()
+    }
+
+    override fun setScaleX(value: Float) {
+        val changed = scaleX != value
+        super.setScaleX(value)
+        if (changed) scheduleVisualSync()
+    }
+
+    override fun setScaleY(value: Float) {
+        val changed = scaleY != value
+        super.setScaleY(value)
+        if (changed) scheduleVisualSync()
+    }
+
+    override fun setTranslationX(value: Float) {
+        val changed = translationX != value
+        super.setTranslationX(value)
+        if (changed) scheduleVisualSync()
+    }
+
+    override fun setTranslationY(value: Float) {
+        val changed = translationY != value
+        super.setTranslationY(value)
+        if (changed) scheduleVisualSync()
+    }
+
+    private fun syncNativeMaterialVisibility(requestedVisible: Boolean, frameOpacity: Int = -1,
+        frameReady: Boolean = false,
+    ) {
         val material = nativeMaterial ?: return
+        // Hiding is immediate. Positive lifecycle events only request a finite native frame;
+        // activation belongs after that frame has settled layout, contour and host transform.
+        if (requestedVisible && !frameReady) {
+            // A native editing handoff may immediately lower the alpha of an existing
+            // drawable, but cannot activate a new material before geometry is ready.
+            if (materialEnabled && editingAnimation != null) syncNativeOpacity()
+            scheduleVisualSync()
+            return
+        }
         try {
-            val isVisible = requestedVisible && windowVisibility == VISIBLE
+            val isVisible = requestedVisible && sceneShown && windowVisibility == VISIBLE &&
+                width > 0 && height > 0 && material.width == width && material.height == height
             // Retire the Google region before the SDK clears its background; disable the MIUI binder too.
             if (!isVisible) material.background?.let { applyNativeOpacity(it, 0) }
             if (materialEnabled != isVisible) {
@@ -640,14 +799,15 @@ internal class DockBackgroundView(
                 materialEnabled = isVisible
                 if (isVisible) configureGlassBlend(material)
             }
-            val visibility = if (isVisible) VISIBLE else INVISIBLE
-            if (material.visibility != visibility) material.visibility = visibility
             if (isVisible) material.background?.let { drawable ->
                 val alpha = if (googleBlur) {
                     if (frameOpacity >= 0) frameOpacity else nativeBlurAlpha()
                 } else (config.opacity * 2.55f).roundToInt()
-                applyNativeOpacity(drawable, alpha)
+                applyNativeOpacity(drawable, alpha, material.width, material.height)
             }
+            // Publish visibility last, with the native drawable already using this frame's bounds/alpha.
+            val visibility = if (isVisible) VISIBLE else INVISIBLE
+            if (material.visibility != visibility) material.visibility = visibility
         } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
             retireMaterial()
@@ -671,7 +831,11 @@ internal class DockBackgroundView(
 
     override fun onLayoutChange(view: View, left: Int, top: Int, right: Int, bottom: Int,
         oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
-    ) { scheduleGeometry() }
+    ) {
+        // A policy/visibility callback may create the child after the parent's layout.
+        // Its own settled bounds wake one commit, even if the earlier PreDraw retired.
+        if (view === nativeMaterial) scheduleVisualSync() else scheduleGeometry()
+    }
 
     private fun cancelGeometry() {
         pendingObserver?.let { if (it.isAlive) it.removeOnPreDrawListener(this) }
@@ -726,9 +890,10 @@ internal class DockBackgroundView(
     private fun syncNativeOpacity(frameOpacity: Int = -1) {
         if (!googleBlur || !materialEnabled) return
         try {
-            val drawable = nativeMaterial?.background ?: return
+            val material = nativeMaterial ?: return
+            val drawable = material.background ?: return
             val alpha = if (frameOpacity >= 0) frameOpacity else nativeBlurAlpha()
-            applyNativeOpacity(drawable, alpha)
+            applyNativeOpacity(drawable, alpha, material.width, material.height)
         } catch (error: Throwable) {
             FatalErrors.unwrapAndRethrowIfFatal(error)
             retireMaterial()
@@ -736,18 +901,22 @@ internal class DockBackgroundView(
         }
     }
 
-    private fun applyNativeOpacity(drawable: Drawable, alpha: Int) {
+    private fun applyNativeOpacity(drawable: Drawable, alpha: Int, width: Int = -1, height: Int = -1) {
         // A14 BackgroundBlurDrawable.setAlpha writes mAlpha but inherits Drawable.getAlpha,
         // which returns 255. Read-back therefore cannot tell whether this region is transparent.
         // Track only this owner's last write, scoped to the current native drawable identity.
         val previous = if (opacityDrawable === drawable) appliedDrawableAlpha else -1
-        if (previous == alpha) return
-        drawable.alpha = alpha
-        opacityDrawable = drawable
-        appliedDrawableAlpha = alpha
-        if (previous <= 0 && alpha > 0) {
-            val bounds = drawable.bounds
-            drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+        if (previous != alpha) {
+            drawable.alpha = alpha
+            opacityDrawable = drawable
+            appliedDrawableAlpha = alpha
+        }
+        val bounds = drawable.bounds
+        val sized = width > 0 && height > 0
+        val changed = sized && (bounds.left != 0 || bounds.top != 0 || bounds.right != width || bounds.bottom != height)
+        if (alpha > 0 && (previous <= 0 || changed)) {
+            if (sized) drawable.setBounds(0, 0, width, height)
+            else drawable.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
         }
     }
 
@@ -757,125 +926,130 @@ internal class DockBackgroundView(
             if (editingAnimation != null && (fullWidthHost.get() ?: parent as? View)?.animation !== editingAnimation)
                 finishEditingAnimation()
             if (config.opacity > 0) syncFullWidthHost()
-            // Reuse only within this synchronous pass, after the full-width transform is applied.
-            // Draw and legacy animation callbacks take their own current snapshot.
-            val opacity = if (config.opacity > 0 && (config.fullWidth && nativeMaterial != null || googleBlur && materialEnabled)) nativeBlurAlpha() else 0
             val host = fullWidthHost.get() ?: parent as? FrameLayout ?: return@guarded
-            if (config.opacity > 0 && config.fullWidth) {
-                syncNativeMaterialVisibility(isShown && opacity > 0, opacity)
+            ready = updateFrameGeometry(host)
+            if (ready && !geometryPending) {
+                val opacity = if (config.opacity > 0 && nativeMaterial != null) nativeBlurAlpha() else 0
+                val drawingAnimation = editingAnimation != null
+                syncNativeMaterialVisibility(drawingAnimation || isShown && opacity > 0, opacity, frameReady = true)
             }
-            syncNativeOpacity(opacity)
-            if (!geometryPending) return@guarded
-            geometryPending = false
-            if (!isShown || host.height <= 0) return@guarded
-            val dragging = contentAccess?.isDragging(host) == true
-            val sceneActive = editingAnimation != null || host.animation?.hasEnded() == false ||
-                widthAnimation?.isStarted != true && (alpha != 1f || scaleX != 1f || scaleY != 1f ||
-                    translationX != 0f || translationY != 0f)
-            val sameHostSize = host.width == lastHostWidth && host.height == lastHostHeight
-            if (dragging || sceneActive || !sameHostSize) cancelWidthAnimation()
-            contentBounds.setEmpty()
-            var rowAvailable = false
-            var iconCount = -1
-            if (!config.fullWidth && !dragging && !contentFailed && contentAccess != null) try {
-                val row = contentAccess.content(host)
-                observeContent(row)
-                if (row != null) {
-                    iconCount = contentAccess.bounds(host, row, contentBounds, scratch)
-                    rowAvailable = true
-                }
-            } catch (error: Throwable) {
-                FatalErrors.unwrapAndRethrowIfFatal(error)
-                contentFailed = true
-                observeContent(null)
-                contentBounds.setEmpty()
-                XposedHelpers.log("Dock background: native bounds unavailable", error)
-            }
-            val root = rootView as? ViewGroup ?: return@guarded
-            // Layout coordinates exclude the launcher's scale/translation animations.
-            scratch.set(0, 0, host.width, host.height)
-            root.offsetDescendantRectToMyCoords(host, scratch)
-            val density = resources.displayMetrics.density
-            val params = layoutParams as? LayoutParams
-            // An empty native row has no panel; keep the View attached for the next native layout.
-            safeBounds.set(maxOf(host.paddingLeft, navigationInsets.left - scratch.left),
-                maxOf(host.paddingTop, navigationInsets.top - scratch.top),
-                minOf(host.width - host.paddingRight, root.width - navigationInsets.right - scratch.left),
-                minOf(host.height - host.paddingBottom, root.height - navigationInsets.bottom - scratch.top))
-            // Also honor every clipping ancestor in layout space. Do not use animation-transformed
-            // global visible rects to feed geometry back into native launch/return transitions.
-            var ancestor = host.parent as? ViewGroup
-            while (ancestor != null) {
-                if (ancestor.clipChildren) {
-                    targetBounds.set(if (ancestor.clipToPadding) ancestor.paddingLeft else 0,
-                        if (ancestor.clipToPadding) ancestor.paddingTop else 0,
-                        ancestor.width - if (ancestor.clipToPadding) ancestor.paddingRight else 0,
-                        ancestor.height - if (ancestor.clipToPadding) ancestor.paddingBottom else 0)
-                    root.offsetDescendantRectToMyCoords(ancestor, targetBounds)
-                    targetBounds.offset(-scratch.left, -scratch.top)
-                    if (!safeBounds.intersect(targetBounds)) safeBounds.setEmpty()
-                }
-                if (ancestor === root) break
-                ancestor = ancestor.parent as? ViewGroup
-            }
-            if (config.fullWidth) {
-                // A separate decoration under the root owns the strip; no native icon layout,
-                // ancestor clipping or touch bounds are changed. Include the navigation area.
-                val top = scratch.top + host.paddingTop
-                targetBounds.set(0, top.coerceIn(0, root.height), root.width, root.height)
-            } else if (dragging && params != null) {
-                targetBounds.set(left, top, right, bottom)
-                DockBackgroundGeometry.constrain(targetBounds, safeBounds, targetBounds)
-            } else if (!contentBounds.isEmpty) {
-                DockBackgroundGeometry.fit(contentBounds, safeBounds,
-                    (config.sideInsetDp * density).roundToInt(), config.sizeAdjustmentDp * density, targetBounds)
-            } else if (rowAvailable || safeBounds.isEmpty) {
-                targetBounds.setEmpty()
-            } else {
-                // Native metadata unavailable: retain the bounded legacy panel fallback.
-                val inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * density).roundToInt()
-                targetBounds.set(safeBounds)
-                targetBounds.inset(minOf(inset, (safeBounds.width() - 1) / 2), 0)
-                DockBackgroundGeometry.constrain(targetBounds, safeBounds, targetBounds)
-            }
-            val panelWidth = targetBounds.width().coerceAtLeast(0)
-            val panelHeight = targetBounds.height().coerceAtLeast(0)
-            val leftInset = targetBounds.left - if (config.fullWidth) 0 else host.paddingLeft
-            val rightInset = if (config.fullWidth) 0 else host.width - host.paddingRight - targetBounds.right
-            val topInset = targetBounds.top - if (config.fullWidth) 0 else host.paddingTop
-            val bottomInset = if (config.fullWidth) 0 else host.height - host.paddingBottom - targetBounds.bottom
-            val countChanged = rowAvailable && lastIconCount > 0 && iconCount > 0 && iconCount != lastIconCount
-            val canAnimate = !config.fullWidth && countChanged && sameHostSize && !dragging && !sceneActive && ValueAnimator.areAnimatorsEnabled()
-            if (params != null && (params.width != panelWidth || params.height != panelHeight || params.leftMargin != leftInset || params.rightMargin != rightInset ||
-                    params.topMargin != topInset || params.bottomMargin != bottomInset)) {
-                val targetWidth = panelWidth
-                val visualWidth = width * scaleX
-                if (canAnimate && width > 0 && targetWidth > 0 && targetWidth != width) {
-                    cancelWidthAnimation()
-                    pendingVisualWidth = visualWidth
-                } else if (pendingVisualWidth == 0f || targetWidth <= 0) cancelWidthAnimation()
-                params.width = panelWidth
-                params.height = panelHeight
-                params.leftMargin = leftInset
-                params.rightMargin = rightInset
-                params.topMargin = topInset
-                params.bottomMargin = bottomInset
-                layoutParams = params
-                ready = false // apply the new geometry before presenting it
-                geometryPending = true
-            }
-            if (!dragging) lastIconCount = iconCount
-            lastHostWidth = host.width
-            lastHostHeight = host.height
-            if (ready && !sceneActive) {
-                pivotX = width * 0.5f
-                pivotY = height * 0.5f
-                if (!dragging && !sceneActive) animatePendingWidth()
-            }
-            updateGeometry()
         }
-        if (!geometryPending && (config.opacity == 0 ||
-                !config.fullWidth && !(googleBlur && materialEnabled))) cancelGeometry()
+        if (!geometryPending && (visualEvents && editingAnimation == null || config.opacity == 0 ||
+                !config.fullWidth && !googleBlur)) cancelGeometry()
+        return ready
+    }
+
+    /** Geometry changes settle before the native material can become visible in this frame. */
+    private fun updateFrameGeometry(host: FrameLayout): Boolean {
+        var ready = true
+        if (!geometryPending) return true
+        geometryPending = false
+        if (!isShown || host.height <= 0) return true
+        val dragging = contentAccess?.isDragging(host) == true
+        val sceneActive = editingAnimation != null || host.animation?.hasEnded() == false ||
+            widthAnimation?.isStarted != true && (alpha != 1f || scaleX != 1f || scaleY != 1f ||
+                translationX != 0f || translationY != 0f)
+        val sameHostSize = host.width == lastHostWidth && host.height == lastHostHeight
+        if (dragging || sceneActive || !sameHostSize) cancelWidthAnimation()
+        contentBounds.setEmpty()
+        var rowAvailable = false
+        var iconCount = -1
+        if (!config.fullWidth && !dragging && !contentFailed && contentAccess != null) try {
+            val row = contentAccess.content(host)
+            observeContent(row)
+            if (row != null) {
+                iconCount = contentAccess.bounds(host, row, contentBounds, scratch)
+                rowAvailable = true
+            }
+        } catch (error: Throwable) {
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            contentFailed = true
+            observeContent(null)
+            contentBounds.setEmpty()
+            XposedHelpers.log("Dock background: native bounds unavailable", error)
+        }
+        val root = rootView as? ViewGroup ?: return true
+        // Layout coordinates exclude the launcher's scale/translation animations.
+        scratch.set(0, 0, host.width, host.height)
+        root.offsetDescendantRectToMyCoords(host, scratch)
+        val density = resources.displayMetrics.density
+        val params = layoutParams as? LayoutParams
+        // An empty native row has no panel; keep the View attached for the next native layout.
+        safeBounds.set(maxOf(host.paddingLeft, navigationInsets.left - scratch.left),
+            maxOf(host.paddingTop, navigationInsets.top - scratch.top),
+            minOf(host.width - host.paddingRight, root.width - navigationInsets.right - scratch.left),
+            minOf(host.height - host.paddingBottom, root.height - navigationInsets.bottom - scratch.top))
+        // Also honor every clipping ancestor in layout space. Do not use animation-transformed
+        // global visible rects to feed geometry back into native launch/return transitions.
+        var ancestor = host.parent as? ViewGroup
+        while (ancestor != null) {
+            if (ancestor.clipChildren) {
+                targetBounds.set(if (ancestor.clipToPadding) ancestor.paddingLeft else 0,
+                    if (ancestor.clipToPadding) ancestor.paddingTop else 0,
+                    ancestor.width - if (ancestor.clipToPadding) ancestor.paddingRight else 0,
+                    ancestor.height - if (ancestor.clipToPadding) ancestor.paddingBottom else 0)
+                root.offsetDescendantRectToMyCoords(ancestor, targetBounds)
+                targetBounds.offset(-scratch.left, -scratch.top)
+                if (!safeBounds.intersect(targetBounds)) safeBounds.setEmpty()
+            }
+            if (ancestor === root) break
+            ancestor = ancestor.parent as? ViewGroup
+        }
+        if (config.fullWidth) {
+            // A separate decoration under the root owns the strip; no native icon layout,
+            // ancestor clipping or touch bounds are changed. Include the navigation area.
+            val top = scratch.top + host.paddingTop
+            targetBounds.set(0, top.coerceIn(0, root.height), root.width, root.height)
+        } else if (dragging && params != null) {
+            targetBounds.set(left, top, right, bottom)
+            DockBackgroundGeometry.constrain(targetBounds, safeBounds, targetBounds)
+        } else if (!contentBounds.isEmpty) {
+            DockBackgroundGeometry.fit(contentBounds, safeBounds,
+                (config.sideInsetDp * density).roundToInt(), config.sizeAdjustmentDp * density, targetBounds)
+        } else if (rowAvailable || safeBounds.isEmpty) {
+            targetBounds.setEmpty()
+        } else {
+            // Native metadata unavailable: retain the bounded legacy panel fallback.
+            val inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * density).roundToInt()
+            targetBounds.set(safeBounds)
+            targetBounds.inset(minOf(inset, (safeBounds.width() - 1) / 2), 0)
+            DockBackgroundGeometry.constrain(targetBounds, safeBounds, targetBounds)
+        }
+        val panelWidth = targetBounds.width().coerceAtLeast(0)
+        val panelHeight = targetBounds.height().coerceAtLeast(0)
+        val leftInset = targetBounds.left - if (config.fullWidth) 0 else host.paddingLeft
+        val rightInset = if (config.fullWidth) 0 else host.width - host.paddingRight - targetBounds.right
+        val topInset = targetBounds.top - if (config.fullWidth) 0 else host.paddingTop
+        val bottomInset = if (config.fullWidth) 0 else host.height - host.paddingBottom - targetBounds.bottom
+        val countChanged = rowAvailable && lastIconCount > 0 && iconCount > 0 && iconCount != lastIconCount
+        val canAnimate = !config.fullWidth && countChanged && sameHostSize && !dragging && !sceneActive && ValueAnimator.areAnimatorsEnabled()
+        if (params != null && (params.width != panelWidth || params.height != panelHeight || params.leftMargin != leftInset || params.rightMargin != rightInset ||
+                params.topMargin != topInset || params.bottomMargin != bottomInset)) {
+            val targetWidth = panelWidth
+            val visualWidth = width * scaleX
+            if (canAnimate && width > 0 && targetWidth > 0 && targetWidth != width) {
+                cancelWidthAnimation()
+                pendingVisualWidth = visualWidth
+            } else if (pendingVisualWidth == 0f || targetWidth <= 0) cancelWidthAnimation()
+            params.width = panelWidth
+            params.height = panelHeight
+            params.leftMargin = leftInset
+            params.rightMargin = rightInset
+            params.topMargin = topInset
+            params.bottomMargin = bottomInset
+            layoutParams = params
+            ready = false // apply the new geometry before presenting it
+            geometryPending = true
+        }
+        if (!dragging) lastIconCount = iconCount
+        lastHostWidth = host.width
+        lastHostHeight = host.height
+        if (ready && !sceneActive) {
+            pivotX = width * 0.5f
+            pivotY = height * 0.5f
+            if (!dragging && !sceneActive) animatePendingWidth()
+        }
+        updateGeometry()
         return ready
     }
 

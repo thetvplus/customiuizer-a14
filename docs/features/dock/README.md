@@ -8,6 +8,8 @@
 
 自动圆角沿用原生面板比例，屏幕底部物理圆角仅作上限，浅面板最多取半高的 64%。DockCornerGeometry 统一提供原生圆角矩形外轮廓；所有材质和回退共用同一布局与半径，不把动态岛 G4 胶囊搬到 Dock。半透明填充的原生圆角路径仅在尺寸 / 圆角变化时重建。有效设备圆角缓存至配置 / Insets 变化，临时缺失不重置。
 
+模块创建的原生材质显式关闭该 View 的厂商 SmoothCorner 附加绘制，避免最近任务的离屏合成进入空 SkSurface 快照路径；原生材质圆角与模块轮廓继续生效。不修改宿主其他 View、Drawable 或全局系统属性。
+
 | 机制 | 所有权与回退 |
 | --- | --- |
 | Android BlurController | 模块 system_disable_window_blurs 与系统 disable_window_blurs 取 OR，不重新开启全局模糊 |

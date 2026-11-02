@@ -19,7 +19,7 @@ import org.robolectric.annotation.GraphicsMode
 class IslandStatusLayoutTest {
     @Test fun oneCompleteStatusLineKeepsFullSemanticsAccessibleAndRestoresMediaLabels() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell, FrameLayout.LayoutParams(240, 44))
         val mode = "Enabled"; val action = "Do not disturb mode"
         val ordinaryWidth = shell.textWidth("A saved image")

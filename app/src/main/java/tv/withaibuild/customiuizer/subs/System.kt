@@ -72,6 +72,10 @@ class System : SubFragment() {
         }
     }
 
+    private fun islandEnabled() = StrongToastPresentationMode.fromPreference(
+        AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
+    ) == StrongToastPresentationMode.DYNAMIC_ISLAND
+
     private fun configureIslandOffsetRange() {
         val prefs = AppHelper.appPrefs ?: return
         val offset = findPreference<SeekBarPreference>("pref_key_system_island_horizontal_offset") ?: return
@@ -235,26 +239,28 @@ class System : SubFragment() {
             }
             "pref_key_system_cat_toasts" -> findPreference<Preference>("pref_key_system_blocktoasts_apps")?.setOnPreferenceClickListener(openAppsEdit)
 
-            "pref_key_system_island_feedback_cat", "pref_key_system_island_music_cat" -> {
-                findPreference<MultiSelectListPreference>("pref_key_system_island_live_kinds")?.let { sources ->
-                    sources.setOnPreferenceChangeListener { _, selected ->
-                        @Suppress("UNCHECKED_CAST")
-                        tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected as Set<String>)
-                        true
+            "pref_key_system_island_live_cat" -> {
+                val sources = requireNotNull(findPreference<MultiSelectListPreference>("pref_key_system_island_live_kinds"))
+                for (kind in tv.withaibuild.customiuizer.mods.island.IslandLiveKind.entries) {
+                    findPreference<CheckBoxPreferenceEx>("pref_key_system_island_live_${kind.value}")?.apply {
+                        isChecked = kind.value in sources.values
+                        setOnPreferenceChangeListener { _, value ->
+                            val selected = sources.values.toMutableSet()
+                            if (value == true) selected.add(kind.value) else selected.remove(kind.value)
+                            sources.values = selected
+                            tv.withaibuild.customiuizer.utils.DynamicAppScope.requestForIslandSources(context, selected)
+                            true
+                        }
                     }
                 }
-                val enabled = StrongToastPresentationMode.fromPreference(
-                    AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
-                ) == StrongToastPresentationMode.DYNAMIC_ISLAND
-                // Native Preference dependencies own media/return enablement and propagate
-                // changes through the existing screen; no mirrored checkbox state.
-                preferenceScreen.isEnabled = enabled
-                findPreference<Preference>("pref_key_system_island_media_return_apps")?.setOnPreferenceClickListener(openAppsEdit)
-                for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries) {
-                    findPreference<Preference>("pref_key_${gesture.key}")?.apply {
-                        onPreferenceClickListener = openMusicActions
-                    }
-                }
+                preferenceScreen.isEnabled = islandEnabled()
+            }
+            "pref_key_system_island_feedback_cat" -> preferenceScreen.isEnabled = islandEnabled()
+            "pref_key_system_island_music_cat" -> {
+                preferenceScreen.isEnabled = islandEnabled()
+                val apps = findPreference<Preference>("pref_key_system_island_media_apps")
+                apps?.setOnPreferenceClickListener(openAppsEdit)
+
             }
             "pref_key_system_island_effects_cat" -> {
                 preferenceScreen.isEnabled = StrongToastPresentationMode.fromPreference(
@@ -271,8 +277,7 @@ class System : SubFragment() {
                 ) == StrongToastPresentationMode.DYNAMIC_ISLAND
                 preferenceScreen.isEnabled = enabled
                 val media = AppHelper.appPrefs?.getBoolean("pref_key_system_island_media", false) == true
-                findPreference<Preference>("pref_key_system_island_media_return")?.isEnabled = enabled && media
-                findPreference<Preference>("pref_key_system_island_media_return_apps")?.setOnPreferenceClickListener(openAppsEdit)
+                findPreference<Preference>("pref_key_system_island_media_swipe")?.isEnabled = enabled && media
                 for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
                     findPreference<Preference>("pref_key_${gesture.key}")?.apply {
                         isEnabled = enabled && media
@@ -302,6 +307,9 @@ class System : SubFragment() {
                 }
                 findPreference<Preference>("pref_key_system_island_notifications_cat")?.setOnPreferenceClickListener {
                     openSystemSubFragment(it, false, R.id.prefs_system_island_notifications); true
+                }
+                findPreference<Preference>("pref_key_system_island_live_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.id.prefs_system_island_live); true
                 }
                 findPreference<Preference>("pref_key_system_island_feedback_cat")?.setOnPreferenceClickListener {
                     openSystemSubFragment(it, false, R.id.prefs_system_island_feedback); true
@@ -336,11 +344,7 @@ class System : SubFragment() {
                 showIslandOffset(strongToastMode?.value ?: AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode"))
                 islandOffsetUpdate?.run()
                 findPreference<Preference>("pref_key_system_island_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
-                findPreference<Preference>("pref_key_system_island_chat_excluded_apps")?.setOnPreferenceClickListener(openAppsEdit)
-                findPreference<Preference>("pref_key_system_island_notification_apps")?.setOnPreferenceClickListener(openAppsEdit)
-                findPreference<Preference>("pref_key_system_island_media_return_apps")?.setOnPreferenceClickListener(openAppsEdit)
-                for (gesture in tv.withaibuild.customiuizer.mods.island.IslandMusicGesture.entries)
-                    findPreference<Preference>("pref_key_${gesture.key}")?.setOnPreferenceClickListener(openMusicActions)
+
             }
             "pref_key_system_cat_statusbar" -> {
                 findPreference<Preference>("pref_key_system_statusbarcolor_apps")?.setOnPreferenceClickListener(openAppsEdit)

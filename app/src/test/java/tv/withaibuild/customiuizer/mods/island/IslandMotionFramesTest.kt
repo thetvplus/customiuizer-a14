@@ -34,7 +34,7 @@ class IslandMotionFramesTest {
         val shell = IslandActivityView(activity)
         activity.setContentView(shell, FrameLayout.LayoutParams(240, 40))
         shell.geometry(240, 40, 40, 280); shell.layout(0, 0, 240, 40)
-        shell.cameraAnchor(20f, 16f); shell.absorption = true
+        shell.cameraAnchor(20f, 16f)
         shadowOf(Looper.getMainLooper()).idle()
         ShadowChoreographer.setPaused(true)
         try {

@@ -22,7 +22,7 @@ import org.robolectric.annotation.GraphicsMode
 class IslandPresentationTest {
     @Test fun returningHomeCannotResizeOrRewrapAnAlreadyVisibleToast() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
         val label = "1项已删除"
         shell.contentHeight(40)
@@ -54,7 +54,7 @@ class IslandPresentationTest {
 
     @Test fun expandedLanesKeepTheirTextOutsideTheCameraAndRightContentShrinksInward() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
         val directory = System.getenv("ISLAND_PREVIEW_DIR")?.let { java.io.File(it) }?.also { it.mkdirs() }
         for (gap in listOf(0, 40)) for (media in listOf(false, true)) {
@@ -92,7 +92,7 @@ class IslandPresentationTest {
 
     @Test fun expandedMediaBalancesIdentityAndRightAlignedDetailWithoutDuplicatingMetadata() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
         shell.geometry(280, 40, 0)
         shell.bind("Song title", "Artist name", null, true, true, true, 0, false, expanded = true)
@@ -147,7 +147,7 @@ class IslandPresentationTest {
     }
     @Test fun upwardGestureDismissesOnceAndDownwardOrLongPressNeverOpensAPanel() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
         shell.bind("Track", null, null, true, true, true, 0, true)
         shell.geometry(400, 40, 40); shell.layout(0, 0, 400, 40)
@@ -167,7 +167,7 @@ class IslandPresentationTest {
 
     @Test fun publicNotificationKeepsAccessibleDetailsWithoutACardOrControlPanel() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
         shell.bind("Sender", "Message supplied by notification", null, false, false, false, 0L, true)
         shell.geometry(240, 40, 40); shell.layout(0, 0, 240, 40)
@@ -180,7 +180,7 @@ class IslandPresentationTest {
 
     @Test fun shortAndLongContentLeaveThePhysicalCameraGapEmptyAtEveryConfiguredHeight() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
         shell.bind("Public sender", "Message", null, false, false, false, 0, false)
         for (width in listOf(184,240,280)) for (height in 38..44) {
@@ -250,7 +250,7 @@ class IslandPresentationTest {
 
     @Test fun cameraCoverAllowsBoundedCrossAxisElasticityWithoutUncoveringThePhysicalHole() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
         shell.geometry(400, 80, 80, 448); shell.layout(0, 0, 400, 80)
         shell.cameraAnchor(40f, 32f)
@@ -338,7 +338,7 @@ class IslandPresentationTest {
 
     @Test fun horizontalSwipesRespectDirectionAndAdvertisedControls() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell, FrameLayout.LayoutParams(288, 44))
         shell.bind("Track", "Artist", null, true, true, true,
             PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS, true, PlaybackState.STATE_PLAYING)
@@ -402,7 +402,7 @@ class IslandPresentationTest {
 
     @Test fun dragCancelPointerChangeAndReverseNeverTriggerAStaleRecall() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val shell = IslandActivityView(activity).apply { simplified = true }
+        val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell, FrameLayout.LayoutParams(288, 44))
         shell.layout(0, 0, 288, 44)
         shell.geometry(288, 44, 40)
