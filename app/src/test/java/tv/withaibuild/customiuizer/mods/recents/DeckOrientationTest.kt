@@ -70,12 +70,13 @@ class DeckOrientationTest {
             setField(owner,"geometryReady",true)
             val transform=Transform()
             assertTrue("Portrait host, landscape visual window",scope.write(0,0f,transform))
-            val motion=DeckModernMotion(DeckModernMotionTest.Native::class.java)
-            val spring=DeckModernMotionTest.Native()
-            motion.mark(spring,owner,owner.transition,DeckSpringScene.OPEN)
+            val motion=DeckMotion.modern(DeckModernSpringParametersTest.Native::class.java)
+            val spring=DeckModernSpringParametersTest.Native()
+            motion.mark(spring,owner,DeckSpringScene.OPEN)
             motion.afterConfigure(spring,"OPEN_FROM_RECENTS",false)
-            assertFalse(owner.customMotionAllowed)
-            assertTrue("Landscape must retain native window spring parameters",spring.calls.isEmpty())
+            assertEquals("Landscape uses the same iOS scene profile",4,spring.calls.size)
+            assertEquals(DeckSpringScene.OPEN.response*spring.durationRatio,spring.mWidthBundle.getStiffness(),0f)
+            DeckMotion.clear(spring,owner,owner.transition)
             assertEquals((1040f-600f)*.5f,transform.rect.top,.001f)
             val expectedContent=RectF(transform.rect)
             IosDeckGeometry(2280f,1100f,1f).content(expectedContent,
@@ -107,15 +108,15 @@ class DeckOrientationTest {
             owner.refreshGeometry()
             assertTrue("A native layout update can restore the shared contract",owner.allowed)
             assertTrue(scope.write(0,0f,transform))
-            assertTrue(owner.customMotionAllowed)
-            motion.mark(spring,owner,owner.transition,DeckSpringScene.OPEN)
+            spring.calls.clear()
+            motion.mark(spring,owner,DeckSpringScene.OPEN)
             motion.afterConfigure(spring,"OPEN_FROM_RECENTS",false)
             assertEquals(4,spring.calls.size)
-            // A reconfigure into landscape restores the old owned parameters
-            // before allowing native defaults to remain authoritative.
+            // Reconfigure restores the native baseline before selecting the
+            // next iOS scene, in either direction.
             motion.beforeConfigure(spring)
             assertEquals(200f,spring.mWidthBundle.getStiffness(),0f)
-            DeckModernMotion.clear(spring,owner,owner.transition)
+            DeckMotion.clear(spring,owner,owner.transition)
             repeat(8) { turn ->
                 val cached=Transform()
                 assertTrue((XposedHelpers.getAdditionalInstanceField(transform,DeckOwner.FRAME) as DeckFrame).copyTo(cached))

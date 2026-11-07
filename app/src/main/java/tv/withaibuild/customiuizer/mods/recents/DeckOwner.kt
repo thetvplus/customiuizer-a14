@@ -249,9 +249,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     val allowed: Boolean get() = !closed && !suspended && baseAllowed && tasksAllowed && geometryReady &&
         ValueAnimator.areAnimatorsEnabled() && (transition!=0L ||
             (stack.parent?.let { api.recents.isInstance(it) && api.overview.getBoolean(it) && !api.split.getBoolean(it) }==true))
-    // Landscape window rotation/aspect handoffs use HyperOS's own scene tuning.
-    // Deck still owns card geometry, never a second window animation clock.
-    val customMotionAllowed: Boolean get()=allowed && !current.landscape
 
     init {
         try {
@@ -543,7 +540,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             finally {
                 val cleanup=CleanupActions()
                 cleanup.run { DeckMotion.clear(spring,this,link.ticket) }
-                cleanup.run { DeckModernMotion.clear(spring,this,link.ticket) }
                 cleanup.finish()
             }
         }

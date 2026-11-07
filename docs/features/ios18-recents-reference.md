@@ -117,7 +117,7 @@ POCO 4.39.14.8255 的 thumbnail 没有 `getCornerRadius()`；此前必需表解�
 
 本轮重读已准入 4.39.30 APK 的完整 `WindowElement` Smali：`mAnim` 唯一写入在构造方法，`animTo`、reset、运行中重定向及 start 均读取同一字段，因此当前前置 mark 不会绑定被原生替换的旧 Spring。窗口更新及 closing provider 改为完整参数和返回类型解析。此为 DEX_STATIC 身份与时序证据；对应版本真实播放器、duration ratio、速度继承及取消的运行时验收仍须分别记录，不用测试 Spring 代替。
 
-2026-11-06 增量迁移：4.39.30 的 `WindowElement.animTo(Object)V` 在 `animResetReady(RectFParams)V` 中先 reset，再调用 `RectFSpringAnim.setAnimParamByType(AnimType)V`，最后 `startInMainThread()`；运行中走 `runningAnimUpdate` / `updateAllAnimValues`。原生四轴是 `mCenterXBundle / mCenterYBundle / mWidthBundle / mRatioBundle`，由私有 `setAnimParam(String,FF)V` 消费 `centerX / centerY / Width / Ratio`，经原生 duration response 转换写入 SpringBundle。新 `DeckModernMotion` 只在准入的卡片 / ticket / 原生 AnimType 下使用这条消费者，普通打开 / 按钮进入映射 .336/1，`performAppToRecents(Z)V` 同步手势范围映射 .531/.94；不访问 Legacy 字段。原生初速、radius / alpha、Surface、目标框、取消和 finish 不变。
+2026-11-06 增量迁移：4.39.30 的 `WindowElement.animTo(Object)V` 在 `animResetReady(RectFParams)V` 中先 reset，再调用 `RectFSpringAnim.setAnimParamByType(AnimType)V`，最后 `startInMainThread()`；运行中走 `runningAnimUpdate` / `updateAllAnimValues`。原生四轴是 `mCenterXBundle / mCenterYBundle / mWidthBundle / mRatioBundle`，由私有 `setAnimParam(String,FF)V` 消费 `centerX / centerY / Width / Ratio`，经原生 duration response 转换写入 SpringBundle。新 `DeckMotion / DeckModernSpringParameters` 只在准入的卡片 / ticket / 原生 AnimType 下使用这条消费者，普通打开 / 按钮进入映射 .336/1，`performAppToRecents(Z)V` 同步手势范围映射 .531/.94；不访问 Legacy 字段。原生初速、radius / alpha、Surface、目标框、取消和 finish 不变。
 
 每次原生重新配置前归还自持参数，成功后再覆盖四轴；end / cancel / 超时 / 旋转释放时仅恢复仍等于本次写入的参数对，后续原生写入优先。失败逐轴回滚，可选动效冷解析失败仅保留原生时序；必需窗口合同失败则 Deck 整批不接管。该变化是 iOS 配置到 Android 原生求解器的映射，并非 UIKit 求解器或全链路等价。WindowElement 的 display / home rotation 相等且为 0、90、270° 时共用交接；两轴不一致、180°、quick switch 或分屏仍保留原生运动。8604 原生 opening provider 在同一调用中读取两次当前 Display rotation，横屏相等值并非异常场景。
 
@@ -156,4 +156,12 @@ A14 使用原生当前横屏窗口、mVisualRotationSystemInsets 与原生横向
 
 设置入口为“系统 → 最近任务 → iOS 任务卡片”；“堆叠式最近任务”保留原键，“卡片比例”控制整体大小。默认自动按 .75 页比例与可用高度求上限，自定义 55–85%，最大显示高度限制为可用高度的 90%；这组范围为 Android 安全映射。新设置关闭 / 自动时不会改变原生业务尺寸或截图宽高比。16:9、19.5:9、20:9、多密度及边界大小有 Host 几何回归，实机覆盖与未覆盖场景分别记录在路线图。
 
-2026-11-07 横屏响应续修：Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable)V，读取同一原生 mPer 并排除 quick switch；7603 / 8255 的横向根姿态与上述 WindowElement 消费者一致。横屏窗口保留 HyperOS 原生场景弹簧参数，竖屏 Deck 参数映射保持。原生圆角更新、截图及完成回调仍在原方法内执行；Host 只验证映射和所有权，不代表设备性能通过。
+2026-11-07 横屏响应续修：Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable)V，读取同一原生 mPer 并排除 quick switch；7603 / 8255 的横向根姿态与上述 WindowElement 消费者一致。横竖屏现共用同一 iOS 场景表，取消此前仅横屏使用原生节奏的分支。原生圆角更新、截图及完成回调仍在原方法内执行；Host 只验证映射和所有权，不代表设备性能通过。
+
+## 动效统一管理（2026-11-07）
+
+卡片外形与运动策略分开：截图、圆角来源、裁切及阴影颜色沿用 HyperOS 1；窗口入退场、手势松手与点击恢复的几何四轴由同一个 DeckMotion 管理已确认的 iOS 场景。横竖屏没有独立参数或另一套动画时钟，新旧 Launcher 只分别实现 DeckSpringTuning 的原生字段 / SpringBundle 存储与转换，场景表位于 DeckSpringScene。
+
+同一管理入口负责有限调用范围、实际 spring 身份、ticket、原生场景类型、重定向前归还和结束 / 取消释放。旧版手势进入嵌套 closing 时沿用 GESTURE，不能被内层按钮 TOGGLE 覆盖；closing provider 在同步调用中换 ticket 时只继承同一个 live owner 的手势来源，参数写入仍核验新 ticket。明确标记的 OPEN 优先于外层宽范围的手势，其他 owner 或无关原生场景不继承。
+
+当前继续使用已确认的 .336/1 与 .531/.94，不从 response 推算总时长；跟手与邻卡排布共用现有 Deck 几何和原生窗口进度。新一轮 Deck REA 资料尚未接入，完整滚动 / 删除求解器、未松手邻卡模拟布局、首次合成帧及真实横竖屏观感仍待对应证据精校。统一入口不是整条链路与 UIKit 等价的结论。

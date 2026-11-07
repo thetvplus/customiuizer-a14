@@ -40,10 +40,7 @@ internal object IosRecentsDeckHooks {
         val profile=DeckLauncherProfile.resolve(param.classLoader)
         val api=DeckNativeApi(param.classLoader,profile)
         val headerConfig=DeckHeaderConfig.read(prefs)
-        val motion=if(profile==DeckLauncherProfile.LEGACY && prefs.getBoolean(DeckMotion.KEY,true))
-            optionalMotion { DeckMotion(api) } else null
-        val modernMotion=if(profile==DeckLauncherProfile.WINDOW_ELEMENT && prefs.getBoolean(DeckMotion.KEY,true))
-            optionalMotion { DeckModernMotion(api.spring) } else null
+        val motion=if(prefs.getBoolean(DeckMotion.KEY,true)) optionalMotion { DeckMotion.create(api) } else null
         val radius=if(profile==DeckLauncherProfile.LEGACY) DeckRadiusHandoff() else null
         // Only a native WindowElement update can admit a Surface correction.
         // Reuse a bounded stack on its UI thread, including nested native calls;
@@ -77,13 +74,10 @@ internal object IosRecentsDeckHooks {
             before(motion.configure) { motion.beforeConfigure(it.getThisObject()!!) }
             afterAlways(motion.configure) { motion.afterConfigure(it.getThisObject()!!,
                 (it.getArg(0) as? Enum<*>)?.name,it.getThrowable()!=null) }
-            before(motion.initialize) { motion.beforeInit(it.getThisObject()!!) }
-            afterAlways(motion.initialize) { if(it.getThrowable()!=null) motion.failedInit(it.getThisObject()!!) }
-        }
-        if(modernMotion!=null) {
-            before(modernMotion.configure) { modernMotion.beforeConfigure(it.getThisObject()!!) }
-            afterAlways(modernMotion.configure) { modernMotion.afterConfigure(it.getThisObject()!!,
-                (it.getArg(0) as? Enum<*>)?.name,it.getThrowable()!=null) }
+            motion.initialize?.let { initialize ->
+                before(initialize) { motion.beforeInit(it.getThisObject()!!) }
+                afterAlways(initialize) { if(it.getThrowable()!=null) motion.failedInit(it.getThisObject()!!) }
+            }
         }
         api.springReset?.let { reset -> before(reset) {
             val active=latest.get() ?: return@before
@@ -285,11 +279,14 @@ internal object IosRecentsDeckHooks {
         before(closing) {
             val active=latest.get()
             try { active?.beginTransition(true) }
-            finally { radius?.enter(active,active?.transition ?: 0L); motion?.enter(active,DeckSpringScene.TOGGLE) }
+            finally {
+                radius?.enter(active,active?.transition ?: 0L)
+                motion?.enter(active,motion.closingScene(active))
+            }
         }
         afterAlways(closing) {
             try { if(it.getThrowable()==null) latest.get()?.let { active ->
-                motion?.mark(it.getResult(),active,DeckSpringScene.TOGGLE)
+                motion?.mark(it.getResult(),active,motion.closingScene(active))
                 active.linkSpring(it.getResult(),active.transition)
             } } finally { motion?.leave(); radius?.leave() }
         }
@@ -337,8 +334,8 @@ internal object IosRecentsDeckHooks {
                 val scale=if(opening) selected.geometry.scale else active.endpointScale(window.index(original)) ?: selected.geometry.scale
                 val copy=window.scaled(original,scale,opening,selected.view.scaleX)
                 XposedHelpers.setAdditionalInstanceField(copy,WINDOW_RECEIPT,WindowReceipt(active,ticket))
-                if(modernMotion!=null) window.spring(it.getThisObject()!!)?.let { spring -> modernMotion.mark(spring,active,ticket,
-                    if(opening) DeckSpringScene.OPEN else modernMotion.closingScene()) }
+                motion?.mark(window.spring(it.getThisObject()!!),active,
+                    if(opening) DeckSpringScene.OPEN else motion.closingScene(active),ticket)
                 XposedHelpers.setAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING,copy)
                 it.getArgs()[0]=copy
             }
@@ -353,7 +350,7 @@ internal object IosRecentsDeckHooks {
                     active.linkSpring(window.spring(it.getThisObject()!!),receipt.ticket)
                 else {
                     XposedHelpers.removeAdditionalInstanceField(params,WINDOW_RECEIPT)
-                    window.spring(it.getThisObject()!!)?.let { spring -> DeckModernMotion.clear(spring,active,receipt.ticket) }
+                    window.spring(it.getThisObject()!!)?.let { spring -> DeckMotion.clear(spring,active,receipt.ticket) }
                     active.endTransition(receipt.ticket)
                 }
             }
@@ -383,7 +380,6 @@ internal object IosRecentsDeckHooks {
         }
         }
         before(api.navToRecents) {
-            modernMotion?.enterGesture()
             val active=latest.get()
             try { active?.beginTransition(true) }
             finally {
@@ -397,7 +393,7 @@ internal object IosRecentsDeckHooks {
                 val spring=api.navSpring.get(it.getThisObject())
                 motion?.mark(spring,active,DeckSpringScene.GESTURE)
                 active.linkSpring(spring,active.transition)
-            } } finally { modernMotion?.leaveGesture(); motion?.leave(); radius?.leave() }
+            } } finally { motion?.leave(); radius?.leave() }
         }
         // Native entry already reloads the stack and requests its layout in the
         // same call. Refresh admission before that traversal without requesting
