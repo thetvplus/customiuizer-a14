@@ -13,8 +13,10 @@ import subprocess
 import sys
 
 try:
+    from tools.ci_scope import select_scope
     from tools.git_changes import changed_paths
 except ModuleNotFoundError:
+    from ci_scope import select_scope
     from git_changes import changed_paths
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -57,6 +59,7 @@ def test_classes(root: Path, patterns: tuple[str, ...]) -> list[str]:
 def plan(root: Path, paths: list[str]) -> dict:
     commands, pending, scenarios, reasons = [], [], set(), []
     production = [p for p in paths if p.startswith(SOURCE)]
+    settings = any(p.startswith("app/settings/") for p in paths)
     tests = set()
     unknown = []
     for path in production:
@@ -79,18 +82,20 @@ def plan(root: Path, paths: list[str]) -> dict:
                 unknown.append(path)  # deleted coverage cannot silently disappear
         elif path.startswith("app/src/test/"):
             unknown.append(path)  # shared fixtures/support may affect any suite
-    if unknown or build:
+    if unknown or build or settings:
         commands.append(["python", "tools/verify.py", "full"])
         reasons.append("Shared/unmapped runtime, removed test or build boundary: use existing Full gate")
     elif production or tests:
         commands.append(["python", "tools/verify.py", "fast", "--tests", *sorted(tests)])
-    if any(p.startswith(("tools/", ".github/", "rom-contracts/")) for p in paths):
+    if select_scope("local", "", {}, paths)["tools"]:
         commands.append(["python", "-m", "unittest", "discover", "-s", "tools/tests", "-p", "test_*.py", "-b"])
         commands.append(["python", "tools/brutal_test_runner.py", "--config", "tools/brutal_test_config.json", "validate"])
         reasons.append("Verification/tool consumers: current tool regressions and mutation policy")
     if any(p.endswith(".md") for p in paths):
         commands.append(["python", "tools/check_docs.py"])
-    if production or build:
+    if settings:
+        commands.append(["python", "tools/generate_feature_map.py", "--check"])
+    if production or build or settings:
         pending += ["ROM/API feasibility: reuse verified ABI/owner evidence; changed private signatures need targeted DexSQL definitions + callers + decode",
                     "Runtime: verify installed candidate identity, LSPosed scope/process activation and observable feature effect; Host success does not prove a hook ran",
                     "Performance: same device/ROM/settings/scenario, separate automation from sampling; baseline and candidate Perfetto windows remain required for claims"]

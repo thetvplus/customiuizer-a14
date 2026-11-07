@@ -23,6 +23,12 @@ class AgentVerifyTest(unittest.TestCase):
         with patch.object(gate, "task_paths", return_value=[]):
             self.assertEqual(2, gate.main(["host"]))
 
+    def test_settings_generation_and_rom_matrix_use_existing_consumers(self):
+        result = gate.plan(gate.ROOT, ["app/settings/prefs_launcher.json", "docs/rom-intelligence/A14_PROCESS_MATRIX.csv"])
+        self.assertIn(["python", "tools/verify.py", "full"], result["host_commands"])
+        self.assertIn(["python", "tools/generate_feature_map.py", "--check"], result["host_commands"])
+        self.assertTrue(any("unittest" in command for command in result["host_commands"]))
+
     def test_missing_tests_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(ValueError, "No current behavior tests"):
