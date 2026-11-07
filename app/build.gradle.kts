@@ -64,7 +64,7 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 303
+val lastVersion = 304
 val lastVersionName = "r14.27.3"
 
 fun resolveBuildRevision(): String {

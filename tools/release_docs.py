@@ -158,8 +158,8 @@ def documents(published: dict) -> dict[str, str]:
                 codes = re.findall(r"\bversionCode(?:\s*[:=]\s*|\s+)(\d+)\b", body)
                 release.require(len(codes) == 1, "Historical release versionCode is missing or ambiguous")
                 history_text = text
-                if version in release.POLICY.get("consolidated_releases", []):
-                    release.require(version != name and version in release.POLICY.get("archived_source_snapshots", {}),
+                if version != name and version in release.POLICY.get("consolidated_releases", []):
+                    release.require(version in release.POLICY.get("archived_source_snapshots", {}),
                                     "Consolidation is limited to verified historical releases")
                     if version not in consolidated:
                         consolidated[version] = published_version(version, require_download=False, latest_only=False)

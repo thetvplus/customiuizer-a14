@@ -165,11 +165,21 @@ class DownloadDocumentsTest(unittest.TestCase):
                     verified.return_value = {"metadata": {"version_code": 999}}
                     with self.assertRaisesRegex(ValueError, "versionCode differs"):
                         docs.documents(published)
-                for selected, snapshots in ((VERSION, {VERSION: {}}), (historical, {})):
-                    with patch.object(release, "ROOT", root), patch.dict(release.POLICY,
-                            consolidated_releases=[selected], archived_source_snapshots=snapshots), \
-                            self.assertRaisesRegex(ValueError, "verified historical"):
-                        docs.documents(published)
+                with patch.object(release, "ROOT", root), patch.dict(release.POLICY,
+                        consolidated_releases=[historical], archived_source_snapshots={}), \
+                        self.assertRaisesRegex(ValueError, "verified historical"):
+                    docs.documents(published)
+                # A withdrawal may make a consolidated historical version Latest.
+                # Its own notes must still come from its published source, without
+                # accepting maintenance text or requiring a second history lookup.
+                with patch.object(release, "ROOT", root), patch.dict(release.POLICY,
+                        consolidated_releases=[VERSION], archived_source_snapshots={VERSION: {}}), \
+                        patch.object(docs, "published_version") as historical_lookup:
+                    result = docs.documents(published)
+                    historical_lookup.assert_not_called()
+                    self.assertNotIn("NEVER_USE_MAINTENANCE_CURRENT", "\n".join(result.values()))
+                    for filename in ("README.md", "README_EN.md"):
+                        self.assertIn("User change 0.", result[filename])
             self.assertEqual([], server.writes)
 
     def test_community_link_is_shared_by_source_docs_and_app_build(self):

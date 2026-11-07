@@ -8,14 +8,18 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## r14.27.3 — 2026-11-08
 
-versionCode 303. Changes since r14.27.1:
+versionCode 304. Changes since r14.26.11:
 
 ### Release summary
 
-- Refine DECK transitions in both orientations, fix card jumps and shadow flashes, and keep quick app switching free of deck scaling.
-- Refine island arrival and content transitions, and bring long-island text closer to the camera-safe edge.
-- Soften Home Indicator color transitions, make feature switches easier to find, and simplify Duo and related settings.
-- Restart the launcher and System UI after updating. DECK requires Horizontal Recents.
+- Add independently enabled iOS DECK task stacking for portrait and landscape on supported launchers.
+- Refine DECK scaling, shadows and task reopening, and fix enlarged cards during quick app switching.
+- Add the iOS home indicator with smoother black/white transitions and an easier-to-find switch.
+- Add the iOS volume bar and an optional narrow default, with touch expansion, overscroll feedback and full controls.
+- Refine island resizing, content transitions and app returns. Restore outer-aligned long-island captions while keeping camera clearance.
+- Update Duo icons, fonts and layout, and simplify settings descriptions while preserving search and upgrades.
+- Fix notification prompts, Control Center feedback, volume buttons and restoration of older settings pages.
+- Restart the launcher and System UI after updating. DECK requires horizontal Recents; the home indicator requires gesture navigation and a visible system handle.
 
 ### User changes
 
@@ -29,29 +33,8 @@ versionCode 303. Changes since r14.27.1:
 - Fix rear-card title and icon opacity on swipe-up deck entry without requiring another scroll.
 - Follow native thumbnail opacity and fullscreen progress for card shadows, reducing premature shadows during swipe-up entry. Keep HyperOS 1 corners, screenshot clipping and shadow colors.
 - Reuse the system's retargetable black/white gesture-handle tint animation, with a 250 ms ordinary gesture-mode transition. Preserve explicit window-handoff timing.
-- Align centered island captions with the inner camera-safe edge, removing extra space for short text. Keep clipping aligned during scaling and horizontal movement, preserving native cutouts and existing clearance.
+- Restore right alignment for long-island trailing content, mirrored at the outer edge in RTL layouts. Camera clearance constrains the available lane and clipping; resizing and translation preserve the outer margin. Keep existing measured or manual capsule widths without changing text alignment to fill space.
 - Add visible horizontal expansion and recoil on first island appearance, music returning home, and new activity reception. Keep same-size handoffs from ending early, reduce vertical expansion and press enlargement, and preserve interrupted and reversed transitions.
-
-### Engineering notes
-
-- Recheck local iOS 18.6.2 binaries and A14 native call chains. Preserve native scrolling, window springs and lifecycle without adding animation clocks, listeners or threads.
-- Prioritize energy use and response by removing dynamic blur and its effect cache from island content transitions. Keep transforms, clipping, crossfades and one outgoing display list on the existing clock, without additional filters or sampling tasks.
-- Retire cached gesture endpoints with orientation ownership, remove unused island wave/strength handoffs, and reuse immutable receive profiles. Related behavior regressions and Develop / R8 / vital Lint passed, with daily use accepted by the user; pixel equivalence to iOS is not claimed.
-- Recheck launcher mounting and landscape-container paths directly in four A14 ROMs, with master-switch, dependent-setting and search coverage. Daily use has been accepted by the user; no further device pass is requested. No new independent frame-rate or power measurements are claimed.
-
-## r14.27.1 — 2026-11-06
-
-versionCode 301. Changes since r14.26.11:
-
-### Release summary
-
-- Add independently enabled iOS DECK recent apps, Home Indicator and volume appearance.
-- Refine island resizing, content changes and returns, plus thin-volume-bar and touch feedback.
-- Update Duo artwork and settings navigation, and fix notification feedback, volume controls and page entry issues.
-- DECK requires Horizontal Recents. Home Indicator requires full-screen gestures and a visible system handle. Restart the affected processes after enabling.
-
-### User changes
-
 - Add an opt-in iOS recents deck for Horizontal Recents on supported HyperOS 1 launchers, in portrait and landscape. Preserve native scrolling, task dismissal and window handoff.
 - Add card sizing, independently scaled titles and icons with depth-based fading, and optional window motion. Select between two native window implementations by their interfaces instead of exact version numbers, including the older POCO spring interface; retain native timing when optional motion interfaces are unavailable.
 - Fix card depth during dragging, dismissal, cancellation and return, window-to-card corner alignment, and premature card recycling. Add directional fling snapping; unsupported layouts restore native hit testing, input and scroll bounds.
@@ -71,9 +54,14 @@ versionCode 301. Changes since r14.26.11:
 
 ### Engineering notes
 
+- Recheck local iOS 18.6.2 binaries and A14 native call chains. Preserve native scrolling, window springs and lifecycle without adding animation clocks, listeners or threads.
+- Prioritize energy use and response by removing dynamic blur and its effect cache from island content transitions. Keep transforms, clipping, crossfades and one outgoing display list on the existing clock, without additional filters or sampling tasks.
+- Retire cached gesture endpoints with orientation ownership, remove unused island wave/strength handoffs, and reuse immutable receive profiles. Related behavior regressions and Develop / R8 / vital Lint passed, with daily use accepted by the user; pixel equivalence to iOS is not claimed.
+- Recheck launcher mounting and landscape-container paths directly in four A14 ROMs, with master-switch, dependent-setting and search coverage. Daily use has been accepted by the user; no further device pass is requested. No new independent frame-rate or power measurements are claimed.
 - Include effective changes from unpublished r14.26.13 and subsequent candidates, retaining Android 14 / SDK 34, arm64-v8a and libxposed API 102.
 - Retain one island, finite animation clocks, native window springs, system input and safe fallback; resolve modern launcher window interfaces by exact signature. Private iOS materials, complete solvers and pixel parity remain incomplete.
 - Publication requires main / exact CI, the historical certificate and dual-repository verification. Device coverage, measurements and unresolved issues are tracked in the refinement roadmap; Host tests do not establish device acceptance.
+- Replace the withdrawn r14.27.1 / 301 and original r14.27.3 / 303 with internal version number 304, cumulative from r14.26.11. Original binaries, metadata and source tags are privately archived; withdrawn candidates are not promoted.
 
 ## r14.26.11 — 2026-11-02
 
