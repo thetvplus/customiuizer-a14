@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
+import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
@@ -68,6 +69,10 @@ internal object IosRecentsDeckHooks {
         fun afterAlways(method: Method,block: (AfterHookCallback)->Unit) = entries.add(method to object:MethodHook() {
             override fun after(callback: AfterHookCallback)=ModuleHelper.guarded { block(callback) }
         })
+        // Use the native window-rotation path consistently: RotationHelper must
+        // not lock the Activity while RecentsContainer rotates only its content.
+        // Keep this in the same atomic batch, before any Launcher is created.
+        entries.add(api.keepRecentsPortrait to HookerClassHelper.returnConstant(false))
         if(motion!=null) {
             before(motion.configure) { motion.beforeConfigure(it.getThisObject()!!) }
             afterAlways(motion.configure) { motion.afterConfigure(it.getThisObject()!!,

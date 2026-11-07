@@ -2,6 +2,14 @@
 -- dataset-local IDs. Decode the selected callers to establish ordering/ownership.
 SELECT file_id, source_path, entry_name FROM dex_files ORDER BY file_id;
 
+-- Real landscape: one policy is shared by RotationHelper and RecentsContainer.
+SELECT file_id, method_descriptor, access_flags FROM class_methods
+WHERE (class_descriptor='Lcom/miui/home/launcher/DeviceConfig;'
+ AND method_name='isKeepRecentsViewPortrait')
+ OR (class_descriptor='Lcom/miui/home/recents/util/RotationHelper;'
+ AND method_name IN ('notifyChange','updateMultiWindowRotationRequest'))
+ORDER BY method_descriptor;
+
 SELECT file_id, descriptor, superclass_descriptor FROM classes
 WHERE descriptor IN ('Lcom/miui/home/recents/views/TaskStackView;',
  'Lcom/miui/home/recents/views/TaskStackLayoutAlgorithm;',

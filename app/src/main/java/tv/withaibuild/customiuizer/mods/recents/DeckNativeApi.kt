@@ -29,6 +29,7 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
         type.getDeclaredMethod(name,*parameters).apply { require(returnType==result && java.lang.reflect.Modifier.isStatic(modifiers)); isAccessible=true }
     private val floatType=Float::class.javaPrimitiveType!!
     private val voidType=Void.TYPE
+    val keepRecentsPortrait=staticExact(cls("launcher.DeviceConfig"),"isKeepRecentsViewPortrait",Boolean::class.javaPrimitiveType!!)
     val stack=cls("recents.views.TaskStackView")
     val algorithm=cls("recents.views.TaskStackLayoutAlgorithm")
     val horizontal=cls("recents.views.TaskStackViewsAlgorithmHorizontal")

@@ -140,7 +140,7 @@ Nav 可在当前滚动位置尚未变化时，用目标 q 查询窗口矩形。�
 
 本地 22G100 的 `containerViewBounds`（0x1d85a82a0）直接读取当前 view.bounds；Deck 水平深度公式本身未按方向另换参数，不能用固定竖屏窗口替代当前容器。原生标题透明度默认分支的竖屏 C=.023 / D=40，横屏 C=.0074 / D=75，常量表与取值分支已核对。原生 resting margin 还包含图标度量及方向分支，尚未等价迁移，不把任意 dp 当完整原生边距。
 
-A14 使用原生当前横屏窗口、mVisualRotationSystemInsets 与原生横向卡片宽高；横屏独立计算安全宽度、垂直中心与高度上限，保留截图比例和水平层叠。竖屏保留既有 top；统一 presentation matrix 供绘制、命中及转场读取，原生 root scale、触摸业务和删除阈值不变。Launcher 可以保持物理窗口竖向，再旋转 RecentsContainer；因此使用已冷解析的 `isLandscapeVisually()Z` 与原生窗口宽高核对，在布局 / 配置事件缓存方向，不将物理 display rotation 强套到卡片坐标。二者暂不一致时回退，配置更换沿原 owner 释放，不新增旋转监听。仅处理手机主屏的既有方向，180°、平板、RTL、分屏及接口不兼容的实现门禁不变。
+A14 使用原生当前横屏窗口、mVisualRotationSystemInsets 与原生横向卡片宽高；横屏独立计算安全宽度、垂直中心与高度上限，保留截图比例和水平层叠。竖屏保留既有 top；统一 presentation matrix 供绘制、命中及转场读取，原生 root scale、触摸业务和删除阈值不变。Deck 启用后在完整 ABI 冷解析和同一原子安装批次内，将 `DeviceConfig.isKeepRecentsViewPortrait()Z` 固定为 false。原生 RotationHelper 不再因该策略强制窗口竖屏，RecentsContainer 也不再单独旋转内容；最近任务继承后方应用方向，系统栏与安全 Insets 随实际窗口旋转，退出最近任务后的桌面方向仍由原生状态恢复。此开关只随 Deck 安装，不调用 Activity.setRequestedOrientation、不修改系统自动旋转设置、不新增方向监听。7603 / 8255 / 8604 的上述入口与 RotationHelper 消费链均有原件 Smali 核对。卡片继续使用已冷解析的 `isLandscapeVisually()Z` 与原生窗口宽高核对，在布局 / 配置事件缓存方向，不将物理 display rotation 强套到卡片坐标；过渡期二者暂不一致时回退，配置更换沿原 owner 释放。卡片几何仍只处理手机主屏的既有方向，180°、平板、RTL、分屏及接口不兼容的实现门禁不变。
 
 2026-11-07 交接修正：视觉方向变化先撤销几何准入，清空旧端点、插值和窗口票据，归还卡片与两份原生滚动边界，再等待原生方向和窗口一致。Transform 的 `copyFrom` 不得把旧代际重新标成当前；旧矩形也必须整份拒绝，不能只丢掉 Deck 缩放后交回原生应用。无 owner 引用的失效标记沿缓存复制传播，新几何计算或原生 reset 才解除。WindowElement 的参数保留弱归属收据，每次邻卡 / Surface 修正必须匹配原 owner、票据及几何代际。原生 spring、Surface 与 finish 仍继续执行。连续方向交错、迟到复制和旧窗口收据有 Host 回归，实机快速旋转及首合成帧仍待验。
 
