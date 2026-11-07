@@ -1406,7 +1406,8 @@ class IslandActivityLifecycleTest {
         assertEquals("好", caption.text.toString())
         val identity = org.robolectric.util.ReflectionHelpers.getField<android.widget.TextView>(original, "identityTitle")
         assertEquals("Alice", identity.text.toString()); assertEquals(View.VISIBLE, identity.visibility)
-        assertEquals(android.view.Gravity.LEFT, caption.gravity and android.view.Gravity.HORIZONTAL_GRAVITY_MASK)
+        assertEquals("Message handoff keeps the trailing caption right-aligned",
+            android.view.Gravity.RIGHT, caption.gravity and android.view.Gravity.HORIZONTAL_GRAVITY_MASK)
         assertTrue(identity.textSize >= caption.textSize)
         assertEquals(android.text.TextUtils.TruncateAt.END, caption.ellipsize)
         val lease = org.robolectric.util.ReflectionHelpers.getField<Any>(controller, "chatLease")

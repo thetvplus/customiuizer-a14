@@ -129,7 +129,7 @@ class IslandIosMotionTest {
             val clock=getField<ValueAnimator>(shell,"motion"); clock.currentPlayTime=140L
             val text=getField<View>(shell,"text")
             assertTrue("New text is already fading in while its lane is still opening",text.alpha > .01f)
-            assertEquals("The reveal starts at the camera-side anchor",0,text.clipBounds!!.left)
+            assertEquals("The reveal stays pinned to the outer caption edge",text.width,text.clipBounds!!.right)
             assertTrue("Only the currently available lane is visible",text.clipBounds!!.width() in 1 until text.width)
             assertEquals("Typography keeps its physical size",1f,text.scaleX*shell.scaleX,.001f)
             clock.end(); assertEquals(text.width,text.clipBounds!!.width()); assertEquals(1f,text.alpha,.001f)
