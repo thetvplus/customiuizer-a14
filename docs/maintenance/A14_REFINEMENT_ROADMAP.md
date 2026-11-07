@@ -2,6 +2,21 @@
 
 本页只维护仍有效的决定、未决问题和必要证据入口；公开历史仅保留正式版源码快照，必要原始证据私有归档。工程约束以 [AGENTS](../../AGENTS.md)、[架构](../../ARCHITECTURE.md)、[兼容矩阵](../../COMPATIBILITY.md)和[测试分级](../TESTING.md)为准。
 
+## 多 ROM 挂载点复核（2026-11-08）
+
+按明确要求，不读取旧 ROM 索引或持久缓存，直接对 duchamp CN、fuxi CN、fuxi TW、munch ID 的原始 APK / JAR 运行官方 DexSQL query / decode。原始属性分别确认 SDK 34 / Android 14 / OS1.0；Launcher、SystemUI、framework、services 与相关 boot 声明分开归属。完整输入身份、SQL、声明、调用关系和选定 Smali 私有保存。生产基线为 `094191e0`，本轮未发现需要改写的错误挂载，未增加 Hook、监听或兼容状态。
+
+| 功能 | 重新核对的入口与原生时序 | 静态结论及边界 |
+| --- | --- | --- |
+| Dock | HotSeats.updateContent 先加入内容并赋值 mContent，模块随后挂载；measure / 内容 layout、拖动结束、Overview、编辑 / 解锁成员及 Backdrop 材质合同存在 | 四份原件可解析。现有 MIUI 路由保持；POCO Dock 未启用，不能把原生接口存在写成运行支持 |
+| Duo | MiuiBatteryMeterView 挂载后读取已注册的原生电池状态，detach 释放；主状态栏、锁屏、控制中心及过渡容器类存在，网络 / tint / 可见性回调均匹配 | 四份核心合同一致。耳机 Map 的实际读写在 PhoneStatusBarPolicy 的接收器内，当前按字段类型解析并在原调用后读取正确；子类另一个同名接收器不应替代它 |
+| Home Indicator | NavigationHandle 原生实例 Paint 只有构造器写入；NavigationBar.setNavBarMode 先更新 View / Transitions 的模式，再调用 updateIcons，初始化、配置重建与布局方向更新也经过该入口 | 四份签名与所有权一致，保留现有绘制和普通 tint 时长入口；主屏 / 手势模式及真实祖先准入不放宽 |
+| 动态岛 | 主状态栏 onFinishInflate 仅准备，真实 attach 后才建立 controller，detach 释放；媒体 / 安全状态、前台 observer、原生批准后的 Heads-up 绑定与隐私重算入口存在；Shell PiP、freeform 与 Session 释放链逐项核对 | 四份 SystemUI 与平台合同存在。FreeFormManager 来自 framework.jar，通过父加载器取得；Session 在可见性变化中更新 overlay 集合，killSessionLocked 清空，现有同步时机匹配。POCO Launcher 原生返回上岛未启用，普通 SystemUI 展示另行判断 |
+
+地区间的资源 ID、部分信号分支及 POCO 新旧窗口类差异已经区分，挂载按原生字段 / 类型与完整方法合同核验，不连接跨 ROM 的局部 DEX ID。Duo 耳机接收器按字段类型取得；动态岛使用的固定匿名回调类只核实当前样本，不视为未测构建的保证。修正 Dock 说明中“无模糊 / 省电监听”的过时表述：磨砂且不透明时有随挂载注册 / detach 解除的原生事件监听，纯色与全透明模式不注册。这是文档校准，生产实现不变。
+
+本轮为静态兼容复核与文档 Quick 检查，不重复构建未变化的 APK；沿用前轮对应实现的行为 / R8 证据，不把它扩大为四份 ROM 的运行验收。多 ROM 实际挂载、横竖屏、重建与长期性能仍需各自设备确认，不能由 ABI 或 Smali 相同推断功耗 / 帧率通过。
+
 ## 横屏原件重分析与节电续修（2026-11-08）
 
 - 按本轮要求直接读取四份 A14 Launcher APK 与各自 overlay，重新提取相关 Java / Smali，未使用 ROM 索引。三份 MIUI 原件同为逐字节相同的 8604，POCO 为 7603。DeviceConfig → RotationHelper / Launcher → RecentsContainer.updateRotation / onMeasure → TaskStackView / 算法的原生链路证实：普通手机保持竖向 Window，同时旋转内部任务容器是正常合同。撤销全局强制 isKeepRecentsViewPortrait=false 与 Display / Configuration 相等准入；新票据依赖已准备的原生视觉 viewport。此前强制旋转策略及其设备结果不再代表当前实现。具体边界见 [Deck 参考](../features/ios18-recents-reference.md#a14-横屏原件重新分析2026-11-08)，原件、汇编与分析私有留存。
