@@ -126,23 +126,6 @@ open class SubFragment : PreferenceFragmentBase() {
         super.onCreate(savedInstanceState)
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        if (settingsType == AppHelper.SettingsType.Edit) {
-            loadSharedPrefs()
-        }
-        val actionBar: ActionBar? = getActionBar()
-        if (actionBar != null) {
-            when {
-                !isStandalone && !sub.isNullOrBlank() -> {
-                    val screen = preferenceScreen
-                    val category = screen.getPreference(0) as PreferenceCategoryEx
-                    actionBar.setTitle(category.title)
-                }
-                else -> actionBar.setTitle(settingTitle)
-            }
-        }
-    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         if (settingsType == AppHelper.SettingsType.Preference) {
@@ -162,6 +145,20 @@ open class SubFragment : PreferenceFragmentBase() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.translationZ = order
+        if (settingsType == AppHelper.SettingsType.Edit) {
+            loadSharedPrefs()
+        }
+        val actionBar: ActionBar? = getActionBar()
+        if (actionBar != null) {
+            when {
+                !isStandalone && !sub.isNullOrBlank() -> {
+                    val screen = preferenceScreen
+                    val category = screen.getPreference(0) as PreferenceCategoryEx
+                    actionBar.setTitle(category.title)
+                }
+                else -> actionBar.setTitle(settingTitle)
+            }
+        }
     }
 
     override fun onStart() {

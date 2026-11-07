@@ -15,8 +15,8 @@ class Launcher : SubFragment() {
         selectSub()
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val openPrivacyAppEdit = Preference.OnPreferenceClickListener {
             openPrivacyAppEdit(this, 0)

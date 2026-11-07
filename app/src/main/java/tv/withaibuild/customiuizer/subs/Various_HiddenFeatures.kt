@@ -12,8 +12,8 @@ import tv.withaibuild.customiuizer.utils.Helpers
 
 class Various_HiddenFeatures : SubFragment() {
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val act = activity as? AppCompatActivity ?: return
 

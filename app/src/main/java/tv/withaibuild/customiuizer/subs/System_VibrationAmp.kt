@@ -16,8 +16,8 @@ class System_VibrationAmp : SubFragment() {
     private var startTimePicker: TimePickerDialog? = null
     private var endTimePicker: TimePickerDialog? = null
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val time = Calendar.getInstance()
         val is24 = DateFormat.is24HourFormat(activity)

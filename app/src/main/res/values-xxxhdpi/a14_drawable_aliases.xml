@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep public/dynamic names while sharing identical bitmap content. -->
+    <item type="drawable" name="ic_sysbar_dot_bottomleft">@drawable/ic_sysbar_dot_topright</item>
+    <item type="drawable" name="ic_sysbar_dot_bottomleft_dark">@drawable/ic_sysbar_dot_topright_dark</item>
+</resources>

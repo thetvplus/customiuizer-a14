@@ -19,8 +19,8 @@ class CategorySelector : SubFragment() {
         super.onCreate(savedInstanceState)
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val screen = findPreference<PreferenceScreen>("pref_key_cat")
         if (screen != null) bindDirectory(screen)

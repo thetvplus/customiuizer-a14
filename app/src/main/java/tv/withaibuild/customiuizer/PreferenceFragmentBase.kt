@@ -15,7 +15,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
-import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.animation.DecelerateInterpolator
@@ -159,7 +158,7 @@ open class PreferenceFragmentBase : Fragment() {
         return (act as? MainActivity)?.settingsBar
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+    fun createSettingsMenu(menu: Menu) {
         if (toolbarMenu) {
             tv.withaibuild.customiuizer.ui.populateSettingsMenu(menu)
         }
@@ -200,7 +199,7 @@ open class PreferenceFragmentBase : Fragment() {
         preferenceManager.sharedPreferencesMode = Context.MODE_PRIVATE
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    open fun onSettingsAction(item: MenuItem): Boolean {
         if (this !is MainFragment && item.itemId in RESTART_MENU_IDS) return false
         when (item.itemId) {
             R.id.edit_confirm -> {

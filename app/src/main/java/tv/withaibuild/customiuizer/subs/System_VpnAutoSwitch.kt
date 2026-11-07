@@ -28,8 +28,8 @@ class System_VpnAutoSwitch : SubFragment() {
     private var generation = 0
     private var timeout: Runnable? = null
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         for (key in listOf("client", "profile")) findPreference<ListPreference>("pref_key_system_vpnauto_$key")?.apply {
             entries = emptyArray<CharSequence>()
             entryValues = emptyArray<CharSequence>()

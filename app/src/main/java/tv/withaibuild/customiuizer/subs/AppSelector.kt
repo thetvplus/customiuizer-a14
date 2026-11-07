@@ -92,8 +92,8 @@ class AppSelector : SubFragmentWithSearch() {
         key = args?.getString("key")
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         if (initialized) {
             setupList()

@@ -12,8 +12,8 @@ class System_AppBehavior : SubFragment() {
     private val prefix = "pref_key_system_appbehavior_"
     private var editing: String? = null
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         for (name in listOf("rotation", "volume", "brightness", "block"))
             findPreference<Preference>(prefix + name + "_apps")?.onPreferenceClickListener = openAppsEdit
         findPreference<ListPreference>(prefix + "edit_app")?.setOnPreferenceChangeListener { _, value ->

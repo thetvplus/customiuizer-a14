@@ -27,12 +27,8 @@ class ActivitySelector : SubFragmentWithSearch() {
     private var user = 0
     private val activities = ArrayList<AppData>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val args = arguments
         key = args?.getString("key")

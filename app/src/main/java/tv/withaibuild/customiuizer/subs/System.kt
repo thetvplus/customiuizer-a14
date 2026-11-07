@@ -61,7 +61,7 @@ class System : SubFragment() {
             showOffset(position?.value)
         }
         // Apply ROM-specific visibility before the first adapter bind. Removing this row
-        // in onActivityCreated starts a list relayout during the horizontal page animation.
+        // in onViewCreated starts a list relayout during the horizontal page animation.
         if (sub == "pref_key_system_cat_qs" && Build.IS_INTERNATIONAL_BUILD) {
             findPreference<Preference>("pref_key_system_cc_switch_qsandnotification")?.isVisible = false
         }
@@ -176,10 +176,6 @@ class System : SubFragment() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     private fun openSystemSubFragment(preference: Preference, isDynamic: Boolean = false, xmlResId: Int) {
         val args = Bundle().apply {
             putBoolean("isStandalone", true)
@@ -189,8 +185,8 @@ class System : SubFragment() {
         openSubFragment(System(), args, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, preference.title?.toString() ?: "", xmlResId)
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         when (sub) {
             "pref_key_system_cat_automation" -> {
                 findPreference<Preference>("pref_key_system_appbehavior_cat")?.setOnPreferenceClickListener {
