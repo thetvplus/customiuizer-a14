@@ -46,6 +46,12 @@ internal object IosRecentsDeckHooks {
         // afterAlways drops every owner reference on success and failure.
         val surfaces=ThreadLocal<ArrayList<DeckOwner?>>()
         var latest=WeakReference<DeckOwner>(null)
+        val gesture=DeckGestureBoundary()
+        fun quickSwitch(value: Boolean) {
+            if(gesture.quickSwitching==value) return
+            gesture.quickSwitching=value
+            latest.get()?.gestureChanged()
+        }
         fun owner(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.OWNER) as? DeckOwner }
         fun frame(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.FRAME) as? DeckFrame }
             ?.takeIf { !it.owner.closed && it.generation==it.owner.geometryGeneration }
@@ -55,7 +61,7 @@ internal object IosRecentsDeckHooks {
             var parent=view.parent
             while(parent is View && !api.recentsContainer.isInstance(parent)) parent=parent.parent
             val container=parent as? View ?: return
-            latest=WeakReference(DeckOwner(view,api,headerConfig,radius,container))
+            latest=WeakReference(DeckOwner(view,api,headerConfig,radius,container,gesture))
         }
         fun after(method: Method,block: (AfterHookCallback)->Unit) = entries.add(method to object:MethodHook() {
             override fun after(callback: AfterHookCallback)=ModuleHelper.guarded {
@@ -242,9 +248,6 @@ internal object IosRecentsDeckHooks {
             val thumbnail=it.getThisObject() as View
             card(thumbnail.parent)?.shadow?.radius((it.getArg(0) as Int).toFloat())
         }
-        // This is a geometry query within the click's transition, not another
-        // user intent. Reuse its ticket, frozen endpoints and native listeners.
-        before(api.openStart) { card(it.getArg(2))?.owner?.beginTransition() }
         // The native getter consumes Scope.content and then maps last/current
         // rotation into the application axes. Do not overwrite its mapped result
         // with an unrotated View rectangle after that conversion.
@@ -275,6 +278,7 @@ internal object IosRecentsDeckHooks {
         }
         api.closing?.let { closing ->
         before(closing) {
+            quickSwitch(false)
             val active=latest.get()
             try { active?.beginTransition(true) }
             finally {
@@ -315,7 +319,7 @@ internal object IosRecentsDeckHooks {
                 val clipped=surface.apply(active,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
                 if(clipped!==result) it.setResult(clipped)
             } }
-            before(window.closing) { latest.get()?.beginTransition(true) }
+            before(window.closing) { quickSwitch(false); latest.get()?.beginTransition(true) }
             afterAlways(window.closing) {
                 if(it.getThrowable()!=null || it.getResult()==null) latest.get()?.let { active -> active.endTransition(active.transition) }
             }
@@ -371,6 +375,7 @@ internal object IosRecentsDeckHooks {
             }
         }
         before(api.navToRecents) {
+            quickSwitch(false)
             val active=latest.get()
             try { active?.beginTransition(true) }
             finally {
@@ -386,6 +391,16 @@ internal object IosRecentsDeckHooks {
                 active.linkSpring(spring,active.transition)
             } } finally { motion?.leave(); radius?.leave() }
         }
+        // Native classifies DOWN before assigning mWindowMode and dispatching
+        // its state machine. A new gesture retires only the previous ticket.
+        after(api.gestureMode) {
+            val mode=it.getResult() as Int
+            // Both admitted A14 families use 5/15 for full/half quick switch.
+            gesture.quickSwitching=mode==5 || mode==15
+            latest.get()?.gestureChanged()
+        }
+        before(api.quickSwitch) { quickSwitch(true) }
+        before(api.halfQuickSwitch) { quickSwitch(true) }
         // Native entry already reloads the stack and requests its layout in the
         // same call. Refresh admission before that traversal without requesting
         // another layout on repeated state notifications or on exit.

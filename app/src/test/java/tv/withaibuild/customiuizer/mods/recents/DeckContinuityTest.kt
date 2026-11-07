@@ -38,6 +38,10 @@ class DeckContinuityTest {
         @JvmField val end=ArrayList<Transform>()
     }
     class Visual { fun isLandscapeVisually()=true }
+    class Recents : FrameLayout(RuntimeEnvironment.getApplication()) {
+        @JvmField var overview=true
+        @JvmField var split=false
+    }
     private fun <T> unconstructed(type: Class<T>): T {
         val field=Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe").apply { isAccessible=true }
         return requireNotNull(type.cast(field.type.getMethod("allocateInstance",Class::class.java).invoke(field.get(null),type)))
@@ -53,6 +57,7 @@ class DeckContinuityTest {
         for((target,source) in mapOf("currentTasks" to "tasks","startTransforms" to "start","endTransforms" to "end"))
             setField(api,target,Handler::class.java.getField(source))
         val owner=unconstructed(DeckOwner::class.java)
+        setField(owner,"gestureBoundary",DeckGestureBoundary())
         val handler=Handler()
         val stack=FrameLayout(RuntimeEnvironment.getApplication())
         val cards=LinkedHashMap<View,DeckOwner.Card>()
@@ -134,6 +139,82 @@ class DeckContinuityTest {
         try { assertEquals("No window ticket before its viewport is ready",0L,ticket) }
         finally { f.owner.endTransition(ticket) }
     }
+    @Test fun backgroundGeometryQueriesCannotCreateADeckWindowIntent() {
+        val f=fixture()
+        setField(f.owner,"transition",0L)
+        val api=getField<DeckNativeApi>(f.owner,"api")
+        setField(api,"recents",Recents::class.java)
+        setField(api,"overview",Recents::class.java.getField("overview"))
+        setField(api,"split",Recents::class.java.getField("split"))
+        Recents().addView(f.stack)
+        // The audited Launcher initializes mInOverviewState to true even while
+        // its shared task container is used by other window consumers.
+        assertTrue(f.owner.allowed)
+        repeat(8) {
+            assertEquals("A shared task-rectangle query is not a Deck entry",0L,f.owner.beginTransition())
+            assertEquals(0L,f.owner.transition)
+        }
+        val ticket=f.owner.beginTransition(true)
+        try { assertTrue("An explicit app-to-Deck intent can still start",ticket!=0L) }
+        finally { f.owner.endTransition(ticket) }
+    }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun quickSwitchRetiresDeckPresentationAndBlocksReplacementOwnersUntilTheNextDeckIntent() {
+        val f=fixture();val replacement=fixture()
+        setField(f.owner,"sequence",1L)
+        val boundary=DeckGestureBoundary()
+        setField(f.owner,"gestureBoundary",boundary);setField(replacement.owner,"gestureBoundary",boundary)
+        for(active in listOf(f,replacement)) {
+            val bridge=getField<DeckNativeApi>(active.owner,"api")
+            setField(bridge,"recents",Recents::class.java)
+            setField(bridge,"overview",Recents::class.java.getField("overview"))
+            setField(bridge,"split",Recents::class.java.getField("split"))
+            Recents().addView(active.stack)
+        }
+        setField(f.owner,"callbacks",android.os.Handler(android.os.Looper.getMainLooper()))
+        val api=getField<DeckNativeApi>(f.owner,"api")
+        val algorithm=DeckOrientationTest.Algorithm()
+        for((target,source) in mapOf("base" to "base","window" to "window","visualInsets" to "insets","minimum" to "minimum"))
+            setField(api,target,DeckOrientationTest.Algorithm::class.java.getField(source))
+        setField(api,"visualLandscape",DeckOrientationTest.Algorithm::class.java.getMethod("isLandscapeVisually"))
+        setField(api,"minimumScroll",DeckOrientationTest.Algorithm::class.java.getMethod("calculateMinScrollP"))
+        val scope=f.owner.Scope(algorithm)
+        setField(f.owner,"current",scope);setField(f.owner,"stable",scope)
+        val view=TaskView();f.stack.addView(view);view.layout(0,0,800,1500)
+        view.addView(view.header)
+        val icon=View(view.context);val title=TextView(view.context);val badge=View(view.context)
+        for(child in arrayOf(icon,title,badge)) view.header.addView(child)
+        val header=DeckHeaderOwner(view.header,icon,title,badge,DeckHeaderConfig(0,0))
+        val geometry=DeckCardGeometry(view,f.stack).apply { apply(.75f) }
+        assertNotNull("The old Deck matrix is present before quick-switch admission changes",view.animationMatrix)
+        val shadow=DeckCardShadow(view,view.header,22f,view,0f)
+        // The pool may already have rebound this View. Native properties belong
+        // to the new task and must survive release of the old Deck matrix.
+        val card=DeckOwner.Card(f.owner,geometry,Any(),0,0,header,1f,shadow)
+        f.cards[view]=card
+        val old=IosRecentsDeckHooks.WindowReceipt(f.owner,1L)
+        view.scaleX=.93f;view.scaleY=.91f;view.translationX=37f
+        try {
+            boundary.quickSwitching=true
+            assertFalse(f.owner.allowed);assertFalse(replacement.owner.allowed)
+            assertEquals(0L,f.owner.beginTransition(true));assertEquals(0L,replacement.owner.beginTransition(true))
+            assertFalse(old.matches(f.owner))
+            f.owner.gestureChanged()
+            assertEquals(0L,f.owner.transition);assertTrue(f.cards.isEmpty())
+            assertNull(view.animationMatrix)
+            assertEquals(.93f,view.scaleX,0f);assertEquals(.91f,view.scaleY,0f);assertEquals(37f,view.translationX,0f)
+            assertEquals(1L,f.owner.geometryGeneration)
+            repeat(4) { assertEquals(0L,f.owner.beginTransition()) }
+            boundary.quickSwitching=false
+            setField(f.owner,"geometryReady",true)
+            val next=f.owner.beginTransition(true)
+            assertTrue(next!=0L);assertTrue(f.owner.allowed)
+            assertFalse("A quick-switch completion cannot revive the previous receipt",old.matches(f.owner))
+        } finally {
+            setField(f.owner,"closed",true);f.owner.endTransition(f.owner.transition)
+            card.release();f.cards.clear()
+        }
+    }
     @Test fun repeatedOpeningGeometryQueriesKeepOneTicketAndTheCurrentPresentation() {
         val f=fixture()
         val host=Robolectric.buildActivity(android.app.Activity::class.java).setup().visible()
@@ -163,6 +244,16 @@ class DeckContinuityTest {
             f.owner.endTransition(f.owner.transition)
             host.pause().stop().destroy()
         }
+    }
+    @Test fun queuedGestureBoundaryCannotRetireAClosedStack() {
+        val f=fixture()
+        setField(f.owner,"gestureBoundary",DeckGestureBoundary().apply { quickSwitching=true })
+        setField(f.owner,"callbacks",android.os.Handler(android.os.Looper.getMainLooper()))
+        val thread=Thread { f.owner.gestureChanged() };thread.start();thread.join()
+        setField(f.owner,"closed",true)
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertEquals(0L,f.owner.geometryGeneration)
+        assertEquals(1L,f.owner.transition)
     }
     @Test fun rightNeighborEntersContinuouslyWhenTheOldestCardIsDismissedAtTheScrollEdge() {
         val f=fixture(); val view=TaskView()

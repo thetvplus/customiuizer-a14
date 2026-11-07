@@ -79,3 +79,11 @@ WHERE class_descriptor='Lcom/miui/home/recents/util/RectFSpringAnim;'
  'mCenterXDamping','mCenterXStiffness','mCenterYDamping','mCenterYStiffness',
  'mWidthDamping','mWidthStiffness','mRatioDamping','mRatioStiffness')
 ORDER BY field_descriptor;
+
+-- DOWN is classified before mWindowMode is assigned and the native state
+-- machine runs. Full/half app-to-app intents must not inherit Deck geometry.
+SELECT file_id, method_descriptor, access_flags FROM class_methods
+WHERE class_descriptor='Lcom/miui/home/recents/NavStubView;'
+ AND method_name IN ('getCurrentWindowMode','isQuickSwitchMode',
+ 'performAppToApp','performHalfAppToHalfApp','performAppToRecents')
+ORDER BY method_descriptor;

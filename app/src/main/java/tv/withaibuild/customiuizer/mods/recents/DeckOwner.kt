@@ -48,9 +48,13 @@ internal class DeckFrame(val owner: DeckOwner,val rect: RectF,var index: Int,var
     }
 }
 
+/** One native gesture boundary shared by replacement stack owners, without holding Views. */
+internal class DeckGestureBoundary { @Volatile var quickSwitching=false }
+
 /** Native stack lifetime, algorithms, visible cards and finite transition ticket. */
 internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val headerConfig: DeckHeaderConfig,
-    private val radiusHandoff: DeckRadiusHandoff?,private val container: View) : View.OnLayoutChangeListener,ViewTreeObserver.OnPreDrawListener {
+    private val radiusHandoff: DeckRadiusHandoff?,private val container: View,
+    private val gestureBoundary: DeckGestureBoundary) : View.OnLayoutChangeListener,ViewTreeObserver.OnPreDrawListener {
     companion object {
         const val OWNER="a14.recents.deck.owner"
         const val SCOPE="a14.recents.deck.scope"
@@ -249,7 +253,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private var interpolation: Float?=null
     private val restoreTransform=api.transform.getDeclaredConstructor().newInstance()
     val router=DeckTouchRouter { api.nativeIntercept.invoke(handler,it) as Boolean }
-    val allowed: Boolean get() = !closed && !suspended && baseAllowed && tasksAllowed && geometryReady &&
+    val allowed: Boolean get() = !closed && !suspended && !gestureBoundary.quickSwitching && baseAllowed && tasksAllowed && geometryReady &&
         ValueAnimator.areAnimatorsEnabled() && (transition!=0L ||
             (stack.parent?.let { api.recents.isInstance(it) && api.overview.getBoolean(it) && !api.split.getBoolean(it) }==true))
 
@@ -527,14 +531,16 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         val previous=opening; opening=null; openingIndex=-1; previous?.release()
     }
     fun beginTransition(force: Boolean=false): Long {
-        if(closed || !baseAllowed || !tasksAllowed || suspended || !ValueAnimator.areAnimatorsEnabled()) return 0L
+        if(closed || !baseAllowed || !tasksAllowed || suspended || gestureBoundary.quickSwitching || !ValueAnimator.areAnimatorsEnabled()) return 0L
         // Native container rotation retires the viewport before its next measure.
         // A portrait Activity may already contain a valid landscape viewport.
         if(!geometryReady) {
             if(transition!=0L) retireGeometry()
             return 0L
         }
-        if(!force && transition!=0L) return transition
+        // Queries and animation consumers only reuse an existing intent. Native
+        // Deck entry and an actual card click are the callers that create one.
+        if(!force) return transition
         val cleanup=CleanupActions()
         for(link in linkedSprings.toList()) cleanup.run { releaseSpring(link) }
         linkedSprings.clear()
@@ -567,6 +573,15 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private fun onUi(block: ()->Unit) {
         if(Looper.myLooper()==callbacks.looper) ModuleHelper.guarded(block)
         else callbacks.post { ModuleHelper.guarded(block) }
+    }
+    fun gestureChanged() {
+        val ticket=transition
+        onUi {
+            if(closed) return@onUi
+            // A queued native boundary must never end a newer deliberate entry.
+            endTransition(ticket)
+            if(gestureBoundary.quickSwitching) retireGeometry() else refresh(false)
+        }
     }
     private fun releaseSpring(link: LinkedSpring) {
         link.spring.get()?.let { spring ->

@@ -12,13 +12,14 @@ versionCode 303. Changes since r14.27.1:
 
 ### Release summary
 
-- Improve iOS DECK transitions in portrait and landscape, swipe-up tracking and app opening, with fewer card jumps and shadow flashes.
+- Refine DECK transitions in both orientations, fix card jumps and shadow flashes, and keep quick app switching free of deck scaling.
 - Refine island arrival and content transitions, and bring long-island text closer to the camera-safe edge.
 - Soften Home Indicator color transitions, make feature switches easier to find, and simplify Duo and related settings.
 - Restart the launcher and System UI after updating. DECK requires Horizontal Recents.
 
 ### User changes
 
+- Fix DECK scaling interfering with app switching along the Home Indicator. Quick switch keeps system geometry; entering the deck and opening its cards retain DECK motion.
 - Give DECK, Duo and iOS Home Indicator switches their full feature names for easier discovery and search. Shorten descriptions while preserving setup and restart requirements.
 - Fix position and size jumps when a neighboring card fills the gap after dismissing the leftmost recents deck card.
 - Reject stale card and window geometry during repeated orientation changes to improve position, size and direction handoff.
