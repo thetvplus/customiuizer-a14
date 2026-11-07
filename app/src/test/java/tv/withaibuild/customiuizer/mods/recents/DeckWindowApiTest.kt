@@ -51,7 +51,7 @@ class DeckWindowApiTest {
     }
     @Test fun otherWindowFlowsStayNative() {
         assertNull(api.scene(params(Type.CLOSE_TO_HOME)))
-        assertNull(api.scene(params(Type.CLOSE_TO_RECENTS,rotation=1)))
+        assertNull(api.scene(params(Type.CLOSE_TO_RECENTS,rotation=2)))
         assertNull(api.scene(params(Type.CLOSE_TO_RECENTS,split=true)))
     }
     @Test fun alignedLandscapeWindowsUseTheSameHandoffAsPortrait() {
@@ -65,8 +65,11 @@ class DeckWindowApiTest {
             assertSame(original.animListener,scaled.animListener)
             assertSame(original.clipAnimationHelper,scaled.clipAnimationHelper)
         }
-        for((display,home) in listOf(1 to 0,0 to 1,1 to 3,3 to 1,2 to 2,-1 to -1,4 to 4))
-            assertNull("Unaligned or unsupported axes stay native",api.scene(params(Type.OPEN_FROM_RECENTS,rotation=display,homeRotation=home)))
+        for(display in listOf(0,1,3)) for(home in listOf(0,1,3))
+            assertEquals("Native default home metadata cannot reject visual landscape",true,
+                api.scene(params(Type.OPEN_FROM_RECENTS,rotation=display,homeRotation=home)))
+        for(display in listOf(2,-1,4))
+            assertNull("Unsupported display rotations stay native",api.scene(params(Type.OPEN_FROM_RECENTS,rotation=display)))
     }
     @Test fun aMatchingNameAndSignatureCannotAdmitAStaticWindowConsumer() {
         assertThrows(IllegalArgumentException::class.java) {

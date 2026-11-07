@@ -19,6 +19,9 @@ import java.util.IdentityHashMap
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34],application=android.app.Application::class,qualifiers="port")
 class DeckOrientationTest {
+    class Container(context: android.content.Context): FrameLayout(context) {
+        @JvmField var mRecentsContainerRotation=1
+    }
     // Only the selected native ABI is supplied. No launcher constructor, Hook
     // installation or physical/visual orientation equivalence is simulated.
     class Algorithm {
@@ -48,6 +51,8 @@ class DeckOrientationTest {
         val host=Robolectric.buildActivity(Activity::class.java).setup().get()
         try {
             val api=unconstructed(DeckNativeApi::class.java)
+            setField(api,"recentsRotation",Container::class.java.getField("mRecentsContainerRotation"))
+            val container=Container(host)
             for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
                 "padding" to "padding","count" to "count","gap" to "gap","headerHeight" to "header"))
                 setField(api,target,Algorithm::class.java.getField(source))
@@ -59,10 +64,11 @@ class DeckOrientationTest {
             val stack=FrameLayout(host)
             val frozen=HashMap<Int,Any>()
             val pairs=IdentityHashMap<Any,Any>().apply { put(Any(),Any()) }
-            for((name,value) in mapOf("api" to api,"stack" to stack,"headerConfig" to DeckHeaderConfig(0,0),
+            for((name,value) in mapOf("api" to api,"stack" to stack,"container" to container,"headerConfig" to DeckHeaderConfig(0,0),
                 "frozen" to frozen,"pairs" to pairs,"cards" to LinkedHashMap<Any,Any>(),
                 "drawCards" to ArrayList<Any>(),"linkedSprings" to ArrayList<Any>(),
                 "router" to DeckTouchRouter { false },"ticketTimeout" to Runnable {})) setField(owner,name,value)
+            setField(owner,"rotation",1)
             setField(owner,"baseAllowed",true);setField(owner,"tasksAllowed",true);setField(owner,"transition",1L)
             val algorithm=Algorithm()
             val scope=owner.Scope(algorithm)
@@ -108,11 +114,13 @@ class DeckOrientationTest {
             opening.add(neighbor,FrameLayout(host),RectF(0f,0f,400f,800f),1)
             setField(owner,"opening",opening);neighbor.failing=true
             algorithm.visual=false
+            container.mRecentsContainerRotation=0
             assertSame(failure,assertThrows(IllegalStateException::class.java) { scope.refreshOrientation() })
             assertTrue(frozen.isEmpty());assertTrue(pairs.isEmpty())
             assertEquals(0L,owner.transition)
             assertNotEquals(oldFrame.generation,owner.geometryGeneration)
             assertFalse(scope.landscape)
+            owner.rotationChanged(0)
             setField(owner,"transition",2L)
             assertFalse("Mixed visual flag/window must fall back",scope.write(0,0f,transform))
             assertFalse("All Deck input and scroll hooks must return to native",owner.allowed)
@@ -138,6 +146,7 @@ class DeckOrientationTest {
                 val previous=XposedHelpers.getAdditionalInstanceField(cached,DeckOwner.FRAME) as DeckFrame
                 val receipt=IosRecentsDeckHooks.WindowReceipt(owner,owner.transition)
                 algorithm.visual=turn%2==0
+                container.mRecentsContainerRotation=if(algorithm.visual) 1 else 0
                 // Visual direction arrives before matching native window bounds.
                 owner.refreshGeometry()
                 assertFalse(owner.allowed)
@@ -165,9 +174,13 @@ class DeckOrientationTest {
             val display=shadowOf(stack.display)
             try {
                 display.setRotation(Surface.ROTATION_90)
+                container.mRecentsContainerRotation=1
                 algorithm.visual=true;algorithm.window.set(0,0,2400,1080)
                 owner.refreshGeometry()
-                assertEquals("Display rotation before its configuration cannot start a window",0L,owner.beginTransition())
+                assertEquals(android.content.res.Configuration.ORIENTATION_PORTRAIT,stack.resources.configuration.orientation)
+                val ticket=owner.beginTransition()
+                assertTrue("A fixed portrait Window admits its prepared native landscape viewport",ticket!=0L)
+                owner.endTransition(ticket)
                 owner.refreshGeometry()
                 setField(owner,"transition",99L)
                 assertTrue(scope.write(0,0f,transform))
@@ -176,6 +189,7 @@ class DeckOrientationTest {
                 val endpoint=DeckFrame(owner,RectF(0f,0f,1100f,600f),0,1f,true,1f,1f)
                 assertTrue(receipt.matches(owner))
                 owner.rotationChanged(Surface.ROTATION_270)
+                container.mRecentsContainerRotation=3
                 assertFalse("Native display event retires the old window before layout",receipt.matches(owner))
                 assertFalse("Retiring frames must also retire the cached native gesture endpoint",
                     scope.contentAt(0,0f,preparedContent))

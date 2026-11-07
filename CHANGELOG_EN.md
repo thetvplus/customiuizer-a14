@@ -14,18 +14,20 @@ versionCode 303. Changes since r14.27.1:
 
 - Fix position and size jumps when a neighboring card fills the gap after dismissing the leftmost recents deck card.
 - Reject stale card and window geometry during repeated orientation changes to improve position, size and direction handoff.
-- Fix landscape deck rotation affecting only the card container. Keep the recents window, status bar and gesture handle aligned; restart the launcher after updating.
+- Restore the launcher's native rotation policy, including landscape task containers inside portrait windows. Convert opening-window and neighboring-card coordinates consistently, with shared iOS motion in both orientations. Restart the launcher after updating.
 - Align card and window scaling centers when native entry changes the pivot. Complete handoff checks for both landscape directions and unprepared layouts.
 - Fix double scaling and window misalignment during swipe-up entry on newer launchers. Fold neighboring cards using the current native window, reducing extra spring lag and stepped position changes.
 - Fix rear-card title and icon opacity on swipe-up deck entry without requiring another scroll.
+- Follow native thumbnail opacity and fullscreen progress for card shadows, reducing premature shadows during swipe-up entry. Keep HyperOS 1 corners, screenshot clipping and shadow colors.
+- Reuse the system's retargetable black/white gesture-handle tint animation, with a 250 ms ordinary gesture-mode transition. Preserve explicit window-handoff timing.
 - Add visible horizontal expansion and recoil on first island appearance, music returning home, and new activity reception. Keep same-size handoffs from ending early, reduce vertical expansion and press enlargement, and preserve interrupted and reversed transitions.
 
 ### Engineering notes
 
 - Recheck local iOS 18.6.2 binaries and A14 native call chains. Preserve native scrolling, window springs and lifecycle without adding animation clocks, listeners or threads.
-- Restore 64 content-blur steps after the 48-step experiment failed the existing continuity regression. Keep the maximum radius, timing and opacity; claim no unverified performance gain.
+- Prioritize energy use and response by removing dynamic blur and its effect cache from island content transitions. Keep transforms, clipping, crossfades and one outgoing display list on the existing clock, without additional filters or sampling tasks.
 - Retire cached gesture endpoints with orientation ownership, remove unused island wave/strength handoffs, and reuse immutable receive profiles. Related behavior regressions and Develop / R8 / vital Lint passed. Final island amplitudes, the first composited deck-entry frame and actual card geometry after repeated rotation still need device visual acceptance; pixel equivalence to iOS is not claimed.
-- Focused device checks passed for landscape windows and system bars. One immediate entry after installation returned to portrait and did not recur in later cold restarts; the first installation/startup handoff remains unverified.
+- Historical landscape-window and system-bar checks used the previous rotation policy and do not validate this native-policy correction. This pass uses static evidence; perceived jank, shadows, first startup and power use still require device checks.
 
 ## r14.27.1 — 2026-11-06
 

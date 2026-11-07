@@ -52,15 +52,14 @@ internal class DeckSurfaceOcclusion(helper: Class<*>, remote: Class<*>, targets:
 
     fun apply(owner: DeckOwner,helper: Any,remote: Any,targetMode: Int,params: Any): Any {
         if(!owner.allowed || mode.getInt(remote)!=0 || targetMode!=0 || taskId.getInt(remote)!=owner.openingTaskId) return params
-        // Only fullscreen zero-origin coordinates are admitted. Insets, freeform,
-        // rotation and translated/letterboxed source bounds retain native output.
+        // Native Surface bounds follow the visual display, while a fixed phone
+        // Window remains portrait. Compare with the prepared visual viewport.
         val bounds=source.get(helper) as Rect
         val targetBounds=container.get(remote) as Rect
         val targetPosition=position.get(remote) as Point
-        val root=owner.stack.rootView
         if(bounds.left!=0 || bounds.top!=0 || targetBounds.left!=0 || targetBounds.top!=0 ||
             targetPosition.x!=0 || targetPosition.y!=0 ||
-            bounds.width()!=root.width || bounds.height()!=root.height) return params
+            !owner.surfaceSizeMatches(bounds.width(),bounds.height())) return params
         val nativeCrop=crop.get(params) as? Rect ?: return params
         val nativeMatrix=matrix.get(params) as? Matrix ?: return params
         nativeMatrix.getValues(values)

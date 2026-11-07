@@ -29,12 +29,15 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
         type.getDeclaredMethod(name,*parameters).apply { require(returnType==result && java.lang.reflect.Modifier.isStatic(modifiers)); isAccessible=true }
     private val floatType=Float::class.javaPrimitiveType!!
     private val voidType=Void.TYPE
-    val keepRecentsPortrait=staticExact(cls("launcher.DeviceConfig"),"isKeepRecentsViewPortrait",Boolean::class.javaPrimitiveType!!)
+    val recentsContainer=cls("recents.views.RecentsContainer")
+    val recentsRotation=field(recentsContainer,"mRecentsContainerRotation",Int::class.javaPrimitiveType!!)
+    val updateRotation=exact(recentsContainer,"updateRotation",voidType,Int::class.javaPrimitiveType!!)
     val stack=cls("recents.views.TaskStackView")
     val algorithm=cls("recents.views.TaskStackLayoutAlgorithm")
     val horizontal=cls("recents.views.TaskStackViewsAlgorithmHorizontal")
     val transform=cls("recents.views.TaskViewTransform")
     val taskView=cls("recents.views.TaskView")
+    val fullscreenProgress=field(taskView,"mFullscreenProgress",floatType)
     private val header=cls("recents.views.TaskViewHeader")
     val headerIcon=field(header,"mIconView",android.widget.ImageView::class.java)
     val headerTitle=field(header,"mTitleView",android.widget.TextView::class.java)
@@ -90,7 +93,6 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val attached=exact(stack,"onAttachedToWindow",voidType)
     val detached=exact(stack,"onDetachedFromWindow",voidType)
     val configuration=exact(stack,"onConfigurationChanged",voidType,android.content.res.Configuration::class.java)
-    val displayRotation=exact(cls("recents.views.RecentsContainer"),"onDisplayRotationChanged",voidType,Int::class.javaPrimitiveType!!)
     val update=exact(algorithm,"update",voidType,XposedHelpers.findClass("com.android.systemui.shared.recents.model.TaskStack",loader),android.util.ArraySet::class.java)
     val bounds=exact(horizontal,"getTaskViewTransform",voidType,Int::class.javaPrimitiveType!!,floatType,transform)
     val minimumScroll=exact(horizontal,"calculateMinScrollP",floatType)

@@ -8,7 +8,7 @@ import tv.withaibuild.customiuizer.mods.utils.CleanupActions
  * The native formula assumes every neighboring center is one card-width apart.
  * Capture the actual presentation once; retain its depth matrix and task order. */
 internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
-    private class Pose(val view: View,val header: View,val centerX: Float,val centerY: Float,val slots: Int) {
+    private class Pose(val view: View,val header: View,val centerX: Float,val centerY: Float,val slots: Int,val scale: Float) {
         val x=view.translationX; val y=view.translationY
         val sx=view.scaleX; val sy=view.scaleY
         val px=view.pivotX; val py=view.pivotY; val alpha=header.alpha
@@ -17,12 +17,16 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
             // Center-pivot scaling preserves the owned center-scale matrix.
             view.pivotX=view.width*.5f; view.pivotY=view.height*.5f
             lastScaleX=sx*ratio; lastScaleY=sy*ratio
-            lastX=x+current.centerX()-source.centerX()+(centerX-source.centerX())*(ratio-1f)
+            var dx=current.centerX()-source.centerX()+(centerX-source.centerX())*(ratio-1f)
             // Deck overlaps at rest. Unfold those actual offsets into the native
             // fullscreen slots as the same window progress advances; otherwise
             // the front card still covers a wide strip at the final handoff.
-            lastX+=(slots*current.width()-(centerX-source.centerX())*ratio)*progress+slots*25f*progress
-            lastY=y+current.centerY()-source.centerY()+(centerY-source.centerY())*(ratio-1f)
+            dx+=(slots*current.width()-(centerX-source.centerX())*ratio)*progress+slots*25f*progress
+            // Visual deltas pass through the owned center-scale matrix. Undo
+            // that scale once, and retain the old pivot's visible center.
+            lastX=x+(1f-sx)*(px-view.width*.5f)+dx/scale
+            lastY=y+(1f-sy)*(py-view.height*.5f)+
+                (current.centerY()-source.centerY()+(centerY-source.centerY())*(ratio-1f))/scale
             view.scaleX=lastScaleX; view.scaleY=lastScaleY
             view.translationX=lastX; view.translationY=lastY
             lastAlpha=headerAlpha; header.alpha=lastAlpha
@@ -38,8 +42,8 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
         }
     }
     private val neighbors=ArrayList<Pose>(8)
-    fun add(view: View,header: View,content: RectF,slots: Int) {
-        neighbors.add(Pose(view,header,content.centerX(),content.centerY(),slots))
+    fun add(view: View,header: View,content: RectF,slots: Int,scale: Float=1f) {
+        neighbors.add(Pose(view,header,content.centerX(),content.centerY(),slots,scale))
     }
     fun apply(current: RectF,progress: Float,headerAlpha: Float) {
         if(start.width()<=0f || current.isEmpty) return

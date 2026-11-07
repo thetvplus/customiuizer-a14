@@ -687,6 +687,9 @@ class IslandActivityLifecycleTest {
                 val attach = org.robolectric.util.ReflectionHelpers.getField<Any>(it, "mAttachInfo")
                 org.robolectric.util.ReflectionHelpers.setField(attach, "mWindowVisibility", View.VISIBLE)
                 it.viewTreeObserver.dispatchOnPreDraw()
+                // Presentation grants capture ownership on pre-draw; execute
+                // the resulting IO work without advancing animation time.
+                scheduler.runCurrent()
             }
         }
     }
@@ -3259,7 +3262,7 @@ class IslandActivityLifecycleTest {
             wave.alpha = 0f; original.refreshWaveformVisibility(); drain()
             assertEquals(acquired, released); assertEquals(0, subscribed)
             val count = acquired
-            repeat(120) { original.refreshWaveformVisibility() }
+            repeat(120) { original.viewTreeObserver.dispatchOnPreDraw() }
             drain(); assertEquals(count, acquired)
             assertTrue(original.isMedia); assertTrue(wave.playing)
             wave.alpha = 1f; original.refreshWaveformVisibility(); drain()

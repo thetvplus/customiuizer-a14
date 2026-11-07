@@ -1,11 +1,10 @@
 package tv.withaibuild.customiuizer.mods.recents
 
 import android.animation.ValueAnimator
-import android.content.res.Configuration
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Matrix
 import android.view.MotionEvent
-import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -51,7 +50,7 @@ internal class DeckFrame(val owner: DeckOwner,val rect: RectF,var index: Int,var
 
 /** Native stack lifetime, algorithms, visible cards and finite transition ticket. */
 internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val headerConfig: DeckHeaderConfig,
-    private val radiusHandoff: DeckRadiusHandoff?=null) : View.OnLayoutChangeListener,ViewTreeObserver.OnPreDrawListener {
+    private val radiusHandoff: DeckRadiusHandoff?,private val container: View) : View.OnLayoutChangeListener,ViewTreeObserver.OnPreDrawListener {
     companion object {
         const val OWNER="a14.recents.deck.owner"
         const val SCOPE="a14.recents.deck.scope"
@@ -103,6 +102,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             private set
         var fullWidth=0f
             private set
+        var fullHeight=0f
+            private set
         val base get()=api.base.get(algorithm) as RectF
         val count get()=api.count.getInt(algorithm)
         val gap: Float get()=1f+api.gap.getFloat(algorithm)/base.width().coerceAtLeast(1f)
@@ -152,7 +153,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             val nativeTop=(api.padding.get(algorithm) as Rect).top+window.top.toFloat()
             val top=DeckViewport.top(nativeTop,(window.top+insets.top).toFloat(),safeHeight,cardHeight,landscape)
             val left=model.left(index,presentation,(window.left+insets.left).toFloat())
-            layoutLeft=(window.left+insets.left).toFloat(); layoutTop=top;fullWidth=window.width().toFloat()
+            layoutLeft=(window.left+insets.left).toFloat(); layoutTop=top;fullWidth=window.width().toFloat();fullHeight=window.height().toFloat()
             rect.set(left,top,left+bounds.width(),top+bounds.height())
             val scale=model.scale(index,presentation)
             val visible=candidate && left+(bounds.width()*(1f+scale))*.5f>window.left-screenWidth*.25f &&
@@ -217,7 +218,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private var baseAllowed=false
     private var tasksAllowed=true
     private var geometryReady=true
-    private var physicalRotation=stack.display?.rotation
+    private var rotation=api.recentsRotation.getInt(container)
     private var suspended=false
     var closed=false
         private set
@@ -240,6 +241,9 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private val occludingBounds=RectF()
     private val gestureReference=RectF()
     private val gestureTarget=RectF()
+    private val global=Matrix()
+    private val local=Matrix()
+    private val surface=Matrix()
     val openingTaskId: Int get()=opening?.selectedId ?: -1
     private val pairs=IdentityHashMap<Any,Pair<DeckFrame,DeckFrame>>()
     private var interpolation: Float?=null
@@ -265,7 +269,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     fun refresh(requestLayout: Boolean=true) {
         if(closed) return
         val config=stack.resources.configuration
-        baseAllowed=stack.isHardwareAccelerated && orientationReady(config) && stack.display?.displayId==0 &&
+        baseAllowed=stack.isHardwareAccelerated && stack.display?.displayId==0 &&
             config.smallestScreenWidthDp<600 && stack.layoutDirection==View.LAYOUT_DIRECTION_LTR &&
             accessibility?.isTouchExplorationEnabled!=true
         refreshGeometry()
@@ -274,16 +278,11 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         current.updateMinimum(); stable.updateMinimum()
         if(requestLayout) stack.requestLayout()
     }
-    private fun orientationReady(config: Configuration)=when(stack.display?.rotation) {
-        Surface.ROTATION_0 -> config.orientation==Configuration.ORIENTATION_PORTRAIT
-        Surface.ROTATION_90,Surface.ROTATION_270 -> config.orientation==Configuration.ORIENTATION_LANDSCAPE
-        else -> false
-    }
     private fun retireGeometry() {
         geometryGeneration++
         geometryReady=false
         current.invalidateGeometry();stable.invalidateGeometry()
-        // A physical 90 -> 270 turn keeps the landscape boolean and dimensions,
+        // A visual 90 -> 270 turn keeps the landscape boolean and dimensions,
         // but its old frames, window receipts and springs still own different axes.
         val cleanup=CleanupActions()
         cleanup.run { invalidateLayout() }
@@ -293,14 +292,14 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         cleanup.run { stable.updateMinimum() }
         cleanup.finish()
     }
-    fun rotationChanged(rotation: Int?) {
-        if(physicalRotation!=rotation) {
-            physicalRotation=rotation
+    fun rotationChanged(rotation: Int) {
+        if(this.rotation!=rotation) {
+            this.rotation=rotation
             retireGeometry()
         }
     }
     fun refreshGeometry() {
-        rotationChanged(stack.display?.rotation)
+        rotationChanged(api.recentsRotation.getInt(container))
         current.refreshOrientation(); stable.refreshOrientation()
         geometryReady=current.geometryValid() && stable.geometryValid()
     }
@@ -351,7 +350,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
                 api.headerTitle.get(headerView) as android.widget.TextView,api.headerBadge.get(headerView) as View,headerConfig)
             val taskId=api.id.getInt(api.key.get(task))
             val thumbnail=api.getThumbnail.invoke(view) as View
-            shadow=DeckCardShadow(view,headerView,api.thumbnailRadius.getInt(thumbnail).toFloat(),thumbnail)
+            shadow=DeckCardShadow(view,headerView,api.thumbnailRadius.getInt(thumbnail).toFloat(),thumbnail,
+                api.fullscreenProgress.getFloat(view))
             return Card(this,geometry,task,taskId,frame.index,header,frame.depthScale,shadow).also {
                 cards[view]=it; XposedHelpers.setAdditionalInstanceField(view,CARD,it)
                 drawCards.add(it)
@@ -399,13 +399,21 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             reference-card.index,gap,current.fullWidth,bend,current.contentHeader,it) }
     }
     fun alignClosing(selected: Card,window: RectF,reference: RectF,alpha: Float) {
+        // Native references come from the visual layout. The moving Window is
+        // in Home space; the legacy final reconciliation passes one local Rect
+        // as both arguments and must not be transformed a second time.
+        if(window===reference) gestureReference.set(window)
+        else {
+            if(!prepareLocalSpace()) return
+            local.mapRect(gestureReference,window)
+        }
         val header=current.contentHeader
         val q=scroll
         for(i in 0 until drawCards.size) {
             val card=drawCards[i]
             if(card===selected || !current.contentAt(card.index,q,gestureTarget)) continue
             val slots=selected.index-card.index
-            if(card.geometry.windowInput(window,reference,gestureTarget,slots,25f,current.fullWidth,0f,header,card.windowInput)) {
+            if(card.geometry.windowInput(gestureReference,reference,gestureTarget,slots,25f,current.fullWidth,0f,header,card.windowInput)) {
                 card.geometry.alignClosing(card.windowInput,slots,25f,header)
                 (api.getHeader.invoke(card.view) as View).alpha=alpha
             }
@@ -427,7 +435,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
                 // scheduled draw; never request another frame or resolve members.
                 for(i in 0 until drawCards.size) {
                     val card=drawCards[i]
-                    card.shadow.syncContentAlpha()
+                    card.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(card.view))
                     card.header.refreshOpacity()
                 }
                 if(dragging?.geometry?.updateSwipe()==false) suspend(true)
@@ -462,32 +470,54 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     fun resetInterpolation() { pairs.clear() }
     fun cardAt(index: Int): Card? = cards.values.firstOrNull { it.index==index }
     fun endpointScale(index: Int): Float? = frozen[index]?.scale
+    private fun prepareLocalSpace(): Boolean {
+        global.reset()
+        stack.transformMatrixToGlobal(global)
+        return global.invert(local)
+    }
     fun alignOpening(selected: Card,start: RectF,current: RectF,progress: Float,headerAlpha: Float) {
         if(!allowed || transition==0L || start.isEmpty) return
+        if(!prepareLocalSpace()) return
+        local.mapRect(gestureTarget,current)
         var alignment=opening
         if(alignment==null || alignment.selectedId!=selected.taskId) {
             clearOpening()
-            alignment=DeckOpenAlignment(selected.taskId,RectF(start))
+            local.mapRect(gestureReference,start)
+            alignment=DeckOpenAlignment(selected.taskId,RectF(gestureReference))
             val bounds=RectF()
             for(card in cards.values) if(card!==selected && card.geometry.owned) {
-                card.geometry.screenContent(bounds,(api.getHeader.invoke(card.view) as View).height.toFloat())
-                alignment.add(card.view,api.getHeader.invoke(card.view) as View,bounds,selected.depth.index-card.depth.index)
+                card.geometry.localContent(bounds,(api.getHeader.invoke(card.view) as View).height.toFloat())
+                alignment.add(card.view,api.getHeader.invoke(card.view) as View,bounds,
+                    selected.depth.index-card.depth.index,card.geometry.scale)
             }
             opening=alignment
             openingIndex=selected.depth.index
         }
-        alignment.apply(current,progress,headerAlpha)
+        alignment.apply(gestureTarget,progress,headerAlpha)
     }
+    fun surfaceSizeMatches(width: Int,height: Int)=width.toFloat()==current.fullWidth && height.toFloat()==current.fullHeight
     fun openingBoundary(surface: RectF): Float? {
         // Opening the front card has no prior occluder. Avoid traversing cards
         // and their global matrices for every Surface frame in this common case.
         if(opening==null || openingIndex<=0) return null
+        global.reset()
+        stack.transformMatrixToGlobal(global)
+        val root=stack.rootView
+        this.surface.reset()
+        // Same quarter-turn convention as native transformCoordinate2(0,r).
+        // Project into the app Surface's axes once, then reuse it for all cards.
+        when(rotation) {
+            1 -> { this.surface.setRotate(-90f); this.surface.postTranslate(0f,minOf(root.width,root.height).toFloat()) }
+            3 -> { this.surface.setRotate(90f); this.surface.postTranslate(maxOf(root.width,root.height).toFloat(),0f) }
+        }
+        global.postConcat(this.surface)
         var edge=Float.POSITIVE_INFINITY
         for(i in 0 until drawCards.size) {
             val card=drawCards[i]
             if(card.depth.index<openingIndex && card.geometry.owned &&
                 card.view.visibility==View.VISIBLE && card.view.alpha>.01f) {
-                card.geometry.screenContent(occludingBounds,0f)
+                card.geometry.localContent(occludingBounds,0f)
+                global.mapRect(occludingBounds)
                 if(RectF.intersects(surface,occludingBounds)) edge=minOf(edge,occludingBounds.left)
             }
         }
@@ -498,10 +528,10 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     fun beginTransition(force: Boolean=false): Long {
         if(closed || !baseAllowed || !tasksAllowed || suspended || !ValueAnimator.areAnimatorsEnabled()) return 0L
-        // Display rotation can arrive before this View's configuration/layout.
-        // Do not hand a cached viewport to a new native window request.
-        if(!geometryReady || !orientationReady(stack.resources.configuration)) {
-            if(geometryReady || transition!=0L) retireGeometry()
+        // Native container rotation retires the viewport before its next measure.
+        // A portrait Activity may already contain a valid landscape viewport.
+        if(!geometryReady) {
+            if(transition!=0L) retireGeometry()
             return 0L
         }
         if(!force && transition!=0L) return transition

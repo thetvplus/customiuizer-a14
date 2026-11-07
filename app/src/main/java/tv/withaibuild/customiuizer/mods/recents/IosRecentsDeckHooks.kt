@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
-import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
@@ -52,8 +51,11 @@ internal object IosRecentsDeckHooks {
             ?.takeIf { !it.owner.closed && it.generation==it.owner.geometryGeneration }
         fun card(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.CARD) as? DeckOwner.Card }
         fun bind(view: ViewGroup) {
-            if(owner(view)!=null || !api.horizontal.isInstance(api.current.get(view))) return
-            latest=WeakReference(DeckOwner(view,api,headerConfig,radius))
+            if(!view.isAttachedToWindow || owner(view)!=null || !api.horizontal.isInstance(api.current.get(view))) return
+            var parent=view.parent
+            while(parent is View && !api.recentsContainer.isInstance(parent)) parent=parent.parent
+            val container=parent as? View ?: return
+            latest=WeakReference(DeckOwner(view,api,headerConfig,radius,container))
         }
         fun after(method: Method,block: (AfterHookCallback)->Unit) = entries.add(method to object:MethodHook() {
             override fun after(callback: AfterHookCallback)=ModuleHelper.guarded {
@@ -66,10 +68,6 @@ internal object IosRecentsDeckHooks {
         fun afterAlways(method: Method,block: (AfterHookCallback)->Unit) = entries.add(method to object:MethodHook() {
             override fun after(callback: AfterHookCallback)=ModuleHelper.guarded { block(callback) }
         })
-        // Use the native window-rotation path consistently: RotationHelper must
-        // not lock the Activity while RecentsContainer rotates only its content.
-        // Keep this in the same atomic batch, before any Launcher is created.
-        entries.add(api.keepRecentsPortrait to HookerClassHelper.returnConstant(false))
         if(motion!=null) {
             before(motion.configure) { motion.beforeConfigure(it.getThisObject()!!) }
             afterAlways(motion.configure) { motion.afterConfigure(it.getThisObject()!!,
@@ -92,7 +90,7 @@ internal object IosRecentsDeckHooks {
         before(api.detached) { owner(it.getThisObject())?.close() }
         before(api.configuration) { owner(it.getThisObject())?.close() }
         after(api.configuration) { bind(it.getThisObject() as ViewGroup) }
-        before(api.displayRotation) {
+        before(api.updateRotation) {
             val active=latest.get() ?: return@before
             if(active.stack.rootView===(it.getThisObject() as View).rootView)
                 active.rotationChanged(it.getArg(0) as Int)
@@ -236,7 +234,7 @@ internal object IosRecentsDeckHooks {
             if(it.getArg(0)===it.getThisObject()) card(it.getThisObject())?.owner?.takeIf { value -> value.allowed }?.beginTransition(true)
         }
         after(api.childrenAlpha) { card(it.getThisObject())?.let { selected ->
-            selected.shadow.syncContentAlpha()
+            selected.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(selected.view))
             selected.header.refreshOpacity(true)
         } }
         after(api.headerTransform) { card(it.getThisObject())?.header?.refreshOpacity(true) }
@@ -306,7 +304,7 @@ internal object IosRecentsDeckHooks {
                 val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
                 if(!receipt.matches(active)) return@before
                 val progress=it.getArg(3) as Float
-                active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(6) as RectF,progress,
+                active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(1) as RectF,progress,
                     ((.4f-progress)/.4f).coerceIn(0f,1f))
                 scope[scope.lastIndex]=active
             }

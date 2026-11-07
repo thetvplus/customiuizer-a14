@@ -128,6 +128,12 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
         rect.set(0f,header,view.width.toFloat(),view.height.toFloat()); combined.mapRect(rect)
     }
 
+    fun localContent(rect: RectF,header: Float) {
+        combined.setTranslate((view.left-parent.scrollX).toFloat(),(view.top-parent.scrollY).toFloat())
+        combined.preConcat(matrix); combined.preConcat(view.matrix)
+        rect.set(0f,header,view.width.toFloat(),view.height.toFloat()); combined.mapRect(rect)
+    }
+
     /** Feed the native app-gesture pose solver in its own coordinates. It still
      * owns root properties and springs; the owned matrix must not scale its
      * already-screen-sized window a second time. Window geometry folds page

@@ -2,6 +2,16 @@
 
 本页只维护仍有效的决定、未决问题和必要证据入口；公开历史仅保留正式版源码快照，必要原始证据私有归档。工程约束以 [AGENTS](../../AGENTS.md)、[架构](../../ARCHITECTURE.md)、[兼容矩阵](../../COMPATIBILITY.md)和[测试分级](../TESTING.md)为准。
 
+## 横屏原件重分析与节电续修（2026-11-08）
+
+- 按本轮要求直接读取四份 A14 Launcher APK 与各自 overlay，重新提取相关 Java / Smali，未使用 ROM 索引。三份 MIUI 原件同为逐字节相同的 8604，POCO 为 7603。DeviceConfig → RotationHelper / Launcher → RecentsContainer.updateRotation / onMeasure → TaskStackView / 算法的原生链路证实：普通手机保持竖向 Window，同时旋转内部任务容器是正常合同。撤销全局强制 isKeepRecentsViewPortrait=false 与 Display / Configuration 相等准入；新票据依赖已准备的原生视觉 viewport。此前强制旋转策略及其设备结果不再代表当前实现。具体边界见 [Deck 参考](../features/ios18-recents-reference.md#a14-横屏原件重新分析2026-11-08)，原件、汇编与分析私有留存。
+- 点击展开使用原始 Window 矩形逆映射到任务栈局部空间，邻卡位移消除自持缩放，并补偿原生 pivot 改变；Surface 只为后排打开将局部卡片边界投影到应用方向，复用 owner 矩阵，保留原生 leash / 时钟。收回只转换移动窗口，布局参考框与旧版终态的同一局部 RectF 不二次转换；旧版圆角端点匹配兼容原生四分之一转的宽高交换。横竖屏共用 DeckMotion iOS 场景，卡片圆角、裁切及阴影颜色仍取 HyperOS 1。
+- 卡片投影透明度改为真实截图 alpha × (1−原生 mFullscreenProgress)，不再仅以截图可见就显示完整阴影；首次 outline 仍读取迟到绑定的截图 alpha。原生两类消费者与 thumbnail 绘制均已核对，连续反向跟随同一原生进度，无阴影动画或滤镜。
+- 四份 A14 SystemUI 的 NavigationBarTransitions / LightBarTransitionsController / NavigationHandle 原件确认同一颜色链。Home Indicator 普通主屏手势渐变由 400 ms 映射为 250 ms，复用原生插值、单个可重定向动画器和 Paint；显式窗口交接及其他模式时序不变。250 ms 是工程取舍，不宣称恢复了 iOS luma 实值。非手势模式也不创建绘制 owner，静止仍无自持帧调度。
+- 以节电优先移除岛体内容切换的 live / outgoing 动态模糊、效果缓存及已失去生产对象的测试；位移、缩放、裁切、透明度、单份旧内容显示列表与既有有限时钟保留。另以失败回归证实波形开关可导致可见性缓存仍为真而采集已停，现将采集准入与实际可见帧合并到既有 presentation 回调，移除额外缓存与通知回调；不增加监听、轮询或采集频率。重复可见帧保持既有采集租约。
+- Deep 受影响验证通过：recents、Home Indicator 与全岛关联回归，包含真实旋转父矩阵的正反横屏展开 / Surface 遮挡、连续反向与票据退役、阴影首绑定 / 全屏进度及波形启停 / 遮挡 / 生命周期；源码不变量、生产洁净度、偏好 / 分配预算、Develop / R8、vital Lint、完整 Debug Lint 和文档检查通过。必要 A14 旧回调覆写诊断及测试夹具反射告警保留，不放宽门禁或以警告数量改写原生合同。
+- 本轮仅静态与 Host 验证；方向几何、持续反向、松手 / 点击恢复、首合成帧、阴影观感和上岛手感仍待实机验收。只确认消除滤镜创建 / 切换、缓存与重复祖先变换，不能换算成整机省电、帧率或低内存结论。版本仍为 r14.27.3 / 303，仅生成本地正式签名包，不作公开发行。
+
 
 ## 无效入口、资源与告警清理（2026-11-07）
 

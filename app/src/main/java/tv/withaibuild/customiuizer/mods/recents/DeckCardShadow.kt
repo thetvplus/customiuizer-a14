@@ -8,11 +8,11 @@ import tv.withaibuild.customiuizer.mods.utils.CleanupActions
 /** One native projection on the TaskView RenderNode. It follows the card's
  * existing matrix/alpha and never borrows the application's Surface. */
 internal class DeckCardShadow(private val view: View, private val header: View, radius: Float,
-    private val content: View) :
+    private val content: View,private var fullscreenProgress: Float) :
     ViewOutlineProvider(), View.OnLayoutChangeListener {
     private val original = view.outlineProvider
     private var corner = radius
-    private var contentAlpha = contentOpacity()
+    private var contentAlpha = contentOpacity(fullscreenProgress)
     private var closed = false
     // A clipped root would cut its header with this content-only outline.
     val owned = !view.clipToOutline
@@ -38,8 +38,9 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
         if (owned && !closed && view.outlineProvider === this) view.invalidateOutline()
     }
 
-    fun syncContentAlpha() {
-        val next=contentOpacity()
+    fun syncContentAlpha(fullscreenProgress: Float) {
+        this.fullscreenProgress=fullscreenProgress
+        val next=contentOpacity(fullscreenProgress)
         if(contentAlpha==next) return
         contentAlpha=next
         if(owned && !closed && view.outlineProvider===this) view.invalidateOutline()
@@ -47,16 +48,17 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
 
     override fun getOutline(view: View, outline: Outline) {
         val top = header.height.coerceIn(0, view.height)
-        val opacity=contentOpacity()
+        val opacity=contentOpacity(fullscreenProgress)
         if (top == view.height || view.width <= 0 || opacity==0f) outline.setEmpty()
         else outline.setRoundRect(0, top, view.width, view.height, corner.coerceAtLeast(0f))
-        // Registration can follow a native setter, and binding can still update
-        // the thumbnail afterwards. Read the real content on the first draw.
+        // The stack's existing pre-draw reconciles native thumbnail writes and
+        // fullscreen progress before projection. No second shadow animation.
         outline.alpha=opacity
     }
 
-    private fun contentOpacity(): Float =
-        if(content.visibility==View.VISIBLE && content.width>0 && content.height>0) content.alpha.coerceIn(0f,1f) else 0f
+    private fun contentOpacity(fullscreenProgress: Float): Float =
+        if(content.visibility==View.VISIBLE && content.width>0 && content.height>0 && fullscreenProgress.isFinite())
+            content.alpha.coerceIn(0f,1f)*(1f-fullscreenProgress.coerceIn(0f,1f)) else 0f
 
     override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
         if (!closed && view.outlineProvider === this) view.invalidateOutline()

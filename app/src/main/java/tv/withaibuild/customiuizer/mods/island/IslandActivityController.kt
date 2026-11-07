@@ -125,9 +125,13 @@ internal class IslandActivityController(
             if (event === lowBatteryLease) batteryWarningMarker?.visible(true)
             (lastContent as? IslandMediaContent)?.takeIf { it.token == event && it.playing && !exiting }
                 ?.let { displayedMedia = it.token }
-            updateSpectrum(visible = true)
         }, hidden = { spectrum?.pauseKeepingFrame(); recorderWave?.pauseKeepingFrame(); batteryWarningMarker?.visible(false) }, frameAllowed = ::frameAllowed,
-        rejected = ::queueFrameRecheck, presented = shell::refreshWaveformVisibility)
+        rejected = ::queueFrameRecheck, presented = {
+            shell.refreshWaveformVisibility()
+            // Sampling also depends on preferences and source ownership. A
+            // visibility-only cache misses an off/on change between two frames.
+            updateSpectrum()
+        })
     private val window = context.getSystemService(WindowManager::class.java)
     private var attached = false
     private var exiting = false
@@ -386,7 +390,6 @@ internal class IslandActivityController(
     }
 
     init {
-        shell.onWaveformVisibilityChanged = { updateSpectrum() }
         touchWindow.onUnavailable = { handler.post { ModuleHelper.guarded { if (!disposed) render() } } }
         shell.onDismiss = {
             when (forms.dismissal()) {
@@ -1720,7 +1723,6 @@ internal class IslandActivityController(
         shell.powerSaveMotion = reducedMotion()
         shell.waveformGain = options.waveformGain
         shell.realtimeWaveform = options.waveformMode == 2
-        shell.allowTextBlur = !reducedMotion()
         shell.entranceStyle = options.entranceStyle
         shell.windowTop = geometry.top
         shell.idle = idle

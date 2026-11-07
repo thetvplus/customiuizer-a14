@@ -41,12 +41,11 @@ internal class DeckWindowApi(element: Class<*>, private val params: Class<*>, pr
         require(fields[7].type.isEnum && View::class.java.isAssignableFrom(fields[11].type))
     }
     fun scene(value: Any): Boolean? {
-        // A rotation value describes axes, not a portrait-only admission flag.
-        // Equal native display/home rotations share coordinates in landscape too.
-        // Mismatched axes still belong to the native rotation handoff.
+        // Native homeRotation defaults to zero. Fixed-window phone landscape
+        // legitimately updates currentDisplayRotation to 1/3 after animTo starts.
         if(!params.isInstance(value) || fields[10].getBoolean(value) || fields[19].getBoolean(value)) return null
         val rotation=fields[15].getInt(value)
-        if(rotation!=fields[16].getInt(value) || rotation!=0 && rotation!=1 && rotation!=3) return null
+        if(rotation!=0 && rotation!=1 && rotation!=3) return null
         return when((fields[7].get(value) as? Enum<*>)?.name) {
             "OPEN_FROM_RECENTS" -> true
             "CLOSE_TO_RECENTS" -> false

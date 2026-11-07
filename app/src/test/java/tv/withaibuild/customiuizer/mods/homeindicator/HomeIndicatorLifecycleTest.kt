@@ -31,6 +31,10 @@ class HomeIndicatorLifecycleTest {
         @JvmField var mNavBarMode=2
         fun updateIcons(config: Configuration) {}
     }
+    class Transitions(@JvmField val mView: Bar) {
+        @JvmField var mNavBarMode=2
+        fun getTintAnimationDuration()=if(mNavBarMode==2) 400 else 120
+    }
     class Incomplete(context: Context): View(context) {
         public override fun onDraw(canvas: Canvas) {}
     }
@@ -44,6 +48,34 @@ class HomeIndicatorLifecycleTest {
         override fun drawPath(path: Path, paint: Paint) {
             this.paint=paint; path.computeBounds(bounds,true)
         }
+    }
+    @Test fun gestureTintUsesTheNativeAnimatorBudgetWithoutCreatingADrawingOwner() {
+        val controller=Robolectric.buildActivity(Activity::class.java).setup().visible()
+        try {
+            val bar=Bar(controller.get());controller.get().setContentView(bar)
+            val transitions=Transitions(bar)
+            val method=Transitions::class.java.getDeclaredMethod("getTintAnimationDuration")
+            val hook=HomeIndicatorHooks.prepare(Handle::class.java,Bar::class.java,Transitions::class.java).toMap().getValue(method)
+            var nativeCalls=0
+            val chain=object: XposedInterface.Chain {
+                override fun getExecutable(): Method=method
+                override fun getThisObject(): Any=transitions
+                override fun getArgs(): List<Any?> = emptyList()
+                override fun getArg(index: Int): Any?=throw IndexOutOfBoundsException()
+                override fun proceed(): Any { nativeCalls++;return transitions.getTintAnimationDuration() }
+                override fun proceed(args: Array<Any?>)=proceed()
+                override fun proceedWith(receiver: Any)=proceed()
+                override fun proceedWith(receiver: Any,args: Array<Any?>)=proceed()
+            }
+            assertEquals(250,hook.intercept(chain))
+            assertEquals(0,nativeCalls)
+            assertNull(XposedHelpers.getAdditionalInstanceField(bar,"a14.home.indicator.owner"))
+            for(mode in intArrayOf(0,1)) {
+                transitions.mNavBarMode=mode
+                assertEquals(120,hook.intercept(chain))
+            }
+            assertEquals(2,nativeCalls)
+        } finally { controller.pause().stop().destroy() }
     }
     @Test fun nativeModeChangesMissingHostAndGeometryFailureKeepNativeDrawing() = scene { bar,handle,invoke ->
         val canvas=Drawing()
@@ -79,8 +111,8 @@ class HomeIndicatorLifecycleTest {
         assertNull(XposedHelpers.getAdditionalInstanceField(inflated,"a14.home.indicator.owner"))
     }
     @Test fun incompleteNativeContractFailsBeforeAnyHookCanInstall() {
-        assertThrows(NoSuchFieldException::class.java) { HomeIndicatorHooks.prepare(Incomplete::class.java,Bar::class.java) }
-        assertThrows(IllegalArgumentException::class.java) { HomeIndicatorHooks.prepare(MutablePaint::class.java,Bar::class.java) }
+        assertThrows(NoSuchFieldException::class.java) { HomeIndicatorHooks.prepare(Incomplete::class.java,Bar::class.java,Transitions::class.java) }
+        assertThrows(IllegalArgumentException::class.java) { HomeIndicatorHooks.prepare(MutablePaint::class.java,Bar::class.java,Transitions::class.java) }
         val support=tv.withaibuild.customiuizer.utils.HomeIndicatorSupport
         assertTrue(support.supported(34,arrayOf("arm64-v8a","armeabi-v7a")))
         assertFalse(support.supported(35,arrayOf("arm64-v8a")))
@@ -94,7 +126,7 @@ class HomeIndicatorLifecycleTest {
             val screen=host.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
             bar.rootView.layout(0,0,screen.width(),screen.height())
             bar.layout(0,0,screen.width(),80);handle.layout(0,0,280,80)
-            val hooks=HomeIndicatorHooks.prepare(Handle::class.java,Bar::class.java).toMap()
+            val hooks=HomeIndicatorHooks.prepare(Handle::class.java,Bar::class.java,Transitions::class.java).toMap()
             block(bar,handle) { receiver,name,arg ->
                 val method=receiver.javaClass.getDeclaredMethod(name,if(name=="onDraw") Canvas::class.java else Configuration::class.java)
                 var native=false

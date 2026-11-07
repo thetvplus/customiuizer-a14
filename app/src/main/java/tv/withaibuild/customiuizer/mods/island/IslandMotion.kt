@@ -8,14 +8,6 @@ import kotlin.math.sqrt
 
 /** Damped step response: prompt travel followed by one small, decaying overshoot. */
 internal object IslandMotion {
-    // Subpixel filter increments on ordinary phone densities, prepared once.
-    const val CONTENT_BLUR_STEPS = 64
-    const val CONTENT_BLUR_RADIUS = 16.666f
-    fun contentBlurLevel(reveal: Float): Int = if(reveal >= .999f) -1 else
-        (kotlin.math.ceil((1f-reveal)*CONTENT_BLUR_STEPS).toInt()-1).coerceIn(0,CONTENT_BLUR_STEPS-1)
-    fun contentBlurRadius(level: Int,density: Float): Float =
-        if(level<0) 0f else CONTENT_BLUR_RADIUS*(level+1)/CONTENT_BLUR_STEPS*density
-
     const val ENTER = 403L
     const val MORPH = 384L
     const val REBOUND = 384L

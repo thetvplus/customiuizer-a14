@@ -8,8 +8,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -229,7 +227,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var outgoing: IslandContentSnapshot? = null
     private var outgoingReveal = 0f
     private var outgoingFresh = false
-    private var outgoingClarity = 1f
     private var contentFromInert = false
     var entranceStyle = IslandEntranceStyle.TOP
     var motionScale = 1f
@@ -242,13 +239,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     val waveformRequested: Boolean get() = recording || isMedia && !expanded
     val waveformSampling: Boolean get() = waveformRequested && wave.isShown && wave.visibility == VISIBLE &&
         (wave.outputVisible || motion != null && !leaving)
-    var onWaveformVisibilityChanged: (() -> Unit)? = null
     private val waveBounds = android.graphics.Rect()
     private val waveClip = android.graphics.Rect()
     private val waveVisibleBounds = android.graphics.RectF()
     private val waveClipBounds = android.graphics.RectF()
     private val waveClipMatrix = android.graphics.Matrix()
-    private var samplingWave = false
 
     /** Reuses presentation's pre-draw; alpha/clip changes do not emit layout events. */
     fun refreshWaveformVisibility() {
@@ -267,31 +262,18 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             parent = parent.parent as? View
         }
         wave.outputVisible = visible
-        val sampling = waveformSampling
-        if (samplingWave != sampling) {
-            samplingWave = sampling
-            onWaveformVisibilityChanged?.invoke()
-        }
     }
     var waveformGain: Int
         get() = wave.gainPercent
         set(value) { wave.gainPercent = value }
     var realtimeWaveform = false
-    var allowTextBlur = true
     var privacy = 0
         set(value) { if (field != value) { field = value; invalidate() } }
     private val privacyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var flipDirection = 1f
     private var albumFlip = false
-    private var blurLevel = -1
-    // One live content node owns blur; the shell and camera remain unfiltered.
+    // One live content node and one outgoing display list share the motion clock.
     private val contentLayer = FrameLayout(context).apply { clipChildren = false; clipToPadding = false }
-    // Same-version slot blur range; cached only for a visible, hardware transition.
-    private val slotBlur = arrayOfNulls<RenderEffect>(IslandMotion.CONTENT_BLUR_STEPS)
-    private fun slotBlur(level: Int): RenderEffect = slotBlur[level] ?: run {
-        val radius = IslandMotion.contentBlurRadius(level,resources.displayMetrics.density)
-        RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP).also { slotBlur[level] = it }
-    }
     var windowTop = 0
     var isMedia = false
         private set
@@ -1236,8 +1218,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         layerReveal = contentOpacity.sample(slotTime).coerceIn(0f, 1f)
                         if (outgoing?.ready == true) {
                             outgoingReveal = outgoingOpacity.sample(slotTime).coerceIn(0f, 1f)
-                            val level = slotBlurLevel(outgoingReveal * outgoingClarity)
-                            outgoing?.pose(outgoingReveal, level, if (level >= 0) slotBlur(level) else null)
+                            outgoing?.pose(outgoingReveal)
                             if (outgoingReveal <= .001f) outgoing?.clear()
                             invalidate()
                         }
@@ -1362,11 +1343,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
 
         text.alpha = reveal * textReveal
-        val nextBlur = slotBlurLevel(layerReveal)
-        if (nextBlur != blurLevel) {
-            blurLevel = nextBlur
-            contentLayer.setRenderEffect(if (nextBlur >= 0) slotBlur(nextBlur) else null)
-        }
         val waveRoom = if (recording) iconRoom else if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize else iconRoom
         wave.alpha = if (waveRoom && geometryHeight * sy >= waveHeight) reveal else 0f
         if (shape.resize(geometryWidth, geometryHeight, sx, sy)) invalidateOutline()
@@ -1392,7 +1368,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         icon.rotationY = 0f
         contentFromInert = false
         outgoing?.clear(); outgoingReveal = 0f; outgoingFresh = false
-        if (blurLevel >= 0) { contentLayer.setRenderEffect(null); blurLevel = -1 }
     }
 
     private fun prepareOutgoing() {
@@ -1406,14 +1381,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
         outgoingReveal = if (outgoingFresh) 1f else 0f
         if (outgoingFresh) {
-            outgoingClarity = layerReveal
-            val level = slotBlurLevel(outgoingClarity)
-            outgoing?.pose(1f, level, if (level >= 0) slotBlur(level) else null)
+            outgoing?.pose(1f)
         }
     }
-
-    private fun slotBlurLevel(reveal: Float) = if (allowTextBlur && !powerSaveMotion && isHardwareAccelerated && reveal < .999f)
-        IslandMotion.contentBlurLevel(reveal) else -1
 
     private fun contentFits(): Boolean {
         val edge = dp(IslandSizing.EDGE_DP)
@@ -1441,7 +1411,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     override fun onDetachedFromWindow() {
         title.stop()
         disposed = true
-        samplingWave = false
         pendingContent = null; displayedContent = null; contentFadeRemaining = 0L
         cancelInputs()
         motion?.cancel(); motion = null
