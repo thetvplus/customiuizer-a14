@@ -1273,14 +1273,15 @@ class FormalTargetAndNotesTest(unittest.TestCase):
     def test_repository_target_matches_the_next_source_and_preserves_both_notes_baselines(self):
         policy = json.loads((REPO_ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
         name, code = release.source_version((REPO_ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
-        self.assertEqual("r14.27.1", name)
-        self.assertEqual(301, code)
+        self.assertEqual("r14.27.3", name)
+        self.assertEqual(303, code)
         with patch.object(release, "POLICY", policy):
             release.release_target(name, code)
-            for retired in (("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257), ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263), ("r14.26.5", 265), ("r14.26.7", 267), ("r14.26.9", 269), ("r14.26.11", 281), ("r14.26.17", 277), (name, 278), (name, 279), (name, 280), (name, 300)):
+            for retired in (("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257), ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263), ("r14.26.5", 265), ("r14.26.7", 267), ("r14.26.9", 269), ("r14.26.11", 281), ("r14.26.17", 277), ("r14.27.1", 301), (name, 278), (name, 279), (name, 280), (name, 300), (name, 301), (name, 302)):
                 with self.assertRaisesRegex(ValueError, "designated formal"):
                     release.release_target(*retired)
-        self.assertEqual({"notes_base": "r14.26.11"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.27.1"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.26.11"}, policy["cumulative_releases"]["r14.27.1"])
         self.assertEqual({"notes_base": "r14.26.9"}, policy["cumulative_releases"]["r14.26.11"])
         self.assertEqual({"notes_base": "r14.26.5"}, policy["cumulative_releases"]["r14.26.9"])
         self.assertEqual({"notes_base": "r14.25.9"}, policy["cumulative_releases"]["r14.26.5"])

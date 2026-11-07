@@ -31,11 +31,11 @@ Availability depends on the ROM and system-app versions. Do not enable this modu
 
 The [documentation index](docs/README.md) covers development, testing, releases and feature contracts. Start with the [shared engineering rules](AGENTS.md) before contributing.
 
-Current source version: `r14.27.1` (versionCode 301). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
+Current source version: `r14.27.3` (versionCode 303). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
 
 The iOS gesture indicator requires full-screen gestures and a visible system handle; turn off this module’s Hide gesture line and restart System UI. The [iOS recents deck](docs/features/ios18-recents-reference.md) uses complete native interfaces to admit MIUI / POCO launchers and requires Horizontal Recents; restart the launcher after changing it. Full-screen gestures are recommended.
 
-r14.27.1 adds the recents deck, gesture indicator and volume appearance, and refines island handoff, Duo graphics and native fallback since r14.26.11; see the [changelog](CHANGELOG_EN.md). Check the [release page](https://github.com/thetvplus/customiuizer-a14/releases/latest) for the published APK and the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for verified scenarios and remaining issues.
+r14.27.3 fixes recents deck gap filling, orientation handoff and rear-card opacity, and adjusts island feedback on returning home and pressing; see the [changelog](CHANGELOG_EN.md). Check the [release page](https://github.com/thetvplus/customiuizer-a14/releases/latest) for the published APK and the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for verified scenarios and remaining issues.
 
 Git history has been consolidated with anonymous commit metadata. Existing signed APKs and original build metadata are unchanged; see the [source correspondence](docs/RELEASE.md#历史匿名化与已签名版本).
 
