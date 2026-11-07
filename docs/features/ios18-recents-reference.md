@@ -44,7 +44,7 @@ MiuiHome 样本版本为 `RELEASE-4.39.30.8604-08262248`。现有 Catalog 中 fu
 | 原生窗口衔接 | 新版含 `TaskViewsElement`；上述 POCO 样本不含此类，使用 `getRecentsWindowAnimatorNew` → `getTaskViewStartRectF` → `RectFSpringAnim` → `ClipAnimationHelper`，必须同步原生 Surface 起止矩形 |
 | `TaskView.resetViewProperties` / detach | 恢复自持属性和命中状态，避免还池后污染 |
 
-不能只在 TaskView 上后置缩放；这样会漏卡、点错对象或与真实应用 Surface 脱节。实现应独立开关、默认关闭，先限定普通竖屏横向最近任务；分屏、小窗、旋转及接口不兼容的实现保留原生回退。继续沿用米客的 Feature 安装、API 102、ClassLoader 与生命周期合同，不每帧读取偏好、查类或重建任务表。
+不能只在 TaskView 上后置缩放；这样会漏卡、点错对象或与真实应用 Surface 脱节。实现使用独立开关、默认关闭，支持普通手机横向最近任务的横竖屏；分屏、组合任务、小窗及接口不兼容的场景保留原生回退。继续沿用米客的 Feature 安装、API 102、ClassLoader 与生命周期合同，不每帧读取偏好、查类或重建任务表。
 
 ## POCO 分支的进一步评估
 

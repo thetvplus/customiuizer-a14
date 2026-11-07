@@ -357,25 +357,30 @@ def community_notes() -> str:
     return f"[交流与反馈 · Telegram / Community]({POLICY['community_url']})"
 
 
-def public_release_notes_section(text: str, name: str, code: int, filename: str, *, language: str | None = None) -> str:
-    """Render reviewed user changes; legacy releases retain their original format."""
+def public_release_notes_section(text: str, name: str, code: int, filename: str, *, language: str | None = None,
+                                 prefer_summary: bool = True) -> str:
+    """Use the authored release summary; detailed changelogs and legacy notes stay available."""
     body = release_notes_section(text, name, code, filename)
     language = language or ("English" if filename.endswith("_EN.md") else "简体中文")
     require(language in {"简体中文", "English"}, "Unsupported changelog language")
     user = "用户变化" if language == "简体中文" else "User changes"
     engineering = "工程说明" if language == "简体中文" else "Engineering notes"
+    summary = "发行摘要" if language == "简体中文" else "Release summary"
     headings = list(re.finditer(r"^### (.+?)\s*$", body, re.M))
-    reserved = {"用户变化", "User changes", "工程说明", "Engineering notes"}
+    reserved = {"用户变化", "User changes", "工程说明", "Engineering notes", "发行摘要", "Release summary"}
     if not any(item[1] in reserved for item in headings):
         return body
-    require([item[1] for item in headings] == [user, engineering],
+    names = [item[1] for item in headings]
+    require(names in ([user, engineering], [summary, user, engineering]),
             f"{filename} needs one ordered user/engineering section pair")
-    changes = body[headings[0].end():headings[1].start()].strip()
-    count = len(re.findall(r"^[-*] \S", changes, re.M))
-    require(count > 0, f"{filename} public notes need reviewed user changes")
-    bullets = re.findall(r"^[-*] (.+)$", changes, re.M)
-    normalized = [" ".join(item.casefold().split()).rstrip("。.!！") for item in bullets]
-    require(len(set(normalized)) == len(normalized), f"{filename} contains duplicate public change entries")
+    sections = [body[headings[i].end():headings[i+1].start()].strip() for i in range(len(headings)-1)]
+    for section in sections:
+        count = len(re.findall(r"^[-*] \S", section, re.M))
+        require(count > 0, f"{filename} public notes need reviewed user changes")
+        bullets = re.findall(r"^[-*] (.+)$", section, re.M)
+        normalized = [" ".join(item.casefold().split()).rstrip("。.!！") for item in bullets]
+        require(len(set(normalized)) == len(normalized), f"{filename} contains duplicate public change entries")
+    changes = sections[0] if prefer_summary else sections[-1]
     intro = re.sub(r"^versionCode\s+\d+[。.]\s*", "", body[:headings[0].start()].strip())
     return f"{intro}\n\n{changes}".strip()
 

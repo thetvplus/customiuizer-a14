@@ -208,6 +208,29 @@ class AutomaticReleaseTest(unittest.TestCase):
         self.assertEqual(release.release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG_EN.md"),
                          release.public_release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG_EN.md"))
 
+    def test_authored_release_summary_is_distinct_from_detailed_changes(self):
+        for filename, summary, user, engineering in (
+                ("CHANGELOG.md", "发行摘要", "用户变化", "工程说明"),
+                ("CHANGELOG_EN.md", "Release summary", "User changes", "Engineering notes")):
+            text = (f"## r14.25.3\n\nversionCode 248. Changes since r14.25.1:\n\n"
+                    f"### {summary}\n\n- Short user overview.\n\n"
+                    f"### {user}\n\n- Detailed behavior A.\n- Detailed behavior B.\n\n"
+                    f"### {engineering}\n\n- Private implementation details.\n")
+            notes = release.public_release_notes_section(text, "r14.25.3", 248, filename)
+            self.assertIn("Short user overview.", notes)
+            self.assertNotIn("Detailed behavior", notes)
+            self.assertNotIn("Private implementation", notes)
+            detailed = release.public_release_notes_section(text, "r14.25.3", 248, filename, prefer_summary=False)
+            self.assertNotIn("Short user overview.", detailed)
+            self.assertIn("Detailed behavior A.", detailed)
+            self.assertIn("Changes since r14.25.1:", detailed)
+            for invalid in (text.replace("- Short user overview.", ""),
+                            text.replace("- Short user overview.", "- Same.\n- Same."),
+                            text.replace(f"### {user}", f"### {summary}"),
+                            text.replace("- Detailed behavior A.\n- Detailed behavior B.", "")):
+                with self.assertRaises(ValueError):
+                    release.public_release_notes_section(invalid, "r14.25.3", 248, filename)
+
     def test_changelog_release_notes_cannot_be_empty_ambiguous_or_wrong_version(self):
         for text in ("## r14.26.1\n\nversionCode 247.\n", "## r14.26.1\n\nversionCode 246.\n- Change\n",
                      "## r14.26.1\n\nversionCode 247.\n- Change\n\n## r14.26.1\n- Duplicate\n"):
