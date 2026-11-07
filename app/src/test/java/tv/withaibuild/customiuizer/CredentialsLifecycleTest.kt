@@ -30,6 +30,27 @@ class UnavailableCredentialShadow : ShadowKeyguardManager() {
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class CredentialsLifecycleTest {
+    @Test fun creatingACredentialShortcutKeepsTheExternalLauncherResultWithoutPinningIt() {
+        val controller = Robolectric.buildActivity(CredentialsShortcut::class.java).create()
+        try {
+            val activity = controller.get()
+            val result = shadowOf(activity).resultIntent
+            assertEquals(Activity.RESULT_OK, shadowOf(activity).resultCode)
+            assertTrue(activity.isFinishing)
+            val target = result.getParcelableExtra("android.intent.extra.shortcut.INTENT", Intent::class.java)!!
+            assertEquals(Credentials::class.java.name, target.component!!.className)
+            assertEquals(activity.packageName, target.component!!.packageName)
+            assertEquals(Intent.ACTION_VIEW, target.action)
+            assertEquals(activity.getString(R.string.credentials_unlock),
+                result.getStringExtra("android.intent.extra.shortcut.NAME"))
+            val icon = result.getParcelableExtra("android.intent.extra.shortcut.ICON_RESOURCE",
+                Intent.ShortcutIconResource::class.java)!!
+            assertEquals(activity.packageName, icon.packageName)
+            assertEquals(activity.resources.getResourceName(R.drawable.ic_credentials), icon.resourceName)
+            assertTrue(activity.getSystemService(android.content.pm.ShortcutManager::class.java).pinnedShortcuts.isEmpty())
+        } finally { controller.destroy() }
+    }
+
     @Test fun manifestShortcutTargetsTheInstalledA14CredentialActivity() {
         val context = RuntimeEnvironment.getApplication()
         context.resources.getXml(R.xml.shortcuts).use { parser ->

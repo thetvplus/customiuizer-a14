@@ -48,8 +48,8 @@ class System_WifiAutomatic : SubFragment() {
         super.onSaveInstanceState(outState)
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         findPreference<Preference>(prefix + "add")?.setOnPreferenceClickListener { edit(null); true }
         findPreference<Preference>(prefix + "current")?.setOnPreferenceClickListener {
             addCurrent()

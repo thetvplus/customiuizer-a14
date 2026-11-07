@@ -16,8 +16,8 @@ import tv.withaibuild.customiuizer.utils.GetPathUtils
 
 class System_ScreenshotConfig : SubFragment() {
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val format = AppHelper.getStringOfAppPrefs("pref_key_system_screenshot_format", "1")
         findPreference<Preference>("pref_key_system_screenshot_quality")?.isEnabled = format == "2" || format == "4"

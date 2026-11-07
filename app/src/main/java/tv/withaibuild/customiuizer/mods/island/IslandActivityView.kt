@@ -8,8 +8,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -202,6 +200,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var mediaReturnProgress = 1f
     private var nativeArrival = false
     private var receivingExisting = false
+    private var receivingContent = false
     private var returnProgress: IslandReturnProgress? = null
 
     fun acceptReturnProgress(progress: IslandReturnProgress?) {
@@ -228,7 +227,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var outgoing: IslandContentSnapshot? = null
     private var outgoingReveal = 0f
     private var outgoingFresh = false
-    private var outgoingClarity = 1f
     private var contentFromInert = false
     var entranceStyle = IslandEntranceStyle.TOP
     var motionScale = 1f
@@ -241,13 +239,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     val waveformRequested: Boolean get() = recording || isMedia && !expanded
     val waveformSampling: Boolean get() = waveformRequested && wave.isShown && wave.visibility == VISIBLE &&
         (wave.outputVisible || motion != null && !leaving)
-    var onWaveformVisibilityChanged: (() -> Unit)? = null
     private val waveBounds = android.graphics.Rect()
     private val waveClip = android.graphics.Rect()
     private val waveVisibleBounds = android.graphics.RectF()
     private val waveClipBounds = android.graphics.RectF()
     private val waveClipMatrix = android.graphics.Matrix()
-    private var samplingWave = false
 
     /** Reuses presentation's pre-draw; alpha/clip changes do not emit layout events. */
     fun refreshWaveformVisibility() {
@@ -266,32 +262,18 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             parent = parent.parent as? View
         }
         wave.outputVisible = visible
-        val sampling = waveformSampling
-        if (samplingWave != sampling) {
-            samplingWave = sampling
-            onWaveformVisibilityChanged?.invoke()
-        }
     }
     var waveformGain: Int
         get() = wave.gainPercent
         set(value) { wave.gainPercent = value }
     var realtimeWaveform = false
-    var returnStrength = 0f
-    var allowTextBlur = true
     var privacy = 0
         set(value) { if (field != value) { field = value; invalidate() } }
     private val privacyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var flipDirection = 1f
     private var albumFlip = false
-    private var blurLevel = -1
-    // One live content node owns blur; the shell and camera remain unfiltered.
+    // One live content node and one outgoing display list share the motion clock.
     private val contentLayer = FrameLayout(context).apply { clipChildren = false; clipToPadding = false }
-    // Same-version slot blur range; cached only for a visible, hardware transition.
-    private val slotBlur = arrayOfNulls<RenderEffect>(IslandMotion.CONTENT_BLUR_STEPS)
-    private fun slotBlur(level: Int): RenderEffect = slotBlur[level] ?: run {
-        val radius = IslandMotion.contentBlurRadius(level,resources.displayMetrics.density)
-        RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP).also { slotBlur[level] = it }
-    }
     var windowTop = 0
     var isMedia = false
         private set
@@ -355,7 +337,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (motion != null || nativeArrival || disposed || leaving || powerSaveMotion ||
             !ValueAnimator.areAnimatorsEnabled() || idle && idleTapAction == 1) return
         pressedBody = true
-        animateTo(minOf(1.2f, maximumWidth / geometryWidth.coerceAtLeast(1)), 1.2f,
+        // 22G100 requests 1.2 then clips to its system container. Map that
+        // request into A14's existing body envelope; width clipping must not
+        // leave an independently inflated vertical axis.
+        val pressedScale=minOf(1.2f,1.14f,maximumWidth/geometryWidth.coerceAtLeast(1))
+        animateTo(pressedScale, pressedScale,
             translationX, translationY, alpha, IslandMotion.REBOUND, interaction = true)
         pressMotion = motion
     }
@@ -475,7 +461,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val detail = content.clockLabel?.trim()?.takeIf { it.isNotEmpty() && it != content.label }
         val split = content.expanded && !content.status && content.clock == null && detail != null
         val twoLevels = detail != null && (content.status || content.expanded && content.clock != null)
-        title.gravity = Gravity.END or Gravity.CENTER_VERTICAL
         applyTextSizes(content, split)
         val identityLabel = if (split) content.label else ""
         if (!TextUtils.equals(identityTitle.text, identityLabel)) identityTitle.text = identityLabel
@@ -631,8 +616,15 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         this.maximumWidth = maximumWidth.coerceAtLeast(width).toFloat()
         this.cameraGap = cameraGap
         this.cameraOffset = cameraOffset
+        val side = if (layoutDirection == LAYOUT_DIRECTION_RTL) -1f else 1f
+        // The camera side is physical; paragraph direction must not move a
+        // Latin caption to the opposite edge of an RTL lane (or vice versa).
+        val captionGravity = (if (cameraGap > 0) Gravity.getAbsoluteGravity(Gravity.START, layoutDirection)
+            else Gravity.END) or Gravity.CENTER_VERTICAL
+        if (title.gravity != captionGravity) title.gravity = captionGravity
+        if (subtitle.gravity != captionGravity) subtitle.gravity = captionGravity
         iconSize = iconSizeForHeight(height)
-        val half = (if (cameraGap > 0) ((width - cameraGap) / 2f + cameraOffset).toInt()
+        val half = (if (cameraGap > 0) ((width - cameraGap) / 2f + cameraOffset * side).toInt()
             else if (identityTitle.visibility == VISIBLE) (width - dp(8)) / 2
             else dp(IslandSizing.EDGE_DP) + iconSize + dp(8)).coerceAtLeast(1)
         val iconParams = icon.layoutParams
@@ -647,7 +639,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (iconMask.shape != iconShape) iconMask.shape = iconShape
         left.setPadding(dp(IslandSizing.EDGE_DP), 0, if (identityTitle.visibility == VISIBLE) dp(8) else 0, 0)
         layoutChild(left, half, height, Gravity.TOP or Gravity.START)
-        layoutChild(text, captionRoom(width, cameraGap), height, Gravity.TOP or Gravity.END,
+        val labelRoom = captionRoom(width, cameraGap)
+        text.pivotX = if (cameraGap > 0) { if (side > 0f) 0f else labelRoom.toFloat() } else labelRoom * .5f
+        layoutChild(text, labelRoom, height, Gravity.TOP or Gravity.END,
             end = dp(IslandSizing.EDGE_DP))
         waveHeight = kotlin.math.round(dp(20) * scale).toInt().coerceAtLeast(1)
         layoutChild(wave, iconSize, waveHeight, Gravity.TOP or if (recording) Gravity.START else Gravity.END,
@@ -743,6 +737,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         disposed = false; leaving = false
         nativeArrival = mediaReturn
         receivingExisting = false
+        receivingContent = false
         mediaReturnProgress = if (mediaReturn && returnProgress != null &&
             !powerSaveMotion && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
         if (mediaReturnProgress == 0f || powerSaveMotion || !ValueAnimator.areAnimatorsEnabled()) {
@@ -778,18 +773,19 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Only a real native channel owns the longer window-arrival clock.
         nativeArrival = true
         receivingExisting = true
+        receivingContent = false
         changePivot(horizontalPivot(geometryWidth), geometryHeight * .5f)
         mediaReturnProgress = if (returnProgress != null && !powerSaveMotion && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
     }
 
-    fun prepareContentArrivalFromCurrent() {
+    fun prepareContentArrivalFromCurrent(receiveBreadth: Boolean = true) {
         acceptReturnProgress(null)
         nativeArrival = false
         receivingExisting = false
+        receivingContent = receiveBreadth
         changePivot(horizontalPivot(geometryWidth), geometryHeight * .5f)
-        // An attached shell already establishes presence. Only a real Home
-        // return owns an arrival excursion; content replacement keeps the
-        // current form and lets actual dimension changes drive the morph.
+        // A new activity can receive horizontally without becoming a Home
+        // window handoff. Metadata/form-only refreshes keep their current shell.
         mediaReturnProgress = 1f
     }
 
@@ -801,11 +797,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         leaving = false
         val startWidth = (if (entering) geometryWidth else fromWidth) * scaleX
         val startHeight = (if (entering) geometryHeight else fromHeight) * scaleY
-        val catchAmount = maxOf(IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat()),
-            if (mediaReturnProgress == 0f) if (nativeArrival) {
-                val pixels = maxOf(dp(12).toFloat(), width * .09f).coerceAtMost(dp(18).toFloat())
-                pixels / width.coerceAtLeast(1)
-            } else .055f else 0f)
+        val secondarySizeChange=IslandMotion.hasSignificantSizeChange(startWidth,startHeight,
+            width.toFloat(),height.toFloat(),dp(6).toFloat())
         if (!entering) {
             scaleX *= fromWidth.toFloat() / width.coerceAtLeast(1)
             scaleY *= fromHeight.toFloat() / height.coerceAtLeast(1)
@@ -818,13 +811,19 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             if (nativeArrival && returnProgress != null) IslandMotion.RETURN_TIMEOUT else IslandMotion.CONTENT_ARRIVAL
         }
             else if (entering) IslandMotion.ENTER
-            else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
+            else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && secondarySizeChange)
+        // A top entry travels at its final width. Home/camera arrivals and
+        // already-visible content may receive horizontally on their own route.
+        val verticalEntry = entering && !entryCameraAnchor
         animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
-            returning = mediaReturnProgress == 0f,
-            catchWeight = catchAmount * 98 / 100, rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival,
+            returning = nativeArrival || mediaReturnProgress == 0f,
+            rigid = verticalEntry,
+            rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival,
             boundsMotion = ordinaryBounds && !entering && mediaReturnProgress >= 1f &&
                 maxOf(abs(startWidth - width), abs(startHeight - height)) > 1f, nativeProfile = true,
-            ringerShake = ringerShake)
+            ringerShake = ringerShake && !verticalEntry,
+            arriving = entering && !verticalEntry || receivingContent)
+        receivingContent = false
     }
 
     private fun requestDismiss() {
@@ -1052,9 +1051,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         2f * abs(geometryHeight * .5f - cameraY) + cameraHeight)
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
-        onEnd: (() -> Unit)? = null, returning: Boolean = false, catchWeight: Float = 0f, rigid: Boolean = false,
+        onEnd: (() -> Unit)? = null, returning: Boolean = false, rigid: Boolean = false,
         rebound: Boolean = false, boundsMotion: Boolean = false, nativeProfile: Boolean = false,
-        ringerShake: Boolean = false, interaction: Boolean = false) {
+        ringerShake: Boolean = false, interaction: Boolean = false, arriving: Boolean = false) {
         if (!interaction) { pressedBody = false; pressMotion = null }
         if (!returning) cancelMediaReturn()
         val carry = motion != null || dragCaptured
@@ -1071,10 +1070,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             return
         }
         val nativeDriven = returning && nativeArrival && returnProgress != null
-        // The recovered acceptance frame retargets an existing container. A new
-        // Android camera seed already expands toward its form; adding that
-        // container's excursion on top invents a second vertical inflation.
-        val acceptingExisting = nativeDriven && receivingExisting
+        // The accepted Home request owns the receive stages. The optional
+        // window-progress mapping only coordinates the app surface/wait clock.
+        val accepting = returning && nativeArrival
         // A final exit keeps its established bounded fade/seed handoff. Applying
         // the longer content clock here leaves a translucent seed after music ends.
         val iosContent = (nativeProfile || interaction) && !leaving
@@ -1099,10 +1097,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             if (boundsMotion && (y - scaleY) * geometryHeight > 1f) IslandMotion.FORM_DAMPING else 1.0)
         // Preserve an interrupted wider body instead of clamping its first frame.
         val maximumBreadth = maxOf(maximumWidth, geometryWidth * scaleX)
-        // Up acceptance can add 26 points of height; the old 1.14 cap was an
-        // Android approximation and cannot truncate that positive receive phase.
+        // Native +26 belongs to its container request, not an unconditional dp
+        // addition on A14's compact body. Keep the established safe body envelope.
         val maximumHeight = maxOf(maxOf(dp(44), geometryHeight) * 1.14f,
-            geometryHeight * maxOf(scaleY, y)) + if (acceptingExisting) dp(26) else 0
+            geometryHeight * maxOf(scaleY, y))
         val restingMinimum = if ((rebound || nativeDriven) && cameraGap > 0)
             minOf(cameraMinimumHeight(), geometryHeight * scaleY)
             else minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
@@ -1110,11 +1108,19 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // the former extra negative pulse after horizontal settling. Positive
         // acceptance height belongs to its explicit, independently retargeted axis.
         val minimumHeight = restingMinimum
-        val absorptionResponse = if (acceptingExisting) IslandAcceptanceResponse(
+        // Preserve the recovered +16 horizontal request. On an existing compact
+        // A14 body, map the vertical request to the same relative excursion;
+        // a new camera seed keeps its ordinary height transition entirely.
+        val receiveHeightScale=if(receivingExisting)
+            minOf(1f,geometryHeight*(16f/26f)/geometryWidth.coerceAtLeast(1)) else 0f
+        val absorptionResponse = if (accepting) IslandAcceptanceResponse(
             geometryWidth * scaleX, geometryHeight * scaleY, geometryWidth * x, geometryHeight * y,
             breadth.velocity, depth.velocity, resources.displayMetrics.density,
-            minOf(compactWidth(), geometryWidth * scaleX), maximumBreadth, minimumHeight, maximumHeight) else null
-        if (absorptionResponse != null) milliseconds = maxOf(milliseconds, absorptionResponse.durationMillis)
+            minOf(compactWidth(), geometryWidth * scaleX), maximumBreadth, minimumHeight, maximumHeight,
+            heightScale=receiveHeightScale) else null
+        val arrivalBreadth=absorptionResponse?.breadth ?: if(arriving && iosContent && !idle && !interaction)
+            IslandArrivalBreadth(geometryWidth*scaleX,geometryWidth*x,breadth.velocity,resources.displayMetrics.density,
+                minOf(compactWidth(),geometryWidth*scaleX),maximumBreadth) else null
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         // A content handoff may interrupt a top exit. Keep its visible origin,
         // without inheriting the old exit's upward travel into a new activity.
@@ -1139,6 +1145,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 profile.horizon(translationX - tx, px), profile.horizon(translationY - ty, py),
                 IslandMotion.IOS_BOUNDS.horizon(alpha - opacity, av, .002, .02))
         }
+        // Generic content/bounds timing must not truncate the receive recoil.
+        milliseconds=maxOf(milliseconds,absorptionResponse?.durationMillis ?: 0L,arrivalBreadth?.durationMillis ?: 0L)
         val contentDelay = if (nativeDriven && pendingContent != null) 200L else 0L
         if (iosContent) {
             val swapping = pendingContent != null
@@ -1169,8 +1177,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val flipIn = minOf(160L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
         var revealAt = 0L
         var textAt: Long? = if (contentFits() && text.alpha > 0f) -130L else null
-        var lastCatch = 0f
-        var lastCatchTime = 0f
         ValueAnimator.ofFloat(0f, 1f).apply {
             this.duration = milliseconds
             interpolator = LinearInterpolator()
@@ -1185,34 +1191,23 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     if (contentStart == null && animation.currentPlayTime >= 200L) contentStart = 200L
                     val contentTime = animation.currentPlayTime - (contentStart ?: animation.currentPlayTime)
                     absorptionResponse?.sample(time)
+                    if(absorptionResponse==null) arrivalBreadth?.sample(time)
                     val physicalDepth = absorptionResponse?.height ?: if (experimental) depth.sample(time).coerceIn(minimumHeight, maximumHeight)
                         else depth.sample(time, minimumHeight, maximumHeight)
                     if (absorptionResponse != null) depth.setVelocity(absorptionResponse.velocityHeight)
                     scaleY = physicalDepth / geometryHeight.coerceAtLeast(1)
-                    val physicalBreadth = if (absorptionResponse != null) {
-                        val width = absorptionResponse.width
-                        breadth.setVelocity(absorptionResponse.velocityWidth)
+                    val physicalBreadth = if (arrivalBreadth != null) {
+                        val width = arrivalBreadth.width
+                        breadth.setVelocity(arrivalBreadth.velocity)
                         breadthExtraVelocity = 0f
                         width
                     } else {
                         val springBreadth = if (experimental) breadth.sample(time) else breadth.sample(time, compactWidth(), maximumBreadth)
-                        val weight = catchWeight * if (returning && nativeArrival) .99f + .02f * returnStrength else 1f
-                        // Page speed confirms arrival; it must not compress or skip
-                        // the default shell's recoil on this existing finite clock.
-                        val catchProgress = if (nativeDriven) (time / seconds).coerceIn(0f, 1f) else progress
-                        val catchValue = if (iosContent || nativeDriven) 0f
-                            else IslandMotion.mediaReturnCatch(catchProgress, nativeArrival)
-                        val effectiveWeight = if (catchValue < 0f) weight else if (nativeDriven) minOf(weight,
-                            ((maximumBreadth - geometryWidth) / geometryWidth.coerceAtLeast(1)).coerceAtLeast(0f))
-                            else IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival)
-                        val width = springBreadth + geometryWidth * effectiveWeight * catchValue
-                        val boundedWidth = width.coerceIn(compactWidth(), maximumBreadth)
-                        val catchPixels = boundedWidth - springBreadth
-                        breadthExtraVelocity = if (experimental) 0f else if (width != boundedWidth) -breadth.velocity else if (nativeDriven)
-                            if (time > lastCatchTime) (catchPixels - lastCatch) / (time - lastCatchTime) else 0f
-                            else geometryWidth * effectiveWeight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
-                        lastCatch = catchPixels; lastCatchTime = time
-                        boundedWidth
+                        // Content/Home receive owns its explicit width axis.
+                        // Other callers have no receive wave; retain their original
+                        // bounds and let ringer feedback carry its own velocity below.
+                        breadthExtraVelocity = 0f
+                        springBreadth.coerceIn(compactWidth(), maximumBreadth)
                     }
                     val bodyWidth = bodyResponse?.width ?: 0f
                     scaleX = minOf(maximumBreadth, physicalBreadth + bodyWidth) / geometryWidth.coerceAtLeast(1)
@@ -1231,8 +1226,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                         layerReveal = contentOpacity.sample(slotTime).coerceIn(0f, 1f)
                         if (outgoing?.ready == true) {
                             outgoingReveal = outgoingOpacity.sample(slotTime).coerceIn(0f, 1f)
-                            val level = slotBlurLevel(outgoingReveal * outgoingClarity)
-                            outgoing?.pose(outgoingReveal, level, if (level >= 0) slotBlur(level) else null)
+                            outgoing?.pose(outgoingReveal)
                             if (outgoingReveal <= .001f) outgoing?.clear()
                             invalidate()
                         }
@@ -1330,8 +1324,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         wave.translationX = (if (recording) dp(28) else -dp(28)) * (1f / sx - 1f)
         wave.translationX += (if (recording) direction else -direction) * squish * wave.width * .5f / sx
         val labelRoom = captionRoom(geometryWidth, cameraGap)
-        text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f)
-        text.translationX -= direction * squish * labelRoom * .5f / sx
         val reveal = ((alpha - .12f) / .88f).coerceIn(0f, 1f) * layerReveal
         val iconRoom = if (cameraGap > 0) IslandContentLayout.leading(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize + maxOf(0f, opticalX * iconSize)
             else geometryWidth * sx >= 2 * (edge + iconSize)
@@ -1345,11 +1337,22 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             // Full-width fit was a binary switch: new labels could suddenly pop
             // in after their opacity spring had already advanced while hidden.
             val room = if (cameraGap > 0)
-                IslandContentLayout.trailing(geometryWidth * sx, cameraGap, cameraOffset, translationX) - edge
+                IslandContentLayout.trailing(geometryWidth * sx, cameraGap, -cameraOffset * direction, -translationX * direction) - edge
                 else if (identityTitle.visibility == VISIBLE) (geometryWidth * sx - dp(8)) * .5f - edge
                 else geometryWidth * sx - 2 * edge - iconSize - dp(8)
             val lane = room.coerceIn(0f, labelRoom.toFloat())
-            captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
+            if (cameraGap > 0) {
+                // Pin the inner edge to the physical camera reservation. Counter-
+                // scaling alone anchors the outer cap and adds empty text space.
+                text.translationX = (cameraOffset - direction * cameraGap * .5f - translationX) / sx +
+                    direction * (geometryWidth * .5f - edge - labelRoom)
+                if (direction < 0f) captionClip.set(0, 0, lane.toInt(), geometryHeight)
+                else captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
+            } else {
+                text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f) -
+                    direction * squish * labelRoom * .5f / sx
+                captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
+            }
             text.clipBounds = captionClip
             identityClip.set(0, 0, identityRoom.toInt().coerceIn(0, identityTitle.width), geometryHeight)
             identityTitle.clipBounds = identityClip
@@ -1357,11 +1360,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
 
         text.alpha = reveal * textReveal
-        val nextBlur = slotBlurLevel(layerReveal)
-        if (nextBlur != blurLevel) {
-            blurLevel = nextBlur
-            contentLayer.setRenderEffect(if (nextBlur >= 0) slotBlur(nextBlur) else null)
-        }
         val waveRoom = if (recording) iconRoom else if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize else iconRoom
         wave.alpha = if (waveRoom && geometryHeight * sy >= waveHeight) reveal else 0f
         if (shape.resize(geometryWidth, geometryHeight, sx, sy)) invalidateOutline()
@@ -1387,7 +1385,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         icon.rotationY = 0f
         contentFromInert = false
         outgoing?.clear(); outgoingReveal = 0f; outgoingFresh = false
-        if (blurLevel >= 0) { contentLayer.setRenderEffect(null); blurLevel = -1 }
     }
 
     private fun prepareOutgoing() {
@@ -1401,19 +1398,15 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
         outgoingReveal = if (outgoingFresh) 1f else 0f
         if (outgoingFresh) {
-            outgoingClarity = layerReveal
-            val level = slotBlurLevel(outgoingClarity)
-            outgoing?.pose(1f, level, if (level >= 0) slotBlur(level) else null)
+            outgoing?.pose(1f)
         }
     }
-
-    private fun slotBlurLevel(reveal: Float) = if (allowTextBlur && !powerSaveMotion && isHardwareAccelerated && reveal < .999f)
-        IslandMotion.contentBlurLevel(reveal) else -1
 
     private fun contentFits(): Boolean {
         val edge = dp(IslandSizing.EDGE_DP)
         val targetRoom = captionRoom(geometryWidth, cameraGap)
-        val room = if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * scaleX, cameraGap, cameraOffset, translationX) - edge
+        val side = if (layoutDirection == LAYOUT_DIRECTION_RTL) -1f else 1f
+        val room = if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * scaleX, cameraGap, cameraOffset * side, translationX * side) - edge
             else if (identityTitle.visibility == VISIBLE) (geometryWidth * scaleX - dp(8)) * .5f - edge
             else geometryWidth * scaleX - 2 * edge - iconSize - dp(8)
         return room + .01f >= minOf(labelWidth, targetRoom.toFloat())
@@ -1421,7 +1414,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     private fun captionRoom(width: Int, gap: Int, height: Int = geometryHeight,
         split: Boolean = identityTitle.visibility == VISIBLE, offset: Float = cameraOffset) = (if (gap > 0)
-        IslandContentLayout.trailing(width.toFloat(), gap, offset, 0f).toInt() - dp(IslandSizing.EDGE_DP)
+        IslandContentLayout.trailing(width.toFloat(), gap, if (layoutDirection == LAYOUT_DIRECTION_RTL) -offset else offset, 0f).toInt() - dp(IslandSizing.EDGE_DP)
         else if (split) (width - dp(8)) / 2 - dp(IslandSizing.EDGE_DP)
         else width - 2 * dp(IslandSizing.EDGE_DP) - iconSizeForHeight(height) - dp(8)).coerceAtLeast(0)
     private fun horizontalPivot(width: Int) = width * .5f
@@ -1436,7 +1429,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     override fun onDetachedFromWindow() {
         title.stop()
         disposed = true
-        samplingWave = false
         pendingContent = null; displayedContent = null; contentFadeRemaining = 0L
         cancelInputs()
         motion?.cancel(); motion = null

@@ -42,6 +42,9 @@ class DeckSpringParametersTest {
     /** A setter spy, not a second spring solver. Native response conversion is
      * independently evidenced in the target APK. */
     class Native {
+        enum class AnimType { OPEN_FROM_RECENTS, CLOSE_TO_RECENTS }
+        fun setAnimParamByType(type: AnimType) {}
+        fun initAllAnimations() {}
         enum class RectAnimType { RECT_CENTER_X,RECT_CENTER_Y,RECT_WIDTH,RECT_RATIO,RADIUS,ALPHA }
         @JvmField var mCenterXDamping=.8f
         @JvmField var mCenterYDamping=.8f
@@ -52,9 +55,11 @@ class DeckSpringParametersTest {
         @JvmField var mWidthStiffness=200f
         @JvmField var mRatioStiffness=400f
         var radius=.7f; var alpha=.9f; var velocity=1520f
+        var failAt: RectAnimType?=null
         val calls=mutableListOf<Triple<RectAnimType,Float,Float>>()
         private fun setAnimParam(axis: RectAnimType,damping: Float,response: Float) {
             calls+=Triple(axis,damping,response)
+            if(axis==failAt) error("native setter failure")
             when(axis) {
                 RectAnimType.RECT_CENTER_X -> { mCenterXDamping=damping; mCenterXStiffness=response }
                 RectAnimType.RECT_CENTER_Y -> { mCenterYDamping=damping; mCenterYStiffness=response }

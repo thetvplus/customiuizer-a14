@@ -29,9 +29,9 @@ class DeckWindowApiTest {
     class StaticElement { companion object { @JvmStatic fun animTo(value: Any) {} } }
     private val api=DeckWindowApi(Element::class.java,Params::class.java,Provider::class.java,
         Any::class.java,Any::class.java,Any::class.java)
-    private fun params(type: Type,rotation: Int=0,split: Boolean=false)=Params(Any(),RectF(1f,2f,3f,4f),
+    private fun params(type: Type,rotation: Int=0,split: Boolean=false,homeRotation: Int=0)=Params(Any(),RectF(1f,2f,3f,4f),
         RectF(10f,20f,30f,40f),12f,18f,.2f,.9f,type,true,false,false,null,Any(),Any(),false,
-        rotation,0,true,7,split,true)
+        rotation,homeRotation,true,7,split,true)
     @Test fun newWindowCopiesOnlyTheCorrespondingCardRadiusAndPreservesItsNativeOwners() {
         for(type in arrayOf(Type.OPEN_FROM_RECENTS,Type.CLOSE_TO_RECENTS)) {
             val original=params(type); val opening=api.scene(original)!!
@@ -51,8 +51,25 @@ class DeckWindowApiTest {
     }
     @Test fun otherWindowFlowsStayNative() {
         assertNull(api.scene(params(Type.CLOSE_TO_HOME)))
-        assertNull(api.scene(params(Type.CLOSE_TO_RECENTS,rotation=1)))
+        assertNull(api.scene(params(Type.CLOSE_TO_RECENTS,rotation=2)))
         assertNull(api.scene(params(Type.CLOSE_TO_RECENTS,split=true)))
+    }
+    @Test fun alignedLandscapeWindowsUseTheSameHandoffAsPortrait() {
+        for(rotation in listOf(0,1,3)) for(type in listOf(Type.OPEN_FROM_RECENTS,Type.CLOSE_TO_RECENTS)) {
+            val original=params(type,rotation=rotation,homeRotation=rotation)
+            val opening=type==Type.OPEN_FROM_RECENTS
+            assertEquals("Aligned native window at rotation $rotation",opening,api.scene(original))
+            val scaled=api.scaled(original,1.25f,opening) as Params
+            assertEquals(rotation,scaled.currentDisplayRotation)
+            assertEquals(rotation,scaled.homeRotation)
+            assertSame(original.animListener,scaled.animListener)
+            assertSame(original.clipAnimationHelper,scaled.clipAnimationHelper)
+        }
+        for(display in listOf(0,1,3)) for(home in listOf(0,1,3))
+            assertEquals("Native default home metadata cannot reject visual landscape",true,
+                api.scene(params(Type.OPEN_FROM_RECENTS,rotation=display,homeRotation=home)))
+        for(display in listOf(2,-1,4))
+            assertNull("Unsupported display rotations stay native",api.scene(params(Type.OPEN_FROM_RECENTS,rotation=display)))
     }
     @Test fun aMatchingNameAndSignatureCannotAdmitAStaticWindowConsumer() {
         assertThrows(IllegalArgumentException::class.java) {

@@ -20,6 +20,11 @@ class DeckRadiusHandoffTest {
             val native=r*sourceWidth/endpoint.width()
             val corrected=scope.corrected(owner,1,spring,RectF(endpoint).apply { offset(80f,-20f) },native)
             assertEquals(r*a,corrected*endpoint.width()/sourceWidth,.00001f)
+            val rotated=RectF(0f,0f,endpoint.height(),endpoint.width())
+            assertEquals("Native quarter-turn preserves the same endpoint scale",native*a,
+                scope.corrected(owner,1,spring,rotated,native),.00001f)
+            assertEquals(native,scope.corrected(owner,2,spring,rotated,native),0f)
+            assertEquals(native,scope.corrected(owner,1,Any(),rotated,native),0f)
             assertEquals(0f,scope.corrected(owner,1,spring,endpoint,0f),0f)
             assertEquals(native,scope.corrected(owner,2,spring,endpoint,native),0f)
             assertEquals(native,scope.corrected(owner,1,Any(),endpoint,native),0f)

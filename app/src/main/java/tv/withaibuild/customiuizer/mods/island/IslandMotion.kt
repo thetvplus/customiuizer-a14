@@ -8,14 +8,6 @@ import kotlin.math.sqrt
 
 /** Damped step response: prompt travel followed by one small, decaying overshoot. */
 internal object IslandMotion {
-    // Subpixel filter increments on ordinary phone densities, prepared once.
-    const val CONTENT_BLUR_STEPS = 64
-    const val CONTENT_BLUR_RADIUS = 16.666f
-    fun contentBlurLevel(reveal: Float): Int = if(reveal >= .999f) -1 else
-        (kotlin.math.ceil((1f-reveal)*CONTENT_BLUR_STEPS).toInt()-1).coerceIn(0,CONTENT_BLUR_STEPS-1)
-    fun contentBlurRadius(level: Int,density: Float): Float =
-        if(level<0) 0f else CONTENT_BLUR_RADIUS*(level+1)/CONTENT_BLUR_STEPS*density
-
     const val ENTER = 403L
     const val MORPH = 384L
     const val REBOUND = 384L
@@ -95,53 +87,14 @@ internal object IslandMotion {
         val full = if (secondary) SECONDARY else MORPH
         return (CONTENT + (full - CONTENT) * (change / .55f).coerceAtMost(1f)).toLong()
     }
-    /** Similar footprints only exchange content. Elastic travel is proportional to
-     * actual visible size change, never the activity kind or text length alone. */
-    fun sizeCatch(fromWidth: Float, fromHeight: Float, width: Float, height: Float, minimum: Float): Float {
+    /** Preserve the secondary morph's footprint threshold independently of receive motion. */
+    fun hasSignificantSizeChange(fromWidth: Float, fromHeight: Float, width: Float, height: Float, minimum: Float): Boolean {
         val dw = kotlin.math.abs(width - fromWidth)
         val dh = kotlin.math.abs(height - fromHeight)
-        if (maxOf(dw, dh) <= minimum) return 0f
+        if (maxOf(dw, dh) <= minimum) return false
         val change = maxOf(dw / maxOf(width, fromWidth, 1f), dh / maxOf(height, fromHeight, 1f))
-        return ((change - .08f) / .42f).coerceIn(0f, 1f) * .03f
+        return change>.08f
     }
-    /** The native window arrives while the shell's one finite clock makes a small catch. */
-    fun mediaReturnCatch(progress: Float, nativeWindow: Boolean = true): Float {
-        if (!nativeWindow) {
-            val t = progress.coerceIn(0f, 1f)
-            return 7.2f * t * t * (1f - t) * (1f - t)
-        }
-        if (nativeWindow && progress < .5f) {
-            val intake = ((progress - .15f) / .35f).coerceIn(0f, 1f)
-            return -3.2f * intake * intake * (1f - intake) * (1f - intake)
-        }
-        val start = if (nativeWindow) .5f else 0f
-        val span = if (nativeWindow) .4f else .8f
-        val t = ((progress - start) / span).coerceIn(0f, 1f)
-        val tail = 1f - t
-        // Early kick, one peak, cubic release. The symmetric bell postponed the
-        // response and could remain visibly at the width cap for several frames.
-        return 5.5f * t * tail * tail * tail
-    }
-    fun catchDerivative(progress: Float, nativeWindow: Boolean = true): Float {
-        if (!nativeWindow) {
-            val t = progress.coerceIn(0f, 1f)
-            return 14.4f * t * (1f - t) * (1f - 2f * t)
-        }
-        if (nativeWindow && progress > .15f && progress < .5f) {
-            val intake = (progress - .15f) / .35f
-            return -6.4f * intake * (1f - intake) * (1f - 2f * intake) / .35f
-        }
-        val start = if (nativeWindow) .5f else 0f
-        val span = if (nativeWindow) .4f else .8f
-        if (progress < start || progress >= start + span) return 0f
-        val t = (progress - start) / span
-        return 5.5f * (1f - t) * (1f - t) * (1f - 4f * t) / span
-    }
-    const val CATCH_PEAK = .580078125f
-    private const val CONTENT_CATCH_PEAK = .45f
-    fun boundedCatchWeight(width: Float, maximum: Float, requested: Float, nativeWindow: Boolean = true): Float =
-        minOf(requested, (maximum - width).coerceAtLeast(0f) /
-            (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else CONTENT_CATCH_PEAK)).coerceAtLeast(0f)
     /** Compression approaches the physical height limit without a flat clamp. */
     fun compressedScale(origin: Float, delta: Float, minimum: Float): Float {
         if (delta >= 0f) return origin + delta

@@ -23,7 +23,7 @@ import java.nio.ByteOrder
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandNativeReturnCompletionTest {
-    @Test fun aNewCameraSeedDoesNotBorrowTheExistingWideContainersAcceptanceStretch() {
+    @Test fun aNewCameraSeedReceivesHorizontallyWithoutBorrowingTheExistingVerticalStretch() {
         run {
             val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
             val memory=SharedMemory.create("new-seed-no-double-stretch",4)
@@ -37,11 +37,15 @@ class IslandNativeReturnCompletionTest {
                 shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
                 shell.prepareEntry(mediaReturn=true);shell.transition(240,40,240,40,true)
                 val clock=getField<ValueAnimator>(shell,"motion")
+                var peak=0f;var recoil=0f
                 for (at in 0L..600L step 10) {
                     writer.putInt(0,(at*1000L).toInt());clock.currentPlayTime=at
                     assertEquals("The new seed grows toward its form without a separate vertical bulge",40f,40*shell.scaleY,.001f)
-                    assertTrue("One finite expansion, without another receive overshoot",240*shell.scaleX<=240.001f)
+                    val width=240*shell.scaleX
+                    peak=maxOf(peak,width);recoil=maxOf(recoil,peak-width)
+                    assertTrue("The receive stays in its safe width",width in 39.999f..260.001f)
                 }
+                assertTrue("First Home arrival visibly expands and retracts",peak>244f && recoil>=3f)
                 writer.putInt(0,1_000_000);clock.end()
                 assertEquals(1f,shell.scaleX,0f);assertEquals(1f,shell.scaleY,0f)
             } finally {
@@ -247,7 +251,7 @@ class IslandNativeReturnCompletionTest {
             for (time in 0L..1400L step 20L) {
                 clock.currentPlayTime = time
                 if(time==0L) assertEquals("Do not reset the adopted origin",240f,shell.scaleX*240f,.001f)
-                assertTrue("Keep native receive within the safe width",shell.scaleX*240f in 239.999f..260.001f)
+                assertTrue("Keep the adopted full form within its small recoil envelope",shell.scaleX*240f in 232f..260.001f)
             }
             assertNull(getField<Any?>(shell, "motion"))
         } finally {
@@ -352,7 +356,9 @@ class IslandNativeReturnCompletionTest {
             var clock: ValueAnimator? = null
             try {
                 shell.bind("Music", null, ColorDrawable(Color.RED), true, false, false, 0, false)
-                shell.geometry(240, 40, 40)
+                // Allow the actual receive tail; an island at its hard width cap
+                // can already have settled when the page reaches its endpoint.
+                shell.geometry(240, 40, 40, 280)
                 shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
                 shell.prepareEntry(mediaReturn = true)
                 shell.transition(240, 40, 240, 40, entering = true)

@@ -17,11 +17,13 @@
 
 设置在“按键与手势 → 导航栏 → iOS 手势指示条”独立分组，组内为“启用”和说明；键为 `controls_ios_home_indicator`，默认关闭，重启 SystemUI 生效。需要系统全面屏手势、可见的原生 Handle，并关闭系统“隐藏全面屏指示条”和米客“隐藏手势提示线”；菜单名称可能随地区 ROM 不同。进入或返回页面时读取系统导航及隐藏开关，不轮询、不改写系统配置，不满足时保留勾选值但禁用入口。生成器保留 `controls_nonavbar` 的 `disableDependentsState=true`，AndroidX 处理依赖，Compose 消费同一个 Preference 的启用状态。仅 SDK 34 / arm64、SystemUI 主进程及完整实例签名通过后安装；设备、地区与构建号不作为通行证。设置进程只判断平台和系统导航选项，实际能力由宿主安装阶段解析；不满足合同只关闭这项绘制替换。
 
-冷解析两个 Hook：`NavigationHandle.onDraw(Landroid/graphics/Canvas;)V` 与 `NavigationBarView.updateIcons(Landroid/content/res/Configuration;)V`。原生 `NavigationBar.setNavBarMode(I)V` 写入字段后调用后者并可能重建 handle，后者仅缓存 `mNavBarMode:I == 2`，前者只在主屏、精确 NavigationHandle 类及真实 NavigationBarView 祖先下工作。复用 `mPaint:Landroid/graphics/Paint;`，同时要求实例字段为 final；已查样本均只在构造器写入，宿主重建 / detach 后重新取得当前实例。可替换 Paint 的未知合同保留原生，不逐帧读取字段。不写原生 Paint、布局、alpha、visibility、Insets、焦点或输入。教程、独立控制中心 / 锁屏 handle、未知子类和旋转尺寸尚未对齐时保留原生。
+冷解析绘制、模式更新及普通颜色渐变时长三个 Hook：`NavigationHandle.onDraw(Landroid/graphics/Canvas;)V`、`NavigationBarView.updateIcons(Landroid/content/res/Configuration;)V` 与 `NavigationBarTransitions.getTintAnimationDuration()I`。原生 `NavigationBar.setNavBarMode(I)V` 写入字段后调用 updateIcons 并可能重建 handle；模式字段缓存后，绘制只在主屏、精确 NavigationHandle 类及真实 NavigationBarView 祖先下工作，非手势模式不创建绘制 owner。复用 `mPaint:Landroid/graphics/Paint;`，同时要求实例字段为 final；已查样本均只在构造器写入，宿主重建 / detach 后重新取得当前实例。可替换 Paint 的未知合同保留原生，不逐帧读取字段。不写原生 Paint、布局、alpha、visibility、Insets、焦点或输入。教程、独立控制中心 / 锁屏 handle、未知子类和旋转尺寸尚未对齐时保留原生。
 
 每个 handle 惰性持有一份 Path 和尺寸缓存，尺寸变化才通过 WindowManager.maximumWindowMetrics 获取当前屏幕几何并重建（SystemUI Resources 在横屏可保留竖屏值）；颜色由原生 Paint 更新，静止时无帧调度。detach 解除自身 attach listener 和附加 owner；没有全局 View 表、悬浮窗口、Bitmap、RenderEffect、跨进程通信或独立动画时钟。完整 Hook 批次未提交或几何无法容纳时不跳过原生绘制。关闭并重启后没有自持原生属性需要归还。
 
 ## 场景策略
+
+黑白转换复用 LightBarTransitionsController 原有的单个可重定向 ValueAnimator、LINEAR_OUT_SLOW_IN 插值及 NavigationHandle 原生颜色混合。主屏全面屏手势的普通渐变由原生 400 ms 映射为 250 ms，其他模式与显式窗口交接时长保持；不增加颜色采样、滤镜或动画对象。四份 A14 SystemUI 原件均已核对 NavigationBarTransitions 的实例方法和 mView / mNavBarMode 字段。250 ms 是本地手感与有限动画工作量的工程取舍，不由 iOS hide / unhide 参数推定，也不宣称恢复了同版 iOS luma 时序。
 
 显隐动效复核：22G100 的 `HomeIndicatorMotion.chooseTransition` 选择已证 hide 0.6s / unhide 0.25s 线性默认配置，ownership 切换各为 0.25s，但这些是原生 style / presence 消费者，不能覆盖任意系统窗口隐藏。A14 `ButtonDispatcher.setAlpha(FZ)V` 直接更新原生 View；`NavigationBarTransitions.applyLightsOut(ZZ)V` 的 1500ms / 250ms 属于整组按钮到 0.6+darkIntensity/10 / 1 的变暗与恢复，并非同构的消失 / 出现。全屏、IME 与 Deck 窗口交接继续消费系统已有透明度和窗口动画，不将变暗强套成 iOS hide、不延迟原生隐藏、不新增代理图层或第二个动画器。Deck 的原生四轴弹簧映射另见其运动合同。
 

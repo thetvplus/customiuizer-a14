@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun dispatchSettingsAction(item: MenuItem) {
         val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
-        if (fragment?.onOptionsItemSelected(item) != true) onOptionsItemSelected(item)
+        if ((fragment as? PreferenceFragmentBase)?.onSettingsAction(item) != true) onOptionsItemSelected(item)
         if (fragment != null && fragment === supportFragmentManager.findFragmentById(R.id.fragment_container) && fragment.isAdded)
             settingsBar.bind(fragment)
     }

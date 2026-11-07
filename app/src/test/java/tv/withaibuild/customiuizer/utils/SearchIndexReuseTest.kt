@@ -20,6 +20,18 @@ class SearchIndexReuseTest {
             this.fontScale = fontScale
         }) }
 
+    @Test fun featureNamesFindTheActualHomeIndicatorDeckAndDuoSwitches() {
+        for ((language, query) in listOf("en" to "Home Indicator", "zh-CN" to "手势指示条", "zh-TW" to "手勢指示條")) {
+            Helpers.getAllMods(context(language), true)
+            for ((key, text) in listOf("pref_key_controls_ios_home_indicator" to query,
+                    "pref_key_system_recents_ios18_deck" to "DECK", "pref_key_system_statusbar_duo" to "Duo")) {
+                val row = Helpers.allModsList.single { it.key == key }
+                assertTrue("$language: $key must be found by its feature name", row.matchesSearch(searchTerms(text)))
+                assertNotEquals("Enable", row.title)
+            }
+        }
+    }
+
     @Test
     fun recreationAndFontChangesReuseTheCompleteIndex() {
         Helpers.getAllMods(context("en"), true)

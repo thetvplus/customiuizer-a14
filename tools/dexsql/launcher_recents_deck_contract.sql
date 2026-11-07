@@ -2,6 +2,14 @@
 -- dataset-local IDs. Decode the selected callers to establish ordering/ownership.
 SELECT file_id, source_path, entry_name FROM dex_files ORDER BY file_id;
 
+-- Native fixed rotation may keep a portrait Window with a landscape container.
+SELECT file_id, method_descriptor, access_flags FROM class_methods
+WHERE (class_descriptor='Lcom/miui/home/launcher/DeviceConfig;'
+ AND method_name='isKeepRecentsViewPortrait')
+ OR (class_descriptor='Lcom/miui/home/recents/util/RotationHelper;'
+ AND method_name IN ('notifyChange','updateMultiWindowRotationRequest'))
+ORDER BY method_descriptor;
+
 SELECT file_id, descriptor, superclass_descriptor FROM classes
 WHERE descriptor IN ('Lcom/miui/home/recents/views/TaskStackView;',
  'Lcom/miui/home/recents/views/TaskStackLayoutAlgorithm;',
@@ -27,11 +35,14 @@ WHERE class_descriptor LIKE 'Lcom/miui/home/recents/%'
  'onReturnViewToPool','onPickUpViewFromPool','resetViewProperties',
  'initTaskViews','animTo','onUpdate','reset','initAllAnimations',
  'calculateWindowCrop','startClosingWindowToRecentsAnimators',
- 'isLandscapeVisually','getRecentsContainerRotation')
+ 'isLandscapeVisually','getRecentsContainerRotation','onDisplayRotationChanged','updateRotation',
+ 'updateTaskView','applyParams')
 ORDER BY method_descriptor;
 
 SELECT file_id, class_descriptor, field_descriptor FROM class_fields
 WHERE (field_name='mCornerRadius' AND class_descriptor LIKE 'Lcom/miui/home/recents/%')
+ OR (class_descriptor='Lcom/miui/home/recents/views/TaskView;' AND field_name='mFullscreenProgress')
+ OR (class_descriptor='Lcom/miui/home/recents/views/RecentsContainer;' AND field_name='mRecentsContainerRotation')
  OR (class_descriptor='Lcom/miui/home/recents/views/TaskStackLayoutAlgorithm;'
  AND field_name IN ('mWindowRect','mTaskViewRectF','mVisualRotationSystemInsets'))
  OR (class_descriptor='Lcom/miui/home/recents/views/SwipeHelperForRecents;'
@@ -43,7 +54,7 @@ WHERE callee_class LIKE 'Lcom/miui/home/recents/%'
  AND callee_name IN ('calculate','onMoveUpdate','prepareSnapBackAnimation',
  'getViewTranslationAnimator','onDragEnd','onChildSnappedBack',
  'setChildrenViewAlpha','setCornerRadius','applyToTaskView',
- 'modifyTransformVisible','bindVisibleTaskViews')
+ 'modifyTransformVisible','bindVisibleTaskViews','onDisplayRotationChanged')
 ORDER BY method,callee;
 
 SELECT file_id, method, field, using_type FROM method_field_accesses

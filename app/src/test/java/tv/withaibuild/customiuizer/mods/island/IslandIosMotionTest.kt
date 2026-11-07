@@ -15,6 +15,20 @@ import org.robolectric.util.ReflectionHelpers.getField
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class IslandIosMotionTest {
+    @Test fun pressingClipsBothAxesToTheAvailableBodyEnvelope() {
+        val host=Robolectric.buildActivity(Activity::class.java).setup().visible()
+        ShadowChoreographer.setPaused(true)
+        try {
+            val shell=IslandActivityView(host.get())
+            host.get().setContentView(shell);shell.geometry(260,40,40,280);shell.layout(0,0,260,40)
+            shell.transition(260,40,260,40,false);getField<ValueAnimator>(shell,"motion").end()
+            val event=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_DOWN,130f,20f,0)
+            try { shell.dispatchTouchEvent(event) } finally { event.recycle() }
+            getField<ValueAnimator>(shell,"motion").end()
+            assertEquals("Width clipping must not leave a disproportionate vertical balloon",shell.scaleX,shell.scaleY,.001f)
+            assertTrue("Stay inside the existing 14% body envelope",shell.scaleY<=1.14001f)
+        } finally { ShadowChoreographer.setPaused(false);host.pause().stop().destroy() }
+    }
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun systemFeedbackShowsTheActualModeAndKeepsItWhenTheSecondaryRowCannotFit() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible()
@@ -115,9 +129,10 @@ class IslandIosMotionTest {
             val clock=getField<ValueAnimator>(shell,"motion"); clock.currentPlayTime=140L
             val text=getField<View>(shell,"text")
             assertTrue("New text is already fading in while its lane is still opening",text.alpha > .01f)
-            assertTrue(text.clipBounds!!.left > 0)
+            assertEquals("The reveal starts at the camera-side anchor",0,text.clipBounds!!.left)
+            assertTrue("Only the currently available lane is visible",text.clipBounds!!.width() in 1 until text.width)
             assertEquals("Typography keeps its physical size",1f,text.scaleX*shell.scaleX,.001f)
-            clock.end(); assertEquals(0,text.clipBounds!!.left); assertEquals(1f,text.alpha,.001f)
+            clock.end(); assertEquals(text.width,text.clipBounds!!.width()); assertEquals(1f,text.alpha,.001f)
         } finally { host.finish(); ShadowChoreographer.setPaused(false) }
     }
     @Test fun ringerBodyMovesAndWidensOnOneClockAndInterruptionKeepsItsVisiblePosition() {
@@ -240,26 +255,39 @@ class IslandIosMotionTest {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible()
         ShadowChoreographer.setPaused(true)
         try {
-            val shell = IslandActivityView(host.get()).apply { entranceStyle = IslandEntranceStyle.TOP; windowTop = 12 }
-            host.get().setContentView(shell); shell.geometry(320, 40, 40); shell.cameraAnchor(20f, 16f)
-            shell.bind("A message", "Synthetic sender", null, false, false, false, 0L, false, expanded = true)
-            shell.layout(0, 0, 320, 40)
-            shell.prepareEntry()
-            assertTrue("A new long island starts above its window", shell.translationY < -40f)
-            assertEquals("Vertical entry retains the selected long width", 1f, shell.scaleX, 0f)
-            shell.transition(320, 40, 320, 40, true)
-            val entry = getField<ValueAnimator>(shell, "motion")
-            entry.currentPlayTime = 80
-            assertTrue(shell.translationY < 0f)
-            entry.end(); assertEquals(0f, shell.translationY, 0f)
-            var ended = false
-            shell.exit { ended = true }
-            val exit = getField<ValueAnimator>(shell, "motion")
-            assertEquals(IslandMotion.EXIT, exit.duration)
-            exit.currentPlayTime = 80
-            assertTrue(shell.translationY < 0f)
-            assertEquals(1f, shell.scaleX, 0f)
-            exit.end(); assertTrue(ended)
+            for (ringerShake in listOf(false, true)) {
+                val shell = IslandActivityView(host.get()).apply { entranceStyle = IslandEntranceStyle.TOP; windowTop = 12 }
+                host.get().setContentView(shell); shell.geometry(320, 40, 40, 380); shell.cameraAnchor(20f, 16f)
+                shell.bind("A message", "Synthetic sender", null, false, false, false, 0L, false, expanded = true)
+                shell.layout(0, 0, 320, 40)
+                if (ringerShake) {
+                    shell.prepareContentArrivalFromCurrent()
+                    shell.transition(320, 40, 320, 40, false, ringerShake = true)
+                    getField<ValueAnimator>(shell, "motion").currentPlayTime = 80
+                    assertTrue("Exercise a real interrupted horizontal receive", shell.scaleX > 1f)
+                }
+                shell.prepareEntry()
+                assertTrue("A new long island starts above its window", shell.translationY < -40f)
+                assertEquals("Vertical entry retains the selected long width", 1f, shell.scaleX, 0f)
+                shell.transition(320, 40, 320, 40, true, ringerShake = ringerShake)
+                val entry = getField<ValueAnimator>(shell, "motion")
+                entry.currentPlayTime = 80
+                assertTrue(shell.translationY < 0f)
+                for (time in 0L until entry.duration step 16L) {
+                    entry.currentPlayTime = time
+                    assertEquals("Vertical entry cannot add a horizontal receive", 1f, shell.scaleX, .0001f)
+                    assertEquals("Vertical entry cannot add a sideways ringer shake", 0f, shell.translationX, .0001f)
+                }
+                entry.end(); assertEquals(0f, shell.translationY, 0f)
+                var ended = false
+                shell.exit { ended = true }
+                val exit = getField<ValueAnimator>(shell, "motion")
+                assertEquals(IslandMotion.EXIT, exit.duration)
+                exit.currentPlayTime = 80
+                assertTrue(shell.translationY < 0f)
+                assertEquals(1f, shell.scaleX, 0f)
+                exit.end(); assertTrue(ended)
+            }
         } finally { ShadowChoreographer.setPaused(false); host.pause().stop().destroy() }
     }
     @Test fun centerMusicExitKeepsItsOriginalDeadlineWithoutTranslucentTail() {

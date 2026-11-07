@@ -156,7 +156,8 @@ def documents(published: dict) -> dict[str, str]:
             if version in retained:
                 codes = re.findall(r"\bversionCode(?:\s*[:=]\s*|\s+)(\d+)\b", body)
                 release.require(len(codes) == 1, "Historical release versionCode is missing or ambiguous")
-                public = release.public_release_notes_section(text, version, int(codes[0]), filename, language=language)
+                public = release.public_release_notes_section(text, version, int(codes[0]), filename,
+                                                            language=language, prefer_summary=False)
                 history.append(f"## {version}\n\n{public}\n\n[{'发行记录' if chinese else 'Release'}]({source_url}/releases/tag/{version})")
         release.require(any(version == name for version, _ in sections) and name in retained, "Published changelog is missing")
         target = "CHANGELOG_CN.md" if chinese else "CHANGELOG.md"

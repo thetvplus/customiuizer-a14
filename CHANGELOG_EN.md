@@ -6,9 +6,48 @@ Changes for maintained releases. Valid r14.26.7 changes are consolidated into r1
 
 ## Unreleased
 
+## r14.27.3 — 2026-11-08
+
+versionCode 303. Changes since r14.27.1:
+
+### Release summary
+
+- Improve iOS DECK transitions in portrait and landscape, swipe-up tracking and app opening, with fewer card jumps and shadow flashes.
+- Refine island arrival and content transitions, and bring long-island text closer to the camera-safe edge.
+- Soften Home Indicator color transitions, make feature switches easier to find, and simplify Duo and related settings.
+- Restart the launcher and System UI after updating. DECK requires Horizontal Recents.
+
+### User changes
+
+- Give DECK, Duo and iOS Home Indicator switches their full feature names for easier discovery and search. Shorten descriptions while preserving setup and restart requirements.
+- Fix position and size jumps when a neighboring card fills the gap after dismissing the leftmost recents deck card.
+- Reject stale card and window geometry during repeated orientation changes to improve position, size and direction handoff.
+- Restore the launcher's native rotation policy, including landscape task containers inside portrait windows. Convert opening-window and neighboring-card coordinates consistently, with shared iOS motion in both orientations. Restart the launcher after updating.
+- Align card and window scaling centers when native entry changes the pivot. Complete handoff checks for both landscape directions and unprepared layouts.
+- Fix double scaling and window misalignment during swipe-up entry on newer launchers. Fold neighboring cards using the current native window, reducing extra spring lag and stepped position changes.
+- Fix rear-card title and icon opacity on swipe-up deck entry without requiring another scroll.
+- Follow native thumbnail opacity and fullscreen progress for card shadows, reducing premature shadows during swipe-up entry. Keep HyperOS 1 corners, screenshot clipping and shadow colors.
+- Reuse the system's retargetable black/white gesture-handle tint animation, with a 250 ms ordinary gesture-mode transition. Preserve explicit window-handoff timing.
+- Align centered island captions with the inner camera-safe edge, removing extra space for short text. Keep clipping aligned during scaling and horizontal movement, preserving native cutouts and existing clearance.
+- Add visible horizontal expansion and recoil on first island appearance, music returning home, and new activity reception. Keep same-size handoffs from ending early, reduce vertical expansion and press enlargement, and preserve interrupted and reversed transitions.
+
+### Engineering notes
+
+- Recheck local iOS 18.6.2 binaries and A14 native call chains. Preserve native scrolling, window springs and lifecycle without adding animation clocks, listeners or threads.
+- Prioritize energy use and response by removing dynamic blur and its effect cache from island content transitions. Keep transforms, clipping, crossfades and one outgoing display list on the existing clock, without additional filters or sampling tasks.
+- Retire cached gesture endpoints with orientation ownership, remove unused island wave/strength handoffs, and reuse immutable receive profiles. Related behavior regressions and Develop / R8 / vital Lint passed, with daily use accepted by the user; pixel equivalence to iOS is not claimed.
+- Recheck launcher mounting and landscape-container paths directly in four A14 ROMs, with master-switch, dependent-setting and search coverage. Daily use has been accepted by the user; no further device pass is requested. No new independent frame-rate or power measurements are claimed.
+
 ## r14.27.1 — 2026-11-06
 
 versionCode 301. Changes since r14.26.11:
+
+### Release summary
+
+- Add independently enabled iOS DECK recent apps, Home Indicator and volume appearance.
+- Refine island resizing, content changes and returns, plus thin-volume-bar and touch feedback.
+- Update Duo artwork and settings navigation, and fix notification feedback, volume controls and page entry issues.
+- DECK requires Horizontal Recents. Home Indicator requires full-screen gestures and a visible system handle. Restart the affected processes after enabling.
 
 ### User changes
 
@@ -39,6 +78,13 @@ versionCode 301. Changes since r14.26.11:
 
 versionCode 281. Changes since r14.26.9:
 
+### Release summary
+
+- Reorganize island media, notifications, live activities and return effects, with refined positioning, recoil and track changes.
+- Support island returns on older HyperOS 1 launchers and fix Dock corner crashes and leftover blur.
+- Refine settings, search and shortcuts, plus Duo artwork and music waveforms.
+- After updating, check island mode, app lists and return effects. Reselect them and restart affected processes if the island or returns are missing.
+
 ### User changes
 
 - Upgrade note: after updating from an older release or local candidate, some Dynamic Island settings may need to be selected again. If the island is absent or returns do not work, check the System feedback & Dynamic Island mode, media/notification app lists, Return to island switches, and None/Instant/Absorption effect; reselect as needed and restart the affected processes.
@@ -65,6 +111,13 @@ versionCode 281. Changes since r14.26.9:
 
 versionCode 269. Changes since r14.26.5:
 
+### Release summary
+
+- Improve trusted-network lists, backup and restore, language changes and input dialogs.
+- Add system-app updater disable/restore and options to hide updater and enterprise-mode entries.
+- Fix compatibility issues in Control Center, screenshot folders, foreground-app state and other system features.
+- Strengthen access checks for system actions and notifications. Restart the device after updating.
+
 ### User changes
 
 - Trusted Wi-Fi networks now use cached scans, system broadcasts and on-demand refresh, with request cooldowns across rapid navigation, rejected scans and wait timeouts. Trusted Bluetooth devices replace the 15-second loop with page entry, system events and manual cache requests; empty results also end the wait.
@@ -90,6 +143,13 @@ versionCode 269. Changes since r14.26.5:
 ## r14.26.5 — 2026-10-31
 
 versionCode 265. Changes since r14.25.9:
+
+### Release summary
+
+- Refresh settings, search and editors with consistent colors and feedback while preserving settings and backups.
+- Add Wi-Fi automation and per-app rules for rotation, brightness, volume, VPN and related actions.
+- Fix Dock blur after restoration and refine island waveforms and live-activity state.
+- Reduce unnecessary clock and status-bar updates. Restart the device after first enabling new rules.
 
 ### User changes
 

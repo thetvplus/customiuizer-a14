@@ -446,7 +446,7 @@ class PreferenceNavigationUiTest {
         settleNavigation()
         val editor = currentPage() as SubFragment
         val menu = PopupMenu(activity, editor.requireView()).menu
-        editor.onCreateOptionsMenu(menu, activity.menuInflater)
+        editor.createSettingsMenu(menu)
         assertTrue(menu.findItem(R.id.edit_confirm).isVisible)
         assertFalse(menu.findItem(R.id.restart_menu).isVisible)
         val labels = activity.resources.getStringArray(R.array.global_actions_launcher)
@@ -456,7 +456,7 @@ class PreferenceNavigationUiTest {
         settleNavigation()
         assertTrue("The Compose action editor follows the available width", editor.requireView().width > 240 * resourcesDensity())
         capturePage("action-landscape-night-zh")
-        assertTrue(editor.onOptionsItemSelected(menu.findItem(R.id.edit_confirm)))
+        assertTrue(editor.onSettingsAction(menu.findItem(R.id.edit_confirm)))
         settleNavigation()
         assertSame(owner, currentPage())
         assertEquals(selected, requireNotNull(AppHelper.appPrefs).getInt("pref_key_launcher_doubletap_action", -1))
@@ -648,8 +648,8 @@ class PreferenceNavigationUiTest {
         settleNavigation()
         capturePage("music-action-320-zh")
         val menu=PopupMenu(activity,editor.requireView()).menu
-        editor.onCreateOptionsMenu(menu,activity.menuInflater)
-        assertTrue(editor.onOptionsItemSelected(menu.findItem(R.id.edit_confirm))); settleNavigation()
+        editor.createSettingsMenu(menu)
+        assertTrue(editor.onSettingsAction(menu.findItem(R.id.edit_confirm))); settleNavigation()
         assertSame(musicPage,currentPage())
         assertEquals(18,requireNotNull(AppHelper.appPrefs).getInt(key+"_action",-1))
         assertEquals(activity.getString(R.string.array_global_actions_volume_up),left.summary.toString())
@@ -828,7 +828,7 @@ class PreferenceNavigationUiTest {
     fun aboutCommunityOpensTheCanonicalUrlOnlyOnClick() {
         val home = currentPage() as MainFragment
         val about = PopupMenu(activity, home.requireView()).menu.add(0, R.id.about, 0, "About")
-        home.onOptionsItemSelected(about)
+        home.onSettingsAction(about)
         settleNavigation()
         val page = currentPage() as AboutFragment
         assertEquals(null, shadowOf(activity).nextStartedActivity)
@@ -850,7 +850,7 @@ class PreferenceNavigationUiTest {
     fun returningFromAboutRestoresTheHomeOptions() {
         val home = currentPage() as MainFragment
         val about = PopupMenu(activity, home.requireView()).menu.add(0, R.id.about, 0, "About")
-        assertTrue(home.onOptionsItemSelected(about))
+        assertTrue(home.onSettingsAction(about))
         settleNavigation()
         assertTrue(currentPage() is AboutFragment)
         pressToolbarBack()
@@ -1474,12 +1474,12 @@ class PreferenceNavigationUiTest {
         assertTrue("Preference XML must load rows", page.preferenceScreen.preferenceCount > 0)
         SettingsPreferenceList(page.preferenceScreen).use { assertTrue("Generated page has visible options", it.rows.isNotEmpty()) }
         val menu = PopupMenu(activity, view).menu
-        page.onCreateOptionsMenu(menu, activity.menuInflater)
+        page.createSettingsMenu(menu)
         for (id in intArrayOf(R.id.restartlauncher, R.id.restartsystemui, R.id.restartsecuritycenter, R.id.softreboot)) {
             assertEquals("Restart actions belong to home", page is MainFragment, menu.findItem(id)?.isVisible == true)
             if (page !is MainFragment) {
                 val action = menu.findItem(id) ?: menu.add(0, id, 0, "Restart")
-                assertFalse("Subpages must also reject a stale restart action", page.onOptionsItemSelected(action))
+                assertFalse("Subpages must also reject a stale restart action", page.onSettingsAction(action))
             }
         }
     }

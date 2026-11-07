@@ -12,6 +12,23 @@ import java.io.File
 import java.lang.reflect.Proxy
 
 class RemainingFeaturesWiringTest {
+    @Test fun deckInstallationRequiresItsMasterSwitchInBothLauncherRoutes() {
+        val prefs=PrefMap().apply {
+            put("system_recents_ios18_deck_motion",true)
+            put("system_recents_ios18_deck_size_auto",false)
+            put("system_recents_ios18_deck_size",72)
+        }
+        val spec=LauncherPostAttachFeatures.all(fakePackageReadyParam(),prefs).single { it.id==LauncherIosRecentsDeckFeatureId }
+        assertEquals(InstallPhase.APPLICATION_ATTACHED,spec.phase)
+        assertEquals(FeatureTarget.LAUNCHER,spec.target)
+        for(enabled in listOf(false,true,false)) {
+            prefs.put("system_recents_ios18_deck",enabled)
+            assertEquals(enabled,spec.isEnabled(prefs))
+            assertEquals(enabled,GenericAppFeatures.shouldInstallPocoRecentsDeck(prefs,
+                "com.mi.android.globallauncher","com.mi.android.globallauncher"))
+        }
+    }
+
 
     @Test fun folderIconBlurIsAnIndependentOptInForTheSharedLauncherTarget() {
         val off = PrefMap()

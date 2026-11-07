@@ -28,8 +28,8 @@ class Controls : SubFragment() {
         selectSub()
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         when (sub) {
             "pref_key_controls_cat_power" -> findPreference<Preference>("pref_key_controls_powerdt")?.setOnPreferenceClickListener(openLaunchActions)

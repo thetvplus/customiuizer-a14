@@ -55,7 +55,8 @@ class IslandVisualBalanceTest {
                 shell.transition(160, 40, 160, 40, !existing)
                 val animation = clock(shell)!!
                 var peak = 0f; var peakAt = 0L; var column = 0
-                var previousWidth = 40f; var expandedAt: Long? = null
+                var expandedAt: Long? = null
+                var recoil=0f
                 val captures = longArrayOf(0, 80, 160, 260, 380, 500, 650, 800)
                 for (i in 0..(hz * 11 / 10)) {
                     val time = i * 1000L / hz
@@ -63,11 +64,10 @@ class IslandVisualBalanceTest {
                     if (clock(shell) === animation) animation.currentPlayTime = time
                     val width = 160 * shell.scaleX
                     if (width > peak) { peak = width; peakAt = time }
+                    recoil=maxOf(recoil,peak-width)
                     if (!existing) {
-                        assertTrue("A new seed expands continuously without a second crest", width + .001f >= previousWidth && width <= 160.001f)
                         assertEquals("Only existing containers borrow the vertical receive",40f,40*shell.scaleY,.001f)
                         if (width >= 144f && expandedAt == null) expandedAt = time
-                        previousWidth = width
                     }
                     assertTrue("Actual safe width is authoritative", width in 39.999f..179.201f)
                     assertEquals(0f, shell.translationX, 0f)
@@ -86,7 +86,7 @@ class IslandVisualBalanceTest {
                     strip?.let { image -> File(directory, "$name.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) } }
                 }
                 if (existing) assertTrue("An existing shell keeps its native receive excursion: $peak", peak >= 167f)
-                else assertEquals("A new shell reaches its form without another overshoot",160f,peak,.001f)
+                else assertTrue("A new shell also visibly receives and retracts",peak>=164f && recoil>=3f)
                 val responseAt = if (existing) peakAt else requireNotNull(expandedAt)
                 assertTrue("A readable expansion/receive must respond within its finite body tempo: $responseAt", responseAt in 100L..620L)
                 peaks += existing to responseAt

@@ -2,7 +2,7 @@
 
 [页面功能地图](../../FEATURE_MAP.md) · [待验收与证据](../../maintenance/A14_REFINEMENT_ROADMAP.md)
 
-入口为「桌面 → Dock」。背景默认关闭，修改后重启桌面。仅保留纯色面板（0）与磨砂玻璃（2），旧轻量玻璃（3）及其它无效取值在设置与运行时归一为面板。复用 Launcher 已有 Backdrop 材质和混色，失败时显示简单半透明面板；不维护模块壁纸、折射 Shader、渐变描边、模糊 / 省电监听或采样任务。
+入口为「桌面 → Dock」。背景默认关闭，修改后重启桌面。仅保留纯色面板（0）与磨砂玻璃（2），旧轻量玻璃（3）及其它无效取值在设置与运行时归一为面板。复用 Launcher 已有 Backdrop 材质和混色，失败时显示简单半透明面板；不维护模块壁纸、折射 Shader、渐变描边或采样任务。需要磨砂且不透明度非零时，在挂载期间注册系统模糊与省电事件，detach 解除；纯色与全透明模式不注册这组监听。
 
 「背景尺寸微调」同时调整上下和左右：正值四边扩展、负值四边收缩，默认 0 dp（存储值 17，减去偏移 17）；按可用空间和导航安全区对称限幅，图标仍使用原生位置与大小。全宽底栏隐藏圆角、水平间距和尺寸微调参数；有效旧高度与上下边距键保持兼容。
 
@@ -20,6 +20,6 @@
 
 几何更新来自原生 measure / layout / 拖动完成等事件；稳定的普通 / 透明背景解除 PreDraw，需要独立合成透明度的原生材质只观察宿主已有帧，不自行请求下一帧。隐藏暂停几何工作，detach 取消宽度动画并释放布局与编辑监听。没有纹理 generation、异步捕获结果或旧 Bitmap 需要移交，整套自定义图像所有权已删除。
 
-A14 已有安装点仍为 HotSeats.updateContent()、onWallpaperColorChanged() 及原生编辑 / 解锁参与者；本轮不增加 ROM API 或扩大 Hook 范围。2026-10-18 的 fuxi CN / TW MiuiHome 静态声明证据继续适用于这些未变化入口。旧采样与 Shader 的数值预算已退役；主机几何 / 生命周期 / 材质回退测试不等同设备帧时间、GPU、功耗或实际观感验收。
+A14 安装点为 HotSeats.updateContent() 完成后挂载，原方法先加入原生内容并写入 mContent；measure、内容 layout、拖动结束、Overview 状态、编辑与解锁回调继续驱动既有装饰。2026-11-08 对 duchamp CN、fuxi CN / TW 与 munch ID 的原始 Launcher APK 重新运行 DexSQL，未使用旧索引；上述声明、原生材质构造与成员合同均存在。当前功能路由只启用 MIUI Launcher，POCO 原件的接口存在不代表 Dock 已接入；不扩大整个 Launcher catalog。具体评估见[多 ROM 挂载复核](../../maintenance/A14_REFINEMENT_ROADMAP.md#多-rom-挂载点复核2026-11-08)。旧采样与 Shader 的数值预算已退役；静态与 Host 证据不等同设备帧时间、GPU、功耗或实际观感验收。
 
 主要实现为 [`LauncherDockBackground`、`DockBackgroundGeometry` 与 `DockCornerGeometry`](../../../app/src/main/java/tv/withaibuild/customiuizer/mods/)。回退单位是本轮轻量玻璃移除与原生材质 / 简单面板取舍，不单独恢复旧的持续采样调度。

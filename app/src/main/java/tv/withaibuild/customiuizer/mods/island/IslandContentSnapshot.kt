@@ -1,7 +1,6 @@
 package tv.withaibuild.customiuizer.mods.island
 
 import android.graphics.Canvas
-import android.graphics.RenderEffect
 import android.graphics.RenderNode
 import android.graphics.Rect
 import android.graphics.Outline
@@ -16,7 +15,6 @@ internal class IslandContentSnapshot {
     private val node = RenderNode("Island content handoff")
     private var width = 0
     private var height = 0
-    private var blur = -1
     private val clip = Rect()
     private val outline = Outline()
     private val outlinePath = Path()
@@ -72,10 +70,7 @@ internal class IslandContentSnapshot {
         canvas.restoreToCount(save)
     }
 
-    fun pose(alpha: Float, level: Int, effect: RenderEffect?) {
-        node.alpha = alpha
-        if (blur != level) { blur = level; node.setRenderEffect(effect) }
-    }
+    fun pose(alpha: Float) { node.alpha = alpha }
 
     fun draw(canvas: Canvas, targetWidth: Int, targetHeight: Int, sx: Float, sy: Float) {
         if (!ready || !canvas.isHardwareAccelerated) return
@@ -88,8 +83,8 @@ internal class IslandContentSnapshot {
     }
 
     fun clear() {
-        ready = false; blur = -1
-        node.setRenderEffect(null); node.alpha = 1f
+        ready = false
+        node.alpha = 1f
         node.discardDisplayList()
     }
 }

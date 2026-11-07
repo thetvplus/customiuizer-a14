@@ -3,7 +3,7 @@ package tv.withaibuild.customiuizer.mods.recents
 import org.junit.Assert.*
 import org.junit.Test
 
-class DeckModernMotionTest {
+class DeckModernSpringParametersTest {
     class Bundle {
         private var damping=.8f; private var stiffness=200f
         var velocity=1200f
@@ -35,9 +35,9 @@ class DeckModernMotionTest {
         }
     }
     @Test fun modernKeysUseNativeDurationConversionWithoutChangingVelocityRadiusOrAlpha() {
-        val adapter=DeckModernMotion(Native::class.java)
+        val adapter=DeckModernSpringParameters(Native::class.java)
         for(scene in DeckSpringScene.entries) {
-            val spring=Native(); val saved=adapter.applyParameters(spring,scene)
+            val spring=Native(); val saved=adapter.apply(spring,scene)
             assertEquals(listOf("centerX","centerY","Width","Ratio"),spring.calls)
             assertEquals(scene.response*1.5f,spring.mWidthBundle.getStiffness(),0f)
             assertEquals(scene.damping,spring.mCenterYBundle.getDamping(),0f)
@@ -45,22 +45,16 @@ class DeckModernMotionTest {
             assertEquals(200f,spring.mRadiusBundle.getStiffness(),0f)
             assertEquals(.8f,spring.mAlphaBundle.getDamping(),0f)
             spring.mCenterXBundle.setDampingAndStiffness(.6f,180f)
-            adapter.restoreParameters(spring,saved)
+            adapter.restore(spring,saved)
             assertEquals(.6f,spring.mCenterXBundle.getDamping(),0f)
             assertEquals(200f,spring.mWidthBundle.getStiffness(),0f)
         }
     }
     @Test fun partialNativeFailureRollsBackEveryOwnedPair() {
-        val adapter=DeckModernMotion(Native::class.java); val spring=Native().apply { failAt="Width" }
-        try { adapter.applyParameters(spring,DeckSpringScene.GESTURE); fail("must fail") }
+        val adapter=DeckModernSpringParameters(Native::class.java); val spring=Native().apply { failAt="Width" }
+        try { adapter.apply(spring,DeckSpringScene.GESTURE); fail("must fail") }
         catch (_: java.lang.reflect.InvocationTargetException) { }
         assertEquals(.8f,spring.mCenterXBundle.getDamping(),0f)
         assertEquals(200f,spring.mCenterYBundle.getStiffness(),0f)
-    }
-    @Test fun nestedGestureScopesDoNotLeakIntoButtonEntry() {
-        val adapter=DeckModernMotion(Native::class.java)
-        adapter.enterGesture(); adapter.enterGesture(); adapter.leaveGesture()
-        assertEquals(DeckSpringScene.GESTURE,adapter.closingScene())
-        adapter.leaveGesture(); assertEquals(DeckSpringScene.TOGGLE,adapter.closingScene())
     }
 }

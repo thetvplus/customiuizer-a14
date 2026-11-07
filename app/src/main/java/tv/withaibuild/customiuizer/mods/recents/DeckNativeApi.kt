@@ -29,11 +29,15 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
         type.getDeclaredMethod(name,*parameters).apply { require(returnType==result && java.lang.reflect.Modifier.isStatic(modifiers)); isAccessible=true }
     private val floatType=Float::class.javaPrimitiveType!!
     private val voidType=Void.TYPE
+    val recentsContainer=cls("recents.views.RecentsContainer")
+    val recentsRotation=field(recentsContainer,"mRecentsContainerRotation",Int::class.javaPrimitiveType!!)
+    val updateRotation=exact(recentsContainer,"updateRotation",voidType,Int::class.javaPrimitiveType!!)
     val stack=cls("recents.views.TaskStackView")
     val algorithm=cls("recents.views.TaskStackLayoutAlgorithm")
     val horizontal=cls("recents.views.TaskStackViewsAlgorithmHorizontal")
     val transform=cls("recents.views.TaskViewTransform")
     val taskView=cls("recents.views.TaskView")
+    val fullscreenProgress=field(taskView,"mFullscreenProgress",floatType)
     private val header=cls("recents.views.TaskViewHeader")
     val headerIcon=field(header,"mIconView",android.widget.ImageView::class.java)
     val headerTitle=field(header,"mTitleView",android.widget.TextView::class.java)
@@ -132,6 +136,16 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val navSpring=if(profile==DeckLauncherProfile.LEGACY) field(nav,"mAppToRecentsAnim2",spring) else null
     val closing=if(profile==DeckLauncherProfile.LEGACY) exact(quick,"startClosingWindowToRecentsAnimators",spring,Class.forName("[Lcom.android.systemui.shared.recents.system.RemoteAnimationTargetCompat;",false,loader),Class.forName("[Lcom.android.systemui.shared.recents.system.RemoteAnimationTargetCompat;",false,loader),cls("recents.util.MultiAnimationEndDetector")) else null
     val windowElement=if(profile==DeckLauncherProfile.WINDOW_ELEMENT) DeckWindowApi(loader) else null
+    val appGesturePose=if(profile==DeckLauncherProfile.WINDOW_ELEMENT) exact(cls("recents.anim.TaskViewsElement"),"updateTaskView",voidType,
+        taskView,Int::class.javaPrimitiveType!!,android.graphics.RectF::class.java,
+        Int::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!,floatType,floatType,Boolean::class.javaPrimitiveType!!,
+        floatType,floatType,Runnable::class.java,floatType,floatType,Boolean::class.javaPrimitiveType!!,
+        Int::class.javaPrimitiveType!!,floatType,Int::class.javaPrimitiveType!!,android.graphics.Rect::class.java) else
+        exact(nav,"updateTaskView",voidType,taskView,Int::class.javaPrimitiveType!!,android.graphics.RectF::class.java,
+            Int::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!,floatType,floatType,Boolean::class.javaPrimitiveType!!,
+            floatType,floatType,Runnable::class.java)
+    val appGestureProgress=if(profile==DeckLauncherProfile.LEGACY) field(nav,"mPer",floatType) else null
+    val appGestureQuickSwitch=if(profile==DeckLauncherProfile.LEGACY) exact(nav,"isQuickSwitchMode",Boolean::class.javaPrimitiveType!!) else null
     val surfaceOcclusion=if(profile==DeckLauncherProfile.WINDOW_ELEMENT) DeckSurfaceOcclusion(cls("recents.util.ClipAnimationHelper")) else null
     val openStart=staticExact(utils,"getTaskViewStartRectF",android.graphics.RectF::class.java,cls("launcher.Launcher"),recents,taskView,android.graphics.RectF::class.java)
     val createSpring=staticExact(utils,"createSpringAnim",spring,recents,taskView,cls("recents.util.ClipAnimationHelper\$TransformParams"),cls("recents.util.ClipAnimationHelper"),cls("recents.util.RemoteAnimationTargetSet"),android.graphics.RectF::class.java,android.graphics.RectF::class.java,floatType,floatType,Boolean::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!)

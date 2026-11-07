@@ -52,7 +52,7 @@ class IslandPresentationTest {
         activity.finish()
     }
 
-    @Test fun expandedLanesKeepTheirTextOutsideTheCameraAndRightContentShrinksInward() {
+    @Test fun expandedLanesKeepTextAtTheCameraEdgeOrTheOuterSideMargin() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity).apply { powerSaveMotion = true }
         activity.setContentView(shell)
@@ -74,7 +74,8 @@ class IslandPresentationTest {
             assertEquals(264, group.right)
             assertTrue(leading.right <= 140 - gap / 2)
             assertTrue(group.left >= 140 + gap / 2)
-            assertEquals(android.view.Gravity.END, content.gravity and android.view.Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK)
+            if (gap > 0) assertEquals("A camera lane starts at its inner safe edge",0f,content.layout.getLineLeft(0),.001f)
+            else assertEquals("A continuous side lane keeps its outer alignment",content.layout.width.toFloat(),content.layout.getLineRight(0),.001f)
             assertTrue(content.height <= 36)
             if (directory != null) {
                 val bitmap = android.graphics.Bitmap.createBitmap(280, 40, android.graphics.Bitmap.Config.ARGB_8888)

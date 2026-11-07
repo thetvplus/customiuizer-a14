@@ -4,20 +4,6 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandMotionTest {
-    @Test fun contentBlurTracksTheContinuousRadiusWithinOnePixelAtPhoneDensities() {
-        for(density in listOf(1f,2f,2.75f,3f,3.5f)) {
-            var previous=Float.POSITIVE_INFINITY
-            for(frame in 0..120) {
-                val reveal=frame/120f
-                val radius=IslandMotion.contentBlurRadius(IslandMotion.contentBlurLevel(reveal),density)
-                val reference=(1f-reveal)*16.666f*density
-                assertTrue("Blur cannot reverse during a monotonic reveal",radius<=previous)
-                assertTrue("Discrete filter jumps must stay below a physical pixel",kotlin.math.abs(reference-radius)<=1f)
-                previous=radius
-            }
-            assertEquals(0f,previous,0f)
-        }
-    }
     @Test fun elasticOverscrollCrossesTheBoundaryOnceAndSettlesWithinTheFiniteClock() {
         val spring = IslandMotion.Spring()
         val seconds = IslandMotion.REBOUND / 1000f
@@ -27,46 +13,6 @@ class IslandMotionTest {
         assertEquals(100f, spring.sample(seconds), .05f)
         spring.finish()
         assertEquals(0f, spring.velocity, 0f)
-    }
-
-    @Test fun nativeIntakePrecedesOneBoundedCatchWithExactEndpoints() {
-        assertEquals(0f, IslandMotion.mediaReturnCatch(0f), 0f)
-        assertEquals(0f, IslandMotion.mediaReturnCatch(1f), 0f)
-        var previous = 0f
-        var descending = false
-        for (i in 0..1000) {
-            val p = i / 1000f
-            val catchValue = IslandMotion.mediaReturnCatch(p)
-            assertTrue(catchValue.isFinite() && catchValue in -.2001f.. .6f)
-            if (p >= .5f) {
-                if (catchValue < previous) descending = true
-                if (descending) assertTrue(catchValue <= previous)
-            } else assertTrue(catchValue <= 0f)
-            previous = catchValue
-        }
-        assertTrue(descending)
-        assertEquals(-.2f, IslandMotion.mediaReturnCatch(.325f), .0001f)
-        assertEquals(0f, IslandMotion.mediaReturnCatch(.5f), 0f)
-        assertTrue(IslandMotion.mediaReturnCatch(.72f) > 0f)
-        assertTrue(IslandMotion.ABSORPTION_BODY < 1000)
-    }
-
-    @Test fun theCatchPeaksEarlyAndScalesIntoTheAvailableSpaceWithoutAClippedPlateau() {
-        val peak = (500..900).maxBy { IslandMotion.mediaReturnCatch(it / 1000f) } / 1000f
-        assertTrue(peak in .59f.. .61f)
-        assertEquals(0f, IslandMotion.mediaReturnCatch(.9f), .00001f)
-        assertTrue(IslandMotion.mediaReturnCatch(.86f) < .006f)
-        for (width in listOf(140f, 160f, 280f, 400f)) {
-            val maximum = width + 8f
-            val weight = IslandMotion.boundedCatchWeight(width, maximum, .1f)
-            var cappedFrames = 0
-            for (step in 500..900) {
-                val breadth = width + width * weight * IslandMotion.mediaReturnCatch(step / 1000f)
-                assertTrue(breadth <= maximum + .0001f)
-                if (breadth >= maximum - .001f) cappedFrames++
-            }
-            assertTrue("There must be a peak, not several frames stuck at the cap", cappedFrames < 5)
-        }
     }
 
     @Test fun elasticReleaseMovesInTheFirstFrameAndCarriesItsMeasuredVelocityOnReversal() {

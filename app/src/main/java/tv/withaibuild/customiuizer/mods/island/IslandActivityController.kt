@@ -125,9 +125,13 @@ internal class IslandActivityController(
             if (event === lowBatteryLease) batteryWarningMarker?.visible(true)
             (lastContent as? IslandMediaContent)?.takeIf { it.token == event && it.playing && !exiting }
                 ?.let { displayedMedia = it.token }
-            updateSpectrum(visible = true)
         }, hidden = { spectrum?.pauseKeepingFrame(); recorderWave?.pauseKeepingFrame(); batteryWarningMarker?.visible(false) }, frameAllowed = ::frameAllowed,
-        rejected = ::queueFrameRecheck, presented = shell::refreshWaveformVisibility)
+        rejected = ::queueFrameRecheck, presented = {
+            shell.refreshWaveformVisibility()
+            // Sampling also depends on preferences and source ownership. A
+            // visibility-only cache misses an off/on change between two frames.
+            updateSpectrum()
+        })
     private val window = context.getSystemService(WindowManager::class.java)
     private var attached = false
     private var exiting = false
@@ -386,7 +390,6 @@ internal class IslandActivityController(
     }
 
     init {
-        shell.onWaveformVisibilityChanged = { updateSpectrum() }
         touchWindow.onUnavailable = { handler.post { ModuleHelper.guarded { if (!disposed) render() } } }
         shell.onDismiss = {
             when (forms.dismissal()) {
@@ -1539,9 +1542,10 @@ internal class IslandActivityController(
         val animationRight = if (besideCamera && options.position == 0) minOf(safeRight, bounds.holeLeft - dp(8)) else safeRight
         val elasticMaximum = IslandSizing.elasticMaximum(placement.width, placement.left,
             animationLeft, animationRight, density).let { if (landscape) minOf(it, contentWidth) else it }
-        val animationMaximum = if (!centered) elasticMaximum else if (expanded && options.automaticWidth)
-            elasticMaximum else minOf(maximumWidth, elasticMaximum)
-        return Geometry(placement.width, height, placement.top, placement.gap, animationMaximum, placement.left)
+        // Layout's compact width is a resting/content bound, not the physical
+        // system-container clip used by receive/press. elasticMaximum already
+        // reserves corners, the camera side, landscape and both screen edges.
+        return Geometry(placement.width, height, placement.top, placement.gap, elasticMaximum, placement.left)
     }
 
     private fun liveReturnFrame(now: Long): IslandMusicReturnSignal.Frame? {
@@ -1592,8 +1596,7 @@ internal class IslandActivityController(
             return
         }
         val publisher = musicReturnPublisher ?: IslandMusicReturnSignal.Publisher(context.applicationContext,
-            handler, scope, ioDispatcher, onCommit = ::nativeMusicReturn,
-            onImpulse = { shell.returnStrength = it }) {
+            handler, scope, ioDispatcher, onCommit = ::nativeMusicReturn) {
             pipStateReader?.invoke()?.let(::applyPipSnapshot)
             val now = SystemClock.uptimeMillis()
             val foregroundMedia = state.uncoveredMedia()?.let {
@@ -1720,7 +1723,6 @@ internal class IslandActivityController(
         shell.powerSaveMotion = reducedMotion()
         shell.waveformGain = options.waveformGain
         shell.realtimeWaveform = options.waveformMode == 2
-        shell.allowTextBlur = !reducedMotion()
         shell.entranceStyle = options.entranceStyle
         shell.windowTop = geometry.top
         shell.idle = idle
@@ -1781,7 +1783,8 @@ internal class IslandActivityController(
             if (returning) {
                 shell.acceptReturnProgress(returnProgress); returnProgress = null
                 if (!entering) shell.prepareReturnFromCurrent() else shell.prepareEntry(mediaReturn = true)
-            } else if (arrival == IslandMotionCoordinator.Arrival.CONTENT) shell.prepareContentArrivalFromCurrent()
+            } else if (arrival == IslandMotionCoordinator.Arrival.CONTENT)
+                shell.prepareContentArrivalFromCurrent(receiveBreadth = secondary || resumingExit)
             if (entering) {
                 // Prepare alpha/scale BEFORE the first Surface can be drawn, including re-entry
                 // after a native activity or a notification-panel transition.

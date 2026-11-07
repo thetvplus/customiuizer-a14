@@ -32,23 +32,41 @@ internal object HomeIndicatorHooks {
         val loader = param.classLoader
         val handle = XposedHelpers.findClass("com.android.systemui.navigationbar.gestural.NavigationHandle", loader)
         val bar = XposedHelpers.findClass("com.android.systemui.navigationbar.NavigationBarView", loader)
-        return PreparedHookBatch().install(prepare(handle, bar))
+        val transitions = XposedHelpers.findClass("com.android.systemui.navigationbar.NavigationBarTransitions", loader)
+        return PreparedHookBatch().install(prepare(handle, bar, transitions))
     }
-    internal fun prepare(handle: Class<*>, bar: Class<*>): List<Pair<java.lang.reflect.Method, MethodHook>> {
+    internal fun prepare(handle: Class<*>, bar: Class<*>, transitions: Class<*>): List<Pair<java.lang.reflect.Method, MethodHook>> {
         val draw = handle.getDeclaredMethod("onDraw", Canvas::class.java)
         // setNavBarMode writes mNavBarMode then calls updateIcons (not
         // updateNavButtonIcons). This also covers configuration reinflation.
         val update = bar.getDeclaredMethod("updateIcons", android.content.res.Configuration::class.java)
         val mode = bar.getDeclaredField("mNavBarMode").apply { isAccessible = true }
         val paint = handle.getDeclaredField("mPaint").apply { isAccessible = true }
+        val tintDuration = transitions.getDeclaredMethod("getTintAnimationDuration")
+        val tintView = transitions.getDeclaredField("mView").apply { isAccessible = true }
+        val tintMode = transitions.getDeclaredField("mNavBarMode").apply { isAccessible = true }
         // The native Paint is constructor-owned. A mutable replacement contract
         // cannot safely share this owner's cached instance without a new lifecycle.
         require(handle.superclass == View::class.java && View::class.java.isAssignableFrom(bar) &&
             draw.returnType == Void.TYPE && !Modifier.isStatic(draw.modifiers) &&
             update.returnType == Void.TYPE && !Modifier.isStatic(update.modifiers) &&
             mode.type == Int::class.javaPrimitiveType && !Modifier.isStatic(mode.modifiers) &&
-            paint.type == Paint::class.java && Modifier.isFinal(paint.modifiers) && !Modifier.isStatic(paint.modifiers))
+            paint.type == Paint::class.java && Modifier.isFinal(paint.modifiers) && !Modifier.isStatic(paint.modifiers) &&
+            tintDuration.returnType == Int::class.javaPrimitiveType && !Modifier.isStatic(tintDuration.modifiers) &&
+            tintView.type == bar && !Modifier.isStatic(tintView.modifiers) &&
+            tintMode.type == Int::class.javaPrimitiveType && !Modifier.isStatic(tintMode.modifiers))
         return listOf(
+            tintDuration to object : MethodHook() {
+                override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
+                    val native = callback.getThisObject()
+                    val navigation = tintView.get(native) as View
+                    // Reuse the system's retargetable tint animator and easing.
+                    // This 250 ms A14 mapping affects ordinary gesture tint only;
+                    // explicit window-handoff durations remain native.
+                    if (navigation.display?.displayId == 0 && tintMode.getInt(native) == 2)
+                        callback.returnAndSkip(250)
+                }
+            },
             update to object : MethodHook() {
                 override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                     if (callback.getThrowable() == null) XposedHelpers.setAdditionalInstanceField(
@@ -69,6 +87,7 @@ internal object HomeIndicatorHooks {
                         if (!bar.isInstance(navigation)) return@guarded
                         if (XposedHelpers.getAdditionalInstanceField(navigation, MODE) == null)
                             XposedHelpers.setAdditionalInstanceField(navigation, MODE, mode.getInt(navigation) == 2)
+                        if (XposedHelpers.getAdditionalInstanceField(navigation, MODE) != true) return@guarded
                         Owner(view, navigation, paint.get(view) as Paint).also {
                             view.addOnAttachStateChangeListener(it)
                             XposedHelpers.setAdditionalInstanceField(view, OWNER, it)

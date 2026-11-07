@@ -3,16 +3,17 @@ package tv.withaibuild.customiuizer.mods.recents
 import java.lang.reflect.Modifier
 import tv.withaibuild.customiuizer.mods.utils.CleanupActions
 
-/** 22G100 scene settings, distinct from layout/tracking springs. */
-internal enum class DeckSpringScene(val response: Float,val damping: Float) {
-    OPEN(.336f,1f), TOGGLE(.336f,1f), GESTURE(.531f,.94f)
+/** Parameter storage varies by Launcher; scenes and lifetime do not. */
+internal interface DeckSpringTuning {
+    class Snapshot(val original: FloatArray,val applied: FloatArray)
+    fun apply(spring: Any,scene: DeckSpringScene): Snapshot
+    fun restore(spring: Any,saved: Snapshot)
 }
 
 /** The native setter owns response conversion and system duration ratio.
  * Keep fields and forces coherent through retargeting; release owned fields at
  * native end/cancel, without overwriting a subsequent native scene's settings. */
-internal class DeckSpringParameters(type: Class<*>) {
-    class Snapshot(val original: FloatArray,val applied: FloatArray)
+internal class DeckSpringParameters(type: Class<*>): DeckSpringTuning {
     private val enumType=type.declaredClasses.singleOrNull { it.simpleName=="RectAnimType" && it.isEnum }
     private val axisType=enumType ?: Class.forName("androidx.dynamicanimation.animation.FloatPropertyCompat",false,type.classLoader)
     private val setter=type.getDeclaredMethod("setAnimParam",axisType,Float::class.javaPrimitiveType,
@@ -32,7 +33,7 @@ internal class DeckSpringParameters(type: Class<*>) {
             require(this.type==Float::class.javaPrimitiveType && !Modifier.isStatic(modifiers) && !Modifier.isFinal(modifiers)); isAccessible=true
         } }
     }
-    fun apply(spring: Any,scene: DeckSpringScene): Snapshot {
+    override fun apply(spring: Any,scene: DeckSpringScene): DeckSpringTuning.Snapshot {
         val saved=FloatArray(fields.size) { fields[it].getFloat(spring) }
         try { for(axis in axes) setter.invoke(spring,axis,scene.damping,scene.response) }
         catch(error: Throwable) {
@@ -40,9 +41,9 @@ internal class DeckSpringParameters(type: Class<*>) {
             for(i in fields.indices) cleanup.run { fields[i].setFloat(spring,saved[i]) }
             cleanup.finish(); throw error
         }
-        return Snapshot(saved,FloatArray(fields.size) { fields[it].getFloat(spring) })
+        return DeckSpringTuning.Snapshot(saved,FloatArray(fields.size) { fields[it].getFloat(spring) })
     }
-    fun restore(spring: Any,saved: Snapshot) {
+    override fun restore(spring: Any,saved: DeckSpringTuning.Snapshot) {
         val cleanup=CleanupActions()
         for(i in fields.indices step 2) cleanup.run {
             // A native scene owns the pair even if it changes only one member.

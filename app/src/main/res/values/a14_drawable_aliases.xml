@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep public/dynamic names while sharing identical bitmap content. -->
+    <item type="drawable" name="statusbar_signal_1_3_theme">@drawable/statusbar_signal_1_2_theme</item>
+    <item type="drawable" name="statusbar_signal_2_2_theme">@drawable/statusbar_signal_2_1_theme</item>
+    <item type="drawable" name="statusbar_signal_2_2_dark_theme">@drawable/statusbar_signal_2_1_dark_theme</item>
+</resources>

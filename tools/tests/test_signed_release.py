@@ -208,6 +208,29 @@ class AutomaticReleaseTest(unittest.TestCase):
         self.assertEqual(release.release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG_EN.md"),
                          release.public_release_notes_section(legacy, "r14.25.2", 247, "CHANGELOG_EN.md"))
 
+    def test_authored_release_summary_is_distinct_from_detailed_changes(self):
+        for filename, summary, user, engineering in (
+                ("CHANGELOG.md", "发行摘要", "用户变化", "工程说明"),
+                ("CHANGELOG_EN.md", "Release summary", "User changes", "Engineering notes")):
+            text = (f"## r14.25.3\n\nversionCode 248. Changes since r14.25.1:\n\n"
+                    f"### {summary}\n\n- Short user overview.\n\n"
+                    f"### {user}\n\n- Detailed behavior A.\n- Detailed behavior B.\n\n"
+                    f"### {engineering}\n\n- Private implementation details.\n")
+            notes = release.public_release_notes_section(text, "r14.25.3", 248, filename)
+            self.assertIn("Short user overview.", notes)
+            self.assertNotIn("Detailed behavior", notes)
+            self.assertNotIn("Private implementation", notes)
+            detailed = release.public_release_notes_section(text, "r14.25.3", 248, filename, prefer_summary=False)
+            self.assertNotIn("Short user overview.", detailed)
+            self.assertIn("Detailed behavior A.", detailed)
+            self.assertIn("Changes since r14.25.1:", detailed)
+            for invalid in (text.replace("- Short user overview.", ""),
+                            text.replace("- Short user overview.", "- Same.\n- Same."),
+                            text.replace(f"### {user}", f"### {summary}"),
+                            text.replace("- Detailed behavior A.\n- Detailed behavior B.", "")):
+                with self.assertRaises(ValueError):
+                    release.public_release_notes_section(invalid, "r14.25.3", 248, filename)
+
     def test_changelog_release_notes_cannot_be_empty_ambiguous_or_wrong_version(self):
         for text in ("## r14.26.1\n\nversionCode 247.\n", "## r14.26.1\n\nversionCode 246.\n- Change\n",
                      "## r14.26.1\n\nversionCode 247.\n- Change\n\n## r14.26.1\n- Duplicate\n"):
@@ -1273,14 +1296,15 @@ class FormalTargetAndNotesTest(unittest.TestCase):
     def test_repository_target_matches_the_next_source_and_preserves_both_notes_baselines(self):
         policy = json.loads((REPO_ROOT / "tools/release-policy.json").read_text(encoding="utf-8"))
         name, code = release.source_version((REPO_ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
-        self.assertEqual("r14.27.1", name)
-        self.assertEqual(301, code)
+        self.assertEqual("r14.27.3", name)
+        self.assertEqual(303, code)
         with patch.object(release, "POLICY", policy):
             release.release_target(name, code)
-            for retired in (("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257), ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263), ("r14.26.5", 265), ("r14.26.7", 267), ("r14.26.9", 269), ("r14.26.11", 281), ("r14.26.17", 277), (name, 278), (name, 279), (name, 280), (name, 300)):
+            for retired in (("r14.25.5", 254), ("r14.25.6", 255), ("r14.25.7", 256), ("r14.25.8", 257), ("r14.25.9", 258), ("r14.25.11", 260), ("r14.26.1", 261), ("r14.26.3", 263), ("r14.26.5", 265), ("r14.26.7", 267), ("r14.26.9", 269), ("r14.26.11", 281), ("r14.26.17", 277), ("r14.27.1", 301), (name, 278), (name, 279), (name, 280), (name, 300), (name, 301), (name, 302)):
                 with self.assertRaisesRegex(ValueError, "designated formal"):
                     release.release_target(*retired)
-        self.assertEqual({"notes_base": "r14.26.11"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.27.1"}, policy["cumulative_releases"][name])
+        self.assertEqual({"notes_base": "r14.26.11"}, policy["cumulative_releases"]["r14.27.1"])
         self.assertEqual({"notes_base": "r14.26.9"}, policy["cumulative_releases"]["r14.26.11"])
         self.assertEqual({"notes_base": "r14.26.5"}, policy["cumulative_releases"]["r14.26.9"])
         self.assertEqual({"notes_base": "r14.25.9"}, policy["cumulative_releases"]["r14.26.5"])

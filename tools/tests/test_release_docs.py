@@ -119,6 +119,25 @@ class DownloadDocumentsTest(unittest.TestCase):
             self.assertEqual(1, result[filename].count(release.POLICY["community_url"]))
             self.assertNotIn("/issues", result[filename])
 
+    def test_readme_uses_authored_summary_but_changelog_keeps_the_full_user_details(self):
+        server = Server()
+        original = server.text
+        def text(filename):
+            value = original(filename)
+            if filename not in {"CHANGELOG.md", "CHANGELOG_EN.md"}:
+                return value
+            user, summary = ("用户变化", "发行摘要") if filename == "CHANGELOG.md" else ("User changes", "Release summary")
+            return value.replace(f"### {user}", f"### {summary}\n\n- Brief release overview.\n\n### {user}", 1)
+        server.text = text
+        with self.context(server):
+            result = docs.documents(docs.published_version(VERSION))
+        for filename in ("README.md", "README_EN.md"):
+            self.assertIn("Brief release overview.", result[filename])
+            self.assertNotIn("User change 0.", result[filename])
+        for filename in ("CHANGELOG.md", "CHANGELOG_CN.md"):
+            self.assertIn("User change 0.", result[filename])
+            self.assertNotIn("Brief release overview.", result[filename])
+
     def test_community_link_is_shared_by_source_docs_and_app_build(self):
         url = release.POLICY["community_url"]
         self.assertEqual("https://t.me/customiuizerA14", url)

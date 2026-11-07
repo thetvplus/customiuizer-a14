@@ -17,6 +17,36 @@ import tv.withaibuild.customiuizer.R
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class ComposeSettingsPagesTest {
+    @Test fun deckMasterControlsEveryOptionWithoutLosingSavedMotionOrSizing() {
+        val context=RuntimeEnvironment.getApplication()
+        val prefs=PreferenceManager.getDefaultSharedPreferences(context)
+        val master="pref_key_system_recents_ios18_deck"
+        val auto=master+"_size_auto"
+        val motion=master+"_motion"
+        val size=master+"_size"
+        val keys=listOf(master,auto,motion,size)
+        try {
+            for(enabled in listOf(false,true)) for(automatic in listOf(false,true)) {
+                prefs.edit().putBoolean(master,enabled).putBoolean(auto,automatic).putBoolean(motion,false).putInt(size,72).commit()
+                val manager=PreferenceManager(context)
+                val screen=ComposeSettingsPages.create(R.id.prefs_system_recents,context,manager)
+                manager.setPreferences(screen);screen.onAttached()
+                try {
+                    val owner=requireNotNull(manager.findPreference<androidx.preference.TwoStatePreference>(master))
+                    val motionRow=requireNotNull(manager.findPreference<androidx.preference.TwoStatePreference>(motion))
+                    for(active in listOf(enabled,!enabled,enabled)) {
+                        owner.isChecked=active
+                        for(key in listOf(auto,motion,master+"_header_icon",master+"_header_title"))
+                            assertEquals(key,active,requireNotNull(manager.findPreference<Preference>(key)).isEnabled)
+                        assertEquals(active && !automatic,requireNotNull(manager.findPreference<Preference>(size)).isEnabled)
+                        assertFalse(motionRow.isChecked)
+                        assertEquals(72,prefs.getInt(size,0))
+                    }
+                } finally { screen.onDetached() }
+            }
+        } finally { val editor=prefs.edit();keys.forEach(editor::remove);editor.commit() }
+    }
+
     @Test fun homeIndicatorReverseDependencySurvivesRestoreReentryAndComposeObservation() {
         val context=RuntimeEnvironment.getApplication()
         val prefs=PreferenceManager.getDefaultSharedPreferences(context)

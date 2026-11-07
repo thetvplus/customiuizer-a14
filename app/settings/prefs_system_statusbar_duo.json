@@ -12,7 +12,7 @@
           "type": "toggle",
           "attributes": {
             "android:key": "pref_key_system_statusbar_duo",
-            "android:title": "@string/enable_mod",
+            "android:title": "@string/system_statusbar_duo_title",
             "android:summary": "@string/system_statusbar_duo_restart",
             "android:defaultValue": "false"
           }

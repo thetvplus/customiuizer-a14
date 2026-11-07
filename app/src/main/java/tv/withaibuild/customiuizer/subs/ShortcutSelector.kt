@@ -25,12 +25,8 @@ class ShortcutSelector : SubFragmentWithSearch() {
     private var key: String? = null
     private var keyContents: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val args = arguments
         key = args?.getString("key")

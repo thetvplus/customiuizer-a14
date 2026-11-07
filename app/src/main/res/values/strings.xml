@@ -993,32 +993,32 @@
     <string name="system_statusbar_lefticons_verticaloffset_title">Left icon vertical offset</string>
     <string name="system_statusbar_lefticons_offset_summ">Negative values move up; positive values move down. 0 keeps system alignment. Restart System UI after changing.</string>
     <string name="system_statusbar_duo_title">Duo three-in-one icon</string>
-    <string name="system_statusbar_duo_summ">Battery ring, Wi-Fi and cellular signal in one icon; dual SIM uses the default data SIM</string>
-    <string name="system_statusbar_duo_restart">Restart System UI after changing settings. Duo percentage and size are independent of native icon hiding and styling. Incompatible devices keep their original icons.</string>
+    <string name="system_statusbar_duo_summ">Battery, Wi-Fi and cellular signal in one icon; dual SIM follows the default data SIM.</string>
+    <string name="system_statusbar_duo_restart">Restart System UI after changes. Set Duo size and percentage independently; unsupported devices keep system icons.</string>
     <string name="system_statusbar_duo_percent_title">Show battery percentage</string>
     <string name="system_statusbar_duo_chargingbolt_title">Show charging bolt</string>
-    <string name="system_statusbar_duo_chargingbolt_summ">Show a bolt while charging. Turn off to show the percentage when enabled; the battery ring stays green.</string>
+    <string name="system_statusbar_duo_chargingbolt_summ">Replace the percentage with a bolt while charging. Turn off to follow the percentage setting; the ring stays green.</string>
     <string name="system_statusbar_duo_size_title">Manual icon size</string>
     <string name="system_statusbar_duo_size_summ">Used with automatic size off; limited by the current row height.</string>
     <string name="system_statusbar_duo_autosize_title">Automatic icon size</string>
-    <string name="system_statusbar_duo_autosize_summ">Scale from the native device icon height and fit the current row. Turn off to use manual size.</string>
+    <string name="system_statusbar_duo_autosize_summ">Fit the system icon and status bar height; turn off to use manual size.</string>
     <string name="system_statusbar_duo_audio_title">Show headphone connections</string>
-    <string name="system_statusbar_duo_audio_summ">Wired or Bluetooth headphones appear for 3 seconds on a new connection, then restore Wi-Fi or the network glyph. Network warnings take priority.</string>
+    <string name="system_statusbar_duo_audio_summ">Show new headphone connections for 3 seconds, then restore network artwork. Network warnings take priority.</string>
     <string name="system_statusbar_duo_bold_title">Bolder icon strokes</string>
     <string name="system_statusbar_duo_bold_summ">Thicker battery ring, Wi-Fi and headphone lines.</string>
     <string name="system_statusbar_duo_horizontalpadding_title">Horizontal spacing</string>
-    <string name="system_statusbar_duo_horizontalpadding_summ">Space on each side; adjust by 0.5 dp while keeping the icon size.</string>
+    <string name="system_statusbar_duo_horizontalpadding_summ">Adjust space on both sides by 0.5 dp without resizing the icon.</string>
     <string name="system_statusbar_duo_verticaloffset_title">Vertical adjustment</string>
-    <string name="system_statusbar_duo_verticaloffset_summ">Center in the current row; adjust by 0.5 dp. Offset is limited and drawing shrinks at the edge to prevent clipping.</string>
+    <string name="system_statusbar_duo_verticaloffset_summ">Move within the current row in 0.5 dp steps; automatically avoid clipping.</string>
     <string name="system_statusbar_duo_headphonestyle_title">Headphone icon style</string>
     <string name="system_statusbar_duo_headphone_auto">Automatic</string>
     <string name="system_statusbar_duo_headphone_overear">Over-ear headphones</string>
     <string name="system_statusbar_duo_headphone_earbuds">Earbuds</string>
     <string name="system_statusbar_duo_headphonescale_title">Headphone icon size</string>
     <string name="system_statusbar_duo_networkfallback_title">Replace disconnected Wi-Fi</string>
-    <string name="system_statusbar_duo_networkfallback_summ">Without Wi-Fi, show cellular artwork or the current network type; unknown types use artwork.</string>
+    <string name="system_statusbar_duo_networkfallback_summ">Without Wi-Fi, show cellular artwork or network type; unknown types use artwork.</string>
     <string name="system_statusbar_duo_btbattery_title">Bluetooth battery colors</string>
-    <string name="system_statusbar_duo_btbattery_summ" formatted="false">One device with a fresh system report: red up to 20%, amber up to 50%. Other or unknown levels use the system color; the ring stays phone battery.</string>
+    <string name="system_statusbar_duo_btbattery_summ" formatted="false">One headset with a valid battery report: red at ≤20%, amber at ≤50%; otherwise use the system color. The ring shows phone battery.</string>
     <string name="system_statusbar_duo_cellularstyle_title">Cellular center style</string>
     <string name="system_statusbar_duo_cellular_graphic">Graphic</string>
     <string name="system_statusbar_duo_cellular_text">Text</string>
@@ -1343,15 +1343,15 @@
     <string-array name="island_return_effects"><item>None</item><item>Instant</item><item>Absorb</item></string-array>
     <string-array name="island_return_effects_val" translatable="false"><item>none</item><item>instant</item><item>absorption</item></string-array>
     <string name="system_island_interaction_group">Interaction</string>
-    <string name="system_recents_ios18_deck_title">Stacked recent apps</string>
-    <string name="system_recents_ios18_deck_summ">Requires a supported HyperOS 1 launcher and Horizontal recents in Settings → Home screen → Arrange items in Recents. Full-screen gestures are recommended. This is separate from the home screen icon layout. Menu names may vary; restart the launcher to apply.</string>
+    <string name="system_recents_ios18_deck_title">iOS DECK recent apps</string>
+    <string name="system_recents_ios18_deck_summ">Requires a supported HyperOS 1 launcher with Recents arranged horizontally. Supports portrait and landscape; restart the launcher after changes.</string>
     <string name="system_recents_deck_header_icon_title">Deck app icon size</string>
     <string name="system_recents_deck_header_title_title">Deck title size</string>
-    <string name="system_recents_deck_header_size_summ">Automatic sizing avoids magnifying the header with the card. Percentages use the original Android header size. Restart the launcher to apply.</string>
+    <string name="system_recents_deck_header_size_summ">Auto keeps header proportions; percentages use the original system size. Restart the launcher after changes.</string>
     <string name="system_recents_deck_motion_title">iOS window motion</string>
-    <string name="system_recents_deck_motion_summ">Refine app opening and entry to recent tasks. Turn off to use the original system motion. Restart the launcher to apply.</string>
+    <string name="system_recents_deck_motion_summ">Use iOS motion when opening apps and entering the deck. Turn off to keep the deck with system motion; restart the launcher after changes.</string>
     <string name="system_ios_desktop_title">iOS task cards</string>
     <string name="system_ios_volume_group_title">iOS volume</string>
     <string name="controls_ios_home_indicator_title">iOS Home Indicator</string>
-    <string name="controls_ios_home_indicator_summ">Requires full-screen gestures and a visible system handle. In Settings → Home screen → System navigation, select Gestures and turn off Hide full-screen indicator. Also turn off this module’s Hide gesture line. Menu names vary by ROM; only adapted builds are supported. Restart System UI to apply.</string>
+    <string name="controls_ios_home_indicator_summ">Use full-screen gestures and keep the system handle visible. Turn off both system and module options that hide it; restart System UI to apply.</string>
 </resources>

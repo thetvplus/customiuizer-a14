@@ -26,8 +26,10 @@ internal class DeckRadiusHandoff {
         if(current.owner!==owner || current.ticket!=ticket || ticket==0L ||
             current.expected!=null && current.expected!==spring || radius<=0f || !radius.isFinite() ||
             !current.scale.isFinite() || current.scale<=0f || current.width<=0f || current.height<=0f ||
-            !current.width.isFinite() || !current.height.isFinite() || !target.width().isFinite() || !target.height().isFinite() ||
-            abs(target.width()-current.width)>2f || abs(target.height()-current.height)>2f) return radius
+            !current.width.isFinite() || !current.height.isFinite() || !target.width().isFinite() || !target.height().isFinite()) return radius
+        val aligned=abs(target.width()-current.width)<=2f && abs(target.height()-current.height)<=2f
+        val rotated=abs(target.width()-current.height)<=2f && abs(target.height()-current.width)<=2f
+        if(!aligned && !rotated) return radius
         return radius*current.scale
     }
 }

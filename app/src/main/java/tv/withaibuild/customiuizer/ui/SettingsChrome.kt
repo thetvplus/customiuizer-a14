@@ -28,7 +28,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
-import tv.withaibuild.customiuizer.MainActivity
+import tv.withaibuild.customiuizer.PreferenceFragmentBase
 import tv.withaibuild.customiuizer.R
 
 /** Settings-only theme. No Compose types are referenced by Hook entry points. */
@@ -106,8 +106,7 @@ class SettingsActionBar(private val context: Context) {
     fun bind(fragment: Fragment) {
         owner = fragment
         val menu = MenuBuilder(context)
-        fragment.onCreateOptionsMenu(menu, (context as MainActivity).menuInflater)
-        fragment.onPrepareOptionsMenu(menu)
+        (fragment as? PreferenceFragmentBase)?.createSettingsMenu(menu)
         items.clear()
         for (index in 0 until menu.size()) items.add(menu.getItem(index))
     }

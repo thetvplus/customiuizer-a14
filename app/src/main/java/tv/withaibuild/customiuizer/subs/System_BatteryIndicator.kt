@@ -8,8 +8,8 @@ import tv.withaibuild.customiuizer.utils.AppHelper
 
 class System_BatteryIndicator : SubFragment() {
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val colorval = AppHelper.getStringOfAppPrefs("pref_key_system_batteryindicator_color", "1")
         findPreference<Preference>("pref_key_system_batteryindicator_colorval1")?.isEnabled = colorval != "3"

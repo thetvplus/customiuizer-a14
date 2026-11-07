@@ -197,13 +197,13 @@ class MainFragment : PreferenceFragmentBase() {
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    override fun onSettingsAction(item: MenuItem): Boolean {
         if (item.itemId == R.id.search_btn) {
             searchExpanded = true
             focusSearch = true
             return true
         }
-        return super.onOptionsItemSelected(item)
+        return super.onSettingsAction(item)
     }
 
     override fun onStop() {
@@ -211,8 +211,8 @@ class MainFragment : PreferenceFragmentBase() {
         super.onStop()
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val actionBar: ActionBar? = getActionBar()
         actionBar?.setTitle(R.string.app_name)
