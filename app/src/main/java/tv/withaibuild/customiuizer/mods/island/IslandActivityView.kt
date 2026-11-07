@@ -461,7 +461,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val detail = content.clockLabel?.trim()?.takeIf { it.isNotEmpty() && it != content.label }
         val split = content.expanded && !content.status && content.clock == null && detail != null
         val twoLevels = detail != null && (content.status || content.expanded && content.clock != null)
-        title.gravity = Gravity.END or Gravity.CENTER_VERTICAL
         applyTextSizes(content, split)
         val identityLabel = if (split) content.label else ""
         if (!TextUtils.equals(identityTitle.text, identityLabel)) identityTitle.text = identityLabel
@@ -617,8 +616,15 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         this.maximumWidth = maximumWidth.coerceAtLeast(width).toFloat()
         this.cameraGap = cameraGap
         this.cameraOffset = cameraOffset
+        val side = if (layoutDirection == LAYOUT_DIRECTION_RTL) -1f else 1f
+        // The camera side is physical; paragraph direction must not move a
+        // Latin caption to the opposite edge of an RTL lane (or vice versa).
+        val captionGravity = (if (cameraGap > 0) Gravity.getAbsoluteGravity(Gravity.START, layoutDirection)
+            else Gravity.END) or Gravity.CENTER_VERTICAL
+        if (title.gravity != captionGravity) title.gravity = captionGravity
+        if (subtitle.gravity != captionGravity) subtitle.gravity = captionGravity
         iconSize = iconSizeForHeight(height)
-        val half = (if (cameraGap > 0) ((width - cameraGap) / 2f + cameraOffset).toInt()
+        val half = (if (cameraGap > 0) ((width - cameraGap) / 2f + cameraOffset * side).toInt()
             else if (identityTitle.visibility == VISIBLE) (width - dp(8)) / 2
             else dp(IslandSizing.EDGE_DP) + iconSize + dp(8)).coerceAtLeast(1)
         val iconParams = icon.layoutParams
@@ -633,7 +639,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (iconMask.shape != iconShape) iconMask.shape = iconShape
         left.setPadding(dp(IslandSizing.EDGE_DP), 0, if (identityTitle.visibility == VISIBLE) dp(8) else 0, 0)
         layoutChild(left, half, height, Gravity.TOP or Gravity.START)
-        layoutChild(text, captionRoom(width, cameraGap), height, Gravity.TOP or Gravity.END,
+        val labelRoom = captionRoom(width, cameraGap)
+        text.pivotX = if (cameraGap > 0) { if (side > 0f) 0f else labelRoom.toFloat() } else labelRoom * .5f
+        layoutChild(text, labelRoom, height, Gravity.TOP or Gravity.END,
             end = dp(IslandSizing.EDGE_DP))
         waveHeight = kotlin.math.round(dp(20) * scale).toInt().coerceAtLeast(1)
         layoutChild(wave, iconSize, waveHeight, Gravity.TOP or if (recording) Gravity.START else Gravity.END,
@@ -1316,8 +1324,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         wave.translationX = (if (recording) dp(28) else -dp(28)) * (1f / sx - 1f)
         wave.translationX += (if (recording) direction else -direction) * squish * wave.width * .5f / sx
         val labelRoom = captionRoom(geometryWidth, cameraGap)
-        text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f)
-        text.translationX -= direction * squish * labelRoom * .5f / sx
         val reveal = ((alpha - .12f) / .88f).coerceIn(0f, 1f) * layerReveal
         val iconRoom = if (cameraGap > 0) IslandContentLayout.leading(geometryWidth * sx, cameraGap, cameraOffset, translationX) >= edge + iconSize + maxOf(0f, opticalX * iconSize)
             else geometryWidth * sx >= 2 * (edge + iconSize)
@@ -1331,11 +1337,22 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             // Full-width fit was a binary switch: new labels could suddenly pop
             // in after their opacity spring had already advanced while hidden.
             val room = if (cameraGap > 0)
-                IslandContentLayout.trailing(geometryWidth * sx, cameraGap, cameraOffset, translationX) - edge
+                IslandContentLayout.trailing(geometryWidth * sx, cameraGap, -cameraOffset * direction, -translationX * direction) - edge
                 else if (identityTitle.visibility == VISIBLE) (geometryWidth * sx - dp(8)) * .5f - edge
                 else geometryWidth * sx - 2 * edge - iconSize - dp(8)
             val lane = room.coerceIn(0f, labelRoom.toFloat())
-            captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
+            if (cameraGap > 0) {
+                // Pin the inner edge to the physical camera reservation. Counter-
+                // scaling alone anchors the outer cap and adds empty text space.
+                text.translationX = (cameraOffset - direction * cameraGap * .5f - translationX) / sx +
+                    direction * (geometryWidth * .5f - edge - labelRoom)
+                if (direction < 0f) captionClip.set(0, 0, lane.toInt(), geometryHeight)
+                else captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
+            } else {
+                text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f) -
+                    direction * squish * labelRoom * .5f / sx
+                captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
+            }
             text.clipBounds = captionClip
             identityClip.set(0, 0, identityRoom.toInt().coerceIn(0, identityTitle.width), geometryHeight)
             identityTitle.clipBounds = identityClip
@@ -1388,7 +1405,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private fun contentFits(): Boolean {
         val edge = dp(IslandSizing.EDGE_DP)
         val targetRoom = captionRoom(geometryWidth, cameraGap)
-        val room = if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * scaleX, cameraGap, cameraOffset, translationX) - edge
+        val side = if (layoutDirection == LAYOUT_DIRECTION_RTL) -1f else 1f
+        val room = if (cameraGap > 0) IslandContentLayout.trailing(geometryWidth * scaleX, cameraGap, cameraOffset * side, translationX * side) - edge
             else if (identityTitle.visibility == VISIBLE) (geometryWidth * scaleX - dp(8)) * .5f - edge
             else geometryWidth * scaleX - 2 * edge - iconSize - dp(8)
         return room + .01f >= minOf(labelWidth, targetRoom.toFloat())
@@ -1396,7 +1414,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
 
     private fun captionRoom(width: Int, gap: Int, height: Int = geometryHeight,
         split: Boolean = identityTitle.visibility == VISIBLE, offset: Float = cameraOffset) = (if (gap > 0)
-        IslandContentLayout.trailing(width.toFloat(), gap, offset, 0f).toInt() - dp(IslandSizing.EDGE_DP)
+        IslandContentLayout.trailing(width.toFloat(), gap, if (layoutDirection == LAYOUT_DIRECTION_RTL) -offset else offset, 0f).toInt() - dp(IslandSizing.EDGE_DP)
         else if (split) (width - dp(8)) / 2 - dp(IslandSizing.EDGE_DP)
         else width - 2 * dp(IslandSizing.EDGE_DP) - iconSizeForHeight(height) - dp(8)).coerceAtLeast(0)
     private fun horizontalPivot(width: Int) = width * .5f

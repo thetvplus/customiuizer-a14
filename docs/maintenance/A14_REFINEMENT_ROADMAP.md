@@ -2,6 +2,21 @@
 
 本页只维护仍有效的决定、未决问题和必要证据入口；公开历史仅保留正式版源码快照，必要原始证据私有归档。工程约束以 [AGENTS](../../AGENTS.md)、[架构](../../ARCHITECTURE.md)、[兼容矩阵](../../COMPATIBILITY.md)和[测试分级](../TESTING.md)为准。
 
+## 长岛文字与摄像头保护区（2026-11-08）
+
+- 用户画面中的中央留白，除已有挖孔保护宽度外，还包含右侧文字向外对齐留下的未用通道。实际 View 回归先复现旧文字边缘偏离内侧保护区，现居中模式按摄像头侧对齐；文字 pivot、反缩放、位移和裁切使用同一物理锚点。英文与 RTL 段落的排版方向独立于物理侧，逐行字形仍在保护区外。非居中且无中央保护区的侧边布局保留原有外侧对齐。
+- 四份 A14 原件重新直查，不使用 ROM 索引。DexSQL 核对 WindowManagerImpl / WindowMetricsController → WindowInsets / DisplayCutout、原始资源解析、缩放和旋转；具体尺寸从 framework-res 与目标为 android 的 DevicesAndroidOverlay 资源取得。DexSQL 的 DEX 数据不能直接替代资源表或运行时挖孔值。
+
+| ROM | 设备 overlay 的主屏顶部保留矩形声明 |
+| --- | --- |
+| duchamp CN | 78 × 102 px |
+| fuxi CN / TW | 68 × 104 px |
+| munch ID | 54 × 80 px |
+
+- 这些矩形从屏幕顶边开始，包含镜头上方保留范围，不是已测镜头外形或可直接写死的屏幕坐标。生产继续读取当前 WindowMetrics 的 DisplayCutout，随分辨率 / 旋转处理；未将静态数字、资源 ID 或设备名单加入生产。已有 max(40 dp, 挖孔宽+16 dp) 保护宽度保持，自动高度的短边推断仍是 Android 映射。
+- 修正复用既有 geometry / contour 更新，不新增动画器、采样、监听、缓存或窗口。验证覆盖声明宽度输入、两行实际字形、LTR / RTL、相机偏移、连续缩放 / 位移和侧边模式恢复；不把 Host 像素与矩阵证据视作多 ROM 实机画面或省电验收。原始截图、ROM 配置、SQL / Smali 和来源身份仅私有保存。
+- 动态岛 Host 回归、Develop / R8、vital lint 与完整 Debug Lint 通过；正式签名 APK、设备观感及功耗分别验收，未以静态结果代替实机结论。
+
 ## 多 ROM 挂载点复核（2026-11-08）
 
 按明确要求，不读取旧 ROM 索引或持久缓存，直接对 duchamp CN、fuxi CN、fuxi TW、munch ID 的原始 APK / JAR 运行官方 DexSQL query / decode。原始属性分别确认 SDK 34 / Android 14 / OS1.0；Launcher、SystemUI、framework、services 与相关 boot 声明分开归属。完整输入身份、SQL、声明、调用关系和选定 Smali 私有保存。生产基线为 `094191e0`，本轮未发现需要改写的错误挂载，未增加 Hook、监听或兼容状态。

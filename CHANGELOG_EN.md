@@ -20,6 +20,7 @@ versionCode 303. Changes since r14.27.1:
 - Fix rear-card title and icon opacity on swipe-up deck entry without requiring another scroll.
 - Follow native thumbnail opacity and fullscreen progress for card shadows, reducing premature shadows during swipe-up entry. Keep HyperOS 1 corners, screenshot clipping and shadow colors.
 - Reuse the system's retargetable black/white gesture-handle tint animation, with a 250 ms ordinary gesture-mode transition. Preserve explicit window-handoff timing.
+- Align centered island captions with the inner camera-safe edge, removing extra space for short text. Keep clipping aligned during scaling and horizontal movement, preserving native cutouts and existing clearance.
 - Add visible horizontal expansion and recoil on first island appearance, music returning home, and new activity reception. Keep same-size handoffs from ending early, reduce vertical expansion and press enlargement, and preserve interrupted and reversed transitions.
 
 ### Engineering notes
