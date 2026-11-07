@@ -57,7 +57,7 @@ class DeckOrientationTest {
             for(name in listOf("rect","scale","visible","z")) setField(api,name,Transform::class.java.getField(name))
             val owner=unconstructed(DeckOwner::class.java)
             val stack=FrameLayout(host)
-            val frozen=HashMap<Int,Any>().apply { put(0,Any()) }
+            val frozen=HashMap<Int,Any>()
             val pairs=IdentityHashMap<Any,Any>().apply { put(Any(),Any()) }
             for((name,value) in mapOf("api" to api,"stack" to stack,"headerConfig" to DeckHeaderConfig(0,0),
                 "frozen" to frozen,"pairs" to pairs,"cards" to LinkedHashMap<Any,Any>(),
@@ -79,10 +79,25 @@ class DeckOrientationTest {
             DeckMotion.clear(spring,owner,owner.transition)
             assertEquals((1040f-600f)*.5f,transform.rect.top,.001f)
             val expectedContent=RectF(transform.rect)
-            IosDeckGeometry(2280f,1100f,1f).content(expectedContent,
+            val contentGeometry=IosDeckGeometry(2280f,1100f,1f)
+            contentGeometry.content(expectedContent,
                 (XposedHelpers.getAdditionalInstanceField(transform,DeckOwner.FRAME) as DeckFrame).scale,52f)
             val preparedContent=RectF()
             assertTrue(scope.contentAt(0,0f,preparedContent));assertEquals(expectedContent,preparedContent)
+            fun assertEndpoint(index: Int,q: Float) {
+                assertTrue(scope.write(index,q,transform))
+                val displayed=RectF(transform.rect)
+                contentGeometry.content(displayed,transform.scale,52f)
+                assertTrue(scope.contentAt(index,q,preparedContent))
+                assertEquals("Gesture endpoints use the same bounded pose as layout",displayed,preparedContent)
+                val nativeContent=RectF(transform.rect).apply { top+=52f }
+                scope.content(index,q,nativeContent)
+                assertEquals("Window queries use that same bounded pose",displayed,nativeContent)
+            }
+            assertEndpoint(0,-10f*scope.gap)
+            assertEndpoint(3,10f*scope.gap)
+            assertEquals("The real window queries populate endpoints retired by rotation",2,frozen.size)
+            assertTrue(scope.write(0,0f,transform))
             val oldFrame=DeckFrame(owner,RectF(transform.rect),0,transform.scale,true,0f,1f)
             val failure=IllegalStateException("retired neighbor")
             val neighbor=object: FrameLayout(host) {
@@ -135,6 +150,12 @@ class DeckOrientationTest {
                 setField(owner,"transition",(turn+3).toLong())
                 assertTrue(owner.allowed)
                 assertTrue(scope.write(0,0f,transform))
+                repeat(3) { direction ->
+                    for(step in -40..40) for(index in 0..3) {
+                        val q=(if(direction%2==0) step else -step)*scope.gap*.25f
+                        assertEndpoint(index,q)
+                    }
+                }
                 assertFalse(previous.copyTo(Transform()))
             }
             // The two landscape directions share width/height and the visual

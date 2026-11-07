@@ -29,13 +29,13 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
-    @Test fun everyNewArrivalShowsHorizontalExpansionAndRecoilOnItsExistingClock() {
+    @Test fun cameraAndVisibleContentArrivalsShowHorizontalRecoilOnTheirExistingClock() {
         val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val image=Bitmap.createBitmap(360,120,Bitmap.Config.ARGB_8888)
         ShadowChoreographer.setPaused(true)
         try {
             val peaks=linkedMapOf<String,Float>()
-            for(route in listOf("center","top","home-seed","home-existing","new-content")) {
+            for(route in listOf("center","home-seed","home-seed-top","home-existing","new-content")) {
                 val shell=IslandActivityView(host)
                 val root=IslandTouchWindow(shell)
                 host.setContentView(root,FrameLayout.LayoutParams(360,120))
@@ -50,11 +50,11 @@ class IslandMotionFramesTest {
                     for(x in 0 until 360) if(Color.alpha(image.getPixel(x,row))>128) { first=minOf(first,x);last=x }
                     return (last-first+1).coerceAtLeast(0)
                 }
-                shell.entranceStyle=if(route=="top") IslandEntranceStyle.TOP else IslandEntranceStyle.CENTER
+                shell.entranceStyle=if(route=="home-seed-top") IslandEntranceStyle.TOP else IslandEntranceStyle.CENTER
                 when(route) {
                     "home-existing" -> shell.prepareReturnFromCurrent()
                     "new-content" -> shell.prepareContentArrivalFromCurrent()
-                    else -> shell.prepareEntry(mediaReturn=route=="home-seed")
+                    else -> shell.prepareEntry(mediaReturn=route.startsWith("home-seed"))
                 }
                 shell.transition(240,40,240,40,route!="home-existing" && route!="new-content")
                 val clock=getField<ValueAnimator>(shell,"motion")
@@ -391,8 +391,9 @@ class IslandMotionFramesTest {
             val entrance = getField<ValueAnimator>(shell, "motion")
             for (time in 0L until entrance.duration step 16L) {
                 entrance.currentPlayTime = time
-                assertTrue("Top entry keeps its full form while receiving horizontally",
-                    shell.width*shell.scaleX in 216f..280.001f)
+                assertEquals("Top entry travels at its full width without horizontal recoil",
+                    240f, shell.width*shell.scaleX, .001f)
+                assertEquals(0f, shell.translationX, .001f)
                 assertEquals(40f, shell.height * shell.scaleY, .001f)
                 assertTrue(shell.translationY in -56f..8f)
             }

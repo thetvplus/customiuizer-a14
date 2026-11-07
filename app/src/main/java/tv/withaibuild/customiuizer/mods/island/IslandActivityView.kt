@@ -822,12 +822,17 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         }
             else if (entering) IslandMotion.ENTER
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && secondarySizeChange)
+        // A top entry travels at its final width. Home/camera arrivals and
+        // already-visible content may receive horizontally on their own route.
+        val verticalEntry = entering && !entryCameraAnchor
         animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
             returning = nativeArrival || mediaReturnProgress == 0f,
+            rigid = verticalEntry,
             rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival,
             boundsMotion = ordinaryBounds && !entering && mediaReturnProgress >= 1f &&
                 maxOf(abs(startWidth - width), abs(startHeight - height)) > 1f, nativeProfile = true,
-            ringerShake = ringerShake, arriving = entering || receivingContent)
+            ringerShake = ringerShake && !verticalEntry,
+            arriving = entering && !verticalEntry || receivingContent)
         receivingContent = false
     }
 

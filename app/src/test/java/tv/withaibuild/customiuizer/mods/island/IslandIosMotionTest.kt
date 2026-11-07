@@ -254,26 +254,39 @@ class IslandIosMotionTest {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible()
         ShadowChoreographer.setPaused(true)
         try {
-            val shell = IslandActivityView(host.get()).apply { entranceStyle = IslandEntranceStyle.TOP; windowTop = 12 }
-            host.get().setContentView(shell); shell.geometry(320, 40, 40); shell.cameraAnchor(20f, 16f)
-            shell.bind("A message", "Synthetic sender", null, false, false, false, 0L, false, expanded = true)
-            shell.layout(0, 0, 320, 40)
-            shell.prepareEntry()
-            assertTrue("A new long island starts above its window", shell.translationY < -40f)
-            assertEquals("Vertical entry retains the selected long width", 1f, shell.scaleX, 0f)
-            shell.transition(320, 40, 320, 40, true)
-            val entry = getField<ValueAnimator>(shell, "motion")
-            entry.currentPlayTime = 80
-            assertTrue(shell.translationY < 0f)
-            entry.end(); assertEquals(0f, shell.translationY, 0f)
-            var ended = false
-            shell.exit { ended = true }
-            val exit = getField<ValueAnimator>(shell, "motion")
-            assertEquals(IslandMotion.EXIT, exit.duration)
-            exit.currentPlayTime = 80
-            assertTrue(shell.translationY < 0f)
-            assertEquals(1f, shell.scaleX, 0f)
-            exit.end(); assertTrue(ended)
+            for (ringerShake in listOf(false, true)) {
+                val shell = IslandActivityView(host.get()).apply { entranceStyle = IslandEntranceStyle.TOP; windowTop = 12 }
+                host.get().setContentView(shell); shell.geometry(320, 40, 40, 380); shell.cameraAnchor(20f, 16f)
+                shell.bind("A message", "Synthetic sender", null, false, false, false, 0L, false, expanded = true)
+                shell.layout(0, 0, 320, 40)
+                if (ringerShake) {
+                    shell.prepareContentArrivalFromCurrent()
+                    shell.transition(320, 40, 320, 40, false, ringerShake = true)
+                    getField<ValueAnimator>(shell, "motion").currentPlayTime = 80
+                    assertTrue("Exercise a real interrupted horizontal receive", shell.scaleX > 1f)
+                }
+                shell.prepareEntry()
+                assertTrue("A new long island starts above its window", shell.translationY < -40f)
+                assertEquals("Vertical entry retains the selected long width", 1f, shell.scaleX, 0f)
+                shell.transition(320, 40, 320, 40, true, ringerShake = ringerShake)
+                val entry = getField<ValueAnimator>(shell, "motion")
+                entry.currentPlayTime = 80
+                assertTrue(shell.translationY < 0f)
+                for (time in 0L until entry.duration step 16L) {
+                    entry.currentPlayTime = time
+                    assertEquals("Vertical entry cannot add a horizontal receive", 1f, shell.scaleX, .0001f)
+                    assertEquals("Vertical entry cannot add a sideways ringer shake", 0f, shell.translationX, .0001f)
+                }
+                entry.end(); assertEquals(0f, shell.translationY, 0f)
+                var ended = false
+                shell.exit { ended = true }
+                val exit = getField<ValueAnimator>(shell, "motion")
+                assertEquals(IslandMotion.EXIT, exit.duration)
+                exit.currentPlayTime = 80
+                assertTrue(shell.translationY < 0f)
+                assertEquals(1f, shell.scaleX, 0f)
+                exit.end(); assertTrue(ended)
+            }
         } finally { ShadowChoreographer.setPaused(false); host.pause().stop().destroy() }
     }
     @Test fun centerMusicExitKeepsItsOriginalDeadlineWithoutTranslucentTail() {

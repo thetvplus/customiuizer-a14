@@ -247,11 +247,9 @@ internal object IosRecentsDeckHooks {
         // This is a geometry query within the click's transition, not another
         // user intent. Reuse its ticket, frozen endpoints and native listeners.
         before(api.openStart) { card(it.getArg(2))?.owner?.beginTransition() }
-        after(api.openStart) {
-            val card=card(it.getArg(2)) ?: return@after
-            val result=it.getResult() as? RectF ?: return@after
-            if(card.owner.allowed) card.geometry.screenContent(result,(api.getHeader.invoke(card.view) as View).height.toFloat())
-        }
+        // The native getter consumes Scope.content and then maps last/current
+        // rotation into the application axes. Do not overwrite its mapped result
+        // with an unrotated View rectangle after that conversion.
         before(api.createSpring) {
             val card=card(it.getArg(1)) ?: return@before
             if(card.owner.allowed) it.getArgs()[7]=(it.getArg(7) as Float)*card.geometry.scale*card.view.scaleX
@@ -357,8 +355,7 @@ internal object IosRecentsDeckHooks {
                 }
             }
         }
-        api.appGesturePose.let { pose ->
-        before(pose) {
+        before(api.appGesturePose) {
             val selected=card(it.getArg(0)) ?: return@before
             if(if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) it.getArg(13)==true
                 else api.appGestureQuickSwitch!!.invoke(it.getThisObject())==true) return@before
@@ -368,18 +365,12 @@ internal object IosRecentsDeckHooks {
                 it.getArg(5) as Float,300f*bend*bend*bend)?.let { input ->
                 val args=it.getArgs()
                 args[2]=input
-                // This is already the native window's sampled pose. A second
-                // per-card spring would chase it with another phase lag. Keep
-                // calls carrying native completion work on their original path.
-                (args[10] as? Runnable)?.let { completion ->
-                    args[10]=selected.poseCompletion.track(completion)
-                }
-                if(!selected.poseCompletion.active) args[7]=false
+                // One sampled window pose, no second spring chasing it. The
+                // native immediate branch cancels old springs (running their
+                // native end work), writes this pose and runs the unchanged
+                // completion Runnable. No wrapper, counter or deferred queue.
+                args[7]=false
             }
-        }
-        afterAlways(pose) {
-            if(it.getThrowable()!=null) (it.getArg(10) as? DeckPoseCompletion.Completion)?.finish()
-        }
         }
         before(api.navToRecents) {
             val active=latest.get()

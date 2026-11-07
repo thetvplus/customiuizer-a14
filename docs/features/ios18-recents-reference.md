@@ -132,7 +132,7 @@ Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析�
 
 ## 目标端点、回填与打开遮挡
 
-Nav 可在当前滚动位置尚未变化时，用目标 q 查询窗口矩形。预测位置、尺寸缩放与无标题内容框必须使用该同一 q；冻结结果也区分 q，不混用当前 scale。不可见区仅限制候选可见性与指数范围，不设置统一的远左占位坐标。2026-11-07 修正：既然旧端点已保留真实入场侧，回填中新可见卡也沿原生进度插值位置与展示缩放；直接使用目标姿态会让左侧边界删除时的右邻卡跳入终点。取消沿同一进度反向接续。
+Nav 可在当前滚动位置尚未变化时，用目标 q 查询窗口矩形。预测位置、尺寸缩放与无标题内容框必须使用该同一 q；冻结结果也区分 q，不混用当前 scale。2026-11-07 续修将布局、手势端点与窗口查询的缩放统一到同一受限 presentationCursor，修正离屏来回拖动时位置已限位而比例仍读原始游标的差异。点击打开继续由 TaskViewUtils.getTaskViewStartRectF 消费该内容框并执行 last / current rotation 转换，模块不再在转换后用未旋转的屏幕矩形覆盖结果；8255 / 8604 两份原生消费者已核对。不可见区仅限制候选可见性与指数范围，不设置统一的远左占位坐标。2026-11-07 修正：既然旧端点已保留真实入场侧，回填中新可见卡也沿原生进度插值位置与展示缩放；直接使用目标姿态会让左侧边界删除时的右邻卡跳入终点。取消沿同一进度反向接续。
 
 新版普通打开的应用 leash 位于整个 Launcher 之上，TaskView 的 Z 不能让前卡遮住它。恢复原生窗口进度下的邻卡让位，从实际 Deck 起始间距连续展开到原生全屏槽位及间隔，使邻卡在窗口完成前离开应用范围；在 Surface 提交前计算同帧姿态。仅全屏零原点、正向轴对齐矩阵和原生内容框一致时，限制选中应用 Surface 的独占 windowCrop 到前卡左边界；完全遮挡复制原参数仅将 alpha 置零。圆角边界采用保守矩形近似，未恢复像素级原生遮挡。其他目标、坐标不符、旋转 / 分屏均保留原生输出，不修改 layer、leash、矩阵或 finish。交接、取消与回收按所有权释放邻卡变换，不增加预览窗口、快照或第二套动画时钟。
 
@@ -148,7 +148,7 @@ A14 使用原生当前横屏窗口、mVisualRotationSystemInsets 与原生横向
 
 卡片与窗口内容框统一使用原生完整 TaskView frame 的中心。原生 TaskViewsElement 在窗口更新时重写 pivot，其他入场和滑动路径也会改变 pivot；旧展示矩阵取用临时 pivot 后缓存，可能与窗口按 frame 中心计算的落点不同。现在自持矩阵固定使用 frame 中心，滑动期间仅在自持矩阵补偿原生 pivot / scale 的组合，保留原生根属性和删除资格。实际屏幕内容框、逆变换命中和窗口模型有同一中心的行为回归，包含 pivot 迟到改变及非均匀原生缩放。原生截图、Surface 提交和 finish 继续由原对象持有。
 
-上滑过程另有独立的原生姿态消费者：8604 的 `TaskViewsElement.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable,Float,Float,Boolean,Int,Float,Int,Rect)V`。原生以屏幕窗口宽度求根 scale、线性页间距、Header 中心与 `300×mPer³` 位移，直接叠上 Deck 矩阵会二次缩放。WindowElement Profile 现冷解析该精确实例方法，在同一次原生调用前将窗口姿态映射到自持矩阵之前的坐标；收拢程度直接由当前原生窗口宽度与已准备端点求出，不再消费分段的手势进度。无原生完成工作的卡片使用原生即时姿态分支，避免再启动卡片弹簧追赶已经连续更新的窗口；出现完成 Runnable 的卡片仅在回调尚未结束时保留原有弹簧路径，原生完成后解除，保留监听与取消语义。原生 alpha、fullscreenProgress、任务索引、窗口 spring、Surface 和 finish 保持。
+上滑过程另有独立的原生姿态消费者：8604 的 `TaskViewsElement.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable,Float,Float,Boolean,Int,Float,Int,Rect)V`。原生以屏幕窗口宽度求根 scale、线性页间距、Header 中心与 `300×mPer³` 位移，直接叠上 Deck 矩阵会二次缩放。WindowElement Profile 现冷解析该精确实例方法，在同一次原生调用前将窗口姿态映射到自持矩阵之前的坐标；收拢程度直接由当前原生窗口宽度与已准备端点求出，不再消费分段的手势进度。2026-11-07 简化续修：接纳的姿态统一走原生即时分支，不再用逐卡计数器和 Runnable 包装保留第二层追赶弹簧。已核对原方法的即时分支会取消旧弹簧、写入本次姿态并执行原 Runnable；原生弹簧取消仍调用自己的结束监听，不丢弃原生完成工作。原生 alpha、fullscreenProgress、任务索引、窗口 spring、Surface 和 finish 保持。
 
 `alignTaskViewWhenAppToRecent` 沿同一窗口几何跟随原生 closing / end 回调，不再整段跳过邻卡对齐。端点取自本次已准备的布局，Header / gap / count 随布局更新；每卡一个复用 RectF，owner 两个工作 RectF，不逐帧创建几何模型或额外时钟。原生准备早于首次布局时，在既有姿态回调内同步矩阵尺寸后再做逆换算；该时序已有先失败后通过的回归。Legacy 的同类上滑消费者在下述横屏响应续修中补齐；未测样本仍需独立验收。
 

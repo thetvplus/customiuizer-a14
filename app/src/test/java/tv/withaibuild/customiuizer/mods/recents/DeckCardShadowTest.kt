@@ -26,7 +26,7 @@ class DeckCardShadowTest {
             val card=FrameLayout(RuntimeEnvironment.getApplication())
             val header=View(card.context); val thumbnail=View(card.context)
             card.addView(header); card.addView(thumbnail)
-            card.layout(0,0,300,700); header.layout(0,0,300,50)
+            card.layout(0,0,300,700); header.layout(0,0,300,50); thumbnail.layout(0,50,300,700)
             card.alpha=.8f; thumbnail.alpha=0f // native handoff before CARD registration
             val shadow=DeckCardShadow(card,header,22f,thumbnail)
             val outline=Outline(); shadow.getOutline(card,outline)
@@ -39,6 +39,28 @@ class DeckCardShadowTest {
             val reused=DeckCardShadow(card,header,22f,thumbnail)
             reused.getOutline(card,outline); assertEquals(1f,outline.alpha,0f); reused.close()
         }
+    }
+    @Test fun shadowCannotAppearBeforeItsContentOrWhileTheNativeThumbnailIsHidden() {
+        val card=FrameLayout(RuntimeEnvironment.getApplication())
+        val header=View(card.context);val thumbnail=View(card.context)
+        card.addView(header);card.addView(thumbnail)
+        card.layout(0,0,300,700);header.layout(0,0,300,50)
+        val shadow=DeckCardShadow(card,header,22f,thumbnail)
+        val outline=Outline()
+        try {
+            shadow.getOutline(card,outline)
+            assertEquals("No orphan shadow while the thumbnail has no bounds",0f,outline.alpha,0f)
+            thumbnail.layout(0,50,300,700)
+            shadow.syncContentAlpha();shadow.getOutline(card,outline)
+            assertEquals(1f,outline.alpha,0f)
+            assertEquals(22f,outline.radius,0f)
+            for(visibility in intArrayOf(View.INVISIBLE,View.GONE,View.VISIBLE,View.INVISIBLE,View.VISIBLE)) {
+                thumbnail.visibility=visibility
+                shadow.syncContentAlpha();shadow.getOutline(card,outline)
+                assertEquals(if(visibility==View.VISIBLE) 1f else 0f,outline.alpha,0f)
+                assertEquals("Native thumbnail alpha is not rewritten",1f,thumbnail.alpha,0f)
+            }
+        } finally { shadow.close() }
     }
     @Test fun nativeUpwardNegativeZeroUsesTranslationWhileOtherDirectionsStayNative() {
         assertTrue(DeckDismissMotion.admitted(1,-0.0f))

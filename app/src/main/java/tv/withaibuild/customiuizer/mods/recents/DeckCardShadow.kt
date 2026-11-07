@@ -12,7 +12,7 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
     ViewOutlineProvider(), View.OnLayoutChangeListener {
     private val original = view.outlineProvider
     private var corner = radius
-    private var contentAlpha = content.alpha
+    private var contentAlpha = contentOpacity()
     private var closed = false
     // A clipped root would cut its header with this content-only outline.
     val owned = !view.clipToOutline
@@ -39,7 +39,7 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
     }
 
     fun syncContentAlpha() {
-        val next=content.alpha.coerceIn(0f,1f)
+        val next=contentOpacity()
         if(contentAlpha==next) return
         contentAlpha=next
         if(owned && !closed && view.outlineProvider===this) view.invalidateOutline()
@@ -47,12 +47,16 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
 
     override fun getOutline(view: View, outline: Outline) {
         val top = header.height.coerceIn(0, view.height)
-        if (top == view.height || view.width <= 0) outline.setEmpty()
+        val opacity=contentOpacity()
+        if (top == view.height || view.width <= 0 || opacity==0f) outline.setEmpty()
         else outline.setRoundRect(0, top, view.width, view.height, corner.coerceAtLeast(0f))
         // Registration can follow a native setter, and binding can still update
         // the thumbnail afterwards. Read the real content on the first draw.
-        outline.alpha=content.alpha.coerceIn(0f,1f)
+        outline.alpha=opacity
     }
+
+    private fun contentOpacity(): Float =
+        if(content.visibility==View.VISIBLE && content.width>0 && content.height>0) content.alpha.coerceIn(0f,1f) else 0f
 
     override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
         if (!closed && view.outlineProvider === this) view.invalidateOutline()

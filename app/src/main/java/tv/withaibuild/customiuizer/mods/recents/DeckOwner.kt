@@ -68,7 +68,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         }
         var animation: ValueAnimator?=null
         val windowInput=RectF()
-        val poseCompletion=DeckPoseCompletion()
         fun release() {
             val cleanup=CleanupActions()
             val previous=animation; animation=null
@@ -164,8 +163,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         fun contentAt(index: Int,q: Float,out: RectF): Boolean {
             val model=metrics ?: return false
             if(index !in 0 until layoutCount || !q.isFinite()) return false
-            val cursor=-q/layoutGap
-            val left=model.left(index,model.presentationCursor(index,cursor),layoutLeft)
+            val cursor=model.presentationCursor(index,-q/layoutGap)
+            val left=model.left(index,cursor,layoutLeft)
             out.set(left,layoutTop,left+cardWidth,layoutTop+cardHeight)
             model.content(out,model.scale(index,cursor),contentHeader)
             return true
@@ -181,7 +180,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             rect.top-=header
             // NavStubView queries its future q before changing the current scroll.
             // The raw rectangle and its depth scale must describe that same q.
-            val scale=model.scale(index,-q/gap)
+            val scale=model.scale(index,model.presentationCursor(index,-q/gap))
             model.content(rect,scale,header)
             if(transition!=0L) {
                 frozen[index]=FrozenContent(RectF(rect),scale,q)
@@ -542,11 +541,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private fun releaseSpring(link: LinkedSpring) {
         link.spring.get()?.let { spring ->
             try { api.unlisten.invoke(spring,link.listener) }
-            finally {
-                val cleanup=CleanupActions()
-                cleanup.run { DeckMotion.clear(spring,this,link.ticket) }
-                cleanup.finish()
-            }
+            finally { DeckMotion.clear(spring,this,link.ticket) }
         }
     }
     private fun transitionTimeout(base: Long): Long =
