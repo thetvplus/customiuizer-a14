@@ -617,10 +617,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         this.cameraGap = cameraGap
         this.cameraOffset = cameraOffset
         val side = if (layoutDirection == LAYOUT_DIRECTION_RTL) -1f else 1f
-        // The camera side is physical; paragraph direction must not move a
-        // Latin caption to the opposite edge of an RTL lane (or vice versa).
-        val captionGravity = (if (cameraGap > 0) Gravity.getAbsoluteGravity(Gravity.START, layoutDirection)
-            else Gravity.END) or Gravity.CENTER_VERTICAL
+        // Keep the caption at the outer edge, independent of paragraph direction
+        // and camera clearance. Width fitting owns any unused capsule space.
+        val captionGravity = Gravity.getAbsoluteGravity(Gravity.END, layoutDirection) or Gravity.CENTER_VERTICAL
         if (title.gravity != captionGravity) title.gravity = captionGravity
         if (subtitle.gravity != captionGravity) subtitle.gravity = captionGravity
         iconSize = iconSizeForHeight(height)
@@ -640,7 +639,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         left.setPadding(dp(IslandSizing.EDGE_DP), 0, if (identityTitle.visibility == VISIBLE) dp(8) else 0, 0)
         layoutChild(left, half, height, Gravity.TOP or Gravity.START)
         val labelRoom = captionRoom(width, cameraGap)
-        text.pivotX = if (cameraGap > 0) { if (side > 0f) 0f else labelRoom.toFloat() } else labelRoom * .5f
+        text.pivotX = labelRoom * .5f
         layoutChild(text, labelRoom, height, Gravity.TOP or Gravity.END,
             end = dp(IslandSizing.EDGE_DP))
         waveHeight = kotlin.math.round(dp(20) * scale).toInt().coerceAtLeast(1)
@@ -1341,18 +1340,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 else if (identityTitle.visibility == VISIBLE) (geometryWidth * sx - dp(8)) * .5f - edge
                 else geometryWidth * sx - 2 * edge - iconSize - dp(8)
             val lane = room.coerceIn(0f, labelRoom.toFloat())
-            if (cameraGap > 0) {
-                // Pin the inner edge to the physical camera reservation. Counter-
-                // scaling alone anchors the outer cap and adds empty text space.
-                text.translationX = (cameraOffset - direction * cameraGap * .5f - translationX) / sx +
-                    direction * (geometryWidth * .5f - edge - labelRoom)
-                if (direction < 0f) captionClip.set(0, 0, lane.toInt(), geometryHeight)
-                else captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
-            } else {
-                text.translationX = -(edge + labelRoom * .5f) * (1f / sx - 1f) -
-                    direction * squish * labelRoom * .5f / sx
+            text.translationX = direction * (edge + labelRoom * .5f) * (1f / sx - 1f) -
+                direction * squish * labelRoom * .5f / sx
+            if (direction < 0f)
                 captionClip.set(kotlin.math.ceil(labelRoom - lane).toInt(), 0, labelRoom, geometryHeight)
-            }
+            else captionClip.set(0, 0, lane.toInt(), geometryHeight)
             text.clipBounds = captionClip
             identityClip.set(0, 0, identityRoom.toInt().coerceIn(0, identityTitle.width), geometryHeight)
             identityTitle.clipBounds = identityClip

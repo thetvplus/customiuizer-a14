@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
 @Config(sdk=[34],application=android.app.Application::class,qualifiers="w393dp-h873dp-440dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandCameraCaptionTest {
-    @Test fun cameraSideCaptionAndClipStayPinnedThroughResizeAndHorizontalInterruption() {
+    @Test fun outerCaptionStaysAlignedAndCameraClipStaysSafeThroughResizeAndHorizontalInterruption() {
         val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val parent=FrameLayout(host)
         host.setContentView(parent)
@@ -56,28 +56,30 @@ class IslandCameraCaptionTest {
                             shell.geometry(width,height,gap,width,cameraOffset=offset)
                             val layout=title.layout
                             val matrix=Matrix();title.transformMatrixToGlobal(matrix)
+                            val cap=floatArrayOf(width*.5f+shift+sign*(width*scale*.5f-edge),0f)
+                            parentMatrix.mapPoints(cap)
                             assertEquals(2,layout.lineCount)
                             for(line in 0 until layout.lineCount) {
                                 val textEdge=floatArrayOf(title.totalPaddingLeft+
-                                    (if(rtl) layout.getLineRight(line) else layout.getLineLeft(line)),0f)
+                                    (if(rtl) layout.getLineLeft(line) else layout.getLineRight(line)),0f)
                                 matrix.mapPoints(textEdge)
-                                assertEquals("Each caption line follows the inner edge: rtl=$rtl scale=$scale shift=$shift",
-                                    cameraEdge[0],textEdge[0],1.1f)
+                                assertEquals("Every caption line keeps its outer alignment: rtl=$rtl scale=$scale shift=$shift",
+                                    cap[0],textEdge[0],1.1f)
                             }
                             val clip=RectF(requireNotNull(lane.clipBounds))
                             matrix.reset();lane.transformMatrixToGlobal(matrix);matrix.mapRect(clip)
-                            assertEquals("Clipping shares the caption's inner anchor",cameraEdge[0],if(rtl) clip.right else clip.left,1.1f)
-                            val cap=floatArrayOf(width*.5f+shift+sign*(width*scale*.5f-edge),0f)
-                            parentMatrix.mapPoints(cap)
-                            if(rtl) assertTrue("Visible text stays inside the outer margin",clip.left>=cap[0]-1.1f)
-                            else assertTrue("Visible text stays inside the outer margin",clip.right<=cap[0]+1.1f)
+                            assertEquals("The clip keeps the same outer margin",cap[0],if(rtl) clip.left else clip.right,1.1f)
+                            if(rtl) assertTrue("The clip never enters the camera reservation",clip.right<=cameraEdge[0]+1.1f)
+                            else assertTrue("The clip never enters the camera reservation",clip.left>=cameraEdge[0]-1.1f)
                         }
                         shell.scaleX=1f;shell.translationX=0f
                         shell.geometry(width,height,gap,width,cameraOffset=offset)
                         val ink=inkBounds(title)
                         val matrix=Matrix();title.transformMatrixToGlobal(matrix);matrix.mapRect(ink)
-                        assertTrue("Actual short glyphs do not retain unused outer-alignment space",
-                            kotlin.math.abs((if(rtl) ink.right else ink.left)-cameraEdge[0])<title.textSize*.2f+2f)
+                        val outer=floatArrayOf(if(rtl) edge.toFloat() else (width-edge).toFloat(),0f)
+                        parentMatrix.mapPoints(outer)
+                        assertTrue("Actual short glyphs stay aligned to the outside of the capsule",
+                            kotlin.math.abs((if(rtl) ink.left else ink.right)-outer[0])<title.textSize*.2f+2f)
                     }
                 } finally { parent.removeView(shell) }
             }

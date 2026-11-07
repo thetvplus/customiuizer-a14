@@ -33,9 +33,9 @@ iOS 手势指示条需要全面屏手势及可见的系统指示条，同时关�
 
 [文档目录](docs/README.md)提供开发、测试、发布和专项说明；参与维护先读[共同工程规则](AGENTS.md)。
 
-当前源码版本：`r14.27.3`（versionCode 303）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
+当前源码版本：`r14.27.3`（versionCode 304）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
 
-r14.27.3 修正最近任务堆叠的删除补位、旋转交接和后排透明度，调整动态岛返回桌面及按压反馈，见[更新记录](CHANGELOG.md)。正式发行与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准；已测范围及剩余问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
+r14.27.3 合并 iOS DECK、手势指示条与音量条的新增和修正，恢复长岛右侧内容右对齐，见[更新记录](CHANGELOG.md)。正式发行与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准；已测范围及剩余问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
 
 Git 历史已匿名整合；既有签名 APK 与原始构建 metadata 保持不变，来源关系见[发行说明](docs/RELEASE.md#历史匿名化与已签名版本)。
 
