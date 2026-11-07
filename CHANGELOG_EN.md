@@ -8,7 +8,7 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## r14.27.3 — 2026-11-08
 
-versionCode 304. Changes since r14.26.11 (cumulative):
+versionCode 304. Changes since r14.26.11:
 
 ### Release summary
 
