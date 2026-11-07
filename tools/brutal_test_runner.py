@@ -735,6 +735,8 @@ def validate_config(cfg: dict) -> None:
             ledger_by_id[lid] = entry
 
             status = entry.get("status")
+            if status == "ACTIVE_INDEPENDENT" and lid not in mutation_names:
+                errors.append(f"coverage_ledger entry {lid!r} has no executable independent gate")
             if status not in policy.VALID_COVERAGE_STATUSES:
                 errors.append(f"coverage_ledger entry {lid!r} has invalid status {status!r}")
             else:
@@ -744,9 +746,12 @@ def validate_config(cfg: dict) -> None:
                 if not entry.get("reason") or not entry.get("requiredFollowUp"):
                     errors.append(f"coverage_ledger entry {lid!r} is not a mutation and has no explanation")
 
-        active_count = counts.get("ACTIVE_INDEPENDENT", 0)
-        if active_count != policy.REQUIRED_INDEPENDENT_KILLS:
-            errors.append(f"coverage_ledger has {active_count} ACTIVE_INDEPENDENT, expected {policy.REQUIRED_INDEPENDENT_KILLS}")
+        # The fixed required CI minimum is not an upper bound on opt-in behavior
+        # gates. Every ledger status must agree with its executable case instead.
+        for case in cfg.get("mutations", []):
+            entry = ledger_by_id.get(case.get("name"))
+            if entry and entry.get("status") != case.get("coverage_status"):
+                errors.append(f"coverage_ledger status disagrees with mutation {case.get('name')!r}")
 
         if sum(counts.get(s, 0) for s in policy.VALID_COVERAGE_STATUSES) != policy.REQUIRED_COVERAGE_TARGET:
             errors.append("coverage_ledger status counts do not sum to target")

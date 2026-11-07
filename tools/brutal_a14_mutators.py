@@ -569,7 +569,7 @@ def callback_guard_fatal_to_normal(root: Path, cfg: dict) -> None:
     _replace_all(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/CallbackGuard.kt"),
-        r"            if \(t is OutOfMemoryError \|\| t is ThreadDeath \|\| t is VirtualMachineError\) throw t\n",
+        r"            FatalErrors\.unwrapAndRethrowIfFatal\(t\)\n",
         "",
     )
 

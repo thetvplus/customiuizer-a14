@@ -189,6 +189,29 @@ class PreferenceBootstrapTest {
     }
 
     @Test
+    fun bootstrap_readySnapshotDoesNotReadRemoteAgain() {
+        val fake = FakeSharedPreferences()
+        fake.put("pref_key_system_statusbarheight", 20)
+        var reads = 0
+        val tracking = object : SharedPreferences by fake {
+            override fun getAll(): Map<String, *> {
+                reads++
+                check(reads <= 2) { "ready bootstrap must not reopen remote reads" }
+                return fake.all
+            }
+        }
+        val prefs = PrefMap()
+        val bootstrap = PreferenceBootstrap.create(prefs) { tracking }
+
+        assertTrue(bootstrap.bootstrap())
+        repeat(3) { assertTrue(bootstrap.bootstrap()) }
+
+        assertEquals(2, reads)
+        assertEquals(20, prefs.getInt("system_statusbarheight", 11))
+        assertTrue(bootstrap.isReady())
+    }
+
+    @Test
     fun bootstrap_concurrentCalls_registerOnlyOnce() {
         val fake = FakeSharedPreferences()
         val prefs = PrefMap()

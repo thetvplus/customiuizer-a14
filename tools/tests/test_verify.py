@@ -1,5 +1,6 @@
 import importlib.util
 import io
+import os
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,28 @@ _VERIFY_PATH = _REPO_ROOT / "tools" / "verify.py"
 _spec_verify = importlib.util.spec_from_file_location("verify_local", _VERIFY_PATH)
 _verify = importlib.util.module_from_spec(_spec_verify)
 _spec_verify.loader.exec_module(_verify)
+
+
+class ManagedGradleTests(unittest.TestCase):
+    def test_managed_context_keeps_original_launcher_and_tasks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = Path(tmp) / "runner.py"
+            runner.touch()
+            with patch.dict(os.environ, A14_GRADLE_RUNNER=str(runner), A14_GRADLE_WORKFLOW="owned"), \
+                    patch.object(_verify, "resolve_build_revision", return_value="fixture"), \
+                    patch.object(_verify, "run", return_value=1) as run:
+                self.assertEqual(1, _verify.gradle("testDebugUnitTest", "--tests", "example.RealTest"))
+                command = run.call_args.args[0]
+                self.assertEqual(str(_verify.GRADLEW_PATH), command[command.index("--") + 1])
+                self.assertEqual(["testDebugUnitTest", "--tests", "example.RealTest"], command[-3:])
+
+    def test_incomplete_context_cannot_fall_back_to_unmanaged_gradle(self):
+        with patch.dict(os.environ, {"A14_GRADLE_RUNNER": "", "A14_GRADLE_WORKFLOW": "owned"}), \
+                patch.object(_verify, "resolve_build_revision", return_value="fixture"), \
+                patch.object(_verify, "run") as run, redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                _verify.gradle("testDebugUnitTest")
+            run.assert_not_called()
 
 
 class DiagnosticSummaryTests(unittest.TestCase):

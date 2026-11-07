@@ -1,0 +1,5 @@
+context platform=android
+open org.example.a14fixture
+wait 'text="A14 FIXTURE READY"' 5000
+is visible 'text="A14 FIXTURE READY"'
+close

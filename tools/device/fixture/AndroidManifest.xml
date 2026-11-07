@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.example.a14fixture" android:versionCode="1" android:versionName="verification">
+    <uses-sdk android:minSdkVersion="34" android:targetSdkVersion="34" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <application android:label="A14 Fixture" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
+        <activity android:name=".FixtureActivity" android:exported="true" android:label="A14 Fixture A" android:taskAffinity="org.example.a14fixture.a" android:launchMode="singleTask">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+        </activity>
+    </application>
+</manifest>

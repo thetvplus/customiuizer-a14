@@ -184,7 +184,17 @@ def gradle(*tasks: str) -> int:
     if not GRADLEW_PATH.exists():
         fail(f"gradle wrapper not found: {GRADLEW_PATH}")
     revision = resolve_build_revision()
-    return run([str(GRADLEW_PATH), "--no-daemon", f"-PbuildRevision={revision}", *tasks])
+    command = [str(GRADLEW_PATH), "--no-daemon", f"-PbuildRevision={revision}", *tasks]
+    # Optional agent-owned compact-output workflow. CI/default execution retains
+    # its current launcher and gates; mutation worktrees inherit this context.
+    managed_runner = os.environ.get("A14_GRADLE_RUNNER")
+    workflow = os.environ.get("A14_GRADLE_WORKFLOW")
+    if managed_runner or workflow:
+        if not managed_runner or not workflow or not Path(managed_runner).is_file():
+            fail("A14_GRADLE_RUNNER and A14_GRADLE_WORKFLOW must identify an existing managed workflow")
+        command = [sys.executable, managed_runner, "run", "--workflow", workflow, "--scope", "targeted",
+                   "--question", "Do the selected A14 verification tasks pass?", "--", *command]
+    return run(command)
 
 
 def check_invariants(changed: bool = False, staged: bool = False) -> int:

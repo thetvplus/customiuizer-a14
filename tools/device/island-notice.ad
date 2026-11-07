@@ -1,0 +1,9 @@
+context platform=android
+open org.example.a14fixture
+wait 'text="A14 FIXTURE READY"' 5000
+press 'text="SHOW A14 NOTICE"'
+home
+wait 'text="A14 verification notice"' 5000
+is visible 'text="A14 verification notice"'
+wait absent 'text="A14 verification notice"' 20000
+close

@@ -44,6 +44,8 @@
 
 ## 验证职责
 
+Agent 按完整任务差异选择现有门禁、设备重放与各层待验边界，使用[自主验证入口](AGENTIC_VERIFICATION.md)。它不替代本页分级或正式发行门禁。
+
 | 层 | 入口 | 证明范围 |
 | --- | --- | --- |
 | 静态契约 | `verify.py`、`check-invariants.py` | SDK / API、偏好、Feature、生命周期、热路径及编码规则 |
