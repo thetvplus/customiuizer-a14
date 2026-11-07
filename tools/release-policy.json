@@ -12,35 +12,11 @@
     "minimum_version_code": 303
   },
   "cumulative_releases": {
-    "r14.25.5": {
+    "r14.25.9": {
       "notes_base": "r14.24.1"
     },
-    "r14.25.7": {
-      "notes_base": "r14.25.5"
-    },
-    "r14.25.8": {
-      "notes_base": "r14.25.7"
-    },
-    "r14.25.9": {
-      "notes_base": "r14.25.7"
-    },
-    "r14.26.1": {
-      "notes_base": "r14.25.9"
-    },
-    "r14.26.3": {
-      "notes_base": "r14.25.9"
-    },
-    "r14.26.5": {
-      "notes_base": "r14.25.9"
-    },
-    "r14.26.7": {
-      "notes_base": "r14.26.5"
-    },
-    "r14.26.9": {
-      "notes_base": "r14.26.5"
-    },
     "r14.26.11": {
-      "notes_base": "r14.26.9"
+      "notes_base": "r14.25.9"
     },
     "r14.27.1": {
       "notes_base": "r14.26.11"
@@ -54,40 +30,12 @@
     "email": "123230313+thetvplus@users.noreply.github.com"
   },
   "archived_source_snapshots": {
-    "r14.26.5": {
-      "build_source_sha": "2037b6da9195fbf406113ded89698a3812be81d2",
-      "source_sha": "313defbd7b1f50892d3cbd48e72f228844ded5d5",
-      "metadata_sha256": "79ac21e8c27ccb1910487cededcb6ec27aa4e50524571f493268368d5d9b8ab2",
-      "apk_sha256": "37d0a445199083f4ff56ab3562c0200c5ba4db03dda3d2abbef90b5dc05581ca",
-      "app_tree": "331cc92b4d4ccdc4874e33fc810aa31ead86c4be"
-    },
     "r14.25.9": {
       "build_source_sha": "f18a112cac62f1db63a0bbda3958681f33df483b",
       "source_sha": "9e1c568c42f2e3ee0f259e48655ab47bf86a26ff",
       "metadata_sha256": "88e1fdcf82646be11c2a734ebf5baa46d193f3b29fa702006e2813b0330bca7f",
       "apk_sha256": "ca953506bcc06f01a4d5b0ca169d524eb9134d15d346c1ceb86d0101175e64b1",
       "app_tree": "6f144397f66fdf4ce42de1bdcea01d56aaf2588d"
-    },
-    "r14.25.7": {
-      "build_source_sha": "fe92d1a9cba6541566f87cae853777e943c760e7",
-      "source_sha": "6242812affc1cca80ac87a525e6cebedd5c97c70",
-      "metadata_sha256": "505e1b37f2ee37115365b4ad8a5252df0177938e0a95333378d1dbccc542131e",
-      "apk_sha256": "fb91a947bed17074b7fe16ce3862a13a7c93314bcfb7bda20e49b53114dc24b0",
-      "app_tree": "efa4839686d088d332b22f45ce60ee9b83bff78d"
-    },
-    "r14.25.5": {
-      "build_source_sha": "df83993f6ac7633044a59794e32ff8718c0dd4cf",
-      "source_sha": "a0d294d8a97dd802729a938075cad311e1d9ba63",
-      "metadata_sha256": "342ac204c2af2ded901eef00dd2e956499f0fba96b27a212f18df4c040d523b3",
-      "apk_sha256": "d36799100a7bbe8b2ebbf804c86654fe05b785c405aa62323eaee5d28beb9ff7",
-      "app_tree": "74277f6e8b6b2a5ac4cd8a82ece8e8763e03fa4c"
-    },
-    "r14.26.9": {
-      "build_source_sha": "94f8adbb670e6a19fa89e35f1cf7afdae7f700f2",
-      "source_sha": "4d936368c39db2cdd25758b1eaa9125197827691",
-      "metadata_sha256": "d7ecde0f978445ee102be7d152c874474578ace22a818a2e298aaaf3a0ad0780",
-      "apk_sha256": "0e19e5dabec45a7de36d8aded7640bfde392c17acffc758f94657923255003a6",
-      "app_tree": "998c7de1e04301a0d3b09e77855a25c74a7f7598"
     },
     "r14.26.11": {
       "build_source_sha": "eea6315fe8ed309575f5d0c97e62df42de935dd9",
@@ -96,5 +44,9 @@
       "apk_sha256": "4a2d34d1e6ffd42c895f8def321932b1a0972a4ee12c51dc084afd7bca752410",
       "app_tree": "80afb9dc2f929239031efef7c3db543749a783de"
     }
-  }
+  },
+  "consolidated_releases": [
+    "r14.25.9",
+    "r14.26.11"
+  ]
 }

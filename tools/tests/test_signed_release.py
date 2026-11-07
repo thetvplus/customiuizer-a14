@@ -1305,12 +1305,11 @@ class FormalTargetAndNotesTest(unittest.TestCase):
                     release.release_target(*retired)
         self.assertEqual({"notes_base": "r14.27.1"}, policy["cumulative_releases"][name])
         self.assertEqual({"notes_base": "r14.26.11"}, policy["cumulative_releases"]["r14.27.1"])
-        self.assertEqual({"notes_base": "r14.26.9"}, policy["cumulative_releases"]["r14.26.11"])
-        self.assertEqual({"notes_base": "r14.26.5"}, policy["cumulative_releases"]["r14.26.9"])
-        self.assertEqual({"notes_base": "r14.25.9"}, policy["cumulative_releases"]["r14.26.5"])
-        self.assertEqual({"notes_base": "r14.25.7"}, policy["cumulative_releases"]["r14.25.9"])
-        self.assertEqual({"notes_base": "r14.25.5"}, policy["cumulative_releases"]["r14.25.7"])
-        self.assertEqual({"notes_base": "r14.24.1"}, policy["cumulative_releases"]["r14.25.5"])
+        self.assertEqual({"notes_base": "r14.25.9"}, policy["cumulative_releases"]["r14.26.11"])
+        self.assertEqual({"notes_base": "r14.24.1"}, policy["cumulative_releases"]["r14.25.9"])
+        self.assertEqual(["r14.25.9", "r14.26.11"], policy["consolidated_releases"])
+        self.assertEqual({"r14.25.9", "r14.26.11"}, set(policy["archived_source_snapshots"]))
+        self.assertEqual({"r14.25.9", "r14.26.11", "r14.27.1", "r14.27.3"}, set(policy["cumulative_releases"]))
 
     def test_trial_and_retired_candidate_cannot_be_formal_release(self):
         release.release_target("r14.25.5",254)

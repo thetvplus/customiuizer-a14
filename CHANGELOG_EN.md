@@ -2,7 +2,7 @@
 
 English | [简体中文](CHANGELOG.md)
 
-Changes for maintained releases. Valid r14.26.7 changes are consolidated into r14.26.9; the original records remain in Git history. Valid r14.26.1 and r14.26.3 changes are consolidated into r14.26.5, and the superseded releases have been retired. Valid changes from the retired r14.25.1 and r14.25.3 releases are consolidated into r14.25.5; the original records remain in Git history.
+Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.11. Superseded releases are retired; original records remain in Git and private archives. Editorial consolidation does not change APKs, signatures or build identities.
 
 ## Unreleased
 
@@ -77,200 +77,76 @@ versionCode 301. Changes since r14.26.11:
 
 ## r14.26.11 — 2026-11-02
 
-versionCode 281. Changes since r14.26.9:
+versionCode 281. Changes since r14.25.9 (cumulative):
 
 ### Release summary
 
-- Reorganize island media, notifications, live activities and return effects, with refined positioning, recoil and track changes.
-- Support island returns on older HyperOS 1 launchers and fix Dock corner crashes and leftover blur.
-- Refine settings, search and shortcuts, plus Duo artwork and music waveforms.
-- After updating, check island mode, app lists and return effects. Reselect them and restart affected processes if the island or returns are missing.
+- Refresh settings, search and editors, and add Wi-Fi automation and per-app behavior rules.
+- Reorganize island media, notifications, activities and return effects, with improved older-launcher returns, positioning and waveforms.
+- Fix Dock corner crashes and leftover blur, plus Control Center, backup, permission and system-entry issues.
+- Reduce unnecessary updates and background work. After updating, check island mode, app lists and return effects, and follow restart prompts.
 
 ### User changes
 
-- Upgrade note: after updating from an older release or local candidate, some Dynamic Island settings may need to be selected again. If the island is absent or returns do not work, check the System feedback & Dynamic Island mode, media/notification app lists, Return to island switches, and None/Instant/Absorption effect; reselect as needed and restart the affected processes.
-- Reorganize Dynamic Island settings into media, notifications, live activities and system feedback. Media display and returns share one explicitly selected app list; notifications use their selected apps. Preserve saved preferences, backups and search routes.
-- Unify return effects as None, Instant and Absorption. None retains native launcher returns, Instant captures no page, and Absorption retains native window springs and secure capture. Retire Simplified motion and the old effect scope while respecting system animation and power-saving settings.
-- Refine receiving motion, rebound, centered and side-position bounds and offsets. Give track changes a bounded loading hold for the same media session so the island does not disappear prematurely.
-- Add gesture returns and absorption to older HyperOS 1 launchers without WindowElement, preserving native returns, interruption recovery and secure-window restrictions. Recover the media island after a bounded missing handoff; late page captures no longer end accepted return progress early. Restart the device after updating.
-- Fix a native system smooth-corner crash during Recents or Home transitions with Dock backgrounds enabled, preserving the background and layout. Remove residual blur when Recents hides the Dock.
-- Solid Dock panels no longer create blur. Frosted glass reuses native materials and commits bounds, opacity and visibility after layout settles, follows system blur and power-saving availability, and stops frame synchronization at rest.
-- Apply global window blur changes promptly while retaining developer, power-saving and thermal restrictions. Scope Recents blur ratios to their actual calls and separate local island transitions from the global window blur switch.
-- Retain five measured music frequency bands with mild display compensation and smooth rise and fall. Cap music and recorder sampling at 10 Hz, retain display-frame interpolation, and stop rendering once silence settles.
-- Align spacing and corners across settings rows, groups, search and action editors, and correct single-line centering and long current values. Add search guidance, preparation and no-results messages, and switch menu subitems directly while retaining page animations and system dynamic colors.
-- Reuse unchanged settings rows and groups and reuse search indexes by language. Correct the credential shortcut target, align portrait and landscape keyboard bottom-spacing names while preserving saved values, and clarify Gboard-only support.
-- Center Duo airplane icons by their actual ink and calculate automatic sizing consistently in pixels, preserving layout and user font settings.
+- Migrate settings to Compose with consistent lists, search, selectors, sliders, colors and action editors, preserving preferences, backups and behavior. Group app behavior, Wi-Fi and VPN automation under System → Apps and automation.
+- Keep home search collapsed until opened, then focus and highlight matches. Improve keyboard handling, navigation, background restoration, language changes and index publication; reuse indexes by language and existing app lists without a query.
+- Unify neutral light/dark surfaces and system dynamic colors. Refine rows, menus, current values and spacing; fix empty dialog titles, pressed-state residue and text jitter. Select numeric input automatically and support scrolling around long content and landscape keyboards.
+- Add Wi-Fi automation using network names, optional BSSID and priority to adjust DND, ringer, rotation and VPN. Restore only owned state on exit, respecting manual changes and user switches with bounded recovery after failures.
+- Add opt-in per-app rules for sensor rotation, media-volume memory, fixed or system brightness, and restrictions on app brightness requests, with Activity exceptions. Restart the device after first enabling.
+- Reorganize island media, notifications, live activities and system feedback. Share manually selected media apps between display and return, use selected notification apps, and preserve settings, backups and search routes.
+- Unify return effects as None, Instant and Absorption: native return, capture-free reception, or continuous absorption using native window springs. Support adapted older HyperOS 1 launchers with task, PiP, transparency and interruption safeguards.
+- Refine island entry, reception, recoil, positioning and offsets. Retain same-session media briefly during track changes, fix stale recording levels after silence, and clear expired clock and activity state.
+- Use bounded waveform sampling with display-frame interpolation and stop on settled silence, preserving hidden, paused and power-saving limits. Restore lightweight waveforms after system animations are re-enabled.
+- Keep solid and frosted Dock materials, falling back from retired lightweight glass. Fix blur restoration, corner crashes and leftover areas across hiding, unlock and Recents. Avoid blur for solid panels and stop frame synchronization when stable.
+- Apply global window-blur changes promptly while retaining developer, power-saving and thermal limits. Separate Recents blur from local island transitions by their actual callers.
+- Use caches, system events and on-demand refresh for trusted Wi-Fi and Bluetooth lists, respecting permissions and scan cooldown. Move backup I/O off the UI thread, prevent duplicate operations and resume after permissions; preserve settings on cancellation or invalid choices.
+- Add system-app updater disable/restore and options to hide updater and enterprise-mode entries. Preserve state snapshots, result checks and Settings search consistency; follow restart prompts after enabling or updating.
+- Fix Control Center columns, screenshot folders and formats, foreground-app observation, nullable interfaces and recovery. Strengthen access checks for system actions, screenshot notifications and battery previews while retaining native failure feedback.
+- Correct credential shortcut targets and results, unify keyboard spacing names with explicit Gboard support, refine Duo airplane icons and sizing, and reduce repeated clock, network-speed and charging updates.
+- After updating, some island settings may need reselection. If the island or returns are missing, check mode, media/notification lists, return switches and None/Instant/Absorption; reselect as needed and restart affected processes.
 
 ### Engineering notes
 
-- Read settings JSON once for Compose pages, search and the preference catalog. Include generated sources in Lint and remove retired resources and feature routes while preserving ten languages, native Preference ordering, dependencies and navigation.
-- Install mutually exclusive launcher return paths with shared capture budgets and bounded lifetimes. Retain task, user, PiP, translucent-window and source checks without continuous sampling, pre-created windows or polling.
-- Remove retired island settings during startup and backup restore, and migrate legacy boolean and numeric return effects precisely. Retain Android 14 / HyperOS 1, libxposed API 102, R8, library Profiles and existing uncompressed DEX layout.
-- Do not translate reduced sampling, calls or allocations into unmeasured device frame-rate, power or startup gains. Withdrawn window-preparation, queue-removal and ART experiments are excluded from this release.
-
-## r14.26.9 — 2026-11-01
-
-versionCode 269. Changes since r14.26.5:
-
-### Release summary
-
-- Improve trusted-network lists, backup and restore, language changes and input dialogs.
-- Add system-app updater disable/restore and options to hide updater and enterprise-mode entries.
-- Fix compatibility issues in Control Center, screenshot folders, foreground-app state and other system features.
-- Strengthen access checks for system actions and notifications. Restart the device after updating.
-
-### User changes
-
-- Trusted Wi-Fi networks now use cached scans, system broadcasts and on-demand refresh, with request cooldowns across rapid navigation, rejected scans and wait timeouts. Trusted Bluetooth devices replace the 15-second loop with page entry, system events and manual cache requests; empty results also end the wait.
-- Move backup filtering, encoding and file writes off the UI thread and share a single operation slot with restore. Finish started file work and close streams when a page is destroyed, preventing overlapping writes and stale success messages while retaining the backup format and system document picker.
-- Defer language refresh while Fragment state is saved and publish search indexes only after preparation completes. Restore editor drafts by stable preference keys and allow complete text and numeric forms to scroll when the landscape keyboard occupies most of the screen.
-- Continue opening trusted-network lists after their permissions are granted, and resume adding the current network in Wi-Fi automatic settings. Directory selection accepts confirmed local storage folders; cancellation or invalid selection preserves the previous setting.
-- Report credential-confirmation success only from the system result and restore pending requests without relaunching them. Ordinary saved Activity state no longer implies authentication is pending.
-- Foreground monitoring no longer installs global Hooks from each network-speed controller constructor. Base initialization and Application.attach share ownership of the actual target, while audio, alarm and brightness callbacks follow their current instances. Correct the nullable Boolean signature that could hide Control Center tiles with custom columns, and rebind each actual left adapter after recreation. Restart the device after updating.
-- Validate screenshot folders against their actual storage volume and MediaStore image-directory rules, letting the system create child folders. Unsupported custom folders retain the native destination. Preserve existing privileged host paths and keep filename extensions and MIME types consistent.
-- Add independent disable and restore controls for the system app updater, reusing original-state snapshots and failure readback. Keep ROM system updates separate and do not reinstall removed apps.
-- Hide the exact native system app updater and enterprise-mode entries, including their Settings search results. Both options default to off and work independently of the module icon position. Disabling them and restarting Settings restores entries. Preserve adjacent entries and nonempty categories; restart the device after updating and enabling.
-- Tighten sender boundaries for system actions, screenshot notifications and battery previews while retaining the A14 screenshot sender's signature-permission contract. Restart the device after updating to register the new boundaries.
-- Correct reflection-result, nullable-data and native-exception boundaries across notification lists, floating windows, media information and VPN state, preserving native execution and failure isolation.
-
-### Engineering notes
-
-- Retain Android 14 / HyperOS 1, SDK 34, arm64-v8a, libxposed API 102 and the historical signing identity. Preserve compact-resource processing and existing failure isolation.
-- Bound successful-build diagnostic summaries, prioritize entries requiring review and report omitted counts. Failed commands still retain full output; zero warnings or deprecations is not a goal.
-- Add regressions for request counts, file-operation ownership and method installation. Host results and reduced source work do not establish device CPU, GPU or power gains.
-- Address a known Guava vulnerability in build and test dependencies without adding production runtime dependencies. Continue tracking the remaining Host risk in Gradle's bundled dependency separately.
-- Add private security reporting, security-only update configuration and a separate manual dependency-graph workflow. Remove the retired manual semantic mirror and its dedicated tooling while retaining source contracts, process matrices and behavior regressions.
-
-## r14.26.5 — 2026-10-31
-
-versionCode 265. Changes since r14.25.9:
-
-### Release summary
-
-- Refresh settings, search and editors with consistent colors and feedback while preserving settings and backups.
-- Add Wi-Fi automation and per-app rules for rotation, brightness, volume, VPN and related actions.
-- Fix Dock blur after restoration and refine island waveforms and live-activity state.
-- Reduce unnecessary clock and status-bar updates. Restart the device after first enabling new rules.
-
-### User changes
-
-- Migrate the settings interface to Compose with consistent lists, search, selectors, sliders, color and action editors, and state feedback. Preserve settings keys, backups and feature behavior. Group app behavior, Wi-Fi and VPN automation under “System → Apps & automation”.
-- Keep home search collapsed by default, with a dedicated view, automatic focus and highlighted matches. Fix retained focus and keyboard flashing across back navigation and background recovery. App selectors use prepared rows directly when the query is empty, avoiding unnecessary background dispatch and empty-list handoffs.
-- Use consistent neutral light / dark pages, toolbars and cards, with Material 3 dynamic colors for buttons, switches and sliders. Match system bars to the page background, align overflow typography and colors, add a restrained restart-submenu transition, and clear pressed feedback as pages or menus leave so a dark click state does not travel with them or linger.
-- Fix “null” titles in language, Settings-entry and other selection dialogs. The shared title fallback also covers text and multi-selection editors. Use 16sp primary text for choices, with system font scaling and clearer contrast.
-- Select the current numeric value when manual input opens, leave space above the keyboard, and allow long dialog content to scroll. Cancel continues to discard edits.
-- Add the missing section heading for Apps & automation and align settings grouping. Restore native edge stretching and use motion-aware text rendering to reduce glyph and spacing jumps during scrolling, rebound and navigation.
-- Restore native Dock blur opacity after hiding or locking, and stop resubmitting identical opacity in a stable state.
-- Add “System → Apps & automation → Wi-Fi automatic settings”: use SSID, optional BSSID and priority to control Do Not Disturb, ringer mode, auto rotation and VPN. Restore only owned state on exit and respect observed manual changes. Grant the network-identity permissions and restart the device after first enabling.
-- Add “System → Apps & automation → App behavior”: enable sensor rotation, media-volume memory, fixed or system-controlled brightness, and limits on or suppression of app brightness requests for selected apps, with exact Activity exceptions. Each option is off by default; restart the device after first enabling.
-- Remove Dock “Light glass” while retaining Solid panel and Frosted glass. Retired selections fall back to the panel. Remove its gradient rim, extra drawing and blur / power observers while preserving layout, editing, dragging and unlock behavior. Restart Launcher after updating.
-- Retain bounded Wi-Fi setting restoration records after a failed scene exit until readback confirms success; respect manual changes and user switches. Recover network tracking after overflow through a complete trusted snapshot, and prepare rotation and brightness Hook interfaces independently. Fix app-behavior and Wi-Fi changes remaining stale on frameworks that cache old settings.
-- Restore smoother Island waveforms with display updates synchronized to screen frames and the earlier music / recorder sampling cadence. Preserve hidden-state capture release, measured-silence / stable-state frame suspension, pause and power-saving guards. Fix lightweight waveforms remaining frozen after system animations are re-enabled.
-- Maintain Island opacity only for occluded nodes, skip repeated occlusion queries when geometry is unchanged, and tighten the texture budget for full transition surfaces. Preserve native gestures and animation handoffs.
-- Stop weather-specific subscriptions and queries when no clock uses weather content, and skip updates for a hidden second clock.
-- Coalesce duplicate status-bar network-speed mirror deliveries and update charging-text layout only when content or layout conditions change. Avoid unrelated brightness reads and argument-array copies in touch handling.
-- Clear stale recording activity levels after silence and reset the previous envelope after a failed read instead of retaining an incorrect peak.
-
-### Engineering notes
-
-- Use stable Kotlin 2.4.21, JDK 27 and Java / Kotlin bytecode 26, with updated Gradle / AGP and compileSdk 37. Runtime support remains Android 14 / HyperOS 1 without raising minSdk or targetSdk.
-- Remove settings layout XML, legacy list adapters, View binding and custom color widgets. Generate typed settings models from validated JSON while preserving AndroidX Preference persistence and dependency semantics.
-- Commit authentication state only after native success. Preserve native exception boundaries and activate screenshot and input-method Hook groups atomically so failures do not leave partial installations.
-- Remove installation sampling, unused reflection helpers, an obsolete threshold implementation and unreachable resources. Keep test helpers and temporary samples in test sources, preserve useful behavior regressions. Only settings activate Compose; host Hooks retain native View / Canvas rendering, and Release excludes test dependencies.
-- Keep Android 14 / HyperOS 1 support, the existing app identity and signing certificate; new rules are off by default. Performance conclusions are limited to measured scenarios; Host tests and reduced source work do not establish device CPU / GPU or power gains.
-- Remove duplicate search state, the obsolete state machine and four unused backgrounds. Preserve AndroidX persistence, dependency notifications and host resources.
-- Use API 102 Chain directly for Dock measurement and content-layout hooks, removing per-call before / after wrappers while preserving single native execution, exception identity, fatal propagation and installation lifetime.
-- Remove lightweight-glass paths, unused G4 path construction and tests of the retired behavior, while retaining the shared Island curvature integral. Use native TextMotion and release ripple nodes with Fragment lifecycle changes; add no persistent work, extra layers or third-party UI library.
+- Consolidate valid changes from r14.26.1, r14.26.3, r14.26.5, r14.26.7 and r14.26.9 through r14.26.11. Retired lightweight glass, old return queues and withdrawn experiments are not retained features; original records and release evidence are archived.
+- Generate pages, search and preference catalogs from shared settings definitions while keeping native View/Canvas hosts. Preserve grouped Hook installation, native exceptions, window/source ownership, background-file lifetimes and test/production boundaries.
+- Keep original APKs, certificate, build identity, Android 14 / HyperOS 1, arm64-v8a and libxposed API 102. Toolchain maintenance and reduced calls do not establish new device frame-rate, startup or power measurements.
 
 ## r14.25.9 — 2026-10-29
 
-versionCode 258. Changes since r14.25.7:
+versionCode 258. Changes since r14.24.1 (cumulative):
+
+### Release summary
+
+- Add Dynamic Island for music, notifications and system activities, with gestures, rotation support and camera clearance.
+- Refine Dock materials, Duo icons and folder-icon blur, plus launcher and System UI handoffs.
+- Add VPN automation, reorganize settings and search, and allow direct numeric slider input.
+- Fix notifications, lock-screen artwork, live activities and settings recovery. Follow restart prompts when first enabling features.
 
 ### User changes
 
-- Add “System → Advanced settings → VPN auto switching”: select multiple trigger apps and one VPN client or saved system IKEv2 profile. Automatic disconnect has its own switch and a 0–30 second delay, defaulting to 3 seconds. Preserve existing, manual, always-on and lockdown connections. Restart the device after first enabling; later rule changes apply live. Actual connection support depends on the chosen client.
-- Correct lock-screen artwork centering, content/options invalidation, stale screen-off requests, reference release and publication-size checks. Static Dock wallpaper reuses its image during movement and refreshes once after settling.
-- Validate the complete native keypad before scrambling lock-screen or app-lock PIN keys. Preserve native construction/layout failures, original digit clicks, fixed controls and authentication policy.
-- Stabilize Island activity handoffs, repeated taps and native returns; reuse valid content and drawing preparation to avoid duplicate submissions.
-- Prevent an immediate clock correction from fading the entire live-activity layer out again during Island entry. Running stopwatches, timers and similar clocks retain their entry progress and prepared icon; pauses and source/session changes keep their existing handoff.
-- Fix folder-icon blur installation on POCO Launcher 5.39.40.11641 / 11739, whose native interfaces differ from the older implementation. Connect the native background-sampling container for verified 4.39.14.7603 and the above 5.39 builds. Use the native 1×1 / 2×2 folder policy and a darker black blend layer with native opacity for closed folder icons. Preserve system-blur and default-folder restrictions and native interactions; the exact 7601 build and final appearance still require device testing.
+- Reorganize System, Launcher, Buttons and Gestures, and App Maintenance settings. Improve grouping, search, navigation, descriptions and current values; keep restart actions on the home page. Sliders accept validated numeric input.
+- Add Dynamic Island for music, notifications, system feedback, calls, alarms, timers, stopwatch, recording and privacy status. Return to media or an idle island when a source ends; retain notification privacy and lock-screen rules.
+- Use one island window and one active source, choosing long or short form from content. Notifications with a separate body use the long form; music and system activities use the short form. Swipe up to dismiss; keep an optional idle island without an expandable details panel.
+- Support left, center and right positioning and horizontal adjustment. Fit dimensions, text, artwork, waveforms and touch areas to camera clearance, system insets and screen space, including stricter landscape limits.
+- Add configurable music gestures for tracks, volume and shortcuts, plus opening the current player. Retain artwork and a static waveform while loading; improve duplicate sessions, multiple tracks, pause handling and track changes.
+- Use native window returns for opt-in music-to-island transitions with manually selected players. Refine resizing, recoil and velocity handoffs; fix gaps, first-frame jumps, diagonal unlock motion, asymmetric deformation and repeated fades on quick returns.
+- Offer lightweight and live waveforms with smoothed levels, noise filtering and silence decay, respecting privacy, pause and power-saving rules. Update clocks only while visible and clear state when sources or clock services end.
+- Use app allowlists for notifications and category selection for feedback. Add optional charging and low-battery prompts; suppress the native low-battery warning only after the replacement is visible. Keep native feedback when takeover fails or content does not fit.
+- Support top, center and bottom Toast placement with safe-area offsets. Short messages can use the island; notification shade keeps an idle island without touch interception, and idle taps no longer implicitly open the shade.
+- Refine picture-in-picture entry, cancellation, exit, stashing and restoration. Floating-window exclusion affects only identifiable floating media while other allowed content remains visible; follow restart prompts after changes.
+- Refine full-width Dock backgrounds, sizing, wallpaper colors and glass materials across unlock, Recents and app returns. Use one visible base and consistent corners; stop redundant sampling offscreen and prepare again on return.
+- Refine Duo automatic size and optical centering. Add opt-in folder-icon background blur for supported MIUI and POCO interfaces, retaining system blur, default-icon and hardware limits. Restart the launcher after changes.
+- Add VPN automation for multiple trigger apps, a VPN client or saved system IKEv2 profile. Configure delayed automatic disconnect independently, preserving manual, existing, always-on and lockdown connections. Restart after first enabling.
+- Fix lock-screen artwork scaling, updates, stale screen-off requests and release. Validate complete native PIN keypads before scrambling, preserving click handling, fixed controls and authentication policy.
+- Refine notification clicks, floating-window actions, expansion, collapse, rebinding, grouping and coloring. Fix shade and Control Center dates, app-lock timeout, installer details, volume keys and keyboard-dismiss boundaries.
+- Synchronize fixed status-bar height with system resources while preserving fullscreen and contrast behavior. Refine A14 vibration strength, volume timers, panel hiding, loud-volume confirmation and audio focus. Restart after system-dimension changes.
+- Fix vertical-dominant gestures triggering Dock swipes, default widget parameters and app-renaming refreshes. Improve back gestures, rotation, interruption, screenshot hiding, visualization and screen-off restoration.
+- Improve migration, backup and maintenance recovery with saved state and result checks. Prevent stale startup or bulk-refresh snapshots from overwriting settings, retaining the last valid configuration on temporary read failures.
 
 ### Engineering notes
 
-- Integrate VPN, ROM retrieval tooling and cumulative refinement branches. Offline source/ROM lookup remains explicit and bounded, with A14 and reference-only samples separated; it is not part of module runtime. Branch integration does not establish public release or device-performance acceptance.
-- Add separate POCO ABI routing, rollback, native state-publication, size-specific theme and material-argument regressions, with bounded gate and native-render-request diagnostics. Handle inlining only for verified native callers during installation; open-folder desktop blur keeps its native behavior.
-
-## r14.25.7 — 2026-10-28
-
-versionCode 256. Changes since r14.25.5:
-
-### User changes
-
-- Select calls, alarms, timers, stopwatch, recording and privacy activity together using native events. SMS and calendar retain notification privacy rules. Clocks update while visible; ending source processes restores media or the idle island.
-- Present one current activity, entering directly as a short or long island according to its content. Reuse the window across sources; one upward swipe dismisses the source and downward swipes do not expand details. An optional still idle island remains when no activity is shown.
-- Refine content fades, local text blur, track artwork flips and damped horizontal feedback. Music return responds subtly to native swipe strength while preserving configured music actions.
-- Use a short island for music and all ongoing system activities, and a long island for messages with distinct body text. Derive a 36–40 dp automatic height from the camera cutout; idle width starts at 100 dp, with content widths and offsets bounded by the cutout and safe area.
-- Follow the ROM audio capture limit, interpolate the waveform at about 30 Hz, and reject small noise changes. Support mirrored Telegram / HyperOS media sessions, retain one same-app audio track while it remains active, and reduce handoff flicker.
-- Exclude confirmed floating-app media sources rather than hiding every activity. Other music, approved messages and system feedback remain eligible.
-- Add optional charging and low-battery feedback. Suppress the native low-battery dialog only after the replacement is visibly acknowledged.
-- Keep one visible Dock material with a shared native rounded-rectangle contour and analytic optical edges; reserve G4 for inset decoration and reduce repeated static-wallpaper captures. Add another 0.5 dp to Duo automatic sizing and balance native row height with optical centering.
-- Fix asymmetric morphs and diagonal unlock motion with one stable canvas, preserving current position and velocity. Similar sizes exchange content without extra bounce; the notification shade retains a still idle island with its touch region disabled.
-- Resolve upward intent before clicks; short upward drags only rebound. Tapping the idle island no longer implicitly opens notifications; its documented downward gesture remains.
-- Preserve current artwork and a still waveform while the same player buffers or loads a track. Commit new content after playback starts, with bounded grace for ambiguous pauses.
-- Simplify Island names and its main page, with dedicated size, music, message and system-feedback pages. Return the global prompt style to the system directory; app and action selection follow native components and view lifecycles.
-
-- Unify continuous dragging and velocity handoff, presenting current content directly without a manually expanded detail step. Refine text hierarchy for notifications, ongoing activities and feedback. Group return gestures together.
-- Rebalance Island entry, content handoff, kneading and exit. Absorption responds immediately while its receiving body completes a full settling gesture independently of page speed. Allow more elastic travel within physical safe bounds, retaining the smaller lower intake and continuity across first entry and reopening. Kneading keeps its anchor, resistance, momentum and camera clearance; reveal artwork earlier and balance short two-line captions.
-- When rapidly returning to a source that is still visible, cancel its unseen replacement and recover from the current opacity, avoiding a repeated fade-out and content rebind. Artwork flips retain their existing handoff.
-- Support landscape presentation with side-cutout and system-safe edges, a tighter width cap and stale native-return wait cleanup after rotation. Retain lockscreen and notification-shade safety.
-- Open notifications with distinct body text directly in the long form. Preserve the current window and visibility across Home, media and system-activity handoffs; fix recursion when the shared progress clock ends and clear stale timer activity when its service is destroyed.
-- Add an independent folder-icon background blur switch, off by default and requiring a Launcher restart after changes. MIUI and POCO use their verified native folder paths while retaining hardware, system-blur and default-icon restrictions; appearance on each ROM still requires device acceptance.
-- Stop invalid Dock captures outside the visible region and prepare again on return. Refresh capture policy when wallpaper type changes, and remove stable transparent full-width backgrounds from frame observation.
-- Prevent vertically dominant diagonal swipes from triggering Dock horizontal actions. Roll back a partially installed Hook group and preserve native touch calls when an observer fails.
-- Refine independent notification-shade and Control Center date formats, app-lock timeout, installer app details, volume-key and IME dismiss-button boundaries, retaining native behavior on failure.
-- Keep preference descriptions visible beside current values and fix recycled warning colors and separators. Unify subpage arrows, search routes, page return and numeric-input boundaries.
-- Restore native widget spacing and title parameters at default settings. Refresh only relevant content for app renaming and theme or configuration updates, retaining icon and touch bounds.
-
-### Engineering notes
-
-- Native window events publish bounded current snapshots. Audio, notification and animation resources retain explicit owners and release paths; no new recording permission, polling service or animation library.
-- Power saver stops Island capture and optional motion. Static Dock capture stops after its bounded native-animation catch-up period.
-- r14.25.7 / 256 is released; the APK and build metadata in both Releases identify the official binary. Earlier local trials retain their own identities. Unverified landscape, POCO appearance, other-ROM and sustained-performance coverage remains documented separately.
-
-## r14.25.5 — 2026-10-25
-
-versionCode 254. Changes since r14.24.1:
-
-### User changes
-
-- Reorganize settings into System, Home screen, Buttons and gestures, and Apps and maintenance. Unify groups and descriptions, improve search navigation, and collect restart actions on the home page.
-- Enter slider values by tapping the number, with range, step and unit validation.
-- Add Dynamic Island for music, system feedback, brief notices and optional message notifications, with short and long forms, secondary activities, and Vertical or Center animations.
-- Add left, center and right placement, horizontal adjustment and cutout avoidance. Set height to 32–64 dp, short width to 96–320 dp and long width to 120–400 dp, with matching text, artwork, waves and touch areas.
-- Improve short/long transitions and content handoffs. Fix blank gaps, first-frame shrink jumps, abrupt position changes and manual short widths incorrectly selecting the long form.
-- Add five customizable music gestures for tracks, volume and shortcuts. Refine pause visibility, opening the current player and upward dismissal.
-- Use the native icon-free animation for direct music return to the island, fixing rapid returns and desktop-icon issues. This option is off by default and requires selecting a player.
-- Refine picture-in-picture entry, cancellation, exit, edge stashing and restoration. The floating-window hiding option hides the whole island; turning it off allows music and PiP to coexist. A full device restart is required after changing this switch.
-- Select system feedback by category and message notifications by app allowlist. Refine lockscreen restrictions, update and click checks, retaining native alerts when takeover fails.
-- Keep lightweight music waves by default and offer an experimental live mode with improved amplitude, quiet high frequencies and silence decay.
-- Add full-width Dock backgrounds, symmetric sizing and wallpaper-tinted glass, with liquid glass and a frosted-glass fallback.
-- Follow unlock, recents and app-return animations for Dock movement, scale, opacity and wallpaper sampling. Prevent an old sampling failure from degrading a new background.
-- Position Toasts at the top, center or bottom with spacing and offsets inside the safe area. Brief notices can use the island; complex or long content retains ordinary Toasts.
-- Apply fixed status-bar height to system dimension resources to correct outdated-height layouts. Preserve independent content offset, app fullscreen visibility and native contrast protection. A full device restart is required after changing the height.
-- Refine normal and floating-window notification clicks, expansion, auto-removal, withdrawal and rebinding, folding and colors. Preserve native lockscreen, user and critical-channel protections.
-- Connect vibration strength to A14 native scaling. Fix volume timers, panel auto-hide, high-volume confirmation and audio-focus handling.
-- Fix back-gesture area compatibility and status-bar actions. Improve recovery after rotation, dimension changes and interrupted gestures.
-- Improve state recovery and resource cleanup for Control Center, the status bar, screenshot-hidden overlays and visualization, preserving screen-off update boundaries.
-- Refine configuration migration, backups and maintenance recovery. Save original states before maintenance, verify results and retain recovery records on failure.
-- Prevent startup or bulk preference refreshes from overwriting newer values with an old snapshot. Keep the last valid settings when a temporary read fails.
-
-### Engineering notes
-
-- Reduce whole-array copies in read-only hooks while preserving argument writes, original calls and exception behavior. Host allocation comparisons establish no device performance or power gain.
-- Invalidate, cancel and release animation, media, PiP, notification and Dock state with the owning window or controller so stale callbacks cannot restore old content.
-- Automate dual-repository publication without human approval. Publish only the official APK and build-metadata.json, retaining the historical certificate, source identity, matching assets and recovery from the original candidate.
-
-See the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for verified scopes and pending device checks.
+- Consolidate valid changes from r14.25.1, r14.25.3, r14.25.5 and r14.25.7 through r14.25.9. Superseded secondary activities and manual details panels are not listed as current features; original per-version records remain in Git and private release archives.
+- Preserve Android 14 / HyperOS 1, arm64-v8a, libxposed API 102, original APKs, certificate and build metadata. Reduced allocation or sampling does not establish unmeasured device frame-rate or power gains.
 
 ## r14.24.1 — 2026-10-19
 
