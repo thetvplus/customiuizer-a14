@@ -90,10 +90,10 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             val next=api.visualLandscape.invoke(algorithm) as Boolean
             if(landscape==next) return
             landscape=next
-            metrics=null
             retireGeometry()
         }
         private var metrics: IosDeckGeometry?=null
+        fun invalidateGeometry() { metrics=null }
         private var screenWidth=0f
         private var cardWidth=0f
         private var safeHeight=0f
@@ -285,6 +285,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private fun retireGeometry() {
         geometryGeneration++
         geometryReady=false
+        current.invalidateGeometry();stable.invalidateGeometry()
         // A physical 90 -> 270 turn keeps the landscape boolean and dimensions,
         // but its old frames, window receipts and springs still own different axes.
         val cleanup=CleanupActions()

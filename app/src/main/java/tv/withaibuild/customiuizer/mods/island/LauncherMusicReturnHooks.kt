@@ -423,7 +423,6 @@ internal object LauncherMusicReturnHooks {
             val message = IslandMusicReturnSignal.encode(current.frame, SystemClock.uptimeMillis(), current.sequence)
                 .setAction(IslandMusicReturnSignal.REQUEST).setPackage(IslandMusicReturnSignal.SYSTEM_UI)
                 .putExtra("committed", true).putExtra("gesture", attempt.sequence)
-                .putExtra("impulse", attempt.impulse)
                 .putExtra("committedAt", SystemClock.uptimeMillis()).addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
                 .putExtras(Bundle().apply { putBinder("progress", progress) })
             commitJob?.cancel()

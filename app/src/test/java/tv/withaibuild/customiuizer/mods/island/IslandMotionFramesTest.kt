@@ -29,7 +29,56 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
-    @Test fun homeCameraSeedHasItsOwnHorizontalReceiveWithoutASecondVerticalInflation() {
+    @Test fun everyNewArrivalShowsHorizontalExpansionAndRecoilOnItsExistingClock() {
+        val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val image=Bitmap.createBitmap(360,120,Bitmap.Config.ARGB_8888)
+        ShadowChoreographer.setPaused(true)
+        try {
+            val peaks=linkedMapOf<String,Float>()
+            for(route in listOf("center","top","home-seed","home-existing","new-content")) {
+                val shell=IslandActivityView(host)
+                val root=IslandTouchWindow(shell)
+                host.setContentView(root,FrameLayout.LayoutParams(360,120))
+                shell.geometry(240,40,40,280);root.geometry(240,40,60)
+                root.measure(View.MeasureSpec.makeMeasureSpec(360,View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(120,View.MeasureSpec.EXACTLY))
+                root.layout(0,0,360,120);shell.cameraAnchor(20f,16f)
+                fun paintedWidth():Int {
+                    image.eraseColor(Color.TRANSPARENT);root.draw(Canvas(image))
+                    val row=(shell.top+shell.height*.5f+shell.translationY).roundToInt().coerceIn(0,119)
+                    var first=360;var last=-1
+                    for(x in 0 until 360) if(Color.alpha(image.getPixel(x,row))>128) { first=minOf(first,x);last=x }
+                    return (last-first+1).coerceAtLeast(0)
+                }
+                shell.entranceStyle=if(route=="top") IslandEntranceStyle.TOP else IslandEntranceStyle.CENTER
+                when(route) {
+                    "home-existing" -> shell.prepareReturnFromCurrent()
+                    "new-content" -> shell.prepareContentArrivalFromCurrent()
+                    else -> shell.prepareEntry(mediaReturn=route=="home-seed")
+                }
+                shell.transition(240,40,240,40,route!="home-existing" && route!="new-content")
+                val clock=getField<ValueAnimator>(shell,"motion")
+                var peak=0f;var contracted=false;var paintedPeak=0
+                for(time in 0L until clock.duration step 8L) {
+                    clock.currentPlayTime=time
+                    val width=240f*shell.scaleX
+                    if(shell.alpha>.7f) peak=maxOf(peak,width)
+                    if(shell.alpha>.7f && width>244f) paintedPeak=maxOf(paintedPeak,paintedWidth())
+                    if(peak>244f && width<peak-3f) contracted=true
+                    assertTrue("$route respects horizontal safety",width in 39.999f..280.001f)
+                    assertTrue("$route keeps vertical amplitude bounded",40f*shell.scaleY<=42.8f)
+                    assertSame("No second animation clock",clock,getField<ValueAnimator>(shell,"motion"))
+                }
+                peaks[route]=peak
+                if(peak>244f) assertTrue("$route must retract after its visible peak",contracted)
+                clock.end();assertEquals(1f,shell.scaleX,0f);assertEquals(1f,shell.scaleY,0f)
+                val paintedRest=paintedWidth()
+                assertTrue("$route must paint its recoil through the real window parent: $paintedPeak -> $paintedRest (physical $peak)",paintedPeak>=paintedRest+3)
+            }
+            assertTrue("Visible body expansion must precede recoil for every arrival: $peaks",peaks.values.all { it>244f })
+        } finally { image.recycle();ShadowChoreographer.setPaused(false);host.finish() }
+    }
+    @Test fun homeAndOrdinarySeedsShareBreadthWithoutASecondVerticalInflation() {
         val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         ShadowChoreographer.setPaused(true)
         try {
@@ -42,7 +91,7 @@ class IslandMotionFramesTest {
                 val result=240*shell.scaleX to 40*shell.scaleY;clock.end();return result
             }
             val ordinary=sample(false);val home=sample(true)
-            assertTrue("Only confirmed Home acceptance adds its small horizontal receive",home.first>ordinary.first+1f)
+            assertEquals("A14 arrivals share the horizontal receive without borrowing Home's height",ordinary.first,home.first,.001f)
             assertEquals("A new camera seed keeps the normal height transition",ordinary.second,home.second,.001f)
         } finally { ShadowChoreographer.setPaused(false);host.finish() }
     }
@@ -136,7 +185,7 @@ class IslandMotionFramesTest {
                         while (lane != null && lane !== shell) {
                             lane.clipBounds?.let { clip ->
                                 val visible = android.graphics.RectF(clip)
-                                val transform = android.graphics.Matrix(); lane!!.transformMatrixToGlobal(transform)
+                                val transform = android.graphics.Matrix(); lane.transformMatrixToGlobal(transform)
                                 transform.mapRect(visible)
                                 if (!it.intersect(visible)) it.setEmpty()
                             }
@@ -167,7 +216,7 @@ class IslandMotionFramesTest {
         } finally { ShadowChoreographer.setPaused(false); activity.finish() }
     }
 
-    @Test fun equalSizeContentReplacementKeepsTheCurrentShellWithoutAnotherEntrancePulse() {
+    @Test fun equalSizeMetadataRefreshKeepsTheCurrentShellWithoutAnotherEntrancePulse() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)
         activity.setContentView(shell, FrameLayout.LayoutParams(160, 40))
@@ -175,7 +224,7 @@ class IslandMotionFramesTest {
         shadowOf(Looper.getMainLooper()).idle()
         ShadowChoreographer.setPaused(true)
         try {
-            shell.prepareContentArrivalFromCurrent()
+            shell.prepareContentArrivalFromCurrent(receiveBreadth=false)
             shell.transition(160, 40, 160, 40, false)
             val clock = getField<ValueAnimator>(shell, "motion")
             clock.currentPlayTime = 0
@@ -342,7 +391,8 @@ class IslandMotionFramesTest {
             val entrance = getField<ValueAnimator>(shell, "motion")
             for (time in 0L until entrance.duration step 16L) {
                 entrance.currentPlayTime = time
-                assertEquals(240f, shell.width * shell.scaleX, .001f)
+                assertTrue("Top entry keeps its full form while receiving horizontally",
+                    shell.width*shell.scaleX in 216f..280.001f)
                 assertEquals(40f, shell.height * shell.scaleY, .001f)
                 assertTrue(shell.translationY in -56f..8f)
             }

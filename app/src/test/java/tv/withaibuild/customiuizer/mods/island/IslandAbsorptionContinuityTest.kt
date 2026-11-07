@@ -157,14 +157,17 @@ class IslandAbsorptionContinuityTest {
         }
     }
 
-    @Test fun growingFromACameraSeedDoesNotBounceTheWholeLayoutAgainAtAccepted() {
+    @Test fun growingFromACameraSeedHasOneBoundedVisibleHorizontalRecoil() {
         val response = IslandAcceptanceResponse(24f, 40f, 240f, 40f, 0f, 0f, 1f, 24f, 300f, 16f, 80f)
         var peak = 24f
+        var recoil = 0f
         for (ms in 0..1600) {
             response.sample(ms / 1000f)
             peak = maxOf(peak, response.width)
+            recoil = maxOf(recoil, peak - response.width)
         }
-        assertTrue("The seed expansion must not add a second large overshoot: $peak", peak < 248f)
+        assertTrue("The new arrival must visibly expand within its receive excursion: $peak", peak in 244f..256f)
+        assertTrue("The visible expansion must retract on the same clock", recoil >= 3f)
         assertTrue(response.settled(1.6f))
     }
 

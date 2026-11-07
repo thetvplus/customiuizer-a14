@@ -1593,8 +1593,7 @@ internal class IslandActivityController(
             return
         }
         val publisher = musicReturnPublisher ?: IslandMusicReturnSignal.Publisher(context.applicationContext,
-            handler, scope, ioDispatcher, onCommit = ::nativeMusicReturn,
-            onImpulse = { shell.returnStrength = it }) {
+            handler, scope, ioDispatcher, onCommit = ::nativeMusicReturn) {
             pipStateReader?.invoke()?.let(::applyPipSnapshot)
             val now = SystemClock.uptimeMillis()
             val foregroundMedia = state.uncoveredMedia()?.let {
@@ -1782,7 +1781,8 @@ internal class IslandActivityController(
             if (returning) {
                 shell.acceptReturnProgress(returnProgress); returnProgress = null
                 if (!entering) shell.prepareReturnFromCurrent() else shell.prepareEntry(mediaReturn = true)
-            } else if (arrival == IslandMotionCoordinator.Arrival.CONTENT) shell.prepareContentArrivalFromCurrent()
+            } else if (arrival == IslandMotionCoordinator.Arrival.CONTENT)
+                shell.prepareContentArrivalFromCurrent(receiveBreadth = secondary || resumingExit)
             if (entering) {
                 // Prepare alpha/scale BEFORE the first Surface can be drawn, including re-entry
                 // after a native activity or a notification-panel transition.

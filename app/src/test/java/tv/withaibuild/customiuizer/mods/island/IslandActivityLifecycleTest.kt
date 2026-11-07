@@ -251,7 +251,7 @@ class IslandActivityLifecycleTest {
         assertEquals(1, adds); assertEquals(0, removes)
     }
 
-    @Test fun aSecondNativeActivityKeepsTheFirstIslandsScreenTopThroughoutItsReturn() {
+    @Test fun aSecondNativeActivityKeepsItsOriginAndBoundsItsIndependentReceive() {
         val controller = controller(media = true, liveKinds = setOf("stopwatch"))
         native.player = launchablePlayer("music-before-second-return")
         controller.updateFromNative(native); revealMedia()
@@ -277,10 +277,14 @@ class IslandActivityLifecycleTest {
         val clock = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
         for (time in 0L until clock.duration step 8L) {
             clock.currentPlayTime = time
-            assertEquals("Second activity must not translate the whole island", top,
-                latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY, .001f)
+            val visibleTop=latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY
+            if(time==0L) assertEquals("The second activity must keep the current origin",top,visibleTop,.001f)
+            // The complete receive clock now includes the existing small height/Y
+            // response; it must not replay the top-entry travel or a full bulge.
+            assertTrue("Only the bounded independent receive may move the top: $visibleTop",visibleTop in (top-3f)..(top+.001f))
         }
         clock.end()
+        assertEquals(top,latestParams!!.y + shell!!.top + shell!!.pivotY * (1f - shell!!.scaleY) + shell!!.translationY,.001f)
         assertEquals(1, adds); assertEquals(0, removes)
     }
 
@@ -706,13 +710,13 @@ class IslandActivityLifecycleTest {
                 shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
                 assertEquals("This path must not depend on a resource callback", orientation, context.resources.configuration.orientation)
                 assertTrue(shell!!.isAttachedToWindow)
-                assertNotNull(controller.showToast(IslandToastContent("Landscape", context.packageName, null), 1000))
+                assertNotNull(controller.showToast(IslandToastContent("Landscape", context.packageName, null), 5000))
                 display.setRotation(Surface.ROTATION_0)
                 metricsWidth = 1080; metricsHeight = 2400
                 geometry.layoutParams.width = 1080
                 geometry.layout(0, 0, 1080, 133)
                 shadowOf(Looper.getMainLooper()).idle(); scheduler.runCurrent()
-                assertNotNull(controller.showToast(IslandToastContent("Portrait", context.packageName, null), 1000))
+                assertNotNull(controller.showToast(IslandToastContent("Portrait", context.packageName, null), 5000))
                 drain()
                 assertTrue(shell!!.isAttachedToWindow)
             }

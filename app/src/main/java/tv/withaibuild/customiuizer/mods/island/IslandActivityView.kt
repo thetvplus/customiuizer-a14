@@ -202,6 +202,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
     private var mediaReturnProgress = 1f
     private var nativeArrival = false
     private var receivingExisting = false
+    private var receivingContent = false
     private var returnProgress: IslandReturnProgress? = null
 
     fun acceptReturnProgress(progress: IslandReturnProgress?) {
@@ -276,7 +277,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         get() = wave.gainPercent
         set(value) { wave.gainPercent = value }
     var realtimeWaveform = false
-    var returnStrength = 0f
     var allowTextBlur = true
     var privacy = 0
         set(value) { if (field != value) { field = value; invalidate() } }
@@ -747,6 +747,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         disposed = false; leaving = false
         nativeArrival = mediaReturn
         receivingExisting = false
+        receivingContent = false
         mediaReturnProgress = if (mediaReturn && returnProgress != null &&
             !powerSaveMotion && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
         if (mediaReturnProgress == 0f || powerSaveMotion || !ValueAnimator.areAnimatorsEnabled()) {
@@ -782,18 +783,19 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // Only a real native channel owns the longer window-arrival clock.
         nativeArrival = true
         receivingExisting = true
+        receivingContent = false
         changePivot(horizontalPivot(geometryWidth), geometryHeight * .5f)
         mediaReturnProgress = if (returnProgress != null && !powerSaveMotion && ValueAnimator.areAnimatorsEnabled()) 0f else 1f
     }
 
-    fun prepareContentArrivalFromCurrent() {
+    fun prepareContentArrivalFromCurrent(receiveBreadth: Boolean = true) {
         acceptReturnProgress(null)
         nativeArrival = false
         receivingExisting = false
+        receivingContent = receiveBreadth
         changePivot(horizontalPivot(geometryWidth), geometryHeight * .5f)
-        // An attached shell already establishes presence. Only a real Home
-        // return owns an arrival excursion; content replacement keeps the
-        // current form and lets actual dimension changes drive the morph.
+        // A new activity can receive horizontally without becoming a Home
+        // window handoff. Metadata/form-only refreshes keep their current shell.
         mediaReturnProgress = 1f
     }
 
@@ -805,11 +807,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         leaving = false
         val startWidth = (if (entering) geometryWidth else fromWidth) * scaleX
         val startHeight = (if (entering) geometryHeight else fromHeight) * scaleY
-        val catchAmount = maxOf(IslandMotion.sizeCatch(startWidth, startHeight, width.toFloat(), height.toFloat(), dp(6).toFloat()),
-            if (mediaReturnProgress == 0f) if (nativeArrival) {
-                val pixels = maxOf(dp(12).toFloat(), width * .09f).coerceAtMost(dp(18).toFloat())
-                pixels / width.coerceAtLeast(1)
-            } else .055f else 0f)
+        val secondarySizeChange=IslandMotion.hasSignificantSizeChange(startWidth,startHeight,
+            width.toFloat(),height.toFloat(),dp(6).toFloat())
         if (!entering) {
             scaleX *= fromWidth.toFloat() / width.coerceAtLeast(1)
             scaleY *= fromHeight.toFloat() / height.coerceAtLeast(1)
@@ -822,13 +821,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             if (nativeArrival && returnProgress != null) IslandMotion.RETURN_TIMEOUT else IslandMotion.CONTENT_ARRIVAL
         }
             else if (entering) IslandMotion.ENTER
-            else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
+            else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && secondarySizeChange)
         animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
             returning = nativeArrival || mediaReturnProgress == 0f,
-            catchWeight = catchAmount * 98 / 100, rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival,
+            rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival,
             boundsMotion = ordinaryBounds && !entering && mediaReturnProgress >= 1f &&
                 maxOf(abs(startWidth - width), abs(startHeight - height)) > 1f, nativeProfile = true,
-            ringerShake = ringerShake)
+            ringerShake = ringerShake, arriving = entering || receivingContent)
+        receivingContent = false
     }
 
     private fun requestDismiss() {
@@ -1056,9 +1056,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         2f * abs(geometryHeight * .5f - cameraY) + cameraHeight)
 
     private fun animateTo(x: Float, y: Float, tx: Float, ty: Float, opacity: Float, duration: Long,
-        onEnd: (() -> Unit)? = null, returning: Boolean = false, catchWeight: Float = 0f, rigid: Boolean = false,
+        onEnd: (() -> Unit)? = null, returning: Boolean = false, rigid: Boolean = false,
         rebound: Boolean = false, boundsMotion: Boolean = false, nativeProfile: Boolean = false,
-        ringerShake: Boolean = false, interaction: Boolean = false) {
+        ringerShake: Boolean = false, interaction: Boolean = false, arriving: Boolean = false) {
         if (!interaction) { pressedBody = false; pressMotion = null }
         if (!returning) cancelMediaReturn()
         val carry = motion != null || dragCaptured
@@ -1123,7 +1123,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             breadth.velocity, depth.velocity, resources.displayMetrics.density,
             minOf(compactWidth(), geometryWidth * scaleX), maximumBreadth, minimumHeight, maximumHeight,
             heightScale=receiveHeightScale) else null
-        if (absorptionResponse != null) milliseconds = maxOf(milliseconds, absorptionResponse.durationMillis)
+        val arrivalBreadth=absorptionResponse?.breadth ?: if(arriving && iosContent && !idle && !interaction)
+            IslandArrivalBreadth(geometryWidth*scaleX,geometryWidth*x,breadth.velocity,resources.displayMetrics.density,
+                minOf(compactWidth(),geometryWidth*scaleX),maximumBreadth) else null
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         // A content handoff may interrupt a top exit. Keep its visible origin,
         // without inheriting the old exit's upward travel into a new activity.
@@ -1148,6 +1150,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                 profile.horizon(translationX - tx, px), profile.horizon(translationY - ty, py),
                 IslandMotion.IOS_BOUNDS.horizon(alpha - opacity, av, .002, .02))
         }
+        // Generic content/bounds timing must not truncate the receive recoil.
+        milliseconds=maxOf(milliseconds,absorptionResponse?.durationMillis ?: 0L,arrivalBreadth?.durationMillis ?: 0L)
         val contentDelay = if (nativeDriven && pendingContent != null) 200L else 0L
         if (iosContent) {
             val swapping = pendingContent != null
@@ -1178,8 +1182,6 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         val flipIn = minOf(160L, milliseconds - fadeOut).coerceAtLeast(1L).toFloat()
         var revealAt = 0L
         var textAt: Long? = if (contentFits() && text.alpha > 0f) -130L else null
-        var lastCatch = 0f
-        var lastCatchTime = 0f
         ValueAnimator.ofFloat(0f, 1f).apply {
             this.duration = milliseconds
             interpolator = LinearInterpolator()
@@ -1194,34 +1196,23 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
                     if (contentStart == null && animation.currentPlayTime >= 200L) contentStart = 200L
                     val contentTime = animation.currentPlayTime - (contentStart ?: animation.currentPlayTime)
                     absorptionResponse?.sample(time)
+                    if(absorptionResponse==null) arrivalBreadth?.sample(time)
                     val physicalDepth = absorptionResponse?.height ?: if (experimental) depth.sample(time).coerceIn(minimumHeight, maximumHeight)
                         else depth.sample(time, minimumHeight, maximumHeight)
                     if (absorptionResponse != null) depth.setVelocity(absorptionResponse.velocityHeight)
                     scaleY = physicalDepth / geometryHeight.coerceAtLeast(1)
-                    val physicalBreadth = if (absorptionResponse != null) {
-                        val width = absorptionResponse.width
-                        breadth.setVelocity(absorptionResponse.velocityWidth)
+                    val physicalBreadth = if (arrivalBreadth != null) {
+                        val width = arrivalBreadth.width
+                        breadth.setVelocity(arrivalBreadth.velocity)
                         breadthExtraVelocity = 0f
                         width
                     } else {
                         val springBreadth = if (experimental) breadth.sample(time) else breadth.sample(time, compactWidth(), maximumBreadth)
-                        val weight = catchWeight * if (returning && nativeArrival) .99f + .02f * returnStrength else 1f
-                        // Page speed confirms arrival; it must not compress or skip
-                        // the default shell's recoil on this existing finite clock.
-                        val catchProgress = if (nativeDriven) (time / seconds).coerceIn(0f, 1f) else progress
-                        val catchValue = if (iosContent || nativeDriven) 0f
-                            else IslandMotion.mediaReturnCatch(catchProgress, nativeArrival)
-                        val effectiveWeight = if (catchValue < 0f) weight else if (nativeDriven) minOf(weight,
-                            ((maximumBreadth - geometryWidth) / geometryWidth.coerceAtLeast(1)).coerceAtLeast(0f))
-                            else IslandMotion.boundedCatchWeight(geometryWidth.toFloat(), maximumBreadth, weight, nativeArrival)
-                        val width = springBreadth + geometryWidth * effectiveWeight * catchValue
-                        val boundedWidth = width.coerceIn(compactWidth(), maximumBreadth)
-                        val catchPixels = boundedWidth - springBreadth
-                        breadthExtraVelocity = if (experimental) 0f else if (width != boundedWidth) -breadth.velocity else if (nativeDriven)
-                            if (time > lastCatchTime) (catchPixels - lastCatch) / (time - lastCatchTime) else 0f
-                            else geometryWidth * effectiveWeight * IslandMotion.catchDerivative(progress, nativeArrival) / seconds
-                        lastCatch = catchPixels; lastCatchTime = time
-                        boundedWidth
+                        // Content/Home receive owns its explicit width axis.
+                        // Other callers have no receive wave; retain their original
+                        // bounds and let ringer feedback carry its own velocity below.
+                        breadthExtraVelocity = 0f
+                        springBreadth.coerceIn(compactWidth(), maximumBreadth)
                     }
                     val bodyWidth = bodyResponse?.width ?: 0f
                     scaleX = minOf(maximumBreadth, physicalBreadth + bodyWidth) / geometryWidth.coerceAtLeast(1)

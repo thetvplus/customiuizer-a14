@@ -112,11 +112,13 @@ CompactRingLayout（`0x224890638`）按元素语义与实际尺寸两遍放置�
 
 2026-11-07 复核原始 block `0x1d8dbf1e0` 与辅助函数 `0x1d874d7e8`：1.2 请求经缩放、居中，随后与按 `minimumEdgePadding` 收紧的 `systemContainerBounds` 相交，并按 displayScale 对齐；1.2 不是最终必达倍率。A14 原实现仅裁横向、仍请求纵向 1.2，导致宽度受限时单独鼓高。现将两轴统一约束到实际可用宽度和既有 14% 岛体安全包络，保留 Begin 参数、当前速度及取消 / 松手语义。这是按用户反馈的 Android 幅度映射，不宣称 Apple 最终倍率或求解器等价。
 
-Up Acceptance 的目标框相对当前容器为 x−8、y−17、w+16、h+26，即中心 Y 上移4。阶段原值为 Stretch .50/.714，120 ms 后重定向 Rebound .35/1，再80 ms进入 Accepted，宽 .513/.525、高 .513/1；这两个推进使用 timer，不等回弹完成 milestone。补核 Stretching 的描述复制 block（`0x1d8dafe88`）后，确认它读取已有容器的未扩张 bounds / center 再写入目标矩形；这不能证明应在安卓从相机种子展开时叠加独立 +26 高度通道。A14 的当前幅度与种子处理见下段。Accepted 不将整个 seed→Short/Long 的大位移改为低阻尼。基础运动、点数到 dp、既有容器上的分轴组合仍属 A14 映射；私有求解器未完整恢复。真实页面轨迹、相机安全与最终移窗保持，触发阈值和首次接受时刻并非已证等价。
+Up Acceptance 的目标框相对当前容器为 x−8、y−17、w+16、h+26，即中心 Y 上移4。阶段原值为 Stretch .50/.714，120 ms 后重定向 Rebound .35/1，再80 ms进入 Accepted，宽 .513/.525、高 .513/1；这两个推进使用 timer，不等回弹完成 milestone。补核 Stretching 的描述复制 block（`0x1d8dafe88`）后，确认它读取已有容器的未扩张 bounds / center 再写入目标矩形；这不能证明应在安卓从相机种子展开时叠加独立 +26 高度通道。A14 的当前幅度与种子处理见下段。早期 A14 将 seed 展开与小幅接受拆开；下述续修已改用一条宽度轴分阶段重定向。基础运动、点数到 dp、容器上的分轴组合仍属 A14 映射；私有求解器未完整恢复。真实页面轨迹、相机安全与最终移窗保持，触发阈值和首次接受时刻并非已证等价。
 
-Home 续修将已确认的返回请求与可选共享进度分开：即使缺少窗口进度，也由原有有限时钟继续接受阶段，不再静止交接。稳态 Compact 宽度不再兼作动画裁切上限，使用现有 `elasticMaximum` 的双侧安全余量；仅小幅接受轴允许越过零点回弹，总框继续受相机 / 屏幕范围限制。已确认 Home 返回的新相机 seed 也接入小幅横向接受，保持原高度过渡；普通首次播放仍不套 Home 请求，不恢复旧 catch 波。
+Home 续修将已确认的返回请求与可选共享进度分开：即使缺少窗口进度，也由原有有限时钟继续接受阶段，不再静止交接。稳态 Compact 宽度不再兼作动画裁切上限，使用现有 `elasticMaximum` 的双侧安全余量；总框继续受相机 / 屏幕范围限制。2026-11-07 续修发现独立早期脉冲在 seed 扩张尚未完成时已消退，同尺寸 Home 时长还会被通用内容时长覆盖。现在由同一物理宽度轴按 120 / 80 ms 重定向，完成横向扩张、回缩和收敛，并在通用时长计算之后保留完整有限尾部。首次出现（含顶部入场）、Home 返回和新活动接收共用该轴；普通元数据刷新、纯形态展开及按压不重播接收。新相机 seed 保持原高度过渡，不叠加纵向鼓包。将 Home 参数用于普通首次通知 / 媒体是本次明确的 Android 产品适配，原生普通首次路由仍未知，不宣称已逆向证明。
 
 按用户“纵向过大、横向消失”的反馈，A14 不再将原生容器的 +26 点原样作为紧凑岛的 dp 增量。现有容器保留 +16 的横向请求，纵向目标按当前宽高映射为同等相对伸缩，系数 `min(1, height/width × 16/26)`；中心 Y 的附加位移使用同一系数。新相机 seed 的该系数为零，基础高度 morph 继续；保留既有安全高度包络。上述是明确的 Android 幅度取舍，不是证明 iOS 原参数已改变。原生三个阶段的 response / damping、120 / 80 ms 计时与内容时序保持。无进度同尺寸 Home 返回、种子横向接续、纵向上界和按压裁切均先有失败回归再修复；这些是 A14 行为证据，不是原机时域采样。
+
+公开资料只补跨平台实现边界：[Apple 的 Live Activities 设计讲解](https://developer.apple.com/videos/play/wwdc2023/10194/)不公开外壳私有求解器；[Android 弹簧文档](https://developer.android.com/develop/ui/views/animations/spring-animation)用于核对中断与速度连续性。对照[固定提交的 Android 参考实现](https://github.com/Arnav-Dugad/dynamic-island-android/blob/c716434720c88f29f4ec3ac07a0576c00d42dd36/app/src/main/java/com/arnav/island/animation/Spring.kt)的解析弹簧思路，本次复用 A14 既有 Spring 与单一 ValueAnimator，未复制参考代码或引入依赖。Windows REA 本次精确函数导出能力不可用，沿用已校验同版原件、精确指令及 WSL Ghidra 证据，不记作新的 REA 导出成功。
 
 ## 音量可见性与弹性补充
 

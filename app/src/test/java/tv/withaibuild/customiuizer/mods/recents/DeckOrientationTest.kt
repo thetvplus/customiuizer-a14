@@ -133,16 +133,23 @@ class DeckOrientationTest {
                 assertEquals("Display rotation before its configuration cannot start a window",0L,owner.beginTransition())
                 owner.refreshGeometry()
                 setField(owner,"transition",99L)
+                assertTrue(scope.write(0,0f,transform))
+                assertTrue(scope.contentAt(0,0f,preparedContent))
                 val receipt=IosRecentsDeckHooks.WindowReceipt(owner,99L)
                 val endpoint=DeckFrame(owner,RectF(0f,0f,1100f,600f),0,1f,true,1f,1f)
                 assertTrue(receipt.matches(owner))
                 owner.rotationChanged(Surface.ROTATION_270)
                 assertFalse("Native display event retires the old window before layout",receipt.matches(owner))
+                assertFalse("Retiring frames must also retire the cached native gesture endpoint",
+                    scope.contentAt(0,0f,preparedContent))
                 display.setRotation(Surface.ROTATION_270)
                 owner.refreshGeometry()
                 assertTrue(scope.landscape)
                 assertFalse("Reverse landscape retires the previous window",receipt.matches(owner))
                 assertFalse(endpoint.copyTo(Transform()))
+                setField(owner,"transition",100L)
+                assertTrue(scope.write(0,0f,transform))
+                assertTrue("Only a freshly prepared layout may supply gesture endpoints",scope.contentAt(0,0f,preparedContent))
             } finally { display.setRotation(Surface.ROTATION_0) }
         } finally { host.finish() }
     }

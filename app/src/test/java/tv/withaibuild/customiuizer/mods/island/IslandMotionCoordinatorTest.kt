@@ -69,7 +69,7 @@ class IslandMotionCoordinatorTest {
         policy.commit("copy", IslandFormState.Source.FEEDBACK)
         assertEquals(IslandMotionCoordinator.Arrival.CONTENT,
             policy.arrival(recorder, IslandFormState.Source.ACTIVITY, false, false, false))
-        assertEquals(0f, IslandMotion.sizeCatch(160f, 40f, 160f, 40f, 6f), 0f)
+        assertFalse(IslandMotion.hasSignificantSizeChange(160f,40f,160f,40f,6f))
     }
     @Test fun aNotificationBodyEarnsLongFormWithoutALengthThresholdAndUserCollapseStillWins() {
         val rich = IslandToastContent("Sender", "native.message", null, notificationKey = "key",
@@ -86,15 +86,6 @@ class IslandMotionCoordinatorTest {
         forms.collapse()
         forms.select("key", automaticExpanded = true); assertFalse(forms.expanded)
         forms.select("next", automaticExpanded = true); assertTrue(forms.expanded)
-    }
-    @Test fun returnCatchStaysAtTheRequestedMiddleStrength() {
-        assertEquals(IslandMotion.CATCH_PEAK, IslandMotion.mediaReturnCatch(.6f), .00001f)
-        for (p in 1..99) {
-            val t=p/100f
-            if (p == 50) continue // The native landing introduces one intentional catch impulse.
-            val numeric=(IslandMotion.mediaReturnCatch(t+.0001f)-IslandMotion.mediaReturnCatch(t-.0001f))/.0002f
-            assertEquals(numeric, IslandMotion.catchDerivative(t), .008f)
-        }
     }
     @Test fun aCurrentClockCanExpandOnPauseAndContractOnResumeWithoutOverridingManualChoice() {
         val forms = IslandFormState()
