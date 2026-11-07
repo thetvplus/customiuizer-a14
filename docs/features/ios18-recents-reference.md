@@ -1,6 +1,6 @@
 # iOS 18 任务堆叠参考与 A14 接入边界
 
-2026-11-04。样本为 iPhone 16 Pro / iOS 18.6.2 / 22G100，与既有岛体研究同构建；此次研究对象是最近任务的 Deck 卡片堆叠。原始二进制、类转储、汇编、伪代码、数值模型与 Android 反编译资料均私有留存，不进入源码或 APK。
+2026-11-04。样本为 iPhone 16 Pro / iOS 18.6.2 / 22G100，与既有岛体研究同构建；此次研究对象是最近任务的 Deck 卡片堆叠。当前消费固定样本的六文件核心包，以有界汇编、索引和明确标为辅助的 C 重建为证据；不假定旧大库仍可用，原始材料不进入源码或 APK。
 
 ## 当前判断
 
@@ -19,7 +19,7 @@
 | 上滑关闭、删除后模拟及相邻项插值 | `SBFluidSwitcherItemContainer` / `SBSwipeToKillSwitcherModifier` |
 | 减弱动态的独立分页路径 | `SBReduceMotionDeckSwitcherModifier` |
 
-选定主链的函数汇编与关键伪代码已保存。布局使用指数深度，而非固定间距：手机默认 pageScale=.75、depthPadding=.13、指数系数 9、平移常量 −18；每卡深度由任务索引、数量与滚动进度共同计算，变换 scale 为 `1+.12×depth`。渲染 scale 乘 pageScale，而另一容器几何消费者使用 `pageScale+.12×depth`，两者不能混用。
+选定主链的函数汇编与关键伪代码已保存。布局使用指数深度，而非固定间距：既有映射采用 pageScale=.75，四项已核验常量包括 depthPadding=.13、指数系数 9、平移常量 −18 和深度缩放系数 .12；每卡深度由任务索引、数量与滚动进度共同计算，变换 scale 为 `1+.12×depth`。渲染 scale 乘 pageScale，而另一容器几何消费者使用 `pageScale+.12×depth`，两者不能混用。
 
 当前进度/内容偏移、RTL、首卡露出边距、居中补偿及可见范围均有独立计算。松手落点按候选目标距离和方向筛选，不能直接替换成固定 gap 的四舍五入。原生减速率 .993 不能直接当 Android friction。
 
@@ -164,4 +164,19 @@ A14 使用原生当前横屏窗口、mVisualRotationSystemInsets 与原生横向
 
 同一管理入口负责有限调用范围、实际 spring 身份、ticket、原生场景类型、重定向前归还和结束 / 取消释放。旧版手势进入嵌套 closing 时沿用 GESTURE，不能被内层按钮 TOGGLE 覆盖；closing provider 在同步调用中换 ticket 时只继承同一个 live owner 的手势来源，参数写入仍核验新 ticket。明确标记的 OPEN 优先于外层宽范围的手势，其他 owner 或无关原生场景不继承。
 
-当前继续使用已确认的 .336/1 与 .531/.94，不从 response 推算总时长；跟手与邻卡排布共用现有 Deck 几何和原生窗口进度。新一轮 Deck REA 资料尚未接入，完整滚动 / 删除求解器、未松手邻卡模拟布局、首次合成帧及真实横竖屏观感仍待对应证据精校。统一入口不是整条链路与 UIKit 等价的结论。
+当前继续使用既有 A14 参数映射 .336/1 与 .531/.94，不从 response 推算总时长；跟手与邻卡排布共用现有 Deck 几何和原生窗口进度。六文件核心包已完成首轮有界汇编对照；完整滚动 / 删除求解器、未松手邻卡模拟布局、首次合成帧及真实横竖屏观感仍待对应证据精校。统一入口不是整条链路与 UIKit 等价的结论。
+
+## 核心包首轮精校（2026-11-07）
+
+来源固定为 iPhone17,1 / d93ap / iOS 18.6.2 / 22G100。核心包的 verification 记录逐字节汇编核对通过且 runtime_verified=false；这证明选定函数的静态原件一致性，不证明动态 receiver、全部调用关系或原机轨迹。C 重建包含 ABI 与间接控制流未知，采用实际 ASM 分支作决定。
+
+| 证据与消费者 | 对照结论与 A14 决定 |
+| --- | --- |
+| depthForIndex 0x1d860e550、_scaleForTransformForIndex 0x1d860e698、scaleForIndex 0x1d860e64c、leadingOffsetForIndex 0x1d860e44c | 四个数据常量 .13 / 9 / -18 / .12 已核验。渲染是 pageScale × (1 + .12 × depth)，leadingOffset 最后也乘渲染比例；现有 IosDeckGeometry 保持此链。固定映射输入的数值样本单独回归，不把 .75 和零起始原点称为本轮恢复的场景默认值 |
+| _scaleInSwitcherViewForIndex 0x1d8d117dc、_scaleTransformedFrameForIndex 0x1d8d116f4 | 容器几何使用 pageScale + .12 × depth；不能据此替换卡片渲染矩阵或窗口端点比例。当前可见池 / 命中继续按 A14 实际呈现几何处理，未宣称与 UIKit 容器模型完全等价 |
+| _restingScrollProgressForProgress 0x1d8d10e08 | ASM 可确认按目标候选距离及方向筛选；C 丢失间接控制流，不作为完整算法。A14 仍只迁移方向候选到原生 q 格点，desiredXOriginForQuantizedTopPage 的完整值与求解器仍未知 |
+| DeckToFullScreen._layoutSettings 0x1d8db498c、HomeGestureToSwitcher._layoutSettings 0x1d8dc06f0 | 可确认 toggleAppSwitcherSettings / launchAppFromSwitcherSettings 与 gestureInitiatedAppToSwitcherSettings 是不同消费者；不能由 SBFFluidBehaviorSettings 基础默认值推定每个配置对象的最终赋值。保留现有 A14 参数映射并更正证据等级，不猜新参数 |
+| DeckToFullScreen.handleTransitionEvent 0x1d8db465c | 原生以 transitionID 匹配事件。A14 同次点击的 start-rect 读取改为复用已建立票据、冻结端点和 listener；实际新点击仍可替换票据。前卡打开没有前置遮挡项，直接跳过遮挡扫描；后排仍沿同帧矩阵校正。邻卡更新改为现有列表索引遍历，不新增状态或时钟 |
+| SwipeToKill 的模拟删除、frame / scale / opacity 消费者 | 原生会在临时删除状态中插值邻卡；A14 未松手阶段的完整邻卡模拟及私有 spring 求解器仍未迁移，不能把现有原生回填 / 取消合同视为完整等价 |
+
+本轮优先消除重复交接和无效逐帧工作，卡片仍用 HyperOS 原生圆角与阴影，横竖屏继续共用 Deck 动效入口。代码层的调用 / 遍历减少不换算为实机帧率、延迟或功耗收益。

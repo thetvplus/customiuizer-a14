@@ -5,7 +5,9 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.util.ArrayDeque
 
-/** Confirmed 22G100 window scenes. Geometry and tracking use the sampled pose. */
+/** A14 window-scene mapping retained from prior research. The focused 22G100
+ * pack verifies distinct consumers, not every scene's numerical initialization.
+ * Geometry and tracking use the sampled pose, not these response values. */
 internal enum class DeckSpringScene(val response: Float,val damping: Float,val nativeType: String) {
     OPEN(.336f,1f,"OPEN_FROM_RECENTS"),
     TOGGLE(.336f,1f,"CLOSE_TO_RECENTS"),

@@ -9,8 +9,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Robolectric
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers.setField
+import org.robolectric.util.ReflectionHelpers.getField
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.util.IdentityHashMap
 
@@ -63,6 +65,36 @@ class DeckContinuityTest {
         val ticket=f.owner.beginTransition()
         try { assertEquals("No window ticket before its viewport is ready",0L,ticket) }
         finally { f.owner.endTransition(ticket) }
+    }
+    @Test fun repeatedOpeningGeometryQueriesKeepOneTicketAndTheCurrentPresentation() {
+        val f=fixture()
+        val host=Robolectric.buildActivity(android.app.Activity::class.java).setup().visible()
+        host.get().setContentView(f.stack)
+        setField(f.owner,"sequence",1L)
+        setField(f.owner,"linkedSprings",ArrayList<Any>())
+        val frozen=hashMapOf(0 to Any())
+        setField(f.owner,"frozen",frozen)
+        setField(f.owner,"router",DeckTouchRouter { false })
+        setField(f.owner,"ticketTimeout",Runnable {})
+        val opening=DeckOpenAlignment(1,RectF(0f,0f,400f,800f))
+        setField(f.owner,"opening",opening)
+        val receipt=IosRecentsDeckHooks.WindowReceipt(f.owner,1L)
+        try {
+            repeat(8) {
+                assertEquals("Read-only start-rect queries reuse the click's transition",1L,f.owner.beginTransition())
+                assertSame(opening,getField<DeckOpenAlignment>(f.owner,"opening"))
+                assertEquals(1,frozen.size)
+                assertTrue(receipt.matches(f.owner))
+            }
+            assertEquals("A new deliberate intent still replaces the transition",2L,f.owner.beginTransition(true))
+            assertFalse(receipt.matches(f.owner))
+            assertTrue(frozen.isEmpty())
+            assertNull(getField<DeckOpenAlignment?>(f.owner,"opening"))
+        } finally {
+            setField(f.owner,"closed",true)
+            f.owner.endTransition(f.owner.transition)
+            host.pause().stop().destroy()
+        }
     }
     @Test fun rightNeighborEntersContinuouslyWhenTheOldestCardIsDismissedAtTheScrollEdge() {
         val f=fixture(); val view=TaskView()

@@ -480,12 +480,17 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         alignment.apply(current,progress,headerAlpha)
     }
     fun openingBoundary(surface: RectF): Float? {
-        if(opening==null) return null
+        // Opening the front card has no prior occluder. Avoid traversing cards
+        // and their global matrices for every Surface frame in this common case.
+        if(opening==null || openingIndex<=0) return null
         var edge=Float.POSITIVE_INFINITY
-        for(card in cards.values) if(card.depth.index<openingIndex && card.geometry.owned &&
-            card.view.visibility==View.VISIBLE && card.view.alpha>.01f) {
-            card.geometry.screenContent(occludingBounds,0f)
-            if(RectF.intersects(surface,occludingBounds)) edge=minOf(edge,occludingBounds.left)
+        for(i in 0 until drawCards.size) {
+            val card=drawCards[i]
+            if(card.depth.index<openingIndex && card.geometry.owned &&
+                card.view.visibility==View.VISIBLE && card.view.alpha>.01f) {
+                card.geometry.screenContent(occludingBounds,0f)
+                if(RectF.intersects(surface,occludingBounds)) edge=minOf(edge,occludingBounds.left)
+            }
         }
         return edge.takeIf { it.isFinite() }
     }

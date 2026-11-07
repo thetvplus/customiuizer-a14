@@ -45,7 +45,8 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
         if(start.width()<=0f || current.isEmpty) return
         val ratio=current.width()/start.width()
         if(!ratio.isFinite() || ratio<=0f) return
-        for(pose in neighbors) pose.apply(start,current,ratio,progress.coerceIn(0f,1f),headerAlpha)
+        val fraction=progress.coerceIn(0f,1f)
+        for(i in 0 until neighbors.size) neighbors[i].apply(start,current,ratio,fraction,headerAlpha)
     }
     fun release() {
         val cleanup=CleanupActions()

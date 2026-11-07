@@ -244,7 +244,9 @@ internal object IosRecentsDeckHooks {
             val thumbnail=it.getThisObject() as View
             card(thumbnail.parent)?.shadow?.radius((it.getArg(0) as Int).toFloat())
         }
-        before(api.openStart) { card(it.getArg(2))?.owner?.beginTransition(true) }
+        // This is a geometry query within the click's transition, not another
+        // user intent. Reuse its ticket, frozen endpoints and native listeners.
+        before(api.openStart) { card(it.getArg(2))?.owner?.beginTransition() }
         after(api.openStart) {
             val card=card(it.getArg(2)) ?: return@after
             val result=it.getResult() as? RectF ?: return@after

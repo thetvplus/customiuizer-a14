@@ -17,6 +17,26 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk=[34], application=android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DeckGeometryTest {
+    @Test fun focused22G100RenderWitnessesKeepContainerScaleOutOfTheCardTransform() {
+        // Explicit mapping inputs, not recovered scene defaults: W=B=390,
+        // density=1, page=.75, minimum frame origin=0. ASM 0x1d860e550 /
+        // 0x1d860e698 / 0x1d860e64c / 0x1d860e44c supplies depth, transform,
+        // render scale and leading offset. The additive container scale in
+        // 0x1d8d117dc belongs to a different consumer.
+        val model=IosDeckGeometry(390f,390f,1f,.75f)
+        val samples=arrayOf(
+            floatArrayOf(0f,0f,.73234808f,0f),
+            floatArrayOf(1f,0f,.72064808f,-44.231464f),
+            floatArrayOf(0f,.5f,.73819808f,52.230613f),
+            floatArrayOf(1f,.5f,.72649808f,-28.636795f),
+            floatArrayOf(0f,1f,.74404808f,147.14097f))
+        for(sample in samples) {
+            val index=sample[0].toInt();val cursor=sample[1]
+            assertEquals(sample[2],model.scale(index,cursor),.000001f)
+            assertEquals(sample[3],model.left(index,cursor,0f),.0005f)
+        }
+    }
+
     @Test fun landscapeNativePoseMatchesTheWindowThroughHoldReleaseAndReverse() {
         val parent=FrameLayout(RuntimeEnvironment.getApplication())
         val view=View(parent.context)
