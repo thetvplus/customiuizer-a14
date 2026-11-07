@@ -860,6 +860,64 @@ class PreferenceNavigationUiTest {
     }
 
     @Test
+    fun homeIndicatorChecksSystemNavigationOnPageEntryAndResumeWithoutChangingSavedChoice() {
+        val device=android.os.Build.DEVICE
+        val incremental=android.os.Build.VERSION.INCREMENTAL
+        val abis=android.os.Build.SUPPORTED_ABIS
+        try {
+            org.robolectric.util.ReflectionHelpers.setStaticField(android.os.Build::class.java,"SUPPORTED_ABIS",arrayOf("arm64-v8a"))
+            org.robolectric.shadows.ShadowBuild.setDevice("xaga")
+            org.robolectric.util.ReflectionHelpers.setStaticField(android.os.Build.VERSION::class.java,"INCREMENTAL","V816.0.9.0.ULOINXM")
+            Settings.Global.putInt(activity.contentResolver,"force_fsg_nav_bar",1)
+            Settings.Global.putInt(activity.contentResolver,"hide_gesture_line",0)
+            val home=currentPage() as MainFragment
+            home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_controls")))
+            settleNavigation()
+            requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_controls_cat_navbar")).performClick()
+            settleNavigation()
+            val page=currentPage() as SubFragment
+            val row=requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_controls_ios_home_indicator"))
+            val hide=requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_controls_nonavbar"))
+            assertTrue(row.isEnabled);row.isChecked=true
+            for((mode,hidden,expected) in listOf(Triple(0,0,false),Triple(1,1,false),Triple(1,0,true))) {
+                Settings.Global.putInt(activity.contentResolver,"force_fsg_nav_bar",mode)
+                Settings.Global.putInt(activity.contentResolver,"hide_gesture_line",hidden)
+                page.onPause();page.onResume()
+                assertEquals(expected,row.isEnabled);assertTrue(row.isChecked)
+            }
+            hide.callChangeListener(true);hide.isChecked=true
+            assertFalse(row.isEnabled)
+            page.onPause();page.onResume();assertFalse(row.isEnabled)
+            hide.callChangeListener(false);hide.isChecked=false;assertTrue(row.isEnabled)
+            org.robolectric.shadows.ShadowBuild.setDevice("unsupported")
+            page.onPause();page.onResume();assertTrue(row.isEnabled);assertTrue(row.isChecked)
+        } finally {
+            org.robolectric.shadows.ShadowBuild.setDevice(device)
+            org.robolectric.util.ReflectionHelpers.setStaticField(android.os.Build::class.java,"SUPPORTED_ABIS",abis)
+            org.robolectric.util.ReflectionHelpers.setStaticField(android.os.Build.VERSION::class.java,"INCREMENTAL",incremental)
+        }
+    }
+
+    @Test
+    fun savedIosCategoryAliasesOpenTheirCurrentVisiblePageAndSurviveRecreation() {
+        val aliases=listOf("ios_volume" to "audio","ios_desktop" to "recents")
+        for((old,current) in aliases) {
+            val home=currentPage() as MainFragment
+            val open=MainFragment::class.java.getDeclaredMethod("openModCat",String::class.java,String::class.java,String::class.java)
+                .apply { isAccessible=true }
+            assertTrue(open.invoke(home,"pref_key_system","pref_key_system_cat_$old","") as Boolean)
+            settleNavigation()
+            val page=currentPage() as SubFragment
+            assertPreferencePageVisible(page)
+            assertTrue(page.preferenceScreen.preferenceCount>0)
+            assertTrue(page.findPreference<Preference>("pref_key_system_cat_$current")!=null)
+            controller.recreate();activity=controller.get();settleNavigation()
+            assertPreferencePageVisible(currentPage())
+            pressToolbarBack()
+        }
+    }
+
+    @Test
     fun navigationPageKeepsKeyboardFixOppositeToVisibleBarActions() {
         val home = currentPage() as MainFragment
         home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_controls")))

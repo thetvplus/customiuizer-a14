@@ -128,6 +128,7 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
             api.surface(element, copy)?.takeIf { it.isValid } ?: return null
         } else null
         val active = Session(element, copy, root, surface, frame.landingRectangle(), if (mesh) frame.rectangle() else null, mesh, instant)
+        active.contactLeft = frame.contactLeft; active.contactRight = frame.contactRight
         session = active
         val generation = epoch
         if (mesh && surface != null) captureJob = scope.launch(Dispatchers.Default) {
@@ -217,18 +218,18 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
         root.getLocationOnScreen(drawing.location)
         drawing.rect.set(rect); drawing.rect.offset(-drawing.location[0].toFloat(), -drawing.location[1].toFloat())
         val remaining = drawing.handoff.progress(active.progress, drawing.rect, active.presented)
+        drawing.leading = IslandAbsorptionMesh.leadingProgress(remaining)
         drawing.destination.set(active.target); drawing.destination.offset(-drawing.location[0].toFloat(), -drawing.location[1].toFloat())
         drawing.shellDestination.set(checkNotNull(active.shellTarget))
         drawing.shellDestination.offset(-drawing.location[0].toFloat(), -drawing.location[1].toFloat())
         val intakeY = IslandAbsorptionMesh.intakeY(drawing.shellDestination, drawing.destination)
         active.radius = radius.coerceAtLeast(0f)
         IslandAbsorptionMesh.fill(drawing.vertices, drawing.handoff.source, drawing.destination, remaining, drawing.rect, intakeY,
-            occlusion = if (active.presented) drawing.shellDestination else null)
+            occlusion = if (active.presented) drawing.shellDestination else null,
+            contactLeft = active.contactLeft - drawing.location[0], contactRight = active.contactRight - drawing.location[0])
         // Keep release opacity until the entire page lies inside the island. Then
         // reveal the real island underneath, rather than leave a separately coloured dot.
         drawing.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.mergeOpacity(drawing.rect, drawing.shellDestination)).toInt().coerceIn(0, 255)
-        if (drawing.paint.alpha > 0) IslandAbsorptionMesh.contactColors(drawing.colors, drawing.vertices,
-            drawing.destination, remaining, intakeY, opaqueBodyReady = true)
         active.setBounds(0, 0, root.width, root.height)
         drawing.clipReady = false
         active.invalidateSelf()
@@ -292,13 +293,13 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
     private class Mesh {
         val handoff = IslandAbsorptionHandoff()
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
-        val colors = IntArray((IslandAbsorptionMesh.ROWS + 1) * 2) { -1 }
         val location = IntArray(2)
         val rect = RectF(); val destination = RectF(); val shellDestination = RectF()
         val path = Path()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         var clipReady = false
         var clipPresented = false
+        var leading = 0f
 
         fun clip(presented: Boolean, radius: Float): Path {
             if (clipReady && clipPresented == presented) return path
@@ -309,7 +310,9 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
                 // Mesh-edge clipping retains native rounded end caps without a rectangular
                 // screenshot outline appearing while the middle is visibly deforming.
                 val topLeft = vertices[0]; val topRight = vertices[2]
-                val corner = minOf(radius, (topRight - topLeft) * .5f, rect.height() * .2f)
+                // Native page corners flatten as the leading edge reaches the
+                // island's middle; a rounded neck must not become an oval cap.
+                val corner = minOf(radius * (1f - leading), (topRight - topLeft) * .5f, rect.height() * .2f)
                 path.moveTo(topLeft + corner, rect.top)
                 path.lineTo(topRight - corner, rect.top); path.quadTo(topRight, rect.top, topRight, rect.top + corner)
                 val bottomLeft = vertices[IslandAbsorptionMesh.ROWS * 4]
@@ -342,6 +345,7 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
         val root = WeakReference(root)
         val progressChannel = IslandReturnProgress.Producer()
         val drawing = if (mesh) Mesh() else null
+        var contactLeft = target.left; var contactRight = target.right
         var texture: Bitmap? = null
         var progress = 0f; var radius = 0f
         var atCommit = Float.NaN
@@ -358,7 +362,7 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
             val save = canvas.save()
             try {
                 canvas.clipPath(clip)
-                canvas.drawBitmapMesh(bitmap, 1, IslandAbsorptionMesh.ROWS, drawing.vertices, 0, drawing.colors, 0, drawing.paint)
+                canvas.drawBitmapMesh(bitmap, 1, IslandAbsorptionMesh.ROWS, drawing.vertices, 0, null, 0, drawing.paint)
             } finally { canvas.restoreToCount(save) }
         }
         override fun setAlpha(alpha: Int) = Unit
@@ -369,8 +373,8 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
     }
 
     companion object {
-        internal const val MAX_CAPTURE_WIDTH = 768
-        internal const val MAX_CAPTURE_PIXELS = 512 * 1024
+        internal const val MAX_CAPTURE_WIDTH = 640
+        internal const val MAX_CAPTURE_PIXELS = 320 * 1024
         internal fun captureScale(width: Int, height: Int): Float =
             minOf(1f, MAX_CAPTURE_WIDTH.toFloat() / width,
                 // Leave headroom for compositor rounding while enforcing the hard result cap.

@@ -841,9 +841,10 @@ class ModuleHelper private constructor() {
                     val topPackage = foregroundInfo.mForegroundPackageName
                     if (pkgName == topPackage) return null
                 }
+                val display: android.view.Display? = mContext.display
                 val freeFormStackInfoList = MiuiFreeFormManager.getAllFreeFormStackInfosOnDisplay(
                     // A14's default-display lookup can fail despite the non-null annotation.
-                    mContext.display?.displayId ?: 0
+                    display?.displayId ?: 0
                 )
                 val freeFormCount = freeFormStackInfoList?.size ?: 0
                 if (freeFormCount == 2) return null

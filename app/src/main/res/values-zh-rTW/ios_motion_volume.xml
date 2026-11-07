@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_volume_ios_title">iOS 音量（實驗性）</string>
+    <string name="system_volume_ios_summ">調整直向與橫向收合音量條的外觀，保留原生拖曳、音訊路由及展開控制。變更後請重新啟動系統介面。</string>
+    <string name="system_volume_ios_compact_title">預設窄條</string>
+    <string name="system_volume_ios_compact_summ">立即顯示窄條，拖曳調整時放大。直向與橫向皆適用。變更後請重新啟動系統介面。</string>
+</resources>

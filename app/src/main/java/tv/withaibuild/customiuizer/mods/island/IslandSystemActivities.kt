@@ -55,7 +55,7 @@ internal data class IslandSystemActivity(val kind: IslandSystemKind, val value: 
     fun content(context: Context): IslandToastContent {
         val res = ModuleHelper.getModuleRes(context)
         val mode = when (kind) {
-            IslandSystemKind.DND -> R.string.system_statusbaricons_dnd_title
+            IslandSystemKind.DND -> R.string.system_island_mode_dnd
             IslandSystemKind.RINGER -> when (value) {
                 AudioManager.RINGER_MODE_SILENT -> R.string.system_island_mode_silent
                 AudioManager.RINGER_MODE_VIBRATE -> R.string.system_island_mode_vibrate
@@ -73,7 +73,7 @@ internal data class IslandSystemActivity(val kind: IslandSystemKind, val value: 
         val enabled = value != 0 || kind == IslandSystemKind.RINGER || kind == IslandSystemKind.DARK
         return IslandToastContent(res.getString(if (enabled) R.string.system_island_state_enabled else R.string.system_island_state_disabled),
             "com.android.systemui", IslandSystemIcons.load(context, kind, value), detail = res.getString(mode),
-            status = true)
+            status = true, statusShortLabel = if(kind==IslandSystemKind.DND) res.getString(R.string.system_island_mode_dnd_short) else null)
     }
 }
 

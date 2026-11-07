@@ -32,7 +32,7 @@ class BluetoothControllerImpl {
     @JvmField var mBluetoothBattery = -1
     @JvmField val mConnectedDevices = ArrayList<Any>()
     fun setBluetoothBattery(step: Int) { mBluetoothBattery = step }
-    fun onConnectionStatusFetched(status: Any?) {}
-    fun onActiveDeviceChanged(profile: Int, device: Any?) {}
+    fun onConnectionStatusFetched(status: com.android.systemui.statusbar.policy.bluetooth.ConnectionStatusModel?) {}
+    fun onActiveDeviceChanged(profile: Int, device: com.android.settingslib.bluetooth.CachedBluetoothDevice?) {}
     fun onBluetoothStateChanged(state: Int) {}
 }

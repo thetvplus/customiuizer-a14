@@ -9,7 +9,7 @@ open class PhoneStatusBarPolicy {
     @JvmField val mIntentReceiver = HeadsetReceiver(this)
     @Suppress("UNUSED_PARAMETER")
     class HeadsetReceiver(@JvmField val `this$0`: PhoneStatusBarPolicy) {
-        fun onReceive(context: Any?, intent: Any?) {}
+        fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {}
     }
 }
 

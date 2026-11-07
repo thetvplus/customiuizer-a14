@@ -22,6 +22,19 @@ class IslandMusicReturnSignalTest {
     private val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
         280f, 15f, 800f, 125f, 1080, 2400)
 
+    @Test fun contactApertureIsValidatedAndDoesNotReplaceTargetIdentity() {
+        val emerging = frame.copy(contactLeft = 490f, contactRight = 590f)
+        assertEquals(emerging, IslandMusicReturnSignal.decode(IslandMusicReturnSignal.encode(emerging, 1000, 1), 1010)!!.frame)
+        assertTrue(emerging.sameTarget(frame))
+        assertFalse(emerging.sameTarget(frame.copy(packageName = "other.music")))
+        for (bad in listOf(frame.copy(contactLeft = Float.NaN), frame.copy(contactRight = 900f),
+            frame.copy(contactLeft = 800f, contactRight = 700f))) {
+            assertNull(IslandMusicReturnSignal.decode(IslandMusicReturnSignal.encode(bad, 1000, 1), 1010))
+        }
+        val legacy = IslandMusicReturnSignal.encode(frame, 1000, 1).apply { removeExtra("contactLeft"); removeExtra("contactRight") }
+        assertEquals(frame, IslandMusicReturnSignal.decode(legacy, 1010)!!.frame)
+    }
+
     @Test fun explicitPacketsRetainOnlyTheUserSourceAndValidatedGeometryForFiveSeconds() {
         val message = IslandMusicReturnSignal.encode(frame, 1000, 12)
         assertEquals(IslandMusicReturnSignal.LAUNCHER, message.`package`)

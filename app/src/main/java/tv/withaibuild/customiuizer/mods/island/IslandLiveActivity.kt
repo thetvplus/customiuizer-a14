@@ -81,6 +81,15 @@ internal class IslandLiveRegistry(private val dismissal: Dismissal = Dismissal()
         current[key.kind] = old.copy(order = nextOrder?.invoke() ?: ++sequence)
     }
     fun urgent(value: IslandLiveActivity) = value.kind == IslandLiveKind.CALL || value.kind == IslandLiveKind.ALARM || value.alert
+    /** Ringing floats belong to the native clock even if the island was dismissed
+     * or a higher-priority activity won selection. Ordinary countdowns do not yield. */
+    fun nativeClockAlert(kinds: Set<IslandLiveKind>, excluded: Set<String>, user: Int): Boolean =
+        current.values.any {
+            val value = it.activity
+            value.kind in kinds && value.packageName !in excluded && value.uid / 100000 == user &&
+                value.packageName == IslandLiveKind.CLOCK_PACKAGE &&
+                (value.kind == IslandLiveKind.ALARM || value.kind == IslandLiveKind.TIMER && value.alert)
+        }
     private fun rank(value: IslandLiveActivity) = when {
         value.kind == IslandLiveKind.CALL -> 3
         urgent(value) -> 2

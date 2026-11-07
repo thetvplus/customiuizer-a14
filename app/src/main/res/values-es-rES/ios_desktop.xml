@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">Tamaño automático de tarjetas</string>
+    <string name="system_deck_size_auto_summ">Ajusta las tarjetas a la pantalla y al espacio disponible.</string>
+    <string name="system_deck_size_title">Tamaño de las tarjetas</string>
+    <string name="system_deck_size_summ">Ajusta el tamaño general de las tarjetas. Reinicia el lanzador.</string>
+</resources>

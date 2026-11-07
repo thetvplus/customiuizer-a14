@@ -17,12 +17,16 @@ import tv.withaibuild.customiuizer.utils.PrefMap
 object GenericAppFeatures {
     @JvmStatic
     fun all(lpparam: PackageReadyParam, mPrefs: PrefMap): List<FeatureSpec> =
-        selected(lpparam, mPrefs, true, true, true, true, true)
+        selected(lpparam, mPrefs, true, true, true, true, true, includePocoRecentsDeck = true)
 
-    /** POCO shares only the verified folder ABI, not the Launcher feature catalog. */
+    /** POCO opts into individual verified capabilities, not the Launcher catalog. */
     @JvmStatic
     fun shouldInstallPocoFolderIconBlur(prefs: PrefMap, packageName: String, processName: String?): Boolean =
         packageName == processName && PocoFolderIconBlurFeature.evaluateEnabled(prefs, packageName)
+
+    @JvmStatic
+    fun shouldInstallPocoRecentsDeck(prefs: PrefMap, packageName: String, processName: String?): Boolean =
+        packageName == processName && PocoRecentsDeckFeature.evaluateEnabled(prefs, packageName)
 
     @JvmStatic
     @JvmOverloads
@@ -35,15 +39,27 @@ object GenericAppFeatures {
         includeVolumeMediaPlayer: Boolean,
         includePocoFolderIconBlur: Boolean = false,
         applicationContext: Context? = null,
+        includePocoRecentsDeck: Boolean = false,
     ): List<FeatureSpec> {
         val count = (if (includeLauncher) 1 else 0) +
             (if (includeStatusBarBackground) 1 else 0) +
             (if (includeNoOverscroll) 1 else 0) +
             (if (includeVolumeMediaPlayer) 1 else 0) +
-            (if (includePocoFolderIconBlur) 1 else 0)
+            (if (includePocoFolderIconBlur) 1 else 0) + (if (includePocoRecentsDeck) 1 else 0)
         if (count == 0) return emptyList()
 
         val features = ArrayList<FeatureSpec>(count)
+        if (includePocoRecentsDeck) {
+            features.add(LazyFeatureSpec(
+                id = PocoRecentsDeckFeatureId,
+                name = "POCO Recents Deck",
+                preferenceKey = "system_recents_ios18_deck",
+                target = FeatureTarget.ANY,
+                phase = InstallPhase.APPLICATION_ATTACHED,
+                enabled = { prefs -> PocoRecentsDeckFeature.evaluateEnabled(prefs, lpparam.packageName.orEmpty()) },
+                factory = { PocoRecentsDeckFeature(lpparam, mPrefs) },
+            ))
+        }
         if (includePocoFolderIconBlur) {
             features.add(
                 LazyFeatureSpec(
@@ -111,6 +127,18 @@ object GenericAppFeatures {
         }
         return features
     }
+}
+
+internal class PocoRecentsDeckFeature(lpparam: PackageReadyParam, mPrefs: PrefMap) : BaseApplicationAttachedFeature(
+    lpparam, mPrefs, PocoRecentsDeckFeatureId, "POCO Recents Deck",
+    "system_recents_ios18_deck", FeatureTarget.ANY,
+) {
+    companion object {
+        fun evaluateEnabled(prefs: PrefMap, packageName: String): Boolean =
+            packageName == "com.mi.android.globallauncher" && prefs.getBoolean("system_recents_ios18_deck")
+    }
+    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs, packageName)
+    override fun install() = tv.withaibuild.customiuizer.mods.recents.IosRecentsDeckHooks.install(lpparam, mPrefs)
 }
 
 internal class PocoFolderIconBlurFeature(lpparam: PackageReadyParam, mPrefs: PrefMap,

@@ -38,6 +38,7 @@ object GenericAppInstaller {
         isNoOverscroll: Boolean,
         controlMedia: Boolean,
         pocoFolderIconBlur: Boolean = false,
+        pocoRecentsDeck: Boolean = false,
     ) {
         attachHook.install {
             ModuleHelper.findAndHookMethodWithId(
@@ -58,6 +59,7 @@ object GenericAppInstaller {
                             controlMedia,
                             pocoFolderIconBlur,
                             callback.getArg(0) as? Context,
+                            pocoRecentsDeck,
                         )) {
                             registry.register(feature)
                         }
@@ -66,7 +68,7 @@ object GenericAppInstaller {
                             registry.installAll(FeatureTarget.LAUNCHER, InstallPhase.APPLICATION_ATTACHED, mPrefs)
                         }
 
-                        if (isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur) {
+                        if (isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur || pocoRecentsDeck) {
                             registry.installAll(FeatureTarget.ANY, InstallPhase.APPLICATION_ATTACHED, mPrefs)
                         }
 

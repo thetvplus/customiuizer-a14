@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_volume_ios_title">Bảng âm lượng iOS</string>
+    <string name="system_volume_ios_summ">Dùng kiểu iOS và giữ điều khiển âm lượng hệ thống. Khởi động lại giao diện hệ thống để áp dụng.</string>
+    <string name="system_volume_ios_compact_title">Thanh mảnh mặc định</string>
+    <string name="system_volume_ios_compact_summ">Hiển thị thanh mảnh trước và trở về thanh mảnh sau khi điều chỉnh bằng thao tác chạm.</string>
+</resources>

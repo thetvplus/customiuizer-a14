@@ -27,17 +27,17 @@ class SurfaceCostBudgetTest {
             assertTrue(scale > 0f && scale <= 1f)
             val outWidth = ceil(width.toDouble() * scale).toLong()
             val outHeight = ceil(height.toDouble() * scale).toLong()
-            assertTrue("$width x $height => $outWidth x $outHeight", outWidth <= 769)
-            assertTrue("$width x $height => $outWidth x $outHeight", outWidth * outHeight <= 524_288)
+            assertTrue("$width x $height => $outWidth x $outHeight", outWidth <= 641)
+            assertTrue("$width x $height => $outWidth x $outHeight", outWidth * outHeight <= 327_680)
         }
     }
 
-    @Test fun pageMeshUsesAtMost34VerticesWithoutAnExtraColumn() {
-        assertEquals(16, IslandAbsorptionMesh.ROWS)
-        assertEquals(68, IslandAbsorptionMesh.FLOATS)
+    @Test fun pageMeshUsesAtMost26VerticesWithoutAnExtraColumn() {
+        assertEquals(12, IslandAbsorptionMesh.ROWS)
+        assertEquals(52, IslandAbsorptionMesh.FLOATS)
     }
 
-    @Test fun capsuleUses16SegmentsPerCapAndRetainsItsContactJoin() {
+    @Test fun capsuleUses16SegmentsPerCap() {
         class Counted : Path() {
             var cubics = 0
             override fun cubicTo(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
@@ -46,9 +46,7 @@ class SurfaceCostBudgetTest {
             }
         }
         val plain = Counted().also { IslandCapsuleGeometry.build(it, 240f, 40f) }
-        val contact = Counted().also { IslandCapsuleGeometry.build(it, 240f, 40f, 1f) }
         assertEquals(32, plain.cubics)
-        assertEquals(34, contact.cubics)
     }
 
     @Test fun waveformCaptureIsBoundedSeparatelyFromDisplayVsync() {

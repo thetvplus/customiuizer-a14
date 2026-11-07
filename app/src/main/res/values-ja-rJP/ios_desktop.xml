@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">カードサイズを自動調整</string>
+    <string name="system_deck_size_auto_summ">画面と利用可能な領域にカードを合わせます。</string>
+    <string name="system_deck_size_title">カードサイズ</string>
+    <string name="system_deck_size_summ">カード全体のサイズを調整します。ランチャーの再起動で反映されます。</string>
+</resources>

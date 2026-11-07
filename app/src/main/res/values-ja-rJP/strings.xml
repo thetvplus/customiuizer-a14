@@ -1308,4 +1308,15 @@
     <string name="system_island_live_title">進行中のアクティビティ</string>
     <string-array name="island_return_effects"><item>なし</item><item>瞬時に収納</item><item>吸収</item></string-array>
     <string name="system_island_interaction_group">操作</string>
+    <string name="system_recents_ios18_deck_title">最近使ったアプリを重ねる</string>
+    <string name="system_recents_ios18_deck_summ">対応する HyperOS 1 ランチャーが必要です。設定 → ホーム画面 → 最近使ったアプリの配置で「横向き」を選んでください。全画面ジェスチャーを推奨します。ホーム画面のアイコン配置とは別の設定です。メニュー名は ROM により異なります。ランチャーの再起動で反映されます。</string>
+    <string name="system_recents_deck_header_icon_title">スタックのアプリアイコンサイズ</string>
+    <string name="system_recents_deck_header_title_title">スタックのタイトルサイズ</string>
+    <string name="system_recents_deck_header_size_summ">自動ではカードに伴う見出しの拡大を抑えます。割合は Android 標準サイズが基準です。ランチャーの再起動で反映されます。</string>
+    <string name="system_recents_deck_motion_title">iOS ウィンドウアニメーション</string>
+    <string name="system_recents_deck_motion_summ">アプリを開く動きと履歴への移行を調整します。オフでは標準の動作を使います。ランチャーの再起動で反映されます。</string>
+    <string name="system_ios_desktop_title">iOS タスクカード</string>
+    <string name="system_ios_volume_group_title">iOS 音量</string>
+    <string name="controls_ios_home_indicator_title">iOS ホームインジケータ</string>
+    <string name="controls_ios_home_indicator_summ">対応する ROM、全画面ジェスチャー、表示中のシステムインジケーターが必要です。設定 → ホーム画面 → システムナビゲーションでジェスチャーを選び、全画面インジケーターの非表示をオフにしてください。本モジュールのジェスチャーライン非表示もオフにしてください。メニュー名は ROM により異なります。システム UI の再起動で反映されます。</string>
 </resources>

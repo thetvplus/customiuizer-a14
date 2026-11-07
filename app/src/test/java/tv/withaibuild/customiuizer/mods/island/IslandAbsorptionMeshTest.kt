@@ -74,7 +74,8 @@ class IslandAbsorptionMeshTest {
             IslandAbsorptionMesh.fill(vertices, rect, target, t)
             assertEquals(target.centerY() - target.height() * .04f, vertices[1], .001f)
             assertEquals(target.centerX(), (vertices[0] + vertices[2]) * .5f, .001f)
-            assertTrue(vertices[2] - vertices[0] < target.width() * .4f)
+            assertEquals("The leading footprint uses the moderated destination width", target.width() * .78f,
+                vertices[2] - vertices[0], .001f)
         }
         for (row in 0..IslandAbsorptionMesh.ROWS) {
             assertTrue(target.contains(vertices[row * 4], vertices[row * 4 + 1]))

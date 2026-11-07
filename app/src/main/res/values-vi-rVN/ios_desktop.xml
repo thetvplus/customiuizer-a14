@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">Kích thước thẻ tự động</string>
+    <string name="system_deck_size_auto_summ">Điều chỉnh thẻ theo màn hình và không gian khả dụng.</string>
+    <string name="system_deck_size_title">Kích thước thẻ</string>
+    <string name="system_deck_size_summ">Điều chỉnh kích thước tổng thể của thẻ. Khởi động lại trình khởi chạy để áp dụng.</string>
+</resources>

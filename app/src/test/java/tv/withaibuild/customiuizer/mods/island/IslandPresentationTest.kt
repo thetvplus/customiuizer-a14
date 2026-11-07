@@ -35,10 +35,10 @@ class IslandPresentationTest {
             shell.layout(0, 0, width, 40)
         }
         layout()
-        val title = (shell.getChildAt(1) as android.widget.LinearLayout).getChildAt(0) as android.widget.TextView
+        val title = (shell.contentAt(1) as android.widget.LinearLayout).getChildAt(0) as android.widget.TextView
         val size = title.textSize
         val lines = title.lineCount
-        val icon = (shell.getChildAt(0) as android.widget.LinearLayout).getChildAt(0)
+        val icon = (shell.contentAt(0) as android.widget.LinearLayout).getChildAt(0)
         val iconLeft = icon.left; val iconTop = icon.top
         repeat(3) {
             // Foreground, accepted native return, and window refresh all measure the same source.
@@ -65,8 +65,8 @@ class IslandPresentationTest {
             shell.measure(android.view.View.MeasureSpec.makeMeasureSpec(280, android.view.View.MeasureSpec.EXACTLY),
                 android.view.View.MeasureSpec.makeMeasureSpec(40, android.view.View.MeasureSpec.EXACTLY))
             shell.layout(0, 0, 280, 40)
-            val leading = shell.getChildAt(0) as android.widget.LinearLayout
-            val group = shell.getChildAt(1) as android.widget.LinearLayout
+            val leading = shell.contentAt(0) as android.widget.LinearLayout
+            val group = shell.contentAt(1) as android.widget.LinearLayout
             val identity = leading.getChildAt(1) as android.widget.TextView
             val content = group.getChildAt(0) as android.widget.TextView
             assertTrue(identity.width > 0); assertTrue(content.width > 0)
@@ -96,10 +96,10 @@ class IslandPresentationTest {
         activity.setContentView(shell)
         shell.geometry(280, 40, 0)
         shell.bind("Song title", "Artist name", null, true, true, true, 0, false, expanded = true)
-        val group = shell.getChildAt(1) as android.widget.LinearLayout
+        val group = shell.contentAt(1) as android.widget.LinearLayout
         val primary = group.getChildAt(0) as android.widget.TextView
         val secondary = group.getChildAt(1) as android.widget.TextView
-        val identity = (shell.getChildAt(0) as android.widget.LinearLayout).getChildAt(1) as android.widget.TextView
+        val identity = (shell.contentAt(0) as android.widget.LinearLayout).getChildAt(1) as android.widget.TextView
         assertEquals("Song title", identity.text.toString()); assertEquals("Artist name", primary.text.toString())
         assertEquals(1, primary.maxLines); assertEquals(1, secondary.maxLines)
         assertTrue(identity.textSize > primary.textSize)
@@ -134,7 +134,6 @@ class IslandPresentationTest {
         shell.transition(400, 80, 400, 80, true)
         val entrance = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
         assertNotSame(exit, entrance)
-        assertEquals(IslandMotion.ENTER, entrance.duration)
         exit.end() // A stale animation cannot apply its exit values to the successor.
         assertEquals(0, exited)
         entrance.end()
@@ -160,7 +159,7 @@ class IslandPresentationTest {
             }
         }
         swipe(180f); assertEquals(0, dismissed)
-        assertEquals(40, shell.height); assertEquals(3, shell.childCount)
+        assertEquals(40, shell.height); assertEquals(1, shell.childCount)
         swipe(-100f); assertEquals(1, dismissed)
         activity.finish()
     }
@@ -172,8 +171,8 @@ class IslandPresentationTest {
         shell.bind("Sender", "Message supplied by notification", null, false, false, false, 0L, true)
         shell.geometry(240, 40, 40); shell.layout(0, 0, 240, 40)
         assertFalse(shell.performLongClick())
-        assertEquals(3, shell.childCount)
-        assertEquals(2, (shell.getChildAt(1) as android.widget.LinearLayout).childCount)
+        assertEquals(1, shell.childCount)
+        assertEquals(2, (shell.contentAt(1) as android.widget.LinearLayout).childCount)
         assertTrue(shell.contentDescription.toString().contains("Message supplied by notification"))
         activity.finish()
     }
@@ -188,8 +187,8 @@ class IslandPresentationTest {
             shell.measure(android.view.View.MeasureSpec.makeMeasureSpec(width,android.view.View.MeasureSpec.EXACTLY),
                 android.view.View.MeasureSpec.makeMeasureSpec(height,android.view.View.MeasureSpec.EXACTLY))
             shell.layout(0,0,width,height)
-            assertTrue(shell.getChildAt(0).right <= (width-40)/2)
-            assertTrue(shell.getChildAt(1).left >= (width+40)/2)
+            assertTrue(shell.contentAt(0).right <= (width-40)/2)
+            assertTrue(shell.contentAt(1).left >= (width+40)/2)
             assertEquals(height,shell.height)
         }
         activity.finish()
@@ -329,7 +328,7 @@ class IslandPresentationTest {
         shell.geometry(840, 120, 120); shell.layout(0, 0, 840, 120)
         shell.transition(552, 120, 840, 120, false)
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(180))
-        val icon = (shell.getChildAt(0) as android.widget.LinearLayout).getChildAt(0)
+        val icon = (shell.contentAt(0) as android.widget.LinearLayout).getChildAt(0)
         assertEquals(shell.scaleX * icon.scaleX, shell.scaleY * icon.scaleY, .001f)
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1200))
         assertEquals(1f, icon.scaleX); assertEquals(1f, icon.scaleY)

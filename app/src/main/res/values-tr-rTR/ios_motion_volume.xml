@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_volume_ios_title">iOS ses paneli</string>
+    <string name="system_volume_ios_summ">Sistem ses kontrollerini koruyarak iOS stilini uygular. Sistem arayüzünü yeniden başlatın.</string>
+    <string name="system_volume_ios_compact_title">Varsayılan olarak ince çubuk</string>
+    <string name="system_volume_ios_compact_summ">İnce çubukla başlar ve dokunarak ayarladıktan sonra yeniden incelir.</string>
+</resources>

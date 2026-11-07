@@ -1308,4 +1308,15 @@
     <string name="system_island_live_title">Atividades em andamento</string>
     <string-array name="island_return_effects"><item>Nenhum</item><item>Instantâneo</item><item>Absorção</item></string-array>
     <string name="system_island_interaction_group">Interação</string>
+    <string name="system_recents_ios18_deck_title">Aplicativos recentes empilhados</string>
+    <string name="system_recents_ios18_deck_summ">Requer um launcher HyperOS 1 compatível e a disposição Horizontal em Configurações → Tela inicial → Organizar itens em Recentes. Recomendam-se gestos em tela cheia. Esta opção é independente da disposição dos ícones. Os nomes podem variar. Reinicie o launcher.</string>
+    <string name="system_recents_deck_header_icon_title">Tamanho do ícone na pilha</string>
+    <string name="system_recents_deck_header_title_title">Tamanho do título na pilha</string>
+    <string name="system_recents_deck_header_size_summ">O modo automático evita ampliar o cabeçalho com o cartão. As porcentagens usam o tamanho original do Android. Reinicie o iniciador.</string>
+    <string name="system_recents_deck_motion_title">Animação de janelas do iOS</string>
+    <string name="system_recents_deck_motion_summ">Ajusta a abertura de apps e a entrada nos recentes. Desative para usar as animações originais. Reinicie o iniciador.</string>
+    <string name="system_ios_desktop_title">Cartões de tarefas iOS</string>
+    <string name="system_ios_volume_group_title">Volume iOS</string>
+    <string name="controls_ios_home_indicator_title">Indicador de gestos do iOS</string>
+    <string name="controls_ios_home_indicator_summ">Requer gestos em tela cheia, indicador visível e ROM compatível. Em Configurações → Tela inicial → Navegação do sistema, selecione Gestos e desative Ocultar indicador de tela cheia. Desative também Ocultar linha de gestos neste módulo. Os nomes variam conforme a ROM. Reinicie a interface do sistema.</string>
 </resources>

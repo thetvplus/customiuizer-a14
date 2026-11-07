@@ -451,6 +451,8 @@ class CurrentArchitectureTest(unittest.TestCase):
             "app/src/main/java/tv/withaibuild/customiuizer/MainModule.java",
             # Direct signature-polymorphic VarHandle invokes keep shared progress scalar-only.
             "app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandReturnProgress.java",
+            # Native RectFSpringAnim supplies null Animator callbacks.
+            "app/src/main/java/tv/withaibuild/customiuizer/mods/recents/DeckSpringEndListener.java",
             "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/XposedHelpers.java",
         ]
         self.assertEqual(

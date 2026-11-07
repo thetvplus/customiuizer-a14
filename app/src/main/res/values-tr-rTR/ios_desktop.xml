@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">Otomatik kart boyutu</string>
+    <string name="system_deck_size_auto_summ">Kartları ekrana ve kullanılabilir alana sığdırır.</string>
+    <string name="system_deck_size_title">Kart boyutu</string>
+    <string name="system_deck_size_summ">Genel kart boyutunu ayarlar. Başlatıcıyı yeniden başlatın.</string>
+</resources>

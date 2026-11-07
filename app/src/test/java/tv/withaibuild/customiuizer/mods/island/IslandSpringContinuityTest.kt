@@ -4,6 +4,34 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandSpringContinuityTest {
+    @Test fun ordinaryFormDampingHasOneSmallOvershootAndKeepsPositionAndVelocityOnReversal() {
+        val spring = IslandMotion.Spring()
+        spring.retarget(184f, 280f, .384f, false, dampingRatio = IslandMotion.FORM_DAMPING)
+        var peak = 184f
+        for (frame in 0..46) peak = maxOf(peak, spring.sample(frame / 120f))
+        assertTrue("A restrained bounds catch", peak > 280f && peak < 282f)
+        assertEquals(280f, spring.sample(.384f), .03f)
+        val position = spring.sample(.06f)
+        val velocity = spring.velocity
+        spring.retarget(position, 184f, .384f, true, dampingRatio = IslandMotion.FORM_DAMPING)
+        assertEquals(position, spring.sample(0f), .0001f)
+        assertEquals(velocity, spring.velocity, .001f)
+        assertTrue(spring.sample(.001f) > position)
+        spring.finish()
+        assertEquals(184f, spring.value, 0f)
+        assertEquals(0f, spring.velocity, 0f)
+    }
+    @Test fun ordinaryBoundsUseElapsedTimeAtBothRefreshRates() {
+        val slow = IslandMotion.Spring(); val fast = IslandMotion.Spring()
+        slow.retarget(184f, 280f, .384f, false, dampingRatio = IslandMotion.FORM_DAMPING)
+        fast.retarget(184f, 280f, .384f, false, dampingRatio = IslandMotion.FORM_DAMPING)
+        for (frame in 0..23) {
+            val time = frame / 60f
+            fast.sample(maxOf(0f, time - 1f / 120f))
+            assertEquals(slow.sample(time), fast.sample(time), .001f)
+            assertEquals(slow.velocity, fast.velocity, .001f)
+        }
+    }
     @Test fun reversalPreservesBothPositionAndVelocityBeforeDecelerating() {
         val spring = IslandMotion.Spring()
         spring.retarget(184f, 280f, .32f, false)

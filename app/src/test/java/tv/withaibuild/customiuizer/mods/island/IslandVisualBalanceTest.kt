@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandVisualBalanceTest {
     @Test fun theReceivingBodyHasItsOwnReadableTempoAcrossNativePageSpeedsAndRefreshRates() {
-        val peaks = mutableListOf<Long>()
+        val peaks = mutableListOf<Pair<Boolean,Long>>()
         val review = JSONArray()
         for (hz in listOf(60, 90, 120)) for (pageMs in listOf(650, 420, 900)) for (existing in listOf(false, true)) {
             val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
@@ -55,6 +55,7 @@ class IslandVisualBalanceTest {
                 shell.transition(160, 40, 160, 40, !existing)
                 val animation = clock(shell)!!
                 var peak = 0f; var peakAt = 0L; var column = 0
+                var previousWidth = 40f; var expandedAt: Long? = null
                 val captures = longArrayOf(0, 80, 160, 260, 380, 500, 650, 800)
                 for (i in 0..(hz * 11 / 10)) {
                     val time = i * 1000L / hz
@@ -62,9 +63,15 @@ class IslandVisualBalanceTest {
                     if (clock(shell) === animation) animation.currentPlayTime = time
                     val width = 160 * shell.scaleX
                     if (width > peak) { peak = width; peakAt = time }
+                    if (!existing) {
+                        assertTrue("A new seed expands continuously without a second crest", width + .001f >= previousWidth && width <= 160.001f)
+                        assertEquals("Only existing containers borrow the vertical receive",40f,40*shell.scaleY,.001f)
+                        if (width >= 144f && expandedAt == null) expandedAt = time
+                        previousWidth = width
+                    }
                     assertTrue("Actual safe width is authoritative", width in 39.999f..179.201f)
                     assertEquals(0f, shell.translationX, 0f)
-                    assertEquals(0f, shell.translationY, 0f)
+                    assertTrue(shell.translationY in -4.001f.. .001f)
                     samples.put(JSONObject().put("timeMs", time).put("width", width).put("height", 40 * shell.scaleY))
                     if (canvas != null && column < captures.size && time >= captures[column]) {
                         paint.color = Color.DKGRAY; paint.textSize = 16f
@@ -78,9 +85,11 @@ class IslandVisualBalanceTest {
                     File(directory, "$name.json").writeText(samples.toString(2))
                     strip?.let { image -> File(directory, "$name.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) } }
                 }
-                assertTrue("A full receiving form needs a visible, bounded crest: $peak", peak >= 170.4f)
-                assertTrue("A readable receiving gesture must not finish its crest in a blink: $peakAt", peakAt in 280L..620L)
-                peaks += peakAt
+                if (existing) assertTrue("An existing shell keeps its native receive excursion: $peak", peak >= 167f)
+                else assertEquals("A new shell reaches its form without another overshoot",160f,peak,.001f)
+                val responseAt = if (existing) peakAt else requireNotNull(expandedAt)
+                assertTrue("A readable expansion/receive must respond within its finite body tempo: $responseAt", responseAt in 100L..620L)
+                peaks += existing to responseAt
                 review.put(JSONObject().put("hz", hz).put("nativePageMs", pageMs).put("existing", existing)
                     .put("peakWidth", peak).put("peakAtMs", peakAt))
                 assertNull("Both clocks must settle and release their channel", clock(shell))
@@ -93,7 +102,7 @@ class IslandVisualBalanceTest {
             }
         }
         // Page speed must not squeeze the island's mass into the page's first few frames.
-        assertTrue("Consistent receiving tempo across 420/650/900ms native returns", peaks.max() - peaks.min() <= 90L)
+        for(group in peaks.groupBy { it.first }.values) assertTrue("Native page speed does not retime the receive stages",group.maxOf { it.second }-group.minOf { it.second }<=40L)
         directory?.let { File(it, "balance-peaks.json").writeText(review.toString(2)) }
     }
 

@@ -79,7 +79,7 @@ class LauncherMusicReturnAccessTest {
         assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
         assertTrue(target.top > frame.top)
         assertTrue(target.bottom < frame.bottom)
-        assertEquals((frame.top + frame.bottom) * .5f + (frame.bottom - frame.top) * .22f, target.centerY(), .001f)
+        assertEquals((frame.top + frame.bottom) * .5f, target.centerY(), .001f)
         assertEquals(RectF(200f, 1800f, 300f, 1900f), source.targetRect)
     }
 
@@ -89,7 +89,7 @@ class LauncherMusicReturnAccessTest {
             val source = params(targets = Targets(arrayOf(Remote().apply { packageName = pkg })))
             val nav = Nav().apply { mRunningTaskComponentName = ComponentName(pkg, "Activity") }
             val target = (access.retarget(source, Element(), nav, current) as Params).targetRect
-            assertEquals((frame.right - frame.left) * .38f, target.width(), .001f)
+            assertEquals((frame.right - frame.left) * .62f, target.width(), .001f)
             assertEquals((frame.left + frame.right) * .5f, target.centerX(), .001f)
             assertEquals((frame.bottom - frame.top) * .44f, target.height(), .001f)
         }
@@ -112,14 +112,14 @@ class LauncherMusicReturnAccessTest {
         assertNotNull(quick.retarget(params(targets = null), owner, Nav(), frame))
     }
 
-    @Test fun absorptionHasASmallerLowerLandingWithoutChangingDefaultOrNativeParams() {
+    @Test fun absorptionHasAWideCenteredLandingWithoutChangingDefaultOrNativeParams() {
         val original = params()
         val nativeTarget = RectF(original.targetRect)
         val absorption = access.retarget(original, Element(), Nav(), frame) as Params
         assertEquals(frame.landingRectangle(), absorption.targetRect)
-        assertTrue(absorption.targetRect.width() < frame.rectangle().width() * .6f)
-        assertTrue(absorption.targetRect.height() < frame.rectangle().height() * .6f)
-        assertTrue(absorption.targetRect.centerY() > frame.rectangle().centerY())
+        assertEquals(frame.rectangle().width() * .62f, absorption.targetRect.width(), .001f)
+        assertEquals(frame.rectangle().height() * .44f, absorption.targetRect.height(), .001f)
+        assertEquals(frame.rectangle().centerY(), absorption.targetRect.centerY(), .001f)
         assertTrue(frame.rectangle().contains(absorption.targetRect))
         assertEquals(nativeTarget, original.targetRect)
         assertEquals(original.startRect, absorption.startRect)

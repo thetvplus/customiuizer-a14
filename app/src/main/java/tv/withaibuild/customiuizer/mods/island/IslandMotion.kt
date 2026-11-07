@@ -4,9 +4,18 @@ import android.animation.TimeInterpolator
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /** Damped step response: prompt travel followed by one small, decaying overshoot. */
 internal object IslandMotion {
+    // Subpixel filter increments on ordinary phone densities, prepared once.
+    const val CONTENT_BLUR_STEPS = 64
+    const val CONTENT_BLUR_RADIUS = 16.666f
+    fun contentBlurLevel(reveal: Float): Int = if(reveal >= .999f) -1 else
+        (kotlin.math.ceil((1f-reveal)*CONTENT_BLUR_STEPS).toInt()-1).coerceIn(0,CONTENT_BLUR_STEPS-1)
+    fun contentBlurRadius(level: Int,density: Float): Float =
+        if(level<0) 0f else CONTENT_BLUR_RADIUS*(level+1)/CONTENT_BLUR_STEPS*density
+
     const val ENTER = 403L
     const val MORPH = 384L
     const val REBOUND = 384L
@@ -15,15 +24,49 @@ internal object IslandMotion {
     const val CONTENT = 230L
     const val CONTENT_ARRIVAL = 403L
     const val ALBUM = 365L
+    /** 22G100 ordinary Compact/Custom stored damping. A14 retains its finite
+     * clock/omega mapping; this is not Apple's response/behaviorType conversion. */
+    const val FORM_DAMPING = .816
+    /** 22G100 stored profiles. Period conversion and state assignment are an
+     * explicit opt-in experiment; response is never used as a playback duration. */
+    data class Profile(val response: Double, val damping: Double) {
+        val omega = 2.0 * kotlin.math.PI / response
+        fun horizon(distance: Float, velocity: Float, pixel: Double = .25, speed: Double = 2.0): Long {
+            if (damping == 1.0) {
+                val d = kotlin.math.abs(distance.toDouble())
+                val b = kotlin.math.abs(velocity + omega * distance)
+                // Critical damping has a polynomial tail, not an oscillatory
+                // envelope divided by sqrt(1-zeta²). Prepare only when retargeting.
+                for (ms in 160L..2000L step 16) {
+                    val t = ms / 1000.0
+                    val decay = exp(-omega * t)
+                    if ((d + b * t) * decay <= pixel &&
+                        (b + omega * (d + b * t)) * decay <= speed) return ms
+                }
+                return 2000L
+            }
+            val a = damping * omega
+            val w = omega * sqrt(1.0 - damping * damping)
+            val b = (velocity + a * distance) / w
+            val radius = sqrt(distance.toDouble() * distance + b * b)
+            val envelope = maxOf(radius / pixel, omega * radius / speed, 1.0)
+            return (kotlin.math.ln(envelope) / a * 1000).toLong().coerceIn(160L, 2000L)
+        }
+    }
+    val IOS_BOUNDS = Profile(.512, .816)
+    val IOS_IDLE = Profile(.512, .6)
+    val IOS_COLLAPSE = Profile(.45, .816)
+    val IOS_CONTENT = Profile(.6, .816)
+    val IOS_SLOTS = Profile(.512, .816)
+    val IOS_SNAPSHOT = Profile(.3, .816)
+    /** 22G100 content-interaction begin; release keeps the existing A14 recoil. */
+    val IOS_PRESS = Profile(.85, .694)
     const val MEDIA_DELAY = 750L
     const val RETURN_TIMEOUT = 1600L
     const val ABSORPTION_TIME_SCALE = 1.2f
     const val ABSORPTION_BODY = 567L
-    const val ABSORPTION_RELEASE_SCALE = 1.25f
-    const val ABSORPTION_DEPTH = 180L
-    const val ABSORPTION_LANDING_WIDTH_RATIO = .38f
+    const val ABSORPTION_LANDING_WIDTH_RATIO = .62f
     const val ABSORPTION_LANDING_HEIGHT_RATIO = .44f
-    const val ABSORPTION_LANDING_OFFSET = .22f
     const val DRAG_STRETCH = .08f
     const val DRAG_SQUEEZE = .04f
     const val PAUSE_LIFETIME = 2000L
@@ -61,14 +104,6 @@ internal object IslandMotion {
         val change = maxOf(dw / maxOf(width, fromWidth, 1f), dh / maxOf(height, fromHeight, 1f))
         return ((change - .08f) / .42f).coerceIn(0f, 1f) * .03f
     }
-    /** A bounded contact cue, using the existing absorption clock. */
-    fun returnFusion(progress: Float): Float {
-        if (!progress.isFinite() || progress <= .12f || progress >= .88f) return 0f
-        val t = (progress - .12f) / .76f
-        val bell = 4f * t * (1f - t)
-        return bell * bell
-    }
-
     /** The native window arrives while the shell's one finite clock makes a small catch. */
     fun mediaReturnCatch(progress: Float, nativeWindow: Boolean = true): Float {
         if (!nativeWindow) {
@@ -107,69 +142,6 @@ internal object IslandMotion {
     fun boundedCatchWeight(width: Float, maximum: Float, requested: Float, nativeWindow: Boolean = true): Float =
         minOf(requested, (maximum - width).coerceAtLeast(0f) /
             (width.coerceAtLeast(1f) * if (nativeWindow) CATCH_PEAK else CONTENT_CATCH_PEAK)).coerceAtLeast(0f)
-    /** Native progress owns acceptance/completion; elapsed time owns the body's mass.
-     * A fast page must not squeeze the entire receiving response into a few frames.
-     * One analytic receiving gesture runs on the existing finite View clock. */
-    class AbsorptionResponse(private val from: Float, private val target: Float,
-        private val minimum: Float, private val maximum: Float, amplitude: Float,
-        initialVelocity: Float, seconds: Float, initialProgress: Float = 0f,
-        catchStart: Float = 0f, releaseScale: Float = 1f) {
-        private val outward = amplitude.coerceIn(minimum - target, maximum - target)
-        // Breadth takes a small grip first; depth is one symmetric compression,
-        // without the opposite-direction pre-bulge that made the short catch uneven.
-        private val inward = if (amplitude > 0f) (-amplitude * .3f).coerceIn(minimum - target, maximum - target) else 0f
-        private val late = initialProgress >= .9f
-        private val duration = if (late) CONTENT_ARRIVAL / 1000f else seconds.coerceIn(.3f, 1f)
-        private val pulseSeconds = duration * (1f - catchStart)
-        private val pulseOffset = duration * catchStart
-        private val releaseRate = 1f / releaseScale
-        val settlingSeconds = if (late) duration else duration + .44f * pulseSeconds * (releaseScale - 1f)
-        private val spring = Spring().apply {
-            setVelocity(initialVelocity)
-            retarget(from, target, duration, true)
-        }
-        private var completed = false
-        private var lastTime = 0f
-        var value = from
-            private set
-        var velocity = initialVelocity
-            private set
-
-        fun sample(progress: Float, elapsed: Float): Float {
-            val time = maxOf(lastTime, elapsed)
-            if (progress >= 1f) completed = true
-            value = spring.sample(time, minimum, maximum)
-            velocity = spring.velocity
-            if (!late) {
-                val phase = (time - pulseOffset) / pulseSeconds
-                val grip = phase / .32f
-                val receive = (phase - .12f) / .88f
-                // Stretch only the descending half of this existing pulse. At its
-                // crest the derivative is zero, so position and velocity stay continuous.
-                val releasing = receive > .5f
-                val receivingPhase = if (releasing) .5f + (receive - .5f) * releaseRate else receive
-                value += inward * pulse(grip) + outward * pulse(receivingPhase)
-                velocity += inward * pulseDerivative(grip) / (.32f * pulseSeconds) +
-                    outward * pulseDerivative(receivingPhase) * (if (releasing) releaseRate else 1f) / (.88f * pulseSeconds)
-            }
-            if (settled(time)) { value = target; velocity = 0f }
-            if (value < minimum) { value = minimum; velocity = maxOf(0f, velocity) }
-            if (value > maximum) { value = maximum; velocity = minOf(0f, velocity) }
-            lastTime = time
-            return value
-        }
-        private fun pulse(progress: Float): Float {
-            val t = progress.coerceIn(0f, 1f)
-            val tail = 1f - t
-            return 16f * t * t * tail * tail
-        }
-        private fun pulseDerivative(progress: Float): Float {
-            val t = progress.coerceIn(0f, 1f)
-            return 32f * t * (1f - t) * (1f - 2f * t)
-        }
-        fun settled(time: Float) = completed && time >= settlingSeconds
-    }
-
     /** Compression approaches the physical height limit without a flat clamp. */
     fun compressedScale(origin: Float, delta: Float, minimum: Float): Float {
         if (delta >= 0f) return origin + delta
@@ -189,8 +161,6 @@ internal object IslandMotion {
         return ratio * ratio
     }
 
-    fun arrivalScale(progress: Float): Float = .96f + .04f *
-        settle.getInterpolation(((progress - .5f) / .5f).coerceIn(0f, 1f))
     private const val DECAY = 7.04
     private const val FREQUENCY = 5.28
     private const val PHASE = 4.0 / 3.0
@@ -203,7 +173,7 @@ internal object IslandMotion {
         return (response(input.coerceIn(0f, 1f).toDouble()) / finalResponse).toFloat()
     }
 
-    /** Analytic damping in physical pixels; overscroll alone uses an elastic response. The animator is only a
+    /** Analytic damping in physical pixels. The animator is only a
      * finite clock; retargeting preserves measured position and velocity, independent of Hz.
      * No reference implementation is incorporated and no spring library is required. */
     class Spring {
@@ -216,26 +186,42 @@ internal object IslandMotion {
         private var impulse = 0.0
         private var omega = 1.0
         private var elastic = false
+        private var dampingRatio = 1.0
+        private var frequencyRatio = 0.0
 
         fun addVelocity(physicalVelocity: Float) { velocity += physicalVelocity }
         fun setVelocity(physicalVelocity: Float) { velocity = if (physicalVelocity.isFinite()) physicalVelocity else 0f }
 
-        fun retarget(current: Float, destination: Float, seconds: Float, carry: Boolean, elastic: Boolean = false) {
+        fun retarget(current: Float, destination: Float, seconds: Float, carry: Boolean, elastic: Boolean = false,
+            dampingRatio: Double = 1.0) {
             value = current
             target = destination
             if (!carry) velocity = 0f
             velocityAtStart = velocity
             omega = 10.5 / seconds.coerceIn(.1f, 1f)
-            this.elastic = elastic
+            this.dampingRatio = if (elastic) .60328 else dampingRatio.coerceIn(.5, 1.0)
+            this.elastic = elastic || this.dampingRatio < 1.0
+            // Retain the established gesture coefficient exactly. Prepare the
+            // ordinary bounds coefficient once, rather than taking sqrt per frame.
+            frequencyRatio = if (elastic) .79753 else sqrt(1.0 - this.dampingRatio * this.dampingRatio)
             displacement = (current - destination).toDouble()
+            impulse = velocity + omega * displacement
+        }
+
+        fun retarget(current: Float, destination: Float, profile: Profile, carry: Boolean) {
+            retarget(current, destination, .4f, carry, dampingRatio = profile.damping)
+            dampingRatio = profile.damping.coerceIn(.01, 1.0)
+            elastic = dampingRatio < 1.0
+            frequencyRatio = sqrt(1.0 - dampingRatio * dampingRatio)
+            omega = profile.omega
             impulse = velocity + omega * displacement
         }
 
         fun sample(seconds: Float, minimum: Float = -Float.MAX_VALUE, maximum: Float = Float.MAX_VALUE): Float {
             val time = seconds.coerceAtLeast(0f).toDouble()
             if (elastic) {
-                val damping = .60328 * omega
-                val frequency = omega * .79753
+                val damping = dampingRatio * omega
+                val frequency = omega * frequencyRatio
                 val b = (velocityAtStart + damping * displacement) / frequency
                 val c = cos(frequency * time); val s = sin(frequency * time)
                 val offset = displacement * c + b * s

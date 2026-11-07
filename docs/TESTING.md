@@ -110,3 +110,7 @@ SDK 安装与 Gradle 输入一致；宿主 classpath 与 APK runtime 分开审�
 发布故障回归覆盖 workflow / event / 仓库 / attempt / SHA、环境策略漂移、签名前 main 前进、错误证书 / 凭据、篡改、版本 / 双语记录、草稿资产、预发行 Latest 与双端部分失败。只允许 Validate / Sign 成功而 Publish 失败的原 attempt 恢复；测试模拟服务器不能证明远端 Secrets / 权限或设备通过。
 
 发布工具测试覆盖原生 main / exact CI、零人工审批的 main-only 环境、指定正式目标与试用隔离、累计说明 / 安全两基线、无条数上限的双语内容、Artifact ID / 归档摘要及安全解压、原候选失败恢复、顺序双仓资产和下载文档幂等性。它们使用模拟 API，不触发正式签名或远端公开；远端环境和实际清理另以 API 读回核实，完整规则见 [发布与恢复](RELEASE.md)。
+
+## 本轮设备刷新率取证
+
+60 / 120 Hz 以采样时的实际 display mode / render frame rate 及 FrameTimeline 为准，不能用设置请求值代替。2026-11-06 的 A14 MISettings 定向反汇编确认：SDK 33 起 `user_refresh_rate` 读写位于 Settings.Secure；对应分支还消费 `miui_refresh_rate`，仅写同名 System 键不会落实本机 60 Hz。取证前分别保存原值，采样结束恢复；此为本轮样本的测量环境说明，不作为所有 ROM 的通用写入配方。GPU memory 数据源不等于 GPU render stages，未提供后者的设备不能据 UI / RenderThread 时长宣称 GPU 用时或功耗收益。

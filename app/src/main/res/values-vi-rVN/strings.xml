@@ -1308,4 +1308,15 @@
     <string name="system_island_live_title">Hoạt động trực tiếp</string>
     <string-array name="island_return_effects"><item>Không</item><item>Thu tức thì</item><item>Hút vào</item></string-array>
     <string name="system_island_interaction_group">Tương tác</string>
+    <string name="system_recents_ios18_deck_title">Ứng dụng gần đây xếp chồng</string>
+    <string name="system_recents_ios18_deck_summ">Cần trình khởi chạy HyperOS 1 được hỗ trợ và bố cục Ngang trong Cài đặt → Màn hình chính → Sắp xếp ứng dụng gần đây. Nên dùng cử chỉ toàn màn hình. Đây là mục riêng, khác bố cục biểu tượng. Tên mục có thể khác tùy ROM. Khởi động lại trình khởi chạy để áp dụng.</string>
+    <string name="system_recents_deck_header_icon_title">Kích thước biểu tượng trong chồng</string>
+    <string name="system_recents_deck_header_title_title">Kích thước tiêu đề trong chồng</string>
+    <string name="system_recents_deck_header_size_summ">Tự động tránh phóng to tiêu đề cùng thẻ. Tỷ lệ dựa trên kích thước gốc của Android. Khởi động lại trình khởi chạy để áp dụng.</string>
+    <string name="system_recents_deck_motion_title">Chuyển động cửa sổ iOS</string>
+    <string name="system_recents_deck_motion_summ">Điều chỉnh mở ứng dụng và vào tác vụ gần đây. Tắt để dùng chuyển động gốc. Khởi động lại trình khởi chạy để áp dụng.</string>
+    <string name="system_ios_desktop_title">Thẻ tác vụ iOS</string>
+    <string name="system_ios_volume_group_title">Âm lượng iOS</string>
+    <string name="controls_ios_home_indicator_title">Thanh cử chỉ iOS</string>
+    <string name="controls_ios_home_indicator_summ">Cần ROM được hỗ trợ, cử chỉ toàn màn hình và thanh chỉ báo hệ thống đang hiển thị. Trong Cài đặt → Màn hình chính → Điều hướng hệ thống, chọn Cử chỉ và tắt Ẩn chỉ báo toàn màn hình. Đồng thời tắt tùy chọn ẩn thanh cử chỉ trong mô-đun này. Tên mục có thể khác tùy ROM. Khởi động lại giao diện hệ thống để áp dụng.</string>
 </resources>

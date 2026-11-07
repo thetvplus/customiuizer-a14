@@ -87,10 +87,8 @@ class IslandMotionCoordinatorTest {
         forms.select("key", automaticExpanded = true); assertFalse(forms.expanded)
         forms.select("next", automaticExpanded = true); assertTrue(forms.expanded)
     }
-    @Test fun returnCatchAndArtworkScaleStayAtTheRequestedMiddleStrength() {
+    @Test fun returnCatchStaysAtTheRequestedMiddleStrength() {
         assertEquals(IslandMotion.CATCH_PEAK, IslandMotion.mediaReturnCatch(.6f), .00001f)
-        assertEquals(.96f, IslandMotion.arrivalScale(0f), .00001f)
-        assertEquals(1f, IslandMotion.arrivalScale(1f), .00001f)
         for (p in 1..99) {
             val t=p/100f
             if (p == 50) continue // The native landing introduces one intentional catch impulse.
@@ -113,7 +111,7 @@ class IslandMotionCoordinatorTest {
         val view = IslandActivityView(org.robolectric.RuntimeEnvironment.getApplication())
         view.prepareContentArrivalFromCurrent()
         view.cancelNativeArrival()
-        assertEquals(0f, org.robolectric.util.ReflectionHelpers.getField<Float>(view, "mediaReturnProgress"), 0f)
+        assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(view, "mediaReturnProgress"), 0f)
         view.prepareReturnFromCurrent()
         view.cancelNativeArrival()
         assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(view, "mediaReturnProgress"), 0f)

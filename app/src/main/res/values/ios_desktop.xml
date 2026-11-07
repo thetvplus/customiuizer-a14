@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">Automatic card size</string>
+    <string name="system_deck_size_auto_summ">Fit cards to the screen and available space.</string>
+    <string name="system_deck_size_title">Card size</string>
+    <string name="system_deck_size_summ">Adjust the overall card size. Restart the launcher to apply.</string>
+</resources>

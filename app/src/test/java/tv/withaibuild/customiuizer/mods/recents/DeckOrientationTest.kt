@@ -1,0 +1,97 @@
+package tv.withaibuild.customiuizer.mods.recents
+
+import android.app.Activity
+import android.graphics.Rect
+import android.graphics.RectF
+import android.widget.FrameLayout
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.util.ReflectionHelpers.setField
+import java.util.IdentityHashMap
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk=[34],application=android.app.Application::class,qualifiers="port")
+class DeckOrientationTest {
+    // Only the selected native ABI is supplied. No launcher constructor, Hook
+    // installation or physical/visual orientation equivalence is simulated.
+    class Algorithm {
+        @JvmField var visual=true
+        @JvmField var window=Rect(0,0,2400,1080)
+        @JvmField var insets=Rect(90,0,30,40)
+        @JvmField var base=RectF(0f,0f,1100f,600f)
+        @JvmField var padding=Rect()
+        @JvmField var count=4
+        @JvmField var gap=30f
+        @JvmField var minimum=-99f
+        fun isLandscapeVisually()=visual
+        fun calculateMinScrollP()=-7f
+    }
+    class Transform {
+        @JvmField var rect=RectF()
+        @JvmField var scale=1f
+        @JvmField var visible=false
+        @JvmField var z=0f
+    }
+    private fun <T> unconstructed(type: Class<T>): T {
+        val field=Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe").apply { isAccessible=true }
+        return requireNotNull(type.cast(field.type.getMethod("allocateInstance",Class::class.java).invoke(field.get(null),type)))
+    }
+    @Test fun visualAxesDriveGeometryAndRotationRetiresAllOldEndpoints() {
+        val host=Robolectric.buildActivity(Activity::class.java).setup().get()
+        try {
+            val api=unconstructed(DeckNativeApi::class.java)
+            for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
+                "padding" to "padding","count" to "count","gap" to "gap"))
+                setField(api,target,Algorithm::class.java.getField(source))
+            setField(api,"visualLandscape",Algorithm::class.java.getMethod("isLandscapeVisually"))
+            setField(api,"minimum",Algorithm::class.java.getField("minimum"))
+            setField(api,"minimumScroll",Algorithm::class.java.getMethod("calculateMinScrollP"))
+            for(name in listOf("rect","scale","visible","z")) setField(api,name,Transform::class.java.getField(name))
+            val owner=unconstructed(DeckOwner::class.java)
+            val stack=FrameLayout(host)
+            val frozen=HashMap<Int,Any>().apply { put(0,Any()) }
+            val pairs=IdentityHashMap<Any,Any>().apply { put(Any(),Any()) }
+            for((name,value) in mapOf("api" to api,"stack" to stack,"headerConfig" to DeckHeaderConfig(0,0),
+                "frozen" to frozen,"pairs" to pairs,"cards" to LinkedHashMap<Any,Any>(),
+                "pendingCards" to ArrayList<Any>(),"linkedSprings" to ArrayList<Any>(),
+                "router" to DeckTouchRouter { false },"ticketTimeout" to Runnable {})) setField(owner,name,value)
+            setField(owner,"baseAllowed",true);setField(owner,"tasksAllowed",true);setField(owner,"transition",1L)
+            val algorithm=Algorithm()
+            val scope=owner.Scope(algorithm)
+            setField(owner,"current",scope);setField(owner,"stable",scope)
+            setField(owner,"geometryReady",true)
+            val transform=Transform()
+            assertTrue("Portrait host, landscape visual window",scope.write(0,0f,transform))
+            assertEquals((1040f-600f)*.5f,transform.rect.top,.001f)
+            val oldFrame=DeckFrame(owner,RectF(transform.rect),0,transform.scale,true,0f,1f)
+            val failure=IllegalStateException("retired neighbor")
+            val neighbor=object: FrameLayout(host) {
+                var failing=false
+                override fun setTranslationX(value: Float) { if(failing) throw failure;super.setTranslationX(value) }
+            }
+            val opening=DeckOpenAlignment(1,RectF(0f,0f,400f,800f))
+            opening.add(neighbor,FrameLayout(host),RectF(0f,0f,400f,800f),1)
+            setField(owner,"opening",opening);neighbor.failing=true
+            algorithm.visual=false
+            assertSame(failure,assertThrows(IllegalStateException::class.java) { scope.refreshOrientation() })
+            assertTrue(frozen.isEmpty());assertTrue(pairs.isEmpty())
+            assertEquals(0L,owner.transition)
+            assertNotEquals(oldFrame.generation,owner.geometryGeneration)
+            assertFalse(scope.landscape)
+            setField(owner,"transition",2L)
+            assertFalse("Mixed visual flag/window must fall back",scope.write(0,0f,transform))
+            assertFalse("All Deck input and scroll hooks must return to native",owner.allowed)
+            assertNull(owner.snap(0f))
+            assertEquals("Native scrolling bounds are returned with input",-7f,algorithm.minimum,0f)
+            assertTrue(transform.rect.width()>0f)
+            algorithm.window.set(0,0,1080,2400)
+            owner.refreshGeometry()
+            assertTrue("A native layout update can restore the shared contract",owner.allowed)
+            assertTrue(scope.write(0,0f,transform))
+        } finally { host.finish() }
+    }
+}

@@ -16,6 +16,7 @@
 | 支持范围与待确认 ROM 行为 | [兼容矩阵](../COMPATIBILITY.md) |
 | Duo 使用规则 | [Duo 三合一图标](features/duo-status-bar.md) |
 | 动态岛、应用反馈与媒体 | [动态岛](features/island/README.md) |
+| iOS 18 任务堆叠研究与接入判断 | [任务堆叠参考](features/ios18-recents-reference.md) |
 | 音乐动作、会话及输入合同 | [音乐手势](features/island/MUSIC_GESTURES.md) |
 | Dock、材质与模糊 | [Dock](features/dock/README.md) |
 | 性能、体积与移除证据 | [优化门禁](OPTIMIZATION_GATES.md) |

@@ -10,7 +10,6 @@ import kotlin.math.sin
  * The analytic curve is rendered with cached Hermite cubics, not an exact G4 spline.
  */
 internal object IslandCapsuleGeometry {
-    const val CONTACT_DEPTH_RATIO = .12f
     // 16 Hermite segments per cap; unit controls are generated once and reused.
     private const val STEPS = 16
     private const val RAMP = 0.25
@@ -53,13 +52,9 @@ internal object IslandCapsuleGeometry {
         precise
     }
 
-    fun build(path: Path, width: Float, height: Float, contact: Float = 0f,
+    fun build(path: Path, width: Float, height: Float,
         localX: Float = 1f, localY: Float = 1f) {
-        // A short meniscus uses the existing shell fill and stays inside its bounds.
-        // The end caps still use the same cached G4 controls; no blur/layer is added.
-        val amount = if (contact.isFinite()) contact.coerceIn(0f, 1f) else 0f
-        val depth = minOf(height * CONTACT_DEPTH_RATIO, (width - height).coerceAtLeast(0f) * .06f) * amount
-        val bodyHeight = height - depth
+        val bodyHeight = height
         val extent = cap[(STEPS / 2 - 1) * 6 + 4] * bodyHeight
         val end = minOf(extent, width * 0.5f)
         val sx = if (extent > 0) bodyHeight * end / extent else 0f
@@ -79,15 +74,6 @@ internal object IslandCapsuleGeometry {
                 if (i == STEPS / 2 - 1) path.lineTo(if (side == 0) width * localX else 0f, bodyHeight * .5f * localY)
             }
             if (side == 0) {
-                if (depth > 0f) {
-                    val center = width * .5f
-                    val span = minOf((width - 2f * end) * .3f, bodyHeight * .8f)
-                    path.lineTo((center + span) * localX, bodyHeight * localY)
-                    path.cubicTo((center + span * .45f) * localX, bodyHeight * localY,
-                        (center + span * .55f) * localX, height * localY, center * localX, height * localY)
-                    path.cubicTo((center - span * .55f) * localX, height * localY,
-                        (center - span * .45f) * localX, bodyHeight * localY, (center - span) * localX, bodyHeight * localY)
-                }
                 path.lineTo(end * localX, bodyHeight * localY)
             }
         }

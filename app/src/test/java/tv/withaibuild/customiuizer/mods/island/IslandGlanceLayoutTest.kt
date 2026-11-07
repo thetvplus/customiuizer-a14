@@ -62,7 +62,7 @@ class IslandGlanceLayoutTest {
         val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { powerSaveMotion = true }
         shell.bind("Notice", "Public message", null, false, false, false, 0, false, expanded = true)
         shell.geometry(280, 40, 40)
-        val title = (shell.getChildAt(1) as LinearLayout).getChildAt(0) as TextView
+        val title = (shell.contentAt(1) as LinearLayout).getChildAt(0) as TextView
         fun layout(height: Int) {
             shell.measure(View.MeasureSpec.makeMeasureSpec(280, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
@@ -106,8 +106,8 @@ class IslandGlanceLayoutTest {
         }
     }
 
-    @Test fun oneThousandConfirmedDefaultReturnsAllocateNoAnimatorAndAlwaysFinishAtRest() {
-        val shell = IslandActivityView(RuntimeEnvironment.getApplication())
+    @Test fun oneThousandReducedMotionReturnsAllocateNoAnimatorAndAlwaysFinishAtRest() {
+        val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { powerSaveMotion = true }
         repeat(1000) { index ->
             shell.geometry(160 + index % 40, 40, 40)
             shell.prepareEntry(mediaReturn = true)

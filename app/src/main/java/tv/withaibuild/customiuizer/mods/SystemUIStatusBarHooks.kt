@@ -27,7 +27,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
-import miui.os.Build
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
@@ -681,7 +680,8 @@ object SystemUIStatusBarHooks {
         val display = view.display
         if (display != null) return display.displayId
         // A14's adjusted-display lookup can return null despite the SDK annotation.
-        return view.context.display?.displayId
+        val contextDisplay: android.view.Display? = view.context.display
+        return contextDisplay?.displayId
     }
 
     private const val STATUS_BAR_PENDING_PRUNE_DELAY_MS = 250L
@@ -1292,6 +1292,9 @@ object SystemUIStatusBarHooks {
 
     @JvmStatic
     fun DualRowSignalHook(lpparam: PackageReadyParam) {
+        val mobileView = XposedHelpers.findClass("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader)
+        val smallHd = optionalMobileIcon(mobileView, "mSmallHd")
+        val smallRoaming = optionalMobileIcon(mobileView, "mSmallRoaming")
         val mobileTypeSingle = MainModule.mPrefs.getBoolean("system_statusbar_mobiletype_single")
         if (!mobileTypeSingle) {
             MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_half_to_top_distance", 3)
@@ -1384,10 +1387,8 @@ object SystemUIStatusBarHooks {
                     if (airplane) return
                     val subId = XposedHelpers.getIntField(mobileIconState, "subId")
                     if (signalStates[0] == -1 || subId != signalStates[0]) return
-                    val mSmallHd = XposedHelpers.getObjectField(callback.getThisObject(), "mSmallHd")
-                    XposedHelpers.callMethod(mSmallHd, "setVisibility", View.GONE)
-                    val mSmallRoaming = XposedHelpers.getObjectField(callback.getThisObject(), "mSmallRoaming")
-                    XposedHelpers.callMethod(mSmallRoaming, "setVisibility", View.VISIBLE)
+                    (smallHd?.get(callback.getThisObject()) as? View)?.visibility = View.GONE
+                    (smallRoaming?.get(callback.getThisObject()) as? View)?.visibility = View.VISIBLE
                 }
                 if (!updateStateMethod) {
                     initAction = false
@@ -2999,6 +3000,8 @@ object SystemUIStatusBarHooks {
     @JvmStatic
     fun HideMobileNetworkIndicatorHook(lpparam: PackageReadyParam) {
         ensureStatusBarLayoutRuntimeState()
+        val mobileView = XposedHelpers.findClass("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader)
+        val smallHd = optionalMobileIcon(mobileView, "mSmallHd")
         val hideMobileActivity = object : MethodHook() {
             private var initAction = false
             override fun before(callback: BeforeHookCallback) {
@@ -3050,10 +3053,7 @@ object SystemUIStatusBarHooks {
                         mRightInOut.visibility = View.GONE
                     }
                     if (wifiAvailable && showOnWifi && (dataConnected || opt == 2)) {
-                        if (!Build.IS_INTERNATIONAL_BUILD) {
-                            val mSmallHd = XposedHelpers.getObjectField(callback.getThisObject(), "mSmallHd") as View
-                            mSmallHd.visibility = View.GONE
-                        }
+                        (smallHd?.get(callback.getThisObject()) as? View)?.visibility = View.GONE
                         if (opt != 2) {
                             val viz = View.VISIBLE
                             if (singleMobileType) {
@@ -3077,6 +3077,11 @@ object SystemUIStatusBarHooks {
         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", hideMobileActivity)
         ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", hideMobileActivity)
     }
+
+    private fun optionalMobileIcon(type: Class<*>, name: String): java.lang.reflect.Field? =
+        XposedHelpers.findFieldIfExists(type, name)?.takeIf {
+            View::class.java.isAssignableFrom(it.type) && !java.lang.reflect.Modifier.isStatic(it.modifiers)
+        }
 
     @JvmStatic
     fun HidePrivacyIndicatorHook(lpparam: PackageReadyParam) {

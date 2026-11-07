@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">Автоматический размер карточек</string>
+    <string name="system_deck_size_auto_summ">Подгоняет карточки под экран и доступное место.</string>
+    <string name="system_deck_size_title">Размер карточек</string>
+    <string name="system_deck_size_summ">Изменяет общий размер карточек. Перезапустите рабочий стол.</string>
+</resources>

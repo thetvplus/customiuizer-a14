@@ -16,6 +16,13 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DuoStatusBarViewTest {
+    @Test fun defaultNetworkLabelDoesNotAddSyntheticWeightToTheIosFont() {
+        for(bold in listOf(false,true)) {
+            val view=DuoStatusBarView(RuntimeEnvironment.getApplication(),DuoConfig(false,24,bold=bold,cellularStyle=2),{ throw it },{})
+            val paint=org.robolectric.util.ReflectionHelpers.getField<android.graphics.Paint>(view,"cellularText")
+            assertEquals(bold,paint.isFakeBoldText)
+        }
+    }
     private fun view(padding: Int, autoSize: Boolean = true, offset: Int = 8): DuoStatusBarView =
         DuoStatusBarView(RuntimeEnvironment.getApplication(), DuoConfig(true, 28,
             autoSize = autoSize, horizontalPadding = padding, verticalOffset = offset),

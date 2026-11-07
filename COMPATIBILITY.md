@@ -39,9 +39,12 @@ r14.23.3 起最低要求 API 102，直接使用原生 Hook 安装和 Service 能
 
 ## 当前功能边界
 
+- 新增默认关闭的 iOS Home Indicator，仅在 SDK / ABI、主屏手势模式及完整绘制合同下替换原生填充，设备、地区与构建号不参与准入。已核对 fuxi CN / TW、munch ID、duchamp CN、fuxi TW .7 与 xaga IN V816.0.9.0.ULOINXM 的 SystemUI，独立宿主与不满足绘制合同的实现回退；几何、签名和完整场景边界见[专项说明](docs/features/ios18-home-indicator.md)。Deck 另按其完整任务和窗口合同准入。
+
 - 动态岛在主屏横屏和竖屏均可呈现，持续系统活动统一短岛；横屏的宽度、侧边挖孔与余量合同见[动态岛说明](docs/features/island/README.md#形态位置与输入)。现有原生窗口返回 / 吸入只在已核实的正向竖屏路径生效，横屏使用普通上岛过渡。新横屏场景尚待最终同 APK 录屏与设备验收。
 
 - Dock 的宿主安装点、两区相同 Launcher 样本与材质限制统一见 [Dock 说明](docs/features/dock/README.md)。这些静态结果不等于动画、编辑或动态壁纸已通过设备验收。
+- iOS 堆叠式最近任务按完整原生 ABI 接入，不再限定 8255 / 8604 版本号；Legacy 与 WindowElement 分别解析真实窗口消费者。已补齐 POCO 7603 的属性式弹簧接口，保留原生转换、取消和结束链。POCO 只在主进程按开关安装 Deck 与文件夹模糊，不启用整个 Launcher catalog。缺少可选动效接口时仅保留原生窗口时序，必需卡片 / 输入 / 窗口合同不完整则整项回退。7603 已完成静态调用链核查，尚未完成该版本实机矩阵。音量与 Duo 已分别复核 fuxi CN / TW、munch ID、duchamp CN 的插件 / SystemUI 完整目标签名；签名存在不等于所有设备运行通过，查询与限制见[音量参考](docs/features/ios18-motion-reference.md)和[Duo 说明](docs/features/duo-status-bar.md#图形与兼容边界2026-11-06)。
 - 文件夹图标模糊分别接入 MIUI 与 POCO，POCO 仅限 `com.mi.android.globallauncher` 主进程的独立开关，不获得其他 Launcher 功能。已核实的两种文件夹 ABI 保留原生硬件、系统模糊与默认图标限制，未知声明不安装；文件夹展开背景是另一功能。完整决策链、样本身份及尚未实测的深浅色 / 壁纸 / 主题 / 省电 / 动态切换矩阵见[候选审计](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)，不能宣称所有 POCO ROM 完整兼容。
 - 隐藏输入法收回键只处理 SystemUI 当前 NavigationBarView 的返回按钮：原生图标更新成功、手势导航模式 2、IME BACK_ALT 位 1 且原生按钮可见时设为 INVISIBLE。保留原生隐藏、三键 / 两键、主页 / 最近任务、导航区域及输入法窗口布局。上述 CN / TW 样本的两字段、四方法及图标更新 Smali 一致，原生 QuickStepContract 也确认模式 2；安装前完整核对实例签名，允许同一所有者的基类实现，缺失则仅跳过本功能。该证据不覆盖所有地区 / 机型或输入法自行绘制导航按钮的实现；原件 SHA 和查询见[当前精修记录](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 - 隐藏导航栏只覆盖主屏，原生窗口状态准备仅处理主屏导航窗口；CN / TW 样本确认 `OverviewProxyService$6.setWindowState(III)` 和唯一三参数创建方法，缺少完整合同则保留原生。光标控制沿用已授权且被框架识别的输入法进程，判断当前编辑器，不依赖 SystemUI 前台监控；应用状态自定义菜单必须与当前包 / UID / Context 用户匹配，未知或跨用户不猜测写入。具体回退和待实机范围见[本批边界记录](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
@@ -52,6 +55,8 @@ r14.23.3 起最低要求 API 102，直接使用原生 Hook 安装和 Service 能
 - 国际版隐藏远程检测拦截且不安装该 Feature；国内版保留。旧 Global GuardProvider 查询与样本哈希见[退役说明](docs/maintenance/A14_FEATURE_RETIREMENTS.md#局部裁剪与-rom-条件)，CN / TW 新样本边界见上文；零命中不能证明其他地区目标不存在。
 
 ## 仍需专项取证
+
+- 动态岛前台观察依赖原生 observer 的字段与事件合同；单例查询仅用于绑定时追平，查询接口缺失不会阻断后续原生事件，也不会清空已观察到的前台状态。不代表新增 ROM 已完成实机认证。
 
 - 锁屏超时当前改资源 `config_lockScreenDisplayTimeout`，是否还需要运行期方法取决于目标 ROM；不猜测上游方法。
 - 单个 fuxi 样本的缺失目标不代表全部 HyperOS 1 机型均移除同一系统能力；当前下线属于 A14 产品范围取舍，恢复需要新的完整安装链和实机证据。

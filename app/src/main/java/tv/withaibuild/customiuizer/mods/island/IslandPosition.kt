@@ -4,6 +4,10 @@ import kotlin.math.abs
 
 /** Physical safe edges are anchors. A side never borrows the camera's central slot. */
 internal object IslandPosition {
+    /** Top cutout reservations can extend to y=0. Infer a circular aperture's
+     * diameter conservatively from its shorter side; retain the full reservation
+     * separately for content/side placement. This is an Android mapping, not ID0. */
+    fun cameraHeight(width: Int, reservedHeight: Int): Int = minOf(width, reservedHeight).coerceAtLeast(0)
     data class Layout(val left: Int, val top: Int, val width: Int, val gap: Int)
 
     fun layout(width: Int, height: Int, minimumWidth: Int, safeLeft: Int, safeRight: Int,

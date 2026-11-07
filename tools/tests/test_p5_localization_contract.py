@@ -8,11 +8,12 @@ User-visible required set (generic, not hardcoded):
 * Kotlin/Java       : R.string.* and R.array.* references in production code
 * string-array refs : @string/... references inside <string-array> in arrays.xml
 
-Non-translatable authority: base values/strings.xml android:translatable="false".
+Non-translatable authority: merged base values/*.xml translatable="false".
 """
 
 import re
 import unittest
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -64,13 +65,30 @@ def _parse(path: Path) -> ET.Element:
     return ET.parse(path).getroot()
 
 
+def _merged_values(directory: Path) -> ET.Element:
+    root = ET.Element("resources")
+    names = set()
+    for resource in sorted(directory.glob("*.xml")):
+        for el in _parse(resource):
+            key = (el.tag, el.get("name"))
+            if el.tag in ("string", "string-array") and key[1]:
+                if key in names:
+                    raise AssertionError(f"Duplicate {el.tag} in {directory.name}: {key[1]}")
+                names.add(key)
+            root.append(el)
+    return root
+
+
 def _load_strings(path: Path) -> tuple[dict[str, str], set[str], set[str]]:
-    root = _parse(path)
+    # Android merges every values XML, including feature-specific files.
+    root = _merged_values(path.parent)
     result = {}
     non_translatable = set()
     non_formatted = set()
     for el in root:
         if el.tag == "string" and "name" in el.attrib:
+            if el.attrib["name"] in result:
+                raise AssertionError(f"Duplicate string in {path.parent.name}: {el.attrib['name']}")
             result[el.attrib["name"]] = "".join(el.itertext())
             if (el.get("translatable", "").lower() == "false" or
                 el.get(f"{{{ANDROID_NS}}}translatable", "").lower() == "false"):
@@ -163,7 +181,7 @@ def _find_array_string_refs() -> set[str]:
     arrays_xml = RES / "values" / "arrays.xml"
     if not arrays_xml.exists():
         return refs
-    root = _parse(arrays_xml)
+    root = _merged_values(arrays_xml.parent)
     for arr in root:
         if arr.tag != "string-array":
             continue
@@ -184,6 +202,28 @@ def _find_user_visible_string_refs() -> set[str]:
 def _find_user_visible_array_refs() -> set[str]:
     _, xml_arrays = _find_xml_visible_refs()
     return xml_arrays | _find_code_array_refs()
+
+
+class ResourceDiscoveryTest(unittest.TestCase):
+    def test_split_resources_preserve_strings_arrays_and_format_flags(self):
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            (directory / "strings.xml").write_text('<resources><string name="base">%1$s</string></resources>', encoding="utf-8")
+            (directory / "feature.xml").write_text('<resources><string name="feature" translatable="false">%1$d</string><string-array name="choices"><item>@string/base</item></string-array></resources>', encoding="utf-8")
+            strings, non_translatable, _ = _load_strings(directory / "strings.xml")
+            self.assertEqual({"base": "%1$s", "feature": "%1$d"}, strings)
+            self.assertEqual({"feature"}, non_translatable)
+            self.assertEqual(["choices"], [el.get("name") for el in _merged_values(directory) if el.tag == "string-array"])
+            self.assertEqual({"missing"}, {"base", "feature", "missing"} - strings.keys())
+
+    def test_duplicate_resources_in_separate_files_fail(self):
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            for tag in ("string", "string-array"):
+                for name in ("strings.xml", "feature.xml"):
+                    (directory / name).write_text(f'<resources><{tag} name="duplicate" /></resources>', encoding="utf-8")
+                with self.assertRaisesRegex(AssertionError, "Duplicate"):
+                    _merged_values(directory)
 
 
 class PlaceholderContractTest(unittest.TestCase):
@@ -325,7 +365,7 @@ class P5LocalizationContractTest(unittest.TestCase):
         base_arrays = RES / "values" / "arrays.xml"
         if not base_arrays.exists():
             self.skipTest("No base arrays.xml")
-        base_root = _parse(base_arrays)
+        base_root = _merged_values(base_arrays.parent)
 
         required_arrays = _find_user_visible_array_refs()
 
@@ -342,7 +382,7 @@ class P5LocalizationContractTest(unittest.TestCase):
                 loc_path = RES / loc / "arrays.xml"
                 loc_items = None
                 if loc_path.exists():
-                    loc_root = _parse(loc_path)
+                    loc_root = _merged_values(loc_path.parent)
                     loc_arr = None
                     for el in loc_root:
                         if el.tag == "string-array" and el.attrib.get("name") == name:

@@ -1315,4 +1315,15 @@
     <string name="system_island_live_title">Probíhající aktivity</string>
     <string-array name="island_return_effects"><item>Žádný</item><item>Okamžitě</item><item>Vtažení</item></string-array>
     <string name="system_island_interaction_group">Ovládání</string>
+    <string name="system_recents_ios18_deck_title">Skládané nedávné aplikace</string>
+    <string name="system_recents_ios18_deck_summ">Vyžaduje podporovaný spouštěč HyperOS 1 a vodorovné řazení nedávných aplikací v Nastavení → Domovská obrazovka. Doporučena jsou gesta na celou obrazovku. Nejde o rozložení ikon. Názvy nabídek se mohou lišit. Restartujte spouštěč.</string>
+    <string name="system_recents_deck_header_icon_title">Velikost ikony ve stohu</string>
+    <string name="system_recents_deck_header_title_title">Velikost názvu ve stohu</string>
+    <string name="system_recents_deck_header_size_summ">Automatická velikost zabraňuje zvětšování záhlaví s kartou. Procenta vycházejí z původní velikosti Androidu. Restartujte spouštěč.</string>
+    <string name="system_recents_deck_motion_title">Animace oken iOS</string>
+    <string name="system_recents_deck_motion_summ">Upraví otevírání aplikací a přechod do přehledu. Vypnutím obnovíte původní animace. Restartujte spouštěč.</string>
+    <string name="system_ios_desktop_title">Karty úloh iOS</string>
+    <string name="system_ios_volume_group_title">Hlasitost iOS</string>
+    <string name="controls_ios_home_indicator_title">Indikátor gest iOS</string>
+    <string name="controls_ios_home_indicator_summ">Vyžaduje gesta na celou obrazovku, viditelný systémový indikátor a podporovanou ROM. V Nastavení → Domovská obrazovka → Navigace systému zvolte gesta a vypněte skrytí indikátoru. Vypněte také skrytí čáry gest v tomto modulu. Názvy nabídek se mohou lišit. Restartujte systémové rozhraní.</string>
 </resources>

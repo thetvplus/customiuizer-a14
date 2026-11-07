@@ -5,7 +5,7 @@ import kotlin.math.pow
 
 /** Native Canvas mesh, driven by the accepted ROM spring. No independent animation clock. */
 internal object IslandAbsorptionMesh {
-    const val ROWS = 16
+    const val ROWS = 12
     const val FLOATS = (ROWS + 1) * 4
     private const val BEND_STEPS = 32
     private const val BEND_STRENGTH = 2.6f
@@ -27,14 +27,13 @@ internal object IslandAbsorptionMesh {
 
     fun prepare() { Tables.bends }
 
-    /** The lower mouth includes its full footprint and an antialias guard. A short
-     * shell may pull it upward; a fixed percentage must never put the neck outside. */
+    /** Absorb at the shell's vertical middle, with the full footprint and an edge guard. */
     fun intakeY(shell: RectF, destination: RectF): Float {
         val half = maxOf(1f, destination.height() * .08f) * .5f
         val guard = maxOf(1f, half * 2f)
         val low = maxOf(shell.top, destination.top) + half + guard
         val high = minOf(shell.bottom, destination.bottom) - half - guard
-        return if (low <= high) (shell.top + shell.height() * .9f).coerceIn(low, high) else shell.centerY()
+        return if (low <= high) shell.centerY().coerceIn(low, high) else shell.centerY()
     }
 
     /** A late or faded frame stays native: overlapping translucent layers during
@@ -49,48 +48,37 @@ internal object IslandAbsorptionMesh {
         return remaining * remaining * (3f - 2f * remaining)
     }
 
-    /** At most 6% softer at the neck, after takeover, never across the page body.
-     * Spatial contact and the first 14% of travel both ease in from zero. */
-    fun contactColors(colors: IntArray, vertices: FloatArray, destination: RectF, progress: Float,
-        contactY: Float = destination.centerY(), opaqueBodyReady: Boolean = false) {
-        val phase = (progress / .14f).coerceIn(0f, 1f)
-        val strength = .06f * phase * phase * (3f - 2f * phase)
-        // Owned mesh arrays prepare their opaque body once. Standalone callers still
-        // receive a complete result, independent of the array's previous contents.
-        if (!opaqueBodyReady) colors.fill(-1)
-        for (row in 0..(ROWS * .16f).toInt()) {
-            val neck = (1f - row / (ROWS * .16f)).coerceIn(0f, 1f)
-            val contact = (1f - kotlin.math.abs(vertices[row * 4 + 1] - contactY) /
-                destination.height().coerceAtLeast(1f)).coerceIn(0f, 1f)
-            val alpha = (255f * (1f - strength * neck * neck * contact)).toInt().coerceIn(0, 255)
-            val color = (alpha shl 24) or 0x00ffffff
-            colors[row * 2] = color; colors[row * 2 + 1] = color
-        }
-    }
-
     /** Native progress includes the drag before release. Admission and mesh travel
      * belong to the accepted return, including a release from an already small page. */
     fun returnProgress(progress: Float, atCommit: Float): Float =
         ((progress - atCommit) / (1f - atCommit).coerceAtLeast(.01f)).coerceIn(0f, 1f)
 
     fun fill(output: FloatArray, rect: RectF, destination: RectF, progress: Float, bounds: RectF? = null,
-        intakeY: Float = destination.centerY(), occlusion: RectF? = null): Float {
+        intakeY: Float = destination.centerY(), occlusion: RectF? = null,
+        contactLeft: Float = destination.left, contactRight: Float = destination.right): Float {
         require(output.size == FLOATS)
         val t = progress.coerceIn(0f, 1f)
         // Keep the captured page's aspect while the leading edge enters first. The
         // native spring supplies the only clock; the trailing edge compresses later.
-        val grip = (t / .16f).coerceIn(0f, 1f)
-        val leading = grip * grip * (3f - 2f * grip)
+        val leading = leadingProgress(t)
         val trailing = t.pow(2.25f)
         val holeHeight = maxOf(1f, destination.height() * .08f)
         val holeTop = intakeY - holeHeight * .5f
         val holeBottom = intakeY + holeHeight * .5f
-        val neck = minOf(destination.width() * .28f, destination.height() * .8f)
+        // Widen only the leading footprint. The body keeps the native rectangle
+        // and its existing trailing curve; static island dimensions do not change.
+        val leadingNeck = minOf(destination.width() * .78f, (contactRight - contactLeft) * .8f)
+        val trailingNeck = minOf(destination.width() * .36f, destination.height())
         val top = rect.top + (holeTop - rect.top) * leading
         val bottom = rect.bottom + (holeBottom - rect.bottom) * trailing
-        val topWidth = rect.width() + (neck - rect.width()) * leading
-        val bottomWidth = rect.width() + (neck - rect.width()) * t.pow(2.4f)
-        val topCenter = rect.centerX() + (destination.centerX() - rect.centerX()) * leading
+        // Finish narrowing before the top edge touches the visible island. An
+        // emerging island supplies its seed aperture; an existing island can be wider.
+        val contactFraction = ((rect.top - (occlusion?.bottom ?: destination.bottom)) /
+            (rect.top - holeTop).coerceAtLeast(1f)).coerceIn(.01f, 1f)
+        val horizontalGrip = (leading / contactFraction).coerceIn(0f, 1f)
+        val topWidth = rect.width() + (leadingNeck - rect.width()) * horizontalGrip
+        val bottomWidth = rect.width() + (trailingNeck - rect.width()) * t.pow(2.4f)
+        val topCenter = rect.centerX() + ((contactLeft + contactRight) * .5f - rect.centerX()) * horizontalGrip
         val bottomCenter = rect.centerX() + (destination.centerX() - rect.centerX()) * trailing
         if (occlusion != null && bounds != null && t >= .96f) {
             // This envelope contains every interpolated row, even for off-centre
@@ -128,4 +116,9 @@ internal object IslandAbsorptionMesh {
 
     /** Remaining trailing-body travel, measured in the same geometry used to draw. */
     fun tailProgress(progress: Float): Float = progress.coerceIn(0f, 1f).pow(2.25f)
+
+    fun leadingProgress(progress: Float): Float {
+        val grip = (progress / .16f).coerceIn(0f, 1f)
+        return grip * grip * (3f - 2f * grip)
+    }
 }

@@ -5,26 +5,30 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class DuoGeometryTest {
-    @Test fun opticalCorrectionUsesOnlySpareNativeRowSpaceAndCannotChangeTheManualShift() {
-        assertEquals(0f, DuoSizing.opticalShift(60f, 60, 0f, 60.1f), 0f)
-        val correction = DuoSizing.opticalShift(60f, 100, -1f, 60.1f)
-        assertTrue(correction < 0f && correction > -1f)
-        assertTrue(20f - 1f + correction >= 0f)
-        assertEquals(28, DuoConfig(true, 28, autoSize = false).sizeDp)
-        assertEquals(-1f, DuoSizing.offset(100, -1f), 0f)
+    @Test fun manualSizeAndShiftRemainExplicitWithoutAnExtraAutomaticOffset() {
+        val config=DuoConfig(true,28,autoSize=false)
+        assertEquals(28,config.sizeDp)
+        assertEquals(56f,DuoSizing.drawingPixels(config,59,2f),0f)
+        assertEquals(-1f,DuoSizing.offset(100,-1f),0f)
     }
-    @Test fun continuousBatterySweepCrossesTheTopWithNoSecondSegment() {
+    @Test fun batteryTrimKeepsOneMonotonicTwoThirdsRange() {
         var previous = 0f
         for (level in 0..100) {
-            val sweep = DuoGeometry.continuousFill(level)
-            assertEquals(DuoGeometry.leftFill(level, DuoGeometry.sideSweep(0f)) +
-                DuoGeometry.rightFill(level, DuoGeometry.sideSweep(0f)), sweep, 0.001f)
+            val sweep = DuoGeometry.arcFillFraction(level)
+            assertEquals((2f/3f) * level.coerceAtLeast(1) / 100, sweep, .00001f)
             assertTrue(sweep >= previous)
             previous = sweep
         }
-        assertEquals(270f, DuoGeometry.RING_START + DuoGeometry.continuousFill(50), 0.001f)
-        assertEquals(0f, DuoGeometry.continuousFill(-99), 0f)
-        assertEquals(242.6f, DuoGeometry.continuousFill(999), 0.001f)
+        assertEquals(1f/3f, DuoGeometry.arcFillFraction(50), .00001f)
+        assertEquals(1f/150f, DuoGeometry.arcFillFraction(-99), .00001f)
+        assertEquals(2f/3f, DuoGeometry.arcFillFraction(999), .00001f)
+    }
+    @Test fun fullChargeHidesBoltOnlyWhenThePercentageAlreadyExpressesFullCharge() {
+        assertTrue(DuoGeometry.showBolt(99,true,true,true))
+        assertFalse(DuoGeometry.showBolt(100,true,true,true))
+        assertTrue(DuoGeometry.showBolt(100,true,true,false))
+        assertFalse(DuoGeometry.showBolt(50,false,true,true))
+        assertFalse(DuoGeometry.showBolt(50,true,false,false))
     }
 
     @Test fun realFakeAndHeaderRowsUseTheSameDrawingBoundsIncludingDoubleRows() {
@@ -52,10 +56,11 @@ class DuoGeometryTest {
     @Test fun automaticDrawingRetainsTheRequestedSizeWithoutTheStockIconHeightCap() {
         val config = DuoConfig(true, 24)
         val width = DuoSizing.pixels(config, 59, 2.8875f)
-        assertEquals(70, width)
+        assertEquals(77, width)
         // The previous version used the full content row. A 59px resource must not cap it.
-        assertEquals(70f, DuoSizing.drawingSize(width, 109, 0f), 0f)
-        assertEquals(70, DuoSizing.requiredHeight(width, 109, 0f))
+        val ink=DuoSizing.drawingPixels(config,59,2.8875f)
+        assertEquals(77f, minOf(ink,DuoSizing.drawingSize(width, 109, 0f)), 0f)
+        assertEquals(77, DuoSizing.requiredHeight(width, 109, 0f))
         assertEquals(54f, DuoSizing.drawingSize(width, 54, 0f), 0f)
         assertEquals(54, DuoSizing.requiredHeight(width, 54, 0f))
         assertEquals(0, DuoSizing.requiredHeight(width, 0, 10f))
@@ -86,31 +91,6 @@ class DuoGeometryTest {
             last = alpha
         }
     }
-    @Test fun percentAndVisibleBoltOpenOnlyTheAppropriateTopGap() {
-        assertEquals(0f, DuoGeometry.topGap(false, false), 0f)
-        assertEquals(71.3f, DuoGeometry.topGap(true, false), 0f)
-        assertEquals(55.6f, DuoGeometry.topGap(true, true), 0f)
-        assertEquals(55.6f, DuoGeometry.topGap(false, true), 0f)
-    }
-
-    @Test fun ringFillIsBoundedMonotonicAndHalfFullAtFiftyPercent() {
-        for (gap in floatArrayOf(0f, 71.3f, 55.6f)) {
-            val side = DuoGeometry.sideSweep(gap)
-            var last = 0f
-            for (level in 0..100) {
-                val left = DuoGeometry.leftFill(level, side)
-                val right = DuoGeometry.rightFill(level, side)
-                assertTrue(left in 0f..side); assertTrue(right in 0f..side)
-                assertTrue(left + right >= last)
-                assertEquals(side * 2 * level / 100, left + right, 0.001f)
-                last = left + right
-            }
-            assertEquals(side, DuoGeometry.leftFill(50, side), 0f)
-            assertEquals(0f, DuoGeometry.rightFill(50, side), 0f)
-            assertEquals(360f, 2 * side + gap + DuoGeometry.BOTTOM_GAP, 0.001f)
-        }
-    }
-
     @Test fun chargingWinsOverSaverAndCriticalBattery() {
         assertEquals(0xff34c759.toInt(), DuoGeometry.batteryColor(-1, 5, true, true))
         assertEquals(0xfff2b900.toInt(), DuoGeometry.batteryColor(-1, 5, false, true))
@@ -146,32 +126,27 @@ class DuoGeometryTest {
         assertEquals(20, DuoConfig(true, -999).sizeDp)
     }
 
-    @Test fun wifiRetainsEveryNativeLevelAndOnlyTheHighestLevelFillsAllThreeElements() {
+    @Test fun wifiUsesNativeOnOffThresholdsWithoutDimmingTheLowestActivePart() {
         for (foreground in intArrayOf(0xffffffff.toInt(), 0xff000000.toInt(), 0x99ffffff.toInt())) {
-            var previous = -1
             for (level in 0..4) {
-                val sum = (0..2).sumOf { DuoGeometry.wifiColor(foreground, level, it) ushr 24 }
-                assertTrue("native Wi-Fi level $level must look different", sum > previous)
-                previous = sum
                 for (part in 0..2) {
                     val color = DuoGeometry.wifiColor(foreground, level, part)
-                    assertEquals(foreground and 0xffffff, color and 0xffffff)
-                    assertTrue(color ushr 24 <= foreground ushr 24)
-                    if (level == 4) assertEquals(foreground, color)
+                    assertEquals(if(part < level) foreground else DuoGeometry.dim(foreground),color)
                 }
             }
-            assertNotEquals(foreground, DuoGeometry.wifiColor(foreground, 3, 2))
+            assertEquals(foreground,DuoGeometry.wifiColor(foreground,1,0))
+            assertEquals(foreground,DuoGeometry.wifiColor(foreground,3,2))
         }
     }
 
     @Test fun automaticSizeUsesNativeDensityAndKeepsImportedManualSizeSeparate() {
         val auto = DuoConfig(true, 28)
-        assertEquals(70, DuoSizing.pixels(auto, 59, 2.8875f))
-        assertEquals(48, DuoSizing.pixels(auto, 0, 2f))
-        assertEquals(42, DuoSizing.pixels(auto, 10, 2f))
-        assertEquals(50, DuoSizing.pixels(auto, 200, 2f))
+        assertEquals(77, DuoSizing.pixels(auto, 59, 2.8875f))
+        assertEquals(53, DuoSizing.pixels(auto, 0, 2f))
+        assertEquals(46, DuoSizing.pixels(auto, 10, 2f))
+        assertEquals(55, DuoSizing.pixels(auto, 200, 2f))
         assertEquals(56, DuoSizing.pixels(DuoConfig(true, 28, autoSize = false), 59, 2f))
-        assertEquals(1, DuoSizing.pixels(auto, 0, 0.001f))
+        assertTrue(DuoSizing.drawingPixels(auto,0,.001f)>=1f)
     }
 
     @Test fun verticalAdjustmentFitsEveryRowAndCannotEraseASmallDoubleRow() {
@@ -188,7 +163,7 @@ class DuoGeometryTest {
         assertEquals(0f, DuoConfig.read(PrefMap()).offsetDp, 0f)
     }
 
-    @Test fun automaticSizePreservesCalibratedPixelsAcrossDensitiesAndNativeHeights() {
+    @Test fun automaticInkAddsPointFourDpWithoutPixelRoundingExceedingPointFive() {
         val config = DuoConfig(true, 24)
         val densities = floatArrayOf(1f, 1.5f, 2f, 2.8875f, 3f, 4f, 6f)
         val heights = intArrayOf(0, 10, 24, 36, 40, 48, 59, 70, 100)
@@ -204,7 +179,12 @@ class DuoGeometryTest {
         )
         for ((row, density) in densities.withIndex()) {
             for ((column, height) in heights.withIndex()) {
-                assertEquals(expected[row][column], DuoSizing.pixels(config, height, density))
+                val drawing=DuoSizing.drawingPixels(config,height,density)
+                val previousVisible=(expected[row][column]+.40f*density)*1.0601073f
+                val growth=(drawing-previousVisible)/density
+                assertEquals("Extra .50dp above the previous visible size, within half a pixel",.50f,growth,.5f/density+.0001f)
+                assertEquals(drawing.toInt().toFloat(),drawing,0f)
+                assertEquals(kotlin.math.ceil(drawing).toInt(),DuoSizing.pixels(config,height,density))
             }
         }
     }

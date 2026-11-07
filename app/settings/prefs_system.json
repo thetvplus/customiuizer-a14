@@ -202,6 +202,33 @@
             {
               "type": "section",
               "attributes": {
+                "android:title": "@string/system_ios_volume_group_title"
+              },
+              "children": [
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_volume_ios",
+                    "android:title": "@string/system_volume_ios_title",
+                    "android:summary": "@string/system_volume_ios_summ",
+                    "android:defaultValue": "false"
+                  }
+                },
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_volume_ios_compact",
+                    "android:title": "@string/system_volume_ios_compact_title",
+                    "android:summary": "@string/system_volume_ios_compact_summ",
+                    "android:dependency": "pref_key_system_volume_ios",
+                    "android:defaultValue": "false"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "attributes": {
                 "android:title": "@string/prefs_group_behavior"
               },
               "children": [
@@ -1739,6 +1766,82 @@
             "android:title": "@string/system_mods_recents"
           },
           "children": [
+            {
+              "type": "section",
+              "attributes": {
+                "android:title": "@string/system_ios_desktop_title"
+              },
+              "children": [
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_recents_ios18_deck",
+                    "android:title": "@string/system_recents_ios18_deck_title",
+                    "android:summary": "@string/system_recents_ios18_deck_summ",
+                    "android:defaultValue": "false"
+                  }
+                },
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_recents_ios18_deck_motion",
+                    "android:title": "@string/system_recents_deck_motion_title",
+                    "android:summary": "@string/system_recents_deck_motion_summ",
+                    "android:defaultValue": "true",
+                    "android:dependency": "pref_key_system_recents_ios18_deck"
+                  }
+                },
+                {
+                  "type": "choice",
+                  "attributes": {
+                    "android:key": "pref_key_system_recents_ios18_deck_header_icon",
+                    "android:title": "@string/system_recents_deck_header_icon_title",
+                    "android:summary": "@string/system_recents_deck_header_size_summ",
+                    "android:entries": "@array/deck_header_sizes",
+                    "android:entryValues": "@array/deck_header_sizes_val",
+                    "android:defaultValue": "0",
+                    "android:dependency": "pref_key_system_recents_ios18_deck"
+                  }
+                },
+                {
+                  "type": "choice",
+                  "attributes": {
+                    "android:key": "pref_key_system_recents_ios18_deck_header_title",
+                    "android:title": "@string/system_recents_deck_header_title_title",
+                    "android:summary": "@string/system_recents_deck_header_size_summ",
+                    "android:entries": "@array/deck_header_sizes",
+                    "android:entryValues": "@array/deck_header_sizes_val",
+                    "android:defaultValue": "0",
+                    "android:dependency": "pref_key_system_recents_ios18_deck"
+                  }
+                },
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_recents_ios18_deck_size_auto",
+                    "android:title": "@string/system_deck_size_auto_title",
+                    "android:summary": "@string/system_deck_size_auto_summ",
+                    "android:defaultValue": "true",
+                    "android:disableDependentsState": "true",
+                    "android:dependency": "pref_key_system_recents_ios18_deck"
+                  }
+                },
+                {
+                  "type": "slider",
+                  "attributes": {
+                    "android:key": "pref_key_system_recents_ios18_deck_size",
+                    "android:title": "@string/system_deck_size_title",
+                    "android:summary": "@string/system_deck_size_summ",
+                    "android:defaultValue": "75",
+                    "app:minValue": "55",
+                    "app:maxValue": "85",
+                    "app:stepValue": "1",
+                    "app:format": "%d%%",
+                    "android:dependency": "pref_key_system_recents_ios18_deck_size_auto"
+                  }
+                }
+              ]
+            },
             {
               "type": "section",
               "attributes": {

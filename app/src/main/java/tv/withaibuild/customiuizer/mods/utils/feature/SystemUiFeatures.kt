@@ -577,6 +577,20 @@ internal class StatusBarContentGeometryFeature(
     override fun installHook() = StatusBarContentGeometryHooks.hook(lpparam)
 }
 
+internal class IosHomeIndicatorFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
+    override val id = IosHomeIndicatorFeatureId
+    override val name = "iOS Home Indicator"
+    override val preferenceKey = "controls_ios_home_indicator"
+    override val target = FeatureTarget.SYSTEM_UI
+    override val phase = InstallPhase.PACKAGE_READY
+    companion object {
+        @JvmStatic fun evaluateEnabled(prefs: PrefMap) =
+            prefs.getBoolean("controls_ios_home_indicator") && !prefs.getBoolean("controls_nonavbar")
+    }
+    override fun isEnabled(prefs: PrefMap) = evaluateEnabled(prefs)
+    override fun install() = tv.withaibuild.customiuizer.mods.homeindicator.HomeIndicatorHooks.install(lpparam)
+}
+
 internal class HideNavBarFeature(
     lpparam: PackageReadyParam,
     mPrefs: PrefMap
@@ -2392,6 +2406,15 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> StatusBarContentGeometryFeature.evaluateEnabled(prefs) },
             factory = { StatusBarContentGeometryFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
+            id = IosHomeIndicatorFeatureId,
+            name = "iOS Home Indicator",
+            preferenceKey = "controls_ios_home_indicator",
+            target = FeatureTarget.SYSTEM_UI,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> IosHomeIndicatorFeature.evaluateEnabled(prefs) },
+            factory = { IosHomeIndicatorFeature(lpparam) },
         ),
         LazyFeatureSpec(
             id = HideNavBarFeatureId,

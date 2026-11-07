@@ -79,7 +79,7 @@ class IslandSystemIconsTest {
         shell.measure(View.MeasureSpec.makeMeasureSpec(184, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(40, View.MeasureSpec.EXACTLY))
         shell.layout(0, 0, 184, 40)
-        val left = shell.getChildAt(0) as android.view.ViewGroup
+        val left = shell.contentAt(0) as android.view.ViewGroup
         val icon = left.getChildAt(0) as ImageView
         assertEquals(ImageView.ScaleType.FIT_CENTER, icon.scaleType)
         assertFalse(icon.clipToOutline)

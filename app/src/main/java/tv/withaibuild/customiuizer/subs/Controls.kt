@@ -5,8 +5,23 @@ import androidx.preference.Preference
 import tv.withaibuild.customiuizer.SubFragment
 import tv.withaibuild.customiuizer.prefs.CheckBoxPreferenceEx
 import tv.withaibuild.customiuizer.utils.AppHelper
+import tv.withaibuild.customiuizer.utils.HomeIndicatorSupport
+import android.os.Build
+import android.provider.Settings
 
 class Controls : SubFragment() {
+
+    override fun onResume() {
+        super.onResume()
+        if (sub != "pref_key_controls_cat_navbar") return
+        val indicator=findPreference<Preference>("pref_key_controls_ios_home_indicator") ?: return
+        val resolver=requireContext().contentResolver
+        // One read on page entry/return. AndroidX retains the independent reverse
+        // dependency on the module's hide-line option; no polling or system writes.
+        indicator.isEnabled=HomeIndicatorSupport.supported(Build.VERSION.SDK_INT,Build.SUPPORTED_ABIS) &&
+            Settings.Global.getInt(resolver,"force_fsg_nav_bar",0)==1 &&
+            Settings.Global.getInt(resolver,"hide_gesture_line",0)==0
+    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         super.onCreatePreferences(savedInstanceState, rootKey)

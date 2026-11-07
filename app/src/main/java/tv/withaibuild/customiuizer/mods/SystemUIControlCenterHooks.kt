@@ -39,6 +39,10 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallbac
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import java.util.concurrent.ConcurrentHashMap
+import tv.withaibuild.customiuizer.mods.volume.IosVolumeStyle
+import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
+import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
+import tv.withaibuild.customiuizer.mods.utils.HookDiagnostics
 import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
@@ -503,6 +507,21 @@ object SystemUIControlCenterHooks {
 
     @JvmStatic
     fun initControlCenter(loader: ClassLoader) {
+        if (MainModule.mPrefs.getBoolean(IosVolumeStyle.KEY)) {
+            ModuleHelper.guarded {
+                val result = IosVolumeStyle.install(loader)
+                HookDiagnostics.record(
+                    HookDiagnostics.currentProcessName.orEmpty(),
+                    HookDiagnostics.Kind.FEATURE,
+                    IosVolumeStyle::class.java.name,
+                    IosVolumeStyle.KEY,
+                    status = if (result == FeatureInstallResult.INSTALLED)
+                        HookDiagnostics.Status.INSTALLED
+                    else HookDiagnostics.Status.INSTALL_FAILED,
+                    exceptionType = result.name,
+                )
+            }
+        }
         if (MainModule.mPrefs.getBoolean("system_nosilentvibrate")) {
             ModuleHelper.hookAllMethods("com.android.systemui.miui.volume.MiuiVolumeDialogImpl", loader, "vibrateH", HookerClassHelper.DO_NOTHING)
         }
@@ -653,6 +672,7 @@ object SystemUIControlCenterHooks {
     @JvmStatic
     fun hasControlCenterModifications(): Boolean {
         return MainModule.mPrefs.getBoolean("system_nosilentvibrate")
+            || MainModule.mPrefs.getBoolean(tv.withaibuild.customiuizer.mods.volume.IosVolumeStyle.KEY)
             || MainModule.mPrefs.getInt("system_volumedialogdelay_collapsed", 0) > 0
             || MainModule.mPrefs.getInt("system_volumedialogdelay_expanded", 0) > 0
             || MainModule.mPrefs.getInt("system_volumeblur_collapsed", 0) > 0
@@ -687,6 +707,7 @@ object SystemUIControlCenterHooks {
     private fun resolveVolumeModeButtonStateField(pluginLoader: ClassLoader): Field? {
         val helperClassName =
             "com.android.systemui.miui.volume.MiuiRingerModeLayout\$RingerButtonHelper"
+
         return try {
             val helperClass = XposedHelpers.findClassIfExists(helperClassName, pluginLoader)
                 ?: return null
@@ -711,6 +732,10 @@ object SystemUIControlCenterHooks {
      */
     @JvmStatic
     fun VolumeModeButtonColorsHook(pluginLoader: ClassLoader) {
+        val footerClass=XposedHelpers.findClass("com.android.systemui.miui.volume.MiuiVolumeDialogView",pluginLoader)
+        val footerMode=XposedHelpers.findField(footerClass,"mRingerModeLayout")
+        footerClass.getDeclaredMethod("updateFooterVisibility",Boolean::class.javaPrimitiveType)
+            .also { require(it.returnType==Void.TYPE) }
         installVolumeModeButtonColorSnapshot()
         installVolumeModeButtonVisibilitySnapshot()
 
@@ -914,14 +939,35 @@ object SystemUIControlCenterHooks {
             "updateState",
             updateStateHook
         )
+        // Native footer updates run independently of the helpers' state changes.
+        // Keep the native more button; only reassert the owned mode container.
+        ModuleHelper.findAndHookMethod(
+            footerClass.name, pluginLoader,
+            "updateFooterVisibility", Boolean::class.javaPrimitiveType,
+            object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    if(callback.getThrowable()!=null) return@guarded
+                    val snapshot=volumeModeButtonVisibilitySnapshot ?: return@guarded
+                    val state=XposedHelpers.getAdditionalInstanceField(
+                        footerMode.get(callback.getThisObject()), VOLUME_MODE_SHARED_VISIBILITY_STATE_FIELD
+                    ) as? VolumeModeSharedVisibilityState ?: return@guarded
+                    applyVolumeModeSharedVisibility(state,snapshot.hideMute,snapshot.hideDnd,true)
+                }
+            }
+        )
     }
 
     private fun applyVolumeModeSharedVisibility(
         state: VolumeModeSharedVisibilityState,
         hideMute: Boolean,
-        hideDnd: Boolean
+        hideDnd: Boolean,
+        layoutNativeWritten: Boolean=false
     ) {
         val layout = state.layoutRef.get() ?: return
+        if(layoutNativeWritten) {
+            state.layoutOwnership.romVisibility=layout.visibility
+            state.layoutOwnership.customHidden=false
+        }
         val layoutNewVisibility = reconcileVolumeModeButtonVisibility(
             state.layoutOwnership,
             shouldHideVolumeModeContainer(hideMute, hideDnd),
@@ -1933,19 +1979,32 @@ object SystemUIControlCenterHooks {
 
     @JvmStatic
     fun CollapseCCAfterClickHook(lpparam: PackageReadyParam) {
-        ModuleHelper.findAndHookMethod("com.android.systemui.qs.tileimpl.QSTileImpl", lpparam.classLoader, "click", View::class.java, object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val mState = XposedHelpers.callMethod(callback.getThisObject(), "getState")
-                val state = XposedHelpers.getIntField(mState, "state")
-                if (state != 0) {
-                    val tileSpec = XposedHelpers.callMethod(callback.getThisObject(), "getTileSpec") as String
-                    if (tileSpec != "edit") {
-                        val mHost = XposedHelpers.getObjectField(callback.getThisObject(), "mHost")
-                        XposedHelpers.callMethod(mHost, "collapsePanels")
-                    }
+        val tileClass=XposedHelpers.findClass("com.android.systemui.qs.tileimpl.QSTileImpl",lpparam.classLoader)
+        // A14 click arms this native one-shot before queuing handleClick. The
+        // refresh path consumes it only when state changes; callbacks and explicit
+        // showStateMessage calls also carry accessibility / unrelated feedback.
+        val click=tileClass.getDeclaredMethod("click",View::class.java)
+        val pending=XposedHelpers.findField(tileClass,"mPendingShowStateMessage")
+        val event=XposedHelpers.findField(tileClass,"mClickEventId")
+        check(pending.type==Boolean::class.javaPrimitiveType && event.type==Int::class.javaPrimitiveType)
+        fun collapses(tile: Any?): Boolean {
+            val state=XposedHelpers.callMethod(tile,"getState")
+            return XposedHelpers.getIntField(state,"state")!=0 && XposedHelpers.callMethod(tile,"getTileSpec")!="edit"
+        }
+        val collapse=object : MethodHook() {
+            override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                val tile=callback.getThisObject()
+                if (callback.getThrowable()==null && collapses(tile)) {
+                    val id=event.getInt(tile)
+                    val host=XposedHelpers.getObjectField(tile,"mHost")
+                    XposedHelpers.callMethod(host,"collapsePanels")
+                    // A failed collapse leaves native feedback armed. Never
+                    // disarm a newer click if collapse reentered native input.
+                    if(event.getInt(tile)==id) pending.setBoolean(tile,false)
                 }
             }
-        })
+        }
+        check(PreparedHookBatch().install(listOf(click to collapse)).isActive)
     }
 
     @JvmStatic

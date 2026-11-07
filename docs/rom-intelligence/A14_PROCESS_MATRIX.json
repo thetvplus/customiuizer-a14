@@ -3366,6 +3366,45 @@
       "enableCondition": "{ prefs -> prefs.getBoolean(\"system_wifiauto_enabled\") }",
       "allowedProcess": "system_server",
       "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 266,
+      "featureIdName": "system_recents_ios18_deck",
+      "name": "Launcher iOS Recents Deck",
+      "preferenceKey": "system_recents_ios18_deck",
+      "target": "LAUNCHER",
+      "phase": "APPLICATION_ATTACHED",
+      "installer": "LauncherPostAttachFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.recents.IosRecentsDeckHooks.install(lpparam,mPrefs)",
+      "enableCondition": "prefs.getBoolean(\"system_recents_ios18_deck\")",
+      "allowedProcess": "com.miui.home",
+      "deniedProcess": "third-party launchers (unless selected app sets)"
+    },
+    {
+      "featureIdInt": 267,
+      "featureIdName": "controls_ios_home_indicator",
+      "name": "iOS Home Indicator",
+      "preferenceKey": "controls_ios_home_indicator",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.homeindicator.HomeIndicatorHooks.install(lpparam)",
+      "enableCondition": "{ prefs -> IosHomeIndicatorFeature.evaluateEnabled(prefs) }",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 268,
+      "featureIdName": "poco_recents_deck",
+      "name": "POCO Recents Deck",
+      "preferenceKey": "system_recents_ios18_deck",
+      "target": "ANY",
+      "phase": "APPLICATION_ATTACHED",
+      "installer": "GenericAppFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.recents.IosRecentsDeckHooks.install(lpparam, mPrefs)",
+      "enableCondition": "packageName == \"com.mi.android.globallauncher\" && prefs.getBoolean(\"system_recents_ios18_deck\")",
+      "allowedProcess": "com.miui.home + selected packages",
+      "deniedProcess": ""
     }
   ],
   "scope": [

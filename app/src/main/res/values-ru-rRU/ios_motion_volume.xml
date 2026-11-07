@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_volume_ios_title">Панель громкости iOS</string>
+    <string name="system_volume_ios_summ">Стиль iOS с сохранением системного управления громкостью. Перезапустите системный интерфейс.</string>
+    <string name="system_volume_ios_compact_title">Узкая полоса по умолчанию</string>
+    <string name="system_volume_ios_compact_summ">Сначала показывает узкую полосу и возвращается к ней после регулировки касанием.</string>
+</resources>

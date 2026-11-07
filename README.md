@@ -11,7 +11,7 @@
 ## 主要功能
 
 - **系统**：状态栏、Duo 三合一图标、动态岛、通知、控制中心、锁屏、声音与振动。
-- **桌面**：Dock 背景与材质、布局、文件夹、应用标题和桌面手势。
+- **桌面**：Dock 背景与材质、最近任务堆叠、布局、文件夹、应用标题和桌面手势。
 - **按键与手势**：电源键、音量键、指纹键、导航栏及自定义动作。
 - **应用与维护**：安装器、应用管理、权限弹窗及可恢复的维护与隐私操作。
 
@@ -23,15 +23,19 @@
 2. 在 Xposed 框架中启用模块，授予需要的作用域。
 3. 重启相关进程或设备，按页面提示启用所需功能；安装型开关修改后需要重启目标进程。
 
+升级提示：从旧版或本地候选升级后，动态岛部分配置可能需要重新确认。若未显示或无法返回上岛，请检查「系统提示与动态岛」模式、媒体／消息显示应用名单、返回上岛开关及「无／瞬收／吸入」效果，按需重新选择并重启相关进程。
+
 功能可用性取决于具体 ROM 和系统应用版本。请勿与上游版或其他 CustoMIUIzer 派生模块同时启用。其他 Android 或 HyperOS 大版本不在支持范围内，详见[兼容矩阵](COMPATIBILITY.md)。
+
+iOS 手势指示条需要全面屏手势及可见的系统指示条，同时关闭米客“隐藏手势提示线”，重启系统界面生效。[iOS 最近任务堆叠](docs/features/ios18-recents-reference.md)按完整原生接口适配 MIUI / POCO 桌面，需要“横向”最近任务排列，修改后重启桌面；全面屏手势为建议条件。
 
 ## 文档与开发
 
 [文档目录](docs/README.md)提供开发、测试、发布和专项说明；参与维护先读[共同工程规则](AGENTS.md)。
 
-当前源码版本：`r14.26.11`（versionCode 281）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
+当前源码版本：`r14.27.1`（versionCode 301）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
 
-r14.26.11 自 r14.26.9 累计整合动态岛设置与上岛效果、Dock 原生材质、全局模糊及设置界面改进，见[更新记录](CHANGELOG.md)。正式发行与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准；已测范围及剩余问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
+r14.27.1 自 r14.26.11 累计新增最近任务堆叠、手势指示条和音量条外观，改进动态岛承接、Duo 图形及原生回退，见[更新记录](CHANGELOG.md)。正式发行与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准；已测范围及剩余问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
 
 Git 历史已匿名整合；既有签名 APK 与原始构建 metadata 保持不变，来源关系见[发行说明](docs/RELEASE.md#历史匿名化与已签名版本)。
 

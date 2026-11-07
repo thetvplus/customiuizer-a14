@@ -23,7 +23,97 @@ import java.nio.ByteOrder
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandNativeReturnCompletionTest {
-    @Test fun receivingUsesTheRequestedHorizontalRhythmWithALaterOneDpCatch() {
+    @Test fun aNewCameraSeedDoesNotBorrowTheExistingWideContainersAcceptanceStretch() {
+        run {
+            val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+            val memory=SharedMemory.create("new-seed-no-double-stretch",4)
+            val writer=memory.mapReadWrite().order(ByteOrder.nativeOrder())
+            val shell=IslandActivityView(host)
+            host.setContentView(shell,FrameLayout.LayoutParams(240,40))
+            ShadowChoreographer.setPaused(true)
+            try {
+                shell.bind("Music",null,ColorDrawable(Color.RED),true,true,false,0L,false)
+                shell.geometry(240,40,40,260);shell.layout(0,0,240,40)
+                shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
+                shell.prepareEntry(mediaReturn=true);shell.transition(240,40,240,40,true)
+                val clock=getField<ValueAnimator>(shell,"motion")
+                for (at in 0L..600L step 10) {
+                    writer.putInt(0,(at*1000L).toInt());clock.currentPlayTime=at
+                    assertEquals("The new seed grows toward its form without a separate vertical bulge",40f,40*shell.scaleY,.001f)
+                    assertTrue("One finite expansion, without another receive overshoot",240*shell.scaleX<=240.001f)
+                }
+                writer.putInt(0,1_000_000);clock.end()
+                assertEquals(1f,shell.scaleX,0f);assertEquals(1f,shell.scaleY,0f)
+            } finally {
+                shell.cancelMediaReturn();host.finish();SharedMemory.unmap(writer);memory.close()
+                ShadowChoreographer.setPaused(false)
+            }
+        }
+    }
+    @Test fun iosNativeAcceptanceUsesTheSameSlotSpringAfterAcceptedWithoutRestartingTheBody() {
+        val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val memory=SharedMemory.create("ios-contact",4)
+        val writer=memory.mapReadWrite().order(ByteOrder.nativeOrder())
+        val shell=IslandActivityView(host)
+        host.setContentView(shell,FrameLayout.LayoutParams(240,40))
+        ShadowChoreographer.setPaused(true)
+        try {
+            shell.geometry(240,40,40,280); shell.layout(0,0,240,40)
+            shell.bind("Old",null,ColorDrawable(Color.RED),true,true,false,0L,false)
+            shell.transition(240,40,240,40,false); getField<ValueAnimator>(shell,"motion").end()
+            shell.bind("New",null,ColorDrawable(Color.BLUE),true,true,false,0L,false)
+            shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
+            shell.prepareReturnFromCurrent(); shell.transition(240,40,240,40,false)
+            val clock=getField<ValueAnimator>(shell,"motion")
+            writer.putInt(0,100_000); clock.currentPlayTime=100
+            assertEquals(0f,getField<Float>(shell,"layerReveal"),.001f)
+            assertTrue(shell.scaleY>1f)
+            writer.putInt(0,600_000); clock.currentPlayTime=280
+            val expected=IslandMotion.Spring().apply { retarget(0f,1f,IslandMotion.IOS_SLOTS,false) }
+            assertEquals(expected.sample(.08f),getField<Float>(shell,"layerReveal"),.001f)
+            assertSame(clock,getField<ValueAnimator>(shell,"motion"))
+            shell.bind("Third",null,null,false,false,false,0L,false)
+            shell.transition(240,40,240,40,false)
+            assertNull(getField<Any?>(shell,"pendingContent"))
+            getField<ValueAnimator>(shell,"motion").end()
+            assertEquals(1f,shell.scaleY,0f); assertEquals(1f,getField<Float>(shell,"layerReveal"),0f)
+        } finally {
+            shell.cancelMediaReturn(); host.finish(); SharedMemory.unmap(writer); memory.close()
+            ShadowChoreographer.setPaused(false)
+        }
+    }
+
+    @Test fun secondActivityKeepsNewContentHiddenUntilTheNativeLeadingPhaseArrives() {
+        val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val memory = SharedMemory.create("existing-shell-contact", 4)
+        val writer = memory.mapReadWrite().order(ByteOrder.nativeOrder())
+        val shell = IslandActivityView(host)
+        host.setContentView(shell, FrameLayout.LayoutParams(240, 40))
+        ShadowChoreographer.setPaused(true)
+        try {
+            shell.geometry(240, 40, 40, 280); shell.layout(0, 0, 240, 40)
+            shell.bind("Music", null, ColorDrawable(Color.RED), true, true, false, 0L, false)
+            shell.transition(240, 40, 240, 40, false); getField<ValueAnimator>(shell, "motion").end()
+            shell.bind("Stopwatch", null, ColorDrawable(Color.BLUE), false, false, false, 0L, false)
+            shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
+            shell.prepareReturnFromCurrent(); shell.transition(240, 40, 240, 40, false)
+            val clock = getField<ValueAnimator>(shell, "motion")
+            writer.putInt(0, 40_000); clock.currentPlayTime = 80L
+            assertNull(getField<Any?>(shell, "pendingContent"))
+            assertEquals(0f, getField<Float>(shell, "layerReveal"), .001f)
+            writer.putInt(0, 200_000); clock.currentPlayTime = 100L
+            writer.putInt(0, 500_000); clock.currentPlayTime = 260L
+            assertNull(getField<Any?>(shell, "pendingContent"))
+            assertEquals("Stopwatch", getField<String>(getField<Any>(shell, "displayedContent"), "label"))
+            assertEquals(1f, shell.alpha, .001f)
+            writer.putInt(0, 1_000_000); clock.end()
+            assertEquals(1f, shell.scaleX, 0f); assertEquals(1f, shell.scaleY, 0f)
+        } finally {
+            shell.cancelMediaReturn(); host.finish(); SharedMemory.unmap(writer); memory.close()
+            ShadowChoreographer.setPaused(false)
+        }
+    }
+    @Test fun receivingUsesPositiveNativeHeightAndReturnsWithoutANegativeTail() {
         for (alignment in 0..2) {
             val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
             val memory = SharedMemory.create("receiving-axis-order", 4)
@@ -35,31 +125,28 @@ class IslandNativeReturnCompletionTest {
                 shell.bind("Music", null, ColorDrawable(Color.RED), true, false, false, 0, false)
                 shell.geometry(240, 40, if (alignment == 1) 40 else 0, 260, alignment)
                 shell.cameraAnchor(20f, 28f, 40f)
-                shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
-                shell.prepareEntry(mediaReturn = true)
+                shell.prepareEntry()
                 shell.transition(240, 40, 240, 40, entering = true)
+                getField<ValueAnimator>(shell, "motion").end()
+                shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
+                shell.prepareReturnFromCurrent()
+                shell.transition(240, 40, 240, 40, entering = false)
                 val clock = getField<ValueAnimator>(shell, "motion")
                 var width = shell.scaleX * 240f
                 var widest = width
                 var widestAt = 0L
-                var deepest = 40f
-                var deepestAt = 0L
-                var widthAtDeepest = 0f
-                for (step in 0..100) {
+                for (step in 0..140) {
                     writer.putInt(0, (step / 50f * 1_000_000).toInt().coerceAtMost(1_000_000))
                     clock.currentPlayTime = step * 10L
-                    if (step == 80) assertSame("The depth catch keeps the shared clock alive", clock, getField<Any?>(shell, "motion"))
+                    if (step == 140) assertNull("Settled receive releases its finite owner", getField<Any?>(shell, "motion"))
                     width = shell.scaleX * 240f
                     assertTrue("Keep the physical width boundary", width <= 260.002f)
                     if (width > widest) { widest = width; widestAt = step * 10L }
                     val height = shell.scaleY * 40f
-                    if (height < deepest) { deepest = height; deepestAt = step * 10L; widthAtDeepest = width }
+                    assertTrue("Receive may grow positively but must not compress below the configured height",height in 39.998f..66.001f)
                 }
-                assertTrue("Retain a restrained horizontal rebound", widest in 240.5f..256f)
-                assertTrue("Reach the horizontal crest near 360 ms", widestAt in 340L..385L)
-                assertTrue("The vertical crest remains later", deepestAt - widestAt >= 250L)
-                assertEquals("Horizontal rebound finishes before vertical catch", 240f, widthAtDeepest, .002f)
-                assertTrue(deepest in 38.999f..39.01f)
+                assertTrue("Retain the native positive receiving preference", widest in 240.5f..260.001f)
+                assertTrue("Advance the receive without a late synthetic pulse",widestAt in 100L..600L)
                 assertEquals(240f, width, .002f)
             } finally {
                 getField<ValueAnimator?>(shell, "motion")?.cancel(); shell.cancelMediaReturn()
@@ -68,7 +155,7 @@ class IslandNativeReturnCompletionTest {
         }
     }
 
-    @Test fun receivingUsesTheSameOneDpDepthAcrossAllAlignments() {
+    @Test fun receivingHeightIsIndependentOfAlignmentAndRestoresTheFinalSize() {
         fun track(gap: Int, alignment: Int): FloatArray {
             val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
             val memory = SharedMemory.create("matching-vertical-receive", 4)
@@ -84,15 +171,14 @@ class IslandNativeReturnCompletionTest {
                 shell.acceptReturnProgress(IslandReturnProgress(memory.mapReadOnly()))
                 shell.prepareReturnFromCurrent(); shell.transition(240, 40, 240, 40, entering = false)
                 val clock = getField<ValueAnimator>(shell, "motion")
-                val heights = FloatArray(101)
+                val heights = FloatArray(141)
                 for (step in heights.indices) {
                     val time = step * 10L
                     writer.putInt(0, (time / 500f * 1_000_000).toInt().coerceAtMost(1_000_000))
                     clock.currentPlayTime = time
                     heights[step] = shell.scaleY * 40f
-                    assertTrue("Temporary compression is bounded", heights[step] >= 38.999f)
+                    assertTrue("Only a positive native receive is permitted",heights[step] in 39.998f..66.001f)
                 }
-                assertTrue("Receive compresses rather than uniformly enlarging", heights.min() < 39.5f)
                 assertNull(getField<Any?>(shell, "motion"))
                 return heights
             } finally {
@@ -138,7 +224,7 @@ class IslandNativeReturnCompletionTest {
         }
     }
 
-    @Test fun aLateDefaultChannelDoesNotReplayTheReceivingGesture() {
+    @Test fun lateAdoptionPreservesTheVisibleOriginAndStillReceivesOnTheSameClock() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val memory = SharedMemory.create("late-default-return", 4)
         val writer = memory.mapReadWrite().order(ByteOrder.nativeOrder())
@@ -158,9 +244,10 @@ class IslandNativeReturnCompletionTest {
             shell.transition(240, 40, 240, 40, entering = false)
             val clock = getField<ValueAnimator>(shell, "motion")
             writer.putInt(0, 1_000_000)
-            for (time in 0L..500L step 20L) {
+            for (time in 0L..1400L step 20L) {
                 clock.currentPlayTime = time
-                assertEquals("An already arrived page cannot replay intake or recoil", 240f, shell.scaleX * 240f, .001f)
+                if(time==0L) assertEquals("Do not reset the adopted origin",240f,shell.scaleX*240f,.001f)
+                assertTrue("Keep native receive within the safe width",shell.scaleX*240f in 239.999f..260.001f)
             }
             assertNull(getField<Any?>(shell, "motion"))
         } finally {
@@ -195,13 +282,16 @@ class IslandNativeReturnCompletionTest {
                 val origin = shell.scaleX
                 writer.putInt(0, 60_000)
                 clock.currentPlayTime = 40L
-                assertTrue("Intake must move the island before page completion; existing=$existing",
-                    kotlin.math.abs(shell.scaleX - origin) * 240f > 1f)
+                if (existing) assertTrue("Accepted contact begins a positive receive without a page-percent gate",shell.scaleX>origin)
+                else assertTrue("An appearing shell must grow during intake", kotlin.math.abs(shell.scaleX - origin) * 240f > 1f)
+                writer.putInt(0, 140_000); clock.currentPlayTime = 80L
+                clock.currentPlayTime = 150L
+                assertTrue("Both paths respond before native completion", kotlin.math.abs(shell.scaleX - origin) * 240f > 1f)
                 writer.putInt(0, 550_000)
                 clock.currentPlayTime = 320L
-                assertEquals("Horizontal receiving precedes vertical catch", 1f, shell.scaleY, .0001f)
-                clock.currentPlayTime = 730L
-                assertTrue("The delayed depth catch still uses the same arrival", shell.scaleY < .99f)
+                assertTrue("Native positive receiving height is allowed",shell.scaleY in 1f..1.651f)
+                clock.currentPlayTime = if (existing) 810L else 730L
+                assertTrue("No delayed negative depth response",shell.scaleY>=.99999f)
                 assertEquals(.55f, getField<Float>(shell, "mediaReturnProgress"), .00001f)
             } finally {
                 getField<ValueAnimator?>(shell, "motion")?.cancel()
@@ -279,11 +369,9 @@ class IslandNativeReturnCompletionTest {
                 assertEquals(0, endings)
                 writer.putInt(0, terminal)
                 clock!!.currentPlayTime = 400L
-                if (terminal > 0) {
-                    assertEquals("Page completion must not cut off the island's damped settling", 0, endings)
-                    assertSame(clock, getField<Any?>(shell, "motion"))
-                    clock!!.currentPlayTime = 1000L
-                }
+                assertEquals("Page completion or an invalid progress channel must not cut off settling", 0, endings)
+                assertSame(clock, getField<Any?>(shell, "motion"))
+                clock!!.currentPlayTime = 1000L
                 assertEquals("Exactly one terminal callback", 1, endings)
                 clock!!.currentPlayTime = 1100L // A stale pulse cannot resume the retired owner.
                 assertNull(getField<Any?>(shell, "motion"))

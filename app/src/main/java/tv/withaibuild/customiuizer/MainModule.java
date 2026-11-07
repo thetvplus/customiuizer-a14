@@ -219,8 +219,9 @@ public class MainModule extends XposedModule {
         final boolean controlMedia = (mPrefs.getStringAsInt("controls_volumemedia_up", 0) > 0
             || mPrefs.getStringAsInt("controls_volumemedia_down", 0) > 0) && mPrefs.getStringSet("controls_mediaplayer_apps").contains(pkg);
         final boolean pocoFolderIconBlur = GenericAppFeatures.shouldInstallPocoFolderIconBlur(mPrefs, pkg, processName);
-        if (isLauncherPkg || isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur) {
-            GenericAppInstaller.installPostAttach(lpparam, mPrefs, isLauncherPkg, isStatusBarColor, isNoOverscroll, controlMedia, pocoFolderIconBlur);
+        final boolean pocoRecentsDeck = GenericAppFeatures.shouldInstallPocoRecentsDeck(mPrefs, pkg, processName);
+        if (isLauncherPkg || isStatusBarColor || isNoOverscroll || controlMedia || pocoFolderIconBlur || pocoRecentsDeck) {
+            GenericAppInstaller.installPostAttach(lpparam, mPrefs, isLauncherPkg, isStatusBarColor, isNoOverscroll, controlMedia, pocoFolderIconBlur, pocoRecentsDeck);
         }
 
         HookDiagnostics.printSummaryForStage("onPackageReady");

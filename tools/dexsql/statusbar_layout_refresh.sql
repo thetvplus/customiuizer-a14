@@ -11,3 +11,9 @@ WHERE (class_descriptor = 'Lcom/android/systemui/statusbar/phone/StatusBarConten
  OR (class_descriptor = 'Lcom/android/systemui/statusbar/views/MiuiBatteryMeterView;'
  AND method_name IN ('onAttachedToWindow','onDetachedFromWindow','onBatteryLevelChanged'))
 ORDER BY file_id, method_descriptor;
+
+-- Optional small icons vary independently from the mobile state consumer.
+SELECT file_id, field_descriptor FROM class_fields
+WHERE class_descriptor='Lcom/android/systemui/statusbar/StatusBarMobileView;'
+ AND field_name IN ('mSmallHd','mSmallRoaming')
+ORDER BY file_id,field_descriptor;

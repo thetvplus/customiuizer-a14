@@ -110,7 +110,7 @@ open class SubFragment : PreferenceFragmentBase() {
         settingTitle = args.getString("titleResId") ?: ""
         order = args.getFloat("order", 100.0f) + 10.0f
         catInfo = args.getBundle("catInfo")
-        sub = args.getString("sub")?.takeIf { it.isNotBlank() }
+        sub = tv.withaibuild.customiuizer.utils.SearchRouteResolver.normalizeSub(args.getString("sub"))
         isStandalone = args.getBoolean("isStandalone", false)
         highlightKey = args.getString("mod")
         if (abType == AppHelper.ActionBarType.Edit) {

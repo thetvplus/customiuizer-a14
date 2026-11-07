@@ -1,11 +1,14 @@
 package tv.withaibuild.customiuizer.mods.island
 
 import android.text.TextPaint
-import kotlin.math.ceil
+import android.text.StaticLayout
+import android.text.Layout
+import android.text.TextDirectionHeuristics
+import android.graphics.text.LineBreaker
 
-/** One complete status line; failure keeps the native presentation rather than clipping meaning. */
+/** A complete system status stays on one row before width or wording changes. */
 internal object IslandStatusLayout {
-    data class Fit(val size: Float, val height: Int)
+    data class Fit(val size: Float, val height: Int, val lines: Int = 1)
 
     fun fit(text: String, source: TextPaint, room: Int, initial: Float, minimum: Float,
         maximumHeight: Int): Fit? {
@@ -15,9 +18,15 @@ internal object IslandStatusLayout {
         val step = (initial - minimum).coerceAtLeast(1f) / 4f
         while (true) {
             paint.textSize = size
-            val metrics = paint.fontMetrics
-            val height = ceil(metrics.descent - metrics.ascent).toInt()
-            if (paint.measureText(text) <= room - 1 && height <= maximumHeight) return Fit(size, height)
+            val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, room - 1)
+                .setIncludePad(false).setMaxLines(1)
+                .setBreakStrategy(LineBreaker.BREAK_STRATEGY_BALANCED)
+                .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)
+                .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_LTR).build()
+            if (layout.lineCount == 1 && layout.height <= maximumHeight &&
+                layout.getLineEnd(0) == text.length && layout.getLineWidth(0) <= room - 1f) {
+                return Fit(size, layout.height)
+            }
             if (size <= minimum) return null
             size = maxOf(minimum, size - step)
         }

@@ -13,6 +13,8 @@
 | File | Reason |
 |---|---|
 | `app/src/main/java/tv/withaibuild/customiuizer/mods/utils/XposedHelpers.java` | LSPosed 派生的 GPL 反射 / Hook 核心。公开静态方法、vararg、数组、泛型和分配敏感缓存。 |
+| `app/src/main/java/tv/withaibuild/customiuizer/mods/island/IslandReturnProgress.java` | VarHandle 签名多态调用，保留跨进程共享进度的标量访问。 |
+| `app/src/main/java/tv/withaibuild/customiuizer/mods/recents/DeckSpringEndListener.java` | 已核对的原生 RectFSpringAnim 以 null Animator 调用 start / end / cancel；Java 适配保留此合同，避免 Kotlin 非空入口断言。 |
 
 ## 第三方补丁
 

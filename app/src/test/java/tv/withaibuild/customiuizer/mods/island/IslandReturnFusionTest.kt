@@ -34,17 +34,20 @@ import org.robolectric.util.ReflectionHelpers.getField
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandReturnFusionTest {
-    @Test fun strongerContactHasAVisibleMeniscusInsideTheOriginalWindow() {
-        val shape = IslandShape().apply { resize(240, 40, 1f, 1f, 1f) }
-        val region = Region().apply { setPath(shape.path, Region(0, 0, 240, 40)) }
-        assertTrue("The centre remains inside the original bottom edge", region.contains(120, 39))
-        assertFalse("Contact must deepen beyond the earlier three-pixel cue", region.contains(80, 36))
-        assertTrue("The body remains substantial", region.contains(80, 34))
-        val bounds = RectF().also { shape.path.computeBounds(it, true) }
-        assertEquals(RectF(0f, 0f, 240f, 40f), bounds)
-        exportShape(shape.path, "stronger-contact")
+    @Test fun pageHeadBecomesFlatAtIslandContactRatherThanAnOvalCap() {
+        withSession(true) { session ->
+            val mesh = getField<Any>(session, "drawing")
+            val vertices = getField<FloatArray>(mesh, "vertices")
+            val rect = getField<RectF>(mesh, "rect")
+            IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), RectF(300f, 20f, 700f, 60f), .16f, rect)
+            mesh.javaClass.getDeclaredField("leading").apply { isAccessible = true }.setFloat(mesh, 1f)
+            val clip = mesh.javaClass.getDeclaredMethod("clip", Boolean::class.javaPrimitiveType, Float::class.javaPrimitiveType)
+                .apply { isAccessible = true }.invoke(mesh, true, 80f) as Path
+            val region = Region().apply { setPath(clip, Region(0, 0, 1080, 2400)) }
+            assertTrue("The page reaches both ends of its wide, flat mouth", region.contains(vertices[0].toInt() + 2, rect.top.toInt() + 2))
+            assertTrue(region.contains(vertices[2].toInt() - 2, rect.top.toInt() + 2))
+        }
     }
-
     @Test fun aFullyMergedPageSkipsClipAndMeshDrawAndCanBecomeVisibleAgain() {
         withSession(true) { session ->
             val mesh = getField<Any>(session, "drawing")
@@ -127,19 +130,19 @@ class IslandReturnFusionTest {
         withSession(true) { session ->
             val first = drawingResources(session)
             assertEquals(1, first.values.count { it is FloatArray && it.size == IslandAbsorptionMesh.FLOATS })
-            assertEquals(1, first.values.count { it is IntArray && it.size == (IslandAbsorptionMesh.ROWS + 1) * 2 })
+            assertEquals("Opaque mesh needs no per-vertex colour buffer", 0, first.values.count { it is IntArray })
             val again = drawingResources(session)
             for ((key, value) in first) assertSame(value, again[key])
         }
     }
 
-    @Test fun absorptionHasTheSameLocalContactWithoutAnExtraClock() =
+    @Test fun absorptionKeepsTheCleanCapsuleOnTheExistingClock() =
         exerciseNativeContact()
 
     @Test fun powerSaveMotionNativeReturnsKeepTheUnmodifiedCapsule() =
         exerciseNativeContact(powerSaveMotion = true)
 
-    @Test fun liquidContactPreservesTheExistingCameraMaskReservation() {
+    @Test fun cleanAbsorptionPreservesTheExistingCameraMaskReservation() {
         exerciseNativeContact(tightCameraMask = true)
     }
 
@@ -164,21 +167,6 @@ class IslandReturnFusionTest {
             mesh.javaClass.getDeclaredField("clipReady").apply { isAccessible = true }.setBoolean(mesh, false)
             clip.invoke(mesh, true, 8f)
             assertNotEquals("A native geometry update invalidates the cached path", accepted, path.generationId)
-        }
-    }
-
-    @Test fun preparedContactColorsKeepTheBodyOpaqueAndStandaloneCallsOverwriteOldInputs() {
-        val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
-        val destination = RectF(100f, 10f, 200f, 50f)
-        IslandAbsorptionMesh.fill(vertices, RectF(20f, 100f, 280f, 600f), destination, .4f)
-        val colors = IntArray((IslandAbsorptionMesh.ROWS + 1) * 2)
-        colors[colors.lastIndex] = -1
-        IslandAbsorptionMesh.contactColors(colors, vertices, destination, .4f)
-        assertTrue(colors.drop(16).all { it == -1 })
-        for (step in 0..100) {
-            IslandAbsorptionMesh.contactColors(colors, vertices, destination, step / 100f, opaqueBodyReady = true)
-            assertTrue(colors.drop(16).all { it == -1 })
-            assertTrue(colors.take(16).all { Color.alpha(it) in 239..255 })
         }
     }
 
@@ -255,7 +243,7 @@ class IslandReturnFusionTest {
                 val difference = Region().apply { setPath(shape.path, clip) }
                 difference.op(Region().apply { setPath(normal.path, clip) }, Region.Op.XOR)
                 assertEquals("powerSaveMotion=$powerSaveMotion cameraReserved=$tightCameraMask hz=$hz",
-                    powerSaveMotion || tightCameraMask, difference.isEmpty)
+                    true, difference.isEmpty)
                 val bounds = RectF().also { shape.path.computeBounds(it, true) }
                 assertTrue("Contact stays inside the existing window: $bounds", bounds.left >= -.001f &&
                     bounds.top >= -.001f && bounds.right <= 240.001f && bounds.bottom <= 40.001f)

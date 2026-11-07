@@ -32,8 +32,8 @@ class IslandStateSubmissionTest {
         val shell = IslandActivityView(RuntimeEnvironment.getApplication()).apply { powerSaveMotion = true }
         shell.bind("Track", "Artist", null, true, true, false, 0, false)
         shell.geometry(280, 40, 40)
-        val identity = (shell.getChildAt(0) as LinearLayout).getChildAt(1) as TextView
-        val detail = (shell.getChildAt(1) as LinearLayout).getChildAt(1) as TextView
+        val identity = (shell.contentAt(0) as LinearLayout).getChildAt(1) as TextView
+        val detail = (shell.contentAt(1) as LinearLayout).getChildAt(1) as TextView
         var textSubmissions = 0
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -62,7 +62,7 @@ class IslandStateSubmissionTest {
         assertEquals(2, textSubmissions)
         shell.bind("Recorder", "Paused", null, false, false, false, 0, false,
             expanded = true, clock = IslandLiveClock(0, false, pausedMillis = 62_000))
-        val clock = (shell.getChildAt(1) as LinearLayout).getChildAt(0) as TextView
+        val clock = (shell.contentAt(1) as LinearLayout).getChildAt(0) as TextView
         assertEquals(IslandLiveLabels.time(62_000), clock.text.toString())
         assertEquals("", identity.text.toString())
         assertEquals("Paused", detail.text.toString())

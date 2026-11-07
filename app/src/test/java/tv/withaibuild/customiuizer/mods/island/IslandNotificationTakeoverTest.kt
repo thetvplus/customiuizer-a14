@@ -36,6 +36,26 @@ class IslandNotificationTakeoverTest {
         assertEquals(1, clicks)
     }
 
+    @Test fun aSameEntryUpdateRevokesTheOldClickWithoutInventingAPrivacyHide() {
+        var concealed=false
+        var checked: StatusBarNotification?=null
+        val port=IslandNotificationAccess(Entry::class.java,Binding::class.java,
+            IslandNotificationPrivacy { _,posted -> checked=posted; concealed })
+        val entry=Entry(context,notification(1)).apply { row.setOnClickListener { } }
+        val bound=requireNotNull(port.read(entry))
+        val hidden=requireNotNull(bound.hidden)
+        entry.mSbn=notification(2)
+        assertFalse(bound.open())
+        assertFalse("A posted update can retain already accepted pixels until the next bind",hidden())
+        assertSame("Privacy still follows the current native notification",entry.mSbn,checked)
+        concealed=true; assertTrue(hidden())
+        concealed=false; entry.row.mRemoved=true; assertTrue(hidden())
+        entry.row.mRemoved=false
+        entry.mSbn=StatusBarNotification(context.packageName,context.packageName,2,"other",Process.myUid(),0,0,
+            Notification.Builder(context,"chat").build(),Process.myUserHandle(),3)
+        assertTrue("A different native identity cannot retain old content",hidden())
+    }
+
     @Test fun appLockSensitiveContentAndMissingClickTargetCannotBeTakenOver() {
         val entry = Entry(context, notification(1))
         assertNull(access.read(entry))

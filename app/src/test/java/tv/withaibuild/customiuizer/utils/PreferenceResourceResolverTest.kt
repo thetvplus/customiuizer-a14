@@ -6,6 +6,13 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.R
 
 class PreferenceResourceResolverTest {
+    @Test
+    fun previousIosCategoryLinksOpenTheirCurrentOwningPages() {
+        assertEquals(R.id.prefs_system_audio,
+            PreferenceResourceResolver.resolve("pref_key_system", "pref_key_system_cat_ios_volume"))
+        assertEquals(R.id.prefs_system_recents,
+            PreferenceResourceResolver.resolve("pref_key_system", "pref_key_system_cat_ios_desktop"))
+    }
 
     @Test
     fun everyGeneratedCategoryResolvesToItsLazyResource() {

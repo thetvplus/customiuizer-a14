@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_island_mode_dnd">勿扰模式</string>
+    <string name="system_island_mode_dnd_short">勿扰</string>
+    <string name="system_volume_ios_title">iOS 音量条（实验）</string>
+    <string name="system_volume_ios_summ">调整横竖屏收起音量条，保留原生拖动、路由及展开控制。修改后需重启 SystemUI。</string>
+    <string name="system_volume_ios_compact_title">默认窄条</string>
+    <string name="system_volume_ios_compact_summ">出现时直接显示窄条，触摸拖动时展开。横竖屏均生效，修改后需重启 SystemUI。</string>
+</resources>

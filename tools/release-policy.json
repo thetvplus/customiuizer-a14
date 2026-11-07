@@ -8,8 +8,9 @@
   "community_url": "https://t.me/customiuizerA14",
   "repository_description": "米客 A14｜CustoMIUIzer A14｜HyperOS 1 / Android 14",
   "release_target": {
-    "version_name": "r14.26.11",
-    "minimum_version_code": 281
+    "version_name": "r14.27.1",
+    "minimum_version_code": 301,
+    "unpublished_source": "r14.26.13"
   },
   "cumulative_releases": {
     "r14.25.5": {
@@ -41,6 +42,9 @@
     },
     "r14.26.11": {
       "notes_base": "r14.26.9"
+    },
+    "r14.27.1": {
+      "notes_base": "r14.26.11"
     }
   },
   "commit_identity": {
@@ -75,6 +79,20 @@
       "metadata_sha256": "342ac204c2af2ded901eef00dd2e956499f0fba96b27a212f18df4c040d523b3",
       "apk_sha256": "d36799100a7bbe8b2ebbf804c86654fe05b785c405aa62323eaee5d28beb9ff7",
       "app_tree": "74277f6e8b6b2a5ac4cd8a82ece8e8763e03fa4c"
+    },
+    "r14.26.9": {
+      "build_source_sha": "94f8adbb670e6a19fa89e35f1cf7afdae7f700f2",
+      "source_sha": "4d936368c39db2cdd25758b1eaa9125197827691",
+      "metadata_sha256": "d7ecde0f978445ee102be7d152c874474578ace22a818a2e298aaaf3a0ad0780",
+      "apk_sha256": "0e19e5dabec45a7de36d8aded7640bfde392c17acffc758f94657923255003a6",
+      "app_tree": "998c7de1e04301a0d3b09e77855a25c74a7f7598"
+    },
+    "r14.26.11": {
+      "build_source_sha": "eea6315fe8ed309575f5d0c97e62df42de935dd9",
+      "source_sha": "052e5cf98764acfb052e6f0567a215a71bc2230b",
+      "metadata_sha256": "284759f1c52f3e1a6e7ef5bcae3af3f3debcd8a5bd9fc76d3a2b389ef87215d3",
+      "apk_sha256": "4a2d34d1e6ffd42c895f8def321932b1a0972a4ee12c51dc084afd7bca752410",
+      "app_tree": "80afb9dc2f929239031efef7c3db543749a783de"
     }
   }
 }

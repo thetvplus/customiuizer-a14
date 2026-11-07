@@ -4,87 +4,37 @@ import android.content.Context
 import android.animation.ValueAnimator
 import android.content.res.Configuration
 import android.graphics.Canvas
-import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.SystemClock
 import android.view.View
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
-/** Native vectors only. Short event-driven transitions reuse the same drawing state and paths. */
+/** Fixed iOS templates; short event-driven transitions reuse drawing state and paths. */
 internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
     private val onFailure: (Throwable) -> Unit,
     private val onGeometryChanged: () -> Unit,
 ) : View(context) {
-    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        textSize = 30f
-        isFakeBoldText = true
+        textSize = 11f * 120f / 47f
+        if (config.showPercent) typeface = DuoIosFont.get(context)
     }
-    private val topInk = Rect().also { text.getTextBounds("88", 0, 2, it) }
-    private val opticalCenter = (minOf(if (config.bold) 5f else 6f,
-        if (config.showPercent || config.showChargingBolt) 26f + topInk.top else 6f) + 117.2f) * .5f
     private val cellularText = if (config.networkFallback && config.cellularStyle == 2) Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         textSize = 35f
-        isFakeBoldText = true
+        isFakeBoldText = config.bold
     } else null
     private var cellularFont: Typeface? = null
     private var cellularBaseline = 0f
-    private val bolt = Path().apply {
-        moveTo(64f, 0f); lineTo(47f, 20f); lineTo(58f, 20f)
-        lineTo(54f, 34f); lineTo(72f, 13f); lineTo(61f, 13f); close()
-        // Status Trio's shared optical height for top markers, adapted to native vectors.
-        // Resolve once, never resize paths or measure text from the drawing callback.
-        val ink = topInk
-        val scale = ink.height().coerceAtLeast(1) / 34f
-        val center = 26f + (ink.top + ink.bottom) / 2f
-        transform(Matrix().apply {
-            setScale(scale, scale, 59.5f, 17f)
-            postTranslate(0f, center - 17f)
-        })
-    }
-    private val plane = DuoAirplane.create()
-    // Config is fixed for this view; create only the audio silhouettes it can draw.
-    private val headphones = if (config.showAudio && config.headphoneStyle != 3) Path().apply {
-        moveTo(38.5f, 72f); lineTo(38.5f, 61f)
-        cubicTo(38.5f, 36f, 80.5f, 36f, 80.5f, 61f); lineTo(80.5f, 72f)
-    } else null
-    private val earbuds = if (config.showAudio && config.headphoneStyle != 2) Path().apply {
-        // Each bud and stem is one silhouette with an open gap between the two earpieces.
-        moveTo(44f, 46f)
-        cubicTo(35f, 46f, 33f, 59f, 40f, 64f)
-        lineTo(40f, 81f); cubicTo(40f, 86f, 48f, 86f, 48f, 81f)
-        lineTo(48f, 63f); cubicTo(57f, 60f, 56f, 46f, 44f, 46f); close()
-        moveTo(75f, 46f)
-        cubicTo(84f, 46f, 86f, 59f, 79f, 64f)
-        lineTo(79f, 81f); cubicTo(79f, 86f, 71f, 86f, 71f, 81f)
-        lineTo(71f, 63f); cubicTo(62f, 60f, 63f, 46f, 75f, 46f); close()
-    } else null
-    // Wi-Fi marker geometry adapted from Status Trio (Apache-2.0).
-    // Attribution and license: assets/licenses/status-trio.txt.
-    private val wifiDot = Path().apply {
-        moveTo(59.5f, 69.9f)
-        cubicTo(61f, 69.9f, 65.2f, 70.8f, 66.5f, 73f)
-        cubicTo(66.7f, 73.8f, 66.7f, 74.3f, 66.5f, 75f)
-        cubicTo(63.8f, 78.8f, 61.15f, 80.95f, 59.5f, 80.95f)
-        cubicTo(57.85f, 80.95f, 55.2f, 78.8f, 52.5f, 75f)
-        cubicTo(52.3f, 74.3f, 52.3f, 73.8f, 52.5f, 73f)
-        cubicTo(53.8f, 70.8f, 58f, 69.9f, 59.5f, 69.9f)
-        close()
-    }
+    private val iosGlyphs = DuoIosGlyphs(config)
     // Resolve once on attachment. Resource reads recur only on configuration changes.
     private val nativeHeightId = resources.getIdentifier("status_bar_icon_height", "dimen", "com.android.systemui")
     var iconSizePx = 0
         private set
+    private var drawingSizePx = 0f
     val layoutWidthPx: Int get() = iconSizePx + paddingLeft + paddingRight
     var binding: DuoBinding? = null
     private var level = -1
@@ -93,6 +43,8 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
     private var foreground = -1
     private var network = 0
     private val transition = DuoTransition()
+    private val secondaryTransition = DuoTransition()
+    private val cellularMotion = DuoCellularMotion()
     private var offsetPx = 0f
     private var sharedHeightPx = 0
     private var label = ""
@@ -103,15 +55,15 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
         isClickable = false
         isFocusable = false
         updateSize()
-        syncTypeface(null)
+        syncTypeface()
     }
 
     val usesCellularText: Boolean get() = cellularText != null
 
-    /** Reuse the native local font. Binding/configuration only; no font files or per-frame metrics. */
-    fun syncTypeface(typeface: Typeface?) {
+    /** Binding/configuration only; the fixed subset is shared across all bindings. */
+    fun syncTypeface() {
         val paint = cellularText ?: return
-        val localFont = typeface ?: Typeface.DEFAULT
+        val localFont = DuoIosFont.get(context)
         if (cellularFont === localFont) return
         cellularFont = localFont
         paint.typeface = localFont
@@ -123,7 +75,8 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
 
     private fun updateSize() {
         val nativeHeight = if (nativeHeightId == 0) 0 else resources.getDimensionPixelSize(nativeHeightId)
-        iconSizePx = DuoSizing.pixels(config, nativeHeight, resources.displayMetrics.density)
+        drawingSizePx = DuoSizing.drawingPixels(config, nativeHeight, resources.displayMetrics.density)
+        iconSizePx = kotlin.math.ceil(drawingSizePx).toInt().coerceAtLeast(1)
         offsetPx = config.offsetDp * resources.displayMetrics.density
         val horizontal = (config.horizontalPaddingDp * resources.displayMetrics.density + 0.5f).toInt()
         setPadding(horizontal, paddingTop, horizontal, paddingBottom)
@@ -149,13 +102,35 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
         val key = DuoCenter.key(network, audio, config)
         if (this.level == level && this.charging == charging && this.saver == saver &&
             this.foreground == foreground && this.network == network && transition.current == key) return
-        val duration = if (this.level >= 0 && DuoCenter.glyph(transition.current) != DuoCenter.glyph(key) &&
-            !saver &&
-            isShown && windowVisibility == VISIBLE && ValueAnimator.areAnimatorsEnabled())
-            (180f * ValueAnimator.getDurationScale().coerceIn(0f, 2f)).toLong() else 0L
-        transition.change(key, SystemClock.uptimeMillis(), duration)
+        if (transition.previous >= 0) iosGlyphs.prepare(transition.previous,foreground,network)
+        if (transition.current >= 0) iosGlyphs.prepare(transition.current,foreground,network)
+        iosGlyphs.prepare(key,foreground,network)
+        val primary=DuoCompactLayout.primary(network)
+        var secondary=DuoCompactLayout.secondary(primary,network and DuoNetworkState.AIRPLANE!=0,false,false)
+        // Keep existing Android text/audio options informative when they replace
+        // the primary cellular bars. They are explicit product extensions.
+        val audioHint=DuoCenter.glyph(key) in DuoAudioState.WIRED_GLYPH..DuoAudioState.BLUETOOTH_GLYPH
+        val cellularText=DuoCenter.glyph(key)==DuoAudioState.CELLULAR_GLYPH && this.cellularText!=null && DuoCenter.value(key) in 2..5
+        if(primary==DuoCompactLayout.CELLULAR && (!config.networkFallback || audioHint || cellularText)) secondary=DuoCompactLayout.CELLULAR
+        if(secondary==DuoCompactLayout.AIRPLANE || secondaryTransition.previous==DuoCompactLayout.AIRPLANE ||
+            secondaryTransition.current==DuoCompactLayout.AIRPLANE) iosGlyphs.preparePlane(foreground)
+        val now=SystemClock.uptimeMillis()
+        val mayAnimate=this.level>=0 && !saver && isShown && windowVisibility==VISIBLE && ValueAnimator.areAnimatorsEnabled()
+        val timeScale=ValueAnimator.getDurationScale()
+        // Wi-Fi strength changes are not wrapped in the native withAnimation.
+        // Replacing their primitive value must not restart an entering silhouette.
+        if(transition.current>=0 && DuoCenter.glyph(transition.current)==DuoCenter.glyph(key) &&
+            (transition.current and DuoCenter.WARNING)==(key and DuoCenter.WARNING)) transition.replaceCurrent(key)
+        else transition.change(key, now, mayAnimate,timeScale)
+        secondaryTransition.change(secondary,now,mayAnimate,timeScale)
+        val cellularVisible=primary==DuoCompactLayout.CELLULAR || secondary==DuoCompactLayout.CELLULAR ||
+            secondaryTransition.previous==DuoCompactLayout.CELLULAR || DuoCenter.glyph(transition.previous)==DuoAudioState.CELLULAR_GLYPH
+        cellularMotion.change(network,now,mayAnimate && cellularVisible,timeScale)
         if (saver) stopTransition()
         if (this.level != level && config.showPercent) label = level.toString()
+        iosGlyphs.prepareMarker(label,DuoGeometry.showBolt(level,charging,config.showChargingBolt,config.showPercent),
+            DuoGeometry.batteryColor(foreground,level,charging,saver),text)
+        iosGlyphs.prepareRing(level)
         this.level = level
         this.charging = charging
         this.saver = saver
@@ -164,7 +139,7 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
         invalidate()
     }
 
-    fun stopTransition() { transition.finish() }
+    fun stopTransition() { transition.finish(); secondaryTransition.finish(); cellularMotion.finish() }
 
     val rowHeightPx: Int
         get() = (height - paddingTop - paddingBottom).coerceAtLeast(0)
@@ -216,11 +191,11 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
             val contentHeight = height - paddingTop - paddingBottom
             val rowHeight = DuoSizing.sharedHeight(contentHeight, sharedHeightPx)
             val offset = DuoSizing.offset(rowHeight, offsetPx)
-            val size = DuoSizing.drawingSize(contentWidth, rowHeight, offset)
+            val size = minOf(drawingSizePx,DuoSizing.drawingSize(contentWidth, rowHeight, offset))
             if (size <= 0f) return
             val scale = size / 120f
             canvas.translate(paddingLeft + (contentWidth - size) / 2f,
-                paddingTop + (contentHeight - size) / 2f + offset + DuoSizing.opticalShift(size, rowHeight, offset, opticalCenter))
+                paddingTop + (contentHeight - size) / 2f + offset)
             canvas.scale(scale, scale)
             drawIcon(canvas)
         } catch (t: Throwable) {
@@ -233,122 +208,68 @@ internal class DuoStatusBarView(context: Context, private val config: DuoConfig,
     }
 
     private fun drawIcon(canvas: Canvas) {
-        val showBolt = charging && config.showChargingBolt
-        val gap = DuoGeometry.topGap(config.showPercent, showBolt)
-        val side = DuoGeometry.sideSweep(gap)
-        val rightStart = 270f + gap / 2f
+        val showBolt = DuoGeometry.showBolt(level,charging,config.showChargingBolt,config.showPercent)
         val track = DuoGeometry.dim(foreground)
         val tint = DuoGeometry.batteryColor(foreground, level, charging, saver)
-        stroke.strokeWidth = if (config.bold) 10f else 8f
-        if (gap == 0f) {
-            // One arc has no rounded-cap overlap at twelve o'clock, including the dim track.
-            stroke.color = track
-            canvas.drawArc(8f, 10f, 111f, 113f, DuoGeometry.RING_START,
-                360f - DuoGeometry.BOTTOM_GAP, false, stroke)
-            stroke.color = tint
-            val sweep = DuoGeometry.continuousFill(level)
-            if (sweep > 0f) canvas.drawArc(8f, 10f, 111f, 113f, DuoGeometry.RING_START, sweep, false, stroke)
-        } else {
-            stroke.color = track
-            canvas.drawArc(8f, 10f, 111f, 113f, DuoGeometry.RING_START, side, false, stroke)
-            canvas.drawArc(8f, 10f, 111f, 113f, rightStart, side, false, stroke)
-            stroke.color = tint
-            val left = DuoGeometry.leftFill(level, side)
-            val right = DuoGeometry.rightFill(level, side)
-            if (left > 0f) canvas.drawArc(8f, 10f, 111f, 113f, DuoGeometry.RING_START, left, false, stroke)
-            if (right > 0f) canvas.drawArc(8f, 10f, 111f, 113f, rightStart, right, false, stroke)
+        fill.color=track
+        canvas.drawPath(iosGlyphs.track,fill)
+        fill.color=tint
+        canvas.drawPath(iosGlyphs.progress,fill)
+        if(showBolt) iosGlyphs.drawBolt(canvas,tint)
+        if(config.showPercent) {
+            text.color=tint
+            canvas.drawText(label,iosGlyphs.percentX,iosGlyphs.percentBaseline,text)
         }
 
-        if (showBolt) {
-            fill.color = tint
-            canvas.drawPath(bolt, fill)
-        } else if (config.showPercent) {
-            text.color = tint
-            canvas.drawText(label, 59.5f, 26f, text)
-        }
+        val now=SystemClock.uptimeMillis()
+        if (!ValueAnimator.areAnimatorsEnabled()) stopTransition()
+        transition.fraction(now); secondaryTransition.fraction(now); cellularMotion.sample(now)
+        if(transition.running) drawCenter(canvas,transition.previous,transition.previousAlpha)
+        drawCenter(canvas, transition.current, transition.currentAlpha)
+        if(secondaryTransition.running) drawSecondary(canvas,secondaryTransition.previous,secondaryTransition.previousAlpha,transition.previous)
+        drawSecondary(canvas,secondaryTransition.current,secondaryTransition.currentAlpha,transition.current)
+        if ((transition.running || secondaryTransition.running || cellularMotion.running) && isShown && windowVisibility == VISIBLE) postInvalidateOnAnimation()
+    }
 
-        var progress = transition.fraction(SystemClock.uptimeMillis())
-        if (progress < 1f && !ValueAnimator.areAnimatorsEnabled()) {
-            transition.finish()
-            progress = 1f
+    private fun drawSecondary(canvas: Canvas,kind: Int,alpha: Int,primaryKey: Int) {
+        if(alpha<=0) return
+        val color=DuoGeometry.withAlpha(foreground,(foreground ushr 24)*alpha/255)
+        if(kind==DuoCompactLayout.AIRPLANE) {
+            iosGlyphs.drawPlane(canvas,color,DuoCenter.glyph(primaryKey)!=DuoAudioState.PLANE_GLYPH,primaryKey,network)
+            return
         }
-        drawCenter(canvas, transition.drawKey(progress), transition.drawAlpha(progress))
-        if (progress < 1f && isShown && windowVisibility == VISIBLE) postInvalidateOnAnimation()
-
-        fill.color = DuoGeometry.signalColor(foreground, network, 0)
-        canvas.drawCircle(33f, 104.2f, 5.5f, fill)
-        fill.color = DuoGeometry.signalColor(foreground, network, 1)
-        canvas.drawCircle(50.5f, 111.2f, 5.5f, fill)
-        fill.color = DuoGeometry.signalColor(foreground, network, 2)
-        canvas.drawCircle(68.5f, 111.7f, 5.5f, fill)
-        fill.color = DuoGeometry.signalColor(foreground, network, 3)
-        canvas.drawCircle(86f, 105.8f, 5.5f, fill)
+        if(kind!=DuoCompactLayout.CELLULAR) return
+        fill.color = cellularMotion.color(color, 0)
+        canvas.drawCircle(34.535364f, 101.289640f, 5.106383f, fill)
+        fill.color = cellularMotion.color(color, 1)
+        canvas.drawCircle(51.114283f, 107.689895f, 5.106383f, fill)
+        fill.color = cellularMotion.color(color, 2)
+        canvas.drawCircle(68.885717f, 107.689895f, 5.106383f, fill)
+        fill.color = cellularMotion.color(color, 3)
+        canvas.drawCircle(85.464636f, 101.289640f, 5.106383f, fill)
     }
 
     private fun drawCenter(canvas: Canvas, key: Int, alpha: Int) {
         if (key < 0 || alpha <= 0) return
         val foreground = DuoGeometry.withAlpha(this.foreground, (this.foreground ushr 24) * alpha / 255)
+        // 24B91020 Wi-Fi transitions combine center-anchored scale
+        // (minimum .00001) with opacity. Reuse this finite handoff's fraction;
+        // strength-only updates and the battery ring remain static.
+        val saved=if(alpha<255 && DuoCenter.glyph(key)==DuoAudioState.WIFI_GLYPH) canvas.save() else -1
+        if(saved>=0) {
+            val scale=.00001f+.99999f*(alpha/255f)
+            canvas.scale(scale,scale,60f,60f)
+        }
         drawCenterGlyph(canvas, key, foreground)
+        if(saved>=0) canvas.restoreToCount(saved)
     }
 
-    private fun drawCenterGlyph(canvas: Canvas, key: Int, foreground: Int) {
-        val glyph = DuoCenter.glyph(key)
-        val value = DuoCenter.value(key)
-        if (glyph == DuoAudioState.PLANE_GLYPH) {
-            fill.color = foreground
-            canvas.drawPath(plane, fill)
-        } else if (glyph == DuoAudioState.WIRED_GLYPH || glyph == DuoAudioState.BLUETOOTH_GLYPH) {
-            val useEarbuds = config.headphoneStyle == 3 ||
-                (config.headphoneStyle == 1 && glyph == DuoAudioState.BLUETOOTH_GLYPH)
-            val path = (if (useEarbuds) earbuds else headphones) ?: return
-            val tint = if (glyph == DuoAudioState.BLUETOOTH_GLYPH) DuoGeometry.bluetoothColor(foreground, value) else foreground
-            val saved = canvas.save()
-            try {
-                canvas.scale(config.headphoneScale, config.headphoneScale, 59.5f, 65f)
-                stroke.strokeWidth = if (config.bold) 9f else 7f
-                stroke.color = tint
-                fill.color = tint
-                if (useEarbuds) {
-                    canvas.drawPath(path, fill)
-                } else {
-                    canvas.drawPath(path, stroke)
-                    canvas.drawRoundRect(32.5f, 61f, 46.5f, 84f, 6f, 6f, fill)
-                    canvas.drawRoundRect(72.5f, 61f, 86.5f, 84f, 6f, 6f, fill)
-                }
-            } finally { canvas.restoreToCount(saved) }
-        } else if (glyph == DuoAudioState.CELLULAR_GLYPH) {
-            if (cellularText != null && value in 2..5) {
-                cellularText.color = foreground
-                canvas.drawText(DuoCellularType.label(value), 59.5f, cellularBaseline, cellularText)
-                return
-            }
-            stroke.color = foreground
-            stroke.strokeWidth = if (config.bold) 9f else 7f
-            // The dot is at both arcs' center; leave a visible gap even with rounded bold caps.
-            canvas.drawLine(59.5f, 72f, 59.5f, 85f, stroke)
-            canvas.drawArc(40.5f, 37f, 78.5f, 75f, 140f, 80f, false, stroke)
-            canvas.drawArc(40.5f, 37f, 78.5f, 75f, 320f, 80f, false, stroke)
-            fill.color = foreground
-            canvas.drawCircle(59.5f, 56f, if (config.bold) 5.5f else 4.5f, fill)
-        } else if (glyph == DuoAudioState.OFFLINE_GLYPH) {
-            stroke.color = foreground
-            stroke.strokeWidth = if (config.bold) 7f else 5f
-            canvas.drawLine(48.5f, 54f, 70.5f, 76f, stroke)
-            canvas.drawLine(70.5f, 54f, 48.5f, 76f, stroke)
-        } else {
-            stroke.strokeWidth = if (config.bold) 9f else 7f
-            stroke.color = DuoGeometry.wifiColor(foreground, value, 2)
-            canvas.drawArc(28.5f, 47.3f, 90.5f, 109.3f, 227.35f, 85.3f, false, stroke)
-            stroke.color = DuoGeometry.wifiColor(foreground, value, 1)
-            canvas.drawArc(41f, 60.39f, 78f, 97.39f, 227.5f, 85f, false, stroke)
-            fill.color = DuoGeometry.wifiColor(foreground, value, 0)
-            canvas.drawPath(wifiDot, fill)
-            if (key and DuoCenter.WARNING != 0) {
-                text.color = foreground
-                text.textSize = 24f
-                canvas.drawText("!", 91f, 84f, text)
-                text.textSize = 30f
-            }
-        }
+    private fun drawCenterGlyph(canvas: Canvas,key: Int,foreground: Int) {
+        if(DuoCenter.glyph(key)==DuoAudioState.PLANE_GLYPH) return // The native airplane is the secondary item.
+        val value=DuoCenter.value(key)
+        if(DuoCenter.glyph(key)==DuoAudioState.CELLULAR_GLYPH && cellularText!=null && value in 2..5) {
+            cellularText.color=foreground
+            canvas.drawText(DuoCellularType.label(value),59.5f,cellularBaseline,cellularText)
+        } else iosGlyphs.draw(canvas,key,foreground,network,cellularMotion)
     }
 }

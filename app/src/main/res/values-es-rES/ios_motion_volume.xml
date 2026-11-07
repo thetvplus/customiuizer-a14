@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_volume_ios_title">Panel de volumen iOS</string>
+    <string name="system_volume_ios_summ">Aplica el estilo iOS conservando el control de volumen del sistema. Reinicia la interfaz del sistema.</string>
+    <string name="system_volume_ios_compact_title">Barra estrecha por defecto</string>
+    <string name="system_volume_ios_compact_summ">Empieza con una barra estrecha y vuelve a ella tras ajustar el volumen al tocar.</string>
+</resources>

@@ -11,6 +11,7 @@ import android.view.View
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
+import tv.withaibuild.customiuizer.mods.utils.CleanupActions
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
@@ -148,7 +149,7 @@ internal data class IslandOptions(
 internal data class IslandToastContent(val text: String, val packageName: String?, val icon: Drawable?,
     val launch: PendingIntent? = null, val notificationKey: String? = null,
     val detail: String? = null, val avatar: Boolean = false, val status: Boolean = false,
-    val liveActivity: IslandLiveActivity? = null)
+    val liveActivity: IslandLiveActivity? = null, val statusShortLabel: String? = null)
 
 /** Only exact, whole, already-successful status messages may be shortened. Never guess from a substring. */
 internal object IslandToastText {
@@ -203,6 +204,7 @@ internal object DynamicIslandActivities {
     private val mediaDismissal = IslandActivityState.MediaDismissal()
     private val liveDismissal = IslandLiveRegistry.Dismissal()
     @Volatile private var foregroundPackage: String? = null
+    private var foregroundAccess: IslandForegroundAccess? = null
     private var pipObserver: IslandPipObserver? = null
     private var freeformAccess: IslandFreeformAccess? = null
     private var installedFloatingWindowPolicy = false
@@ -225,6 +227,7 @@ internal object DynamicIslandActivities {
             null
         }
         if (foreground != null) {
+            foregroundAccess = foreground
             val capture = object : MethodHook() {
                 override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                     if (callback.getThrowable() != null) return@guarded
@@ -344,6 +347,9 @@ internal object DynamicIslandActivities {
         if (XposedHelpers.getAdditionalInstanceField(statusBar, OWNER) != null) return
         val options = IslandOptions.read(source).copy(hideInFloatingWindow = installedFloatingWindowPolicy)
         if (!options.enabled || statusBar.display?.displayId != 0) return
+        // The native singleton can predate hook installation. Recover its current
+        // foreground before admitting live activities, without adding another observer.
+        ModuleHelper.guarded { foregroundAccess?.let { foregroundPackage = it.currentPackage(foregroundPackage) } }
         active.get()?.dispose()
         val controller = IslandActivityController(statusBar.context, source, options, resolved,
             dismissal = mediaDismissal, markerLoader = resolved.mediaClass.classLoader,
@@ -358,9 +364,11 @@ internal object DynamicIslandActivities {
         statusBar.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) = Unit
             override fun onViewDetachedFromWindow(v: View) = ModuleHelper.guarded {
-                controller.dispose()
-                XposedHelpers.removeAdditionalInstanceField(v, OWNER)
-                v.removeOnAttachStateChangeListener(this)
+                val cleanup = CleanupActions()
+                cleanup.run { controller.dispose() }
+                cleanup.run { XposedHelpers.removeAdditionalInstanceField(v, OWNER) }
+                cleanup.run { v.removeOnAttachStateChangeListener(this) }
+                cleanup.finish()
             }
         })
         safety.get()?.let { controller.connectSafety(it) }

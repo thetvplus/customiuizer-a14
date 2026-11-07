@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_volume_ios_title">iOS panel hlasitosti</string>
+    <string name="system_volume_ios_summ">Použije styl iOS při zachování systémového ovládání hlasitosti. Restartujte systémové rozhraní.</string>
+    <string name="system_volume_ios_compact_title">Ve výchozím stavu úzký panel</string>
+    <string name="system_volume_ios_compact_summ">Zobrazí nejprve úzký panel a po dotykovém nastavení jej opět zúží.</string>
+</resources>

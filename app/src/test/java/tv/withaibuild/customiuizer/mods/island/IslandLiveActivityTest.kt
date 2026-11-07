@@ -6,6 +6,25 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class IslandLiveActivityTest {
+    @Test fun nativeClockRingingCoexistenceIgnoresIslandDismissalButRespectsAdmission() {
+        val registry = IslandLiveRegistry()
+        val kinds = setOf(IslandLiveKind.ALARM, IslandLiveKind.TIMER, IslandLiveKind.STOPWATCH)
+        val timer = activity(IslandLiveKind.TIMER).copy(packageName = IslandLiveKind.CLOCK_PACKAGE)
+        registry.update(timer.kind, timer)
+        assertFalse(registry.nativeClockAlert(kinds, emptySet(), 0))
+        val alert = timer.copy(alert = true)
+        registry.update(alert.kind, alert); registry.dismiss(alert.key)
+        assertNull(registry.select(kinds, emptySet(), 0))
+        assertTrue(registry.nativeClockAlert(kinds, emptySet(), 0))
+        assertFalse(registry.nativeClockAlert(kinds, emptySet(), 10))
+        assertFalse(registry.nativeClockAlert(emptySet(), emptySet(), 0))
+        assertFalse(registry.nativeClockAlert(kinds, setOf(timer.packageName), 0))
+        registry.update(timer.kind, null)
+        assertFalse(registry.nativeClockAlert(kinds, emptySet(), 0))
+        val alarm = activity(IslandLiveKind.ALARM).copy(packageName = IslandLiveKind.CLOCK_PACKAGE)
+        registry.update(alarm.kind, alarm)
+        assertTrue(registry.nativeClockAlert(kinds, emptySet(), 0))
+    }
     @Test fun foregroundOwnershipFiltersEverySourceWithoutDismissingItsNextBackgroundPresentation() {
         val registry = IslandLiveRegistry()
         val all = IslandLiveKind.entries.toSet()

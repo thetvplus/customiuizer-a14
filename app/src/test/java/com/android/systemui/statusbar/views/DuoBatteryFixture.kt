@@ -6,5 +6,5 @@ class MiuiBatteryMeterView {
     fun onAttachedToWindow() {}
     fun onDetachedFromWindow() {}
     fun updateAll() {}
-    fun onDarkChanged(areas: Any?, intensity: Float, tint: Int, light: Int, dark: Int, useTint: Boolean) {}
+    fun onDarkChanged(areas: java.util.ArrayList<android.graphics.Rect>?, intensity: Float, tint: Int, light: Int, dark: Int, useTint: Boolean) {}
 }

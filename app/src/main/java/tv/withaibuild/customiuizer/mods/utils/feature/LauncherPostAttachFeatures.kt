@@ -274,6 +274,15 @@ object LauncherPostAttachFeatures {
             factory = { LauncherHideStatusBarInRecentsFeature(lpparam, mPrefs) },
         ),
         LazyFeatureSpec(
+            id = LauncherIosRecentsDeckFeatureId,
+            name = "Launcher iOS Recents Deck",
+            preferenceKey = "system_recents_ios18_deck",
+            target = FeatureTarget.LAUNCHER,
+            phase = InstallPhase.APPLICATION_ATTACHED,
+            enabled = { prefs -> LauncherIosRecentsDeckFeature.evaluateEnabled(prefs) },
+            factory = { LauncherIosRecentsDeckFeature(lpparam, mPrefs) },
+        ),
+        LazyFeatureSpec(
             id = LauncherRecentsCardStyleFeatureId,
             name = "Launcher Recents Card Style",
             preferenceKey = "system_recents_card_style",
@@ -1315,4 +1324,15 @@ internal class LauncherWallpaperColorModeFeature(
 
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun installHook() = LauncherAnimationHooks.WallpaperColorModeHook(lpparam)
+}
+
+internal class LauncherIosRecentsDeckFeature(lpparam: PackageReadyParam, mPrefs: PrefMap) : BaseApplicationAttachedFeature(
+    lpparam, mPrefs, LauncherIosRecentsDeckFeatureId, "Launcher iOS Recents Deck",
+    "system_recents_ios18_deck", FeatureTarget.LAUNCHER,
+) {
+    companion object {
+        @JvmStatic fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_recents_ios18_deck")
+    }
+    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
+    override fun install() = tv.withaibuild.customiuizer.mods.recents.IosRecentsDeckHooks.install(lpparam,mPrefs)
 }

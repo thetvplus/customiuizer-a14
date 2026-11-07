@@ -28,6 +28,7 @@ class DuoReducedMotionTest {
     private val view = DuoStatusBarView(activity.get(), DuoConfig(true, 28), { throw AssertionError(it) }, {})
     private val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
     private val transition: DuoTransition get() = ReflectionHelpers.getField(view, "transition")
+    private val secondary: DuoTransition get() = ReflectionHelpers.getField(view, "secondaryTransition")
 
     init {
         activity.get().setContentView(view, FrameLayout.LayoutParams(64, 64))
@@ -55,11 +56,14 @@ class DuoReducedMotionTest {
         scale(1f)
         changeCenter()
         assertTrue(transition.fraction(android.os.SystemClock.uptimeMillis()) < 1f)
+        assertTrue(secondary.fraction(android.os.SystemClock.uptimeMillis()) < 1f)
         scale(0f)
         view.draw(Canvas(bitmap))
         assertEquals(1f, transition.fraction(android.os.SystemClock.uptimeMillis()), 0f)
         assertEquals(transition.current, transition.previous)
-        assertEquals(255, transition.drawAlpha(1f))
+        assertEquals(255, transition.currentAlpha)
+        assertEquals(1f,secondary.fraction(android.os.SystemClock.uptimeMillis()),0f)
+        assertEquals(secondary.current,secondary.previous)
     }
 
     @Test fun disabledAnimationsFromTheStartCommitWithoutAClock() {
@@ -68,6 +72,7 @@ class DuoReducedMotionTest {
         view.draw(Canvas(bitmap))
         assertEquals(1f, transition.fraction(android.os.SystemClock.uptimeMillis()), 0f)
         assertEquals(transition.current, transition.previous)
+        assertEquals(secondary.current,secondary.previous)
     }
 
     @Test fun enabledAnimationsKeepTheirOriginalFiniteDeadline() {
@@ -76,6 +81,7 @@ class DuoReducedMotionTest {
         view.draw(Canvas(bitmap))
         val now = android.os.SystemClock.uptimeMillis()
         assertTrue(transition.fraction(now + 60) in 0f..0.5f)
-        assertEquals(1f, transition.fraction(now + 181), 0f)
+        assertEquals(1f, transition.fraction(now + 1600), 0f)
+        assertEquals(1f, secondary.fraction(now + 1600), 0f)
     }
 }

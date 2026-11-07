@@ -70,8 +70,14 @@ internal class IslandNotificationAccess internal constructor(entryClass: Class<*
         }
         val isHidden = {
             val current = weakEntry.get()
-            current == null || sbn.get(current) !== notification || row.get(current) !== weakRow.get() ||
-                hidden(current, notification)
+            val currentRow = weakRow.get()
+            val posted = current?.let(sbn::get) as? StatusBarNotification
+            // A same-key update invalidates the old click, not its already
+            // accepted pixels. Check current native privacy independently so
+            // asynchronous rebinding does not manufacture an exit/entrance.
+            current == null || posted == null || posted.key != notification.key || currentRow == null ||
+                row.get(current) !== currentRow || rowEntry.get(currentRow) !== current || rowRemoved.getBoolean(currentRow) ||
+                hidden(current, posted)
         }
         return Bound(notification, rank, icon, open, isHidden)
     }

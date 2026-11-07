@@ -198,7 +198,8 @@ object Various {
     internal fun resolveAppStateTarget(info: PackageInfo?, contextUser: Int): AppStateTarget? {
         val application = info?.applicationInfo ?: return null
         // A default or parcelled PackageInfo can still contain a null package name.
-        val name = info.packageName ?: return null
+        val packageName: String? = info.packageName
+        val name = packageName ?: return null
         if (name.isBlank() || application.packageName != name || application.uid < 0 || contextUser < 0 ||
             application.uid / 100000 != contextUser) return null
         return AppStateTarget(name, application.uid)

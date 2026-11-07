@@ -43,7 +43,7 @@
 - SystemUI、Settings、PermissionController 只接受各自主进程。SecurityCenter 的常规功能也只在主进程安装；精确的 `com.miui.securitycenter.remote` 电源进程只安装已有低电量策略，提前返回，不安装主进程 UI 或 GenericApp 功能；其它 secondary / bootaware 继续拒绝。fused location 与 networkstack 进程拒绝。
 - `miui.systemui.plugin` 不单独加入 scope；SystemUI 从 `PluginFactory.createPlugin` 取得插件 ClassLoader，安装 / 释放由插件 runtime 持有。
 - 键盘包必须在静态 scope；`ProcessRouter` 交给 InputMethodInstaller，scope 外无回调。Launcher 还可按用户选择安装 GenericApp 的 post-attach 功能。
-- POCO 的 `com.mi.android.globallauncher` 仍是 GENERIC_APP；只有该包主进程且明确启用文件夹图标模糊时，才复用 Application.attach 安装单独 Feature。不得把整个 Launcher catalog 扩至 POCO；MIUI 的 Launcher 路由不变。
+- POCO 的 `com.mi.android.globallauncher` 仍是 GENERIC_APP；只有该包主进程且明确启用文件夹图标模糊或 Deck 时，才复用 Application.attach 安装对应的独立 Feature。不得把整个 Launcher catalog 扩至 POCO；MIUI 的 Launcher 路由不变。
 - `StatusBarHeightFeature` 虽为 ANY，仍限资源包集合和高度开关；窗口几何归 system_server 的 Insets Feature。`AlarmCompatFeature` 另受应用名单控制。
 - SystemUI bootstrap 与 Launcher 在安装派发前维护 ReflectionCache 安全生命周期；GuardProvider / Media 按需加载并关闭 DexKit，目标始终用实际加载器解析。
 
@@ -99,6 +99,8 @@ Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，
 
 状态栏几何 Binding 跟随实际 View / Window，保留最新原生基线，仅恢复自己仍持有的属性；配置和 detach 不改写其他 owner 的新值。变更不得扩大到通用 View setter 或全局窗口缓存。
 
+Deck 与 iOS 音量的必需 Hook 共用 PreparedHookBatch 的完整提交门禁；准备或安装失败不得提前接管 UI，卸载失败的包装保持失活。View 接管构造失败先回滚，独立释放不得被前一项异常阻断。Deck Card 持有自建缩放动画，原生任务变化先失效冻结几何；原生 spring 的 end / cancel 为正常完成入口，开始后仍保留有限兜底期限，不接管原生 finish。
+
 ## 生产源码与开发资产
 
 生产路径仅保留实际功能、失败隔离及有界故障诊断。安装器直接构建阶段 Catalog、注册并交由 FeatureInstallRegistry 安装，不嵌入性能采样。临时测量使用宿主工具及外部 trace；长期需要的调试实现放独立源码集，不能依赖 Release R8 消除。JVM / Robolectric 与替身归 `src/test`，开发脚本归 `tools` / `scripts`，不加入 main sources、assets 或运行依赖图。`PrefsProvider` 的 `test/*` 和五个样本资产是用户“打开方式”功能，属于生产资源。
@@ -121,3 +123,9 @@ AndroidX Preference 只承载已有持久化、依赖与控制器行为，Compos
 备份 V2 使用大小限制、严格解码与 CRC；受限旧格式解码保留既有用户兼容。维护恢复记录使用精确原状态和可恢复事务，不进入备份传输。语义约束见[遗留合同](docs/maintenance/LEGACY_SEMANTIC_CALIBRATION.md)。目录重排不能改变偏好键或稳定 Feature ID。
 
 `MainModule.java`、`XposedHelpers.java`、`MemberUtilsX.java` 保留 Java；Kotlin Installer 的 `@JvmStatic` 保持入口 ABI，见 [Java 边界](docs/JAVA_BOUNDARY_ALLOWLIST.md)。
+
+动态岛内容切换统一走 iOS 参数主路径：同一有限时钟驱动外壳 / 新内容 / 旧显示列表；新内容只有一个容器拥有 RenderEffect，外壳不模糊，旧内容显示列表复用且不保留第二份来源或采集租约。省电、系统动画关闭、释放及隐藏回到无滤镜终态，不新增逐帧特效对象或独立时钟。
+
+Deck 横屏消费原生视觉方向、当前窗口和安全 Insets，允许宿主保持物理竖屏并旋转 RecentsContainer；视觉方向在原布局事件缓存，与窗口轴不一致时回退。自动及自定义大小只改变统一展示矩阵，不修改原生 root scale、删除判定或截图比例；绘制、命中和转场共用几何。Duo 固定符号轮廓按需共享，原始遮罩只在测试资源，绘制阶段不解析图片或轮廓。音量边界为一次有限脉冲加重复信号锁定，插件无 KEY_UP 的缺口通过有界单次到期映射，不增加常驻输入监听或轮询。
+
+Duo 整体只进行一次尺寸 / 用户偏移映射；自动尺寸以既有可见体量为基准再增加约 .50 dp 后取整数像素，占位与绘制共享该值。Wi-Fi 使用已证的 15/top13 或 16/top15.33 父布局分支，辅助飞机从当前主项实测底缘加 1，主蜂窝栏保留 top17；扩展耳机与离线图案单独按轮廓重心居中，不将全部状态强设同一纵坐标。原始矢量以命令直接构造并按需共享，保留 peer 层透明度与抗锯齿；圆环用四段原始贝塞尔和有界 PathMeasure 裁切，几何只在状态变化准备。数字 / 网络文字仍保留当前 Heavy 字体实例，未用未知原生字体轴的默认数字代码替换。

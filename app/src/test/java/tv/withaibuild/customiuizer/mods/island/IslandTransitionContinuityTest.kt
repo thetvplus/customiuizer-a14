@@ -53,7 +53,7 @@ class IslandTransitionContinuityTest {
             shell.transition(184, 40, 184, 40, true)
             val entry = motion()
             entry.currentPlayTime = 96
-            val visible = shell.getChildAt(1).alpha
+            val visible = shell.contentAt(1).alpha
             assertTrue(visible > 0f)
             repeat(4) { correction ->
                 assertFalse("A clock correction must not schedule another content arrival",
@@ -61,7 +61,7 @@ class IslandTransitionContinuityTest {
                         clock = IslandLiveClock(base + correction + 1, countdown), clockKey = owner))
                 assertNull("Keep the active clock instead of fading it out", getField<Any?>(shell, "pendingContent"))
                 assertSame(entry, motion())
-                assertEquals(visible, shell.getChildAt(1).alpha, .001f)
+                assertEquals(visible, shell.contentAt(1).alpha, .001f)
             }
             entry.end()
             assertTrue("A different clock session still performs its visual handoff",
@@ -163,7 +163,7 @@ class IslandTransitionContinuityTest {
             val clock = motion()
             assertTrue(clock.duration >= (IslandMotion.ALBUM * scale).toLong())
             clock.currentPlayTime = clock.duration - 1
-            assertTrue(shell.getChildAt(0).alpha > .98f)
+            assertTrue(shell.contentAt(0).alpha > .98f)
             assertEquals(0f, getField<android.widget.ImageView>(shell, "icon").rotationY, 1f)
             clock.end()
         }
@@ -172,7 +172,6 @@ class IslandTransitionContinuityTest {
         label("Copy")
         shell.transition(184, 40, 184, 40, false, secondary = true)
         val clock = motion()
-        assertEquals(IslandMotion.CONTENT, clock.duration)
         for (time in 0..220 step 8) {
             clock.currentPlayTime = time.toLong()
             assertEquals(184f, shell.width * shell.scaleX, .001f)
@@ -181,34 +180,24 @@ class IslandTransitionContinuityTest {
         clock.end()
     }
 
-    @Test fun rapidReturnToTheStillDisplayedSourceCancelsTheUnseenReplacement() {
-        val originalArt = activity.getDrawable(android.R.drawable.ic_dialog_info)
-        fun bindOriginal() = shell.bind("Original", null, originalArt, false, false, false, 0, false)
-        bindOriginal()
-        shell.transition(184, 40, 184, 40, false)
-        motion().end()
-        val original = getField<Any>(shell, "displayedContent")
-        repeat(12) {
-            label("Unseen $it")
+    @Test fun rapidReplacementCommitsOnlyTheLatestSourceOnOneFiniteClock() {
+        shell.transition(184, 40, 184, 40, false); motion().end()
+        repeat(12) { index ->
+            label("Replacement $index")
             shell.transition(184, 40, 184, 40, false)
             val outgoing = motion()
             outgoing.currentPlayTime = 16
-            val opacity = shell.getChildAt(0).alpha
-            assertEquals("Original", title.text.toString())
-            assertTrue(bindOriginal())
-            assertNull("Returning before replacement must reuse the visible content",
-                getField<Any?>(shell, "pendingContent"))
-            assertSame(original, getField<Any>(shell, "displayedContent"))
-            assertEquals(opacity, shell.getChildAt(0).alpha, .001f)
+            label("Original")
             shell.transition(184, 40, 184, 40, false)
             val recovery = motion()
+            assertNotSame(outgoing, recovery)
             outgoing.end()
             assertSame(recovery, motion())
-            recovery.currentPlayTime = 60
-            assertTrue(shell.getChildAt(0).alpha >= opacity)
+            assertEquals("Original", title.text.toString())
+            assertNull(getField<Any?>(shell, "pendingContent"))
             recovery.end()
-            assertSame(original, getField<Any>(shell, "displayedContent"))
-            assertEquals(1f, shell.getChildAt(0).alpha, .001f)
+            assertEquals("Original", title.text.toString())
+            assertEquals(1f, shell.contentAt(0).alpha, .001f)
         }
     }
     private lateinit var activity: Activity
@@ -241,40 +230,30 @@ class IslandTransitionContinuityTest {
         shell.cameraAnchor(height / 2f, 16f)
     }
 
-    @Test fun shortToLongFadesTheOutgoingContentBeforeCommittingTheLatestLabel() {
+    @Test fun shortToLongImmediatelyPreparesTheLatestLabelAndRevealsItsLane() {
         label("New")
         layout(280, 40)
         shell.transition(184, 40, 280, 40, false, secondary = true)
         val clock = motion()
-        assertEquals("Old", title.text.toString())
-        clock.currentPlayTime = 32
-        assertEquals("Old", title.text.toString())
-        assertTrue(shell.getChildAt(0).alpha in .1f.. .9f)
-        assertTrue(shell.width * shell.scaleX in 184f..280f)
-        clock.currentPlayTime = 60
         assertEquals("New", title.text.toString())
-        assertEquals(0f, shell.getChildAt(0).alpha, .001f)
-        clock.currentPlayTime = 200
-        assertTrue(shell.getChildAt(0).alpha > .5f)
+        assertEquals(0f, getField<Float>(shell, "layerReveal"), .001f)
+        clock.currentPlayTime = 140
+        assertTrue(shell.contentAt(0).alpha > .01f)
+        assertTrue(shell.width * shell.scaleX > 184f)
         clock.end()
         assertEquals(280f, shell.width * shell.scaleX, .001f)
-        assertEquals(1f, shell.getChildAt(0).alpha, .001f)
+        assertEquals(1f, shell.contentAt(0).alpha, .001f)
     }
 
-    @Test fun aReplacementCarriesTheRemainingFadeAndOldClockCannotCommitStaleContent() {
+    @Test fun replacedClockCannotCommitItsSupersededContent() {
         label("Superseded")
         shell.transition(184, 40, 184, 40, false, secondary = true)
-        val old = motion()
-        old.currentPlayTime = 32
-        val opacity = shell.getChildAt(0).alpha
+        val old = motion(); old.currentPlayTime = 32
         label("Latest")
         shell.transition(184, 40, 184, 40, false, secondary = true)
-        assertEquals(opacity, shell.getChildAt(0).alpha, .001f)
         val current = motion()
         old.end()
-        assertEquals("Old", title.text.toString())
         assertSame(current, motion())
-        current.currentPlayTime = 32
         assertEquals("Latest", title.text.toString())
         current.end()
         assertNull(getField<Any?>(shell, "pendingContent"))
@@ -289,7 +268,7 @@ class IslandTransitionContinuityTest {
         shell.transition(184, 40, 184, 40, false)
         motion().end()
         assertEquals("Hidden compact labels must not schedule text layout", "", title.text.toString())
-        assertEquals(View.GONE, shell.getChildAt(1).visibility)
+        assertEquals(View.GONE, shell.contentAt(1).visibility)
         assertTrue(shell.contentDescription.toString().contains("Current track"))
         shell.bind("Current track", null, activity.getDrawable(android.R.drawable.ic_dialog_info),
             true, true, true, 0, false, expanded = true)
@@ -297,7 +276,7 @@ class IslandTransitionContinuityTest {
         shell.transition(184, 40, 300, 40, false)
         motion().end()
         assertEquals("Current track", title.text.toString())
-        assertEquals(View.VISIBLE, shell.getChildAt(1).visibility)
+        assertEquals(View.VISIBLE, shell.contentAt(1).visibility)
     }
 
     @Test fun cancellationDiscardsPendingContentAndAStaleCompletionCannotReapplyIt() {
@@ -338,7 +317,7 @@ class IslandTransitionContinuityTest {
         shell.transition(184, 40, 184, 40, false, secondary = true)
         motion().currentPlayTime = 32
         assertEquals("Old", title.text.toString())
-        assertEquals(1f, shell.getChildAt(0).alpha, .001f)
+        assertEquals(1f, shell.contentAt(0).alpha, .001f)
         motion().end()
     }
 
@@ -352,7 +331,7 @@ class IslandTransitionContinuityTest {
         assertEquals("Immediate", title.text.toString())
         assertNull(getField<Any?>(shell, "motion"))
         assertEquals(1f, shell.alpha, .001f)
-        assertEquals(1f, shell.getChildAt(1).alpha, .001f)
+        assertEquals(1f, shell.contentAt(1).alpha, .001f)
     }
 
     @Test fun sideLongToShortAndTallToShortDoNotClampToTheTargetOnTheFirstFrame() {

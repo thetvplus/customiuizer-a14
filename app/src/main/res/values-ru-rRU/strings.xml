@@ -1307,4 +1307,15 @@
     <string name="system_island_live_title">Текущие действия</string>
     <string-array name="island_return_effects"><item>Нет</item><item>Мгновенно</item><item>Втягивание</item></string-array>
     <string name="system_island_interaction_group">Управление</string>
+    <string name="system_recents_ios18_deck_title">Стопка недавних приложений</string>
+    <string name="system_recents_ios18_deck_summ">Нужен поддерживаемый рабочий стол HyperOS 1. В Настройки → Рабочий стол → Расположение недавних приложений выберите горизонтальное расположение. Рекомендуются полноэкранные жесты. Это отдельная настройка, не сетка значков. Названия меню могут отличаться. Перезапустите рабочий стол.</string>
+    <string name="system_recents_deck_header_icon_title">Размер значка в стопке</string>
+    <string name="system_recents_deck_header_title_title">Размер заголовка в стопке</string>
+    <string name="system_recents_deck_header_size_summ">Автоматический режим предотвращает увеличение заголовка вместе с карточкой. Проценты от исходного размера Android. Перезапустите лаунчер.</string>
+    <string name="system_recents_deck_motion_title">Анимация окон iOS</string>
+    <string name="system_recents_deck_motion_summ">Настраивает открытие приложений и переход к недавним. Выключите для исходной анимации системы. Перезапустите лаунчер.</string>
+    <string name="system_ios_desktop_title">Карточки задач iOS</string>
+    <string name="system_ios_volume_group_title">Громкость iOS</string>
+    <string name="controls_ios_home_indicator_title">Индикатор жестов iOS</string>
+    <string name="controls_ios_home_indicator_summ">Нужны полноэкранные жесты, видимый системный индикатор и поддерживаемая ROM. В Настройки → Рабочий стол → Системная навигация выберите жесты и отключите скрытие полноэкранного индикатора. Также отключите скрытие линии жестов в этом модуле. Названия меню зависят от ROM. Перезапустите системный интерфейс.</string>
 </resources>

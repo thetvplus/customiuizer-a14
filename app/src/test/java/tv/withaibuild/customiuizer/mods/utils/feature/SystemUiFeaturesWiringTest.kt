@@ -75,8 +75,8 @@ class SystemUiFeaturesWiringTest {
         val features = SystemUiFeatures.all(fakePackageReadyParam(), PrefMap())
 
         assertEquals(
-            "All 97 active SystemUI features include the new Toast presentation adapter",
-            97,
+            "SystemUI includes the opt-in native Home Indicator",
+            98,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
@@ -86,6 +86,17 @@ class SystemUiFeaturesWiringTest {
             assertEquals(FeatureTarget.SYSTEM_UI, feature.target)
             assertEquals(InstallPhase.PACKAGE_READY, feature.phase)
         }
+    }
+
+    @Test fun homeIndicatorIsLazyAndRespectsTheExistingHideNavigationOption() {
+        val prefs=PrefMap()
+        val feature=SystemUiFeatures.all(fakePackageReadyParam(),prefs).single { it.id==IosHomeIndicatorFeatureId }
+        assertEquals("controls_ios_home_indicator",feature.preferenceKey)
+        assertFalse(feature.isEnabled(prefs))
+        prefs.put("controls_ios_home_indicator",true)
+        assertTrue(feature.isEnabled(prefs))
+        prefs.put("controls_nonavbar",true)
+        assertFalse(feature.isEnabled(prefs))
     }
 
     @Test

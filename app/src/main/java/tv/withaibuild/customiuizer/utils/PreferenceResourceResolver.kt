@@ -14,7 +14,7 @@ internal object PreferenceResourceResolver {
     }
 
     fun resolve(category: String, sub: String?): Int = when (category) {
-        "pref_key_system" -> resolveSystem(sub)
+        "pref_key_system" -> resolveSystem(SearchRouteResolver.normalizeSub(sub))
         "pref_key_launcher" -> resolveLauncher(sub)
         "pref_key_controls" -> resolveControls(sub)
         "pref_key_various" -> resolveVarious(sub)

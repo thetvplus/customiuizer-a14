@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_volume_ios_title">iOS 音量パネル</string>
+    <string name="system_volume_ios_summ">システムの音量操作を維持して iOS スタイルを適用します。システム UI の再起動で反映されます。</string>
+    <string name="system_volume_ios_compact_title">初期表示を細いバーにする</string>
+    <string name="system_volume_ios_compact_summ">細いバーで表示し、タッチで調整した後も細いバーに戻ります。</string>
+</resources>

@@ -5,6 +5,18 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class IslandSizingTest {
+    @Test fun topEdgeReservationDoesNotStretchAutomaticHeightOrTheCameraMask() {
+        for (density in listOf(1f, 2.75f, 3f)) {
+            val diameter = (24 * density).roundToInt()
+            val reserved = (48 * density).roundToInt()
+            val inferred = IslandPosition.cameraHeight(diameter, reserved)
+            assertEquals(diameter, inferred)
+            assertEquals(IslandSizing.automaticHeight((diameter / density).toInt(), 46),
+                IslandSizing.automaticHeight((inferred / density).toInt(), 46))
+        }
+        assertEquals(0, IslandPosition.cameraHeight(0, 100))
+        assertEquals(20, IslandPosition.cameraHeight(60, 20))
+    }
     @Test fun expandedWidthFitsTheActualCaptionInsteadOfReservingAnEmptyWideCard() {
         assertEquals(184, IslandSizing.expanded(1f, 400, 400, 40, 20f))
         assertEquals(192, IslandSizing.expanded(1f, 400, 400, 40, 60f))

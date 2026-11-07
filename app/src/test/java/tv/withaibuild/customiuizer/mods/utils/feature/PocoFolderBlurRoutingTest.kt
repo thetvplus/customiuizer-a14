@@ -47,4 +47,25 @@ class PocoFolderBlurRoutingTest {
         assertFalse(spec.isEnabled(PrefMap()))
         assertFalse(LauncherPostAttachFeature.evaluateEnabled(enabled, poco))
     }
+    @Test fun deckOptInIsIndependentAndCannotActivateTheWholeLauncherCatalog() {
+        val prefs=PrefMap().apply { put("system_recents_ios18_deck",true) }
+        assertTrue(GenericAppFeatures.shouldInstallPocoRecentsDeck(prefs,poco,poco))
+        assertFalse(GenericAppFeatures.shouldInstallPocoRecentsDeck(enabled,poco,poco))
+        assertFalse(GenericAppFeatures.shouldInstallPocoFolderIconBlur(prefs,poco,poco))
+        for(process in listOf<String?>(null,"$poco:remote","com.miui.home"))
+            assertFalse(GenericAppFeatures.shouldInstallPocoRecentsDeck(prefs,poco,process))
+        for(pkg in listOf("com.miui.home","com.other.launcher"))
+            assertFalse(GenericAppFeatures.shouldInstallPocoRecentsDeck(prefs,pkg,pkg))
+        val param=Proxy.newProxyInstance(PackageReadyParam::class.java.classLoader,
+            arrayOf(PackageReadyParam::class.java)) { _,method,_ ->
+            when(method.name) { "getPackageName" -> poco; else -> null }
+        } as PackageReadyParam
+        val spec=GenericAppFeatures.selected(param,prefs,false,false,false,false,
+            includePocoRecentsDeck=true).single()
+        assertEquals(PocoRecentsDeckFeatureId,spec.id)
+        assertEquals(InstallPhase.APPLICATION_ATTACHED,spec.phase)
+        assertTrue(spec.isEnabled(prefs)); assertFalse(spec.isEnabled(PrefMap()))
+        assertEquals(ProcessScope.GENERIC_APP,ProcessRouter.resolve(poco,poco))
+        assertFalse(LauncherPostAttachFeature.evaluateEnabled(prefs,poco))
+    }
 }

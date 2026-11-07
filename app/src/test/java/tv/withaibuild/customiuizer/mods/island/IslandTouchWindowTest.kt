@@ -17,7 +17,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], qualifiers = "mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandTouchWindowTest {
-    @Test fun confirmedDefaultReturnHasNoClockAndKeepsTheExistingInputBounds() {
+    @Test fun missingProgressReturnAnimatesWithinTheExistingInputBounds() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         org.robolectric.shadows.ShadowChoreographer.setPaused(true)
         try {
@@ -31,11 +31,15 @@ class IslandTouchWindowTest {
             layout(root, 240 + 2 * root.margin, 40 + 2 * root.margin)
             shell.prepareEntry(mediaReturn = true)
             shell.transition(240, 40, 240, 40, true)
-            assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
+            val entrance = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator>(shell, "motion")
+            assertNotNull(entrance)
+            entrance.currentPlayTime = 100L
             val cover = org.robolectric.util.ReflectionHelpers.getField<View>(shell, "left")
             assertEquals(240 + 2 * root.margin, root.width)
             assertEquals(40 + 2 * root.margin, root.height)
             assertFalse(touch(root, MotionEvent.ACTION_DOWN, root.width * .5f, root.height + 25f, 0))
+            entrance.end()
+            assertNull(org.robolectric.util.ReflectionHelpers.getField<Any?>(shell, "motion"))
             assertEquals(1f, cover.alpha, 0f)
             assertEquals(1f, org.robolectric.util.ReflectionHelpers.getField<Float>(shell, "mediaReturnProgress"), 0f)
         } finally {

@@ -4,6 +4,20 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IslandMotionTest {
+    @Test fun contentBlurTracksTheContinuousRadiusWithinOnePixelAtPhoneDensities() {
+        for(density in listOf(1f,2f,2.75f,3f,3.5f)) {
+            var previous=Float.POSITIVE_INFINITY
+            for(frame in 0..120) {
+                val reveal=frame/120f
+                val radius=IslandMotion.contentBlurRadius(IslandMotion.contentBlurLevel(reveal),density)
+                val reference=(1f-reveal)*16.666f*density
+                assertTrue("Blur cannot reverse during a monotonic reveal",radius<=previous)
+                assertTrue("Discrete filter jumps must stay below a physical pixel",kotlin.math.abs(reference-radius)<=1f)
+                previous=radius
+            }
+            assertEquals(0f,previous,0f)
+        }
+    }
     @Test fun elasticOverscrollCrossesTheBoundaryOnceAndSettlesWithinTheFiniteClock() {
         val spring = IslandMotion.Spring()
         val seconds = IslandMotion.REBOUND / 1000f

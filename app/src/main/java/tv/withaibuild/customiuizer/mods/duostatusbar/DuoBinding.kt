@@ -85,7 +85,7 @@ internal class DuoBinding(
     }
 
     fun syncTypeface() {
-        if (view.usesCellularText) view.syncTypeface((abi.percentView.get(owner) as? TextView)?.typeface)
+        if (view.usesCellularText) view.syncTypeface()
     }
 
     /** Layout/visibility events only. Grow the header locally instead of shrinking the status icon. */

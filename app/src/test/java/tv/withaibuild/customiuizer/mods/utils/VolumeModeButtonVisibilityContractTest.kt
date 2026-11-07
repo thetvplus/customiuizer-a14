@@ -31,7 +31,11 @@ class VolumeModeButtonVisibilityContractTest {
         assertTrue(section.contains("WeakReference(root)"))
         assertTrue(section.contains("VolumeModeButtonVisibilityOwnership"))
         assertTrue(section.contains("romVisibility = root.visibility"))
-        assertTrue(!section.contains("mRingerMode"))
+        // The native mRingerModeLayout container is a different, verified field;
+        // forbid only a fallback to the old mode field, not its name prefix.
+        assertTrue(!section.contains("\"mRingerMode\""))
+        assertTrue(section.contains("\"mRingerModeLayout\""))
+        assertTrue(section.contains("\"updateFooterVisibility\""))
         assertTrue(!section.contains("getResourceEntryName"))
         assertTrue(!section.contains("getParent"))
         assertTrue(!section.contains("classifyVolumeModeButton"))

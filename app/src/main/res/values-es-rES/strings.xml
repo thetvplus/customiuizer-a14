@@ -1307,4 +1307,15 @@
     <string name="system_island_live_title">Actividades en curso</string>
     <string-array name="island_return_effects"><item>Ninguno</item><item>Instantáneo</item><item>Absorción</item></string-array>
     <string name="system_island_interaction_group">Interacción</string>
+    <string name="system_recents_ios18_deck_title">Aplicaciones recientes apiladas</string>
+    <string name="system_recents_ios18_deck_summ">Requiere un lanzador HyperOS 1 compatible y la disposición Horizontal en Ajustes → Pantalla de inicio → Organizar elementos en Recientes. Se recomiendan los gestos a pantalla completa. Es independiente de la disposición de iconos. Los nombres pueden variar. Reinicia el lanzador.</string>
+    <string name="system_recents_deck_header_icon_title">Tamaño del icono en la pila</string>
+    <string name="system_recents_deck_header_title_title">Tamaño del título en la pila</string>
+    <string name="system_recents_deck_header_size_summ">El modo automático evita ampliar la cabecera con la tarjeta. Los porcentajes usan el tamaño original de Android. Reinicia el lanzador.</string>
+    <string name="system_recents_deck_motion_title">Animación de ventanas de iOS</string>
+    <string name="system_recents_deck_motion_summ">Ajusta la apertura de apps y la entrada a recientes. Desactívalo para usar las animaciones originales. Reinicia el lanzador.</string>
+    <string name="system_ios_desktop_title">Tarjetas de tareas iOS</string>
+    <string name="system_ios_volume_group_title">Volumen iOS</string>
+    <string name="controls_ios_home_indicator_title">Indicador de gestos de iOS</string>
+    <string name="controls_ios_home_indicator_summ">Requiere gestos a pantalla completa, un indicador visible y una ROM compatible. En Ajustes → Pantalla de inicio → Navegación del sistema, elige Gestos y desactiva Ocultar indicador de pantalla completa. Desactiva también Ocultar línea de gestos en este módulo. Los nombres pueden variar según la ROM. Reinicia la interfaz del sistema.</string>
 </resources>

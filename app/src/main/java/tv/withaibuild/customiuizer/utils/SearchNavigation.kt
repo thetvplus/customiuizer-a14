@@ -35,7 +35,11 @@ object SearchRouteResolver {
      * Collapses null, empty or all-whitespace `sub` values to `null` while keeping real
      * sub-category keys intact.
      */
-    fun normalizeSub(sub: String?): String? = sub?.takeIf { it.isNotBlank() }
+    fun normalizeSub(sub: String?): String? = when (sub?.takeIf { it.isNotBlank() }) {
+        "pref_key_system_cat_ios_volume" -> "pref_key_system_cat_audio"
+        "pref_key_system_cat_ios_desktop" -> "pref_key_system_cat_recents"
+        else -> sub?.takeIf { it.isNotBlank() }
+    }
 
     /**
      * Returns a [SearchRoute] for known categories, `null` for anything else.

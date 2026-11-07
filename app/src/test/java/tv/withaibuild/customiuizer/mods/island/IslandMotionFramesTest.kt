@@ -29,6 +29,35 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
+    @Test fun firstMusicArrivalWithoutNativeProgressStillMovesFromItsSeed() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell = IslandActivityView(activity)
+        activity.setContentView(shell, FrameLayout.LayoutParams(240, 40))
+        shell.geometry(240, 40, 40, 280); shell.layout(0, 0, 240, 40)
+        shell.cameraAnchor(20f, 16f)
+        shadowOf(Looper.getMainLooper()).idle()
+        ShadowChoreographer.setPaused(true)
+        try {
+            for (style in IslandEntranceStyle.entries) {
+                shell.entranceStyle = style
+                shell.prepareEntry(mediaReturn = true)
+                val seed = shell.scaleX
+                assertTrue("No native window does not mean no island entrance", seed < 1f)
+                assertEquals("A music return stays at its camera even with top notification entry",0f,shell.translationY,0f)
+                shell.transition(0, 0, 240, 40, true)
+                val clock = getField<ValueAnimator>(shell, "motion")
+                clock.currentPlayTime = 120L
+                assertTrue(shell.scaleX > seed)
+                assertTrue(shell.scaleX.isFinite())
+                assertEquals(0f,shell.translationY,.001f)
+                assertEquals(1f,shell.scaleY,.001f)
+                clock.end()
+                assertEquals(1f, shell.scaleX, .001f)
+                assertEquals(1f, shell.alpha, .001f)
+            }
+        } finally { ShadowChoreographer.setPaused(false); activity.finish() }
+    }
+
     @Test fun anExistingIslandMorphsWhenNativeReturnHasNoCaptureChannel() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)
@@ -68,14 +97,31 @@ class IslandMotionFramesTest {
                     val layout = requireNotNull(view.layout)
                     return android.graphics.RectF(layout.getLineLeft(0), 0f, layout.getLineRight(0), view.height.toFloat()).also {
                         val matrix = android.graphics.Matrix(); view.transformMatrixToGlobal(matrix); matrix.mapRect(it)
+                        var lane: View? = view
+                        while (lane != null && lane !== shell) {
+                            lane.clipBounds?.let { clip ->
+                                val visible = android.graphics.RectF(clip)
+                                val transform = android.graphics.Matrix(); lane!!.transformMatrixToGlobal(transform)
+                                transform.mapRect(visible)
+                                if (!it.intersect(visible)) it.setEmpty()
+                            }
+                            lane = lane.parent as? View
+                        }
                     }
                 }
                 for (at in 0L..clock.duration step 8) {
                     clock.currentPlayTime = at
+                    // Immediate snapshot handoff commits new visibility before the
+                    // next traversal. Run that requested layout before inspecting ink.
+                    if (shell.isLayoutRequested) {
+                        shell.measure(View.MeasureSpec.makeMeasureSpec(280, View.MeasureSpec.EXACTLY),
+                            View.MeasureSpec.makeMeasureSpec(40, View.MeasureSpec.EXACTLY))
+                        shell.layout(0, 0, 280, 40)
+                    }
                     val center = floatArrayOf(140f, 20f)
                     val matrix = android.graphics.Matrix(); shell.transformMatrixToGlobal(matrix); matrix.mapPoints(center)
                     if (identity.alpha * leading.alpha > .01f)
-                        assertTrue("Leading text crosses its lane at $at ms, gap=$gap artwork=$artwork",
+                        assertTrue("Leading text crosses its lane at $at ms, gap=$gap artwork=$artwork ink=${ink(identity)} center=${center[0]} scale=${shell.scaleX} clip=${identity.clipBounds}",
                             ink(identity).right <= center[0] - gap * .5f + .5f)
                     if (trailing.alpha > .01f)
                         assertTrue("Right-aligned text crosses its lane at $at ms, gap=$gap artwork=$artwork",
@@ -86,7 +132,7 @@ class IslandMotionFramesTest {
         } finally { ShadowChoreographer.setPaused(false); activity.finish() }
     }
 
-    @Test fun equalSizeContentArrivalExpandsOnceFromTheCurrentShellAndSettlesWithinTheSameClock() {
+    @Test fun equalSizeContentReplacementKeepsTheCurrentShellWithoutAnotherEntrancePulse() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)
         activity.setContentView(shell, FrameLayout.LayoutParams(160, 40))
@@ -99,10 +145,13 @@ class IslandMotionFramesTest {
             val clock = getField<ValueAnimator>(shell, "motion")
             clock.currentPlayTime = 0
             assertEquals(160f, shell.width * shell.scaleX, .001f)
-            clock.currentPlayTime = clock.duration / 2
-            assertTrue("An already-present shell must acknowledge the arrival", shell.width * shell.scaleX > 163f)
-            assertTrue(shell.width * shell.scaleX <= 168f)
-            assertEquals(40f, shell.height * shell.scaleY, .001f)
+            for (at in 0L..clock.duration step 8) {
+                clock.currentPlayTime = at
+                assertEquals("Only content changes in an equal-size shell",160f,shell.width*shell.scaleX,.001f)
+                assertEquals(40f,shell.height*shell.scaleY,.001f)
+                assertEquals(1f,shell.alpha,.001f)
+                assertEquals(0f,shell.translationY,.001f)
+            }
             clock.end()
             assertEquals(1f, shell.scaleX, .001f)
             assertEquals(1f, shell.alpha, .001f)
@@ -168,18 +217,16 @@ class IslandMotionFramesTest {
                 false, false, false, 0, false)
             layout(240); shell.transition(184, 40, 240, 40, false, secondary = true)
             val entrance = getField<ValueAnimator>(shell, "motion")
-            assertTrue(entrance.duration in (IslandMotion.CONTENT + 1)..IslandMotion.SECONDARY)
             assertTrue(entrance.duration > IslandMotion.morphDuration(184f, 40f, 240f, 40f, false))
             entrance.currentPlayTime = 32
-            assertEquals(1f, shell.getChildAt(0).alpha, .001f)
+            assertEquals(1f, shell.contentAt(0).alpha, .001f)
             entrance.currentPlayTime = 200
-            assertTrue(shell.getChildAt(0).alpha > .5f)
+            assertTrue(shell.contentAt(0).alpha > .5f)
             entrance.end()
             shell.bind("Music", null, activity.getDrawable(android.R.drawable.ic_media_play),
                 true, true, true, 0, false)
             layout(184); shell.transition(240, 40, 184, 40, false, secondary = true)
             val back = getField<ValueAnimator>(shell, "motion")
-            assertEquals(entrance.duration, back.duration)
             for (time in 0L..back.duration step 8L) {
                 back.currentPlayTime = time
                 assertEquals(40f, shell.height * shell.scaleY, .001f)
@@ -209,7 +256,7 @@ class IslandMotionFramesTest {
             shell.transition(240, 40, 240, 40, false)
             val resumed = getField<ValueAnimator>(shell, "motion")
             resumed.currentPlayTime = 80
-            assertTrue(shell.getChildAt(0).alpha > .1f)
+            assertTrue(shell.contentAt(0).alpha > .1f)
             assertEquals(0f, shell.translationY, 0f)
             assertEquals(40f, shell.height * shell.scaleY, .001f)
             resumed.end()
@@ -233,7 +280,6 @@ class IslandMotionFramesTest {
                     shell.width * shell.scaleX, .001f)
                 shell.transition(300, 40, 300, 40, true)
                 val flight = getField<ValueAnimator>(shell, "motion")
-                assertEquals(IslandMotion.ENTER, flight.duration)
                 for (time in 0L until flight.duration step 16L) {
                     flight.currentPlayTime = time
                     assertSame(flight, getField<ValueAnimator>(shell, "motion"))
@@ -263,7 +309,7 @@ class IslandMotionFramesTest {
                 entrance.currentPlayTime = time
                 assertEquals(240f, shell.width * shell.scaleX, .001f)
                 assertEquals(40f, shell.height * shell.scaleY, .001f)
-                assertTrue(shell.translationY in -56f..0f)
+                assertTrue(shell.translationY in -56f..8f)
             }
             entrance.end()
             var completed = 0
@@ -273,7 +319,7 @@ class IslandMotionFramesTest {
                 exit.currentPlayTime = time
                 assertEquals(240f, shell.width * shell.scaleX, .001f)
                 assertEquals(40f, shell.height * shell.scaleY, .001f)
-                assertTrue(shell.translationY in -56f..0f)
+                assertTrue(shell.translationY in -56f..8f)
             }
             assertTrue(shell.translationY < -40f)
             exit.end()

@@ -4,51 +4,88 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DuoTransitionTest {
-    @Test fun eachTransitionFrameDrawsOnlyOneGlyphAndEndsAtFullOpacity() {
-        val state = DuoTransition()
-        state.change(1, 0L, 180L)
-        state.change(2, 100L, 180L)
-        for (time in 100L..280L) {
-            val progress = state.fraction(time)
-            assertEquals(if (time < 190L) 1 else 2, state.drawKey(progress))
-            assertTrue(state.drawAlpha(progress) in 0..255)
+    @Test fun longFrameAndTinyScaleConvergeWithoutLeavingCellularFramesRunning() {
+        for(scale in floatArrayOf(.00001f,.01f,1f,10f)) {
+            val spring=DuoSpring(0f); spring.retarget(1f,0L,scale)
+            spring.sample(100000L)
+            assertTrue(spring.settled); assertEquals(1f,spring.value,.001f)
+            val bars=DuoCellularMotion()
+            bars.change(0,0,false); bars.change(4 shl 7,0,true,scale); bars.sample(100000L)
+            assertFalse(bars.running)
         }
-        assertEquals(255, state.drawAlpha(0f))
-        assertEquals(0, state.drawAlpha(0.5f))
-        assertEquals(255, state.drawAlpha(1f))
-        assertEquals(2, state.drawKey(1f))
     }
-
-    @Test fun seedAndDisabledAnimationsSnapAndDuplicatesDoNoWork() {
-        val state = DuoTransition()
-        assertTrue(state.change(1, 0L, 180L))
-        assertEquals(1f, state.fraction(0L), 0f)
-        repeat(10000) { assertFalse(state.change(1, 1L, 180L)) }
-        state.change(2, 10L, 0L)
-        assertEquals(1f, state.fraction(10L), 0f)
-        assertEquals(2, state.previous)
+    @Test fun matrixPowersMatchNativeHalfStepIntegrationAcrossRetargetsAndStalls() {
+        val spring=DuoSpring(0f)
+        var x=0f; var v=0.0; var target=0f; var remainder=0.0; var at=0L
+        val random=java.util.Random(147)
+        repeat(40) { round ->
+            target=if(round%2==0) 1f else 0f
+            spring.retarget(target,at)
+            repeat(15) {
+                val elapsed=1+random.nextInt(2000)
+                val steps=elapsed.coerceAtMost(1500)*.3+remainder
+                val count=steps.toInt(); remainder=steps-count
+                var next=x.toDouble()
+                val omega=2.0*Math.PI/.5; val dt=1.0/300
+                repeat(count) {
+                    v+=(-2*omega*v+omega*omega*(target-next))*dt*.5
+                    next+=v*dt
+                    v+=(-2*omega*v+omega*omega*(target-next))*dt*.5
+                }
+                x=next.toFloat()
+                if(kotlin.math.abs(x-target)<.001f && kotlin.math.abs(v)<.005) { x=target; v=0.0; remainder=0.0 }
+                at+=elapsed; spring.sample(at)
+                assertEquals(x,spring.value,.00001f)
+            }
+        }
     }
-
-    @Test fun transitionIsFiniteAndRapidUpdatesCannotExtendItsDeadline() {
-        val state = DuoTransition()
-        state.change(1, 0L, 180L)
-        state.change(2, 100L, 180L)
-        assertEquals(0f, state.fraction(100L), 0f)
-        repeat(10000) { state.change(2 + it % 2, 150L, 180L) }
-        assertEquals(1f, state.fraction(280L), 0f)
-        assertEquals(state.current, state.previous)
-        state.change(4, 300L, Long.MAX_VALUE)
-        assertEquals(1f, state.fraction(660L), 0f)
+    @Test fun nativeDefaultSpringHasNoArtificialBlankMidpointAndSettlesAtFullOpacity() {
+        val state=DuoTransition(); state.change(1,0,false); state.change(2,100,true)
+        for(time in 100L..1100L step 5) {
+            val progress=state.fraction(time)
+            assertTrue(progress in 0f..1f)
+            assertTrue(state.currentAlpha+state.previousAlpha>=254)
+            if(time==200L) assertEquals(.358f,progress,.015f)
+        }
+        assertFalse(state.running); assertEquals(255,state.currentAlpha); assertEquals(0,state.previousAlpha)
     }
-
+    @Test fun seedDisabledMotionAndDuplicateValuesDoNotCreateWork() {
+        val state=DuoTransition(); assertTrue(state.change(1,0,true))
+        assertEquals(1f,state.fraction(0),0f)
+        repeat(10000) { assertFalse(state.change(1,1,true)) }
+        state.change(2,10,false)
+        assertFalse(state.running); assertEquals(state.current,state.previous)
+    }
+    @Test fun reversingPreservesBothVisibleGlyphValuesAndOnlyTheLatestPairSurvives() {
+        val state=DuoTransition(); state.change(1,0,false); state.change(2,10,true)
+        state.fraction(110)
+        val old=state.previousAlpha; val current=state.currentAlpha
+        state.change(1,110,true); state.fraction(110)
+        assertEquals(old,state.currentAlpha); assertEquals(current,state.previousAlpha)
+        repeat(10000) { state.change(3+it%2,150,true) }
+        state.fraction(1650)
+        assertFalse(state.running); assertEquals(state.current,state.previous)
+    }
     @Test fun hiddenDetachedOrFailedOwnerFinishesImmediately() {
-        val state = DuoTransition()
-        state.change(1, 0L, 180L); state.change(2, 10L, 180L)
+        val state=DuoTransition(); state.change(1,0,true); state.change(2,10,true)
         state.finish()
-        assertEquals(1f, state.fraction(11L), 0f)
-        assertEquals(state.current, state.previous)
-        state.change(3, 12L, 180L)
-        assertEquals(0f, state.fraction(12L), 0f)
+        assertEquals(1f,state.fraction(11),0f); assertEquals(state.current,state.previous)
+        state.change(3,12,true); assertEquals(0f,state.fraction(12),0f)
+    }
+    @Test fun animationScaleChangesTimeWithoutChangingNativeSpringGeometry() {
+        val ordinary=DuoTransition(); val slow=DuoTransition()
+        ordinary.change(1,0,false); slow.change(1,0,false)
+        ordinary.change(2,0,true); slow.change(2,0,true,2f)
+        assertEquals(ordinary.fraction(100),slow.fraction(200),.001f)
+    }
+    @Test fun cellularBarsRetargetFromTheirVisibleValueAndStopWhenNotVisible() {
+        val bars=DuoCellularMotion(); val high=4 shl 7
+        bars.change(0,0,false); bars.change(high,0,true); bars.sample(100)
+        val alpha=bars.color(-1,0) ushr 24
+        assertTrue(alpha in 57..254)
+        bars.change(0,100,true); assertEquals(alpha,bars.color(-1,0) ushr 24)
+        bars.sample(1600); assertEquals(56,bars.color(-1,0) ushr 24); assertFalse(bars.running)
+        bars.change(high,1700,false); assertEquals(255,bars.color(-1,0) ushr 24); assertFalse(bars.running)
     }
 
     @Test fun centerOnlyChangesForVisibleStateAndNeverInventsHeadphones() {

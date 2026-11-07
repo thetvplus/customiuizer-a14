@@ -14,6 +14,7 @@ class DuoTransitionAllocationTest {
         val thread = Thread.currentThread().threadId()
         val config = DuoConfig(true, 24)
         val transition = DuoTransition()
+        val cellular = DuoCellularMotion()
         val signals = DuoNetworkState().apply { subscriptions(10, -1, true) }
         val headphones = DuoAudioState()
         val textConfig = DuoConfig(true, 24, cellularStyle = 2)
@@ -25,10 +26,12 @@ class DuoTransitionAllocationTest {
                 headphones.wired(i % 4 == 0, i.toLong(), true)
                 headphones.bluetooth(true, i % 4 == 1, true, false, i.toLong(), true)
                 headphones.bluetoothBattery(i % 11, true)
-                transition.change(DuoCenter.key(network, headphones.snapshot, config), i.toLong(), 180L)
-                val progress = transition.fraction(i.toLong())
-                checksum += transition.drawAlpha(progress) + transition.drawKey(progress)
+                transition.change(DuoCenter.key(network, headphones.snapshot, config), i.toLong(), true)
+                transition.fraction(i.toLong())
+                checksum += transition.currentAlpha + transition.previousAlpha + transition.current
                 signals.mobile(0, 10, i % 6, true, 5, DuoCellularType.generation("5G"))
+                cellular.change(signals.snapshot,i.toLong(),true); cellular.sample(i.toLong())
+                checksum += cellular.color(-1,i%4) ushr 24
                 checksum += DuoGeometry.signalColor(-1, signals.snapshot, i % 4) ushr 24
                 checksum += DuoCellularType.label(DuoCenter.value(DuoCenter.key(signals.snapshot, 0, textConfig))).length
             }

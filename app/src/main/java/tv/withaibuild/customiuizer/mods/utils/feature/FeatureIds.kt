@@ -1102,3 +1102,18 @@ data object WifiAutomaticSettingsFeatureId : FeatureId {
     override val id = 265
     override val name = "system_wifi_automatic_settings"
 }
+
+data object LauncherIosRecentsDeckFeatureId : FeatureId {
+    override val id = 266
+    override val name = "system_recents_ios18_deck"
+}
+
+data object IosHomeIndicatorFeatureId : FeatureId {
+    override val id = 267
+    override val name = "controls_ios_home_indicator"
+}
+
+data object PocoRecentsDeckFeatureId : FeatureId {
+    override val id = 268
+    override val name = "poco_recents_deck"
+}

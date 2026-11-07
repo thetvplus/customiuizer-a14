@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">自动卡片比例</string>
+    <string name="system_deck_size_auto_summ">根据屏幕和可用区域调整卡片大小。</string>
+    <string name="system_deck_size_title">卡片比例</string>
+    <string name="system_deck_size_summ">调整卡片整体大小，重启桌面生效。</string>
+</resources>

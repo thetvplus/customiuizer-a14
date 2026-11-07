@@ -300,7 +300,7 @@ class IslandGestureRecoveryTest {
         assertEquals(visibleWidth, shell.width * shell.scaleX, .001f)
         morph.end()
         assertEquals(1f, shell.scaleX, .001f)
-        assertEquals(1f, shell.getChildAt(1).alpha, .001f)
+        assertEquals(1f, shell.contentAt(1).alpha, .001f)
         assertEquals(40, shell.height)
     }
 

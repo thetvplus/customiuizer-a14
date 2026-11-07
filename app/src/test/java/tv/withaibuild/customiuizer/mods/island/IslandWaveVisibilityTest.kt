@@ -130,7 +130,7 @@ class IslandWaveVisibilityTest {
         shell.layout(0, 0, 240, 40)
         val attach = getField<Any>(shell, "mAttachInfo")
         org.robolectric.util.ReflectionHelpers.setField(attach, "mWindowVisibility", View.VISIBLE)
-        val wave = shell.getChildAt(2) as IslandWaveView
+        val wave = shell.contentAt(2) as IslandWaveView
         var changes = 0
         shell.onWaveformVisibilityChanged = { changes++ }
         fun refresh() = shell.refreshWaveformVisibility()

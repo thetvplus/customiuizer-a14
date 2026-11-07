@@ -40,7 +40,7 @@ class LauncherMusicReturnWindowOwnershipTest {
         val first = source()
         val second = source()
         val outer = access.retarget(first, Element(), Nav(), frame) as Params
-        val nested = access.retarget(second, Element(), Nav(), frame.copy(left = 300f)) as Params
+        val nested = access.retarget(second, Element(), Nav(), frame.copy(left = 300f, contactLeft = 300f)) as Params
         assertNull(outer.targetView); assertNull(nested.targetView)
         assertNotSame(first, second)
         assertSame(first.animListener, outer.animListener)

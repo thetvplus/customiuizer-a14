@@ -1343,4 +1343,15 @@
     <string-array name="island_return_effects"><item>None</item><item>Instant</item><item>Absorb</item></string-array>
     <string-array name="island_return_effects_val" translatable="false"><item>none</item><item>instant</item><item>absorption</item></string-array>
     <string name="system_island_interaction_group">Interaction</string>
+    <string name="system_recents_ios18_deck_title">Stacked recent apps</string>
+    <string name="system_recents_ios18_deck_summ">Requires a supported HyperOS 1 launcher and Horizontal recents in Settings → Home screen → Arrange items in Recents. Full-screen gestures are recommended. This is separate from the home screen icon layout. Menu names may vary; restart the launcher to apply.</string>
+    <string name="system_recents_deck_header_icon_title">Deck app icon size</string>
+    <string name="system_recents_deck_header_title_title">Deck title size</string>
+    <string name="system_recents_deck_header_size_summ">Automatic sizing avoids magnifying the header with the card. Percentages use the original Android header size. Restart the launcher to apply.</string>
+    <string name="system_recents_deck_motion_title">iOS window motion</string>
+    <string name="system_recents_deck_motion_summ">Refine app opening and entry to recent tasks. Turn off to use the original system motion. Restart the launcher to apply.</string>
+    <string name="system_ios_desktop_title">iOS task cards</string>
+    <string name="system_ios_volume_group_title">iOS volume</string>
+    <string name="controls_ios_home_indicator_title">iOS Home Indicator</string>
+    <string name="controls_ios_home_indicator_summ">Requires full-screen gestures and a visible system handle. In Settings → Home screen → System navigation, select Gestures and turn off Hide full-screen indicator. Also turn off this module’s Hide gesture line. Menu names vary by ROM; only adapted builds are supported. Restart System UI to apply.</string>
 </resources>

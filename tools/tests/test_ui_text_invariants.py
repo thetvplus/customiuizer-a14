@@ -39,9 +39,10 @@ TYPEFACE_ALLOWLIST = {
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemClockHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemUIBatteryHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "utils" / "StatusBarTextFit.kt",
-    # Duo copies the ROM font object; only nullable types and DEFAULT fallback
-    # are allowed below, never font factories or bundled font loading.
+    # The status-bar renderer keeps its nullable local font; the single cold
+    # resource owner below is separate from the module settings typography.
     DUO_DIR / "DuoStatusBarView.kt",
+    DUO_DIR / "DuoIosFont.kt",
     # Helpers.applyNewMod() uses StyleSpan(Typeface.ITALIC); explicit files
     # will be checked for StyleSpan separately below.
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "utils" / "Helpers.kt",
@@ -227,14 +228,22 @@ class AppTextInvariantsTest(unittest.TestCase):
             + ", ".join(bad),
         )
 
-    def test_duo_reuses_rom_font_without_loading_a_font(self):
-        """The replacement status bar inherits its owner's local font object."""
+    def test_duo_font_is_owned_by_one_cold_host_resource_loader(self):
+        """Only the explicit status-bar font owner may load the bundled subset."""
         binding = (DUO_DIR / "DuoBinding.kt").read_text(encoding="utf-8")
-        self.assertRegex(binding, r"syncTypeface\(\(abi\.percentView\.get\(owner\) as\? TextView\)\?\.typeface\)")
+        self.assertIn("if (view.usesCellularText) view.syncTypeface()", binding)
+        owner = DUO_DIR / "DuoIosFont.kt"
+        resource_loader = owner.read_text(encoding="utf-8")
+        self.assertIn("@Synchronized", resource_loader)
+        self.assertIn("font ?: requireNotNull(", resource_loader)
+        self.assertIn("ModuleHelper.getModuleRes(context).getFont(R.font.duo_rounded_heavy)", resource_loader)
         banned_loaders = re.compile(r"\b(?:createFromAsset|createFromFile|FontRequest|FontsContract|ResourcesCompat\.getFont)\b")
         for path in sorted(DUO_DIR.glob("*.kt")):
             with self.subTest(path=path.name):
-                self.assertIsNone(banned_loaders.search(path.read_text(encoding="utf-8")))
+                text = path.read_text(encoding="utf-8")
+                self.assertIsNone(banned_loaders.search(text))
+                if path != owner:
+                    self.assertNotIn(".getFont(", text)
 
     def test_about_attribution_text_views_allow_wrapping(self):
         """The about page attribution TextViews must not be constrained to one line."""
@@ -263,10 +272,17 @@ class AppTextInvariantsTest(unittest.TestCase):
         self.assertIn("mikanoshi", based_on.lower(), "about_based_on must name Mikanoshi")
         self.assertIn("monwf", based_on.lower(), "about_based_on must name MonwF")
 
-    def test_font_resource_directory_does_not_exist(self):
-        """The module App must not ship its own font resources."""
+    def test_font_resource_is_limited_to_the_explicit_host_subset(self):
+        """Settings retain system typography; only the Duo subset is bundled."""
         font_dir = APP_ROOT / "res" / "font"
-        self.assertFalse(font_dir.is_dir(), f"App must not contain {font_dir}")
+        self.assertEqual(["duo_rounded_heavy.ttf"], sorted(p.name for p in font_dir.iterdir()))
+        font = (font_dir / "duo_rounded_heavy.ttf").read_bytes()
+        self.assertEqual(b"\x00\x01\x00\x00", font[:4])
+        consumers = {p.relative_to(APP_ROOT).as_posix()
+                     for p in _all_kotlin_and_xml((APP_ROOT / "java", APP_ROOT / "res"))
+                     if "R.font.duo_rounded_heavy" in p.read_text(encoding="utf-8")
+                     or "@font/duo_rounded_heavy" in p.read_text(encoding="utf-8")}
+        self.assertEqual({"java/tv/withaibuild/customiuizer/mods/duostatusbar/DuoIosFont.kt"}, consumers)
 
 
 if __name__ == "__main__":

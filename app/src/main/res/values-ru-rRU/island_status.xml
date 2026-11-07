@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_island_mode_dnd">Не беспокоить</string>
+    <string name="system_island_mode_dnd_short">Не беспокоить</string>
+</resources>

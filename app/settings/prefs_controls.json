@@ -388,6 +388,24 @@
             {
               "type": "section",
               "attributes": {
+                "android:title": "@string/controls_ios_home_indicator_title"
+              },
+              "children": [
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_controls_ios_home_indicator",
+                    "android:title": "@string/enable_mod",
+                    "android:summary": "@string/controls_ios_home_indicator_summ",
+                    "android:defaultValue": "false",
+                    "android:dependency": "pref_key_controls_nonavbar"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "attributes": {
                 "android:title": "@string/prefs_group_keyboard"
               },
               "children": [

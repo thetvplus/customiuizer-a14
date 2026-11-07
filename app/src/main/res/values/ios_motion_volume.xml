@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_island_mode_dnd">Do Not Disturb</string>
+    <string name="system_island_mode_dnd_short">DND</string>
+    <string name="system_volume_ios_title">iOS volume (experimental)</string>
+    <string name="system_volume_ios_summ">Style the collapsed volume bar in portrait and landscape. Keep native dragging, routes and expanded controls. Restart SystemUI after changing.</string>
+    <string name="system_volume_ios_compact_title">Start with thin bar</string>
+    <string name="system_volume_ios_compact_summ">Show the thin bar immediately, expanding it while dragging. Applies in portrait and landscape. Restart SystemUI after changing.</string>
+</resources>

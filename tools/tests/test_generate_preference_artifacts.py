@@ -294,6 +294,14 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         )} for item in entries if not item["page"]]
         self.assertEqual(_source_search_entries(), generated)
         by_key = {item["key"]: item for item in generated}
+        for key, owner, section in (
+            ("pref_key_system_volume_ios", "pref_key_system_cat_audio", "@string/system_ios_volume_group_title"),
+            ("pref_key_system_volume_ios_compact", "pref_key_system_cat_audio", "@string/system_ios_volume_group_title"),
+            ("pref_key_system_recents_ios18_deck", "pref_key_system_cat_recents", "@string/system_ios_desktop_title"),
+            ("pref_key_system_recents_ios18_deck_size", "pref_key_system_cat_recents", "@string/system_ios_desktop_title"),
+        ):
+            self.assertEqual(owner, by_key[key]["routeSub"])
+            self.assertEqual(section, by_key[key]["breadcrumbSubSubTitle"])
         for suffix in ("collapsed", "expanded"):
             item = by_key[f"pref_key_system_volumeblur_{suffix}"]
             self.assertEqual("pref_key_system_cat_audio", item["routeSub"])

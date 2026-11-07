@@ -14,10 +14,28 @@ internal class DuoAbi(private val loader: ClassLoader) {
         return result
     }
     fun method(type: Class<*>, name: String, count: Int): Method {
+        val parameters=when(name) {
+            "onAttachedToWindow","onDetachedFromWindow","updateAll","fireBatteryLevelChanged","firePowerSaveChanged" -> emptyList()
+            "onDarkChanged" -> listOf("java.util.ArrayList","float","int","int","int","boolean")
+            "notifyListeners" -> listOf("com.android.systemui.statusbar.connectivity.SignalCallback")
+            "setIsAirplaneMode" -> listOf("com.android.systemui.statusbar.connectivity.IconState")
+            "setSubs" -> listOf("java.util.List")
+            "applyWifiState" -> listOf("com.android.systemui.statusbar.phone.StatusBarSignalPolicy\$WifiIconState")
+            "applyMobileState","updateState" -> listOf("com.android.systemui.statusbar.phone.StatusBarSignalPolicy\$MobileIconState")
+            "setVisibleState" -> listOf("int","boolean")
+            "onConnectionStatusFetched" -> listOf("com.android.systemui.statusbar.policy.bluetooth.ConnectionStatusModel")
+            "onActiveDeviceChanged" -> listOf("int","com.android.settingslib.bluetooth.CachedBluetoothDevice")
+            "onBluetoothStateChanged","onActiveDataSubscriptionIdChanged" -> listOf("int")
+            "onReceive" -> listOf("android.content.Context","android.content.Intent")
+            else -> error("Duo: unspecified ABI $name")
+        }
+        require(parameters.size==count)
+        val result=if(name=="updateState") "boolean" else "void"
         var current: Class<*>? = type
         while (current != null && current.name.startsWith("com.android.systemui.")) {
-            val found = current.declaredMethods.firstOrNull {
-                it.name == name && it.parameterCount == count && !it.isBridge
+            val found = current.declaredMethods.singleOrNull {
+                it.name == name && !it.isBridge && it.returnType.name==result &&
+                    it.parameterTypes.map(Class<*>::getName)==parameters
             }
             if (found != null) return found.apply { isAccessible = true }
             current = current.superclass

@@ -38,16 +38,23 @@ internal class DuoConfig(val showPercent: Boolean, sizeDp: Int,
 }
 
 internal object DuoSizing {
-    /** Calibrated affine map in pixels; clamp the final size and round only once. */
-    fun pixels(config: DuoConfig, nativeHeight: Int, density: Float): Int {
+    /** Fold the previous visible size into the one frame, then add .50dp.
+     * The former second Canvas zoom is gone. Drawing and reservation use the
+     * same whole-pixel result, so native proportions have one scale owner. */
+    fun drawingPixels(config: DuoConfig, nativeHeight: Int, density: Float): Float {
         val pixels = when {
             !config.autoSize -> config.sizeDp * density
             nativeHeight > 0 -> (nativeHeight * 1.14345f + density)
                 .coerceIn(20.8f * density, 24.76f * density)
             else -> 23.869f * density
         }
-        return (pixels + 0.5f).toInt().coerceAtLeast(1)
+        val calibrated=(pixels + 0.5f).toInt().coerceAtLeast(1)
+        if (!config.autoSize || density <= 0f) return calibrated.toFloat()
+        val previousVisible=(calibrated + .40f*density)*1.0601073f
+        return (previousVisible + .50f*density + .5f).toInt().toFloat()
     }
+    fun pixels(config: DuoConfig, nativeHeight: Int, density: Float): Int =
+        kotlin.math.ceil(drawingPixels(config,nativeHeight,density)).toInt().coerceAtLeast(1)
 
     /** Reserve space for the requested shift inside the existing row, including double rows. */
     fun offset(height: Int, requested: Float): Float {
@@ -57,15 +64,6 @@ internal object DuoSizing {
 
     fun drawingSize(width: Int, height: Int, offset: Float): Float =
         minOf(width.toFloat(), (height - 2f * kotlin.math.abs(offset)).coerceAtLeast(0f))
-
-    /** Blend the visible-ink box with the ring's perceived center; only use spare row
-     * space. This never changes the chosen size or overrides the user's manual shift. */
-    fun opticalShift(size: Float, row: Int, userOffset: Float, inkCenter: Float): Float {
-        val center = inkCenter * .65f + 61.5f * .35f
-        val wanted = (60f - center) * size / 120f
-        val spare = ((row - size) * .5f - kotlin.math.abs(userOffset)).coerceAtLeast(0f)
-        return wanted.coerceIn(-spare, spare)
-    }
 
     /** Use the actual source row, not the smaller stock icon resource. */
     fun sharedHeight(height: Int, sourceHeight: Int): Int =
@@ -81,19 +79,11 @@ internal object DuoSizing {
 }
 
 internal object DuoGeometry {
-    const val RING_START = 148.7f
-    const val BOTTOM_GAP = 117.4f
-
-    fun topGap(showPercent: Boolean, showBolt: Boolean): Float = when {
-        showBolt -> 55.6f
-        showPercent -> 71.3f
-        else -> 0f
-    }
-
-    fun sideSweep(topGap: Float) = (360f - BOTTOM_GAP - topGap) / 2f
-    fun continuousFill(level: Int) = (360f - BOTTOM_GAP) * level.coerceIn(0, 100) / 100f
-    fun leftFill(level: Int, side: Float) = side * level.coerceIn(0, 50) / 50f
-    fun rightFill(level: Int, side: Float) = side * (level - 50).coerceIn(0, 50) / 50f
+    // Native curve-length fraction, before the independent marker mask.
+    fun arcFillFraction(level: Int) = (2f/3f) * level.coerceIn(1, 100) / 100f
+    // Native threshold .995; Android's source is already an integer percentage.
+    fun showBolt(level: Int,charging: Boolean,enabled: Boolean,percent: Boolean) =
+        charging && enabled && (!percent || level<100)
 
     fun batteryColor(foreground: Int, level: Int, charging: Boolean, saver: Boolean): Int = withAlpha(when {
         charging -> 0xff34c759.toInt()
@@ -107,9 +97,10 @@ internal object DuoGeometry {
     fun signalColor(foreground: Int, network: Int, dot: Int): Int {
         return strengthColor(foreground, DuoNetworkState.dotCoverage(network, dot))
     }
-    /** Three Wi-Fi elements retain all five native levels; level 3 must not look full. */
+    /** Native variable-color thresholds are 0, .34 and .68, not partial opacity.
+     * Android retains five input levels; the highest two share the full glyph. */
     fun wifiColor(foreground: Int, level: Int, part: Int): Int =
-        strengthColor(foreground, (level.coerceIn(0, 4) * 3 - part * 4).coerceIn(0, 4) * 255 / 4)
+        if(level.coerceIn(0,4)*25 > part*34) foreground else dim(foreground)
 
     private fun strengthColor(foreground: Int, coverage: Int): Int {
         val alpha = foreground ushr 24

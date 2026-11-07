@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_deck_size_auto_title">Automatická velikost karet</string>
+    <string name="system_deck_size_auto_summ">Přizpůsobí karty obrazovce a dostupnému prostoru.</string>
+    <string name="system_deck_size_title">Velikost karet</string>
+    <string name="system_deck_size_summ">Změní celkovou velikost karet. Restartujte spouštěč.</string>
+</resources>

@@ -1314,4 +1314,15 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_live_title">Canlı etkinlikler</string>
     <string-array name="island_return_effects"><item>Yok</item><item>Anında</item><item>Emilim</item></string-array>
     <string name="system_island_interaction_group">Etkileşim</string>
+    <string name="system_recents_ios18_deck_title">Yığılmış son uygulamalar</string>
+    <string name="system_recents_ios18_deck_summ">Desteklenen HyperOS 1 başlatıcısı gerekir. Ayarlar → Ana ekran → Son uygulamaları düzenle altında Yatay seçeneğini seçin. Tam ekran hareketleri önerilir. Bu ayar, ana ekran simge düzeninden ayrıdır. Menü adları değişebilir. Başlatıcıyı yeniden başlatın.</string>
+    <string name="system_recents_deck_header_icon_title">Yığındaki uygulama simgesi boyutu</string>
+    <string name="system_recents_deck_header_title_title">Yığındaki başlık boyutu</string>
+    <string name="system_recents_deck_header_size_summ">Otomatik boyut, başlığın kartla birlikte büyümesini önler. Yüzdeler özgün Android boyutuna göredir. Başlatıcıyı yeniden başlatın.</string>
+    <string name="system_recents_deck_motion_title">iOS pencere hareketi</string>
+    <string name="system_recents_deck_motion_summ">Uygulama açılışını ve son görevlere geçişi düzenler. Özgün hareket için kapatın. Başlatıcıyı yeniden başlatın.</string>
+    <string name="system_ios_desktop_title">iOS görev kartları</string>
+    <string name="system_ios_volume_group_title">iOS ses düzeyi</string>
+    <string name="controls_ios_home_indicator_title">iOS hareket göstergesi</string>
+    <string name="controls_ios_home_indicator_summ">Tam ekran hareketleri, görünür sistem göstergesi ve desteklenen ROM gerekir. Ayarlar → Ana ekran → Sistem gezintisi altında Hareketler seçeneğini seçin ve Tam ekran göstergesini gizle seçeneğini kapatın. Bu modüldeki hareket çizgisini gizleme seçeneğini de kapatın. Menü adları ROM’a göre değişebilir. Sistem arayüzünü yeniden başlatın.</string>
 </resources>

@@ -17,6 +17,37 @@ import tv.withaibuild.customiuizer.R
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class ComposeSettingsPagesTest {
+    @Test fun homeIndicatorReverseDependencySurvivesRestoreReentryAndComposeObservation() {
+        val context=RuntimeEnvironment.getApplication()
+        val prefs=PreferenceManager.getDefaultSharedPreferences(context)
+        val hide="pref_key_controls_nonavbar"
+        val indicator="pref_key_controls_ios_home_indicator"
+        prefs.edit().remove(hide).remove(indicator).commit()
+        fun check(expectedEnabled: Boolean,expectedChecked: Boolean) {
+            val manager=PreferenceManager(context)
+            val screen=ComposeSettingsPages.create(R.id.prefs_controls_navbar,context,manager)
+            manager.setPreferences(screen);screen.onAttached()
+            try {
+                val owner=requireNotNull(manager.findPreference<androidx.preference.TwoStatePreference>(hide))
+                val row=requireNotNull(manager.findPreference<androidx.preference.TwoStatePreference>(indicator))
+                assertTrue(owner.disableDependentsState)
+                tv.withaibuild.customiuizer.ui.SettingsPreferenceList(screen).use { model ->
+                    assertSame(row,model.rows.single { it.preference.key==indicator }.preference)
+                    assertEquals(expectedEnabled,row.isEnabled);assertEquals(expectedChecked,row.isChecked)
+                    owner.isChecked=!owner.isChecked
+                    assertEquals(!expectedEnabled,row.isEnabled)
+                    owner.isChecked=!owner.isChecked
+                    assertEquals(expectedEnabled,row.isEnabled)
+                }
+            } finally { screen.onDetached() }
+        }
+        check(true,false)
+        for(hidden in listOf(false,true)) for(enabled in listOf(false,true)) {
+            prefs.edit().putBoolean(hide,hidden).putBoolean(indicator,enabled).commit()
+            repeat(2) { check(!hidden,enabled) }
+        }
+        prefs.edit().remove(hide).remove(indicator).commit()
+    }
     @Test fun allTypedPagesAttachDetachAndReattachWithoutMissingOrDuplicateDependencies() {
         val context = RuntimeEnvironment.getApplication()
         val pages = ComposeSettingsPages::class.java.declaredMethods.filter { it.name.startsWith("prefs_") }

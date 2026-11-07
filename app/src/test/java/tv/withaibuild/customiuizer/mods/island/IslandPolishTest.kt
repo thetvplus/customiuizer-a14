@@ -118,8 +118,8 @@ class IslandPolishTest {
             motion.end()
             assertEquals(40,shell.height)
             assertEquals(1f,shell.scaleX,.001f)
-            for (index in 0..2) assertEquals(1f,shell.getChildAt(index).alpha,.001f)
-            val art=(shell.getChildAt(0) as LinearLayout).getChildAt(0)
+            for (index in 0..2) assertEquals(1f,shell.contentAt(index).alpha,.001f)
+            val art=(shell.contentAt(0) as LinearLayout).getChildAt(0)
             assertEquals(1f,art.scaleX,.001f); assertEquals(1f,art.scaleY,.001f)
         } finally { ShadowChoreographer.setPaused(false); activity.finish() }
     }
@@ -133,17 +133,17 @@ class IslandPolishTest {
             shell.bind("Saved",null,art,false,false,false,0,false)
             shell.geometry(240,height,40); layout(shell,240,height)
             for (index in 0..1) {
-                val group=shell.getChildAt(index) as LinearLayout
+                val group=shell.contentAt(index) as LinearLayout
                 val child=group.getChildAt(0)
                 assertEquals(height/2f,group.top+child.top+child.height/2f,.5f)
             }
-            assertEquals(3,shell.childCount)
+            assertEquals(1,shell.childCount)
         }
         val height=shell.statusHeight("Enabled",240,40,40)!!
         shell.bind("Enabled","Do Not Disturb",art,false,false,false,0,false,status=true)
         shell.geometry(240,height,40); layout(shell,240,height)
         assertEquals(40,height)
-        assertEquals(2,(shell.getChildAt(1) as LinearLayout).childCount)
+        assertEquals(2,(shell.contentAt(1) as LinearLayout).childCount)
         assertTrue(shell.contentDescription.toString().contains("Do Not Disturb"))
         assertFalse(shell.performLongClick())
         activity.finish()
@@ -183,8 +183,8 @@ class IslandPolishTest {
             val motion=getField<ValueAnimator>(shell,"motion")
             for (time in 0..320 step 8) {
                 motion.currentPlayTime=time.toLong()
-                val art=(shell.getChildAt(0) as LinearLayout).getChildAt(0)
-                val wave=shell.getChildAt(2)
+                val art=(shell.contentAt(0) as LinearLayout).getChildAt(0)
+                val wave=shell.contentAt(2)
                 for (view in listOf(art,wave)) {
                     assertEquals(1f,shell.scaleX*view.scaleX,.001f)
                     assertEquals(1f,shell.scaleY*view.scaleY,.001f)

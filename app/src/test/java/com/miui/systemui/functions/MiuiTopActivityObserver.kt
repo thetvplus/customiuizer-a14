@@ -5,4 +5,5 @@ import android.content.ComponentName
 class MiuiTopActivityObserver {
     @JvmField var mTopActivity: ComponentName? = null
     fun updateTopActivity() = Unit
+    fun notifyListeners() = Unit
 }

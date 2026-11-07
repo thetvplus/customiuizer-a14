@@ -32,19 +32,26 @@ internal object IslandMusicReturnSignal {
 
     data class Frame(val packageName: String, val user: UserHandle,
         val left: Float, val top: Float, val right: Float, val bottom: Float,
-        val screenWidth: Int, val screenHeight: Int) {
+        val screenWidth: Int, val screenHeight: Int,
+        val contactLeft: Float = left, val contactRight: Float = right) {
         fun valid(): Boolean = packageName.length in 1..255 &&
             screenWidth in 1..10000 && screenHeight in 1..20000 && screenWidth < screenHeight &&
             left.isFinite() && top.isFinite() && right.isFinite() && bottom.isFinite() &&
             left >= 0 && top >= 0 && right > left && bottom > top &&
-            right <= screenWidth && bottom <= screenHeight
+            right <= screenWidth && bottom <= screenHeight &&
+            contactLeft.isFinite() && contactRight.isFinite() &&
+            contactLeft >= left && contactRight <= right && contactRight > contactLeft
+        // Presentation hints may change while the same authenticated target is
+        // appearing. They must not revoke its in-flight progress ownership.
+        fun sameTarget(other: Frame) = packageName == other.packageName && user == other.user &&
+            left == other.left && top == other.top && right == other.right && bottom == other.bottom &&
+            screenWidth == other.screenWidth && screenHeight == other.screenHeight
         fun rectangle() = RectF(left, top, right, bottom)
         fun landingRectangle() = rectangle().apply {
             val shellHeight = height()
             val targetHeight = shellHeight * IslandMotion.ABSORPTION_LANDING_HEIGHT_RATIO
             val targetWidth = maxOf(width() * IslandMotion.ABSORPTION_LANDING_WIDTH_RATIO, targetHeight).coerceAtMost(width())
             inset((width() - targetWidth) * .5f, (shellHeight - targetHeight) * .5f)
-            offset(0f, shellHeight * IslandMotion.ABSORPTION_LANDING_OFFSET)
         }
     }
 
@@ -60,6 +67,7 @@ internal object IslandMusicReturnSignal {
                     putExtra("left", frame.left); putExtra("top", frame.top)
                     putExtra("right", frame.right); putExtra("bottom", frame.bottom)
                     putExtra("width", frame.screenWidth); putExtra("height", frame.screenHeight)
+                    putExtra("contactLeft", frame.contactLeft); putExtra("contactRight", frame.contactRight)
                 }
             }
 
@@ -73,7 +81,9 @@ internal object IslandMusicReturnSignal {
             intent.getParcelableExtra("user", UserHandle::class.java) ?: return null,
             intent.getFloatExtra("left", Float.NaN), intent.getFloatExtra("top", Float.NaN),
             intent.getFloatExtra("right", Float.NaN), intent.getFloatExtra("bottom", Float.NaN),
-            intent.getIntExtra("width", 0), intent.getIntExtra("height", 0))
+            intent.getIntExtra("width", 0), intent.getIntExtra("height", 0),
+            intent.getFloatExtra("contactLeft", intent.getFloatExtra("left", Float.NaN)),
+            intent.getFloatExtra("contactRight", intent.getFloatExtra("right", Float.NaN)))
         return if (frame.valid()) Snapshot(frame, at, sequence) else null
     }
 
@@ -100,7 +110,7 @@ internal object IslandMusicReturnSignal {
                     val gesture = intent.getLongExtra("gesture", -1)
                     val at = intent.getLongExtra("committedAt", -1)
                     val now = SystemClock.uptimeMillis()
-                    if (packet.frame == frame && gesture > committedGesture && at >= 0 && now >= at && now - at <= 1000) {
+                    if (packet.frame?.sameTarget(frame) == true && gesture > committedGesture && at >= 0 && now >= at && now - at <= 1000) {
                         committedGesture = gesture
                         progressJob?.cancel(); progressJob = null
                         onImpulse(intent.getFloatExtra("impulse", 0f).takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f)
@@ -114,7 +124,7 @@ internal object IslandMusicReturnSignal {
                             // No frame IPC: map one read-only scalar on IO, then hand its
                             // ownership to the same admitted native return on Main.
                             handler.post {
-                                if (closed || committedGesture != gesture || current() != frame) progress?.close()
+                                if (closed || committedGesture != gesture || current()?.sameTarget(frame) != true) progress?.close()
                                 else ModuleHelper.guarded { onCommit(frame, at, progress) }
                             }
                         }
@@ -128,7 +138,10 @@ internal object IslandMusicReturnSignal {
         fun publish(force: Boolean = false) {
             if (closed) return
             val frame = current()?.takeIf { it.valid() }
-            if (!force && sent && frame == last) return
+            val unchanged = if (frame == null) last == null else last?.sameTarget(frame) == true
+            // Contact observations are refreshed by the explicit gesture request;
+            // ordinary state events must not broadcast animation presentation changes.
+            if (!force && sent && unchanged) return
             last = frame; sent = true
             val message = encode(frame).putExtras(Bundle().apply { putBinder("owner", owner) })
             job?.cancel()

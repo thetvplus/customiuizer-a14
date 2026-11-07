@@ -1319,4 +1319,15 @@
     <string name="system_island_live_title">实时活动</string>
     <string-array name="island_return_effects"><item>无</item><item>瞬收</item><item>吸入</item></string-array>
     <string name="system_island_interaction_group">交互</string>
+    <string name="system_recents_ios18_deck_title">堆叠式最近任务</string>
+    <string name="system_recents_ios18_deck_summ">需要已适配的 HyperOS 1 桌面，并在系统设置 → 桌面 → 最近任务排列方式中选择“横向”。建议配合全面屏手势使用；此项不同于桌面图标布局。系统菜单名称可能因 ROM 而异。修改后重启桌面生效。</string>
+    <string name="system_recents_deck_header_icon_title">堆叠应用图标大小</string>
+    <string name="system_recents_deck_header_title_title">堆叠标题大小</string>
+    <string name="system_recents_deck_header_size_summ">自动避免标题栏随卡片额外放大；百分比以安卓原生标题栏为基准，重启桌面生效。</string>
+    <string name="system_recents_deck_motion_title">iOS 窗口动效</string>
+    <string name="system_recents_deck_motion_summ">调整打开应用与进入最近任务的动效，关闭后使用系统原有效果，重启桌面生效。</string>
+    <string name="system_ios_desktop_title">iOS 任务卡片</string>
+    <string name="system_ios_volume_group_title">iOS 音量</string>
+    <string name="controls_ios_home_indicator_title">iOS 手势指示条</string>
+    <string name="controls_ios_home_indicator_summ">仅适用于全面屏手势及已适配的 ROM。请在系统设置 → 桌面 → 系统导航方式中选择“全面屏手势”，并关闭“隐藏全面屏指示条”；同时关闭米客的“隐藏手势提示线”。系统菜单名称可能因 ROM 而异。重启系统界面后生效。</string>
 </resources>
