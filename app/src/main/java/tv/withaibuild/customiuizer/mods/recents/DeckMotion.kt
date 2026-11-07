@@ -38,7 +38,7 @@ internal class DeckMotion(private val api: DeckNativeApi) {
     }
     fun leave() { contexts.get()?.let { it.poll(); if(it.isEmpty()) contexts.remove() } }
     fun mark(spring: Any?,owner: DeckOwner,scene: DeckSpringScene) {
-        if(spring!=null && owner.allowed && owner.transition!=0L)
+        if(spring!=null && owner.customMotionAllowed && owner.transition!=0L)
             XposedHelpers.setAdditionalInstanceField(spring,PROFILE,Profile(owner,owner.transition,scene,spring))
     }
     fun beforeInit(spring: Any) {
@@ -74,6 +74,6 @@ internal class DeckMotion(private val api: DeckNativeApi) {
     }
     private fun valid(profile: Profile?): Boolean {
         val owner=profile?.owner ?: return false
-        return profile.ticket!=0L && profile.ticket==owner.transition && owner.allowed
+        return profile.ticket!=0L && profile.ticket==owner.transition && owner.customMotionAllowed
     }
 }

@@ -17,6 +17,33 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk=[34], application=android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DeckGeometryTest {
+    @Test fun landscapeNativePoseMatchesTheWindowThroughHoldReleaseAndReverse() {
+        val parent=FrameLayout(RuntimeEnvironment.getApplication())
+        val view=View(parent.context)
+        parent.addView(view);parent.layout(0,0,2400,1080);view.layout(650,200,1750,800)
+        val header=52f
+        val geometry=DeckCardGeometry(view,parent)
+        val scale=1.35f
+        val target=RectF(650f,200f,1750f,800f)
+        IosDeckGeometry(2280f,1100f,1f).content(target,scale,header)
+        geometry.apply(scale)
+        try {
+            for(p in floatArrayOf(0f,.2f,.6f,.6f,.9f,1f,.9f,.2f,0f)) {
+                val width=2400f+(target.width()-2400f)*p
+                val window=RectF(0f,0f,width,width*(600f-header)/1100f)
+                window.offset(target.centerX()-window.centerX(),target.centerY()-window.centerY())
+                val input=RectF()
+                assertTrue(geometry.windowInput(window,target,target,0,25f,2400f,0f,header,input))
+                // Both verified native horizontal consumers apply these same
+                // root properties before the owned presentation matrix.
+                geometry.alignClosing(input,0,25f,header)
+                val shown=RectF();geometry.screenContent(shown,header)
+                assertEquals(window.left,shown.left,.002f);assertEquals(window.top,shown.top,.002f)
+                assertEquals(window.right,shown.right,.002f);assertEquals(window.bottom,shown.bottom,.002f)
+            }
+        } finally { geometry.release() }
+    }
+
     @Test fun nativeAppGestureUsesScreenWindowOnceAndArrivesAtTheDeckFrame() {
         val reference=RectF(100f,200f,500f,800f)
         IosDeckGeometry(600f,400f,1f).content(reference,.8f,50f)

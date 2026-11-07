@@ -5,6 +5,10 @@
 
 ## Deck 与动态岛常用场景修正（2026-11-07）
 
+- 横屏响应续修以静态证据收口：7603 / 8255 的 `NavStubView.updateTaskView` 与 8604 的 `TaskViewsElement.updateTaskView` 共用已核对的横向姿态公式。旧版此前缺少 Deck 矩阵之前的窗口输入补偿，现补齐同次窗口 / 端点映射，并排除原生 quick switch；原生圆角、截图、fullscreenProgress 与完成工作仍由原消费者执行。没有设备采样，不能确认已解决用户整条横屏链路的卡顿。
+- 卡片的完成工作从“出现一次就保留弹簧直到回收”改为只持有尚未结束的原生 Runnable；正常完成、取消完成、同步回调和异常释放后，后续窗口采样恢复直接跟随，重入与重叠完成不会释放新工作。横屏两类 Profile 的窗口场景保留 HyperOS 原生参数，竖屏维持既有 Deck 参数；没有新时钟或定时器。
+- 按当前产品取舍保留层叠阴影。卡片截图裁切与半径取 HyperOS 原生值，窗口端点仅保留展示矩阵所需的半径单位换算；同一 RenderNode 的内容投影和原有深度排序继续使用，取消模块对原生 ambient / spot 颜色的覆盖。实际阴影强弱、横屏首帧、点击恢复流畅度和多 ROM 运行兼容仍待实机验收。
+- 本轮按 Deep 的受影响 Hook / 所有权范围验证：JDK 27 下全部 recents JVM / Android 14 模型回归、源码不变量、生产边界、偏好 / 分配预算、Develop / R8、vital Lint 及文档检查通过。设备未获调试授权且用户要求静态推进，未安装候选、未采样，也未调整设备设置；构建与 Host 结果不替代实际横屏流畅度。
 - 横屏状态栏错向已在 8255 桌面复现：正反横屏应用进入 Deck 后，窗口均被原生保持竖屏策略拉回 rotation 0，卡片容器单独旋转。Deck 现于完整 ABI 冷解析及同一 PreparedHookBatch 内取消 `isKeepRecentsViewPortrait`，由原生 RotationHelper / RecentsContainer 统一处理窗口、系统栏及 Insets，桌面退出恢复原生方向；不新增监听、轮询或逐帧工作。7603 / 8255 / 8604 的静态策略与消费链已核对，其他 ROM 不据此宣称设备通过。
 - 8604 续查将方向交接接到原生 `RecentsContainer.onDisplayRotationChanged(I)V`，包含不改变 landscape 布尔值 / 宽高的 90→270°，在配置与布局之前撤销旧票据；尚未准备的 viewport 或 View Configuration 与 Display 不一致时不得发新票据。原生 display / home rotation 相同的正反横屏窗口沿用交接，两轴不一致 / 180° / 分屏保留原生。原生 overview 已请求布局时，模块只刷新准入。
 - 卡片矩阵曾以原生临时 pivot 缩放，窗口却按完整 frame 中心求落点；行为回归已复现该差异。现统一中心，并补偿删除滑动时原生 pivot / scale 的组合，保留删除资格。上滑中的另一个错误已在同版原生姿态更新点取证：屏幕宽 2400 的窗口叠加 Deck 后约 3107；输入坐标补偿后回到约 2400，未将此几何结果换算为帧率收益。

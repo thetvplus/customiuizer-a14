@@ -68,9 +68,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         }
         var animation: ValueAnimator?=null
         val windowInput=RectF()
-        // Native completion listeners can outlive the invocation carrying them.
-        // Keep that card's native spring path until the card is returned/rebound.
-        var nativePoseCompletion=false
+        val poseCompletion=DeckPoseCompletion()
         fun release() {
             val cleanup=CleanupActions()
             val previous=animation; animation=null
@@ -251,6 +249,9 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     val allowed: Boolean get() = !closed && !suspended && baseAllowed && tasksAllowed && geometryReady &&
         ValueAnimator.areAnimatorsEnabled() && (transition!=0L ||
             (stack.parent?.let { api.recents.isInstance(it) && api.overview.getBoolean(it) && !api.split.getBoolean(it) }==true))
+    // Landscape window rotation/aspect handoffs use HyperOS's own scene tuning.
+    // Deck still owns card geometry, never a second window animation clock.
+    val customMotionAllowed: Boolean get()=allowed && !current.landscape
 
     init {
         try {

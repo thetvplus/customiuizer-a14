@@ -358,10 +358,13 @@ internal object IosRecentsDeckHooks {
                 }
             }
         }
-        api.appGesturePose?.let { pose -> before(pose) {
-            if(it.getArg(13)==true) return@before
+        api.appGesturePose.let { pose ->
+        before(pose) {
             val selected=card(it.getArg(0)) ?: return@before
-            val bend=it.getArg(15) as Float
+            if(if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) it.getArg(13)==true
+                else api.appGestureQuickSwitch!!.invoke(it.getThisObject())==true) return@before
+            val bend=if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) it.getArg(15) as Float
+                else api.appGestureProgress!!.getFloat(it.getThisObject())
             selected.owner.appGestureInput(selected,it.getArg(2) as RectF,it.getArg(3) as Int,
                 it.getArg(5) as Float,300f*bend*bend*bend)?.let { input ->
                 val args=it.getArgs()
@@ -369,10 +372,16 @@ internal object IosRecentsDeckHooks {
                 // This is already the native window's sampled pose. A second
                 // per-card spring would chase it with another phase lag. Keep
                 // calls carrying native completion work on their original path.
-                if(args[10]!=null) selected.nativePoseCompletion=true
-                if(!selected.nativePoseCompletion) args[7]=false
+                (args[10] as? Runnable)?.let { completion ->
+                    args[10]=selected.poseCompletion.track(completion)
+                }
+                if(!selected.poseCompletion.active) args[7]=false
             }
-        } }
+        }
+        afterAlways(pose) {
+            if(it.getThrowable()!=null) (it.getArg(10) as? DeckPoseCompletion.Completion)?.finish()
+        }
+        }
         before(api.navToRecents) {
             modernMotion?.enterGesture()
             val active=latest.get()

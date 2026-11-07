@@ -121,7 +121,7 @@ POCO 4.39.14.8255 的 thumbnail 没有 `getCornerRadius()`；此前必需表解�
 
 每次原生重新配置前归还自持参数，成功后再覆盖四轴；end / cancel / 超时 / 旋转释放时仅恢复仍等于本次写入的参数对，后续原生写入优先。失败逐轴回滚，可选动效冷解析失败仅保留原生时序；必需窗口合同失败则 Deck 整批不接管。该变化是 iOS 配置到 Android 原生求解器的映射，并非 UIKit 求解器或全链路等价。WindowElement 的 display / home rotation 相等且为 0、90、270° 时共用交接；两轴不一致、180°、quick switch 或分屏仍保留原生运动。8604 原生 opening provider 在同一调用中读取两次当前 Display rotation，横屏相等值并非异常场景。
 
-阴影继续使用同一 TaskView RenderNode 和原生内容 alpha，没有引入新滤镜或阴影时钟；16dp 投影平面、环境 / 定向颜色仍为 Android 工程近似。现有静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
+阴影继续使用同一 TaskView RenderNode 和原生内容 alpha，没有引入新滤镜或阴影时钟；16dp 投影平面仍为 Android 工程近似，环境 / 定向颜色保留 HyperOS 当前原值。卡片截图的圆角与裁切由原生 thumbnail 管理，内容投影同步原生半径，不增加另一套曲率。现有静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
 
 Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析器，必需布局、触摸、卡池、窗口和生命周期成员仍在冷安装前完整解析。后者已移除旧 Quickstep closing 入口，改由 WindowElement 持有 RectFSpringAnim；不能只放开版本门禁或把旧字段当作参数别名。
 
@@ -148,10 +148,12 @@ A14 使用原生当前横屏窗口、mVisualRotationSystemInsets 与原生横向
 
 卡片与窗口内容框统一使用原生完整 TaskView frame 的中心。原生 TaskViewsElement 在窗口更新时重写 pivot，其他入场和滑动路径也会改变 pivot；旧展示矩阵取用临时 pivot 后缓存，可能与窗口按 frame 中心计算的落点不同。现在自持矩阵固定使用 frame 中心，滑动期间仅在自持矩阵补偿原生 pivot / scale 的组合，保留原生根属性和删除资格。实际屏幕内容框、逆变换命中和窗口模型有同一中心的行为回归，包含 pivot 迟到改变及非均匀原生缩放。原生截图、Surface 提交和 finish 继续由原对象持有。
 
-上滑过程另有独立的原生姿态消费者：8604 的 `TaskViewsElement.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable,Float,Float,Boolean,Int,Float,Int,Rect)V`。原生以屏幕窗口宽度求根 scale、线性页间距、Header 中心与 `300×mPer³` 位移，直接叠上 Deck 矩阵会二次缩放。WindowElement Profile 现冷解析该精确实例方法，在同一次原生调用前将窗口姿态映射到自持矩阵之前的坐标；收拢程度直接由当前原生窗口宽度与已准备端点求出，不再消费分段的手势进度。无原生完成工作的卡片使用原生即时姿态分支，避免再启动卡片弹簧追赶已经连续更新的窗口；出现完成 Runnable 的卡片保持原有弹簧路径至回收，保留监听与取消语义。原生 alpha、fullscreenProgress、任务索引、窗口 spring、Surface 和 finish 保持。
+上滑过程另有独立的原生姿态消费者：8604 的 `TaskViewsElement.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable,Float,Float,Boolean,Int,Float,Int,Rect)V`。原生以屏幕窗口宽度求根 scale、线性页间距、Header 中心与 `300×mPer³` 位移，直接叠上 Deck 矩阵会二次缩放。WindowElement Profile 现冷解析该精确实例方法，在同一次原生调用前将窗口姿态映射到自持矩阵之前的坐标；收拢程度直接由当前原生窗口宽度与已准备端点求出，不再消费分段的手势进度。无原生完成工作的卡片使用原生即时姿态分支，避免再启动卡片弹簧追赶已经连续更新的窗口；出现完成 Runnable 的卡片仅在回调尚未结束时保留原有弹簧路径，原生完成后解除，保留监听与取消语义。原生 alpha、fullscreenProgress、任务索引、窗口 spring、Surface 和 finish 保持。
 
-`alignTaskViewWhenAppToRecent` 沿同一窗口几何跟随原生 closing / end 回调，不再整段跳过邻卡对齐。端点取自本次已准备的布局，Header / gap / count 随布局更新；每卡一个复用 RectF，owner 两个工作 RectF，不逐帧创建几何模型或额外时钟。原生准备早于首次布局时，在既有姿态回调内同步矩阵尺寸后再做逆换算；该时序已有先失败后通过的回归。Legacy 的上滑更新 ABI 未据此扩展，未测样本仍需独立验收。
+`alignTaskViewWhenAppToRecent` 沿同一窗口几何跟随原生 closing / end 回调，不再整段跳过邻卡对齐。端点取自本次已准备的布局，Header / gap / count 随布局更新；每卡一个复用 RectF，owner 两个工作 RectF，不逐帧创建几何模型或额外时钟。原生准备早于首次布局时，在既有姿态回调内同步矩阵尺寸后再做逆换算；该时序已有先失败后通过的回归。Legacy 的同类上滑消费者在下述横屏响应续修中补齐；未测样本仍需独立验收。
 
 后排标题 / 图标的深度透明度在现有 PreDraw 内随有界卡片列表校正，涵盖首次布局之后绕过 TaskView setter 的原生 Header 动画 / reset 写入；不再只校正绑定后的第一次绘制。相同 alpha 不重复写入，不请求额外帧，不增加监听器或业务时钟；回收、旋转、退出仍释放原生属性所有权。此项有首次绘制后多次迟到写入的 Host 回归，实际上滑呼出的最终观感待实机验收。
 
 设置入口为“系统 → 最近任务 → iOS 任务卡片”；“堆叠式最近任务”保留原键，“卡片比例”控制整体大小。默认自动按 .75 页比例与可用高度求上限，自定义 55–85%，最大显示高度限制为可用高度的 90%；这组范围为 Android 安全映射。新设置关闭 / 自动时不会改变原生业务尺寸或截图宽高比。16:9、19.5:9、20:9、多密度及边界大小有 Host 几何回归，实机覆盖与未覆盖场景分别记录在路线图。
+
+2026-11-07 横屏响应续修：Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable)V，读取同一原生 mPer 并排除 quick switch；7603 / 8255 的横向根姿态与上述 WindowElement 消费者一致。横屏窗口保留 HyperOS 原生场景弹簧参数，竖屏 Deck 参数映射保持。原生圆角更新、截图及完成回调仍在原方法内执行；Host 只验证映射和所有权，不代表设备性能通过。

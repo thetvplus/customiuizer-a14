@@ -11,8 +11,6 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
     private val content: View) :
     ViewOutlineProvider(), View.OnLayoutChangeListener {
     private val original = view.outlineProvider
-    private val ambient = view.outlineAmbientShadowColor
-    private val spot = view.outlineSpotShadowColor
     private var corner = radius
     private var contentAlpha = content.alpha
     private var closed = false
@@ -26,8 +24,6 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
         if (owned) {
             try {
                 view.outlineProvider = this
-                view.outlineAmbientShadowColor = AMBIENT
-                view.outlineSpotShadowColor = SPOT
                 view.addOnLayoutChangeListener(this)
                 header.addOnLayoutChangeListener(this)
             } catch (error: Throwable) {
@@ -67,13 +63,5 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
         closed = true
         view.removeOnLayoutChangeListener(this); header.removeOnLayoutChangeListener(this)
         if (view.outlineProvider === this) view.outlineProvider = original
-        if (view.outlineAmbientShadowColor == AMBIENT) view.outlineAmbientShadowColor = ambient
-        if (view.outlineSpotShadowColor == SPOT) view.outlineSpotShadowColor = spot
-    }
-
-    companion object {
-        // Android projection tuning, not recovered CoreMaterial filter values.
-        private const val AMBIENT = 0x24000000
-        private const val SPOT = 0x50000000
     }
 }

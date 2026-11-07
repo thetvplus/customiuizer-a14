@@ -76,6 +76,8 @@ class DeckCardShadowTest {
         card.outlineAmbientShadowColor=0xff112233.toInt()
         card.outlineSpotShadowColor=0xff445566.toInt()
         val shadow=DeckCardShadow(card,header,22f,card)
+        assertEquals("Keep native ambient shadow color",0xff112233.toInt(),card.outlineAmbientShadowColor)
+        assertEquals("Keep native spot shadow color",0xff445566.toInt(),card.outlineSpotShadowColor)
         shadow.close(); shadow.close()
         assertSame(original,card.outlineProvider)
         assertEquals(0xff112233.toInt(),card.outlineAmbientShadowColor)

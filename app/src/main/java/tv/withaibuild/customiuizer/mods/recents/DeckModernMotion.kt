@@ -45,7 +45,7 @@ internal class DeckModernMotion(type: Class<*>) {
     fun afterConfigure(spring: Any, nativeType: String?, failed: Boolean) {
         val request = request(spring) ?: return
         val expected = if (request.scene == DeckSpringScene.OPEN) "OPEN_FROM_RECENTS" else "CLOSE_TO_RECENTS"
-        if (failed || nativeType != expected || !request.owner.allowed || request.owner.transition != request.ticket) {
+        if (failed || nativeType != expected || !request.owner.customMotionAllowed || request.owner.transition != request.ticket) {
             XposedHelpers.removeAdditionalInstanceField(spring, KEY); return
         }
         request.snapshot = applyParameters(spring, request.scene)
