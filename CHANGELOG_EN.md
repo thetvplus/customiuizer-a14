@@ -14,6 +14,7 @@ versionCode 303. Changes since r14.27.1:
 
 - Fix position and size jumps when a neighboring card fills the gap after dismissing the leftmost recents deck card.
 - Reject stale card and window geometry during repeated orientation changes to improve position, size and direction handoff.
+- Fix landscape deck rotation affecting only the card container. Keep the recents window, status bar and gesture handle aligned; restart the launcher after updating.
 - Fix rear-card title and icon opacity on swipe-up deck entry without requiring another scroll.
 - Restore horizontal island recoil when returning home from music, reduce vertical expansion and press enlargement, and preserve interrupted and reversed transitions.
 
@@ -22,6 +23,7 @@ versionCode 303. Changes since r14.27.1:
 - Recheck local iOS 18.6.2 binaries and A14 native call chains. Preserve native scrolling, window springs and lifecycle without adding animation clocks, listeners or threads.
 - Restore 64 content-blur steps after the 48-step experiment failed the existing continuity regression. Keep the maximum radius, timing and opacity; claim no unverified performance gain.
 - Related behavior regressions and Develop / R8 / vital Lint passed. Final island amplitudes, the first composited deck-entry frame and actual card geometry after repeated rotation still need device visual acceptance; pixel equivalence to iOS is not claimed.
+- Focused device checks passed for landscape windows and system bars. One immediate entry after installation returned to portrait and did not recur in later cold restarts; the first installation/startup handoff remains unverified.
 
 ## r14.27.1 — 2026-11-06
 
