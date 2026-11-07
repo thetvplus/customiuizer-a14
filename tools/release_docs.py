@@ -146,6 +146,7 @@ def documents(published: dict) -> dict[str, str]:
         raise ValueError("Release history exceeds the bounded document review limit")
     result = {"SUMMARY": "米客 A14｜CustoMIUIzer A14\n", "SOURCE_URL": source_url + "\n",
               "SCOPE": json.dumps(scope, ensure_ascii=False, indent=2) + "\n"}
+    consolidated = {}
     for filename, language in layout:
         chinese = language == "简体中文"
         text = source_text(filename, sha)
@@ -156,7 +157,19 @@ def documents(published: dict) -> dict[str, str]:
             if version in retained:
                 codes = re.findall(r"\bversionCode(?:\s*[:=]\s*|\s+)(\d+)\b", body)
                 release.require(len(codes) == 1, "Historical release versionCode is missing or ambiguous")
-                public = release.public_release_notes_section(text, version, int(codes[0]), filename,
+                history_text = text
+                if version in release.POLICY.get("consolidated_releases", []):
+                    release.require(version != name and version in release.POLICY.get("archived_source_snapshots", {}),
+                                    "Consolidation is limited to verified historical releases")
+                    if version not in consolidated:
+                        consolidated[version] = published_version(version, require_download=False, latest_only=False)
+                    release.require(consolidated[version]["metadata"]["version_code"] == int(codes[0]),
+                                    "Consolidated history versionCode differs from its signed release")
+                    # Only explicitly reviewed historical descriptions may use
+                    # current maintenance text. Current APK notes remain pinned.
+                    source_file = next(path for path, lang in release.CURRENT_CHANGELOGS if lang == language)
+                    history_text = (release.ROOT / source_file).read_text(encoding="utf-8")
+                public = release.public_release_notes_section(history_text, version, int(codes[0]), filename,
                                                             language=language, prefer_summary=False)
                 history.append(f"## {version}\n\n{public}\n\n[{'发行记录' if chinese else 'Release'}]({source_url}/releases/tag/{version})")
         release.require(any(version == name for version, _ in sections) and name in retained, "Published changelog is missing")

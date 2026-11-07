@@ -138,6 +138,40 @@ class DownloadDocumentsTest(unittest.TestCase):
             self.assertIn("User change 0.", result[filename])
             self.assertNotIn("Brief release overview.", result[filename])
 
+    def test_consolidated_history_is_verified_and_cannot_replace_current_apk_notes(self):
+        server = Server()
+        historical = "r14.25.1"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for filename, language in release.CURRENT_CHANGELOGS:
+                user, engineering = ("用户变化", "工程说明") if language == "简体中文" else ("User changes", "Engineering notes")
+                (root / filename).write_text(
+                    f"## {VERSION}\n\nversionCode 248.\n\n- NEVER_USE_MAINTENANCE_CURRENT\n\n"
+                    f"## {historical}\n\nversionCode 246.\n\n### {user}\n\n- Reviewed cumulative history.\n\n"
+                    f"### {engineering}\n\n- INTERNAL_ONLY\n", encoding="utf-8")
+            with self.context(server):
+                published = docs.published_version(VERSION)
+                with patch.object(release, "ROOT", root), patch.dict(release.POLICY,
+                        consolidated_releases=[historical], archived_source_snapshots={historical: {}}), \
+                        patch.object(docs, "published_version", return_value={"metadata": {"version_code": 246}}) as verified:
+                    result = docs.documents(published)
+                    verified.assert_called_once_with(historical, require_download=False, latest_only=False)
+                    for filename in ("CHANGELOG.md", "CHANGELOG_CN.md"):
+                        self.assertIn("Reviewed cumulative history.", result[filename])
+                    for filename in ("README.md", "README_EN.md"):
+                        self.assertNotIn("Reviewed cumulative history.", result[filename])
+                        self.assertIn("User change 0.", result[filename])
+                    self.assertNotIn("NEVER_USE_MAINTENANCE_CURRENT", "\n".join(result.values()))
+                    verified.return_value = {"metadata": {"version_code": 999}}
+                    with self.assertRaisesRegex(ValueError, "versionCode differs"):
+                        docs.documents(published)
+                for selected, snapshots in ((VERSION, {VERSION: {}}), (historical, {})):
+                    with patch.object(release, "ROOT", root), patch.dict(release.POLICY,
+                            consolidated_releases=[selected], archived_source_snapshots=snapshots), \
+                            self.assertRaisesRegex(ValueError, "verified historical"):
+                        docs.documents(published)
+            self.assertEqual([], server.writes)
+
     def test_community_link_is_shared_by_source_docs_and_app_build(self):
         url = release.POLICY["community_url"]
         self.assertEqual("https://t.me/customiuizerA14", url)
