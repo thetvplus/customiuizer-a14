@@ -23,6 +23,7 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
     private var releaseY = 0f
     private var appliedX = Float.NaN
     private var appliedY = Float.NaN
+    private var appliedShiftX = Float.NaN
     private var appliedOffset = Float.NaN
     private var nativeAlpha = 1f
     private var appliedAlpha = Float.NaN
@@ -36,20 +37,26 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
         if (!owned) return false
         val current = view.animationMatrix
         if (w >= 0 && current != null && current != matrix) { owned=false; return false }
-        val x = if (swipe) value / view.scaleX.coerceAtLeast(.001f) else value
-        val y = if (swipe) value / view.scaleY.coerceAtLeast(.001f) else value
+        val width=view.width; val height=view.height
+        val centerX=width*.5f; val centerY=height*.5f
+        val nativeX=if(swipe) view.scaleX.coerceAtLeast(.001f) else 1f
+        val nativeY=if(swipe) view.scaleY.coerceAtLeast(.001f) else 1f
+        val x=value/nativeX; val y=value/nativeY
         val desiredY = if (released && !committed && releaseY != 0f)
             (releaseY + offset) * (view.translationY / releaseY) else view.translationY + offset
-        // animationMatrix also transforms native translation. Cancel that factor
-        // so the displayed displacement stays in the finger's screen coordinates.
-        val shift = if (swipe) desiredY - y * view.translationY else 0f
-        if (w==view.width && h==view.height && scale==value && current!=null &&
-            appliedX==x && appliedY==y && appliedOffset==shift) return true
-        val scaleChanged=w!=view.width || h!=view.height || scale!=value
-        w=view.width; h=view.height; scale=value
-        appliedX=x; appliedY=y; appliedOffset=shift
-        matrix.setScale(x,y,view.pivotX,view.pivotY)
-        matrix.postTranslate(0f,shift)
+        // Native entry/swipe may change its pivot. Our frame and window endpoint
+        // always share the frame center; compensate native gesture scale without
+        // changing the pivot, scale or displacement used by native qualification.
+        val shiftX=if(swipe) x*(1f-nativeX)*(centerX-view.pivotX) else 0f
+        val shiftY=if(swipe) desiredY-y*view.translationY+
+            y*(1f-nativeY)*(centerY-view.pivotY) else 0f
+        if (w==width && h==height && scale==value && current!=null &&
+            appliedX==x && appliedY==y && appliedShiftX==shiftX && appliedOffset==shiftY) return true
+        val scaleChanged=w!=width || h!=height || scale!=value
+        w=width; h=height; scale=value
+        appliedX=x; appliedY=y; appliedShiftX=shiftX; appliedOffset=shiftY
+        matrix.setScale(x,y,centerX,centerY)
+        matrix.postTranslate(shiftX,shiftY)
         view.setAnimationMatrix(matrix)
         if (scaleChanged) onScaleChanged?.invoke(value)
         return true
@@ -119,6 +126,45 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
         combined.preTranslate((view.left-parent.scrollX).toFloat(),(view.top-parent.scrollY).toFloat())
         combined.preConcat(matrix); combined.preConcat(view.matrix)
         rect.set(0f,header,view.width.toFloat(),view.height.toFloat()); combined.mapRect(rect)
+    }
+
+    /** Feed the native app-gesture pose solver in its own coordinates. It still
+     * owns root properties and springs; the owned matrix must not scale its
+     * already-screen-sized window a second time. Window geometry folds page
+     * spacing into the real Deck endpoints without another animation clock. */
+    fun windowInput(window: RectF,reference: RectF,target: RectF,slots: Int,gap: Float,
+        fullWidth: Float,bend: Float,header: Float,out: RectF): Boolean {
+        if(!owned || swipe || view.width<=0 || view.height<=header || scale<=0f ||
+            window.isEmpty || reference.isEmpty || target.isEmpty ||
+            !fullWidth.isFinite() || !bend.isFinite()) return false
+        // Native may prepare the card before its first layout. Reconcile the
+        // matrix here, in the existing pose callback, before using its inverse.
+        if((w!=view.width || h!=view.height) && !apply(scale)) return false
+        val range=fullWidth-reference.width()
+        val p=if(range>0f) ((fullWidth-window.width())/range).coerceIn(0f,1f) else 1f
+        val ratio=window.width()/reference.width()
+        val width=window.width()*(1f+(target.width()/reference.width()-1f)*p)
+        val height=width*(view.height-header)/view.width
+        val pages=slots*(window.width()+gap)
+        val dx=pages+((target.centerX()-reference.centerX())*ratio-pages)*p
+        val cy=window.centerY()+(target.centerY()-reference.centerY())*ratio*p
+        val cx=view.left+view.width*.5f; val frameY=view.top+view.height*.5f
+        val rawWidth=width/scale
+        val left=cx+(window.centerX()+dx-cx)/scale-rawWidth*.5f-slots*(rawWidth+gap)
+        val top=frameY+(cy-height*.5f-frameY)/scale-bend
+        out.set(left,top,left+rawWidth,top+height/scale)
+        return true
+    }
+
+    /** Same horizontal pose consumer as native alignTaskByVisualRectF, with the
+     * input already expressed before our presentation matrix. Native close/end
+     * callbacks drive this and reset the pose; no independently retained motion. */
+    fun alignClosing(input: RectF,slots: Int,gap: Float,header: Float) {
+        val s=input.width()/view.width
+        view.pivotX=view.width*.5f;view.pivotY=view.height*.5f
+        view.scaleX=s;view.scaleY=s
+        view.translationX=input.centerX()-(view.left+view.width*.5f)+slots*(input.width()+gap)
+        view.translationY=input.top+(view.height-header)*s*.5f-header*s*.5f-(view.top+view.height*.5f)
     }
 
     fun release() {

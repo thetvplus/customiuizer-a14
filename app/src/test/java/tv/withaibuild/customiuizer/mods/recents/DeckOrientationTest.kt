@@ -4,10 +4,12 @@ import android.app.Activity
 import android.graphics.Rect
 import android.graphics.RectF
 import android.widget.FrameLayout
+import android.view.Surface
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers.setField
@@ -28,6 +30,7 @@ class DeckOrientationTest {
         @JvmField var count=4
         @JvmField var gap=30f
         @JvmField var minimum=-99f
+        @JvmField var header=52
         fun isLandscapeVisually()=visual
         fun calculateMinScrollP()=-7f
     }
@@ -46,7 +49,7 @@ class DeckOrientationTest {
         try {
             val api=unconstructed(DeckNativeApi::class.java)
             for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
-                "padding" to "padding","count" to "count","gap" to "gap"))
+                "padding" to "padding","count" to "count","gap" to "gap","headerHeight" to "header"))
                 setField(api,target,Algorithm::class.java.getField(source))
             setField(api,"visualLandscape",Algorithm::class.java.getMethod("isLandscapeVisually"))
             setField(api,"minimum",Algorithm::class.java.getField("minimum"))
@@ -68,6 +71,11 @@ class DeckOrientationTest {
             val transform=Transform()
             assertTrue("Portrait host, landscape visual window",scope.write(0,0f,transform))
             assertEquals((1040f-600f)*.5f,transform.rect.top,.001f)
+            val expectedContent=RectF(transform.rect)
+            IosDeckGeometry(2280f,1100f,1f).content(expectedContent,
+                (XposedHelpers.getAdditionalInstanceField(transform,DeckOwner.FRAME) as DeckFrame).scale,52f)
+            val preparedContent=RectF()
+            assertTrue(scope.contentAt(0,0f,preparedContent));assertEquals(expectedContent,preparedContent)
             val oldFrame=DeckFrame(owner,RectF(transform.rect),0,transform.scale,true,0f,1f)
             val failure=IllegalStateException("retired neighbor")
             val neighbor=object: FrameLayout(host) {
@@ -113,6 +121,29 @@ class DeckOrientationTest {
                 assertTrue(scope.write(0,0f,transform))
                 assertFalse(previous.copyTo(Transform()))
             }
+            // The two landscape directions share width/height and the visual
+            // boolean, but an old window receipt still belongs to different axes.
+            setField(api,"recents",Algorithm::class.java)
+            host.setContentView(stack)
+            val display=shadowOf(stack.display)
+            try {
+                display.setRotation(Surface.ROTATION_90)
+                algorithm.visual=true;algorithm.window.set(0,0,2400,1080)
+                owner.refreshGeometry()
+                assertEquals("Display rotation before its configuration cannot start a window",0L,owner.beginTransition())
+                owner.refreshGeometry()
+                setField(owner,"transition",99L)
+                val receipt=IosRecentsDeckHooks.WindowReceipt(owner,99L)
+                val endpoint=DeckFrame(owner,RectF(0f,0f,1100f,600f),0,1f,true,1f,1f)
+                assertTrue(receipt.matches(owner))
+                owner.rotationChanged(Surface.ROTATION_270)
+                assertFalse("Native display event retires the old window before layout",receipt.matches(owner))
+                display.setRotation(Surface.ROTATION_270)
+                owner.refreshGeometry()
+                assertTrue(scope.landscape)
+                assertFalse("Reverse landscape retires the previous window",receipt.matches(owner))
+                assertFalse(endpoint.copyTo(Transform()))
+            } finally { display.setRotation(Surface.ROTATION_0) }
         } finally { host.finish() }
     }
 }

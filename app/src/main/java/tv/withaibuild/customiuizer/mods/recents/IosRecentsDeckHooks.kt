@@ -98,6 +98,11 @@ internal object IosRecentsDeckHooks {
         before(api.detached) { owner(it.getThisObject())?.close() }
         before(api.configuration) { owner(it.getThisObject())?.close() }
         after(api.configuration) { bind(it.getThisObject() as ViewGroup) }
+        before(api.displayRotation) {
+            val active=latest.get() ?: return@before
+            if(active.stack.rootView===(it.getThisObject() as View).rootView)
+                active.rotationChanged(it.getArg(0) as Int)
+        }
         before(api.update) {
             (XposedHelpers.getAdditionalInstanceField(it.getThisObject(),DeckOwner.SCOPE) as? DeckOwner.Scope)?.owner?.invalidateLayout()
         }
@@ -269,8 +274,12 @@ internal object IosRecentsDeckHooks {
             }
         }
         before(api.alignClose) {
-            val active=card(it.getArg(0))?.owner
-            if(active?.allowed==true) it.returnAndSkip(null)
+            val selected=card(it.getArg(0)) ?: return@before
+            if(selected.owner.allowed) {
+                selected.owner.alignClosing(selected,it.getArg(1) as RectF,it.getArg(2) as RectF,
+                    it.getArg(4) as Float)
+                it.returnAndSkip(null)
+            }
         }
         api.closing?.let { closing ->
         before(closing) {
@@ -349,6 +358,21 @@ internal object IosRecentsDeckHooks {
                 }
             }
         }
+        api.appGesturePose?.let { pose -> before(pose) {
+            if(it.getArg(13)==true) return@before
+            val selected=card(it.getArg(0)) ?: return@before
+            val bend=it.getArg(15) as Float
+            selected.owner.appGestureInput(selected,it.getArg(2) as RectF,it.getArg(3) as Int,
+                it.getArg(5) as Float,300f*bend*bend*bend)?.let { input ->
+                val args=it.getArgs()
+                args[2]=input
+                // This is already the native window's sampled pose. A second
+                // per-card spring would chase it with another phase lag. Keep
+                // calls carrying native completion work on their original path.
+                if(args[10]!=null) selected.nativePoseCompletion=true
+                if(!selected.nativePoseCompletion) args[7]=false
+            }
+        } }
         before(api.navToRecents) {
             modernMotion?.enterGesture()
             val active=latest.get()
@@ -366,7 +390,10 @@ internal object IosRecentsDeckHooks {
                 active.linkSpring(spring,active.transition)
             } } finally { modernMotion?.leaveGesture(); motion?.leave(); radius?.leave() }
         }
-        after(api.setOverview) { owner(api.recentsStack.get(it.getThisObject()))?.refresh() }
+        // Native entry already reloads the stack and requests its layout in the
+        // same call. Refresh admission before that traversal without requesting
+        // another layout on repeated state notifications or on exit.
+        after(api.setOverview) { owner(api.recentsStack.get(it.getThisObject()))?.refresh(false) }
         before(api.splitStart) { latest.get()?.suspend(true) }
         after(api.splitEnd) { latest.get()?.suspend(false) }
         return PreparedHookBatch().install(entries)

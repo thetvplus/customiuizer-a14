@@ -35,7 +35,8 @@ WHERE class_descriptor LIKE 'Lcom/miui/home/recents/%'
  'onReturnViewToPool','onPickUpViewFromPool','resetViewProperties',
  'initTaskViews','animTo','onUpdate','reset','initAllAnimations',
  'calculateWindowCrop','startClosingWindowToRecentsAnimators',
- 'isLandscapeVisually','getRecentsContainerRotation')
+ 'isLandscapeVisually','getRecentsContainerRotation','onDisplayRotationChanged',
+ 'updateTaskView','applyParams')
 ORDER BY method_descriptor;
 
 SELECT file_id, class_descriptor, field_descriptor FROM class_fields
@@ -51,7 +52,7 @@ WHERE callee_class LIKE 'Lcom/miui/home/recents/%'
  AND callee_name IN ('calculate','onMoveUpdate','prepareSnapBackAnimation',
  'getViewTranslationAnimator','onDragEnd','onChildSnappedBack',
  'setChildrenViewAlpha','setCornerRadius','applyToTaskView',
- 'modifyTransformVisible','bindVisibleTaskViews')
+ 'modifyTransformVisible','bindVisibleTaskViews','onDisplayRotationChanged')
 ORDER BY method,callee;
 
 SELECT file_id, method, field, using_type FROM method_field_accesses

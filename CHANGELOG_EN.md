@@ -15,6 +15,8 @@ versionCode 303. Changes since r14.27.1:
 - Fix position and size jumps when a neighboring card fills the gap after dismissing the leftmost recents deck card.
 - Reject stale card and window geometry during repeated orientation changes to improve position, size and direction handoff.
 - Fix landscape deck rotation affecting only the card container. Keep the recents window, status bar and gesture handle aligned; restart the launcher after updating.
+- Align card and window scaling centers when native entry changes the pivot. Complete handoff checks for both landscape directions and unprepared layouts.
+- Fix double scaling and window misalignment during swipe-up entry on newer launchers. Fold neighboring cards using the current native window, reducing extra spring lag and stepped position changes.
 - Fix rear-card title and icon opacity on swipe-up deck entry without requiring another scroll.
 - Restore horizontal island recoil when returning home from music, reduce vertical expansion and press enlargement, and preserve interrupted and reversed transitions.
 

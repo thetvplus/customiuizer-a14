@@ -17,6 +17,78 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk=[34], application=android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DeckGeometryTest {
+    @Test fun nativeAppGestureUsesScreenWindowOnceAndArrivesAtTheDeckFrame() {
+        val reference=RectF(100f,200f,500f,800f)
+        IosDeckGeometry(600f,400f,1f).content(reference,.8f,50f)
+        for(neighbor in listOf(false,true)) {
+            val (parent,view)=pair()
+            if(neighbor) view.layout(-220,200,180,800)
+            val scale=if(neighbor) .7f else .8f
+            val target=RectF(view.left.toFloat(),200f,view.right.toFloat(),800f)
+            IosDeckGeometry(600f,400f,1f).content(target,scale,50f)
+            val geometry=DeckCardGeometry(view,parent)
+            // Native preparation can precede the first real card layout.
+            view.layout(0,0,0,0);geometry.apply(scale)
+            view.layout(if(neighbor) -220 else 100,200,if(neighbor) 180 else 500,800)
+            try {
+                val slots=if(neighbor) -1 else 0
+                for(p in floatArrayOf(0f,.4f,.8f,1f,.8f,.4f,0f)) {
+                    val width=800f+(reference.width()-800f)*p
+                    val window=RectF(reference.left*p,reference.top*p,reference.left*p+width,
+                        reference.top*p+width*550f/400f)
+                    val saved=RectF(window);val input=RectF();val bend=300f*.3f*.3f*.3f
+                    assertTrue(geometry.windowInput(window,reference,target,slots,25f,800f,bend,50f,input))
+                    assertEquals(saved,window)
+                    // Verified native horizontal updateTaskView consumer: root
+                    // width, ordinal page offset, header center and mPer bend.
+                    val s=input.width()/view.width
+                    view.scaleX=s;view.scaleY=s
+                    view.translationX=input.centerX()-(view.left+view.width*.5f)+slots*(input.width()+25f)
+                    view.translationY=input.top+(view.height-50f)*s*.5f-50f*s*.5f-(view.top+view.height*.5f)+bend
+                    val actual=RectF();geometry.screenContent(actual,50f)
+                    val ratio=window.width()/reference.width()
+                    val pages=slots*(window.width()+25f)
+                    val dx=pages+((target.centerX()-reference.centerX())*ratio-pages)*p
+                    assertEquals(window.centerX()+dx,actual.centerX(),.002f)
+                    assertEquals(window.centerY()+(target.centerY()-reference.centerY())*ratio*p,actual.centerY(),.002f)
+                    if(!neighbor) assertEquals(window.width(),actual.width(),.002f)
+                    if(p==1f) {
+                        assertEquals(target.left,actual.left,.002f);assertEquals(target.top,actual.top,.002f)
+                        assertEquals(target.right,actual.right,.002f);assertEquals(target.bottom,actual.bottom,.002f)
+                        assertEquals(1f,view.scaleX,.002f);assertEquals(0f,view.translationX,.002f);assertEquals(0f,view.translationY,.002f)
+                    }
+                    assertTrue(geometry.windowInput(window,reference,target,slots,25f,800f,0f,50f,input))
+                    geometry.alignClosing(input,slots,25f,50f)
+                    val closing=RectF();geometry.screenContent(closing,50f)
+                    assertEquals(actual.left,closing.left,.002f);assertEquals(actual.top,closing.top,.002f)
+                    assertEquals(actual.right,closing.right,.002f);assertEquals(actual.bottom,closing.bottom,.002f)
+                }
+            } finally { geometry.release() }
+        }
+    }
+    @Test fun cardAndWindowKeepOneCenterWhileNativePivotChanges() {
+        val (parent,view)=pair()
+        view.pivotX=0f;view.pivotY=0f
+        val geometry=DeckCardGeometry(view,parent)
+        val expected=RectF(100f,200f,500f,800f)
+        IosDeckGeometry(600f,400f,1f).content(expected,.8f,50f)
+        try {
+            assertTrue(geometry.apply(.8f))
+            val actual=RectF();geometry.screenContent(actual,50f)
+            assertEquals("Card content and native window endpoint share their center",expected,actual)
+            view.pivotX=40f;view.pivotY=100f
+            assertTrue(geometry.apply(.8f))
+            geometry.screenContent(actual,50f);assertEquals(expected,actual)
+            view.scaleX=.7f;view.scaleY=.65f;view.translationY=-20f
+            assertTrue(geometry.trackSwipe(-55f,-20f))
+            geometry.screenContent(actual,50f)
+            expected.offset(0f,-55f)
+            assertEquals(expected.left,actual.left,.001f);assertEquals(expected.top,actual.top,.001f)
+            assertEquals(expected.right,actual.right,.001f);assertEquals(expected.bottom,actual.bottom,.001f)
+            assertEquals(40f,view.pivotX,0f);assertEquals(100f,view.pivotY,0f)
+            assertEquals(.7f,view.scaleX,0f);assertEquals(.65f,view.scaleY,0f)
+        } finally { geometry.release() }
+    }
     @Test fun frontCardRemainsAdmittedWhileItsLeadingEdgeIsStillInsideTheScreen() {
         for(page in floatArrayOf(.55f,.75f,.85f)) {
             val model=IosDeckGeometry(1080f,864f,459f/160f,page)

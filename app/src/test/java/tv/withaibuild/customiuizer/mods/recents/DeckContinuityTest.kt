@@ -53,6 +53,17 @@ class DeckContinuityTest {
         setField(owner,"geometryReady",true);setField(owner,"transition",1L)
         return Fixture(owner,handler,stack,cards)
     }
+    @Test fun anUnpreparedViewportCannotStartAWindowHandoff() {
+        val f=fixture()
+        setField(f.owner,"geometryReady",false);setField(f.owner,"transition",0L)
+        setField(f.owner,"linkedSprings",ArrayList<Any>())
+        setField(f.owner,"frozen",HashMap<Any,Any>())
+        setField(f.owner,"router",DeckTouchRouter { false })
+        setField(f.owner,"ticketTimeout",Runnable {})
+        val ticket=f.owner.beginTransition()
+        try { assertEquals("No window ticket before its viewport is ready",0L,ticket) }
+        finally { f.owner.endTransition(ticket) }
+    }
     @Test fun rightNeighborEntersContinuouslyWhenTheOldestCardIsDismissedAtTheScrollEdge() {
         val f=fixture(); val view=TaskView()
         val model=IosDeckGeometry(1080f,864f,3f)
