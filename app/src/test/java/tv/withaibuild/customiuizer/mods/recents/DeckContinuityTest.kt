@@ -85,7 +85,12 @@ class DeckContinuityTest {
         repeat(8) {
             setField(f.owner,"geometryGeneration",f.owner.geometryGeneration+1)
             assertFalse("Native copy must not revalidate a retired orientation",old.copyTo(target))
-            assertNull(XposedHelpers.getAdditionalInstanceField(target,DeckOwner.FRAME))
+            assertTrue("Reject the stale native rectangle as well as its Deck scale",DeckFrame.isRetired(target))
+            val next=Transform()
+            DeckFrame.copy(target,next)
+            assertTrue("A second native copy must retain rejection",DeckFrame.isRetired(next))
+            f.owner.putFrame(next,2,.7f,true,.3f,1f)
+            assertFalse("Freshly computed current geometry can take over",DeckFrame.isRetired(next))
         }
     }
     @Test fun windowFramesCannotCrossTicketsOwnersOrRepeatedOrientationChanges() {

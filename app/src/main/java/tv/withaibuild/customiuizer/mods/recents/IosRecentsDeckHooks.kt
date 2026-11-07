@@ -121,8 +121,7 @@ internal object IosRecentsDeckHooks {
             if(scope!=null && result!=null) scope.content(it.getArg(0) as Int,it.getArg(1) as Float,result)
         }
         after(api.copy) {
-            val from=frame(it.getArg(0)); val out=it.getThisObject()!!
-            if(from?.copyTo(out)!=true) XposedHelpers.removeAdditionalInstanceField(out,DeckOwner.FRAME)
+            DeckFrame.copy(it.getArg(0)!!,it.getThisObject()!!)
         }
         after(api.reset) { XposedHelpers.removeAdditionalInstanceField(it.getThisObject(),DeckOwner.FRAME) }
         after(api.fill) {
@@ -133,6 +132,7 @@ internal object IosRecentsDeckHooks {
             owner(it.getThisObject())?.applyInterpolation(it.getArg(0) as View,it.getArg(1)!!)
         }
         before(api.apply) {
+            if(DeckFrame.isRetired(it.getThisObject()!!)) { it.returnAndSkip(null); return@before }
             val frame=frame(it.getThisObject()) ?: return@before
             frame.owner.card(it.getArg(0) as View,frame) ?: return@before
             // Native ObjectAnimator Z would keep overwriting the owned order

@@ -20,9 +20,30 @@ import android.os.Handler
 import android.os.Looper
 
 internal class DeckFrame(val owner: DeckOwner,val rect: RectF,var index: Int,var scale: Float,var visible: Boolean,var z: Float,var depthScale: Float) {
+    companion object {
+        private val retired=Any()
+        fun copy(source: Any,out: Any) {
+            when(val value=XposedHelpers.getAdditionalInstanceField(source,DeckOwner.FRAME)) {
+                is DeckFrame -> value.copyTo(out)
+                retired -> XposedHelpers.setAdditionalInstanceField(out,DeckOwner.FRAME,retired)
+                else -> XposedHelpers.removeAdditionalInstanceField(out,DeckOwner.FRAME)
+            }
+        }
+        fun isRetired(transform: Any): Boolean {
+            val value=XposedHelpers.getAdditionalInstanceField(transform,DeckOwner.FRAME)
+            return value===retired || value is DeckFrame && value.isRetired
+        }
+    }
     var generation=owner.geometryGeneration
+    private val isRetired get()=owner.closed || generation!=owner.geometryGeneration
     fun copyTo(out: Any): Boolean {
-        if(!owner.allowed || generation!=owner.geometryGeneration) return false
+        if(isRetired) {
+            // Keep a marker without retaining the old owner: dropping metadata
+            // alone lets native apply the stale LTRB with the new card matrix.
+            XposedHelpers.setAdditionalInstanceField(out,DeckOwner.FRAME,retired)
+            return false
+        }
+        if(!owner.allowed) { XposedHelpers.removeAdditionalInstanceField(out,DeckOwner.FRAME); return false }
         owner.putFrame(out,index,scale,visible,z,depthScale)
         return true
     }

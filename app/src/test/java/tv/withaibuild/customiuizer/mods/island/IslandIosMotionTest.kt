@@ -15,6 +15,20 @@ import org.robolectric.util.ReflectionHelpers.getField
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class IslandIosMotionTest {
+    @Test fun pressingClipsBothAxesToTheAvailableBodyEnvelope() {
+        val host=Robolectric.buildActivity(Activity::class.java).setup().visible()
+        ShadowChoreographer.setPaused(true)
+        try {
+            val shell=IslandActivityView(host.get())
+            host.get().setContentView(shell);shell.geometry(260,40,40,280);shell.layout(0,0,260,40)
+            shell.transition(260,40,260,40,false);getField<ValueAnimator>(shell,"motion").end()
+            val event=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_DOWN,130f,20f,0)
+            try { shell.dispatchTouchEvent(event) } finally { event.recycle() }
+            getField<ValueAnimator>(shell,"motion").end()
+            assertEquals("Width clipping must not leave a disproportionate vertical balloon",shell.scaleX,shell.scaleY,.001f)
+            assertTrue("Stay inside the existing 14% body envelope",shell.scaleY<=1.14001f)
+        } finally { ShadowChoreographer.setPaused(false);host.pause().stop().destroy() }
+    }
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun systemFeedbackShowsTheActualModeAndKeepsItWhenTheSecondaryRowCannotFit() {
         val host = Robolectric.buildActivity(Activity::class.java).setup().visible()

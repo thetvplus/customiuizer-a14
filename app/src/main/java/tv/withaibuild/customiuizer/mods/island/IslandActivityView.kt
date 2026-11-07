@@ -355,7 +355,11 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         if (motion != null || nativeArrival || disposed || leaving || powerSaveMotion ||
             !ValueAnimator.areAnimatorsEnabled() || idle && idleTapAction == 1) return
         pressedBody = true
-        animateTo(minOf(1.2f, maximumWidth / geometryWidth.coerceAtLeast(1)), 1.2f,
+        // 22G100 requests 1.2 then clips to its system container. Map that
+        // request into A14's existing body envelope; width clipping must not
+        // leave an independently inflated vertical axis.
+        val pressedScale=minOf(1.2f,1.14f,maximumWidth/geometryWidth.coerceAtLeast(1))
+        animateTo(pressedScale, pressedScale,
             translationX, translationY, alpha, IslandMotion.REBOUND, interaction = true)
         pressMotion = motion
     }
@@ -820,7 +824,7 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             else if (entering) IslandMotion.ENTER
             else IslandMotion.morphDuration(startWidth, startHeight, width.toFloat(), height.toFloat(), secondary && catchAmount > 0f)
         animateTo(1f, 1f, 0f, 0f, 1f, maxOf(travel, if (albumFlip) IslandMotion.ALBUM else 0L),
-            returning = mediaReturnProgress == 0f,
+            returning = nativeArrival || mediaReturnProgress == 0f,
             catchWeight = catchAmount * 98 / 100, rebound = entering && entranceStyle == IslandEntranceStyle.CENTER && !nativeArrival,
             boundsMotion = ordinaryBounds && !entering && mediaReturnProgress >= 1f &&
                 maxOf(abs(startWidth - width), abs(startHeight - height)) > 1f, nativeProfile = true,
@@ -1071,10 +1075,9 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             return
         }
         val nativeDriven = returning && nativeArrival && returnProgress != null
-        // The recovered acceptance frame retargets an existing container. A new
-        // Android camera seed already expands toward its form; adding that
-        // container's excursion on top invents a second vertical inflation.
-        val acceptingExisting = nativeDriven && receivingExisting
+        // The accepted Home request owns the receive stages. The optional
+        // window-progress mapping only coordinates the app surface/wait clock.
+        val accepting = returning && nativeArrival
         // A final exit keeps its established bounded fade/seed handoff. Applying
         // the longer content clock here leaves a translucent seed after music ends.
         val iosContent = (nativeProfile || interaction) && !leaving
@@ -1099,10 +1102,10 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             if (boundsMotion && (y - scaleY) * geometryHeight > 1f) IslandMotion.FORM_DAMPING else 1.0)
         // Preserve an interrupted wider body instead of clamping its first frame.
         val maximumBreadth = maxOf(maximumWidth, geometryWidth * scaleX)
-        // Up acceptance can add 26 points of height; the old 1.14 cap was an
-        // Android approximation and cannot truncate that positive receive phase.
+        // Native +26 belongs to its container request, not an unconditional dp
+        // addition on A14's compact body. Keep the established safe body envelope.
         val maximumHeight = maxOf(maxOf(dp(44), geometryHeight) * 1.14f,
-            geometryHeight * maxOf(scaleY, y)) + if (acceptingExisting) dp(26) else 0
+            geometryHeight * maxOf(scaleY, y))
         val restingMinimum = if ((rebound || nativeDriven) && cameraGap > 0)
             minOf(cameraMinimumHeight(), geometryHeight * scaleY)
             else minOf(cameraDiameter, geometryHeight.toFloat(), geometryHeight * scaleY)
@@ -1110,10 +1113,16 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         // the former extra negative pulse after horizontal settling. Positive
         // acceptance height belongs to its explicit, independently retargeted axis.
         val minimumHeight = restingMinimum
-        val absorptionResponse = if (acceptingExisting) IslandAcceptanceResponse(
+        // Preserve the recovered +16 horizontal request. On an existing compact
+        // A14 body, map the vertical request to the same relative excursion;
+        // a new camera seed keeps its ordinary height transition entirely.
+        val receiveHeightScale=if(receivingExisting)
+            minOf(1f,geometryHeight*(16f/26f)/geometryWidth.coerceAtLeast(1)) else 0f
+        val absorptionResponse = if (accepting) IslandAcceptanceResponse(
             geometryWidth * scaleX, geometryHeight * scaleY, geometryWidth * x, geometryHeight * y,
             breadth.velocity, depth.velocity, resources.displayMetrics.density,
-            minOf(compactWidth(), geometryWidth * scaleX), maximumBreadth, minimumHeight, maximumHeight) else null
+            minOf(compactWidth(), geometryWidth * scaleX), maximumBreadth, minimumHeight, maximumHeight,
+            heightScale=receiveHeightScale) else null
         if (absorptionResponse != null) milliseconds = maxOf(milliseconds, absorptionResponse.durationMillis)
         shiftX.retarget(translationX, tx, seconds, carry && !rigid, rebound)
         // A content handoff may interrupt a top exit. Keep its visible origin,

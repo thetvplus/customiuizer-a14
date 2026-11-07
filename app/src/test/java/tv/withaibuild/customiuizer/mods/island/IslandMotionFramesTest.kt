@@ -29,6 +29,41 @@ import kotlin.math.roundToInt
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandMotionFramesTest {
+    @Test fun homeCameraSeedHasItsOwnHorizontalReceiveWithoutASecondVerticalInflation() {
+        val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        ShadowChoreographer.setPaused(true)
+        try {
+            fun sample(home: Boolean): Pair<Float,Float> {
+                val shell=IslandActivityView(host);host.setContentView(shell,FrameLayout.LayoutParams(240,40))
+                shell.geometry(240,40,40,260);shell.layout(0,0,240,40);shell.cameraAnchor(20f,16f)
+                shell.entranceStyle=IslandEntranceStyle.CENTER
+                shell.prepareEntry(mediaReturn=home);shell.transition(0,0,240,40,true)
+                val clock=getField<ValueAnimator>(shell,"motion");clock.currentPlayTime=100L
+                val result=240*shell.scaleX to 40*shell.scaleY;clock.end();return result
+            }
+            val ordinary=sample(false);val home=sample(true)
+            assertTrue("Only confirmed Home acceptance adds its small horizontal receive",home.first>ordinary.first+1f)
+            assertEquals("A new camera seed keeps the normal height transition",ordinary.second,home.second,.001f)
+        } finally { ShadowChoreographer.setPaused(false);host.finish() }
+    }
+    @Test fun confirmedHomeReturnReceivesOnAnExistingShellWithoutOptionalWindowProgress() {
+        val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val shell=IslandActivityView(host)
+        host.setContentView(shell,FrameLayout.LayoutParams(240,40))
+        shell.geometry(240,40,40,260);shell.layout(0,0,240,40)
+        ShadowChoreographer.setPaused(true)
+        try {
+            shell.prepareReturnFromCurrent()
+            shell.transition(240,40,240,40,false)
+            val clock=getField<ValueAnimator>(shell,"motion")
+            clock.currentPlayTime=100L
+            assertTrue("A confirmed Home return must not lose its horizontal receive without a shared progress channel",shell.scaleX>1.001f)
+            assertTrue(shell.scaleY>1f)
+            assertTrue("Compact A14 content must not inherit the full outer-container vertical excursion",shell.scaleY<1.07f)
+            clock.end()
+            assertEquals(1f,shell.scaleX,0f);assertEquals(1f,shell.scaleY,0f)
+        } finally { ShadowChoreographer.setPaused(false);host.finish() }
+    }
     @Test fun firstMusicArrivalWithoutNativeProgressStillMovesFromItsSeed() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val shell = IslandActivityView(activity)

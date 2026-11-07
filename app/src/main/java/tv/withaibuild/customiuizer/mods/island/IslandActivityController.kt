@@ -1539,9 +1539,10 @@ internal class IslandActivityController(
         val animationRight = if (besideCamera && options.position == 0) minOf(safeRight, bounds.holeLeft - dp(8)) else safeRight
         val elasticMaximum = IslandSizing.elasticMaximum(placement.width, placement.left,
             animationLeft, animationRight, density).let { if (landscape) minOf(it, contentWidth) else it }
-        val animationMaximum = if (!centered) elasticMaximum else if (expanded && options.automaticWidth)
-            elasticMaximum else minOf(maximumWidth, elasticMaximum)
-        return Geometry(placement.width, height, placement.top, placement.gap, animationMaximum, placement.left)
+        // Layout's compact width is a resting/content bound, not the physical
+        // system-container clip used by receive/press. elasticMaximum already
+        // reserves corners, the camera side, landscape and both screen edges.
+        return Geometry(placement.width, height, placement.top, placement.gap, elasticMaximum, placement.left)
     }
 
     private fun liveReturnFrame(now: Long): IslandMusicReturnSignal.Frame? {

@@ -16,6 +16,17 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IslandAbsorptionContinuityTest {
+    @Test fun existingReceiveExcursionRetainsHorizontalRecoilAroundItsRestingWidth() {
+        val response=IslandAcceptanceResponse(240f,40f,240f,40f,0f,0f,1f,40f,260f,16f,80f)
+        var peak=240f;var trough=240f
+        for(ms in 0..1600 step 4) {
+            response.sample(ms/1000f)
+            peak=maxOf(peak,response.width);trough=minOf(trough,response.width)
+        }
+        assertTrue("The recovered receive excursion expands",peak>241f)
+        assertTrue("Accepted's damped width may recoil past rest without being flattened",trough<239.9f)
+        assertTrue(response.settled(1.6f))
+    }
     @Test fun finiteReceiveBudgetContainsItsTailAtBothRefreshRatesAndHighDensity() {
         for(density in listOf(1f,3f,4f)) for(hz in listOf(60,120)) {
             val response=IslandAcceptanceResponse(154f*density,40f*density,240f*density,40f*density,
