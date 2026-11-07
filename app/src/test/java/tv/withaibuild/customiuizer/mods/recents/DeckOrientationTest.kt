@@ -61,6 +61,7 @@ class DeckOrientationTest {
             setField(api,"minimumScroll",Algorithm::class.java.getMethod("calculateMinScrollP"))
             for(name in listOf("rect","scale","visible","z")) setField(api,name,Transform::class.java.getField(name))
             val owner=unconstructed(DeckOwner::class.java)
+            setField(owner,"gestureBoundary",DeckGestureBoundary())
             val stack=FrameLayout(host)
             val frozen=HashMap<Int,Any>()
             val pairs=IdentityHashMap<Any,Any>().apply { put(Any(),Any()) }
@@ -178,7 +179,7 @@ class DeckOrientationTest {
                 algorithm.visual=true;algorithm.window.set(0,0,2400,1080)
                 owner.refreshGeometry()
                 assertEquals(android.content.res.Configuration.ORIENTATION_PORTRAIT,stack.resources.configuration.orientation)
-                val ticket=owner.beginTransition()
+                val ticket=owner.beginTransition(true)
                 assertTrue("A fixed portrait Window admits its prepared native landscape viewport",ticket!=0L)
                 owner.endTransition(ticket)
                 owner.refreshGeometry()

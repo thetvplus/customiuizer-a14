@@ -23,6 +23,7 @@ class DeckMotionTest {
         val api=unconstructed(DeckNativeApi::class.java)
         setField(api,"visualLandscape",Algorithm::class.java.getMethod("isLandscapeVisually"))
         val owner=unconstructed(DeckOwner::class.java)
+        setField(owner,"gestureBoundary",DeckGestureBoundary())
         setField(owner,"api",api)
         setField(owner,"stack",FrameLayout(RuntimeEnvironment.getApplication()))
         setField(owner,"current",owner.Scope(Algorithm(landscape)))

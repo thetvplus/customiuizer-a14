@@ -133,6 +133,10 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val applyTiming=exact(props,"apply",android.animation.ValueAnimator::class.java,Int::class.javaPrimitiveType!!,android.animation.ValueAnimator::class.java)
     val navVisible=exact(nav,"modifyTransformVisible",voidType,java.util.ArrayList::class.java)
     val navToRecents=exact(nav,"performAppToRecents",voidType,Boolean::class.javaPrimitiveType!!)
+    val gestureMode=exact(nav,"getCurrentWindowMode",Int::class.javaPrimitiveType!!,MotionEvent::class.java,
+        Boolean::class.javaPrimitiveType!!,Boolean::class.javaPrimitiveType!!,Boolean::class.javaPrimitiveType!!)
+    val quickSwitch=exact(nav,"performAppToApp",voidType,Int::class.javaPrimitiveType!!)
+    val halfQuickSwitch=exact(nav,"performHalfAppToHalfApp",voidType,Int::class.javaPrimitiveType!!)
     val navSpring=if(profile==DeckLauncherProfile.LEGACY) field(nav,"mAppToRecentsAnim2",spring) else null
     val closing=if(profile==DeckLauncherProfile.LEGACY) exact(quick,"startClosingWindowToRecentsAnimators",spring,Class.forName("[Lcom.android.systemui.shared.recents.system.RemoteAnimationTargetCompat;",false,loader),Class.forName("[Lcom.android.systemui.shared.recents.system.RemoteAnimationTargetCompat;",false,loader),cls("recents.util.MultiAnimationEndDetector")) else null
     val windowElement=if(profile==DeckLauncherProfile.WINDOW_ELEMENT) DeckWindowApi(loader) else null
@@ -147,7 +151,6 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val appGestureProgress=if(profile==DeckLauncherProfile.LEGACY) field(nav,"mPer",floatType) else null
     val appGestureQuickSwitch=if(profile==DeckLauncherProfile.LEGACY) exact(nav,"isQuickSwitchMode",Boolean::class.javaPrimitiveType!!) else null
     val surfaceOcclusion=if(profile==DeckLauncherProfile.WINDOW_ELEMENT) DeckSurfaceOcclusion(cls("recents.util.ClipAnimationHelper")) else null
-    val openStart=staticExact(utils,"getTaskViewStartRectF",android.graphics.RectF::class.java,cls("launcher.Launcher"),recents,taskView,android.graphics.RectF::class.java)
     val createSpring=staticExact(utils,"createSpringAnim",spring,recents,taskView,cls("recents.util.ClipAnimationHelper\$TransformParams"),cls("recents.util.ClipAnimationHelper"),cls("recents.util.RemoteAnimationTargetSet"),android.graphics.RectF::class.java,android.graphics.RectF::class.java,floatType,floatType,Boolean::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!)
     val listen=exact(spring,"addAnimatorListener",voidType,Animator.AnimatorListener::class.java)
     val unlisten=exact(spring,"removeAnimatorListener",voidType,Animator.AnimatorListener::class.java)
