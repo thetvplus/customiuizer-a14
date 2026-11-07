@@ -21,6 +21,11 @@ import android.os.Looper
 
 internal class DeckFrame(val owner: DeckOwner,val rect: RectF,var index: Int,var scale: Float,var visible: Boolean,var z: Float,var depthScale: Float) {
     var generation=owner.geometryGeneration
+    fun copyTo(out: Any): Boolean {
+        if(!owner.allowed || generation!=owner.geometryGeneration) return false
+        owner.putFrame(out,index,scale,visible,z,depthScale)
+        return true
+    }
 }
 
 /** Native stack lifetime, algorithms, visible cards and finite transition ticket. */
@@ -62,6 +67,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             landscape=next
             metrics=null
             geometryGeneration++
+            geometryReady=false
             // Visual axes can rotate before the physical window/configuration.
             // Old frozen endpoints, interpolation and neighbor opening poses
             // cannot participate in a new native window handoff.
@@ -69,6 +75,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             cleanup.run { invalidateLayout() }
             cleanup.run { endTransition(transition) }
             cleanup.run { restoreCards() }
+            cleanup.run { current.updateMinimum() }
+            cleanup.run { stable.updateMinimum() }
             cleanup.finish()
         }
         private var metrics: IosDeckGeometry?=null
@@ -158,7 +166,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     var flingVelocity=0
     val scroll get()=api.scroll.getFloat(scroller)
     private val cards=LinkedHashMap<View,Card>()
-    private val pendingCards=ArrayList<Card>(8)
+    private val drawCards=ArrayList<Card>(8)
     private var dragging: Card?=null
     fun trackSwipe(card: Card,raw: Float,delta: Float) {
         if(dragging!==card) { dragging?.geometry?.finishSwipe(); dragging=card }
@@ -291,7 +299,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             shadow=DeckCardShadow(view,headerView,api.thumbnailRadius.getInt(thumbnail).toFloat(),thumbnail)
             return Card(this,geometry,task,taskId,frame.index,header,frame.depthScale,shadow).also {
                 cards[view]=it; XposedHelpers.setAdditionalInstanceField(view,CARD,it)
-                pendingCards.add(it)
+                drawCards.add(it)
                 observeDepth()
             }
         } catch(error: Throwable) {
@@ -314,7 +322,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     fun remove(view: View) {
         val card=cards.remove(view) ?: return
-        pendingCards.remove(card)
+        drawCards.remove(card)
         if(dragging===card) dragging=null
         val cleanup=CleanupActions()
         cleanup.run { clearOpening() }
@@ -339,12 +347,14 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     override fun onPreDraw(): Boolean {
         ModuleHelper.guarded {
             if(allowed) {
-                for(i in 0 until pendingCards.size) {
-                    val card=pendingCards[i]
+                // Native entry/header animators can write alpha after the first
+                // layout and bypass TaskView's setters. Reconcile on an already
+                // scheduled draw; never request another frame or resolve members.
+                for(i in 0 until drawCards.size) {
+                    val card=drawCards[i]
                     card.shadow.syncContentAlpha()
                     card.header.refreshOpacity()
                 }
-                pendingCards.clear()
                 if(dragging?.geometry?.updateSwipe()==false) suspend(true)
                 if(allowed) reapplyDepth()
             } else restoreCards()
@@ -369,13 +379,10 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         val fraction=interpolation ?: return
         val pair=pairs[api.getTask.invoke(view)] ?: return
         val (a,b)=pair
-        if(!a.visible && b.visible) {
-            // Native refill interpolates every transform, including newly pooled
-            // cards whose old rectangle was never drawn. They enter at their
-            // destination behind existing cards, not from an offscreen sentinel.
-            (api.rect.get(out) as RectF).set(b.rect)
-            putFrame(out,b.index,b.scale,true,b.z,b.depthScale)
-        } else putFrame(out,b.index,a.scale+(b.scale-a.scale)*fraction,a.visible||b.visible,a.z+(b.z-a.z)*fraction,b.depthScale)
+        // Native LTRB already interpolates the two real endpoints. The bounded
+        // Deck tail preserves an offscreen card's exit/entry side, so newly
+        // visible neighbors must follow that same progress rather than jump in.
+        putFrame(out,b.index,a.scale+(b.scale-a.scale)*fraction,a.visible||b.visible,a.z+(b.z-a.z)*fraction,b.depthScale)
     }
     fun resetInterpolation() { pairs.clear() }
     fun cardAt(index: Int): Card? = cards.values.firstOrNull { it.index==index }
@@ -493,7 +500,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     private fun restoreCards() {
         dragging=null
-        pendingCards.clear()
+        drawCards.clear()
         if(cards.isEmpty() && opening==null && depthObserver==null) { router.cancel(); return }
         val cleanup=CleanupActions()
         cleanup.run { clearOpening() }

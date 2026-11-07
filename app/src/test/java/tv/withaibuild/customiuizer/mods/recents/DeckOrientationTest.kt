@@ -11,6 +11,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers.setField
+import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.util.IdentityHashMap
 
 @RunWith(RobolectricTestRunner::class)
@@ -57,7 +58,7 @@ class DeckOrientationTest {
             val pairs=IdentityHashMap<Any,Any>().apply { put(Any(),Any()) }
             for((name,value) in mapOf("api" to api,"stack" to stack,"headerConfig" to DeckHeaderConfig(0,0),
                 "frozen" to frozen,"pairs" to pairs,"cards" to LinkedHashMap<Any,Any>(),
-                "pendingCards" to ArrayList<Any>(),"linkedSprings" to ArrayList<Any>(),
+                "drawCards" to ArrayList<Any>(),"linkedSprings" to ArrayList<Any>(),
                 "router" to DeckTouchRouter { false },"ticketTimeout" to Runnable {})) setField(owner,name,value)
             setField(owner,"baseAllowed",true);setField(owner,"tasksAllowed",true);setField(owner,"transition",1L)
             val algorithm=Algorithm()
@@ -92,6 +93,26 @@ class DeckOrientationTest {
             owner.refreshGeometry()
             assertTrue("A native layout update can restore the shared contract",owner.allowed)
             assertTrue(scope.write(0,0f,transform))
+            repeat(8) { turn ->
+                val cached=Transform()
+                assertTrue((XposedHelpers.getAdditionalInstanceField(transform,DeckOwner.FRAME) as DeckFrame).copyTo(cached))
+                val previous=XposedHelpers.getAdditionalInstanceField(cached,DeckOwner.FRAME) as DeckFrame
+                val receipt=IosRecentsDeckHooks.WindowReceipt(owner,owner.transition)
+                algorithm.visual=turn%2==0
+                // Visual direction arrives before matching native window bounds.
+                owner.refreshGeometry()
+                assertFalse(owner.allowed)
+                assertEquals(0L,owner.transition)
+                assertFalse(receipt.matches(owner))
+                assertFalse(previous.copyTo(Transform()))
+                if(algorithm.visual) algorithm.window.set(0,0,2400,1080)
+                else algorithm.window.set(0,0,1080,2400)
+                owner.refreshGeometry()
+                setField(owner,"transition",(turn+3).toLong())
+                assertTrue(owner.allowed)
+                assertTrue(scope.write(0,0f,transform))
+                assertFalse(previous.copyTo(Transform()))
+            }
         } finally { host.finish() }
     }
 }

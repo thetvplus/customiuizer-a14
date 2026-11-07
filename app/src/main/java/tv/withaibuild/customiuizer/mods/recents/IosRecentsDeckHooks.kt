@@ -25,7 +25,12 @@ internal object IosRecentsDeckHooks {
     const val KEY="system_recents_ios18_deck"
     private const val WINDOW_RECEIPT="a14.recents.deck.window.receipt"
     private const val WINDOW_PENDING="a14.recents.deck.window.pending"
-    private class WindowReceipt(owner: DeckOwner,val ticket: Long) { val owner=WeakReference(owner) }
+    internal class WindowReceipt(owner: DeckOwner,val ticket: Long) {
+        val owner=WeakReference(owner)
+        private val generation=owner.geometryGeneration
+        fun matches(active: DeckOwner)=owner.get()===active && active.allowed &&
+            active.transition==ticket && ticket!=0L && active.geometryGeneration==generation
+    }
 
     fun install(param: PackageReadyParam,prefs: PrefMap): FeatureInstallResult {
         val entries=ArrayList<Pair<Method,MethodHook>>()
@@ -117,8 +122,7 @@ internal object IosRecentsDeckHooks {
         }
         after(api.copy) {
             val from=frame(it.getArg(0)); val out=it.getThisObject()!!
-            if(from!=null && !from.owner.closed) from.owner.putFrame(out,from.index,from.scale,from.visible,from.z,from.depthScale)
-            else XposedHelpers.removeAdditionalInstanceField(out,DeckOwner.FRAME)
+            if(from?.copyTo(out)!=true) XposedHelpers.removeAdditionalInstanceField(out,DeckOwner.FRAME)
         }
         after(api.reset) { XposedHelpers.removeAdditionalInstanceField(it.getThisObject(),DeckOwner.FRAME) }
         after(api.fill) {
@@ -288,7 +292,8 @@ internal object IosRecentsDeckHooks {
                 if(window.scene(params)!=true) return@before
                 val selected=card(window.view(params)) ?: return@before
                 val active=selected.owner
-                if(!active.allowed || active.transition==0L) return@before
+                val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
+                if(!receipt.matches(active)) return@before
                 val progress=it.getArg(3) as Float
                 active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(6) as RectF,progress,
                     ((.4f-progress)/.4f).coerceIn(0f,1f))
@@ -326,11 +331,14 @@ internal object IosRecentsDeckHooks {
             afterAlways(window.animate) {
                 XposedHelpers.removeAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING)
                 val params=it.getArg(0) ?: return@afterAlways
-                val receipt=XposedHelpers.removeAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@afterAlways
+                // Keep the weak receipt with native currentRectFParams: later
+                // frames must still belong to this owner/ticket/orientation.
+                val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@afterAlways
                 val active=receipt.owner.get() ?: return@afterAlways
-                if(it.getThrowable()==null && active.allowed && window.accepted(params,it.getThisObject()!!))
+                if(it.getThrowable()==null && receipt.matches(active) && window.accepted(params,it.getThisObject()!!))
                     active.linkSpring(window.spring(it.getThisObject()!!),receipt.ticket)
                 else {
+                    XposedHelpers.removeAdditionalInstanceField(params,WINDOW_RECEIPT)
                     window.spring(it.getThisObject()!!)?.let { spring -> DeckModernMotion.clear(spring,active,receipt.ticket) }
                     active.endTransition(receipt.ticket)
                 }
