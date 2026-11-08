@@ -103,7 +103,8 @@ def in_island(snapshot: dict, title: str, frame: tuple | None) -> bool:
             seen.add(root["index"])
             root = nodes[root["parentIndex"]]
         rect = root["rect"]
-        if frame and all(abs(rect[k]-v) <= 2 for k, v in zip(("x", "y", "width", "height"), frame)):
+        if root.get("bundleId") == "com.android.systemui" and frame and all(
+                abs(rect[k]-v) <= 2 for k, v in zip(("x", "y", "width", "height"), frame)):
             return True
     return False
 
@@ -436,6 +437,9 @@ def exercise(args, output: Path) -> dict:
         spec = SCENARIOS[args.scenario]
         if not spec.get("implemented", True):
             report["status"] = "NOT_IMPLEMENTED"
+            return report
+        if getattr(args, "perfetto_rounds", 0) and spec["proof"] != "HOOK_EFFECT":
+            report.update(status="NOT_APPLICABLE", error="Performance pairs are implemented only for controlled island takeover")
             return report
         if not adb:
             raise RuntimeError("ADB unavailable")

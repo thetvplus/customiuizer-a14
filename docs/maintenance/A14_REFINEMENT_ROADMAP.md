@@ -4,12 +4,14 @@
 
 ## Agent 自主验证增量（2026-11-08）
 
-- [验证入口与能力边界](../AGENTIC_VERIFICATION.md)复用现有 JVM、Mutation、ROM catalog / DexSQL、Perfetto 及 ADB，不重建索引或证据数据库。`agent_verify.py` 根据完整任务差异选择既有门禁，未知共享边界保守回到 Full，ROM、产物、Hook 效果与性能保持独立待验。原 Quick / Standard / Deep / Release 和 required-only CI 条件不变。
-- agent-device 固定版本接入原生 `.ad` / JUnit，新增离线临时测试应用与 Deck 返回、Dock 恢复、通知出现 / 消失场景。实机已通过对应状态断言与宿主 PID 稳定检查；故意替换预期文字时实际失败，锁屏和缺设备均不会误报通过。零用例、跳过、矛盾报告与候选包不一致按失败 / 待验处理。生产 APK 不增加采样、依赖、线程、服务或诊断入口。
-- 设备模块与所选本地候选字节不一致，已阻止候选安装身份通过；本轮未替换日常模块，不把 UI 路径结果归属于候选。Deck 特有几何、岛体接管、完整生命周期、多 ROM 运行和候选性能仍待验。通知文字同样可能由原生 Heads-up 提供，不能单凭该场景宣称岛体生效。
+- [验证入口与能力边界](../AGENTIC_VERIFICATION.md)复用现有 JVM、Mutation、官方 DexSQL、Perfetto、ADB 与固定版本 agent-device，不重建框架、索引或证据数据库。原 Quick / Standard / Deep / Release、required-only CI 及生产 APK 保持不变。
+- 第二轮已完成真实通知接管样板：选定与设备安装字节一致、生产源码树与当前实现一致的既有正式模块；不替换或重新签名模块。精确进程的候选映射、版本加载日志、API 102 初始化 ID 回读、接管回调与具名岛体窗口内容相互关联。fixture 禁用准入时文字属于原生窗口，启用后属于岛体；同键更新、取消消失及 SystemUI 重建后再次接管通过。官方 DexSQL 对当前设备 SystemUI 的定义来源 / 成员查询及精确 bind 回调 decode 已执行；不以静态目标存在代替运行结论，也未直接提取 Java ClassLoader 对象身份。
+- 选测现追查跨 owner 类型消费者和测试辅助对象；Deck 动效变更会关联实际消费它的岛体。叶子 Python 复用 import / 脚本路径消费者关系，未知共享边界继续 Full；共享验证器仍运行全工具门禁。当前真实工具修正投影的定向选测实测约 3.38 秒，同轮宽选工具回归为约 127.38 秒，两者验证范围不同，不宣称整轮同倍提速。岛体轮廓值计算由 87 个 owner 测试类收敛到 7 个实际消费者类并实际执行通过；共享尺寸仍宽选。设置生成输入保留相关行为 / 地图验证，省去无关 Debug Lint；完整 base diff 省去重复 HEAD 扫描。
 - CallbackGuard 首个 fatal 检查的单点删除仍由 `log(Throwable)` 再次传播，首次 mutation 如实报告存活，未伪造检出或删改成熟保护。注入改为同一 callback 路径的普通字符串日志 / fallback，验证真正吞掉 fatal 的可观察缺陷；偏好就绪后远程读取与插件 owner 令牌归还继续使用真实行为断言。摘要状态与可执行门禁统一，required 最低值不再错误限制可选行为门禁数量。
 - Deep 定向验证已通过：干净 HEAD 的 FatalBoundary / PreferenceBootstrap / RuntimeHolder 行为基线，以及真实 fatal 吞没、就绪后重复远程读取、owner 替换遗留令牌的独立缺陷检出。最后一项 fatal 注入覆盖回调自身及偏好监听器异常传播。原 required-only 独立门禁、受影响工具 / 路由 / 清理负例、生产边界与文档检查通过；临时 mutation worktree 均已释放。测试与工具变更不触发新的模块 APK / R8 产物结论，沿用未改动的生产证据。
-- 有限时系统 Perfetto 采样及既有 probe / trace-sanity 查询已实际执行，具有帧时间线和调度信号；GPU / heap 信号未采集。没有同条件候选对照，不作性能回归通过或收益结论。设备测试及采样结束已卸载本次临时应用 / helper、停止独立 daemon、移除本次设备 trace 并锁屏；既有代理 / 日常应用不变。私有原始证据位于忽略目录 `.di-evidence/device-*`、`.di-evidence/perfetto-*`，不上传。
+- 结果合同现区分可执行、未实现、不适用、断言失败、环境待验与中断；规划直接消费执行器注册，未实现手势不再进入可执行列表。JUnit 绑定脚本 / 实际用例与输入摘要，JVM 门禁核对类身份、实际用例、失败 / 错误 / 跳过计数，执行错误不计独立 kill。部分证据损坏、fixture 卸载失败不能阻断剩余清理；保留真实负例的失败判定。宿主重建后的锁屏须先解除再观察，锁屏通知不能充当已解锁的原生对照。
+- 实机已形成同一 APK、通知准入关闭 / 开启的三组交替 Perfetto 对照：实际约 120 Hz、热状态 0，自动化 daemon 与本次 helper 退出后采样，同一输入时间表的实测偏差小于 1 ms。既有 probe、SystemUI 精确进程 / 8 秒窗口图与原比较器确认可比；平均帧时长中位差约 +0.47 ms，侧内波动约 1.59 ms，判定 `INCONCLUSIVE_NOISE`。这是功能成本对照，不是两个候选构建的回归通过，也不作 CPU / GPU / 功耗收益推断。
+- 偏好按原值语义恢复，临时应用 / helper、自动化进程及设备 trace 已清理并锁屏，既有代理 / 日常应用不变。私有证据在忽略目录 `.di-evidence/verification-ii/`；不上传设备身份、通知层级、日志、APK 或原始采样。Deck 特有几何、其他通知类型、多 ROM 运行、完整长期生命周期及不同候选构建性能仍需各自证据。
 
 ## 长岛对齐修正与替代发行（2026-11-08）
 

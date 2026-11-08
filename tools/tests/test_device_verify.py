@@ -41,6 +41,12 @@ class DeviceVerifyTest(unittest.TestCase):
             self.assertEqual("UNVERIFIED", report["hook_effect"])
             run.assert_not_called()
 
+    def test_unsupported_sampling_request_is_explicit_before_device_actions(self):
+        args = argparse.Namespace(scenario="fixture-smoke", adb="adb", serial=None, run=True, apk=None, perfetto_rounds=3)
+        with tempfile.TemporaryDirectory() as tmp, patch.object(gate, "device") as device:
+            self.assertEqual("NOT_APPLICABLE", gate.exercise(args, Path(tmp))["status"])
+            device.assert_not_called()
+
     def test_truncated_partial_proof_cannot_interrupt_cleanup_reporting(self):
         args = argparse.Namespace(scenario="island-takeover", adb="adb", serial=None, run=True, apk=None)
         with tempfile.TemporaryDirectory() as tmp:
@@ -116,11 +122,14 @@ class DeviceVerifyTest(unittest.TestCase):
 
     def test_native_heads_up_cannot_satisfy_island_window_attribution(self):
         snapshot = {"snapshotQuality": {"state": "healthy"}, "nodes": [
-            {"index": 0, "rect": {"x": 0, "y": 0, "width": 1080, "height": 2460}},
+            {"index": 0, "bundleId": "com.android.systemui", "rect": {"x": 0, "y": 0, "width": 1080, "height": 2460}},
             {"index": 1, "parentIndex": 0, "label": "fixture", "visibleToUser": True}]}
         self.assertFalse(gate.in_island(snapshot, "fixture", (0, 0, 1080, 250)))
         snapshot["nodes"][0]["rect"]["height"] = 250
         self.assertTrue(gate.in_island(snapshot, "fixture", (0, 0, 1080, 250)))
+        snapshot["nodes"][0]["bundleId"] = "org.example.other"
+        self.assertFalse(gate.in_island(snapshot, "fixture", (0, 0, 1080, 250)))
+        snapshot["nodes"][0]["bundleId"] = "com.android.systemui"
         snapshot["truncated"] = True
         with self.assertRaises(RuntimeError): gate.in_island(snapshot, "fixture", (0, 0, 1080, 250))
 
