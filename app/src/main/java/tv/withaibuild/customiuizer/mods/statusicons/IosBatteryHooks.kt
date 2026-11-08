@@ -3,7 +3,6 @@ package tv.withaibuild.customiuizer.mods.statusicons
 import android.animation.ArgbEvaluator
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Path
 import android.view.View
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
@@ -91,28 +90,21 @@ internal object IosBatteryHooks {
     }
 }
 
-/** No View/Context references, timers or frame clock. All paints/paths are reused. */
+/** No View/Context references, timers or frame clock. Paints are reused. */
 internal class IosBatteryInk {
     private val body = Paint(Paint.ANTI_ALIAS_FLAG)
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f }
-    private val boltPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val bolt = Path().apply {
-        moveTo(12.6f, 1.6f); lineTo(8.7f, 6.6f); lineTo(11.3f, 6.6f)
-        lineTo(10.4f, 10.1f); lineTo(14.5f, 5.1f); lineTo(11.9f, 5.1f); close()
-    }
     var active = false
     private var level = 0
-    private var charging = false
     fun update(level: Int, color: Int, lowColor: Int, saverColor: Int, chargingColor: Int,
         saver: Boolean, low: Boolean, charging: Boolean) {
-        this.level = level.coerceIn(0, 100); this.charging = charging
+        this.level = level.coerceIn(0, 100)
         // 22G100's verified precedence is saver, low, then charging. Color values
         // remain native HyperOS theme values, not unverified Apple RGBA constants.
         fill.color = when { saver -> saverColor; low -> lowColor; charging -> chargingColor; else -> color }
         body.color = (color and 0x00ffffff) or (((color ushr 24) * .24f).toInt() shl 24)
         outline.color = (color and 0x00ffffff) or (((color ushr 24) * .55f).toInt() shl 24)
-        boltPaint.color = color
     }
     fun draw(canvas: Canvas, view: View): Boolean {
         if (!active) return false
@@ -121,7 +113,8 @@ internal class IosBatteryInk {
         if (width <= 0 || height <= 0) return false
         // Fit the existing native allocation. 22 x 11.5 is a verified iconSize=1
         // branch, selected here as an Android ratio, not the measured 16 Pro default.
-        // Rounded frame and bolt outlines are Android approximations.
+        // The rounded frame is an Android approximation. The parent meter owns
+        // charging glyphs; drawing another bolt here would duplicate its overlay.
         val scale = minOf(width / 22f, height / 11.5f)
         val saved = canvas.save()
         try {
@@ -136,7 +129,6 @@ internal class IosBatteryInk {
                 canvas.clipRect(1.8f, 1.8f, 1.8f + 16.7f * level / 100f, 9.7f)
                 canvas.drawRoundRect(1.8f, 1.8f, 18.5f, 9.7f, 1.5f, 1.5f, fill)
             } finally { canvas.restoreToCount(clip) }
-            if (charging) canvas.drawPath(bolt, boltPaint)
         } finally { canvas.restoreToCount(saved) }
         return true
     }

@@ -64,6 +64,19 @@ class IosBatteryInkTest {
             assertEquals(Color.TRANSPARENT, bitmap.getPixel(5, 5))
         } finally { bitmap.recycle() }
     }
+    @Test fun chargingGlyphRemainsOwnedByTheNativeParentOverlay() {
+        val view = View(RuntimeEnvironment.getApplication()).apply { layout(0, 0, 88, 44) }
+        val ink = IosBatteryInk().apply { active = true }
+        val images = listOf(false, true).map { charging ->
+            val bitmap = Bitmap.createBitmap(88, 44, Bitmap.Config.ARGB_8888)
+            try {
+                ink.update(50, Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE, false, false, charging)
+                assertTrue(ink.draw(Canvas(bitmap), view))
+                IntArray(88 * 44).also { bitmap.getPixels(it, 0, 88, 0, 0, 88, 44) }
+            } finally { bitmap.recycle() }
+        }
+        assertArrayEquals("The parent supplies the charging glyph; only native colors may change here", images[0], images[1])
+    }
     @Test fun disabledAndConflictingPresentationOwnersCannotInstallTheBatteryStyle() {
         val prefs = PrefMap()
         assertFalse(IosStatusBarBatteryFeature.evaluateEnabled(prefs))
