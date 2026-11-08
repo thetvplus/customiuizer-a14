@@ -104,6 +104,9 @@ class ClassicSignalTest {
         val chain = Chain(first); assertSame(chain.result, chain.invoke()); assertEquals(1, chain.calls)
         Chain(second).invoke()
         val ink = first.mMobile!!.drawable as ClassicSignalHooks.Dots
+        val owner = XposedHelpers.getAdditionalInstanceField(first, "a14.status.signal.dots")
+        assertTrue("Global lookup must not retain the image/parent view tree", owner is java.lang.ref.WeakReference<*>)
+        assertNotNull((owner as java.lang.ref.WeakReference<*>).get())
         assertEquals(3, ink.level); assertEquals(0, second.mMobile!!.drawable.level)
         assertEquals(34, first.mMobile!!.layoutParams.width)
         first.mMobile!!.imageTintList = ColorStateList.valueOf(Color.RED)
@@ -179,6 +182,27 @@ class ClassicSignalTest {
                 assertEquals(if (lock) android.graphics.Rect(2, 26, 127, 47) else android.graphics.Rect(2, 22, 102, 38), occupied)
             } finally { bitmap.recycle() }
         }
+    }
+    @Test fun unchangedNativeDeliveriesDoNotAddDrawableInvalidations() {
+        var invalidations = 0
+        val image = object : ImageView(ApplicationProvider.getApplicationContext()) {
+            override fun invalidateDrawable(drawable: android.graphics.drawable.Drawable) {
+                invalidations++; super.invalidateDrawable(drawable)
+            }
+        }.apply { layoutParams = FrameLayout.LayoutParams(12, 20) }
+        val binding = ClassicSignalHooks.Binding(image)
+        try {
+            binding.update(3, Color.BLACK)
+            val baseline = invalidations
+            repeat(100) { binding.update(3, Color.BLACK) }
+            assertEquals("Equal native state must not request more drawing", baseline, invalidations)
+            binding.update(4, Color.BLACK); assertTrue(invalidations > baseline)
+            val tint = ColorStateList.valueOf(Color.RED)
+            image.drawable.setTintList(tint)
+            val tinted = invalidations
+            repeat(100) { image.drawable.setTintList(tint) }
+            assertEquals("Equal native tint must not rebuild its filter", tinted, invalidations)
+        } finally { binding.close() }
     }
     private fun <T> proxy(type: Class<T>, body: (String, Array<out Any?>?) -> Any?): T = type.cast(
         Proxy.newProxyInstance(type.classLoader, arrayOf(type)) { _, method, args -> body(method.name, args) })!!

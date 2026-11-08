@@ -19,6 +19,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.reflect.Modifier
+import java.lang.ref.WeakReference
 import kotlin.math.roundToInt
 
 /** Native slots and state remain authoritative; unknown/theme/no-service IDs stay native. */
@@ -48,7 +49,7 @@ internal object ClassicSignalHooks {
         require(listOf(apply, darkness).all { it.returnType == Void.TYPE && !Modifier.isStatic(it.modifiers) })
         fun sync(view: Any) {
             val target = image.get(view) as ImageView
-            val previous = XposedHelpers.getAdditionalInstanceField(view, OWNER) as? Binding
+            val previous = (XposedHelpers.getAdditionalInstanceField(view, OWNER) as? WeakReference<*>)?.get() as? Binding
             val old = previous?.takeIf { it.matches(target) }
             if (previous !== old) previous?.close()
             val native = current.get(view)
@@ -57,7 +58,11 @@ internal object ClassicSignalHooks {
                 !MainModule.mPrefs.getBoolean("system_statusbar_signal_dots")) null
                 else dotCount(levels, strength.getInt(native))
             if (count == null) { old?.close(); XposedHelpers.removeAdditionalInstanceField(view, OWNER); return }
-            val binding = old?.takeUnless { it.closed } ?: Binding(target).also { XposedHelpers.setAdditionalInstanceField(view, OWNER, it) }
+            // The image's attach listener owns the binding. A strong global
+            // additional-field value would retain image -> parent -> weak key.
+            val binding = old?.takeUnless { it.closed } ?: Binding(target).also {
+                XposedHelpers.setAdditionalInstanceField(view, OWNER, WeakReference(it))
+            }
             try { binding.update(count, color.getInt(view)) }
             catch (error: Throwable) { binding.close(); XposedHelpers.removeAdditionalInstanceField(view, OWNER); throw error }
         }
@@ -66,7 +71,7 @@ internal object ClassicSignalHooks {
                 val view = callback.getThisObject()!!
                 if (callback.getThrowable() == null) sync(view)
                 else {
-                    (XposedHelpers.getAdditionalInstanceField(view, OWNER) as? Binding)?.close()
+                    ((XposedHelpers.getAdditionalInstanceField(view, OWNER) as? WeakReference<*>)?.get() as? Binding)?.close()
                     XposedHelpers.removeAdditionalInstanceField(view, OWNER)
                 }
             }
@@ -91,14 +96,15 @@ internal object ClassicSignalHooks {
         fun update(count: Int, color: Int) {
             if (closed) return
             if (image.drawable !== ink) native = image.drawable
-            ink.color = color; ink.level = count
             var parent = image.parent
             var lock = false
             while (parent is View) {
                 if (parent.javaClass.name == "com.android.systemui.statusbar.phone.KeyguardStatusBarView") lock = true
                 parent = parent.parent
             }
-            ink.lock = lock
+            val changed = ink.color != color || ink.lock != lock
+            ink.color = color; ink.lock = lock
+            val levelChanged = ink.setLevel(count)
             image.layoutParams?.let { lp ->
                 if (appliedWidth != null && lp.width != appliedWidth) width = lp.width
                 val h = if (lp.height > 0) lp.height else ink.intrinsicHeight
@@ -107,7 +113,7 @@ internal object ClassicSignalHooks {
                 appliedWidth = w
             }
             if (image.drawable !== ink) image.setImageDrawable(ink)
-            ink.invalidateSelf()
+            if (changed && !levelChanged) ink.invalidateSelf()
         }
         fun close() {
             if (closed) return
@@ -139,8 +145,15 @@ internal object ClassicSignalHooks {
         override fun onLevelChange(level: Int): Boolean { invalidateSelf(); return true }
         override fun isStateful() = tint?.isStateful == true
         override fun onStateChange(state: IntArray): Boolean { updateFilter(); return true }
-        override fun setTintList(tint: ColorStateList?) { this.tint = tint; updateFilter() }
-        override fun setTintMode(tintMode: PorterDuff.Mode?) { mode = tintMode ?: PorterDuff.Mode.SRC_IN; updateFilter() }
+        override fun setTintList(tint: ColorStateList?) {
+            if (this.tint === tint) return
+            this.tint = tint; updateFilter()
+        }
+        override fun setTintMode(tintMode: PorterDuff.Mode?) {
+            val next = tintMode ?: PorterDuff.Mode.SRC_IN
+            if (mode == next) return
+            mode = next; updateFilter()
+        }
         private fun updateFilter() {
             filter = tint?.let { PorterDuffColorFilter(it.getColorForState(state, it.defaultColor), mode) }
             invalidateSelf()
