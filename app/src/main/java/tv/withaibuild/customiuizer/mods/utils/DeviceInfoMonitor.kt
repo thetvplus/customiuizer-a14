@@ -249,25 +249,17 @@ object DeviceInfoMonitor {
     private fun onConfigMayHaveChanged() {
         val mPrefs = MainModule.mPrefs ?: return
         val newConfig = buildConfig(mPrefs)
-        config = newConfig
-
-        if (!newConfig.hasDeviceInfoWork) {
-            stopMonitoring()
-            return
-        }
-
         if (newConfig.showBatteryDetail && newConfig.batteryInCharge && chargeUtilsClass == null) {
-            chargeUtilsClass = XposedHelpers.findClassIfExists(
-                "com.miui.charge.ChargeUtils",
-                lpClassLoader
-            )
+            chargeUtilsClass = lpClassLoader?.let { DeviceInfoChargeVisibility.resolveChargeUtilsClass(it) }
         }
-
         synchronized(monitorLock) {
-            activeBgHandler?.removeMessages(MONITOR_MESSAGE)
-            activeBgHandler?.removeMessages(UPDATE_MESSAGE)
-            monitorState.screenOn = true
-            activeBgHandler?.sendEmptyMessage(MONITOR_MESSAGE)
+            config = newConfig
+            activeMainHandler?.removeMessages(UPDATE_MESSAGE)
+            if (!newConfig.hasDeviceInfoWork) {
+                stopMonitoring()
+                return
+            }
+            requestImmediateTickLocked()
         }
     }
 
@@ -485,78 +477,83 @@ object DeviceInfoMonitor {
                     val looper = resolveNetworkSpeedControllerLooper(args, bgHandler) ?: return
                     XposedHelpers.log("DeviceInfoMonitor: MONITOR_CONSTRUCTOR_REACHED")
 
-                    synchronized(monitorLock) {
-                        activeBgHandler?.removeMessages(MONITOR_MESSAGE)
-                        activeBgHandler?.removeMessages(UPDATE_MESSAGE)
-                        stopScreenReceiverLocked()
-
-                        val handlerId = monitorState.startNewGeneration()
-                        monitorState.screenOn = true
-                        monitorState.resetFailCount()
-
-                        activeMainHandler = object : Handler(Looper.getMainLooper()) {
-                            val myId = handlerId
-                            override fun handleMessage(msg: Message) = ModuleHelper.guarded {
-                                if (!monitorState.isActiveMain(myId)) {
-                                    removeMessages(UPDATE_MESSAGE)
-                                    return@guarded
-                                }
-                                if (msg.what == UPDATE_MESSAGE) {
-                                    val update = msg.obj as? IconUpdate ?: return@guarded
-                                    if (update.generation != myId) {
-                                        removeMessages(UPDATE_MESSAGE)
-                                        return@guarded
-                                    }
-                                    monitorState.commitPublished(myId, update.type, update.show, update.text)
-                                    SystemUIStatusBarHooks.updateStatusbarTextIcons(update.type, update.show, update.text)
-                                }
-                            }
-                        }
-
-                        activeBgHandler = object : Handler(looper) {
-                            val myId = handlerId
-                            override fun handleMessage(msg: Message) = ModuleHelper.guarded {
-                                if (!monitorState.isActiveBg(myId)) {
-                                    removeMessages(MONITOR_MESSAGE)
-                                    removeMessages(UPDATE_MESSAGE)
-                                    return@guarded
-                                }
-                                if (msg.what == MONITOR_MESSAGE) {
-                                    // One read of the volatile per tick, so the whole tick
-                                    // works from a single consistent snapshot even if a
-                                    // preference changes halfway through it.
-                                    val current = config ?: return@guarded
-                                    doMonitorTick(mContext, current, myId)
-                                }
-                            }
-                        }
-
-                        activeContext = mContext
-                        startScreenReceiverLocked(mContext)
-                    }
-
-                    activeBgHandler?.removeMessages(MONITOR_MESSAGE)
-                    activeBgHandler?.sendEmptyMessage(MONITOR_MESSAGE)
-                    XposedHelpers.log("DeviceInfoMonitor: MONITOR_HANDLER_STARTED")
+                    startMonitoring(mContext, looper)
                 }
             }
         )
+    }
+
+    private fun startMonitoring(mContext: Context, looper: Looper) {
+        synchronized(monitorLock) {
+            if (config?.hasDeviceInfoWork != true) return
+            activeBgHandler?.removeMessages(MONITOR_MESSAGE)
+            activeMainHandler?.removeMessages(UPDATE_MESSAGE)
+            stopScreenReceiverLocked()
+
+            val handlerId = monitorState.startNewGeneration()
+            monitorState.screenOn = (mContext.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive != false
+            monitorState.resetFailCount()
+            activeMainHandler = object : Handler(Looper.getMainLooper()) {
+                override fun handleMessage(msg: Message) = ModuleHelper.guarded {
+                    synchronized(monitorLock) {
+                        if (!monitorState.screenOn || !monitorState.isActiveMain(handlerId)) return@guarded
+                        if (msg.what != UPDATE_MESSAGE) return@guarded
+                        val update = msg.obj as? IconUpdate ?: return@guarded
+                        if (update.generation != handlerId) return@guarded
+                        monitorState.commitPublished(handlerId, update.type, update.show, update.text)
+                        SystemUIStatusBarHooks.updateStatusbarTextIcons(update.type, update.show, update.text)
+                    }
+                }
+            }
+            activeBgHandler = object : Handler(looper) {
+                override fun handleMessage(msg: Message) = ModuleHelper.guarded {
+                    if (!monitorState.isActiveBg(handlerId)) return@guarded
+                    if (msg.what == MONITOR_MESSAGE) {
+                        val current = config ?: return@guarded
+                        doMonitorTick(mContext, current, handlerId)
+                    }
+                }
+            }
+            activeContext = mContext
+            try {
+                startScreenReceiverLocked(mContext)
+                requestImmediateTickLocked()
+            } catch (oom: OutOfMemoryError) {
+                val cleanup = CleanupActions(oom)
+                cleanup.run { stopMonitoring() }
+                cleanup.finish()
+                throw oom
+            } catch (error: Throwable) {
+                val cleanup = CleanupActions(error)
+                cleanup.run { stopMonitoring() }
+                cleanup.finish()
+            }
+        }
+    }
+
+    private fun requestImmediateTickLocked() {
+        if (!monitorState.screenOn || config?.hasDeviceInfoWork != true) return
+        val handler = activeBgHandler ?: return
+        handler.removeMessages(MONITOR_MESSAGE)
+        handler.sendEmptyMessage(MONITOR_MESSAGE)
     }
 
     private fun startScreenReceiverLocked(context: Context) {
         if (screenReceiver != null) return
         screenReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
-                when (intent.action) {
-                    Intent.ACTION_SCREEN_ON -> {
-                        monitorState.screenOn = true
-                        activeBgHandler?.removeMessages(MONITOR_MESSAGE)
-                        activeBgHandler?.sendEmptyMessage(MONITOR_MESSAGE)
-                    }
-                    Intent.ACTION_SCREEN_OFF -> {
-                        monitorState.screenOn = false
-                        activeBgHandler?.removeMessages(MONITOR_MESSAGE)
-                        activeBgHandler?.removeMessages(UPDATE_MESSAGE)
+                synchronized(monitorLock) {
+                    if (screenReceiver !== this) return@guarded
+                    when (intent.action) {
+                        Intent.ACTION_SCREEN_ON -> {
+                            monitorState.screenOn = true
+                            requestImmediateTickLocked()
+                        }
+                        Intent.ACTION_SCREEN_OFF -> {
+                            monitorState.screenOn = false
+                            activeBgHandler?.removeMessages(MONITOR_MESSAGE)
+                            activeMainHandler?.removeMessages(UPDATE_MESSAGE)
+                        }
                     }
                 }
             }
@@ -586,15 +583,17 @@ object DeviceInfoMonitor {
 
     private fun stopMonitoring() {
         synchronized(monitorLock) {
-            activeBgHandler?.removeMessages(MONITOR_MESSAGE)
-            activeBgHandler?.removeMessages(UPDATE_MESSAGE)
-            stopScreenReceiverLocked()
-            activeMainHandler = null
-            activeBgHandler = null
-            activeContext = null
             monitorState.stop()
             monitorState.resetFailCount()
-            CustomTextIconTintRoute.releaseAll()
+            activeBgHandler?.removeMessages(MONITOR_MESSAGE)
+            activeMainHandler?.removeMessages(UPDATE_MESSAGE)
+            try { stopScreenReceiverLocked() }
+            finally {
+                activeMainHandler = null
+                activeBgHandler = null
+                activeContext = null
+                CustomTextIconTintRoute.releaseAll()
+            }
         }
     }
 
@@ -606,7 +605,7 @@ object DeviceInfoMonitor {
      * process lifetime.
      */
     private fun doMonitorTick(mContext: Context, cfg: ConfigSnapshot, handlerId: Long) {
-        if (!monitorState.screenOn) return
+        if (!monitorState.screenOn || !cfg.hasDeviceInfoWork || cfg !== config) return
         if (!monitorState.isActiveBg(handlerId)) return
 
         val powerMgr = mContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -634,31 +633,38 @@ object DeviceInfoMonitor {
     }
 
     private fun publishReadings(cfg: ConfigSnapshot, data: DeviceData, handlerId: Long) {
-        if (!monitorState.isActiveBg(handlerId) || !monitorState.isActiveMain(handlerId)) return
+        synchronized(monitorLock) {
+            if (!monitorState.screenOn || cfg !== config || !monitorState.isActiveBg(handlerId) || !monitorState.isActiveMain(handlerId)) return
 
-        val handler = activeMainHandler ?: return
+            val handler = activeMainHandler ?: return
 
-        if (cfg.showBatteryDetail &&
-            monitorState.shouldPublish(handlerId, 91, data.batteryShow, data.batteryText)
-        ) {
-            handler.sendMessage(
-                handler.obtainMessage(UPDATE_MESSAGE, IconUpdate(91, data.batteryShow, data.batteryText, handlerId))
-            )
-        }
-        if (cfg.showDeviceTemp &&
-            monitorState.shouldPublish(handlerId, 92, data.tempShow, data.tempText)
-        ) {
-            handler.sendMessage(
-                handler.obtainMessage(UPDATE_MESSAGE, IconUpdate(92, data.tempShow, data.tempText, handlerId))
-            )
+            if (cfg.showBatteryDetail &&
+                monitorState.shouldPublish(handlerId, 91, data.batteryShow, data.batteryText)
+            ) {
+                handler.sendMessage(
+                    handler.obtainMessage(UPDATE_MESSAGE, IconUpdate(91, data.batteryShow, data.batteryText, handlerId))
+                )
+            }
+            if (cfg.showDeviceTemp &&
+                monitorState.shouldPublish(handlerId, 92, data.tempShow, data.tempText)
+            ) {
+                handler.sendMessage(
+                    handler.obtainMessage(UPDATE_MESSAGE, IconUpdate(92, data.tempShow, data.tempText, handlerId))
+                )
+            }
         }
     }
 
     private fun scheduleNextTick(handlerId: Long) {
-        if (!monitorState.screenOn) return
-        if (!monitorState.isActiveBg(handlerId)) return
-        val delay = monitorState.calculateDelay(BASE_MONITOR_DELAY_MS, MAX_MONITOR_DELAY_MS)
-        activeBgHandler?.sendEmptyMessageDelayed(MONITOR_MESSAGE, delay)
+        synchronized(monitorLock) {
+            if (!monitorState.screenOn || config?.hasDeviceInfoWork != true || !monitorState.isActiveBg(handlerId)) return
+            val handler = activeBgHandler ?: return
+            // A refresh queued during this read wins. Do not delay it or start
+            // another recurring chain when the old tick's finally block runs.
+            if (handler.hasMessages(MONITOR_MESSAGE)) return
+            val delay = monitorState.calculateDelay(BASE_MONITOR_DELAY_MS, MAX_MONITOR_DELAY_MS)
+            handler.sendEmptyMessageDelayed(MONITOR_MESSAGE, delay)
+        }
     }
 
     private fun readDeviceData(mContext: Context, cfg: ConfigSnapshot, handlerId: Long): DeviceData? {

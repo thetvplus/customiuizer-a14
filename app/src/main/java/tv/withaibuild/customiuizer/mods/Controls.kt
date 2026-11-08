@@ -52,10 +52,10 @@ object Controls {
     private var isPowerLongPressed = false
     @Volatile private var isVolumePressed = false
     @Volatile private var isVolumeLongPressed = false
-    private var isWaitingForPowerLongPressed = false
+    private val powerLongPress = tv.withaibuild.customiuizer.mods.utils.OwnedHandlerCallback()
+    @Volatile private var powerPress: KeyPressToken? = null
     @Volatile private var isWaitingForVolumeLongPressed = false
     private var wasRaise2WakeEnabled = false
-    private var mHandler: Handler? = null
 
     internal data class ControlsSnapshot(
         val powerFlashDelay: Boolean = false,
@@ -174,6 +174,7 @@ object Controls {
 
     private val mScreenOnReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
+            cancelPowerPress()
             if (isTorchEnabled(context)) setTorch(context, false)
             if (HookUtils.mWakeLock != null && HookUtils.mWakeLock!!.isHeld) HookUtils.mWakeLock!!.release()
             if (wasRaise2WakeEnabled) {
@@ -207,95 +208,88 @@ object Controls {
             }
         })
 
-        ModuleHelper.findAndHookMethod("com.android.server.policy.MiuiPhoneWindowManager", lpparam.classLoader, "interceptKeyBeforeQueueing", KeyEvent::class.java, Int::class.javaPrimitiveType, object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var skipped = false
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-                    val thisObject = chain.thisObject
+        ModuleHelper.findAndHookMethod("com.android.server.policy.MiuiPhoneWindowManager", lpparam.classLoader, "interceptKeyBeforeQueueing", KeyEvent::class.java, Int::class.javaPrimitiveType, powerKeyHook())
+    }
 
-                    // Power and volkeys are pressed at the same time
-                    if (isVolumePressed) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                    val keyEvent = chain.getArg(0) as KeyEvent
+    private fun cancelPowerPress() {
+        powerLongPress.cancel()
+        powerPress = null
+        isPowerPressed = false
+        isPowerLongPressed = false
+    }
 
-                    val keycode = keyEvent.keyCode
-                    val action = keyEvent.action
-                    val flags = keyEvent.flags
-
-                    // Ignore repeated KeyEvents simulated on Power Key Up
-                    if ((flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) == KeyEvent.FLAG_VIRTUAL_HARD_KEY) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if ((flags and KeyEvent.FLAG_FROM_SYSTEM) != KeyEvent.FLAG_FROM_SYSTEM || keycode != KeyEvent.KEYCODE_POWER) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-
-                    // Power long press
-                    val mContext = XposedHelpers.getObjectField(thisObject, "mContext") as Context
-                    val mPowerManager = XposedHelpers.getObjectField(thisObject, "mPowerManager") as PowerManager
-                    if (mPowerManager.isInteractive) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
-                    if (action == KeyEvent.ACTION_DOWN) {
-                        isPowerPressed = true
-                        isPowerLongPressed = false
-
-                        mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
-
-                        val longPressDelay = (if (controlsConfig.powerFlashDelay) ViewConfiguration.getLongPressTimeout() * 3 else ViewConfiguration.getLongPressTimeout()) + 500
-                        // Post only one delayed runnable that waits for long press timeout
-                        if (!isWaitingForPowerLongPressed) {
-                            // Runs on the PhoneWindowManager handler inside system_server, outside
-                            // this hook's try/catch. An unguarded throw here reboots the device.
-                            mHandler!!.postDelayed(Runnable {
-                                ModuleHelper.guarded {
-                                    if (isPowerPressed) {
-                                        isPowerLongPressed = true
-
-                                        val wakeLock = HookUtils.mWakeLock
-                                            ?: mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "miuizer:flashlight")
-                                                .also { HookUtils.mWakeLock = it }
-
-                                        if (!isTorchEnabled(mContext) || !wakeLock.isHeld) {
-                                            setTorch(mContext, true)
-                                            if (!wakeLock.isHeld) wakeLock.acquire(600000L)
-                                        } else {
-                                            setTorch(mContext, true)
-                                            if (wakeLock.isHeld) wakeLock.release()
-                                        }
-                                    }
+    internal fun powerKeyHook() = object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val event = chain.getArg(0) as KeyEvent
+            if (event.keyCode != KeyEvent.KEYCODE_POWER ||
+                event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY != 0 || event.flags and KeyEvent.FLAG_FROM_SYSTEM == 0)
+                return chain.proceed()
+            // Keep native execution outside the module boundary: native failures
+            // retain their identity, and fallback cannot call the original twice.
+            val consumed = try { run {
+                if (isVolumePressed) { cancelPowerPress(); return@run false }
+                val policy = chain.thisObject
+                val context = XposedHelpers.getObjectField(policy, "mContext") as Context
+                val power = XposedHelpers.getObjectField(policy, "mPowerManager") as PowerManager
+                if (power.isInteractive) { cancelPowerPress(); return@run false }
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    val current = powerPress
+                    if (current?.matches(event) == true) return@run true
+                    if (event.repeatCount != 0) return@run false
+                    cancelPowerPress()
+                    val handler = XposedHelpers.getObjectField(policy, "mHandler") as Handler
+                    val press = KeyPressToken(event.keyCode, event.deviceId, event.downTime)
+                    powerPress = press
+                    isPowerPressed = true
+                    val delay = (if (controlsConfig.powerFlashDelay) ViewConfiguration.getLongPressTimeout() * 3
+                        else ViewConfiguration.getLongPressTimeout()) + 500
+                    val task = object : Runnable {
+                        override fun run() {
+                            if (!powerLongPress.take(this)) return
+                            try { ModuleHelper.guarded {
+                                if (powerPress !== press || !isPowerPressed || isVolumePressed || power.isInteractive) return@guarded
+                                isPowerLongPressed = true
+                                val wakeLock = HookUtils.mWakeLock
+                                    ?: power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "miuizer:flashlight")
+                                        .also { HookUtils.mWakeLock = it }
+                                if (!isTorchEnabled(context) || !wakeLock.isHeld) {
+                                    setTorch(context, true)
+                                    if (!wakeLock.isHeld) wakeLock.acquire(600000L)
+                                } else {
+                                    setTorch(context, true)
+                                    if (wakeLock.isHeld) wakeLock.release()
                                 }
-                                isPowerPressed = false
-                                isWaitingForPowerLongPressed = false
-                            }, longPressDelay.toLong())
-                        }
-
-                        isWaitingForPowerLongPressed = true
-                        skipped = true; result = 0; throwable = null
-                    }
-
-                    if (action == KeyEvent.ACTION_UP) {
-                        if (isPowerPressed && !isPowerLongPressed) {
-                            try {
-                                if (isTorchEnabled(mContext)) setTorch(mContext, false)
-                                if (HookUtils.mWakeLock != null && HookUtils.mWakeLock!!.isHeld) HookUtils.mWakeLock!!.release()
-                                XposedHelpers.callMethod(mPowerManager, "wakeUp", SystemClock.uptimeMillis())
-                                skipped = true; result = 0; throwable = null
-                            } catch (t: Throwable) {
-                                XposedHelpers.log(t)
+                            } } finally {
+                                if (powerPress === press) isPowerPressed = false
                             }
-                        } else if (wasRaise2WakeEnabled && !isTorchEnabled(mContext)) {
-                            wasRaise2WakeEnabled = false
-                            Settings.System.putInt(mContext.contentResolver, "pick_up_gesture_wakeup_mode", 1)
                         }
-                        isPowerPressed = false
-                        isWaitingForPowerLongPressed = false
                     }
-
-                    if (skipped) { return XposedHelpers.throwOrReturn(throwable, result) }
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
+                    if (!powerLongPress.post(handler, task, delay.toLong())) { cancelPowerPress(); return@run false }
+                    return@run true
                 }
-                return XposedHelpers.throwOrReturn(throwable, result)
+                if (event.action == KeyEvent.ACTION_UP && powerPress?.matches(event) == true) {
+                    val shortPress = isPowerPressed && !isPowerLongPressed
+                    cancelPowerPress()
+                    if (event.isCanceled) return@run true
+                    if (shortPress) {
+                        if (isTorchEnabled(context)) setTorch(context, false)
+                        HookUtils.mWakeLock?.let { if (it.isHeld) it.release() }
+                        XposedHelpers.callMethod(power, "wakeUp", SystemClock.uptimeMillis())
+                        return@run true
+                    }
+                    if (wasRaise2WakeEnabled && !isTorchEnabled(context)) {
+                        wasRaise2WakeEnabled = false
+                        Settings.System.putInt(context.contentResolver, "pick_up_gesture_wakeup_mode", 1)
+                    }
+                }
+                false
+            } } catch (error: Throwable) {
+                cancelPowerPress()
+                XposedHelpers.log(error)
+                false
             }
-        })
+            return if (consumed) 0 else chain.proceed()
+        }
     }
 
     @JvmStatic
@@ -307,7 +301,9 @@ object Controls {
         ModuleHelper.hookMethod(access.intercept, volumeMediaButtonsHook(access))
     }
 
-    private data class VolumePressToken(val code: Int, val device: Int, val downTime: Long)
+    private data class KeyPressToken(val code: Int, val device: Int, val downTime: Long) {
+        fun matches(event: KeyEvent) = code == event.keyCode && device == event.deviceId && downTime == event.downTime
+    }
 
     private fun unsupportedControlsContract(name: String) {
         XposedHelpers.log("$name: complete native contract unavailable; keeping native behavior")
@@ -317,10 +313,8 @@ object Controls {
     @SuppressLint("MissingPermission")
     internal fun volumeMediaButtonsHook(access: VolumePolicyAccess) = object : MethodHook() {
         private val longPress = tv.withaibuild.customiuizer.mods.utils.OwnedHandlerCallback()
-        @Volatile private var owned: VolumePressToken? = null
-        private fun owns(event: KeyEvent) = owned?.let {
-            it.code == event.keyCode && it.device == event.deviceId && it.downTime == event.downTime
-        } == true
+        @Volatile private var owned: KeyPressToken? = null
+        private fun owns(event: KeyEvent) = owned?.matches(event) == true
         override fun intercept(chain: XposedInterface.Chain): Any? {
             var skipped = false
             var result: Any? = null
@@ -373,7 +367,7 @@ object Controls {
                 if (action == KeyEvent.ACTION_DOWN) {
                     val volumeHandler = access.handler.get(thisObject) as? Handler ?: return chain.proceed()
                     if (access.wakeLock.get(thisObject) !is WakeLock) return chain.proceed()
-                    val press = VolumePressToken(keycode, keyEvent.deviceId, keyEvent.downTime)
+                    val press = KeyPressToken(keycode, keyEvent.deviceId, keyEvent.downTime)
                     owned = press
                     isVolumePressed = true
                     isVolumeLongPressed = false
