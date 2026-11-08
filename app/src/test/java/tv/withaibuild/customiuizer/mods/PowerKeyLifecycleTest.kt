@@ -30,6 +30,7 @@ class PowerKeyLifecycleTest {
         @JvmField val mContext=context
         @JvmField val mPowerManager=context.getSystemService(PowerManager::class.java)
         @JvmField val mHandler=Handler(Looper.getMainLooper())
+        @JvmField val mBroadcastWakeLock=mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"test-power-chord")
         fun interceptKeyBeforeQueueing(event: KeyEvent,flags: Int): Int=41
     }
     private lateinit var policy: Policy
@@ -91,6 +92,24 @@ class PowerKeyLifecycleTest {
         idle(delay)
         assertEquals(0,torchRequests())
         assertFalse(policy.mPowerManager.isInteractive)
+    }
+    @Test fun aPhysicalVolumeChordCancelsPowerTimeoutButUnrelatedInputDoesNot() {
+        val power=Controls.powerKeyHook()
+        val volume=Controls.volumeMediaButtonsHook(requireNotNull(VolumePolicyAccess.resolve(Policy::class.java)))
+        power.intercept(Chain(event(10)))
+        // Both hooks share the policy entry. Non-volume input cannot retire power ownership.
+        volume.intercept(Chain(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_HOME)))
+        volume.intercept(Chain(KeyEvent(20,20,KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_VOLUME_DOWN,0,0,3,0,
+            KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_VIRTUAL_HARD_KEY)))
+        assertTrue(ReflectionHelpers.getStaticField(Controls::class.java,"isPowerPressed"))
+        var foreign=0
+        policy.mHandler.postDelayed({ foreign++ },delay)
+        val chord=Chain(KeyEvent(20,20,KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_VOLUME_DOWN,0,0,3,0,KeyEvent.FLAG_FROM_SYSTEM))
+        assertEquals(41,volume.intercept(chord))
+        assertEquals(1,chord.nativeCalls)
+        idle(delay)
+        assertEquals("a volume chord must retire the pending torch action",0,torchRequests())
+        assertEquals(1,foreign)
     }
     @Test fun nativeFailureEscapesUnchangedAndUnrelatedKeysProceedOnce() {
         val failure=IllegalStateException("native")

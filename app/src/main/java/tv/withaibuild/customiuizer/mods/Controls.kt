@@ -320,16 +320,6 @@ object Controls {
             var result: Any? = null
             var throwable: Throwable? = null
             try {
-                // Power and volkeys are pressed at the same time
-                if (isPowerPressed) {
-                    longPress.cancel(); isVolumePressed = false; isWaitingForVolumeLongPressed = false
-                    val event = chain.getArg(0) as KeyEvent
-                    if (owns(event)) {
-                        if (event.action == KeyEvent.ACTION_UP) owned = null
-                        return 0
-                    }
-                    return chain.proceed()
-                }
                 val keyEvent = chain.getArg(0) as KeyEvent
 
                 val keycode = keyEvent.keyCode
@@ -339,6 +329,18 @@ object Controls {
                 // Ignore repeated KeyEvents simulated on volume Key Up
                 if ((flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) == KeyEvent.FLAG_VIRTUAL_HARD_KEY) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
                 if ((flags and KeyEvent.FLAG_FROM_SYSTEM) != KeyEvent.FLAG_FROM_SYSTEM || (keycode != KeyEvent.KEYCODE_VOLUME_UP && keycode != KeyEvent.KEYCODE_VOLUME_DOWN)) { return if (skipped) XposedHelpers.throwOrReturn(throwable, result) else XposedHelpers.proceedOrThrow(chain, throwable) }
+
+                // A physical volume chord retires the pending power action too.
+                // This hook also sees power/unrelated input: validate the key first.
+                if (isPowerPressed) {
+                    if (action == KeyEvent.ACTION_DOWN) cancelPowerPress()
+                    longPress.cancel(); isVolumePressed = false; isWaitingForVolumeLongPressed = false
+                    if (owns(keyEvent)) {
+                        if (action == KeyEvent.ACTION_UP) owned = null
+                        return 0
+                    }
+                    return chain.proceed()
+                }
 
                 val configured = if (keycode == KeyEvent.KEYCODE_VOLUME_UP) controlsConfig.volumeMediaUp else controlsConfig.volumeMediaDown
                 if (action == KeyEvent.ACTION_DOWN && owned != null && !owns(keyEvent)) {

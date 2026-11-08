@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """A14 preflight + agent-device assertions. 0=scenario passed, 1=failed, 2=pending.
 
-Runs only an installed external CLI and an offline fixture. Never installs the
-module, changes LSPosed scope, restarts a host or changes user preferences.
+Runs an installed external CLI and an offline fixture. Never installs the module
+or changes LSPosed scope. Controlled takeover explicitly opts into temporary
+preferences and SystemUI recreation, with restoration on exit.
 """
 from __future__ import annotations
 
