@@ -55,13 +55,15 @@ Agent 按完整任务差异选择现有门禁、设备重放与各层待验边�
 | 正式候选 | [A14 Signed Build](RELEASE.md#actions-构建与自动发布) | 历史正式签名、来源 / Artifact 摘要、元数据及零人工审批发布契约 |
 | 设备 | 指定 APK / ROM 下操作与日志 | 实际 Hook、UI、生命周期和性能，仅限已测场景 |
 
-不以测试数量、静态命中或一次构建代替兼容结论。保留行为、备份 V2、偏好、所有权、热路径、API 边界和 issue 回归；只有无 production subject、完全重复或锁死错误细节的测试才可评估移除。Python 不重复实现 Kotlin 业务，也不以测试方法名匹配代替执行。
+不以测试数量、静态命中或一次构建代替兼容结论。保留行为、备份 V2、偏好、所有权、热路径、API 边界和 issue 回归；只有无 production subject、完全重复或锁死错误细节的测试才可评估移除。Python 不重复实现 Kotlin 业务，也不以测试方法名匹配代替执行。共享 fixture 只读，写入和故障注入使用独立目录，清理在创建后立即注册；注入先确认干净基线及实际应用，再识别预期断言失败。
+
+生成器确定性比较实际 Compose Kotlin、偏好目录、页面 ID 与搜索索引，要求产物非空；分组模型回归不能冒充最终文件验证。资源检查读取设置 JSON 和平台 XML，解析失败、缺失引用与翻译均须失败；同一次检查复用已解析输入，不设跨测试缓存。
 
 ## 关键回归
 
 - 天气需求回归 `WeatherFormatDemandTest` / `WeatherRefreshLifecycleTest` 覆盖四种生效格式、隐藏日期、CC 格式既有规则、无需求零订阅 / 查询、关闭取消发布、灭屏恢复和 owner 替换；复用 `SystemClockHotPathTest` 的格式 / 秒钟能力回归。天气 owner 静态门禁同时识别两参数与需求参数调用，错误 owner 和漏掉 OOM 隔离仍须检出，不以更新合法调用形态放宽所有权 / fatal 合同。
-- 输入成本回归 `StatusBarTouchCostTest` / `GestureBrightnessReadCostTest`：原生单次分发与异常、无整组参数读取、多指后加入亮度、无效控制中心起点、普通亮度读取失败与 fatal；复用既有 GestureMachine 状态 / 所有权压力回归。图标 `BitmapCachedLoaderMetadataTest` 覆盖冷加载元数据复用、热缓存不访问 PM、缺失 / 无图标回退与共享库查询标志。均为 Host 次数和行为证据，设备交互仍须单独验收。
-- 设置界面运行实际 FragmentManager、XML、动画和返回流程，覆盖四类页面、关于页、动画关闭、取消返回和 Activity 重建；断言页面可见且有可见选项。测试 `miui.os.Build` 只控制选项，不模拟 HyperOS。
+- 输入成本回归 `StatusBarTouchCostTest` / `GestureBrightnessReadCostTest`：原生单次分发与异常、无整组参数读取、多指后加入亮度、无效控制中心起点、普通亮度读取失败与 fatal；复用既有 GestureMachine 状态 / 所有权压力回归。图标键与搜索字段由 `AppListMetadataTest` 检查；其中加载器接入部分是源码断言，不能当作 PM 调用次数或设备性能证据。
+- 设置界面运行实际 FragmentManager、JSON 生成模型、Compose、动画和返回流程，覆盖四类页面、关于页、动画关闭、取消返回和 Activity 重建；断言页面可见且有可见选项。测试 `miui.os.Build` 只控制选项，不模拟 HyperOS。
 - Fragment 动画创建时保留框架正在准备的位置 / alpha，否则可停在屏外。Activity 继续通过 Fragment 公开入口关闭预测预览；重新启用前须验证取消预览遗留位移及目标 HyperOS 手势，不能只看普通返回。
 - Dock 覆盖 4→5→4、1 / 3–6 图标、子布局边界不变、拖拽结束 / 取消、文件夹 / 占位、空 Dock / 重填、空闲帧不读图标、尺寸控制独立；真实动画合成另需设备。
 - Dock / Toast 的固定种子轨迹分别覆盖 owner 重建、0–6 图标、旋转、安全区、文字和字号极值；保留状态机长序列与释放断言。当前种子与步数以测试源为准。

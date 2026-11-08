@@ -48,8 +48,16 @@ class FeatureMapTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.repo = Path(self.temp.name)
-        for directory in (feature_map.RES / "xml", feature_map.RES / "values", feature_map.RES / "values-zh-rCN", Path("app/settings"), feature_map.JAVA):
+        # Copy UI/catalog inputs, not every production Hook. The real/fixture map
+        # comparison below also detects an input accidentally omitted here.
+        for directory in (feature_map.RES / "xml", feature_map.RES / "values", feature_map.RES / "values-zh-rCN", Path("app/settings"),
+                          *(feature_map.JAVA / sub for sub in ("subs", "prefs", "ui", "mods/utils/feature"))):
             shutil.copytree(ROOT / directory, self.repo / directory)
+        for source in (ROOT / feature_map.JAVA).glob("*.kt"):
+            shutil.copyfile(source, self.repo / feature_map.JAVA / source.name)
+        resolver = feature_map.JAVA / "utils/PreferenceResourceResolver.kt"
+        (self.repo / resolver).parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / resolver, self.repo / resolver)
         matrix = Path("docs/rom-intelligence/A14_PROCESS_MATRIX.json")
         (self.repo / matrix).parent.mkdir(parents=True)
         shutil.copyfile(ROOT / matrix, self.repo / matrix)

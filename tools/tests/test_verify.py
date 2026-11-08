@@ -332,8 +332,13 @@ class VerifyEnvironmentTests(unittest.TestCase):
         self.assertIsNone(_verify.parse_java_major("not a java runtime"))
 
     def test_hookBodyPrefmapGateIsWired(self):
-        self.assertTrue(callable(_verify.check_hook_body_prefmap))
-        self.assertEqual(0, _verify.check_hook_body_prefmap())
+        # The scanner's own tests execute its real tree/negative fixtures. Here
+        # verify.py must invoke that gate and preserve its failure status.
+        with patch.object(_verify, "run", return_value=7) as run:
+            self.assertEqual(7, _verify.check_hook_body_prefmap())
+        run.assert_called_once_with([
+            _verify.sys.executable, str(_verify.REPO_ROOT / "tools/hook_body_prefmap_scan.py"), "--check",
+        ])
 
     def test_commandEnvironmentNormalizesBinJavaHome(self):
         java_name = "java.exe" if _verify.sys.platform == "win32" else "java"

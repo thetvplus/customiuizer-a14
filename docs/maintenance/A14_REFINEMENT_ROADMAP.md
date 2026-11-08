@@ -48,6 +48,7 @@
 | 当前源码 / Host / R8 | 依 [TESTING 的复用条件](../TESTING.md#证据复用)核对输入、环境、范围和实际结果；旧 Full、告警数、候选体积与中间 PASS 不充当当前状态 |
 | 多 ROM 静态复核 | 2026-11-08 直接核对 duchamp CN、fuxi CN / TW、munch ID 的 A14 原件。Dock、Duo、Home Indicator、岛体与 Deck 的定义 / 时序按各[专题](../README.md)保存；同 ABI 不证明运行或扩大路由 |
 | Hook 样板与选测 | 当前实现见 [AGENTIC_VERIFICATION](../AGENTIC_VERIFICATION.md)。真实叶子工具差异定向执行约 3.38 s，宽选工具约 127.38 s，范围不同；岛体轮廓由 87 个 owner 类收敛到 7 个实际消费者类并执行通过，共享尺寸仍宽选。不是整轮同倍提速 |
+| Python 测试质量 | 清理重复存在性 / 字号 / 惰性工厂断言和 JVM 方法名伪证据；生成器遗漏 Kotlin 或仅 Kotlin 漂移的受控输入，旧检查通过，新检查均因断言失败检出。资源合并请求 2621→10；同机单次纯 Python 回归约 52.3→38.2 s，本地化约 10.42→0.58 s。未计六项既有 Gradle 集成，不外推整轮 CI 倍率；原始对照在忽略目录 `.di-evidence/python-test-quality/`。原 required-only、CI 和发布合同保持 |
 | 通知性能 A/B | 同 APK、通知准入关 / 开三组交替，实际约 120 Hz、热状态 0，自动化 helper 退出后按同时间表采样，输入偏差小于 1 ms。平均帧时长中位差约 +0.47 ms，侧内波动约 1.59 ms，结果为 INCONCLUSIVE_NOISE；不是候选构建回归通过或 CPU / GPU / 功耗收益 |
 | 原始材料 | ROM / iOS 原件、SQL / Smali、JUnit、APK / mapping、设备日志与 trace 私有留存；通知样板入口为忽略目录 `.di-evidence/verification-ii/`。实验环境按原值恢复并清理本次临时资源 |
 
