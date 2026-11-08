@@ -72,6 +72,42 @@
 | 内存与生命周期 | 缓存有界 / loader 隔离，替换与 detach 释放；保留有效 ReflectionCache、FeatureRegistry 和 StrongToast 基础设施 | 有 retain-chain、loader churn 或持续增长证据再改引用；不按静态强引用数报告泄漏 |
 | 图像、资源与绘制 | Dock 复用原生材质；岛内容切换已移除动态模糊 / 效果缓存，保留单份旧显示列表；波形按实际可见帧管理采集 | 先测主线程 / RenderThread / GPU 和图像分配；不据源码复杂度或减少对象推断帧率、整机省电 |
 
+### 实机成本与 Native 取舍（2026-11-08）
+
+基于 `40f42fe346e6f247fecd65f5f13cea497fa531c3` 的准确 Develop 产物。单一 HyperOS 1 / Android 14 设备，实际 120 Hz、热状态 0、固定方向；自动化、截图和内存查询不进入 trace 操作窗口。以下是同 APK 的目标功能组合开 / 关，关闭侧仍保留其它原有配置，不是代码优化前后或纯原生系统对照。每场景三组交替，取各侧中位数；最大组内极差只作描述性噪声参考，不是显著性检验。
+
+| 场景 / 宿主 | 关闭 → 开启 | 结论与边界 |
+| --- | --- | --- |
+| 20 次音量键 / 12 s，SystemUI | 主线程 CPU 1574.04 → 1773.74 ms；帧 P95 16.82 → 16.06、P99 18.32 → 17.62 ms | 观察到主线程多用 199.70 ms，尚未隔离到 HUD 或具体方法；总 CPU 和帧差小于组内波动，不判提速或无回归 |
+| 两次最近任务打开 / 返回 / 12 s，Launcher | 帧 P95 19.94 → 23.68、P99 21.21 → 25.82 ms | 较慢倾向仍落在 5.21 / 5.87 ms 组内极差内；真实 Deck 呈现已确认，持续 HOLD、删除回填、横屏和窗口交接性能仍待验 |
+| 后台通知接管 / 更新 / 取消 / 8 s，SystemUI | CPU 682.27 → 1646.67 ms；主线程 193.73 → 357.50 ms | 确认真正岛窗口及重建恢复；额外有限动画产生更多渲染工作，帧差仍在噪声内。未证明存在可删除的数学计算或闲置循环 |
+| 静止 / 灭屏各 30 s，SystemUI | CPU 127.37 → 96.04 / 15.05 → 16.30 ms | 差异均在组内波动内；灭屏两侧均 0 个实际 surface 帧，不推断功耗或零唤醒 |
+
+帧指标来自独立实际 surface 行的完成时长，不是输入延迟、主线程耗时或 FPS。媒体卡片仅有一组各两次播放 / 暂停的确认回调；Seek 两侧均未得到有效提交，不能记完整通过或模块回归。相同宿主连续约 328 s 的两轮交互 / 静止 / 灭屏观察未见 PSS 单调增长，保留原生超时，不等于长期泄漏检出。厂商 ATrace 解析错误、部分 ftrace 配置缺失和无可用方法栈限制了 GC / Binder / 唤醒归因；GPU、对象分配、真实岛音乐、共享 Wi-Fi 高频及功耗仍未量化。
+
+Native 审计沿实际消费者区分计算与宿主工作，当前不增加生产 JNI、常驻缓冲、采样或构建依赖：
+
+| 范围 | 当前成本来源 / 决定 |
+| --- | --- |
+| 岛 G4 / 形变 / 动画 | `IslandCapsuleGeometry` / `G4RoundRectGeometry` 已一次准备控制点，`IslandShape` 按几何变化复用 Path；吸收 mesh 为 13 行、幂表预备，Spring 系数在 retarget 准备。保留 ART 与原生动画时钟；尚无方法栈证明这些标量计算主导设备成本。C 计算坐标后仍须提交 Framework Path / View，不借私有 Skia 指针绕过宿主合同 |
+| 音频 | 系统 Visualizer 已提供 FFT，`AudioFftBands` 只汇总有符号复数 bin；岛为 512 / 1024 字节、最多约 10 Hz、五个输出，传统可视化为 31 频段复用缓冲。后者使用宿主最大采样率，不套用岛的 10 Hz 测量结论 |
+| Deck | 有界可见卡片的标量指数 / 缩放，原生 scroller / spring / Surface 保持所有权。没有批量计算热点证据，不迁移手势、窗口或 Hook 到 C |
+| Dock / Duo / 状态图标 | Dock 材质由 ROM 渲染，稳定几何不扫描图标；Duo 路径、字形、环形按内容变化准备，有限过渡才采样。保留 Canvas / Path 与状态回调，C 不会自动减少布局或 GPU 工作 |
+| Hook / 其它业务 | API 102、单参数读取、loader 缓存、冷路径反射准备及原生结果 / 异常继续留在托管层；JNI 不消除 Binder、Framework 对象访问或业务 I/O。现有 DexKit 仅在相关能力需要时加载，扫描 bridge 有释放；不扩展为所有进程预载。设置、备份、网络 / 天气和媒体会话未发现值得新增 Native 的独立计算热循环 |
+| 锁屏专辑图模糊 | `HookUtils.fastBlur` 是真正的整图 CPU 候选；消费者已限 512² 像素、串行后台处理、generation 检查及结果缓存。整图 C 原型有可重复收益，但尚缺真实宿主缓存未命中频率、完整流水线、优化 APK / R8、异常注入及多 ROM 证据，暂不落地 |
+
+独立同设备 ART 实验使用原函数源码、统一输入、JDK 27 / Kotlin 2.4.21 / D8 9.5.28 / API 34，C 为 arm64 Clang 18 `-O3`；三次新进程内轮换顺序，设备锁屏、热状态 0，无模块替换。只是热 JIT 计算对照，不代表优化 APK 或 UI P95/P99：
+
+| 输入 | 原 Kotlin | 优化 Kotlin 原型 | JNI C 原型 |
+| --- | --- | --- | --- |
+| 五频段，1024 字节 / 48 kHz | 0.540 μs / 次 | 预备频段边界 0.519 μs | 含输入复制 / 五值回传 0.258 μs；按岛上限仅节省约 3 μs / s，不值得引入库 |
+| 整图模糊，512² / 半径 31 | 16.949 ms；托管分配约 5.26 MB / 次 | 打包中间 RGB、滑动加权和：12.868 ms；约 2.11 MB | 同一滑动算法、含 JNI、Bitmap 复制 / 读写及 malloc / free：7.538 ms；托管约 1.05 MB，另有 native scratch / 可能的 JNI 复制，不是总内存降至 1.05 MB |
+| 整图模糊，128² / 半径 1 | 0.633 ms | 0.725 ms，出现小图退化 | 0.424 ms；有限事件仍需计加载与宿主收益 |
+
+五频段每进程 480 组等价样本及独立有符号脉冲校验通过；模糊每进程 48 组窄图、边缘、半透明和大半径逐像素比较通过。FFT 的 P95/P99 是每批 4096 次的平均值分布，模糊每配置 54 次，均不充当交互尾延迟。FFT 最小库文件 5456 B，进程冷加载 / 文件缓存热为 2.04–2.68 ms，库映射 RSS 16 KiB / PSS 12 KiB；不是完整 Native 接入的 APK、进程内存或启动成本。JNI 空调用约 23 ns 只是该原型下限，不含数组 / Framework 访问。全局功耗及发布 APK 增量未测。
+
+结论：保留当前实现；整图模糊列为条件候选，不把更快的隔离 kernel 当作已获得宿主净收益，也不把小图更慢的 Kotlin 原型直接替换现有实现。[Android JNI 指南](https://developer.android.com/ndk/guides/jni-tips)要求控制数据搬运；若后续证实频繁缓存未命中，再评估按需仅在消费者进程加载、loader / namespace 隔离、R8 入口、OOM 回退和 native 崩溃对宿主的影响。不得预载到 system_server 或以 JNI 替代 API 102。必要私有收据为 `.di-evidence/device-performance-receipt.json` 与 `.di-evidence/native-audit-receipt.json`，原型、ROM 链接输入及采样不进入公开仓库。
+
 ## 仓库安全待办
 
 - 独立依赖图工作流已保留，首次手动运行结果仍待核实；不能把配置存在视为执行成功。
@@ -88,7 +124,7 @@
 | 多 ROM 能力复核 | 2026-11-08 恢复并复用原 ROM Catalog / 官方 DexSQL 缓存，生产范围仅 duchamp CN、fuxi CN / TW、munch ID。新增媒体、电池、控制中心手势的 67 个所需声明逐样本匹配，媒体的 32 个资源名均存在；POCO 缺失 WindowElement 继续走既有 Legacy 准入，不扩大全 Launcher 路由。原 264 项生成目录未漂移。声明、Host 与实机边界见[兼容矩阵](../../COMPATIBILITY.md#a14-样本与能力准入)；本次私有收据在 `.di-evidence/rom-compatibility-receipt.json`，非第二套兼容数据库。索引中三份非 ZIP MiuiBooster.jar 不在本次核心合同证据内，不能当作有效定义源 |
 | Hook 样板与选测 | 当前实现见 [AGENTIC_VERIFICATION](../AGENTIC_VERIFICATION.md)。真实叶子工具差异定向执行约 3.38 s，宽选工具约 127.38 s，范围不同；岛体轮廓由 87 个 owner 类收敛到 7 个实际消费者类并执行通过，共享尺寸仍宽选。不是整轮同倍提速 |
 | Python 测试质量 | 清理重复存在性 / 字号 / 惰性工厂断言和 JVM 方法名伪证据；生成器遗漏 Kotlin 或仅 Kotlin 漂移的受控输入，旧检查通过，新检查均因断言失败检出。资源合并请求 2621→10；同机单次纯 Python 回归约 52.3→38.2 s，本地化约 10.42→0.58 s。未计六项既有 Gradle 集成，不外推整轮 CI 倍率；原始对照在忽略目录 `.di-evidence/python-test-quality/`。原 required-only、CI 和发布合同保持 |
-| 通知性能 A/B | 旧工具状态目录失效，使其自动化退出标记不可信；旧采样不作为隔离性能证据。修复后复用既有 Perfetto 三组交替流程，按宿主样本 / ROM、刷新率、热状态、方向、输入与实际会话退出逐项核对。未取得超出噪声的可信同条件对照，不宣称 CPU、帧时、分配、闲置唤醒或功耗收益；私有收据入口为忽略目录 `.di-evidence/authorized-runtime/` |
+| 设备性能与 Native | 当前准确候选的同配置对照、独立 ART / JNI 原型及待验边界见[实机成本与 Native 取舍](#实机成本与-native-取舍2026-11-08)。旧自动化退出不可信的通知采样继续排除；不宣称整机提速、零后台开销或 Native 已进入生产 |
 | 原始材料 | ROM / iOS 原件、SQL / Smali、JUnit、APK / mapping、设备日志与 trace 私有留存；通知样板入口为忽略目录 `.di-evidence/verification-ii/`。实验环境按原值恢复并清理本次临时资源 |
 
 逆向来源和仍有效的技术取舍保留在功能专题、[M03 通知合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)、[遗留语义](LEGACY_SEMANTIC_CALIBRATION.md)与[退役依据](A14_FEATURE_RETIREMENTS.md)。过程追溯可查[整理前的固定版本](https://github.com/thetvplus/customiuizer-a14/blob/2a2a21e12401df16fb316756eacd93db476cc232/docs/maintenance/A14_REFINEMENT_ROADMAP.md)，不得以其中被后续修正的方案覆盖当前代码。
