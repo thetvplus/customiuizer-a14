@@ -1,0 +1,62 @@
+name: A14 CodeQL extraction probe
+
+# Bounded experiment: default setup cannot provision this project's JDK 27.
+# Do not replace working default scans until Kotlin extraction is demonstrated.
+on:
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/a14-codeql-probe.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '27'
+          force-download: true
+          verify-signature: true
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+      - run: bash tools/ci_install_android_sdk.sh
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: true
+      - uses: github/codeql-action/init@5895b2c9be147bc7f1c75ce72c5cb577febb1907 # v4
+        with:
+          languages: java-kotlin,python,actions
+          build-mode: manual
+      - name: Compile production sources under extraction
+        run: ./gradlew --no-daemon --no-build-cache --rerun-tasks -Pkotlin.incremental=false :app:compileDebugKotlin :app:compileDebugJavaWithJavac
+      - name: Analyze without replacing default setup
+        uses: github/codeql-action/analyze@5895b2c9be147bc7f1c75ce72c5cb577febb1907 # v4
+        with:
+          output: codeql-results
+          upload: false
+          upload-database: false
+      - name: Keep bounded extraction evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v6.0.0
+        with:
+          name: codeql-extraction-probe
+          path: |
+            codeql-results/*.sarif
+            ${{ runner.temp }}/codeql_databases/java/codeql-database.yml
+            ${{ runner.temp }}/codeql_databases/java/log/*.log
+          retention-days: 7

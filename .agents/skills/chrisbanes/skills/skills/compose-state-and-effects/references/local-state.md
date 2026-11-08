@@ -35,4 +35,4 @@ val merged = remember(parent, overlay) {
 
 ## Related
 
-Focus behavior belongs in [Compose focus navigation](../../compose-focus-navigation/SKILL.md); `rememberUpdatedState` is effect-capture state, not a replacement for ordinary local UI state.
+`rememberUpdatedState` is effect-capture state, not a replacement for ordinary local UI state.

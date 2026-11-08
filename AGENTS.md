@@ -43,5 +43,5 @@
 | ROM 私有接口、签名或 ClassLoader 不确定 | [DexSQL](docs/rom-intelligence/DEXSQL.md#离线-rom-知识库)：复用 Catalog，再 locate / search；来源变化或缓存缺失才 update / prepare。HyperOS 3 / dada 仅 REFERENCE_ONLY，不能提供 A14 ABI / 资源合同 |
 | 环境、生成、Git | [DEVELOPMENT](docs/DEVELOPMENT.md) |
 | 选测、行为 / 设备 / Hook 验证 | [TESTING](docs/TESTING.md#执行分级) → 按需用[自主验证入口](docs/AGENTIC_VERIFICATION.md) |
-| 实施 / 只读审查 / 原生界面 | [项目 Skills](.agents/skills/README.md) |
+| 实施 / 只读审查 / 专项工具 | [项目 Skills](.agents/skills/README.md) |
 | 文档职责、更新与删除 | [DOCS_STYLE](docs/DOCS_STYLE.md)；总目录只维护在 [docs/README](docs/README.md) |

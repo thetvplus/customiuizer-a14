@@ -108,7 +108,6 @@ If the inspected composable exposes no input surface that can change the state,
 name the missing host or parent interaction seam before proposing a key-driven
 test; do not assume a selector or control exists in the supplied UI.
 
-Details—focus graph, `FocusRequester`, restoration, key handlers, and test patterns: [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md).
 
 ## Screenshot tests
 

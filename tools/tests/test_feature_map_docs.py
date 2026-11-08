@@ -186,6 +186,21 @@ class FeatureMapTest(unittest.TestCase):
 
 
 class MarkdownLinksTest(unittest.TestCase):
+    def test_skill_sources_match_installed_third_party_skills(self):
+        folder = ROOT / ".agents/skills"
+        sources = json.loads((folder / "upstream-sources.json").read_text(encoding="utf-8"))
+        paths = [item["installed_path"] for item in sources]
+        self.assertEqual(len(paths), len(set(paths)), "duplicate installed source")
+        names = [item["name"] for item in sources]
+        self.assertEqual(len(names), len(set(names)), "ambiguous skill name")
+        actual = {path.parent.relative_to(folder).as_posix()
+                  for path in folder.rglob("SKILL.md")
+                  if path.parent.parent != folder}
+        self.assertEqual(actual, set(paths), "orphan or missing source record")
+        for item in sources:
+            self.assertRegex(item["revision"], r"^[0-9a-f]{40}$")
+            self.assertTrue((folder / item["installed_path"]).resolve().is_relative_to(folder.resolve()))
+
     def test_links_images_references_unicode_duplicate_anchors_and_code(self):
         with tempfile.TemporaryDirectory() as folder:
             repo = Path(folder)

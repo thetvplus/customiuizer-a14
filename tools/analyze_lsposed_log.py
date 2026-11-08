@@ -180,11 +180,8 @@ NO_FIELD_IN_CLASS_RE = re.compile(r"No field\s+(\w+)\s+in class\s+([\w.$]+)")
 NO_METHOD_IN_CLASS_RE = re.compile(r"No method\s+(\w+)\s+in class\s+([\w.$]+)")
 
 MODULE_STACK_RE = re.compile(
-    r"at\s+(tv\.withaibuild\.customiuizer(?:\.[A-Za-z_$][\w$]*|\$[A-Za-z_$][\w$]*)+)\."
-    r"([A-Za-z_$][\w$]*)\s*\("
-)
-MODULE_STACK_FALLBACK_RE = re.compile(
-    r"at\s+(tv\.withaibuild\.customiuizer(?:\.[A-Za-z_$][\w$]*|\$[A-Za-z_$][\w$]*)+)"
+    r"at\s+(tv\.withaibuild\.customiuizer[.$][A-Za-z_$][\w$]*"
+    r"(?:\.[A-Za-z_$][\w$]*)*)"
 )
 
 HEX_RE = re.compile(r"0x[0-9a-fA-F]+|\b[0-9a-fA-F]{7,}\b")
@@ -330,12 +327,7 @@ def extract_exception_type(text: str) -> str:
 
 def extract_module_stack(text: str) -> str:
     m = MODULE_STACK_RE.search(text)
-    if m:
-        return f"{m.group(1)}.{m.group(2)}"
-    m = MODULE_STACK_FALLBACK_RE.search(text)
-    if m:
-        return m.group(1)
-    return ""
+    return m.group(1) if m else ""
 
 
 def is_anchor(rec: dict) -> bool:

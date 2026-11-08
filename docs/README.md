@@ -32,6 +32,6 @@
 | 进程矩阵生成与 ROM 证据边界 | [进程矩阵与 ROM 证据](rom-intelligence/README.md) |
 | DexSQL 方法、来源与局限 | [DexSQL 取证方法](rom-intelligence/DEXSQL.md) |
 | 通知事务、Heads-up、频道和 Count/Fold | [M03 ROM 合同](rom-intelligence/M03_NOTIFICATION_CONTRACT.md) |
-| 实施、独立审查与原生界面 | [项目 Skills](../.agents/skills/README.md) |
+| 实施、独立审查与专项工具 | [项目 Skills](../.agents/skills/README.md) |
 
 未发布条目在准备发行时归入对应版本，历史发行记录保留最终变化；中文见 [CHANGELOG.md](../CHANGELOG.md)，英文见 [CHANGELOG_EN.md](../CHANGELOG_EN.md)。过程审计、调试版本与逐次试验保留在 Git 历史或仓库外的本地证据中。
