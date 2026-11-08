@@ -71,16 +71,17 @@ internal object IosRecentsDeckHooks {
         fun before(method: Method,block: (BeforeHookCallback)->Unit) = entries.add(method to object:MethodHook() {
             override fun before(callback: BeforeHookCallback)=ModuleHelper.guarded { block(callback) }
         })
-        fun afterAlways(method: Method,block: (AfterHookCallback)->Unit) = entries.add(method to object:MethodHook() {
-            override fun after(callback: AfterHookCallback)=ModuleHelper.guarded { block(callback) }
-        })
+        fun around(method: Method,always: Boolean=false,before: (BeforeHookCallback)->Unit,after: (AfterHookCallback)->Unit) =
+            entries.add(method to paired(before,after,always))
         if(motion!=null) {
-            before(motion.configure) { motion.beforeConfigure(it.getThisObject()!!) }
-            afterAlways(motion.configure) { motion.afterConfigure(it.getThisObject()!!,
-                (it.getArg(0) as? Enum<*>)?.name,it.getThrowable()!=null) }
+            around(motion.configure,always=true,
+                before={ motion.beforeConfigure(it.getThisObject()!!) },
+                after={ motion.afterConfigure(it.getThisObject()!!,
+                    (it.getArg(0) as? Enum<*>)?.name,it.getThrowable()!=null) })
             motion.initialize?.let { initialize ->
-                before(initialize) { motion.beforeInit(it.getThisObject()!!) }
-                afterAlways(initialize) { if(it.getThrowable()!=null) motion.failedInit(it.getThisObject()!!) }
+                around(initialize,always=true,
+                    before={ motion.beforeInit(it.getThisObject()!!) },
+                    after={ if(it.getThrowable()!=null) motion.failedInit(it.getThisObject()!!) })
             }
         }
         api.springReset?.let { reset -> before(reset) {
@@ -90,30 +91,34 @@ internal object IosRecentsDeckHooks {
             val corrected=radius.corrected(active,active.transition,it.getThisObject()!!,it.getArg(1) as RectF,original)
             if(corrected!=original) it.getArgs()[3]=corrected
         } }
-        before(api.layout) { owner(it.getThisObject())?.close() }
-        after(api.layout) { bind(it.getThisObject() as ViewGroup) }
+        around(api.layout,
+            before={ owner(it.getThisObject())?.close() },
+            after={ bind(it.getThisObject() as ViewGroup) })
         after(api.attached) { bind(it.getThisObject() as ViewGroup); owner(it.getThisObject())?.refresh() }
         before(api.detached) { owner(it.getThisObject())?.close() }
-        before(api.configuration) { owner(it.getThisObject())?.close() }
-        after(api.configuration) { bind(it.getThisObject() as ViewGroup) }
+        around(api.configuration,
+            before={ owner(it.getThisObject())?.close() },
+            after={ bind(it.getThisObject() as ViewGroup) })
         before(api.updateRotation) {
             val active=latest.get() ?: return@before
             if(active.stack.rootView===(it.getThisObject() as View).rootView)
                 active.rotationChanged(it.getArg(0) as Int)
         }
-        before(api.update) {
-            (XposedHelpers.getAdditionalInstanceField(it.getThisObject(),DeckOwner.SCOPE) as? DeckOwner.Scope)?.owner?.invalidateLayout()
-        }
-        after(api.update) {
-            (XposedHelpers.getAdditionalInstanceField(it.getThisObject(),DeckOwner.SCOPE) as? DeckOwner.Scope)?.let { scope ->
-                scope.owner.refreshGeometry()
-                scope.owner.tasksChanged()
-            }
-        }
-        before(api.fling) { owner(it.getThisObject())?.let { active ->
-            active.flingVelocity=if(active.allowed) it.getArg(5) as Int else 0
-        } }
-        afterAlways(api.fling) { owner(it.getThisObject())?.flingVelocity=0 }
+        around(api.update,
+            before={
+                (XposedHelpers.getAdditionalInstanceField(it.getThisObject(),DeckOwner.SCOPE) as? DeckOwner.Scope)?.owner?.invalidateLayout()
+            },
+            after={
+                (XposedHelpers.getAdditionalInstanceField(it.getThisObject(),DeckOwner.SCOPE) as? DeckOwner.Scope)?.let { scope ->
+                    scope.owner.refreshGeometry()
+                    scope.owner.tasksChanged()
+                }
+            })
+        around(api.fling,always=true,
+            before={ owner(it.getThisObject())?.let { active ->
+                active.flingVelocity=if(active.allowed) it.getArg(5) as Int else 0
+            } },
+            after={ owner(it.getThisObject())?.flingVelocity=0 })
         before(api.nearest) { owner(it.getThisObject())?.snap(it.getArg(0) as Float)?.let(it::returnAndSkip) }
         before(api.bounds) {
             val scope=XposedHelpers.getAdditionalInstanceField(it.getThisObject(),DeckOwner.SCOPE) as? DeckOwner.Scope
@@ -139,48 +144,50 @@ internal object IosRecentsDeckHooks {
         before(api.updateView) {
             owner(it.getThisObject())?.applyInterpolation(it.getArg(0) as View,it.getArg(1)!!)
         }
-        before(api.apply) {
-            if(DeckFrame.isRetired(it.getThisObject()!!)) { it.returnAndSkip(null); return@before }
-            val frame=frame(it.getThisObject()) ?: return@before
-            frame.owner.card(it.getArg(0) as View,frame) ?: return@before
-            // Native ObjectAnimator Z would keep overwriting the owned order
-            // after applyToTaskView returns. LTRB/timing/business remain native.
-            it.getArgs()[3]=false
-        }
-        afterAlways(api.apply) {
-            if(it.getThrowable()!=null) {
-                card(it.getArg(0))?.owner?.remove(it.getArg(0) as View)
-                return@afterAlways
-            }
-            val frame=frame(it.getThisObject()) ?: return@afterAlways
-            val view=it.getArg(0) as View
-            val card=frame.owner.card(view,frame) ?: return@afterAlways
-            card.depth.apply()
-            card.animation?.cancel(); card.animation=null
-            val timing=it.getArg(2)!!
-            if(api.isImmediate.invoke(timing) as Boolean || card.geometry.scale==frame.scale) {
-                if(!card.geometry.apply(frame.scale)) frame.owner.suspend(true)
-            } else {
-                val target=frame.scale
-                val animation=ValueAnimator.ofFloat(card.geometry.scale,target).apply {
-                    addUpdateListener { value -> ModuleHelper.guarded {
-                        if(card.animation===value && !frame.owner.closed && card.geometry.owned && !card.geometry.apply(value.animatedValue as Float))
-                            frame.owner.suspend(true)
-                    } }
+        around(api.apply,always=true,
+            before=before@ {
+                if(DeckFrame.isRetired(it.getThisObject()!!)) { it.returnAndSkip(null); return@before }
+                val frame=frame(it.getThisObject()) ?: return@before
+                frame.owner.card(it.getArg(0) as View,frame) ?: return@before
+                // Native ObjectAnimator Z would keep overwriting the owned order
+                // after applyToTaskView returns. LTRB/timing/business remain native.
+                it.getArgs()[3]=false
+            },
+            after=afterAlways@ {
+                if(it.getThrowable()!=null) {
+                    card(it.getArg(0))?.owner?.remove(it.getArg(0) as View)
+                    return@afterAlways
                 }
-                card.animation=animation
-                @Suppress("UNCHECKED_CAST")
-                (it.getArg(1) as MutableList<Animator>).add(api.applyTiming.invoke(timing,6,animation) as Animator)
-            }
-        }
+                val frame=frame(it.getThisObject()) ?: return@afterAlways
+                val view=it.getArg(0) as View
+                val card=frame.owner.card(view,frame) ?: return@afterAlways
+                card.depth.apply()
+                card.animation?.cancel(); card.animation=null
+                val timing=it.getArg(2)!!
+                if(api.isImmediate.invoke(timing) as Boolean || card.geometry.scale==frame.scale) {
+                    if(!card.geometry.apply(frame.scale)) frame.owner.suspend(true)
+                } else {
+                    val target=frame.scale
+                    val animation=ValueAnimator.ofFloat(card.geometry.scale,target).apply {
+                        addUpdateListener { value -> ModuleHelper.guarded {
+                            if(card.animation===value && !frame.owner.closed && card.geometry.owned && !card.geometry.apply(value.animatedValue as Float))
+                                frame.owner.suspend(true)
+                        } }
+                    }
+                    card.animation=animation
+                    @Suppress("UNCHECKED_CAST")
+                    (it.getArg(1) as MutableList<Animator>).add(api.applyTiming.invoke(timing,6,animation) as Animator)
+                }
+            })
         before(api.poolReturn) { owner(it.getThisObject())?.remove(it.getArg(0) as View) }
         before(api.poolPickup) { owner(it.getThisObject())?.remove(it.getArg(0) as View) }
         before(api.dragEnd) {
             card(it.getArg(0))?.geometry?.releaseSwipe()
             owner(it.getThisObject())?.resetInterpolation()
         }
-        before(api.interpolate) { owner(it.getThisObject())?.interpolate(it.getArg(0) as Float) }
-        afterAlways(api.interpolate) { owner(it.getThisObject())?.interpolate(null) }
+        around(api.interpolate,always=true,
+            before={ owner(it.getThisObject())?.interpolate(it.getArg(0) as Float) },
+            after={ owner(it.getThisObject())?.interpolate(null) })
         before(api.prepareSnap) { card(it.getArg(0))?.geometry?.releaseSwipe() }
         before(api.snapChild) { card(it.getArg(0))?.geometry?.snapSwipe() }
         after(api.childSnapped) {
@@ -190,11 +197,12 @@ internal object IosRecentsDeckHooks {
         // calculate -> set native pose -> onMoveUpdate is synchronous on Main.
         // Consume the native raw delta without another touch listener or field query.
         val swipeInput=DeckSwipeInput()
-        before(api.swipeTouch) {
-            val helper=it.getThisObject()!!
-            swipeInput.begin(helper,api.verticalSwipe.get(helper))
-        }
-        afterAlways(api.swipeTouch) { swipeInput.end() }
+        around(api.swipeTouch,always=true,
+            before={
+                val helper=it.getThisObject()!!
+                swipeInput.begin(helper,api.verticalSwipe.get(helper))
+            },
+            after={ swipeInput.end() })
         before(api.verticalCalculate) { swipeInput.calculate(it.getThisObject()!!,it.getArg(0) as Float) }
         after(api.swipeMove) {
             val raw=swipeInput.consume(it.getThisObject()!!)
@@ -251,15 +259,16 @@ internal object IosRecentsDeckHooks {
         // The native getter consumes Scope.content and then maps last/current
         // rotation into the application axes. Do not overwrite its mapped result
         // with an unrotated View rectangle after that conversion.
-        before(api.createSpring) {
-            val card=card(it.getArg(1)) ?: return@before
-            if(card.owner.allowed) it.getArgs()[7]=(it.getArg(7) as Float)*card.geometry.scale*card.view.scaleX
-        }
-        after(api.createSpring) {
-            val active=card(it.getArg(1))?.owner ?: return@after
-            motion?.mark(it.getResult(),active,DeckSpringScene.OPEN)
-            active.linkSpring(it.getResult(),active.transition)
-        }
+        around(api.createSpring,
+            before=before@ {
+                val card=card(it.getArg(1)) ?: return@before
+                if(card.owner.allowed) it.getArgs()[7]=(it.getArg(7) as Float)*card.geometry.scale*card.view.scaleX
+            },
+            after=after@ {
+                val active=card(it.getArg(1))?.owner ?: return@after
+                motion?.mark(it.getResult(),active,DeckSpringScene.OPEN)
+                active.linkSpring(it.getResult(),active.transition)
+            })
         before(api.alignOpen) {
             val selected=card(it.getArg(0)) ?: return@before
             if(selected.owner.allowed) {
@@ -277,85 +286,89 @@ internal object IosRecentsDeckHooks {
             }
         }
         api.closing?.let { closing ->
-        before(closing) {
-            quickSwitch(false)
-            val active=latest.get()
-            try { active?.beginTransition(true) }
-            finally {
-                radius?.enter(active,active?.transition ?: 0L)
-                motion?.enter(active,motion.closingScene(active))
-            }
-        }
-        afterAlways(closing) {
-            try { if(it.getThrowable()==null) latest.get()?.let { active ->
-                motion?.mark(it.getResult(),active,motion.closingScene(active))
-                active.linkSpring(it.getResult(),active.transition)
-            } } finally { motion?.leave(); radius?.leave() }
-        }
+        around(closing,always=true,
+            before={
+                quickSwitch(false)
+                val active=latest.get()
+                try { active?.beginTransition(true) }
+                finally {
+                    radius?.enter(active,active?.transition ?: 0L)
+                    motion?.enter(active,motion.closingScene(active))
+                }
+            },
+            after={
+                try { if(it.getThrowable()==null) latest.get()?.let { active ->
+                    motion?.mark(it.getResult(),active,motion.closingScene(active))
+                    active.linkSpring(it.getResult(),active.transition)
+                } } finally { motion?.leave(); radius?.leave() }
+            })
         }
         api.windowElement?.let { window ->
-            before(window.update) {
-                val scope=surfaces.get() ?: ArrayList<DeckOwner?>(2).also(surfaces::set)
-                scope.add(null)
-                val element=it.getThisObject()!!
-                // startInMainThread can synchronously draw before animTo stores
-                // currentRectFParams. That first frame belongs to the new request.
-                val params=XposedHelpers.getAdditionalInstanceField(element,WINDOW_PENDING)
-                    ?: window.current(element) ?: return@before
-                if(window.scene(params)!=true) return@before
-                val selected=card(window.view(params)) ?: return@before
-                val active=selected.owner
-                val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
-                if(!receipt.matches(active)) return@before
-                val progress=it.getArg(3) as Float
-                active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(1) as RectF,progress,
-                    ((.4f-progress)/.4f).coerceIn(0f,1f))
-                scope[scope.lastIndex]=active
-            }
-            afterAlways(window.update) { surfaces.get()?.let { scope -> if(scope.isNotEmpty()) scope.removeAt(scope.lastIndex) } }
+            around(window.update,always=true,
+                before=before@ {
+                    val scope=surfaces.get() ?: ArrayList<DeckOwner?>(2).also(surfaces::set)
+                    scope.add(null)
+                    val element=it.getThisObject()!!
+                    // startInMainThread can synchronously draw before animTo stores
+                    // currentRectFParams. That first frame belongs to the new request.
+                    val params=XposedHelpers.getAdditionalInstanceField(element,WINDOW_PENDING)
+                        ?: window.current(element) ?: return@before
+                    if(window.scene(params)!=true) return@before
+                    val selected=card(window.view(params)) ?: return@before
+                    val active=selected.owner
+                    val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
+                    if(!receipt.matches(active)) return@before
+                    val progress=it.getArg(3) as Float
+                    active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(1) as RectF,progress,
+                        ((.4f-progress)/.4f).coerceIn(0f,1f))
+                    scope[scope.lastIndex]=active
+                },
+                after={ surfaces.get()?.let { scope -> if(scope.isNotEmpty()) scope.removeAt(scope.lastIndex) } })
             api.surfaceOcclusion?.let { surface -> after(surface.calculate) {
                 val active=surfaces.get()?.lastOrNull() ?: return@after
                 val result=it.getResult() ?: return@after
                 val clipped=surface.apply(active,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
                 if(clipped!==result) it.setResult(clipped)
             } }
-            before(window.closing) { quickSwitch(false); latest.get()?.beginTransition(true) }
-            afterAlways(window.closing) {
-                if(it.getThrowable()!=null || it.getResult()==null) latest.get()?.let { active -> active.endTransition(active.transition) }
-            }
-            before(window.animate) {
-                val original=it.getArg(0) ?: return@before
-                XposedHelpers.setAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING,original)
-                val opening=window.scene(original) ?: return@before
-                val target=window.view(original)
-                val selected=(if(target!=null) card(target) else latest.get()?.cardAt(window.index(original))) ?: return@before
-                val active=selected.owner
-                if(!active.allowed || !selected.geometry.owned) return@before
-                val ticket=active.beginTransition()
-                if(ticket==0L) return@before
-                val scale=if(opening) selected.geometry.scale else active.endpointScale(window.index(original)) ?: selected.geometry.scale
-                val copy=window.scaled(original,scale,opening,selected.view.scaleX)
-                XposedHelpers.setAdditionalInstanceField(copy,WINDOW_RECEIPT,WindowReceipt(active,ticket))
-                motion?.mark(window.spring(it.getThisObject()!!),active,
-                    if(opening) DeckSpringScene.OPEN else motion.closingScene(active),ticket)
-                XposedHelpers.setAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING,copy)
-                it.getArgs()[0]=copy
-            }
-            afterAlways(window.animate) {
-                XposedHelpers.removeAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING)
-                val params=it.getArg(0) ?: return@afterAlways
-                // Keep the weak receipt with native currentRectFParams: later
-                // frames must still belong to this owner/ticket/orientation.
-                val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@afterAlways
-                val active=receipt.owner.get() ?: return@afterAlways
-                if(it.getThrowable()==null && receipt.matches(active) && window.accepted(params,it.getThisObject()!!))
-                    active.linkSpring(window.spring(it.getThisObject()!!),receipt.ticket)
-                else {
-                    XposedHelpers.removeAdditionalInstanceField(params,WINDOW_RECEIPT)
-                    window.spring(it.getThisObject()!!)?.let { spring -> DeckMotion.clear(spring,active,receipt.ticket) }
-                    active.endTransition(receipt.ticket)
-                }
-            }
+            around(window.closing,always=true,
+                before={ quickSwitch(false); latest.get()?.beginTransition(true) },
+                after={
+                    if(it.getThrowable()!=null || it.getResult()==null) latest.get()?.let { active -> active.endTransition(active.transition) }
+                })
+            around(window.animate,always=true,
+                before=before@ {
+                    val original=it.getArg(0) ?: return@before
+                    XposedHelpers.setAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING,original)
+                    val opening=window.scene(original) ?: return@before
+                    val target=window.view(original)
+                    val selected=(if(target!=null) card(target) else latest.get()?.cardAt(window.index(original))) ?: return@before
+                    val active=selected.owner
+                    if(!active.allowed || !selected.geometry.owned) return@before
+                    val ticket=active.beginTransition()
+                    if(ticket==0L) return@before
+                    val scale=if(opening) selected.geometry.scale else active.endpointScale(window.index(original)) ?: selected.geometry.scale
+                    val copy=window.scaled(original,scale,opening,selected.view.scaleX)
+                    XposedHelpers.setAdditionalInstanceField(copy,WINDOW_RECEIPT,WindowReceipt(active,ticket))
+                    motion?.mark(window.spring(it.getThisObject()!!),active,
+                        if(opening) DeckSpringScene.OPEN else motion.closingScene(active),ticket)
+                    XposedHelpers.setAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING,copy)
+                    it.getArgs()[0]=copy
+                },
+                after=afterAlways@ {
+                    XposedHelpers.removeAdditionalInstanceField(it.getThisObject(),WINDOW_PENDING)
+                    val params=it.getArg(0) ?: return@afterAlways
+                    // Keep the weak receipt with native currentRectFParams: later
+                    // frames must still belong to this owner/ticket/orientation.
+                    val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@afterAlways
+                    val active=receipt.owner.get() ?: return@afterAlways
+                    if(it.getThrowable()==null && receipt.matches(active) && window.accepted(params,it.getThisObject()!!))
+                        active.linkSpring(window.spring(it.getThisObject()!!),receipt.ticket)
+                    else {
+                        XposedHelpers.removeAdditionalInstanceField(params,WINDOW_RECEIPT)
+                        window.spring(it.getThisObject()!!)?.let { spring -> DeckMotion.clear(spring,active,receipt.ticket) }
+                        active.endTransition(receipt.ticket)
+                    }
+                })
         }
         before(api.appGesturePose) {
             val selected=card(it.getArg(0)) ?: return@before
@@ -374,23 +387,24 @@ internal object IosRecentsDeckHooks {
                 args[7]=false
             }
         }
-        before(api.navToRecents) {
-            quickSwitch(false)
-            val active=latest.get()
-            try { active?.beginTransition(true) }
-            finally {
-                val spring=api.navSpring?.get(it.getThisObject())
-                radius?.enter(active,active?.transition ?: 0L,spring)
-                motion?.enter(active,DeckSpringScene.GESTURE,spring)
-            }
-        }
-        afterAlways(api.navToRecents) {
-            try { if(it.getThrowable()==null && api.navSpring!=null) latest.get()?.let { active ->
-                val spring=api.navSpring.get(it.getThisObject())
-                motion?.mark(spring,active,DeckSpringScene.GESTURE)
-                active.linkSpring(spring,active.transition)
-            } } finally { motion?.leave(); radius?.leave() }
-        }
+        around(api.navToRecents,always=true,
+            before={
+                quickSwitch(false)
+                val active=latest.get()
+                try { active?.beginTransition(true) }
+                finally {
+                    val spring=api.navSpring?.get(it.getThisObject())
+                    radius?.enter(active,active?.transition ?: 0L,spring)
+                    motion?.enter(active,DeckSpringScene.GESTURE,spring)
+                }
+            },
+            after={
+                try { if(it.getThrowable()==null && api.navSpring!=null) latest.get()?.let { active ->
+                    val spring=api.navSpring.get(it.getThisObject())
+                    motion?.mark(spring,active,DeckSpringScene.GESTURE)
+                    active.linkSpring(spring,active.transition)
+                } } finally { motion?.leave(); radius?.leave() }
+            })
         // Native classifies DOWN before assigning mWindowMode and dispatching
         // its state machine. A new gesture retires only the previous ticket.
         after(api.gestureMode) {
@@ -408,6 +422,16 @@ internal object IosRecentsDeckHooks {
         before(api.splitStart) { latest.get()?.suspend(true) }
         after(api.splitEnd) { latest.get()?.suspend(false) }
         return PreparedHookBatch().install(entries)
+    }
+
+    // One native interceptor owns both phases. A locally skipped call never
+    // reached the former inner after hook, so it must not acquire cleanup now.
+    internal fun paired(beforeBlock: (BeforeHookCallback)->Unit,afterBlock: (AfterHookCallback)->Unit,
+        always: Boolean=false): MethodHook = object: MethodHook() {
+        override fun before(callback: BeforeHookCallback)=ModuleHelper.guarded { beforeBlock(callback) }
+        override fun after(callback: AfterHookCallback)=ModuleHelper.guarded {
+            if(!callback.isSkipped && (always || callback.getThrowable()==null)) afterBlock(callback)
+        }
     }
 
     internal fun <T> optionalMotion(resolve: () -> T): T? = try { resolve() }

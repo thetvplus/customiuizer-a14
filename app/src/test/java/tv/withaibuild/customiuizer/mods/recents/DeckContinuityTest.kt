@@ -30,7 +30,8 @@ class DeckContinuityTest {
         val task=Any()
         @JvmField var mFullscreenProgress=0f
         val header=FrameLayout(context)
-        fun getHeaderView()=header
+        var headerReads=0
+        fun getHeaderView(): View { headerReads++; return header }
     }
     class Handler {
         @JvmField val tasks=ArrayList<Any>()
@@ -121,6 +122,7 @@ class DeckContinuityTest {
                 val shown=RectF();neighbor.geometry.localContent(shown,0f)
                 if(selectedIndex==0) assertTrue("The back card unfolds out of the visible window: r=$rotation, rect=$shown",shown.right<=-24.99f)
                 else assertTrue("The front card clears the opening app: r=$rotation, rect=$shown",shown.left>=2424.99f)
+                assertEquals("Window alignment reuses the bound header",0,(neighbor.view as TaskView).headerReads)
             } finally {
                 org.robolectric.util.ReflectionHelpers.callInstanceMethod<Unit>(f.owner,"clearOpening")
                 cards.forEach { it.release() };f.cards.clear()
