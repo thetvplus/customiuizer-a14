@@ -143,23 +143,19 @@ internal class HideStatusBarWhenCaptureFeature(
     override fun installHook() = SystemUIScreenshotHooks.HideStatusBarWhenCaptureHook(lpparam)
 }
 
-internal class NetworkIndicatorWifiFeature(
-    lpparam: PackageReadyParam,
-    mPrefs: PrefMap
-) : BaseSystemUiFeature(
-    lpparam,
-    mPrefs,
-    NetworkIndicatorWifiFeatureId,
-    "Network Indicator WiFi",
-    "system_networkindicator_wifi"
-) {
+internal class NetworkIndicatorWifiFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
+    override val id = NetworkIndicatorWifiFeatureId
+    override val name = "Network Indicator WiFi"
+    override val preferenceKey = "system_networkindicator_wifi"
+    override val target = FeatureTarget.SYSTEM_UI
+    override val phase = InstallPhase.PACKAGE_READY
     companion object {
         @JvmStatic
         fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getBoolean("system_networkindicator_wifi")
     }
 
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = ModsSystem.NetworkIndicatorWifi(lpparam)
+    override fun isEnabled(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
+    override fun install(): FeatureInstallResult = ModsSystem.NetworkIndicatorWifi(lpparam)
 }
 
 internal class DrawerBlurRatioFeature(
@@ -1505,23 +1501,19 @@ internal class HideIconsBattery2Feature(
     override fun installHook() = SystemStatusBarIconHooks.HideIconsBattery2Hook(lpparam)
 }
 
-internal class DisplayWifiStandardFeature(
-    lpparam: PackageReadyParam,
-    mPrefs: PrefMap
-) : BaseSystemUiFeature(
-    lpparam,
-    mPrefs,
-    DisplayWifiStandardFeatureId,
-    "Display WiFi Standard",
-    "system_statusbaricons_wifistandard"
-) {
+internal class DisplayWifiStandardFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
+    override val id = DisplayWifiStandardFeatureId
+    override val name = "Display WiFi Standard"
+    override val preferenceKey = "system_statusbaricons_wifistandard"
+    override val target = FeatureTarget.SYSTEM_UI
+    override val phase = InstallPhase.PACKAGE_READY
     companion object {
         @JvmStatic
         fun evaluateEnabled(prefs: PrefMap): Boolean = prefs.getStringAsInt("system_statusbaricons_wifistandard", 1) > 1
     }
 
-    override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
-    override fun installHook() = SystemStatusBarIconHooks.DisplayWifiStandardHook(lpparam)
+    override fun isEnabled(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
+    override fun install(): FeatureInstallResult = SystemStatusBarIconHooks.DisplayWifiStandardHook(lpparam)
 }
 
 internal class HidePrivacyIndicatorFeature(
@@ -2216,7 +2208,7 @@ object SystemUiFeatures {
             target = FeatureTarget.SYSTEM_UI,
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> NetworkIndicatorWifiFeature.evaluateEnabled(prefs) },
-            factory = { NetworkIndicatorWifiFeature(lpparam, mPrefs) },
+            factory = { NetworkIndicatorWifiFeature(lpparam) },
         ),
         LazyFeatureSpec(
             id = DrawerBlurRatioFeatureId,
@@ -2765,7 +2757,7 @@ object SystemUiFeatures {
             target = FeatureTarget.SYSTEM_UI,
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> DisplayWifiStandardFeature.evaluateEnabled(prefs) },
-            factory = { DisplayWifiStandardFeature(lpparam, mPrefs) },
+            factory = { DisplayWifiStandardFeature(lpparam) },
         ),
         LazyFeatureSpec(
             id = HidePrivacyIndicatorFeatureId,

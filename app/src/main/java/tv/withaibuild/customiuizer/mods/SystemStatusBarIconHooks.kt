@@ -31,7 +31,8 @@ object SystemStatusBarIconHooks {
     private var hideBatteryCharging = false
 
     @Volatile
-    private var wifiStandard = 1
+    internal var wifiStandard = 1
+        private set
 
     private var iconObserverRegistered = false
 
@@ -291,30 +292,9 @@ object SystemStatusBarIconHooks {
     }
 
     @JvmStatic
-    fun DisplayWifiStandardHook(lpparam: PackageReadyParam) {
+    fun DisplayWifiStandardHook(lpparam: PackageReadyParam): tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult {
         installStatusBarIconSnapshot()
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarWifiView", lpparam.classLoader, "applyWifiState", object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any? = null
-                var throwable: Throwable? = null
-                try {
-
-                    val wifiState = chain.getArg(0)
-                    if (wifiState != null) {
-                        val opt = wifiStandard
-                        if (opt == 1) { return XposedHelpers.proceedOrThrow(chain, throwable) }
-                        val wifiStandard = XposedHelpers.getObjectField(wifiState, "wifiStandard") as Int
-                        XposedHelpers.setObjectField(wifiState, "showWifiStandard", opt == 2 && wifiStandard > 0)
-                    }
-
-
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        })
+        return StatusBarWifiHooks.install(lpparam.classLoader,true)
     }
+
 }

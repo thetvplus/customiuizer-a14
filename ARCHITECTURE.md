@@ -43,6 +43,8 @@
 
 before / after 只读单参数统一使用 `getArg(index)`；尚未物化参数时直接读取当前 Chain，已有可变数组时读取该数组，after 因而能看到 before 的参数改写。只有实际改写参数或确实需要整组数组时才调用 `getArgs()`；只读 before 保留无参数数组的 `chain.proceed()`，after 不为读取单项复制整组参数。不改变原方法调用次数、回调顺序或异常恢复。
 
+Wi-Fi 制式显示与活动箭头隐藏由 `StatusBarWifiHooks` 共用一次 `StatusBarWifiView.applyWifiState(WifiIconState)` 拦截：制式标记在原生执行前调整，原生完成更新后才隐藏活动 View。两项 Feature 保留独立开关、ABI 准备与安装结果，复用 PreparedHookBatch；入口按实际宿主 Class 隔离，热路径直接使用冷解析字段，不查分发表、不复制连接状态、不持有 View 或添加更新时钟。Duo 的原生状态观察保持独立，不扩展为公共事件总线。
+
 | 基础设施安装点 | 固定 ID |
 | --- | --- |
 | `SystemUIInitializer.init(boolean)` | `systemui.init` |
