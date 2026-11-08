@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">Медиакарточка iOS (экспериментальная)</string>
+    <string name="system_media_ios_card_summ">Меняет вид медиакарточки, сохраняя системное воспроизведение, перемотку и выбор устройства. При крупном шрифте используется системный макет. Перезапустите системный интерфейс.</string>
+</resources>

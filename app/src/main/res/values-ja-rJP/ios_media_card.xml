@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">iOS メディアカード（試験的）</string>
+    <string name="system_media_ios_card_summ">通知欄のメディアカードの外観を変更し、システムの再生、シーク、出力先操作を維持します。大きな文字ではシステムのレイアウトを使用します。変更後は SystemUI を再起動してください。</string>
+</resources>

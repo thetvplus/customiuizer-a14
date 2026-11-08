@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">iOS media card (experimental)</string>
+    <string name="system_media_ios_card_summ">Restyle the notification shade media card while keeping system playback, seeking and output controls. Large text uses the system layout. Restart SystemUI after changing.</string>
+</resources>

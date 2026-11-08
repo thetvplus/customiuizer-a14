@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">Karta médií iOS (experimentální)</string>
+    <string name="system_media_ios_card_summ">Změní vzhled karty médií a zachová systémové přehrávání, posun a výběr výstupu. Velké písmo používá systémové rozložení. Po změně restartujte SystemUI.</string>
+</resources>

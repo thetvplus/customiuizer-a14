@@ -3405,6 +3405,32 @@
       "enableCondition": "packageName == \"com.mi.android.globallauncher\" && prefs.getBoolean(\"system_recents_ios18_deck\")",
       "allowedProcess": "com.miui.home + selected packages",
       "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 269,
+      "featureIdName": "system_media_ios_card",
+      "name": "iOS Media Card",
+      "preferenceKey": "system_media_ios_card",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.media.IosMediaCardHooks.install(lpparam)",
+      "enableCondition": "{ prefs -> IosMediaCardFeature.evaluateEnabled(prefs) }",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 270,
+      "featureIdName": "system_statusbar_ios_battery",
+      "name": "iOS Status Bar Battery",
+      "preferenceKey": "system_statusbar_ios_battery",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.statusicons.IosBatteryHooks.install(lpparam)",
+      "enableCondition": "{ prefs -> IosStatusBarBatteryFeature.evaluateEnabled(prefs) }",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     }
   ],
   "scope": [

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">Cartão de mídia iOS (experimental)</string>
+    <string name="system_media_ios_card_summ">Altera o visual do cartão e mantém a reprodução, o avanço e a saída do sistema. Texto grande usa o layout do sistema. Reinicie o SystemUI após alterar.</string>
+</resources>

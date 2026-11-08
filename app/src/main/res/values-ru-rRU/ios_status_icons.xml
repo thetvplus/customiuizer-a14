@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">Батарея iOS (экспериментальная)</string>
+    <string name="system_statusbar_ios_battery_summ">Меняет значок батареи, сохраняя системные состояния и проценты. Duo и текущие настройки батареи имеют приоритет. Неподдерживаемые темы и режимы остаются системными. Перезапустите системный интерфейс.</string>
+</resources>

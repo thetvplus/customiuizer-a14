@@ -200,6 +200,15 @@
           },
           "children": [
             {
+              "type": "toggle",
+              "attributes": {
+                "android:key": "pref_key_system_media_ios_card",
+                "android:title": "@string/system_media_ios_card_title",
+                "android:summary": "@string/system_media_ios_card_summ",
+                "android:defaultValue": "false"
+              }
+            },
+            {
               "type": "section",
               "attributes": {
                 "android:title": "@string/system_ios_volume_group_title"

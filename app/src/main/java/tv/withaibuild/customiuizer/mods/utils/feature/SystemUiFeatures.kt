@@ -573,6 +573,34 @@ internal class StatusBarContentGeometryFeature(
     override fun installHook() = StatusBarContentGeometryHooks.hook(lpparam)
 }
 
+internal class IosStatusBarBatteryFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
+    override val id = IosStatusBarBatteryFeatureId
+    override val name = "iOS Status Bar Battery"
+    override val preferenceKey = "system_statusbar_ios_battery"
+    override val target = FeatureTarget.SYSTEM_UI
+    override val phase = InstallPhase.PACKAGE_READY
+    companion object {
+        @JvmStatic fun evaluateEnabled(prefs: PrefMap) = prefs.getBoolean("system_statusbar_ios_battery") &&
+            !prefs.getBoolean("system_statusbar_duo") && !prefs.getBoolean("system_statusbar_batterystyle") &&
+            !prefs.getBoolean("system_statusbaricons_battery1")
+    }
+    override fun isEnabled(prefs: PrefMap) = evaluateEnabled(prefs)
+    override fun install() = tv.withaibuild.customiuizer.mods.statusicons.IosBatteryHooks.install(lpparam)
+}
+
+internal class IosMediaCardFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
+    override val id = IosMediaCardFeatureId
+    override val name = "iOS Media Card"
+    override val preferenceKey = "system_media_ios_card"
+    override val target = FeatureTarget.SYSTEM_UI
+    override val phase = InstallPhase.PACKAGE_READY
+    companion object {
+        @JvmStatic fun evaluateEnabled(prefs: PrefMap) = prefs.getBoolean("system_media_ios_card")
+    }
+    override fun isEnabled(prefs: PrefMap) = evaluateEnabled(prefs)
+    override fun install() = tv.withaibuild.customiuizer.mods.media.IosMediaCardHooks.install(lpparam)
+}
+
 internal class IosHomeIndicatorFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
     override val id = IosHomeIndicatorFeatureId
     override val name = "iOS Home Indicator"
@@ -2407,6 +2435,24 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> IosHomeIndicatorFeature.evaluateEnabled(prefs) },
             factory = { IosHomeIndicatorFeature(lpparam) },
+        ),
+        LazyFeatureSpec(
+            id = IosMediaCardFeatureId,
+            name = "iOS Media Card",
+            preferenceKey = "system_media_ios_card",
+            target = FeatureTarget.SYSTEM_UI,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> IosMediaCardFeature.evaluateEnabled(prefs) },
+            factory = { IosMediaCardFeature(lpparam) },
+        ),
+        LazyFeatureSpec(
+            id = IosStatusBarBatteryFeatureId,
+            name = "iOS Status Bar Battery",
+            preferenceKey = "system_statusbar_ios_battery",
+            target = FeatureTarget.SYSTEM_UI,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> IosStatusBarBatteryFeature.evaluateEnabled(prefs) },
+            factory = { IosStatusBarBatteryFeature(lpparam) },
         ),
         LazyFeatureSpec(
             id = HideNavBarFeatureId,

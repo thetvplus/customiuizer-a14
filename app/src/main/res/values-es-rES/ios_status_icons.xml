@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">Batería de iOS (experimental)</string>
+    <string name="system_statusbar_ios_battery_summ">Cambia el icono conservando los estados y porcentajes del sistema. Duo y los ajustes actuales tienen prioridad. Los temas y modos no compatibles conservan sus iconos. Reinicia SystemUI tras cambiar.</string>
+</resources>

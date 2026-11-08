@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">iOS 電池（實驗性）</string>
+    <string name="system_statusbar_ios_battery_summ">調整原生電池圖示，保留系統狀態與百分比規則。Duo 與既有電池自訂優先，不支援的主題和模式保留系統圖示。變更後請重新啟動系統介面。</string>
+</resources>
