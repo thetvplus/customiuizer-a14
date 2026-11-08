@@ -20,6 +20,8 @@ class ModuleStackTest(unittest.TestCase):
                 "tv.withaibuild.customiuizer.mods.Hook",
             "at tv.withaibuild.customiuizer$Hook.run(Hook.java)":
                 "tv.withaibuild.customiuizer$Hook.run",
+            "at tv.withaibuild.customiuizer.Incomplete; at tv.withaibuild.customiuizer.Real.run(Real.kt)":
+                "tv.withaibuild.customiuizer.Real.run",
             "at tv.withaibuild.customiuizerOther.Hook.run(Hook.kt)": "",
             "at com.android.systemui.Hook.run(Hook.java)": "",
             "unrelated log message": "",
