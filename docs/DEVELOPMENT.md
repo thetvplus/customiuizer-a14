@@ -36,6 +36,7 @@ GitHub CLI / API 仅作为已有 Git 网络故障证据下的备用路径。先�
 - Python 3.12+：`python -m pip install -r tools/requirements.txt`。Windows 可设置 `$env:PYTHONUTF8='1'` 统一子进程编码。
 - Android SDK 安装项以 [ci_install_android_sdk.sh](../tools/ci_install_android_sdk.sh) 为准；本机 `local.properties` 的 `sdk.dir` 指向 SDK 根目录，不入库。compileSdk 不改变 minSdk / targetSdk 34 的运行边界。
 - 使用仓库 wrapper；版本以 [libs.versions.toml](../gradle/libs.versions.toml)、[根构建](../build.gradle.kts)、[app 构建](../app/build.gradle.kts) 和 [wrapper 配置](../gradle/wrapper/gradle-wrapper.properties) 为准。
+- PowerShell 按目录与 `rg -g '*.kt'` 等过滤器检索，不向工具传入未展开的路径通配符。经 Python / 受管执行器启动 Gradle 时使用绝对 `gradlew.bat` 路径（`verify.py` 已处理），避免把 POSIX 的 `./gradlew` 传入 Windows 子进程。
 
 默认使用官方仓库。`-PuseChinaMirrors=true` 选择已有镜像；libxposed 始终独占 Maven Central。保留 [verification-metadata.xml](../gradle/verification-metadata.xml) 中的产物校验，其范围不覆盖所有依赖。Gradle 宿主 Kotlin 与 APK 的 BOM / stdlib 属于不同 classpath，按实际解析图审查，不强行统一。
 

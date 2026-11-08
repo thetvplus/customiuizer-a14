@@ -9,43 +9,50 @@ from tools import brutal_test_runner, ci_contract_scan, ci_scope
 
 
 class CIScopeTest(unittest.TestCase):
-    def test_ordinary_code_and_docs_need_only_fast(self):
+    def test_ordinary_code_and_docs_need_no_additional_tool_gates(self):
         for paths in (["app/src/main/java/example/Feature.kt"], ["README.md"], []):
-            self.assertEqual({"full": False, "tools": False},
-                             ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, paths))
+            self.assertEqual({"tools": False},
+                             ci_scope.select_scope("pull_request", "refs/pull/1/merge", paths))
 
-    def test_build_and_dependency_changes_need_full(self):
+    def test_build_and_dependency_changes_keep_unconditional_ci_gates(self):
         for path in ("app/build.gradle.kts", "app/proguard-rules.pro", "gradle/libs.versions.toml",
                      "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "app/lib/framework.jar"):
             with self.subTest(path=path):
-                self.assertEqual({"full": True, "tools": False},
-                                 ci_scope.select_scope("push", "refs/heads/main", {}, [path]))
+                self.assertEqual({"tools": False},
+                                 ci_scope.select_scope("push", "refs/heads/main", [path]))
 
     def test_tool_changes_release_and_manual_runs_include_tool_gates(self):
         for path in ("tools/verify.py", ".github/workflows/a14-ci.yml", ".github/ISSUE_TEMPLATE/config.yml"):
-            self.assertEqual({"full": True, "tools": True},
-                             ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path]))
+            self.assertEqual({"tools": True},
+                             ci_scope.select_scope("pull_request", "refs/pull/1/merge", [path]))
         for event, ref in (("workflow_dispatch", "refs/heads/main"),
                            ("push", "refs/tags/r14.22.5")):
-            self.assertEqual({"full": True, "tools": True}, ci_scope.select_scope(event, ref, {}, []))
+            self.assertEqual({"tools": True}, ci_scope.select_scope(event, ref, []))
 
     def test_catalog_and_matrix_changes_exercise_tool_gates(self):
         for path in ("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/SystemUiFeatures.kt",
                      "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/FeatureIds.kt",
                      "docs/rom-intelligence/A14_PROCESS_MATRIX.csv"):
             with self.subTest(path=path):
-                self.assertTrue(ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path])["tools"])
+                self.assertTrue(ci_scope.select_scope("pull_request", "refs/pull/1/merge", [path])["tools"])
 
     def test_auxiliary_contract_and_schema_changes_include_tool_gates(self):
         for path in ("rom-contracts/hyperos1-a14-core.json", "rom-contracts/schema.json"):
             with self.subTest(path=path):
-                self.assertEqual({"tools": True, "full": True},
-                                 ci_scope.select_scope("pull_request", "refs/pull/1/merge", {}, [path]))
+                self.assertEqual({"tools": True},
+                                 ci_scope.select_scope("pull_request", "refs/pull/1/merge", [path]))
 
-    def test_explicit_full_request_does_not_repeat_tool_tests(self):
-        event = {"head_commit": {"message": "fix: harden feature [full-ci]"}}
-        self.assertEqual({"full": True, "tools": False},
-                         ci_scope.select_scope("push", "refs/heads/main", event, []))
+    def test_cli_publishes_only_the_consumed_tool_selector(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            event = root / "event.json"
+            output = root / "output"
+            event.write_text("{}", encoding="utf-8")
+            with patch.dict("os.environ", {"GITHUB_EVENT_NAME": "workflow_dispatch",
+                    "GITHUB_REF": "refs/heads/main", "GITHUB_EVENT_PATH": str(event), "GITHUB_OUTPUT": str(output)}), \
+                    patch.object(ci_scope, "changed_paths", return_value=[]):
+                self.assertEqual(0, ci_scope.main())
+            self.assertEqual("tools=true\n", output.read_text(encoding="utf-8"))
 
     def test_git_diff_covers_all_commits_and_filenames_with_spaces(self):
         with tempfile.TemporaryDirectory() as td:
@@ -69,7 +76,7 @@ class CIScopeTest(unittest.TestCase):
             head = commit("docs/a file.md")
             paths = ci_scope.changed_paths("push", {"before": base, "after": head}, root)
             self.assertEqual(["docs/a file.md", "gradle/libs.versions.toml"], paths)
-            self.assertTrue(ci_scope.select_scope("push", "refs/heads/main", {}, paths)["full"])
+            self.assertEqual({"tools": False}, ci_scope.select_scope("push", "refs/heads/main", paths))
             pr = {"pull_request": {"base": {"sha": base}, "head": {"sha": head}}}
             self.assertEqual(paths, ci_scope.changed_paths("pull_request", pr, root))
             initial = ci_scope.changed_paths("push", {"before": "0" * 40, "after": head}, root)
@@ -101,8 +108,8 @@ class CIScopeTest(unittest.TestCase):
             paths = ci_scope.changed_paths("push", {"before": base, "after": head}, root)
             self.assertIn("tools/gate.py", paths)
             self.assertIn("docs/gate.py", paths)
-            self.assertEqual({"tools": True, "full": True},
-                             ci_scope.select_scope("push", "refs/heads/main", {}, paths))
+            self.assertEqual({"tools": True},
+                             ci_scope.select_scope("push", "refs/heads/main", paths))
 
     def test_ci_checks_and_builds_only_once_in_one_job(self):
         path = Path(__file__).resolve().parents[2] / ".github/workflows/a14-ci.yml"
@@ -114,6 +121,8 @@ class CIScopeTest(unittest.TestCase):
         self.assertEqual(1, commands.count(":app:assembleDevelop"))
         self.assertEqual(1, commands.count(":app:lintVitalDevelop"))
         self.assertNotIn(":app:assembleDebug", commands)
+        full = next(step for step in fast["steps"] if "tools/verify.py full" in step.get("run", ""))
+        self.assertNotIn("if", full, "Full JVM/lint remains unconditional for every CI candidate")
         build = next(step for step in fast["steps"] if ":app:assembleDevelop" in step.get("run", ""))
         self.assertNotIn("if", build)
         checks = next(step for step in fast["steps"] if " hermeticity" in step.get("run", ""))

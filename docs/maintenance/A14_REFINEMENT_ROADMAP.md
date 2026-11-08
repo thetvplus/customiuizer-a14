@@ -136,3 +136,10 @@ Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析�
 | 原始材料 | ROM / iOS 原件、SQL / Smali、JUnit、APK / mapping、设备日志与 trace 私有留存；通知样板入口为忽略目录 `.di-evidence/verification-ii/`。实验环境按原值恢复并清理本次临时资源 |
 
 逆向来源和仍有效的技术取舍保留在功能专题、[M03 通知合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)、[遗留语义](LEGACY_SEMANTIC_CALIBRATION.md)与[退役依据](A14_FEATURE_RETIREMENTS.md)。过程追溯可查[整理前的固定版本](https://github.com/thetvplus/customiuizer-a14/blob/2a2a21e12401df16fb316756eacd93db476cc232/docs/maintenance/A14_REFINEMENT_ROADMAP.md)，不得以其中被后续修正的方案覆盖当前代码。
+
+## Harness 执行成本（2026-11-09）
+
+- CI 始终执行 Full、Develop/R8 与原正式门禁；移除无人消费的 `full` 输出及提交消息分支，只保留实际控制附加工具检查的 `tools`。本轮不因缩减门禁宣称提速。
+- `agent_verify` 对无 Python 变更的 catalog 输入直接保留全工具回退，免建导入图；单次计划内同一测试集合只查找一次，不留下跨任务缓存。三个代表计划的命令、场景、理由和待验项逐项相同。
+- 本机五次暖缓存对照：catalog 计划 103 次 AST 解析降为 0，中位约 426 ms 降为 0.01 ms；五个 Deck 文件的测试查找由 9 次降为 2。叶子 Python 工具仍执行 103 次必要解析，耗时差异不作提速结论；不推断整个开发任务或 Android 运行性能。
+- 已核对 CLI、受信配置与实际 MCP；保留模型/推理选择、安全设置、Shell Snapshot 和现有工具，未为缺乏实测收益的开关增加项目配置。Windows 的过滤器与 wrapper 约定合并到既有环境入口。

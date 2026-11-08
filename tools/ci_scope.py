@@ -8,22 +8,16 @@ import subprocess
 from pathlib import Path
 
 
-def select_scope(event_name: str, ref: str, event: dict, paths: list[str]) -> dict[str, bool]:
+def select_scope(event_name: str, ref: str, paths: list[str]) -> dict[str, bool]:
     release_or_manual = event_name == "workflow_dispatch" or ref.startswith("refs/tags/r14.")
     tools_changed = any(path.startswith((
         "tools/", ".github/", "rom-contracts/",
         "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature/",
         "docs/rom-intelligence/A14_PROCESS_",
     )) for path in paths)
-    build_changed = any(
-        path.startswith(("gradle/", "app/lib/", "gradlew")) or path in {
-            "app/build.gradle.kts", "app/proguard-rules.pro", "build.gradle.kts",
-            "settings.gradle.kts", "gradle.properties", "local.properties",
-        } for path in paths
-    )
-    message = (event.get("head_commit") or {}).get("message", "")
-    return {"tools": release_or_manual or tools_changed,
-            "full": release_or_manual or tools_changed or build_changed or "[full-ci]" in message}
+    # Full JVM/lint and Develop/R8 always run in a14-ci.yml. Only the additional
+    # tool/mutation gates have a scope consumer; do not publish a dead selector.
+    return {"tools": release_or_manual or tools_changed}
 
 
 def changed_paths(event_name: str, event: dict, cwd: Path | None = None) -> list[str]:
@@ -45,7 +39,7 @@ def changed_paths(event_name: str, event: dict, cwd: Path | None = None) -> list
 def main() -> int:
     event_name = os.environ["GITHUB_EVENT_NAME"]
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
-    scope = select_scope(event_name, os.environ["GITHUB_REF"], event, changed_paths(event_name, event))
+    scope = select_scope(event_name, os.environ["GITHUB_REF"], changed_paths(event_name, event))
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
         for key, value in scope.items():
             output.write(f"{key}={str(value).lower()}\n")
