@@ -8,6 +8,7 @@ import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -325,15 +326,25 @@ class ControlCenterPluginRuntimeTest {
     @Test
     fun installHooksSuccessButInstallPluginHooksFailsDoesNotRepeatInstall() {
         val loader = testLoader
+        val failure = IllegalStateException("unsupported volume styling member")
+        var prepared: Any? = null
+        engine.installPluginHooksAction = { prepared = engine.runtimeHolder().activeRuntime() }
+        engine.installPluginHooksFailure = failure
 
-        engine.installPluginHooksFailure = RuntimeException("ui hooks failed")
+        val result = engine.bind(loader)
 
-        engine.bind(loader)
-
+        assertTrue(result is ControlCenterBindResult.Failed)
+        assertSame(failure, (result as ControlCenterBindResult.Failed).reason)
+        assertNotNull(prepared)
+        assertSame(prepared, engine.runtimeHolder().activeRuntime())
+        val lease = requireNotNull(engine.activeLease())
+        assertTrue(lease.active)
+        assertTrue(engine.bind(loader) is ControlCenterBindResult.NoRetry)
+        assertSame(lease, engine.activeLease())
+        assertSame(prepared, engine.runtimeHolder().activeRuntime())
         assertEquals(1, engine.installGestureCalls)
         assertEquals(1, engine.installPluginCalls)
         assertEquals(InstallState.FAILED_PARTIAL, engine.installState())
-        assertNull(engine.runtimeHolder().activeRuntime())
     }
 
     @Test

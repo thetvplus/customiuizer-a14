@@ -114,8 +114,8 @@ open class ControlCenterPluginRuntimeEngine(
      * - Reentrant installation and retired loaders never add another set of UI hooks.
      * - A new loader ends the previous lease, clears the previous gesture runtime and tokens,
      *   then runs a fresh install transaction.
-     * - The active loader is only published after the gesture hooks and the control-center UI
-     *   hooks both succeed; fatal failures during install do not leave a half-state.
+     * - A non-fatal UI install failure remains FAILED_PARTIAL without cancelling ready gestures.
+     *   Fatal failures and failed gesture preparation do not leave a live gesture runtime.
      */
     @Synchronized
     fun bind(loader: ClassLoader): ControlCenterBindResult {
@@ -151,7 +151,16 @@ open class ControlCenterPluginRuntimeEngine(
 
             try {
                 _runtimeHolder.bind(loader)
-                if (lease.active) onInstallPluginHooks(loader)
+                if (lease.active) {
+                    try {
+                        onInstallPluginHooks(loader)
+                    } catch (e: Throwable) {
+                        // Styling is independent of the prepared native gesture owner.
+                        // Fatal errors still reach the outer cleanup boundary.
+                        FatalErrors.unwrapAndRethrowIfFatal(e)
+                        lastFailure = e
+                    }
+                }
                 if (!lease.active) {
                     // A reentrant teardown may run during either installer. The holder can
                     // finish publishing after clear(), so release it again before returning.
@@ -159,9 +168,9 @@ open class ControlCenterPluginRuntimeEngine(
                     installState = InstallState.IDLE
                     ControlCenterBindResult.NoRetry
                 } else {
-                    installState = InstallState.INSTALLED
+                    installState = if (lastFailure == null) InstallState.INSTALLED else InstallState.FAILED_PARTIAL
                     activeLoader = loader
-                    ControlCenterBindResult.Installed
+                    lastFailure?.let { ControlCenterBindResult.Failed(it) } ?: ControlCenterBindResult.Installed
                 }
             } catch (e: Throwable) {
                 clearInternal()
