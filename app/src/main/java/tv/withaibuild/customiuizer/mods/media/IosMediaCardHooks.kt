@@ -2,6 +2,7 @@ package tv.withaibuild.customiuizer.mods.media
 
 import android.content.Context
 import android.graphics.Outline
+import android.graphics.Path
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
@@ -18,6 +19,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import tv.withaibuild.customiuizer.utils.G4RoundRectGeometry
 
 /** Presentation on the native PLAYER. No session, notification, input or animation owner. */
 internal object IosMediaCardHooks {
@@ -179,12 +181,21 @@ internal object IosMediaCardHooks {
         private val artOutline = art.outlineProvider
         private val artClipped = art.clipToOutline
         private var radius = 24f * root.resources.displayMetrics.density
-        private val rounded = object : ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, radius)
+        private fun corners(fraction: Float) = object : ViewOutlineProvider() {
+            private val path = Path()
+            private var width = -1; private var height = -1; private var appliedRadius = Float.NaN
+            override fun getOutline(view: View, outline: Outline) {
+                if (view.width <= 0 || view.height <= 0) { outline.setEmpty(); return }
+                if (width != view.width || height != view.height || appliedRadius != radius) {
+                    path.rewind()
+                    G4RoundRectGeometry.build(path, view.width.toFloat(), view.height.toFloat(), radius * fraction)
+                    width = view.width; height = view.height; appliedRadius = radius
+                }
+                outline.setPath(path)
+            }
         }
-        private val artwork = object : ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, radius / 2f)
-        }
+        private val rounded = corners(1f)
+        private val artwork = corners(.5f)
         var dirty = true
         fun supported() = root.get()?.resources?.configuration?.fontScale?.let { it <= 1.3f } == true
         fun matches(view: ViewGroup) = root.get() === view && view.findViewById<View>(ids.getValue("album_art")) === art

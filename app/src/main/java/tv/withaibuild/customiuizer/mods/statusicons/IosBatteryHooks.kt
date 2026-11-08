@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods.statusicons
 import android.animation.ArgbEvaluator
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.view.View
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
@@ -11,6 +12,7 @@ import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import tv.withaibuild.customiuizer.utils.G4RoundRectGeometry
 
 /** Only the native battery ImageView's ink. Native slots, percent text, state,
  * accessibility, hiding and invalidation stay owned by SystemUI. */
@@ -90,11 +92,14 @@ internal object IosBatteryHooks {
     }
 }
 
-/** No View/Context references, timers or frame clock. Paints are reused. */
+/** No View/Context references, timers or frame clock. Unit ink is prepared once. */
 internal class IosBatteryInk {
     private val body = Paint(Paint.ANTI_ALIAS_FLAG)
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f }
+    private val frame = Path().apply { G4RoundRectGeometry.build(this, 19.3f, 10.5f, 2.8f); offset(.5f, .5f) }
+    private val terminal = Path().apply { G4RoundRectGeometry.build(this, 1.5f, 3.9f, .7f); offset(20.5f, 3.8f) }
+    private val content = Path().apply { G4RoundRectGeometry.build(this, 16.7f, 7.9f, 1.5f); offset(1.8f, 1.8f) }
     var active = false
     private var level = 0
     fun update(level: Int, color: Int, lowColor: Int, saverColor: Int, chargingColor: Int,
@@ -121,13 +126,13 @@ internal class IosBatteryInk {
             canvas.translate(view.paddingLeft + (width - 22f * scale) * .5f,
                 view.paddingTop + (height - 11.5f * scale) * .5f)
             canvas.scale(scale, scale)
-            canvas.drawRoundRect(.5f, .5f, 19.8f, 11f, 2.8f, 2.8f, body)
-            canvas.drawRoundRect(.5f, .5f, 19.8f, 11f, 2.8f, 2.8f, outline)
-            canvas.drawRoundRect(20.5f, 3.8f, 22f, 7.7f, .7f, .7f, body)
+            canvas.drawPath(frame, body)
+            canvas.drawPath(frame, outline)
+            canvas.drawPath(terminal, body)
             val clip = canvas.save()
             try {
                 canvas.clipRect(1.8f, 1.8f, 1.8f + 16.7f * level / 100f, 9.7f)
-                canvas.drawRoundRect(1.8f, 1.8f, 18.5f, 9.7f, 1.5f, 1.5f, fill)
+                canvas.drawPath(content, fill)
             } finally { canvas.restoreToCount(clip) }
         } finally { canvas.restoreToCount(saved) }
         return true
