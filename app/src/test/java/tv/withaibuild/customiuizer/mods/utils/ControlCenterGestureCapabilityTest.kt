@@ -40,6 +40,15 @@ class ControlCenterGestureCapabilityTest {
         public override fun onAttachedToWindow() = Unit
         fun destroy() = Unit
     }
+    class DependencyOwner(context: Context, failure: Throwable) : View(context) {
+        @JvmField val controlCenterController = Controller(failure)
+    }
+    class Controller(failure: Throwable) {
+        @JvmField val brightnessController = Provider(failure)
+    }
+    class Provider(private val failure: Throwable) {
+        fun get(): Any = throw failure
+    }
     private val engine = ControlCenterPluginRuntimeEngine()
     private val arbiter = PhysicalGestureArbiter()
     private val machine = GestureMachine(
@@ -55,6 +64,21 @@ class ControlCenterGestureCapabilityTest {
     )
     private fun entries(type: Class<*> = Owner::class.java, lease: RuntimeLease = RuntimeLease()) =
         engine.prepareControlCenterGestureHooks(type, machine, lease)
+
+    @Test fun nativeDependencyFatalMustNotBecomeAnUnavailableCapability() {
+        val resolver = ControlCenterGestureDependenciesResolver()
+        for (fatal in listOf(OutOfMemoryError("provider"), InternalError("provider"), ThreadDeath())) {
+            val view = DependencyOwner(RuntimeEnvironment.getApplication(), XposedHelpers.InvocationTargetError(fatal))
+            assertSame(fatal, assertThrows(fatal.javaClass) { resolver.prepare(1, "native", view) })
+        }
+    }
+
+    @Test fun ordinaryNativeDependencyFailureDoesNotPublishAHalfPreparedOwner() {
+        val resolver = ControlCenterGestureDependenciesResolver()
+        val view = DependencyOwner(RuntimeEnvironment.getApplication(), IllegalStateException("not initialized"))
+        assertTrue(resolver.prepare(1, "native", view) is GestureDependenciesResult.FailedTransient)
+        assertEquals(GestureDependenciesResult.NotReady, resolver.prepare(2, "native", Any()))
+    }
 
     @Test fun rejectsIncompleteOrWrongAbiBeforeAnyInstallation() {
         for (type in listOf(Any::class.java, WrongReturn::class.java, MissingDestroy::class.java, MissingState::class.java)) {
