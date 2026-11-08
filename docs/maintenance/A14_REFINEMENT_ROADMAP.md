@@ -152,7 +152,8 @@ Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析�
 ## 仓库安全待办
 
 - 独立依赖图的仓库白名单已补齐 `dependency-submission`。[main 实际运行](https://github.com/thetvplus/customiuizer-a14/actions/runs/42529732427) 的生成、隔离提交均成功，快照绑定 `8eb454c2`，包含 351 项解析依赖；没有构建 APK 或触发签名。依赖变化后按需刷新，不加入重复 CI。
-- 2026-11-08 仍记录 Gradle 9.8.2 内置 Guava 33.4.6-jre 的 CVE-2026-102554 宿主风险；项目控制的依赖已修复，生产 APK 不含完整 Guava。升级时重新核对公告与可用版本，不改发行包内部文件或固定摘要。
+- 新依赖图显露 6 条传递依赖告警；定向解析确认旧版 Guava、Bouncy Castle、Commons Lang 和 HttpClient 来自 AGP 独立的 `androidLintTool`，未继承根 buildscript 约束。候选已补齐现有安全版本约束，实际 Lint 通过，APK / JVM 测试运行时依赖清单与修复前逐字一致。main 告警保留开放，合入后须刷新依赖图核实；Dependabot 对已约束的根依赖返回无需更新，不能替代 Lint 配置验证。
+- Gradle 9.8.2 内置 Guava 33.4.6-jre 的 CVE-2026-102554 宿主风险仍待上游发行版处理，区别于项目可约束的依赖。生产 APK 不含完整 Guava；不改 Gradle 发行包内部文件或固定摘要。
 - CodeQL Default setup 当前保留 Python / Actions，JS 已停用；两份 JS 随无消费者的设计工具删除。候选 `c156bc45` 的两项真实扫描无告警；日志解析器的指数回溯有独立超时复现与修复回归，另三项旧告警属于已移除、仅支持 npm/PyPI/Go 的辅助工具，不手工关闭 main 的历史告警。Java/Kotlin 的原 autobuild 因缺 JDK 27 失败。[手动构建试验](https://github.com/thetvplus/customiuizer-a14/actions/runs/42510958785) 已用 JDK 27.0.1 / Kotlin 2.4.21 / CodeQL 2.27.4 实际提取全部 429 个 Kotlin、5 个 Java 主源码及 3 个生成文件，Kotlin/Java 代码指标为 87,476/1,340 行，分析无告警；不据此扩大到未测工具版本或 Hook 行为。保留按需入口与提取完整性门禁，不新增定时扫描或重复 Python/Actions；SARIF 暂不上传 Security，持续 Java/Kotlin 告警接入仍待主线 Advanced 迁移。
 
 ## 验证与证据
