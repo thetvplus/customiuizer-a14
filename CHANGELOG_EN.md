@@ -6,8 +6,21 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## Unreleased
 
+### User changes
+
 - Add an optional iOS 12 central volume HUD while retaining native volume, routing and expanded controls. Upgrades keep the side style and the saved narrow-bar choice.
-- Add default-off iOS 10 five-dot cellular signals using native network state, hiding and no-service fallback, with Duo taking priority. Real-SIM, dual-SIM and roaming scenarios remain pending.
+- Add default-off iOS 10 five-dot cellular signals using native network state, hiding and no-service fallback, with Duo taking priority.
+- Add a default-off iOS media presentation using the notification shade's native media sessions, actions and progress controls. Its display lifecycle stays independent of island media. Control Center media is not replaced.
+- Add a default-off iOS battery presentation retaining native charging and power-saving states. Duo, battery hiding and existing battery styles take priority.
+- Reorganize settings within pages and update search routes while preserving the four home entries, saved keys, defaults and backup format.
+- Fix shared-hook and plugin-loading isolation and fallback after partial initialization. Improve cancellation and resource release for monitoring, key combinations and Recents menus.
+- Refine DECK interception and window restoration while retaining native calls, skips and exceptions. Identical status-icon updates avoid redundant invalidation requests.
+
+### Engineering notes
+
+- Trim preparation for disabled features, verification routing and Agent Skills while retaining build, compatibility and release gates.
+- Add independent behavior regressions, safe imported-log parsing and CodeQL source-extraction checks. Java/Kotlin analysis is available on demand; continuous Security alerts await a main-line setup transition.
+- New presentations are partial adaptations. Real-SIM/dual-SIM/roaming, sustained landscape DECK and first composition, intermittent Dock flashes and long-term resource costs retain their acceptance limits. No unmeasured frame-rate, power or multi-ROM benefit is claimed.
 
 ## r14.27.3 — 2026-11-08
 
