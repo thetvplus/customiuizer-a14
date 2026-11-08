@@ -6,7 +6,27 @@
 
 - 指定的 16 Pro 灵动岛、Duo 三合一、SE3 全覆盖 Dock、7 Plus iOS12 中央音量框及 iOS10 五圆点已完成静态核心提取与当前源码对照。[接入参考](../features/apple-ui-core-reference.md)维护版本、链路、数据/窗口所有权和互斥约束，原件函数与小资源私有留存。
 - Duo 已补实际 SwiftUI body / 布局 witness 和同构建原始资源，SE3 已补设备枚举/尺寸匹配/跳转表，iOS12 四份旧编码图形已解码；旧辅助 C 的截断保留原标记。源码、原字节与资源校验通过，不外推原机或 A14 像素/性能验收。
-- 本次未新增生产模式或 APK。iOS10 五圆点、iOS12 中央 HUD 的设置/运行时实现继续按接入合同另行推进；现有灵动岛、Duo 与 Dock 的原机字体/动态效果、实时显示上下文及 Dock 偶发闪现保留原待验边界。
+- 中央 HUD 已接入既有音量开关下的样式选择，缺省仍为侧条；五圆点为独立、默认关闭的蜂窝选项，Duo 优先。首页四入口、旧键/默认值与备份格式不变。下表区分实际消费者和研究边界，不把源文件、静态 ABI 或 Host 通过当作设备通过。
+
+### 11 条研究链与消费者差异（2026-11-09）
+
+| 研究链 | A14 实际消费者与实现状态 | 尚未迁移或验证的边界 |
+| --- | --- | --- |
+| Recents / 22G100 | 部分实现：`IosRecentsDeckHooks`、Deck 几何/运动/窗口交接，原生任务与 Surface 生命周期 | 完整 UIKit 转场、横屏持续 HOLD 与首个合成帧仍待对应设备验收 |
+| Home Indicator / 22G100 | 部分实现：`HomeIndicatorHooks` 消费几何、颜色和普通手势栏原生动画 | 独立教程/控制中心宿主及完整显隐/唤回/窗口归属协议保留原生 |
+| Media Player / 22G100 | 部分实现：`IosMediaCardHooks` / `MediaCardLayout` 消费通知栏 PLAYER、两套 ConstraintSet 和 bind/refresh | 控制中心是独立插件 tile/DetailAdapter；有 Android ABI，缺对应 Apple CC 主链，不能直接套用通知卡重排；完整材质/全部方向待验 |
+| Volume HUD / 22G100 | 部分实现：`IosVolumeStyle` 侧边五态、原生音量/输入/退出与有限弹性时钟 | 逻辑点、材质、求解器和交互映射不等于 UIKit；全路由/安全音量/无障碍待实机覆盖 |
+| Status Icons / 22G100 | 部分实现：`IosBatteryHooks` 单一电池绘制消费者 | 普通 Wi-Fi、蜂窝和必要 symbol 缺完整可核验字形，保留原生；不借 Duo 27.2 资源冒充 iOS18 普通图标 |
+| Dock / 22G100 | 部分实现：`LauncherDockBackground`、几何和单一原生材质 | 系统合成和跨桌面动态效果仍有 Android 映射；偶发闪现无根因，不叠加修补 |
+| Island18 / 22G100 | 部分实现：`DynamicIslandActivities`、`IslandMotion`、`IslandMotionCoordinator` 的来源仲裁、参数与退场 | 新补 register/context/mitosis 证据用于核对所有权；完整元素、六阶段协议和积分器未迁移，不以固定时长冒充 milestone |
+| Duo27 / 24B91020 | 部分实现：`DuoAbi`、`DuoStatusBarHooks/View` 与独立 Path；保留真实 subId/颜色/宿主 | 最新 body/layout witness 与资源用于校准；SwiftUI 字体轴、最终布局/插值未完全迁移；四条蜂窝映射不用于五圆点 |
+| SE3Dock18 / 22G100 | 已有实现：`DockFullWidthContainer` 从 HotSeats 顶部延伸到根底部，保留图标与输入 | 96 点及 4 点仅属于归档 screenType 分支，不硬改成 96 dp；实时缩放/材质待验 |
+| Volume12 / 16G102 | 新增中央 HUD：同一插件 dialog/SeekBar/监听，155:414 短边比例、9 点圆角映射、16 段独立绘制 | 原生流/路由图标和退出计时；52 点图标、颜色及出入场是 Android 适配，不宣称 Apple 资源/动画等价；不猜测内部 mode==3 类别 |
+| Dots10 / 14G60 | 新增 `ClassicSignalHooks`：按运行时 `TELEPHONY_SIGNAL_STRENGTH` 成员识别等级；五点独立绘制、空心未亮点、普通/锁屏比例 | 0..5 直映，0..4 量化为 0/1/3/4/5；未知/无服务/无语音资源保留原生。RF 阈值不替代 Android 网络语义；全双卡/漫游/锁屏待验 |
+
+新消费者不复制私有图片/字体/二进制，不依赖私有库构建。中央 HUD 不创建窗口、音量控制器、退出任务或形变时钟，跳过侧条专用六个 Hook；只在原生已有帧协调居中与 Insets。半像素取整残差保持稳定，避免无效重绘。五圆点只挂两个原生更新出口，按原生 ImageView 更新图形/颜色，未知输入归还原生，不增加网络监听或轮询。这些是调用/所有权证据，不是设备帧率、CPU 或功耗收益。
+
+定向 Host 集成 78 例通过、零跳过，覆盖经典 HUD/五圆点、旧侧条、电池、Feature 路由与真实设置生成。独立断言覆盖窄父容器下的完整触摸区、布局后图标/按钮定位、半像素稳定、16 段进度、普通/锁屏墨迹边界、原生异常/部分安装、ClassLoader、双 slot、Duo 互斥和图形/布局归还；旧用户缺省侧条与已保存窄条选择保留。实际安装、全部 ROM/路由与像素/性能仍按设备证据分别验收。
 
 ## 当前维护边界
 

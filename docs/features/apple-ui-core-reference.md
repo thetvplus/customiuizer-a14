@@ -1,14 +1,14 @@
 # Apple 界面核心链路与 A14 接入
 
-2026-11-08，覆盖指定机型的五条原生核心链。原始函数、构建清单和小型资源私有留存；本页只保存双端对照及接入合同。当前产品行为以源码为准，本次未新增设置、修改生产代码或生成 APK。
+2026-11-08，覆盖指定机型的五条原生核心链。原始函数、构建清单和小型资源私有留存；本页只保存双端对照及接入合同。2026-11-09 已接入中央 HUD 与五圆点；全部 11 链的当前差异见[原路线图](../maintenance/A14_REFINEMENT_ROADMAP.md#11-条研究链与消费者差异2026-11-09)。
 
 | 功能 | 原件身份 | 核心链与 A14 消费者 |
 | --- | --- | --- |
 | 灵动岛 | iPhone 16 Pro / iPhone17,1 / 18.6.2 / 22G100 | 注册、偏好顺序、mitosis、几何、退出 → `DynamicIslandActivities` / `IslandMotionCoordinator` |
 | Duo 三合一 | iPhone Duo / iPhone19,4 / 27.2 / 24B91020 | 聚合更新、model、hosting、Compact/Expanded body、环与弧点布局 → `DuoStatusBarHooks` / `DuoStatusBarView` |
 | 全覆盖 Dock | iPhone SE 3 / iPhone14,6 / 18.6.2 / 22G100 | 设备/显示上下文、screenType、配置、metrics、材质/layout → `LauncherDockBackground` / `DockFullWidthContainer` |
-| 中央音量指示 | iPhone 7 Plus / iPhone9,2 / 12.4.1 / 16G102 | 有效音量/分类准入、HUD view、居中 window、分段进度、退出 → MIUI 音量插件；当前 `IosVolumeStyle` 仍是侧边样式 |
-| 五圆点信号 | iPhone 7 Plus / iPhone9,2 / 10.3.3 / 14G60 | raw/bars/RSSI、模板选择、图形和宽度 → SystemUI mobile slot；当前未新增五圆点模式 |
+| 中央音量指示 | iPhone 7 Plus / iPhone9,2 / 12.4.1 / 16G102 | 有效音量/分类准入、HUD view、居中 window、分段进度、退出 → MIUI 音量插件；`IosVolumeStyle` 可选中央样式 / `ClassicVolumePlacement`，旧侧边默认值保留 |
+| 五圆点信号 | iPhone 7 Plus / iPhone9,2 / 10.3.3 / 14G60 | raw/bars/RSSI、模板选择、图形和宽度 → SystemUI mobile slot；`ClassicSignalHooks` 可选五圆点，默认关闭 |
 
 Duo 的“最新正式版”固定为本日核对的 27.2，依据 [Apple 正式发布表](https://support.apple.com/en-us/100100) 与该机型固件清单，最终构建以原始 BuildManifest 为准。7 Plus 取对应大版本最后适用的 10.3.3 / 12.4.1；不使用其他机型的 10.3.4 / 12.5.x。
 
@@ -26,16 +26,16 @@ Duo 的“最新正式版”固定为本日核对的 27.2，依据 [Apple 正式
 
 6 份选定 CSI 和 6 份 PNG 完整。mute/speaker 及 RTL 四份使用 CoreUI wrapper v5 的 GA8 deepmap，已按原负载解码；文件名中的 `.pdf` 不代表通用 PDF。图形仅供私有校准，不直接加入 APK。
 
-后续若新增中央模式，应在既有音量插件 ClassLoader、dialog owner 内互斥选择展示。继续消费原生 stream、路由、按键 flags、安全音量、监听、无障碍和 dismiss；用当次窗口 metrics 居中并更新触控/可见区域，处理横屏、锁屏、配置变化和销毁。不能只把侧条平移到中间，也不新增第二套音量控制器或退出定时器。155 点、材质和动画须作 Android 映射，原生 UIKit 合成不跨平台执行。
+中央模式在既有音量插件 ClassLoader、dialog owner 内互斥选择展示。继续消费原生 stream、路由、按键 flags、安全音量、监听、无障碍和 dismiss；用当次窗口 metrics 居中并更新触控/可见区域，处理横屏、锁屏、配置变化和销毁。不能只把侧条平移到中间，也不新增第二套音量控制器或退出定时器。155 点、材质和动画须作 Android 映射，原生 UIKit 合成不跨平台执行。
 
 ## iOS10 五圆点信号
 
 `UIStatusBarSignalStrengthItemView` 分别持有 raw signal、bars 和 RSSI；普通图形经 `%d_Bars` 请求 `imageWithShadowNamed:`，RSSI 是独立分支。Black / LockScreen 两套 0–5 级共 12 份圆点模板已提取，另保留 8 份同 catalog 的 Wi-Fi 旁证。普通图片框为 34×20 点，锁屏约 42⅓×24 点；图片框、墨迹、@3x 资源像素和 7 Plus 最终物理像素不得混用。
 
-新增模式时复用 SystemUI 自身 mobile slot、订阅回调及根 View，与 Duo、iOS18 普通图标保持单一绘制所有者。明确 Android 0–4 / 0–5 输入到五点的量化，保留无服务、飞行模式、有效 0 格、双卡、dot/hidden、暗色区域和无障碍；关闭后恢复原生绑定。Duo 是四点弧布局，不共用这一量化。几何在绑定/尺寸变化时准备，稳定状态不解析路径、不轮询。
+五圆点模式复用 SystemUI 自身 mobile slot、订阅回调及根 View，与 Duo、iOS18 普通图标保持单一绘制所有者。明确 Android 0–4 / 0–5 输入到五点的量化，保留无服务、飞行模式、有效 0 格、双卡、dot/hidden、暗色区域和无障碍；关闭后恢复原生绑定。Duo 是四点弧布局，不共用这一量化。几何在绑定/尺寸变化时准备，稳定状态不解析路径、不轮询。
 
 ## 验证与剩余边界
 
 原始字节与可读 ASM 是依据。新 PAuth_LR 指令已完整解码；旧 Ghidra 抽样的截断 C 继续标记为不可用，不通过改写指令制造成功。小型资源保留原 CSI 与派生输出的独立摘要，BVG 二进制矢量不冒充 XML SVG。
 
-本次完成核心提取、资源和当前 A14 源码对照。iOS10/12 新产品模式、完整 Apple 弹簧/合成器、最终字体 trait、实时显示缩放、像素一致性与设备性能未由静态证据验收；Dock 既有偶发闪现维持原未决状态。当前决定与后续入口只维护在[原路线图](../maintenance/A14_REFINEMENT_ROADMAP.md#apple-界面核心接入2026-11-08)。
+本次完成核心提取、资源和当前 A14 源码对照。新模式的全部 ROM/场景、完整 Apple 弹簧/合成器、最终字体 trait、实时显示缩放、像素一致性与设备性能未由静态证据验收；Dock 既有偶发闪现维持原未决状态。当前决定与后续入口只维护在[原路线图](../maintenance/A14_REFINEMENT_ROADMAP.md#apple-界面核心接入2026-11-08)。

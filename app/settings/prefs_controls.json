@@ -33,6 +33,18 @@
                   }
                 },
                 {
+                  "type": "choice",
+                  "attributes": {
+                    "android:key": "pref_key_system_volume_ios_style",
+                    "android:title": "@string/ios_volume_style_title",
+                    "android:entries": "@array/ios_volume_style_entries",
+                    "android:entryValues": "@array/ios_volume_style_values",
+                    "android:dependency": "pref_key_system_volume_ios",
+                    "android:defaultValue": "1",
+                    "app:valueAsSummary": "true"
+                  }
+                },
+                {
                   "type": "toggle",
                   "attributes": {
                     "android:key": "pref_key_system_volume_ios_compact",

@@ -3431,6 +3431,19 @@
       "enableCondition": "{ prefs -> IosStatusBarBatteryFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 271,
+      "featureIdName": "system_statusbar_signal_dots",
+      "name": "Classic Cellular Signal",
+      "preferenceKey": "system_statusbar_signal_dots",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.statusicons.ClassicSignalHooks.install(lpparam)",
+      "enableCondition": "{ prefs -> ClassicSignalFeature.evaluateEnabled(prefs) }",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     }
   ],
   "scope": [

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ios_volume_style_title">音量スタイル</string>
+    <string name="ios_volume_side">サイドバー（iOS 18）</string>
+    <string name="ios_volume_classic">中央 HUD（iOS 12）</string>
+    <string name="ios_signal_dots_title">5つの丸の電波表示（iOS 10）</string>
+    <string name="ios_signal_dots_summary">Duo を優先します。不明または圏外のアイコンは標準表示を維持します。変更後に SystemUI を再起動してください。</string>
+</resources>

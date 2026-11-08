@@ -3,6 +3,15 @@
   "attributes": {},
   "children": [
     {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_statusbar_signal_dots",
+        "android:title": "@string/ios_signal_dots_title",
+        "android:summary": "@string/ios_signal_dots_summary",
+        "android:defaultValue": "false"
+      }
+    },
+    {
       "type": "section",
       "attributes": {
         "android:title": "@string/prefs_group_network_type"

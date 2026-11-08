@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ios_volume_style_title">音量样式</string>
+    <string name="ios_volume_side">侧边音量条（iOS 18）</string>
+    <string name="ios_volume_classic">中央音量框（iOS 12）</string>
+    <string name="ios_signal_dots_title">五圆点蜂窝信号（iOS 10）</string>
+    <string name="ios_signal_dots_summary">Duo 优先生效。未知图标及无服务状态保留原生显示。修改后需重启 SystemUI。</string>
+</resources>

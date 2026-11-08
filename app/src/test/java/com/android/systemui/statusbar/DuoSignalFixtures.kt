@@ -27,6 +27,8 @@ class StatusBarWifiView {
 @Suppress("UNUSED_PARAMETER")
 class StatusBarMobileView {
     @JvmField var mState: StatusBarSignalPolicy.MobileIconState? = null
+    @JvmField var mMobile: android.widget.ImageView? = null
+    @JvmField var mColor = -1
     fun applyMobileState(state: StatusBarSignalPolicy.MobileIconState) {}
     fun updateState(state: StatusBarSignalPolicy.MobileIconState) = false
     fun applyDarknessInternal() {}

@@ -17,6 +17,30 @@ import tv.withaibuild.customiuizer.R
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class ComposeSettingsPagesTest {
+    @Test fun volumeStyleDefaultsToSideAndKeepsTheSavedCompactChoice() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val master = "pref_key_system_volume_ios"
+        val style = "pref_key_system_volume_ios_style"
+        val compact = "pref_key_system_volume_ios_compact"
+        try {
+            prefs.edit().putBoolean(master, true).putBoolean(compact, true).remove(style).commit()
+            for (expected in listOf("1", "2")) {
+                val manager = PreferenceManager(context)
+                val screen = ComposeSettingsPages.create(R.id.prefs_controls, context, manager)
+                manager.setPreferences(screen); screen.onAttached()
+                try {
+                    val choice = requireNotNull(manager.findPreference<androidx.preference.ListPreference>(style))
+                    assertEquals(expected, choice.value)
+                    assertTrue(choice.isEnabled)
+                    assertTrue(requireNotNull(manager.findPreference<androidx.preference.TwoStatePreference>(compact)).isChecked)
+                    choice.value = "2"
+                } finally { screen.onDetached() }
+            }
+            assertTrue(prefs.getBoolean(compact, false))
+        } finally { prefs.edit().remove(master).remove(style).remove(compact).commit() }
+    }
+
     @Test fun deckMasterControlsEveryOptionWithoutLosingSavedMotionOrSizing() {
         val context=RuntimeEnvironment.getApplication()
         val prefs=PreferenceManager.getDefaultSharedPreferences(context)

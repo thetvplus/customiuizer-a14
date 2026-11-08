@@ -588,6 +588,20 @@ internal class IosStatusBarBatteryFeature(private val lpparam: PackageReadyParam
     override fun install() = tv.withaibuild.customiuizer.mods.statusicons.IosBatteryHooks.install(lpparam)
 }
 
+internal class ClassicSignalFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
+    override val id = ClassicSignalFeatureId
+    override val name = "Classic Cellular Signal"
+    override val preferenceKey = "system_statusbar_signal_dots"
+    override val target = FeatureTarget.SYSTEM_UI
+    override val phase = InstallPhase.PACKAGE_READY
+    companion object {
+        @JvmStatic fun evaluateEnabled(prefs: PrefMap) = prefs.getBoolean("system_statusbar_signal_dots") &&
+            !prefs.getBoolean("system_statusbar_duo")
+    }
+    override fun isEnabled(prefs: PrefMap) = evaluateEnabled(prefs)
+    override fun install() = tv.withaibuild.customiuizer.mods.statusicons.ClassicSignalHooks.install(lpparam)
+}
+
 internal class IosMediaCardFeature(private val lpparam: PackageReadyParam) : FeatureDefinition {
     override val id = IosMediaCardFeatureId
     override val name = "iOS Media Card"
@@ -2453,6 +2467,15 @@ object SystemUiFeatures {
             phase = InstallPhase.PACKAGE_READY,
             enabled = { prefs -> IosStatusBarBatteryFeature.evaluateEnabled(prefs) },
             factory = { IosStatusBarBatteryFeature(lpparam) },
+        ),
+        LazyFeatureSpec(
+            id = ClassicSignalFeatureId,
+            name = "Classic Cellular Signal",
+            preferenceKey = "system_statusbar_signal_dots",
+            target = FeatureTarget.SYSTEM_UI,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> ClassicSignalFeature.evaluateEnabled(prefs) },
+            factory = { ClassicSignalFeature(lpparam) },
         ),
         LazyFeatureSpec(
             id = HideNavBarFeatureId,

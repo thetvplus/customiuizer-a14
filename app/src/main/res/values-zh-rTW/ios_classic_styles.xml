@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ios_volume_style_title">音量樣式</string>
+    <string name="ios_volume_side">側邊音量條（iOS 18）</string>
+    <string name="ios_volume_classic">中央音量框（iOS 12）</string>
+    <string name="ios_signal_dots_title">五圓點行動訊號（iOS 10）</string>
+    <string name="ios_signal_dots_summary">Duo 優先生效。未知圖示與無服務狀態保留原生顯示。變更後請重新啟動系統介面。</string>
+</resources>

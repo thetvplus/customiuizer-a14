@@ -40,6 +40,7 @@ import kotlin.math.*
 internal object IosVolumeStyle {
     const val KEY = "system_volume_ios"
     const val COMPACT_KEY = "system_volume_ios_compact"
+    const val STYLE_KEY = "system_volume_ios_style"
     private const val OWNER = "a14.iosVolume.owner"
     private const val BINDING = "a14.iosVolume.binding"
 
@@ -87,13 +88,16 @@ internal object IosVolumeStyle {
             hookMethod(method,callback)
         }
         val startCompact = MainModule.mPrefs.getBoolean(COMPACT_KEY, false)
+        val classic = MainModule.mPrefs.getString(STYLE_KEY, "1") == "2"
         val input=NativeInput()
-        val controller=XposedHelpers.findClass("com.android.systemui.volume.VolumeDialogControllerImpl",loader)
-        val volumeChanged=controller.getDeclaredMethod("onVolumeChangedW",Int::class.javaPrimitiveType,Int::class.javaPrimitiveType)
-            .apply { require(returnType==Boolean::class.javaPrimitiveType);isAccessible=true }
-        hookMethod(volumeChanged,object: MethodHook() {
-            override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded { input.record(callback.getArg(1) as Int) }
-        })
+        if (!classic) {
+            val controller=XposedHelpers.findClass("com.android.systemui.volume.VolumeDialogControllerImpl",loader)
+            val volumeChanged=controller.getDeclaredMethod("onVolumeChangedW",Int::class.javaPrimitiveType,Int::class.javaPrimitiveType)
+                .apply { require(returnType==Boolean::class.javaPrimitiveType);isAccessible=true }
+            hookMethod(volumeChanged,object: MethodHook() {
+                override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded { input.record(callback.getArg(1) as Int) }
+            })
+        }
         val dialog = XposedHelpers.findClassIfExists("com.android.systemui.miui.volume.MiuiVolumeDialogImpl", loader) ?: return FeatureInstallResult.FAILED_PERMANENT
         val listener = XposedHelpers.findClassIfExists("${dialog.name}\$VolumeSeekBarChangeListener", loader) ?: return FeatureInstallResult.FAILED_PERMANENT
         val expanded = dialog.getDeclaredField("mExpanded").apply { isAccessible = true }
@@ -176,7 +180,7 @@ internal object IosVolumeStyle {
                         cleanup.finish()
                     }
                     val nativeFill = blurOpened.invoke(null, root.context) == true
-                    val binding = Binding(root, seek, fill, track, image, nativeFill, startCompact, blur)
+                    val binding = Binding(root, seek, fill, track, image, nativeFill, startCompact, classic, blur)
                     bindings.add(binding)
                     if (nativeFill) binding.nativeProgress(fillProgress.getInt(fill), fillHeight.getInt(fill))
                     streamState.get(item)?.let { binding.nativeVolume(streamLevel.getInt(it), streamMin.getInt(it), streamMax.getInt(it),initial=true) }
@@ -250,12 +254,12 @@ internal object IosVolumeStyle {
         })
         // Repeated hardware input retains the current shape/velocity and re-arms
         // only the cosmetic collapse; native showH still owns dismissal timing.
-        hookAllMethods(dialog, "showH", object : MethodHook() {
+        if (!classic) hookAllMethods(dialog, "showH", object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() == null) (XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), OWNER) as? Session)?.noteInput(input.isKey())
             }
         })
-        for (method in listOf("onProgressChanged", "onStartTrackingTouch", "onStopTrackingTouch")) {
+        for (method in if (classic) listOf("onProgressChanged") else listOf("onProgressChanged", "onStartTrackingTouch", "onStopTrackingTouch")) {
             hookAllMethods(listener, method, object : MethodHook() {
                 override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                     if (callback.getThrowable() != null) return@guarded
@@ -278,7 +282,7 @@ internal object IosVolumeStyle {
                 binding.nativeProgress((callback.getArg(0) as Number).toInt(), fillHeight.getInt(source))
             }
         })
-        hookAllMethods(dialog, "updateVolumeColumnH", object : MethodHook() {
+        if (!classic) hookAllMethods(dialog, "updateVolumeColumnH", object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() != null) return@guarded
                 val column = callback.getArg(0) ?: return@guarded
@@ -286,7 +290,7 @@ internal object IosVolumeStyle {
                 streamState.get(column)?.let { binding.nativeVolume(streamLevel.getInt(it), streamMin.getInt(it), streamMax.getInt(it)) }
             }
         })
-        hookMethod(nativeTouch, object : MethodHook() {
+        if (!classic) hookMethod(nativeTouch, object : MethodHook() {
             override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
                 val binding = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), BINDING) as? Binding ?: return@guarded
                 (callback.getArg(0) as? MotionEvent)?.let(binding::observeTouch)
@@ -351,6 +355,7 @@ internal object IosVolumeStyle {
         private val touchRect = Rect()
         private val moreGlyph = moreImage?.let { MoreGlyph(root.resources.displayMetrics.density) }
         private var hardwareReleased: Runnable?=null
+        private val placement = bindings.singleOrNull()?.takeIf { it.classic }?.let { ClassicVolumePlacement(root, it.trackView) }
         init {
             try {
                 root.addOnAttachStateChangeListener(this); content.addOnAttachStateChangeListener(this)
@@ -420,17 +425,33 @@ internal object IosVolumeStyle {
         }
         fun includeTouchableRegion(region: Region) {
             if (closed || !root.isShown) return
+            placement?.update()
             // The verified native callback uses getLeft/getTop and omits the
             // dialog's final translation. The compact strip and dot reach that
             // translated edge; retain native regions and union actual bounds.
             root.getLocationInWindow(touchLocation)
             touchRect.set(touchLocation[0], touchLocation[1], touchLocation[0] + root.width, touchLocation[1] + root.height)
-            region.op(touchRect, Region.Op.UNION)
+            // The verified collapsed callback sets only this root's rectangle.
+            // Central mode replaces its stale untranslated edge region, otherwise
+            // invisible side coordinates would continue to intercept input.
+            if (placement != null) {
+                // Native parent width may still use its narrow-column resource.
+                // Include the real slider and footer, even outside that parent.
+                val track = bindings.single().trackView
+                track.getLocationInWindow(touchLocation)
+                touchRect.union(touchLocation[0], touchLocation[1], touchLocation[0] + track.width, touchLocation[1] + track.height)
+                if (more?.isShown == true) {
+                    more.getLocationInWindow(touchLocation)
+                    touchRect.union(touchLocation[0], touchLocation[1], touchLocation[0] + more.width, touchLocation[1] + more.height)
+                }
+                region.set(touchRect)
+            } else region.op(touchRect, Region.Op.UNION)
         }
         fun close() {
             if (closed) return
             closed = true
             val cleanup = CleanupActions()
+            cleanup.run { placement?.close() }
             cleanup.run { hardwareReleased?.let(root::removeCallbacks);hardwareReleased=null }
             cleanup.run { root.removeOnAttachStateChangeListener(this) }
             cleanup.run { content.removeOnAttachStateChangeListener(this) }
@@ -487,7 +508,11 @@ internal object IosVolumeStyle {
         private val track: View, private val icon: ImageView,
         private val nativeFill: Boolean = false,
         private val startCompact: Boolean = false,
+        val classic: Boolean = false,
         private val blur: ((Boolean) -> Unit)? = null) : View.OnAttachStateChangeListener {
+        val trackView get() = track
+        private val panelWidth get() = if (classic) 155 else 58
+        private val panelHeight get() = if (classic) 155 else 170
         private var rootBackground = root.background
         private var sliderBackground = slider.background
         private var progress = slider.progressDrawable
@@ -509,12 +534,19 @@ internal object IosVolumeStyle {
         private val dimensions = arrayOf(slider, track).map { it.layoutParams.width to it.layoutParams.height }
         private var closed = false
         private val density = root.resources.displayMetrics.density
+        // 7 Plus uses a 414-point short edge. This is an Android window mapping,
+        // not an assertion that UIKit points equal dp on the target display.
+        private val panelDensity = if (classic) root.resources.displayMetrics.let {
+            minOf(it.widthPixels, it.heightPixels).coerceAtLeast(1) / 414f
+        } else density
         private var moreView: ImageView? = null
         private var moreLocations: IntArray? = null
         private var moreTrackDelta = 0f
         private var morePositioned = false
         private var moreOriginalY = 0f
         private var moreAppliedY = Float.NaN
+        private var moreOriginalX = 0f
+        private var moreAppliedX = Float.NaN
         private var appliedIconAlpha = Float.NaN
         private var appliedIconX = Float.NaN; private var appliedIconY = Float.NaN
         private var appliedIconScaleX = Float.NaN; private var appliedIconScaleY = Float.NaN
@@ -524,20 +556,22 @@ internal object IosVolumeStyle {
         private val darkIconTint = ColorStateList.valueOf(0xff242426.toInt())
         private val lightIconTint = ColorStateList.valueOf(0xfffafafa.toInt())
         private val moreLayout = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> positionMore() }
-        private val paint: Track = Track(density, startCompact) { w, h, glyph, offsetY ->
+        private val classicLayout = if (classic) View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> paint.refreshGeometry() } else null
+        private val paint: Track = Track(panelDensity, startCompact, classic) { w, h, glyph, offsetY ->
             icon.alpha = iconAlpha * glyph.coerceIn(0f, 1f)
             val f = regularFraction(paint.materialWidth / density)
-            val glyphY = (h - w) * (1f - f) + (h - w * .5f) * f
+            val glyphY = if (classic) h * .48f else (h - w) * (1f - f) + (h - w * .5f) * f
             glyphFillThreshold = (1f - glyphY / h).coerceIn(0f, 1f)
             updateIconTint()
             icon.translationX = track.left + paint.center(track.width.toFloat()) - icon.left - icon.width * .5f
             icon.translationY = track.top + (track.height - h) * .5f + glyphY + offsetY - icon.top - icon.height * .5f
-            icon.scaleX = iconScaleX * glyph * .768f; icon.scaleY = iconScaleY * glyph * .768f
+            val iconScale = if (classic) { if (icon.width > 0) 52f * panelDensity / icon.width else 1f } else glyph * .768f
+            icon.scaleX = iconScaleX * iconScale; icon.scaleY = iconScaleY * iconScale
             if (morePositioned) moreView?.let {
                 moreAppliedY = moreTrackDelta + (track.height + h) * .5f + offsetY
                 it.translationY = moreAppliedY
             }
-            track.elevation = paintShadowElevation(paint.materialWidth)
+            track.elevation = if (classic) 0f else paintShadowElevation(paint.materialWidth)
             icon.translationZ = track.z + density - icon.elevation
             appliedIconAlpha = icon.alpha; appliedIconX = icon.translationX; appliedIconY = icon.translationY
             appliedIconScaleX = icon.scaleX; appliedIconScaleY = icon.scaleY; appliedIconZ = icon.translationZ
@@ -583,14 +617,15 @@ internal object IosVolumeStyle {
                 allowStretch()
                 root.setPadding(root.paddingLeft, root.paddingTop, root.paddingRight, paddingBottom + (28 * density).roundToInt())
                 for (v in arrayOf(slider, track)) v.layoutParams = v.layoutParams.apply {
-                    width = (58 * density).roundToInt(); height = (170 * density).roundToInt()
+                    width = (panelWidth * panelDensity).roundToInt(); height = (panelHeight * panelDensity).roundToInt()
                 }
+                classicLayout?.let { track.addOnLayoutChangeListener(it); icon.addOnLayoutChangeListener(it) }
                 slider.addOnAttachStateChangeListener(this)
                 XposedHelpers.setAdditionalInstanceField(slider, BINDING, this)
                 XposedHelpers.setAdditionalInstanceField(track, BINDING, this)
                 if (nativeFill) XposedHelpers.setAdditionalInstanceField(fill, BINDING, this)
                 refresh()
-                if (startCompact) paint.refreshGeometry()
+                if (classic || startCompact) paint.refreshGeometry()
                 else {
                     paint.form(47f, 148f, .8, .9)
                     root.postDelayed(compact, 1000L)
@@ -614,7 +649,7 @@ internal object IosVolumeStyle {
             }
         }
         private fun updateIconTint() {
-            val tint = if (visibleLevel >= glyphFillThreshold * 10000f) darkIconTint else lightIconTint
+            val tint = if (classic || visibleLevel >= glyphFillThreshold * 10000f) darkIconTint else lightIconTint
             if (icon.imageTintList !== tint) icon.imageTintList = tint
         }
         fun nativeVolume(level: Int, minimum: Int, maximum: Int,initial: Boolean=false) {
@@ -638,7 +673,7 @@ internal object IosVolumeStyle {
             root.postDelayed(hardwareRelease,600L)
         }
         fun attachMore(glyph: MoreGlyph, more: ImageView) {
-            moreView = more; moreOriginalY = more.translationY; moreLocations = IntArray(2)
+            moreView = more; moreOriginalY = more.translationY; moreOriginalX = more.translationX; moreLocations = IntArray(2)
             more.addOnLayoutChangeListener(moreLayout); track.addOnLayoutChangeListener(moreLayout)
             paint.attachMore(glyph); positionMore()
         }
@@ -649,7 +684,12 @@ internal object IosVolumeStyle {
             // Resolve different native parents only on layout, never on a frame.
             track.getLocationInWindow(locations)
             val trackY = locations[1]
+            val trackCenterX = locations[0] + track.width * .5f
             more.getLocationInWindow(locations)
+            if (classic) {
+                moreAppliedX = more.translationX + trackCenterX - locations[0] - more.width * .5f
+                more.translationX = moreAppliedX
+            }
             moreTrackDelta = trackY - locations[1] + more.translationY
             morePositioned = true
             paint.refreshGeometry()
@@ -676,7 +716,7 @@ internal object IosVolumeStyle {
             if(!closed) paint.releaseEndpoint()
         }
         fun noteInput(hardware: Boolean=true) {
-            if (closed || tracking) return
+            if (closed || tracking || classic) return
             root.removeCallbacks(compact)
             // iOS contextual value changes select Compact after the initial
             // appearance. Hardware updates keep the thin strip usable; only
@@ -691,6 +731,7 @@ internal object IosVolumeStyle {
             root.postDelayed(hardwareEndpoint, 32L)
         }
         fun interact(active: Boolean) {
+            if (classic) return
             if (active) releaseHardware()
             if (active) allowStretch()
             if (active && !tracking) compactBeforeTracking = paint.isCompact
@@ -714,6 +755,7 @@ internal object IosVolumeStyle {
             }
         }
         fun observeTouch(event: MotionEvent) {
+            if (classic) return
             if (closed) return
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -761,7 +803,11 @@ internal object IosVolumeStyle {
             clipping = null
             cleanup.run { moreView?.removeOnLayoutChangeListener(moreLayout) }
             cleanup.run { track.removeOnLayoutChangeListener(moreLayout) }
-            cleanup.run { moreView?.let { if (it.translationY == moreAppliedY) it.translationY = moreOriginalY } }
+            cleanup.run { classicLayout?.let { track.removeOnLayoutChangeListener(it); icon.removeOnLayoutChangeListener(it) } }
+            cleanup.run { moreView?.let {
+                if (it.translationY == moreAppliedY) it.translationY = moreOriginalY
+                if (it.translationX == moreAppliedX) it.translationX = moreOriginalX
+            } }
             moreView = null; moreLocations = null; morePositioned = false
             cleanup.run { if (root.background == null) root.background = rootBackground }
             cleanup.run { if (slider.background == null) slider.background = sliderBackground }
@@ -790,8 +836,8 @@ internal object IosVolumeStyle {
             for ((i, v) in arrayOf(slider, track).withIndex()) cleanup.run {
                 val params = v.layoutParams
                 var changed = false
-                if (params.width == (58 * density).roundToInt()) { params.width = dimensions[i].first; changed = true }
-                if (params.height == (170 * density).roundToInt()) { params.height = dimensions[i].second; changed = true }
+                if (params.width == (panelWidth * panelDensity).roundToInt()) { params.width = dimensions[i].first; changed = true }
+                if (params.height == (panelHeight * panelDensity).roundToInt()) { params.height = dimensions[i].second; changed = true }
                 if (changed) v.layoutParams = params
             }
             for (v in arrayOf(root, slider, track, fill)) cleanup.run {
@@ -847,24 +893,24 @@ internal object IosVolumeStyle {
         override fun setColorFilter(colorFilter: ColorFilter?) = Unit
         @Deprecated("Platform API") override fun getOpacity() = PixelFormat.TRANSLUCENT
     }
-    internal class Track(private val density: Float, startCompact: Boolean = false, private val changed: GlyphFrame) : Drawable() {
+    internal class Track(private val density: Float, startCompact: Boolean = false, private val classic: Boolean = false, private val changed: GlyphFrame) : Drawable() {
         private val path = Path()
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private var width = (if (startCompact) 7f else 14.1f) * density
-        private var height = (if (startCompact) 134f else 44.4f) * density
+        private var width = (if (classic) 155f else if (startCompact) 7f else 14.1f) * density
+        private var height = (if (classic) 155f else if (startCompact) 134f else 44.4f) * density
         private var velocityW = 0.0
         private var velocityH = 0.0
-        private var glyph = if (startCompact) 0f else .3f
+        private var glyph = if (classic) 1f else if (startCompact) 0f else .3f
         private var velocityGlyph = 0.0
         private var stretch = 0f
         private var velocityStretch = 0.0
-        private var targetWidth = if (startCompact) 7f else 47f
-        private var targetHeight = if (startCompact) 134f else 148f
+        private var targetWidth = if (classic) 155f else if (startCompact) 7f else 47f
+        private var targetHeight = if (classic) 155f else if (startCompact) 134f else 148f
         private var initialStretch = 18f * density
         private var more: MoreGlyph? = null
         fun attachMore(more: MoreGlyph) { this.more = more; more.pose(unscaledWidth()) }
         val materialWidth: Float get() = width
-        fun center(room: Float) = trackCenter(unscaledWidth(),room,density)
+        fun center(room: Float) = if (classic) room * .5f else trackCenter(unscaledWidth(),room,density)
         fun refreshGeometry() = notifyFrame()
         var dragging = false
         // 22G100 captures the stretch range at pan begin; changing to the
@@ -889,6 +935,7 @@ internal object IosVolumeStyle {
         private var pressFromVelocity=0.0
         private var pressAt=0L
         fun releaseEndpoint() {
+            if (classic) return
             endpointDirection=0f;buttonRaw=0.0
             targetPress(1f);targetButton(0f,.6)
         }
@@ -915,6 +962,7 @@ internal object IosVolumeStyle {
             else current.duration=maxOf(current.duration,pressAt+1200L)
         }
         fun endpointKick(direction: Float,advance: Boolean=true) {
+            if (classic) return
             if (dragging || !ValueAnimator.areAnimatorsEnabled() || direction==0f || !direction.isFinite()) return
             if(endpointDirection!=direction) { endpointDirection=direction;buttonRaw=0.0 }
             // Same-version default stepCount=16. The virtual excess is cosmetic;
@@ -957,9 +1005,10 @@ internal object IosVolumeStyle {
         private var cachedW = -1f
         private var cachedH = -1f
         private var opacity = 255
-        var isCompact = startCompact
+        var isCompact = startCompact && !classic
             private set
         fun form(w: Float, h: Float, response: Double, damping: Double) {
+            if (classic) return
             if(targetWidth==w && targetHeight==h) {
                 if(clock!=null) return
                 // A repeated native state delivery must not start an idle clock.
@@ -1066,6 +1115,9 @@ internal object IosVolumeStyle {
         }
         override fun onLevelChange(level: Int): Boolean { invalidateSelf(); return true }
         override fun getOutline(outline: Outline) {
+            if (classic) {
+                outline.setRoundRect(bounds, 9f * density); outline.alpha = 0f; return
+            }
             val w=elasticWidth().coerceIn(1f,bounds.width().coerceAtLeast(1).toFloat())
             val h=elasticHeight().coerceAtLeast(1f)
             val x=bounds.left+center(bounds.width().toFloat())-w*.5f
@@ -1076,6 +1128,19 @@ internal object IosVolumeStyle {
         }
         override fun draw(canvas: Canvas) {
             if (bounds.isEmpty) return
+            if (classic) {
+                val x = bounds.exactCenterX() - 77.5f * density
+                val y = bounds.exactCenterY() - 77.5f * density
+                paint.color = 0xffd4d4d8.toInt(); paint.alpha = opacity * 235 / 255
+                canvas.drawRoundRect(x, y, x + 155f * density, y + 155f * density, 9f * density, 9f * density, paint)
+                val filled = level.coerceIn(0, 10000) * 16 / 10000
+                for (i in 0..15) {
+                    paint.color = if (i < filled) 0xff242426.toInt() else 0xffa0a0a5.toInt(); paint.alpha = opacity
+                    val left = x + (14f + i * 8f) * density
+                    canvas.drawRect(left, y + 126f * density, left + 7f * density, y + 131f * density, paint)
+                }
+                return
+            }
             val w = unscaledWidth().coerceIn(1f/pressScale, bounds.width()/pressScale)
             val h = unscaledHeight().coerceAtLeast(1f/pressScale)
             if (w != cachedW || h != cachedH) {
