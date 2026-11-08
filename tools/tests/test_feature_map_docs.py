@@ -74,12 +74,12 @@ class FeatureMapTest(unittest.TestCase):
                 if key and element.tag not in ("PreferenceScreen", prefs.PREFERENCE_CATEGORY) and element.get(prefs.AUTO_VISIBLE) != "false":
                     with self.subTest(path=path.name, key=key):
                         self.assertTrue(f"`{key}`" in rendered, f"map missing {path.name}: {key}")
-        self.assertIn("状态栏与动态岛 → 状态栏 → Duo 三合一图标", rendered)
-        self.assertIn("状态栏与动态岛 → 系统提示与动态岛 → 媒体", rendered)
-        self.assertIn("状态栏与动态岛 → 系统提示与动态岛 → 位置尺寸", rendered)
-        self.assertIn("状态栏与动态岛 → 系统提示与动态岛 → 消息通知", rendered)
-        self.assertIn("状态栏与动态岛 → 系统提示与动态岛", rendered)
-        self.assertIn("桌面与最近任务 → Dock", rendered)
+        self.assertIn("系统 → 状态栏 → Duo 三合一图标", rendered)
+        self.assertIn("系统 → 系统提示与动态岛 → 媒体", rendered)
+        self.assertIn("系统 → 系统提示与动态岛 → 位置尺寸", rendered)
+        self.assertIn("系统 → 系统提示与动态岛 → 消息通知", rendered)
+        self.assertIn("系统 → 系统提示与动态岛", rendered)
+        self.assertIn("桌面 → Dock", rendered)
         self.assertNotIn("system_betterpopups_nohide", rendered)
         self.assertNotIn("状态刷新", rendered)
 
@@ -135,8 +135,8 @@ class FeatureMapTest(unittest.TestCase):
         self.assertEqual(0, self.cli("--output", str(output), "--check").returncode)
         source = self.repo / feature_map.RES / "values-zh-rCN/strings.xml"
         text = source.read_text(encoding="utf-8")
-        self.assertIn('name="settings_category_system"', text)
-        source.write_text(text.replace('name="settings_category_system">屏幕与锁屏<', 'name="settings_category_system">系统测试<'), encoding="utf-8")
+        self.assertIn('name="system_mods"', text)
+        source.write_text(text.replace('name="system_mods">系统<', 'name="system_mods">系统测试<'), encoding="utf-8")
         self.assertNotEqual(original, feature_map.render(self.repo).encode())
         self.assertEqual(1, self.cli("--output", str(output), "--check").returncode)
         self.assertEqual(original, output.read_bytes())

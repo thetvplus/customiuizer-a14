@@ -341,7 +341,6 @@ class MainFragment : PreferenceFragmentBase() {
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
         val key = preference.key ?: return super.onPreferenceTreeClick(preference)
-        if (key == "pref_key_miuizer_backup") { showBackupRestoreDialog(); return true }
         val modsCat = findPreference<PreferenceCategory>("prefs_cat")
         return if (modsCat?.findPreference<Preference>(key) != null && openModCat(key, null, key)) {
             true

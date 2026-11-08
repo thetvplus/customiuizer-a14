@@ -97,7 +97,7 @@ class PreferenceResourceContractTest(unittest.TestCase):
                 self.assertTrue(required <= strings, required - strings)
 
     def test_toast_position_has_independent_offsets_and_complete_translations(self):
-        root = read_element(XML_DIR / "prefs_notifications.xml")
+        root = read_element(XML_DIR / "prefs_system.xml")
         controls = {el.get(ATTR_KEY): el for el in root.iter()}
         position = controls['pref_key_system_toast_position']
         self.assertEqual('0', position.get(f'{{{ANDROID_NS}}}defaultValue'))

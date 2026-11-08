@@ -42,12 +42,10 @@ class CategorySource:
 
 
 CATEGORY_SOURCES = (
-    CategorySource("pref_key_statusbar", "prefs_statusbar.xml", "@string/settings_category_statusbar"),
-    CategorySource("pref_key_notifications", "prefs_notifications.xml", "@string/settings_category_notifications"),
-    CategorySource("pref_key_launcher", "prefs_launcher.xml", "@string/settings_category_launcher"),
-    CategorySource("pref_key_controls", "prefs_controls.xml", "@string/settings_category_controls"),
-    CategorySource("pref_key_system", "prefs_system.xml", "@string/settings_category_system"),
-    CategorySource("pref_key_various", "prefs_various.xml", "@string/settings_category_various"),
+    CategorySource("pref_key_system", "prefs_system.xml", "@string/system_mods"),
+    CategorySource("pref_key_launcher", "prefs_launcher.xml", "@string/launcher_title"),
+    CategorySource("pref_key_controls", "prefs_controls.xml", "@string/controls_mods"),
+    CategorySource("pref_key_various", "prefs_various.xml", "@string/various_mods"),
 )
 
 # Standalone pages opened by the category controllers. Search must use the same

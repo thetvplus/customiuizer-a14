@@ -1327,17 +1327,8 @@
     <string name="controls_ios_home_indicator_title">Indikátor gest iOS</string>
     <string name="controls_ios_home_indicator_summ">Vyžaduje gesta na celou obrazovku, viditelný systémový indikátor a podporovanou ROM. V Nastavení → Domovská obrazovka → Navigace systému zvolte gesta a vypněte skrytí indikátoru. Vypněte také skrytí čáry gest v tomto modulu. Názvy nabídek se mohou lišit. Restartujte systémové rozhraní.</string>
     <string name="settings_category_statusbar">Stavový řádek a Dynamic Island</string>
-    <string name="settings_category_statusbar_summary">Hodiny, baterie, síť a živé aktivity</string>
     <string name="settings_category_notifications">Oznámení a ovládací centrum</string>
-    <string name="settings_category_notifications_summary">Pravidla, bannery a mediální karty</string>
-    <string name="settings_category_launcher">Plocha a nedávné aplikace</string>
-    <string name="settings_category_launcher_summary">Rozložení, Dock, složky a přepínání úloh</string>
-    <string name="settings_category_controls">Zvuk a ovládání</string>
-    <string name="settings_category_controls_summary">Hlasitost, vibrace, tlačítka a gesta</string>
     <string name="settings_category_system">Displej a zámek obrazovky</string>
-    <string name="settings_category_system_summary">Otáčení, jas, snímky a zamykání</string>
-    <string name="settings_category_various">Aplikace a údržba</string>
-    <string name="settings_category_various_summary">Chování aplikací, automatizace a kompatibilita</string>
     <string name="settings_animation_scales">Rychlost systémových animací</string>
     <string name="settings_background_capture">Pozadí a snímky obrazovky</string>
     <string name="settings_battery_customization">Vlastní styl baterie</string>

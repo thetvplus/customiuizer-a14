@@ -1326,17 +1326,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="controls_ios_home_indicator_title">iOS hareket göstergesi</string>
     <string name="controls_ios_home_indicator_summ">Tam ekran hareketleri, görünür sistem göstergesi ve desteklenen ROM gerekir. Ayarlar → Ana ekran → Sistem gezintisi altında Hareketler seçeneğini seçin ve Tam ekran göstergesini gizle seçeneğini kapatın. Bu modüldeki hareket çizgisini gizleme seçeneğini de kapatın. Menü adları ROM’a göre değişebilir. Sistem arayüzünü yeniden başlatın.</string>
     <string name="settings_category_statusbar">Durum çubuğu ve Dynamic Island</string>
-    <string name="settings_category_statusbar_summary">Saat, pil, ağ ve canlı etkinlikler</string>
     <string name="settings_category_notifications">Bildirimler ve denetim merkezi</string>
-    <string name="settings_category_notifications_summary">Kurallar, başlıklar ve medya kartları</string>
-    <string name="settings_category_launcher">Ana ekran ve son uygulamalar</string>
-    <string name="settings_category_launcher_summary">Düzen, Dock, klasörler ve görev geçişi</string>
-    <string name="settings_category_controls">Ses ve kontroller</string>
-    <string name="settings_category_controls_summary">Ses düzeyi, titreşim, tuşlar ve hareketler</string>
     <string name="settings_category_system">Ekran ve kilit ekranı</string>
-    <string name="settings_category_system_summary">Döndürme, parlaklık, görüntüler ve kilit</string>
-    <string name="settings_category_various">Uygulamalar ve bakım</string>
-    <string name="settings_category_various_summary">Davranış, otomasyon ve uyumluluk</string>
     <string name="settings_animation_scales">Sistem animasyon hızı</string>
     <string name="settings_background_capture">Arka plan ve ekran görüntüleri</string>
     <string name="settings_battery_customization">Özel pil stili</string>

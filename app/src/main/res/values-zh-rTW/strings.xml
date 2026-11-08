@@ -1321,17 +1321,8 @@
     <string name="controls_ios_home_indicator_title">iOS 手勢指示條</string>
     <string name="controls_ios_home_indicator_summ">使用全螢幕手勢並保留系統指示條。關閉系統與米客的隱藏指示條選項，重新啟動系統介面後生效。</string>
     <string name="settings_category_statusbar">狀態列與動態島</string>
-    <string name="settings_category_statusbar_summary">時鐘、電池、網路與即時動態</string>
     <string name="settings_category_notifications">通知與控制中心</string>
-    <string name="settings_category_notifications_summary">通知規則、橫幅與媒體卡片</string>
-    <string name="settings_category_launcher">桌面與最近使用的應用程式</string>
-    <string name="settings_category_launcher_summary">版面、Dock、資料夾與工作切換</string>
-    <string name="settings_category_controls">聲音與操作</string>
-    <string name="settings_category_controls_summary">音量面板、震動、按鍵與手勢</string>
     <string name="settings_category_system">螢幕與鎖定畫面</string>
-    <string name="settings_category_system_summary">旋轉、亮度、截圖與鎖定畫面</string>
-    <string name="settings_category_various">應用程式與維護</string>
-    <string name="settings_category_various_summary">應用程式行為、自動化與相容設定</string>
     <string name="settings_animation_scales">系統動畫速度</string>
     <string name="settings_background_capture">背景與截圖</string>
     <string name="settings_battery_customization">自訂電池樣式</string>

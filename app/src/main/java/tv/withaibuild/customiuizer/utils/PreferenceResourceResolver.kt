@@ -11,8 +11,6 @@ import tv.withaibuild.customiuizer.subs.Various
 internal object PreferenceResourceResolver {
 
     fun categorySelector(category: String): Int? = when (category) {
-        "pref_key_statusbar" -> R.id.prefs_statusbar_cat
-        "pref_key_notifications" -> R.id.prefs_notifications_cat
         "pref_key_system" -> R.id.prefs_system_cat
         "pref_key_launcher" -> R.id.prefs_launcher_cat
         "pref_key_controls" -> R.id.prefs_controls_cat
@@ -21,12 +19,10 @@ internal object PreferenceResourceResolver {
     }
 
     fun categoryTitle(category: String): Int = when (category) {
-        "pref_key_statusbar" -> R.string.settings_category_statusbar
-        "pref_key_notifications" -> R.string.settings_category_notifications
-        "pref_key_system" -> R.string.settings_category_system
-        "pref_key_launcher" -> R.string.settings_category_launcher
-        "pref_key_controls" -> R.string.settings_category_controls
-        "pref_key_various" -> R.string.settings_category_various
+        "pref_key_system" -> R.string.system_mods
+        "pref_key_launcher" -> R.string.launcher_title
+        "pref_key_controls" -> R.string.controls_mods
+        "pref_key_various" -> R.string.various_mods
         else -> 0
     }
 
@@ -39,7 +35,6 @@ internal object PreferenceResourceResolver {
             key.startsWith("pref_key_launcher_") -> "pref_key_launcher"
             key.startsWith("pref_key_controls_") -> "pref_key_controls"
             key.startsWith("pref_key_various_") -> "pref_key_various"
-            category == "pref_key_statusbar" || category == "pref_key_notifications" -> "pref_key_system"
             else -> category
         }
     }
@@ -53,18 +48,14 @@ internal object PreferenceResourceResolver {
     }
 
     fun resolve(category: String, sub: String?): Int = when (owner(category, sub)) {
-        "pref_key_system" -> resolveSystem(SearchRouteResolver.normalizeSub(sub), when (category) {
-            "pref_key_statusbar" -> R.id.prefs_statusbar
-            "pref_key_notifications" -> R.id.prefs_notifications
-            else -> R.id.prefs_system
-        })
+        "pref_key_system" -> resolveSystem(SearchRouteResolver.normalizeSub(sub))
         "pref_key_launcher" -> resolveLauncher(sub)
         "pref_key_controls" -> resolveControls(SearchRouteResolver.normalizeSub(sub))
         "pref_key_various" -> resolveVarious(sub)
         else -> 0
     }
 
-    private fun resolveSystem(sub: String?, fallback: Int): Int = when (sub) {
+    private fun resolveSystem(sub: String?): Int = when (sub) {
         "pref_key_system_cat_screen" -> R.id.prefs_system_screen
         "pref_key_system_cat_appearance" -> R.id.prefs_system_appearance
         "pref_key_system_cat_capture" -> R.id.prefs_system_capture
@@ -84,7 +75,7 @@ internal object PreferenceResourceResolver {
         "pref_key_system_cat_applock" -> R.id.prefs_system_applock
         "pref_key_system_cat_lockscreen" -> R.id.prefs_system_lockscreen
         "pref_key_system_cat_other" -> R.id.prefs_system_other
-        else -> fallback
+        else -> R.id.prefs_system
     }
 
     private fun resolveLauncher(sub: String?): Int = when (sub) {

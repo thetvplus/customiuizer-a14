@@ -163,7 +163,7 @@ class PreferenceNavigationUiTest {
         assertEquals("All standalone page entries, including Wi-Fi automatic settings, must be indexed", 36, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
-        for (key in arrayOf("pref_key_statusbar", "pref_key_notifications", "pref_key_launcher", "pref_key_controls", "pref_key_system", "pref_key_various")) {
+        for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
             val home = currentPage() as MainFragment
             assertTrue(home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>(key))))
             settleNavigation()
@@ -320,7 +320,7 @@ class PreferenceNavigationUiTest {
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun titlesAndSummariesAreCenteredInTheWholeClickableRow() {
         val page = currentPage() as MainFragment
-        for (key in listOf("pref_key_statusbar", "pref_key_notifications", "pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various",
+        for (key in listOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various",
             "pref_key_miuizer_locale", "pref_key_miuizer_launchericon")) {
             val preference = requireNotNull(page.findPreference<Preference>(key))
             val row = compose.onNodeWithTag(key).fetchSemanticsNode().boundsInRoot
@@ -435,10 +435,12 @@ class PreferenceNavigationUiTest {
         }
     }
 
-    @Test fun homeBackupShortcutUsesTheExistingDialogWithoutChangingSettings() {
+    @Test fun backupMenuUsesTheExistingDialogWithoutChangingSettings() {
         val home = currentPage() as MainFragment
         val before = requireNotNull(AppHelper.appPrefs).all
-        assertTrue(home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_miuizer_backup"))))
+        assertNull(home.findPreference<Preference>("pref_key_miuizer_backup"))
+        val item = PopupMenu(activity, home.requireView()).menu.add(0, R.id.backuprestore, 0, activity.getString(R.string.backup_restore))
+        home.onSettingsAction(item)
         settleNavigation()
         assertTrue(requireNotNull(ShadowDialog.getLatestDialog()).isShowing)
         assertEquals(before, requireNotNull(AppHelper.appPrefs).all)
@@ -501,7 +503,7 @@ class PreferenceNavigationUiTest {
     private fun resourcesDensity() = activity.resources.displayMetrics.density
 
     private fun openIslandPage(style: String = "3"): SubFragment {
-        openSettingsPage("pref_key_statusbar", "pref_key_system_cat_island")
+        openSettingsPage("pref_key_system", "pref_key_system_cat_island")
         val page = currentPage() as SubFragment
         val mode = requireNotNull(page.findPreference<ListPreference>("pref_key_system_strong_toast_mode"))
         assertTrue(mode.callChangeListener(style)); mode.value = style
@@ -1041,7 +1043,7 @@ class PreferenceNavigationUiTest {
         requireNotNull(AppHelper.appPrefs).edit().putInt("pref_key_system_toast_bottom", 120)
             .remove("pref_key_system_toast_position").commit()
         val home = currentPage() as MainFragment
-        home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_notifications")))
+        home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_system")))
         settleNavigation()
         requireNotNull((currentPage() as SubFragment)
             .findPreference<Preference>("pref_key_system_cat_toasts")).performClick()

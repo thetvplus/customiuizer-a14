@@ -14,8 +14,6 @@ data class SearchRoute(
 
     private companion object {
         private val CATEGORY_SELECTOR_CATEGORIES = setOf(
-            "pref_key_statusbar",
-            "pref_key_notifications",
             "pref_key_system",
             "pref_key_launcher",
             "pref_key_controls",
@@ -27,8 +25,6 @@ data class SearchRoute(
 object SearchRouteResolver {
 
     private val KNOWN_CATEGORIES = setOf(
-        "pref_key_statusbar",
-        "pref_key_notifications",
         "pref_key_system",
         "pref_key_launcher",
         "pref_key_controls",

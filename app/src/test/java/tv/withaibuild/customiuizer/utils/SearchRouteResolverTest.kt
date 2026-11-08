@@ -33,9 +33,7 @@ class SearchRouteResolverTest {
     }
 
     @Test
-    fun allSixKnownCategoriesReturnRoute() {
-        assertEquals("pref_key_statusbar", SearchRouteResolver.resolve("pref_key_statusbar", "sub", "key")?.category)
-        assertEquals("pref_key_notifications", SearchRouteResolver.resolve("pref_key_notifications", "sub", "key")?.category)
+    fun allFourKnownCategoriesReturnRoute() {
         assertEquals("pref_key_system", SearchRouteResolver.resolve("pref_key_system", "sub", "key")?.category)
         assertEquals("pref_key_launcher", SearchRouteResolver.resolve("pref_key_launcher", "sub", "key")?.category)
         assertEquals("pref_key_controls", SearchRouteResolver.resolve("pref_key_controls", "sub", "key")?.category)

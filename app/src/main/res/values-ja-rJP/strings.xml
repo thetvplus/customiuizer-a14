@@ -1320,17 +1320,8 @@
     <string name="controls_ios_home_indicator_title">iOS ホームインジケータ</string>
     <string name="controls_ios_home_indicator_summ">対応する ROM、全画面ジェスチャー、表示中のシステムインジケーターが必要です。設定 → ホーム画面 → システムナビゲーションでジェスチャーを選び、全画面インジケーターの非表示をオフにしてください。本モジュールのジェスチャーライン非表示もオフにしてください。メニュー名は ROM により異なります。システム UI の再起動で反映されます。</string>
     <string name="settings_category_statusbar">ステータスバーとDynamic Island</string>
-    <string name="settings_category_statusbar_summary">時計、バッテリー、ネットワーク、ライブアクティビティ</string>
     <string name="settings_category_notifications">通知とコントロールセンター</string>
-    <string name="settings_category_notifications_summary">通知ルール、バナー、メディアカード</string>
-    <string name="settings_category_launcher">ホームと最近のアプリ</string>
-    <string name="settings_category_launcher_summary">配置、Dock、フォルダー、タスク切り替え</string>
-    <string name="settings_category_controls">サウンドと操作</string>
-    <string name="settings_category_controls_summary">音量パネル、振動、ボタン、ジェスチャー</string>
     <string name="settings_category_system">画面とロック画面</string>
-    <string name="settings_category_system_summary">回転、明るさ、スクリーンショット、ロック画面</string>
-    <string name="settings_category_various">アプリとメンテナンス</string>
-    <string name="settings_category_various_summary">アプリの動作、自動化、互換性</string>
     <string name="settings_animation_scales">システムアニメーション速度</string>
     <string name="settings_background_capture">背景とスクリーンショット</string>
     <string name="settings_battery_customization">バッテリースタイルのカスタマイズ</string>

@@ -5,8 +5,6 @@ import java.util.Locale
 class ModData {
 
     enum class ModCat {
-        pref_key_statusbar,
-        pref_key_notifications,
         pref_key_system,
         pref_key_launcher,
         pref_key_controls,

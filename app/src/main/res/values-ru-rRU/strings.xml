@@ -1319,17 +1319,8 @@
     <string name="controls_ios_home_indicator_title">Индикатор жестов iOS</string>
     <string name="controls_ios_home_indicator_summ">Нужны полноэкранные жесты, видимый системный индикатор и поддерживаемая ROM. В Настройки → Рабочий стол → Системная навигация выберите жесты и отключите скрытие полноэкранного индикатора. Также отключите скрытие линии жестов в этом модуле. Названия меню зависят от ROM. Перезапустите системный интерфейс.</string>
     <string name="settings_category_statusbar">Строка состояния и Dynamic Island</string>
-    <string name="settings_category_statusbar_summary">Часы, батарея, сеть и события</string>
     <string name="settings_category_notifications">Уведомления и центр управления</string>
-    <string name="settings_category_notifications_summary">Правила, баннеры и медиакарточки</string>
-    <string name="settings_category_launcher">Рабочий стол и недавние</string>
-    <string name="settings_category_launcher_summary">Сетка, Dock, папки и переключение задач</string>
-    <string name="settings_category_controls">Звук и управление</string>
-    <string name="settings_category_controls_summary">Громкость, вибрация, кнопки и жесты</string>
     <string name="settings_category_system">Экран и блокировка</string>
-    <string name="settings_category_system_summary">Поворот, яркость, снимки и блокировка</string>
-    <string name="settings_category_various">Приложения и обслуживание</string>
-    <string name="settings_category_various_summary">Поведение, автоматизация и совместимость</string>
     <string name="settings_animation_scales">Скорость системной анимации</string>
     <string name="settings_background_capture">Фон и снимки экрана</string>
     <string name="settings_battery_customization">Свой стиль батареи</string>

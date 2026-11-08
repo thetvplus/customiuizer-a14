@@ -18,9 +18,9 @@ class SearchIndexReuseTest {
         Helpers.getAllMods(context("zh-CN"), true)
         for ((key, category) in mapOf(
             "pref_key_system_volume_ios" to ModData.ModCat.pref_key_controls,
-            "pref_key_system_media_ios_card" to ModData.ModCat.pref_key_notifications,
+            "pref_key_system_media_ios_card" to ModData.ModCat.pref_key_system,
             "pref_key_system_recents_ios18_deck" to ModData.ModCat.pref_key_launcher,
-            "pref_key_system_statusbar_duo" to ModData.ModCat.pref_key_statusbar,
+            "pref_key_system_statusbar_duo" to ModData.ModCat.pref_key_system,
             "pref_key_system_usb_default_function" to ModData.ModCat.pref_key_various,
         )) assertEquals(key, category, Helpers.allModsList.single { it.key == key }.cat)
         val indicator = Helpers.allModsList.single { it.key == "pref_key_controls_ios_home_indicator" }

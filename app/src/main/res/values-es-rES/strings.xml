@@ -1319,17 +1319,8 @@
     <string name="controls_ios_home_indicator_title">Indicador de gestos de iOS</string>
     <string name="controls_ios_home_indicator_summ">Requiere gestos a pantalla completa, un indicador visible y una ROM compatible. En Ajustes → Pantalla de inicio → Navegación del sistema, elige Gestos y desactiva Ocultar indicador de pantalla completa. Desactiva también Ocultar línea de gestos en este módulo. Los nombres pueden variar según la ROM. Reinicia la interfaz del sistema.</string>
     <string name="settings_category_statusbar">Barra de estado y Dynamic Island</string>
-    <string name="settings_category_statusbar_summary">Reloj, batería, red y actividades en directo</string>
     <string name="settings_category_notifications">Notificaciones y centro de control</string>
-    <string name="settings_category_notifications_summary">Reglas, avisos y tarjetas multimedia</string>
-    <string name="settings_category_launcher">Inicio y aplicaciones recientes</string>
-    <string name="settings_category_launcher_summary">Diseño, Dock, carpetas y cambio de tareas</string>
-    <string name="settings_category_controls">Sonido y controles</string>
-    <string name="settings_category_controls_summary">Volumen, vibración, botones y gestos</string>
     <string name="settings_category_system">Pantalla y bloqueo</string>
-    <string name="settings_category_system_summary">Giro, brillo, capturas y pantalla de bloqueo</string>
-    <string name="settings_category_various">Aplicaciones y mantenimiento</string>
-    <string name="settings_category_various_summary">Comportamiento, automatización y compatibilidad</string>
     <string name="settings_animation_scales">Velocidad de animación del sistema</string>
     <string name="settings_background_capture">Fondo y capturas</string>
     <string name="settings_battery_customization">Estilo de batería personalizado</string>

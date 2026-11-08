@@ -77,12 +77,10 @@ RETIRED_A14_KEYS = {
 }
 
 CATEGORY_SOURCES = {
-    "pref_key_statusbar": ("prefs_statusbar.xml", "@string/settings_category_statusbar"),
-    "pref_key_notifications": ("prefs_notifications.xml", "@string/settings_category_notifications"),
-        "pref_key_launcher": ("prefs_launcher.xml", "@string/settings_category_launcher"),
-    "pref_key_controls": ("prefs_controls.xml", "@string/settings_category_controls"),
-    "pref_key_system": ("prefs_system.xml", "@string/settings_category_system"),
-    "pref_key_various": ("prefs_various.xml", "@string/settings_category_various"),
+    "pref_key_system": ("prefs_system.xml", "@string/system_mods"),
+    "pref_key_launcher": ("prefs_launcher.xml", "@string/launcher_title"),
+    "pref_key_controls": ("prefs_controls.xml", "@string/controls_mods"),
+    "pref_key_various": ("prefs_various.xml", "@string/various_mods"),
 }
 
 EXPECTED_SPLITS = {
@@ -205,7 +203,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
 
     def test_every_structured_category_is_an_exact_single_category_slice(self) -> None:
         found_keys: set[str] = set()
-        for category in ("statusbar", "notifications", "system", "launcher", "controls", "various"):
+        for category in ("system", "launcher", "controls", "various"):
             source_root = read_element(SOURCE_DIR / f"prefs_{category}.xml")
             for source_category in source_root.iter():
                 key = source_category.get(ANDROID_KEY, "")
@@ -317,7 +315,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                 self.assertEqual(f"@id/prefs_system_island_{suffix}", match[0]["page"])
                 self.assertEqual("System", match[0]["pageFragment"])
                 self.assertEqual(f"pref_key_system_island_{suffix}_cat", match[0]["routeSub"])
-        source = read_element(SOURCE_DIR / "prefs_statusbar.xml")
+        source = read_element(SOURCE_DIR / "prefs_system.xml")
         island = next(e for e in source.iter() if e.get(ANDROID_KEY) == "pref_key_system_cat_island")
         self.assertEqual([f"@string/system_island_{name}_group" for name in
                           ("basic", "feedback", "appearance", "interaction")],
