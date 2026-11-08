@@ -4,6 +4,7 @@ import importlib.util
 import re
 import unittest
 from pathlib import Path
+from tools.hook_body_prefmap_scan import find_block_end, strip_comments
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -13,6 +14,19 @@ def source(rel: str) -> str:
     if not path.is_file():
         raise FileNotFoundError(f"Missing source: {path}")
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def function_body(text: str, name: str) -> str:
+    """Inspect one block, without treating comment words as declarations."""
+    text = strip_comments(text)
+    match = re.search(r"\bfun\s+" + re.escape(name) + r"\s*\([^)]*\)[^{=]*\{", text)
+    if match is None:
+        raise ValueError(f"Missing block function: {name}")
+    start = match.end() - 1
+    end = find_block_end(text, start)
+    if end < 0:
+        raise ValueError(f"Unclosed function: {name}")
+    return text[start + 1:end]
 
 
 def assert_contains(test: unittest.TestCase, haystack: str, needle: str, label: str) -> None:
@@ -30,6 +44,25 @@ def find_hook_call(text: str, class_name: str, method_name: str) -> bool:
         re.DOTALL,
     )
     return bool(pattern.search(text))
+
+
+class FunctionBodyExtractionTest(unittest.TestCase):
+    def test_comment_declarations_and_nested_blocks_do_not_truncate_the_body(self):
+        text = '''fun bind(loader: ClassLoader): Result {
+            // Native class preparation; fun clear() { } is commentary.
+            if (ready) { val label = "class fun }" }
+            clearInternal()
+        }
+        fun unrelated() { wrongOwner.clear() }
+        '''
+        body = function_body(text, "bind")
+        self.assertIn("clearInternal()", body)
+        self.assertNotIn("wrongOwner.clear()", body)
+
+    def test_missing_commented_and_unclosed_functions_fail_closed(self):
+        for text in ("fun other() {}", "// fun bind() { clearInternal() }", "fun bind() { nested { }"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                function_body(text, "bind")
 
 
 class GestureLifecycleInventoryTest(unittest.TestCase):
@@ -200,12 +233,13 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
         self.assertIn("existing?.machine?.clear()", holder)
 
         # Plugin: new loader invalidates old lease, runs clearInternal, then binds a fresh machine.
-        bind = re.search(r"fun\s+bind\s*\(\s*loader:\s*ClassLoader\s*\).*?(?=fun\s+|class\s+|\Z)", plugin, re.DOTALL)
-        self.assertIsNotNone(bind, "ControlCenterPluginRuntime.bind missing")
-        bind_body = bind.group(0)
-        self.assertIn("activeLease?.invalidate()", bind_body)
+        bind_body = function_body(plugin, "bind")
+        cleanup = function_body(plugin, "clearInternal")
+        self.assertIn("activeLease?.invalidate()", cleanup)
         self.assertIn("clearInternal()", bind_body)
         self.assertIn("runtimeHolder.bind(loader)", bind_body)
+        self.assertLess(bind_body.index("clearInternal()"), bind_body.index("runtimeHolder.bind(loader)"))
+        self.assertLess(cleanup.index("activeLease?.invalidate()"), cleanup.index("_runtimeHolder.unbind()"))
 
         # Whole-machine clear releases its prepared owners before dropping their IDs.
         machine = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/gesture/GestureMachine.kt")
@@ -256,9 +290,8 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
         self.assertIsNotNone(sb_clear, "status bar clear with identityHashCode missing")
 
         # Replacement path invalidates the old lease; new hooks are created with a new lease.
-        plugin_bind = re.search(r"fun\s+bind\s*\(\s*loader:\s*ClassLoader\s*\).*?(?=fun\s+|class\s+|\Z)", plugin, re.DOTALL)
-        self.assertIsNotNone(plugin_bind)
-        self.assertIn("activeLease?.invalidate()", plugin_bind.group(0))
+        self.assertIn("clearInternal()", function_body(plugin, "bind"))
+        self.assertIn("activeLease?.invalidate()", function_body(plugin, "clearInternal"))
 
     def test_repeated_loader_replacement_does_not_grow_unbounded_state(self) -> None:
         """Only one active runtime is kept; in-memory collections are bounded."""
