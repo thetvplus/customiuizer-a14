@@ -6,6 +6,9 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## Unreleased
 
+- Add an optional iOS 12 central volume HUD while retaining native volume, routing and expanded controls. Upgrades keep the side style and the saved narrow-bar choice.
+- Add default-off iOS 10 five-dot cellular signals using native network state, hiding and no-service fallback, with Duo taking priority. Real-SIM, dual-SIM and roaming scenarios remain pending.
+
 ## r14.27.3 — 2026-11-08
 
 versionCode 304. Changes since r14.26.11:
