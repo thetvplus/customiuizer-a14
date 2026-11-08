@@ -144,7 +144,7 @@ Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析�
 
 - 独立依赖图工作流已保留，首次手动运行结果仍待核实；不能把配置存在视为执行成功。
 - 2026-11-08 仍记录 Gradle 9.8.2 内置 Guava 33.4.6-jre 的 CVE-2026-102554 宿主风险；项目控制的依赖已修复，生产 APK 不含完整 Guava。升级时重新核对公告与可用版本，不改发行包内部文件或固定摘要。
-- 尚无真实 CodeQL Kotlin / Java 扫描结果。已记录的工具支持边界不覆盖 JDK 27 / Kotlin 2.4.21；支持变化后再核对 manual build 和提取质量，不降 JDK 或用 none 模式跳过 Kotlin。
+- CodeQL Default setup 当前保留 Python / Actions，JS 已停用；两份 JS 随无消费者的设计工具删除。候选 `c156bc45` 的两项真实扫描无告警；日志解析器的指数回溯有独立超时复现与修复回归，另三项旧告警属于已移除、仅支持 npm/PyPI/Go 的辅助工具，不手工关闭 main 的历史告警。Java/Kotlin 的原 autobuild 因缺 JDK 27 失败。[手动构建试验](https://github.com/thetvplus/customiuizer-a14/actions/runs/42510958785) 已用 JDK 27.0.1 / Kotlin 2.4.21 / CodeQL 2.27.4 实际提取全部 429 个 Kotlin、5 个 Java 主源码及 3 个生成文件，Kotlin/Java 代码指标为 87,476/1,340 行，分析无告警；不据此扩大到未测工具版本或 Hook 行为。保留按需入口与提取完整性门禁，不新增定时扫描或重复 Python/Actions；SARIF 暂不上传 Security，持续 Java/Kotlin 告警接入仍待主线 Advanced 迁移。
 
 ## 验证与证据
 
@@ -167,3 +167,5 @@ Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析�
 - `agent_verify` 对无 Python 变更的 catalog 输入直接保留全工具回退，免建导入图；单次计划内同一测试集合只查找一次，不留下跨任务缓存。三个代表计划的命令、场景、理由和待验项逐项相同。
 - 本机五次暖缓存对照：catalog 计划 103 次 AST 解析降为 0，中位约 426 ms 降为 0.01 ms；五个 Deck 文件的测试查找由 9 次降为 2。叶子 Python 工具仍执行 103 次必要解析，耗时差异不作提速结论；不推断整个开发任务或 Android 运行性能。
 - 已核对 CLI、受信配置与实际 MCP；保留模型/推理选择、安全设置、Shell Snapshot 和现有工具，未为缺乏实测收益的开关增加项目配置。Windows 的过滤器与 wrapper 约定合并到既有环境入口。
+
+- Agent Skills 按内容、引用和 A14 消费者从 92 项收敛到 25 项，开发资料减少 448 个文件、约 4.77 MB；移除视觉设计、组件/主题/动效、设计系统、跨平台专用和重复审查工具。保留完整 Perfetto 运行目录及性能、安全、构建、并发和测试入口；来源清单与实际安装目录由回归核对，删除项按 Git 历史恢复。Android 测试说明复用现有合同，清除未安装的上游 workflow 引用。

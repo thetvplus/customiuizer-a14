@@ -1,18 +1,15 @@
-name: A14 CodeQL extraction probe
+name: A14 Kotlin CodeQL
 
-# Bounded experiment: default setup cannot provision this project's JDK 27.
-# Do not replace working default scans until Kotlin extraction is demonstrated.
+# Default setup cannot provision JDK 27. Keep its Python/Actions scans active;
+# this manual Kotlin analysis publishes SARIF artifacts, not duplicate Security uploads.
 on:
-  pull_request:
-    branches: [main]
-    paths: [.github/workflows/a14-codeql-probe.yml]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: codeql-probe-${{ github.ref }}
+  group: codeql-kotlin-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -50,13 +47,14 @@ jobs:
           output: codeql-results
           upload: false
           upload-database: false
-      - name: Keep bounded extraction evidence
+      - name: Require production Kotlin extraction
+        run: python tools/check_codeql_extraction.py codeql-results/java.sarif
+      - name: Keep analysis evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v6.0.0
         with:
-          name: codeql-extraction-probe
+          name: codeql-kotlin-analysis
           path: |
             codeql-results/*.sarif
             ${{ runner.temp }}/codeql_databases/java/codeql-database.yml
-            ${{ runner.temp }}/codeql_databases/java/log/*.log
           retention-days: 7
