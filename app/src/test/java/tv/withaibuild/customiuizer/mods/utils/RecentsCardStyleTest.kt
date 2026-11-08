@@ -113,7 +113,7 @@ class RecentsCardStyleTest {
 
     @Test
     fun prefsXmlUsesCheckBoxForRecentsCardStyle() {
-        val data = source("app/settings/prefs_system.json").readText()
+        val data = source("app/settings/prefs_launcher.json").readText()
         val prefix = data.substringBefore("pref_key_system_recents_card_style")
         assertTrue(prefix.substringAfterLast("\"type\":").contains("\"toggle\""))
         val block = data.substring(data.lastIndexOf("{", data.indexOf("pref_key_system_recents_card_style"))).substringBefore("}")

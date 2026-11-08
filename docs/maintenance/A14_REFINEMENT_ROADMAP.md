@@ -76,7 +76,7 @@
 | 多 ROM 静态复核 | 2026-11-08 直接核对 duchamp CN、fuxi CN / TW、munch ID 的 A14 原件。Dock、Duo、Home Indicator、岛体与 Deck 的定义 / 时序按各[专题](../README.md)保存；同 ABI 不证明运行或扩大路由 |
 | Hook 样板与选测 | 当前实现见 [AGENTIC_VERIFICATION](../AGENTIC_VERIFICATION.md)。真实叶子工具差异定向执行约 3.38 s，宽选工具约 127.38 s，范围不同；岛体轮廓由 87 个 owner 类收敛到 7 个实际消费者类并执行通过，共享尺寸仍宽选。不是整轮同倍提速 |
 | Python 测试质量 | 清理重复存在性 / 字号 / 惰性工厂断言和 JVM 方法名伪证据；生成器遗漏 Kotlin 或仅 Kotlin 漂移的受控输入，旧检查通过，新检查均因断言失败检出。资源合并请求 2621→10；同机单次纯 Python 回归约 52.3→38.2 s，本地化约 10.42→0.58 s。未计六项既有 Gradle 集成，不外推整轮 CI 倍率；原始对照在忽略目录 `.di-evidence/python-test-quality/`。原 required-only、CI 和发布合同保持 |
-| 通知性能 A/B | 当前正式优化构建与 `8ea67d17` Develop R8 各六份 trace，宿主样本 / ROM、120 Hz、热状态 0、方向和固定通知输入一致。分准入关 / 开比较，平均帧时长中位差约 +1.73 / −0.55 ms，侧内波动约 2.19 / 2.09 ms，均为 INCONCLUSIVE_NOISE。没有 CPU、分配、闲置唤醒或功耗收益结论；原始收据在忽略目录 `.di-evidence/authorized-runtime/` |
+| 通知性能 A/B | 旧工具状态目录失效，使其自动化退出标记不可信；旧采样不作为隔离性能证据。修复后复用既有 Perfetto 三组交替流程，按宿主样本 / ROM、刷新率、热状态、方向、输入与实际会话退出逐项核对。未取得超出噪声的可信同条件对照，不宣称 CPU、帧时、分配、闲置唤醒或功耗收益；私有收据入口为忽略目录 `.di-evidence/authorized-runtime/` |
 | 原始材料 | ROM / iOS 原件、SQL / Smali、JUnit、APK / mapping、设备日志与 trace 私有留存；通知样板入口为忽略目录 `.di-evidence/verification-ii/`。实验环境按原值恢复并清理本次临时资源 |
 
 逆向来源和仍有效的技术取舍保留在功能专题、[M03 通知合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)、[遗留语义](LEGACY_SEMANTIC_CALIBRATION.md)与[退役依据](A14_FEATURE_RETIREMENTS.md)。过程追溯可查[整理前的固定版本](https://github.com/thetvplus/customiuizer-a14/blob/2a2a21e12401df16fb316756eacd93db476cc232/docs/maintenance/A14_REFINEMENT_ROADMAP.md)，不得以其中被后续修正的方案覆盖当前代码。
