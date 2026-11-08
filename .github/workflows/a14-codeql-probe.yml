@@ -40,7 +40,7 @@ jobs:
           cache-read-only: true
       - uses: github/codeql-action/init@5895b2c9be147bc7f1c75ce72c5cb577febb1907 # v4
         with:
-          languages: java-kotlin,python,actions
+          languages: java-kotlin
           build-mode: manual
       - name: Compile production sources under extraction
         run: ./gradlew --no-daemon --no-build-cache --rerun-tasks -Pkotlin.incremental=false :app:compileDebugKotlin :app:compileDebugJavaWithJavac
