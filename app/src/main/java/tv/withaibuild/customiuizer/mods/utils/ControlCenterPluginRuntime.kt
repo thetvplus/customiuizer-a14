@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods.utils
 import android.view.MotionEvent
 import android.view.View
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import java.lang.ref.WeakReference
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.SystemUIControlCenterHooks
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
@@ -82,6 +83,10 @@ open class ControlCenterPluginRuntimeEngine(
     private var installState = InstallState.IDLE
     private var lastFailure: Throwable? = null
     private var hooked = false
+    private var binding = false
+    // Plugin UI hooks are not lease-scoped. A retired loader must not install them again.
+    // Weak identities avoid retaining loaders after their native plugin is collected.
+    private val attemptedLoaders = ArrayList<WeakReference<ClassLoader>>()
 
     /** Expose the shared arbiter so status-bar and control-center gestures share one authority. */
     fun arbiter(): PhysicalGestureArbiter = arbiter
@@ -106,12 +111,16 @@ open class ControlCenterPluginRuntimeEngine(
      *
      * - Same loader + [InstallState.INSTALLED] is idempotent.
      * - Same loader + [InstallState.FAILED_PARTIAL] is *not* retried.
+     * - Reentrant installation and retired loaders never add another set of UI hooks.
      * - A new loader ends the previous lease, clears the previous gesture runtime and tokens,
      *   then runs a fresh install transaction.
      * - The active loader is only published after the gesture hooks and the control-center UI
      *   hooks both succeed; fatal failures during install do not leave a half-state.
      */
+    @Synchronized
     fun bind(loader: ClassLoader): ControlCenterBindResult {
+        // Native class preparation can re-enter PluginFactory before a loader is published.
+        if (binding) return ControlCenterBindResult.AlreadyInstalled
         if (activeLoader === loader) {
             return when (installState) {
                 InstallState.INSTALLED -> ControlCenterBindResult.AlreadyInstalled
@@ -123,28 +132,47 @@ open class ControlCenterPluginRuntimeEngine(
             }
         }
 
-        // New loader (or first bind): invalidate old lease and clean up previous state.
-        activeLease?.invalidate()
-        clearInternal()
+        val previous = attemptedLoaders.iterator()
+        while (previous.hasNext()) {
+            val attempted = previous.next().get()
+            if (attempted == null) previous.remove()
+            else if (attempted === loader) return ControlCenterBindResult.NoRetry
+        }
+        attemptedLoaders.add(WeakReference(loader))
 
-        val lease = RuntimeLease()
-        activeLease = lease
-        installState = InstallState.INSTALLING
-        lastFailure = null
-
+        binding = true
         return try {
-            _runtimeHolder.bind(loader)
-            onInstallPluginHooks(loader)
-            installState = InstallState.INSTALLED
-            activeLoader = loader
-            ControlCenterBindResult.Installed
-        } catch (e: Throwable) {
+            // New loader (or first bind): retire the previous runtime before preparing hooks.
             clearInternal()
-            FatalErrors.unwrapAndRethrowIfFatal(e)
-            activeLoader = loader
-            installState = InstallState.FAILED_PARTIAL
-            lastFailure = e
-            ControlCenterBindResult.Failed(e)
+            val lease = RuntimeLease()
+            activeLease = lease
+            installState = InstallState.INSTALLING
+            lastFailure = null
+
+            try {
+                _runtimeHolder.bind(loader)
+                if (lease.active) onInstallPluginHooks(loader)
+                if (!lease.active) {
+                    // A reentrant teardown may run during either installer. The holder can
+                    // finish publishing after clear(), so release it again before returning.
+                    clearInternal()
+                    installState = InstallState.IDLE
+                    ControlCenterBindResult.NoRetry
+                } else {
+                    installState = InstallState.INSTALLED
+                    activeLoader = loader
+                    ControlCenterBindResult.Installed
+                }
+            } catch (e: Throwable) {
+                clearInternal()
+                FatalErrors.unwrapAndRethrowIfFatal(e)
+                activeLoader = loader
+                installState = InstallState.FAILED_PARTIAL
+                lastFailure = e
+                ControlCenterBindResult.Failed(e)
+            }
+        } finally {
+            binding = false
         }
     }
 
@@ -154,6 +182,7 @@ open class ControlCenterPluginRuntimeEngine(
      * Invalidates the current lease, clears the gesture runtime and its physical-gesture
      * tokens, and drops the active loader references so the old ClassLoader can be collected.
      */
+    @Synchronized
     fun clear() {
         activeLease?.invalidate()
         if (activeLease == null) {

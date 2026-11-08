@@ -113,6 +113,24 @@ class SystemUiFeaturesWiringTest {
         assertFalse(feature.isEnabled(prefs))
     }
 
+    @Test fun batteryPresentationHasOneOwnerWithoutDisablingTheMediaCard() {
+        val prefs = PrefMap().apply {
+            put("system_statusbar_ios_battery", true)
+            put("system_media_ios_card", true)
+        }
+        val features = SystemUiFeatures.all(fakePackageReadyParam(), prefs)
+        val battery = features.single { it.id == IosStatusBarBatteryFeatureId }
+        val media = features.single { it.id == IosMediaCardFeatureId }
+        for (owner in listOf("system_statusbar_duo", "system_statusbar_batterystyle", "system_statusbaricons_battery1")) {
+            assertTrue(battery.isEnabled(prefs))
+            prefs.put(owner, true)
+            assertFalse(battery.isEnabled(prefs))
+            assertTrue(media.isEnabled(prefs))
+            prefs.put(owner, false)
+        }
+        assertTrue(battery.isEnabled(prefs))
+    }
+
     @Test
     fun retiredNotificationKeysHaveNoFeatureAndDoNotEnableCalendarClockReplacement() {
         val retiredPrefs = PrefMap().apply {
