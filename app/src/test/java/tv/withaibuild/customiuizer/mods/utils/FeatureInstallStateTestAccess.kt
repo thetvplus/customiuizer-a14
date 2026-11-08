@@ -14,4 +14,11 @@ object FeatureInstallStateTestAccess {
         val map = field.get(null) as MutableMap<Int, FeatureState>
         synchronized(map) { map.clear() }
     }
+
+    fun snapshot(): Map<Int, FeatureState> {
+        val field = FeatureInstallState::class.java.getDeclaredField("states").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        val map = field.get(null) as Map<Int, FeatureState>
+        return synchronized(map) { HashMap(map) }
+    }
 }

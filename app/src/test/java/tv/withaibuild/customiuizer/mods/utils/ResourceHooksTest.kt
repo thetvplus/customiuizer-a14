@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.util.SparseArray
 import android.util.SparseIntArray
+import tv.withaibuild.customiuizer.MainModule
 import io.github.libxposed.api.XposedInterface
 import org.junit.After
 import org.junit.Assert.*
@@ -53,6 +54,13 @@ class ResourceHooksTest {
     }
 
     // ---- getFakeResId ----
+
+    @Test
+    fun moduleResourceConsumersShareOneInstance() {
+        val shared = MainModule.getResourceHooks()
+        assertSame(shared, MainModule.getResourceHooks())
+        assertNotSame("isolated tests keep their own replacement state", hooks, shared)
+    }
 
     @Test
     fun getFakeResIdIsStablePerName() {

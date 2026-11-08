@@ -50,7 +50,7 @@ object SystemUIMonitorAndTileHooks {
                     if (enable5G) sb.append(",custom_5G")
                     if (enableFps) sb.append(",custom_FPS")
                     if (enableFloatingTime) sb.append(",custom_floatingtime")
-                    MainModule.resHooks.setObjectReplacement("com.android.systemui", "string", "miui_quick_settings_tiles_stock", sb.toString())
+                    MainModule.getResourceHooks().setObjectReplacement("com.android.systemui", "string", "miui_quick_settings_tiles_stock", sb.toString())
                 }
             }
         })
@@ -204,16 +204,16 @@ object SystemUIMonitorAndTileHooks {
         val tileOnResMap = ArrayMap<String, Int>()
         val tileOffResMap = ArrayMap<String, Int>()
         if (enable5G) {
-            tileOnResMap["custom_5G"] = MainModule.resHooks.addFakeResource("ic_qs_m5g_on", R.drawable.ic_qs_5g_on, "drawable")
-            tileOffResMap["custom_5G"] = MainModule.resHooks.addFakeResource("ic_qs_m5g_off", R.drawable.ic_qs_5g_off, "drawable")
+            tileOnResMap["custom_5G"] = MainModule.getResourceHooks().addFakeResource("ic_qs_m5g_on", R.drawable.ic_qs_5g_on, "drawable")
+            tileOffResMap["custom_5G"] = MainModule.getResourceHooks().addFakeResource("ic_qs_m5g_off", R.drawable.ic_qs_5g_off, "drawable")
         }
         if (enableFps) {
-            tileOnResMap["custom_FPS"] = MainModule.resHooks.addFakeResource("ic_qs_mfps_on", R.drawable.ic_qs_fps_on, "drawable")
-            tileOffResMap["custom_FPS"] = MainModule.resHooks.addFakeResource("ic_qs_mfps_off", R.drawable.ic_qs_fps_off, "drawable")
+            tileOnResMap["custom_FPS"] = MainModule.getResourceHooks().addFakeResource("ic_qs_mfps_on", R.drawable.ic_qs_fps_on, "drawable")
+            tileOffResMap["custom_FPS"] = MainModule.getResourceHooks().addFakeResource("ic_qs_mfps_off", R.drawable.ic_qs_fps_off, "drawable")
         }
         if (enableFloatingTime) {
-            tileOnResMap["custom_floatingtime"] = MainModule.resHooks.addFakeResource("ic_qs_mfloatingtime_on", R.drawable.ic_qs_second_off, "drawable")
-            tileOffResMap["custom_floatingtime"] = MainModule.resHooks.addFakeResource("ic_qs_mfloatingtime_off", R.drawable.ic_qs_second_on, "drawable")
+            tileOnResMap["custom_floatingtime"] = MainModule.getResourceHooks().addFakeResource("ic_qs_mfloatingtime_on", R.drawable.ic_qs_second_off, "drawable")
+            tileOffResMap["custom_floatingtime"] = MainModule.getResourceHooks().addFakeResource("ic_qs_mfloatingtime_off", R.drawable.ic_qs_second_on, "drawable")
         }
         ModuleHelper.hookAllMethods(NfcTileCls, lpparam.classLoader, "handleUpdateState", object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {

@@ -1343,24 +1343,24 @@ object SystemUIControlCenterHooks {
     @JvmStatic
     fun CCTileColorHook() {
         val customColor = MainModule.mPrefs.getInt("system_cc_tile_enabled_color_custom", 0xff277af7.toInt())
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_enabled_color", customColor)
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_warning_color", customColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_enabled_color", customColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_warning_color", customColor)
 
         val iconColor = MainModule.mPrefs.getInt("system_cc_tile_enabled_iconcolor_custom", 0xffffffff.toInt())
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_icon_enabled_color", iconColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_icon_enabled_color", iconColor)
     }
 
     @JvmStatic
     fun CCCardColorHook(loader: ClassLoader) {
         val customColor = MainModule.mPrefs.getInt("system_cc_card_enabled_color_custom", 0xff3482ff.toInt())
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_cellular_color", customColor)
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_enabled_color", customColor)
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_flashlight_color", customColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_cellular_color", customColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_enabled_color", customColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_flashlight_color", customColor)
 
         val primaryColor = MainModule.mPrefs.getInt("system_cc_card_enabled_primary_textcolor", 0xffffffff.toInt())
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_primary_text_enabled_color", primaryColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_primary_text_enabled_color", primaryColor)
         val secondaryColor = MainModule.mPrefs.getInt("system_cc_card_enabled_secondary_textcolor", 0x80ffffff.toInt())
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_secondary_text_enabled_color", secondaryColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "qs_card_secondary_text_enabled_color", secondaryColor)
 
         val iconColor = MainModule.mPrefs.getInt("system_cc_card_enabled_iconcolor_custom", 0xffffffff.toInt())
         if (iconColor != 0xffffffff.toInt()) {
@@ -1375,15 +1375,15 @@ object SystemUIControlCenterHooks {
     @JvmStatic
     fun CCSliderColorHook() {
         val customColor = MainModule.mPrefs.getInt("system_cc_slider_progress_color", 0xffffffff.toInt())
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "toggle_slider_progress_color", customColor)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "toggle_slider_progress_color", customColor)
         val blendColors = intArrayOf(customColor, 3)
-        MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "integer-array", "toggle_slider_progress_blend_colors", blendColors)
+        MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "integer-array", "toggle_slider_progress_blend_colors", blendColors)
 
         val iconColor = MainModule.mPrefs.getInt("system_cc_slider_icon_color", 0xff959595.toInt())
         if (iconColor != 0xff959595.toInt()) {
-            MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "color", "toggle_slider_icon_color", iconColor)
+            MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "color", "toggle_slider_icon_color", iconColor)
             val iconBlendColors = intArrayOf(iconColor, 3)
-            MainModule.resHooks.setThemeValueReplacement("miui.systemui.plugin", "integer-array", "toggle_slider_icon_blend_colors", iconBlendColors)
+            MainModule.getResourceHooks().setThemeValueReplacement("miui.systemui.plugin", "integer-array", "toggle_slider_icon_blend_colors", iconBlendColors)
         }
     }
 

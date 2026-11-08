@@ -8,23 +8,12 @@ package tv.withaibuild.customiuizer.mods.utils
  * fast and avoids the per-installer state maps that used to be created by each
  * [FeatureInstallRegistry].
  *
- * The current implementation uses a plain [HashMap] because it is available both on Android and in
- * the JVM unit-test runtime.  Once a SparseArray/BitSet implementation is available in both
- * runtimes, the storage can be switched without changing callers.
+ * Missing entries mean NOT_INSTALLED. Only an actual installation attempt creates state;
+ * registering or skipping a disabled declaration retains nothing in this process-wide map.
  */
 object FeatureInstallState {
 
     private val states = HashMap<Int, FeatureState>()
-
-    /** Initialize a feature without overwriting state recorded by an earlier registry. */
-    @JvmStatic
-    fun initialize(featureId: FeatureId) {
-        synchronized(states) {
-            if (!states.containsKey(featureId.id)) {
-                states[featureId.id] = FeatureState.NOT_INSTALLED
-            }
-        }
-    }
 
     /**
      * Atomically claim installation for a new or transiently failed feature.

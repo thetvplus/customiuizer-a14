@@ -177,12 +177,12 @@ object LauncherLayoutHooks {
 
     @JvmStatic
     fun UnlockGridsRes() {
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_x", 3)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_y", 4)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_x_min", 3)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_y_min", 4)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_x_max", 8)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_y_max", 10)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_x", 3)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_y", 4)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_x_min", 3)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_y_min", 4)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_x_max", 8)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_cell_count_y_max", 10)
     }
 
     @JvmStatic
@@ -301,15 +301,15 @@ object LauncherLayoutHooks {
     @JvmStatic
     fun HorizontalSpacingRes() {
         val opt = MainModule.mPrefs.getInt("launcher_horizmargin", 0) - 21
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "dimen", "workspace_cell_padding_side", opt)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "dimen", "workspace_cell_padding_side_no_word", opt)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "dimen", "workspace_cell_padding_side_rotatable", opt)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "dimen", "workspace_cell_padding_side", opt)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "dimen", "workspace_cell_padding_side_no_word", opt)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "dimen", "workspace_cell_padding_side_rotatable", opt)
     }
 
     @JvmStatic
     fun IndicatorHeightRes() {
         val opt = MainModule.mPrefs.getInt("launcher_indicatorheight", 9)
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "dimen", "slide_bar_height", opt)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "dimen", "slide_bar_height", opt)
     }
 
     @JvmStatic
@@ -416,7 +416,7 @@ object LauncherLayoutHooks {
     @JvmStatic
     fun IndicatorMarginTopHook(lpparam: PackageReadyParam) {
         val opt = MainModule.mPrefs.getInt("launcher_indicator_topmargin", 0) - 21
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "dimen", "slide_bar_margin_top", opt)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "dimen", "slide_bar_margin_top", opt)
         ModuleHelper.findAndHookMethod("com.miui.home.launcher.util.DimenUtils1X", lpparam.classLoader, "getDimensionPixelSize", Context::class.java, String::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var skipped = false

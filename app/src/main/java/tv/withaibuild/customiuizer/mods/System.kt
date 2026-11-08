@@ -95,8 +95,8 @@ object System {
 
     @JvmStatic
     fun ViewWifiPasswordHook(lpparam: PackageReadyParam) {
-        val titleId = MainModule.resHooks.addFakeResource("system_wifipassword_btn_title", R.string.system_wifipassword_btn_title, "string")
-        val dlgTitleId = MainModule.resHooks.addFakeResource("system_wifi_password_dlgtitle", R.string.system_wifi_password_dlgtitle, "string")
+        val titleId = MainModule.getResourceHooks().addFakeResource("system_wifipassword_btn_title", R.string.system_wifipassword_btn_title, "string")
+        val dlgTitleId = MainModule.getResourceHooks().addFakeResource("system_wifi_password_dlgtitle", R.string.system_wifi_password_dlgtitle, "string")
         ModuleHelper.hookAllMethods("com.android.settings.wifi.SavedAccessPointPreference", lpparam.classLoader, "onBindViewHolder", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?

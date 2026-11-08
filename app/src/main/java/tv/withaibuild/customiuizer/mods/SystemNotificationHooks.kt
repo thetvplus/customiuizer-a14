@@ -116,15 +116,15 @@ object SystemNotificationHooks {
             XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.NotificationSnooze", lpparam.classLoader),
             Int::class.javaPrimitiveType!!,
         )
-        val appInfoIconResId = MainModule.resHooks.addFakeResource("ic_appinfo", R.drawable.ic_appinfo12, "drawable")
-        val forceCloseIconResId = MainModule.resHooks.addFakeResource("ic_forceclose", R.drawable.ic_forceclose12, "drawable")
-        val openInFwIconResId = MainModule.resHooks.addFakeResource("ic_openinfw", R.drawable.ic_openinfw, "drawable")
-        val appInfoDescId = MainModule.resHooks.addFakeResource("miui_notification_menu_appinfo_title", R.string.system_notifrowmenu_appinfo, "string")
-        val forceCloseDescId = MainModule.resHooks.addFakeResource("miui_notification_menu_forceclose_title", R.string.system_notifrowmenu_forceclose, "string")
-        val openInFwDescId = MainModule.resHooks.addFakeResource("miui_notification_menu_openinfw_title", R.string.system_notifrowmenu_openinfw, "string")
-        MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "notification_menu_icon_padding", 0)
-        MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "miui_notification_modal_menu_margin_left_right", 3)
-        MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "miui_notification_modal_menu_icon_bg_size", 50)
+        val appInfoIconResId = MainModule.getResourceHooks().addFakeResource("ic_appinfo", R.drawable.ic_appinfo12, "drawable")
+        val forceCloseIconResId = MainModule.getResourceHooks().addFakeResource("ic_forceclose", R.drawable.ic_forceclose12, "drawable")
+        val openInFwIconResId = MainModule.getResourceHooks().addFakeResource("ic_openinfw", R.drawable.ic_openinfw, "drawable")
+        val appInfoDescId = MainModule.getResourceHooks().addFakeResource("miui_notification_menu_appinfo_title", R.string.system_notifrowmenu_appinfo, "string")
+        val forceCloseDescId = MainModule.getResourceHooks().addFakeResource("miui_notification_menu_forceclose_title", R.string.system_notifrowmenu_forceclose, "string")
+        val openInFwDescId = MainModule.getResourceHooks().addFakeResource("miui_notification_menu_openinfw_title", R.string.system_notifrowmenu_openinfw, "string")
+        MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "notification_menu_icon_padding", 0)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "miui_notification_modal_menu_margin_left_right", 3)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "miui_notification_modal_menu_icon_bg_size", 50)
 
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.notification.row.MiuiNotificationMenuRow", lpparam.classLoader, "createMenuViews", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {

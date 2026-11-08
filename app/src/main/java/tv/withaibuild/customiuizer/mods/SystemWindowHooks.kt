@@ -349,7 +349,7 @@ object SystemWindowHooks {
 
     @JvmStatic
     fun NoFloatingWindowBlacklistHook(lpparam: SystemServerStartingParam) {
-        MainModule.resHooks.setThemeValueReplacement("android", "string-array", "freeform_black_list", ResourceConstants.module_resize_black_list)
+        MainModule.getResourceHooks().setThemeValueReplacement("android", "string-array", "freeform_black_list", ResourceConstants.module_resize_black_list)
         DisableFloatingWindowBlacklistHook(lpparam.classLoader)
         ModuleHelper.findAndHookMethod("com.android.server.wm.MiuiFreeformUtilImpl", lpparam.classLoader, "supportsFreeform", HookerClassHelper.returnConstant(true))
     }
@@ -454,7 +454,7 @@ object SystemWindowHooks {
 
     @JvmStatic
     fun MultiWindowPlusHook(lpparam: SystemServerStartingParam) {
-        MainModule.resHooks.setThemeValueReplacement("android", "string-array", "miui_resize_black_list", ResourceConstants.module_resize_black_list)
+        MainModule.getResourceHooks().setThemeValueReplacement("android", "string-array", "miui_resize_black_list", ResourceConstants.module_resize_black_list)
         val AtmClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerServiceImpl", lpparam.classLoader)
         if (AtmClass != null) {
             ModuleHelper.findAndHookMethod(AtmClass, "updateResizeBlackList", Context::class.java, HookerClassHelper.DO_NOTHING)

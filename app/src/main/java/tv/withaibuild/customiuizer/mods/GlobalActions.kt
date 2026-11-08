@@ -526,7 +526,7 @@ object GlobalActions {
         if (hideUpdater || hideEnterprise) SettingsEntryHooks.hideSearchEntries(lpparam, hideUpdater, hideEnterprise)
         if (hideEnterprise) SettingsEntryHooks.hideEnterpriseMode(lpparam)
         if (settingsIconPos <= 0 && !hideUpdater) return
-        val settingsIconResId = if (settingsIconPos > 0) MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable") else 0
+        val settingsIconResId = if (settingsIconPos > 0) MainModule.getResourceHooks().addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable") else 0
         ModuleHelper.findAndHookMethod("com.android.settings.MiuiSettings", lpparam.classLoader, "updateHeaderList", List::class.java, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?

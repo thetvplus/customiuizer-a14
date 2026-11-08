@@ -46,7 +46,16 @@ import tv.withaibuild.customiuizer.utils.PrefMap;
 public class MainModule extends XposedModule {
 
     public static final PrefMap mPrefs = new PrefMap();
-    public static ResourceHooks resHooks = new ResourceHooks();
+
+    /** A process that never replaces resources needs no replacement tables or install state. */
+    @NonNull
+    public static ResourceHooks getResourceHooks() {
+        return ResourceHooksHolder.INSTANCE;
+    }
+
+    private static final class ResourceHooksHolder {
+        private static final ResourceHooks INSTANCE = new ResourceHooks();
+    }
     String processName;
 
     private PreferenceBootstrap preferenceBootstrap;

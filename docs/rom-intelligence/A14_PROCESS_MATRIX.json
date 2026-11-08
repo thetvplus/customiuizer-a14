@@ -3037,7 +3037,7 @@
       "target": "SYSTEM_PACKAGE",
       "phase": "PACKAGE_READY",
       "installer": "AndroidPackageFeatures",
-      "installHook": "{ val allRotations = mPrefs.getStringAsInt(\"system_allrotations2\", 1) MainModule.resHooks.setThemeValueReplacement(\"android\", \"bool\", \"config_allowAllRotations\", allRotations == 2) return FeatureInstallResult.INSTALLED }",
+      "installHook": "{ val allRotations = mPrefs.getStringAsInt(\"system_allrotations2\", 1) MainModule.getResourceHooks().setThemeValueReplacement(\"android\", \"bool\", \"config_allowAllRotations\", allRotations == 2) return FeatureInstallResult.INSTALLED }",
       "enableCondition": "prefs.getStringAsInt(\"system_allrotations2\", 1) > 1",
       "allowedProcess": "android",
       "deniedProcess": ""

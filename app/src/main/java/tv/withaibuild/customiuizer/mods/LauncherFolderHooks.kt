@@ -186,7 +186,7 @@ object LauncherFolderHooks {
 
     @JvmStatic
     fun FolderColumnsRes(folderCols: Int) {
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "integer", "config_folder_columns_count", folderCols)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "integer", "config_folder_columns_count", folderCols)
     }
 
     private fun setFolderWidth(thisObject: Any) {

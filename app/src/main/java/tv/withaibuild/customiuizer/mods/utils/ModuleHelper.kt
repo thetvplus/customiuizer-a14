@@ -993,9 +993,9 @@ class ModuleHelper private constructor() {
         @JvmStatic
         fun replacePkgAndFrameworkValue(pkg: String, type: String, name: String, resValue: Any?) {
             if (pkg != "android") {
-                MainModule.resHooks.setThemeValueReplacement("android", type, name, resValue)
+                MainModule.getResourceHooks().setThemeValueReplacement("android", type, name, resValue)
             }
-            MainModule.resHooks.setThemeValueReplacement(pkg, type, name, resValue)
+            MainModule.getResourceHooks().setThemeValueReplacement(pkg, type, name, resValue)
         }
 
         @JvmStatic

@@ -108,6 +108,14 @@ Native 审计沿实际消费者区分计算与宿主工作，当前不增加生�
 
 结论：保留当前实现；整图模糊列为条件候选，不把更快的隔离 kernel 当作已获得宿主净收益，也不把小图更慢的 Kotlin 原型直接替换现有实现。[Android JNI 指南](https://developer.android.com/ndk/guides/jni-tips)要求控制数据搬运；若后续证实频繁缓存未命中，再评估按需仅在消费者进程加载、loader / namespace 隔离、R8 入口、OOM 回退和 native 崩溃对宿主的影响。不得预载到 system_server 或以 JNI 替代 API 102。必要私有收据为 `.di-evidence/device-performance-receipt.json` 与 `.di-evidence/native-audit-receipt.json`，原型、ROM 链接输入及采样不进入公开仓库。
 
+### 冷启动与最终产物（2026-11-08）
+
+基于 `08088585` 精修两个明确的关闭路径成本：`MainModule` 的资源替换容器改为首次消费者访问时由类初始化安全发布，未使用资源替换的宿主不创建替换表、GetterInstaller 或失败计时数组；全部消费者共用原有进程级 owner。`FeatureInstallRegistry.register` 不再为每项声明写入全局 NOT_INSTALLED，缺省读取与实际安装时的原子 claim 已提供同样语义，删除失去生产调用的初始化方法。
+
+关闭声明零状态项回归先在旧实现失败；修复后与资源共享、跨 registry 单次安装、暂时失败重试、偏好稍后就绪及启动 owner 回归一起验证。保留完整声明顺序、能力准入、偏好 bootstrap、必要诊断和原生异常合同；不为减少元数据对象重写 catalog，不跨 loader 合并反射缓存。
+
+Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析中影响最大的项目规则保护 626 个 Hooker 类的合并隔离，防止设置应用提前解析 compileOnly API；不为分析分数删除该合同。重复许可证、资源配置及 Open With 样本有来源或消费者，未按内容相同直接删除。最终入口、延迟边界、API 102、映射、资源与未签名产物检查的私有入口为 `.di-evidence/cold-start-artifact-receipt.json`。Host 状态项、产物差异及 R8 分数不换算设备启动毫秒、P95/P99 或持续内存收益。
+
 ## 仓库安全待办
 
 - 独立依赖图工作流已保留，首次手动运行结果仍待核实；不能把配置存在视为执行成功。
