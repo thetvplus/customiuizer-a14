@@ -142,14 +142,9 @@ class GestureLifecycleInventoryTest(unittest.TestCase):
 
         owner_expr = r"System\.identityHashCode\s*\(\s*thisObject\s*\)"
 
-        self.assertTrue(
-            find_hook_call(text, "miui.systemui.controlcenter.windowview.ControlCenterWindowViewImpl", "onAttachedToWindow"),
-            "ControlCenterWindowViewImpl onAttachedToWindow hook missing",
-        )
-        self.assertTrue(
-            find_hook_call(text, "miui.systemui.controlcenter.windowview.ControlCenterWindowViewImpl", "destroy"),
-            "ControlCenterWindowViewImpl destroy hook missing",
-        )
+        prepared = function_body(text, "prepareControlCenterGestureHooks")
+        self.assertIn('method("onAttachedToWindow", Void.TYPE)', prepared)
+        self.assertIn('method("destroy", Void.TYPE)', prepared)
 
         prepare = re.search(
             r"controlCenterMachine\.prepare\s*\(\s*" + owner_expr + r"\s*,\s*thisObject\s*\)",
@@ -366,6 +361,21 @@ class GestureOwnerCleanupInvariantsTest(unittest.TestCase):
 
     def test_current_production_source_has_owner_release(self):
         self.assertEqual([], self.check_control_center(CONTROL_CENTER_PATH.read_text(encoding="utf-8")))
+
+    def test_prepared_batch_must_register_the_actual_owner_cleanup(self):
+        text = CONTROL_CENTER_PATH.read_text(encoding="utf-8")
+        mutations = (
+            ('destroy to hooks.destroy', 'destroy to hooks.onAttachedToWindow'),
+            ('destroy = destroyHook', 'destroy = onAttachedHook'),
+            ('method("destroy", Void.TYPE)', 'method("onDetachedFromWindow", Void.TYPE)'),
+            ('PreparedHookBatch().install(entries)', 'PreparedHookBatch().install(emptyList())'),
+            ('controlCenterMachine.clear(System.identityHashCode(thisObject))', 'controlCenterMachine.clear()'),
+            ('controlCenterMachine.clear(System.identityHashCode(thisObject))', 'controlCenterMachine.clear(System.identityHashCode(otherView))'),
+        )
+        for before, after in mutations:
+            with self.subTest(before=before):
+                self.assertEqual(1, text.count(before))
+                self.assert_rejected(text.replace(before, after))
 
     def test_registered_destroy_clears_its_callback_owner(self):
         self.assertEqual([], self.check_control_center(VALID_CALLBACK + HOOK_INSTALL))

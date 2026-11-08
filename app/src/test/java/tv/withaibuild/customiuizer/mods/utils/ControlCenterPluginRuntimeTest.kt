@@ -348,6 +348,56 @@ class ControlCenterPluginRuntimeTest {
     }
 
     @Test
+    fun missingGestureCapabilityKeepsIndependentUiAndDoesNotPublishRuntime() {
+        val failure = NoSuchMethodException("unsupported gesture ABI")
+        engine.installGestureFailure = failure
+
+        val result = engine.bind(testLoader) as ControlCenterBindResult.Failed
+
+        assertSame(failure, result.reason)
+        assertEquals(1, engine.installPluginCalls)
+        assertNull(engine.runtimeHolder().activeRuntime())
+        assertFalse(requireNotNull(engine.activeLease()).active)
+        assertEquals(InstallState.FAILED_PARTIAL, engine.installState())
+        assertTrue(engine.bind(testLoader) is ControlCenterBindResult.NoRetry)
+        assertEquals(1, engine.installGestureCalls)
+        assertEquals(1, engine.installPluginCalls)
+
+        engine.installGestureFailure = null
+        val replacement = newIsolatedClassLoader()
+        assertTrue(engine.bind(replacement) is ControlCenterBindResult.Installed)
+        assertSame(replacement, engine.runtimeHolder().activeRuntime()!!.classLoader)
+        assertTrue(requireNotNull(engine.activeLease()).active)
+    }
+
+    @Test
+    fun failuresInBothIndependentInstallersKeepTheFirstCauseAndBothEvidence() {
+        val gestureFailure = IllegalStateException("gesture installation")
+        val uiFailure = IllegalArgumentException("UI installation")
+        engine.installGestureFailure = gestureFailure
+        engine.installPluginHooksFailure = uiFailure
+
+        val result = engine.bind(testLoader) as ControlCenterBindResult.Failed
+
+        assertSame(gestureFailure, result.reason)
+        assertEquals(listOf(uiFailure), result.reason.suppressed.toList())
+        assertNull(engine.runtimeHolder().activeRuntime())
+        assertEquals(1, engine.installPluginCalls)
+    }
+
+    @Test
+    fun fatalGestureFailureSkipsUiAndReleasesTheLease() {
+        val fatal = OutOfMemoryError("gesture installation")
+        engine.installGestureFailure = java.lang.reflect.InvocationTargetException(fatal)
+
+        assertSame(fatal, org.junit.Assert.assertThrows(OutOfMemoryError::class.java) { engine.bind(testLoader) })
+        assertEquals(0, engine.installPluginCalls)
+        assertNull(engine.runtimeHolder().activeRuntime())
+        assertNull(engine.activeLoader())
+        assertFalse(requireNotNull(engine.activeLease()).active)
+    }
+
+    @Test
     fun hookIfNeededOrdinaryFailureSetsFailedPartial() {
         val failure = RuntimeException("hook install failed")
         engine.installCreatePluginHookFailure = failure
@@ -368,11 +418,10 @@ class ControlCenterPluginRuntimeTest {
     fun handleMotionEventGuardsArgsAndTypes() {
         val machine = newGestureMachine()
         val lease = RuntimeLease()
-        val hooks = engine.installControlCenterGestureHooks(
-            testLoader,
+        val hooks = engine.createControlCenterGestureHooks(
             machine,
             lease,
-        )
+        ) { error("State must not be read for invalid arguments") }
 
         // No args.
         hooks.handleMotionEvent.beforeHook(fakeBeforeHookCallback(args = arrayOf()))
@@ -395,16 +444,14 @@ class ControlCenterPluginRuntimeTest {
         val activeLease = RuntimeLease()
         val inactiveLease = RuntimeLease().apply { invalidate() }
 
-        val activeHooks = engine.installControlCenterGestureHooks(
-            testLoader,
+        val activeHooks = engine.createControlCenterGestureHooks(
             machine,
             activeLease,
-        )
-        val inactiveHooks = engine.installControlCenterGestureHooks(
-            testLoader,
+        ) { error("No motion event") }
+        val inactiveHooks = engine.createControlCenterGestureHooks(
             machine,
             inactiveLease,
-        )
+        ) { error("No motion event") }
 
         // With an inactive lease, callbacks must be no-ops.
         inactiveHooks.onAttachedToWindow.beforeHook(fakeBeforeHookCallback(thisObject = Any()))
@@ -421,7 +468,7 @@ class ControlCenterPluginRuntimeTest {
     fun destroyClearsOnlyItsOwnerAndReleasesItsGestureToken() {
         val arbiter = PhysicalGestureArbiter()
         val machine = newPreparedGestureMachine(arbiter)
-        val hooks = engine.installControlCenterGestureHooks(testLoader, machine, RuntimeLease())
+        val hooks = engine.createControlCenterGestureHooks(machine, RuntimeLease()) { error("No motion event") }
         val view = View(null)
         val otherView = View(null)
         val owner = System.identityHashCode(view)
@@ -450,8 +497,8 @@ class ControlCenterPluginRuntimeTest {
         val arbiter = PhysicalGestureArbiter()
         val machine = newPreparedGestureMachine(arbiter)
         val oldLease = RuntimeLease()
-        val oldHooks = engine.installControlCenterGestureHooks(testLoader, machine, oldLease)
-        val replacementHooks = engine.installControlCenterGestureHooks(testLoader, machine, RuntimeLease())
+        val oldHooks = engine.createControlCenterGestureHooks(machine, oldLease) { error("No motion event") }
+        val replacementHooks = engine.createControlCenterGestureHooks(machine, RuntimeLease()) { error("No motion event") }
         val view = View(null)
         val owner = System.identityHashCode(view)
         oldLease.invalidate()
@@ -475,7 +522,7 @@ class ControlCenterPluginRuntimeTest {
         val arbiter = PhysicalGestureArbiter()
         var preparations = 0
         val machine = newPreparedGestureMachine(arbiter) { preparations++ }
-        val hooks = engine.installControlCenterGestureHooks(testLoader, machine, RuntimeLease())
+        val hooks = engine.createControlCenterGestureHooks(machine, RuntimeLease()) { error("No motion event") }
         val view = View(null)
         val owner = System.identityHashCode(view)
 
