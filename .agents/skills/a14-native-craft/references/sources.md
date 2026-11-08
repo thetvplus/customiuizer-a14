@@ -32,6 +32,6 @@ Desktop 的 C++ / Qt / RPL 类型、命名规则、注释配额、构建系统�
 - [ViewGroup 触摸事件](https://developer.android.com/develop/ui/views/touch-and-input/gestures/viewgroup)：父级拦截会给原子 View 发 CANCEL；结合 A14 的输入所有权处理，不复制示例控件。
 - [自定义 View 无障碍](https://developer.android.com/guide/topics/ui/accessibility/views/custom-views)：语义、点击、虚拟节点和可访问动作。
 - [Views 触摸目标与描述](https://developer.android.com/guide/topics/ui/accessibility/views/apps-views)、[文字对比建议](https://developer.android.com/guide/topics/ui/accessibility/apps)：Android 的交互与可读性基准；覆盖层命中范围仍服从既有系统手势合同。
-- [Google 官方 Android Skills](https://github.com/android/skills/blob/4ebabf2b0fd6c04b7150023c8b612f80592a6226/README.md)（Apache-2.0）：已检查 [edge-to-edge](https://github.com/android/skills/blob/4ebabf2b0fd6c04b7150023c8b612f80592a6226/system/edge-to-edge/SKILL.md)，其前置要求为 Compose 与 target SDK 35+，会要求升级较低 SDK，因此未安装到 View / SDK 34 的 A14；本次未批量安装 Android CLI、迁移或构建类 Skill。
+- [Google 官方 Android Skills](https://github.com/android/skills/blob/4ebabf2b0fd6c04b7150023c8b612f80592a6226/README.md)（Apache-2.0）：该固定版本的 [edge-to-edge](https://github.com/android/skills/blob/4ebabf2b0fd6c04b7150023c8b612f80592a6226/system/edge-to-edge/SKILL.md)面向 Compose / target SDK 35+，不能据此升级 A14 运行边界或迁移宿主 View。当前安装内容以[来源清单](../../upstream-sources.json)为准，不由这份历史参考判断。
 
 Anthropic 提交 `dbd4588f9e1033efb41dad4bef2f7947c8993d44`，许可按所链目录的 LICENSE.txt；Emil 提交 `2d228630ba1446365f614a108cb8252f1feda202`，仓库标注 MIT；Android Skills 提交 `4ebabf2b0fd6c04b7150023c8b612f80592a6226`。不自动下载或更新这些参考，不把其要求作为新增依赖。

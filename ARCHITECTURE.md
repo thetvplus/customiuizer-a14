@@ -12,16 +12,6 @@
 - PrefMap、ResourceHooks、FeatureRegistry、ProcessRouter、PreferenceBootstrap 的变化须有具体问题、受影响契约和专项回归。保留 Dynamic Island / Dock 视觉与布局合同；设置界面采用 Compose，宿主 Hook 保持原生 View / Canvas；不默认引入 DI、StateFlow 或全量语言迁移。语言迁移小批量、行为等价，与功能变化分开。
 - 项目自绘圆角复用共享 G4 曲率模型，保留现有视觉比例；单位曲线按需缓存，逐帧不重新积分或创建效果对象。原生组件遵循系统自身几何；材质接管每帧仅保留一个可见填充，回退不叠加另一种曲率轮廓。
 
-## 产品职责
-
-| 级别 | 范围 | 维护方向 |
-| --- | --- | --- |
-| CORE | 通知、动态岛、Dock、状态栏与手势 | 触摸、切换、动画、原生恢复与资源释放 |
-| MAINTAIN | 声音 / 振动、Toast、控制中心辅助、设置 / 搜索 / 备份、有限维护工具 | 安全安装、可靠恢复，不扩张停用范围 |
-| RETIRE_CANDIDATE | 有目标 ROM 失效、原生重复或所有权无法闭合证据的具体实现 | 在[退役页](docs/maintenance/A14_FEATURE_RETIREMENTS.md)逐项裁定；引用数不构成删除依据 |
-
-当前精修状态与证据归[路线图](docs/maintenance/A14_REFINEMENT_ROADMAP.md)，性能口径归[优化门禁](docs/OPTIMIZATION_GATES.md)。
-
 ## 入口与进程路由
 
 | 层 | 职责 |
@@ -73,29 +63,14 @@ R8 保留入口、Hooker、JNI、ServiceLoader 及设置进程与 compileOnly AP
 | `mods/island` | `DynamicIslandActivities` ROM 接入；Controller 持有安全 / 会话 / 租约，View / Motion / Sizing 呈现；输入容器只管 touchableRegion |
 | `mods/duostatusbar`、`clock`、`battery` | 独立功能状态与 View |
 | `mods/vpn` | system_server 原生应用 / VPN 事件、单目标连接所有权；设置只读桥不传输 VPN 凭据 |
-| Launcher Dock Hook / 装饰 / 采样 / 材质 | HotSeats 所有权及背景；共享模糊仍在公共层 |
+| Launcher Dock Hook / 装饰 / 材质 | HotSeats 所有权及背景，见 [Dock](docs/features/dock/README.md) |
+| `mods/recents` | 卡片几何、命中、窗口票据及原生运动参数，见 [Deck](docs/features/ios18-recents-reference.md) |
 | `mods/utils` | 跨功能 Hook、安全、ClassLoader 缓存及生命周期机制 |
 | `utils`、`prefs`、`subs` | 设置界面、持久化、页面控制器 |
 | `app/src/test` | 按对应功能包组织 JVM / Android 模型回归 |
 | `tools`、`tools/tests`、`.github/workflows` | 生成器、契约工具及 CI / 发布，见[工具索引](docs/TOOLS.md) |
 
-动态岛的单窗口展示、状态栏占用及新旧事件隔离由上述 owner 负责；通用 StrongToast 快照与安全层不复制。完整布局、输入、租约、媒体返回及波形合同以[功能说明](docs/features/island/README.md)为准。
-
-波形显示与采集时钟分离：可见显示使用 View.postOnAnimation 跟随屏幕帧，不用低频定时器限制观感，也不修改全局刷新率。音乐 FFT 仍受 ROM 上限，录音峰值仍按有界间隔读取，不能跟随显示帧增加 Binder 调用；沿用可见性 / 来源租约与稳定停帧、隐藏 / detach 释放，不新增常驻线程或监听器。轻量波形仅在已附着、实际可见且播放时注册原生动画缩放通知，关闭动画后保持静止，重新开启可恢复；隐藏、暂停、切入实测或 detach 即注销，通知不建立独立系统观察器或轮询。设置中的应用行为、Wi-Fi 与 VPN 自动规则集中在“系统 → 应用与自动化”，保留原稳定键与独立功能控制器，搜索、惰性页面和真实导航同步。
-
-除既有加载会话的持有合同外，动态岛媒体卡片因闹钟等短暂中断消失时，只有原生 manager 仍存活、系统活动会话列表再次确认当前已选会话的相同 token / 包名，才保留既有回调。真实 PLAYING 继续显示；PAUSED 仍按原两秒可见期限隐藏，仅给同一回调最多 30 秒恢复机会，重复卡片 / 元数据快照不续期，未恢复则释放。复核只在原生卡片缺口事件执行，期限复用既有 expiry；不轮询、不从旧 PLAYING 复活会话，manager 丢失、会话销毁、安全失效和 STOPPED / ERROR 仍清理。
-
-原生返回的共享进度表示已接受返回的整体行程，网格后缘压缩仅用于网格几何；可选捕获不得推迟接收岛体的反馈。原生进度确认接入 / 完成，接收岛体宽高取同一初始状态并按已有有限时钟的已用时间推进，不能由页面速度压缩完整形变。首次小形态及已有完整岛体都从可见状态接续；完成从当前尺寸 / 速度收敛，不另建常驻动画或逐帧 Binder。
-
-动态岛来源元数据归 IslandLiveKind，配置集合及正选 / 排除规则归不可变 IslandOptions 快照；异步读取不观察原集合后续突变。小窗身份只筛对应媒体槽，不负责全局窗口隐藏。Controller 仍分别核验通知提交、原生窗口返回和安全生命周期；媒体返回取消不得清除其他活动的内容接入进度，绘制继续共用同一有限时钟。具体入口与资源边界见[来源规则](docs/features/island/README.md#来源规则与复用)。
-
-持续系统活动仍由同一个岛 controller 选择，每类最多一个当前状态。时钟 / 录音生产者只在明确作用域与来源开启时安装，跨进程状态先验证原生发送者再读载荷；每个生产包最多一个匿名存活令牌，死亡、替换与 detach 释放旧所有者，不轮询进程或保留活动历史。系统原生提醒与权限状态不由岛改写。
-
-TimerService 销毁先撤销匹配的当前 owner，再发布剩余状态；应用进程仍存活不构成服务继续计时的依据。到期三秒交接与正在响铃的提醒独立保留，旧服务销毁不能撤销新 owner。Launcher 返回主 Hook 组先完整解析，任一安装失败停止并逆序撤回；可选吸入网格独立回退，不能留下只有目标覆盖或只有 owner 的半安装。
-
-录音可附加一个仅 SystemUI UID 可读的峰值令牌，接口只返回标量，不提供命令或音频。可见后台录音由单个 owner 限速读取，所有隐藏 / 暂停 / 配置失效取消；前台录音 UI 保留其原生峰值读取。音乐与系统活动共用 Launcher 返回所有权和单窗口形变，每次原生提交独立标识，旧尝试在新打开 / 触摸 / 停用后失效。
-
-Dock 默认背景属于 HotSeats；全宽底栏是窗口根底层独立装饰，以弱 owner 跟随其布局、可见性、原生动画与解绑，不松开祖先裁切、不移动图标、不接受触摸。关闭选项回到原背景合同，见 [Dock](docs/features/dock/README.md)。 Dock 仅保留纯色面板与磨砂玻璃，旧轻量玻璃取值归一为面板；复用宿主原生模糊，失败使用简单半透明填充。不维护壁纸捕获、折射 Shader、额外描边、模糊 / 省电监听或采样任务。
+动态岛的单窗口、来源 / 安全 / 会话租约、媒体返回、计时与采集合同只维护在[动态岛说明](docs/features/island/README.md)和[音乐手势](docs/features/island/MUSIC_GESTURES.md)。Dock 的弱 HotSeats owner、全宽装饰、原生材质及挂载期间的事件监听见 [Dock](docs/features/dock/README.md)；Duo 的几何与状态映射见 [Duo](docs/features/duo-status-bar.md)。iOS 静态参数与 Android 映射的区别见[运动参考](docs/features/ios18-motion-reference.md)。
 
 状态栏几何 Binding 跟随实际 View / Window，保留最新原生基线，仅恢复自己仍持有的属性；配置和 detach 不改写其他 owner 的新值。变更不得扩大到通用 View setter 或全局窗口缓存。
 
@@ -105,7 +80,7 @@ Deck 与 iOS 音量的必需 Hook 共用 PreparedHookBatch 的完整提交门禁
 
 生产路径仅保留实际功能、失败隔离及有界故障诊断。安装器直接构建阶段 Catalog、注册并交由 FeatureInstallRegistry 安装，不嵌入性能采样。临时测量使用宿主工具及外部 trace；长期需要的调试实现放独立源码集，不能依赖 Release R8 消除。JVM / Robolectric 与替身归 `src/test`，开发脚本归 `tools` / `scripts`，不加入 main sources、assets 或运行依赖图。`PrefsProvider` 的 `test/*` 和五个样本资产是用户“打开方式”功能，属于生产资源。
 
-FeatureSpec 的元数据 / 惰性工厂、FeatureDefinition 的安装行为和 Registry 的安装状态各有实际职责；不合并成预先创建所有业务对象的通用注册表。XposedHelpers 是模块内部辅助面，保留实际消费者与匹配 / 异常语义，不恢复无人使用的上游 API 全集。工程精简依据与产物证据见[原路线图](docs/maintenance/A14_REFINEMENT_ROADMAP.md#当前维护边界)。
+FeatureSpec 的元数据 / 惰性工厂、FeatureDefinition 的安装行为和 Registry 的安装状态各有实际职责；不合并成预先创建所有业务对象的通用注册表。XposedHelpers 是模块内部辅助面，保留实际消费者与匹配 / 异常语义，不恢复无人使用的上游 API 全集。
 
 ## 设置、生成与持久化
 
@@ -122,10 +97,4 @@ AndroidX Preference 只承载已有持久化、依赖与控制器行为，Compos
 
 备份 V2 使用大小限制、严格解码与 CRC；受限旧格式解码保留既有用户兼容。维护恢复记录使用精确原状态和可恢复事务，不进入备份传输。语义约束见[遗留合同](docs/maintenance/LEGACY_SEMANTIC_CALIBRATION.md)。目录重排不能改变偏好键或稳定 Feature ID。
 
-`MainModule.java`、`XposedHelpers.java`、`MemberUtilsX.java` 保留 Java；Kotlin Installer 的 `@JvmStatic` 保持入口 ABI，见 [Java 边界](docs/JAVA_BOUNDARY_ALLOWLIST.md)。
-
-动态岛内容切换统一走 iOS 参数主路径：同一有限时钟驱动外壳 / 新内容 / 旧显示列表的位移、缩放、裁切与透明度；内容切换不创建 RenderEffect 或模糊缓存。旧内容显示列表复用且不保留第二份来源或采集租约。省电、系统动画关闭、释放及隐藏保留现有终态与释放语义，不新增特效时钟。
-
-Deck 保留原生 DeviceConfig / RotationHelper 方向策略；手机可在竖向 Activity / Window 内通过 RecentsContainer 的尺寸交换与旋转呈现横屏，不要求 Display、Configuration 与视觉方向相等。原生 RecentsContainer.updateRotation 在布局前撤销旧几何，包含 90→270°，同时退役手势端点；只有两份原生视觉 viewport 准备后才发窗口票据。自动及自定义大小只改变以完整 TaskView frame 中心为基准的展示矩阵，原生 pivot 可独立变化；Deck 比例不写入用于删除资格的根 scale，绘制、命中和转场共用几何。窗口跟手在两类原生姿态消费者前补偿该矩阵，统一使用原生即时姿态分支，取消旧卡片弹簧并由原方法执行原有完成回调。点击保留原生起始矩形与方向转换；邻卡只将 Window 矩形逆变换到任务栈局部空间，位移再消除自持缩放；Surface 遮挡从同一局部空间经原生四分之一转规则投影，不重写原生 leash 或矩阵。横竖屏由同一 DeckMotion 管理 iOS 场景、参数所有权与释放，两类 Launcher 只区分参数适配器。截图圆角 / 裁切保持原生，阴影同步原生半径、颜色、截图透明度及 1−fullscreenProgress，无独立阴影动画。任务索引、原生 spring、Surface 和 finish 保持。Duo 固定符号轮廓按需共享，原始遮罩只在测试资源，绘制阶段不解析图片或轮廓。音量边界为一次有限脉冲加重复信号锁定，插件无 KEY_UP 的缺口通过有界单次到期映射，不增加常驻输入监听或轮询。
-
-Duo 整体只进行一次尺寸 / 用户偏移映射；自动尺寸以既有可见体量为基准再增加约 .50 dp 后取整数像素，占位与绘制共享该值。Wi-Fi 使用已证的 15/top13 或 16/top15.33 父布局分支，辅助飞机从当前主项实测底缘加 1，主蜂窝栏保留 top17；扩展耳机与离线图案单独按轮廓重心居中，不将全部状态强设同一纵坐标。原始矢量以命令直接构造并按需共享，保留 peer 层透明度与抗锯齿；圆环用四段原始贝塞尔和有界 PathMeasure 裁切，几何只在状态变化准备。数字 / 网络文字仍保留当前 Heavy 字体实例，未用未知原生字体轴的默认数字代码替换。
+保留 Java 的文件及 Kotlin Installer 的 `@JvmStatic` 入口清单统一见 [Java 边界](docs/JAVA_BOUNDARY_ALLOWLIST.md)，不在本页维护副本。

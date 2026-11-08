@@ -20,6 +20,6 @@
 
 几何更新来自原生 measure / layout / 拖动完成等事件；稳定的普通 / 透明背景解除 PreDraw，需要独立合成透明度的原生材质只观察宿主已有帧，不自行请求下一帧。隐藏暂停几何工作，detach 取消宽度动画并释放布局与编辑监听。没有纹理 generation、异步捕获结果或旧 Bitmap 需要移交，整套自定义图像所有权已删除。
 
-A14 安装点为 HotSeats.updateContent() 完成后挂载，原方法先加入原生内容并写入 mContent；measure、内容 layout、拖动结束、Overview 状态、编辑与解锁回调继续驱动既有装饰。2026-11-08 对 duchamp CN、fuxi CN / TW 与 munch ID 的原始 Launcher APK 重新运行 DexSQL，未使用旧索引；上述声明、原生材质构造与成员合同均存在。当前功能路由只启用 MIUI Launcher，POCO 原件的接口存在不代表 Dock 已接入；不扩大整个 Launcher catalog。具体评估见[多 ROM 挂载复核](../../maintenance/A14_REFINEMENT_ROADMAP.md#多-rom-挂载点复核2026-11-08)。旧采样与 Shader 的数值预算已退役；静态与 Host 证据不等同设备帧时间、GPU、功耗或实际观感验收。
+A14 安装点为 HotSeats.updateContent() 完成后挂载，原方法先加入原生内容并写入 mContent；measure、内容 layout、拖动结束、Overview 状态、编辑与解锁回调继续驱动既有装饰。2026-11-08 对 duchamp CN、fuxi CN / TW 与 munch ID 的原始 Launcher APK 重新运行 DexSQL，未使用旧索引；上述声明、原生材质构造与成员合同均存在。当前功能路由只启用 MIUI Launcher，POCO 原件的接口存在不代表 Dock 已接入；不扩大整个 Launcher catalog。具体评估见[静态复核证据](../../maintenance/A14_REFINEMENT_ROADMAP.md#验证与证据)。静态与 Host 证据不等同设备帧时间、GPU、功耗或实际观感验收。
 
-主要实现为 [`LauncherDockBackground`、`DockBackgroundGeometry` 与 `DockCornerGeometry`](../../../app/src/main/java/tv/withaibuild/customiuizer/mods/)。回退单位是本轮轻量玻璃移除与原生材质 / 简单面板取舍，不单独恢复旧的持续采样调度。
+主要实现为 [`LauncherDockBackground`、`DockBackgroundGeometry` 与 `DockCornerGeometry`](../../../app/src/main/java/tv/withaibuild/customiuizer/mods/)。不恢复旧轻量玻璃的持续采样调度。

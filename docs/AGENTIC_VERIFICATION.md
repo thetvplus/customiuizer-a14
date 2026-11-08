@@ -41,7 +41,7 @@ python tools/device_verify.py --apk <待核对的模块APK> --output .di-evidenc
 python tools/device_verify.py --run --scenario deck-open-return --agent-device <已安装bin/agent-device.mjs> --fixture-apk .di-evidence/fixture-build/fixture.apk --output .di-evidence/deck-run
 ```
 
-输出目录必须不存在。多设备时显式指定 `--serial`。默认只读 preflight，返回 2 / `PREFLIGHT_ONLY`；`--apk` 比较已安装模块与候选字节，不安装或重签模块。实际安装、LSPosed scope、宿主重载沿用既有授权和操作，完成后重新核对。运行前须解锁，脚本不保存或处理锁屏密码。
+输出目录必须不存在。多设备时显式指定 `--serial`。默认只读 preflight，返回 2 / `PREFLIGHT_ONLY`；`--apk` 比较已安装模块与候选字节，不安装或重签模块。实际安装、LSPosed scope、宿主重载沿用既有授权和操作，完成后重新核对。普通 UI 场景运行前须解锁；受控通知样板可按下文读取临时解锁环境变量，不保存密码。
 
 `--run` 确认 Android 14 / HyperOS 1 / arm64、校验 fixture 包身份并安装，授予其通知权限。普通 UI 场景要求新 JUnit 绑定所选脚本、有实际用例且无失败 / 跳过；仅识别明确的断言失败，未知工具错误保留待验。脚本 / fixture / 驱动摘要、APK provenance、时间、ROM 与宿主归属写入本次私有结果。返回 0 只表示 `SCENARIO_PASSED`；真实断言失败返回 1 / `FAILED`；环境、报告、连接、清理异常返回 2 / `PENDING`，中断为 `INTERRUPTED`。不支持的目标为 `NOT_APPLICABLE`，未实现的场景为 `NOT_IMPLEMENTED`，同样返回 2。`installation`、`hook_effect`、`performance` 各自记录，不因普通 UI 场景通过升级。
 

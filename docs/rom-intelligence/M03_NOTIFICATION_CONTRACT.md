@@ -1,12 +1,12 @@
-# M03 通知链路：ROM 精校交接
+# M03 通知链路合同
 
-本页承接[精修路线图 M03](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)，只保存定位合同与验证边界；完成状态、代码历史和取舍仍在路线图原页。查询入口为 [notification_m03_contract.sql](../../tools/dexsql/notification_m03_contract.sql)。
+本页保留通知事务、Heads-up、权限与 Count/Fold 的定位合同；待验项统一见[原路线图](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。查询入口为 [notification_m03_contract.sql](../../tools/dexsql/notification_m03_contract.sql)。
 
 ## 证据与输入
 
 2026-10-23 使用本机 DexSQL **0.1.1**，读取已解包 fuxi CN/TW HyperOS 1 / Android 14 样本；没有连接 ADB 设备。目录和历史镜像 provenance 不代表当前设备安装版本。原件、完整查询回执、Smali、测试日志及后续 R8 mapping 放在忽略目录 `.di-evidence/m03-20261023/` 或仓库外，不提交厂商样本。
 
-最终 SQL 在 SystemUI / Settings / framework / services 数据集返回 96 个声明、108 条调用和 44 个字段声明；在 miui JAR 数据集返回 32 个声明、2 条调用。所有结果均读到 `next_offset=null`。这些是静态引用行数，包含多个 invoke，**不是执行次数**。17 对关键方法共 34 个完整 decode、36 页文本，CN/TW 文本相同；另补两区 NMS 更新与 setFold 的完整 decode。地区配置和实际路径仍可能不同。方法索引只在对应数据集内有效，交接使用下述描述符和哈希。
+声明、调用 / 字段查询已读完分页，关键方法及两区 NMS 更新 / setFold 已完整 decode；相同 Smali 不排除地区配置和实际路径差异。静态引用数不是执行次数，局部索引不能跨数据集连接；复核使用下述描述符与输入哈希。
 
 | 相对镜像路径 | CN SHA-256 | TW SHA-256 |
 | --- | --- | --- |
@@ -70,7 +70,6 @@ Landroid/app/INotificationManager$Stub$Proxy;->buzzBeepBlinkForNotification(Ljav
 
 待精校：CN/TW 的输入激活 / 结束、旧 alert entry 复用和 reset、无障碍超时、锁屏与旋转，及动态岛成功 / 拒绝接管时的原生 Heads-up 数量。静态相同签名不能证明没有重复展示。
 
-2026-10-24 接管边界补充见[通知与媒体安全状态](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 复用已提取实机 SystemUI（SHA-256 `5d8f2fe0b65d8a1a947b4280f8053b524f8c5de73f48a74f8792d415ae76e513`）与 CN/TW 参考样本：
 `KeyguardNotificationVisibilityProviderImpl.isLockedOrLocking()` 读取 `KeyguardStateControllerImpl.mShowing` 和 `StatusBarStateControllerImpl.mUpcomingState`，不能仅以 `mState=0` 推断解锁。
 动态岛沿用 `Dependency.get(KeyguardStateController.class)` 和 native Callback，在现有 owner 的连接 / 释放边界注册 / 移除，事件边界拒绝 Showing、GoingAway、FadingAway、Bouncer、LaunchTransitionFadingAway、KeyguardRequested、Dozing / Dreaming 及未知状态。

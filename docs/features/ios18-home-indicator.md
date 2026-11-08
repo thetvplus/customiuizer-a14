@@ -11,7 +11,7 @@
 | `SBHomeGrabberView → SBFHomeAffordanceView → MTLumaDodgePillView → MTPillView` | `NavigationHandle.onDraw(Canvas)V` 单次替换填充，使用原生 `mPaint` | Android 近似。专用 cornerContents、亮度滤镜和私有合成未迁移；沿用系统 LightBar 颜色，禁止后台截图取色 |
 | 触摸唤回、隐藏原因、所有权与旋转双信号 | 完全沿用 Android 原生导航 View 的 visibility / alpha / 旋转与输入 | 原生静态合同已读；iOS 状态机没有安全的同构 Android 输入，未另建计时器或手势求解器。不能称原生动态确认 |
 
-研究报告中的 786 个去重函数、编译及有限数值检查已核对；其 `iosRuntimeExecuted=false`、`androidCanvasExecuted=false`，不等于全场景画面已经验证。现阶段没有绑定 22G100 的原机动态证据。
+研究入口的静态与有限数值检查已核对；其 `iosRuntimeExecuted=false`、`androidCanvasExecuted=false`，不等于全场景画面已经验证。现阶段没有绑定 22G100 的原机动态证据。
 
 ## 接入与所有权
 
@@ -48,4 +48,4 @@
 
 未知构建只有通过完整 ABI、精确实例 / 父容器、主屏、手势模式及有效几何时才替换当前填充；它不改导航输入、窗口或原生 Paint。相同合同共享实现，不新增兼容轮询、日志或线程。以上样本是行为语义的证据来源，并非强制设备名单。
 
-这些是 ARTIFACT / DEX_STATIC 证据；各 ROM 的实机覆盖、性能和完整场景仍单独验收。当前结果及未决项统一见[路线图](../maintenance/A14_REFINEMENT_ROADMAP.md#ios-1862-融合2026-11-06)。
+这些是 ARTIFACT / DEX_STATIC 证据；各 ROM 的实机覆盖、性能和完整场景仍单独验收。当前结果及未决项统一见[待实机验收](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。

@@ -23,7 +23,7 @@
 2. 在 Xposed 框架中启用模块，授予需要的作用域。
 3. 重启相关进程或设备，按页面提示启用所需功能；安装型开关修改后需要重启目标进程。
 
-升级提示：从旧版或本地候选升级后，动态岛部分配置可能需要重新确认。若未显示或无法返回上岛，请检查「系统提示与动态岛」模式、媒体／消息显示应用名单、返回上岛开关及「无／瞬收／吸入」效果，按需重新选择并重启相关进程。
+升级后如动态岛未显示，检查提示模式、媒体 / 通知名单及上岛效果；空媒体名单不接入应用。设置条件与重启要求见[动态岛说明](docs/features/island/README.md#设置与兼容)。
 
 功能可用性取决于具体 ROM 和系统应用版本。请勿与上游版或其他 CustoMIUIzer 派生模块同时启用。其他 Android 或 HyperOS 大版本不在支持范围内，详见[兼容矩阵](COMPATIBILITY.md)。
 
@@ -35,7 +35,7 @@ iOS 手势指示条需要全面屏手势及可见的系统指示条，同时关�
 
 当前源码版本：`r14.27.3`（versionCode 304）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
 
-r14.27.3 合并 iOS DECK、手势指示条与音量条的新增和修正，恢复长岛右侧内容右对齐，见[更新记录](CHANGELOG.md)。正式发行与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准；已测范围及剩余问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
+正式版本与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准，变化见[更新记录](CHANGELOG.md)，未决问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
 
 Git 历史已匿名整合；既有签名 APK 与原始构建 metadata 保持不变，来源关系见[发行说明](docs/RELEASE.md#历史匿名化与已签名版本)。
 

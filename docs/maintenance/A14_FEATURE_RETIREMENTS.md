@@ -27,7 +27,7 @@
 - “修复动画”只移除旧 RectFSpringAnim 字段分支，保留 `SpringAnimator.getSpringForce(FFF)` 和功能入口。
 - 锁屏音乐封面移除失效的 `clearCurrentMediaNotification` 辅助 Hook，保留主更新路径和有效清理契约。
 - 网速隐藏低速、阈值、隐藏 B/s 在原生样式下禁用编辑，保留存储值；详细样式 2 / 3 恢复编辑。切换样式涉及 Hook 的安装 / 退出时仍需重启 SystemUI；已安装详细 Hook 的格式子值通过观察者更新。
-- 国际版隐藏远程检测拦截入口并禁止安装该 Feature；国内版保留原查询和实现。2026-10-11 Global GuardProvider APK SHA-256 为 `1b767096d88e61b51e1f5db928eb963071ba851f47da0f20965ce262e31edeb6`，生产 DexKit 查询未命中。该样本的 user 0 已卸载状态没有改变，也不作为国内版验收证据。
+- 国际版隐藏远程检测拦截入口并禁止安装该 Feature；国内版保留原查询和实现。2026-10-11 Global GuardProvider APK SHA-256 为 `1b767096d88e61b51e1f5db928eb963071ba851f47da0f20965ce262e31edeb6`，生产 DexKit 查询未命中。零命中仅约束该样本，不作为国内版验收证据。
 
 ## 升级与备份
 
@@ -35,14 +35,10 @@
 
 StrongToast 旧隐藏开关仍先迁移为现代 mode=2，再执行弃用判定；旧位置键保持弃用，不恢复 Bottom 入口，不删除受限旧备份解码器。当前框架边界统一遵循 [兼容矩阵](../../COMPATIBILITY.md) 的 API 102 基线。
 
-## 2026-10-23 产品复核
+## 通知安全收口
 
-本轮复用已完成退役，不重复删除或重编号。M03 已移除全局通知频道保护绕过和失效 system_server 安装身份，保留旧偏好与备份兼容；目标与具体保护分支见 [M03 ROM 合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)。这属于已实施的安全收口，不能据此宣称所有 ROM 的通知能力都失效。
-
-新增评估候选仅为动态岛的实验性实时波形：当前路径依赖隐藏的媒体 UID / 音轨身份、录音权限和唯一活动会话，权限拒绝、offload 或身份不明时只能退回轻量模式。它的维护成本有明确实现依据，但相对轻量模式的设备收益与资源对照仍缺失，故保留试验开关和失败释放，不删除功能、不提升为默认。详见[动态岛说明](../features/island/README.md)与路线图设备记录。只有实际使用价值和可重复测量支持时才继续投入。
-
-未使用资源、依赖和工具须结合最终 R8 usage / mapping、Manifest、XML、反射字符串、稳定 Feature ID 与备份格式复核；本轮没有仅按引用数删除类、资源或依赖。Global GuardProvider 的 user 0 未安装状态也不构成删除国内版实现的授权或依据。
+M03 已移除全局通知频道保护绕过和失效 system_server 安装身份，保留旧偏好与备份兼容；具体保护分支和来源见 [M03 通知合同](../rom-intelligence/M03_NOTIFICATION_CONTRACT.md)。这不是全部 ROM 通知能力失效的结论。
 
 ## 验证边界
 
-验证应覆盖退役键的源 XML、搜索、生成目录、备份恢复与 revision 1 升级，磁贴颜色依赖，日历 / 时钟保留和网速样式切换。Fast / Full、Python 工具测试与 diff 检查属于源码和构建证据；最终 APK 的目标设备操作与日志另行记录，不能由本页推断全部功能已通过实机验收。
+验证应覆盖退役键的设置 JSON、搜索、生成目录、备份恢复与 revision 1 升级，磁贴颜色依赖，日历 / 时钟保留和网速样式切换。Fast / Full、Python 工具测试与 diff 检查属于源码和构建证据；最终 APK 的目标设备操作与日志另行记录，不能由本页推断全部功能已通过实机验收。

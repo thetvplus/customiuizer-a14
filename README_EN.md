@@ -23,7 +23,7 @@ See the [compact feature map](docs/FEATURE_MAP_SIMPLE.md) for all pages. Detaile
 2. Enable the module in your Xposed framework and grant the required scopes.
 3. Restart the affected process or device, then enable the features you need. Hooks selected at installation time require restarting their target process after changing the switch.
 
-Upgrade note: after updating from an older release or local candidate, some Dynamic Island settings may need to be selected again. If the island is absent or returns do not work, check the System feedback & Dynamic Island mode, media/notification app lists, Return to island switches, and None/Instant/Absorption effect; reselect as needed and restart the affected processes.
+If the island is absent after upgrading, check the presentation mode, media/notification app lists and return effect. An empty media list admits no apps; see [Dynamic Island settings](docs/features/island/README.md#设置与兼容) for conditions and restart requirements.
 
 Availability depends on the ROM and system-app versions. Do not enable this module together with upstream or another CustoMIUIzer-derived module. Other major Android or HyperOS versions are unsupported; see the [compatibility matrix](COMPATIBILITY.md).
 
@@ -35,7 +35,7 @@ Current source version: `r14.27.3` (versionCode 304). Maintainer: `thetvplus`. A
 
 The iOS gesture indicator requires full-screen gestures and a visible system handle; turn off this module’s Hide gesture line and restart System UI. The [iOS recents deck](docs/features/ios18-recents-reference.md) uses complete native interfaces to admit MIUI / POCO launchers and requires Horizontal Recents; restart the launcher after changing it. Full-screen gestures are recommended.
 
-r14.27.3 fixes recents deck gap filling, orientation handoff and rear-card opacity, and adjusts island feedback on returning home and pressing; see the [changelog](CHANGELOG_EN.md). Check the [release page](https://github.com/thetvplus/customiuizer-a14/releases/latest) for the published APK and the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for verified scenarios and remaining issues.
+Published versions and APKs are listed on the [release page](https://github.com/thetvplus/customiuizer-a14/releases/latest); see the [changelog](CHANGELOG_EN.md) for changes and the [current refinement state](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for unresolved issues.
 
 Git history has been consolidated with anonymous commit metadata. Existing signed APKs and original build metadata are unchanged; see the [source correspondence](docs/RELEASE.md#历史匿名化与已签名版本).
 

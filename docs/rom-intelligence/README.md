@@ -2,7 +2,7 @@
 
 开发期深查字符串、调用和指令时，可使用 [DexSQL 指引](DEXSQL.md)。它是可选补充，不代替现有清单、契约门禁或实机证据。
 
-通知专项的启动事务、Heads-up、权限与 Count/Fold 定位合同见 [M03 通知精校交接](M03_NOTIFICATION_CONTRACT.md)；完成状态仍维护在精修路线图原页。
+通知专项的启动事务、Heads-up、权限与 Count/Fold 定位合同见 [M03 通知合同](M03_NOTIFICATION_CONTRACT.md)；当前待验见[原路线图](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 
 ## 当前源码生成物
 
