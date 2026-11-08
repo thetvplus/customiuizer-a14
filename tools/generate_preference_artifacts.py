@@ -42,16 +42,19 @@ class CategorySource:
 
 
 CATEGORY_SOURCES = (
-    CategorySource("pref_key_system", "prefs_system.xml", "@string/system_mods"),
-    CategorySource("pref_key_launcher", "prefs_launcher.xml", "@string/launcher_title"),
-    CategorySource("pref_key_controls", "prefs_controls.xml", "@string/controls_mods"),
-    CategorySource("pref_key_various", "prefs_various.xml", "@string/various_mods"),
+    CategorySource("pref_key_statusbar", "prefs_statusbar.xml", "@string/settings_category_statusbar"),
+    CategorySource("pref_key_notifications", "prefs_notifications.xml", "@string/settings_category_notifications"),
+    CategorySource("pref_key_launcher", "prefs_launcher.xml", "@string/settings_category_launcher"),
+    CategorySource("pref_key_controls", "prefs_controls.xml", "@string/settings_category_controls"),
+    CategorySource("pref_key_system", "prefs_system.xml", "@string/settings_category_system"),
+    CategorySource("pref_key_various", "prefs_various.xml", "@string/settings_category_various"),
 )
 
 # Standalone pages opened by the category controllers. Search must use the same
 # controller as normal navigation so dependent controls keep their behavior.
 # (entry key, XML resource, controller, dynamic title marker)
 STANDALONE_PAGES = (
+    ("pref_key_system_statusbar_layout_cat", "prefs_system_statusbar_layout", "System", False),
     ("pref_key_system_island_live_cat", "prefs_system_island_live", "System", False),
     ("pref_key_system_island_feedback_cat", "prefs_system_island_feedback", "System", False),
     ("pref_key_system_island_music_cat", "prefs_system_island_music", "System", False),
@@ -109,10 +112,11 @@ def _write_xml(path: Path, root: ET.Element) -> None:
 
 
 def _split_name(category: CategorySource, key: str) -> str:
-    prefix = f"{category.key}_cat_"
-    if not key.startswith(prefix):
+    # A page keeps its resource/controller namespace when its visible category moves.
+    match = re.fullmatch(r"pref_key_(system|launcher|controls|various)_cat_(\w+)", key)
+    if match is None:
         raise ValueError(f"Unexpected category key {key!r} in {category.source_name}")
-    return f"prefs_{category.suffix}_{key.removeprefix(prefix)}.xml"
+    return f"prefs_{match[1]}_{match[2]}.xml"
 
 
 def _structured_categories(
@@ -159,22 +163,23 @@ def _search_entries(
     entries: list[dict[str, str]] = []
     order = 0
 
-    def visit(group: ET.Element, route: str = "", page_title: str = "", section: str = "") -> None:
+    def visit(group: ET.Element, route: str = "", page_title: str = "", section: str = "", keywords: str = "") -> None:
         nonlocal order
         for element in group:
             if element.get(AUTO_VISIBLE, "true").lower() == "false":
                 continue
             title = element.get(ANDROID_TITLE, "")
             key = element.get(ANDROID_KEY, "")
+            aliases = element.get(f"{{{AUTO_NS}}}searchKeywords", keywords)
             if element.tag == PREFERENCE_CATEGORY:
                 order += 1
                 if key:
                     order = 1
-                    visit(element, key, title)
+                    visit(element, key, title, keywords=aliases)
                 else:
                     # A hidden dependency container does not add a breadcrumb.
                     heading = section if element.get(f"{{{AUTO_NS}}}state") in ("1", "2") else title
-                    visit(element, route, page_title, heading)
+                    visit(element, route, page_title, heading, aliases)
                 continue
             if title.startswith("@") and key:
                 item = {
@@ -190,6 +195,8 @@ def _search_entries(
                     item["breadcrumbSubTitle"] = page_title
                 if section:
                     item["breadcrumbSubSubTitle"] = section
+                if aliases:
+                    item["keywords"] = aliases
                 entries.append(item)
             order += 1
 
@@ -273,6 +280,7 @@ def _append_compact_search_category(
                 "title": item["title"],
                 "key": item["key"],
                 "order": item["order"],
+                **({"keywords": item["keywords"]} if item.get("keywords") else {}),
             },
         )
 

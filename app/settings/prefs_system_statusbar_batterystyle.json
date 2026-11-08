@@ -15,7 +15,7 @@
       "type": "toggle",
       "attributes": {
         "android:key": "pref_key_system_statusbar_batterystyle",
-        "android:title": "@string/enable_mod",
+        "android:title": "@string/settings_battery_customization",
         "android:defaultValue": "false"
       }
     },

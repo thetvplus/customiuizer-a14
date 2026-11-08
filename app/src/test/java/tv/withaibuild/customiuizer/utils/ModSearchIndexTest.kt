@@ -13,6 +13,17 @@ import org.junit.Test
  * its own lowered title.
  */
 class ModSearchIndexTest {
+    @Test
+    fun aliasesAreSearchableAndRebuiltWhenTheAliasChanges() {
+        val entry = mod("Sound/Navigation", "Keyboard spacing")
+        entry.searchKeywords = "IME Gboard 输入法"
+        assertTrue(entry.matchesSearch(searchTerms("gboard spacing")))
+        assertTrue(entry.matchesSearch(searchTerms("输入法")))
+        entry.searchKeywords = "IME"
+        org.junit.Assert.assertFalse(entry.matchesSearch(searchTerms("gboard")))
+        assertTrue(entry.matchesSearch(searchTerms("IME")))
+    }
+
 
     @Test
     fun searchTermsPreservesPunctuationAndWhitespaceRules() {

@@ -6,7 +6,8 @@ import org.junit.Test
 /** Host mutation/ownership checks. This does not stand in for the ROM's layout solver. */
 class MediaCardLayoutTest {
     private val names = listOf("album_art", "icon", "header_title", "header_artist", "media_seamless", "media_progress_bar",
-        "actionPlayPause", "actionNext", "actionPrev", "action0", "action1", "action2", "action3", "action4", "dismiss", "media_bg")
+        "actionPlayPause", "actionNext", "actionPrev", "action0", "action1", "action2", "action3", "action4", "dismiss", "media_bg",
+        "media_elapsed_time", "media_total_time", "media_scrubbing_elapsed_time", "media_scrubbing_total_time")
     private val ids = names.mapIndexed { index, name -> name to index + 1 }.toMap()
     private val layout = MediaCardLayout(Sets::class.java)
     class Layout {
@@ -119,6 +120,18 @@ class MediaCardLayoutTest {
                     assertTrue(name, action.mWidth >= (48 * density + .5f).toInt())
                     assertTrue(name, action.mHeight >= (48 * density + .5f).toInt())
                 }
+            }
+        }
+    }
+    @Test fun nativeTimeLabelsCannotKeepTheOldBelowTransportConstraintChain() {
+        for ((compact, height) in listOf(true to 140, false to 168)) {
+            val result = layout.prepare(native(), ids, 2.75f, compact) as Sets
+            for (name in listOf("media_elapsed_time", "media_total_time", "media_scrubbing_elapsed_time", "media_scrubbing_total_time")) {
+                val time = result.values.getValue(ids.getValue(name)).layout
+                assertEquals(name, -1, time.topToBottom)
+                assertEquals(name, -1, time.bottomToBottom)
+                assertEquals(name, 0, time.topToTop)
+                assertTrue(name, time.topMargin + time.mHeight <= (height * 2.75f + .5f).toInt())
             }
         }
     }

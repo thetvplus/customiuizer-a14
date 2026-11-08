@@ -77,10 +77,12 @@ RETIRED_A14_KEYS = {
 }
 
 CATEGORY_SOURCES = {
-    "pref_key_system": ("prefs_system.xml", "@string/system_mods"),
-    "pref_key_launcher": ("prefs_launcher.xml", "@string/launcher_title"),
-    "pref_key_controls": ("prefs_controls.xml", "@string/controls_mods"),
-    "pref_key_various": ("prefs_various.xml", "@string/various_mods"),
+    "pref_key_statusbar": ("prefs_statusbar.xml", "@string/settings_category_statusbar"),
+    "pref_key_notifications": ("prefs_notifications.xml", "@string/settings_category_notifications"),
+        "pref_key_launcher": ("prefs_launcher.xml", "@string/settings_category_launcher"),
+    "pref_key_controls": ("prefs_controls.xml", "@string/settings_category_controls"),
+    "pref_key_system": ("prefs_system.xml", "@string/settings_category_system"),
+    "pref_key_various": ("prefs_various.xml", "@string/settings_category_various"),
 }
 
 EXPECTED_SPLITS = {
@@ -118,7 +120,8 @@ EXPECTED_SPLITS = {
     "pref_key_various_cat_calls": "prefs_various_calls.xml",
     "pref_key_various_cat_settings": "prefs_various_settings.xml",
     "pref_key_various_cat_exclusive": "prefs_various_exclusive.xml",
-    "pref_key_various_cat_gboard": "prefs_various_gboard.xml",
+    "pref_key_system_cat_appearance": "prefs_system_appearance.xml",
+    "pref_key_system_cat_capture": "prefs_system_capture.xml",
 }
 
 def _signature(element: ET.Element) -> tuple:
@@ -202,7 +205,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
 
     def test_every_structured_category_is_an_exact_single_category_slice(self) -> None:
         found_keys: set[str] = set()
-        for category in ("system", "launcher", "controls", "various"):
+        for category in ("statusbar", "notifications", "system", "launcher", "controls", "various"):
             source_root = read_element(SOURCE_DIR / f"prefs_{category}.xml")
             for source_category in source_root.iter():
                 key = source_category.get(ANDROID_KEY, "")
@@ -261,14 +264,12 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             self.assertEqual([child.get(ANDROID_TITLE) for child in source],
                              [child.get(ANDROID_TITLE) for child in selector])
             sections = list(selector)
-            if category == "pref_key_system":
+            if category == "pref_key_various":
                 first = sections[0]
-                self.assertEqual(PREFERENCE_CATEGORY, first.tag)
-                self.assertEqual("@string/prefs_group_apps", first.get(ANDROID_TITLE))
-                entry = first[0]
-                self.assertEqual("tv.withaibuild.customiuizer.prefs.PreferenceEx", entry.tag)
-                self.assertEqual("pref_key_system_cat_automation", entry.get(ANDROID_KEY))
-            self.assertTrue(all(child.tag == PREFERENCE_CATEGORY and len(child) for child in sections))
+                self.assertEqual("tv.withaibuild.customiuizer.prefs.PreferenceEx", first.tag)
+                self.assertEqual("@string/system_mods_automation", first.get(ANDROID_TITLE))
+                self.assertEqual("pref_key_system_cat_automation", first.get(ANDROID_KEY))
+            self.assertTrue(all((child.tag == PREFERENCE_CATEGORY and len(child)) or child.get(ANDROID_KEY) in EXPECTED_SPLITS for child in sections))
 
     def test_search_index_matches_page_ownership_sections_and_adapter_order(self) -> None:
         entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
@@ -279,8 +280,8 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertEqual(_source_search_entries(), generated)
         by_key = {item["key"]: item for item in generated}
         for key, owner, section in (
-            ("pref_key_system_volume_ios", "pref_key_system_cat_audio", "@string/system_ios_volume_group_title"),
-            ("pref_key_system_volume_ios_compact", "pref_key_system_cat_audio", "@string/system_ios_volume_group_title"),
+            ("pref_key_system_volume_ios", "pref_key_system_cat_audio", "@string/settings_ios_volume"),
+            ("pref_key_system_volume_ios_compact", "pref_key_system_cat_audio", "@string/settings_ios_volume"),
             ("pref_key_system_recents_ios18_deck", "pref_key_system_cat_recents", "@string/system_ios_desktop_title"),
             ("pref_key_system_recents_ios18_deck_size", "pref_key_system_cat_recents", "@string/system_ios_desktop_title"),
         ):
@@ -289,7 +290,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         for suffix in ("collapsed", "expanded"):
             item = by_key[f"pref_key_system_volumeblur_{suffix}"]
             self.assertEqual("pref_key_system_cat_audio", item["routeSub"])
-            self.assertEqual("@string/prefs_group_material", item["breadcrumbSubSubTitle"])
+            self.assertEqual("@string/settings_panel_background", item["breadcrumbSubSubTitle"])
         self.assertEqual("pref_key_various_cat_exclusive", by_key["pref_key_various_disable_miui_daemon"]["routeSub"])
 
     def test_application_and_network_rules_share_the_automation_directory(self) -> None:
@@ -316,7 +317,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                 self.assertEqual(f"@id/prefs_system_island_{suffix}", match[0]["page"])
                 self.assertEqual("System", match[0]["pageFragment"])
                 self.assertEqual(f"pref_key_system_island_{suffix}_cat", match[0]["routeSub"])
-        source = read_element(SOURCE_DIR / "prefs_system.xml")
+        source = read_element(SOURCE_DIR / "prefs_statusbar.xml")
         island = next(e for e in source.iter() if e.get(ANDROID_KEY) == "pref_key_system_cat_island")
         self.assertEqual([f"@string/system_island_{name}_group" for name in
                           ("basic", "feedback", "appearance", "interaction")],

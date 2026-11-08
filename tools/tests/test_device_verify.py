@@ -96,6 +96,9 @@ class DeviceVerifyTest(unittest.TestCase):
                 if parts[:2] == ("shell", "pidof"): return "42"
                 return "Success"
             def cli(command, **kwargs):
+                self.assertEqual(str(root / "agent-device-home"), kwargs["env"]["AGENT_DEVICE_STATE_DIR"])
+                if command[2:4] == ["daemon", "stop"]:
+                    self.assertEqual(str(root / "agent-device-home"), command[-1])
                 if command[2] == "test":
                     (root / "junit.xml").write_text('<testsuite tests="0"/>')
                 return subprocess.CompletedProcess(command, 0, "", "")

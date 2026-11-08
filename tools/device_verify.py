@@ -492,7 +492,7 @@ def exercise(args, output: Path) -> dict:
         before_packages = packages()
         if f"package:{FIXTURE}" in before_packages:
             raise RuntimeError("Fixture already exists; refusing to replace unknown test state")
-        env["AGENT_DEVICE_HOME"] = str(output / "agent-device-home")
+        env["AGENT_DEVICE_STATE_DIR"] = str(output / "agent-device-home")
         env["AGENT_DEVICE_NO_UPDATE_NOTIFIER"] = "1"
         # Isolate from existing remote daemon/provider configuration.
         for key in ("AGENT_DEVICE_DAEMON_BASE_URL", "AGENT_DEVICE_DAEMON_AUTH_TOKEN", "AGENT_DEVICE_CONFIG"):
@@ -550,7 +550,7 @@ def exercise(args, output: Path) -> dict:
                 cleanup.append("Incomplete hook evidence: " + str(error))
         if cli_started:
             try:
-                stopped = cli("daemon", "stop", "--clean", "--state-dir", env["AGENT_DEVICE_HOME"])
+                stopped = cli("daemon", "stop", "--clean", "--state-dir", env["AGENT_DEVICE_STATE_DIR"])
                 if stopped.returncode:
                     cleanup.append("Owned automation daemon cleanup failed")
             except (OSError, subprocess.SubprocessError, KeyboardInterrupt) as error:

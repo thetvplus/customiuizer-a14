@@ -7,6 +7,25 @@ import tv.withaibuild.customiuizer.R
 
 class PreferenceResourceResolverTest {
     @Test
+    fun movedPagesKeepTheirOriginalControllersAndFreshInstances() {
+        for ((category, sub, controller, resource) in listOf(
+            listOf("pref_key_statusbar", "pref_key_system_cat_statusbar", "System", R.id.prefs_system_statusbar),
+            listOf("pref_key_notifications", "pref_key_system_cat_drawer", "System", R.id.prefs_system_drawer),
+            listOf("pref_key_controls", "pref_key_system_cat_audio", "System", R.id.prefs_system_audio),
+            listOf("pref_key_launcher", "pref_key_system_cat_recents", "System", R.id.prefs_system_recents),
+            listOf("pref_key_various", "pref_key_system_cat_automation", "System", R.id.prefs_system_automation),
+            listOf("pref_key_various", "pref_key_various_cat_gboard", "Controls", R.id.prefs_controls_navbar),
+            listOf("pref_key_system", "pref_key_system_cat_appearance", "System", R.id.prefs_system_appearance),
+            listOf("pref_key_system", "pref_key_system_cat_capture", "System", R.id.prefs_system_capture),
+        )) {
+            val first = PreferenceResourceResolver.createFragment(category as String, sub as String)
+            assertEquals(controller, first?.javaClass?.simpleName)
+            org.junit.Assert.assertNotSame(first, PreferenceResourceResolver.createFragment(category, sub))
+            assertEquals(resource, PreferenceResourceResolver.resolve(category, sub))
+        }
+    }
+
+    @Test
     fun previousIosCategoryLinksOpenTheirCurrentOwningPages() {
         assertEquals(R.id.prefs_system_audio,
             PreferenceResourceResolver.resolve("pref_key_system", "pref_key_system_cat_ios_volume"))
@@ -48,7 +67,7 @@ class PreferenceResourceResolverTest {
             Triple("pref_key_various", "pref_key_various_cat_security_center", R.id.prefs_various_security_center),
             Triple("pref_key_various", "pref_key_various_cat_calls", R.id.prefs_various_calls),
             Triple("pref_key_various", "pref_key_various_cat_settings", R.id.prefs_various_settings),
-            Triple("pref_key_various", "pref_key_various_cat_gboard", R.id.prefs_various_gboard),
+            Triple("pref_key_various", "pref_key_various_cat_gboard", R.id.prefs_controls_navbar),
         )
 
         expected.forEach { (category, sub, resource) ->
@@ -59,6 +78,8 @@ class PreferenceResourceResolverTest {
     @Test
     fun missingOrUnknownSubFallsBackToCanonicalFullResource() {
         val fullResources = mapOf(
+            "pref_key_statusbar" to R.id.prefs_statusbar,
+            "pref_key_notifications" to R.id.prefs_notifications,
             "pref_key_system" to R.id.prefs_system,
             "pref_key_launcher" to R.id.prefs_launcher,
             "pref_key_controls" to R.id.prefs_controls,
@@ -71,7 +92,9 @@ class PreferenceResourceResolverTest {
     }
 
     @Test
-    fun selectorResourcesExistForAllFourMainCategories() {
+    fun selectorResourcesExistForAllSixMainCategories() {
+        assertEquals(R.id.prefs_statusbar_cat, PreferenceResourceResolver.categorySelector("pref_key_statusbar"))
+        assertEquals(R.id.prefs_notifications_cat, PreferenceResourceResolver.categorySelector("pref_key_notifications"))
         assertEquals(R.id.prefs_system_cat, PreferenceResourceResolver.categorySelector("pref_key_system"))
         assertEquals(R.id.prefs_launcher_cat, PreferenceResourceResolver.categorySelector("pref_key_launcher"))
         assertEquals(R.id.prefs_controls_cat, PreferenceResourceResolver.categorySelector("pref_key_controls"))

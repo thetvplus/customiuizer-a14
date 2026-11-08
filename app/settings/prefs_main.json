@@ -22,29 +22,49 @@
         {
           "type": "action",
           "attributes": {
-            "android:title": "@string/system_mods",
-            "android:key": "pref_key_system"
+            "android:key": "pref_key_statusbar",
+            "android:title": "@string/settings_category_statusbar",
+            "android:summary": "@string/settings_category_statusbar_summary"
           }
         },
         {
           "type": "action",
           "attributes": {
-            "android:title": "@string/launcher_title",
-            "android:key": "pref_key_launcher"
+            "android:key": "pref_key_notifications",
+            "android:title": "@string/settings_category_notifications",
+            "android:summary": "@string/settings_category_notifications_summary"
           }
         },
         {
           "type": "action",
           "attributes": {
-            "android:title": "@string/controls_mods",
-            "android:key": "pref_key_controls"
+            "android:key": "pref_key_launcher",
+            "android:title": "@string/settings_category_launcher",
+            "android:summary": "@string/settings_category_launcher_summary"
           }
         },
         {
           "type": "action",
           "attributes": {
-            "android:title": "@string/various_mods",
-            "android:key": "pref_key_various"
+            "android:key": "pref_key_controls",
+            "android:title": "@string/settings_category_controls",
+            "android:summary": "@string/settings_category_controls_summary"
+          }
+        },
+        {
+          "type": "action",
+          "attributes": {
+            "android:key": "pref_key_system",
+            "android:title": "@string/settings_category_system",
+            "android:summary": "@string/settings_category_system_summary"
+          }
+        },
+        {
+          "type": "action",
+          "attributes": {
+            "android:key": "pref_key_various",
+            "android:title": "@string/settings_category_various",
+            "android:summary": "@string/settings_category_various_summary"
           }
         }
       ]
@@ -84,6 +104,13 @@
             "android:entryValues": "@array/settingsicon_val",
             "app:valueAsSummary": "true",
             "android:defaultValue": "1"
+          }
+        },
+        {
+          "type": "action",
+          "attributes": {
+            "android:key": "pref_key_miuizer_backup",
+            "android:title": "@string/backup_restore"
           }
         }
       ]

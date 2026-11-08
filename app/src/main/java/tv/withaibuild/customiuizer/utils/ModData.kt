@@ -5,6 +5,8 @@ import java.util.Locale
 class ModData {
 
     enum class ModCat {
+        pref_key_statusbar,
+        pref_key_notifications,
         pref_key_system,
         pref_key_launcher,
         pref_key_controls,
@@ -39,8 +41,14 @@ class ModData {
     var searchText: String = ""
         private set
 
+    var searchKeywords: String = ""
+        set(value) {
+            field = value
+            updateSearchText()
+        }
+
     private fun updateSearchText() {
-        searchText = normalizeSearchText(title + " " + breadcrumbs)
+        searchText = normalizeSearchText(title + " " + breadcrumbs + if (searchKeywords.isEmpty()) "" else " " + searchKeywords)
     }
 
     fun matchesSearch(terms: List<String>): Boolean = terms.all { searchText.contains(it) }

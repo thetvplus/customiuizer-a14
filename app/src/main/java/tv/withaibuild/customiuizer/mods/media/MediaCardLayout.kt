@@ -37,7 +37,8 @@ internal class MediaCardLayout(private val sets: Class<*>) {
         require(density.isFinite() && density > 0f)
         val source = constraints.get(original) as Map<Int, Any>
         val positioned = listOf("album_art", "icon", "header_title", "header_artist", "media_seamless", "media_progress_bar",
-            "actionPlayPause", "actionNext", "actionPrev", "action0", "action1", "action2", "action3", "action4")
+            "actionPlayPause", "actionNext", "actionPrev", "action0", "action1", "action2", "action3", "action4",
+            "media_elapsed_time", "media_total_time", "media_scrubbing_elapsed_time", "media_scrubbing_total_time")
         require(positioned.all { ids[it] in source })
         val backdrop = requireNotNull(layout.get(source.getValue(ids.getValue("media_bg"))))
         val minimumHeight = ((if (compact) 140 else 168) * density + .5f).toInt()
@@ -95,6 +96,13 @@ internal class MediaCardLayout(private val sets: Class<*>) {
         for ((name, position) in listOf("actionPrev" to .22f, "actionPlayPause" to .5f, "actionNext" to .78f))
             place(name, 48, 48, actionTop, position)
         for (index in 0..4) place("action$index", 48, 48, actionTop, index / 4f)
+        // The native time row is constrained below action0. Keeping that chain
+        // after moving transport enlarges the host and recenters its backdrop.
+        val timeTop = if (compact) 68 else 100
+        place("media_elapsed_time", 48, 20, timeTop, 0f)
+        place("media_total_time", 48, 20, timeTop, 1f)
+        place("media_scrubbing_elapsed_time", 48, 48, actionTop, 0f)
+        place("media_scrubbing_total_time", 48, 48, actionTop, 1f)
         return result
     }
 }
