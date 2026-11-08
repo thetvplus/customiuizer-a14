@@ -72,6 +72,14 @@ Status Trio 是受 iPhone Duo 启发的 macOS 改编，其底部信息是音量�
 
 整体仍只有一次整数像素映射，保留已授权的约 .50 dp 增量与手动尺寸／偏移。Host 验证原始轮廓、两种字重的水平／垂直中心、强度更新、组合间距、隐藏释放及设置导航；目标 fuxi 的最终画面另作验收。
 
+## 原生核心来源
+
+2026-11-08 重新核对 iPhone19,4 / iOS27.2 / 24B91020。聚合更新、CombinedItem、CombinedViewModel、hosting、Compact/Expanded 实际 body 与 CompactRingLayout / ArcLayout 已用同版 Swift conformance witness 和原始指令串联；ArcLayout 的布局入口由 witness 直接分支确认，已超出仅有类名或旧标签的旁证。
+
+逻辑名 `wifi.statusbar.combined` 实际由 `SystemStatusUI.car` 解析为 `wifi_68_status_bar_C2.svg`，三份原始 SVG master 保留 0/.34/.68 强度阈值。普通 `Duo_battery_20.svg` 与 compact 圆环分别拥有消费者；不能用普通电池资源推导圆环绘制。飞机、耳机、AirPods、蜂窝、异常 Wi-Fi 与充电符号已重新取得同构建的原始 CSI、BVG 矢量和可解码 PNG，并与原 CAR 区间逐字节匹配；旧 A14 fixture 仅作对照。原始小资源私有留存，不新增 APK 资产。新指令可完整读取，旧工具截断的辅助 C 不作为实现依据。
+
+这次补证不改变本页既有布局和原生网络/订阅所有权，也不把耳机提示、字体替代、Android PathMeasure 或信号量化提升为原机等价。五项范围与旧系统模式的互斥接入见[核心接入参考](apple-ui-core-reference.md)。
+
 ## 字体来源与再发行
 
 圆体来自 [Google Fonts 的 Nunito 固定源码](https://github.com/google/fonts/tree/38411257417e616c5d4daa1b9e91a3dbcebe1c2e/ofl/nunito)，版权归 The Nunito Project Authors。以 fontTools 4.63.0 固定 wght=900，仅保留 `%+0123456789EGLT`，修改族名为 A14 Rounded，并保留版权和许可元数据。完整 OFL-1.1 随 APK 位于 `assets/licenses/Nunito-OFL.txt`。这是 Android 上的相近圆体，不宣称 SF UI Rounded 或原生字体像素等价；未增加绘制时加载、网络下载或字体监听。

@@ -1,5 +1,13 @@
 # Dock 与模糊
 
+## SE3 原生参考
+
+iPhone SE 3 / iPhone14,6 / iOS18.6.2 / 22G100 的独立原件已核对，未用 16 Pro 的布局替代。设备/显示上下文经过 48 项 screenType 枚举、尺寸/scale/artwork 信息匹配，再由 provider 写 visualConfiguration；原始名称表、尺寸池和跳转表均已保留。N61/type1 为 375×667 点、scale2，N41/type0 为 320×568 点、scale2；两类配置进入高度 96 点、背景圆角 0、background/list insets=(4,0,0,0) 的非浮岛分支。`isDockInset` 判断背景圆角是否大于 0，内容、背景与 overhang 由各自 metrics 消费。
+
+这是全宽底栏的静态几何参照。实时显示上下文由系统决定，96 点不直接替换为 96dp；A14 继续消费 Launcher 的 HotSeats、根窗口与导航区尺寸，背景和图标输入分属原所有者。材质构造、alpha 与 layout 链已保留，最终合成和既有偶发闪现仍需对应设备证据。五项范围见[核心接入参考](../apple-ui-core-reference.md)。
+
+## A14 行为
+
 [页面功能地图](../../FEATURE_MAP.md) · [待验收与证据](../../maintenance/A14_REFINEMENT_ROADMAP.md)
 
 入口为「桌面 → Dock」。背景默认关闭，修改后重启桌面。仅保留纯色面板（0）与磨砂玻璃（2），旧轻量玻璃（3）及其它无效取值在设置与运行时归一为面板。复用 Launcher 已有 Backdrop 材质和混色，失败时显示简单半透明面板；不维护模块壁纸、折射 Shader、渐变描边或采样任务。需要磨砂且不透明度非零时，在挂载期间注册系统模糊与省电事件，detach 解除；纯色与全透明模式不注册这组监听。

@@ -4,6 +4,8 @@
 
 ## 岛体
 
+2026-11-08 补齐同机型/构建的注册、偏好排序、mitosis、几何与旧元素退出核心，逐函数边界和原字节已验证；与 Duo、SE3 及旧系统样式的接入范围见[核心参考](apple-ui-core-reference.md)。这些静态补证不覆盖下文首次音乐、Home 接受、完整弹簧积分和原机动态确认的既有缺口。
+
 2026-11-06 复核采用私有 `island-22G100/recheck-20261106/A14_HANDOFF.md` 为唯一研究交接入口；`MUSIC_ARRIVAL`、`NATIVE_MODEL`、`REVIEW_DIFF` 与 DI22G-001–020 证据索引已消费。Home 接受和首次播放分开：首次音乐是否提交 bounce request、重定位进度生产 / rebasing、UIKit 当前动画状态对 impulse / smoothing / projection 的消费仍未闭环；原机动态确认缺失。旧自动表 Accepted damping=.016、Stretch impulse=.525 存在反证，不能继续导入。经原指令修正的 Up 参数仍为 Stretch .5/.714/.02、Rebound .35/1/.016、Accepted .513/.525/.02，首 container 的 height / center.y 使用 .513/1 辅助配置；顺序为 response / damping / retargetImpulse。
 
 | 场景与消费者 | A14 当前映射及差异 | 本轮处理 |
