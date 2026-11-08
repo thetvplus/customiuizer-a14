@@ -91,9 +91,18 @@ class BehaviorGateTests(unittest.TestCase):
         self.assertEqual(3, self.run_gate(0, failing))  # contradictory result
 
     def test_success_skip_and_invalid_reports_are_distinct(self):
-        self.assertEqual(0, self.run_gate(0, '<testsuite name="example.RealTest" tests="2"/>'))
-        self.assertEqual(2, self.run_gate(0, '<testsuite name="example.RealTest" tests="2" skipped="2"/>'))
+        self.assertEqual(0, self.run_gate(0, '<testsuite name="example.RealTest" tests="2"><testcase name="a"/><testcase name="b"/></testsuite>'))
+        self.assertEqual(2, self.run_gate(0, '<testsuite name="example.RealTest" tests="1" skipped="1"><testcase name="a"><skipped/></testcase></testsuite>'))
         self.assertEqual(3, self.run_gate(1, '<broken'))
+
+    def test_wrong_identity_counts_and_execution_errors_are_not_kills(self):
+        for report in (
+            '<testsuite name="example.Other" tests="1"><testcase><failure/></testcase></testsuite>',
+            '<testsuite name="example.RealTest" tests="2"><testcase><failure/></testcase></testsuite>',
+            '<testsuite name="example.RealTest" tests="1"><testcase><error/></testcase></testsuite>',
+            '<testsuite name="example.RealTest" tests="1" failures="0"><testcase><failure/></testcase></testsuite>',
+        ):
+            self.assertEqual(3, self.run_gate(1, report))
 
 
 class VerifyChangedInputsTests(unittest.TestCase):

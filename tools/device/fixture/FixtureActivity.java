@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -26,12 +28,31 @@ public final class FixtureActivity extends Activity {
         root.addView(marker);
         Button notice = new Button(this);
         notice.setText("SHOW A14 NOTICE");
-        notice.setOnClickListener(view -> notices.notify(14,
-            new Notification.Builder(this, "a14").setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("A14 verification notice").setContentText("Offline fixture payload")
-                .setTimeoutAfter(15000).build()));
+        notice.setOnClickListener(view -> publish("A14 verification notice"));
         root.addView(notice);
         setContentView(root);
+        event(getIntent());
+    }
+
+    private void publish(String title) {
+        PendingIntent open = PendingIntent.getActivity(this, 14,
+            new Intent(this, FixtureActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        notices.notify(14,
+            new Notification.Builder(this, "a14").setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title).setContentText("Offline fixture payload").setContentIntent(open)
+                .setTimeoutAfter(15000).build());
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        event(intent);
+    }
+
+    private void event(Intent intent) {
+        String action = intent.getStringExtra("event");
+        if ("post".equals(action)) publish("A14 verification notice");
+        if ("update".equals(action)) publish("A14 updated notice");
+        if ("cancel".equals(action)) notices.cancel(14);
     }
 
     @Override public void onDestroy() {

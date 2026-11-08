@@ -12,7 +12,8 @@ class AgentVerifyTest(unittest.TestCase):
         result = gate.plan(gate.ROOT, [gate.SOURCE + "java/tv/withaibuild/customiuizer/mods/recents/DeckMotion.kt"])
         command = result["host_commands"][0]
         self.assertIn("tv.withaibuild.customiuizer.mods.recents.DeckContinuityTest", command)
-        self.assertEqual(["deck-open-return"], result["device_scenarios"])
+        self.assertIn("deck-open-return", result["device_scenarios"])
+        self.assertIn("island-takeover", result["device_scenarios"])
         self.assertTrue(any("Runtime" in risk for risk in result["pending"]))
 
     def test_shared_runtime_and_deleted_tests_use_full(self):
@@ -25,9 +26,29 @@ class AgentVerifyTest(unittest.TestCase):
 
     def test_settings_generation_and_rom_matrix_use_existing_consumers(self):
         result = gate.plan(gate.ROOT, ["app/settings/prefs_launcher.json", "docs/rom-intelligence/A14_PROCESS_MATRIX.csv"])
-        self.assertIn(["python", "tools/verify.py", "full"], result["host_commands"])
+        self.assertEqual(["python", "tools/verify.py", "fast"], result["host_commands"][0][:3])
         self.assertIn(["python", "tools/generate_feature_map.py", "--check"], result["host_commands"])
         self.assertTrue(any("unittest" in command for command in result["host_commands"]))
+
+    def test_unimplemented_gesture_is_a_pending_requirement_not_executable(self):
+        result = gate.plan(gate.ROOT, [gate.SOURCE + "java/tv/withaibuild/customiuizer/mods/utils/gesture/GestureMachine.kt"])
+        self.assertEqual([], result["device_scenarios"])
+        self.assertEqual("NOT_IMPLEMENTED", result["scenario_requirements"][0]["status"])
+
+    def test_leaf_tool_uses_actual_consumers_and_shared_gate_stays_broad(self):
+        selected = gate.tool_tests(gate.ROOT, ["tools/device_verify.py"])
+        self.assertIn("tools.tests.test_device_verify", selected)
+        self.assertIn("tools.tests.test_agent_verify", selected)
+        self.assertNotIn("tools.tests.test_rom_catalog", selected)
+        self.assertIsNone(gate.tool_tests(gate.ROOT, ["tools/verify.py"]))
+
+    def test_subprocess_consumers_are_not_lost_without_a_python_import(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'tools/tests').mkdir(parents=True)
+            (root / 'tools/driver.py').write_text('value = 1')
+            (root / 'tools/tests/test_driver.py').write_text('command = ["python", "tools/driver.py"]')
+            self.assertIn('tools.tests.test_driver', gate.tool_tests(root, ['tools/driver.py']))
 
     def test_missing_tests_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:

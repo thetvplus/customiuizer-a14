@@ -388,12 +388,30 @@ def behavior(tests: list[str]) -> int:
             print("behavior: missing/stale JUnit reports; build failure is not a semantic kill", file=sys.stderr)
             return 3
         roots = [ET.parse(p).getroot() for p in reports]
+        for name, root in zip(dict.fromkeys(tests), roots):
+            cases = root.findall("testcase")
+            if root.get("name") != name or int(root.get("tests", 0)) != len(cases):
+                print("behavior: report identity or executed case count is inconsistent", file=sys.stderr)
+                return 3
+            if any(case.get("classname", name) != name for case in cases):
+                print("behavior: report contains another selected class", file=sys.stderr)
+                return 3
+            if int(root.get("skipped", 0)) != sum(case.find("skipped") is not None for case in cases):
+                print("behavior: contradictory skip count", file=sys.stderr)
+                return 3
+            if any(key in root.attrib and int(root.get(key, 0)) != sum(case.find(tag) is not None for case in cases)
+                   for key, tag in (("failures", "failure"), ("errors", "error"))):
+                print("behavior: contradictory failure/error count", file=sys.stderr)
+                return 3
         if any(int(r.get("tests", 0)) <= int(r.get("skipped", 0)) for r in roots):
             print("behavior: a selected suite executed no tests", file=sys.stderr)
             return 2
         failures = [f"{r.get('name')}.{case.get('name')}: {failure.get('message', '')[:400]}"
                     for r in roots for case in r.findall("testcase")
                     for failure in [*case.findall("failure"), *case.findall("error")]]
+        if any(case.find("error") is not None for root in roots for case in root.findall("testcase")):
+            print("behavior: execution error is not an independent assertion kill", file=sys.stderr)
+            return 3
         if code != 0 and failures:
             print("behavior: fresh JVM failures\n" + "\n".join(failures[:12]))
             return 1
