@@ -22,7 +22,7 @@ internal class DeckHeaderConfig(val iconPercent: Int, val titlePercent: Int, val
 /** Header ink has its own scale; Deck depth must not magnify native app identity.
  * Native icon/text objects, font scaling, actions and root gesture transform stay
  * native. All layout metrics are read on layout, then reused by finite frames. */
-internal class DeckHeaderOwner(private val header: View,private val icon: View, private val title: TextView,private val badge: View,
+internal class DeckHeaderOwner(val view: View,private val icon: View, private val title: TextView,private val badge: View,
     private val config: DeckHeaderConfig) : View.OnLayoutChangeListener {
     private class Opacity(val view: View,private val hides: Boolean=false) {
         private var native=view.alpha
@@ -71,12 +71,12 @@ internal class DeckHeaderOwner(private val header: View,private val icon: View, 
     private val image=Original(icon)
     private val label=Original(title)
     private val lock=Original(badge)
-    private val headerOpacity=Opacity(header,true)
+    private val headerOpacity=Opacity(view,true)
     private val titleOpacity=Opacity(title)
     private val iconInk=RectF()
-    private val density=header.resources.displayMetrics.density
+    private val density=view.resources.displayMetrics.density
     private val autoTitleSize=android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,
-        15f,header.resources.displayMetrics)
+        15f,view.resources.displayMetrics)
     private var scale=1f
     private var closed=false
     private var badgeGap=0f
@@ -84,7 +84,7 @@ internal class DeckHeaderOwner(private val header: View,private val icon: View, 
     private var index=0
     private var landscape=false
     init {
-        try { for(view in arrayOf(header,icon,title,badge)) view.addOnLayoutChangeListener(this); metrics() }
+        try { for(child in arrayOf(view,icon,title,badge)) child.addOnLayoutChangeListener(this); metrics() }
         catch(error: Throwable) {
             val cleanup=CleanupActions(error); cleanup.run { close() }; cleanup.finish()
         }
@@ -113,11 +113,11 @@ internal class DeckHeaderOwner(private val header: View,private val icon: View, 
         val titleRatio=if(config.titlePercent==0) autoTitleSize/(title.textSize*label.scaleY) else config.ratio(config.titlePercent)
         val iconScale=iconRatio/deckScale
         val titleScale=titleRatio/deckScale
-        val iconBottom=header.height-8f*density/deckScale
+        val iconBottom=view.height-8f*density/deckScale
         val iconCenter=iconBottom-iconInk.height()*image.scaleY*iconScale*.5f
         image.pose(iconScale,vertical=iconBottom-icon.top-icon.height*.5f-(iconInk.bottom-icon.height*.5f)*image.scaleY*iconScale)
         val titleX=icon.left+image.translationX+iconInk.right*image.scaleX*iconScale+8f*density/deckScale-title.left
-        val baseline=header.height-16f*density/deckScale
+        val baseline=view.height-16f*density/deckScale
         val titleY=baseline-title.top-title.height*.5f-(title.baseline-title.height*.5f)*label.scaleY*titleScale
         label.pose(titleScale,titleX,titleY)
         lock.pose(1f/deckScale,title.left+titleX+title.width*label.scaleX*titleScale+badgeGap/deckScale-badge.left,
@@ -134,7 +134,7 @@ internal class DeckHeaderOwner(private val header: View,private val icon: View, 
         if(closed) return
         closed=true
         val cleanup=CleanupActions()
-        for(view in arrayOf(header,icon,title,badge)) cleanup.run { view.removeOnLayoutChangeListener(this) }
+        for(child in arrayOf(view,icon,title,badge)) cleanup.run { child.removeOnLayoutChangeListener(this) }
         cleanup.run { image.release() }; cleanup.run { label.release() }; cleanup.run { lock.release() }
         cleanup.run { headerOpacity.close() }; cleanup.run { titleOpacity.close() }; cleanup.finish()
     }

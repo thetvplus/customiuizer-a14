@@ -419,7 +419,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             val slots=selected.index-card.index
             if(card.geometry.windowInput(gestureReference,reference,gestureTarget,slots,25f,current.fullWidth,0f,header,card.windowInput)) {
                 card.geometry.alignClosing(card.windowInput,slots,25f,header)
-                (api.getHeader.invoke(card.view) as View).alpha=alpha
+                card.header.view.alpha=alpha
             }
         }
     }
@@ -490,8 +490,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             alignment=DeckOpenAlignment(selected.taskId,RectF(gestureReference))
             val bounds=RectF()
             for(card in cards.values) if(card!==selected && card.geometry.owned) {
-                card.geometry.localContent(bounds,(api.getHeader.invoke(card.view) as View).height.toFloat())
-                alignment.add(card.view,api.getHeader.invoke(card.view) as View,bounds,
+                card.geometry.localContent(bounds,card.header.view.height.toFloat())
+                alignment.add(card.view,card.header.view,bounds,
                     selected.depth.index-card.depth.index,card.geometry.scale)
             }
             opening=alignment

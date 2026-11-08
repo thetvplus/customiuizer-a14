@@ -38,6 +38,7 @@ object SearchRouteResolver {
     fun normalizeSub(sub: String?): String? = when (sub?.takeIf { it.isNotBlank() }) {
         "pref_key_system_cat_ios_volume" -> "pref_key_system_cat_audio"
         "pref_key_system_cat_ios_desktop" -> "pref_key_system_cat_recents"
+        "pref_key_various_cat_gboard" -> "pref_key_controls_cat_navbar"
         else -> sub?.takeIf { it.isNotBlank() }
     }
 

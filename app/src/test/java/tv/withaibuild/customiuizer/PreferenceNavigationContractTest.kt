@@ -49,16 +49,11 @@ class PreferenceSearchNavigationContractTest {
 
         assertFalse(main.contains("var prefSystem"))
         assertFalse(main.contains("val catSelector"))
-        assertTrue(main.contains("openSubFragment(SubSystem(), bundle"))
+        assertTrue(main.contains("PreferenceResourceResolver.createFragment(route.category, route.sub)"))
         assertTrue(main.contains("openSubFragment(CategorySelector(), bundle"))
-        assertTrue(main.contains("openSubFragment(Launcher(), bundle"))
-        assertTrue(main.contains("openSubFragment(Controls(), bundle"))
-        assertTrue(main.contains("openSubFragment(Various(), bundle"))
+
 
         assertFalse(category.contains("mainFrag.prefSystem"))
-        assertTrue(category.contains("openSubFragment(System(), bundle"))
-        assertTrue(category.contains("openSubFragment(Launcher(), bundle"))
-        assertTrue(category.contains("openSubFragment(Controls(), bundle"))
-        assertTrue(category.contains("openSubFragment(Various(), bundle"))
+        assertTrue(category.contains("PreferenceResourceResolver.createFragment(category, preference.key)"))
     }
 }

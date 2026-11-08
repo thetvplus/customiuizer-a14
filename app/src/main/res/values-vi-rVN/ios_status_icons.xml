@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">Pin iOS (thử nghiệm)</string>
+    <string name="system_statusbar_ios_battery_summ">Đổi biểu tượng nhưng giữ trạng thái và quy tắc phần trăm của hệ thống. Duo và tùy chỉnh pin hiện có được ưu tiên. Chủ đề và chế độ chưa hỗ trợ giữ biểu tượng hệ thống. Khởi động lại SystemUI sau khi đổi.</string>
+</resources>

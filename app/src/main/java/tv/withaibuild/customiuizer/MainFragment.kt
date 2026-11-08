@@ -40,10 +40,6 @@ import kotlinx.coroutines.withContext
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.prefs.ListPreferenceEx
 import tv.withaibuild.customiuizer.subs.CategorySelector
-import tv.withaibuild.customiuizer.subs.Controls
-import tv.withaibuild.customiuizer.subs.Launcher
-import tv.withaibuild.customiuizer.subs.System as SubSystem
-import tv.withaibuild.customiuizer.subs.Various
 import tv.withaibuild.customiuizer.utils.AppHelper
 import tv.withaibuild.customiuizer.utils.AppLocaleController
 import tv.withaibuild.customiuizer.utils.AppSelectionSanitizer
@@ -316,50 +312,31 @@ class MainFragment : PreferenceFragmentBase() {
     }
 
     private fun openModCat(cat: String, sub: String?, mod: String): Boolean {
-        val route = SearchRouteResolver.resolve(cat, sub, mod) ?: return false
-        if (!isAdded) return false
-
+        if (!isAdded || parentFragmentManager.isStateSaved) return false
+        // Resolve old search paths by the existing canonical index, including
+        // standalone pages. No parallel alias route table or copied settings.
+        val indexed = if (mod != cat) {
+            Helpers.getAllMods(requireContext(), false)
+            Helpers.allModsList.firstOrNull { it.key == mod }
+        } else null
+        if (indexed?.page != null) return openSearchResult(indexed)
+        val route = SearchRouteResolver.resolve(indexed?.cat?.name ?: cat, indexed?.sub ?: sub, mod) ?: return false
         val bundle = Bundle().apply {
             putString("cat", route.category)
             putString("mod", route.key)
             route.sub?.let { putString("sub", it) }
         }
-
-        return when (route.category) {
-            "pref_key_system" -> {
-                if (route.isCategorySelector()) {
-                    openSubFragment(CategorySelector(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.system_mods, PreferenceResourceResolver.categorySelector(route.category) ?: return false)
-                } else {
-                    openSubFragment(SubSystem(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.system_mods, PreferenceResourceResolver.resolve(route.category, route.sub))
-                }
-                true
-            }
-            "pref_key_launcher" -> {
-                if (route.isCategorySelector()) {
-                    openSubFragment(CategorySelector(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.launcher_title, PreferenceResourceResolver.categorySelector(route.category) ?: return false)
-                } else {
-                    openSubFragment(Launcher(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.launcher_title, PreferenceResourceResolver.resolve(route.category, route.sub))
-                }
-                true
-            }
-            "pref_key_controls" -> {
-                if (route.isCategorySelector()) {
-                    openSubFragment(CategorySelector(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.controls_mods, PreferenceResourceResolver.categorySelector(route.category) ?: return false)
-                } else {
-                    openSubFragment(Controls(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.controls_mods, PreferenceResourceResolver.resolve(route.category, route.sub))
-                }
-                true
-            }
-            "pref_key_various" -> {
-                if (route.isCategorySelector()) {
-                    openSubFragment(CategorySelector(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.various_mods, PreferenceResourceResolver.categorySelector(route.category) ?: return false)
-                } else {
-                    openSubFragment(Various(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.various_mods, PreferenceResourceResolver.resolve(route.category, route.sub))
-                }
-                true
-            }
-            else -> false
+        val title = PreferenceResourceResolver.categoryTitle(route.category)
+        if (title == 0) return false
+        if (route.isCategorySelector()) {
+            val resource = PreferenceResourceResolver.categorySelector(route.category) ?: return false
+            openSubFragment(CategorySelector(), bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, title, resource)
+        } else {
+            val fragment = PreferenceResourceResolver.createFragment(route.category, route.sub) ?: return false
+            openSubFragment(fragment, bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, title,
+                PreferenceResourceResolver.resolve(route.category, route.sub))
         }
+        return true
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {

@@ -160,7 +160,7 @@ class PreferenceNavigationUiTest {
             .putBoolean("pref_key_system_island_media", true).apply()
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries, including Wi-Fi automatic settings, must be indexed", 35, standaloneKeys.size)
+        assertEquals("All standalone page entries, including Wi-Fi automatic settings, must be indexed", 36, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -226,11 +226,10 @@ class PreferenceNavigationUiTest {
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun systemDirectoryGroupsAutomationUnderTheAppsHeading() {
+    fun appsDirectoryMakesAutomationDiscoverable() {
         val home = currentPage() as MainFragment
-        home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_system")))
+        home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_various")))
         settleNavigation()
-        compose.onNodeWithText(activity.getString(R.string.prefs_group_apps)).assertIsDisplayed()
         compose.onNodeWithTag("pref_key_system_cat_automation").assertIsDisplayed()
     }
 
@@ -319,7 +318,7 @@ class PreferenceNavigationUiTest {
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun singleLineTitlesAreCenteredInTheWholeClickableRow() {
+    fun titlesAndSummariesAreCenteredInTheWholeClickableRow() {
         val page = currentPage() as MainFragment
         for (key in listOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various",
             "pref_key_miuizer_locale", "pref_key_miuizer_launchericon")) {
@@ -327,7 +326,11 @@ class PreferenceNavigationUiTest {
             val row = compose.onNodeWithTag(key).fetchSemanticsNode().boundsInRoot
             val title = compose.onNode(hasText(preference.title.toString()) and hasAnyAncestor(hasTestTag(key)), useUnmergedTree = true)
                 .fetchSemanticsNode().boundsInRoot
-            assertEquals(key, row.center.y, title.center.y, 1f)
+            val summary = preference.summary?.toString().orEmpty()
+            val bottom = if (summary.isBlank()) title.bottom else compose.onNode(
+                hasText(summary) and hasAnyAncestor(hasTestTag(key)), useUnmergedTree = true)
+                .fetchSemanticsNode().boundsInRoot.bottom
+            assertEquals(key, row.center.y, (title.top + bottom) / 2f, 1f)
         }
     }
 
@@ -397,7 +400,9 @@ class PreferenceNavigationUiTest {
         Helpers.getAllMods(activity, true)
         for (key in arrayOf("pref_key_system_volumeblur_collapsed", "pref_key_system_statusbaricons_wifi",
             "pref_key_system_autobrightness_limitmin", "pref_key_various_disable_miui_daemon",
-            "pref_key_system_island_feedback_wifi", "pref_key_system_island_music_down")) {
+            "pref_key_system_island_feedback_wifi", "pref_key_system_island_music_down",
+            "pref_key_system_media_ios_card", "pref_key_system_statusbarheight", "pref_key_various_gboardpadding_port",
+            "pref_key_system_animationscale_window", "pref_key_system_gallery_screenshots_path")) {
             val result = Helpers.allModsList.single { it.key == key }
             val home = currentPage() as MainFragment
             assertTrue(ReflectionHelpers.callInstanceMethod<Boolean>(home, "openSearchResult",
@@ -411,11 +416,42 @@ class PreferenceNavigationUiTest {
         }
     }
 
+    @Test fun previousSearchPathsResolveMovedRowsAndKeepTheirBindings() {
+        for ((sub, key) in listOf(
+            "pref_key_system_cat_audio" to "pref_key_system_media_ios_card",
+            "pref_key_system_cat_statusbar" to "pref_key_system_statusbarheight",
+            "pref_key_various_cat_gboard" to "pref_key_various_gboardpadding_port",
+            "pref_key_system_cat_other" to "pref_key_system_animationscale_window",
+        )) {
+            val home = currentPage() as MainFragment
+            assertTrue(ReflectionHelpers.callInstanceMethod<Boolean>(home, "openModCat",
+                ReflectionHelpers.ClassParameter.from(String::class.java, "pref_key_system"),
+                ReflectionHelpers.ClassParameter.from(String::class.java, sub),
+                ReflectionHelpers.ClassParameter.from(String::class.java, key)))
+            settleNavigation()
+            assertTrue(requireNotNull((currentPage() as SubFragment).findPreference<Preference>(key)).isVisible)
+            pressToolbarBack()
+            assertSame(home, currentPage())
+        }
+    }
+
+    @Test fun backupMenuUsesTheExistingDialogWithoutChangingSettings() {
+        val home = currentPage() as MainFragment
+        val before = requireNotNull(AppHelper.appPrefs).all
+        assertNull(home.findPreference<Preference>("pref_key_miuizer_backup"))
+        val item = PopupMenu(activity, home.requireView()).menu.add(0, R.id.backuprestore, 0, activity.getString(R.string.backup_restore))
+        home.onSettingsAction(item)
+        settleNavigation()
+        assertTrue(requireNotNull(ShadowDialog.getLatestDialog()).isShowing)
+        assertEquals(before, requireNotNull(AppHelper.appPrefs).all)
+        requireNotNull(ShadowDialog.getLatestDialog()).dismiss()
+    }
+
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "zh-rCN-w320dp-h640dp")
     fun narrowChinesePageKeepsItsLayoutAndNestedDependenciesAfterRecreation() {
-        openSettingsPage("pref_key_system", "pref_key_system_cat_audio")
+        openSettingsPage("pref_key_controls", "pref_key_system_cat_audio")
         val page = currentPage() as SubFragment
         val master = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_volume_mode_button_colors"))
         val color = requireNotNull(page.findPreference<Preference>("pref_key_system_volume_mode_button_icon_color"))
@@ -681,14 +717,12 @@ class PreferenceNavigationUiTest {
 
     @Test fun automationDirectoryOwnsTheAppAndNetworkRulesWithoutDuplicateOldEntries() {
         val home = currentPage() as MainFragment
-        assertTrue(home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_system"))))
+        assertTrue(home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_various"))))
         settleNavigation()
         val directory = currentPage() as SubFragment
         assertPreferencePageVisible(directory)
         SettingsPreferenceList(directory.preferenceScreen).use { model ->
-            assertEquals(PreferenceGroupChrome.Kind.SECTION_HEADER, model.chrome.first().kind)
-            assertEquals(activity.getString(R.string.prefs_group_apps), model.rows.first().preference.title)
-            assertEquals("Automation follows its section heading", "pref_key_system_cat_automation", model.rows[1].preference.key)
+            assertEquals("No redundant heading for a single directory entry", "pref_key_system_cat_automation", model.rows.first().preference.key)
         }
         compose.onNodeWithTag("pref_key_system_cat_automation").assertIsDisplayed()
         requireNotNull(directory.findPreference<Preference>("pref_key_system_cat_automation")).performClick()
@@ -697,10 +731,7 @@ class PreferenceNavigationUiTest {
         for (key in listOf("appbehavior", "wifiauto", "vpnauto"))
             assertTrue(requireNotNull(page.findPreference<Preference>("pref_key_system_${key}_cat")).isVisible)
         pressToolbarBack()
-        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_cat_screen")).performClick()
-        settleNavigation()
         assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_appbehavior_cat"))
-        pressToolbarBack()
         requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_cat_other")).performClick()
         settleNavigation()
         assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_wifiauto_cat"))
@@ -711,7 +742,7 @@ class PreferenceNavigationUiTest {
         val config = tv.withaibuild.customiuizer.utils.WifiAutomaticSettings
         val existing = tv.withaibuild.customiuizer.utils.WifiAutomaticSettings.Rule("home", "Home", "home", dnd = 2)
         AppHelper.appPrefs!!.edit().putString("pref_key_system_wifiauto_rules", config.encode(listOf(existing))).apply()
-        openSettingsPage("pref_key_system", "pref_key_system_cat_automation")
+        openSettingsPage("pref_key_various", "pref_key_system_cat_automation")
         requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_wifiauto_cat")).performClick()
         settleNavigation()
         val page = currentPage() as tv.withaibuild.customiuizer.subs.System_WifiAutomatic
@@ -745,7 +776,7 @@ class PreferenceNavigationUiTest {
     @Test fun appBehaviorUsesSeparateSwitchesAndStoresBrightnessPerApplication() {
         val prefix = "pref_key_system_appbehavior_"
         AppHelper.appPrefs!!.edit().putStringSet(prefix + "brightness_apps", setOf("app.a", "app.b")).apply()
-        openSettingsPage("pref_key_system", "pref_key_system_cat_automation")
+        openSettingsPage("pref_key_various", "pref_key_system_cat_automation")
         requireNotNull((currentPage() as SubFragment).findPreference<Preference>(prefix + "cat")).performClick()
         settleNavigation()
         val page = currentPage() as tv.withaibuild.customiuizer.subs.System_AppBehavior
@@ -779,7 +810,7 @@ class PreferenceNavigationUiTest {
     }
 
     @Test fun vpnRulesUseOneClientOrProfileAndAMultiAppSelector() {
-        openSettingsPage("pref_key_system", "pref_key_system_cat_automation")
+        openSettingsPage("pref_key_various", "pref_key_system_cat_automation")
         requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_vpnauto_cat")).performClick()
         settleNavigation()
         val page = currentPage() as tv.withaibuild.customiuizer.subs.System_VpnAutoSwitch

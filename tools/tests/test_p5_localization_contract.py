@@ -12,8 +12,11 @@ Non-translatable authority: merged base values/*.xml translatable="false".
 """
 
 import re
+import json
+import sys
 import unittest
 import tempfile
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -23,10 +26,6 @@ JAVA_DIR = REPO / "app" / "src" / "main" / "java"
 
 ANDROID_NS = "http://schemas.android.com/apk/res/android"
 USER_VISIBLE_ATTRS = ("title", "summary", "text", "hint", "entries")
-
-NON_LANG_PREFIXES = (
-    "night", "land", "port", "sw", "w", "h",
-)
 
 PLACEHOLDER_RE = re.compile(
     r"%"
@@ -39,21 +38,14 @@ PLACEHOLDER_RE = re.compile(
 
 
 def _is_language_qualifier(qualifier: str) -> bool:
-    lower = qualifier.lower()
-    if lower.startswith("v") and re.match(r"^v\d+", lower):
-        return False
-    for non in NON_LANG_PREFIXES:
-        if lower.startswith(non):
-            return False
-    if re.match(r"^[a-zA-Z]{2}(-r[A-Z]{2})?(-.*)?$", qualifier):
-        return True
-    return False
+    # Match a language token, not prefixes: hi/hu/hr are languages, h600dp is not.
+    return re.fullmatch(r"[a-z]{2}(?:-r[A-Z]{2})?(?:-[A-Za-z0-9]+)*", qualifier) is not None
 
 
 def discover_formal_locales() -> list[str]:
     locales = []
     for d in RES.iterdir():
-        if not d.is_dir() or d.name == "values":
+        if not d.is_dir() or not d.name.startswith("values-"):
             continue
         qualifier = d.name[len("values-"):]
         if _is_language_qualifier(qualifier):
@@ -81,14 +73,17 @@ def _merged_values(directory: Path) -> ET.Element:
 
 def _load_strings(path: Path) -> tuple[dict[str, str], set[str], set[str]]:
     # Android merges every values XML, including feature-specific files.
-    root = _merged_values(path.parent)
+    return _strings(_merged_values(path.parent))
+
+
+def _strings(root: ET.Element) -> tuple[dict[str, str], set[str], set[str]]:
     result = {}
     non_translatable = set()
     non_formatted = set()
     for el in root:
         if el.tag == "string" and "name" in el.attrib:
             if el.attrib["name"] in result:
-                raise AssertionError(f"Duplicate string in {path.parent.name}: {el.attrib['name']}")
+                raise AssertionError(f"Duplicate string: {el.attrib['name']}")
             result[el.attrib["name"]] = "".join(el.itertext())
             if (el.get("translatable", "").lower() == "false" or
                 el.get(f"{{{ANDROID_NS}}}translatable", "").lower() == "false"):
@@ -120,25 +115,20 @@ def _extract_placeholders(text: str) -> list:
     return placeholders + literals
 
 
+def _visible_definitions():
+    for subdir in ("xml", "layout", "menu"):
+        for f in (RES / subdir).rglob("*.xml"):
+            yield f, _parse(f)
+    from tools.settings_schema import read_element
+    for source in (REPO / "app/settings").glob("*.json"):
+        yield source, read_element(source)
+
+
 def _find_xml_visible_refs() -> tuple[set[str], set[str]]:
     string_refs = set()
     array_refs = set()
-    for subdir in ("xml", "layout", "menu"):
-        for f in (RES / subdir).rglob("*.xml"):
-            try:
-                root = _parse(f)
-            except ET.ParseError:
-                continue
-            for el in root.iter():
-                for attr in USER_VISIBLE_ATTRS:
-                    val = el.get(f"{{{ANDROID_NS}}}{attr}", "")
-                    if val.startswith("@string/"):
-                        string_refs.add(val[8:])
-                    elif val.startswith("@array/"):
-                        array_refs.add(val[7:])
-    from tools.settings_schema import read_element
-    for source in (REPO / "app/settings").glob("*.json"):
-        for node in read_element(source).iter():
+    for _, root in _visible_definitions():
+        for node in root.iter():
             for attr in USER_VISIBLE_ATTRS:
                 value = node.get(f"{{{ANDROID_NS}}}{attr}", "")
                 if value.startswith("@string/"):
@@ -178,10 +168,7 @@ def _find_code_array_refs() -> set[str]:
 
 def _find_array_string_refs() -> set[str]:
     refs = set()
-    arrays_xml = RES / "values" / "arrays.xml"
-    if not arrays_xml.exists():
-        return refs
-    root = _merged_values(arrays_xml.parent)
+    root = _merged_values(RES / "values")
     for arr in root:
         if arr.tag != "string-array":
             continue
@@ -205,6 +192,77 @@ def _find_user_visible_array_refs() -> set[str]:
 
 
 class ResourceDiscoveryTest(unittest.TestCase):
+    def _run_contract(self, repo, method):
+        with patch.multiple(sys.modules[__name__], REPO=repo, RES=repo / "app/src/main/res",
+                            JAVA_DIR=repo / "app/src/main/java"):
+            result = unittest.TestResult()
+            P5LocalizationContractTest(method).run(result)
+            self.assertEqual(1, result.testsRun)
+            self.assertFalse(result.skipped, result.skipped)
+            return result
+
+    def test_language_tokens_do_not_confuse_languages_with_screen_qualifiers(self):
+        for qualifier in ("hi", "hu", "hr", "zh-rCN", "en-land"):
+            self.assertTrue(_is_language_qualifier(qualifier), qualifier)
+        for qualifier in ("night", "land", "v31", "h600dp", "w600dp", "sw600dp", "xxxhdpi"):
+            self.assertFalse(_is_language_qualifier(qualifier), qualifier)
+
+    def test_array_contract_reads_split_resources_once_and_rejects_real_drift(self):
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw)
+            res = repo / "app/src/main/res"
+            for directory in (res / "values", res / "values-es-rES", repo / "app/settings"):
+                directory.mkdir(parents=True)
+            base = res / "values/feature.xml"
+            locale = res / "values-es-rES/feature.xml"
+            base_text = '<resources><string name="label">%1$s</string><string-array name="choices"><item>@string/label</item></string-array></resources>'
+            locale_text = '<resources><string name="label">%1$s</string></resources>'
+            base.write_text(base_text, encoding="utf-8")
+            locale.write_text(locale_text, encoding="utf-8")
+            (repo / "app/settings/prefs_main.json").write_text(json.dumps({
+                "type": "screen", "attributes": {"android:entries": "@array/choices"}
+            }), encoding="utf-8")
+            method = "test_user_visible_string_arrays_have_resolved_translations"
+            with patch(__name__ + "._merged_values", wraps=_merged_values) as reads:
+                result = self._run_contract(repo, method)
+            self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+            self.assertEqual(2, reads.call_count, "base and locale must each be merged once")
+            for source, text, reason in (
+                (base, base_text.replace('name="choices"', 'name="other"'), "Missing arrays"),
+                (locale, '<resources/>', "missing translation"),
+                (locale, locale_text.replace('%1$s', '%1$d'), "placeholder mismatch"),
+                (locale, locale_text.replace('</resources>', '<string-array name="choices"/></resources>'), "item count"),
+            ):
+                with self.subTest(reason=reason):
+                    base.write_text(base_text, encoding="utf-8")
+                    locale.write_text(locale_text, encoding="utf-8")
+                    source.write_text(text, encoding="utf-8")
+                    result = self._run_contract(repo, method)
+                    self.assertFalse(result.errors, result.errors)
+                    self.assertEqual(1, len(result.failures), result.failures)
+                    self.assertIn(reason, result.failures[0][1])
+
+    def test_visible_text_contract_checks_json_and_does_not_ignore_broken_xml(self):
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw)
+            settings = repo / "app/settings"
+            settings.mkdir(parents=True)
+            source = settings / "prefs_main.json"
+            source.write_text(json.dumps({"type": "screen", "attributes": {"android:title": "Literal title"}}), encoding="utf-8")
+            method = "test_no_hardcoded_user_visible_text"
+            result = self._run_contract(repo, method)
+            self.assertFalse(result.errors, result.errors)
+            self.assertEqual(1, len(result.failures))
+            self.assertIn("Literal title", result.failures[0][1])
+            source.write_text(json.dumps({"type": "screen", "attributes": {"android:title": "@string/title"}}), encoding="utf-8")
+            self.assertTrue(self._run_contract(repo, method).wasSuccessful())
+            xml = repo / "app/src/main/res/xml"
+            xml.mkdir(parents=True)
+            (xml / "broken.xml").write_text('<broken', encoding="utf-8")
+            result = self._run_contract(repo, method)
+            self.assertEqual(1, len(result.errors))
+            self.assertIn("ParseError", result.errors[0][1])
+
     def test_split_resources_preserve_strings_arrays_and_format_flags(self):
         with tempfile.TemporaryDirectory() as raw:
             directory = Path(raw)
@@ -301,17 +359,12 @@ class P5LocalizationContractTest(unittest.TestCase):
 
     def test_no_hardcoded_user_visible_text(self):
         violations = []
-        for subdir in ("xml", "layout", "menu"):
-            for f in (RES / subdir).rglob("*.xml"):
-                try:
-                    root = _parse(f)
-                except ET.ParseError:
-                    continue
-                for el in root.iter():
-                    for attr in USER_VISIBLE_ATTRS:
-                        val = el.get(f"{{{ANDROID_NS}}}{attr}", "")
-                        if val and not val.startswith("@") and not val.startswith("?"):
-                            violations.append(f"{f.relative_to(REPO)} android:{attr}={val!r}")
+        for f, root in _visible_definitions():
+            for el in root.iter():
+                for attr in USER_VISIBLE_ATTRS:
+                    val = el.get(f"{{{ANDROID_NS}}}{attr}", "")
+                    if val and not val.startswith("@") and not val.startswith("?"):
+                        violations.append(f"{f.relative_to(REPO)} android:{attr}={val!r}")
         self.assertFalse(violations, "\n".join(violations))
 
     def test_user_visible_strings_exist_in_all_formal_locales(self):
@@ -359,15 +412,17 @@ class P5LocalizationContractTest(unittest.TestCase):
         """Base string-arrays that reference @string/... must resolve to
         translated strings in every formal locale. If a locale overrides the
         array, it must preserve item count and item placeholder contracts."""
-        base, base_non_tr, _ = _load_strings(RES / "values" / "strings.xml")
+        base_root = _merged_values(RES / "values")
+        base, base_non_tr, _ = _strings(base_root)
         locales = discover_formal_locales()
-
-        base_arrays = RES / "values" / "arrays.xml"
-        if not base_arrays.exists():
-            self.skipTest("No base arrays.xml")
-        base_root = _merged_values(base_arrays.parent)
-
         required_arrays = _find_user_visible_array_refs()
+        arrays = {el.get("name"): el for el in base_root if el.tag in ("string-array", "integer-array", "array")}
+        self.assertFalse(required_arrays - arrays.keys(), f"Missing arrays: {required_arrays - arrays.keys()}")
+        # One parse per locale for this invocation; fixtures and later runs remain fresh.
+        locale_roots = {loc: _merged_values(RES / loc) for loc in locales}
+        locale_strings = {loc: _strings(root)[0] for loc, root in locale_roots.items()}
+        locale_arrays = {loc: {el.get("name"): el for el in root if el.tag == "string-array"}
+                         for loc, root in locale_roots.items()}
 
         mismatches = []
         inline_missing = []
@@ -379,22 +434,13 @@ class P5LocalizationContractTest(unittest.TestCase):
                 continue
             base_items = ["".join(item.itertext()).strip() for item in arr if item.tag == "item"]
             for loc in locales:
-                loc_path = RES / loc / "arrays.xml"
                 loc_items = None
-                if loc_path.exists():
-                    loc_root = _merged_values(loc_path.parent)
-                    loc_arr = None
-                    for el in loc_root:
-                        if el.tag == "string-array" and el.attrib.get("name") == name:
-                            loc_arr = el
-                            break
-                    if loc_arr is not None:
-                        loc_items = ["".join(item.itertext()).strip() for item in loc_arr if item.tag == "item"]
-                        if len(loc_items) != len(base_items):
-                            mismatches.append(
-                                f"{loc}/{name}: item count {len(loc_items)} != {len(base_items)}"
-                            )
-                            continue
+                loc_arr = locale_arrays[loc].get(name)
+                if loc_arr is not None:
+                    loc_items = ["".join(item.itertext()).strip() for item in loc_arr if item.tag == "item"]
+                    if len(loc_items) != len(base_items):
+                        mismatches.append(f"{loc}/{name}: item count {len(loc_items)} != {len(base_items)}")
+                        continue
 
                 for i, b in enumerate(base_items):
                     if b.startswith("@string/"):
@@ -405,12 +451,11 @@ class P5LocalizationContractTest(unittest.TestCase):
                             l = loc_items[i]
                             if l != f"@string/{key}":
                                 mismatches.append(f"{loc}/{name}[{i}]: base refs @{key}, locale has {l!r}")
-                        loc_strings = _load_strings(RES / loc / "strings.xml")[0]
-                        if key in base and key in loc_strings:
-                            base_contract = _extract_placeholders(base[key])
-                            loc_contract = _extract_placeholders(loc_strings[key])
-                            if base_contract != loc_contract:
-                                mismatches.append(f"{loc}/{name}[{i}]/{key}: placeholder mismatch")
+                        loc_strings = locale_strings[loc]
+                        if key not in base or key not in loc_strings:
+                            mismatches.append(f"{loc}/{name}[{i}]/{key}: missing translation")
+                        elif _extract_placeholders(base[key]) != _extract_placeholders(loc_strings[key]):
+                            mismatches.append(f"{loc}/{name}[{i}]/{key}: placeholder mismatch")
                     elif loc_items is not None:
                         # If the locale overrides the array, inline user-visible
                         # text must be provided and the placeholder contract must

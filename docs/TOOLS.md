@@ -4,6 +4,7 @@
 
 | 用途 | 入口 |
 | --- | --- |
+| 增量选测、设备 / Hook 与性能对照 | `agent_verify.py`、`device_verify.py`、`build_device_fixture.py`，操作和边界见[自主验证](AGENTIC_VERIFICATION.md) |
 | 本地编译、测试与源码门禁 | `verify.py`、`check-invariants.py`、`eol_check.py` |
 | 偏好、致命错误与源码边界 | `check_observer_key_contract.py`、`check_main_source_cleanliness.py`、`source_hazard_scan.py` |
 | Hook 热路径预算 | `hook_body_prefmap_scan.py`、`check_hotpath_alloc_budget.py`，分别读取同目录的预算 JSON |
@@ -50,12 +51,12 @@ python tools/query_aux_data.py context --key launcher_dock_background --full
 | `matrix` | `extract_process_matrix.py` 生成 JSON / CSV，确定性门禁检查 | 静态 catalog / routing 视图；`featureIdName` / 整数 ID 与源码 Feature ID 对应 |
 | `rom` | `rom-contracts/hyperos1-a14-core.json` 与同目录 Schema | 部分源码契约；coverage 按目标条目计数，optional 仍须真实样本取证 |
 | `hazards` | `tools/SOURCE_HAZARD_BASELINE.json` | 已存基线，查询不重新扫描或接受新增风险 |
-| `context` | Process Matrix、当前源码与 XML、既有 ROM Catalog；`agent_context.py` 仅为此入口的实现模块 | 原设置键精确关联，次级键与词法依赖标为 CANDIDATE；引用实际源码行号，不把候选调用图或 DEX 当实机证据 |
+| `context` | Process Matrix、当前源码 / 设置 JSON / 平台资源、既有 ROM Catalog；`agent_context.py` 仅为此入口的实现模块 | 原设置键精确关联，次级键与词法依赖标为 CANDIDATE；引用实际源码行号，不把候选调用图或 DEX 当实机证据 |
 
 `context` 默认读取当前工作区；`--repo-root` 可指定最新有效源码，不能默认为远端 main。
 它在既有外部 Catalog SQLite 中按工作区、文件状态及提取器哈希增量保存源码事实，不另建数据库 / MCP。
 只枚举 Git 的相关源码文件名并检查状态；热查询不重读未变化的源码，不扫描 ROM。新文件、未提交修改、删除和切换源码会使相应事实失效。
-源码 / XML 是事实来源，Matrix 只提供路由视图；`matrixStale` 或 `matrixWarning` 出现时先核对并运行原生成器。
+源码 / 设置 JSON / 平台资源是事实来源，Matrix 只提供路由视图；`matrixStale` 或 `matrixWarning` 出现时先核对并运行原生成器。
 来源可疑或存在保留文件状态的替换时，显式 `context --refresh` 重读源码事实，不扫描 ROM。
 `--full` 的 source / callers / dependencies / classLoader / verification 给出生命周期、异常分支和相关测试入口；词法关系未经过编译器解析，必须阅读对应方法，不能自动生成 Hook 或宣称完整调用图。
 没有实机验证时保持未测；测试候选不能替代按 [TESTING](TESTING.md#执行分级)选择的必要检查。

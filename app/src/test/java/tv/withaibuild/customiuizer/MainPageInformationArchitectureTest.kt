@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer
 import tv.withaibuild.customiuizer.testsupport.repositorySource as source
 
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class MainPageInformationArchitectureTest {
@@ -18,10 +19,12 @@ class MainPageInformationArchitectureTest {
         ).map { mods.indexOf(it) }
         assertTrue(order.all { it >= 0 })
         assertTrue(order == order.sorted())
-        assertTrue(xml.contains("\"android:title\": \"@string/system_mods\""))
-        assertTrue(xml.contains("\"android:title\": \"@string/launcher_title\""))
-        assertTrue(xml.contains("\"android:title\": \"@string/controls_mods\""))
-        assertTrue(xml.contains("\"android:title\": \"@string/various_mods\""))
+        for (title in listOf("system_mods", "launcher_title", "controls_mods", "various_mods")) {
+            assertTrue(xml.contains("\"android:title\": \"@string/$title\""))
+        }
+        assertFalse(mods.contains("pref_key_statusbar"))
+        assertFalse(mods.contains("pref_key_notifications"))
+        assertFalse(xml.contains("pref_key_miuizer_backup"))
         assertTrue(xml.contains("\"android:title\": \"@string/settings_title\""))
     }
 

@@ -1,5 +1,6 @@
 import importlib.util
 import io
+import os
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,28 @@ _VERIFY_PATH = _REPO_ROOT / "tools" / "verify.py"
 _spec_verify = importlib.util.spec_from_file_location("verify_local", _VERIFY_PATH)
 _verify = importlib.util.module_from_spec(_spec_verify)
 _spec_verify.loader.exec_module(_verify)
+
+
+class ManagedGradleTests(unittest.TestCase):
+    def test_managed_context_keeps_original_launcher_and_tasks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = Path(tmp) / "runner.py"
+            runner.touch()
+            with patch.dict(os.environ, A14_GRADLE_RUNNER=str(runner), A14_GRADLE_WORKFLOW="owned"), \
+                    patch.object(_verify, "resolve_build_revision", return_value="fixture"), \
+                    patch.object(_verify, "run", return_value=1) as run:
+                self.assertEqual(1, _verify.gradle("testDebugUnitTest", "--tests", "example.RealTest"))
+                command = run.call_args.args[0]
+                self.assertEqual(str(_verify.GRADLEW_PATH), command[command.index("--") + 1])
+                self.assertEqual(["testDebugUnitTest", "--tests", "example.RealTest"], command[-3:])
+
+    def test_incomplete_context_cannot_fall_back_to_unmanaged_gradle(self):
+        with patch.dict(os.environ, {"A14_GRADLE_RUNNER": "", "A14_GRADLE_WORKFLOW": "owned"}), \
+                patch.object(_verify, "resolve_build_revision", return_value="fixture"), \
+                patch.object(_verify, "run") as run, redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                _verify.gradle("testDebugUnitTest")
+            run.assert_not_called()
 
 
 class DiagnosticSummaryTests(unittest.TestCase):
@@ -68,9 +91,18 @@ class BehaviorGateTests(unittest.TestCase):
         self.assertEqual(3, self.run_gate(0, failing))  # contradictory result
 
     def test_success_skip_and_invalid_reports_are_distinct(self):
-        self.assertEqual(0, self.run_gate(0, '<testsuite name="example.RealTest" tests="2"/>'))
-        self.assertEqual(2, self.run_gate(0, '<testsuite name="example.RealTest" tests="2" skipped="2"/>'))
+        self.assertEqual(0, self.run_gate(0, '<testsuite name="example.RealTest" tests="2"><testcase name="a"/><testcase name="b"/></testsuite>'))
+        self.assertEqual(2, self.run_gate(0, '<testsuite name="example.RealTest" tests="1" skipped="1"><testcase name="a"><skipped/></testcase></testsuite>'))
         self.assertEqual(3, self.run_gate(1, '<broken'))
+
+    def test_wrong_identity_counts_and_execution_errors_are_not_kills(self):
+        for report in (
+            '<testsuite name="example.Other" tests="1"><testcase><failure/></testcase></testsuite>',
+            '<testsuite name="example.RealTest" tests="2"><testcase><failure/></testcase></testsuite>',
+            '<testsuite name="example.RealTest" tests="1"><testcase><error/></testcase></testsuite>',
+            '<testsuite name="example.RealTest" tests="1" failures="0"><testcase><failure/></testcase></testsuite>',
+        ):
+            self.assertEqual(3, self.run_gate(1, report))
 
 
 class VerifyChangedInputsTests(unittest.TestCase):
@@ -300,8 +332,13 @@ class VerifyEnvironmentTests(unittest.TestCase):
         self.assertIsNone(_verify.parse_java_major("not a java runtime"))
 
     def test_hookBodyPrefmapGateIsWired(self):
-        self.assertTrue(callable(_verify.check_hook_body_prefmap))
-        self.assertEqual(0, _verify.check_hook_body_prefmap())
+        # The scanner's own tests execute its real tree/negative fixtures. Here
+        # verify.py must invoke that gate and preserve its failure status.
+        with patch.object(_verify, "run", return_value=7) as run:
+            self.assertEqual(7, _verify.check_hook_body_prefmap())
+        run.assert_called_once_with([
+            _verify.sys.executable, str(_verify.REPO_ROOT / "tools/hook_body_prefmap_scan.py"), "--check",
+        ])
 
     def test_commandEnvironmentNormalizesBinJavaHome(self):
         java_name = "java.exe" if _verify.sys.platform == "win32" else "java"

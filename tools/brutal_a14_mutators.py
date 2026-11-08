@@ -565,12 +565,17 @@ def reflection_wrapped_fatal_unwrap(root: Path, cfg: dict) -> None:
 
 
 def callback_guard_fatal_to_normal(root: Path, cfg: dict) -> None:
-    """Remove the fatal rethrow from CallbackGuard.guarded."""
+    """Convert fatal callback failures to ordinary string logging/fallback.
+
+    Removing only the first check is equivalent: log(Throwable) independently
+    propagates fatal errors. Bypass that redundant protection in the same callback
+    path too, so the injected bug actually changes observable behavior.
+    """
     _replace_all(
         root,
         _kt_file("tv/withaibuild/customiuizer/mods/utils/CallbackGuard.kt"),
-        r"            if \(t is OutOfMemoryError \|\| t is ThreadDeath \|\| t is VirtualMachineError\) throw t\n",
-        "",
+        r"            FatalErrors\.unwrapAndRethrowIfFatal\(t\)\n            XposedHelpers\.log\(t\)",
+        "            XposedHelpers.log(t.toString())",
     )
 
 

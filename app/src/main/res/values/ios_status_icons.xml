@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">iOS battery (experimental)</string>
+    <string name="system_statusbar_ios_battery_summ">Style the native battery icon and keep system status and percentage rules. Duo and existing battery customization take priority. Unsupported themes and modes keep their system icons. Restart SystemUI after changing.</string>
+</resources>

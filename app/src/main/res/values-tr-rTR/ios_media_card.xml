@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">iOS medya kartı (deneysel)</string>
+    <string name="system_media_ios_card_summ">Sistem oynatma, arama ve çıkış kontrollerini koruyarak medya kartının görünümünü değiştirir. Büyük metinde sistem düzeni kullanılır. Değişiklikten sonra SystemUI bileşenini yeniden başlatın.</string>
+</resources>

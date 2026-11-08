@@ -35,17 +35,6 @@ def find_hook_call(text: str, class_name: str, method_name: str) -> bool:
 class GestureLifecycleInventoryTest(unittest.TestCase):
     """Static source invariants for gesture owner lifecycle."""
 
-    def test_source_files_exist(self) -> None:
-        for rel in [
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt",
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/gesture/GestureMachine.kt",
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/gesture/ControlCenterGestureRuntimeHolder.kt",
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/ControlCenterPluginRuntime.kt",
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/gesture/PhysicalGestureArbiter.kt",
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/gesture/GestureSideEffectGate.kt",
-        ]:
-            self.assertTrue((REPO_ROOT / rel).is_file(), f"missing {rel}")
-
     def test_phone_status_bar_view_attach_has_detach(self) -> None:
         """Status-bar gesture hooks attach and detach PhoneStatusBarView."""
         text = source("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemUIControlCenterHooks.kt")

@@ -15,6 +15,13 @@ class BrutalConfigPolicyTest(unittest.TestCase):
         cfg = self._base()
         validate_config(cfg)
 
+    def test_optional_behavior_ledger_must_match_executable_gate(self):
+        cfg = self._base()
+        entry = next(e for e in cfg['coverage_ledger'] if e['id'] == 'callback_guard_fatal_to_normal')
+        entry['status'] = 'BLOCKED_NO_INDEPENDENT_GATE'
+        with self.assertRaisesRegex(Exception, 'status disagrees'):
+            validate_config(cfg)
+
     def test_a14_contract_kill_gate_fails(self):
         cfg = self._base()
         cfg['kill_gates']['a14_contract'] = ['python', 'tools/brutal_a14_contract_scan.py', '--mutation', '{mutator}']

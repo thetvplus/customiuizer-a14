@@ -6,10 +6,10 @@ import subprocess
 from pathlib import Path
 
 
-def changed_paths(repo: Path, *, staged: bool = False) -> list[str]:
+def changed_paths(repo: Path, *, staged: bool = False, base: str = "HEAD") -> list[str]:
     """List index changes, or all changes from HEAD including untracked files."""
     commands = [["diff", "--no-renames", "--name-only", "-z", "--diff-filter=ACMRD",
-                 "--cached" if staged else "HEAD", "--"]]
+                 *( ["--cached"] if staged else [base]), "--"]]
     if not staged:
         commands.append(["ls-files", "--others", "--exclude-standard", "-z"])
 

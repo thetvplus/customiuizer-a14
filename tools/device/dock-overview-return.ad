@@ -1,0 +1,12 @@
+context platform=android
+open org.example.a14fixture
+wait 'text="A14 FIXTURE READY"' 5000
+home
+wait 'id="com.miui.home:id/hotseat"' 5000
+is visible 'id="com.miui.home:id/hotseat"'
+app-switcher
+wait 'text="A14 Fixture A"' 5000
+home
+wait 'id="com.miui.home:id/hotseat"' 5000
+is visible 'id="com.miui.home:id/hotseat"'
+close

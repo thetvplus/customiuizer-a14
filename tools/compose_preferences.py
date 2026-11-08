@@ -36,6 +36,7 @@ def _page_body(root: ET.Element) -> list[str]:
     def visit(element: ET.Element, parent: str | None = None) -> None:
         nonlocal serial
         attributes = dict(element.attrib)
+        attributes.pop(U + "searchKeywords", None)  # Index metadata, not a second preference value.
         kind = element.tag.rsplit(".", 1)[-1]
         if parent is None:
             variable = "root"

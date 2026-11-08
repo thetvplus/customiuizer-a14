@@ -225,6 +225,18 @@ class PreferenceResourceContractTest(unittest.TestCase):
             f"Category title references missing in values/strings.xml: {unresolved}",
         )
 
+    def test_information_architecture_labels_and_search_aliases_are_translated(self):
+        required = {
+            value.removeprefix("@string/")
+            for path in preference_sources(XML_DIR)
+            for element in read_element(path).iter()
+            for value in element.attrib.values()
+            if value.startswith("@string/settings_")
+        }
+        self.assertGreater(len(required), 30)
+        for locale, names in self.base_strings.items():
+            self.assertTrue(required <= names, (locale, required - names))
+
     def test_shared_section_headings_are_translated_in_every_supported_locale(self):
         headings = {
             el.get(ATTR_TITLE)[8:]
@@ -255,7 +267,7 @@ class PreferenceResourceContractTest(unittest.TestCase):
                 seen[key] = path.name
 
     def test_usb_preference_contract(self):
-        root = read_element(XML_DIR / "prefs_system.xml")
+        root = read_element(XML_DIR / "prefs_various.xml")
         usb = None
         for el in _collect_elements(root):
             if el.get(ATTR_KEY) == "pref_key_system_usb_default_function":
@@ -269,7 +281,7 @@ class PreferenceResourceContractTest(unittest.TestCase):
         self.assertEqual(usb.get(f"{{{ANDROID_NS}}}defaultValue"), "0")
 
     def test_recents_hide_app_name_contract(self):
-        root = read_element(XML_DIR / "prefs_system.xml")
+        root = read_element(XML_DIR / "prefs_launcher.xml")
         recents = None
         for el in _collect_elements(root):
             if el.get(ATTR_KEY) == "pref_key_system_recents_card_style":

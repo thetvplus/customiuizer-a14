@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">iOS バッテリー（試験的）</string>
+    <string name="system_statusbar_ios_battery_summ">システムの状態と残量表示を維持してアイコンを変更します。Duo と既存のバッテリー設定を優先し、未対応のテーマやモードでは元のアイコンを使用します。変更後は SystemUI を再起動してください。</string>
+</resources>

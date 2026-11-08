@@ -634,30 +634,6 @@ object System {
     }
 
     @JvmStatic
-    fun NetworkIndicatorWifi(lpparam: PackageReadyParam) {
-        val hideWifiActivity = object : MethodHook() {
-            override fun intercept(chain: XposedInterface.Chain): Any? {
-                var result: Any?
-                var throwable: Throwable? = null
-                try {
-                    result = chain.proceed()
-                } catch (t: Throwable) {
-                    throwable = t
-                    result = null
-                }
-                try {
-                    val thisObject = chain.thisObject
-
-                    val mWifiActivityView = XposedHelpers.getObjectField(thisObject, "mWifiActivityView")
-                    XposedHelpers.callMethod(mWifiActivityView, "setVisibility", View.INVISIBLE)
-
-                } catch (t: Throwable) {
-                    XposedHelpers.log(t)
-                }
-                return XposedHelpers.throwOrReturn(throwable, result)
-            }
-        }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarWifiView", lpparam.classLoader, "applyWifiState", hideWifiActivity)
-    }
+    fun NetworkIndicatorWifi(lpparam: PackageReadyParam) = StatusBarWifiHooks.install(lpparam.classLoader,false)
 
 }

@@ -24,6 +24,7 @@ import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceConstants
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.util.ArrayList
+import java.lang.ref.WeakReference
 
 /**
  * Window, rotation and free-form hooks.
@@ -468,40 +469,33 @@ object SystemWindowHooks {
             ModuleHelper.findAndHookMethodSilently("com.android.systemui.shared.recents.model.Task", lpparam.classLoader, "isSupportSplit", HookerClassHelper.returnConstant(true))
             ModuleHelper.hookAllMethods("com.miui.home.recents.views.RecentMenuView", lpparam.classLoader, "onMessageEvent", object : MethodHook() {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
-                    var result: Any?
-                    var throwable: Throwable? = null
-                    try {
-                        result = chain.proceed()
-                    } catch (t: Throwable) {
-                        throwable = t
-                        result = null
-                    }
-                    try {
-                        val thisObject = chain.thisObject
-
-                        val mHandler = XposedHelpers.getObjectField(thisObject, "mHandler") as Handler
-                        val oldMultiWindowEnableRunnable = XposedHelpers.getAdditionalInstanceField(thisObject, "multiWindowEnableRunnable") as Runnable?
-                        if (oldMultiWindowEnableRunnable != null) mHandler.removeCallbacks(oldMultiWindowEnableRunnable)
-                        val multiWindowEnableRunnable = Runnable {
-                            ModuleHelper.guarded {
-                                val mMenuItemMultiWindow = XposedHelpers.getObjectField(thisObject, "mMenuItemMultiWindow") as ImageView
-                                val mMenuItemSmallWindow = XposedHelpers.getObjectField(thisObject, "mMenuItemSmallWindow") as ImageView
-                                mMenuItemMultiWindow.isEnabled = true
-                                mMenuItemMultiWindow.imageAlpha = 255
-                                mMenuItemSmallWindow.isEnabled = true
-                                mMenuItemSmallWindow.imageAlpha = 255
-                            }
-                        }
-                        XposedHelpers.setAdditionalInstanceField(thisObject, "multiWindowEnableRunnable", multiWindowEnableRunnable)
-                        mHandler.postDelayed(multiWindowEnableRunnable, 200)
-
-                    } catch (t: Throwable) {
-                        XposedHelpers.log(t)
-                    }
-                    return XposedHelpers.throwOrReturn(throwable, result)
+                    val result = chain.proceed()
+                    ModuleHelper.guarded { scheduleMultiWindowEnable(chain.thisObject!!) }
+                    return result
                 }
             })
         }
+    }
+
+    internal fun scheduleMultiWindowEnable(menu: Any) {
+        val key = "multiWindowEnableRunnable"
+        val handler = XposedHelpers.getObjectField(menu, "mHandler") as Handler
+        val old = XposedHelpers.removeAdditionalInstanceField(menu, key) as? Runnable
+        old?.let(handler::removeCallbacks)
+        val owner = WeakReference(menu)
+        val task = object : Runnable {
+            override fun run() = ModuleHelper.guarded {
+                val target = owner.get() ?: return@guarded
+                if (XposedHelpers.getAdditionalInstanceField(target, key) !== this) return@guarded
+                XposedHelpers.removeAdditionalInstanceField(target, key)
+                val multiWindow = XposedHelpers.getObjectField(target, "mMenuItemMultiWindow") as ImageView
+                val smallWindow = XposedHelpers.getObjectField(target, "mMenuItemSmallWindow") as ImageView
+                multiWindow.isEnabled = true; multiWindow.imageAlpha = 255
+                smallWindow.isEnabled = true; smallWindow.imageAlpha = 255
+            }
+        }
+        XposedHelpers.setAdditionalInstanceField(menu, key, task)
+        if (!handler.postDelayed(task, 200)) XposedHelpers.removeAdditionalInstanceField(menu, key)
     }
 
     @JvmStatic

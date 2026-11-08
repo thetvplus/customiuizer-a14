@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">iOS 电池（实验性）</string>
+    <string name="system_statusbar_ios_battery_summ">调整原生电池图标，保留系统状态与百分比规则。Duo 和已有电池自定义优先，不支持的主题和模式保留系统图标。修改后需重启 SystemUI。</string>
+</resources>

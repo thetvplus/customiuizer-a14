@@ -343,7 +343,9 @@ class System : SubFragment() {
 
             }
             "pref_key_system_cat_statusbar" -> {
-                findPreference<Preference>("pref_key_system_statusbarcolor_apps")?.setOnPreferenceClickListener(openAppsEdit)
+                findPreference<Preference>("pref_key_system_statusbar_layout_cat")?.setOnPreferenceClickListener {
+                    openSystemSubFragment(it, false, R.id.prefs_system_statusbar_layout); true
+                }
                 findPreference<Preference>("pref_key_system_detailednetspeed_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, false, R.id.prefs_system_detailednetspeed); true }
                 findPreference<Preference>("pref_key_system_statusbar_batterytempandcurrent_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.id.prefs_system_statusbar_batterytempandcurrent); true }
                 findPreference<Preference>("prefs_system_statusbar_showdevicetemperature_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.id.prefs_system_statusbar_showdevicetemperature); true }
@@ -359,6 +361,7 @@ class System : SubFragment() {
                 }
                 findPreference<Preference>("pref_key_system_statusbarcontrols_cat")?.setOnPreferenceClickListener { openSystemSubFragment(it, true, R.id.prefs_system_statusbarcontrols); true }
             }
+            "pref_key_system_statusbar_layout_cat" -> findPreference<Preference>("pref_key_system_statusbarcolor_apps")?.setOnPreferenceClickListener(openAppsEdit)
             "pref_key_system_cat_drawer" -> {
                 findPreference<Preference>("pref_key_system_clock_app")?.setOnPreferenceClickListener {
                     openStandaloneApp(it, this, 1)
@@ -436,7 +439,6 @@ class System : SubFragment() {
             "pref_key_system_lockscreenshortcuts_cat" -> findPreference<Preference>("pref_key_system_lockscreenshortcuts_right")?.setOnPreferenceClickListener(openLockScreenActions)
             "pref_key_system_cat_other" -> {
                 findPreference<Preference>("pref_key_system_forceclose_apps")?.setOnPreferenceClickListener(openAppsEdit)
-                findPreference<Preference>("pref_key_system_nooverscroll_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 findPreference<Preference>("pref_key_system_cleanshare_apps")?.setOnPreferenceClickListener(openShareEdit)
                 findPreference<Preference>("pref_key_system_cleanshare_test")?.setOnPreferenceClickListener {
                     val sendIntent = Intent().apply {
@@ -475,11 +477,16 @@ class System : SubFragment() {
                     true
                 }
 
+            }
+            "pref_key_system_cat_capture" -> {
                 findPreference<Preference>("pref_key_system_screenshot_cat")?.setOnPreferenceClickListener {
                     openSubFragment(System_ScreenshotConfig(), null, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp, R.string.system_screenshot_title, R.id.prefs_system_screenshot)
                     true
                 }
 
+            }
+            "pref_key_system_cat_appearance" -> {
+                findPreference<Preference>("pref_key_system_nooverscroll_apps")?.setOnPreferenceClickListener(openAppsEdit)
                 AppHelper.appPrefs!!.edit().putInt("pref_key_system_animationscale_window", (Helpers.getAnimationScale(0) * 10).roundToInt()).apply()
                 findPreference<SeekBarPreference>("pref_key_system_animationscale_window")?.let { control ->
                     control.setOnValueChangeListener(commit = { value -> requestAnimationScale(0, control, value) })

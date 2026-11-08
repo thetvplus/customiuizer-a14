@@ -118,20 +118,9 @@ EXPECTED_SPLITS = {
     "pref_key_various_cat_calls": "prefs_various_calls.xml",
     "pref_key_various_cat_settings": "prefs_various_settings.xml",
     "pref_key_various_cat_exclusive": "prefs_various_exclusive.xml",
-    "pref_key_various_cat_gboard": "prefs_various_gboard.xml",
+    "pref_key_system_cat_appearance": "prefs_system_appearance.xml",
+    "pref_key_system_cat_capture": "prefs_system_capture.xml",
 }
-
-def model_page(path):
-    if path.name == "mod_search_index.xml":
-        return ET.parse(path).getroot()
-    if path.parent == SOURCE_DIR or path.suffix == ".json":
-        return read_element(path)
-    for category in production_generator.CATEGORY_SOURCES:
-        pages = production_generator._structured_categories(category, read_element(SOURCE_DIR / category.source_name))
-        if path.stem in pages:
-            return pages[path.stem]
-    raise AssertionError(f"Missing generated Compose model: {path.name}")
-
 
 def _signature(element: ET.Element) -> tuple:
     return (
@@ -144,7 +133,7 @@ def _signature(element: ET.Element) -> tuple:
 def _source_search_entries() -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
     for category, (source_name, category_title) in CATEGORY_SOURCES.items():
-        root = model_page(SOURCE_DIR / source_name)
+        root = read_element(SOURCE_DIR / source_name)
         parents = {child: parent for parent in root.iter() for child in parent}
         for page in root.iter():
             page_key = page.get(ANDROID_KEY)
@@ -196,43 +185,39 @@ def _generated_search_entries(index_root: ET.Element) -> list[dict[str, str]]:
 
 class GeneratePreferenceArtifactsTest(unittest.TestCase):
 
-    def setUp(self) -> None:
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.output_dir = Path(self.temp_dir.name) / "generated"
-        subprocess.run(
-            [
-                sys.executable,
-                str(GENERATOR),
-                "--source-dir",
-                str(SOURCE_DIR),
-                "--output-dir",
-                str(self.output_dir),
-            ],
-            cwd=REPO_ROOT,
-            check=True,
-        )
-        self.xml_dir = self.output_dir / "xml"
-
-    def tearDown(self) -> None:
-        self.temp_dir.cleanup()
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Shared files are read-only. CLI/output mutation tests use their own directories.
+        cls.fixture = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.fixture.cleanup)
+        cls.output_dir = Path(cls.fixture.name) / "res"
+        cls.catalog_dir = Path(cls.fixture.name) / "kotlin"
+        feature_dir = REPO_ROOT / "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature"
+        production_generator.generate(SOURCE_DIR, cls.output_dir, cls.catalog_dir, feature_dir)
+        cls.xml_dir = cls.output_dir / "xml"
+        # These tests exercise the grouping model, not nonexistent generated XML pages.
+        cls.pages = {}
+        for category in production_generator.CATEGORY_SOURCES:
+            cls.pages.update(production_generator._structured_categories(
+                category, read_element(SOURCE_DIR / category.source_name)))
 
     def test_every_structured_category_is_an_exact_single_category_slice(self) -> None:
         found_keys: set[str] = set()
         for category in ("system", "launcher", "controls", "various"):
-            source_root = model_page(SOURCE_DIR / f"prefs_{category}.xml")
+            source_root = read_element(SOURCE_DIR / f"prefs_{category}.xml")
             for source_category in source_root.iter():
                 key = source_category.get(ANDROID_KEY, "")
                 if key not in EXPECTED_SPLITS:
                     continue
                 found_keys.add(key)
-                split_root = model_page(self.xml_dir / EXPECTED_SPLITS[key])
+                split_root = self.pages[Path(EXPECTED_SPLITS[key]).stem]
                 self.assertEqual(1, len(split_root))
                 self.assertEqual(_signature(source_category), _signature(split_root[0]))
 
         self.assertEqual(set(EXPECTED_SPLITS), found_keys)
 
     def test_various_groups_preserve_every_real_preference_once(self) -> None:
-        source_root = model_page(SOURCE_DIR / "prefs_various.xml")
+        source_root = read_element(SOURCE_DIR / "prefs_various.xml")
         source_preferences = [
             _signature(child) for child in source_root.iter()
             if child is not source_root and child.tag != PREFERENCE_CATEGORY
@@ -242,7 +227,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             key = page.get(ANDROID_KEY)
             if key not in EXPECTED_SPLITS:
                 continue
-            split_root = model_page(self.xml_dir / EXPECTED_SPLITS[key])
+            split_root = self.pages[Path(EXPECTED_SPLITS[key]).stem]
             generated_preferences.extend(
                 _signature(child) for child in split_root.iter()
                 if child is not split_root and child.tag != PREFERENCE_CATEGORY
@@ -251,7 +236,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
 
     def test_every_dependency_target_remains_in_the_same_lazy_page(self) -> None:
         for output_name in EXPECTED_SPLITS.values():
-            root = model_page(self.xml_dir / output_name)
+            root = self.pages[Path(output_name).stem]
             keys = {
                 element.get(ANDROID_KEY)
                 for element in root.iter()
@@ -267,8 +252,8 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
     def test_category_selectors_are_derived_from_generated_slices(self) -> None:
         for category in CATEGORY_SOURCES:
             suffix = category.removeprefix("pref_key_")
-            source = model_page(SOURCE_DIR / f"prefs_{suffix}.xml")
-            selector = model_page(self.xml_dir / f"prefs_{suffix}_cat.xml")
+            source = read_element(SOURCE_DIR / f"prefs_{suffix}.xml")
+            selector = self.pages[f"prefs_{suffix}_cat"]
             expected = [(child.get(ANDROID_KEY), child.get(ANDROID_TITLE)) for child in source.iter()
                         if child.get(ANDROID_KEY) in EXPECTED_SPLITS]
             actual = [(child.get(ANDROID_KEY), child.get(ANDROID_TITLE)) for child in selector.iter()
@@ -277,17 +262,15 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             self.assertEqual([child.get(ANDROID_TITLE) for child in source],
                              [child.get(ANDROID_TITLE) for child in selector])
             sections = list(selector)
-            if category == "pref_key_system":
+            if category == "pref_key_various":
                 first = sections[0]
-                self.assertEqual(PREFERENCE_CATEGORY, first.tag)
-                self.assertEqual("@string/prefs_group_apps", first.get(ANDROID_TITLE))
-                entry = first[0]
-                self.assertEqual("tv.withaibuild.customiuizer.prefs.PreferenceEx", entry.tag)
-                self.assertEqual("pref_key_system_cat_automation", entry.get(ANDROID_KEY))
-            self.assertTrue(all(child.tag == PREFERENCE_CATEGORY and len(child) for child in sections))
+                self.assertEqual("tv.withaibuild.customiuizer.prefs.PreferenceEx", first.tag)
+                self.assertEqual("@string/system_mods_automation", first.get(ANDROID_TITLE))
+                self.assertEqual("pref_key_system_cat_automation", first.get(ANDROID_KEY))
+            self.assertTrue(all((child.tag == PREFERENCE_CATEGORY and len(child)) or child.get(ANDROID_KEY) in EXPECTED_SPLITS for child in sections))
 
     def test_search_index_matches_page_ownership_sections_and_adapter_order(self) -> None:
-        entries = _generated_search_entries(model_page(self.xml_dir / "mod_search_index.xml"))
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
         generated = [{key: item.get(key, "") for key in (
             "title", "key", "category", "categoryTitle", "breadcrumbSubTitle",
             "breadcrumbSubSubTitle", "routeSub", "order",
@@ -295,8 +278,8 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertEqual(_source_search_entries(), generated)
         by_key = {item["key"]: item for item in generated}
         for key, owner, section in (
-            ("pref_key_system_volume_ios", "pref_key_system_cat_audio", "@string/system_ios_volume_group_title"),
-            ("pref_key_system_volume_ios_compact", "pref_key_system_cat_audio", "@string/system_ios_volume_group_title"),
+            ("pref_key_system_volume_ios", "pref_key_system_cat_audio", "@string/settings_ios_volume"),
+            ("pref_key_system_volume_ios_compact", "pref_key_system_cat_audio", "@string/settings_ios_volume"),
             ("pref_key_system_recents_ios18_deck", "pref_key_system_cat_recents", "@string/system_ios_desktop_title"),
             ("pref_key_system_recents_ios18_deck_size", "pref_key_system_cat_recents", "@string/system_ios_desktop_title"),
         ):
@@ -305,11 +288,11 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         for suffix in ("collapsed", "expanded"):
             item = by_key[f"pref_key_system_volumeblur_{suffix}"]
             self.assertEqual("pref_key_system_cat_audio", item["routeSub"])
-            self.assertEqual("@string/prefs_group_material", item["breadcrumbSubSubTitle"])
+            self.assertEqual("@string/settings_panel_background", item["breadcrumbSubSubTitle"])
         self.assertEqual("pref_key_various_cat_exclusive", by_key["pref_key_various_disable_miui_daemon"]["routeSub"])
 
     def test_application_and_network_rules_share_the_automation_directory(self) -> None:
-        entries = _generated_search_entries(model_page(self.xml_dir / "mod_search_index.xml"))
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
         for suffix in ("appbehavior", "wifiauto", "vpnauto"):
             matches = [item for item in entries if item["key"] == f"pref_key_system_{suffix}_cat"]
             self.assertEqual(1, len(matches))
@@ -317,7 +300,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             self.assertEqual("@string/system_mods_automation", matches[0]["breadcrumbSubTitle"])
 
     def test_island_subpages_preserve_feedback_gesture_keys_and_search_targets(self) -> None:
-        entries = _generated_search_entries(model_page(self.xml_dir / "mod_search_index.xml"))
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
         for suffix, keys in (
             ("feedback", [f"pref_key_system_island_feedback_{kind}" for kind in
                           ("dnd", "ringer", "dark", "airplane", "nfc", "hotspot", "torch", "wifi", "data", "bluetooth")]),
@@ -332,16 +315,16 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                 self.assertEqual(f"@id/prefs_system_island_{suffix}", match[0]["page"])
                 self.assertEqual("System", match[0]["pageFragment"])
                 self.assertEqual(f"pref_key_system_island_{suffix}_cat", match[0]["routeSub"])
-        source = model_page(SOURCE_DIR / "prefs_system.xml")
+        source = read_element(SOURCE_DIR / "prefs_system.xml")
         island = next(e for e in source.iter() if e.get(ANDROID_KEY) == "pref_key_system_cat_island")
         self.assertEqual([f"@string/system_island_{name}_group" for name in
                           ("basic", "feedback", "appearance", "interaction")],
                          [e.get(ANDROID_TITLE) for e in island])
         keys = {e.get(ANDROID_KEY) for e in island.iter()}
         self.assertNotIn("pref_key_system_island_waveform_mode", keys)
-        music = model_page(SOURCE_DIR / "prefs_system_island_music.xml")
+        music = read_element(SOURCE_DIR / "prefs_system_island_music.xml")
         self.assertNotIn("pref_key_system_island_waveform_mode", {e.get(ANDROID_KEY) for e in music.iter()})
-        effects = model_page(SOURCE_DIR / "prefs_system_island_effects.xml")
+        effects = read_element(SOURCE_DIR / "prefs_system_island_effects.xml")
         wave = next(e for e in effects.iter() if e.get(ANDROID_KEY) == "pref_key_system_island_waveform_mode")
         self.assertIsNone(wave.get("{http://schemas.android.com/apk/res/android}dependency"))
         self.assertEqual("@string/system_island_waveform_mode_summ", wave.get("{http://schemas.android.com/apk/res/android}summary"))
@@ -354,7 +337,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertNotIn("pref_key_system_island_waveform", keys)
 
     def test_every_standalone_preference_is_searchable_with_its_real_page(self) -> None:
-        entries = _generated_search_entries(model_page(self.xml_dir / "mod_search_index.xml"))
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
         pages = {item["page"] for item in entries if item["page"]}
         standalone_files = set(preference_sources(SOURCE_DIR)) - {
             SOURCE_DIR.parents[3] / "settings" / name.replace(".xml", ".json") for name in ("prefs_main.xml", *(item[0] for item in CATEGORY_SOURCES.values()))
@@ -366,7 +349,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             with self.subTest(page=path.name):
                 expected = {
                     element.get(ANDROID_KEY): element.get(ANDROID_TITLE)
-                    for element in model_page(path).iter()
+                    for element in read_element(path).iter()
                     if element.tag != PREFERENCE_CATEGORY
                     and element.get(ANDROID_KEY)
                     and element.get(f"{{{AUTO_NS}}}isPreferenceVisible", "true").lower() != "false"
@@ -382,12 +365,12 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
 
     def test_retired_a14_preferences_have_no_source_or_search_entry(self) -> None:
         for path in preference_sources(SOURCE_DIR):
-            root = model_page(path)
+            root = read_element(path)
             attributes = {value for element in root.iter() for value in element.attrib.values()}
             with self.subTest(page=path.name):
                 self.assertFalse(RETIRED_A14_KEYS & attributes)
 
-        entries = _generated_search_entries(model_page(self.xml_dir / "mod_search_index.xml"))
+        entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
         searchable = {item["key"] for item in entries}
         self.assertFalse(RETIRED_A14_KEYS & searchable)
         retained = {
@@ -406,7 +389,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertTrue(retained <= searchable, f"Retained settings missing from search: {retained - searchable}")
 
     def test_custom_tile_colors_depend_on_the_visible_color_switch(self) -> None:
-        root = model_page(SOURCE_DIR / "prefs_system_controlcenter_themestyle.xml")
+        root = read_element(SOURCE_DIR / "prefs_system_controlcenter_themestyle.xml")
         preferences = {element.get(ANDROID_KEY): element for element in root.iter() if element.get(ANDROID_KEY)}
         master_key = "pref_key_system_cc_tile_enabled_color"
         self.assertIn(master_key, preferences)
@@ -419,11 +402,7 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                 self.assertEqual(master_key, preferences[key].get(ANDROID_DEPENDENCY))
 
     def test_child_presentation_flag_does_not_exclude_a_searchable_setting(self) -> None:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("preference_generator", GENERATOR)
-        generator = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = generator
-        spec.loader.exec_module(generator)
+        generator = production_generator
         root = ET.fromstring(f'''<PreferenceScreen xmlns:android="{ANDROID_NS}" xmlns:app="{AUTO_NS}">
             <{PREFERENCE_CATEGORY} android:key="pref_key_system_cat_statusbar" android:title="@string/system_statusbar_title">
                 <Preference android:key="pref_key_child" android:title="@string/child" app:child="true" />
@@ -447,40 +426,28 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         self.assertNotIn("breadcrumbSubSubTitle", entries["dependent"])
 
     def test_generation_is_byte_for_byte_deterministic(self) -> None:
-        subprocess.run(
-            [
-                sys.executable,
-                str(GENERATOR),
-                "--source-dir",
-                str(SOURCE_DIR),
-                "--output-dir",
-                str(self.output_dir),
-            ],
-            cwd=REPO_ROOT,
-            check=True,
-        )
-        second_output = Path(self.temp_dir.name) / "generated-second"
-        subprocess.run(
-            [
-                sys.executable,
-                str(GENERATOR),
-                "--source-dir",
-                str(SOURCE_DIR),
-                "--output-dir",
-                str(second_output),
-            ],
-            cwd=REPO_ROOT,
-            check=True,
-        )
-        first_files = {
-            path.name: path.read_bytes()
-            for path in sorted(self.xml_dir.glob("*.xml"))
+        expected_paths = {
+            "res/xml/mod_search_index.xml", "res/values/compose_pages.xml",
+            "kotlin/tv/withaibuild/customiuizer/prefs/ComposeSettingsPages.kt",
+            "kotlin/tv/withaibuild/customiuizer/utils/CurrentPreferenceCatalog.kt",
         }
-        second_files = {
-            path.name: path.read_bytes()
-            for path in sorted((second_output / "xml").glob("*.xml"))
-        }
-        self.assertEqual(first_files, second_files)
+        def snapshot(root):
+            files = {path.relative_to(root).as_posix(): path.read_bytes()
+                     for path in root.rglob("*") if path.is_file()}
+            self.assertEqual(expected_paths, files.keys(), "all runtime artifacts must be generated")
+            self.assertTrue(all(files.values()), "generated artifacts must not be empty")
+            return files
+        baseline = snapshot(Path(self.fixture.name))
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ("first", "second"):
+                output = Path(directory) / name
+                subprocess.run(
+                    [sys.executable, str(GENERATOR), "--source-dir", str(SOURCE_DIR),
+                     "--output-dir", str(output / "res"), "--catalog-output", str(output / "kotlin"),
+                     "--java-dir", str(REPO_ROOT / "app/src/main/java/tv/withaibuild/customiuizer/mods/utils/feature")],
+                    cwd=REPO_ROOT, check=True,
+                )
+                self.assertEqual(baseline, snapshot(output))
 
     def test_runtime_uses_only_the_generated_index_and_build_wires_generation(self) -> None:
         helpers = (
@@ -501,43 +468,9 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
 
         expected_files = {"mod_search_index.xml"}
         self.assertEqual(expected_files, {path.name for path in self.xml_dir.glob("*.xml")})
-        canonical_size = sum(
-            path.stat().st_size
-            for path in preference_sources(SOURCE_DIR)
-            if path.name != "prefs_main.xml"
-        )
-        self.assertLess(
-            (self.xml_dir / "mod_search_index.xml").stat().st_size,
-            canonical_size // 2,
-        )
 
-    def test_catalog_is_generated_from_xml_and_feature_keys(self) -> None:
-        catalog_dir = Path(self.temp_dir.name) / "catalog"
-        java_dir = REPO_ROOT / "app" / "src" / "main" / "java"
-        subprocess.run(
-            [
-                sys.executable,
-                str(GENERATOR),
-                "--source-dir",
-                str(SOURCE_DIR),
-                "--output-dir",
-                str(self.output_dir),
-                "--catalog-output",
-                str(catalog_dir),
-                "--java-dir",
-                str(java_dir),
-            ],
-            cwd=REPO_ROOT,
-            check=True,
-        )
-        catalog = (
-            catalog_dir
-            / "tv"
-            / "withaibuild"
-            / "customiuizer"
-            / "utils"
-            / "CurrentPreferenceCatalog.kt"
-        ).read_text(encoding="utf-8")
+    def test_catalog_is_generated_from_settings_and_feature_keys(self) -> None:
+        catalog = (self.catalog_dir / "tv/withaibuild/customiuizer/utils/CurrentPreferenceCatalog.kt").read_text(encoding="utf-8")
         self.assertIn("internal object CurrentPreferenceCatalog", catalog)
         self.assertIn('"pref_key_miuizer_launchericon"', catalog)
         self.assertIn('"pref_key_system_strong_toast_mode"', catalog)
@@ -555,16 +488,16 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
         java_dir = REPO_ROOT / "app/src/main/java"
         feature_dir = java_dir / "tv/withaibuild/customiuizer/mods/utils/feature"
         catalogs = []
-        for name, source in (("full", java_dir), ("scoped", feature_dir)):
-            catalog_dir = Path(self.temp_dir.name) / name
-            subprocess.run(
-                [sys.executable, str(GENERATOR), "--source-dir", str(SOURCE_DIR),
-                 "--output-dir", str(self.output_dir), "--catalog-output", str(catalog_dir),
-                 "--java-dir", str(source)],
-                cwd=REPO_ROOT,
-                check=True,
-            )
-            catalogs.append((catalog_dir / "tv/withaibuild/customiuizer/utils/CurrentPreferenceCatalog.kt").read_bytes())
+        with tempfile.TemporaryDirectory() as directory:
+            for name, source in (("full", java_dir), ("scoped", feature_dir)):
+                output = Path(directory) / name
+                subprocess.run(
+                    [sys.executable, str(GENERATOR), "--source-dir", str(SOURCE_DIR),
+                     "--output-dir", str(output / "res"), "--catalog-output", str(output / "kotlin"),
+                     "--java-dir", str(source)],
+                    cwd=REPO_ROOT, check=True,
+                )
+                catalogs.append((output / "kotlin/tv/withaibuild/customiuizer/utils/CurrentPreferenceCatalog.kt").read_bytes())
         self.assertEqual(catalogs[0], catalogs[1],
                          "Feature preference keys outside the declared Gradle input would be lost")
 

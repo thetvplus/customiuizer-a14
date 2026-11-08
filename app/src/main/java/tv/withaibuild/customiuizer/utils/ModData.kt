@@ -39,8 +39,14 @@ class ModData {
     var searchText: String = ""
         private set
 
+    var searchKeywords: String = ""
+        set(value) {
+            field = value
+            updateSearchText()
+        }
+
     private fun updateSearchText() {
-        searchText = normalizeSearchText(title + " " + breadcrumbs)
+        searchText = normalizeSearchText(title + " " + breadcrumbs + if (searchKeywords.isEmpty()) "" else " " + searchKeywords)
     }
 
     fun matchesSearch(terms: List<String>): Boolean = terms.all { searchText.contains(it) }

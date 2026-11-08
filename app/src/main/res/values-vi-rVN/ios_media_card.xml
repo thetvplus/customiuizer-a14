@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">Thẻ phương tiện iOS (thử nghiệm)</string>
+    <string name="system_media_ios_card_summ">Đổi giao diện thẻ nhưng giữ phát lại, tua và chọn đầu ra của hệ thống. Chữ lớn dùng bố cục hệ thống. Khởi động lại SystemUI sau khi đổi.</string>
+</resources>

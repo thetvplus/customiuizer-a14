@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">iOS pil simgesi (deneysel)</string>
+    <string name="system_statusbar_ios_battery_summ">Sistem durumu ve yüzde kurallarını korur. Duo ve mevcut pil özelleştirmeleri önceliklidir. Desteklenmeyen tema ve modlarda sistem simgeleri korunur. Değişiklikten sonra SystemUI bileşenini yeniden başlatın.</string>
+</resources>

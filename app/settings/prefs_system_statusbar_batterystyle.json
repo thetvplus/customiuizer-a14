@@ -5,8 +5,17 @@
     {
       "type": "toggle",
       "attributes": {
+        "android:key": "pref_key_system_statusbar_ios_battery",
+        "android:title": "@string/system_statusbar_ios_battery_title",
+        "android:summary": "@string/system_statusbar_ios_battery_summ",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
         "android:key": "pref_key_system_statusbar_batterystyle",
-        "android:title": "@string/enable_mod",
+        "android:title": "@string/settings_battery_customization",
         "android:defaultValue": "false"
       }
     },

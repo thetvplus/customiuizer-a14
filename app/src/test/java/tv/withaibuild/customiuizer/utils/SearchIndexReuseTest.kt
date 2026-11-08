@@ -14,6 +14,24 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class SearchIndexReuseTest {
+    @Test fun movedSettingsAndAliasesUseTheirSingleVisibleOwner() {
+        Helpers.getAllMods(context("zh-CN"), true)
+        for ((key, category) in mapOf(
+            "pref_key_system_volume_ios" to ModData.ModCat.pref_key_controls,
+            "pref_key_system_media_ios_card" to ModData.ModCat.pref_key_system,
+            "pref_key_system_recents_ios18_deck" to ModData.ModCat.pref_key_launcher,
+            "pref_key_system_statusbar_duo" to ModData.ModCat.pref_key_system,
+            "pref_key_system_usb_default_function" to ModData.ModCat.pref_key_various,
+        )) assertEquals(key, category, Helpers.allModsList.single { it.key == key }.cat)
+        val indicator = Helpers.allModsList.single { it.key == "pref_key_controls_ios_home_indicator" }
+        assertTrue(indicator.matchesSearch(searchTerms("小白条")))
+        val keyboard = Helpers.allModsList.single { it.key == "pref_key_various_gboardpadding_port" }
+        assertTrue(keyboard.matchesSearch(searchTerms("Gboard")))
+        assertEquals("pref_key_controls_cat_navbar", keyboard.sub)
+        assertTrue(Helpers.allModsList.single { it.key == "pref_key_system_recents_ios18_deck" }
+            .matchesSearch(searchTerms("多任务")))
+    }
+
     private fun context(tag: String, fontScale: Float = 1f) = RuntimeEnvironment.getApplication()
         .let { app -> app.createConfigurationContext(Configuration(app.resources.configuration).apply {
             setLocales(LocaleList(Locale.forLanguageTag(tag)))

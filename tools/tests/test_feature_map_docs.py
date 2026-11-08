@@ -48,8 +48,16 @@ class FeatureMapTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.repo = Path(self.temp.name)
-        for directory in (feature_map.RES / "xml", feature_map.RES / "values", feature_map.RES / "values-zh-rCN", Path("app/settings"), feature_map.JAVA):
+        # Copy UI/catalog inputs, not every production Hook. The real/fixture map
+        # comparison below also detects an input accidentally omitted here.
+        for directory in (feature_map.RES / "xml", feature_map.RES / "values", feature_map.RES / "values-zh-rCN", Path("app/settings"),
+                          *(feature_map.JAVA / sub for sub in ("subs", "prefs", "ui", "mods/utils/feature"))):
             shutil.copytree(ROOT / directory, self.repo / directory)
+        for source in (ROOT / feature_map.JAVA).glob("*.kt"):
+            shutil.copyfile(source, self.repo / feature_map.JAVA / source.name)
+        resolver = feature_map.JAVA / "utils/PreferenceResourceResolver.kt"
+        (self.repo / resolver).parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / resolver, self.repo / resolver)
         matrix = Path("docs/rom-intelligence/A14_PROCESS_MATRIX.json")
         (self.repo / matrix).parent.mkdir(parents=True)
         shutil.copyfile(ROOT / matrix, self.repo / matrix)
@@ -57,7 +65,7 @@ class FeatureMapTest(unittest.TestCase):
     def test_every_page_and_visible_key_in_real_inputs_is_mapped(self):
         strings = feature_map.load_strings(self.repo)
         pages = feature_map.collect_pages(self.repo, strings)
-        self.assertEqual(35, sum(not p.standalone for p in pages))
+        self.assertEqual(36, sum(not p.standalone for p in pages))
         self.assertEqual({p[0] for p in prefs.STANDALONE_PAGES}, {p.key for p in pages if p.standalone})
         rendered = feature_map.render(self.repo)
         for path in (self.repo / "app/settings").glob("prefs_*.json"):

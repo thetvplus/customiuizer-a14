@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Mechanical validation of the current A14 source architecture.
-
-This test replaces the previous markdown-backed architecture evidence with
-direct source and JVM-test parsing. It does not read or require
-docs/A14_CURRENT_ARCHITECTURE.md and does not modify app/src/main.
-"""
+"""Source wiring and installation boundaries; JVM behavior is executed separately."""
 
 from __future__ import annotations
 
@@ -17,7 +12,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = REPO_ROOT / "app" / "src" / "main" / "java"
-TEST_ROOT = REPO_ROOT / "app" / "src" / "test" / "java"
 RESOURCES_ROOT = REPO_ROOT / "app" / "src" / "main" / "resources"
 CHECK_INVARIANTS = REPO_ROOT / "tools" / "check-invariants.py"
 SOURCE_HAZARD_SCAN = REPO_ROOT / "tools" / "source_hazard_scan.py"
@@ -42,10 +36,6 @@ def source(rel: str) -> str:
     if not path.is_file():
         path = REPO_ROOT / rel
     return path.read_text(encoding="utf-8")
-
-
-def test_source(rel: str) -> str:
-    return (TEST_ROOT / rel).read_text(encoding="utf-8")
 
 
 def _method_body(text: str, header_pattern: str) -> str:
@@ -122,9 +112,6 @@ class CurrentArchitectureTest(unittest.TestCase):
         self.assertIn("minApiVersion=102", module_prop)
         self.assertIn("targetApiVersion=102", module_prop)
 
-        jvm_test = test_source("tv/withaibuild/customiuizer/MainModuleSystemServerLoadMarkerTest.kt")
-        self.assertIn("systemServerLoadMarkerIsLoggedBeforeAnyHookInstallation", jvm_test)
-
     def test_process_router_resolves_process_scope(self) -> None:
         text = CI.strip_comments(
             source("tv/withaibuild/customiuizer/mods/utils/ProcessRouter.kt")
@@ -157,9 +144,6 @@ class CurrentArchitectureTest(unittest.TestCase):
         )
         self.assertIn("enum class ProcessScope", scope_text)
         self.assertIn("val isInstallable: Boolean", scope_text)
-
-        jvm_test = test_source("tv/withaibuild/customiuizer/mods/utils/ProcessRouterTest.kt")
-        self.assertIn("resolvesPrimaryProcesses", jvm_test)
 
     def test_package_installer_router_exists_and_routes(self) -> None:
         text = CI.strip_comments(
@@ -294,10 +278,6 @@ class CurrentArchitectureTest(unittest.TestCase):
                             f"{entry['rel']} method body must contain {token}",
                         )
 
-        jvm_test = test_source("tv/withaibuild/customiuizer/installers/InstallerJvmAbiTest.kt")
-        for name in ["GenericAppInstaller", "SystemUiInstaller", "LauncherInstaller", "SecurityCenterInstaller"]:
-            self.assertIn(name, jvm_test)
-
     def test_feature_install_registry_owns_feature_installation(self) -> None:
         text = CI.strip_comments(
             source("tv/withaibuild/customiuizer/mods/utils/FeatureInstallRegistry.kt")
@@ -326,36 +306,6 @@ class CurrentArchitectureTest(unittest.TestCase):
         install_all = _method_body(text, r"\bfun\s+installAll\s*\(")
         self.assertIn("spec.target != target && spec.target != FeatureTarget.ANY", install_all)
         self.assertIn("spec.phase != phase", install_all)
-
-        jvm_tests = [
-            ("tv/withaibuild/customiuizer/mods/utils/FeatureInstallRegistryTest.kt", "installAll_idempotent"),
-            ("tv/withaibuild/customiuizer/mods/utils/FeatureInstallBoundaryContractTest.kt", "registryKeepsFatalAndOrdinaryFailurePathsSeparate"),
-            ("tv/withaibuild/customiuizer/mods/utils/FeatureRegistryWiringTest.kt", "packagePermissionsFeatureIsRegisteredInSystemServerInstaller"),
-        ]
-        for rel, token in jvm_tests:
-            self.assertIn(token, test_source(rel))
-
-    def test_lazy_feature_spec_defers_creation_until_enabled(self) -> None:
-        text = CI.strip_comments(
-            source("tv/withaibuild/customiuizer/mods/utils/LazyFeatureSpec.kt")
-        )
-        self.assertIn("internal data class LazyFeatureSpec", text)
-        self.assertIn("private val enabled: (PrefMap) -> Boolean", text)
-        self.assertIn("private val factory: () -> FeatureDefinition", text)
-        self.assertIn("override fun isEnabled(prefs: PrefMap): Boolean = enabled(prefs)", text)
-        self.assertIn("override fun create(): FeatureDefinition = factory()", text)
-
-        registry_text = CI.strip_comments(
-            source("tv/withaibuild/customiuizer/mods/utils/FeatureInstallRegistry.kt")
-        )
-        install_one = _method_body(registry_text, r"\bfun\s+installOne\s*\(")
-        is_enabled = install_one.find("if (!spec.isEnabled(prefs))")
-        create = install_one.find("spec.create().install()")
-        self.assertLess(is_enabled, create, "FeatureInstallRegistry must check isEnabled before create")
-
-        jvm_test = test_source("tv/withaibuild/customiuizer/mods/utils/FeatureInstallRegistryTest.kt")
-        self.assertIn("lazySpec_disabledFeatureDoesNotCreateDefinition", jvm_test)
-        self.assertIn("lazySpec_enabledFeatureCreatesAndInstalls", jvm_test)
 
     def test_feature_install_state_is_process_level_state(self) -> None:
         text = CI.strip_comments(
@@ -407,10 +357,6 @@ class CurrentArchitectureTest(unittest.TestCase):
             "preference bootstrap must complete before package installers",
         )
 
-        jvm_test = test_source("tv/withaibuild/customiuizer/mods/utils/PreferenceBootstrapTest.kt")
-        self.assertIn("bootstrap_nonEmptySnapshot_reachesLoaded", jvm_test)
-        self.assertIn("bootstrap_listenerNotRegistered_notReady", jvm_test)
-
     def test_native_api102_preserves_installation_lifecycle(self) -> None:
         bridge_text = source("tv/withaibuild/customiuizer/mods/utils/HookInstallation.kt")
         self.assertIn("internal object HookInstallation", bridge_text)
@@ -436,10 +382,6 @@ class CurrentArchitectureTest(unittest.TestCase):
         self.assertIn("HookInstallation.intercept(", xposed_helpers)
         self.assertNotIn("setStableHookId", xposed_helpers)
         self.assertNotIn(".setId(", xposed_helpers)
-
-        jvm_test = test_source("tv/withaibuild/customiuizer/mods/utils/Api102HookInstallationTest.kt")
-        self.assertIn("missingRequiredIdApiFailsBeforeIntercept", jvm_test)
-        self.assertIn("api102PreservesPriorityModeCallbackAndUnhookWithStableId", jvm_test)
 
     def test_java_kotlin_boundary_is_preserved(self) -> None:
         java_files = sorted(
@@ -473,9 +415,6 @@ class CurrentArchitectureTest(unittest.TestCase):
             "public class MemberUtilsX",
             source("org/apache/commons/lang3/reflect/MemberUtilsX.java"),
         )
-
-        jvm_test = test_source("tv/withaibuild/customiuizer/mods/utils/XposedHelpersAbiTest.kt")
-        self.assertIn("publicAbiSnapshotContainsExpectedMethods", jvm_test)
 
 
 if __name__ == "__main__":

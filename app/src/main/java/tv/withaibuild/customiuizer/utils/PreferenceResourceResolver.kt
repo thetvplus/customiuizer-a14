@@ -1,6 +1,11 @@
 package tv.withaibuild.customiuizer.utils
 
 import tv.withaibuild.customiuizer.R
+import tv.withaibuild.customiuizer.SubFragment
+import tv.withaibuild.customiuizer.subs.System as SystemPage
+import tv.withaibuild.customiuizer.subs.Launcher
+import tv.withaibuild.customiuizer.subs.Controls
+import tv.withaibuild.customiuizer.subs.Various
 
 /** Resolves main setting categories to generated selector and lazy page resources. */
 internal object PreferenceResourceResolver {
@@ -13,16 +18,48 @@ internal object PreferenceResourceResolver {
         else -> null
     }
 
-    fun resolve(category: String, sub: String?): Int = when (category) {
+    fun categoryTitle(category: String): Int = when (category) {
+        "pref_key_system" -> R.string.system_mods
+        "pref_key_launcher" -> R.string.launcher_title
+        "pref_key_controls" -> R.string.controls_mods
+        "pref_key_various" -> R.string.various_mods
+        else -> 0
+    }
+
+    // Visible categories describe user tasks. Existing page keys retain their
+    // controller namespace, so a move never bypasses its dependency/action binding.
+    private fun owner(category: String, sub: String?): String {
+        val key = SearchRouteResolver.normalizeSub(sub).orEmpty()
+        return when {
+            key.startsWith("pref_key_system_") -> "pref_key_system"
+            key.startsWith("pref_key_launcher_") -> "pref_key_launcher"
+            key.startsWith("pref_key_controls_") -> "pref_key_controls"
+            key.startsWith("pref_key_various_") -> "pref_key_various"
+            else -> category
+        }
+    }
+
+    fun createFragment(category: String, sub: String?): SubFragment? = when (owner(category, sub)) {
+        "pref_key_system" -> SystemPage()
+        "pref_key_launcher" -> Launcher()
+        "pref_key_controls" -> Controls()
+        "pref_key_various" -> Various()
+        else -> null
+    }
+
+    fun resolve(category: String, sub: String?): Int = when (owner(category, sub)) {
         "pref_key_system" -> resolveSystem(SearchRouteResolver.normalizeSub(sub))
         "pref_key_launcher" -> resolveLauncher(sub)
-        "pref_key_controls" -> resolveControls(sub)
+        "pref_key_controls" -> resolveControls(SearchRouteResolver.normalizeSub(sub))
         "pref_key_various" -> resolveVarious(sub)
         else -> 0
     }
 
     private fun resolveSystem(sub: String?): Int = when (sub) {
         "pref_key_system_cat_screen" -> R.id.prefs_system_screen
+        "pref_key_system_cat_appearance" -> R.id.prefs_system_appearance
+        "pref_key_system_cat_capture" -> R.id.prefs_system_capture
+        "pref_key_system_statusbar_layout_cat" -> R.id.prefs_system_statusbar_layout
         "pref_key_system_cat_automation" -> R.id.prefs_system_automation
         "pref_key_system_cat_audio" -> R.id.prefs_system_audio
         "pref_key_system_cat_vibration" -> R.id.prefs_system_vibration
@@ -68,7 +105,6 @@ internal object PreferenceResourceResolver {
         "pref_key_various_cat_calls" -> R.id.prefs_various_calls
         "pref_key_various_cat_settings" -> R.id.prefs_various_settings
         "pref_key_various_cat_exclusive" -> R.id.prefs_various_exclusive
-        "pref_key_various_cat_gboard" -> R.id.prefs_various_gboard
         else -> R.id.prefs_various
     }
 }

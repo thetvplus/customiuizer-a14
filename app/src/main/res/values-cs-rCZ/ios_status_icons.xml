@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_statusbar_ios_battery_title">Baterie iOS (experimentální)</string>
+    <string name="system_statusbar_ios_battery_summ">Upraví ikonu a zachová systémové stavy a procenta. Duo a stávající úpravy mají přednost. Nepodporované motivy a režimy zachovají systémové ikony. Po změně restartujte SystemUI.</string>
+</resources>

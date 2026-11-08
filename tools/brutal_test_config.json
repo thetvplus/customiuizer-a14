@@ -139,6 +139,15 @@
       "tv.withaibuild.customiuizer.mods.utils.gesture.GestureSideEffectGateTest",
       "tv.withaibuild.customiuizer.mods.utils.ReflectionCacheTest",
       "tv.withaibuild.customiuizer.mods.utils.gesture.ControlCenterGestureRuntimeHolderTest"
+    ],
+    "behavior-lifecycle": [
+      "python",
+      "tools/verify.py",
+      "behavior",
+      "--tests",
+      "tv.withaibuild.customiuizer.mods.utils.FatalBoundaryTest",
+      "tv.withaibuild.customiuizer.mods.utils.PreferenceBootstrapTest",
+      "tv.withaibuild.customiuizer.mods.utils.gesture.ControlCenterGestureRuntimeHolderTest"
     ]
   },
   "mutations": [
@@ -242,10 +251,11 @@
     {
       "name": "callback_guard_fatal_to_normal",
       "mutator": "callback_guard_fatal_to_normal",
-      "apply_check": "a14_contract",
-      "kill_gate": null,
+      "apply_check": null,
+      "kill_gate": "behavior-lifecycle",
       "required_independent": false,
-      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+      "coverage_status": "ACTIVE_INDEPENDENT",
+      "baseline_required": true
     },
     {
       "name": "catch_throwable_no_fatal",
@@ -420,7 +430,7 @@
       "name": "plugin_runtime_lifecycle_leak",
       "mutator": "plugin_runtime_lifecycle_leak",
       "apply_check": null,
-      "kill_gate": "behavior",
+      "kill_gate": "behavior-lifecycle",
       "required_independent": false,
       "coverage_status": "ACTIVE_INDEPENDENT",
       "baseline_required": true
@@ -428,10 +438,11 @@
     {
       "name": "preference_bootstrap_eager",
       "mutator": "preference_bootstrap_eager",
-      "apply_check": "a14_contract",
-      "kill_gate": null,
+      "apply_check": null,
+      "kill_gate": "behavior-lifecycle",
       "required_independent": false,
-      "coverage_status": "BLOCKED_NO_INDEPENDENT_GATE"
+      "coverage_status": "ACTIVE_INDEPENDENT",
+      "baseline_required": true
     },
     {
       "name": "process_router_fallthrough",
@@ -724,7 +735,7 @@
     },
     {
       "id": "action_cancel_as_up",
-      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "status": "ACTIVE_INDEPENDENT",
       "mutator": "action_cancel_as_up",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
@@ -738,9 +749,9 @@
     },
     {
       "id": "callback_guard_fatal_to_normal",
-      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "status": "ACTIVE_INDEPENDENT",
       "mutator": "callback_guard_fatal_to_normal",
-      "reason": "Executable mutation in current configuration",
+      "reason": "Current production mutation is checked by executed behavior assertions with a clean HEAD baseline.",
       "requiredFollowUp": null
     },
     {
@@ -766,7 +777,7 @@
     },
     {
       "id": "classloader_cache_global",
-      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "status": "ACTIVE_INDEPENDENT",
       "mutator": "classloader_cache_global",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null
@@ -892,16 +903,16 @@
     },
     {
       "id": "plugin_runtime_lifecycle_leak",
-      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "status": "ACTIVE_INDEPENDENT",
       "mutator": "plugin_runtime_lifecycle_leak",
-      "reason": "Executable mutation in current configuration",
+      "reason": "Current production mutation is checked by executed behavior assertions with a clean HEAD baseline.",
       "requiredFollowUp": null
     },
     {
       "id": "preference_bootstrap_eager",
-      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "status": "ACTIVE_INDEPENDENT",
       "mutator": "preference_bootstrap_eager",
-      "reason": "Executable mutation in current configuration",
+      "reason": "Current production mutation is checked by executed behavior assertions with a clean HEAD baseline.",
       "requiredFollowUp": null
     },
     {
@@ -962,7 +973,7 @@
     },
     {
       "id": "remove_event_dedup",
-      "status": "BLOCKED_NO_INDEPENDENT_GATE",
+      "status": "ACTIVE_INDEPENDENT",
       "mutator": "remove_event_dedup",
       "reason": "Executable mutation in current configuration",
       "requiredFollowUp": null

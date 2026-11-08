@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">Tarjeta multimedia de iOS (experimental)</string>
+    <string name="system_media_ios_card_summ">Cambia el aspecto de la tarjeta conservando la reproducción, el progreso y la salida del sistema. Con texto grande se usa el diseño del sistema. Reinicia SystemUI tras cambiar.</string>
+</resources>

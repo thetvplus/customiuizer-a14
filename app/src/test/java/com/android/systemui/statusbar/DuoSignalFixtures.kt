@@ -2,7 +2,7 @@ package com.android.systemui.statusbar
 
 import com.android.systemui.statusbar.phone.StatusBarSignalPolicy
 
-/** Hand-written ABI fixtures, without Android views or ROM implementation code. */
+/** Hand-written ABI fixtures; no View construction or ROM implementation code. */
 class SignalIcon {
     open class State {
         @JvmField var level = 0
@@ -18,6 +18,7 @@ class SignalIcon {
 
 @Suppress("UNUSED_PARAMETER")
 class StatusBarWifiView {
+    @JvmField var mWifiActivityView: android.view.View? = null
     @JvmField var mState: StatusBarSignalPolicy.WifiIconState? = null
     fun applyWifiState(state: StatusBarSignalPolicy.WifiIconState) {}
     fun setVisibleState(state: Int, animate: Boolean) {}

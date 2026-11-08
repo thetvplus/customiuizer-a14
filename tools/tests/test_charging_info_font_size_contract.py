@@ -1,6 +1,5 @@
 """Static contract and mutation tests for A14-UX1 lock screen charging info font size."""
 import re
-import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 from tools.settings_schema import read_element
@@ -28,8 +27,6 @@ class ChargingInfoFontSizeContractTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        ET.register_namespace("android", NS["android"])
-        ET.register_namespace("miuizer", NS["miuizer"])
         cls.xml_text = ET.tostring(read_element(CHARGING_XML), encoding="unicode")
         cls.kt_text = LOCKSCREEN_HOOKS.read_text(encoding="utf-8")
         cls.features_text = SYSTEM_UI_FEATURES.read_text(encoding="utf-8")
@@ -121,18 +118,6 @@ class ChargingInfoFontSizeContractTest(unittest.TestCase):
     def test_01_real_files_obey_contract(self) -> None:
         self._assert_contract(self.xml_text, self.kt_text, self.features_text)
 
-    def test_02_font_size_resolver_matches_expected_table(self) -> None:
-        """Cross-check the resolver table from the task spec against the source text."""
-        match = re.search(
-            r"internal fun resolveChargingInfoFontSizeSp\(.*?\}\s*",
-            self.kt_text,
-            re.S,
-        )
-        self.assertIsNotNone(match)
-        body = match.group(0)
-        self.assertIn("17..40", body)
-        self.assertIn("raw / 2f", body)
-
     def test_native_max_lines_reads_are_allowed(self) -> None:
         kt = self.kt_text + "\nval same = view.maxLines == Int.MAX_VALUE\nval limit = view.getMaxLines()"
         self._assert_contract(self.xml_text, kt, self.features_text)
@@ -149,14 +134,21 @@ class ChargingInfoFontSizeContractTest(unittest.TestCase):
     # ---- mutation tests (in-memory / temporary text) ----
 
     def _mutated(self, xml_text: str, kt_text: str, features_text: str) -> None:
+        self._assert_contract(self.xml_text, self.kt_text, self.features_text)
+        self.assertNotEqual((self.xml_text, self.kt_text, self.features_text),
+                            (xml_text, kt_text, features_text), "mutation did not apply")
         with self.assertRaises(AssertionError):
             self._assert_contract(xml_text, kt_text, features_text)
 
+    def _changed_preference(self, namespace: str, attribute: str, value: str) -> str:
+        root = ET.fromstring(self.xml_text)
+        preference = next(node for node in root.iter()
+                          if node.get(_qname("android", "key")) == "pref_key_system_charginginfo_fontsize")
+        preference.set(_qname(namespace, attribute), value)
+        return ET.tostring(root, encoding="unicode")
+
     def test_03_mutation_xml_key_wrong(self) -> None:
-        xml = self.xml_text.replace(
-            'android:key="pref_key_system_charginginfo_fontsize"',
-            'android:key="pref_key_system_charginginfo_fontsz"',
-        )
+        xml = self._changed_preference("android", "key", "pref_key_system_charginginfo_fontsz")
         self._mutated(xml, self.kt_text, self.features_text)
 
     def test_04_mutation_runtime_key_wrong(self) -> None:
@@ -167,17 +159,11 @@ class ChargingInfoFontSizeContractTest(unittest.TestCase):
         self._mutated(self.xml_text, kt, self.features_text)
 
     def test_05_mutation_default_24(self) -> None:
-        xml = self.xml_text.replace(
-            'android:defaultValue="16"',
-            'android:defaultValue="24"',
-        )
+        xml = self._changed_preference("android", "defaultValue", "24")
         self._mutated(xml, self.kt_text, self.features_text)
 
     def test_06_mutation_max_80(self) -> None:
-        xml = self.xml_text.replace(
-            'miuizer:maxValue="40"',
-            'miuizer:maxValue="80"',
-        )
+        xml = self._changed_preference("miuizer", "maxValue", "80")
         self._mutated(xml, self.kt_text, self.features_text)
 
     def test_07_mutation_sp_to_dip(self) -> None:

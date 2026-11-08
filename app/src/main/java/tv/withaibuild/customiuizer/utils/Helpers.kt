@@ -532,9 +532,14 @@ object Helpers {
                                     val modKey = xml.getAttributeValue(null, "key").orEmpty()
                                     val supportedOnRom = modKey != "pref_key_various_disable_defraud_apps_detect" ||
                                         !miui.os.Build.IS_INTERNATIONAL_BUILD
-                                    if (titleResId > 0 && categoryTitleResId > 0 && currentCategory != null && supportedOnRom) {
+                                    val visibleOnRom = modKey != "pref_key_system_cc_switch_qsandnotification" ||
+                                        !miui.os.Build.IS_INTERNATIONAL_BUILD
+                                    if (titleResId > 0 && categoryTitleResId > 0 && currentCategory != null && supportedOnRom && visibleOnRom) {
                                         val modData = ModData()
                                         modData.title = res.getString(titleResId)
+                                        val keywordRes = xml.getAttributeResourceValue(null, "keywords", 0)
+                                        modData.searchKeywords = if (keywordRes != 0) res.getString(keywordRes)
+                                            else xml.getAttributeValue(null, "keywords").orEmpty()
                                         modData.breadcrumbs = buildString {
                                             append(res.getString(categoryTitleResId))
                                             if (breadcrumbSubTitleResId > 0) {

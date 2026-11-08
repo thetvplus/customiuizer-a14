@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="system_media_ios_card_title">iOS 媒体卡片（实验性）</string>
+    <string name="system_media_ios_card_summ">调整通知栏媒体卡片外观，保留系统播放、进度和输出设备控制。大字体下使用系统布局，修改后需重启 SystemUI。</string>
+</resources>
