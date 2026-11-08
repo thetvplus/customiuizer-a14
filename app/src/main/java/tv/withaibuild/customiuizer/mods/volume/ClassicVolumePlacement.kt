@@ -9,8 +9,8 @@ import kotlin.math.abs
  * reconciled before drawing/Insets while this central presentation is attached. */
 internal class ClassicVolumePlacement(private val root: View, private val track: View) : ViewTreeObserver.OnPreDrawListener {
     private val location = IntArray(2)
-    private val originalX = root.translationX
-    private val originalY = root.translationY
+    private var nativeX = root.translationX
+    private var nativeY = root.translationY
     private var appliedX = Float.NaN
     private var appliedY = Float.NaN
     private var closed = false
@@ -20,6 +20,10 @@ internal class ClassicVolumePlacement(private val root: View, private val track:
         val window = root.rootView
         if (!track.isAttachedToWindow || !root.isAttachedToWindow || track.rootView !== window) return
         if (window.width <= 0 || window.height <= 0) return
+        // Native show/dismiss can advance underneath the central presentation.
+        // Expansion must resume its latest pose, not the old attach-time seed.
+        if (root.translationX != appliedX) nativeX = root.translationX
+        if (root.translationY != appliedY) nativeY = root.translationY
         track.getLocationInWindow(location)
         val dx = window.width * .5f - location[0] - track.width * .5f
         val dy = window.height * .5f - location[1] - track.height * .5f
@@ -33,7 +37,7 @@ internal class ClassicVolumePlacement(private val root: View, private val track:
         if (closed) return
         closed = true
         if (root.viewTreeObserver.isAlive) root.viewTreeObserver.removeOnPreDrawListener(this)
-        if (root.translationX == appliedX) root.translationX = originalX
-        if (root.translationY == appliedY) root.translationY = originalY
+        if (root.translationX == appliedX) root.translationX = nativeX
+        if (root.translationY == appliedY) root.translationY = nativeY
     }
 }

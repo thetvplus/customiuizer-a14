@@ -110,6 +110,7 @@ class ClassicVolumeTest {
                 placement.onPreDraw(); assertEquals(x, root.translationX, 1f)
                 root.translationY = 123f // a newer owner must not be overwritten on retirement
                 placement.close(); assertEquals(123f, root.translationY, 0f)
+                assertEquals("Expansion must resume the latest native position, not the attachment snapshot", 80f, root.translationX, 0f)
             } finally { placement.close() }
         } finally { activity.finish() }
     }
