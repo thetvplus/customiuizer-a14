@@ -371,23 +371,7 @@ internal object IosRecentsDeckHooks {
                     }
                 })
         }
-        before(api.appGesturePose) {
-            val selected=card(it.getArg(0)) ?: return@before
-            if(if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) it.getArg(13)==true
-                else api.appGestureQuickSwitch!!.invoke(it.getThisObject())==true) return@before
-            val bend=if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) it.getArg(15) as Float
-                else api.appGestureProgress!!.getFloat(it.getThisObject())
-            selected.owner.appGestureInput(selected,it.getArg(2) as RectF,it.getArg(3) as Int,
-                it.getArg(5) as Float,300f*bend*bend*bend)?.let { input ->
-                val args=it.getArgs()
-                args[2]=input
-                // One sampled window pose, no second spring chasing it. The
-                // native immediate branch cancels old springs (running their
-                // native end work), writes this pose and runs the unchanged
-                // completion Runnable. No wrapper, counter or deferred queue.
-                args[7]=false
-            }
-        }
+        entries.add(api.appGesturePose to appGesturePoseHook(api))
         around(api.navToRecents,always=true,
             before={
                 quickSwitch(false)
@@ -424,6 +408,21 @@ internal object IosRecentsDeckHooks {
         after(api.splitEnd) { latest.get()?.suspend(false) }
         return PreparedHookBatch().install(entries)
     }
+
+    internal fun appGesturePoseHook(api: DeckNativeApi): MethodHook = paired({
+        val selected=XposedHelpers.getAdditionalInstanceField(it.getArg(0),DeckOwner.CARD) as? DeckOwner.Card ?: return@paired
+        if(if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) it.getArg(13)==true
+            else api.appGestureQuickSwitch!!.invoke(it.getThisObject())==true) return@paired
+        val bend=if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) it.getArg(15) as Float
+            else api.appGestureProgress!!.getFloat(it.getThisObject())
+        selected.owner.appGestureInput(selected,it.getArg(2) as RectF,it.getArg(3) as Int,
+            it.getArg(5) as Float,300f*bend*bend*bend)?.let { input ->
+            // Tracking stays immediate; release keeps the native card spring's
+            // current pose, velocity and completion. Forcing its flag off snaps
+            // neighbors to their endpoints and runs cancellation work mid-frame.
+            it.getArgs()[2]=input
+        }
+    }, {})
 
     internal fun legacyOpeningHook(): MethodHook = object: MethodHook() {
         override fun intercept(chain: io.github.libxposed.api.XposedInterface.Chain): Any? {

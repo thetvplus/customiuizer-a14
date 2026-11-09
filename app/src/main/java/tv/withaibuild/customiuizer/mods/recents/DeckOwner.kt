@@ -349,6 +349,9 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         var header: DeckHeaderOwner?=null
         var shadow: DeckCardShadow?=null
         try {
+            // A newly bound card has no previous Deck pose. Prepare its real
+            // scale before native layout/animation can compose its first frame.
+            geometry.apply(frame.scale)
             val headerView=api.getHeader.invoke(view)
             header=DeckHeaderOwner(headerView as View,api.headerIcon.get(headerView) as View,
                 api.headerTitle.get(headerView) as android.widget.TextView,api.headerBadge.get(headerView) as View,headerConfig)

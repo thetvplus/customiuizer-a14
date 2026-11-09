@@ -26,12 +26,22 @@ class DeckContinuityTest {
         @JvmField var visible=false
         @JvmField var z=0f
     }
+    class Key { @JvmField var id=7 }
+    class Task { @JvmField val key=Key() }
+    class Header : FrameLayout(RuntimeEnvironment.getApplication()) {
+        @JvmField val icon=View(context)
+        @JvmField val title=TextView(context)
+        @JvmField val badge=View(context)
+    }
+    class Thumbnail : View(RuntimeEnvironment.getApplication()) { @JvmField var radius=22 }
     class TaskView : FrameLayout(RuntimeEnvironment.getApplication()) {
-        val task=Any()
+        val task=Task()
         @JvmField var mFullscreenProgress=0f
-        val header=FrameLayout(context)
+        val header=Header()
+        val thumbnail=Thumbnail()
         var headerReads=0
         fun getHeaderView(): View { headerReads++; return header }
+        fun getThumbnailView(): View=thumbnail
     }
     class Handler {
         @JvmField val tasks=ArrayList<Any>()
@@ -39,6 +49,12 @@ class DeckContinuityTest {
         @JvmField val end=ArrayList<Transform>()
     }
     class Visual { fun isLandscapeVisually()=true }
+    class Scroller { @JvmField var scroll=0f }
+    class Gesture {
+        @JvmField var progress=.3f
+        fun quickSwitch()=false
+        fun pose()=Unit
+    }
     class Recents : FrameLayout(RuntimeEnvironment.getApplication()) {
         @JvmField var overview=true
         @JvmField var split=false
@@ -72,6 +88,70 @@ class DeckContinuityTest {
         setField(owner,"baseAllowed",true);setField(owner,"tasksAllowed",true)
         setField(owner,"geometryReady",true);setField(owner,"transition",1L)
         return Fixture(owner,handler,stack,cards)
+    }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun aNewlyVisibleCardStartsAtItsDeckScaleBeforeTheFirstNativeComposition() {
+        val f=fixture();val api=getField<DeckNativeApi>(f.owner,"api")
+        setField(api,"getThumbnail",TaskView::class.java.getMethod("getThumbnailView"))
+        setField(api,"thumbnailRadius",Thumbnail::class.java.getField("radius"))
+        setField(api,"key",Task::class.java.getField("key"));setField(api,"id",Key::class.java.getField("id"))
+        for((target,source) in mapOf("headerIcon" to "icon","headerTitle" to "title","headerBadge" to "badge"))
+            setField(api,target,Header::class.java.getField(source))
+        setField(api,"visualLandscape",Visual::class.java.getMethod("isLandscapeVisually"))
+        setField(f.owner,"current",f.owner.Scope(Visual()));setField(f.owner,"headerConfig",DeckHeaderConfig(0,0))
+        val view=TaskView();f.stack.addView(view);view.layout(0,0,800,1400)
+        val transform=Transform();f.owner.putFrame(transform,3,.72f,true,.25f,1f)
+        val frame=XposedHelpers.getAdditionalInstanceField(transform,DeckOwner.FRAME) as DeckFrame
+        val card=requireNotNull(f.owner.card(view,frame))
+        try {
+            assertEquals("A refill card has no previous full-size Deck pose to animate from",.72f,card.geometry.scale,0f)
+            assertNotNull(view.animationMatrix)
+            assertNull(card.animation)
+        } finally { f.owner.remove(view) }
+    }
+    @Test fun releasePoseKeepsTheNativeSpringFlagAndCompletionForBothLauncherFamilies() {
+        for(profile in DeckLauncherProfile.entries) for(animate in listOf(false,true)) {
+            val f=fixture();val api=getField<DeckNativeApi>(f.owner,"api")
+            val algorithm=DeckOrientationTest.Algorithm()
+            for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
+                "padding" to "padding","count" to "count","gap" to "gap","headerHeight" to "header"))
+                setField(api,target,algorithm.javaClass.getField(source))
+            setField(api,"visualLandscape",algorithm.javaClass.getMethod("isLandscapeVisually"))
+            setField(api,"profile",profile)
+            setField(api,"appGestureProgress",Gesture::class.java.getField("progress"))
+            setField(api,"appGestureQuickSwitch",Gesture::class.java.getMethod("quickSwitch"))
+            setField(api,"scroll",Scroller::class.java.getField("scroll"))
+            setField(f.owner,"scroller",Scroller());setField(f.owner,"headerConfig",DeckHeaderConfig(0,0))
+            val scope=f.owner.Scope(algorithm);setField(f.owner,"current",scope)
+            assertTrue(scope.write(0,0f,Transform()))
+            val view=TaskView();f.stack.addView(view);view.layout(500,200,1600,800)
+            val geometry=DeckCardGeometry(view,f.stack).apply { apply(.8f) }
+            val card=unconstructed(DeckOwner.Card::class.java)
+            setField(card,"owner",f.owner);setField(card,"geometry",geometry);setField(card,"index",0)
+            setField(card,"windowInput",RectF())
+            XposedHelpers.setAdditionalInstanceField(view,DeckOwner.CARD,card)
+            val completion=Runnable {};val nativeWindow=RectF(0f,0f,2000f,1000f)
+            val args=arrayOf<Any?>(view,0,nativeWindow,0,0,25f,1f,animate,.9f,.5f,completion,0f,0f,false,0,.3f,0,android.graphics.Rect())
+            var calls=0
+            val callback=object: io.github.libxposed.api.XposedInterface.Chain {
+                override fun getExecutable()=Gesture::class.java.getMethod("pose")
+                override fun getThisObject()=Gesture()
+                override fun getArg(index: Int)=args[index]
+                override fun getArgs(): List<Any?> = args.toList()
+                override fun proceed(): Any? { calls++;return null }
+                override fun proceed(updated: Array<Any?>): Any? { updated.copyInto(args);return proceed() }
+                override fun proceedWith(receiver: Any): Any?=throw AssertionError("Native receiver changed")
+                override fun proceedWith(receiver: Any,updated: Array<Any?>): Any?=throw AssertionError("Native receiver changed")
+            }
+            try {
+                IosRecentsDeckHooks.appGesturePoseHook(api).intercept(callback)
+                assertEquals(1,calls)
+                assertNotSame("The Deck input compensation must actually run",nativeWindow,args[2])
+                assertEquals("Release must start the native card spring instead of snapping its endpoint",animate,args[7])
+                assertSame(completion,args[10])
+                assertEquals(RectF(0f,0f,2000f,1000f),nativeWindow)
+            } finally { XposedHelpers.removeAdditionalInstanceField(view,DeckOwner.CARD);geometry.release() }
+        }
     }
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun fixedPortraitWindowKeepsOpeningAndOcclusionInTheVisualTaskSpaceInBothLandscapeDirections() {
