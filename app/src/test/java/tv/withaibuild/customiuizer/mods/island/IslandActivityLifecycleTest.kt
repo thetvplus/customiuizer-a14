@@ -39,6 +39,25 @@ import java.time.Duration
     instrumentedPackages = ["tv.withaibuild.customiuizer.mods.island.IslandWaveView"])
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class IslandActivityLifecycleTest {
+    @Test fun volumeFeedbackShowsAndReusesSpeakerAndMuteGlyphsInTheExistingIconSlot() {
+        val controller = controller(powerSaveMotion = true)
+        val lease = requireNotNull(controller.showVolume("30%", 3)); drain()
+        val icon = org.robolectric.util.ReflectionHelpers.getField<android.widget.ImageView>(shell, "icon")
+        val speaker = requireNotNull(icon.drawable)
+        assertEquals(View.VISIBLE, icon.visibility)
+        assertSame(lease, controller.showVolume("40%", 3, lease))
+        assertSame("Percentage changes reuse the native speaker drawable", speaker, icon.drawable)
+        assertSame(lease, controller.showVolume("0%", 3, lease))
+        val muted = requireNotNull(icon.drawable)
+        assertNotSame(speaker, muted)
+        assertEquals(View.VISIBLE, icon.visibility)
+        assertSame(lease, controller.showVolume("1%", 3, lease))
+        assertSame(speaker, icon.drawable)
+        assertSame(lease, controller.showVolume("0%", 3, lease))
+        assertSame(muted, icon.drawable)
+        assertEquals(1, adds)
+    }
+
     @Test fun volumeBurstRetainsOneLeaseWindowAndEntranceWithoutRelaxingToastSourceRules() {
         val controller = controller()
         assertNull(controller.showToast(IslandToastContent("50%", "com.android.systemui", null), 2400))

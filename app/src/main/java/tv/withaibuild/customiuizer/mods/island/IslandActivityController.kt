@@ -105,6 +105,12 @@ internal class IslandActivityController(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
     private val state = IslandActivityState<IslandToastContent, IslandMediaContent>(dismissal)
     private var volumeLease: IslandActivityState.Lease? = null
+    private val volumeSpeaker by lazy(LazyThreadSafetyMode.NONE) {
+        context.getDrawable(android.R.drawable.ic_lock_silent_mode_off)?.mutate()?.apply { setTint(android.graphics.Color.WHITE) }
+    }
+    private val volumeMuted by lazy(LazyThreadSafetyMode.NONE) {
+        context.getDrawable(android.R.drawable.ic_lock_silent_mode)?.mutate()?.apply { setTint(android.graphics.Color.WHITE) }
+    }
     private val live = IslandLiveRegistry(liveDismissal, state::nextOrder)
     private var liveSources: IslandLiveSources? = null
     private var liveContent: IslandToastContent? = null
@@ -971,7 +977,7 @@ internal class IslandActivityController(
         if (state.hasPersistentActivity() || nativeAlertYield) return null
         if (lease != null && (lease !== volumeLease || !state.owns(lease, now))) return null
         if (lease == null && state.toast(now) != null) return null
-        val value = IslandToastContent(text, "com.android.systemui", null)
+        val value = IslandToastContent(text, "com.android.systemui", if (text == "0%") volumeMuted else volumeSpeaker)
         val current = lease ?: state.offer(value, now, 2400L).also {
             volumeLease = it
             forms.select(it, source = IslandFormState.Source.FEEDBACK)
