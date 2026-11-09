@@ -18,7 +18,7 @@
     <string name="white_lists">Включить белый список</string>
     <string name="system_mods">Система</string>
     <string name="system_mods_screen">Экран</string>
-    <string name="system_mods_audio">Звук</string>
+    <string name="system_mods_audio">Громкость и звук</string>
     <string name="system_mods_vibration">Вибрация</string>
     <string name="system_mods_toasts">Всплывающие сообщения</string>
     <string name="system_statusbaricons_title">Скрытие иконок</string>
@@ -130,7 +130,7 @@
     <string name="system_netspeed_rowspacing_summ">Настраивает расстояние между строками исходящей и входящей скорости; после изменения требуется перезапуск SystemUI</string>
     <string name="system_netspeed_prerequisite_note">Сначала включите "Показывать скорость сети" в настройках системы</string>
     <string name="system_netspeed_use_clock_style_title">Использовать стиль текста часов в строке состояния</string>
-    <string name="system_statusbarcontrols_title">Управление жестами</string>
+    <string name="system_statusbarcontrols_title">Жесты строки состояния</string>
     <string name="system_statusbarcontrols_summ">Выполняет выбранные действия на скольжение и двойное нажатие</string>
     <string name="system_statusbarcontrols_sens_title">Чувствительность регулировки</string>
     <string name="system_statusbarcontrols_sens_bright_title">Яркость</string>
@@ -364,7 +364,7 @@
     <string name="system_qs_hideoperator_title">Скрыть имя оператора</string>
     <string name="system_qs_hideoperator_delimiter_title">Скрыть разделитель между именем оператора</string>
     <string name="system_qshaptic_title">Вибрация при переключении настроек</string>
-    <string name="system_mods_automation">Приложения и автоматизация</string>
+    <string name="system_mods_automation">Подключения и устройства</string>
     <string name="system_mods_other">Дополнительные настройки</string>
     <string name="system_volumeblur_collapsed_title">Свёрнутый диалог</string>
     <string name="system_volumeblur_expanded_title">Развёрнутый диалог</string>
@@ -440,7 +440,7 @@
     <string name="launcher_spread_title">Разведение двух пальцев</string>
     <string name="launcher_bugfixes">Совместимость и исправления</string>
     <string name="system_resizablewidgets_title">Свободный размер виджетов</string>
-    <string name="controls_mods">Кнопки и жесты</string>
+    <string name="controls_mods">Звук и управление</string>
     <string name="controls_powerdt_summ">Заменяет запуск камеры по двойному нажатию кнопки питания. Родное действие должно быть активно.</string>
     <string name="controls_powerflash_title">Быстрый фонарик</string>
     <string name="controls_powerflash_summ">Позволяет активировать фонарик при отключенном экране долгим нажатием на кнопку питания</string>
@@ -466,7 +466,7 @@
     <string name="controls_volumemedia_down_title">Долгое нажатие на Понижение громкости</string>
     <string name="controls_volumemedia_down_summ">Действие на долгое нажатие клавиши понижения громкости при выключенном экране</string>
     <string name="controls_volumemedia_vibrate_title">Вибрация при долгом нажатии</string>
-    <string name="controls_mods_navbar">Панель навигации</string>
+    <string name="controls_mods_navbar">Панель навигации и клавиатура</string>
     <string name="controls_nonavbar_title">Скрыть панель</string>
     <string name="controls_hide_ime_dismiss_button_title">Скрыть кнопку скрытия клавиатуры</string>
     <string name="controls_hide_ime_dismiss_button_summ">Скрывает кнопку скрытия клавиатуры в левом нижнем углу при жестовой навигации</string>
@@ -492,7 +492,7 @@
     <string name="controls_fsg_assist_right_title">Действие на свайп вверх в правом углу</string>
     <string name="controls_fsg_swipeandstop_title">Проведите по экрану, начиная от края и заканчивая действием</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">Не вибрировать</string>
-    <string name="various_mods">Приложения и обслуживание</string>
+    <string name="various_mods">Приложения и инструменты</string>
     <string name="various_general_cat_title">Система и совместимость</string>
     <string name="various_app_management_cat_title">Управление приложениями</string>
     <string name="various_hiddenfeatures_title">Скрытые функции</string>
@@ -1150,7 +1150,7 @@
     <string name="system_island_geometry_group">Положение и размер</string>
     <string name="system_island_appearance_group">Внешний вид</string>
     <string name="system_island_feedback_group">Содержимое</string>
-    <string name="system_island_gestures_title">Жесты</string>
+    <string name="system_island_gestures_title">Жесты Dynamic Island</string>
     <string name="system_island_waveform_off">Выключено</string>
     <string name="system_island_waveform_light">Лёгкая анимация</string>
     <string name="system_island_waveform_real">Живой спектр (эксперимент)</string>
@@ -1349,4 +1349,11 @@
     <string name="settings_status_icons">Значки состояния</string>
     <string name="settings_launcher_layout">Рабочий стол и анимация</string>
     <string name="settings_app_behavior">Поведение приложений</string>
+    <string name="settings_sound_vibration">Звук и вибрация</string>
+    <string name="settings_keywords_controls">Кнопки и жесты buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">Приложения и обслуживание apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">Поведение приложений system compatibility hidden features</string>
+    <string name="settings_keywords_connections">Приложения и автоматизация connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">Приложения и автоматизация app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
 </resources>

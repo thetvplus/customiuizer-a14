@@ -479,25 +479,29 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         stack.transformMatrixToGlobal(global)
         return global.invert(local)
     }
-    fun alignOpening(selected: Card,start: RectF,current: RectF,progress: Float,headerAlpha: Float) {
-        if(!allowed || transition==0L || start.isEmpty) return
-        if(!prepareLocalSpace()) return
-        local.mapRect(gestureTarget,current)
-        var alignment=opening
-        if(alignment==null || alignment.selectedId!=selected.taskId) {
-            clearOpening()
-            local.mapRect(gestureReference,start)
-            alignment=DeckOpenAlignment(selected.taskId,RectF(gestureReference))
-            val bounds=RectF()
-            for(card in cards.values) if(card!==selected && card.geometry.owned) {
-                card.geometry.localContent(bounds,card.header.view.height.toFloat())
-                alignment.add(card.view,card.header.view,bounds,
-                    selected.depth.index-card.depth.index,card.geometry.scale)
-            }
-            opening=alignment
-            openingIndex=selected.depth.index
+    /** Capture before Legacy's UI callback can fade the same native neighbors. */
+    fun prepareOpening(selected: Card,start: RectF): Boolean {
+        if(!allowed || transition==0L || start.isEmpty) return false
+        if(opening?.selectedId==selected.taskId) return true
+        if(!prepareLocalSpace()) return false
+        clearOpening()
+        local.mapRect(gestureReference,start)
+        val alignment=DeckOpenAlignment(selected.taskId,RectF(gestureReference))
+        val bounds=RectF()
+        for(card in cards.values) if(card!==selected && card.geometry.owned) {
+            card.geometry.localContent(bounds,card.header.view.height.toFloat())
+            alignment.add(card.view,card.header.view,bounds,
+                selected.depth.index-card.depth.index,card.geometry.scale)
         }
-        alignment.apply(gestureTarget,progress,headerAlpha)
+        opening=alignment
+        openingIndex=selected.depth.index
+        return true
+    }
+    fun alignOpening(selected: Card,start: RectF,current: RectF,progress: Float,headerAlpha: Float,
+        nativeFaded: Boolean=false) {
+        if(!prepareOpening(selected,start) || !prepareLocalSpace()) return
+        local.mapRect(gestureTarget,current)
+        opening?.apply(gestureTarget,progress,headerAlpha,nativeFaded)
     }
     fun surfaceSizeMatches(width: Int,height: Int)=width.toFloat()==current.fullWidth && height.toFloat()==current.fullHeight
     fun openingBoundary(surface: RectF): Float? {

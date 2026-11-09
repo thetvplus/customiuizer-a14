@@ -31,6 +31,60 @@ class DockFullWidthTest {
         }
     }
 
+    @Test fun nativeHostReattachmentRestoresOneStripWithoutAnotherContentUpdate() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val root = FrameLayout(activity.get())
+        activity.get().setContentView(root)
+        val host = FrameLayout(activity.get())
+        val icon = View(activity.get())
+        val hostParams = FrameLayout.LayoutParams(320, 80).apply { leftMargin = 20; topMargin = 600 }
+        host.addView(icon, FrameLayout.LayoutParams(48, 48).apply { leftMargin = 20; topMargin = 10 })
+        root.addView(host, hostParams)
+        val key = "customiuizer_dock_full_width_owner"
+        val windowRoot = host.rootView as FrameLayout
+        fun settle() {
+            repeat(4) {
+                windowRoot.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY))
+                windowRoot.layout(0, 0, 360, 800)
+                windowRoot.viewTreeObserver.dispatchOnPreDraw()
+            }
+        }
+        fun layers() = (0 until windowRoot.childCount).map { windowRoot.getChildAt(it) }
+            .filterIsInstance<DockFullWidthContainer>()
+        try {
+            LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true), null)
+            settle()
+            repeat(3) {
+                val oldLayer = layers().single()
+                val oldPanel = oldLayer.getChildAt(0) as DockBackgroundView
+                root.removeView(host)
+                assertNull(oldPanel.parent)
+                assertNull(oldLayer.parent)
+                assertTrue(layers().isEmpty())
+                root.addView(host, hostParams) // Native reparent does not rebuild mContent.
+                settle()
+                val layer = layers().single()
+                val panel = layer.getChildAt(0) as DockBackgroundView
+                assertNotSame(oldPanel, panel)
+                assertSame(panel, tv.withaibuild.customiuizer.mods.utils.XposedHelpers.getAdditionalInstanceField(host, key))
+                assertTrue(panel.isAttachedToWindow)
+                assertEquals(windowRoot.width, panel.width)
+                assertEquals(windowRoot.height, panel.bottom)
+                assertEquals(1f, layer.alpha, 0f)
+                LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = true), null)
+                assertSame(layer, layers().single())
+                assertEquals(1, host.childCount)
+                assertSame(icon, host.getChildAt(0))
+                assertEquals(20, icon.left)
+                assertEquals(10, icon.top)
+            }
+        } finally {
+            activity.pause().stop().destroy()
+            tv.withaibuild.customiuizer.mods.utils.XposedHelpers.removeAdditionalInstanceField(host, key)
+        }
+    }
+
     @Test fun transparentStripReleasesItsFrameObserverAfterGeometrySettles() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
         try {

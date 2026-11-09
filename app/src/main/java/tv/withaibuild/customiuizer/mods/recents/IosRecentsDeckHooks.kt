@@ -269,6 +269,7 @@ internal object IosRecentsDeckHooks {
                 motion?.mark(it.getResult(),active,DeckSpringScene.OPEN)
                 active.linkSpring(it.getResult(),active.transition)
             })
+        api.legacyOpeningFrame?.let { entries.add(it to legacyOpeningHook()) }
         before(api.alignOpen) {
             val selected=card(it.getArg(0)) ?: return@before
             if(selected.owner.allowed) {
@@ -422,6 +423,29 @@ internal object IosRecentsDeckHooks {
         before(api.splitStart) { latest.get()?.suspend(true) }
         after(api.splitEnd) { latest.get()?.suspend(false) }
         return PreparedHookBatch().install(entries)
+    }
+
+    internal fun legacyOpeningHook(): MethodHook = object: MethodHook() {
+        override fun intercept(chain: io.github.libxposed.api.XposedInterface.Chain): Any? {
+            val horizontal=chain.getArg(2)==true
+            // The native mode-1 branch already enters the shared alignOpen Hook.
+            if(horizontal && chain.getArg(3)==1) return chain.proceed()
+            val selected=XposedHelpers.getAdditionalInstanceField(chain.getArg(0),DeckOwner.CARD) as? DeckOwner.Card
+                ?: return chain.proceed()
+            val active=selected.owner
+            if(active.transition==0L || !active.allowed || !selected.geometry.owned) return chain.proceed()
+            val ticket=active.transition
+            var prepared=false
+            ModuleHelper.guarded { prepared=active.prepareOpening(selected,chain.getArg(5) as RectF) }
+            val result=chain.proceed()
+            if(prepared) ModuleHelper.guarded {
+                if(active.transition!=ticket || !active.allowed || !selected.geometry.owned) return@guarded
+                val progress=chain.getArg(1) as Float
+                active.alignOpening(selected,chain.getArg(5) as RectF,chain.getArg(6) as RectF,progress,
+                    ((.4f-progress)/.4f).coerceIn(0f,1f),nativeFaded=horizontal)
+            }
+            return result
+        }
     }
 
     // One native interceptor owns both phases. A locally skipped call never

@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
@@ -50,6 +51,8 @@ class ClassicVolumeTest {
             val fill = View(activity); val track = FrameLayout(activity); val icon = ImageView(activity)
             for (view in listOf(slider, fill, track, icon)) root.addView(view, FrameLayout.LayoutParams(58, 170))
             activity.setContentView(root)
+            val nativeGlyph = GradientDrawable().apply { setColor(Color.BLACK); setSize(20, 20) }
+            icon.setImageDrawable(nativeGlyph)
             val background = ColorDrawable(Color.BLUE); track.background = background
             val progress = slider.progressDrawable; val thumb = slider.thumb
             var changes = 0
@@ -66,7 +69,11 @@ class ClassicVolumeTest {
             assertEquals(155, slider.layoutParams.width); assertEquals(155, track.layoutParams.height)
             root.layout(240, 90, 298, 273); track.layout(0, 0, 155, 155)
             icon.layout(0, 0, 20, 20)
-            assertEquals("A static HUD must place its icon after native layout without an animation tick", 2.6f, icon.scaleX, .001f)
+            assertEquals("Classic glyphs render at their final resolution, without magnifying the View cache", 1f, icon.scaleX, .001f)
+            assertEquals(ImageView.ScaleType.MATRIX, icon.scaleType)
+            assertSame(nativeGlyph, icon.drawable)
+            val matrix = FloatArray(9); icon.imageMatrix.getValues(matrix)
+            assertEquals(2.6f, matrix[android.graphics.Matrix.MSCALE_X], .001f)
             val more = ImageView(activity)
             root.addView(more, FrameLayout.LayoutParams(58, 28)); more.layout(0, 155, 58, 183)
             val session = IosVolumeStyle.Session(root, root, null, listOf(binding), { 0 }, {}, {}, more)
@@ -86,6 +93,8 @@ class ClassicVolumeTest {
             assertNull(getField<ValueAnimator?>(paint, "clock"))
             binding.close(); binding.close()
             assertSame(background, track.background); assertSame(progress, slider.progressDrawable); assertSame(thumb, slider.thumb)
+            assertSame(nativeGlyph, icon.drawable)
+            assertEquals(ImageView.ScaleType.FIT_CENTER, icon.scaleType)
             assertEquals(58, slider.layoutParams.width); assertEquals(170, track.layoutParams.height)
             val replacement = IosVolumeStyle.Binding(root, slider, fill, track, icon, classic = true)
             replacement.close(); assertSame(background, track.background)

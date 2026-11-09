@@ -6,6 +6,7 @@ import android.animation.AnimatorListenerAdapter
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.Path
@@ -23,6 +24,7 @@ import android.widget.FrameLayout
 import android.view.Gravity
 import android.view.ViewOutlineProvider
 import tv.withaibuild.customiuizer.MainModule
+import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.utils.G4RoundRectGeometry
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
@@ -41,6 +43,7 @@ internal object IosVolumeStyle {
     const val KEY = "system_volume_ios"
     const val COMPACT_KEY = "system_volume_ios_compact"
     const val STYLE_KEY = "system_volume_ios_style"
+    const val CLASSIC_OFFSET_KEY = "system_volume_ios_classic_offset"
     private const val OWNER = "a14.iosVolume.owner"
     private const val BINDING = "a14.iosVolume.binding"
 
@@ -89,6 +92,7 @@ internal object IosVolumeStyle {
         }
         val startCompact = MainModule.mPrefs.getBoolean(COMPACT_KEY, false)
         val classic = MainModule.mPrefs.getString(STYLE_KEY, "1") == "2"
+        val classicOffset = MainModule.mPrefs.getInt(CLASSIC_OFFSET_KEY, 0).coerceIn(-100, 100)
         val input=NativeInput()
         if (!classic) {
             val controller=XposedHelpers.findClass("com.android.systemui.volume.VolumeDialogControllerImpl",loader)
@@ -120,6 +124,17 @@ internal object IosVolumeStyle {
             .getDeclaredMethod("onTouchEvent", MotionEvent::class.java)
         val listenerColumn = listener.getDeclaredField("mColumn").apply { isAccessible = true }
         val streamState = columnType.getDeclaredField("ss").apply { isAccessible = true }
+        val cachedIcon = XposedHelpers.findFieldIfExists(columnType, "cachedIconRes")
+        val classicIconUpdate = if (classic && cachedIcon != null)
+            XposedHelpers.findMethodExactIfExists(dialog, "updateIconRes", columnType) else null
+        val headset = XposedHelpers.findFieldIfExists(dialog, "mIsHeadset")
+        val bluetooth = XposedHelpers.findFieldIfExists(streamState.type, "routedToBluetooth")
+        val dynamic = XposedHelpers.findFieldIfExists(streamState.type, "dynamic")
+        fun speakerRoute(owner: Any, column: Any): Boolean {
+            val state = streamState.get(column) ?: return false
+            return headset?.getBoolean(owner) == false && bluetooth?.getBoolean(state) == false &&
+                dynamic?.getBoolean(state) == false
+        }
         val streamLevel = streamState.type.getDeclaredField("level").apply { isAccessible = true }
         val streamMin = streamState.type.getDeclaredField("levelMin").apply { isAccessible = true }
         val streamMax = streamState.type.getDeclaredField("levelMax").apply { isAccessible = true }
@@ -182,6 +197,7 @@ internal object IosVolumeStyle {
                     val nativeFill = blurOpened.invoke(null, root.context) == true
                     val binding = Binding(root, seek, fill, track, image, nativeFill, startCompact, classic, blur)
                     bindings.add(binding)
+                    if (classicIconUpdate != null) binding.nativeGlyph(cachedIcon!!.getInt(item), speakerRoute(owner, item))
                     if (nativeFill) binding.nativeProgress(fillProgress.getInt(fill), fillHeight.getInt(fill))
                     streamState.get(item)?.let { binding.nativeVolume(streamLevel.getInt(it), streamMin.getInt(it), streamMax.getInt(it),initial=true) }
                     XposedHelpers.setAdditionalInstanceField(root, BINDING, binding)
@@ -205,7 +221,7 @@ internal object IosVolumeStyle {
                             if(input.session.get()===closing) input.session.clear()
                             if(XposedHelpers.getAdditionalInstanceField(owner,OWNER)===closing)
                                 XposedHelpers.removeAdditionalInstanceField(owner,OWNER)
-                        }, more, originalClick) {
+                        }, more, originalClick, classicOffset = classicOffset) {
                         viewMotion.get(root)?.let { motion ->
                             // The original dots pass through to the overlapping slider.
                             // A separate footer invokes that same guarded native action.
@@ -221,6 +237,19 @@ internal object IosVolumeStyle {
                 bindings.forEach { binding -> cleanup.run { binding.close() } }
                 cleanup.finish()
             }
+        }
+        if (classicIconUpdate != null && cachedIcon != null) {
+            // Initial replacement and independent mute/route updates share one
+            // capability gate. Missing callbacks keep every glyph native.
+            hookMethod(classicIconUpdate, object : MethodHook() {
+                    override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                        if (callback.getThrowable() != null) return@guarded
+                        val owner = callback.getThisObject() ?: return@guarded
+                        val column = callback.getArg(0) ?: return@guarded
+                        val binding = XposedHelpers.getAdditionalInstanceField(view.get(column), BINDING) as? Binding ?: return@guarded
+                        binding.nativeGlyph(cachedIcon.getInt(column), speakerRoute(owner, column))
+                    }
+            })
         }
         hookAllMethods(dialog, "updateColumnH", object : MethodHook() {
             override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded { callback.getThisObject()?.let(::clear) }
@@ -323,6 +352,22 @@ internal object IosVolumeStyle {
         return PreparedHookBatch().install(entries)
     }
 
+    internal fun classicGlyphResource(name: String, speakerRoute: Boolean): Int = when (name) {
+        "ic_miui_volume_media", "ic_miui_volume_media_collpased" -> if (speakerRoute) R.drawable.ios12_volume_speaker else 0
+        "ic_miui_volume_media_mute", "ic_miui_volume_media_mute_collpased" -> if (speakerRoute) R.drawable.ios12_volume_mute else 0
+        "ic_miui_volume_speaker" -> R.drawable.ios12_volume_speaker
+        "ic_miui_volume_speaker_mute" -> R.drawable.ios12_volume_mute
+        "ic_miui_volume_ringer_on_seekbar", "ic_miui_volume_ringer_on_seekbar_collpased" -> R.drawable.ios12_volume_ringer
+        "ic_miui_volume_ringer_mute_on_seekbar", "ic_miui_volume_ringer_mute_on_seekbar_collpased" -> R.drawable.ios12_volume_ringer_mute
+        else -> 0
+    }
+    private fun loadClassicGlyph(icon: ImageView, resource: Int, speakerRoute: Boolean): Drawable? {
+        if (resource == 0) return null
+        return try {
+            val selected = classicGlyphResource(icon.resources.getResourceEntryName(resource), speakerRoute)
+            if (selected == 0) null else ModuleHelper.getModuleRes(icon.context).getDrawable(selected, null)?.mutate()
+        } catch (_: android.content.res.Resources.NotFoundException) { null }
+    }
     internal fun visibleColumn(root: View): Boolean {
         var current: View? = root
         while (current != null) {
@@ -335,6 +380,7 @@ internal object IosVolumeStyle {
     internal class Session(private val root: View, private val content: View, private val shadow: View?, private val bindings: List<Binding>,
         private val readMode: () -> Int, private val writeMode: (Int) -> Unit, private val ended: (Session) -> Unit,
         private val more: View? = null, private val moreClick: View.OnClickListener? = null,
+        private val classicOffset: Int = 0,
         private val moreAction: (() -> Unit)? = null) : View.OnAttachStateChangeListener {
         @Volatile private var closed = false
         private val shadowVisibility = shadow?.visibility
@@ -355,7 +401,7 @@ internal object IosVolumeStyle {
         private val touchRect = Rect()
         private val moreGlyph = moreImage?.let { MoreGlyph(root.resources.displayMetrics.density) }
         private var hardwareReleased: Runnable?=null
-        private val placement = bindings.singleOrNull()?.takeIf { it.classic }?.let { ClassicVolumePlacement(root, it.trackView) }
+        private val placement = bindings.singleOrNull()?.takeIf { it.classic }?.let { ClassicVolumePlacement(root, it.trackView, classicOffset, more) }
         init {
             try {
                 root.addOnAttachStateChangeListener(this); content.addOnAttachStateChangeListener(this)
@@ -530,6 +576,13 @@ internal object IosVolumeStyle {
         private val iconX = icon.translationX; private val iconY = icon.translationY
         private val iconScaleX = icon.scaleX; private val iconScaleY = icon.scaleY
         private val iconZ = icon.translationZ
+        private var nativeIcon = icon.drawable
+        private var nativeIconResource = 0
+        private var nativeSpeakerRoute = false
+        private var classicGlyph: Drawable? = null
+        private val iconScaleType = icon.scaleType
+        private val iconMatrix = if (classic) Matrix(icon.imageMatrix) else null
+        private val classicMatrix = if (classic) Matrix() else null
         private val paddingBottom = root.paddingBottom
         private val dimensions = arrayOf(slider, track).map { it.layoutParams.width to it.layoutParams.height }
         private var closed = false
@@ -565,8 +618,12 @@ internal object IosVolumeStyle {
             updateIconTint()
             icon.translationX = track.left + paint.center(track.width.toFloat()) - icon.left - icon.width * .5f
             icon.translationY = track.top + (track.height - h) * .5f + glyphY + offsetY - icon.top - icon.height * .5f
-            val iconScale = if (classic) { if (icon.width > 0) 52f * panelDensity / icon.width else 1f } else glyph * .768f
-            icon.scaleX = iconScaleX * iconScale; icon.scaleY = iconScaleY * iconScale
+            if (classic) {
+                updateClassicGlyph()
+                icon.scaleX = 1f; icon.scaleY = 1f
+            } else {
+                icon.scaleX = iconScaleX * glyph * .768f; icon.scaleY = iconScaleY * glyph * .768f
+            }
             if (morePositioned) moreView?.let {
                 moreAppliedY = moreTrackDelta + (track.height + h) * .5f + offsetY
                 it.translationY = moreAppliedY
@@ -577,6 +634,23 @@ internal object IosVolumeStyle {
             appliedIconScaleX = icon.scaleX; appliedIconScaleY = icon.scaleY; appliedIconZ = icon.translationZ
             appliedElevation = track.elevation
             track.invalidateOutline()
+        }
+        private fun updateClassicGlyph() {
+            val matrix = classicMatrix ?: return
+            if (icon.width <= 0 || icon.height <= 0) return
+            val drawable = icon.drawable
+            val width = drawable?.intrinsicWidth?.takeIf { it > 0 } ?: icon.width
+            val height = drawable?.intrinsicHeight?.takeIf { it > 0 } ?: icon.height
+            val scale = if (classicGlyph != null) panelDensity / density
+                else 52f * panelDensity / maxOf(width, height)
+            // ImageView's canvas matrix lets VectorDrawable rasterize at the final
+            // resolution. Scaling its RenderNode magnifies the small native cache.
+            // Keep the native Drawable, including muted/route/animation identity.
+            matrix.setScale(scale, scale)
+            matrix.postTranslate((icon.width - icon.paddingLeft - icon.paddingRight - width * scale) * .5f,
+                (icon.height - icon.paddingTop - icon.paddingBottom - height * scale) * .5f)
+            if (icon.scaleType != ImageView.ScaleType.MATRIX) icon.scaleType = ImageView.ScaleType.MATRIX
+            if (icon.imageMatrix != matrix) icon.imageMatrix = matrix
         }
         private fun paintShadowElevation(width: Float): Float {
             val compact=((47f*density-width)/(40f*density)).coerceIn(0f,1f)
@@ -648,6 +722,17 @@ internal object IosVolumeStyle {
                 paint.level = visibleLevel; updateIconTint()
             }
         }
+        fun nativeGlyph(resource: Int, speakerRoute: Boolean) {
+            if (!classic || closed) return
+            if (nativeIconResource == resource && nativeSpeakerRoute == speakerRoute &&
+                (classicGlyph == null || icon.drawable === classicGlyph)) return
+            if (icon.drawable !== classicGlyph) nativeIcon = icon.drawable
+            nativeIconResource = resource; nativeSpeakerRoute = speakerRoute
+            classicGlyph = loadClassicGlyph(icon, resource, speakerRoute)
+            val target = classicGlyph ?: nativeIcon
+            if (icon.drawable !== target) icon.setImageDrawable(target)
+            paint.refreshGeometry()
+        }
         private fun updateIconTint() {
             val tint = if (classic || visibleLevel >= glyphFillThreshold * 10000f) darkIconTint else lightIconTint
             if (icon.imageTintList !== tint) icon.imageTintList = tint
@@ -709,6 +794,7 @@ internal object IosVolumeStyle {
             track.background = null; track.foreground = paint; fill.alpha = 0f
             blur?.invoke(false)
             updateIconTint()
+            if (classic) paint.refreshGeometry()
         }
         fun releaseHardware() {
             hardwarePending=false;levelChangedForInput=false
@@ -822,10 +908,18 @@ internal object IosVolumeStyle {
             cleanup.run { if (track.outlineAmbientShadowColor == 0xff000000.toInt()) track.outlineAmbientShadowColor = nativeAmbient }
             cleanup.run { if (track.outlineSpotShadowColor == 0xff000000.toInt()) track.outlineSpotShadowColor = nativeSpot }
             cleanup.run { blur?.invoke(true) }
+            cleanup.run { if (classicGlyph != null && icon.drawable === classicGlyph) icon.setImageDrawable(nativeIcon) }
+            classicGlyph = null
             cleanup.run { if (icon.alpha == appliedIconAlpha) icon.alpha = iconAlpha }
             cleanup.run { if (icon.imageTintList === darkIconTint || icon.imageTintList === lightIconTint) icon.imageTintList = iconTint }
             cleanup.run { if (icon.translationX == appliedIconX) icon.translationX = iconX }
             cleanup.run { if (icon.translationY == appliedIconY) icon.translationY = iconY }
+            cleanup.run {
+                if (classicMatrix != null && icon.scaleType == ImageView.ScaleType.MATRIX && icon.imageMatrix == classicMatrix) {
+                    icon.scaleType = iconScaleType
+                    icon.imageMatrix = iconMatrix
+                }
+            }
             cleanup.run { if (icon.scaleX == appliedIconScaleX) icon.scaleX = iconScaleX }
             cleanup.run { if (icon.scaleY == appliedIconScaleY) icon.scaleY = iconScaleY }
             cleanup.run { if (icon.translationZ == appliedIconZ) icon.translationZ = iconZ }

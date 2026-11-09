@@ -25,9 +25,14 @@ import kotlin.math.roundToInt
 /** Native slots and state remain authoritative; unknown/theme/no-service IDs stay native. */
 internal object ClassicSignalHooks {
     private const val OWNER = "a14.status.signal.dots"
+    private const val IMAGE_OWNER = "a14.status.signal.image"
+    private fun imageBinding(image: ImageView) =
+        (XposedHelpers.getAdditionalInstanceField(image, IMAGE_OWNER) as? WeakReference<*>)?.get() as? Binding
     fun install(param: PackageReadyParam): FeatureInstallResult {
         require(param.packageName == "com.android.systemui")
         val loader = param.classLoader
+        val leftSpacing = MainModule.mPrefs.getInt("system_statusbar_signal_dots_leftmargin", 0)
+        val rightSpacing = MainModule.mPrefs.getInt("system_statusbar_signal_dots_rightmargin", 0)
         val host = Class.forName("com.android.systemui.statusbar.StatusBarMobileView", false, loader)
         val state = Class.forName("com.android.systemui.statusbar.phone.StatusBarSignalPolicy\$MobileIconState", false, loader)
         val icons = Class.forName("com.android.systemui.statusbar.mobile.TelephonyIcons", false, loader)
@@ -47,9 +52,20 @@ internal object ClassicSignalHooks {
         val apply = host.getDeclaredMethod("applyMobileState", state)
         val darkness = host.getDeclaredMethod("applyDarknessInternal")
         require(listOf(apply, darkness).all { it.returnType == Void.TYPE && !Modifier.isStatic(it.modifiers) })
+        val spacingReady = (leftSpacing != 0 || rightSpacing != 0) &&
+            StatusIconSpacing.install(param.classLoader).isActive
+        fun ownsTarget(view: Any, target: ImageView, previous: Binding?): Boolean {
+            val actual = StatusIconSpacing.slot(target, host.name)
+            if (actual !== target) return actual === view
+            // While unparented, only its current source may refresh the cached
+            // inputs. A stale second host reference cannot steal the image.
+            val current = imageBinding(target)
+            return current == null || current === previous
+        }
         fun sync(view: Any) {
             val target = image.get(view) as ImageView
             val previous = (XposedHelpers.getAdditionalInstanceField(view, OWNER) as? WeakReference<*>)?.get() as? Binding
+            if (!ownsTarget(view, target, previous)) return
             val old = previous?.takeIf { it.matches(target) }
             if (previous !== old) previous?.close()
             val native = current.get(view)
@@ -57,13 +73,16 @@ internal object ClassicSignalHooks {
                 MainModule.mPrefs.getBoolean("system_statusbar_duo") ||
                 !MainModule.mPrefs.getBoolean("system_statusbar_signal_dots")) null
                 else dotCount(levels, strength.getInt(native))
-            if (count == null) { old?.close(); XposedHelpers.removeAdditionalInstanceField(view, OWNER); return }
+            if (count == null) {
+                imageBinding(target)?.close(); old?.close()
+                XposedHelpers.removeAdditionalInstanceField(view, OWNER); return
+            }
             // The image's attach listener owns the binding. A strong global
             // additional-field value would retain image -> parent -> weak key.
             val binding = old?.takeUnless { it.closed } ?: Binding(target).also {
                 XposedHelpers.setAdditionalInstanceField(view, OWNER, WeakReference(it))
             }
-            try { binding.update(count, color.getInt(view)) }
+            try { binding.update(count, color.getInt(view), if (spacingReady) leftSpacing else 0, if (spacingReady) rightSpacing else 0) }
             catch (error: Throwable) { binding.close(); XposedHelpers.removeAdditionalInstanceField(view, OWNER); throw error }
         }
         val hook = object : MethodHook() {
@@ -71,7 +90,9 @@ internal object ClassicSignalHooks {
                 val view = callback.getThisObject()!!
                 if (callback.getThrowable() == null) sync(view)
                 else {
-                    ((XposedHelpers.getAdditionalInstanceField(view, OWNER) as? WeakReference<*>)?.get() as? Binding)?.close()
+                    val previous = (XposedHelpers.getAdditionalInstanceField(view, OWNER) as? WeakReference<*>)?.get() as? Binding
+                    val target = image.get(view) as ImageView
+                    if (ownsTarget(view, target, previous)) previous?.close()
                     XposedHelpers.removeAdditionalInstanceField(view, OWNER)
                 }
             }
@@ -85,17 +106,37 @@ internal object ClassicSignalHooks {
     }
 
     internal class Binding(private val image: ImageView) : View.OnAttachStateChangeListener {
+        // Release the previous image owner before capturing native Drawable/width.
+        // A moved image can already display that owner's dots on its first frame.
+        init { imageBinding(image)?.close() }
         private var native = image.drawable
         private var width = image.layoutParams?.width
         private var appliedWidth: Int? = null
         var closed = false
             private set
         private val ink = Dots(image.resources.displayMetrics.density)
-        init { image.addOnAttachStateChangeListener(this) }
         fun matches(target: ImageView) = image === target
-        fun update(count: Int, color: Int) {
-            if (closed) return
+        private var slot: View? = null
+        private var hasState = false
+        private var count = 0
+        private var color = -1
+        private var leftSpacing = 0
+        private var rightSpacing = 0
+        init {
+            image.addOnAttachStateChangeListener(this)
+            XposedHelpers.setAdditionalInstanceField(image, IMAGE_OWNER, WeakReference(this))
+        }
+        fun update(count: Int, color: Int, leftSpacing: Int = 0, rightSpacing: Int = 0) {
+            if (closed || imageBinding(image) !== this) return
+            hasState = true
+            this.count = count; this.color = color
+            this.leftSpacing = leftSpacing; this.rightSpacing = rightSpacing
+            if (image.isAttachedToWindow) apply()
+        }
+        private fun apply() {
             if (image.drawable !== ink) native = image.drawable
+            val nextSlot = StatusIconSpacing.slot(image, "com.android.systemui.statusbar.StatusBarMobileView")
+            if (slot !== nextSlot) { slot?.let(StatusIconSpacing::restore); slot = nextSlot }
             var parent = image.parent
             var lock = false
             while (parent is View) {
@@ -106,7 +147,7 @@ internal object ClassicSignalHooks {
             ink.color = color; ink.lock = lock
             val levelChanged = ink.setLevel(count)
             image.layoutParams?.let { lp ->
-                if (appliedWidth != null && lp.width != appliedWidth) width = lp.width
+                if (lp.width != appliedWidth) width = lp.width
                 val h = if (lp.height > 0) lp.height else ink.intrinsicHeight
                 val w = (h * ink.ratio).roundToInt()
                 if (lp.width != w) { lp.width = w; image.layoutParams = lp }
@@ -114,20 +155,34 @@ internal object ClassicSignalHooks {
             }
             if (image.drawable !== ink) image.setImageDrawable(ink)
             if (changed && !levelChanged) ink.invalidateSelf()
+            StatusIconSpacing.update(nextSlot, leftSpacing, rightSpacing)
         }
-        fun close() {
-            if (closed) return
-            closed = true
-            image.removeOnAttachStateChangeListener(this)
+        private fun restore() {
+            val previousSlot = slot; slot = null
+            previousSlot?.let(StatusIconSpacing::restore)
             if (image.drawable === ink) image.setImageDrawable(native)
             val restoreWidth = width
             image.layoutParams?.let { lp ->
                 if (restoreWidth != null && lp.width == appliedWidth) { lp.width = restoreWidth; image.layoutParams = lp }
             }
+            appliedWidth = null
         }
-        override fun onViewAttachedToWindow(v: View) = Unit
-        // Keep native data on the view; no global references or callbacks survive detach.
-        override fun onViewDetachedFromWindow(v: View) { close() }
+        fun close() {
+            if (closed) return
+            closed = true
+            image.removeOnAttachStateChangeListener(this)
+            if (imageBinding(image) === this) XposedHelpers.removeAdditionalInstanceField(image, IMAGE_OWNER)
+            restore()
+        }
+        override fun onViewAttachedToWindow(v: View) = ModuleHelper.guarded {
+            if (!closed && (!MainModule.mPrefs.getBoolean("system_statusbar_signal_dots") ||
+                MainModule.mPrefs.getBoolean("system_statusbar_duo"))) close()
+            else if (!closed && hasState) apply()
+        }
+        // A native slot can be reparented without another state/dark callback.
+        // Return its presentation while detached, retaining only this View's
+        // attach owner and latest inputs; explicit close remains permanent.
+        override fun onViewDetachedFromWindow(v: View) = ModuleHelper.guarded { restore() }
     }
 
     /** Independent circle drawing using measured normal/lockscreen aspect and spacing. */

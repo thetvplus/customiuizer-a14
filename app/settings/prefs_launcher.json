@@ -886,8 +886,9 @@
           "type": "section",
           "attributes": {
             "android:key": "pref_key_launcher_cat_gestures",
-            "android:title": "@string/launcher_gestures",
-            "app:dynamic": "true"
+            "android:title": "@string/prefs_group_workspace_gestures",
+            "app:dynamic": "true",
+            "app:searchKeywords": "@string/settings_keywords_launcher_gestures"
           },
           "children": [
             {

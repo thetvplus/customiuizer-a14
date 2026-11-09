@@ -159,6 +159,12 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
         android.graphics.RectF::class.java,android.graphics.RectF::class.java,
         floatType,floatType,floatType,floatType) else null
     val click=exact(taskView,"onClick",voidType,android.view.View::class.java)
+    // Both admitted Legacy families gate neighbor alignment on clip mode 1.
+    // Hook only that UI callback: changing createSpringAnim's mode would also
+    // change native Surface cropping, which must retain its original contract.
+    val legacyOpeningFrame=if(profile==DeckLauncherProfile.LEGACY) staticExact(utils,
+        "lambda\$createSpringAnim\$0",voidType,taskView,floatType,Boolean::class.javaPrimitiveType!!,
+        Int::class.javaPrimitiveType!!,recents,android.graphics.RectF::class.java,android.graphics.RectF::class.java) else null
     val alignOpen=exact(recents,"alignTaskViewWhenTaskLaunch",voidType,taskView,android.graphics.RectF::class.java,android.graphics.RectF::class.java,floatType,floatType)
     val alignClose=exact(recents,"alignTaskViewWhenAppToRecent",voidType,taskView,android.graphics.RectF::class.java,android.graphics.RectF::class.java,floatType,floatType)
     val setOverview=exact(recents,"setInOverviewState",voidType,Boolean::class.javaPrimitiveType!!)

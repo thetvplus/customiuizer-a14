@@ -25,6 +25,7 @@ import tv.withaibuild.customiuizer.utils.G4RoundRectGeometry
 internal object IosMediaCardHooks {
     private const val OWNER = "a14.media.card.presentation"
     private const val CONTROLLER = "a14.media.card.controller"
+    private const val STANDARD_ACTION = "a14.media.card.standard-action"
 
     fun install(param: PackageReadyParam): FeatureInstallResult {
         if (param.packageName != "com.android.systemui") return FeatureInstallResult.FAILED_PERMANENT
@@ -50,6 +51,13 @@ internal object IosMediaCardHooks {
         private val expanded = field(controller, "expandedLayout", sets)
         private val panelController = field(panel, "mMediaViewController", controller)
         private val presentation = MediaCardLayout(sets)
+        private val action = type("com.android.systemui.media.controls.models.player.MediaAction")
+        private val standardAction = type("com.android.systemui.media.controls.pipeline.MediaDataManager")
+            .getDeclaredMethod("getStandardAction", android.media.session.MediaController::class.java,
+                Long::class.javaPrimitiveType, Long::class.javaPrimitiveType).apply {
+                require(returnType == action && !Modifier.isStatic(modifiers)); isAccessible = true
+            }
+        private val bindButton = method(panel, "bindButtonCommon", android.widget.ImageButton::class.java, action)
         // Names and types, never sample-specific integer IDs. Keep even the native
         // effects and guts controls: their constructor/listener contracts still run.
         private val required = linkedMapOf(
@@ -156,6 +164,25 @@ internal object IosMediaCardHooks {
                     }
                 }
             },
+            standardAction to object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    if (callback.getThrowable() != null) return@guarded
+                    val result = callback.getResult() ?: return@guarded
+                    val request = callback.getArg(2) as Long
+                    if (request == 2L || request == 4L || request == 16L || request == 32L)
+                        XposedHelpers.setAdditionalInstanceField(result, STANDARD_ACTION, request)
+                }
+            },
+            bindButton to object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    if (callback.getThrowable() != null) return@guarded
+                    val presentation = style(panelController.get(callback.getThisObject())) ?: return@guarded
+                    val action = callback.getArg(1)
+                    val request = if (action == null) 0L else
+                        XposedHelpers.getAdditionalInstanceField(action, STANDARD_ACTION) as? Long ?: 0L
+                    presentation.bind(callback.getArg(0) as android.widget.ImageButton, request)
+                }
+            },
             bind to object : MethodHook() {
                 override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                     if (callback.getThrowable() == null) style(panelController.get(callback.getThisObject()))?.apply()
@@ -180,6 +207,9 @@ internal object IosMediaCardHooks {
         private val art = root.findViewById<View>(ids.getValue("album_art"))
         private val artOutline = art.outlineProvider
         private val artClipped = art.clipToOutline
+        private val appearance = MediaCardAppearance(root, ids)
+        private var detached = false
+        private var disabled = false
         private var radius = 24f * root.resources.displayMetrics.density
         private fun corners(fraction: Float) = object : ViewOutlineProvider() {
             private val path = Path()
@@ -195,11 +225,15 @@ internal object IosMediaCardHooks {
             }
         }
         private val rounded = corners(1f)
-        private val artwork = corners(.5f)
+        private val artwork = corners(.25f)
         var dirty = true
         fun supported() = root.get()?.resources?.configuration?.fontScale?.let { it <= 1.3f } == true
         fun matches(view: ViewGroup) = root.get() === view && view.findViewById<View>(ids.getValue("album_art")) === art
+        fun bind(button: android.widget.ImageButton, action: Long) {
+            if (!disabled) appearance.bind(button, action, active = !detached)
+        }
         fun apply() {
+            if (disabled || detached) return
             val view = root.get() ?: return
             val next = 24f * view.resources.displayMetrics.density
             val changed = next != radius
@@ -209,16 +243,19 @@ internal object IosMediaCardHooks {
             if (art.outlineProvider !== artwork) art.outlineProvider = artwork
             if (!art.clipToOutline) art.clipToOutline = true
             if (changed) { view.invalidateOutline(); art.invalidateOutline() }
+            appearance.apply()
         }
         fun disable() {
+            disabled = true
             root.get()?.let { it.removeOnAttachStateChangeListener(this); XposedHelpers.removeAdditionalInstanceField(it, OWNER) }
             restore()
         }
         fun restore() {
+            appearance.restore()
             root.get()?.let { if (it.outlineProvider === rounded) { it.outlineProvider = outline; it.clipToOutline = clipped } }
             if (art.outlineProvider === artwork) { art.outlineProvider = artOutline; art.clipToOutline = artClipped }
         }
-        override fun onViewAttachedToWindow(view: View) = apply()
-        override fun onViewDetachedFromWindow(view: View) = restore()
+        override fun onViewAttachedToWindow(view: View) { detached = false; apply() }
+        override fun onViewDetachedFromWindow(view: View) { detached = true; restore() }
     }
 }

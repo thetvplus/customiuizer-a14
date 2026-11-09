@@ -33,7 +33,7 @@
     <string name="white_lists">启用白名单</string>
     <string name="system_mods">系统</string>
     <string name="system_mods_screen">屏幕</string>
-    <string name="system_mods_audio">声音</string>
+    <string name="system_mods_audio">音量与声音</string>
     <string name="system_mods_vibration">振动</string>
     <string name="system_mods_toasts">Toast</string>
     <string name="system_statusbaricons_title">隐藏图标</string>
@@ -154,7 +154,7 @@
     <string name="system_netspeed_rowspacing_summ">调整上传与下载两行之间的距离，修改后需重启系统界面</string>
     <string name="system_netspeed_prerequisite_note">需先在手机系统设置中开启“显示实时网速”</string>
     <string name="system_netspeed_use_clock_style_title">文字样式与状态栏时钟保持一致</string>
-    <string name="system_statusbarcontrols_title">手势控制</string>
+    <string name="system_statusbarcontrols_title">状态栏手势</string>
     <string name="system_statusbarcontrols_summ">滑动、双击与长按时执行所选动作</string>
     <string name="system_statusbarcontrols_sens_title">调整灵敏度</string>
     <string name="system_statusbarcontrols_sens_bright_title">亮度</string>
@@ -396,7 +396,7 @@
     <string name="system_qs_hideoperator_title">隐藏运营商名称</string>
     <string name="system_qs_hideoperator_delimiter_title">隐藏运营商名称之间的分隔线</string>
     <string name="system_qshaptic_title">磁贴振动</string>
-    <string name="system_mods_automation">应用与自动化</string>
+    <string name="system_mods_automation">连接与设备</string>
     <string name="system_mods_other">高级设置</string>
     <string name="system_volumeblur_collapsed_title">折叠对话框</string>
     <string name="system_volumeblur_expanded_title">展开对话框</string>
@@ -475,7 +475,7 @@
     <string name="launcher_wallpaper_colormode_title">强制桌面壁纸颜色模式</string>
     <string name="system_resizablewidgets_title">自由调整小部件</string>
 
-    <string name="controls_mods">按键与手势</string>
+    <string name="controls_mods">声音与操作</string>
     <string name="controls_powerdt_summ">双击电源键替代启动相机。需要启用内置的快捷键。</string>
     <string name="controls_powerflash_title">快速手电筒</string>
     <string name="controls_powerflash_summ">屏幕关闭时长按电源键打开手电筒</string>
@@ -501,7 +501,7 @@
     <string name="controls_volumemedia_down_title">长按音量下键动作</string>
     <string name="controls_volumemedia_down_summ">屏幕关闭时长按音量下键的动作</string>
     <string name="controls_volumemedia_vibrate_title">长按振动</string>
-    <string name="controls_mods_navbar">导航栏</string>
+    <string name="controls_mods_navbar">导航栏与输入法</string>
     <string name="controls_nonavbar_title">隐藏手势提示线</string>
     <string name="controls_hide_ime_dismiss_button_title">隐藏输入法收回按键</string>
     <string name="controls_hide_ime_dismiss_button_summ">在手势导航下隐藏输入法显示时底部左侧的收回按键</string>
@@ -527,7 +527,7 @@
     <string name="controls_fsg_assist_right_title">屏幕右下角上划动作</string>
     <string name="controls_fsg_swipeandstop_title">屏幕两侧向内滑动并停顿</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">禁止振动</string>
-    <string name="various_mods">应用与维护</string>
+    <string name="various_mods">应用与工具</string>
     <string name="various_general_cat_title">系统与兼容性</string>
     <string name="various_app_management_cat_title">应用管理</string>
     <string name="various_exclusive_features_cat_title">维护与隐私</string>
@@ -1163,7 +1163,7 @@
     <string name="system_island_geometry_group">位置尺寸</string>
     <string name="system_island_appearance_group">外观</string>
     <string name="system_island_feedback_group">内容</string>
-    <string name="system_island_gestures_title">手势</string>
+    <string name="system_island_gestures_title">动态岛手势</string>
     <string name="system_island_waveform_off">关闭</string>
     <string name="system_island_waveform_light">轻量波形</string>
     <string name="system_island_waveform_real">实时波形</string>
@@ -1361,4 +1361,11 @@
     <string name="settings_status_icons">状态图标</string>
     <string name="settings_launcher_layout">桌面布局与动画</string>
     <string name="settings_app_behavior">应用行为</string>
+    <string name="settings_sound_vibration">声音与振动</string>
+    <string name="settings_keywords_controls">按键与手势 buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">应用与维护 apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">应用行为 system compatibility hidden features</string>
+    <string name="settings_keywords_connections">应用与自动化 connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">应用与自动化 app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
 </resources>

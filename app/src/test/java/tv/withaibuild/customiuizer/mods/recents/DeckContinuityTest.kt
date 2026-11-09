@@ -105,7 +105,24 @@ class DeckContinuityTest {
                 val selected=cards[selectedIndex]
                 val neighbor=cards[1-selectedIndex]
                 val start=RectF();selected.geometry.screenContent(start,0f)
-                f.owner.alignOpening(selected,start,start,0f,1f)
+                // The first Legacy frame can already fade its neighbors. Capture
+                // the true presentation before that native UI callback executes.
+                XposedHelpers.setAdditionalInstanceField(selected.view,DeckOwner.CARD,selected)
+                try {
+                    val args=arrayOf<Any?>(selected.view,0f,true,3,Any(),start,start)
+                    val callback=object: io.github.libxposed.api.XposedInterface.Chain {
+                        override fun getExecutable()=DeckContinuityTest::class.java.getDeclaredMethod("fixedPortraitWindowKeepsOpeningAndOcclusionInTheVisualTaskSpaceInBothLandscapeDirections")
+                        override fun getThisObject(): Any?=null
+                        override fun getArg(index: Int)=args[index]
+                        override fun getArgs(): List<Any?> = throw AssertionError("No frame argument list")
+                        override fun proceed(): Any? { neighbor.view.alpha=.4f;return null }
+                        override fun proceed(args: Array<Any?>): Any?=throw AssertionError("No frame remarshal")
+                        override fun proceedWith(receiver: Any): Any?=throw AssertionError("Native receiver changed")
+                        override fun proceedWith(receiver: Any,args: Array<Any?>): Any?=throw AssertionError("Native owner changed")
+                    }
+                    IosRecentsDeckHooks.legacyOpeningHook().intercept(callback)
+                    assertEquals("The first native fade cannot seed the Deck presentation",1f,neighbor.view.alpha,0f)
+                } finally { XposedHelpers.removeAdditionalInstanceField(selected.view,DeckOwner.CARD) }
                 if(selectedIndex==1) {
                     val shown=RectF();selected.geometry.localContent(shown,0f)
                     val front=RectF();neighbor.geometry.localContent(front,0f)

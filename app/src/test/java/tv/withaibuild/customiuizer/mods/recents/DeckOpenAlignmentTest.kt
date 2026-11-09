@@ -51,4 +51,23 @@ class DeckOpenAlignmentTest {
         assertEquals(17f,far.translationX,0f)
         assertEquals(1f,h1.alpha,0f)
     }
+    @Test fun knownNativeFadeWritesStayVisibleDuringOpeningAndReturnTheirLatestState() {
+        val context=RuntimeEnvironment.getApplication()
+        for(reverse in listOf(false,true)) for(replaced in listOf(false,true)) {
+            val neighbor=View(context).apply { layout(450,200,1050,1400);alpha=.9f }
+            val start=RectF(100f,200f,700f,1400f)
+            val alignment=DeckOpenAlignment(7,start)
+            alignment.add(neighbor,View(context),RectF(450f,200f,1050f,1400f),1)
+            neighbor.alpha=.3f // The actual Legacy callback wrote its fade.
+            alignment.apply(RectF(50f,100f,800f,1600f),.5f,0f,nativeFaded=true)
+            assertEquals(.9f,neighbor.alpha,0f)
+            if(reverse) {
+                neighbor.alpha=.9f // A native write equal to our presentation still counts.
+                alignment.apply(start,0f,1f,nativeFaded=true)
+            }
+            if(replaced) neighbor.alpha=.6f
+            alignment.release()
+            assertEquals(if(replaced) .6f else if(reverse) .9f else .3f,neighbor.alpha,0f)
+        }
+    }
 }

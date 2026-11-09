@@ -487,6 +487,7 @@ object Helpers {
                 var eventType = xml.eventType
                 var category: ModData.ModCat? = null
                 var categoryTitleResId = 0
+                var categoryKeywords = ""
                 var routeSub: String? = null
                 var breadcrumbSubTitleResId = 0
                 var breadcrumbSubSubTitleResId = 0
@@ -501,6 +502,9 @@ object Helpers {
                                     )
                                     categoryTitleResId =
                                         xml.getAttributeResourceValue(null, "title", 0)
+                                    val keywordsRes = xml.getAttributeResourceValue(null, "keywords", 0)
+                                    categoryKeywords = if (keywordsRes != 0) res.getString(keywordsRes)
+                                        else xml.getAttributeValue(null, "keywords").orEmpty()
                                     routeSub = null
                                     breadcrumbSubTitleResId = 0
                                     breadcrumbSubSubTitleResId = 0
@@ -538,8 +542,10 @@ object Helpers {
                                         val modData = ModData()
                                         modData.title = res.getString(titleResId)
                                         val keywordRes = xml.getAttributeResourceValue(null, "keywords", 0)
-                                        modData.searchKeywords = if (keywordRes != 0) res.getString(keywordRes)
+                                        val keywords = if (keywordRes != 0) res.getString(keywordRes)
                                             else xml.getAttributeValue(null, "keywords").orEmpty()
+                                        modData.searchKeywords = if (categoryKeywords.isEmpty()) keywords
+                                            else categoryKeywords + " " + keywords
                                         modData.breadcrumbs = buildString {
                                             append(res.getString(categoryTitleResId))
                                             if (breadcrumbSubTitleResId > 0) {

@@ -83,6 +83,43 @@ class FeatureMapTest(unittest.TestCase):
         self.assertNotIn("system_betterpopups_nohide", rendered)
         self.assertNotIn("状态刷新", rendered)
 
+    def test_direct_directory_pages_use_the_real_endpoint_and_controller(self):
+        pages = feature_map.collect_pages(self.repo, feature_map.load_strings(self.repo))
+        for suffix, controller in (("appbehavior", "System_AppBehavior"), ("wifiauto", "System_WifiAutomatic"),
+                                   ("vpnauto", "System_VpnAutoSwitch")):
+            page = next(p for p in pages if p.key == f"pref_key_system_{suffix}_cat")
+            self.assertTrue(page.standalone)
+            self.assertEqual(2, len(page.path), "A direct directory click has no intermediate page")
+            self.assertEqual(controller, page.controller)
+            self.assertEqual(f"prefs_system_{suffix}.json", page.source)
+            resolver = self.repo / feature_map.JAVA / "utils/PreferenceResourceResolver.kt"
+            original = resolver.read_text(encoding="utf-8")
+            try:
+                resolver.write_text(original.replace(f'"{page.key}" -> {controller}()',
+                                                    f'"{page.key}" -> System()'), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "Missing direct controller navigation"):
+                    feature_map.collect_pages(self.repo, feature_map.load_strings(self.repo))
+                resolver.write_text(original.replace(f'"{page.key}" -> R.id.prefs_system_{suffix}',
+                                                    f'"{page.key}" -> R.id.prefs_missing'), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "Resolver routes"):
+                    feature_map.collect_pages(self.repo, feature_map.load_strings(self.repo))
+            finally:
+                resolver.write_text(original, encoding="utf-8")
+
+    def test_a_removed_direct_directory_link_is_still_unreachable(self):
+        source = self.repo / "app/settings/prefs_various.json"
+        root = json.loads(source.read_text(encoding="utf-8"))
+        key = "pref_key_system_appbehavior_cat"
+        def remove(node):
+            node["children"] = [child for child in node.get("children", [])
+                                if child.get("attributes", {}).get("android:key") != key]
+            for child in node["children"]:
+                remove(child)
+        remove(root)
+        source.write_text(json.dumps(root, ensure_ascii=False), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "Unreachable standalone pages.*appbehavior"):
+            feature_map.collect_pages(self.repo, feature_map.load_strings(self.repo))
+
     def test_document_matches_and_generation_is_deterministic(self):
         first = feature_map.render(ROOT).encode("utf-8")
         self.assertEqual(first, feature_map.render(ROOT).encode("utf-8"))

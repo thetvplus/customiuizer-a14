@@ -76,4 +76,80 @@ class MediaCardOutlineTest {
         assertSame(artNative, art.outlineProvider)
         assertFalse(art.clipToOutline)
     }
+    @Test fun nativeActionRebindWhileDetachedRestoresTheLatestGlyphOnlyOnReattachment() {
+        val root = root()
+        val button = android.widget.ImageButton(context).apply { id = 18 }
+        val nativePause = android.graphics.drawable.ColorDrawable(android.graphics.Color.BLUE)
+        button.setImageDrawable(nativePause)
+        root.addView(button, FrameLayout.LayoutParams(48, 48))
+        val owner = Class.forName("tv.withaibuild.customiuizer.mods.media.IosMediaCardHooks\$Style")
+            .getDeclaredConstructor(ViewGroup::class.java, Map::class.java).apply { isAccessible = true }
+            .newInstance(root, mapOf("album_art" to 17, "actionPlayPause" to 18))
+        val bind = owner.javaClass.getDeclaredMethod("bind", android.widget.ImageButton::class.java, Long::class.javaPrimitiveType)
+            .apply { isAccessible = true }
+        val listener = owner as View.OnAttachStateChangeListener
+        fun pixels(): IntArray {
+            val bitmap = android.graphics.Bitmap.createBitmap(48, 48, android.graphics.Bitmap.Config.ARGB_8888)
+            try {
+                button.drawable.setBounds(0, 0, 48, 48)
+                button.drawable.draw(android.graphics.Canvas(bitmap))
+                return IntArray(48 * 48).also { bitmap.getPixels(it, 0, 48, 0, 0, 48, 48) }
+            } finally { bitmap.recycle() }
+        }
+        try {
+            invoke(owner, "apply"); bind.invoke(owner, button, 2L)
+            val glyph = button.drawable
+            val pause = pixels()
+            assertNotSame(nativePause, glyph)
+            listener.onViewDetachedFromWindow(root)
+            assertSame(nativePause, button.drawable)
+            listener.onViewAttachedToWindow(root)
+            assertSame("No new native bind is needed after a normal reparent", glyph, button.drawable)
+            listener.onViewDetachedFromWindow(root)
+            val nativePlay = android.graphics.drawable.ColorDrawable(android.graphics.Color.GREEN)
+            button.setImageDrawable(nativePlay)
+            var clicks = 0; button.setOnClickListener { clicks++ }
+            bind.invoke(owner, button, 4L) // Native async bind finishes while offscreen.
+            assertSame("Offscreen bind records semantics without taking ink", nativePlay, button.drawable)
+            invoke(owner, "apply"); assertSame(nativePlay, button.drawable)
+            listener.onViewAttachedToWindow(root)
+            assertSame(glyph, button.drawable)
+            assertFalse("Latest play state must replace the old pause silhouette", pause.contentEquals(pixels()))
+            button.performClick(); assertEquals(1, clicks)
+            listener.onViewDetachedFromWindow(root)
+            assertSame("Release restores the latest native icon", nativePlay, button.drawable)
+            bind.invoke(owner, button, 0L)
+            listener.onViewAttachedToWindow(root)
+            assertSame("Unknown action does not reuse old semantics", nativePlay, button.drawable)
+            listener.onViewDetachedFromWindow(root)
+            bind.invoke(owner, button, 2L)
+            val unattributed = android.graphics.drawable.ColorDrawable(android.graphics.Color.YELLOW)
+            button.setImageDrawable(unattributed) // A newer native/async owner, without this binding.
+            listener.onViewAttachedToWindow(root)
+            assertSame(unattributed, button.drawable)
+            invoke(owner, "disable")
+            bind.invoke(owner, button, 2L); invoke(owner, "apply")
+            assertSame("Disabled owners stay passive", unattributed, button.drawable)
+        } finally { invoke(owner, "disable") }
+    }
+    @Test fun lateNativeBindCannotReacquireAppearanceAfterDetachOrDisable() {
+        val root = root(); val art = root.getChildAt(0) as ImageView
+        art.setPadding(4, 5, 6, 7)
+        val nativeOutline = root.outlineProvider
+        val owner = style(root)
+        val listener = owner as View.OnAttachStateChangeListener
+        invoke(owner, "apply")
+        assertEquals(0, art.paddingLeft)
+        listener.onViewDetachedFromWindow(root)
+        assertEquals(4, art.paddingLeft)
+        invoke(owner, "apply") // The original bind callback may finish after detach.
+        assertSame(nativeOutline, root.outlineProvider)
+        assertEquals(4, art.paddingLeft)
+        listener.onViewAttachedToWindow(root)
+        assertEquals(0, art.paddingLeft)
+        invoke(owner, "disable")
+        invoke(owner, "apply")
+        assertSame(nativeOutline, root.outlineProvider)
+        assertEquals(4, art.paddingLeft)
+    }
 }

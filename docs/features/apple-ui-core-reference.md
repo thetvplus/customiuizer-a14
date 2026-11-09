@@ -24,7 +24,7 @@ Duo 的“最新正式版”固定为本日核对的 27.2，依据 [Apple 正式
 
 `VolumeControl` 接受有效变化并检查分类准入，构造 `SBVolumeHUDView`，由 `SBHUDController` 的专有 window/content 居中、旋转和退出。`SBHUDView` 初始 155×155 点、圆角 9、16 段进度、每段 1/16。`_presentVolumeHUDWithMode:volume:` 内部 mode==3 选 3 秒，其余 1.5 秒；未确认枚举生产源，不命名为某个音量类别，也不推广为所有 HUD 调用的退出时间。
 
-6 份选定 CSI 和 6 份 PNG 完整。mute/speaker 及 RTL 四份使用 CoreUI wrapper v5 的 GA8 deepmap，已按原负载解码；文件名中的 `.pdf` 不代表通用 PDF。图形仅供私有校准，不直接加入 APK。
+6 份选定 CSI 和 6 份 PNG 完整。mute/speaker 及 RTL 四份使用 CoreUI wrapper v5 的 GA8 deepmap，已按原负载解码；文件名中的 `.pdf` 不代表通用 PDF。原始字节保留私有；APK 使用按原图 alpha 轮廓校准的有限矢量，保留扬声器 77×63、铃声 69×80 点比例和 RTL 变体，仅替换已识别的原生资源身份。
 
 中央模式在既有音量插件 ClassLoader、dialog owner 内互斥选择展示。继续消费原生 stream、路由、按键 flags、安全音量、监听、无障碍和 dismiss；用当次窗口 metrics 居中并更新触控/可见区域，处理横屏、锁屏、配置变化和销毁。不能只把侧条平移到中间，也不新增第二套音量控制器或退出定时器。155 点、材质和动画须作 Android 映射，原生 UIKit 合成不跨平台执行。
 

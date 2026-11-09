@@ -31,14 +31,6 @@ class Controls : SubFragment() {
     override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        findPreference<Preference>("pref_key_system_volume_ios_compact")?.let { compact ->
-            compact.isVisible = AppHelper.getStringOfAppPrefs("pref_key_system_volume_ios_style", "1") != "2"
-            findPreference<Preference>("pref_key_system_volume_ios_style")?.setOnPreferenceChangeListener { preference, value ->
-                compact.isVisible = syncPendingListSelection(preference, value) != "2"
-                true
-            }
-        }
-
         when (sub) {
             "pref_key_controls_cat_power" -> findPreference<Preference>("pref_key_controls_powerdt")?.setOnPreferenceClickListener(openLaunchActions)
             "pref_key_controls_cat_volume" -> {

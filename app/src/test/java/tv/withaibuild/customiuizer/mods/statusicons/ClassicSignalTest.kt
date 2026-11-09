@@ -1,5 +1,6 @@
 package tv.withaibuild.customiuizer.mods.statusicons
 
+import android.app.Activity
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -17,6 +18,8 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.android.controller.ActivityController
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
@@ -38,13 +41,25 @@ class ClassicSignalTest {
     private var attempts = 0
     private var failAt = 0
     private var unhooks = 0
+    private lateinit var activity: ActivityController<Activity>
+    private lateinit var liveRoot: FrameLayout
     @Before fun setup() {
+        activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        liveRoot = FrameLayout(activity.get())
+        activity.get().setContentView(liveRoot)
         MainModule.mPrefs.clear(); MainModule.mPrefs.put("system_statusbar_signal_dots", true)
         XposedHelpers.moduleInst = proxy(XposedInterface::class.java) { name, args ->
             assertEquals("hook", name); builder(args!![0] as Method)
         }
     }
-    @After fun cleanup() { XposedHelpers.moduleInst = savedModule; MainModule.mPrefs.replaceSnapshot(preferences) }
+    @After fun cleanup() {
+        try { activity.pause().stop().destroy() }
+        finally {
+            XposedHelpers.removeAdditionalStaticField(com.android.systemui.statusbar.views.MiuiStatusBatteryContainer::class.java,
+                "a14.status.spacing.measure")
+            XposedHelpers.moduleInst = savedModule; MainModule.mPrefs.replaceSnapshot(preferences)
+        }
+    }
     private fun builder(method: Method): XposedInterface.HookBuilder = proxy(XposedInterface.HookBuilder::class.java) { name, args ->
         when (name) {
             "setPriority", "setExceptionMode" -> builder(method)
@@ -67,10 +82,13 @@ class ClassicSignalTest {
             else -> throw AssertionError(name)
         } })
     private fun host() = StatusBarMobileView().apply {
+        setPadding(2, 1, 3, 1)
         mMobile = ImageView(ApplicationProvider.getApplicationContext()).apply {
             layoutParams = FrameLayout.LayoutParams(12, 20); setImageDrawable(ColorDrawable(Color.BLUE))
         }
+        addView(mMobile)
         mState = StatusBarSignalPolicy.MobileIconState().apply { strengthId = 103 }
+        liveRoot.addView(this)
     }
     private inner class Chain(private val host: StatusBarMobileView, private val name: String = "applyMobileState", private val native: () -> Unit = {}) : XposedInterface.Chain {
         var calls = 0
@@ -136,6 +154,7 @@ class ClassicSignalTest {
         val host = host(); val first = host.mMobile!!; val native = first.drawable
         Chain(host).invoke()
         host.mMobile = ImageView(first.context).apply { layoutParams = FrameLayout.LayoutParams(17, 20); setImageDrawable(ColorDrawable(Color.GREEN)) }
+        host.removeView(first); host.addView(host.mMobile)
         Chain(host).invoke(); assertSame(native, first.drawable); assertEquals(12, first.layoutParams.width)
         val current = host.mMobile!!
         current.layoutParams.width = 22 // native density/theme update
@@ -190,6 +209,7 @@ class ClassicSignalTest {
                 invalidations++; super.invalidateDrawable(drawable)
             }
         }.apply { layoutParams = FrameLayout.LayoutParams(12, 20) }
+        liveRoot.addView(image)
         val binding = ClassicSignalHooks.Binding(image)
         try {
             binding.update(3, Color.BLACK)
@@ -203,6 +223,117 @@ class ClassicSignalTest {
             repeat(100) { image.drawable.setTintList(tint) }
             assertEquals("Equal native tint must not rebuild its filter", tinted, invalidations)
         } finally { binding.close() }
+    }
+    @Test fun bareNativeDetachAndReattachResumeTheSameSignalWithoutAnotherStateCallback() {
+        val host = host(); val image = host.mMobile!!
+        val native = image.drawable
+        val binding = ClassicSignalHooks.Binding(image)
+        try {
+            binding.update(3, Color.BLACK, 4, 8)
+            val ink = image.drawable
+            assertTrue(ink is ClassicSignalHooks.Dots)
+            assertEquals(34, image.layoutParams.width)
+            assertEquals(4, host.paddingLeft); assertEquals(7, host.paddingRight)
+            liveRoot.removeView(host)
+            assertFalse(binding.closed)
+            assertSame(native, image.drawable); assertEquals(12, image.layoutParams.width)
+            assertEquals(2, host.paddingLeft); assertEquals(3, host.paddingRight)
+            liveRoot.addView(host) // No applyMobileState/applyDarknessInternal callback.
+            assertSame(ink, image.drawable); assertEquals(3, image.drawable.level)
+            assertEquals(34, image.layoutParams.width)
+            assertEquals(4, host.paddingLeft); assertEquals(7, host.paddingRight)
+        } finally { binding.close() }
+    }
+    @Test fun offscreenUpdatesStayNativeAndReparentingAcquiresOnlyTheNewSlot() {
+        val previous = host(); val image = previous.mMobile!!
+        val binding = ClassicSignalHooks.Binding(image)
+        try {
+            binding.update(2, Color.BLACK, 4, 8)
+            previous.removeView(image)
+            val replacement = ColorDrawable(Color.GREEN)
+            image.setImageDrawable(replacement); image.layoutParams.width = 17
+            binding.update(5, Color.RED, 6, 10)
+            assertSame(replacement, image.drawable); assertEquals(17, image.layoutParams.width)
+            assertEquals(2, previous.paddingLeft); assertEquals(3, previous.paddingRight)
+            val next = StatusBarMobileView().apply { setPadding(7, 0, 11, 0) }
+            liveRoot.addView(next); next.addView(image)
+            val ink = image.drawable as ClassicSignalHooks.Dots
+            assertEquals(5, ink.level); assertEquals(Color.RED, ink.color)
+            assertEquals(10, next.paddingLeft); assertEquals(16, next.paddingRight)
+            assertEquals(2, previous.paddingLeft); assertEquals(3, previous.paddingRight)
+            binding.close()
+            assertSame(replacement, image.drawable); assertEquals(17, image.layoutParams.width)
+            assertEquals(7, next.paddingLeft); assertEquals(11, next.paddingRight)
+        } finally { binding.close() }
+    }
+    @Test fun explicitCloseAndDuoActivationCannotRestartOnAReattachedImage() {
+        for (duo in listOf(false, true)) {
+            val host = host(); val image = host.mMobile!!; val native = image.drawable
+            val binding = ClassicSignalHooks.Binding(image)
+            try {
+                binding.update(4, Color.BLACK, 4, 8)
+                if (!duo) binding.close()
+                liveRoot.removeView(host)
+                if (duo) MainModule.mPrefs.put("system_statusbar_duo", true)
+                liveRoot.addView(host)
+                binding.update(5, Color.RED, 6, 10)
+                assertTrue(binding.closed)
+                assertSame(native, image.drawable); assertEquals(12, image.layoutParams.width)
+                assertEquals(2, host.paddingLeft); assertEquals(3, host.paddingRight)
+            } finally { binding.close(); MainModule.mPrefs.put("system_statusbar_duo", false) }
+        }
+    }
+    @Test fun aReparentedImageHasOneHookOwnerAndReturnsItsTrueNativePresentation() {
+        MainModule.mPrefs.put("system_statusbar_signal_dots_leftmargin", 4)
+        MainModule.mPrefs.put("system_statusbar_signal_dots_rightmargin", 8)
+        assertEquals(FeatureInstallResult.INSTALLED, install())
+        val previous = host(); val image = previous.mMobile!!
+        val native = image.drawable
+        fun hostOwner(host: StatusBarMobileView) =
+            (XposedHelpers.getAdditionalInstanceField(host, "a14.status.signal.dots") as? java.lang.ref.WeakReference<*>)?.get() as? ClassicSignalHooks.Binding
+        fun imageOwner() =
+            (XposedHelpers.getAdditionalInstanceField(image, "a14.status.signal.image") as? java.lang.ref.WeakReference<*>)?.get() as? ClassicSignalHooks.Binding
+        fun imageListeners(): Collection<*> {
+            val info = android.view.View::class.java.getDeclaredField("mListenerInfo").apply { isAccessible = true }.get(image)
+            return info.javaClass.getDeclaredField("mOnAttachStateChangeListeners").apply { isAccessible = true }.get(info) as Collection<*>
+        }
+        Chain(previous).invoke()
+        val old = requireNotNull(hostOwner(previous))
+        previous.removeView(image)
+        val next = StatusBarMobileView().apply {
+            setPadding(7, 0, 11, 0)
+            mMobile = image; mColor = Color.RED
+            mState = StatusBarSignalPolicy.MobileIconState().apply { strengthId = 105 }
+        }
+        liveRoot.addView(next); next.addView(image)
+        var current: ClassicSignalHooks.Binding? = null
+        try {
+            Chain(next).invoke() // A new real host invokes the installed native callback.
+            current = requireNotNull(hostOwner(next))
+            assertNotSame(old, current)
+            assertTrue("The previous image owner must retire before the new snapshot", old.closed)
+            assertSame(current, imageOwner())
+            assertEquals(1, imageListeners().count { it is ClassicSignalHooks.Binding })
+            val ink = image.drawable
+            assertEquals(5, ink.level)
+            previous.mState!!.strengthId = 100
+            Chain(previous).invoke() // Old mMobile can still reference the moved ImageView.
+            assertSame(ink, image.drawable); assertEquals(5, image.drawable.level)
+            assertSame(current, imageOwner()); assertFalse(current.closed)
+            assertEquals(2, previous.paddingLeft); assertEquals(3, previous.paddingRight)
+            assertEquals(9, next.paddingLeft); assertEquals(15, next.paddingRight)
+            next.removeView(image)
+            assertSame(native, image.drawable); assertEquals(12, image.layoutParams.width)
+            assertEquals(7, next.paddingLeft); assertEquals(11, next.paddingRight)
+            next.addView(image)
+            assertSame(ink, image.drawable)
+            MainModule.mPrefs.put("system_statusbar_signal_dots", false)
+            Chain(next).invoke()
+            assertTrue(current.closed)
+            assertNull(imageOwner()); assertEquals(0, imageListeners().count { it is ClassicSignalHooks.Binding })
+            assertSame(native, image.drawable); assertEquals(12, image.layoutParams.width)
+            assertEquals(7, next.paddingLeft); assertEquals(11, next.paddingRight)
+        } finally { current?.close(); old.close() }
     }
     private fun <T> proxy(type: Class<T>, body: (String, Array<out Any?>?) -> Any?): T = type.cast(
         Proxy.newProxyInstance(type.classLoader, arrayOf(type)) { _, method, args -> body(method.name, args) })!!

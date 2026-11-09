@@ -29,7 +29,7 @@
     <string name="enable_mod">啟用</string>
     <string name="system_mods">系統</string>
     <string name="system_mods_screen">螢幕</string>
-    <string name="system_mods_audio">聲音</string>
+    <string name="system_mods_audio">音量與聲音</string>
     <string name="system_mods_vibration">振動</string>
     <string name="system_mods_toasts">Toast</string>
     <string name="system_statusbaricons_title">隱藏圖示</string>
@@ -132,7 +132,7 @@
     <string name="system_netspeed_rowspacing_title">雙排網速行距</string>
     <string name="system_netspeed_rowspacing_summ">調整上傳與下載兩行之間的距離，修改後需重新啟動系統介面</string>
     <string name="system_netspeed_prerequisite_note">請先在手機系統設定中開啟「顯示即時網路速度」</string>
-    <string name="system_statusbarcontrols_title">手勢控制</string>
+    <string name="system_statusbarcontrols_title">狀態列手勢</string>
     <string name="system_statusbarcontrols_summ">滑動雙擊時執行所選動作</string>
     <string name="system_statusbarcontrols_sens_title">調整靈敏度</string>
     <string name="system_statusbarcontrols_sens_bright_title">亮度</string>
@@ -347,7 +347,7 @@
     <string name="system_qsgridcolumns_title">列數</string>
     <string name="system_qs_hideoperator_title">隱藏運營商名稱</string>
     <string name="system_qshaptic_title">快速設置觸覺反饋</string>
-    <string name="system_mods_automation">應用程式與自動化</string>
+    <string name="system_mods_automation">連線與裝置</string>
     <string name="system_mods_other">進階設定</string>
     <string name="system_volumeblur_collapsed_title">折疊對話框</string>
     <string name="system_volumeblur_expanded_title">展開對話框</string>
@@ -421,7 +421,7 @@
     <string name="launcher_pinch_title">雙指捏合</string>
     <string name="launcher_spread_title">雙指展開</string>
     <string name="launcher_bugfixes">相容與修正</string>
-    <string name="controls_mods">按鍵與手勢</string>
+    <string name="controls_mods">聲音與操作</string>
     <string name="controls_powerdt_summ">按壓兩次電源鍵替代啟動相機。需要啟用內置的快捷鍵。</string>
     <string name="controls_powerflash_title">快速手電筒</string>
     <string name="controls_powerflash_summ">螢幕關閉時長按電源鍵開啟手電筒</string>
@@ -446,7 +446,7 @@
     <string name="controls_volumemedia_down_title">長按音量下鍵動作</string>
     <string name="controls_volumemedia_down_summ">螢幕關閉時長按音量下鍵的動作</string>
     <string name="controls_volumemedia_vibrate_title">長按振動</string>
-    <string name="controls_mods_navbar">導航欄</string>
+    <string name="controls_mods_navbar">導覽列與輸入法</string>
     <string name="controls_nonavbar_title">隱藏導航欄</string>
     <string name="controls_hide_ime_dismiss_button_title">隱藏輸入法收回按鍵</string>
     <string name="controls_hide_ime_dismiss_button_summ">在手勢導覽下隱藏輸入法顯示時底部左側的收回按鍵</string>
@@ -466,7 +466,7 @@
     <string name="controls_fsg_horiz_title">水平手勢</string>
     <string name="controls_fsg_horiz_summ">啟用水平手勢和導航欄</string>
     <string name="controls_fsg_swipeandstop_title">螢幕兩側向內滑動並停頓</string>
-    <string name="various_mods">應用程式與維護</string>
+    <string name="various_mods">應用程式與工具</string>
     <string name="various_general_cat_title">系統與相容性</string>
     <string name="various_app_management_cat_title">應用程式管理</string>
     <string name="various_exclusive_features_cat_title">維護與隱私</string>
@@ -1153,7 +1153,7 @@
     <string name="system_island_geometry_group">位置尺寸</string>
     <string name="system_island_appearance_group">外觀</string>
     <string name="system_island_feedback_group">內容</string>
-    <string name="system_island_gestures_title">手勢</string>
+    <string name="system_island_gestures_title">動態島手勢</string>
     <string name="system_island_waveform_off">關閉</string>
     <string name="system_island_waveform_light">轻量波形</string>
     <string name="system_island_waveform_real">實時波形</string>
@@ -1351,4 +1351,11 @@
     <string name="settings_status_icons">狀態圖示</string>
     <string name="settings_launcher_layout">桌面版面與動畫</string>
     <string name="settings_app_behavior">應用程式行為</string>
+    <string name="settings_sound_vibration">聲音與震動</string>
+    <string name="settings_keywords_controls">按鍵與手勢 buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">應用程式與維護 apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">應用程式行為 system compatibility hidden features</string>
+    <string name="settings_keywords_connections">應用程式與自動化 connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">應用程式與自動化 app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
 </resources>

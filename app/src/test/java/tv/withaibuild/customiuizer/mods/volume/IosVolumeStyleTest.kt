@@ -417,7 +417,7 @@ class IosVolumeStyleTest {
         val root=FrameLayout(host); val content=FrameLayout(host); val more=ImageView(host)
         root.addView(content); root.addView(more,FrameLayout.LayoutParams(20,20))
         host.setContentView(root)
-        val session=IosVolumeStyle.Session(root,content,null,emptyList(),{0},{},{},more,null,{})
+        val session=IosVolumeStyle.Session(root,content,null,emptyList(),{0},{},{},more,null,moreAction={})
         val current=more.layoutParams as FrameLayout.LayoutParams
         current.width=91; current.topMargin=17
         var clicked=false; more.setOnClickListener { clicked=true }

@@ -35,7 +35,11 @@ class CategorySelector : SubFragment() {
             entry.setOnPreferenceClickListener { preference ->
                 if (preference !is PreferenceEx) return@setOnPreferenceClickListener false
                 val category = cat ?: return@setOnPreferenceClickListener false
-                val bundle = Bundle().apply { putString("sub", preference.key); putString("cat", category) }
+                val bundle = Bundle().apply {
+                    putString("sub", preference.key)
+                    putString("cat", category)
+                    putBoolean("isStandalone", PreferenceResourceResolver.isStandalonePage(preference.key))
+                }
                 val resource = PreferenceResourceResolver.resolve(category, preference.key)
                 val fragment = PreferenceResourceResolver.createFragment(category, preference.key) ?: return@setOnPreferenceClickListener false
                 openSubFragment(fragment, bundle, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp,

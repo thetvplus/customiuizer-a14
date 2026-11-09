@@ -18,7 +18,7 @@
     <string name="white_lists">Bật tự động cho phép</string>
     <string name="system_mods">Hệ thống</string>
     <string name="system_mods_screen">Màn hình</string>
-    <string name="system_mods_audio">Âm thanh</string>
+    <string name="system_mods_audio">Âm lượng và âm thanh</string>
     <string name="system_mods_vibration">Rung</string>
     <string name="system_mods_toasts">Thông báo nhanh</string>
     <string name="system_statusbaricons_title">Ẩn biểu tượng</string>
@@ -133,7 +133,7 @@
     <string name="system_netspeed_rowspacing_summ">Điều chỉnh khoảng cách giữa dòng tải lên và tải xuống; cần khởi động lại SystemUI sau khi thay đổi</string>
     <string name="system_netspeed_prerequisite_note">Trước tiên hãy bật "Hiển thị tốc độ mạng thời gian thực" trong cài đặt hệ thống</string>
     <string name="system_netspeed_use_clock_style_title">Dùng kiểu chữ giống đồng hồ trên thanh trạng thái</string>
-    <string name="system_statusbarcontrols_title">Điều khiển bằng cử chỉ</string>
+    <string name="system_statusbarcontrols_title">Cử chỉ thanh trạng thái</string>
     <string name="system_statusbarcontrols_summ">Thực hiện hành động đã chọn khi vuốt và nhấp đúp</string>
     <string name="system_statusbarcontrols_sens_title">Điều chỉnh độ nhạy</string>
     <string name="system_statusbarcontrols_sens_bright_title">Độ sáng</string>
@@ -374,7 +374,7 @@
     <string name="system_qs_hideoperator_title">Ẩn tên nhà mạng</string>
     <string name="system_qs_hideoperator_delimiter_title">Ẩn dấu phân cách giữa tên nhà mạng</string>
     <string name="system_qshaptic_title">Phản hồi xúc giác trong cài đặt nhanh</string>
-    <string name="system_mods_automation">Ứng dụng và tự động hóa</string>
+    <string name="system_mods_automation">Kết nối và thiết bị</string>
     <string name="system_mods_other">Cài đặt nâng cao</string>
     <string name="system_volumeblur_collapsed_title">Hộp thoại thu gọn</string>
     <string name="system_volumeblur_expanded_title">Hộp thoại mở rộng</string>
@@ -452,7 +452,7 @@
     <string name="launcher_bugfixes">Tương thích và sửa lỗi</string>
     <string name="launcher_wallpaper_colormode_title">Buộc chế độ ảnh nền có màu ở màn hình chính</string>
     <string name="system_resizablewidgets_title">Tự do điều chỉnh tiện ích</string>
-    <string name="controls_mods">Phím và cử chỉ</string>
+    <string name="controls_mods">Âm thanh và thao tác</string>
     <string name="controls_powerdt_summ">Nhấn nút nguồn hai lần để khởi động máy ảnh. Yêu cầu bật các phím tắt tích hợp.</string>
     <string name="controls_powerflash_title">Mở đèn pin nhanh</string>
     <string name="controls_powerflash_summ">Khi màn hình tắt, nhấn và giữ nút nguồn để bật đèn pin</string>
@@ -478,7 +478,7 @@
     <string name="controls_volumemedia_down_title">Nhấn và giữ hành động nút giảm âm lượng</string>
     <string name="controls_volumemedia_down_summ">Nhấn và giữ nút giảm âm lượng khi màn hình tắt</string>
     <string name="controls_volumemedia_vibrate_title">Nhấn và giữ để rung</string>
-    <string name="controls_mods_navbar">Thanh điều hướng</string>
+    <string name="controls_mods_navbar">Thanh điều hướng và bàn phím</string>
     <string name="controls_nonavbar_title">Ẩn thanh điều hướng và chỉ báo toàn màn hình</string>
     <string name="controls_hide_ime_dismiss_button_title">Ẩn nút thu bàn phím</string>
     <string name="controls_hide_ime_dismiss_button_summ">Ẩn nút thu bàn phím bên trái dưới cùng khi hiển thị bàn phím trong điều hướng cử chỉ</string>
@@ -504,7 +504,7 @@
     <string name="controls_fsg_assist_right_title">Thao tác vuốt góc phải màn hình</string>
     <string name="controls_fsg_swipeandstop_title">Vuốt trên màn hình bắt đầu từ cạnh và dừng hành động</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">Không rung</string>
-    <string name="various_mods">Ứng dụng và bảo trì</string>
+    <string name="various_mods">Ứng dụng và công cụ</string>
     <string name="various_general_cat_title">Hệ thống và khả năng tương thích</string>
     <string name="various_app_management_cat_title">Quản lý ứng dụng</string>
     <string name="various_hiddenfeatures_title">Tính năng ẩn</string>
@@ -1151,7 +1151,7 @@
     <string name="system_island_geometry_group">Vị trí và kích thước</string>
     <string name="system_island_appearance_group">Giao diện</string>
     <string name="system_island_feedback_group">Nội dung</string>
-    <string name="system_island_gestures_title">Cử chỉ</string>
+    <string name="system_island_gestures_title">Cử chỉ Dynamic Island</string>
     <string name="system_island_waveform_off">Tắt</string>
     <string name="system_island_waveform_light">Hoạt ảnh nhẹ</string>
     <string name="system_island_waveform_real">Dạng sóng trực tiếp (thử nghiệm)</string>
@@ -1350,4 +1350,11 @@
     <string name="settings_status_icons">Biểu tượng trạng thái</string>
     <string name="settings_launcher_layout">Bố cục màn hình chính và hoạt ảnh</string>
     <string name="settings_app_behavior">Hành vi ứng dụng</string>
+    <string name="settings_sound_vibration">Âm thanh và rung</string>
+    <string name="settings_keywords_controls">Phím và cử chỉ buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">Ứng dụng và bảo trì apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">Hành vi ứng dụng system compatibility hidden features</string>
+    <string name="settings_keywords_connections">Ứng dụng và tự động hóa connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">Ứng dụng và tự động hóa app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
 </resources>

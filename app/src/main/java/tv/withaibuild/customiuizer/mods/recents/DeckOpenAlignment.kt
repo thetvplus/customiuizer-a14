@@ -12,8 +12,18 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
         val x=view.translationX; val y=view.translationY
         val sx=view.scaleX; val sy=view.scaleY
         val px=view.pivotX; val py=view.pivotY; val alpha=header.alpha
+        private val shownAlpha=view.alpha
+        private var nativeAlpha=shownAlpha
+        private var ownsAlpha=false
         var lastX=x; var lastY=y; var lastScaleX=sx; var lastScaleY=sy; var lastAlpha=alpha
-        fun apply(source: RectF,current: RectF,ratio: Float,progress: Float,headerAlpha: Float) {
+        fun apply(source: RectF,current: RectF,ratio: Float,progress: Float,headerAlpha: Float,nativeFaded: Boolean) {
+            if(nativeFaded) {
+                // This callback is known to have written alpha, even if its value
+                // equals ours on a reversed first/last frame. Keep its latest
+                // state for release while the Deck's captured pose stays visible.
+                nativeAlpha=view.alpha; ownsAlpha=true
+                if(view.alpha!=shownAlpha) view.alpha=shownAlpha
+            }
             // Center-pivot scaling preserves the owned center-scale matrix.
             view.pivotX=view.width*.5f; view.pivotY=view.height*.5f
             lastScaleX=sx*ratio; lastScaleY=sy*ratio
@@ -39,18 +49,19 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
             if(view.pivotX==view.width*.5f) view.pivotX=px
             if(view.pivotY==view.height*.5f) view.pivotY=py
             if(header.alpha==lastAlpha) header.alpha=alpha
+            if(ownsAlpha && view.alpha==shownAlpha) view.alpha=nativeAlpha
         }
     }
     private val neighbors=ArrayList<Pose>(8)
     fun add(view: View,header: View,content: RectF,slots: Int,scale: Float=1f) {
         neighbors.add(Pose(view,header,content.centerX(),content.centerY(),slots,scale))
     }
-    fun apply(current: RectF,progress: Float,headerAlpha: Float) {
+    fun apply(current: RectF,progress: Float,headerAlpha: Float,nativeFaded: Boolean=false) {
         if(start.width()<=0f || current.isEmpty) return
         val ratio=current.width()/start.width()
         if(!ratio.isFinite() || ratio<=0f) return
         val fraction=progress.coerceIn(0f,1f)
-        for(i in 0 until neighbors.size) neighbors[i].apply(start,current,ratio,fraction,headerAlpha)
+        for(i in 0 until neighbors.size) neighbors[i].apply(start,current,ratio,fraction,headerAlpha,nativeFaded)
     }
     fun release() {
         val cleanup=CleanupActions()

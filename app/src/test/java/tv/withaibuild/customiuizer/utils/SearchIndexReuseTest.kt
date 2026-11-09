@@ -32,6 +32,32 @@ class SearchIndexReuseTest {
             .matchesSearch(searchTerms("多任务")))
     }
 
+    @Test fun renamedDirectoriesKeepHistoricalNamesAndLocalAliasesInEveryPage() {
+        for ((locale, controls, tools) in listOf(
+            Triple("en", "Buttons & gestures", "Apps & maintenance"),
+            Triple("zh-CN", "按键与手势", "应用与维护"),
+            Triple("zh-TW", "按鍵與手勢", "應用程式與維護"),
+        )) {
+            Helpers.getAllMods(context(locale), true)
+            val keyboard = Helpers.allModsList.single { it.key == "pref_key_various_gboardpadding_port" }
+            assertTrue(keyboard.matchesSearch(searchTerms("$controls Gboard")))
+            val indicator = Helpers.allModsList.single { it.key == "pref_key_controls_ios_home_indicator" }
+            assertTrue(indicator.matchesSearch(searchTerms("$controls Home Indicator")))
+            val application = Helpers.allModsList.single { it.key == "pref_key_system_appbehavior_brightness" }
+            assertTrue(application.matchesSearch(searchTerms(tools)))
+            assertTrue(application.matchesSearch(searchTerms(context(locale).getString(tv.withaibuild.customiuizer.R.string.various_mods))))
+            assertFalse(application.breadcrumbs.contains(tools))
+            val statusbar = Helpers.allModsList.single { it.key == "pref_key_system_statusbar_clocktweak" }
+            assertFalse(statusbar.matchesSearch(searchTerms(tools)))
+            for ((key, name) in listOf("appbehavior" to "System_AppBehavior", "wifiauto" to "System_WifiAutomatic",
+                    "vpnauto" to "System_VpnAutoSwitch")) {
+                val entry = Helpers.allModsList.single { it.key == "pref_key_system_${key}_cat" }
+                assertEquals(name, entry.page?.createFragment()?.javaClass?.simpleName)
+                assertEquals(entry.key, entry.sub)
+            }
+        }
+    }
+
     private fun context(tag: String, fontScale: Float = 1f) = RuntimeEnvironment.getApplication()
         .let { app -> app.createConfigurationContext(Configuration(app.resources.configuration).apply {
             setLocales(LocaleList(Locale.forLanguageTag(tag)))

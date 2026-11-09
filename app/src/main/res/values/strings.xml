@@ -38,7 +38,7 @@
     <string name="white_lists">Turn on whitelisting</string>
     <string name="system_mods">System</string>
     <string name="system_mods_screen">Screen</string>
-    <string name="system_mods_audio">Audio</string>
+    <string name="system_mods_audio">Volume &amp; audio</string>
     <string name="system_mods_vibration">Vibration</string>
     <string name="system_mods_toasts">Toasts</string>
     <string name="system_statusbaricons_title">Hide icons</string>
@@ -160,7 +160,7 @@
     <string name="system_netspeed_rowspacing_summ">Adjusts spacing between upload and download rows; restart SystemUI after changing</string>
     <string name="system_netspeed_prerequisite_note">Enable "Show real-time network speed" in system settings first</string>
     <string name="system_netspeed_use_clock_style_title">Match status bar clock text style</string>
-    <string name="system_statusbarcontrols_title">Gesture controls</string>
+    <string name="system_statusbarcontrols_title">Status bar gestures</string>
     <string name="system_statusbarcontrols_summ">Perform selected actions on slide and double tap</string>
     <string name="system_statusbarcontrols_sens_title">Adjustment sensitivity</string>
     <string name="system_statusbarcontrols_sens_bright_title">Brightness</string>
@@ -417,7 +417,7 @@
     <string name="system_qs_hideoperator_title">Hide carrier name</string>
     <string name="system_qs_hideoperator_delimiter_title">Hide delimiter between carrier name</string>
     <string name="system_qshaptic_title">Quick settings haptic feedback</string>
-    <string name="system_mods_automation">Apps &amp; automation</string>
+    <string name="system_mods_automation">Connections &amp; devices</string>
     <string name="system_mods_other">Advanced settings</string>
     <string name="system_volumeblur_collapsed_title">Collapsed dialog</string>
     <string name="system_volumeblur_expanded_title">Expanded dialog</string>
@@ -501,7 +501,7 @@
     <string name="launcher_wallpaper_colormode_title">Force homescreen wallpaper color mode</string>
     <string name="system_resizablewidgets_title">Free widget resize</string>
 
-    <string name="controls_mods">Buttons &amp; gestures</string>
+    <string name="controls_mods">Sound &amp; controls</string>
     <string name="controls_powerdt_summ">Replace camera launch on power key double press. Requires stock button shortcut to be enabled.</string>
     <string name="controls_powerflash_title">Quick flashlight</string>
     <string name="controls_powerflash_summ">Long press power button while screen is off to turn flashlight on</string>
@@ -527,7 +527,7 @@
     <string name="controls_volumemedia_down_title">Volume Down long press action</string>
     <string name="controls_volumemedia_down_summ">Action for Volume Down long press when screen is off</string>
     <string name="controls_volumemedia_vibrate_title">Long press vibration</string>
-    <string name="controls_mods_navbar">Navigation bar</string>
+    <string name="controls_mods_navbar">Navigation bar &amp; keyboard</string>
     <string name="controls_nonavbar_title">Hide navbar and fullscreen indicator</string>
     <string name="controls_hide_ime_dismiss_button_title">Hide keyboard dismiss button</string>
     <string name="controls_hide_ime_dismiss_button_summ">Hide the bottom-left dismiss button while the keyboard is shown in gesture navigation</string>
@@ -554,7 +554,7 @@
     <string name="controls_fsg_swipeandstop_title">Swipe across the screen starting from the edge and stop action</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">Do not vibrate</string>
 
-    <string name="various_mods">Apps &amp; maintenance</string>
+    <string name="various_mods">Apps &amp; tools</string>
     <string name="various_general_cat_title">System &amp; compatibility</string>
     <string name="various_app_management_cat_title">App management</string>
     <string name="various_exclusive_features_cat_title">Maintenance &amp; privacy</string>
@@ -1191,7 +1191,7 @@
     <string name="system_island_geometry_group">Size &amp; position</string>
     <string name="system_island_appearance_group">Appearance</string>
     <string name="system_island_feedback_group">Content</string>
-    <string name="system_island_gestures_title">Gestures</string>
+    <string name="system_island_gestures_title">Dynamic Island gestures</string>
     <string name="system_island_waveform_off">Off</string>
     <string name="system_island_waveform_light">Lightweight animation</string>
     <string name="system_island_waveform_real">Measured waveform</string>
@@ -1385,4 +1385,11 @@
     <string name="settings_status_icons">Status icons</string>
     <string name="settings_launcher_layout">Home layout &amp; Animation</string>
     <string name="settings_app_behavior">App behavior</string>
+    <string name="settings_sound_vibration">Sound &amp; vibration</string>
+    <string name="settings_keywords_controls">Buttons &amp; gestures buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">Apps &amp; maintenance apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">App behavior system compatibility hidden features</string>
+    <string name="settings_keywords_connections">Apps &amp; automation connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">Apps &amp; automation app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
 </resources>
