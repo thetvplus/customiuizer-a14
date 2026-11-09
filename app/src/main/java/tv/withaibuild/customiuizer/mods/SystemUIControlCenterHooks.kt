@@ -41,6 +41,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallba
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import java.util.concurrent.ConcurrentHashMap
 import tv.withaibuild.customiuizer.mods.volume.IosVolumeStyle
+import tv.withaibuild.customiuizer.mods.volume.VolumePercentageFeedback
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.HookDiagnostics
@@ -1764,6 +1765,9 @@ object SystemUIControlCenterHooks {
 
     private var mPctRef: WeakReference<TextView>? = null
     private var mPctOwnerRef: WeakReference<Any>? = null
+    private var volumePctFeedback: VolumePercentageFeedback? = null
+    private var volumePctValue = -1
+    private var volumePctStream = -1
 
     private val mPct: TextView?
         get() = mPctRef?.get()
@@ -1826,7 +1830,7 @@ object SystemUIControlCenterHooks {
             pct = null
         }
         if (pct == null) {
-            pct = TextView(container.context)
+            pct = TextView(if (source == PCT_SOURCE_VOLUME) context else container.context)
             pct.setTextSize(TypedValue.COMPLEX_UNIT_SP, 40f)
             pct.gravity = Gravity.CENTER
             val density = res.displayMetrics.density
@@ -1834,6 +1838,10 @@ object SystemUIControlCenterHooks {
             lp.gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
             pct.setPadding(Math.round(20 * density), Math.round(10 * density), Math.round(18 * density), Math.round(12 * density))
             pct.layoutParams = lp
+            if (source == PCT_SOURCE_VOLUME) {
+                val appearance = res.getIdentifier("TextAppearance.Toast", "style", "android")
+                if (appearance != 0) pct.setTextAppearance(appearance)
+            }
             try {
                 val modRes = ModuleHelper.getModuleRes(context)
                 pct.setTextColor(modRes.getColor(R.color.color_on_surface_variant, context.theme))
@@ -1842,12 +1850,43 @@ object SystemUIControlCenterHooks {
                 FatalErrors.rethrowIfFatal(err)
                 XposedHelpers.log(err)
             }
+            if (source == PCT_SOURCE_VOLUME) {
+                pct.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
+                pct.includeFontPadding = false
+                pct.setSingleLine()
+                pct.minWidth = Math.round(64 * density)
+                pct.minHeight = Math.round(40 * density)
+                pct.setPadding(Math.round(12 * density), Math.round(4 * density), Math.round(12 * density), Math.round(4 * density))
+                // Use the plugin's own transient volume material and theme-aware text palette.
+                val background = res.getIdentifier("miui_volume_dnd_toast_backgroud", "drawable", "miui.systemui.plugin")
+                val color = res.getIdentifier("miui_dnd_toast_text_color", "color", "miui.systemui.plugin")
+                if (background != 0 && color != 0) {
+                    pct.background = context.getDrawable(background)
+                    pct.setTextColor(res.getColorStateList(color, context.theme))
+                }
+                pct.setOnApplyWindowInsetsListener { view, insets ->
+                    ModuleHelper.guarded(insets) {
+                        val params = view.layoutParams as? FrameLayout.LayoutParams
+                        val top = resolveVolumePctTopMarginPx(insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top)
+                        if (params != null && params.topMargin != top) {
+                            params.topMargin = top
+                            view.layoutParams = params
+                        }
+                        insets
+                    }
+                }
+                if (MainModule.mPrefs.getStringAsInt(VolumePercentageFeedback.KEY, 0) == 1) {
+                    volumePctFeedback = VolumePercentageFeedback(container.display?.displayId ?: 0)
+                }
+            }
             pct.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(view: View) = Unit
                 override fun onViewDetachedFromWindow(view: View) {
                     if (mPctRef?.get() === view) {
                         view.visibility = View.GONE
                         mPctOwnerRef = null
+                        volumePctFeedback?.close()
+                        volumePctFeedback = null
                         // Keep the weak handle so replacement can remove this child after the
                         // parent's detach traversal, without adding another overlay on reattach.
                     }
@@ -1860,11 +1899,16 @@ object SystemUIControlCenterHooks {
         applyPctTopMargin(pct, container, source)
         pct.setTag(source)
         pct.visibility = View.GONE
+        if (source == PCT_SOURCE_VOLUME) { volumePctValue = -1; volumePctStream = -1 }
         return pct
     }
 
     private fun removePct(mPctText: TextView?) {
         if (mPctText != null) {
+            if (mPctRef?.get() === mPctText) {
+                volumePctFeedback?.close()
+                volumePctFeedback = null
+            }
             mPctText.visibility = View.GONE
             (mPctText.parent as? ViewGroup)?.removeView(mPctText)
             if (mPctRef?.get() === mPctText) {
@@ -1944,19 +1988,52 @@ object SystemUIControlCenterHooks {
         val listenerClass = XposedHelpers.findClassIfExists("com.android.systemui.miui.volume.MiuiVolumeDialogImpl\$VolumeSeekBarChangeListener", pluginLoader) ?: return
         val ownerField = XposedHelpers.findFieldIfExists(listenerClass, "this\$0") ?: return
         if (!MiuiVolumeDialogImpl.isAssignableFrom(ownerField.type)) return
+        val dialogView = XposedHelpers.findField(MiuiVolumeDialogImpl, "mDialogView")
+        val columns = XposedHelpers.findField(MiuiVolumeDialogImpl, "mColumns")
+        val progressHook = VolumePercentageProgressHook(ownerField)
+        val slider = XposedHelpers.findField(progressHook.columnType, "slider")
         ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "showVolumeDialogH", Int::class.javaPrimitiveType!!, object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
                 val owner = callback.getThisObject() ?: return
-                val mDialogView = XposedHelpers.getObjectField(owner, "mDialogView") as View
+                val mDialogView = dialogView.get(owner) as View
                 val windowView = mDialogView.parent as? ViewGroup ?: return
-                initPct(windowView, PCT_SOURCE_VOLUME, windowView.context, owner)
+                progressHook.clearTracking()
+                initPct(windowView, PCT_SOURCE_VOLUME, mDialogView.context, owner)
+                // Native state can be unchanged on show, so no SeekBar callback is guaranteed.
+                for (column in (columns.get(owner) as? List<*>).orEmpty()) {
+                    if (column != null) (slider.get(column) as? SeekBar)?.let {
+                        progressHook.update(owner, column, it)
+                    }
+                }
             }
         })
 
         ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "dismissH", Int::class.javaPrimitiveType!!, VolumePercentageDismissHook())
 
-        ModuleHelper.hookAllMethods(listenerClass, "onProgressChanged", VolumePercentageProgressHook(ownerField))
+        ModuleHelper.hookAllMethods(listenerClass, "onProgressChanged", progressHook)
+        for (event in listOf("onStartTrackingTouch", "onStopTrackingTouch")) {
+            ModuleHelper.findAndHookMethod(listenerClass, event, SeekBar::class.java, object : MethodHook() {
+                override fun after(callback: AfterHookCallback) {
+                    if (callback.getThrowable() == null) callback.getThisObject()?.let {
+                        progressHook.track(it, event == "onStartTrackingTouch")
+                    }
+                }
+            })
+        }
+        ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "updateColumnH", progressHook.columnType,
+            object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    if (callback.getThrowable() != null) return@guarded
+                    val owner = callback.getThisObject() ?: return@guarded
+                    val column = callback.getArg(0) ?: return@guarded
+                    val seekBar = slider.get(column) as? SeekBar ?: return@guarded
+                    progressHook.update(owner, column, seekBar)
+                }
+            })
+        ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "destroy", object : MethodHook() {
+            override fun before(callback: BeforeHookCallback) { removePct(callback.getThisObject(), PCT_SOURCE_VOLUME) }
+        })
     }
 
     internal class VolumePercentageDismissHook : MethodHook() {
@@ -1968,39 +2045,79 @@ object SystemUIControlCenterHooks {
     }
 
     internal class VolumePercentageProgressHook(private val ownerField: Field) : MethodHook() {
+        private val columnField = XposedHelpers.findField(ownerField.declaringClass, "mColumn")
+        val columnType: Class<*> = columnField.type
+        private val stateField = XposedHelpers.findField(columnType, "ss")
+        private val streamField = XposedHelpers.findField(columnType, "stream")
+        private val animField = XposedHelpers.findField(columnType, "anim")
+        private val targetField = XposedHelpers.findField(columnType, "animTargetProgress")
+        private val minimumField = XposedHelpers.findField(stateField.type, "levelMin")
+        private val levelField = XposedHelpers.findField(stateField.type, "level")
+        private val activeField = XposedHelpers.findField(ownerField.type, "mActiveStream")
+        private var tracking = WeakReference<Any>(null)
+
+        fun clearTracking() { tracking.clear() }
+        fun track(listener: Any, started: Boolean) {
+            val owner = ownerField.get(listener) ?: return
+            if (ownedPct(owner, PCT_SOURCE_VOLUME) == null) return
+            val column = columnField.get(listener) ?: return
+            if (started) tracking = WeakReference(column)
+            else if (tracking.get() === column) tracking.clear()
+        }
+
         override fun after(callback: AfterHookCallback) {
             if (callback.getThrowable() != null) return
-            val pct = ownedPct(ownerField.get(callback.getThisObject()), PCT_SOURCE_VOLUME) ?: return
-            val mColumn = XposedHelpers.getObjectField(callback.getThisObject(), "mColumn")
-            val ss = XposedHelpers.getObjectField(mColumn, "ss")
-            if (ss == null) return
-            if (XposedHelpers.getIntField(mColumn, "stream") == 10) return
+            val listener = callback.getThisObject() ?: return
+            val owner = ownerField.get(listener) ?: return
+            val column = columnField.get(listener) ?: return
+            update(owner, column, callback.getArg(0) as SeekBar,
+                (callback.getArg(1) as Int).takeIf { callback.getArg(2) == true })
+        }
 
-            val fromUser = callback.getArg(2) as Boolean
-            val currentLevel: Int = if (fromUser) {
-                callback.getArg(1) as Int
-            } else {
-                val anim = XposedHelpers.getObjectField(mColumn, "anim") as ObjectAnimator?
-                if (anim == null || !anim.isRunning) return
-                XposedHelpers.getIntField(mColumn, "animTargetProgress")
-            }
-            val levelMin = XposedHelpers.getIntField(ss, "levelMin")
+        fun update(owner: Any, column: Any, seekBar: SeekBar, userProgress: Int? = null) {
+            val pct = ownedPct(owner, PCT_SOURCE_VOLUME) ?: return
+            val stream = streamField.getInt(column)
+            if (stream == 10) return
+            val dragged = tracking.get()
+            if (userProgress == null && (if (dragged != null) dragged !== column else stream != activeField.getInt(owner))) return
+            val ss = stateField.get(column) ?: return
+            val anim = animField.get(column) as? ObjectAnimator
+            val currentLevel = userProgress ?: if (anim?.isRunning == true) targetField.getInt(column)
+                else levelField.getInt(ss) * 1000
+            val levelMin = minimumField.getInt(ss)
             var adjustedLevel = currentLevel
             if (levelMin > 0 && adjustedLevel < levelMin * 1000) {
                 adjustedLevel = levelMin * 1000
             }
-            val seekBar = callback.getArg(0) as SeekBar
             val max = seekBar.max
             val maxLevel = max / 1000
-            if (maxLevel <= 0) return
+            if (maxLevel <= 0) {
+                pct.visibility = View.GONE
+                volumePctFeedback?.release()
+                volumePctValue = -1
+                return
+            }
             adjustedLevel = adjustedLevel.coerceIn(0, max)
             if (adjustedLevel != 0) {
                 val i3 = maxLevel - 1
                 adjustedLevel = if (adjustedLevel == max) maxLevel else ((adjustedLevel.toFloat() / max) * i3).toInt() + 1
             }
-            val text = ((adjustedLevel * 100) / maxLevel).toString() + "%"
+            val percent = (adjustedLevel * 100) / maxLevel
+            if (volumePctValue == percent && volumePctStream == stream) {
+                // No new text, layout or animation for repeated animation frames. A preempted
+                // or expired external surface still exposes the already prepared native hint.
+                if (pct.visibility == View.GONE && volumePctFeedback?.isPresented() != true) {
+                    volumePctFeedback?.release()
+                    pct.visibility = View.VISIBLE
+                }
+                return
+            }
+            volumePctValue = percent
+            volumePctStream = stream
+            val text = "$percent%"
             if (pct.text.toString() != text) pct.text = text
-            pct.visibility = View.VISIBLE
+            val accepted = ModuleHelper.guarded(false) { volumePctFeedback?.update(text, stream) == true }
+            pct.visibility = if (accepted) View.GONE else View.VISIBLE
         }
     }
 

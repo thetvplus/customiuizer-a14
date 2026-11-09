@@ -1357,4 +1357,8 @@
     <string name="settings_keywords_connections">アプリと自動化 connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">アプリと自動化 app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">音量の割合の表示方法</string>
+    <string name="volume_pct_presentation_native">標準のフローティング表示</string>
+    <string name="volume_pct_presentation_auto">Toast と Dynamic Island（自動）</string>
+    <string name="volume_pct_presentation_summary">利用可能な Dynamic Island または標準の Toast カプセルを使用し、利用できない場合は標準のフローティング表示に戻ります。</string>
 </resources>

@@ -86,6 +86,19 @@
                   }
                 },
                 {
+                  "type": "choice",
+                  "attributes": {
+                    "android:key": "pref_key_system_volume_pct_presentation",
+                    "android:title": "@string/volume_pct_presentation_title",
+                    "android:summary": "@string/volume_pct_presentation_summary",
+                    "android:entries": "@array/volume_pct_presentation_entries",
+                    "android:entryValues": "@array/volume_pct_presentation_values",
+                    "android:dependency": "pref_key_system_cc_volume_showpct",
+                    "android:defaultValue": "0",
+                    "app:valueAsSummary": "true"
+                  }
+                },
+                {
                   "type": "toggle",
                   "attributes": {
                     "android:key": "pref_key_system_volumetimer",

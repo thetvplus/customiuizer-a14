@@ -1357,4 +1357,8 @@
     <string name="settings_keywords_connections">Apps e automação connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">Apps e automação app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Exibição da porcentagem do volume</string>
+    <string name="volume_pct_presentation_native">Indicador flutuante nativo</string>
+    <string name="volume_pct_presentation_auto">Toast e Dynamic Island (automático)</string>
+    <string name="volume_pct_presentation_summary">Usar o Dynamic Island ou a cápsula Toast do sistema quando disponíveis; caso contrário, usar o indicador flutuante nativo.</string>
 </resources>

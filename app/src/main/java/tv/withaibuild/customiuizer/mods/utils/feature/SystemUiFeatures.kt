@@ -992,10 +992,13 @@ internal class ToastPresentationFeature(lpparam: PackageReadyParam, mPrefs: Pref
 ) {
     companion object {
         @JvmStatic
-        fun evaluateEnabled(prefs: PrefMap): Boolean = ToastPresentationConfig.read(prefs).enabled
+        fun evaluateEnabled(prefs: PrefMap): Boolean = ToastPresentationConfig.read(prefs).enabled || volumeFeedback(prefs)
+        private fun volumeFeedback(prefs: PrefMap) = prefs.getBoolean("system_cc_volume_showpct") &&
+            prefs.getStringAsInt("system_volume_pct_presentation", 0) == 1
     }
     override fun isEnabledCondition(prefs: PrefMap) = evaluateEnabled(prefs)
-    override fun installHook() = SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs))
+    override fun installHook() = SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs),
+        mPrefs.getBoolean("system_cc_volume_showpct") && mPrefs.getStringAsInt("system_volume_pct_presentation", 0) == 1)
 }
 
 internal class StrongToastPresentationFeature(

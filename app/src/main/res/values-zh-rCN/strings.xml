@@ -1368,4 +1368,8 @@
     <string name="settings_keywords_connections">应用与自动化 connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">应用与自动化 app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">音量百分比显示方式</string>
+    <string name="volume_pct_presentation_native">原生悬浮提示</string>
+    <string name="volume_pct_presentation_auto">Toast 与动态岛（自动）</string>
+    <string name="volume_pct_presentation_summary">优先使用空闲的动态岛或系统 Toast 胶囊，不可用时回退为原生悬浮提示。</string>
 </resources>

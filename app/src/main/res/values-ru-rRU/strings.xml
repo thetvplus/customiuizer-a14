@@ -1356,4 +1356,8 @@
     <string name="settings_keywords_connections">Приложения и автоматизация connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">Приложения и автоматизация app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Отображение громкости в процентах</string>
+    <string name="volume_pct_presentation_native">Стандартная плавающая подсказка</string>
+    <string name="volume_pct_presentation_auto">Toast и Dynamic Island (автоматически)</string>
+    <string name="volume_pct_presentation_summary">Использовать свободный Dynamic Island или системную капсулу Toast, иначе — стандартную плавающую подсказку.</string>
 </resources>

@@ -1357,4 +1357,8 @@
     <string name="settings_keywords_connections">Ứng dụng và tự động hóa connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">Ứng dụng và tự động hóa app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Cách hiển thị phần trăm âm lượng</string>
+    <string name="volume_pct_presentation_native">Chỉ báo nổi gốc</string>
+    <string name="volume_pct_presentation_auto">Toast và Dynamic Island (tự động)</string>
+    <string name="volume_pct_presentation_summary">Dùng Dynamic Island hoặc viên nang Toast của hệ thống khi có thể; nếu không, dùng chỉ báo nổi gốc.</string>
 </resources>

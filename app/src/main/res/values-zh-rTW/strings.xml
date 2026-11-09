@@ -1358,4 +1358,8 @@
     <string name="settings_keywords_connections">應用程式與自動化 connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">應用程式與自動化 app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">音量百分比顯示方式</string>
+    <string name="volume_pct_presentation_native">原生浮動提示</string>
+    <string name="volume_pct_presentation_auto">Toast 與動態島（自動）</string>
+    <string name="volume_pct_presentation_summary">優先使用閒置的動態島或系統 Toast 膠囊，無法使用時改用原生浮動提示。</string>
 </resources>

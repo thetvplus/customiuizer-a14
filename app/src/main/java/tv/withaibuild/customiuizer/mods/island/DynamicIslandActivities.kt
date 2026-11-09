@@ -381,6 +381,14 @@ internal object DynamicIslandActivities {
 
     fun releaseToast(lease: IslandActivityState.Lease) { active.get()?.releaseToast(lease) }
 
+    // Dedicated local feedback; ordinary SystemUI Toast filtering remains unchanged.
+    fun showVolume(text: String, stream: Int, displayId: Int): IslandActivityState.Lease? =
+        if (displayId == android.view.Display.DEFAULT_DISPLAY) active.get()?.showVolume(text, stream) else null
+
+    fun updateVolume(text: String, stream: Int, displayId: Int, lease: IslandActivityState.Lease): Boolean =
+        displayId == android.view.Display.DEFAULT_DISPLAY && active.get()?.showVolume(text, stream, lease) === lease
+    fun ownsVolume(lease: IslandActivityState.Lease): Boolean = active.get()?.ownsVolume(lease) == true
+
 }
 
 internal interface IslandNativePort {

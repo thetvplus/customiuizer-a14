@@ -1392,4 +1392,8 @@
     <string name="settings_keywords_connections">Apps &amp; automation connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">Apps &amp; automation app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Volume percentage display</string>
+    <string name="volume_pct_presentation_native">Native floating hint</string>
+    <string name="volume_pct_presentation_auto">Toast and Dynamic Island (automatic)</string>
+    <string name="volume_pct_presentation_summary">Use an available Dynamic Island or native Toast capsule; fall back to the floating hint when unavailable.</string>
 </resources>

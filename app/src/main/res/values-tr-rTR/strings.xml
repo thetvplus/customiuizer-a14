@@ -1363,4 +1363,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="settings_keywords_connections">Uygulamalar ve otomasyon connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">Uygulamalar ve otomasyon app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Ses yüzdesi gösterimi</string>
+    <string name="volume_pct_presentation_native">Yerel kayan gösterge</string>
+    <string name="volume_pct_presentation_auto">Toast ve Dynamic Island (otomatik)</string>
+    <string name="volume_pct_presentation_summary">Kullanılabilir Dynamic Island veya sistem Toast kapsülünü kullan; kullanılamıyorsa yerel kayan göstergeye dön.</string>
 </resources>

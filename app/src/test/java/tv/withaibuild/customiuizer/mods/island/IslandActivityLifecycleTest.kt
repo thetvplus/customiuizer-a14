@@ -39,6 +39,86 @@ import java.time.Duration
     instrumentedPackages = ["tv.withaibuild.customiuizer.mods.island.IslandWaveView"])
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class IslandActivityLifecycleTest {
+    @Test fun volumeBurstRetainsOneLeaseWindowAndEntranceWithoutRelaxingToastSourceRules() {
+        val controller = controller()
+        assertNull(controller.showToast(IslandToastContent("50%", "com.android.systemui", null), 2400))
+        val lease = requireNotNull(controller.showVolume("0%", 3)); drain()
+        val firstShell = shell
+        val entrance = org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion")
+        for (value in 1..100) {
+            assertSame(lease, controller.showVolume("$value%", 3, lease))
+        }
+        assertEquals(1, adds)
+        assertSame(firstShell, shell)
+        assertTrue(controller.ownsVolume(lease))
+        assertSame(entrance, org.robolectric.util.ReflectionHelpers.getField<android.animation.ValueAnimator?>(shell, "motion"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2401)); drain()
+        assertFalse(controller.ownsVolume(lease))
+    }
+
+    @Test fun volumeYieldsToMediaLiveActivitiesAndOtherToastLeases() {
+        val controller = controller(media = true, liveKinds = setOf("recorder"))
+        native.player = launchablePlayer("volume-media-competition")
+        controller.updateFromNative(native); revealMedia()
+        assertNull(controller.showVolume("50%", 3))
+        val mediaShell = shell
+        assertTrue(mediaShell!!.isAttachedToWindow)
+        native.player = null
+        controller.updateFromNative(native); drain()
+        val notice = requireNotNull(controller.showToast(IslandToastContent("Copied", "other.app", null), 2400))
+        assertNull(controller.showVolume("60%", 3))
+        controller.releaseToast(notice); drain()
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        registry.update(IslandLiveKind.RECORDER, IslandLiveActivity(IslandLiveKind.RECORDER,
+            IslandLiveKind.RECORDER_PACKAGE, context.applicationInfo.uid, IslandLiveClock(0, false), session = 77))
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod<Boolean>(controller, "render"); drain()
+        assertNull(controller.showVolume("70%", 3))
+    }
+
+    @Test fun volumeOldCallbacksCannotReplaceTheNewLeaseAndNativePrivacyStillBlocksAdmission() {
+        val controller = controller(powerSaveMotion = true)
+        val old = requireNotNull(controller.showVolume("10%", 3))
+        controller.releaseToast(old)
+        val current = requireNotNull(controller.showVolume("20%", 0))
+        assertNull(controller.showVolume("90%", 3, old))
+        controller.releaseToast(old)
+        assertTrue(controller.ownsVolume(current))
+        native.allowed = false
+        native.changed?.invoke(); drain()
+        assertNull(controller.showVolume("30%", 0, current))
+        assertFalse(controller.ownsVolume(current))
+    }
+
+    @Test fun volumeAdmissionFailureOrLandscapeKeepsTheNativeFallbackAvailable() {
+        metricsWidth = 2400; metricsHeight = 1080
+        val controller = controller(powerSaveMotion = true)
+        assertNull(controller.showVolume("50%", 3))
+        assertEquals(0, adds)
+    }
+
+    @Test fun aLiveSnapshotAdmittedDuringRenderCannotFalselyAcceptTheVolumeLease() {
+        val controller = controller(powerSaveMotion = true, liveKinds = setOf("recorder"))
+        val registry = org.robolectric.util.ReflectionHelpers.getField<IslandLiveRegistry>(controller, "live")
+        registry.update(IslandLiveKind.RECORDER, IslandLiveActivity(IslandLiveKind.RECORDER,
+            IslandLiveKind.RECORDER_PACKAGE, context.applicationInfo.uid, IslandLiveClock(0, false), session = 81))
+        // Native live selection is intentionally pending; showVolume itself performs render.
+        assertNull(controller.showVolume("50%", 3))
+        assertTrue(shell!!.isAttachedToWindow)
+        val state = org.robolectric.util.ReflectionHelpers.getField<IslandActivityState<IslandToastContent, IslandMediaContent>>(controller, "state")
+        assertEquals(IslandLiveKind.RECORDER, state.activity(android.os.SystemClock.uptimeMillis())?.liveActivity?.kind)
+    }
+
+    @Test fun volumeLeaseIsRevokedOnRotationWithoutWaitingForAnotherVolumeCallback() {
+        val controller = controller(powerSaveMotion = true)
+        val lease = requireNotNull(controller.showVolume("50%", 3)); drain()
+        assertTrue(controller.ownsVolume(lease))
+        metricsWidth = 2400; metricsHeight = 1080
+        org.robolectric.util.ReflectionHelpers.getField<android.content.ComponentCallbacks>(controller, "configuration")
+            .onConfigurationChanged(android.content.res.Configuration(context.resources.configuration)); drain()
+        assertFalse(controller.ownsVolume(lease))
+        assertFalse(shell!!.isAttachedToWindow)
+    }
+
     @Test fun disposalFailureStillRemovesTheWindowAndCancelsTheOwnerScope() {
         val controller=controller(media=true)
         native.player=launchablePlayer("dispose-release")

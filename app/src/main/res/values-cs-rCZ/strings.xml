@@ -1364,4 +1364,8 @@
     <string name="settings_keywords_connections">Aplikace a automatizace connectivity network devices USB Wi-Fi automation</string>
     <string name="settings_keywords_app_rules">Aplikace a automatizace app rules rotation brightness media volume</string>
     <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Zobrazení hlasitosti v procentech</string>
+    <string name="volume_pct_presentation_native">Nativní plovoucí ukazatel</string>
+    <string name="volume_pct_presentation_auto">Toast a Dynamic Island (automaticky)</string>
+    <string name="volume_pct_presentation_summary">Použít dostupný Dynamic Island nebo systémovou kapsli Toast, jinak nativní plovoucí ukazatel.</string>
 </resources>

@@ -370,7 +370,8 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
         media: Boolean, waveform: Boolean, actions: Long, showControls: Boolean,
         playbackState: Int = PlaybackState.STATE_NONE, avatar: Boolean = false, status: Boolean = false,
         expanded: Boolean = false, loading: Boolean = false, photo: Boolean = media || avatar,
-        clock: IslandLiveClock? = null, recording: Boolean = false, clockKey: IslandLiveKey? = null): Boolean {
+        clock: IslandLiveClock? = null, recording: Boolean = false, clockKey: IslandLiveKey? = null,
+        inPlace: Boolean = false): Boolean {
         val recordingChanged = this.recording != recording
         this.recording = recording
         if (recordingChanged) geometryDirty = true
@@ -397,7 +398,14 @@ internal class IslandActivityView(context: Context) : FrameLayout(context) {
             pendingContent = null; contentFadeRemaining = 0L; albumFlip = false
         } else if (changed) {
             val content = Content(caption, drawable, media, waveform, avatar, status, expanded, photo, clock, detail, clockKey)
-            if (previous != null && (content.sameCompactVisual(previous) || content.sameRunningClockVisual(previous))) {
+            if (inPlace && previous != null && !media && !previous.media) {
+                // Native scalar feedback changes its prepared label, never starts a content fade
+                // or an extra morph clock for each audio update.
+                pendingContent = null; contentFadeRemaining = 0L
+                clearContentEffects()
+                applyContent(content)
+                visualChanged = false
+            } else if (previous != null && (content.sameCompactVisual(previous) || content.sameRunningClockVisual(previous))) {
                 // Compact media has no visible label. Metadata-only updates, including
                 // mirrored Binder copies of the same cover, must not fade its artwork/wave.
                 // A running clock's corrected base is also an in-place update:
