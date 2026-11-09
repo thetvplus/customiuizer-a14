@@ -13,6 +13,7 @@ import android.graphics.ColorFilter
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
+import android.os.Looper
 import android.os.Message
 import android.util.TypedValue
 import android.view.Gravity
@@ -331,19 +332,71 @@ object SystemUIControlCenterHooks {
 
     internal class VolumeModeSharedVisibilityState(layout: View) {
         val layoutRef = WeakReference<View>(layout)
-        val dividerRef = WeakReference<View>(
-            layout.findViewById(
-                layout.resources.getIdentifier(
-                    "miui_volume_ringer_divider",
-                    "id",
-                    layout.context.packageName
-                )
-            )
-        )
+        private fun find(name: String): View? {
+            val layout = layoutRef.get() ?: return null
+            val id = layout.resources.getIdentifier(name, "id", layout.context.packageName)
+            return if (id != 0) layout.findViewById(id) else null
+        }
+        val dividerRef = WeakReference(find("miui_volume_ringer_divider"))
+        private val holderRef = WeakReference(find("miui_ringer_state_layout"))
+        private val buttonsRef = WeakReference(find("miui_ringer_btn_layout") as? LinearLayout)
+        var expanded = false
+        private var nativeWidth: Int? = null
+        private var nativeHeight: Int? = null
         val layoutOwnership = VolumeModeButtonVisibilityOwnership(romVisibility = layout.visibility)
         val dividerOwnership = VolumeModeButtonVisibilityOwnership(
             romVisibility = dividerRef.get()?.visibility ?: View.VISIBLE
         )
+
+        fun reflow(hideMute: Boolean, hideDnd: Boolean, nativeDimensionsWritten: Boolean = false) {
+            val holder = holderRef.get() ?: return
+            val buttons = buttonsRef.get() ?: return
+            val params = holder.layoutParams ?: return
+            // Native state application writes both dimensions, including on rotation/collapse.
+            if (nativeDimensionsWritten) {
+                nativeWidth = null
+                nativeHeight = null
+            }
+            val shrink = expanded && hideMute != hideDnd
+            val shrinkWidth = shrink && buttons.orientation == LinearLayout.HORIZONTAL
+            val shrinkHeight = shrink && buttons.orientation == LinearLayout.VERTICAL
+            var changed = false
+            if (shrinkWidth) {
+                if (nativeWidth == null || params.width != ViewGroup.LayoutParams.WRAP_CONTENT) {
+                    nativeWidth = params.width
+                }
+                if (params.width != ViewGroup.LayoutParams.WRAP_CONTENT) {
+                    params.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                    changed = true
+                }
+            } else {
+                nativeWidth?.let {
+                    if (params.width == ViewGroup.LayoutParams.WRAP_CONTENT && params.width != it) {
+                        params.width = it
+                        changed = true
+                    }
+                }
+                nativeWidth = null
+            }
+            if (shrinkHeight) {
+                if (nativeHeight == null || params.height != ViewGroup.LayoutParams.WRAP_CONTENT) {
+                    nativeHeight = params.height
+                }
+                if (params.height != ViewGroup.LayoutParams.WRAP_CONTENT) {
+                    params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    changed = true
+                }
+            } else {
+                nativeHeight?.let {
+                    if (params.height == ViewGroup.LayoutParams.WRAP_CONTENT && params.height != it) {
+                        params.height = it
+                        changed = true
+                    }
+                }
+                nativeHeight = null
+            }
+            if (changed) holder.layoutParams = params
+        }
     }
 
     internal fun shouldHideVolumeModeDivider(hideMute: Boolean, hideDnd: Boolean): Boolean =
@@ -736,6 +789,10 @@ object SystemUIControlCenterHooks {
         val footerMode=XposedHelpers.findField(footerClass,"mRingerModeLayout")
         footerClass.getDeclaredMethod("updateFooterVisibility",Boolean::class.javaPrimitiveType)
             .also { require(it.returnType==Void.TYPE) }
+        val isExpanded = footerClass.getMethod("isExpanded")
+        val stateGroupClass = XposedHelpers.findClass("com.android.systemui.miui.ViewStateGroup", pluginLoader)
+        stateGroupClass.getDeclaredMethod("apply", ViewGroup::class.java)
+            .also { require(it.returnType == Void.TYPE) }
         installVolumeModeButtonColorSnapshot()
         installVolumeModeButtonVisibilitySnapshot()
 
@@ -911,6 +968,18 @@ object SystemUIControlCenterHooks {
                 prepareColors(helper)
                 applyColors(helper)
                 applyVisibility(helper)
+                // Reuse the existing preference dispatch. The owner and queued work retain no
+                // native helper/view; a rebuilt panel naturally releases its old observer.
+                val helperRef = WeakReference(helper)
+                ModuleHelper.observePreferenceChange(object : ModuleHelper.PreferenceObserver {
+                    override fun onChange(key: String?) {
+                        if (key != null && key != VOLUME_MODE_BUTTON_HIDE_MUTE_KEY &&
+                            key != VOLUME_MODE_BUTTON_HIDE_DND_KEY) return
+                        Handler(Looper.getMainLooper()).post {
+                            helperRef.get()?.let(applyVisibility)
+                        }
+                    }
+                }, helper)
             }
         }
 
@@ -938,6 +1007,24 @@ object SystemUIControlCenterHooks {
             pluginLoader,
             "updateState",
             updateStateHook
+        )
+        // The ROM reapplies fixed resource sizes independently of helper/footer visibility.
+        // Reflow once after that write, before traversal; never poll or correct frame by frame.
+        ModuleHelper.findAndHookMethod(
+            stateGroupClass.name, pluginLoader, "apply", ViewGroup::class.java,
+            object : MethodHook() {
+                override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
+                    if (callback.getThrowable() != null) return@guarded
+                    val dialog = callback.getArg(0) ?: return@guarded
+                    if (!footerClass.isInstance(dialog)) return@guarded
+                    val state = XposedHelpers.getAdditionalInstanceField(
+                        footerMode.get(dialog), VOLUME_MODE_SHARED_VISIBILITY_STATE_FIELD
+                    ) as? VolumeModeSharedVisibilityState ?: return@guarded
+                    val snapshot = volumeModeButtonVisibilitySnapshot ?: return@guarded
+                    state.expanded = isExpanded.invoke(dialog) as Boolean
+                    state.reflow(snapshot.hideMute, snapshot.hideDnd, nativeDimensionsWritten = true)
+                }
+            }
         )
         // Native footer updates run independently of the helpers' state changes.
         // Keep the native more button; only reassert the owned mode container.
@@ -976,6 +1063,8 @@ object SystemUIControlCenterHooks {
         if (layoutNewVisibility != NO_VISIBILITY_WRITE) {
             layout.visibility = layoutNewVisibility
         }
+
+        state.reflow(hideMute, hideDnd)
 
         val divider = state.dividerRef.get() ?: return
         val dividerNewVisibility = reconcileVolumeModeButtonVisibility(
