@@ -198,6 +198,22 @@ class VolumePercentageLifecycleTest {
         assertEquals(previous, (brightness.layoutParams as FrameLayout.LayoutParams).topMargin)
     }
 
+    @Test fun overlayWindowsWithZeroInsetsStillStayBelowTheMeasuredStatusBar() {
+        val activity = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup()
+        val bar = FrameLayout(activity.get())
+        try {
+            activity.get().setContentView(bar)
+            bar.layout(0, 0, 1080, 130)
+            tv.withaibuild.customiuizer.mods.island.DynamicIslandStatusBarFade.bindFromStatusBar(bar)
+            val pct = init(first)
+            pct.dispatchApplyWindowInsets(android.view.WindowInsets.Builder().build())
+            assertEquals(130, (pct.layoutParams as FrameLayout.LayoutParams).topMargin)
+            bar.layout(0, 0, 1080, 170)
+            pct.dispatchApplyWindowInsets(android.view.WindowInsets.Builder().build())
+            assertEquals(170, (pct.layoutParams as FrameLayout.LayoutParams).topMargin)
+        } finally { activity.pause().stop().destroy() }
+    }
+
     @Test fun inactiveStreamsCannotOverwriteTheActiveStreamsPercentage() {
         val pct = init(first)
         val listener = Listener(first).apply { mColumn.stream = 0 }

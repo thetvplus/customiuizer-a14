@@ -42,6 +42,7 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import java.util.concurrent.ConcurrentHashMap
 import tv.withaibuild.customiuizer.mods.volume.IosVolumeStyle
 import tv.withaibuild.customiuizer.mods.volume.VolumePercentageFeedback
+import tv.withaibuild.customiuizer.mods.island.DynamicIslandStatusBarFade
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.HookDiagnostics
@@ -1795,12 +1796,12 @@ object SystemUIControlCenterHooks {
     internal fun resolveVolumePctTopMarginPx(statusBarBottomPx: Int): Int =
         statusBarBottomPx.coerceAtLeast(0)
 
-    private fun statusBarBottomPx(view: View): Int {
-        val insets = view.rootWindowInsets
+    private fun statusBarBottomPx(view: View, supplied: WindowInsets? = view.rootWindowInsets): Int {
+        val insets = supplied
             ?: view.context.getSystemService(WindowManager::class.java)
                 ?.currentWindowMetrics?.windowInsets
-            ?: return 0
-        return insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top
+        return maxOf(DynamicIslandStatusBarFade.measuredStatusBarBottomPx(),
+            insets?.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars())?.top ?: 0)
     }
 
     private fun applyPctTopMargin(pct: TextView, container: View, source: Int) {
@@ -1867,7 +1868,7 @@ object SystemUIControlCenterHooks {
                 pct.setOnApplyWindowInsetsListener { view, insets ->
                     ModuleHelper.guarded(insets) {
                         val params = view.layoutParams as? FrameLayout.LayoutParams
-                        val top = resolveVolumePctTopMarginPx(insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top)
+                        val top = resolveVolumePctTopMarginPx(statusBarBottomPx(view, insets))
                         if (params != null && params.topMargin != top) {
                             params.topMargin = top
                             view.layoutParams = params

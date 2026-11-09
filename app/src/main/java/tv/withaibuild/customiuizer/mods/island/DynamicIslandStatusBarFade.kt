@@ -12,6 +12,7 @@ internal object DynamicIslandStatusBarFade {
     private const val CONTENTS_ID = "status_bar_contents"
     private const val LEFT_CONTAINER_FIELD = "mStatusBarLeftContainer"
     internal var contentsRef: WeakReference<View>? = null
+    private var statusBarRef: WeakReference<View>? = null
     internal var ownerRef: WeakReference<Any>? = null
     private val islandBounds = Rect()
     private var compact: IslandStatusBarCompact? = null
@@ -26,9 +27,14 @@ internal object DynamicIslandStatusBarFade {
     }
 
     fun bindFromStatusBar(statusBar: View) {
+        if (statusBarRef?.get() !== statusBar) statusBarRef = WeakReference(statusBar)
         val contents = resolveContents(statusBar) ?: return
         bind(contents)
     }
+
+    /** Volume overlays can exclude their own status-bar inset source. Reuse its actual View. */
+    fun measuredStatusBarBottomPx(): Int = statusBarRef?.get()
+        ?.takeIf { it.isAttachedToWindow }?.bottom?.coerceAtLeast(0) ?: 0
 
     internal fun bind(contents: View) {
         if (contentsRef?.get() !== contents) {

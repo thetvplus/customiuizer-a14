@@ -61,7 +61,7 @@
 
 ### 跨功能共存
 
-- 音量百分比保留原键与原生浮层默认值，亮度提示不变；浮层使用 26sp、原生昼夜配对材质和实际 Insets。可选自动模式直接借用现有 Toast 胶囊或动态岛 transient lease，连续数值原位更新，不构造 Android Toast、不建立新窗口 / 队列 / 时钟。动态岛仅在可见竖屏且没有音乐、Live Activity 或其它反馈时准入，失去所有权后回退为原生提示；胶囊续用原生退场回调和已解析的无障碍时限。[原生绑定回归](../../app/src/test/java/tv/withaibuild/customiuizer/mods/VolumePercentageNativeBindingTest.kt)覆盖首次 / 同值打开、活动流、动画目标及旧 owner 隔离；窗口、租约、方向与退出竞争由既有 Island / Toast 行为回归覆盖。fuxi / xaga 静态合同与 Host 结果不代替完整实机矩阵，视频、来电及跨设备观感按实际已测范围分别验收。
+- 音量百分比保留原键与原生浮层默认值，亮度提示不变；浮层使用 26sp、原生昼夜配对材质和实际 Insets。可选自动模式直接借用现有 Toast 胶囊或动态岛 transient lease，连续数值原位更新，不构造 Android Toast、不建立新窗口 / 队列 / 时钟。动态岛仅在可见竖屏且没有音乐、Live Activity 或其它反馈时准入，失去所有权后回退为原生提示；胶囊续用原生退场回调和已解析的无障碍时限。[原生绑定回归](../../app/src/test/java/tv/withaibuild/customiuizer/mods/VolumePercentageNativeBindingTest.kt)覆盖首次 / 同值打开、活动流、动画目标及旧 owner 隔离；窗口、租约、方向与退出竞争由既有 Island / Toast 行为回归覆盖。xaga 定向试用已核对原生浮层、原生胶囊、岛体与 iOS 共存，连续更新保持原窗口，横屏回退与双隐藏展开取得特有效果证据；发现音量窗口的零 Insets 后，补用已捕获状态栏的实际边界，独立回归先失败后通过。fuxi 当前只有静态合同，完整视频、来电及跨设备观感仍待验；窗口身份和 Host 分配 / 回调证据不外推整机 CPU、帧率或功耗。
 - 控制中心 UI、音量 HUD 与手势共用插件发现入口。安装期间禁止重入替换租约，安装中途释放不再发布旧运行时；同一加载器退役后不重复叠加未按租约隔离的 UI Hook。手势先准备完整 ABI，再原子安装三处 Hook，部分失败回滚并保持残留回调被动；手势缺失保留独立 UI 安装，局部 UI 失败保留已就绪手势，结果仍为 `FAILED_PARTIAL`。依赖准备的包装致命异常已由实际 provider 回调复现并修复，状态栏同根因一并处理；普通依赖缺失不发布半成品。状态读取在冷路径准备，触摸只读单参数；不新增帧回调、监听或全局调度器。
 - Duo / 旧电池样式 / 隐藏电池优先于独立 iOS 电池绘制；媒体卡片开关保持独立。岛体只临时接管重叠状态图标的 alpha / 避让，归还最新原生目标；组合回归执行真实 Duo 绘制并核对岛体释放后像素与父容器状态。
 - 通知栏媒体卡片保留原生会话、动作及 TransitionLayout；动态岛媒体不控制它的销毁。音量、Home Indicator 各保留原生窗口与输入；Deck 的任务 / Surface 和 Dock 的装饰层继续消费原生 Overview / 场景状态，不增加公共动画所有者。Host 组合验证不替代具体 APK / ROM 的 Hook 与观感验收。
