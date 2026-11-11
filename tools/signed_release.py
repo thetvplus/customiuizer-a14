@@ -106,12 +106,12 @@ def source_policy() -> None:
             stream.write("Validation only: this branch is not authorized for signing. No official APK will be created.\n")
 
 
-def trusted_ci(record: dict, sha: str, workflow_id: int) -> bool:
+def trusted_ci(record: dict, sha: str, workflow_id: int, *, historical_main: bool = False) -> bool:
     return (record.get("workflow_id") == workflow_id and record.get("head_sha") == sha
             and record.get("status") == "completed" and record.get("conclusion") == "success"
             and record.get("event") in {"push", "workflow_dispatch"}
             and record.get("head_repository", {}).get("full_name") == REPO
-            and record.get("head_branch") in POLICY["trusted_branches"]
+            and record.get("head_branch") in (["main"] if historical_main else POLICY["trusted_branches"])
             and record.get("path") == ".github/workflows/a14-ci.yml")
 
 
@@ -146,13 +146,16 @@ def require_current_master(sha: str) -> None:
             "master moved; validate and confirm its latest commit instead")
 
 
-def require_master_ci(sha: str, *, current: bool = True) -> None:
+def require_master_ci(sha: str, *, current: bool = True, historical_main: bool = False) -> None:
+    require(not (current and historical_main), "Historical main CI is for recovery of an already published source")
+    if historical_main:
+        run("git", "merge-base", "--is-ancestor", sha, POLICY["historical_main_tip"])
     if current:
         require_current_master(sha)
     workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
     records = api(f"repos/{REPO}/actions/workflows/{workflow['id']}/runs?head_sha={sha}&status=success&per_page=30")
-    require(any(trusted_ci(record, sha, workflow["id"]) and record.get("head_branch") == "master"
-                for record in records["workflow_runs"]), "Publication requires successful A14 CI on this exact master commit")
+    require(any(trusted_ci(record, sha, workflow["id"], historical_main=historical_main)
+                for record in records["workflow_runs"]), "Publication requires successful A14 CI on this exact source commit")
 
 
 def environment_policy() -> None:
@@ -463,8 +466,10 @@ def candidate(folder: Path) -> None:
 
 def check_run(record: dict, workflow_id: int, *, current_run: bool = False, publication_failed: bool = False) -> None:
     require(record.get("workflow_id") == workflow_id and record.get("path") == WORKFLOW, "Wrong source workflow")
+    branch = record.get("head_branch")
+    historical_main = not current_run and branch == "main"
     require(record.get("event") == "workflow_dispatch" or
-            record.get("event") == "workflow_run" and record.get("head_branch") == "master",
+            record.get("event") == "workflow_run" and (branch == "master" or historical_main),
             "Source must be a native dispatch or a master CI release")
     if current_run:
         # The publish job is still part of this run. It may consume only the
@@ -482,8 +487,11 @@ def check_run(record: dict, workflow_id: int, *, current_run: bool = False, publ
                 (record.get("conclusion") == "success" or publication_failed and record.get("conclusion") == "failure"),
                 "Source build did not finish successfully")
     require(record.get("head_repository", {}).get("full_name") == REPO, "Wrong source repository")
-    require(record.get("head_branch") in POLICY["trusted_branches"], "Source branch is not authorized")
-    require(bool(SHA.fullmatch(record.get("head_sha", ""))), "Invalid source commit")
+    require(historical_main or branch in POLICY["trusted_branches"], "Source branch is not authorized")
+    sha = record.get("head_sha", "")
+    require(bool(SHA.fullmatch(sha)), "Invalid source commit")
+    if historical_main:
+        run("git", "merge-base", "--is-ancestor", sha, POLICY["historical_main_tip"])
 
 
 def check_metadata(metadata: dict, record: dict) -> None:
@@ -725,7 +733,10 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
     source = existing[REPO]
     if source is None or source["draft"]:
         release_review(name, code, sha)
-    require_master_ci(sha, current=source is None or source["draft"])
+    if source is not None and not source["draft"] and metadata.get("source_ref") == "refs/heads/main":
+        require_master_ci(sha, current=False, historical_main=True)
+    else:
+        require_master_ci(sha, current=source is None or source["draft"])
     check_new_release(name, code, sha, resume=source is not None)
     for repository, tag, env in repositories:
         record = existing[repository]

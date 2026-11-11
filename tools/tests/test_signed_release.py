@@ -505,11 +505,32 @@ class PromotionTrustTest(unittest.TestCase):
                         release.fetch_candidate("42", Path(temp) / "candidate")
                     self.assertEqual(3, api.call_count)
 
-    def test_completed_automatic_candidates_are_allowed_only_from_main(self):
+    def test_completed_automatic_candidates_accept_trusted_master_and_pinned_main_history(self):
         record = dict(build_run(), event="workflow_run")
         release.check_run(record, 7)
         with self.assertRaisesRegex(ValueError, "master CI release"):
             release.check_run(dict(record, head_branch="codex/a14-feature-refinement-20261019"), 7)
+        old = dict(record, head_branch="main")
+        with patch.object(release, "run") as git:
+            release.check_run(old, 7)
+            git.assert_called_once_with("git", "merge-base", "--is-ancestor", COMMIT, release.POLICY["historical_main_tip"])
+            git.side_effect = RuntimeError("outside migration history")
+            with self.assertRaisesRegex(RuntimeError, "outside migration history"):
+                release.check_run(old, 7)
+        with self.assertRaisesRegex(ValueError, "master CI release"):
+            release.check_run(old, 7, current_run=True)
+
+    def test_published_main_recovery_reuses_exact_main_ci_only(self):
+        old = dict(ci_run(), head_branch="main")
+        self.assertFalse(release.trusted_ci(old, COMMIT, old["workflow_id"]))
+        with self.assertRaisesRegex(ValueError, "Historical main CI"):
+            release.require_master_ci(COMMIT, historical_main=True)
+        with patch.object(release, "run") as git, patch.object(release, "api", side_effect=[
+            {"id": old["workflow_id"]}, {"workflow_runs": [old]},
+        ]):
+            release.require_master_ci(COMMIT, current=False, historical_main=True)
+            git.assert_called_once_with("git", "merge-base", "--is-ancestor", COMMIT, release.POLICY["historical_main_tip"])
+
 
     def test_current_run_is_allowed_only_with_exact_native_run_attempt_and_source(self):
         record = dict(build_run(), status="in_progress", conclusion=None)
