@@ -84,9 +84,6 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val ignored=exact(stack,"isIgnoredTask",Boolean::class.javaPrimitiveType!!,task)
     val getHeader=exact(taskView,"getHeaderView",header)
     val getThumbnail=exact(taskView,"getThumbnailView",cls("recents.views.TaskViewThumbnail"))
-    // The POCO profile has no getter; the admitted native families own this Int field.
-    val thumbnailRadius=field(getThumbnail.returnType,"mCornerRadius",Int::class.javaPrimitiveType!!).apply { require(type==Int::class.javaPrimitiveType) }
-    val setThumbnailRadius=exact(getThumbnail.returnType,"setCornerRadius",voidType,Int::class.javaPrimitiveType!!)
     val headerTransform=exact(taskView,"setHeaderTranslationAndAlpha",voidType,floatType,floatType,floatType)
     val childrenAlpha=exact(taskView,"setChildrenViewAlpha",voidType,floatType)
     val layout=exact(stack,"updateLayoutStyle",voidType)

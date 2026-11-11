@@ -1,8 +1,12 @@
 package tv.withaibuild.customiuizer.mods.recents
 
 import android.animation.ObjectAnimator
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Rect
+import android.graphics.drawable.ColorDrawable
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.view.animation.LinearInterpolator
@@ -21,158 +25,115 @@ import org.robolectric.shadows.ShadowChoreographer
 @Config(sdk=[34],application=android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DeckCardShadowTest {
-    @Test fun lateThumbnailRevealAndReversalKeepTheOutlineOnTheVisibleContent() {
-        val card=FrameLayout(RuntimeEnvironment.getApplication())
-        val header=View(card.context);val thumbnail=View(card.context)
-        card.addView(header);card.addView(thumbnail)
-        card.layout(0,0,300,700);header.layout(0,0,300,50);thumbnail.layout(0,50,300,700)
-        thumbnail.alpha=0f
-        val shadow=DeckCardShadow(card,header,22f,thumbnail,1f)
-        val outline=Outline();val shown=Rect()
-        try {
-            for(progress in floatArrayOf(1f,.5f,0f)) {
-                shadow.syncContentAlpha(progress);shadow.getOutline(card,outline)
-                assertEquals("The card is still waiting for visible content",0f,outline.alpha,0f)
-                assertTrue(outline.isEmpty)
-            }
-            for(alpha in floatArrayOf(.15f,.6f,1f,.4f)) {
-                thumbnail.alpha=alpha;shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
-                assertEquals(alpha,outline.alpha,0f)
-                assertTrue(outline.getRect(shown));assertEquals(Rect(0,50,300,700),shown)
-            }
-            thumbnail.visibility=View.INVISIBLE
-            shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
-            assertEquals(0f,outline.alpha,0f)
-            thumbnail.visibility=View.VISIBLE
-            shadow.getOutline(card,outline)
-            assertEquals("A visible thumbnail keeps its own opacity",.4f,outline.alpha,0f)
-        } finally { shadow.close() }
-    }
-    @Test fun fullscreenSnapshotHasNoDeckShadowAndContinuousReversalReusesNativeProgress() {
-        val card=FrameLayout(RuntimeEnvironment.getApplication())
-        val header=View(card.context);val thumbnail=View(card.context)
-        card.addView(header);card.addView(thumbnail)
-        card.layout(0,0,300,700);header.layout(0,0,300,50);thumbnail.layout(0,50,300,700)
-        thumbnail.alpha=.8f
-        val shadow=DeckCardShadow(card,header,22f,thumbnail,1f)
-        val outline=Outline()
-        try {
-            shadow.getOutline(card,outline);assertEquals(0f,outline.alpha,0f)
-            for(progress in floatArrayOf(1f,.8f,.4f,0f,.4f,.8f,1f)) {
-                shadow.syncContentAlpha(progress);shadow.getOutline(card,outline)
-                assertEquals(.8f*(1f-progress),outline.alpha,.0001f)
-                assertEquals("Projection does not rewrite native thumbnail opacity",.8f,thumbnail.alpha,0f)
-                assertEquals(1f,card.scaleX,0f)
-            }
-        } finally { shadow.close() }
-    }
-    @Test fun lastCardFirstOutlineReadsContentBeforeRegistrationAndAfterBindingWithoutTouch() {
-        repeat(4) {
-            val card=FrameLayout(RuntimeEnvironment.getApplication())
-            val header=View(card.context); val thumbnail=View(card.context)
-            card.addView(header); card.addView(thumbnail)
-            card.layout(0,0,300,700); header.layout(0,0,300,50); thumbnail.layout(0,50,300,700)
-            card.alpha=.8f; thumbnail.alpha=0f // native handoff before CARD registration
-            val shadow=DeckCardShadow(card,header,22f,thumbnail,0f)
-            val outline=Outline(); shadow.getOutline(card,outline)
-            assertEquals(0f,outline.alpha,0f); assertEquals(.8f,card.alpha,0f)
-            thumbnail.alpha=.45f // bind updates content without a module setter callback
-            shadow.getOutline(card,outline); assertEquals(.45f,outline.alpha,0f)
-            shadow.syncContentAlpha(0f); thumbnail.alpha=1f
-            shadow.getOutline(card,outline); assertEquals(1f,outline.alpha,0f)
-            shadow.close()
-            val reused=DeckCardShadow(card,header,22f,thumbnail,0f)
-            reused.getOutline(card,outline); assertEquals(1f,outline.alpha,0f); reused.close()
+    private class Scene {
+        val parent = FrameLayout(RuntimeEnvironment.getApplication()).apply { clipChildren = false }
+        val card = FrameLayout(parent.context)
+        val thumbnail = View(parent.context)
+        init {
+            parent.addView(card)
+            card.addView(thumbnail)
+            parent.layout(0, 0, 500, 800)
+            card.layout(40, 50, 340, 650)
+            thumbnail.layout(0, 45, 300, 600)
         }
     }
-    @Test fun shadowCannotAppearBeforeItsContentOrWhileTheNativeThumbnailIsHidden() {
-        val card=FrameLayout(RuntimeEnvironment.getApplication())
-        val header=View(card.context);val thumbnail=View(card.context)
-        card.addView(header);card.addView(thumbnail)
-        card.layout(0,0,300,700);header.layout(0,0,300,50)
-        val shadow=DeckCardShadow(card,header,22f,thumbnail,0f)
-        val outline=Outline()
+
+    @Test fun nativeForegroundDrawsOnlyAShortBottomEdgeInTheCardsPose() {
+        val scene = Scene()
+        val card = scene.card
+        val shadow = DeckCardShadow(card, scene.thumbnail, 0f)
+        assertTrue(shadow.owned)
+        assertSame(shadow, card.foreground)
+        val image = Bitmap.createBitmap(500, 800, Bitmap.Config.ARGB_8888)
         try {
-            shadow.getOutline(card,outline)
-            assertEquals("No orphan shadow while the thumbnail has no bounds",0f,outline.alpha,0f)
-            thumbnail.layout(0,50,300,700)
-            shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
-            assertEquals(1f,outline.alpha,0f)
-            assertEquals(22f,outline.radius,0f)
-            for(visibility in intArrayOf(View.INVISIBLE,View.GONE,View.VISIBLE,View.INVISIBLE,View.VISIBLE)) {
-                thumbnail.visibility=visibility
-                shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
-                assertEquals(if(visibility==View.VISIBLE) 1f else 0f,outline.alpha,0f)
-                assertEquals("Native thumbnail alpha is not rewritten",1f,thumbnail.alpha,0f)
+            val canvas = Canvas(image)
+            val depth = 5f * card.resources.displayMetrics.density
+            for (offset in listOf(0f, -240f, 75f)) {
+                image.eraseColor(Color.TRANSPARENT)
+                card.translationY = offset
+                card.translationX = 80f
+                scene.parent.draw(canvas)
+                val bottom = (card.bottom + offset).toInt()
+                val center = card.left + 80 + card.width / 2
+                assertEquals(0, Color.alpha(image.getPixel(center, bottom - 1)))
+                val atEdge = Color.alpha(image.getPixel(center, bottom))
+                val half = Color.alpha(image.getPixel(center, bottom + (depth * .5f).toInt()))
+                assertTrue(atEdge in 1..36)
+                assertTrue(half in 1 until atEdge)
+                assertEquals(0, Color.alpha(image.getPixel(center, bottom + depth.toInt() + 1)))
+                assertEquals(0, Color.alpha(image.getPixel(card.left + 80, bottom)))
+                assertEquals(0, Color.alpha(image.getPixel(center, bottom - 50)))
             }
-        } finally { shadow.close() }
+        } finally { shadow.close(); image.recycle() }
     }
+
+    @Test fun reversalHiddenContentAndRelayoutKeepTheShadowAtTheLiveBottom() {
+        val scene = Scene()
+        val card = scene.card
+        val thumbnail = scene.thumbnail
+        thumbnail.alpha = 0f
+        val shadow = DeckCardShadow(card, thumbnail, 0f)
+        val image = Bitmap.createBitmap(500, 800, Bitmap.Config.ARGB_8888)
+        try {
+            fun alpha(y: Int = thumbnail.bottom): Int {
+                image.eraseColor(Color.TRANSPARENT)
+                card.draw(Canvas(image))
+                return Color.alpha(image.getPixel(150, y))
+            }
+            assertEquals(0, alpha())
+            thumbnail.alpha = 1f
+            val full = alpha()
+            assertTrue("First draw reads the current thumbnail", full > 0)
+            for (progress in floatArrayOf(1f, .8f, .4f, 0f, .4f, .8f, 1f, 0f)) {
+                shadow.syncContentAlpha(progress)
+                assertEquals(full * (1f - progress), alpha().toFloat(), 2f)
+            }
+            val oldBottom = thumbnail.bottom
+            thumbnail.layout(0, 45, 300, 420)
+            shadow.syncContentAlpha(0f)
+            assertEquals(0, alpha(oldBottom))
+            assertEquals(full, alpha())
+            thumbnail.visibility = View.INVISIBLE
+            assertEquals(0, alpha())
+            thumbnail.visibility = View.VISIBLE
+            thumbnail.layout(0, 45, 1, 420)
+            assertEquals(0, alpha())
+        } finally { shadow.close(); image.recycle() }
+    }
+
+    @Test fun shadowSuppressesNativeProjectionAndRestoresOnlyItsOwnProperties() {
+        val scene = Scene()
+        val card = scene.card
+        val original = ViewOutlineProvider.BOUNDS
+        card.outlineProvider = original
+        val shadow = DeckCardShadow(card, scene.thumbnail, 0f)
+        val outline = Outline()
+        card.outlineProvider.getOutline(card, outline)
+        val rect = Rect()
+        assertTrue(outline.getRect(rect))
+        assertEquals(Rect(0, 0, 300, 600), rect)
+        assertEquals(0f, outline.alpha, 0f)
+        shadow.close()
+        assertNull(card.foreground)
+        assertSame(original, card.outlineProvider)
+        val next = DeckCardShadow(card, scene.thumbnail, 0f)
+        val replacement = ColorDrawable(Color.BLUE)
+        card.foreground = replacement
+        next.syncContentAlpha(0f)
+        assertSame(replacement, card.foreground)
+        assertSame(original, card.outlineProvider)
+        assertFalse(DeckCardShadow(card, scene.thumbnail, 0f).owned)
+        card.foreground = null
+        scene.parent.clipChildren = true
+        assertFalse(DeckCardShadow(card, scene.thumbnail, 0f).owned)
+        assertTrue(scene.parent.clipChildren)
+    }
+
     @Test fun nativeUpwardNegativeZeroUsesTranslationWhileOtherDirectionsStayNative() {
         assertTrue(DeckDismissMotion.admitted(1,-0.0f))
-        assertTrue(DeckDismissMotion.admitted(1,0.0f))
+        assertTrue(DeckDismissMotion.admitted(1,0f))
         assertFalse(DeckDismissMotion.admitted(0,-0.0f))
         assertFalse(DeckDismissMotion.admitted(1,300f))
-    }
-    @Test fun contentOutlineExcludesHeaderAndPositiveProjectionKeepsOrderThroughNativeZChanges() {
-        val parent=FrameLayout(RuntimeEnvironment.getApplication())
-        val order=DeckDepthOrder(parent)
-        val cards=Array(3) { FrameLayout(parent.context).also { parent.addView(it); it.layout(0,0,300,600) } }
-        val shadows=cards.map { view ->
-            val header=View(parent.context); view.addView(header); header.layout(0,0,300,40)
-            DeckCardShadow(view,header,24f,view,0f)
-        }
-        val entries=cards.mapIndexed { i,view -> order.add(view,i,shadows[i].height) }
-        cards[1].translationZ=100f; order.apply()
-        assertTrue(cards[0].z>cards[1].z); assertTrue(cards[1].z>cards[2].z)
-        assertTrue(cards.all { it.z>shadows[0].height })
-        val outline=Outline(); val rect=Rect()
-        shadows[0].getOutline(cards[0],outline)
-        assertTrue(outline.getRect(rect)); assertEquals(Rect(0,40,300,600),rect)
-        assertEquals(24f,outline.radius,0f)
-        shadows[0].radius(18f); shadows[0].getOutline(cards[0],outline)
-        assertEquals(18f,outline.radius,0f)
-        entries.forEach(order::remove); shadows.forEach { it.close() }
-        assertEquals(100f,cards[1].translationZ,0f)
-        assertTrue(parent.clipChildren); assertTrue(parent.clipToPadding)
-    }
-
-    @Test fun recyclingRestoresOwnedPropertiesAndPreservesNewNativeWrites() {
-        val card=FrameLayout(RuntimeEnvironment.getApplication())
-        val header=View(card.context); card.addView(header)
-        val original=card.outlineProvider
-        card.outlineAmbientShadowColor=0xff112233.toInt()
-        card.outlineSpotShadowColor=0xff445566.toInt()
-        val shadow=DeckCardShadow(card,header,22f,card,0f)
-        assertEquals("Keep native ambient shadow color",0xff112233.toInt(),card.outlineAmbientShadowColor)
-        assertEquals("Keep native spot shadow color",0xff445566.toInt(),card.outlineSpotShadowColor)
-        shadow.close(); shadow.close()
-        assertSame(original,card.outlineProvider)
-        assertEquals(0xff112233.toInt(),card.outlineAmbientShadowColor)
-        assertEquals(0xff445566.toInt(),card.outlineSpotShadowColor)
-        val second=DeckCardShadow(card,header,22f,card,0f)
-        card.outlineProvider=ViewOutlineProvider.BOUNDS; card.outlineSpotShadowColor=0xff778899.toInt()
-        second.close()
-        assertSame(ViewOutlineProvider.BOUNDS,card.outlineProvider)
-        assertEquals(0xff778899.toInt(),card.outlineSpotShadowColor)
-        card.clipToOutline=true
-        val clipped=DeckCardShadow(card,header,22f,card,0f)
-        assertFalse(clipped.owned); assertEquals(second.height,clipped.height,0f)
-        assertTrue(card.clipToOutline)
-    }
-
-    @Test fun invisibleNativeContentCannotKeepCastingADeckShadowBehindItsAppSurface() {
-        val card=FrameLayout(RuntimeEnvironment.getApplication())
-        val header=View(card.context); card.addView(header)
-        card.layout(0,0,300,700); header.layout(0,0,300,50)
-        val shadow=DeckCardShadow(card,header,22f,card,0f)
-        val outline=android.graphics.Outline()
-        card.alpha=0f; shadow.syncContentAlpha(0f); shadow.getOutline(card,outline)
-        assertEquals(0f,outline.alpha,0f)
-        card.alpha=.4f; shadow.syncContentAlpha(0f); shadow.getOutline(card,outline)
-        assertEquals(.4f,outline.alpha,0f)
-        card.alpha=1f; shadow.syncContentAlpha(0f); shadow.getOutline(card,outline)
-        assertEquals(1f,outline.alpha,0f)
-        shadow.close()
     }
 
     @Test fun committedDismissalTranslatesOffscreenWithoutShrinkingAndRetainsNativeCompletion() {

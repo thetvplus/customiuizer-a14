@@ -259,10 +259,6 @@ internal object IosRecentsDeckHooks {
         }
         after(api.childrenAlpha) { card(it.getThisObject())?.header?.refreshOpacity(true) }
         after(api.headerTransform) { card(it.getThisObject())?.header?.refreshOpacity(true) }
-        after(api.setThumbnailRadius) {
-            val thumbnail=it.getThisObject() as View
-            card(thumbnail.parent)?.shadow?.radius((it.getArg(0) as Int).toFloat())
-        }
         // The native getter consumes Scope.content and then maps last/current
         // rotation into the application axes. Do not overwrite its mapped result
         // with an unrotated View rectangle after that conversion.

@@ -63,7 +63,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     class Card(val owner: DeckOwner,val geometry: DeckCardGeometry,val task: Any,val taskId: Int,var index: Int,val header: DeckHeaderOwner,var depthScale: Float,val shadow: DeckCardShadow) {
         val view get()=geometry.view
-        val depth=owner.depthOrder.add(view,owner.depthIndex(taskId,index),shadow.height)
+        val depth=owner.depthOrder.add(view,owner.depthIndex(taskId,index))
         init {
             geometry.onScaleChanged={ value -> header.pose(value,index,(value*depthScale-1f)/.12f,owner.current.landscape) }
             // Native entry can defer the first scale sample until after layout.
@@ -359,8 +359,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
                 api.headerTitle.get(headerView) as android.widget.TextView,api.headerBadge.get(headerView) as View,headerConfig)
             val taskId=api.id.getInt(api.key.get(task))
             val thumbnail=api.getThumbnail.invoke(view) as View
-            shadow=DeckCardShadow(view,headerView,api.thumbnailRadius.getInt(thumbnail).toFloat(),thumbnail,
-                api.fullscreenProgress.getFloat(view))
+            shadow=DeckCardShadow(view,thumbnail,api.fullscreenProgress.getFloat(view))
             return Card(this,geometry,task,taskId,frame.index,header,frame.depthScale,shadow).also {
                 cards[view]=it; XposedHelpers.setAdditionalInstanceField(view,CARD,it)
                 drawCards.add(it)
@@ -485,7 +484,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
                 // scheduled draw; never request another frame or resolve members.
                 for(i in 0 until drawCards.size) {
                     val card=drawCards[i]
-                    card.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(card.view))
+                    if(card.shadow.owned) card.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(card.view))
                     card.header.refreshOpacity()
                 }
                 if(dragging?.geometry?.updateSwipe()==false) suspend(true)
