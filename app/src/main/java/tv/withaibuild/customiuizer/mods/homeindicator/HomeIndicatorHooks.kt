@@ -17,6 +17,7 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.G4RoundRectGeometry
 import tv.withaibuild.customiuizer.utils.HomeIndicatorSupport
 import tv.withaibuild.customiuizer.mods.utils.HookDiagnostics
+import java.lang.ref.WeakReference
 import java.lang.reflect.Modifier
 
 /** Replaces only the native handle's fill. No window, input, visibility, alpha,
@@ -79,7 +80,7 @@ internal object HomeIndicatorHooks {
                     // Separate tutorial/CC/lockscreen hosts and subclasses keep
                     // native rendering until their own contracts are verified.
                     if (view.javaClass != handle || view.display?.displayId != 0) return@guarded
-                    val owner = XposedHelpers.getAdditionalInstanceField(view, OWNER) as? Owner ?: run {
+                    val owner = owner(view) ?: run {
                         var parent = view.parent
                         var depth = 0
                         while (parent is View && !bar.isInstance(parent) && depth++ < 8) parent = parent.parent
@@ -90,7 +91,8 @@ internal object HomeIndicatorHooks {
                         if (XposedHelpers.getAdditionalInstanceField(navigation, MODE) != true) return@guarded
                         Owner(view, navigation, paint.get(view) as Paint).also {
                             view.addOnAttachStateChangeListener(it)
-                            XposedHelpers.setAdditionalInstanceField(view, OWNER, it)
+                            // The attach listener owns the renderer for this handle.
+                            XposedHelpers.setAdditionalInstanceField(view, OWNER, WeakReference(it))
                         }
                     }
                     if (XposedHelpers.getAdditionalInstanceField(owner.navigation, MODE) != true) return@guarded
@@ -98,6 +100,9 @@ internal object HomeIndicatorHooks {
                 }
             })
     }
+    private fun owner(view: View): Owner? =
+        (XposedHelpers.getAdditionalInstanceField(view, OWNER) as? WeakReference<*>)?.get() as? Owner
+
     private class Owner(val view: View, val navigation: View, val paint: Paint) : View.OnAttachStateChangeListener {
         private val path = Path()
         private val windows = navigation.context.getSystemService(WindowManager::class.java)
@@ -128,7 +133,7 @@ internal object HomeIndicatorHooks {
         override fun onViewAttachedToWindow(v: View) = Unit
         override fun onViewDetachedFromWindow(v: View) {
             v.removeOnAttachStateChangeListener(this)
-            if (XposedHelpers.getAdditionalInstanceField(v, OWNER) === this)
+            if (owner(v) === this)
                 XposedHelpers.removeAdditionalInstanceField(v, OWNER)
             path.rewind(); ready = false
         }

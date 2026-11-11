@@ -23,11 +23,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
+import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
+import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.ScreenStateController
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
-import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.CustomMethodUnhooker
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.ref.WeakReference
@@ -36,42 +37,10 @@ import java.util.concurrent.atomic.AtomicLong
 import java.lang.reflect.Method
 
 /** A target override cannot outlive a missing owner, cancellation or animation hook. */
-internal fun installIslandReturnHooks(install: ((Method, MethodHook) -> CustomMethodUnhooker) -> Unit) {
-    val handles = ArrayList<CustomMethodUnhooker>()
-    var complete = false
-    var failure: Throwable? = null
-    try {
-        install { method, callback ->
-            checkNotNull(ModuleHelper.hookMethod(method, callback)) { "Island return hook unavailable: $method" }
-                .also(handles::add)
-        }
-        complete = true
-    } catch (error: Throwable) {
-        failure = error
-        throw error
-    } finally {
-        if (!complete) {
-            var cleanupFailure: Throwable? = null
-            for (handle in handles.asReversed()) {
-                try { ModuleHelper.guarded { handle.unhook() } }
-                catch (error: Throwable) {
-                    val previous = cleanupFailure
-                    if (previous == null) cleanupFailure = error
-                    else if (previous !== error) previous.addSuppressed(error)
-                }
-            }
-            cleanupFailure?.let { cleanup ->
-                failure?.let { primary ->
-                    try { FatalErrors.unwrapAndRethrowIfFatal(primary) }
-                    catch (fatal: Throwable) {
-                        if (fatal !== cleanup) fatal.addSuppressed(cleanup)
-                        throw fatal
-                    }
-                    if (primary !== cleanup) cleanup.addSuppressed(primary)
-                }
-                throw cleanup
-            }
-        }
+internal fun installIslandReturnHooks(prepare: ((Method, MethodHook) -> Unit) -> Unit) {
+    val entries = buildList { prepare { method, callback -> add(method to callback) } }
+    check(PreparedHookBatch().install(entries) == FeatureInstallResult.INSTALLED) {
+        "Island return hook group incomplete"
     }
 }
 
@@ -79,31 +48,11 @@ internal fun installIslandReturnHooks(install: ((Method, MethodHook) -> CustomMe
 internal fun installIslandAbsorptionHooks(update: Method, frameHook: MethodHook,
     cancellations: List<Method>, endingHook: (Method) -> MethodHook): Boolean {
     if (cancellations.isEmpty()) return false
-    val handles = ArrayList<CustomMethodUnhooker>()
-    var complete = false
-    var failure: Throwable? = null
-    try {
-        handles.add(ModuleHelper.hookMethod(update, frameHook) ?: return false)
-        for (method in cancellations) handles.add(ModuleHelper.hookMethod(method, endingHook(method)) ?: return false)
-        complete = true
-        return true
-    } catch (error: Throwable) {
-        failure = error
-        throw error
-    } finally {
-        if (!complete) {
-            var cleanupFailure = failure
-            for (handle in handles.asReversed()) {
-                try { ModuleHelper.guarded { handle.unhook() } }
-                catch (error: Throwable) {
-                    val previous = cleanupFailure
-                    if (previous == null) cleanupFailure = error
-                    else if (previous !== error) previous.addSuppressed(error)
-                }
-            }
-            if (failure == null) cleanupFailure?.let { throw it }
-        }
+    val entries = buildList {
+        add(update to frameHook)
+        for (method in cancellations) add(method to endingHook(method))
     }
+    return PreparedHookBatch().install(entries) == FeatureInstallResult.INSTALLED
 }
 
 internal object LauncherMusicReturnHooks {
