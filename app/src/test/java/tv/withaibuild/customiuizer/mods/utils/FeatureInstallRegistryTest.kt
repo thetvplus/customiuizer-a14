@@ -80,6 +80,18 @@ class FeatureInstallRegistryTest {
     }
 
     @Test
+    fun unattemptedFeaturesDoNotPopulateProcessState() {
+        val registry = FeatureInstallRegistry()
+        val disabled = List(100) { DummyFeature("disabled-$it", enabled = false) }
+        disabled.forEach(registry::register)
+        assertTrue("registration must not retain unattempted state", FeatureInstallStateTestAccess.snapshot().isEmpty())
+
+        registry.installAll(FeatureTarget.SYSTEM_UI, InstallPhase.PACKAGE_READY, PrefMap())
+        assertTrue("disabled features must not retain state", FeatureInstallStateTestAccess.snapshot().isEmpty())
+        disabled.forEach { assertEquals(FeatureState.NOT_INSTALLED, FeatureInstallState.get(it.id)) }
+    }
+
+    @Test
     fun installAll_skippedFeatureInstallsOnLaterEnabledSnapshot() {
         var gate = false
         val delayed = object : FeatureDefinition {
@@ -157,8 +169,6 @@ class FeatureInstallRegistryTest {
     @Test
     fun beginInstallClaimIsAtomic() {
         val id = TestId("atomic-claim")
-        FeatureInstallState.initialize(id)
-
         assertEquals(FeatureState.NOT_INSTALLED, FeatureInstallState.beginInstall(id))
         assertEquals(FeatureState.INSTALLING, FeatureInstallState.beginInstall(id))
     }

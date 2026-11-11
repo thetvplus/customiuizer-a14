@@ -75,8 +75,8 @@ class SystemUiFeaturesWiringTest {
         val features = SystemUiFeatures.all(fakePackageReadyParam(), PrefMap())
 
         assertEquals(
-            "SystemUI includes the opt-in native media card and battery presentation",
-            100,
+            "SystemUI includes the opt-in media card, battery and classic signal presentations",
+            101,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
@@ -92,7 +92,8 @@ class SystemUiFeaturesWiringTest {
         val prefs = PrefMap()
         val features = SystemUiFeatures.all(fakePackageReadyParam(), prefs)
         for ((id, key) in listOf(IosMediaCardFeatureId to "system_media_ios_card",
-            IosStatusBarBatteryFeatureId to "system_statusbar_ios_battery")) {
+            IosStatusBarBatteryFeatureId to "system_statusbar_ios_battery",
+            ClassicSignalFeatureId to "system_statusbar_signal_dots")) {
             val feature = features.single { it.id == id }
             assertTrue(feature is tv.withaibuild.customiuizer.mods.utils.LazyFeatureSpec)
             assertEquals(key, feature.preferenceKey)
@@ -111,6 +112,24 @@ class SystemUiFeaturesWiringTest {
         assertTrue(feature.isEnabled(prefs))
         prefs.put("controls_nonavbar",true)
         assertFalse(feature.isEnabled(prefs))
+    }
+
+    @Test fun batteryPresentationHasOneOwnerWithoutDisablingTheMediaCard() {
+        val prefs = PrefMap().apply {
+            put("system_statusbar_ios_battery", true)
+            put("system_media_ios_card", true)
+        }
+        val features = SystemUiFeatures.all(fakePackageReadyParam(), prefs)
+        val battery = features.single { it.id == IosStatusBarBatteryFeatureId }
+        val media = features.single { it.id == IosMediaCardFeatureId }
+        for (owner in listOf("system_statusbar_duo", "system_statusbar_batterystyle", "system_statusbaricons_battery1")) {
+            assertTrue(battery.isEnabled(prefs))
+            prefs.put(owner, true)
+            assertFalse(battery.isEnabled(prefs))
+            assertTrue(media.isEnabled(prefs))
+            prefs.put(owner, false)
+        }
+        assertTrue(battery.isEnabled(prefs))
     }
 
     @Test

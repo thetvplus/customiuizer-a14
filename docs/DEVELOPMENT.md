@@ -4,6 +4,12 @@
 
 ## Git 与协作
 
+远端 `main` 禁止强推与删除，保护对管理员生效；不要求额外的 PR 审批或仓库级必需状态。正式签名与发布仍须满足 [RELEASE](RELEASE.md) 的 exact main CI、来源和环境门禁。
+
+日常开发、修复与实验在任务分支进行，保留有意义的阶段提交。单个完整任务可直接通过 Squash PR 整合。多个任务确需一起验收时，使用短期 `release/<version>` 分支，逐项核对纳入范围、冲突、其他协作者的成果和验证证据，再由该分支发起 Squash PR。`main` 合并、Tag 和正式发布各自需要明确授权。
+
+默认一个正式版本对应一个整合提交，标题采用 `release: r14.27.5 — <核心变化>`。细节和证据写入 PR 与双语 Changelog。独立安全、CI、文档维护或必要修复可使用 `security:`、`ci:`、`docs:`、`fix:`，在 PR 说明独立整合的原因。小改动无需单独升版。Squash 后以最终提交及 PR 追溯来源，通过树、有效差异与验证核对成果等价性，不能以开发提交是否为祖先判断是否遗漏。合并后结束已完成的任务分支，仍按下述安全条件清理。未发布整合发现问题时可暂停发布或经 PR 修正，公开 Tag 保留原 SHA。
+
 首次初始化或明确切换独立任务、实际写入冲突、关键上下文失效时，定向核对任务归属、相关 Issue / PR、工作树、HEAD、Worktree 和目标远端；不扫描全部历史任务。新聊天优先接续已有任务。同一聊天的追加要求、纠正、状态询问及压缩恢复沿用分支、授权和可信证据，只刷新失效部分。
 
 独立任务原则上一个 Issue / 工作分支。首次写入或归属变化时更新分支、HEAD、负责范围和下一步，之后复用；认领不是原子锁，冲突只停止受影响范围。同一 Worktree 只有一个写入者，只读审查可共享，不另建 Agent 状态系统。
@@ -36,6 +42,7 @@ GitHub CLI / API 仅作为已有 Git 网络故障证据下的备用路径。先�
 - Python 3.12+：`python -m pip install -r tools/requirements.txt`。Windows 可设置 `$env:PYTHONUTF8='1'` 统一子进程编码。
 - Android SDK 安装项以 [ci_install_android_sdk.sh](../tools/ci_install_android_sdk.sh) 为准；本机 `local.properties` 的 `sdk.dir` 指向 SDK 根目录，不入库。compileSdk 不改变 minSdk / targetSdk 34 的运行边界。
 - 使用仓库 wrapper；版本以 [libs.versions.toml](../gradle/libs.versions.toml)、[根构建](../build.gradle.kts)、[app 构建](../app/build.gradle.kts) 和 [wrapper 配置](../gradle/wrapper/gradle-wrapper.properties) 为准。
+- PowerShell 按目录与 `rg -g '*.kt'` 等过滤器检索，不向工具传入未展开的路径通配符。经 Python / 受管执行器启动 Gradle 时使用绝对 `gradlew.bat` 路径（`verify.py` 已处理），避免把 POSIX 的 `./gradlew` 传入 Windows 子进程。
 
 默认使用官方仓库。`-PuseChinaMirrors=true` 选择已有镜像；libxposed 始终独占 Maven Central。保留 [verification-metadata.xml](../gradle/verification-metadata.xml) 中的产物校验，其范围不覆盖所有依赖。Gradle 宿主 Kotlin 与 APK 的 BOM / stdlib 属于不同 classpath，按实际解析图审查，不强行统一。
 

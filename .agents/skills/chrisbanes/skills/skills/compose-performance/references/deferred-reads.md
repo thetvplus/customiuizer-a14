@@ -33,7 +33,7 @@ val merged = remember(parent, overlay) {
 }
 ```
 
-For cross-row measurement, use a measure-phase helper such as [`decorateMeasureConstraints`](../../compose-component-design/references/modifier-layout.md), keep a fixed fallback while size is unknown, and compare before writing the captured size. This avoids a layout-to-composition cascade in sibling lazy items.
+For cross-row measurement, use a measure-phase helper, keep a fixed fallback while size is unknown, and compare before writing the captured size. This avoids a layout-to-composition cascade in sibling lazy items.
 
 ## Exceptions
 

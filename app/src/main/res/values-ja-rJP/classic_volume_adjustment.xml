@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ios_volume_classic_offset_title">中央 HUD の垂直位置</string>
+    <string name="ios_volume_classic_offset_summary">HUD の幅に対する割合で上（−）または下（+）に微調整します。0 は自動中央配置。移動範囲は安全領域内に制限されます。変更後は SystemUI を再起動してください。</string>
+</resources>

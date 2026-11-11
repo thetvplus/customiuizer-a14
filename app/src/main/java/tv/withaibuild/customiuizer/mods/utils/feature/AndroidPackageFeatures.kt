@@ -102,7 +102,7 @@ internal class AndroidAllRotationsFeature(
     override fun isEnabledCondition(prefs: PrefMap) = Companion.evaluateEnabled(prefs)
     override fun install(): FeatureInstallResult {
         val allRotations = mPrefs.getStringAsInt("system_allrotations2", 1)
-        MainModule.resHooks.setThemeValueReplacement("android", "bool", "config_allowAllRotations", allRotations == 2)
+        MainModule.getResourceHooks().setThemeValueReplacement("android", "bool", "config_allowAllRotations", allRotations == 2)
         return FeatureInstallResult.INSTALLED
     }
 }

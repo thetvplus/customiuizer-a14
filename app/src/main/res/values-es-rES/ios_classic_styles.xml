@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ios_volume_style_title">Estilo de volumen</string>
+    <string name="ios_volume_side">Barra lateral (iOS 18)</string>
+    <string name="ios_volume_classic">Panel central (iOS 12)</string>
+    <string name="ios_signal_dots_title">Señal móvil de cinco puntos (iOS 10)</string>
+    <string name="ios_signal_dots_summary">Duo tiene prioridad. Los iconos desconocidos o sin servicio conservan el estilo del sistema. Reinicia SystemUI tras cambiarlo.</string>
+</resources>

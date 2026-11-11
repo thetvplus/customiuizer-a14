@@ -3,6 +3,9 @@ package tv.withaibuild.customiuizer.mods.utils
 import android.view.MotionEvent
 import android.view.View
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import java.lang.ref.WeakReference
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.SystemUIControlCenterHooks
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
@@ -82,6 +85,10 @@ open class ControlCenterPluginRuntimeEngine(
     private var installState = InstallState.IDLE
     private var lastFailure: Throwable? = null
     private var hooked = false
+    private var binding = false
+    // Plugin UI hooks are not lease-scoped. A retired loader must not install them again.
+    // Weak identities avoid retaining loaders after their native plugin is collected.
+    private val attemptedLoaders = ArrayList<WeakReference<ClassLoader>>()
 
     /** Expose the shared arbiter so status-bar and control-center gestures share one authority. */
     fun arbiter(): PhysicalGestureArbiter = arbiter
@@ -106,12 +113,16 @@ open class ControlCenterPluginRuntimeEngine(
      *
      * - Same loader + [InstallState.INSTALLED] is idempotent.
      * - Same loader + [InstallState.FAILED_PARTIAL] is *not* retried.
+     * - Reentrant installation and retired loaders never add another set of UI hooks.
      * - A new loader ends the previous lease, clears the previous gesture runtime and tokens,
      *   then runs a fresh install transaction.
-     * - The active loader is only published after the gesture hooks and the control-center UI
-     *   hooks both succeed; fatal failures during install do not leave a half-state.
+     * - Non-fatal gesture and UI installation failures are isolated from each other and
+     *   reported as FAILED_PARTIAL. Fatal failures do not leave a live gesture runtime.
      */
+    @Synchronized
     fun bind(loader: ClassLoader): ControlCenterBindResult {
+        // Native class preparation can re-enter PluginFactory before a loader is published.
+        if (binding) return ControlCenterBindResult.AlreadyInstalled
         if (activeLoader === loader) {
             return when (installState) {
                 InstallState.INSTALLED -> ControlCenterBindResult.AlreadyInstalled
@@ -123,28 +134,64 @@ open class ControlCenterPluginRuntimeEngine(
             }
         }
 
-        // New loader (or first bind): invalidate old lease and clean up previous state.
-        activeLease?.invalidate()
-        clearInternal()
+        val previous = attemptedLoaders.iterator()
+        while (previous.hasNext()) {
+            val attempted = previous.next().get()
+            if (attempted == null) previous.remove()
+            else if (attempted === loader) return ControlCenterBindResult.NoRetry
+        }
+        attemptedLoaders.add(WeakReference(loader))
 
-        val lease = RuntimeLease()
-        activeLease = lease
-        installState = InstallState.INSTALLING
-        lastFailure = null
-
+        binding = true
         return try {
-            _runtimeHolder.bind(loader)
-            onInstallPluginHooks(loader)
-            installState = InstallState.INSTALLED
-            activeLoader = loader
-            ControlCenterBindResult.Installed
-        } catch (e: Throwable) {
+            // New loader (or first bind): retire the previous runtime before preparing hooks.
             clearInternal()
-            FatalErrors.unwrapAndRethrowIfFatal(e)
-            activeLoader = loader
-            installState = InstallState.FAILED_PARTIAL
-            lastFailure = e
-            ControlCenterBindResult.Failed(e)
+            val lease = RuntimeLease()
+            activeLease = lease
+            installState = InstallState.INSTALLING
+            lastFailure = null
+
+            try {
+                try {
+                    _runtimeHolder.bind(loader)
+                } catch (e: Throwable) {
+                    FatalErrors.unwrapAndRethrowIfFatal(e)
+                    lease.invalidate()
+                    lastFailure = e
+                }
+                if (installState == InstallState.INSTALLING) {
+                    try {
+                        onInstallPluginHooks(loader)
+                    } catch (e: Throwable) {
+                        // Styling is independent of the prepared native gesture owner.
+                        // Fatal errors still reach the outer cleanup boundary.
+                        FatalErrors.unwrapAndRethrowIfFatal(e)
+                        val previousFailure = lastFailure
+                        if (previousFailure == null) lastFailure = e
+                        else if (previousFailure !== e) previousFailure.addSuppressed(e)
+                    }
+                }
+                if (installState != InstallState.INSTALLING) {
+                    // A reentrant teardown may run during either installer. The holder can
+                    // finish publishing after clear(), so release it again before returning.
+                    clearInternal()
+                    installState = InstallState.IDLE
+                    ControlCenterBindResult.NoRetry
+                } else {
+                    installState = if (lastFailure == null) InstallState.INSTALLED else InstallState.FAILED_PARTIAL
+                    activeLoader = loader
+                    lastFailure?.let { ControlCenterBindResult.Failed(it) } ?: ControlCenterBindResult.Installed
+                }
+            } catch (e: Throwable) {
+                clearInternal()
+                FatalErrors.unwrapAndRethrowIfFatal(e)
+                activeLoader = loader
+                installState = InstallState.FAILED_PARTIAL
+                lastFailure = e
+                ControlCenterBindResult.Failed(e)
+            }
+        } finally {
+            binding = false
         }
     }
 
@@ -154,6 +201,7 @@ open class ControlCenterPluginRuntimeEngine(
      * Invalidates the current lease, clears the gesture runtime and its physical-gesture
      * tokens, and drops the active loader references so the old ClassLoader can be collected.
      */
+    @Synchronized
     fun clear() {
         activeLease?.invalidate()
         if (activeLease == null) {
@@ -192,7 +240,8 @@ open class ControlCenterPluginRuntimeEngine(
                         // A failed plugin lease must not disable discovery of its replacement loader.
                         if (lease != null && !lease.active && installState != InstallState.FAILED_PARTIAL) return
                         val loader = SystemUIControlCenterHooks.extractPluginLoader(callback.getThisObject()) ?: return
-                        bind(loader)
+                        val result = bind(loader)
+                        if (result is ControlCenterBindResult.Failed) XposedHelpers.log(result.reason)
                     }
                 },
             )
@@ -219,12 +268,16 @@ open class ControlCenterPluginRuntimeEngine(
      * Overridable so tests can observe or replace the installer.
      */
     protected open fun onInstallCreatePluginHook(classLoader: ClassLoader, hook: MethodHook) {
-        ModuleHelper.hookAllMethodsWithId(
-            "com.android.systemui.shared.plugins.PluginInstance\$PluginFactory",
-            classLoader,
-            "createPlugin",
-            HookInstallation.STABLE_ID_PLUGIN_CREATE,
+        val factory = Class.forName("com.android.systemui.shared.plugins.PluginInstance\$PluginFactory", false, classLoader)
+        val plugin = Class.forName("com.android.systemui.plugins.Plugin", false, classLoader)
+        val create = factory.getDeclaredMethod("createPlugin").also {
+            require(!Modifier.isStatic(it.modifiers) && it.returnType == plugin)
+            it.isAccessible = true
+        }
+        HookInstallation.intercept(
+            XposedHelpers.moduleInst.hook(create),
             hook,
+            HookInstallation.STABLE_ID_PLUGIN_CREATE,
         )
     }
 
@@ -247,34 +300,73 @@ open class ControlCenterPluginRuntimeEngine(
         val destroy: MethodHook,
     )
 
-    internal open fun installControlCenterGestureHooks(
+    internal fun installControlCenterGestureHooks(
         classLoader: ClassLoader,
         controlCenterMachine: GestureMachine,
         lease: RuntimeLease,
+    ) {
+        val owner = Class.forName("miui.systemui.controlcenter.windowview.ControlCenterWindowViewImpl", false, classLoader)
+        val entries = prepareControlCenterGestureHooks(owner, controlCenterMachine, lease)
+        check(PreparedHookBatch().install(entries) == FeatureInstallResult.INSTALLED) {
+            "Control-center gesture hooks were not fully installed"
+        }
+    }
+
+    internal fun prepareControlCenterGestureHooks(
+        owner: Class<*>,
+        machine: GestureMachine,
+        lease: RuntimeLease,
+    ): List<Pair<Method, MethodHook>> {
+        require(View::class.java.isAssignableFrom(owner))
+        fun method(name: String, returnType: Class<*>, vararg parameters: Class<*>): Method =
+            owner.getDeclaredMethod(name, *parameters).also {
+                require(!Modifier.isStatic(it.modifiers) && it.returnType == returnType)
+                it.isAccessible = true
+            }
+        val touch = method("handleMotionEvent", Boolean::class.javaPrimitiveType!!, MotionEvent::class.java, Boolean::class.javaPrimitiveType!!)
+        val attach = method("onAttachedToWindow", Void.TYPE)
+        // The A14 plugin declares destroy(), but inherits onDetachedFromWindow.
+        val destroy = method("destroy", Void.TYPE)
+        val stateField = owner.getDeclaredField("statusBarStateController").also {
+            require(!Modifier.isStatic(it.modifiers))
+            it.isAccessible = true
+        }
+        val getState = stateField.type.getMethod("getState").also {
+            require(!Modifier.isStatic(it.modifiers) && it.returnType == Int::class.javaPrimitiveType)
+            it.isAccessible = true
+        }
+        val hooks = createControlCenterGestureHooks(machine, lease) { view ->
+            stateField.get(view)?.let { getState.invoke(it) as Int }
+        }
+        return listOf(touch to hooks.handleMotionEvent, attach to hooks.onAttachedToWindow, destroy to hooks.destroy)
+    }
+
+    internal fun createControlCenterGestureHooks(
+        controlCenterMachine: GestureMachine,
+        lease: RuntimeLease,
+        readState: (View) -> Int?,
     ): ControlCenterGestureHooks {
         val controlCenterHook = object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
                 if (!lease.active) return
-                if (callback.getArgs().size >= 2 && (callback.getArg(1) as? Boolean) == true) return
-                if (callback.getArgs().isEmpty()) return
-                val event = callback.getArg(0) as? MotionEvent ?: return
-                val thisObject = callback.getThisObject() as? View ?: return
-                val statusBarStateController = XposedHelpers.getObjectField(thisObject, "statusBarStateController")
-                val state = XposedHelpers.callMethod(statusBarStateController, "getState") as Int
-                if (state == 1 || state == 2) return
-                val gestureEvent = GestureEvent(
-                    entry = GestureEntry.CONTROL_CENTER_TOUCH,
-                    actionMasked = event.actionMasked,
-                    downTime = event.downTime,
-                    eventTime = event.eventTime,
-                    x = event.x,
-                    y = event.y,
-                    pointerCount = event.pointerCount,
-                    ownerId = System.identityHashCode(thisObject),
-                    deviceId = event.deviceId,
-                    source = event.source,
-                )
                 ModuleHelper.guarded {
+                    if (callback.getArg(1) as? Boolean != false) return@guarded
+                    val event = callback.getArg(0) as? MotionEvent ?: return@guarded
+                    val thisObject = callback.getThisObject() as? View ?: return@guarded
+                    val state = readState(thisObject) ?: return@guarded
+                    if (state != 0) return@guarded
+                    val gestureEvent = GestureEvent(
+                        entry = GestureEntry.CONTROL_CENTER_TOUCH,
+                        actionMasked = event.actionMasked,
+                        downTime = event.downTime,
+                        eventTime = event.eventTime,
+                        x = event.x,
+                        y = event.y,
+                        pointerCount = event.pointerCount,
+                        ownerId = System.identityHashCode(thisObject),
+                        deviceId = event.deviceId,
+                        source = event.source,
+                    )
                     controlCenterMachine.dispatch(gestureEvent, thisObject)
                 }
             }
@@ -297,12 +389,7 @@ open class ControlCenterPluginRuntimeEngine(
                 }
             }
         }
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.windowview.ControlCenterWindowViewImpl", classLoader, "handleMotionEvent", MotionEvent::class.java, Boolean::class.javaPrimitiveType!!, controlCenterHook)
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.windowview.ControlCenterWindowViewImpl", classLoader, "onAttachedToWindow", onAttachedHook)
-        // HyperOS 1 destroys this owner before removing its window. The plugin View
-        // inherits onDetachedFromWindow, so the exact-method installer cannot hook it here.
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.windowview.ControlCenterWindowViewImpl", classLoader, "destroy", destroyHook)
-        return ControlCenterGestureHooks(controlCenterHook, onAttachedHook, destroyHook)
+        return ControlCenterGestureHooks(handleMotionEvent = controlCenterHook, onAttachedToWindow = onAttachedHook, destroy = destroyHook)
     }
 }
 

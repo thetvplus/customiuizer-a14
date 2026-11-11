@@ -25,8 +25,11 @@ class StatusBarWifiView {
 }
 
 @Suppress("UNUSED_PARAMETER")
-class StatusBarMobileView {
+// Match the real View owner so attachment and slot restoration use Android lifecycle.
+class StatusBarMobileView : android.widget.FrameLayout(org.robolectric.RuntimeEnvironment.getApplication()) {
     @JvmField var mState: StatusBarSignalPolicy.MobileIconState? = null
+    @JvmField var mMobile: android.widget.ImageView? = null
+    @JvmField var mColor = -1
     fun applyMobileState(state: StatusBarSignalPolicy.MobileIconState) {}
     fun updateState(state: StatusBarSignalPolicy.MobileIconState) = false
     fun applyDarknessInternal() {}

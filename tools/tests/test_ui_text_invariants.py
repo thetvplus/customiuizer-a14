@@ -39,6 +39,8 @@ TYPEFACE_ALLOWLIST = {
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemClockHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "SystemUIBatteryHooks.kt",
     APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "utils" / "StatusBarTextFit.kt",
+    # Native SystemUI PLAYER typography, owned only by IosMediaCardHooks.Style.
+    APP_ROOT / "java" / "tv" / "withaibuild" / "customiuizer" / "mods" / "media" / "MediaCardAppearance.kt",
     # The status-bar renderer keeps its nullable local font; the single cold
     # resource owner below is separate from the module settings typography.
     DUO_DIR / "DuoStatusBarView.kt",

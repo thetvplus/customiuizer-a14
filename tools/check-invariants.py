@@ -1264,14 +1264,38 @@ def check_gesture_detach_cleanup(path: Path, text: str) -> list[Finding]:
         )
         install = re.search(target_call + r'"destroy"\s*,\s*(\w+)\s*\)', cc_text)
         obsolete_detach = re.search(target_call + r'"onDetachedFromWindow"', cc_text)
+        callback_name = install.group(1) if install else None
+        callback_source = cc_text
+        if install is None:
+            # Follow the prepared batch into its callback factory, rather than accepting
+            # an unregistered clear or an unrelated method("destroy") elsewhere.
+            def function(name: str) -> str:
+                declaration = re.search(rf'\bfun\s+{name}\s*\(', cc_text)
+                return block_at(cc_text, declaration.end())[0] if declaration else ""
+
+            installer = function("installControlCenterGestureHooks")
+            prepare = function("prepareControlCenterGestureHooks")
+            factory = function("createControlCenterGestureHooks")
+            owner = re.search(r'val\s+(\w+)\s*=\s*Class\.forName\("miui\.systemui\.controlcenter\.windowview\.ControlCenterWindowViewImpl"', installer)
+            entries = re.search(r'val\s+(\w+)\s*=\s*prepareControlCenterGestureHooks\(\s*(\w+)\s*,', installer)
+            target = re.search(r'val\s+(\w+)\s*=\s*method\("destroy"\s*,\s*Void\.TYPE\)', prepare)
+            hooks = re.search(r'val\s+(\w+)\s*=\s*createControlCenterGestureHooks\(', prepare)
+            returned = re.search(r'return\s+ControlCenterGestureHooks\([^)]*\bdestroy\s*=\s*(\w+)\s*\)', factory)
+            if (owner and entries and target and hooks and returned
+                and owner.group(1) == entries.group(2)
+                and re.search(rf'PreparedHookBatch\(\)\.install\(\s*{re.escape(entries.group(1))}\s*\)', installer)
+                and re.search(rf'\breturn\s+listOf\([^)]*\b{re.escape(target.group(1))}\s+to\s+{re.escape(hooks.group(1))}\.destroy\b', prepare)):
+                callback_name = returned.group(1)
+                callback_source = factory
+            obsolete_detach = obsolete_detach or re.search(r'method\("onDetachedFromWindow"', prepare)
         cc_ok = False
-        if install is not None and obsolete_detach is None:
+        if callback_name is not None and obsolete_detach is None:
             declaration = re.search(
-                rf'\bval\s+{re.escape(install.group(1))}\s*=\s*object\s*:\s*MethodHook\s*\(\s*\)',
-                cc_text,
+                rf'\bval\s+{re.escape(callback_name)}\s*=\s*object\s*:\s*MethodHook\s*\(\s*\)',
+                callback_source,
             )
             if declaration is not None:
-                callback, _ = block_at(cc_text, declaration.end())
+                callback, _ = block_at(callback_source, declaration.end())
                 before = re.search(r'override\s+fun\s+before\s*\(\s*(\w+)\s*:\s*BeforeHookCallback\s*\)', callback)
                 if before is not None:
                     body, _ = block_at(callback, before.end())

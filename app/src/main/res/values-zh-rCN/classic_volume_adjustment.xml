@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ios_volume_classic_offset_title">中央音量框垂直微调</string>
+    <string name="ios_volume_classic_offset_summary">按音量框宽度的百分比向上（−）或向下（+）微调。0 为自动居中，实际范围受安全区域限制。修改后需重启 SystemUI。</string>
+</resources>

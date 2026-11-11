@@ -6,6 +6,9 @@ import tv.withaibuild.customiuizer.subs.System as SystemPage
 import tv.withaibuild.customiuizer.subs.Launcher
 import tv.withaibuild.customiuizer.subs.Controls
 import tv.withaibuild.customiuizer.subs.Various
+import tv.withaibuild.customiuizer.subs.System_AppBehavior
+import tv.withaibuild.customiuizer.subs.System_WifiAutomatic
+import tv.withaibuild.customiuizer.subs.System_VpnAutoSwitch
 
 /** Resolves main setting categories to generated selector and lazy page resources. */
 internal object PreferenceResourceResolver {
@@ -39,7 +42,19 @@ internal object PreferenceResourceResolver {
         }
     }
 
-    fun createFragment(category: String, sub: String?): SubFragment? = when (owner(category, sub)) {
+    fun isStandalonePage(sub: String?): Boolean = when (sub) {
+        "pref_key_system_appbehavior_cat", "pref_key_system_wifiauto_cat", "pref_key_system_vpnauto_cat" -> true
+        else -> false
+    }
+
+    fun createFragment(category: String, sub: String?): SubFragment? = when (sub) {
+        "pref_key_system_appbehavior_cat" -> System_AppBehavior()
+        "pref_key_system_wifiauto_cat" -> System_WifiAutomatic()
+        "pref_key_system_vpnauto_cat" -> System_VpnAutoSwitch()
+        else -> createCategoryFragment(category, sub)
+    }
+
+    private fun createCategoryFragment(category: String, sub: String?): SubFragment? = when (owner(category, sub)) {
         "pref_key_system" -> SystemPage()
         "pref_key_launcher" -> Launcher()
         "pref_key_controls" -> Controls()
@@ -56,6 +71,9 @@ internal object PreferenceResourceResolver {
     }
 
     private fun resolveSystem(sub: String?): Int = when (sub) {
+        "pref_key_system_appbehavior_cat" -> R.id.prefs_system_appbehavior
+        "pref_key_system_wifiauto_cat" -> R.id.prefs_system_wifiauto
+        "pref_key_system_vpnauto_cat" -> R.id.prefs_system_vpnauto
         "pref_key_system_cat_screen" -> R.id.prefs_system_screen
         "pref_key_system_cat_appearance" -> R.id.prefs_system_appearance
         "pref_key_system_cat_capture" -> R.id.prefs_system_capture

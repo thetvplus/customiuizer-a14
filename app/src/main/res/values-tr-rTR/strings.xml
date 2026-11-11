@@ -15,7 +15,7 @@
     <string name="enable_mod">Etkinleştir</string>
     <string name="system_mods">Sistem</string>
     <string name="system_mods_screen">Ekran</string>
-    <string name="system_mods_audio">Ses</string>
+    <string name="system_mods_audio">Ses düzeyi ve ses</string>
     <string name="system_mods_vibration">Titreşim</string>
     <string name="system_mods_toasts">Tostlar</string>
     <string name="system_statusbaricons_title">Simgeleri gizle</string>
@@ -114,7 +114,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_netspeed_rowspacing_title">Ağ hızı satır aralığı</string>
     <string name="system_netspeed_rowspacing_summ">Yükleme ve indirme satırları arasındaki boşluğu ayarlar; değişiklikten sonra SystemUI yeniden başlatılmalıdır</string>
     <string name="system_netspeed_prerequisite_note">Önce sistem ayarlarından "Gerçek zamanlı ağ hızını göster" seçeneğini açın</string>
-    <string name="system_statusbarcontrols_title">Hareket kontrolleri</string>
+    <string name="system_statusbarcontrols_title">Durum çubuğu hareketleri</string>
     <string name="system_statusbarcontrols_summ">Slaytta seçilen eylemleri gerçekleştirin ve çift dokunun</string>
     <string name="system_statusbarcontrols_sens_title">Ayar hassasiyeti</string>
     <string name="system_statusbarcontrols_sens_bright_title">Parlaklık</string>
@@ -328,7 +328,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_qsgridcolumns_title">Sütun sayısı</string>
     <string name="system_qs_hideoperator_title">Taşıyıcı adını gizle</string>
     <string name="system_qshaptic_title">Hızlı ayarlar dokunsal geri bildirim</string>
-    <string name="system_mods_automation">Uygulamalar ve otomasyon</string>
+    <string name="system_mods_automation">Bağlantılar ve cihazlar</string>
     <string name="system_mods_other">Gelişmiş ayarlar</string>
     <string name="system_volumeblur_collapsed_title">Daraltılmış iletişim kutusu</string>
     <string name="system_volumeblur_expanded_title">Genişletilmiş iletişim kutusu</string>
@@ -400,7 +400,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="launcher_pinch_title">İki parmakla kıstırma</string>
     <string name="launcher_spread_title">İki parmakla açma</string>
     <string name="launcher_bugfixes">Uyumluluk ve düzeltmeler</string>
-    <string name="controls_mods">Tuşlar ve hareketler</string>
+    <string name="controls_mods">Ses ve kontroller</string>
     <string name="controls_powerdt_summ">Güç tuşuna çift basıldığında kamera başlatmayı değiştirin. Etkinleştirilmesi için stok düğme kısayolu gerekir.</string>
     <string name="controls_powerflash_title">Hızlı el feneri</string>
     <string name="controls_powerflash_summ">El fenerini açmak için ekran kapalıyken güç düğmesine uzun basın</string>
@@ -425,7 +425,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="controls_volumemedia_down_title">Ses Kısma uzun basma eylemi</string>
     <string name="controls_volumemedia_down_summ">Ekran kapalıyken Ses Kısma uzun basma eylemi</string>
     <string name="controls_volumemedia_vibrate_title">Uzun basma titreşimi</string>
-    <string name="controls_mods_navbar">Gezinti çubuğu</string>
+    <string name="controls_mods_navbar">Gezinme çubuğu ve klavye</string>
     <string name="controls_nonavbar_title">Gezinme çubuğunu ve tam ekran göstergesini gizle</string>
     <string name="controls_hide_ime_dismiss_button_title">Klavye gizle düğmesini gizle</string>
     <string name="controls_hide_ime_dismiss_button_summ">Hareketle gezinmede klavye gösterilirken sol alttaki gizle düğmesini gizler</string>
@@ -449,7 +449,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="controls_fsg_horiz_summ">Hem yatay hareketleri hem de gezinme çubuğunu etkinleştirin</string>
     <string name="controls_fsg_swipeandstop_title">Kenardan başlayarak ekranı kaydırın ve eylemi durdurun</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">Titretme</string>
-    <string name="various_mods">Uygulamalar ve bakım</string>
+    <string name="various_mods">Uygulamalar ve araçlar</string>
     <string name="various_general_cat_title">Sistem ve uyumluluk</string>
     <string name="various_app_management_cat_title">Uygulama yönetimi</string>
     <string name="various_hiddenfeatures_title">Gizli özellikler</string>
@@ -1157,7 +1157,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_island_geometry_group">Konum ve boyut</string>
     <string name="system_island_appearance_group">Görünüm</string>
     <string name="system_island_feedback_group">İçerik</string>
-    <string name="system_island_gestures_title">Hareketler</string>
+    <string name="system_island_gestures_title">Dynamic Island hareketleri</string>
     <string name="system_island_waveform_off">Kapalı</string>
     <string name="system_island_waveform_light">Hafif animasyon</string>
     <string name="system_island_waveform_real">Canlı dalga biçimi (deneysel)</string>
@@ -1356,4 +1356,15 @@ ss - iki basamaklı saniye(09)</string>
     <string name="settings_status_icons">Durum simgeleri</string>
     <string name="settings_launcher_layout">Ana ekran düzeni ve animasyon</string>
     <string name="settings_app_behavior">Uygulama davranışı</string>
+    <string name="settings_sound_vibration">Ses ve titreşim</string>
+    <string name="settings_keywords_controls">Tuşlar ve hareketler buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">Uygulamalar ve bakım apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">Uygulama davranışı system compatibility hidden features</string>
+    <string name="settings_keywords_connections">Uygulamalar ve otomasyon connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">Uygulamalar ve otomasyon app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Ses yüzdesi gösterimi</string>
+    <string name="volume_pct_presentation_native">Yerel kayan gösterge</string>
+    <string name="volume_pct_presentation_auto">Toast ve Dynamic Island (otomatik)</string>
+    <string name="volume_pct_presentation_summary">Kullanılabilir Dynamic Island veya sistem Toast kapsülünü kullan; kullanılamıyorsa yerel kayan göstergeye dön.</string>
 </resources>

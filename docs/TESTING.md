@@ -80,6 +80,10 @@ Agent 按完整任务差异选择现有门禁、设备重放与各层待验边�
 
 同一 job 执行 Python / 源码契约、Full、一次 Develop 和 fatal lint；所有成功运行保留唯一 Develop APK 与 mapping，R8 输出始终检查。工具 / CI / catalog / matrix、tag 和手动运行另做矩阵确定性与必需独立 mutation。需要诊断可重复性时才做两次隔离构建与 `apk_semantic_diff.py`，不加入日常 CI。
 
+CodeQL Default setup 保留 Python / Actions。[Kotlin CodeQL](../.github/workflows/a14-codeql-kotlin.yml) 手动入口尚在候选分支，合入 main 后才进入默认分支工作流；已有 PR 提取试验的实际结果见[当前状态](maintenance/A14_REFINEMENT_ROADMAP.md#仓库安全待办)。入口复用现有 JDK / SDK / Gradle，只编译生产 Kotlin / Java，分析后由 `check_codeql_extraction.py` 核对全部已跟踪主源码的成功提取及非零 Kotlin 代码指标。SARIF 保留 7 天，暂不重复上传 Security；Java/Kotlin 的持续告警接入须在主线迁移 Advanced setup 后再停用 Default，不能提前留下扫描空档。提取失败与安全发现分别报告，不以零告警证明绝对安全，也不增加正式发行门禁。
+
+[依赖图](../.github/workflows/a14-dependency-graph.yml) 单独手动运行，只解析依赖并由隔离作业提交，不重复 CI 或构建 APK。仓库 Actions 白名单须同时允许 `setup-gradle` 与 `dependency-submission`，不能只允许前者而留下失效入口。
+
 main / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment main 限制、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
 
 清理历史时先核对 Release 元数据、原 run / attempt 及候选资产；签名任务最终失败也可能留下可恢复候选，不能按 conclusion 批量删除。没有过期或确认失效的资产时沿用现有保留期，不新增定时清理工作流。

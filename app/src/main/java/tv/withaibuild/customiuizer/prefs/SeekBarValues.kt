@@ -5,18 +5,19 @@ import java.math.RoundingMode
 
 /** The existing slider lattice is multiples of step, before the display shift/divider. */
 internal class SeekBarValues(min: Int, max: Int, val step: Int, val shift: Int, val divider: Int) {
-    private val first = (min.toLong() + step - 1) / step * step
-    val isValid = first <= max / step * step
+    private val first = -Math.floorDiv(-min.toLong(), step.toLong()) * step
+    private val last = Math.floorDiv(max, step) * step.toLong()
+    val isValid = first <= last
     val minimum = first.coerceAtMost(max.toLong()).toInt()
-    val maximum = (max / step * step).coerceAtLeast(minimum)
-    val progressMax = (maximum - minimum) / step
+    val maximum = last.coerceAtLeast(minimum.toLong()).toInt()
+    val progressMax = ((maximum.toLong() - minimum) / step).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 
-    fun storage(progress: Int): Int = minimum + progress.coerceIn(0, progressMax) * step
+    fun storage(progress: Int): Int = (minimum + progress.coerceIn(0, progressMax).toLong() * step).toInt()
     fun progress(value: Int): Int =
-        ((value.toLong().coerceIn(minimum.toLong(), maximum.toLong()) - minimum + step / 2) / step).toInt()
-            .coerceIn(0, progressMax)
+        ((value.toLong().coerceIn(minimum.toLong(), maximum.toLong()) - minimum + step / 2) / step)
+            .coerceAtMost(progressMax.toLong()).toInt()
     fun bounded(value: Int): Int = storage(progress(value))
-    fun contains(value: Int): Boolean = isValid && value in minimum..maximum && (value - minimum) % step == 0
+    fun contains(value: Int): Boolean = isValid && value in minimum..maximum && (value.toLong() - minimum) % step == 0L
 
     fun number(value: Int): String = BigDecimal.valueOf(value.toLong() - shift)
         .divide(BigDecimal.valueOf(divider.toLong()), 12, RoundingMode.HALF_UP)

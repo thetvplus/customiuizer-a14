@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.toArgb
 import tv.withaibuild.customiuizer.ui.settingsView
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import tv.withaibuild.customiuizer.ui.SettingsPreferenceList
 import org.junit.Rule
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -181,6 +180,7 @@ class PreferenceNavigationUiTest {
                 assertTrue("$settingKey must open a fresh settings page", currentPage() !== selector)
                 assertPreferencePageVisible(currentPage())
                 capturePage(settingKey)
+                if (settingKey in standaloneKeys) visited.add(settingKey)
                 for (entryKey in standaloneKeys) {
                     val parent = currentPage() as SubFragment
                     val entry = parent.findPreference<Preference>(entryKey) ?: continue
@@ -226,11 +226,41 @@ class PreferenceNavigationUiTest {
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun appsDirectoryMakesAutomationDiscoverable() {
+    fun appsAndNetworkRulesOpenDirectlyFromTheirVisibleDirectory() {
         val home = currentPage() as MainFragment
         home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_various")))
         settleNavigation()
-        compose.onNodeWithTag("pref_key_system_cat_automation").assertIsDisplayed()
+        val selector = currentPage() as SubFragment
+        for ((suffix, controller, setting) in listOf(
+            Triple("appbehavior", "System_AppBehavior", "rotation"),
+            Triple("wifiauto", "System_WifiAutomatic", "enabled"),
+            Triple("vpnauto", "System_VpnAutoSwitch", "enabled"),
+        )) {
+            val key = "pref_key_system_${suffix}_cat"
+            compose.onNodeWithTag("settings.list").performScrollToNode(hasTestTag(key))
+            compose.onNodeWithTag(key).performClick()
+            settleNavigation()
+            val page = currentPage() as SubFragment
+            assertEquals(controller, page.javaClass.simpleName)
+            assertTrue(requireNotNull(page.arguments).getBoolean("isStandalone"))
+            assertEquals(key, requireNotNull(page.arguments).getString("sub"))
+            val title = requireNotNull(selector.findPreference<Preference>(key)).title.toString()
+            assertEquals(title, activity.settingsBar.titleText.toString())
+            assertSame(page, activity.settingsBar.owner)
+            compose.onNode(hasText(title) and !hasAnyAncestor(hasTestTag("settings.list"))).assertIsDisplayed()
+            assertTrue(page !== selector)
+            assertTrue(page.findPreference<Preference>("pref_key_system_${suffix}_$setting") != null)
+            assertPreferencePageVisible(page)
+            pressToolbarBack()
+            assertSame(selector, currentPage())
+        }
+        compose.onNodeWithTag("settings.list").performScrollToNode(hasTestTag("pref_key_system_cat_automation"))
+        compose.onNodeWithTag("pref_key_system_cat_automation").performClick()
+        settleNavigation()
+        val connections = currentPage() as SubFragment
+        assertTrue(connections.findPreference<Preference>("pref_key_system_wifipassword") != null)
+        assertTrue(connections.findPreference<Preference>("pref_key_system_usb_default_function") != null)
+        assertNull(connections.findPreference<Preference>("pref_key_system_appbehavior_cat"))
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -715,24 +745,37 @@ class PreferenceNavigationUiTest {
         assertTrue(requireNotNull(AppHelper.appPrefs).getStringSet(allowed.key,emptySet())!!.isEmpty())
     }
 
-    @Test fun automationDirectoryOwnsTheAppAndNetworkRulesWithoutDuplicateOldEntries() {
+    @Test fun appsAndToolsDirectorySeparatesAppRulesConnectionsAndSystemToolsWithoutDuplicateEntries() {
         val home = currentPage() as MainFragment
         assertTrue(home.onPreferenceTreeClick(requireNotNull(home.findPreference<Preference>("pref_key_various"))))
         settleNavigation()
         val directory = currentPage() as SubFragment
         assertPreferencePageVisible(directory)
-        SettingsPreferenceList(directory.preferenceScreen).use { model ->
-            assertEquals("No redundant heading for a single directory entry", "pref_key_system_cat_automation", model.rows.first().preference.key)
-        }
-        compose.onNodeWithTag("pref_key_system_cat_automation").assertIsDisplayed()
+        val groups = (0 until directory.preferenceScreen.preferenceCount)
+            .map { directory.preferenceScreen.getPreference(it) as PreferenceGroup }
+        assertEquals(listOf(R.string.prefs_group_apps, R.string.prefs_group_connectivity, R.string.prefs_group_system_tools)
+            .map(activity::getText), groups.map { it.title })
+        val keys = directoryKeys(directory.preferenceScreen)
+        assertEquals(keys.size, keys.toSet().size)
+        assertTrue(groups[0].findPreference<Preference>("pref_key_system_appbehavior_cat") != null)
+        assertNull(groups[0].findPreference<Preference>("pref_key_system_wifiauto_cat"))
+        assertNull(groups[0].findPreference<Preference>("pref_key_system_vpnauto_cat"))
+        for (suffix in listOf("wifiauto", "vpnauto"))
+            assertTrue(groups[1].findPreference<Preference>("pref_key_system_${suffix}_cat") != null)
+        assertTrue(groups[2].findPreference<Preference>("pref_key_various_cat_general") != null)
+        assertTrue(groups[2].findPreference<Preference>("pref_key_various_cat_exclusive") != null)
         requireNotNull(directory.findPreference<Preference>("pref_key_system_cat_automation")).performClick()
         settleNavigation()
-        val page = currentPage() as SubFragment
-        for (key in listOf("appbehavior", "wifiauto", "vpnauto"))
-            assertTrue(requireNotNull(page.findPreference<Preference>("pref_key_system_${key}_cat")).isVisible)
+        val connections = currentPage() as SubFragment
+        for (suffix in listOf("appbehavior", "wifiauto", "vpnauto"))
+            assertNull(connections.findPreference<Preference>("pref_key_system_${suffix}_cat"))
+        assertTrue(requireNotNull(connections.findPreference<Preference>("pref_key_system_wifipassword")).isVisible)
+        assertTrue(requireNotNull(connections.findPreference<Preference>("pref_key_system_usb_default_function")).isVisible)
         pressToolbarBack()
-        assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_appbehavior_cat"))
-        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_cat_other")).performClick()
+        assertSame(directory, currentPage())
+        for (suffix in listOf("appbehavior", "wifiauto", "vpnauto"))
+            assertTrue(requireNotNull(directory.findPreference<Preference>("pref_key_system_${suffix}_cat")).isVisible)
+        requireNotNull(directory.findPreference<Preference>("pref_key_system_cat_other")).performClick()
         settleNavigation()
         assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_wifiauto_cat"))
         assertNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_vpnauto_cat"))
@@ -742,9 +785,7 @@ class PreferenceNavigationUiTest {
         val config = tv.withaibuild.customiuizer.utils.WifiAutomaticSettings
         val existing = tv.withaibuild.customiuizer.utils.WifiAutomaticSettings.Rule("home", "Home", "home", dnd = 2)
         AppHelper.appPrefs!!.edit().putString("pref_key_system_wifiauto_rules", config.encode(listOf(existing))).apply()
-        openSettingsPage("pref_key_various", "pref_key_system_cat_automation")
-        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_wifiauto_cat")).performClick()
-        settleNavigation()
+        openSettingsPage("pref_key_various", "pref_key_system_wifiauto_cat")
         val page = currentPage() as tv.withaibuild.customiuizer.subs.System_WifiAutomatic
         assertPreferencePageVisible(page)
         assertFalse(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_wifiauto_enabled")).isChecked)
@@ -776,9 +817,7 @@ class PreferenceNavigationUiTest {
     @Test fun appBehaviorUsesSeparateSwitchesAndStoresBrightnessPerApplication() {
         val prefix = "pref_key_system_appbehavior_"
         AppHelper.appPrefs!!.edit().putStringSet(prefix + "brightness_apps", setOf("app.a", "app.b")).apply()
-        openSettingsPage("pref_key_various", "pref_key_system_cat_automation")
-        requireNotNull((currentPage() as SubFragment).findPreference<Preference>(prefix + "cat")).performClick()
-        settleNavigation()
+        openSettingsPage("pref_key_various", prefix + "cat")
         val page = currentPage() as tv.withaibuild.customiuizer.subs.System_AppBehavior
         assertPreferencePageVisible(page)
         for (name in listOf("rotation", "volume", "brightness", "block")) {
@@ -810,9 +849,7 @@ class PreferenceNavigationUiTest {
     }
 
     @Test fun vpnRulesUseOneClientOrProfileAndAMultiAppSelector() {
-        openSettingsPage("pref_key_various", "pref_key_system_cat_automation")
-        requireNotNull((currentPage() as SubFragment).findPreference<Preference>("pref_key_system_vpnauto_cat")).performClick()
-        settleNavigation()
+        openSettingsPage("pref_key_various", "pref_key_system_vpnauto_cat")
         val page = currentPage() as tv.withaibuild.customiuizer.subs.System_VpnAutoSwitch
         assertPreferencePageVisible(page)
         val kind = requireNotNull(page.findPreference<ListPreference>("pref_key_system_vpnauto_kind"))
@@ -946,6 +983,67 @@ class PreferenceNavigationUiTest {
             assertPreferencePageVisible(currentPage())
             pressToolbarBack()
         }
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun audioDirectoryUsesItsSystemControllerAndPersistsTheVisibleIosVolumeOptions() {
+        val styleKey = "pref_key_system_volume_ios_style"
+        val compactKey = "pref_key_system_volume_ios_compact"
+        val offsetKey = "pref_key_system_volume_ios_classic_offset"
+        openSettingsPage("pref_key_controls", "pref_key_system_cat_audio")
+        val page = currentPage() as tv.withaibuild.customiuizer.subs.System
+        val style = requireNotNull(page.findPreference<ListPreference>(styleKey))
+        assertEquals("1", style.value)
+        assertTrue(requireNotNull(page.findPreference<Preference>(compactKey)).isVisible)
+        assertFalse(requireNotNull(page.findPreference<Preference>(offsetKey)).isVisible)
+        compose.onNodeWithTag(offsetKey).assertDoesNotExist()
+        compose.onNodeWithTag("pref_key_system_volume_ios").performClick()
+        settleNavigation()
+        assertTrue(requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_volume_ios")).isChecked)
+        fun select(value: String) {
+            val current = currentPage() as tv.withaibuild.customiuizer.subs.System
+            val list = requireNotNull(current.findPreference<ListPreference>(styleKey))
+            val index = list.entryValues.indexOfFirst { it.toString() == value }
+            assertTrue("Enabling the HUD must enable its style choice", list.isEnabled)
+            compose.onNodeWithTag("settings.list").performScrollToNode(hasTestTag(styleKey))
+            compose.onNodeWithTag(styleKey).assertIsEnabled().assertIsDisplayed().performClick()
+            settleNavigation()
+            compose.onNode(hasText(list.title.toString()) and hasAnyAncestor(isDialog())).assertIsDisplayed()
+            compose.onNode(hasText(list.entries[index].toString()) and hasAnyAncestor(isDialog()),
+                useUnmergedTree = true).assertIsDisplayed().performClick()
+            settleNavigation()
+            assertEquals(value, list.value)
+            assertEquals(value, requireNotNull(AppHelper.appPrefs).getString(styleKey, null))
+        }
+        select("2")
+        assertFalse(requireNotNull(page.findPreference<Preference>(compactKey)).isVisible)
+        assertTrue(requireNotNull(page.findPreference<Preference>(offsetKey)).isVisible)
+        compose.onNodeWithTag(compactKey).assertDoesNotExist()
+        compose.onNodeWithTag(offsetKey).assertIsDisplayed()
+        val offset = requireNotNull(page.findPreference<tv.withaibuild.customiuizer.prefs.SeekBarPreference>(offsetKey))
+        assertEquals(-100, offset.getMinValue())
+        assertTrue(offset.submitComposeInput("-25"))
+        assertEquals(-25, requireNotNull(AppHelper.appPrefs).getInt(offsetKey, 0))
+        assertEquals("-25", offset.composeInput)
+        pressToolbarBack()
+        val directory = currentPage() as SubFragment
+        requireNotNull(directory.findPreference<Preference>("pref_key_system_cat_audio")).performClick()
+        settleNavigation()
+        val restored = currentPage() as tv.withaibuild.customiuizer.subs.System
+        assertEquals("2", restored.findPreference<ListPreference>(styleKey)?.value)
+        assertFalse(requireNotNull(restored.findPreference<Preference>(compactKey)).isVisible)
+        assertTrue(requireNotNull(restored.findPreference<Preference>(offsetKey)).isVisible)
+        select("1")
+        assertTrue(requireNotNull(restored.findPreference<Preference>(compactKey)).isVisible)
+        assertFalse(requireNotNull(restored.findPreference<Preference>(offsetKey)).isVisible)
+        pressToolbarBack()
+        assertSame(directory, currentPage())
+        requireNotNull(directory.findPreference<Preference>("pref_key_system_cat_audio")).performClick()
+        settleNavigation()
+        val side = currentPage() as tv.withaibuild.customiuizer.subs.System
+        assertEquals("1", side.findPreference<ListPreference>(styleKey)?.value)
+        assertTrue(requireNotNull(side.findPreference<Preference>(compactKey)).isVisible)
+        assertFalse(requireNotNull(side.findPreference<Preference>(offsetKey)).isVisible)
     }
 
     @Test
@@ -1503,7 +1601,10 @@ class PreferenceNavigationUiTest {
         assertEquals("The page must end inside the viewport", 0f, view.translationX, 0.01f)
         assertEquals(1f, view.alpha, 0.01f)
         assertTrue("Preference XML must load rows", page.preferenceScreen.preferenceCount > 0)
-        SettingsPreferenceList(page.preferenceScreen).use { assertTrue("Generated page has visible options", it.rows.isNotEmpty()) }
+        // A second PreferenceGroupAdapter replaces AndroidX's single internal listener.
+        // Inspect the mounted list without taking its presentation ownership.
+        val list = compose.onNodeWithTag("settings.list").assertIsDisplayed()
+        assertTrue("Generated page must render visible options", list.onChildren().fetchSemanticsNodes().isNotEmpty())
         val menu = PopupMenu(activity, view).menu
         page.createSettingsMenu(menu)
         for (id in intArrayOf(R.id.restartlauncher, R.id.restartsystemui, R.id.restartsecuritycenter, R.id.softreboot)) {

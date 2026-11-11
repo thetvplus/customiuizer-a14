@@ -24,7 +24,7 @@ class DeckOrientationTest {
     }
     // Only the selected native ABI is supplied. No launcher constructor, Hook
     // installation or physical/visual orientation equivalence is simulated.
-    class Algorithm {
+    open class Algorithm {
         @JvmField var visual=true
         @JvmField var window=Rect(0,0,2400,1080)
         @JvmField var insets=Rect(90,0,30,40)

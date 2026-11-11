@@ -64,8 +64,8 @@ if (officialRelease) {
     }
 }
 
-val lastVersion = 304
-val lastVersionName = "r14.27.3"
+val lastVersion = 305
+val lastVersionName = "r14.27.5"
 
 fun resolveBuildRevision(): String {
     val prop = project.findProperty("buildRevision")?.toString()
@@ -385,7 +385,15 @@ dependencies {
     testImplementation(libs.compose.ui.test)
     debugImplementation(libs.compose.test.manifest)
     constraints {
-        testImplementation("com.google.guava:guava:33.7.2-jre") {
+        // AGP's isolated lint tool does not inherit the root buildscript constraints.
+        // Constrain only this host configuration; keep APK and test graphs unchanged.
+        listOf(libs.host.guava, libs.commons.lang3, libs.host.bcprov, libs.host.bcpkix,
+            libs.host.bcutil, libs.host.httpclient).forEach {
+            add("androidLintTool", it) {
+                because("Use the patched versions already validated by the host build tools")
+            }
+        }
+        testImplementation(libs.host.guava) {
             because("CVE-2026-102554; Robolectric's host-only transitive dependency")
         }
         implementation(libs.androidx.fragment.ktx) {
@@ -400,4 +408,5 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.dynamicanimation)
 }

@@ -35,6 +35,7 @@ class CategorySource:
     key: str
     source_name: str
     title: str
+    keywords: str = ""
 
     @property
     def suffix(self) -> str:
@@ -44,8 +45,8 @@ class CategorySource:
 CATEGORY_SOURCES = (
     CategorySource("pref_key_system", "prefs_system.xml", "@string/system_mods"),
     CategorySource("pref_key_launcher", "prefs_launcher.xml", "@string/launcher_title"),
-    CategorySource("pref_key_controls", "prefs_controls.xml", "@string/controls_mods"),
-    CategorySource("pref_key_various", "prefs_various.xml", "@string/various_mods"),
+    CategorySource("pref_key_controls", "prefs_controls.xml", "@string/controls_mods", "@string/settings_keywords_controls"),
+    CategorySource("pref_key_various", "prefs_various.xml", "@string/various_mods", "@string/settings_keywords_tools"),
 )
 
 # Standalone pages opened by the category controllers. Search must use the same
@@ -129,6 +130,12 @@ def _structured_categories(
         for source_category in source_group:
             key = source_category.get(ANDROID_KEY, "")
             title = source_category.get(ANDROID_TITLE, "")
+            if source_category.tag == PREFERENCE_ITEM:
+                if not title or len(source_category) or key not in {page[0] for page in STANDALONE_PAGES}:
+                    raise ValueError(f"Unknown standalone directory link in {category.source_name}: {key}")
+                selector_group.append(ET.Element(source_category.tag, dict(source_category.attrib)))
+                found += 1
+                continue
             if source_category.tag != PREFERENCE_CATEGORY or not title:
                 raise ValueError(f"Invalid directory node in {category.source_name}: {source_category.tag}")
             if not key:
@@ -189,6 +196,12 @@ def _search_entries(
                 }
                 if route:
                     item["routeSub"] = route
+                else:
+                    for entry_key, resource, controller, dynamic in STANDALONE_PAGES:
+                        if key == entry_key:
+                            item.update(routeSub=key, page=f"@id/{resource}", pageTitle=title,
+                                        pageFragment=controller, pageDynamic=str(dynamic).lower())
+                            break
                 if page_title:
                     item["breadcrumbSubTitle"] = page_title
                 if section:
@@ -216,6 +229,8 @@ def _standalone_search_entries(
         root = source_pages[resource]
         for item in _search_entries(category, root):
             section = item.get("breadcrumbSubSubTitle") or item.get("breadcrumbSubTitle", "")
+            if not item.get("keywords") and parent.get("keywords"):
+                item["keywords"] = parent["keywords"]
             item.update(
                 routeSub=entry_key,
                 breadcrumbSubTitle=parent.get("breadcrumbSubTitle", ""),
@@ -237,7 +252,8 @@ def _append_compact_search_category(
     category_element = ET.SubElement(
         index_root,
         "category",
-        {"key": category.key, "title": category.title},
+        {"key": category.key, "title": category.title,
+         **({"keywords": category.keywords} if category.keywords else {})},
     )
     group_element: ET.Element | None = None
     current_group: tuple[str, ...] | None = None

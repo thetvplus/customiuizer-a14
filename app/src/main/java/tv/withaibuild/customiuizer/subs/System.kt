@@ -45,6 +45,20 @@ class System : SubFragment() {
         }
         super.onCreatePreferences(savedInstanceState, rootKey)
         selectSub()
+        if (sub == "pref_key_system_cat_audio") {
+            val style = findPreference<ListPreferenceEx>("pref_key_system_volume_ios_style")
+            val compact = findPreference<Preference>("pref_key_system_volume_ios_compact")
+            val offset = findPreference<Preference>("pref_key_system_volume_ios_classic_offset")
+            fun showVolumeOptions(value: String?) {
+                compact?.isVisible = value != "2"
+                offset?.isVisible = value == "2"
+            }
+            style?.setOnPreferenceChangeListener { preference, value ->
+                showVolumeOptions(syncPendingListSelection(preference, value))
+                true
+            }
+            showVolumeOptions(style?.value)
+        }
         if (sub == "pref_key_system_island_layout_cat") configureIslandOffsetRange()
         if (sub == "pref_key_system_cat_toasts") {
             val position = findPreference<ListPreferenceEx>("pref_key_system_toast_position")
@@ -188,23 +202,6 @@ class System : SubFragment() {
     override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         when (sub) {
-            "pref_key_system_cat_automation" -> {
-                findPreference<Preference>("pref_key_system_appbehavior_cat")?.setOnPreferenceClickListener {
-                    openSubFragment(System_AppBehavior(), null, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp,
-                        R.string.appbehavior_title, R.id.prefs_system_appbehavior)
-                    true
-                }
-                findPreference<Preference>("pref_key_system_wifiauto_cat")?.setOnPreferenceClickListener {
-                    openSubFragment(System_WifiAutomatic(), null, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp,
-                        R.string.wifiauto_title, R.id.prefs_system_wifiauto)
-                    true
-                }
-                findPreference<Preference>("pref_key_system_vpnauto_cat")?.setOnPreferenceClickListener {
-                    openSubFragment(System_VpnAutoSwitch(), null, AppHelper.SettingsType.Preference, AppHelper.ActionBarType.HomeUp,
-                        R.string.system_vpnauto_title, R.id.prefs_system_vpnauto)
-                    true
-                }
-            }
             "pref_key_system_cat_screen" -> {
                 findPreference<Preference>("pref_key_system_orientationlock")?.setOnPreferenceChangeListener { _, newValue ->
                     val act = activity ?: return@setOnPreferenceChangeListener false

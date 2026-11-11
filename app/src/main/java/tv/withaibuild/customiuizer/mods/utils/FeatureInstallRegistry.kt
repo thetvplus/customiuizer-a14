@@ -40,7 +40,6 @@ class FeatureInstallRegistry {
         }
         if (existing == null) {
             orderedFeatures.add(feature)
-            FeatureInstallState.initialize(feature.id)
         }
     }
 

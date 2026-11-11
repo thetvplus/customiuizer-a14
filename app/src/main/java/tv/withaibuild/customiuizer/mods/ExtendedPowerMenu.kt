@@ -92,8 +92,8 @@ internal object ExtendedPowerMenu {
         val messageField = XposedHelpers.findField(single, "mMessageResId")
         val ready = AtomicBoolean()
         val titles = mapOf(
-            Target.FASTBOOT to MainModule.resHooks.addFakeResource("epm_fastboot_title", Target.FASTBOOT.title, "string"),
-            Target.RECOVERY to MainModule.resHooks.addFakeResource("epm_recovery_title", Target.RECOVERY.title, "string"))
+            Target.FASTBOOT to MainModule.getResourceHooks().addFakeResource("epm_fastboot_title", Target.FASTBOOT.title, "string"),
+            Target.RECOVERY to MainModule.getResourceHooks().addFakeResource("epm_recovery_title", Target.RECOVERY.title, "string"))
         val titleHook = ModuleHelper.findAndHookConstructor(singleConstructor.declaringClass.name, loader, dialogType,
             Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {

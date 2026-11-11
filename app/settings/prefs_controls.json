@@ -7,7 +7,7 @@
     {
       "type": "section",
       "attributes": {
-        "android:title": "@string/system_mods_audio"
+        "android:title": "@string/settings_sound_vibration"
       },
       "children": [
         {
@@ -33,6 +33,33 @@
                   }
                 },
                 {
+                  "type": "choice",
+                  "attributes": {
+                    "android:key": "pref_key_system_volume_ios_style",
+                    "android:title": "@string/ios_volume_style_title",
+                    "android:entries": "@array/ios_volume_style_entries",
+                    "android:entryValues": "@array/ios_volume_style_values",
+                    "android:dependency": "pref_key_system_volume_ios",
+                    "android:defaultValue": "1",
+                    "app:valueAsSummary": "true"
+                  }
+                },
+                {
+                  "type": "slider",
+                  "attributes": {
+                    "android:key": "pref_key_system_volume_ios_classic_offset",
+                    "android:title": "@string/ios_volume_classic_offset_title",
+                    "android:summary": "@string/ios_volume_classic_offset_summary",
+                    "android:dependency": "pref_key_system_volume_ios",
+                    "android:defaultValue": "0",
+                    "app:minValue": "-100",
+                    "app:maxValue": "100",
+                    "app:stepValue": "1",
+                    "app:format": "%d%%",
+                    "app:offtext": "@string/array_default"
+                  }
+                },
+                {
                   "type": "toggle",
                   "attributes": {
                     "android:key": "pref_key_system_volume_ios_compact",
@@ -40,67 +67,6 @@
                     "android:summary": "@string/system_volume_ios_compact_summ",
                     "android:dependency": "pref_key_system_volume_ios",
                     "android:defaultValue": "false"
-                  }
-                }
-              ]
-            },
-            {
-              "type": "section",
-              "attributes": {
-                "android:title": "@string/settings_playback_calls"
-              },
-              "children": [
-                {
-                  "type": "toggle",
-                  "attributes": {
-                    "android:key": "pref_key_system_nosafevolume",
-                    "android:title": "@string/system_nosafevolume_title",
-                    "android:summary": "@string/needs_systemui_restart",
-                    "android:defaultValue": "false"
-                  }
-                },
-                {
-                  "type": "toggle",
-                  "attributes": {
-                    "android:key": "pref_key_system_noducking",
-                    "android:title": "@string/system_noducking_title",
-                    "android:summary": "@string/needs_device_restart",
-                    "android:defaultValue": "false"
-                  }
-                },
-                {
-                  "type": "toggle",
-                  "attributes": {
-                    "android:key": "pref_key_system_firstpress",
-                    "android:title": "@string/system_firstpress_title",
-                    "android:summary": "@string/needs_device_restart",
-                    "android:defaultValue": "false"
-                  }
-                },
-                {
-                  "type": "toggle",
-                  "attributes": {
-                    "android:key": "pref_key_system_ignorecalls",
-                    "android:title": "@string/system_ignorecalls_title",
-                    "android:summary": "@string/system_ignorecalls_summ",
-                    "android:defaultValue": "false"
-                  }
-                },
-                {
-                  "type": "action",
-                  "attributes": {
-                    "android:title": "@string/system_popupnotif_apps_title",
-                    "android:key": "pref_key_system_ignorecalls_apps",
-                    "android:dependency": "pref_key_system_ignorecalls",
-                    "app:indentLevel": "1",
-                    "app:countAsSummary": "true"
-                  }
-                },
-                {
-                  "type": "action",
-                  "attributes": {
-                    "android:key": "pref_key_system_visualizer_cat",
-                    "android:title": "@string/system_visualizer_title"
                   }
                 }
               ]
@@ -117,6 +83,19 @@
                     "android:key": "pref_key_system_cc_volume_showpct",
                     "android:title": "@string/system_cc_volume_showpct_title",
                     "android:defaultValue": "false"
+                  }
+                },
+                {
+                  "type": "choice",
+                  "attributes": {
+                    "android:key": "pref_key_system_volume_pct_presentation",
+                    "android:title": "@string/volume_pct_presentation_title",
+                    "android:summary": "@string/volume_pct_presentation_summary",
+                    "android:entries": "@array/volume_pct_presentation_entries",
+                    "android:entryValues": "@array/volume_pct_presentation_values",
+                    "android:dependency": "pref_key_system_cc_volume_showpct",
+                    "android:defaultValue": "0",
+                    "app:valueAsSummary": "true"
                   }
                 },
                 {
@@ -239,6 +218,67 @@
                     "app:maxValue": "100",
                     "app:stepValue": "1",
                     "app:format": "%d%%"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "attributes": {
+                "android:title": "@string/settings_playback_calls"
+              },
+              "children": [
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_nosafevolume",
+                    "android:title": "@string/system_nosafevolume_title",
+                    "android:summary": "@string/needs_systemui_restart",
+                    "android:defaultValue": "false"
+                  }
+                },
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_noducking",
+                    "android:title": "@string/system_noducking_title",
+                    "android:summary": "@string/needs_device_restart",
+                    "android:defaultValue": "false"
+                  }
+                },
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_firstpress",
+                    "android:title": "@string/system_firstpress_title",
+                    "android:summary": "@string/needs_device_restart",
+                    "android:defaultValue": "false"
+                  }
+                },
+                {
+                  "type": "toggle",
+                  "attributes": {
+                    "android:key": "pref_key_system_ignorecalls",
+                    "android:title": "@string/system_ignorecalls_title",
+                    "android:summary": "@string/system_ignorecalls_summ",
+                    "android:defaultValue": "false"
+                  }
+                },
+                {
+                  "type": "action",
+                  "attributes": {
+                    "android:title": "@string/system_popupnotif_apps_title",
+                    "android:key": "pref_key_system_ignorecalls_apps",
+                    "android:dependency": "pref_key_system_ignorecalls",
+                    "app:indentLevel": "1",
+                    "app:countAsSummary": "true"
+                  }
+                },
+                {
+                  "type": "action",
+                  "attributes": {
+                    "android:key": "pref_key_system_visualizer_cat",
+                    "android:title": "@string/system_visualizer_title"
                   }
                 }
               ]

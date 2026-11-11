@@ -19,11 +19,52 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowChoreographer
 import org.robolectric.util.ReflectionHelpers
+import tv.withaibuild.customiuizer.mods.duostatusbar.DuoConfig
+import tv.withaibuild.customiuizer.mods.duostatusbar.DuoNetworkState
+import tv.withaibuild.customiuizer.mods.duostatusbar.DuoStatusBarView
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class IslandStatusBarCompactTest {
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun islandReleasePreservesDuoUpdatesAndTheNativeBatteryAlpha() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val root = FrameLayout(activity)
+        val clock = View(activity)
+        val battery = FrameLayout(activity).apply { alpha = .7f }
+        val duo = DuoStatusBarView(activity, DuoConfig(true, 24), { throw AssertionError(it) }, {})
+        battery.addView(duo)
+        root.addView(clock); root.addView(battery); activity.setContentView(root)
+        root.layout(0, 0, 400, 50); clock.layout(8, 0, 60, 50); battery.layout(340, 0, 392, 50)
+        duo.layout(0, 0, 52, 50)
+        val network = DuoNetworkState().apply { wifi(true, true, 3, true) }
+        val compact = IslandStatusBarCompact(root, clock, battery, animationsEnabled = { false })
+        val bitmap = Bitmap.createBitmap(52, 50, Bitmap.Config.ARGB_8888)
+        fun pixels(): IntArray {
+            bitmap.eraseColor(0)
+            duo.draw(android.graphics.Canvas(bitmap))
+            return IntArray(52 * 50).also { bitmap.getPixels(it, 0, 52, 0, 0, 52, 50) }
+        }
+        try {
+            duo.render(25, false, false, -1, network.snapshot, 0)
+            val before = pixels()
+            val origin = IntArray(2); root.getLocationOnScreen(origin)
+            compact.show(Rect(origin[0] + 20, origin[1], origin[0] + 380, origin[1] + 50))
+            assertEquals(0f, battery.alpha)
+            duo.render(80, true, false, -1, network.snapshot, 0)
+            val updated = pixels()
+            assertFalse(before.contentEquals(updated))
+            battery.alpha = .4f // Native shade/keyguard animation changes the host target.
+            root.viewTreeObserver.dispatchOnPreDraw()
+            assertEquals(0f, battery.alpha)
+            compact.restore()
+            assertEquals(.4f, battery.alpha)
+            assertSame(battery, duo.parent)
+            assertArrayEquals(updated, pixels())
+        } finally { compact.restore(); bitmap.recycle(); activity.finish() }
+    }
+
     @Test fun sharedAncestorsHaveOneMatrixCheckPerUnchangedFrame() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         val root = FrameLayout(activity)

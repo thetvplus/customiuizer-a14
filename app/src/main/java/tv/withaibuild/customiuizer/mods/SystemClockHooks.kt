@@ -1268,7 +1268,7 @@ object SystemClockHooks {
     fun CCClockTweakHook(lpparam: PackageReadyParam) {
         val ccClockSize = MainModule.mPrefs.getInt("system_cc_clock_fontsize", 9)
         if (ccClockSize > 9) {
-            MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "qs_control_header_clock_size", ccClockSize)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "qs_control_header_clock_size", ccClockSize)
         }
         val ccClockHook = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {

@@ -18,7 +18,7 @@
     <string name="white_lists">Zapnout seznam povolených</string>
     <string name="system_mods">Systém</string>
     <string name="system_mods_screen">Zobrazení</string>
-    <string name="system_mods_audio">Zvuk</string>
+    <string name="system_mods_audio">Hlasitost a zvuk</string>
     <string name="system_mods_vibration">Vibrace</string>
     <string name="system_mods_toasts">Připnutá oznámení</string>
     <string name="system_statusbaricons_title">Skrýt ikony</string>
@@ -131,7 +131,7 @@
     <string name="system_netspeed_rowspacing_summ">Upraví mezery mezi řádky odesílání a stahování; po změně je nutné restartovat SystemUI</string>
     <string name="system_netspeed_prerequisite_note">Nejprve v systémovém nastavení zapněte "Zobrazit rychlost sítě v reálném čase"</string>
     <string name="system_netspeed_use_clock_style_title">Použít styl textu hodin ve stavovém řádku</string>
-    <string name="system_statusbarcontrols_title">Ovládání pomocí gest</string>
+    <string name="system_statusbarcontrols_title">Gesta stavového řádku</string>
     <string name="system_statusbarcontrols_summ">Provádění vybraných akcí na snímku a dvojité klepnutí</string>
     <string name="system_statusbarcontrols_sens_title">Citlivost přizpůsobení</string>
     <string name="system_statusbarcontrols_sens_bright_title">Jas</string>
@@ -369,7 +369,7 @@
     <string name="system_qs_hideoperator_title">Skrýt název operátora</string>
     <string name="system_qs_hideoperator_delimiter_title">Skrýt oddělovač názvu operátora</string>
     <string name="system_qshaptic_title">Rychlé nastavení hmatové zpětné vazby</string>
-    <string name="system_mods_automation">Aplikace a automatizace</string>
+    <string name="system_mods_automation">Připojení a zařízení</string>
     <string name="system_mods_other">Pokročilá nastavení</string>
     <string name="system_volumeblur_collapsed_title">Sbalený dialog</string>
     <string name="system_volumeblur_expanded_title">Rozšířený dialog</string>
@@ -445,7 +445,7 @@
     <string name="launcher_spread_title">Roztažení dvěma prsty</string>
     <string name="launcher_bugfixes">Kompatibilita a opravy</string>
     <string name="system_resizablewidgets_title">Volná změna velikosti widgetu</string>
-    <string name="controls_mods">Tlačítka a gesta</string>
+    <string name="controls_mods">Zvuk a ovládání</string>
     <string name="controls_powerdt_summ">Vyměňte spuštění fotoaparátu při dvojitém stisknutí tlačítka napájení. Vyžaduje zapnutí výchozí klávesové zkratky.</string>
     <string name="controls_powerflash_title">Rychlá svítilna</string>
     <string name="controls_powerflash_summ">Dlouhým stisknutím tlačítka napájení při vypnuté obrazovce zapnouz svítilnu</string>
@@ -471,7 +471,7 @@
     <string name="controls_volumemedia_down_title">Akce dlouhého stisknutí tlačítka Snížení hlasitosti</string>
     <string name="controls_volumemedia_down_summ">Akce pro dlouhé stisknutí tlačítka snížení hlasitosti, když je obrazovka vypnutá</string>
     <string name="controls_volumemedia_vibrate_title">Vibrace při dlouhém stisknutí</string>
-    <string name="controls_mods_navbar">Navigační panel</string>
+    <string name="controls_mods_navbar">Navigační lišta a klávesnice</string>
     <string name="controls_nonavbar_title">Skrýt navigační panel</string>
     <string name="controls_hide_ime_dismiss_button_title">Skrýt tlačítko pro skrytí klávesnice</string>
     <string name="controls_hide_ime_dismiss_button_summ">Skryje tlačítko pro skrytí klávesnice vlevo dole v gestové navigaci</string>
@@ -497,7 +497,7 @@
     <string name="controls_fsg_assist_right_title">Akce přejetím pravého rohu</string>
     <string name="controls_fsg_swipeandstop_title">Potáhnutím prstu z jednoho okraje displeje na druhý pro návrat k předchozí aplikaci</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">Nevibrovat</string>
-    <string name="various_mods">Aplikace a údržba</string>
+    <string name="various_mods">Aplikace a nástroje</string>
     <string name="various_general_cat_title">Systém a kompatibilita</string>
     <string name="various_app_management_cat_title">Správa aplikací</string>
     <string name="various_hiddenfeatures_title">Skryté funkce</string>
@@ -1158,7 +1158,7 @@
     <string name="system_island_geometry_group">Poloha a velikost</string>
     <string name="system_island_appearance_group">Vzhled</string>
     <string name="system_island_feedback_group">Obsah</string>
-    <string name="system_island_gestures_title">Gesta</string>
+    <string name="system_island_gestures_title">Gesta Dynamic Island</string>
     <string name="system_island_waveform_off">Vypnuto</string>
     <string name="system_island_waveform_light">Lehká animace</string>
     <string name="system_island_waveform_real">Živý průběh (experimentální)</string>
@@ -1357,4 +1357,15 @@
     <string name="settings_status_icons">Stavové ikony</string>
     <string name="settings_launcher_layout">Rozložení plochy a animace</string>
     <string name="settings_app_behavior">Chování aplikací</string>
+    <string name="settings_sound_vibration">Zvuk a vibrace</string>
+    <string name="settings_keywords_controls">Tlačítka a gesta buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">Aplikace a údržba apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">Chování aplikací system compatibility hidden features</string>
+    <string name="settings_keywords_connections">Aplikace a automatizace connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">Aplikace a automatizace app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Zobrazení hlasitosti v procentech</string>
+    <string name="volume_pct_presentation_native">Nativní plovoucí ukazatel</string>
+    <string name="volume_pct_presentation_auto">Toast a Dynamic Island (automaticky)</string>
+    <string name="volume_pct_presentation_summary">Použít dostupný Dynamic Island nebo systémovou kapsli Toast, jinak nativní plovoucí ukazatel.</string>
 </resources>

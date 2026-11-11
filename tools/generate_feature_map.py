@@ -89,8 +89,10 @@ def resolve(value: str, strings: dict[str, str]) -> str:
 def collect_pages(repo: Path, strings: dict[str, str]) -> list[Page]:
     xml_dir = repo / RES / "xml"
     resolver = (repo / JAVA / "utils/PreferenceResourceResolver.kt").read_text(encoding="utf-8")
-    routes = dict(re.findall(r'"(pref_key_\w+_cat_\w+)" -> R\.id\.(\w+)', resolver))
     standalone = {row[0]: row[1:] for row in prefs.STANDALONE_PAGES}
+    declared_routes = dict(re.findall(r'"(pref_key_\w+)" -> R\.id\.(\w+)', resolver))
+    direct_controllers = dict(re.findall(r'"(pref_key_\w+)" -> (\w+)\(\)', resolver))
+    direct_keys: set[str] = set()
     seen: set[str] = set()
     expected_routes: dict[str, str] = {}
     pages: list[Page] = []
@@ -102,10 +104,25 @@ def collect_pages(repo: Path, strings: dict[str, str]) -> list[Page]:
         root = read_element(xml_dir / category.source_name)
         # Reuse search breadcrumb/route parsing, rather than another page registry.
         search = prefs._search_entries(category, root)
-        for group in root.iter(prefs.PREFERENCE_CATEGORY):
-            key = group.get(prefs.ANDROID_KEY, "")
-            if not key:
+        directory = prefs._structured_categories(category, root)[f"prefs_{category.suffix}_cat"]
+        groups = {group.get(prefs.ANDROID_KEY): group for group in root.iter(prefs.PREFERENCE_CATEGORY)
+                  if group.get(prefs.ANDROID_KEY)}
+        # Traverse the same selectable entries as CategorySelector, including direct
+        # standalone endpoints. A resource name alone cannot prove the click target.
+        for link in directory.iter(prefs.PREFERENCE_ITEM):
+            key = link.attrib[prefs.ANDROID_KEY]
+            if key in standalone:
+                resource, controller, _dynamic = standalone[key]
+                if direct_controllers.get(key) != controller:
+                    raise ValueError(f"Missing direct controller navigation: {key}")
+                expected_routes[key] = resource
+                direct_keys.add(key)
+                seen.add(key)
+                child = read_element(xml_dir / f"{resource}.xml")
+                path = (resolve(category.title, strings), resolve(link.attrib[prefs.ANDROID_TITLE], strings))
+                pages.append(Page(path, key, f"{resource}.json", controller, child, True))
                 continue
+            group = groups[key]
             resource = prefs._split_name(category, key).removesuffix(".xml")
             expected_routes[key] = resource
             path = (resolve(category.title, strings), resolve(group.attrib[prefs.ANDROID_TITLE], strings))
@@ -119,10 +136,11 @@ def collect_pages(repo: Path, strings: dict[str, str]) -> list[Page]:
                 seen.add(entry["key"])
                 child = read_element(xml_dir / f"{resource}.xml")
                 pages.append(Page(path + (resolve(entry["title"], strings),), entry["key"], f"{resource}.json", owner, child, True))
-    if routes != expected_routes:
-        raise ValueError("PreferenceResourceResolver routes differ from canonical categories")
     if seen != set(standalone):
         raise ValueError(f"Unreachable standalone pages: {sorted(set(standalone) - seen)}")
+    routes = {key: resource for key, resource in declared_routes.items() if "_cat_" in key or key in direct_keys}
+    if routes != expected_routes:
+        raise ValueError("PreferenceResourceResolver routes differ from canonical categories")
     covered = {p.source for p in pages} | {"prefs_main.json"}
     orphaned = {p.name for p in preference_sources(xml_dir)} - covered
     if orphaned:
@@ -132,7 +150,7 @@ def collect_pages(repo: Path, strings: dict[str, str]) -> list[Page]:
         owner = JAVA / (f"subs/{page.controller}.kt" if page.controller != "SubFragment" else "SubFragment.kt")
         if not (repo / owner).is_file():
             raise ValueError(f"Missing page controller: {owner}")
-        if page.standalone and not re.search(r"\bR\.id\." + re.escape(Path(page.source).stem) + r"\b", navigation):
+        if page.standalone and page.key not in direct_keys and not re.search(r"\bR\.id\." + re.escape(Path(page.source).stem) + r"\b", navigation):
             raise ValueError(f"Missing controller navigation: {page.source}")
     return pages
 

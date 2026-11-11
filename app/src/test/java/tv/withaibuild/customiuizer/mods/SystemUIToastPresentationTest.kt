@@ -34,6 +34,76 @@ import kotlin.random.Random
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SystemUIToastPresentationTest {
+    @Test fun volumeCapsuleRejectsNativeExitAndNewlyHiddenPresentationModes() {
+        var mode: StrongToastPresentationMode? = StrongToastPresentationMode.SYSTEM_DEFAULT
+        val controller = ControllerFixture(nativeContext)
+        val bridge = NativeToastCapsule(ControllerFixture::class.java, RootFixture::class.java) { mode }
+        controller.before = bridge::onNativeShow
+        bridge.capture(controller)
+        val lease = requireNotNull(bridge.show("50%", "com.android.systemui", 2400, allowDefault = true))
+        val root = controller.mMiuiStrongToast!!
+        try {
+            for (next in listOf(StrongToastPresentationMode.HIDE, StrongToastPresentationMode.DYNAMIC_ISLAND, null)) {
+                mode = next
+                assertFalse(bridge.owns(lease))
+                assertFalse(bridge.update(lease, "60%"))
+            }
+            mode = StrongToastPresentationMode.SYSTEM_DEFAULT
+            root.exitDelay = 400
+            root.hideStrongToast()
+            assertNotNull(root.parent)
+            assertFalse(bridge.owns(lease))
+            assertFalse(bridge.update(lease, "70%"))
+            bridge.release(lease)
+            assertEquals("Do not restart an already-running native exit", 1, root.hideCalls)
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(401))
+            assertNull(root.parent)
+        } finally { root.mShowStrongToastHandler.removeCallbacksAndMessages(null) }
+    }
+    @Test fun volumeFeedbackUsesOneNativeCapsuleAndRenewsOnlyItsExistingHideCallback() {
+        val controller = ControllerFixture(nativeContext)
+        val bridge = NativeToastCapsule(ControllerFixture::class.java, RootFixture::class.java) {
+            StrongToastPresentationMode.SYSTEM_DEFAULT
+        }
+        controller.before = bridge::onNativeShow
+        bridge.capture(controller)
+        val lease = requireNotNull(bridge.show("0%", "com.android.systemui", 2400, allowDefault = true))
+        val root = controller.mMiuiStrongToast!!
+        for (value in 1..100) assertTrue(bridge.update(lease, "$value%"))
+        assertEquals(1, controller.calls)
+        assertSame(root, controller.mMiuiStrongToast)
+        assertEquals("100%", root.mLeftTextView.text.toString())
+        val looper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+        looper.idleFor(java.time.Duration.ofMillis(2399))
+        assertNotNull(root.parent)
+        looper.idleFor(java.time.Duration.ofMillis(1))
+        assertNull(root.parent)
+        assertEquals(1, root.hideCalls)
+        assertFalse(bridge.update(lease, "90%"))
+        bridge.release(lease)
+        assertEquals(1, root.hideCalls)
+    }
+
+    @Test fun volumeCannotCreateASuppressedCapsuleOrOverwriteAnotherNativeCategory() {
+        var mode = StrongToastPresentationMode.DYNAMIC_ISLAND
+        val controller = ControllerFixture(nativeContext)
+        val bridge = NativeToastCapsule(ControllerFixture::class.java, RootFixture::class.java) { mode }
+        controller.before = bridge::onNativeShow
+        bridge.capture(controller)
+        assertNull(bridge.show("50%", "com.android.systemui", 2400, allowDefault = true))
+        assertEquals(0, controller.calls)
+        mode = StrongToastPresentationMode.SYSTEM_DEFAULT
+        val lease = requireNotNull(bridge.show("50%", "com.android.systemui", 2400, allowDefault = true))
+        val root = controller.mMiuiStrongToast!!
+        root.mCurrentToastCategory = "native_important_activity"
+        root.mShowStrongToastHandler.removeCallbacks(root.mHideStrongToastRunnable)
+        assertFalse(bridge.update(lease, "60%"))
+        assertNull(bridge.show("60%", "com.android.systemui", 2400, allowDefault = true))
+        bridge.release(lease)
+        assertEquals(0, root.hideCalls)
+        root.hideStrongToast()
+    }
+
     private var foreheadHeightDp = 48
     private val base: Context get() = RuntimeEnvironment.getApplication()
     private val nativeContext get() = object : ContextWrapper(base) {
@@ -349,16 +419,29 @@ class SystemUIToastPresentationTest {
         }
     }
     class RootFixture(context: Context) : FrameLayout(context) {
+        @JvmField val mShowStrongToastHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        @JvmField val mHideStrongToastRunnable = Runnable { hideStrongToast() }
         @JvmField var mStrongToastShow = false
         @JvmField var mCheckStartAnimation = false
         @JvmField var mCheckInOutStrongToasting = false
         @JvmField var mCurrentToastCategory = ""
         @JvmField val mLeftTextView = TextView(context)
         var hideCalls = 0
+        var exitDelay = 0L
         fun hideStrongToast() {
+            mShowStrongToastHandler.removeCallbacks(mHideStrongToastRunnable)
             hideCalls++
-            (parent as? ViewGroup)?.removeView(this)
-            mStrongToastShow = false
+            if (exitDelay > 0) {
+                mCheckInOutStrongToasting = true
+                mShowStrongToastHandler.postDelayed({
+                    (parent as? ViewGroup)?.removeView(this)
+                    mStrongToastShow = false
+                    mCheckInOutStrongToasting = false
+                }, exitDelay)
+            } else {
+                (parent as? ViewGroup)?.removeView(this)
+                mStrongToastShow = false
+            }
         }
     }
     companion object {

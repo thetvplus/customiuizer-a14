@@ -16,6 +16,73 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = android.app.Application::class, shadows = [DockWindowManagerShadow::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DockNativeAnimationTest {
+    @Test fun nativeSceneSnapshotHidesNewPanelsAndRestoresReattachedOwnersInBothModes() {
+        for (full in booleanArrayOf(false, true)) for (google in booleanArrayOf(false, true)) {
+            val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+            DockBackgroundTest.NativeMaterial.googleSupported = google
+            try {
+                val root = FrameLayout(activity.get())
+                activity.get().setContentView(root)
+                val host = SceneHotSeats(activity.get())
+                val params = FrameLayout.LayoutParams(320, 80).apply { topMargin = 600 }
+                root.addView(host, params)
+                val access = DockContentAccess(SceneHotSeats::class.java, DockBackgroundTest.ItemIconFixture::class.java)
+                val manager = host.mDragController.mLauncher.manager
+                manager.current = com.miui.home.recents.OverviewState()
+                LauncherDockBackground.attach(host, DockBackgroundConfig(fullWidth = full, material = 2),
+                    DockBackgroundTest.NativeMaterial::class.java.getConstructor(android.content.Context::class.java),
+                    access, visualEvents = true)
+                val decor = host.rootView as FrameLayout
+                fun panel(): DockBackgroundView = if (full) (0 until decor.childCount).map { decor.getChildAt(it) }
+                    .filterIsInstance<DockFullWidthContainer>().single().getChildAt(0) as DockBackgroundView
+                    else (0 until host.childCount).map { host.getChildAt(it) }.filterIsInstance<DockBackgroundView>().single()
+                fun settle() = repeat(4) {
+                    decor.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY))
+                    decor.layout(0, 0, 360, 800); decor.viewTreeObserver.dispatchOnPreDraw()
+                }
+                settle()
+                assertEquals("A panel created after Overview's callback must remain hidden", View.INVISIBLE, panel().visibility)
+                assertFalse((panel().getChildAt(0) as DockBackgroundTest.NativeMaterial).appliedEnabled)
+                repeat(2) {
+                    root.removeView(host)
+                    manager.current = Any() // Native state changed while the owner was detached.
+                    root.addView(host, params)
+                    settle()
+                    val visible = panel()
+                    assertEquals(View.VISIBLE, visible.visibility)
+                    assertTrue((visible.getChildAt(0) as DockBackgroundTest.NativeMaterial).appliedEnabled)
+                    manager.current = com.miui.home.recents.OverviewState()
+                    visible.setSceneVisible(false)
+                    root.removeView(host)
+                    root.addView(host, params)
+                    settle()
+                    assertEquals("Reattaching within Overview must not flash a new strip", View.INVISIBLE, panel().visibility)
+                    assertFalse((panel().getChildAt(0) as DockBackgroundTest.NativeMaterial).appliedEnabled)
+                    assertSame(host.mContent, host.getChildAt(if (full) 0 else 1))
+                }
+            } finally { activity.pause().stop().destroy(); DockBackgroundTest.NativeMaterial.googleSupported = false }
+        }
+    }
+
+    class SceneHotSeats(context: android.content.Context) : FrameLayout(context) {
+        @JvmField val mContent = FrameLayout(context)
+        @JvmField val mDragController = SceneDragController(SceneLauncher(this))
+        init {
+            mContent.addView(DockBackgroundTest.ItemIconFixture(context), LayoutParams(100, 80))
+            addView(mContent, LayoutParams(-1, -1))
+        }
+    }
+    class SceneDragController(@JvmField val mLauncher: SceneLauncher) { @JvmField var mDragging = false }
+    class SceneLauncher(@JvmField val mHotSeats: SceneHotSeats) {
+        val manager = SceneManager()
+        fun getStateManager() = manager
+    }
+    class SceneManager {
+        var current: Any = Any()
+        fun getState() = current
+    }
+
     @Test fun overviewOwnsBothPanelModesEvenWhenNativeHotSeatsRemainOpaqueAndVisible() {
         for (full in booleanArrayOf(false, true)) for (google in booleanArrayOf(false, true)) {
             val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()

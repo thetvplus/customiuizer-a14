@@ -56,6 +56,8 @@ def tool_tests(root: Path, paths: list[str]) -> list[str] | None:
     changed = {p[:-3].replace("/", ".") for p in paths if p.startswith("tools/") and p.endswith(".py")}
     if any(p.startswith("tools/device/") for p in paths):
         changed.add("tools.device_verify")
+    if not changed:
+        return None  # Catalog/non-Python inputs use the broad gate without an import graph.
     files = [*root.glob("tools/*.py"), *root.glob("tools/tests/test_*.py")]
     literal_targets = {p.name: p.relative_to(root).with_suffix("").as_posix().replace("/", ".") for p in files}
     graph = {}
@@ -78,7 +80,7 @@ def tool_tests(root: Path, paths: list[str]) -> list[str] | None:
                 target = literal_targets.get(node.value.replace("\\", "/").rsplit("/", 1)[-1])
                 if target: deps.add(target)  # subprocess / importlib source consumers
         graph[module] = {d if d.startswith("tools.") else "tools." + d for d in deps}
-    if not changed or any(c not in graph for c in changed):
+    if any(c not in graph for c in changed):
         return None
     affected = set(changed)
     while True:
@@ -167,13 +169,20 @@ def plan(root: Path, paths: list[str]) -> dict:
     tests = set()
     unknown = []
     sources = None
+    resolved_tests = {}
+    def behavior_tests(patterns):
+        # One plan observes one checkout; reuse the same owner lookup across
+        # changed files/cross-owner callers, with no cache surviving this call.
+        if patterns not in resolved_tests:
+            resolved_tests[patterns] = test_classes(root, patterns)
+        return resolved_tests[patterns]
     for path in production:
         feature = next((name for name, (fragment, _, _) in FEATURES.items() if fragment in path), None)
         if feature:
             if sources is None: sources = source_texts(root)
             _, patterns, scenario = FEATURES[feature]
             narrow = leaf_tests(root, path, patterns, sources)
-            tests.update(narrow or test_classes(root, patterns))
+            tests.update(narrow or behavior_tests(patterns))
             scenarios.add(scenario)
             reasons.append(f"{path}: {feature} owner and behavior regressions")
             if narrow: reasons.append(f"{path}: reviewed value seam + direct consumer behavior tests")
@@ -189,7 +198,7 @@ def plan(root: Path, paths: list[str]) -> dict:
                     relative = caller.relative_to(root).as_posix()
                     other = next((key for key, (fragment, _, _) in FEATURES.items() if fragment in relative), None)
                     if other and other != feature:
-                        tests.update(test_classes(root, FEATURES[other][1]))
+                        tests.update(behavior_tests(FEATURES[other][1]))
                         scenarios.add(FEATURES[other][2])
                         reasons.append(f"{path}: cross-owner consumer {relative}")
                     elif not other and "/mods/utils/feature/" not in relative:
@@ -214,9 +223,9 @@ def plan(root: Path, paths: list[str]) -> dict:
         reasons.append("Shared/unmapped runtime, removed test or build boundary: use existing Full gate")
     elif production or tests or settings:
         if settings:
-            tests.update(test_classes(root, ("**/*Settings*Test.*", "**/*Preference*Test.*")))
+            tests.update(behavior_tests(("**/*Settings*Test.*", "**/*Preference*Test.*")))
         commands.append(["python", "tools/verify.py", "fast", "--tests", *sorted(tests)])
-    if select_scope("local", "", {}, paths)["tools"]:
+    if select_scope("local", "", paths)["tools"]:
         selected_tools = tool_tests(root, paths)
         commands.append(["python", "-m", "unittest", *selected_tools, "-b"] if selected_tools else
                         ["python", "-m", "unittest", "discover", "-s", "tools/tests", "-p", "test_*.py", "-b"])

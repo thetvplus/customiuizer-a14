@@ -3,9 +3,9 @@ package tv.withaibuild.customiuizer.mods.utils.gesture
 import android.content.Context
 import android.media.AudioManager
 import android.view.View
+import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
-import java.lang.reflect.Method
 
 /**
  * Resolves the runtime dependencies for the status bar (PhoneStatusBarView) gesture owner.
@@ -78,10 +78,8 @@ class StatusBarGestureDependenciesResolver(
                 ),
             )
         } catch (err: Throwable) {
-            when (err) {
-                is OutOfMemoryError, is ThreadDeath, is VirtualMachineError -> throw err
-                else -> GestureDependenciesResult.FailedTransient(err.message ?: "unknown")
-            }
+            FatalErrors.unwrapAndRethrowIfFatal(err)
+            GestureDependenciesResult.FailedTransient(err.message ?: "unknown")
         }
     }
 }

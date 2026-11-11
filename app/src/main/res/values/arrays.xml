@@ -1,4 +1,11 @@
 <resources>
+    <string-array name="volume_pct_presentation_entries">
+        <item>@string/volume_pct_presentation_native</item>
+        <item>@string/volume_pct_presentation_auto</item>
+    </string-array>
+    <string-array name="volume_pct_presentation_values">
+        <item>0</item><item>1</item>
+    </string-array>
     <string-array name="duo_cellular_style_entries">
         <item>@string/system_statusbar_duo_cellular_graphic</item>
         <item>@string/system_statusbar_duo_cellular_text</item>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ios_volume_classic_offset_title">Orta panelin dikey konumu</string>
+    <string name="ios_volume_classic_offset_summary">Panel genişliğinin yüzdesi olarak yukarı (−) veya aşağı (+) kaydırır. Sıfır otomatik ortalar; güvenli alan hareketi sınırlar. Değişiklikten sonra SystemUI yeniden başlatılmalıdır.</string>
+</resources>

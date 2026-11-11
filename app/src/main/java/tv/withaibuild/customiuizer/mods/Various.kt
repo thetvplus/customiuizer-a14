@@ -598,8 +598,8 @@ object Various {
         val registeredOwnerView = arrayOf<WeakReference<View>?>(null)
         val enableSideBar = MainModule.mPrefs.getBoolean("various_swipe_expand_sidebar")
         if (!enableSideBar) {
-            MainModule.resHooks.setThemeValueReplacement("com.miui.securitycenter", "dimen", "sidebar_height_default", 8)
-            MainModule.resHooks.setThemeValueReplacement("com.miui.securitycenter", "dimen", "sidebar_height_vertical", 8)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.miui.securitycenter", "dimen", "sidebar_height_default", 8)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.miui.securitycenter", "dimen", "sidebar_height_vertical", 8)
         }
         val RegionSamplingHelper = XposedHelpers.findClassIfExists("com.android.systemui.navigationbar.gestural.RegionSamplingHelper", lpparam.classLoader)
         if (RegionSamplingHelper == null) {
@@ -873,7 +873,7 @@ object Various {
 
     @JvmStatic
     fun OpenByDefaultHook(lpparam: PackageReadyParam) {
-        val defaultOpenTitleId = MainModule.resHooks.addFakeResource("various_open_by_default_title", R.string.various_open_by_default_title, "string")
+        val defaultOpenTitleId = MainModule.getResourceHooks().addFakeResource("various_open_by_default_title", R.string.various_open_by_default_title, "string")
         ModuleHelper.findAndHookMethod("com.miui.appmanager.ApplicationsDetailsActivity", lpparam.classLoader, "initView", object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?

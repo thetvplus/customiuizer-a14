@@ -90,6 +90,8 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val headerTransform=exact(taskView,"setHeaderTranslationAndAlpha",voidType,floatType,floatType,floatType)
     val childrenAlpha=exact(taskView,"setChildrenViewAlpha",voidType,floatType)
     val layout=exact(stack,"updateLayoutStyle",voidType)
+    val rebaseScroll=exact(stack,"changeTaskStackViewScrollAndTaskViewTranslation",voidType,floatType)
+    val cardSprings=DeckCardSpring(taskView)
     val attached=exact(stack,"onAttachedToWindow",voidType)
     val detached=exact(stack,"onDetachedFromWindow",voidType)
     val configuration=exact(stack,"onConfigurationChanged",voidType,android.content.res.Configuration::class.java)
@@ -150,7 +152,17 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
             floatType,floatType,Runnable::class.java)
     val appGestureProgress=if(profile==DeckLauncherProfile.LEGACY) field(nav,"mPer",floatType) else null
     val appGestureQuickSwitch=if(profile==DeckLauncherProfile.LEGACY) exact(nav,"isQuickSwitchMode",Boolean::class.javaPrimitiveType!!) else null
-    val surfaceOcclusion=if(profile==DeckLauncherProfile.WINDOW_ELEMENT) DeckSurfaceOcclusion(cls("recents.util.ClipAnimationHelper")) else null
+    val surfaceOcclusion=if(profile==DeckLauncherProfile.WINDOW_ELEMENT) DeckSurfaceOcclusion(cls("recents.util.ClipAnimationHelper"))
+        else DeckSurfaceOcclusion.resolve(cls("recents.util.ClipAnimationHelper"))
+    val springStart=if(profile==DeckLauncherProfile.LEGACY) exact(spring,"getStartRect",android.graphics.RectF::class.java) else null
+    val legacySpringStarts=if(profile==DeckLauncherProfile.LEGACY) listOf(
+        exact(spring,"startInGestureThread",voidType),exact(spring,"startInMainThread",voidType)) else emptyList()
+    val legacySurfaceFrame=if(profile==DeckLauncherProfile.LEGACY && surfaceOcclusion!=null) staticExact(utils,
+        "lambda\$createSpringAnim\$1",voidType,cls("recents.util.ClipAnimationHelper\$TransformParams"),
+        cls("recents.util.ClipAnimationHelper"),cls("recents.util.RemoteAnimationTargetSet"),
+        Boolean::class.javaPrimitiveType!!,Boolean::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!,
+        Boolean::class.javaPrimitiveType!!,taskView,Boolean::class.javaPrimitiveType!!,recents,android.graphics.RectF::class.java,
+        Boolean::class.javaPrimitiveType!!,android.graphics.RectF::class.java,floatType,floatType,floatType) else null
     val createSpring=staticExact(utils,"createSpringAnim",spring,recents,taskView,cls("recents.util.ClipAnimationHelper\$TransformParams"),cls("recents.util.ClipAnimationHelper"),cls("recents.util.RemoteAnimationTargetSet"),android.graphics.RectF::class.java,android.graphics.RectF::class.java,floatType,floatType,Boolean::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!)
     val listen=exact(spring,"addAnimatorListener",voidType,Animator.AnimatorListener::class.java)
     val unlisten=exact(spring,"removeAnimatorListener",voidType,Animator.AnimatorListener::class.java)
@@ -159,6 +171,12 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
         android.graphics.RectF::class.java,android.graphics.RectF::class.java,
         floatType,floatType,floatType,floatType) else null
     val click=exact(taskView,"onClick",voidType,android.view.View::class.java)
+    // Both admitted Legacy families gate neighbor alignment on clip mode 1.
+    // Keep its native clip mode; align the UI and crop the opening leash through
+    // their respective existing callbacks instead of changing that mode globally.
+    val legacyOpeningFrame=if(profile==DeckLauncherProfile.LEGACY) staticExact(utils,
+        "lambda\$createSpringAnim\$0",voidType,taskView,floatType,Boolean::class.javaPrimitiveType!!,
+        Int::class.javaPrimitiveType!!,recents,android.graphics.RectF::class.java,android.graphics.RectF::class.java) else null
     val alignOpen=exact(recents,"alignTaskViewWhenTaskLaunch",voidType,taskView,android.graphics.RectF::class.java,android.graphics.RectF::class.java,floatType,floatType)
     val alignClose=exact(recents,"alignTaskViewWhenAppToRecent",voidType,taskView,android.graphics.RectF::class.java,android.graphics.RectF::class.java,floatType,floatType)
     val setOverview=exact(recents,"setInOverviewState",voidType,Boolean::class.javaPrimitiveType!!)

@@ -104,6 +104,13 @@ internal class IslandActivityController(
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
     private val state = IslandActivityState<IslandToastContent, IslandMediaContent>(dismissal)
+    private var volumeLease: IslandActivityState.Lease? = null
+    private val volumeSpeaker by lazy(LazyThreadSafetyMode.NONE) {
+        context.getDrawable(android.R.drawable.ic_lock_silent_mode_off)?.mutate()?.apply { setTint(android.graphics.Color.WHITE) }
+    }
+    private val volumeMuted by lazy(LazyThreadSafetyMode.NONE) {
+        context.getDrawable(android.R.drawable.ic_lock_silent_mode)?.mutate()?.apply { setTint(android.graphics.Color.WHITE) }
+    }
     private val live = IslandLiveRegistry(liveDismissal, state::nextOrder)
     private var liveSources: IslandLiveSources? = null
     private var liveContent: IslandToastContent? = null
@@ -959,7 +966,34 @@ internal class IslandActivityController(
         return lease
     }
 
-    fun releaseToast(lease: IslandActivityState.Lease) = onMain { state.release(lease); render() }
+    fun ownsVolume(lease: IslandActivityState.Lease): Boolean = !disposed && state.allowed &&
+        screen?.let { it.width < it.height } == true && volumeLease === lease && state.owns(lease, SystemClock.uptimeMillis())
+
+    fun showVolume(text: String, stream: Int, lease: IslandActivityState.Lease? = null): IslandActivityState.Lease? {
+        if (Looper.myLooper() != Looper.getMainLooper() || disposed || !options.enabled ||
+            !state.allowed || screen?.let { it.width < it.height } != true || stream < 0 || stream == 10) return null
+        val now = SystemClock.uptimeMillis()
+        // Brief volume feedback never displaces music, live activities, alerts or another Toast.
+        if (state.hasPersistentActivity() || nativeAlertYield) return null
+        if (lease != null && (lease !== volumeLease || !state.owns(lease, now))) return null
+        if (lease == null && state.toast(now) != null) return null
+        val value = IslandToastContent(text, "com.android.systemui", if (text == "0%") volumeMuted else volumeSpeaker)
+        val current = lease ?: state.offer(value, now, 2400L).also {
+            volumeLease = it
+            forms.select(it, source = IslandFormState.Source.FEEDBACK)
+        }
+        if (lease != null) state.update(lease, value, now + 2400L)
+        if (!render()) { state.release(current); volumeLease = null; render(); return null }
+        // Rendering may admit a newer native live activity from its coalesced snapshot.
+        // Only suppress the volume hint if this exact feedback still owns the drawn slot.
+        return current.takeIf { volumeLease === it && state.owns(it, SystemClock.uptimeMillis()) }
+    }
+
+    fun releaseToast(lease: IslandActivityState.Lease) = onMain {
+        state.release(lease)
+        if (volumeLease === lease) volumeLease = null
+        render()
+    }
 
     fun notificationPosted(sbn: StatusBarNotification) = onMain {
         // Posting never approves new content or renews its lifetime. Revoke the
@@ -1674,6 +1708,13 @@ internal class IslandActivityController(
         if (state.toast(now)?.let { it.notificationKey != null && it.packageName == foregroundPackage } == true) {
             clearChat(); state.clearToast()
         }
+        volumeLease?.let {
+            if (!state.owns(it, now) || state.hasPersistentActivity() || !state.allowed || nativeAlertYield ||
+                screen?.let { it.width < it.height } != true) {
+                state.release(it)
+                volumeLease = null
+            }
+        }
         val toast = (state.toast(now) ?: state.activity(now)).takeIf { state.allowed }
             ?.takeUnless { it.liveActivity != null && awaitingHome(it.packageName) }
         // A confirmed player return may be prepared while its foreground UI or
@@ -1697,7 +1738,9 @@ internal class IslandActivityController(
             IslandMotionCoordinator.prefersLong(toast), motionSource)
         forms.expireExpansion(now)
         val idle = options.idle && !forms.idleSuppressed && (state.allowed || shadeIdle) && toast == null && current == null
-        val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle)) geometry(idle = idle) else null
+        // Reserve the bounded widest percentage once. Digit changes need no geometry/morph.
+        val geometry = if (!disposed && options.enabled && (toast != null || current != null || idle))
+            geometry(label = if (volumeLease != null) "100%" else null, idle = idle) else null
         val liveExpiry = toast?.liveActivity?.clock?.takeIf { it.countdown && it.pausedMillis == null }
             ?.let { now + (it.base + 3000 - SystemClock.elapsedRealtime()).coerceAtLeast(1) }
         val nextExpiry = listOfNotNull(forms.expansionDeadline, liveExpiry, state.deadline(), nativeCardGapDeadline?.takeIf { it > now && it < Long.MAX_VALUE },
@@ -1746,7 +1789,8 @@ internal class IslandActivityController(
             photo = if (showingMedia) current.artwork == true else toast?.avatar == true,
             clock = toast?.liveActivity?.clock,
             clockKey = toast?.liveActivity?.key,
-            recording = options.waveformMode == 2 && toast?.liveActivity?.let { it.kind == IslandLiveKind.RECORDER && it.meter != null } == true)
+            recording = options.waveformMode == 2 && toast?.liveActivity?.let { it.kind == IslandLiveKind.RECORDER && it.meter != null } == true,
+            inPlace = volumeLease != null && lastArrivalIdentity === volumeLease)
         shell.configureGestures(if (idle) idleIdentity else if (showingMedia) selected else state.identity(now),
             if (idle) options.idleActions.gestures else options.musicActions, idle || showingMedia && options.mediaSwipe)
         val cameraOffset = screen?.takeIf { options.position == 1 && it.holeWidth > 0 }?.let {

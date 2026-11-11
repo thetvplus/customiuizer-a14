@@ -8,7 +8,7 @@ import tv.withaibuild.customiuizer.mods.utils.FeatureId
  * Keeping feature ids together makes it easy to see the complete list and avoids accidental
  * duplicate identities across different installers.
  *
- * Feature ID range: 0..270 (including reserved historical identities).
+ * Feature ID range: 0..271 (including reserved historical identities).
  */
 
 data object PackagePermissionsFeatureId : FeatureId {
@@ -1126,4 +1126,9 @@ data object IosMediaCardFeatureId : FeatureId {
 data object IosStatusBarBatteryFeatureId : FeatureId {
     override val id = 270
     override val name = "system_statusbar_ios_battery"
+}
+
+data object ClassicSignalFeatureId : FeatureId {
+    override val id = 271
+    override val name = "system_statusbar_signal_dots"
 }

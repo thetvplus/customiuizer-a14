@@ -42,6 +42,22 @@ class AgentVerifyTest(unittest.TestCase):
         self.assertNotIn("tools.tests.test_rom_catalog", selected)
         self.assertIsNone(gate.tool_tests(gate.ROOT, ["tools/verify.py"]))
 
+    def test_non_python_tool_inputs_keep_full_tool_gate_without_parsing_imports(self):
+        with patch.object(gate.ast, "parse", side_effect=AssertionError("Unneeded import graph")):
+            for path in ("tools/data.json", gate.SOURCE + "java/mods/utils/feature/FeatureIds.kt"):
+                self.assertIsNone(gate.tool_tests(gate.ROOT, [path]))
+
+    def test_multiple_files_and_cross_owner_callers_resolve_each_test_set_once(self):
+        paths = [gate.SOURCE + "java/tv/withaibuild/customiuizer/mods/recents/" + name + ".kt"
+                 for name in ("DeckMotion", "DeckOwner")]
+        with patch.object(gate, "test_classes", wraps=gate.test_classes) as lookup:
+            result = gate.plan(gate.ROOT, paths)
+        patterns = [call.args[1] for call in lookup.call_args_list]
+        self.assertEqual(len(set(patterns)), len(patterns))
+        self.assertEqual(["python", "tools/verify.py", "full"], result["host_commands"][0],
+                         "A shared consumer still requires Full after deduplicating lookups")
+        self.assertIn("island-takeover", result["device_scenarios"])
+
     def test_subprocess_consumers_are_not_lost_without_a_python_import(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -135,6 +135,19 @@ class MediaCardLayoutTest {
             }
         }
     }
+    @Test fun seekAndTransportTouchTargetsNeverOverlapInEitherNativeHost() {
+        for (compact in listOf(false, true)) for (density in listOf(1f, 2.75f, 3.5f)) {
+            val result = layout.prepare(native(), ids, density, compact) as Sets
+            val seek = result.values.getValue(ids.getValue("media_progress_bar")).layout
+            val action = result.values.getValue(ids.getValue("actionPlayPause")).layout
+            val art = result.values.getValue(ids.getValue("album_art")).layout
+            val time = result.values.getValue(ids.getValue("media_elapsed_time")).layout
+            assertTrue("Seek bounds must clear the previous header row", art.topMargin + art.mHeight <= seek.topMargin)
+            assertTrue("Touch targets must not compete", seek.topMargin + seek.mHeight <= action.topMargin)
+            assertTrue("Time ink must sit below the thin track", time.topMargin >= seek.topMargin + seek.mHeight / 2)
+            assertTrue("Time labels must clear transport", time.topMargin + time.mHeight <= action.topMargin)
+        }
+    }
     @Test fun aShorterNativeHostRejectsThePresentationBeforeCloningOrMutation() {
         val original = native()
         original.values.getValue(ids.getValue("media_bg")).layout.mHeight = 139

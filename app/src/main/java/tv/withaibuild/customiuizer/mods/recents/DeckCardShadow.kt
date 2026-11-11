@@ -16,9 +16,11 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
     private var closed = false
     // A clipped root would cut its header with this content-only outline.
     val owned = !view.clipToOutline
-    // Every sibling shares this plane, including a card retaining a native
-    // clipped outline. Mixing planes would make shadow capability reorder cards.
-    val height = 16f * view.resources.displayMetrics.density
+    // Keep sibling order on one common plane, with a shallower settled shadow
+    // so a dense stack of overlapping outlines does not darken the wallpaper.
+    val height = 8f * view.resources.displayMetrics.density
+    private var windowOpacity = 0f
+    private var awaitingThumbnail = false
 
     init {
         if (owned) {
@@ -40,15 +42,19 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
 
     fun syncContentAlpha(fullscreenProgress: Float) {
         this.fullscreenProgress=fullscreenProgress
-        val next=contentOpacity(fullscreenProgress)
-        if(contentAlpha==next) return
-        contentAlpha=next
-        if(owned && !closed && view.outlineProvider===this) view.invalidateOutline()
+        val previous=maxOf(contentAlpha,windowOpacity)
+        contentAlpha=contentOpacity(fullscreenProgress)
+        if(!hasContentBounds() || (awaitingThumbnail && contentAlpha>=.999f)) {
+            windowOpacity=0f;awaitingThumbnail=false
+        }
+        if(previous!=maxOf(contentAlpha,windowOpacity) && owned && !closed && view.outlineProvider===this) view.invalidateOutline()
     }
 
     override fun getOutline(view: View, outline: Outline) {
         val top = header.height.coerceIn(0, view.height)
-        val opacity=contentOpacity(fullscreenProgress)
+        // Use the card's own silhouette on every ROM. A window-space outline
+        // can survive a legacy rebase and cast a detached rectangular shadow.
+        val opacity=if(hasContentBounds()) maxOf(windowOpacity,contentOpacity(fullscreenProgress)) else 0f
         if (top == view.height || view.width <= 0 || opacity==0f) outline.setEmpty()
         else outline.setRoundRect(0, top, view.width, view.height, corner.coerceAtLeast(0f))
         // The stack's existing pre-draw reconciles native thumbnail writes and
@@ -56,9 +62,35 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
         outline.alpha=opacity
     }
 
+    private fun hasContentBounds(): Boolean =
+        content.visibility==View.VISIBLE && content.width>0 && content.height>0
+
     private fun contentOpacity(fullscreenProgress: Float): Float =
-        if(content.visibility==View.VISIBLE && content.width>0 && content.height>0 && fullscreenProgress.isFinite())
+        if(hasContentBounds() && fullscreenProgress.isFinite())
             content.alpha.coerceIn(0f,1f)*(1f-fullscreenProgress.coerceIn(0f,1f)) else 0f
+
+    fun followWindow(progress: Float) {
+        if(!owned || closed || view.outlineProvider!==this) return
+        val p=progress.coerceIn(0f,1f)
+        awaitingThumbnail=false
+        val next=if(hasContentBounds()) p*p*(3f-2f*p) else 0f
+        val changed=maxOf(contentAlpha,windowOpacity)!=maxOf(contentAlpha,next)
+        windowOpacity=next
+        if(changed) view.invalidateOutline()
+    }
+
+    fun finishWindow(settled: Boolean) {
+        if(windowOpacity==0f) return
+        if(!settled || !hasContentBounds() || contentOpacity(fullscreenProgress)>=.999f) clearWindow()
+        else awaitingThumbnail=true
+    }
+
+    fun clearWindow() {
+        if(windowOpacity==0f) return
+        val changed=windowOpacity>contentAlpha
+        windowOpacity=0f;awaitingThumbnail=false
+        if(changed && view.outlineProvider===this) view.invalidateOutline()
+    }
 
     override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
         if (!closed && view.outlineProvider === this) view.invalidateOutline()

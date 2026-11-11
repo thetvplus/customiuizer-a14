@@ -23,5 +23,9 @@ class StatusBarSignalPolicy {
         @JvmField var wifiStandard = 0
         @JvmField var showWifiStandard = false
     }
-    class MobileIconState { @JvmField var visible = false }
+    class MobileIconState {
+        @JvmField var visible = false
+        @JvmField var strengthId = 0
+        @JvmField var airplane = false
+    }
 }

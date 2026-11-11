@@ -1297,9 +1297,9 @@ object SystemUIStatusBarHooks {
         val smallRoaming = optionalMobileIcon(mobileView, "mSmallRoaming")
         val mobileTypeSingle = MainModule.mPrefs.getBoolean("system_statusbar_mobiletype_single")
         if (!mobileTypeSingle) {
-            MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_half_to_top_distance", 3)
-            MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_left_inout_over_strength", 0)
-            MainModule.resHooks.setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_middle_to_strength_start", -0.4f)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_half_to_top_distance", 3)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_left_inout_over_strength", 0)
+            MainModule.getResourceHooks().setThemeValueReplacement("com.android.systemui", "dimen", "status_bar_mobile_type_middle_to_strength_start", -0.4f)
         }
 
         val colorModeList = arrayOf("", "dark", "tint")
@@ -1321,7 +1321,7 @@ object SystemUIStatusBarHooks {
                                     val dualIconResName = "statusbar_signal_${slot}_${lvl}" + (if (colorMode.isNotEmpty()) "_$colorMode" else "") + (if (selectedIconStyle.isNotEmpty()) "_$selectedIconStyle" else "")
                                     val iconResId = modRes.getIdentifier(dualIconResName, "drawable", Helpers.modulePkg)
                                     dualSignalResIds[slotIndex][lvl][colorModeIndex] =
-                                        MainModule.resHooks.addFakeResource(dualIconResName, iconResId, "drawable")
+                                        MainModule.getResourceHooks().addFakeResource(dualIconResName, iconResId, "drawable")
                                 }
                             }
                         }

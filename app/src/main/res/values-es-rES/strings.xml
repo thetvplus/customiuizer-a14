@@ -16,7 +16,7 @@
     <string name="white_lists">Activar lista blanca</string>
     <string name="system_mods">Sistema</string>
     <string name="system_mods_screen">Pantalla</string>
-    <string name="system_mods_audio">Sonido</string>
+    <string name="system_mods_audio">Volumen y sonido</string>
     <string name="system_mods_vibration">Vibración</string>
     <string name="system_mods_toasts">Notificación Toast</string>
     <string name="system_statusbaricons_title">Ocultar iconos</string>
@@ -127,7 +127,7 @@
     <string name="system_netspeed_rowspacing_title">Espaciado entre líneas de velocidad de red</string>
     <string name="system_netspeed_rowspacing_summ">Ajusta el espacio entre las líneas de subida y descarga; requiere reiniciar SystemUI después del cambio</string>
     <string name="system_netspeed_prerequisite_note">Primero activa "Mostrar velocidad de red en tiempo real" en los ajustes del sistema</string>
-    <string name="system_statusbarcontrols_title">Control de gestos</string>
+    <string name="system_statusbarcontrols_title">Gestos de la barra de estado</string>
     <string name="system_statusbarcontrols_summ">Realizar acciones seleccionadas al deslizar y doble toque</string>
     <string name="system_statusbarcontrols_sens_title">Ajuste de sensibilidad</string>
     <string name="system_statusbarcontrols_sens_bright_title">Brillo</string>
@@ -346,7 +346,7 @@
     <string name="system_qs_hideoperator_title">Ocultar nombre de la operadora</string>
     <string name="system_qs_hideoperator_delimiter_title">Ocultar separador entre nombre del operador</string>
     <string name="system_qshaptic_title">Ajustes rápidos de respuesta háptica</string>
-    <string name="system_mods_automation">Aplicaciones y automatización</string>
+    <string name="system_mods_automation">Conexiones y dispositivos</string>
     <string name="system_mods_other">Ajustes avanzados</string>
     <string name="system_volumeblur_collapsed_title">Cuadro de diálogo compactado</string>
     <string name="system_volumeblur_expanded_title">Cuadro de diálogo expandido</string>
@@ -422,7 +422,7 @@
     <string name="launcher_spread_title">Separar dos dedos</string>
     <string name="launcher_bugfixes">Compatibilidad y correcciones</string>
     <string name="system_resizablewidgets_title">Tamaño de widget libre</string>
-    <string name="controls_mods">Botones y gestos</string>
+    <string name="controls_mods">Sonido y controles</string>
     <string name="controls_powerdt_summ">Cambiar el lanzamiento de la cámara al presionar el botón de encendido dos veces. Requiere que el acceso directo del botón stock esté activado.</string>
     <string name="controls_powerflash_title">Linterna rápida</string>
     <string name="controls_powerflash_summ">Mantener presionado el botón de encendido mientras la pantalla esté apagada para encender la linterna</string>
@@ -448,7 +448,7 @@
     <string name="controls_volumemedia_down_title">Acción de pulsación larga de volumen abajo</string>
     <string name="controls_volumemedia_down_summ">Acción para pulsación larga de volumen arriba con pantalla apagada</string>
     <string name="controls_volumemedia_vibrate_title">Vibración en pulsación larga</string>
-    <string name="controls_mods_navbar">Barra de navegación</string>
+    <string name="controls_mods_navbar">Barra de navegación y teclado</string>
     <string name="controls_nonavbar_title">Esconder barra de navegación e indicador de pantalla completa</string>
     <string name="controls_hide_ime_dismiss_button_title">Ocultar botón de cierre del teclado</string>
     <string name="controls_hide_ime_dismiss_button_summ">Oculta el botón inferior izquierdo de cierre del teclado en la navegación por gestos</string>
@@ -474,7 +474,7 @@
     <string name="controls_fsg_assist_right_title">Acción al deslizar la esquina derecha</string>
     <string name="controls_fsg_swipeandstop_title">Deslizar a través de la pantalla empezando de la esquina y detenerse</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">No vibrar</string>
-    <string name="various_mods">Aplicaciones y mantenimiento</string>
+    <string name="various_mods">Aplicaciones y herramientas</string>
     <string name="various_general_cat_title">Sistema y compatibilidad</string>
     <string name="various_app_management_cat_title">Gestión de aplicaciones</string>
     <string name="various_hiddenfeatures_title">Características ocultas</string>
@@ -1150,7 +1150,7 @@
     <string name="system_island_geometry_group">Posición y tamaño</string>
     <string name="system_island_appearance_group">Apariencia</string>
     <string name="system_island_feedback_group">Contenido</string>
-    <string name="system_island_gestures_title">Gestos</string>
+    <string name="system_island_gestures_title">Gestos de Dynamic Island</string>
     <string name="system_island_waveform_off">Desactivado</string>
     <string name="system_island_waveform_light">Animación ligera</string>
     <string name="system_island_waveform_real">Onda en directo (experimental)</string>
@@ -1349,4 +1349,15 @@
     <string name="settings_status_icons">Iconos de estado</string>
     <string name="settings_launcher_layout">Diseño de inicio y animación</string>
     <string name="settings_app_behavior">Comportamiento de aplicaciones</string>
+    <string name="settings_sound_vibration">Sonido y vibración</string>
+    <string name="settings_keywords_controls">Botones y gestos buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">Aplicaciones y mantenimiento apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">Comportamiento de aplicaciones system compatibility hidden features</string>
+    <string name="settings_keywords_connections">Aplicaciones y automatización connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">Aplicaciones y automatización app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Visualización del porcentaje de volumen</string>
+    <string name="volume_pct_presentation_native">Indicador flotante nativo</string>
+    <string name="volume_pct_presentation_auto">Toast y Dynamic Island (automático)</string>
+    <string name="volume_pct_presentation_summary">Usar Dynamic Island o la cápsula Toast del sistema si están disponibles; en caso contrario, usar el indicador flotante nativo.</string>
 </resources>

@@ -7,8 +7,7 @@
     {
       "type": "section",
       "attributes": {
-        "android:key": "pref_key_system_cat_automation",
-        "android:title": "@string/system_mods_automation"
+        "android:title": "@string/prefs_group_apps"
       },
       "children": [
         {
@@ -16,68 +15,10 @@
           "attributes": {
             "android:key": "pref_key_system_appbehavior_cat",
             "android:title": "@string/appbehavior_title",
-            "android:summary": "@string/appbehavior_summary"
+            "android:summary": "@string/appbehavior_summary",
+            "app:searchKeywords": "@string/settings_keywords_app_rules"
           }
         },
-        {
-          "type": "section",
-          "attributes": {
-            "android:title": "@string/system_vpnauto_group"
-          },
-          "children": [
-            {
-              "type": "action",
-              "attributes": {
-                "android:key": "pref_key_system_wifiauto_cat",
-                "android:title": "@string/wifiauto_title",
-                "android:summary": "@string/wifiauto_summary"
-              }
-            },
-            {
-              "type": "action",
-              "attributes": {
-                "android:key": "pref_key_system_vpnauto_cat",
-                "android:title": "@string/system_vpnauto_title",
-                "android:summary": "@string/system_vpnauto_summary"
-              }
-            }
-          ]
-        },
-        {
-          "type": "section",
-          "attributes": {
-            "android:title": "@string/prefs_group_connectivity"
-          },
-          "children": [
-            {
-              "type": "toggle",
-              "attributes": {
-                "android:key": "pref_key_system_wifipassword",
-                "android:title": "@string/system_wifipassword_title",
-                "android:summary": "@string/system_wifipassword_summ",
-                "android:defaultValue": "true"
-              }
-            },
-            {
-              "type": "choice",
-              "attributes": {
-                "android:key": "pref_key_system_usb_default_function",
-                "android:title": "@string/system_usb_default_function_title",
-                "android:entries": "@array/usb_default_functions",
-                "android:entryValues": "@array/usb_default_functions_val",
-                "android:defaultValue": "0"
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "section",
-      "attributes": {
-        "android:title": "@string/prefs_group_apps"
-      },
-      "children": [
         {
           "type": "section",
           "attributes": {
@@ -434,40 +375,95 @@
               ]
             }
           ]
+        },
+        {
+          "type": "section",
+          "attributes": {
+            "android:title": "@string/calls",
+            "android:key": "pref_key_various_cat_calls"
+          },
+          "children": [
+            {
+              "type": "toggle",
+              "attributes": {
+                "android:key": "pref_key_various_answerinheadup",
+                "android:title": "@string/various_answerinheadup_title",
+                "android:defaultValue": "false"
+              }
+            },
+            {
+              "type": "choice",
+              "attributes": {
+                "android:key": "pref_key_various_showcallui",
+                "android:title": "@string/various_showcallui_title",
+                "android:entries": "@array/incallui",
+                "android:entryValues": "@array/incallui_val",
+                "android:defaultValue": "0"
+              }
+            },
+            {
+              "type": "action",
+              "attributes": {
+                "android:key": "pref_key_various_calluibright_cat",
+                "android:title": "@string/various_calluibright_title"
+              }
+            }
+          ]
         }
       ]
     },
     {
       "type": "section",
       "attributes": {
-        "android:title": "@string/calls",
-        "android:key": "pref_key_various_cat_calls"
+        "android:title": "@string/prefs_group_connectivity"
       },
       "children": [
         {
-          "type": "toggle",
+          "type": "action",
           "attributes": {
-            "android:key": "pref_key_various_answerinheadup",
-            "android:title": "@string/various_answerinheadup_title",
-            "android:defaultValue": "false"
-          }
-        },
-        {
-          "type": "choice",
-          "attributes": {
-            "android:key": "pref_key_various_showcallui",
-            "android:title": "@string/various_showcallui_title",
-            "android:entries": "@array/incallui",
-            "android:entryValues": "@array/incallui_val",
-            "android:defaultValue": "0"
+            "android:key": "pref_key_system_wifiauto_cat",
+            "android:title": "@string/wifiauto_title",
+            "android:summary": "@string/wifiauto_summary",
+            "app:searchKeywords": "@string/settings_keywords_connections"
           }
         },
         {
           "type": "action",
           "attributes": {
-            "android:key": "pref_key_various_calluibright_cat",
-            "android:title": "@string/various_calluibright_title"
+            "android:key": "pref_key_system_vpnauto_cat",
+            "android:title": "@string/system_vpnauto_title",
+            "android:summary": "@string/system_vpnauto_summary",
+            "app:searchKeywords": "@string/settings_keywords_connections"
           }
+        },
+        {
+          "type": "section",
+          "attributes": {
+            "android:key": "pref_key_system_cat_automation",
+            "android:title": "@string/system_mods_automation",
+            "app:searchKeywords": "@string/settings_keywords_connections"
+          },
+          "children": [
+            {
+              "type": "toggle",
+              "attributes": {
+                "android:key": "pref_key_system_wifipassword",
+                "android:title": "@string/system_wifipassword_title",
+                "android:summary": "@string/system_wifipassword_summ",
+                "android:defaultValue": "true"
+              }
+            },
+            {
+              "type": "choice",
+              "attributes": {
+                "android:key": "pref_key_system_usb_default_function",
+                "android:title": "@string/system_usb_default_function_title",
+                "android:entries": "@array/usb_default_functions",
+                "android:entryValues": "@array/usb_default_functions_val",
+                "android:defaultValue": "0"
+              }
+            }
+          ]
         }
       ]
     },
@@ -480,8 +476,9 @@
         {
           "type": "section",
           "attributes": {
-            "android:title": "@string/settings_app_behavior",
-            "android:key": "pref_key_various_cat_general"
+            "android:title": "@string/various_general_cat_title",
+            "android:key": "pref_key_various_cat_general",
+            "app:searchKeywords": "@string/settings_keywords_general"
           },
           "children": [
             {

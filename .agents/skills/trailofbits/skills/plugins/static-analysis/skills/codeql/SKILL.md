@@ -1,15 +1,6 @@
 ---
 name: codeql
-description: >-
-  Scans a codebase for security vulnerabilities using CodeQL's interprocedural data flow and
-  taint tracking analysis. Triggers on "run codeql", "codeql scan", "build codeql database",
-  "SAST scan", "taint analysis", "dataflow analysis", or "find vulnerabilities in this repo".
-  Covers Python, JavaScript/TypeScript, Go, Java/Kotlin, C/C++, C#, Ruby, and Swift. Supports
-  "run all" (security-and-quality + security-experimental) and "important only"
-  (high-precision) scan modes, and creates data extension models for project-specific sources
-  and sinks. For fast single-file pattern matching, or when no build is available for a
-  compiled language, use the semgrep skill; to parse SARIF that already exists rather than
-  produce it, use the sarif-parsing skill.
+description: Build or analyze local CodeQL databases for interprocedural security analysis, extraction quality, query suites and data extensions. GitHub Default setup configuration alone does not require this local CLI pipeline.
 allowed-tools: Bash Read Write Edit Glob Grep AskUserQuestion TaskCreate TaskList TaskUpdate TaskGet
 ---
 

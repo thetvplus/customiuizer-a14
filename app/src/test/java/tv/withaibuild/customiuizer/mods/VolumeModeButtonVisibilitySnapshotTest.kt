@@ -56,6 +56,27 @@ class VolumeModeButtonVisibilitySnapshotTest {
     }
 
     @Test
+    fun installedClassicHudHidesBothShortcutsWithoutChangingSavedChoices() {
+        val installed = SystemUIControlCenterHooks::class.java.getDeclaredField("classicVolumeInstalled")
+            .apply { isAccessible = true }
+        MainModule.mPrefs.put(hideMuteKey, false)
+        MainModule.mPrefs.put(hideDndKey, false)
+        try {
+            installed.setBoolean(null, true)
+            SystemUIControlCenterHooks.refreshVolumeModeButtonVisibilitySnapshot()
+            val classic = SystemUIControlCenterHooks.getVolumeModeButtonVisibilitySnapshot()
+            assertTrue(classic.hideMute && classic.hideDnd)
+            assertFalse(MainModule.mPrefs.getBoolean(hideMuteKey))
+            assertFalse(MainModule.mPrefs.getBoolean(hideDndKey))
+        } finally {
+            installed.setBoolean(null, false)
+            SystemUIControlCenterHooks.refreshVolumeModeButtonVisibilitySnapshot()
+        }
+        val side = SystemUIControlCenterHooks.getVolumeModeButtonVisibilitySnapshot()
+        assertFalse(side.hideMute || side.hideDnd)
+    }
+
+    @Test
     fun hideMuteLiveRefreshUpdatesSnapshot() {
         MainModule.mPrefs.put(hideMuteKey, true)
         MainModule.mPrefs.put(hideDndKey, false)

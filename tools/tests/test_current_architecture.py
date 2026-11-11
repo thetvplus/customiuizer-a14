@@ -287,7 +287,8 @@ class CurrentArchitectureTest(unittest.TestCase):
         self.assertIn("fun installAll(", text)
 
         register_body = _method_body(text, r"\bfun\s+register\s*\(")
-        self.assertIn("FeatureInstallState.initialize(feature.id)", register_body)
+        # Registration is metadata. Only an enabled installation attempt owns process state.
+        self.assertNotIn("FeatureInstallState.", register_body)
 
         install_one = _method_body(text, r"\bfun\s+installOne\s*\(")
         self.assertIn("if (!spec.isEnabled(prefs))", install_one)
@@ -314,8 +315,13 @@ class CurrentArchitectureTest(unittest.TestCase):
         self.assertIn("object FeatureInstallState", text)
         self.assertIn("private val states = HashMap<Int, FeatureState>()", text)
         self.assertIn("synchronized(states)", text)
-        for m in ["initialize", "beginInstall", "get", "set"]:
+        for m in ["beginInstall", "get", "set"]:
             self.assertRegex(text, rf"@JvmStatic\s*\n\s*fun\s+{m}\s*\(")
+        read_state = _method_body(text, r"\bfun\s+get\s*\(\s*featureId:\s*Int")
+        self.assertIn("states[featureId] ?: FeatureState.NOT_INSTALLED", read_state)
+        begin = _method_body(text, r"\bfun\s+beginInstall\s*\(")
+        self.assertIn("states[featureId.id] ?: FeatureState.NOT_INSTALLED", begin)
+        self.assertIn("states[featureId.id] = FeatureState.INSTALLING", begin)
 
     def test_preference_bootstrap_initializes_snapshot_before_install(self) -> None:
         pb_text = CI.strip_comments(

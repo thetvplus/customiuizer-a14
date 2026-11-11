@@ -18,7 +18,7 @@
     <string name="white_lists">Ativar lista de permissões</string>
     <string name="system_mods">Sistema</string>
     <string name="system_mods_screen">Tela</string>
-    <string name="system_mods_audio">Áudio</string>
+    <string name="system_mods_audio">Volume e som</string>
     <string name="system_mods_vibration">Vibração</string>
     <string name="system_mods_toasts">Dicas</string>
     <string name="system_statusbaricons_title">Ocultar ícones</string>
@@ -133,7 +133,7 @@
     <string name="system_netspeed_rowspacing_summ">Ajusta o espaço entre as linhas de upload e download; requer reiniciar a SystemUI após a alteração</string>
     <string name="system_netspeed_prerequisite_note">Ative primeiro "Mostrar velocidade da rede em tempo real" nas configurações do sistema</string>
     <string name="system_netspeed_use_clock_style_title">Usar o mesmo estilo de texto do relógio da barra de status</string>
-    <string name="system_statusbarcontrols_title">Controles de gestos</string>
+    <string name="system_statusbarcontrols_title">Gestos da barra de status</string>
     <string name="system_statusbarcontrols_summ">Execute ações selecionadas no slide e toque duas vezes</string>
     <string name="system_statusbarcontrols_sens_title">Sensibilidade de ajuste</string>
     <string name="system_statusbarcontrols_sens_bright_title">Brilho</string>
@@ -374,7 +374,7 @@
     <string name="system_qs_hideoperator_title">Ocultar nome da operadora</string>
     <string name="system_qs_hideoperator_delimiter_title">Ocultar delimitador entre o nome da operadora</string>
     <string name="system_qshaptic_title">Feedback tátil de Configurações rápidas</string>
-    <string name="system_mods_automation">Apps e automação</string>
+    <string name="system_mods_automation">Conexões e dispositivos</string>
     <string name="system_mods_other">Configurações avançadas</string>
     <string name="system_volumeblur_collapsed_title">Diálogo recolhido</string>
     <string name="system_volumeblur_expanded_title">Diálogo expandido</string>
@@ -452,7 +452,7 @@
     <string name="launcher_bugfixes">Compatibilidade e correções</string>
     <string name="launcher_wallpaper_colormode_title">Forçar modo de cor do plano de fundo da tela inicial</string>
     <string name="system_resizablewidgets_title">Redimensionamento livre de widgets</string>
-    <string name="controls_mods">Botões e gestos</string>
+    <string name="controls_mods">Som e controles</string>
     <string name="controls_powerdt_summ">Substitua a inicialização da câmera ao pressionar duas vezes a botão liga/desliga. Requer que o atalho do botão de estoque esteja ativado.</string>
     <string name="controls_powerflash_title">Lanterna rápida</string>
     <string name="controls_powerflash_summ">Pressione e segure o botão liga/desliga enquanto a tela estiver desligada para ligar a lanterna</string>
@@ -478,7 +478,7 @@
     <string name="controls_volumemedia_down_title">Ação ao pressionar o botão de diminuir volume</string>
     <string name="controls_volumemedia_down_summ">Ação de diminuir o volume quando a tela estiver desligada</string>
     <string name="controls_volumemedia_vibrate_title">Vibração de pressão longa</string>
-    <string name="controls_mods_navbar">Barra de navegação</string>
+    <string name="controls_mods_navbar">Barra de navegação e teclado</string>
     <string name="controls_nonavbar_title">Ocultar barra de navegação e indicador de tela cheia</string>
     <string name="controls_hide_ime_dismiss_button_title">Ocultar botão de ocultar teclado</string>
     <string name="controls_hide_ime_dismiss_button_summ">Oculta o botão inferior esquerdo de ocultar teclado na navegação por gestos</string>
@@ -504,7 +504,7 @@
     <string name="controls_fsg_assist_right_title">Ação de deslizar no canto direito</string>
     <string name="controls_fsg_swipeandstop_title">Deslize pela tela a partir da borda e pare a ação</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">Não vibrar</string>
-    <string name="various_mods">Apps e manutenção</string>
+    <string name="various_mods">Apps e ferramentas</string>
     <string name="various_general_cat_title">Sistema e compatibilidade</string>
     <string name="various_app_management_cat_title">Gerenciamento de apps</string>
     <string name="various_hiddenfeatures_title">Recursos ocultos</string>
@@ -1151,7 +1151,7 @@
     <string name="system_island_geometry_group">Posição e tamanho</string>
     <string name="system_island_appearance_group">Aparência</string>
     <string name="system_island_feedback_group">Conteúdo</string>
-    <string name="system_island_gestures_title">Gestos</string>
+    <string name="system_island_gestures_title">Gestos da Dynamic Island</string>
     <string name="system_island_waveform_off">Desativado</string>
     <string name="system_island_waveform_light">Animação leve</string>
     <string name="system_island_waveform_real">Forma de onda ao vivo (experimental)</string>
@@ -1350,4 +1350,15 @@
     <string name="settings_status_icons">Ícones de status</string>
     <string name="settings_launcher_layout">Layout inicial e animação</string>
     <string name="settings_app_behavior">Comportamento dos apps</string>
+    <string name="settings_sound_vibration">Som e vibração</string>
+    <string name="settings_keywords_controls">Botões e gestos buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">Apps e manutenção apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">Comportamento dos apps system compatibility hidden features</string>
+    <string name="settings_keywords_connections">Apps e automação connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">Apps e automação app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">Exibição da porcentagem do volume</string>
+    <string name="volume_pct_presentation_native">Indicador flutuante nativo</string>
+    <string name="volume_pct_presentation_auto">Toast e Dynamic Island (automático)</string>
+    <string name="volume_pct_presentation_summary">Usar o Dynamic Island ou a cápsula Toast do sistema quando disponíveis; caso contrário, usar o indicador flutuante nativo.</string>
 </resources>

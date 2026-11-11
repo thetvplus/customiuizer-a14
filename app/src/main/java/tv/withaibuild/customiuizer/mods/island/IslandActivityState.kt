@@ -28,10 +28,12 @@ internal class IslandActivityState<T, M>(private val dismissal: MediaDismissal =
         return lease
     }
 
-    fun update(lease: Lease, value: T) {
+    fun update(lease: Lease, value: T, deadline: Long? = null) {
         val current = transient ?: return
-        if (current.lease === lease) transient = current.copy(value = value)
+        if (current.lease === lease) transient = current.copy(value = value, deadline = deadline ?: current.deadline)
     }
+
+    fun hasPersistentActivity(): Boolean = activity != null || uncoveredMedia() != null
 
     fun release(lease: Lease) {
         if (transient?.lease === lease) transient = null

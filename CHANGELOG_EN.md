@@ -6,6 +6,37 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## Unreleased
 
+## r14.27.5 — 2026-11-11
+
+versionCode 305. Changes since r14.27.3:
+
+### Release summary
+
+- Add an optional iOS 12 central volume HUD with vertical adjustment and automatic hiding of the mute and Do Not Disturb shortcuts. Volume percentages can appear in an overlay, a toast capsule or the Dynamic Island.
+- Add optional iOS battery, five-dot cellular signal and notification-shade media styles.
+- Improve foreground card exits, refill and window shadow handoff in DECK, and restore the Dock background and blur when returning Home.
+- Reorganize settings and search paths while preserving the four home entries, existing preferences and backups.
+- Restart the launcher and System UI after updating to apply the affected styles.
+
+### User changes
+
+- Add an optional iOS 12 central volume HUD while retaining native volume, routing and expanded controls. Upgrades keep the side style and the saved narrow-bar choice.
+- Add default-off iOS 10 five-dot cellular signals using native network state, hiding and no-service fallback, with Duo taking priority.
+- Add a default-off iOS media presentation using the notification shade's native media sessions, actions and progress controls. Its display lifecycle stays independent of island media. Control Center media is not replaced.
+- Add a default-off iOS battery presentation retaining native charging and power-saving states. Duo, battery hiding and existing battery styles take priority.
+- Reorganize settings within pages and update search routes while preserving the four home entries, saved keys, defaults and backup format.
+- Fix shared-hook and plugin-loading isolation and fallback after partial initialization. Improve cancellation and resource release for monitoring, key combinations and Recents menus.
+- Refine the central volume HUD with vector icons and signed vertical positioning. The central style hides the mute and Do Not Disturb shortcuts and reclaims their space.
+- Make the volume percentage overlay more compact and add an automatic toast capsule or Dynamic Island option. Existing settings keep the overlay by default, and repeated adjustments update the same hint.
+- Restore Dock background and blur when its view reattaches or Home returns. Refine the battery percentage, five-dot spacing and notification-shade media card.
+- Fix DECK card jumps on release, initial refill scale and window shadow handoff. When opening a back card, foreground cards move toward their recentered positions. The app window and its settled card share one shadow during the swipe.
+
+### Engineering notes
+
+- Trim preparation for disabled features, verification routing and Agent Skills while retaining build, compatibility and release gates.
+- Add independent behavior regressions, safe imported-log parsing and CodeQL source-extraction checks. Java/Kotlin analysis is available on demand; continuous Security alerts await a main-line setup transition.
+- New presentations are partial adaptations. Real-SIM/dual-SIM/roaming, sustained landscape DECK and first composition, intermittent Dock flashes and long-term resource costs retain their acceptance limits. No unmeasured frame-rate, power or multi-ROM benefit is claimed.
+
 ## r14.27.3 — 2026-11-08
 
 versionCode 304. Changes since r14.26.11:

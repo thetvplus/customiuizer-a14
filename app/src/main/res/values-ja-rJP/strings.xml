@@ -18,7 +18,7 @@
     <string name="white_lists">ホワイトリストをオンにする</string>
     <string name="system_mods">システム</string>
     <string name="system_mods_screen">画面</string>
-    <string name="system_mods_audio">オーディオ</string>
+    <string name="system_mods_audio">音量とサウンド</string>
     <string name="system_mods_vibration">バイブレーション</string>
     <string name="system_mods_toasts">トースト通知</string>
     <string name="system_statusbaricons_title">アイコンを非表示にする</string>
@@ -133,7 +133,7 @@
     <string name="system_netspeed_rowspacing_summ">アップロード行とダウンロード行の間隔を調整します。変更後はSystemUIの再起動が必要です</string>
     <string name="system_netspeed_prerequisite_note">システム設定で「通信速度をリアルタイム表示」を有効にしてください</string>
     <string name="system_netspeed_use_clock_style_title">ステータスバーの時計と同じ文字スタイルを使用</string>
-    <string name="system_statusbarcontrols_title">ジェスチャーコントロール</string>
+    <string name="system_statusbarcontrols_title">ステータスバーのジェスチャー</string>
     <string name="system_statusbarcontrols_summ">スワイプとダブルタップで選択をしたアクションを実行します</string>
     <string name="system_statusbarcontrols_sens_title">感度調整</string>
     <string name="system_statusbarcontrols_sens_bright_title">画面の明るさ</string>
@@ -374,7 +374,7 @@
     <string name="system_qs_hideoperator_title">通信事業者名を非表示にする</string>
     <string name="system_qs_hideoperator_delimiter_title">通信事業者名の区切り文字を非表示にする</string>
     <string name="system_qshaptic_title">クイック設定の触覚フィードバック</string>
-    <string name="system_mods_automation">アプリと自動化</string>
+    <string name="system_mods_automation">接続とデバイス</string>
     <string name="system_mods_other">詳細設定</string>
     <string name="system_volumeblur_collapsed_title">折りたたまれたダイアログ</string>
     <string name="system_volumeblur_expanded_title">展開されたダイアログ</string>
@@ -452,7 +452,7 @@
     <string name="launcher_bugfixes">互換性と修正</string>
     <string name="launcher_wallpaper_colormode_title">ホーム画面の壁紙カラーモードを強制する</string>
     <string name="system_resizablewidgets_title">ウィジェットのリサイズを自由にする</string>
-    <string name="controls_mods">ボタンとジェスチャー</string>
+    <string name="controls_mods">サウンドと操作</string>
     <string name="controls_powerdt_summ">電源ボタンを2回押しでカメラの起動を置き換えます。純正ボタンのショートカットを有効化する必要があります。</string>
     <string name="controls_powerflash_title">懐中電灯のクイック起動</string>
     <string name="controls_powerflash_summ">画面消灯中に電源を長押しで懐中電灯を点灯させるようにします</string>
@@ -478,7 +478,7 @@
     <string name="controls_volumemedia_down_title">音量ダウンボタン長押し時のアクション</string>
     <string name="controls_volumemedia_down_summ">画面消灯で音量ダウンボタン長押し時のアクションを設定します</string>
     <string name="controls_volumemedia_vibrate_title">長押し時のバイブレーション</string>
-    <string name="controls_mods_navbar">ナビゲーションバー</string>
+    <string name="controls_mods_navbar">ナビゲーションバーとキーボード</string>
     <string name="controls_nonavbar_title">ナビゲーションバーを非表示</string>
     <string name="controls_hide_ime_dismiss_button_title">キーボードを閉じるボタンを非表示</string>
     <string name="controls_hide_ime_dismiss_button_summ">ジェスチャーナビゲーション時、キーボード表示中に左下の閉じるボタンを非表示にします</string>
@@ -504,7 +504,7 @@
     <string name="controls_fsg_assist_right_title">右端スワイプ時のアクション</string>
     <string name="controls_fsg_swipeandstop_title">画面の端から順にスワイプをしてアクションを停止する</string>
     <string name="controls_fsg_swipeandstop_disablevibrate_title">バイブレーションをさせない</string>
-    <string name="various_mods">アプリとメンテナンス</string>
+    <string name="various_mods">アプリとツール</string>
     <string name="various_general_cat_title">システムと互換性</string>
     <string name="various_app_management_cat_title">アプリ管理</string>
     <string name="various_hiddenfeatures_title">隠された機能</string>
@@ -1151,7 +1151,7 @@
     <string name="system_island_geometry_group">位置とサイズ</string>
     <string name="system_island_appearance_group">外観</string>
     <string name="system_island_feedback_group">表示内容</string>
-    <string name="system_island_gestures_title">ジェスチャー</string>
+    <string name="system_island_gestures_title">Dynamic Islandのジェスチャー</string>
     <string name="system_island_waveform_off">オフ</string>
     <string name="system_island_waveform_light">軽量アニメーション</string>
     <string name="system_island_waveform_real">リアルタイム波形（試験的）</string>
@@ -1350,4 +1350,15 @@
     <string name="settings_status_icons">ステータスアイコン</string>
     <string name="settings_launcher_layout">ホームの配置とアニメーション</string>
     <string name="settings_app_behavior">アプリの動作</string>
+    <string name="settings_sound_vibration">サウンドとバイブ</string>
+    <string name="settings_keywords_controls">ボタンとジェスチャー buttons gestures keys sound audio volume vibration</string>
+    <string name="settings_keywords_tools">アプリとメンテナンス apps tools maintenance compatibility</string>
+    <string name="settings_keywords_general">アプリの動作 system compatibility hidden features</string>
+    <string name="settings_keywords_connections">アプリと自動化 connectivity network devices USB Wi-Fi automation</string>
+    <string name="settings_keywords_app_rules">アプリと自動化 app rules rotation brightness media volume</string>
+    <string name="settings_keywords_launcher_gestures">Dock desktop home workspace swipe gestures</string>
+    <string name="volume_pct_presentation_title">音量の割合の表示方法</string>
+    <string name="volume_pct_presentation_native">標準のフローティング表示</string>
+    <string name="volume_pct_presentation_auto">Toast と Dynamic Island（自動）</string>
+    <string name="volume_pct_presentation_summary">利用可能な Dynamic Island または標準の Toast カプセルを使用し、利用できない場合は標準のフローティング表示に戻ります。</string>
 </resources>

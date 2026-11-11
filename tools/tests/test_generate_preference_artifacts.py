@@ -232,7 +232,11 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                 _signature(child) for child in split_root.iter()
                 if child is not split_root and child.tag != PREFERENCE_CATEGORY
             )
-        self.assertEqual(source_preferences, generated_preferences)
+        standalone_keys = {page[0] for page in production_generator.STANDALONE_PAGES}
+        generated_preferences.extend(_signature(child) for child in self.pages["prefs_various_cat"].iter()
+                                     if child.get(ANDROID_KEY) in standalone_keys)
+        # Directory order and each page slice have separate exact-order assertions.
+        self.assertCountEqual(source_preferences, generated_preferences)
 
     def test_every_dependency_target_remains_in_the_same_lazy_page(self) -> None:
         for output_name in EXPECTED_SPLITS.values():
@@ -254,20 +258,21 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             suffix = category.removeprefix("pref_key_")
             source = read_element(SOURCE_DIR / f"prefs_{suffix}.xml")
             selector = self.pages[f"prefs_{suffix}_cat"]
-            expected = [(child.get(ANDROID_KEY), child.get(ANDROID_TITLE)) for child in source.iter()
-                        if child.get(ANDROID_KEY) in EXPECTED_SPLITS]
+            def directory_entries(group):
+                for child in group:
+                    if child.get(ANDROID_KEY) in EXPECTED_SPLITS or child.tag != PREFERENCE_CATEGORY:
+                        yield child.get(ANDROID_KEY), child.get(ANDROID_TITLE)
+                    else:
+                        yield from directory_entries(child)
+            expected = list(directory_entries(source))
             actual = [(child.get(ANDROID_KEY), child.get(ANDROID_TITLE)) for child in selector.iter()
                       if child is not selector and child.tag != PREFERENCE_CATEGORY]
             self.assertEqual(expected, actual)
             self.assertEqual([child.get(ANDROID_TITLE) for child in source],
                              [child.get(ANDROID_TITLE) for child in selector])
             sections = list(selector)
-            if category == "pref_key_various":
-                first = sections[0]
-                self.assertEqual("tv.withaibuild.customiuizer.prefs.PreferenceEx", first.tag)
-                self.assertEqual("@string/system_mods_automation", first.get(ANDROID_TITLE))
-                self.assertEqual("pref_key_system_cat_automation", first.get(ANDROID_KEY))
-            self.assertTrue(all((child.tag == PREFERENCE_CATEGORY and len(child)) or child.get(ANDROID_KEY) in EXPECTED_SPLITS for child in sections))
+            self.assertTrue(all((child.tag == PREFERENCE_CATEGORY and len(child)) or
+                                child.get(ANDROID_KEY) in EXPECTED_SPLITS for child in sections))
 
     def test_search_index_matches_page_ownership_sections_and_adapter_order(self) -> None:
         entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
@@ -291,13 +296,39 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
             self.assertEqual("@string/settings_panel_background", item["breadcrumbSubSubTitle"])
         self.assertEqual("pref_key_various_cat_exclusive", by_key["pref_key_various_disable_miui_daemon"]["routeSub"])
 
-    def test_application_and_network_rules_share_the_automation_directory(self) -> None:
+    def test_application_and_network_rules_open_the_existing_pages_directly(self) -> None:
         entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
-        for suffix in ("appbehavior", "wifiauto", "vpnauto"):
-            matches = [item for item in entries if item["key"] == f"pref_key_system_{suffix}_cat"]
+        directory = {child.get(ANDROID_KEY): child for child in self.pages["prefs_various_cat"].iter()}
+        for suffix, controller in (("appbehavior", "System_AppBehavior"), ("wifiauto", "System_WifiAutomatic"),
+                                   ("vpnauto", "System_VpnAutoSwitch")):
+            key = f"pref_key_system_{suffix}_cat"
+            self.assertEqual("tv.withaibuild.customiuizer.prefs.PreferenceEx", directory[key].tag)
+            matches = [item for item in entries if item["key"] == key]
             self.assertEqual(1, len(matches))
-            self.assertEqual("pref_key_system_cat_automation", matches[0]["routeSub"])
-            self.assertEqual("@string/system_mods_automation", matches[0]["breadcrumbSubTitle"])
+            self.assertEqual(key, matches[0]["routeSub"])
+            self.assertEqual(f"@id/prefs_system_{suffix}", matches[0]["page"])
+            self.assertEqual(controller, matches[0]["pageFragment"])
+        automation = self.pages["prefs_system_automation"]
+        self.assertEqual({"pref_key_system_wifipassword", "pref_key_system_usb_default_function"},
+                         {e.get(ANDROID_KEY) for e in automation.iter() if e is not automation and e.tag != PREFERENCE_CATEGORY and e.get(ANDROID_KEY)})
+
+    def test_category_aliases_are_shared_without_overwriting_local_aliases(self) -> None:
+        index = ET.parse(self.xml_dir / "mod_search_index.xml").getroot()
+        by_category = {category.get("key"): category for category in index}
+        self.assertEqual("@string/settings_keywords_controls", by_category["pref_key_controls"].get("keywords"))
+        self.assertEqual("@string/settings_keywords_tools", by_category["pref_key_various"].get("keywords"))
+        self.assertIsNone(by_category["pref_key_system"].get("keywords"))
+        entries = _generated_search_entries(index)
+        by_key = {item["key"]: item for item in entries}
+        self.assertEqual("@string/settings_keywords_indicator", by_key["pref_key_controls_ios_home_indicator"]["keywords"])
+        self.assertEqual("@string/settings_keywords_app_rules", by_key["pref_key_system_appbehavior_brightness"]["keywords"])
+
+    def test_unknown_standalone_directory_link_is_rejected(self) -> None:
+        source = ET.Element("PreferenceScreen")
+        ET.SubElement(source, "tv.withaibuild.customiuizer.prefs.PreferenceEx",
+                      {ANDROID_KEY: "unknown_page", ANDROID_TITLE: "@string/page"})
+        with self.assertRaises(ValueError):
+            production_generator._structured_categories(production_generator.CATEGORY_SOURCES[3], source)
 
     def test_island_subpages_preserve_feedback_gesture_keys_and_search_targets(self) -> None:
         entries = _generated_search_entries(ET.parse(self.xml_dir / "mod_search_index.xml").getroot())
@@ -355,6 +386,11 @@ class GeneratePreferenceArtifactsTest(unittest.TestCase):
                     and element.get(f"{{{AUTO_NS}}}isPreferenceVisible", "true").lower() != "false"
                     and element.get(ANDROID_TITLE, "").startswith("@")
                 }
+                directory = {e.get(ANDROID_KEY): e.get(ANDROID_TITLE)
+                             for e in self.pages["prefs_various_cat"].iter() if e.get(ANDROID_KEY)}
+                for entry_key, resource, _, _ in production_generator.STANDALONE_PAGES:
+                    if resource == path.stem and entry_key in directory:
+                        expected[entry_key] = directory[entry_key]
                 actual = {item["key"]: item["title"] for item in entries if item["page"] == f"@id/{path.stem}"}
                 self.assertEqual(expected, actual)
         hide_wifi = next(item for item in entries if item["key"] == "pref_key_system_statusbaricons_wifi")

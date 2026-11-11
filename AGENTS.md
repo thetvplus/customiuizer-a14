@@ -22,7 +22,7 @@
 
 ## Git 与协作
 
-- `main` 是唯一长期稳定线。沿用当前聊天的工作分支、Worktree、授权及验证状态；按 [DEVELOPMENT](docs/DEVELOPMENT.md#git-与协作) 的触发条件增量核对归属，不重新发现整个任务。
+- `main` 是唯一长期稳定版本线。任务分支正常提交，已验证成果通过 Squash PR 整合，正式版本尽量对应一个整合提交。未完成成果留在任务分支。沿用当前聊天的工作分支、Worktree、授权及验证状态；按 [DEVELOPMENT](docs/DEVELOPMENT.md#git-与协作) 的触发条件增量核对归属，不重新发现整个任务。
 - 授权开发任务完成必要验证后，默认 commit / push 对应工作分支，无需再次确认；推送后读回远端完整 SHA。该授权不包含 merge main、tag 或 Release，用户指定的只读 / 停止点优先。
 - 禁止 force push、破坏性 reset、改写公开历史、无差别 clean 或覆盖未知修改。Review 不建平行分支；同一 Worktree 只有一个写入者，冲突范围先协调。远端不可用时报告协作状态未知。
 
@@ -43,5 +43,5 @@
 | ROM 私有接口、签名或 ClassLoader 不确定 | [DexSQL](docs/rom-intelligence/DEXSQL.md#离线-rom-知识库)：复用 Catalog，再 locate / search；来源变化或缓存缺失才 update / prepare。HyperOS 3 / dada 仅 REFERENCE_ONLY，不能提供 A14 ABI / 资源合同 |
 | 环境、生成、Git | [DEVELOPMENT](docs/DEVELOPMENT.md) |
 | 选测、行为 / 设备 / Hook 验证 | [TESTING](docs/TESTING.md#执行分级) → 按需用[自主验证入口](docs/AGENTIC_VERIFICATION.md) |
-| 实施 / 只读审查 / 原生界面 | [项目 Skills](.agents/skills/README.md) |
+| 实施 / 只读审查 / 专项工具 | [项目 Skills](.agents/skills/README.md) |
 | 文档职责、更新与删除 | [DOCS_STYLE](docs/DOCS_STYLE.md)；总目录只维护在 [docs/README](docs/README.md) |

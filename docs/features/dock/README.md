@@ -28,6 +28,8 @@ iPhone SE 3 / iPhone14,6 / iOS18.6.2 / 22G100 的独立原件已核对，未用 
 
 几何更新来自原生 measure / layout / 拖动完成等事件；稳定的普通 / 透明背景解除 PreDraw，需要独立合成透明度的原生材质只观察宿主已有帧，不自行请求下一帧。隐藏暂停几何工作，detach 取消宽度动画并释放布局与编辑监听。没有纹理 generation、异步捕获结果或旧 Bitmap 需要移交，整套自定义图像所有权已删除。
 
+全宽装饰 detach 后复用一次性 attach 入口，在同一 HotSeats 原生重挂载时恢复，不依赖再次 updateContent。首次创建、attach 和窗口恢复时读取原生 LauncherState，避免旧场景陈旧或 Overview 内新装饰默认显示；不增加持续轮询。
+
 A14 安装点为 HotSeats.updateContent() 完成后挂载，原方法先加入原生内容并写入 mContent；measure、内容 layout、拖动结束、Overview 状态、编辑与解锁回调继续驱动既有装饰。2026-11-08 对 duchamp CN、fuxi CN / TW 与 munch ID 的原始 Launcher APK 重新运行 DexSQL，未使用旧索引；上述声明、原生材质构造与成员合同均存在。当前功能路由只启用 MIUI Launcher，POCO 原件的接口存在不代表 Dock 已接入；不扩大整个 Launcher catalog。具体评估见[静态复核证据](../../maintenance/A14_REFINEMENT_ROADMAP.md#验证与证据)。静态与 Host 证据不等同设备帧时间、GPU、功耗或实际观感验收。
 
 主要实现为 [`LauncherDockBackground`、`DockBackgroundGeometry` 与 `DockCornerGeometry`](../../../app/src/main/java/tv/withaibuild/customiuizer/mods/)。不恢复旧轻量玻璃的持续采样调度。

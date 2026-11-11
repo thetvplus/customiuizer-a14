@@ -72,15 +72,17 @@ internal class MediaCardLayout(private val sets: Class<*>) {
         }
         // Android layout policy. The reference establishes separation of header,
         // time and transport; these dp values are not recovered Apple dimensions.
-        place("album_art", 52, 52, 16, 0f)
+        val artSize = if (compact) 44 else 52
+        place("album_art", artSize, artSize, if (compact) 12 else 16, 0f)
         val app = place("icon", 16, 16, 0, 0f)
         integer.getValue("startToStart").setInt(app, ids.getValue("album_art"))
         integer.getValue("endToEnd").setInt(app, -1)
         integer.getValue("topToTop").setInt(app, ids.getValue("album_art"))
-        integer.getValue("startMargin").setInt(app, dp(36))
-        integer.getValue("topMargin").setInt(app, dp(36))
-        place("media_seamless", 48, 48, 18, 1f)
-        for ((name, top) in listOf("header_title" to 17, "header_artist" to 43)) {
+        integer.getValue("startMargin").setInt(app, dp(artSize - 16))
+        integer.getValue("topMargin").setInt(app, dp(artSize - 16))
+        place("media_seamless", 48, 48, if (compact) 10 else 18, 1f)
+        for ((name, top) in listOf("header_title" to if (compact) 12 else 17,
+            "header_artist" to if (compact) 34 else 43)) {
             val native = place(name, 0, 24, top)
             integer.getValue("startToStart").setInt(native, -1)
             integer.getValue("endToEnd").setInt(native, -1)
@@ -89,18 +91,20 @@ internal class MediaCardLayout(private val sets: Class<*>) {
             integer.getValue("startMargin").setInt(native, dp(12))
             integer.getValue("endMargin").setInt(native, dp(8))
         }
-        place("media_progress_bar", 0, 32, 76)
+        // Preserve the native SeekBar target. Its thin track is centered inside
+        // this row; labels sit below the ink and the transport target never overlaps it.
+        place("media_progress_bar", 0, 32, if (compact) 56 else 76)
         // Native collapsed height is 140 dp, expanded is at least 168 dp.
         // Keep visible compact actions inside their host and retain 48 dp targets.
-        val actionTop = if (compact) 88 else 120
+        val actionTop = if (compact) 92 else 120
         for ((name, position) in listOf("actionPrev" to .22f, "actionPlayPause" to .5f, "actionNext" to .78f))
             place(name, 48, 48, actionTop, position)
         for (index in 0..4) place("action$index", 48, 48, actionTop, index / 4f)
         // The native time row is constrained below action0. Keeping that chain
         // after moving transport enlarges the host and recenters its backdrop.
-        val timeTop = if (compact) 68 else 100
-        place("media_elapsed_time", 48, 20, timeTop, 0f)
-        place("media_total_time", 48, 20, timeTop, 1f)
+        val timeTop = if (compact) 76 else 96
+        place("media_elapsed_time", 64, 16, timeTop, 0f)
+        place("media_total_time", 64, 16, timeTop, 1f)
         place("media_scrubbing_elapsed_time", 48, 48, actionTop, 0f)
         place("media_scrubbing_total_time", 48, 48, actionTop, 1f)
         return result

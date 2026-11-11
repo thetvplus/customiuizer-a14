@@ -74,6 +74,40 @@ class Api102BulkHookInstallationTest {
         assertTrue(attempts.all { !it.calls.contains("setId") && !it.calls.contains("getId") })
     }
 
+    @Test
+    fun pluginDiscoveryUsesOnlyTheVerifiedNativeAbiAndInstallsOnce() {
+        bind()
+        val engine = ControlCenterPluginRuntimeEngine()
+        val factory = com.android.systemui.shared.plugins.PluginInstance.PluginFactory::class.java
+        engine.hookIfNeeded(factory.classLoader!!)
+        engine.hookIfNeeded(factory.classLoader!!)
+
+        assertEquals(1, attempts.size)
+        val attempt = attempts.single()
+        assertEquals(factory.getDeclaredMethod("createPlugin"), attempt.method)
+        assertEquals(com.android.systemui.plugins.Plugin::class.java, attempt.method.returnType)
+        assertEquals(listOf("setPriority", "setExceptionMode", "setId", "intercept", "getId"), attempt.calls)
+        assertEquals("systemui.plugin.create", attempt.id)
+        assertNull(engine.lastFailure())
+    }
+
+    @Test
+    fun missingPluginFactoryCannotBeReportedAsSuccessfulDiscovery() {
+        bind()
+        val missing = object : ClassLoader(javaClass.classLoader) {
+            override fun loadClass(name: String, resolve: Boolean): Class<*> {
+                if (name == "com.android.systemui.shared.plugins.PluginInstance\$PluginFactory") throw ClassNotFoundException(name)
+                return super.loadClass(name, resolve)
+            }
+        }
+        val engine = ControlCenterPluginRuntimeEngine()
+        engine.hookIfNeeded(missing)
+
+        assertTrue(attempts.isEmpty())
+        assertEquals(InstallState.FAILED_PARTIAL, engine.installState())
+        assertTrue(engine.lastFailure() is ClassNotFoundException)
+    }
+
     private fun install(name: String = "createPlugin") = ModuleHelper.hookAllMethodsWithId(
         Target::class.java.name, Target::class.java.classLoader, name,
         HookInstallation.STABLE_ID_PLUGIN_CREATE, callback,

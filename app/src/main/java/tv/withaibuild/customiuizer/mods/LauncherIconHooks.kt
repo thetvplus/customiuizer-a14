@@ -607,7 +607,7 @@ object LauncherIconHooks {
 
     @JvmStatic
     fun ShowHotseatTitlesHook(lpparam: PackageReadyParam) {
-        MainModule.resHooks.setThemeValueReplacement("com.miui.home", "bool", "config_hide_hotseats_app_title", false)
+        MainModule.getResourceHooks().setThemeValueReplacement("com.miui.home", "bool", "config_hide_hotseats_app_title", false)
         ModuleHelper.findAndHookMethodSilently("com.miui.home.launcher.Launcher", lpparam.classLoader, "createItemIcon", ViewGroup::class.java, "com.miui.home.launcher.ItemInfo", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any? = null

@@ -216,22 +216,12 @@ object LauncherDockBackground {
         visualEvents: Boolean = false,
     ) {
         if (config.fullWidth && !host.isAttachedToWindow) {
-            if (XposedHelpers.getAdditionalInstanceField(host, FULL_WIDTH_OWNER) != null) return
-            val listener = object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {
-                    v.removeOnAttachStateChangeListener(this)
-                    XposedHelpers.removeAdditionalInstanceField(v, FULL_WIDTH_OWNER)
-                    // This listener is also a value in the global weak-key field table.
-                    // Use the callback owner so its value cannot keep its own key alive.
-                    attach(v as FrameLayout, config, material, content, visualEvents)
-                }
-                override fun onViewDetachedFromWindow(v: View) = Unit
-            }
-            XposedHelpers.setAdditionalInstanceField(host, FULL_WIDTH_OWNER, listener)
-            host.addOnAttachStateChangeListener(listener)
+            awaitAttachment(host, config, material, content, visualEvents)
             return
         }
+        val sceneVisible = content?.sceneVisible(host)
         findBackground(host)?.let {
+            sceneVisible?.let(it::setSceneVisible)
             it.scheduleGeometry()
             return
         }
@@ -239,6 +229,7 @@ object LauncherDockBackground {
         val full = config.fullWidth && container !== host
         val decoration = DockBackgroundView(host.context, if (full) config else config.copy(fullWidth = false),
             material, content, if (full) host else null, visualEvents)
+        sceneVisible?.let(decoration::setSceneVisible)
         val inset = ((if (config.sideInsetDp == 0) 14 else config.sideInsetDp) * host.resources.displayMetrics.density).roundToInt()
         val layer = if (full) DockFullWidthContainer(host.context).also {
             container.addView(it, 0, FrameLayout.LayoutParams(-1, -1))
@@ -256,9 +247,30 @@ object LauncherDockBackground {
                     (decoration.parent as? ViewGroup)?.removeView(decoration)
                     (layer.parent as? ViewGroup)?.removeView(layer)
                     v.removeOnAttachStateChangeListener(this)
+                    // A native reparent/window rebuild need not call updateContent again.
+                    // Arm the next attach directly: during detach mAttachInfo may still be set.
+                    awaitAttachment(v as FrameLayout, config, material, content, visualEvents)
                 }
             })
         }
+    }
+
+    private fun awaitAttachment(host: FrameLayout, config: DockBackgroundConfig,
+        material: Constructor<*>?, content: DockContentAccess?, visualEvents: Boolean,
+    ) {
+        if (XposedHelpers.getAdditionalInstanceField(host, FULL_WIDTH_OWNER) != null) return
+        val listener = object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                v.removeOnAttachStateChangeListener(this)
+                XposedHelpers.removeAdditionalInstanceField(v, FULL_WIDTH_OWNER)
+                // This listener is also a value in the global weak-key field table.
+                // Use the callback owner so its value cannot keep its own key alive.
+                attach(v as FrameLayout, config, material, content, visualEvents)
+            }
+            override fun onViewDetachedFromWindow(v: View) = Unit
+        }
+        XposedHelpers.setAdditionalInstanceField(host, FULL_WIDTH_OWNER, listener)
+        host.addOnAttachStateChangeListener(listener)
     }
 
     internal fun userPresentChildren(children: List<*>, background: DockBackgroundView): List<*> {
@@ -345,10 +357,22 @@ internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Cl
     private val dragging = dragController?.type?.let { XposedHelpers.findFieldIfExists(it, "mDragging") }
     private val launcher = dragController?.type?.let { XposedHelpers.findFieldIfExists(it, "mLauncher") }
     private val hotseats = launcher?.type?.let { XposedHelpers.findFieldIfExists(it, "mHotSeats") }
+    private val stateManager = launcher?.type?.let { XposedHelpers.findMethodExactIfExists(it, "getStateManager") }
+    private val launcherState = stateManager?.returnType?.let { XposedHelpers.findMethodExactIfExists(it, "getState") }
+    private val overviewType = XposedHelpers.findClassIfExists("com.miui.home.recents.OverviewState", hotseatType.classLoader)
     val dragControllerType: Class<*>? get() = if (hotseats != null) dragController?.type else null
 
     fun host(controller: Any): FrameLayout? = launcher?.get(controller)?.let { hotseats?.get(it) as? FrameLayout }
     fun hostFromLauncher(owner: Any): FrameLayout? = hotseats?.get(owner) as? FrameLayout
+
+    /** A rebuilt/reparented HotSeats may have missed the previous scene callback. */
+    fun sceneVisible(host: ViewGroup): Boolean? {
+        val controller = dragController?.get(host) ?: return null
+        val owner = launcher?.get(controller) ?: return null
+        val manager = stateManager?.invoke(owner) ?: return null
+        val state = launcherState?.invoke(manager) ?: return null
+        return overviewType?.let { !it.isInstance(state) }
+    }
 
     fun isDragging(host: ViewGroup): Boolean {
         val controller = dragController?.get(host) ?: return false
@@ -485,6 +509,7 @@ internal class DockBackgroundView(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         ModuleHelper.guarded {
+            syncSceneFromHost()
             readScreenRadius(rootWindowInsets)
             navigationInsets = rootWindowInsets?.getInsets(WindowInsets.Type.navigationBars()) ?: Insets.NONE
             materialUnavailable = false
@@ -641,6 +666,7 @@ internal class DockBackgroundView(
                 cancelGeometry()
                 syncNativeMaterialVisibility(false)
             } else {
+                syncSceneFromHost()
                 observeBlurPolicy(isShown)
                 refreshBlurPolicy()
                 syncNativeMaterialVisibility(isShown || editingAnimation != null)
@@ -723,6 +749,11 @@ internal class DockBackgroundView(
 
     internal fun scheduleVisualSync() {
         if (visualReady && isAttachedToWindow && windowVisibility == VISIBLE && (isShown || editingAnimation != null)) observeFrames()
+    }
+
+    private fun syncSceneFromHost() {
+        val host = fullWidthHost.get() ?: parent as? FrameLayout ?: return
+        contentAccess?.sceneVisible(host)?.let(::setSceneVisible)
     }
 
     internal fun setSceneVisible(visible: Boolean) {

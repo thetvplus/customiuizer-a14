@@ -64,6 +64,5 @@ and `.value` requirements. If any is unknown, do not choose a primitive yet.
 
 ## Related
 
-- [Kotlin control flow](../../kotlin-control-flow/SKILL.md) — state and event branching.
 - [Structured concurrency](structured-concurrency.md) — scope and cancellation ownership.
 - [Compose state and effects](../../compose-state-and-effects/SKILL.md) — UI collection.

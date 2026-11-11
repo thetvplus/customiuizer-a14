@@ -11,7 +11,7 @@ Composable bodies render; external work belongs to the smallest effect whose lif
 3. For a long-lived effect that needs the latest callback without restarting, read a `rememberUpdatedState` value lazily inside the effect or a later callback. If a changed value should recreate work, use it as a key instead.
 4. Collect event/side-effect flows in `LaunchedEffect`; collect render state near the state holder and render it as plain state. A `snapshotFlow` needs a terminal `collect`.
 5. Pair every registration in `DisposableEffect` with `onDispose`; start click/gesture coroutines through `rememberCoroutineScope` rather than an event flag.
-6. Route focus navigation semantics to [Compose focus navigation](../../compose-focus-navigation/SKILL.md) and measurement phase work to [Compose performance](../../compose-performance/SKILL.md).
+6. Route measurement phase work to [Compose performance](../../compose-performance/SKILL.md).
 7. Finish when work cannot run from composition, its restart/cleanup identity is explicit, and the current lifecycle owns cancellation.
 
 | Need | API |

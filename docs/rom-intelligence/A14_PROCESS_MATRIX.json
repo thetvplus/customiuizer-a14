@@ -3037,7 +3037,7 @@
       "target": "SYSTEM_PACKAGE",
       "phase": "PACKAGE_READY",
       "installer": "AndroidPackageFeatures",
-      "installHook": "{ val allRotations = mPrefs.getStringAsInt(\"system_allrotations2\", 1) MainModule.resHooks.setThemeValueReplacement(\"android\", \"bool\", \"config_allowAllRotations\", allRotations == 2) return FeatureInstallResult.INSTALLED }",
+      "installHook": "{ val allRotations = mPrefs.getStringAsInt(\"system_allrotations2\", 1) MainModule.getResourceHooks().setThemeValueReplacement(\"android\", \"bool\", \"config_allowAllRotations\", allRotations == 2) return FeatureInstallResult.INSTALLED }",
       "enableCondition": "prefs.getStringAsInt(\"system_allrotations2\", 1) > 1",
       "allowedProcess": "android",
       "deniedProcess": ""
@@ -3245,8 +3245,8 @@
       "target": "SYSTEM_UI",
       "phase": "PACKAGE_READY",
       "installer": "SystemUiFeatures",
-      "installHook": "SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs))",
-      "enableCondition": "ToastPresentationConfig.read(prefs).enabled",
+      "installHook": "SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs), mPrefs.getBoolean(\"system_cc_volume_showpct\") && mPrefs.getStringAsInt(\"system_volume_pct_presentation\", 0) == 1)",
+      "enableCondition": "ToastPresentationConfig.read(prefs).enabled || volumeFeedback(prefs)",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
@@ -3429,6 +3429,19 @@
       "installer": "SystemUiFeatures",
       "installHook": "tv.withaibuild.customiuizer.mods.statusicons.IosBatteryHooks.install(lpparam)",
       "enableCondition": "{ prefs -> IosStatusBarBatteryFeature.evaluateEnabled(prefs) }",
+      "allowedProcess": "com.android.systemui",
+      "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 271,
+      "featureIdName": "system_statusbar_signal_dots",
+      "name": "Classic Cellular Signal",
+      "preferenceKey": "system_statusbar_signal_dots",
+      "target": "SYSTEM_UI",
+      "phase": "PACKAGE_READY",
+      "installer": "SystemUiFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.statusicons.ClassicSignalHooks.install(lpparam)",
+      "enableCondition": "{ prefs -> ClassicSignalFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     }

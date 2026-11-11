@@ -60,7 +60,7 @@ MiuiHome 样本版本为 `RELEASE-4.39.30.8604-08262248`。现有 Catalog 中 fu
 
 22G100 的 `shadowOpacityForLayoutRole:atIndex:`（`0x1d8d0fa18`）恒返 1，`shadowOffsetForIndex:`（`0x1d8d0fa20`）恒返 0，`shadowStyleForLayoutRole:inAppLayout:`（`0x1d8d0fcb8`）恒返 1。这不代表阴影最终为纯黑不透明；具体滤镜仍未恢复，不凭层级主观添加逐卡透明度曲线。
 
-A14 将排序放在共同 16 dp 投影平面上，再保留原有细小排名差；不再将实际 Z 压到不足一个物理像素。卡片自身的原生 Outline 只覆盖快照内容，沿用宿主圆角并响应其设置事件，保留标题及祖先裁切。颜色与投影高度是 Android 调整，不等同 Apple 材质。投影随同一 TaskView 的矩阵、原生内容 alpha、位移和回收更新，没有位图模糊或独立阴影时钟；释放按属性所有权恢复原值。原生窗口交接会让 thumbnail alpha=0 而根 alpha=1；只跟根透明度会在慢速 HOLD 留下大块孤立投影。当前绑定时读取 thumbnail alpha，后续消费原生 setChildrenViewAlpha 更新 Outline alpha，不遮盖壁纸、不改变模糊或应用 Surface。
+A14 将排序放在共同 8 dp 投影平面上，再保留原有细小排名差；不再将实际 Z 压到不足一个物理像素。卡片自身的原生 Outline 只覆盖快照内容，沿用宿主圆角并响应其设置事件，保留标题及祖先裁切。颜色与投影高度是 Android 调整，不等同 Apple 材质。投影随同一 TaskView 的矩阵、原生内容 alpha、位移和回收更新，没有位图模糊或独立阴影时钟；释放按属性所有权恢复原值。原生窗口交接会让 thumbnail alpha=0 而根 alpha=1；只跟根透明度会在慢速 HOLD 留下大块孤立投影。当前绑定时读取 thumbnail alpha，后续消费原生 setChildrenViewAlpha 更新 Outline alpha，不遮盖壁纸、不改变模糊或应用 Surface。
 
 22G100 的 `scaleForIndex:`（`0x1d8b8ee98`）不为被拖卡附加缩小，`opacityForLayoutRole:inAppLayout:atIndex:`（`0x1d8b8f4e8`）仅在配置允许且释放目标指向删除后清零，不支持 MOVE 全程淡出。`handleSwipeToKillEvent:` 区分 translation、progress、isDragging 和 decelerationTargetProgress；越过位移门槛不能替代释放后的业务提交。邻卡 frame / scale / shadow 由临时删除状态与 progress 插值，不能从一个常量恢复全部链路。
 
@@ -85,7 +85,7 @@ Thumbnail 通过冷解析的 mCornerRadius:Int 和原生 setter 同步 Outline�
 
 上述三个 A14 样本的 `mCornerRadius:I` / `setCornerRadius(I)V`、`setChildrenViewAlpha(F)V`、`calculate(F)V`、`onMoveUpdate(View;FF)V`、`prepareSnapBackAnimation(View;Object)V`、`snapChild(View;F)V` 和 `getViewTranslationAnimator(View;F)ObjectAnimator` 已核对。`$1` 直接继承 SwipeHelper，两个覆写均不调用 super；原生 snap 的完成 Runnable 再调用 `onChildSnappedBack(View;F)V`。冷安装精确校验本轮所用参数、返回值、继承与字段类型，完整表失败即保留原生，不添加模糊反射回退。原始来源、SQL 输出及 Smali 私有留存，不将原始样本或设备界面入库。
 
-同构建 Deck 的 `topMostLayoutElements` 返回任务列表，`shouldBringCardToFrontDuringInsertionOrRemoval` 返回 false；SwipeToKill 未覆盖该排序，controller 按组应用顺序。因此不保留 A14 在拖动 / 删除间由正 Z 跨到负 Z 的层级切换。横向仅融合方向候选筛选：同一次原生 fling 内将手指速度转换为相反的 content-offset 方向，在原生 q 格点选同方向候选，仍由原生预测及 PhysicalScroller 驱动。普通低速吸附、边界与退化任务数保留原生；未把 .993 当 friction，也未移植完整 UIKit 跟手求解器或原生候选边距。
+同构建 Deck 的 `topMostLayoutElements` 返回任务列表，`shouldBringCardToFrontDuringInsertionOrRemoval` 返回 false；SwipeToKill 未覆盖该排序，controller 按组应用顺序。因此不保留 A14 在拖动 / 删除间由正 Z 跨到负 Z 的层级切换。横向 fling 在当前手势方向的 q 格点中选择最靠近原生预测位置的卡位，避免对预测位置再次向手势方向进位。原生 PhysicalScroller 根据落点和手指速度求阻力并驱动后续运动。普通低速吸附、边界与退化任务数保留原生。
 
 ## 标题层次与窗口动效
 
@@ -121,7 +121,7 @@ Thumbnail 通过冷解析的 mCornerRadius:Int 和原生 setter 同步 Outline�
 
 每次原生重新配置前归还自持参数，成功后再覆盖四轴；end / cancel / 超时 / 旋转释放时仅恢复仍等于本次写入的参数对，后续原生写入优先。失败逐轴回滚，可选动效冷解析失败仅保留原生时序；必需窗口合同失败则 Deck 整批不接管。该变化是 iOS 配置到 Android 原生求解器的映射，并非 UIKit 求解器或全链路等价。WindowElement 的当前显示旋转为 0、90、270° 时共用交接；不要求默认 homeRotation 元数据与其相等。180°、quick switch 或分屏仍保留原生运动，原生坐标转换与参数身份保留。
 
-阴影继续使用同一 TaskView RenderNode，透明度为原生截图 alpha × (1−mFullscreenProgress)，截图不可见 / 未准备时为零，没有引入新滤镜或阴影时钟。16dp 投影平面仍为 Android 工程近似，环境 / 定向颜色保留 HyperOS 当前原值。卡片截图的圆角与裁切由原生 thumbnail 管理，内容投影同步原生半径，不增加另一套曲率。现有 iOS 静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
+阴影使用 TaskView RenderNode。常态透明度为原生截图 alpha × (1−mFullscreenProgress)，应用窗口交接使用下文的同一投影。8 dp 投影平面仍为 Android 工程近似，环境 / 定向颜色保留 HyperOS 当前原值。卡片截图的圆角与裁切由原生 thumbnail 管理，内容投影同步原生半径，不增加另一套曲率。现有 iOS 静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
 
 Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析器，必需布局、触摸、卡池、窗口和生命周期成员仍在冷安装前完整解析。后者已移除旧 Quickstep closing 入口，改由 WindowElement 持有 RectFSpringAnim；不能只放开版本门禁或把旧字段当作参数别名。
 
@@ -134,7 +134,7 @@ Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析�
 
 Nav 可在当前滚动位置尚未变化时，用目标 q 查询窗口矩形。预测位置、尺寸缩放与无标题内容框必须使用该同一 q；冻结结果也区分 q，不混用当前 scale。布局、手势端点与窗口查询的缩放统一到同一受限 presentationCursor，修正离屏来回拖动时位置已限位而比例仍读原始游标的差异。点击打开继续由 TaskViewUtils.getTaskViewStartRectF 消费该内容框并执行 last / current rotation 转换，模块不再在转换后用未旋转的屏幕矩形覆盖结果；8255 / 8604 两份原生消费者已核对。不可见区仅限制候选可见性与指数范围，不设置统一的远左占位坐标。旧端点保留真实入场侧，回填中新可见卡也沿原生进度插值位置与展示缩放；直接使用目标姿态会让左侧边界删除时的右邻卡跳入终点。取消沿同一进度反向接续。
 
-新版普通打开的应用 leash 位于整个 Launcher 之上，TaskView 的 Z 不能让前卡遮住它。恢复原生窗口进度下的邻卡让位，从实际 Deck 起始间距连续展开到原生全屏槽位及间隔，使邻卡在窗口完成前离开应用范围；在 Surface 提交前计算同帧姿态。仅全屏零原点、正向轴对齐矩阵和原生内容框一致时，限制选中应用 Surface 的独占 windowCrop 到前卡左边界；完全遮挡复制原参数仅将 alpha 置零。圆角边界采用保守矩形近似，未恢复像素级原生遮挡。其他目标、坐标不符、旋转 / 分屏均保留原生输出，不修改 layer、leash、矩阵或 finish。交接、取消与回收按所有权释放邻卡变换，不增加预览窗口、快照或第二套动画时钟。
+新版普通打开的应用 leash 位于整个 Launcher 之上，TaskView 的 Z 不能让前卡遮住它。本地 iOS 18.6.2 的 `SBDeckToFullScreenSwitcherModifier.transitionWillBegin` 先提交选中卡的滚动对齐，再提交转场布局选项。A14 用现有 Deck 几何求各前卡重新定位后的端点，从实际姿态按原生窗口进度前往该端点，并以应用窗口的边缘限制遮挡量。在 Surface 提交前计算同帧姿态。仅全屏零原点、正向轴对齐矩阵和原生内容框一致时，限制选中应用 Surface 的独占 windowCrop 到前卡左边界；完全遮挡复制原参数仅将 alpha 置零。圆角边界采用保守矩形近似，未恢复像素级原生遮挡。其他目标、坐标不符、旋转 / 分屏均保留原生输出，不修改 layer、leash、矩阵或 finish。交接、取消与回收按所有权释放邻卡变换，不增加预览窗口、快照或第二套动画时钟。
 
 ## 横屏与卡片大小（2026-11-06）
 
@@ -148,7 +148,7 @@ A14 保留 DeviceConfig / RotationHelper 的原生方向策略，以视觉 viewp
 
 卡片与窗口内容框统一使用原生完整 TaskView frame 的中心。原生 TaskViewsElement 在窗口更新时重写 pivot，其他入场和滑动路径也会改变 pivot；旧展示矩阵取用临时 pivot 后缓存，可能与窗口按 frame 中心计算的落点不同。现在自持矩阵固定使用 frame 中心，滑动期间仅在自持矩阵补偿原生 pivot / scale 的组合，保留原生根属性和删除资格。实际屏幕内容框、逆变换命中和窗口模型有同一中心的行为回归，包含 pivot 迟到改变及非均匀原生缩放。原生截图、Surface 提交和 finish 继续由原对象持有。
 
-上滑过程另有独立的原生姿态消费者：8604 的 `TaskViewsElement.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable,Float,Float,Boolean,Int,Float,Int,Rect)V`。原生以屏幕窗口宽度求根 scale、线性页间距、Header 中心与 `300×mPer³` 位移，直接叠上 Deck 矩阵会二次缩放。WindowElement Profile 现冷解析该精确实例方法，在同一次原生调用前将窗口姿态映射到自持矩阵之前的坐标；收拢程度直接由当前原生窗口宽度与已准备端点求出，不再消费分段的手势进度。接纳的姿态统一走原生即时分支，不再用逐卡计数器和 Runnable 包装保留第二层追赶弹簧。已核对原方法的即时分支会取消旧弹簧、写入本次姿态并执行原 Runnable；原生弹簧取消仍调用自己的结束监听，不丢弃原生完成工作。原生 alpha、fullscreenProgress、任务索引、窗口 spring、Surface 和 finish 保持。
+上滑过程另有独立的原生姿态消费者：8604 的 `TaskViewsElement.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable,Float,Float,Boolean,Int,Float,Int,Rect)V`。原生以屏幕窗口宽度求根 scale、线性页间距、Header 中心与 `300×mPer³` 位移，直接叠上 Deck 矩阵会二次缩放。WindowElement Profile 现冷解析该精确实例方法，在同一次原生调用前将窗口姿态映射到自持矩阵之前的坐标；收拢程度直接由当前原生窗口宽度与已准备端点求出，不再消费分段的手势进度。仅转换姿态矩形，保留原生即时 / Spring 选择，释放由原生卡片 Spring 从当前姿态和速度接续，完成 Runnable 不变。强制即时分支会取消原生弹簧并直接写入终点，已由跨 Legacy / WindowElement 的真实 Hook 回归复现；不增加逐卡计数器、Runnable 包装或补偿时钟。新绑定卡片先采用其 Deck frame 缩放，避免补位首帧从默认全尺寸开始。原生 alpha、fullscreenProgress、任务索引、窗口 spring、Surface 和 finish 保持。
 
 `alignTaskViewWhenAppToRecent` 沿同一窗口几何跟随原生 closing / end 回调，不再整段跳过邻卡对齐。端点取自本次已准备的布局，Header / gap / count 随布局更新；每卡一个复用 RectF，owner 两个工作 RectF，不逐帧创建几何模型或额外时钟。原生准备早于首次布局时，在既有姿态回调内同步矩阵尺寸后再做逆换算；该时序已有先失败后通过的回归。Legacy 的同类上滑消费者在下述横屏响应续修中补齐；未测样本仍需独立验收。
 
@@ -157,6 +157,16 @@ A14 保留 DeviceConfig / RotationHelper 的原生方向策略，以视觉 viewp
 设置入口为“系统 → 最近任务 → iOS 任务卡片”；“iOS DECK 堆叠任务”使用原键，“卡片比例”控制整体大小。默认自动按 .75 页比例与可用高度求上限，自定义 55–85%，最大显示高度限制为可用高度的 90%；这组范围为 Android 安全映射。新设置关闭 / 自动时不会改变原生业务尺寸或截图宽高比。16:9、19.5:9、20:9、多密度及边界大小有 Host 几何回归，实机覆盖与未覆盖场景分别记录在路线图。
 
 Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable)V，读取同一原生 mPer 并排除 quick switch；7603 / 8255 的横向根姿态与上述 WindowElement 消费者一致。横竖屏现共用同一 iOS 场景表，取消此前仅横屏使用原生节奏的分支。原生圆角更新、截图及完成回调仍在原方法内执行；Host 只验证映射和所有权，不代表设备性能通过。
+
+## 原生交接连续性（2026-11-09）
+
+松手的 `changeTaskStackViewScrollAndTaskViewTranslation` 按线性页坐标重置 q 和根 translation，异步布局尚未应用 Deck 新 frame 时会改变实际屏幕位置。现先保存可见内容框，原生方法仍执行一次，随后在同一边界提交新的 Deck frame，并换算根 scale / translation，使屏幕框保持连续。运行中的原生 DynamicAnimation 同步换算已有位置与速度，包含缩放对位移速度的耦合；不取消释放弹簧、不修改目标或开启补偿时钟。相关实例方法、四轴和缓存字段已从 7603 / 8255 / 8604 原件核对。
+
+App 收回时，原生截图透明度与 fullscreenProgress 的乘积在截图恢复前接近零。两套 Launcher 在各自的原生窗口回调中用收拢进度更新 TaskView 投影透明度，Outline 始终采用卡片自身的轮廓。正常抵达端点后，同一投影保持亮度直至截图接管；取消、换代或缩略图隐藏时清理过渡。前卡让位按选中卡的居中位置求端点，限制离屏位移，并随原生窗口进度逐步展开，避免线性插值过远端点时前卡抢跑。
+
+Legacy 后卡打开补齐与 WindowElement 相同的卡片 / Surface 所有权：原生 start 前一次性取消尚在收敛的卡片 springs，再读取 `getStartRect()`。该边界晚于 `setupAnimAndBreakLast`，包含快速打断时原生对 start 的再次改写；创建阶段只保存本次请求的弱引用与票据 / 代际，启动时消费一次。`skipViewChanges`、迟到和失主请求不接管卡片。两种原生启动入口不会重复准备，未改变原生 clip mode 或完成回调。
+
+8255 的窗口帧先提交 Surface、后投递 UI 对齐，不能从手势线程读取当前 View 来补遮挡。现于 Main 准备一次纯几何数据，以同一原生 Rect / progress、同一位移公式计算前卡完整边界，并按与新版相同的相交、viewport、轴对齐和 buffer 矩阵条件裁切。数据弱附着于本次原生新建的 TransformParams，回收 / 换代即失活；工作区随该原生请求存在，不建立额外调度器。10 / 11 参数 Surface 合同分别适配，能力不符保留原生输出。实际设备覆盖和待验边界只记在[路线图](../maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 
 ## 动效统一管理（2026-11-07）
 

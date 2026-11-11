@@ -67,14 +67,22 @@ internal object SystemUIToastPresentation {
     private const val TEXT = "customiuizer_plain_toast_text"
     private const val LEASE = "customiuizer_plain_toast_capsule"
     private const val SOURCE = "customiuizer_plain_toast_source"
+    private var volumeCapsule: NativeToastCapsule? = null
 
-    fun install(lpparam: PackageReadyParam, config: ToastPresentationConfig) {
+    fun showVolumeCapsule(text: String, displayId: Int): ToastCapsuleLease? =
+        volumeCapsule?.show(text, "com.android.systemui", 2400L, displayId, allowDefault = true)
+    fun updateVolumeCapsule(lease: ToastCapsuleLease, text: String): Boolean = volumeCapsule?.update(lease, text) == true
+    fun ownsVolumeCapsule(lease: ToastCapsuleLease): Boolean = volumeCapsule?.owns(lease) == true
+    fun releaseVolumeCapsule(lease: ToastCapsuleLease) { volumeCapsule?.release(lease) }
+
+    fun install(lpparam: PackageReadyParam, config: ToastPresentationConfig, volume: Boolean = false) {
+        val bridge = if (config.capsule || volume) installCapsule(lpparam) else null
+        volumeCapsule = bridge
         if (!config.enabled) return
         val presenter = XposedHelpers.findClass("android.widget.ToastPresenter", lpparam.classLoader)
         val viewField = XposedHelpers.findField(presenter, "mView")
         val paramsField = XposedHelpers.findField(presenter, "mParams")
         val packageField = XposedHelpers.findField(presenter, "mPackageName")
-        val bridge = if (config.capsule) installCapsule(lpparam) else null
         val timeoutField = if (bridge != null)
             XposedHelpers.findFieldIfExists(WindowManager.LayoutParams::class.java, "hideTimeoutMilliseconds") else null
         // Plugin/custom views are not safe to reinterpret as a plain text Toast.
@@ -199,7 +207,7 @@ internal object SystemUIToastPresentation {
     }
 }
 
-internal class ToastCapsuleLease(val root: WeakReference<View>, val token: Any)
+internal class ToastCapsuleLease(val root: WeakReference<View>, val token: Any, val timeoutMs: Long = 7000L)
 
 /** Metadata is scoped to the SystemUI ClassLoader; the native controller and leases are weak. */
 internal class NativeToastCapsule(controllerClass: Class<*>, rootClass: Class<*>,
@@ -210,6 +218,8 @@ internal class NativeToastCapsule(controllerClass: Class<*>, rootClass: Class<*>
     private val hide = rootClass.getMethod("hideStrongToast")
     private val textView = XposedHelpers.findField(rootClass, "mLeftTextView")
     private val category = XposedHelpers.findField(rootClass, "mCurrentToastCategory")
+    private val handler = XposedHelpers.findFieldIfExists(rootClass, "mShowStrongToastHandler")
+    private val hideRunnable = XposedHelpers.findFieldIfExists(rootClass, "mHideStrongToastRunnable")
     private val busy = arrayOf("mStrongToastShow", "mCheckStartAnimation", "mCheckInOutStrongToasting")
         .map { XposedHelpers.findField(rootClass, it) }
     private var controller = WeakReference<Any>(null)
@@ -240,11 +250,17 @@ internal class NativeToastCapsule(controllerClass: Class<*>, rootClass: Class<*>
         return true
     }
 
-    fun show(text: String, packageName: String, timeout: Long, displayId: Int = Display.DEFAULT_DISPLAY): ToastCapsuleLease? {
+    fun show(text: String, packageName: String, timeout: Long, displayId: Int = Display.DEFAULT_DISPLAY,
+        allowDefault: Boolean = false): ToastCapsuleLease? {
         if (displayId != Display.DEFAULT_DISPLAY) return null
-        val currentMode = mode()
+        val currentMode = mode() ?: return null
+        // Island mode suppresses this native category before window creation. Do not route a
+        // volume fallback back through that suppression path or interrupt another island activity.
+        if (allowDefault && currentMode == StrongToastPresentationMode.DYNAMIC_ISLAND) return null
         if (currentMode != StrongToastPresentationMode.DYNAMIC_ISLAND &&
-            currentMode != StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT) return null
+            currentMode != StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT &&
+            !(allowDefault && currentMode == StrongToastPresentationMode.SYSTEM_DEFAULT)) return null
+        if (allowDefault && (handler == null || hideRunnable == null)) return null
         if (text.isBlank() || text.length > 2048 || text.any { it == '\n' || it == '\r' }) return null
         val owner = controller.get() ?: return null
         val existing = nativeRoot.get(owner) as? View
@@ -279,8 +295,9 @@ internal class NativeToastCapsule(controllerClass: Class<*>, rootClass: Class<*>
             else resources.getDimensionPixelSize(heightId).toFloat(), currentMode)
         try {
             val accessibility = nativeContext.getSystemService(AccessibilityManager::class.java)
-            val duration = accessibility?.getRecommendedTimeoutMillis(timeout.coerceIn(7000, Int.MAX_VALUE.toLong()).toInt(),
-                AccessibilityManager.FLAG_CONTENT_TEXT)?.toLong() ?: timeout.coerceAtLeast(7000)
+            val requested = timeout.coerceIn(if (allowDefault) 1L else 7000L, Int.MAX_VALUE.toLong())
+            val duration = accessibility?.getRecommendedTimeoutMillis(requested.toInt(),
+                AccessibilityManager.FLAG_CONTENT_TEXT)?.toLong() ?: requested
             val parameters = JSONObject().put("left", JSONObject().put("textParams", JSONObject()
                 .put("text", text).put("textColor", Color.WHITE))).put("right", JSONObject())
             val bundle = Bundle().apply {
@@ -291,11 +308,14 @@ internal class NativeToastCapsule(controllerClass: Class<*>, rootClass: Class<*>
             }
             show.invoke(owner, bundle)
             val root = nativeRoot.get(owner) as? View ?: return null
-            val lease = ToastCapsuleLease(WeakReference(root), token)
+            val lease = ToastCapsuleLease(WeakReference(root), token, duration)
             if (root.parent != null && busy.first().getBoolean(root) &&
                 XposedHelpers.getAdditionalInstanceField(root, TOKEN) === token &&
                 category.get(root) == CATEGORY &&
-                (textView.get(root) as? TextView)?.text?.toString() == text) return lease
+                (textView.get(root) as? TextView)?.text?.toString() == text) {
+                if (allowDefault && !update(lease, text)) { release(lease); return null }
+                return lease
+            }
             release(lease)
             if (root.parent == null) releaseUnattached(root)
         } catch (error: Throwable) {
@@ -313,7 +333,28 @@ internal class NativeToastCapsule(controllerClass: Class<*>, rootClass: Class<*>
         val root = lease.root.get() ?: return
         if (XposedHelpers.getAdditionalInstanceField(root, TOKEN) !== lease.token) return
         XposedHelpers.removeAdditionalInstanceField(root, TOKEN)
-        if (category.get(root) == CATEGORY && busy.first().getBoolean(root)) hide.invoke(root)
+        if (category.get(root) == CATEGORY && busy.first().getBoolean(root) && !busy[2].getBoolean(root)) hide.invoke(root)
+    }
+
+    fun owns(lease: ToastCapsuleLease): Boolean {
+        val currentMode = mode()
+        if (currentMode != StrongToastPresentationMode.SYSTEM_DEFAULT &&
+            currentMode != StrongToastPresentationMode.MATCH_STATUS_BAR_HEIGHT) return false
+        val root = lease.root.get() ?: return false
+        return root.parent != null && busy.first().getBoolean(root) && !busy[2].getBoolean(root) && category.get(root) == CATEGORY &&
+            XposedHelpers.getAdditionalInstanceField(root, TOKEN) === lease.token
+    }
+
+    fun update(lease: ToastCapsuleLease, text: String): Boolean {
+        if (!owns(lease)) return false
+        val root = lease.root.get() ?: return false
+        val label = textView.get(root) as? TextView ?: return false
+        val nativeHandler = handler?.get(root) as? android.os.Handler ?: return false
+        val hide = hideRunnable?.get(root) as? Runnable ?: return false
+        if (label.text.toString() != text) label.text = text
+        nativeHandler.removeCallbacks(hide)
+        nativeHandler.postDelayed(hide, lease.timeoutMs)
+        return true
     }
 
     private fun releaseUnattached(root: View) {

@@ -19,8 +19,8 @@ import java.lang.reflect.Executable
 @Config(sdk = [34])
 class VolumePercentageLifecycleTest {
     private val context = RuntimeEnvironment.getApplication()
-    private val first = FrameLayout(context)
-    private val second = FrameLayout(context)
+    private val first = FrameLayout(context).apply { tag = PanelOwner() }
+    private val second = FrameLayout(context).apply { tag = PanelOwner() }
     private val hook = SystemUIControlCenterHooks.VolumePercentageProgressHook(Listener::class.java.getField("owner"))
 
     @After
@@ -176,7 +176,71 @@ class VolumePercentageLifecycleTest {
         }
     }
 
-    private fun init(container: ViewGroup, source: Int = 3, owner: Any = container): TextView {
+    @Test fun compactVolumeStyleDoesNotChangeBrightnessTypography() {
+        val volume = init(first)
+        assertEquals(26f, volume.textSize / context.resources.displayMetrics.scaledDensity, .01f)
+        assertFalse(volume.includeFontPadding)
+        val brightness = init(second, 2)
+        assertEquals(40f, brightness.textSize / context.resources.displayMetrics.scaledDensity, .01f)
+    }
+
+    @Test fun currentInsetsMoveOnlyTheVolumeHintAfterAWindowConfigurationChange() {
+        val pct = init(first)
+        for (top in listOf(180, 104, 0)) {
+            pct.dispatchApplyWindowInsets(android.view.WindowInsets.Builder()
+                .setInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars(), android.graphics.Insets.of(0, top, 0, 0)).build())
+            assertEquals(top, (pct.layoutParams as FrameLayout.LayoutParams).topMargin)
+        }
+        val brightness = init(second, 2)
+        val previous = (brightness.layoutParams as FrameLayout.LayoutParams).topMargin
+        brightness.dispatchApplyWindowInsets(android.view.WindowInsets.Builder()
+            .setInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars(), android.graphics.Insets.of(0, 180, 0, 0)).build())
+        assertEquals(previous, (brightness.layoutParams as FrameLayout.LayoutParams).topMargin)
+    }
+
+    @Test fun overlayWindowsWithZeroInsetsStillStayBelowTheMeasuredStatusBar() {
+        val activity = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup()
+        val bar = FrameLayout(activity.get())
+        try {
+            activity.get().setContentView(bar)
+            bar.layout(0, 0, 1080, 130)
+            tv.withaibuild.customiuizer.mods.island.DynamicIslandStatusBarFade.bindFromStatusBar(bar)
+            val pct = init(first)
+            pct.dispatchApplyWindowInsets(android.view.WindowInsets.Builder().build())
+            assertEquals(130, (pct.layoutParams as FrameLayout.LayoutParams).topMargin)
+            bar.layout(0, 0, 1080, 170)
+            pct.dispatchApplyWindowInsets(android.view.WindowInsets.Builder().build())
+            assertEquals(170, (pct.layoutParams as FrameLayout.LayoutParams).topMargin)
+        } finally { activity.pause().stop().destroy() }
+    }
+
+    @Test fun inactiveStreamsCannotOverwriteTheActiveStreamsPercentage() {
+        val pct = init(first)
+        val listener = Listener(first).apply { mColumn.stream = 0 }
+        hook.intercept(Chain(listener, SeekBar(context).apply { max = 15000 }, 15000, fromUser = false))
+        assertEquals("", pct.text.toString())
+    }
+
+    @Test fun draggingAnotherExpandedStreamTakesPrecedenceOverBackgroundUpdates() {
+        val pct = init(first)
+        val dragged = Listener(first).apply { mColumn.stream = 0 }
+        hook.track(dragged, true)
+        hook.intercept(Chain(dragged, SeekBar(context).apply { max = 15000 }, 15000))
+        assertEquals("100%", pct.text.toString())
+        hook.intercept(Chain(Listener(first), SeekBar(context).apply { max = 15000 }, 2000, fromUser = false))
+        assertEquals("100%", pct.text.toString())
+        hook.track(dragged, false)
+    }
+
+    @Test fun aNonAnimatedNativeUpdateUsesCurrentStateInsteadOfLeavingTheLabelEmpty() {
+        val pct = init(first)
+        val listener = Listener(first).apply { mColumn.ss.level = 5 }
+        hook.intercept(Chain(listener, SeekBar(context).apply { max = 15000 }, 2000, fromUser = false))
+        assertEquals("33%", pct.text.toString())
+        assertEquals(View.VISIBLE, pct.visibility)
+    }
+
+    private fun init(container: ViewGroup, source: Int = 3, owner: Any = container.tag ?: container): TextView {
         val method = SystemUIControlCenterHooks::class.java.getDeclaredMethod(
             "initPct", ViewGroup::class.java, Int::class.javaPrimitiveType, android.content.Context::class.java,
             Any::class.java,
@@ -186,7 +250,7 @@ class VolumePercentageLifecycleTest {
 
     private fun remove(owner: Any, source: Int) {
         SystemUIControlCenterHooks::class.java.getDeclaredMethod("removePct", Any::class.java, Int::class.javaPrimitiveType)
-            .apply { isAccessible = true }.invoke(SystemUIControlCenterHooks, owner, source)
+            .apply { isAccessible = true }.invoke(SystemUIControlCenterHooks, (owner as? View)?.tag ?: owner, source)
     }
 
     private fun assertOverlayReferencesCleared() {
@@ -196,14 +260,15 @@ class VolumePercentageLifecycleTest {
         }
     }
 
-    class State { @JvmField var levelMin = 0 }
+    class State { @JvmField var levelMin = 0; @JvmField var level = 5 }
     class Column {
         @JvmField val ss = State()
         @JvmField var stream = 3
         @JvmField val anim: android.animation.ObjectAnimator? = null
+        @JvmField val animTargetProgress = 0
     }
-    class Listener(@JvmField val owner: Any) { @JvmField val mColumn = Column() }
-    class PanelOwner { @JvmField var mShowing = true }
+    class Listener(container: FrameLayout) { @JvmField val owner = container.tag as PanelOwner; @JvmField val mColumn = Column() }
+    class PanelOwner { @JvmField var mShowing = true; @JvmField var mActiveStream = 3 }
 
     private class DismissChain(val owner: PanelOwner, val dismiss: Boolean) : XposedInterface.Chain {
         var proceeds = 0
@@ -217,11 +282,11 @@ class VolumePercentageLifecycleTest {
         override fun proceedWith(target: Any, args: Array<Any>): Any = error("unused")
     }
 
-    private class Chain(val listener: Listener, val seekBar: SeekBar, val progress: Int, val failure: Throwable? = null) : XposedInterface.Chain {
+    private class Chain(val listener: Listener, val seekBar: SeekBar, val progress: Int, val failure: Throwable? = null, val fromUser: Boolean = true) : XposedInterface.Chain {
         var proceeds = 0
         override fun getExecutable(): Executable = Any::class.java.getMethod("toString")
         override fun getThisObject(): Any = listener
-        override fun getArgs(): List<Any?> = listOf(seekBar, progress, true)
+        override fun getArgs(): List<Any?> = listOf(seekBar, progress, fromUser)
         override fun getArg(index: Int): Any? = getArgs()[index]
         override fun proceed(): Any? { proceeds++; failure?.let { throw it }; return null }
         override fun proceed(args: Array<Any>): Any? = proceed()
