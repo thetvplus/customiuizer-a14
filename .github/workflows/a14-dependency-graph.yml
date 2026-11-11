@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   generate:
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.ref == 'refs/heads/main'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -40,7 +40,7 @@ jobs:
 
   submit:
     needs: generate
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.ref == 'refs/heads/main'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

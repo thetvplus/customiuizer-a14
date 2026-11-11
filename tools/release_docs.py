@@ -93,7 +93,7 @@ def published_version(version: str | None = None, *, download_env: dict | None =
                     re.fullmatch(r"[0-9a-f]{64}", metadata["apk_sha256"]) is not None,
                     "Invalid published version or binary identity")
     release.require(metadata["repository"] == release.REPO and metadata["workflow"] == release.WORKFLOW and
-                    metadata["source_ref"] == "refs/heads/main" and metadata["certificate_sha256"] == release.CERT and
+                    metadata["source_ref"] in {"refs/heads/main", "refs/heads/master"} and metadata["certificate_sha256"] == release.CERT and
                     metadata["application_id"] == "tv.withaibuild.customiuizer.r14" and
                     metadata["min_sdk"] == metadata["target_sdk"] == 34 and metadata["abi"] == "arm64-v8a" and
                     metadata["debuggable"] is False, "Published metadata violates the A14 release contract")

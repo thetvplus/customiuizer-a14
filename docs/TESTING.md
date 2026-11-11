@@ -11,7 +11,7 @@
 | **Quick** | 文档：`python tools/check_docs.py`；导航 / 功能地图输入变化时加 `python tools/generate_feature_map.py --check`。叶子 Python 工具：受影响的 `tools/tests/test_*.py` 和相关消费者 / 静态契约。局部产品修复：`python tools/verify.py fast --changed --tests <TestClassName>`；无对应行为测试时用 `fast --changed` 编译并补充能识别实际缺陷的验证。纯名称 / 文案调整检查相关资源与引用，无打包疑问时无需 APK。 | 目标完成、完整 diff 已审、受影响的必要检查通过，再做 `git diff --check`；不因收口自动追加 Full / 全量 Python / APK。 |
 | **Standard** | 跨模块迭代、页面行为或生成链变化：`python tools/verify.py fast --tests <TestClassName> <RelatedTestClassName>` 加关联回归；工具 / 生成器跨多个消费者时运行相关工具测试，范围无法可靠界定时运行全量工具测试。资源打包、Manifest 或变体行为变化时做必要构建。 | 调用方、生成 / 持久化输入及失败路径均有覆盖；构建不能代替行为回归。 |
 | **Deep** | 复杂 Hook、共享状态、并发、安全 / 兼容及构建边界变化：验证实际受影响的调用、所有权、异常和释放路径。公共运行边界变化或定向证据无法界定影响时执行 `python tools/verify.py full`；工具链整体受影响才运行全量工具测试。涉及打包 / R8 / 类加载时运行 `:app:assembleDevelop :app:lintVitalDevelop` 及相应输出 / API 检查；涉及工具 / CI / catalog / matrix 时补对应的确定性与独立 mutation。ROM 行为或设备性能结论须有对应目标样本与实机证据。 | 受影响契约验证完整，回退范围明确；“性能”“Hook”等关键词本身不触发全量审计。设备不可用则保留待验，不把 Host / 构建通过写成 ROM 或设备通过。 |
-| **Release** | 正式版本准备、签名、候选晋升、双仓发布 / 恢复：使用既有 [RELEASE](RELEASE.md) 工作流及其 exact main CI、版本、双语记录、历史证书、来源和原候选约束。 | 按该工作流的收据与双端读回验收；不得用 Quick / Standard 或本地通过替代正式门禁。 |
+| **Release** | 正式版本准备、签名、候选晋升、双仓发布 / 恢复：使用既有 [RELEASE](RELEASE.md) 工作流及其 exact master CI、版本、双语记录、历史证书、来源和原候选约束。 | 按该工作流的收据与双端读回验收；不得用 Quick / Standard 或本地通过替代正式门禁。 |
 
 修改 `.github/`、发布工具、验证器、基线、契约扫描器、catalog / matrix、共享生成器或依赖配置时，按影响至少 Standard；影响门禁可信度、签名、产物或公共运行边界则 Deep，并读取受影响的正式发布合同。工具文件不因扩展名为 Python 就归 Quick。发布流程的代码维护不自动授权签名或公开发行。
 
@@ -21,7 +21,7 @@
 
 工具测试入口为 `python -m unittest discover -s tools/tests -p "test_<affected>.py"`；影响全工具链时用 `-p "test_*.py"`。不要把通配占位符当成已执行范围；最终结果记录实际测试类 / 文件及执行结果。失败在原任务修复，不通过删测试、降断言或吞异常制造通过。
 
-源码合同测试复用 `src/test` 的 `testsupport.repositorySource`，从 Gradle 工作目录向上定位仓库；缺源码必须失败，不通过 ClassLoader URL 或 Assume 跳过。`test_rom_inventory.py` 在临时目录用既有 JDK / SDK 工具生成小 APK / DEX，使用仓库 JAR 验证 class 读取，不依赖历史安装包、厂商 ROM 或预先运行应用构建；固定 SDK 与 `ci_install_android_sdk.sh` 对齐。样本不进入 main 或 Git。
+源码合同测试复用 `src/test` 的 `testsupport.repositorySource`，从 Gradle 工作目录向上定位仓库；缺源码必须失败，不通过 ClassLoader URL 或 Assume 跳过。`test_rom_inventory.py` 在临时目录用既有 JDK / SDK 工具生成小 APK / DEX，使用仓库 JAR 验证 class 读取，不依赖历史安装包、厂商 ROM 或预先运行应用构建；固定 SDK 与 `ci_install_android_sdk.sh` 对齐。样本不进入稳定分支或 Git。
 
 ## 证据复用
 
@@ -76,15 +76,15 @@ Agent 按完整任务差异选择现有门禁、设备重放与各层待验边�
 
 ## CI
 
-普通 CI 在 main push、PR、`r14.*` tag 与手动触发；main 纯 Markdown 跳过构建，tag 不受路径过滤影响。[ci_scope.py](../tools/ci_scope.py)按完整 diff 选择额外工具门禁，不安排定时构建或依赖自动更新。
+普通 CI 在 master push、PR、`r14.*` tag 与手动触发；master 纯 Markdown 跳过构建，tag 不受路径过滤影响。[ci_scope.py](../tools/ci_scope.py)按完整 diff 选择额外工具门禁，不安排定时构建或依赖自动更新。
 
 同一 job 执行 Python / 源码契约、Full、一次 Develop 和 fatal lint；所有成功运行保留唯一 Develop APK 与 mapping，R8 输出始终检查。工具 / CI / catalog / matrix、tag 和手动运行另做矩阵确定性与必需独立 mutation。需要诊断可重复性时才做两次隔离构建与 `apk_semantic_diff.py`，不加入日常 CI。
 
-CodeQL Default setup 保留 Python / Actions。[Kotlin CodeQL](../.github/workflows/a14-codeql-kotlin.yml) 手动入口尚在候选分支，合入 main 后才进入默认分支工作流；已有 PR 提取试验的实际结果见[当前状态](maintenance/A14_REFINEMENT_ROADMAP.md#仓库安全待办)。入口复用现有 JDK / SDK / Gradle，只编译生产 Kotlin / Java，分析后由 `check_codeql_extraction.py` 核对全部已跟踪主源码的成功提取及非零 Kotlin 代码指标。SARIF 保留 7 天，暂不重复上传 Security；Java/Kotlin 的持续告警接入须在主线迁移 Advanced setup 后再停用 Default，不能提前留下扫描空档。提取失败与安全发现分别报告，不以零告警证明绝对安全，也不增加正式发行门禁。
+CodeQL Default setup 保留 Python / Actions。[Kotlin CodeQL](../.github/workflows/a14-codeql-kotlin.yml) 手动入口尚在候选分支，合入 master 后才进入默认分支工作流；已有 PR 提取试验的实际结果见[当前状态](maintenance/A14_REFINEMENT_ROADMAP.md#仓库安全待办)。入口复用现有 JDK / SDK / Gradle，只编译生产 Kotlin / Java，分析后由 `check_codeql_extraction.py` 核对全部已跟踪主源码的成功提取及非零 Kotlin 代码指标。SARIF 保留 7 天，暂不重复上传 Security；Java/Kotlin 的持续告警接入须在主线迁移 Advanced setup 后再停用 Default，不能提前留下扫描空档。提取失败与安全发现分别报告，不以零告警证明绝对安全，也不增加正式发行门禁。
 
 [依赖图](../.github/workflows/a14-dependency-graph.yml) 单独手动运行，只解析依赖并由隔离作业提交，不重复 CI 或构建 APK。仓库 Actions 白名单须同时允许 `setup-gradle` 与 `dependency-submission`，不能只允许前者而留下失效入口。
 
-main / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment main 限制、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
+master / PR 新提交取消旧运行，tag 正常完成；诊断 7 天，检查产物 30 天，历史清理保留正式发行的成功验证记录。正式自动发布、同 SHA CI 复用、Environment master 限制、顺序双端发布和原候选恢复只维护在 [RELEASE](RELEASE.md)，普通 CI 永不接触正式密钥。
 
 清理历史时先核对 Release 元数据、原 run / attempt 及候选资产；签名任务最终失败也可能留下可恢复候选，不能按 conclusion 批量删除。没有过期或确认失效的资产时沿用现有保留期，不新增定时清理工作流。
 
@@ -114,9 +114,9 @@ Actions 固定完整 SHA；JDK 下载保留 force-download / verify-signature，
 
 SDK 安装与 Gradle 输入一致；宿主 classpath 与 APK runtime 分开审查。依赖变化按影响检查解析图、编译与 DEX 输出、R8 / API 隔离、签名及必要设备路径；不把 JVM 26 当作 Android API 可用性证明。
 
-发布故障回归覆盖 workflow / event / 仓库 / attempt / SHA、环境策略漂移、签名前 main 前进、错误证书 / 凭据、篡改、版本 / 双语记录、草稿资产、预发行 Latest 与双端部分失败。只允许 Validate / Sign 成功而 Publish 失败的原 attempt 恢复；测试模拟服务器不能证明远端 Secrets / 权限或设备通过。
+发布故障回归覆盖 workflow / event / 仓库 / attempt / SHA、环境策略漂移、签名前 master 前进、错误证书 / 凭据、篡改、版本 / 双语记录、草稿资产、预发行 Latest 与双端部分失败。只允许 Validate / Sign 成功而 Publish 失败的原 attempt 恢复；测试模拟服务器不能证明远端 Secrets / 权限或设备通过。
 
-发布工具测试覆盖原生 main / exact CI、零人工审批的 main-only 环境、指定正式目标与试用隔离、累计说明 / 安全两基线、无条数上限的双语内容、Artifact ID / 归档摘要及安全解压、原候选失败恢复、顺序双仓资产和下载文档幂等性。它们使用模拟 API，不触发正式签名或远端公开；远端环境和实际清理另以 API 读回核实，完整规则见 [发布与恢复](RELEASE.md)。
+发布工具测试覆盖原生 master / exact CI、零人工审批的 master-only 环境、指定正式目标与试用隔离、累计说明 / 安全两基线、无条数上限的双语内容、Artifact ID / 归档摘要及安全解压、原候选失败恢复、顺序双仓资产和下载文档幂等性。它们使用模拟 API，不触发正式签名或远端公开；远端环境和实际清理另以 API 读回核实，完整规则见 [发布与恢复](RELEASE.md)。
 
 ## 本轮设备刷新率取证
 

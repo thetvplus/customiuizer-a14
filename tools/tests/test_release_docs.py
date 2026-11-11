@@ -421,9 +421,9 @@ class BaselineReviewTest(unittest.TestCase):
                     docs.review_candidate("r14.25.4", 249, "f" * 40)
 
     def test_document_retry_rejects_an_untrusted_native_workflow_without_an_approval_token(self):
-        for ref in ("refs/heads/untrusted","refs/heads/main"):
+        for ref in ("refs/heads/untrusted","refs/heads/main","refs/heads/master"):
             env={"GITHUB_ACTIONS":"true","GITHUB_REPOSITORY":release.REPO,"GITHUB_EVENT_NAME":"workflow_dispatch",
-                 "GITHUB_REF":ref,"GITHUB_SHA":SHA,"GITHUB_WORKFLOW_REF":"attacker/untrusted.yml@refs/heads/main"}
+                 "GITHUB_REF":ref,"GITHUB_SHA":SHA,"GITHUB_WORKFLOW_REF":"attacker/untrusted.yml@refs/heads/master"}
             with patch.dict(os.environ,env),patch("sys.argv",["signed_release.py","sync-docs","--version",VERSION,"--apply"]),patch.object(docs,"sync_published") as sync:
                 self.assertEqual(1,release.main());sync.assert_not_called()
 

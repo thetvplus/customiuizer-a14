@@ -21,7 +21,7 @@ class CIWorkflowRegressionTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "a14-ci.yml"
             path.write_text(text, encoding="utf-8")
-            return ci_contract_scan.scan_workflow(path, "main", "main")
+            return ci_contract_scan.scan_workflow(path, "master", "master")
 
     def original(self):
         return self.WORKFLOW.read_text(encoding="utf-8")
@@ -287,7 +287,7 @@ jobs:
 """,
                 encoding="utf-8",
             )
-            errors = ci_contract_scan.scan_workflow(path, "devin/audit", "main")
+            errors = ci_contract_scan.scan_workflow(path, "devin/audit", "master")
             text = "\n".join(errors)
             self.assertIn("CI_FULL_HISTORY", text)
             self.assertIn("CI_SIGNING", text)
@@ -320,7 +320,7 @@ jobs:
 """,
                 encoding="utf-8",
             )
-            errors = ci_contract_scan.scan_workflow(path, "main", "main")
+            errors = ci_contract_scan.scan_workflow(path, "master", "master")
             text = "\n".join(errors)
             self.assertNotIn("CI_API37_RESOLUTION", text)
             self.assertNotIn("CI_SDK_NONDETERMINISTIC", text)
@@ -347,7 +347,7 @@ jobs:
 """,
                 encoding="utf-8",
             )
-            errors = "\n".join(ci_contract_scan.scan_workflow(path, "main", "main"))
+            errors = "\n".join(ci_contract_scan.scan_workflow(path, "master", "master"))
             self.assertIn("CI_CHECKOUT_CREDENTIALS", errors)
             self.assertIn("CI_ACTION_PIN", errors)
             self.assertIn("CI_GRADLEW_MODE", errors)
@@ -375,7 +375,7 @@ jobs:
 """,
                 encoding="utf-8",
             )
-            errors = "\n".join(ci_contract_scan.scan_workflow(path, "main", "main"))
+            errors = "\n".join(ci_contract_scan.scan_workflow(path, "master", "master"))
             self.assertNotIn("CI_CHECKOUT_CREDENTIALS", errors)
             self.assertNotIn("CI_ACTION_PIN", errors)
             self.assertNotIn("CI_GRADLEW_MODE", errors)
@@ -474,7 +474,7 @@ jobs:
 """,
                 encoding="utf-8",
             )
-            errors = ci_contract_scan.scan_workflow(path, "devin/audit", "main")
+            errors = ci_contract_scan.scan_workflow(path, "devin/audit", "master")
             text = "\n".join(errors)
             self.assertNotIn("CI_SCHEDULE_CONDITION", text)
 
@@ -498,7 +498,7 @@ jobs:
 """,
                 encoding="utf-8",
             )
-            errors = ci_contract_scan.scan_workflow(path, "devin/audit", "main")
+            errors = ci_contract_scan.scan_workflow(path, "devin/audit", "master")
             text = "\n".join(errors)
             self.assertNotIn("CI_SCHEDULE_CONDITION", text)
 

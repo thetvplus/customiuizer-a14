@@ -4,24 +4,23 @@ run-name: A14 CI / ${{ github.ref_name }}
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - 'r14.*'
     paths-ignore:
       - '**/*.md'
   pull_request:
     branches:
-      - main
       - master
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# New main/PR commits replace obsolete runs; release-tag checks finish normally.
+# New master/PR commits replace obsolete runs; release-tag checks finish normally.
 concurrency:
   group: a14-ci-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/master' }}
 
 jobs:
   fast:

@@ -274,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--root", default=".github/workflows")
     p.add_argument("--repo-root", default=".")
     p.add_argument("--expected-branch", required=True)
-    p.add_argument("--default-branch", default="main")
+    p.add_argument("--default-branch", default="master")
     args = p.parse_args(argv)
 
     root = Path(args.root)

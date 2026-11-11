@@ -18,7 +18,7 @@ from tools import ci_contract_scan, signed_release as release
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMMIT = "12345678" + "a" * 32
-REF = "refs/heads/main"
+REF = "refs/heads/master"
 ENV = {"GITHUB_REPOSITORY": release.REPO, "GITHUB_EVENT_NAME": "workflow_dispatch",
        "GITHUB_REF": REF, "GITHUB_SHA": COMMIT, "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
        "GITHUB_EVENT_PATH": ""}
@@ -46,7 +46,7 @@ def tearDownModule():
 def build_run():
     return {"id": 42, "run_attempt": 1, "workflow_id": 7, "path": release.WORKFLOW,
             "head_repository": {"full_name": release.REPO}, "head_sha": COMMIT,
-            "head_branch": "main", "status": "completed", "conclusion": "success", "event": "workflow_dispatch"}
+            "head_branch": "master", "status": "completed", "conclusion": "success", "event": "workflow_dispatch"}
 
 
 def ci_run():
@@ -66,7 +66,7 @@ class AutomaticReleaseTest(unittest.TestCase):
 
     def test_main_ci_event_has_native_source_and_default_dual_publication(self):
         with tempfile.TemporaryDirectory() as temp:
-            env = self.environment(Path(temp) / "event.json", dict(ci_run(), name="A14 CI / main"))
+            env = self.environment(Path(temp) / "event.json", dict(ci_run(), name="A14 CI / master"))
             self.assertEqual((REF, COMMIT), release.event_source(env))
             with patch.dict(os.environ, env):
                 self.assertEqual(("both", False), release.dispatch_options())
@@ -79,7 +79,7 @@ class AutomaticReleaseTest(unittest.TestCase):
             for key, value in (("event", "pull_request"), ("head_branch", "other"), ("head_sha", "b" * 40),
                                ("head_repository", {"full_name": "attacker/fork"}), ("conclusion", "failure"), ("path", ".github/workflows/untrusted.yml")):
                 env = self.environment(path, dict(ci_run(), **{key: value}))
-                with self.subTest(key=key), self.assertRaisesRegex(ValueError, "upstream main CI"):
+                with self.subTest(key=key), self.assertRaisesRegex(ValueError, "upstream master CI"):
                     release.event_source(env)
 
     def test_upstream_ci_rerun_after_trigger_requires_a_fresh_source_check(self):
@@ -91,7 +91,7 @@ class AutomaticReleaseTest(unittest.TestCase):
 
     def test_zero_approval_environments_still_require_exact_main_branch_restrictions(self):
         valid = {"protection_rules": [{"type": "branch_policy"}], "deployment_branch_policy": {"custom_branch_policies": True, "protected_branches": False}}
-        branches = {"total_count": 1, "branch_policies": [{"name": "main", "type": "branch"}]}
+        branches = {"total_count": 1, "branch_policies": [{"name": "master", "type": "branch"}]}
         def read(path):
             return branches if "deployment-branch-policies" in path else valid
         with patch.object(release, "api", side_effect=read):
@@ -101,14 +101,14 @@ class AutomaticReleaseTest(unittest.TestCase):
                        dict(valid, deployment_branch_policy=None)):
             with self.subTest(broken=broken), patch.object(release, "api", return_value=broken), self.assertRaises(ValueError):
                 release.environment_policy()
-        for entry in ({"name": "*", "type": "branch"}, {"name": "main", "type": "tag"}, {"name": "other", "type": "branch"}):
+        for entry in ({"name": "*", "type": "branch"}, {"name": "master", "type": "tag"}, {"name": "other", "type": "branch"}):
             with self.subTest(entry=entry), patch.object(release, "api", side_effect=[valid, {"total_count": 1, "branch_policies": [entry]}]), self.assertRaises(ValueError):
                 release.environment_policy()
 
     def test_already_published_main_only_skips_without_signing_or_requesting_approval(self):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(Path(temp) / "event.json")
-            with patch.dict(os.environ, env), patch.object(release, "automatic_ci"), patch.object(release, "require_current_main"):
+            with patch.dict(os.environ, env), patch.object(release, "automatic_ci"), patch.object(release, "require_current_master"):
                 with patch.object(release, "optional_api", return_value={"draft": False}), patch.object(release, "output") as output:
                     with patch.object(release, "environment_policy") as approval, patch.object(release, "check_new_release") as version:
                         release.release_plan()
@@ -122,7 +122,7 @@ class AutomaticReleaseTest(unittest.TestCase):
             env["GITHUB_STEP_SUMMARY"] = str(Path(temp) / "summary.md")
             with ExitStack() as stack:
                 stack.enter_context(patch.dict(os.environ, env))
-                for name in ("automatic_ci", "require_current_main", "check_new_release"):
+                for name in ("automatic_ci", "require_current_master", "check_new_release"):
                     stack.enter_context(patch.object(release, name))
                 review = stack.enter_context(patch.object(release, "release_review", return_value="Published baseline and complete source comparison\n\n"))
                 stack.enter_context(patch.object(release, "optional_api", return_value=None))
@@ -144,16 +144,16 @@ class AutomaticReleaseTest(unittest.TestCase):
 
     def test_moved_main_and_pr_only_ci_are_rejected(self):
         with patch.object(release, "api", return_value={"object": {"sha": "b" * 40}}):
-            with self.assertRaisesRegex(ValueError, "main moved"):
-                release.require_current_main(COMMIT)
+            with self.assertRaisesRegex(ValueError, "master moved"):
+                release.require_current_master(COMMIT)
         with patch.object(release, "api", side_effect=[{"id": 8}, {"workflow_runs": [dict(ci_run(), event="pull_request")]}]):
             with self.assertRaisesRegex(ValueError, "successful A14 CI"):
-                release.require_main_ci(COMMIT, current=False)
+                release.require_master_ci(COMMIT, current=False)
 
     def test_manual_publication_also_requires_exact_branch_environment_policy(self):
         with patch.dict(os.environ, ENV), ExitStack() as stack:
             stack.enter_context(patch.object(release, "dispatch_options", return_value=("both", False)))
-            stack.enter_context(patch.object(release, "require_main_ci"))
+            stack.enter_context(patch.object(release, "require_master_ci"))
             stack.enter_context(patch.object(release, "check_new_release"))
             stack.enter_context(patch.object(release, "local_release_notes", return_value=["Reviewed"]))
             stack.enter_context(patch.object(release, "release_review", return_value="Baseline review"))
@@ -171,7 +171,7 @@ class AutomaticReleaseTest(unittest.TestCase):
         with patch.dict(os.environ, ENV), ExitStack() as stack:
             stack.enter_context(patch.object(release, "dispatch_options", return_value=("both", False)))
             stack.enter_context(patch.object(release, "optional_api", return_value={"draft": False}))
-            ci = stack.enter_context(patch.object(release, "require_main_ci"))
+            ci = stack.enter_context(patch.object(release, "require_master_ci"))
             approval = stack.enter_context(patch.object(release, "environment_policy"))
             output = stack.enter_context(patch.object(release, "output"))
             release.release_plan()
@@ -245,7 +245,7 @@ class SourceTrustTest(unittest.TestCase):
     def test_source_selector_inputs_are_rejected_even_if_they_match_the_native_commit(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "event.json"
-            for key,value in (("ref", "main"), ("source_sha", COMMIT), ("display_sha", COMMIT[:8])):
+            for key,value in (("ref", "master"), ("source_sha", COMMIT), ("display_sha", COMMIT[:8])):
                 path.write_text(json.dumps({"inputs": {key:value}}))
                 with self.subTest(key=key), self.assertRaisesRegex(ValueError, "Source selectors"):
                     release.event_source(dict(ENV, GITHUB_EVENT_PATH=str(path)))
@@ -266,13 +266,13 @@ class SourceTrustTest(unittest.TestCase):
             stack.enter_context(patch.object(release,"event_source",return_value=(REF,COMMIT)))
             stack.enter_context(patch.object(release,"environment_policy"))
             ci=stack.enter_context(patch.object(release,"automatic_ci"))
-            main=stack.enter_context(patch.object(release,"require_main_ci"))
+            master=stack.enter_context(patch.object(release,"require_master_ci"))
             stack.enter_context(patch.object(release,"source_version",return_value=("r14.25.5",254)))
             for name in ("check_new_release","local_release_notes","release_review"):
                 stack.enter_context(patch.object(release,name))
             command=stack.enter_context(patch.object(release,"run"))
             release.signing_preflight()
-            ci.assert_called_once(); main.assert_called_once_with(COMMIT); command.assert_not_called()
+            ci.assert_called_once(); master.assert_called_once_with(COMMIT); command.assert_not_called()
 
     def test_pr_fork_tag_and_partial_sha_are_rejected(self):
         for field, value in (("GITHUB_EVENT_NAME", "pull_request"), ("GITHUB_REPOSITORY", "attacker/fork"),
@@ -505,11 +505,32 @@ class PromotionTrustTest(unittest.TestCase):
                         release.fetch_candidate("42", Path(temp) / "candidate")
                     self.assertEqual(3, api.call_count)
 
-    def test_completed_automatic_candidates_are_allowed_only_from_main(self):
+    def test_completed_automatic_candidates_accept_trusted_master_and_pinned_main_history(self):
         record = dict(build_run(), event="workflow_run")
         release.check_run(record, 7)
-        with self.assertRaisesRegex(ValueError, "main CI release"):
+        with self.assertRaisesRegex(ValueError, "master CI release"):
             release.check_run(dict(record, head_branch="codex/a14-feature-refinement-20261019"), 7)
+        old = dict(record, head_branch="main")
+        with patch.object(release, "run") as git:
+            release.check_run(old, 7)
+            git.assert_called_once_with("git", "merge-base", "--is-ancestor", COMMIT, release.POLICY["historical_main_tip"])
+            git.side_effect = RuntimeError("outside migration history")
+            with self.assertRaisesRegex(RuntimeError, "outside migration history"):
+                release.check_run(old, 7)
+        with self.assertRaisesRegex(ValueError, "master CI release"):
+            release.check_run(old, 7, current_run=True)
+
+    def test_published_main_recovery_reuses_exact_main_ci_only(self):
+        old = dict(ci_run(), head_branch="main")
+        self.assertFalse(release.trusted_ci(old, COMMIT, old["workflow_id"]))
+        with self.assertRaisesRegex(ValueError, "Historical main CI"):
+            release.require_master_ci(COMMIT, historical_main=True)
+        with patch.object(release, "run") as git, patch.object(release, "api", side_effect=[
+            {"id": old["workflow_id"]}, {"workflow_runs": [old]},
+        ]):
+            release.require_master_ci(COMMIT, current=False, historical_main=True)
+            git.assert_called_once_with("git", "merge-base", "--is-ancestor", COMMIT, release.POLICY["historical_main_tip"])
+
 
     def test_current_run_is_allowed_only_with_exact_native_run_attempt_and_source(self):
         record = dict(build_run(), status="in_progress", conclusion=None)
@@ -694,7 +715,7 @@ class PublicationTest(unittest.TestCase):
                 notes = {"content": base64.b64encode(b"## r14.25.2\n\nversionCode 247.\n\n- Changes.\n").decode()}
                 with patch.object(release, "check_new_release"), patch.object(release, "check_tag") as tag:
                     with patch.object(release, "find_release", return_value=None), patch.object(release, "api", side_effect=lambda endpoint, **_: [{"name": filename, "type": "file"} for filename, _ in release.CURRENT_CHANGELOGS] if "/contents?ref=" in endpoint else notes):
-                        with patch.object(release, "run", side_effect=command), patch.object(release, "require_main_ci"), patch.object(release, "require_current_main"), patch.object(release, "release_review"):
+                        with patch.object(release, "run", side_effect=command), patch.object(release, "require_master_ci"), patch.object(release, "require_current_master"), patch.object(release, "release_review"):
                             if tamper:
                                 with self.assertRaisesRegex(ValueError, "digest/size differs"):
                                     release.publish_verified(folder, "42", "source", metadata)
@@ -849,7 +870,7 @@ class DualPublicationTest(unittest.TestCase):
         stack.enter_context(patch.dict(os.environ, A14_XPOSED_RELEASE_TOKEN="test-xposed-token"))
         stack.enter_context(patch.object(release, "api", side_effect=server.api))
         stack.enter_context(patch.object(release, "run", side_effect=server.command))
-        for name in ("check_tag", "check_new_release", "require_main_ci", "require_current_main", "release_review", "sync_release_documents"):
+        for name in ("check_tag", "check_new_release", "require_master_ci", "require_current_master", "release_review", "sync_release_documents"):
             stack.enter_context(patch.object(release, name))
         return stack
 
@@ -1033,8 +1054,8 @@ class DualPublicationTest(unittest.TestCase):
             def current_main(sha):
                 self.assertEqual(COMMIT, sha)
                 if release.REPO in server.records and not server.records[release.REPO]["draft"]:
-                    raise ValueError("main moved after source publication")
-            with self.context(server), patch.object(release, "require_current_main", side_effect=current_main):
+                    raise ValueError("master moved after source publication")
+            with self.context(server), patch.object(release, "require_current_master", side_effect=current_main):
                 release.publish_verified(root, "42", "both", metadata)
             self.assertFalse(server.records[server.download]["draft"])
 
@@ -1043,8 +1064,8 @@ class DualPublicationTest(unittest.TestCase):
             root = Path(temp)
             metadata = self.fixture(root)
             server = ReleaseServer(root)
-            with self.context(server), patch.object(release, "require_current_main", side_effect=ValueError("main moved")):
-                with self.assertRaisesRegex(ValueError, "main moved"):
+            with self.context(server), patch.object(release, "require_current_master", side_effect=ValueError("master moved")):
+                with self.assertRaisesRegex(ValueError, "master moved"):
                     release.publish_verified(root, "42", "both", metadata)
             self.assertTrue(server.records[release.REPO]["draft"])
             self.assertNotIn(server.download, server.records)
@@ -1199,7 +1220,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / filename
             path.write_text(text, encoding="utf-8")
-            return ci_contract_scan.scan_workflow(path, "main", "main")
+            return ci_contract_scan.scan_workflow(path, "master", "master")
 
     def workflow(self, filename="a14-signed-build.yml"):
         return (REPO_ROOT / ".github/workflows" / filename).read_text(encoding="utf-8")
@@ -1252,7 +1273,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
                 self.assertTrue(self.scan(text))
 
     def test_main_ci_success_sha_and_native_preflight_guards_are_required(self):
-        for original, changed in (("branches: [main]", "branches: ['*']"),
+        for original, changed in (("branches: [master]", "branches: ['*']"),
                                   ("github.event.workflow_run.head_sha == github.sha", "true"),
                                   ("github.event.workflow_run.conclusion == 'success'", "true"),
                                   ("signed_release.py signing-preflight", "signed_release.py ci-status"),
@@ -1271,7 +1292,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
 
     def test_promotion_bootstrap_cannot_execute_a_job(self):
         filename = "a14-promote-release.yml"
-        text = self.workflow(filename).replace("    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination != 'docs-only'\n", "    if: always()\n")
+        text = self.workflow(filename).replace("    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.destination != 'docs-only'\n", "    if: always()\n")
         self.assertTrue(self.scan(text, filename))
 
     def test_promotion_cannot_rebuild_or_publish_by_default(self):
@@ -1284,7 +1305,7 @@ class ProtectedWorkflowTest(unittest.TestCase):
 
     def test_document_recovery_cannot_lose_its_guard_or_gain_signing_permissions(self):
         filename = "a14-promote-release.yml"
-        for original, changed in (("github.ref == 'refs/heads/main'", "true"),
+        for original, changed in (("github.ref == 'refs/heads/master'", "true"),
                                   ("inputs.destination == 'docs-only'", "true"),
                                   ("signed_release.py sync-docs", "signed_release.py publish"),
                                   ("RELEASE_DOC_VERSION: ${{ inputs.version }}", "RELEASE_DOC_VERSION: latest")):
@@ -1329,7 +1350,7 @@ class FormalTargetAndNotesTest(unittest.TestCase):
 
     def test_signed_candidate_also_requires_exact_current_main_ci(self):
         with patch.dict(os.environ,ENV), patch.object(release,"dispatch_options",return_value=("actions-only",False)), \
-             patch.object(release,"environment_policy"), patch.object(release,"require_main_ci",side_effect=ValueError("missing exact CI")) as ci:
+             patch.object(release,"environment_policy"), patch.object(release,"require_master_ci",side_effect=ValueError("missing exact CI")) as ci:
             for operation in (release.release_plan,release.signing_preflight):
                 with self.subTest(operation=operation.__name__),self.assertRaisesRegex(ValueError,"missing exact CI"):
                     operation()
