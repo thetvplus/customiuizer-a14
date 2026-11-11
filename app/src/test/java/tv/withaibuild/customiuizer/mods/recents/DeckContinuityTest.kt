@@ -113,7 +113,6 @@ class DeckContinuityTest {
         for((name,value) in mapOf("api" to api,"handler" to handler,"stack" to stack,"cards" to cards,
             "drawCards" to ArrayList<DeckOwner.Card>(),"pairs" to IdentityHashMap<Any,Any>(),
             "shadowBounds" to RectF(),
-            "closingWindow" to RectF(),
             "depthOrder" to DeckDepthOrder(stack),"global" to Matrix(),"local" to Matrix(),"surface" to Matrix(),
             "gestureReference" to RectF(),"gestureTarget" to RectF(),"occludingBounds" to RectF(),
             "depthIndices" to android.util.SparseIntArray(),"frozen" to HashMap<Any,Any>(),

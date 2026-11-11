@@ -354,7 +354,7 @@ internal object IosRecentsDeckHooks {
             around(window.closing,always=true,
                 before={ quickSwitch(false); latest.get().get()?.beginTransition(true) },
                 after={
-                    if(it.getThrowable()!=null || it.getResult()==null) latest.get().get()?.let { active -> active.endTransition(active.transition) }
+                    if(it.getThrowable()!=null || it.getResult()==null) latest.get().get()?.let { active -> active.endTransition(active.transition,cancelled=true) }
                 })
             around(window.animate,always=true,
                 before=before@ {
@@ -387,7 +387,7 @@ internal object IosRecentsDeckHooks {
                     else {
                         XposedHelpers.removeAdditionalInstanceField(params,WINDOW_RECEIPT)
                         window.spring(it.getThisObject()!!)?.let { spring -> DeckMotion.clear(spring,active,receipt.ticket) }
-                        active.endTransition(receipt.ticket)
+                        active.endTransition(receipt.ticket,cancelled=true)
                     }
                 })
         }

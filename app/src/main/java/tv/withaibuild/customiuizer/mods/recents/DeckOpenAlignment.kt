@@ -27,7 +27,7 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
                 if(view.alpha!=shownAlpha) view.alpha=shownAlpha
             }
             if(slots>0) {
-                lastX=x+(frontAdvance+exitDelta*progress)/scale
+                lastX=x+(frontAdvance+exitDelta*progress*progress)/scale
                 if(view.translationX!=lastX) view.translationX=lastX
                 return
             }
@@ -95,7 +95,7 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
             val advance=frontAdvance(start,current,frontEdge,minimumExit,p)
             var i=0;var at=0
             while(i<fronts.size) {
-                val dx=advance+fronts[i+4]*p
+                val dx=advance+fronts[i+4]*p*p
                 bounds[at++]=axisX*(fronts[i]+dx)+originX;bounds[at++]=axisY*fronts[i+1]+originY
                 bounds[at++]=axisX*(fronts[i+2]+dx)+originX;bounds[at++]=axisY*fronts[i+3]+originY
                 i+=5
@@ -147,7 +147,8 @@ internal class DeckOpenAlignment(val selectedId: Int,private val start: RectF) {
         private fun frontAdvance(start: RectF,current: RectF,edge: Float,exit: Float,p: Float): Float {
             if(!edge.isFinite()) return 0f
             val overlap=(start.right-edge).coerceAtLeast(0f)
-            return (current.right-edge-overlap*(1f-p)+(25f-exit)*p).coerceAtLeast(0f)
+            val travel=p*p
+            return (current.right-edge-overlap*(1f-travel)+(25f-exit)*travel).coerceAtLeast(0f)
         }
         private fun offset(source: RectF,current: RectF,center: Float,slots: Int,ratio: Float,p: Float): Float =
             current.centerX()-source.centerX()+(center-source.centerX())*(ratio-1f)+

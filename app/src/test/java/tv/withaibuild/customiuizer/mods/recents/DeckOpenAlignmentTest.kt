@@ -90,8 +90,8 @@ class DeckOpenAlignmentTest {
         assertEquals(0f,near.translationX,0f)
         alignment.apply(RectF(0f,0f,900f,1800f),.5f,.3f)
         assertEquals(1f,near.scaleX,0f)
-        assertEquals(337.5f,near.translationX,.001f)
-        assertEquals(562.5f,far.translationX,.001f)
+        assertEquals(268.75f,near.translationX,.001f)
+        assertEquals(381.25f,far.translationX,.001f)
         assertEquals(1f,h1.alpha,0f)
         assertEquals(0f,near.translationZ,0f)
         far.translationX=17f // Later native ownership must survive release.

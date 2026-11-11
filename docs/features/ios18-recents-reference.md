@@ -85,7 +85,7 @@ Thumbnail 通过冷解析的 mCornerRadius:Int 和原生 setter 同步 Outline�
 
 上述三个 A14 样本的 `mCornerRadius:I` / `setCornerRadius(I)V`、`setChildrenViewAlpha(F)V`、`calculate(F)V`、`onMoveUpdate(View;FF)V`、`prepareSnapBackAnimation(View;Object)V`、`snapChild(View;F)V` 和 `getViewTranslationAnimator(View;F)ObjectAnimator` 已核对。`$1` 直接继承 SwipeHelper，两个覆写均不调用 super；原生 snap 的完成 Runnable 再调用 `onChildSnappedBack(View;F)V`。冷安装精确校验本轮所用参数、返回值、继承与字段类型，完整表失败即保留原生，不添加模糊反射回退。原始来源、SQL 输出及 Smali 私有留存，不将原始样本或设备界面入库。
 
-同构建 Deck 的 `topMostLayoutElements` 返回任务列表，`shouldBringCardToFrontDuringInsertionOrRemoval` 返回 false；SwipeToKill 未覆盖该排序，controller 按组应用顺序。因此不保留 A14 在拖动 / 删除间由正 Z 跨到负 Z 的层级切换。横向仅融合方向候选筛选：同一次原生 fling 内将手指速度转换为相反的 content-offset 方向，在原生 q 格点选同方向候选，仍由原生预测及 PhysicalScroller 驱动。普通低速吸附、边界与退化任务数保留原生；未把 .993 当 friction，也未移植完整 UIKit 跟手求解器或原生候选边距。
+同构建 Deck 的 `topMostLayoutElements` 返回任务列表，`shouldBringCardToFrontDuringInsertionOrRemoval` 返回 false；SwipeToKill 未覆盖该排序，controller 按组应用顺序。因此不保留 A14 在拖动 / 删除间由正 Z 跨到负 Z 的层级切换。横向 fling 在当前手势方向的 q 格点中选择最靠近原生预测位置的卡位，避免对预测位置再次向手势方向进位。原生 PhysicalScroller 根据落点和手指速度求阻力并驱动后续运动。普通低速吸附、边界与退化任务数保留原生。
 
 ## 标题层次与窗口动效
 
@@ -162,7 +162,7 @@ Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,In
 
 松手的 `changeTaskStackViewScrollAndTaskViewTranslation` 按线性页坐标重置 q 和根 translation，异步布局尚未应用 Deck 新 frame 时会改变实际屏幕位置。现先保存可见内容框，原生方法仍执行一次，随后在同一边界提交新的 Deck frame，并换算根 scale / translation，使屏幕框保持连续。运行中的原生 DynamicAnimation 同步换算已有位置与速度，包含缩放对位移速度的耦合；不取消释放弹簧、不修改目标或开启补偿时钟。相关实例方法、四轴和缓存字段已从 7603 / 8255 / 8604 原件核对。
 
-App 收回时，原生截图透明度与 fullscreenProgress 的乘积在截图恢复前接近零，单靠该乘积会把投影推迟到最后。两套 Launcher 在各自的原生窗口回调中提供矩形，现有 PreDraw 在宿主写入卡片变换后，将移动窗口换算到同一 TaskView 的 Outline。透明度随原生窗口收拢渐变，抵达端点后使用同一投影保持亮度，直到截图接管。取消或释放所有权时恢复常态。整个交接复用卡片 RenderNode、圆角和绘制帧。
+App 收回时，原生截图透明度与 fullscreenProgress 的乘积在截图恢复前接近零。两套 Launcher 在各自的原生窗口回调中用收拢进度更新 TaskView 投影透明度，Outline 始终采用卡片自身的轮廓。正常抵达端点后，同一投影保持亮度直至截图接管；取消、换代或缩略图隐藏时清理过渡。前卡让位按选中卡的居中位置求端点，限制离屏位移，并随原生窗口进度逐步展开，避免线性插值过远端点时前卡抢跑。
 
 Legacy 后卡打开补齐与 WindowElement 相同的卡片 / Surface 所有权：原生 start 前一次性取消尚在收敛的卡片 springs，再读取 `getStartRect()`。该边界晚于 `setupAnimAndBreakLast`，包含快速打断时原生对 start 的再次改写；创建阶段只保存本次请求的弱引用与票据 / 代际，启动时消费一次。`skipViewChanges`、迟到和失主请求不接管卡片。两种原生启动入口不会重复准备，未改变原生 clip mode 或完成回调。
 
