@@ -18,7 +18,10 @@ versionCode 305. Changes since r14.27.3:
 - Add a default-off iOS battery presentation retaining native charging and power-saving states. Duo, battery hiding and existing battery styles take priority.
 - Reorganize settings within pages and update search routes while preserving the four home entries, saved keys, defaults and backup format.
 - Fix shared-hook and plugin-loading isolation and fallback after partial initialization. Improve cancellation and resource release for monitoring, key combinations and Recents menus.
-- Refine DECK interception and window restoration while retaining native calls, skips and exceptions. Identical status-icon updates avoid redundant invalidation requests.
+- Refine the central volume HUD with vector icons and positioning. Hiding the mute or Do Not Disturb shortcut reclaims its space in the expanded panel.
+- Make the volume percentage overlay more compact and add an automatic toast capsule or Dynamic Island option. Existing settings keep the overlay by default, and repeated adjustments update the same hint.
+- Restore Dock background and blur when its view reattaches or Home returns. Refine the battery percentage, five-dot spacing and notification-shade media card.
+- Fix DECK card jumps on release, initial refill scale and window shadow handoff. When opening a back card, legacy launchers also move the front cards and crop the opening window using native animation progress.
 
 ### Engineering notes
 
