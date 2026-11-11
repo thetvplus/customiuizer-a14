@@ -648,6 +648,29 @@ class PreferenceNavigationUiTest {
         capturePage("island-waveform-320-zh")
     }
 
+    @Test fun absorptionWidthControlsFollowTheEffectAndAutomaticMode() {
+        val island = openIslandPage()
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_effects_cat")).performClick()
+        settleNavigation()
+        val page = currentPage() as SubFragment
+        val effect = requireNotNull(page.findPreference<ListPreference>("pref_key_system_island_return_effect"))
+        val automatic = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_absorption_header_auto"))
+        val width = requireNotNull(page.findPreference<Preference>("pref_key_system_island_absorption_header_width"))
+        assertFalse(automatic.isVisible)
+        assertFalse(width.isVisible)
+        assertTrue(effect.callChangeListener("absorption"))
+        effect.value = "absorption"
+        assertTrue(automatic.isVisible)
+        assertTrue(automatic.isChecked)
+        assertFalse(width.isVisible)
+        assertTrue(automatic.callChangeListener(false))
+        automatic.isChecked = false
+        assertTrue(width.isVisible)
+        assertTrue(effect.callChangeListener("instant"))
+        assertFalse(automatic.isVisible)
+        assertFalse(width.isVisible)
+    }
+
     @Test fun mediaDownActionStaysEditableAndLegacyExpansionHasNoControl() {
         requireNotNull(AppHelper.appPrefs).edit().putInt("pref_key_system_island_music_down_action", 85).apply()
         val mediaPage = openIslandMusic()

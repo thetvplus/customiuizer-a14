@@ -182,18 +182,26 @@ class IslandAbsorptionContinuityTest {
         response.sample(2f); assertTrue(response.settled(2f))
     }
 
-    @Test fun thePageLeadingEdgeUsesAWideCenteredMouthInTheFirstSixteenPercentOfTravel() {
+    @Test fun theLeadingEdgeFitsTheCenteredApertureInTheFirstSixteenPercentOfTravel() {
         val shell = RectF(300f, 20f, 700f, 60f)
         val frame = IslandMusicReturnSignal.Frame("chosen.music", android.os.Process.myUserHandle(),
             shell.left, shell.top, shell.right, shell.bottom, 1080, 2400)
         val landing = frame.landingRectangle()
         val intake = IslandAbsorptionMesh.intakeY(shell, landing)
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
-        IslandAbsorptionMesh.fill(vertices, RectF(100f, 400f, 900f, 1800f), landing, .16f, intakeY = intake)
+        val page = RectF(100f, 400f, 900f, 1800f)
+        IslandAbsorptionMesh.fill(vertices, page, landing, .16f, intakeY = intake,
+            contactLeft = frame.contactLeft, contactRight = frame.contactRight)
         assertTrue("The leading edge is already at the island, not halfway through the page", vertices[1] < shell.bottom)
-        assertTrue("An existing island can accept a broader mouth", vertices[2] - vertices[0] > shell.width() * .45f)
+        val visibleShellWidth = vertices[2] - vertices[0]
+        assertEquals(landing.width() * .52f, visibleShellWidth, .001f)
+        assertEquals(shell.centerX(), (vertices[0] + vertices[2]) * .5f, .001f)
         assertEquals(shell.centerY() - landing.height() * .04f, vertices[1], .0001f)
         assertTrue("The trailing body still has volume", vertices.last() > 1700f)
+        IslandAbsorptionMesh.fill(vertices, page, landing, .16f, intakeY = intake,
+            contactLeft = shell.centerX() - 20f, contactRight = shell.centerX() + 20f)
+        assertEquals(40f * .68f, vertices[2] - vertices[0], .001f)
+        assertTrue(vertices[2] - vertices[0] < visibleShellWidth)
     }
 
     @Test fun lateAdoptionStillStartsAtTheCurrentVisibleFrameAndKeepsRealReceivePhases() {

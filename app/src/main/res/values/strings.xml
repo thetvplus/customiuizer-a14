@@ -1234,6 +1234,9 @@
     <string name="system_island_waveform_group">Waveform</string>
     <string name="system_island_motion_group">Animation</string>
     <string name="system_island_return_effect_title">Island effect</string>
+    <string name="system_island_absorption_header_auto_title">Automatic absorption width</string>
+    <string name="system_island_absorption_header_width_title">Absorption header width</string>
+    <string name="system_island_absorption_header_width_summ">Set the page’s leading edge as a percentage of the available intake width.</string>
     <string name="system_island_return_effect_summ">Instant hides the page and lets the island respond. Absorb draws the page into the island. None leaves ordinary content display.</string>
     <string name="system_island_width_group">Width</string>
     <string name="system_island_return_group">Island effect</string>

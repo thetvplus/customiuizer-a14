@@ -1196,6 +1196,9 @@
     <string name="system_island_waveform_group">波形</string>
     <string name="system_island_motion_group">動畫</string>
     <string name="system_island_return_effect_title">上島效果</string>
+    <string name="system_island_absorption_header_auto_title">自動配合吸入寬度</string>
+    <string name="system_island_absorption_header_width_title">頁面頂部吸入寬度</string>
+    <string name="system_island_absorption_header_width_summ">以可用吸入口寬度的百分比調整頁面頂部。</string>
     <string name="system_island_return_effect_summ">瞬收：頁面消失，島體承接。吸入：頁面連續吸入島中。無：內容照常顯示。</string>
     <string name="system_island_width_group">寬度</string>
     <string name="system_island_return_group">上島效果</string>

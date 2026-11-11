@@ -17,6 +17,28 @@
       }
     },
     {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_island_absorption_header_auto",
+        "android:title": "@string/system_island_absorption_header_auto_title",
+        "android:defaultValue": "true"
+      }
+    },
+    {
+      "type": "slider",
+      "attributes": {
+        "android:key": "pref_key_system_island_absorption_header_width",
+        "android:title": "@string/system_island_absorption_header_width_title",
+        "android:summary": "@string/system_island_absorption_header_width_summ",
+        "android:defaultValue": "55",
+        "app:minValue": "30",
+        "app:maxValue": "75",
+        "app:stepValue": "5",
+        "app:format": "%d%%",
+        "app:indentLevel": "1"
+      }
+    },
+    {
       "type": "section",
       "attributes": {
         "android:title": "@string/system_island_waveform_group"

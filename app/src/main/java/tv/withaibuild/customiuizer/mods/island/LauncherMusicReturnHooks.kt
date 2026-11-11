@@ -417,7 +417,11 @@ internal object LauncherMusicReturnHooks {
             committedAttempt = attempt.sequence
             access.timeReturn(element, attempt.impulse)
             val progress = if (absorption != null) attempt.snapshot.frame?.let { frame ->
-                ModuleHelper.guarded<IslandReturnProgress.Producer?>(null) { absorption.begin(tasks, element, attempt.params, frame, options.returnEffect == IslandReturnEffect.INSTANT) }
+                ModuleHelper.guarded<IslandReturnProgress.Producer?>(null) {
+                    absorption.begin(tasks, element, attempt.params, frame,
+                        instant = options.returnEffect == IslandReturnEffect.INSTANT,
+                        headerPercent = options.absorptionHeaderPercent)
+                }
             } else null
             val current = attempt.snapshot
             val message = IslandMusicReturnSignal.encode(current.frame, SystemClock.uptimeMillis(), current.sequence)

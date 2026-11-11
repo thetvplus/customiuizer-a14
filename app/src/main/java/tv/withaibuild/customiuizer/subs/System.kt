@@ -259,6 +259,23 @@ class System : SubFragment() {
                 preferenceScreen.isEnabled = StrongToastPresentationMode.fromPreference(
                     AppHelper.appPrefs?.all?.get("pref_key_system_strong_toast_mode")?.toString()?.toIntOrNull() ?: 0
                 ) == StrongToastPresentationMode.DYNAMIC_ISLAND
+                val effect = findPreference<ListPreferenceEx>("pref_key_system_island_return_effect")
+                val autoHeader = findPreference<CheckBoxPreferenceEx>("pref_key_system_island_absorption_header_auto")
+                val headerWidth = findPreference<Preference>("pref_key_system_island_absorption_header_width")
+                fun updateHeaderControls(value: Any?, automatic: Boolean) {
+                    val absorption = value == "absorption"
+                    autoHeader?.isVisible = absorption
+                    headerWidth?.isVisible = absorption && !automatic
+                }
+                updateHeaderControls(effect?.value, autoHeader?.isChecked != false)
+                effect?.setOnPreferenceChangeListener { _, value ->
+                    updateHeaderControls(value, autoHeader?.isChecked != false)
+                    true
+                }
+                autoHeader?.setOnPreferenceChangeListener { _, value ->
+                    updateHeaderControls(effect?.value, value != false)
+                    true
+                }
                 val mode = findPreference<ListPreferenceEx>("pref_key_system_island_waveform_mode")
                 val gain = findPreference<Preference>("pref_key_system_island_waveform_gain")
                 gain?.isEnabled = mode?.value == "2"

@@ -5,6 +5,9 @@ import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.Interpolator
+import android.widget.ImageView
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.CustomMethodUnhooker
@@ -24,6 +27,7 @@ internal object LauncherFolderIconBlur {
             val blur = XposedHelpers.findClass("com.miui.home.launcher.common.BlurUtilities", loader)
             if (hasPocoFolderBlurGate(blur)) {
                 PocoFolderIconBlur.install(loader, context)
+                installFolderBlurFade(loader)
             } else {
                 install(loader, context)
                 folderIconBlurLog("installed profile=legacy-folder-scope process=POCO")
@@ -82,6 +86,57 @@ internal object LauncherFolderIconBlur {
         val deoptimize = if (container == null) emptyList() else entries + container.publicationCaller
         installFolderIconBlurHooks(gate, entries, extras, deoptimize) {
             (container?.controller?.usable != false) && allowed()
+        }
+        installFolderBlurFade(loader)
+    }
+}
+
+/** The transition bitmap contains only the preview items. The actual material stays on the
+ * workspace icon, so its existing alpha track must remain visible over several frames. */
+private fun installFolderBlurFade(loader: ClassLoader) {
+    try {
+        fun type(name: String) = XposedHelpers.findClass("com.miui.home.launcher.$name", loader)
+        val folder = type("FolderIcon")
+        val owner = type("folder.FolderAnimHelper")
+        val image = folder.getDeclaredField("mIconImageView").apply { isAccessible = true }
+        require(ImageView::class.java.isAssignableFrom(image.type) && !Modifier.isStatic(image.modifiers))
+        val blurMode = checkedFolderBlurMethod(View::class.java, "getMiViewBlurMode", Int::class.javaPrimitiveType!!, false)
+        val iconFade = checkedFolderBlurMethod(owner, "prepareFolderIconAnim", Void.TYPE, false,
+            ImageView::class.java, type("FolderInfo"), Boolean::class.javaPrimitiveType!!)
+        val alphaTrack = checkedFolderBlurMethod(owner, "prepareAlphaObjectAnim", Void.TYPE, false,
+            View::class.java, Float::class.javaPrimitiveType!!, Float::class.javaPrimitiveType!!,
+            Long::class.javaPrimitiveType!!, Long::class.javaPrimitiveType!!, Interpolator::class.java)
+        check(checkNotNull(XposedHelpers.moduleInst).deoptimize(iconFade)) { "Cannot deoptimize folder icon fade caller" }
+        checkNotNull(ModuleHelper.hookMethod(alphaTrack, folderBlurFadeHook(folder) { view ->
+            val background = image.get(view) as? ImageView
+            background != null && (blurMode.invoke(background) as Int) != 0
+        }))
+    } catch (error: Throwable) {
+        FatalErrors.unwrapAndRethrowIfFatal(error)
+        folderIconBlurLog("native-fade-unavailable ${error.javaClass.simpleName}")
+    }
+}
+
+internal fun folderBlurFadeHook(folder: Class<*>, hasBlur: (View) -> Boolean): MethodHook {
+    val curve = AccelerateDecelerateInterpolator()
+    return object : MethodHook() {
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val target = chain.getArg(0)
+            if (target !is View || !folder.isInstance(target)) return chain.proceed()
+            val from = chain.getArg(1) as Float
+            val to = chain.getArg(2) as Float
+            val nativeDuration = chain.getArg(3) as Long
+            val duration = when (to) {
+                0f -> 96L
+                1f -> 144L
+                else -> return chain.proceed()
+            }
+            if (from == to || nativeDuration <= 0L || nativeDuration >= duration ||
+                !ModuleHelper.guarded(false) { hasBlur(target) }) return chain.proceed()
+            val args = chain.args.toTypedArray()
+            args[3] = duration
+            args[5] = curve
+            return chain.proceed(args)
         }
     }
 }
