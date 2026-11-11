@@ -17,6 +17,43 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk=[34], application=android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DeckGeometryTest {
+    @Test fun scrollCoordinateRebasePreservesTheRenderedPoseBeforeTheNativeSpringStarts() {
+        for(landscape in listOf(false,true)) {
+            val (parent,view)=pair()
+            if(landscape) view.layout(180,70,980,670)
+            val header=50f;val geometry=DeckCardGeometry(view,parent)
+            val before=RectF();val scratch=RectF()
+            try {
+                geometry.apply(.82f)
+                view.pivotX=73f;view.pivotY=41f
+                view.scaleX=.61f;view.scaleY=.67f
+                view.translationX=37f;view.translationY=-132f
+                geometry.localContent(before,header)
+                // The native linear-page correction is not the Deck's new frame.
+                view.translationX-=615f
+                view.layout(view.left+191,view.top+13,view.right+191,view.bottom+13)
+                geometry.apply(.91f)
+                geometry.localContent(scratch,header)
+                assertTrue(kotlin.math.abs(before.left-scratch.left)>100f)
+                assertTrue(geometry.rebaseContent(before,header,scratch))
+                geometry.localContent(scratch,header)
+                assertEquals(before.left,scratch.left,.002f);assertEquals(before.top,scratch.top,.002f)
+                assertEquals(before.right,scratch.right,.002f);assertEquals(before.bottom,scratch.bottom,.002f)
+                // Zero native progress reads exactly the captured start. Its
+                // existing root=1/0 endpoint is still the new stable Deck frame.
+                val sx=view.scaleX;val sy=view.scaleY;val tx=view.translationX;val ty=view.translationY
+                for(p in floatArrayOf(0f,.2f,.7f,1f)) {
+                    view.scaleX=sx+(1f-sx)*p;view.scaleY=sy+(1f-sy)*p
+                    view.translationX=tx*(1f-p);view.translationY=ty*(1f-p)
+                    geometry.localContent(scratch,header)
+                    assertTrue(scratch.width()>0f && scratch.height()>0f)
+                    if(p==0f) assertEquals(before.left,scratch.left,.002f)
+                }
+                assertEquals(view.width*.91f,scratch.width(),.002f)
+                assertEquals((view.height-header)*.91f,scratch.height(),.002f)
+            } finally { geometry.release() }
+        }
+    }
     @Test fun focused22G100RenderWitnessesKeepContainerScaleOutOfTheCardTransform() {
         // Explicit mapping inputs, not recovered scene defaults: W=B=390,
         // density=1, page=.75, minimum frame origin=0. ASM 0x1d860e550 /

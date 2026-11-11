@@ -24,7 +24,7 @@ class DeckOrientationTest {
     }
     // Only the selected native ABI is supplied. No launcher constructor, Hook
     // installation or physical/visual orientation equivalence is simulated.
-    class Algorithm {
+    open class Algorithm {
         @JvmField var visual=true
         @JvmField var window=Rect(0,0,2400,1080)
         @JvmField var insets=Rect(90,0,30,40)
@@ -68,6 +68,7 @@ class DeckOrientationTest {
             for((name,value) in mapOf("api" to api,"stack" to stack,"container" to container,"headerConfig" to DeckHeaderConfig(0,0),
                 "frozen" to frozen,"pairs" to pairs,"cards" to LinkedHashMap<Any,Any>(),
                 "drawCards" to ArrayList<Any>(),"linkedSprings" to ArrayList<Any>(),
+                "surfaceCards" to emptyArray<DeckSurfaceShadow.CardState?>(),
                 "router" to DeckTouchRouter { false },"ticketTimeout" to Runnable {})) setField(owner,name,value)
             setField(owner,"rotation",1)
             setField(owner,"baseAllowed",true);setField(owner,"tasksAllowed",true);setField(owner,"transition",1L)

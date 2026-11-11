@@ -22,6 +22,10 @@ class DeckSurfaceOcclusionTest {
         val mSourceStackBounds=Rect(); val mCurrentRectWithInsets=RectF()
         fun calculateSurfaceParams(a: Remote,b: Remote,c: Remote,d: Any,e: Int,f: Any,g: Any,h: Int,i: Any,j: Boolean): Surface=error("not executed")
     }
+    class LegacyHelper {
+        val mSourceStackBounds=Rect();val mCurrentRectWithInsets=RectF()
+        fun calculateSurfaceParams(a: Remote,b: Remote,c: Remote,d: Any,e: Int,f: Any,g: Any,h: Int,i: Any,j: Boolean,k: Boolean): Surface=error("not executed")
+    }
     private fun api()=DeckSurfaceOcclusion(Helper::class.java,Remote::class.java,Any::class.java,Any::class.java,Any::class.java,Surface::class.java)
     @Test fun sameArityWithWrongParametersOrReturnTypeCannotAdmitSurfaceWrites() {
         assertThrows(NoSuchMethodException::class.java) {
@@ -32,6 +36,19 @@ class DeckSurfaceOcclusionTest {
         }
     }
     private fun params()=Surface(Any(),7,.75f,Matrix(),Rect(10,20,1010,2020),11,Any(),13,Any(),19f,23,true,29f,true)
+    @Test fun legacyElevenArgumentSurfaceRetainsTheSameCropAndRetirementContract() {
+        val api=DeckSurfaceOcclusion(LegacyHelper::class.java,Remote::class.java,Any::class.java,Any::class.java,Any::class.java,Surface::class.java)
+        assertEquals(11,api.calculate.parameterCount)
+        val helper=LegacyHelper().apply { mSourceStackBounds.set(0,0,1080,2400);mCurrentRectWithInsets.set(10f,20f,1010f,2020f) }
+        val presentation=DeckOpenAlignment.Surface(7,1080f,2400f,RectF(0f,0f,1000f,2000f),Matrix(),1f,0f,1f,0f,floatArrayOf(600f,1000f,600f,2000f,1f,0f))
+        presentation.update(RectF(0f,0f,1000f,2000f),0f)
+        val target=Remote(7,0,Rect(0,0,1080,2400),android.graphics.Point())
+        val first=params();assertSame(first,api.apply(presentation,helper,target,0,first))
+        assertEquals(300,first.windowCrop.right)
+        presentation.active=false
+        val retired=params();assertSame(retired,api.apply(presentation,helper,target,0,retired));assertEquals(1010,retired.windowCrop.right)
+        assertEquals(29f,retired.shadowRadius,0f)
+    }
     @Test fun cropUsesTheNativeBufferTransformAndConservativelyRoundsTheCoveredEdge() {
         val api=api()
         val p=params()

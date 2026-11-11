@@ -60,6 +60,9 @@ internal class DeckCardShadow(private val view: View, private val header: View, 
         if(content.visibility==View.VISIBLE && content.width>0 && content.height>0 && fullscreenProgress.isFinite())
             content.alpha.coerceIn(0f,1f)*(1f-fullscreenProgress.coerceIn(0f,1f)) else 0f
 
+    fun surfaceShare(): Float = if(!owned || closed) 0f else 1f-contentOpacity(fullscreenProgress)*
+        (if(view.visibility==View.VISIBLE) view.alpha.coerceIn(0f,1f) else 0f)
+
     override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
         if (!closed && view.outlineProvider === this) view.invalidateOutline()
     }

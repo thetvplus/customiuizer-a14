@@ -34,14 +34,40 @@ class DeckContinuityTest {
         @JvmField val badge=View(context)
     }
     class Thumbnail : View(RuntimeEnvironment.getApplication()) { @JvmField var radius=22 }
+    class RootSprings(view: View) {
+        private val x=androidx.dynamicanimation.animation.SpringAnimation(view,androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_X)
+        private val y=androidx.dynamicanimation.animation.SpringAnimation(view,androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_Y)
+        private val sx=androidx.dynamicanimation.animation.SpringAnimation(view,androidx.dynamicanimation.animation.DynamicAnimation.SCALE_X)
+        private val sy=androidx.dynamicanimation.animation.SpringAnimation(view,androidx.dynamicanimation.animation.DynamicAnimation.SCALE_Y)
+        private val alpha=androidx.dynamicanimation.animation.SpringAnimation(view,androidx.dynamicanimation.animation.DynamicAnimation.ALPHA)
+        fun getTranslationXSpringAnim()=x
+        fun getTranslationYSpringAnim()=y
+        fun getScaleXSpringAnim()=sx
+        fun getScaleYSpringAnim()=sy
+        private val all by lazy { listOf(x,y,sx,sy,alpha) }
+        fun getAllSpringAnim()=all
+    }
     class TaskView : FrameLayout(RuntimeEnvironment.getApplication()) {
         val task=Task()
         @JvmField var mFullscreenProgress=0f
         val header=Header()
         val thumbnail=Thumbnail()
+        private val springs by lazy { RootSprings(this) }
         var headerReads=0
         fun getHeaderView(): View { headerReads++; return header }
         fun getThumbnailView(): View=thumbnail
+        fun getSpringAnimationImpl()=springs
+    }
+    class NativeStack : FrameLayout(RuntimeEnvironment.getApplication()) {
+        fun nativeUpdate(view: TaskView,out: Transform,ignoredTiming: Any) {
+            view.layout(out.rect.left.toInt(),out.rect.top.toInt(),out.rect.right.toInt(),out.rect.bottom.toInt())
+        }
+    }
+    class RebaseAlgorithm : DeckOrientationTest.Algorithm() {
+        internal lateinit var scope: DeckOwner.Scope
+        fun nativeTransform(task: Task,q: Float,out: Transform): Transform {
+            scope.write(task.key.id,q,out);return out
+        }
     }
     class Handler {
         @JvmField val tasks=ArrayList<Any>()
@@ -54,6 +80,12 @@ class DeckContinuityTest {
         @JvmField var progress=.3f
         fun quickSwitch()=false
         fun pose()=Unit
+    }
+    class OpeningSpring {
+        val start=RectF(100f,200f,700f,1400f)
+        var reads=0
+        fun getStartRect(): RectF { reads++;return start }
+        fun startInGestureThread()=Unit
     }
     class Recents : FrameLayout(RuntimeEnvironment.getApplication()) {
         @JvmField var overview=true
@@ -76,10 +108,11 @@ class DeckContinuityTest {
         val owner=unconstructed(DeckOwner::class.java)
         setField(owner,"gestureBoundary",DeckGestureBoundary())
         val handler=Handler()
-        val stack=FrameLayout(RuntimeEnvironment.getApplication())
+        val stack=NativeStack()
         val cards=LinkedHashMap<View,DeckOwner.Card>()
         for((name,value) in mapOf("api" to api,"handler" to handler,"stack" to stack,"cards" to cards,
             "drawCards" to ArrayList<DeckOwner.Card>(),"pairs" to IdentityHashMap<Any,Any>(),
+            "surfaceToken" to Any(),"surfaceCards" to emptyArray<DeckSurfaceShadow.CardState?>(),
             "depthOrder" to DeckDepthOrder(stack),"global" to Matrix(),"local" to Matrix(),"surface" to Matrix(),
             "gestureReference" to RectF(),"gestureTarget" to RectF(),"occludingBounds" to RectF(),
             "depthIndices" to android.util.SparseIntArray(),"frozen" to HashMap<Any,Any>(),
@@ -88,6 +121,220 @@ class DeckContinuityTest {
         setField(owner,"baseAllowed",true);setField(owner,"tasksAllowed",true)
         setField(owner,"geometryReady",true);setField(owner,"transition",1L)
         return Fixture(owner,handler,stack,cards)
+    }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun legacyOpeningHandsTheSettlingCardSpringsOverOnceBeforeCapturingTheirPose() {
+        val f=fixture();val api=getField<DeckNativeApi>(f.owner,"api")
+        setField(api,"profile",DeckLauncherProfile.LEGACY);setField(api,"cardSprings",DeckCardSpring(TaskView::class.java))
+        setField(api,"springStart",OpeningSpring::class.java.getMethod("getStartRect"))
+        setField(api,"visualLandscape",Visual::class.java.getMethod("isLandscapeVisually"))
+        setField(f.owner,"current",f.owner.Scope(Visual()))
+        val view=TaskView();f.stack.addView(view);view.layout(100,200,700,1400)
+        val header=DeckHeaderOwner(view.header,view.header.icon,view.header.title,view.header.badge,DeckHeaderConfig(0,0))
+        val geometry=DeckCardGeometry(view,f.stack).apply { apply(.8f) }
+        val card=DeckOwner.Card(f.owner,geometry,view.task,7,0,header,1f,DeckCardShadow(view,view.header,22f,view.thumbnail,0f))
+        f.cards[view]=card;setField(f.owner,"drawCards",arrayListOf(card))
+        XposedHelpers.setAdditionalInstanceField(view,DeckOwner.CARD,card)
+        val moving=view.getSpringAnimationImpl().getAllSpringAnim()
+        val spring=OpeningSpring();val params=Any()
+        var calls=0
+        val callback=object: io.github.libxposed.api.XposedInterface.Chain {
+            override fun getExecutable()=OpeningSpring::class.java.getMethod("startInGestureThread")
+            override fun getThisObject()=spring
+            override fun getArg(index: Int): Any?=throw AssertionError("No native start arguments")
+            override fun getArgs(): List<Any?> = throw AssertionError("No argument array")
+            override fun proceed(): Any? { calls++;return null }
+            override fun proceed(updated: Array<Any?>): Any?=throw AssertionError("No remarshal")
+            override fun proceedWith(receiver: Any): Any?=throw AssertionError("Native receiver changed")
+            override fun proceedWith(receiver: Any,updated: Array<Any?>): Any?=throw AssertionError("Native receiver changed")
+        }
+        try {
+            for(spring in moving) { spring.spring=androidx.dynamicanimation.animation.SpringForce(1f);spring.start() }
+            IosRecentsDeckHooks.legacyOpeningCreated(card,params,spring,skip=true)
+            IosRecentsDeckHooks.legacySpringStartHook(api).intercept(callback)
+            assertTrue("Native skipViewChanges cannot acquire the card pose",moving.all { it.isRunning })
+            assertEquals(0,spring.reads)
+            IosRecentsDeckHooks.legacyOpeningCreated(card,params,spring,skip=false)
+            assertEquals("Creation precedes native BreakableAnimManager's start rewrite",0,spring.reads)
+            spring.start.set(80f,130f,720f,1510f)
+            IosRecentsDeckHooks.legacySpringStartHook(api).intercept(callback)
+            val alignment=getField<DeckOpenAlignment>(f.owner,"opening")
+            assertEquals("Capture uses the final native continuation pose",spring.start,getField<RectF>(alignment,"start"))
+            assertEquals(1,spring.reads)
+            assertTrue("The old card clock cannot overwrite opening alignment",moving.none { it.isRunning })
+            moving[0].start()
+            IosRecentsDeckHooks.legacySpringStartHook(api).intercept(callback)
+            assertTrue("Preparing another frame does not repeatedly cancel native work",moving[0].isRunning)
+            assertEquals(1,spring.reads);assertEquals(3,calls)
+        } finally {
+            moving.forEach { it.cancel() }
+            org.robolectric.util.ReflectionHelpers.callInstanceMethod<Unit>(f.owner,"clearOpening")
+            card.release()
+            XposedHelpers.removeAdditionalInstanceField(view,DeckOwner.CARD)
+        }
+    }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun closingLeashProjectsItsShadowContinuouslyAndHandsItBackToTheThumbnail() {
+        val f=fixture();val api=getField<DeckNativeApi>(f.owner,"api")
+        val algorithm=DeckOrientationTest.Algorithm()
+        for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
+            "padding" to "padding","count" to "count","gap" to "gap","headerHeight" to "header"))
+            setField(api,target,algorithm.javaClass.getField(source))
+        setField(api,"visualLandscape",algorithm.javaClass.getMethod("isLandscapeVisually"))
+        setField(api,"scroll",Scroller::class.java.getField("scroll"));setField(f.owner,"scroller",Scroller())
+        setField(f.owner,"headerConfig",DeckHeaderConfig(0,0))
+        val scope=f.owner.Scope(algorithm);setField(f.owner,"current",scope)
+        val frame=Transform();assertTrue(scope.write(0,0f,frame))
+        val surface=DeckSurfaceShadow(DeckSurfaceOcclusionTest.Helper::class.java,DeckSurfaceOcclusionTest.Remote::class.java,
+            Any::class.java,Any::class.java,Any::class.java,DeckSurfaceOcclusionTest.Surface::class.java)
+        setField(api,"surfaceShadow",surface)
+        setField(api,"getThumbnail",TaskView::class.java.getMethod("getThumbnailView"))
+        setField(api,"thumbnailRadius",Thumbnail::class.java.getField("radius"))
+        setField(api,"key",Task::class.java.getField("key"));setField(api,"id",Key::class.java.getField("id"))
+        for((target,source) in mapOf("headerIcon" to "icon","headerTitle" to "title","headerBadge" to "badge"))
+            setField(api,target,Header::class.java.getField(source))
+        val view=TaskView();f.stack.addView(view);view.layout(0,0,1100,600)
+        view.header.layout(0,0,1100,52);view.thumbnail.layout(0,52,1100,600);view.thumbnail.alpha=0f
+        val card=requireNotNull(f.owner.card(view,XposedHelpers.getAdditionalInstanceField(frame,DeckOwner.FRAME) as DeckFrame))
+        val shadow=card.shadow;card.depth.apply()
+        val helper=DeckSurfaceOcclusionTest.Helper().apply { mSourceStackBounds.set(0,0,2400,1080) }
+        val remote=DeckSurfaceOcclusionTest.Remote(7,1,android.graphics.Rect(0,0,2400,1080),android.graphics.Point())
+        fun params(flags: Int=7,radius: Float=0f)=DeckSurfaceOcclusionTest.Surface(Any(),flags,.75f,Matrix(),android.graphics.Rect(0,0,2400,1080),
+            11,Any(),13,Any(),19f,23,true,radius,true)
+        val height=shadow.height+1f;val target=f.owner.surfaceTargetWidth(0)
+        try {
+            for(p in floatArrayOf(0f,.25f,.5f,1f,.5f,0f,1f)) {
+                helper.mCurrentRectWithInsets.set(0f,0f,2400f+(target-2400f)*p,1080f)
+                val data=params();surface.apply(f.owner,helper,remote,1,data)
+                assertEquals(height*p,data.shadowRadius,.001f);assertEquals(7 or 0x100,data.flags)
+                assertEquals(.75f,data.alpha,0f);assertEquals(19f,data.cornerRadius,0f)
+                assertEquals(23,data.backgroundBlurRadius);assertEquals(11,data.layer)
+                assertEquals(0f,view.thumbnail.alpha,0f)
+            }
+            val held=params();surface.apply(f.owner,helper,remote,1,held)
+            assertEquals("Stable HOLD adds no duplicate shadow transaction",7,held.flags)
+            val outline=android.graphics.Outline();shadow.getOutline(view,outline);assertEquals(0f,outline.alpha,0f)
+            view.thumbnail.alpha=.25f
+            f.owner.onPreDraw()
+            val shared=params();surface.apply(f.owner,helper,remote,1,shared)
+            assertEquals(height*.75f,shared.shadowRadius,.001f)
+            view.thumbnail.alpha=1f;shadow.syncContentAlpha(0f)
+            f.owner.onPreDraw()
+            val handoff=params();surface.apply(f.owner,helper,remote,1,handoff)
+            assertEquals(0f,handoff.shadowRadius,0f);assertEquals(7 or 0x100,handoff.flags)
+            shadow.getOutline(view,outline);assertEquals(1f,outline.alpha,0f)
+            view.mFullscreenProgress=.4f;f.owner.onPreDraw()
+            val partial=params();surface.apply(f.owner,helper,remote,1,partial)
+            assertEquals(height*.4f,partial.shadowRadius,.001f)
+            shadow.getOutline(view,outline);assertEquals(.6f,outline.alpha,.001f)
+            val native=params(7 or 0x100,23f);surface.apply(f.owner,helper,remote,1,native)
+            assertEquals("An explicit native projection keeps ownership",23f,native.shadowRadius,0f)
+            view.thumbnail.alpha=0f;f.owner.onPreDraw()
+            val again=params()
+            val failure=java.util.concurrent.atomic.AtomicReference<Throwable>()
+            val worker=Thread { try { surface.apply(f.owner,helper,remote,1,again) } catch(error: Throwable) { failure.set(error) } }
+            worker.start();worker.join(1000L)
+            assertFalse("Native gesture thread completed without dispatching to Main",worker.isAlive)
+            assertNull(failure.get())
+            assertEquals(height,again.shadowRadius,.001f)
+            val replaced=params();surface.apply(fixture().owner,helper,remote,1,replaced)
+            assertEquals("A replacement stack cannot inherit the previous leash projection",0f,replaced.shadowRadius,0f)
+            val resumed=params();surface.apply(f.owner,helper,remote,1,resumed)
+            assertEquals(height,resumed.shadowRadius,.001f)
+            f.owner.remove(view)
+            val retired=params();surface.apply(f.owner,helper,remote,1,retired)
+            assertEquals(0f,retired.shadowRadius,0f);assertEquals(7 or 0x100,retired.flags)
+            val other=DeckSurfaceOcclusionTest.Remote(8,1,android.graphics.Rect(),android.graphics.Point())
+            val unrelated=params();surface.apply(f.owner,helper,other,1,unrelated);assertEquals(7,unrelated.flags)
+        } finally { f.owner.remove(view) }
+    }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun aRunningNativeSpringCannotWriteItsOldCoordinatesBackOnTheFirstFrameAfterRebase() {
+        val f=fixture();val api=getField<DeckNativeApi>(f.owner,"api")
+        val algorithm=RebaseAlgorithm()
+        for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
+            "padding" to "padding","count" to "count","gap" to "gap","headerHeight" to "header"))
+            setField(api,target,algorithm.javaClass.getField(source))
+        setField(api,"visualLandscape",algorithm.javaClass.getMethod("isLandscapeVisually"))
+        setField(api,"scroll",Scroller::class.java.getField("scroll"));val scroller=Scroller()
+        setField(f.owner,"scroller",scroller);setField(f.owner,"headerConfig",DeckHeaderConfig(0,0))
+        val scope=f.owner.Scope(algorithm);algorithm.scope=scope;setField(f.owner,"current",scope)
+        setField(api,"taskTransform",algorithm.javaClass.getMethod("nativeTransform",Task::class.java,Float::class.javaPrimitiveType,Transform::class.java))
+        setField(api,"updateView",NativeStack::class.java.getMethod("nativeUpdate",TaskView::class.java,Transform::class.java,Any::class.java))
+        setField(api,"immediate",Any());setField(f.owner,"restoreTransform",Transform())
+        setField(api,"cardSprings",DeckCardSpring(TaskView::class.java))
+        val transform=Transform();assertTrue(scope.write(0,0f,transform))
+        val view=TaskView();view.task.key.id=0;f.stack.addView(view)
+        view.layout(transform.rect.left.toInt(),transform.rect.top.toInt(),transform.rect.right.toInt(),transform.rect.bottom.toInt())
+        view.header.layout(0,0,view.width,52)
+        val header=DeckHeaderOwner(view.header,view.header.icon,view.header.title,view.header.badge,DeckHeaderConfig(0,0))
+        val geometry=DeckCardGeometry(view,f.stack).apply { apply(transform.scale) }
+        val shadow=DeckCardShadow(view,view.header,22f,view.thumbnail,0f)
+        val card=DeckOwner.Card(f.owner,geometry,view.task,0,0,header,1f,shadow)
+        f.cards[view]=card;setField(f.owner,"drawCards",arrayListOf(card))
+        XposedHelpers.setAdditionalInstanceField(f.stack,DeckOwner.OWNER,f.owner)
+        val springs=view.getSpringAnimationImpl()
+        val moving=listOf(springs.getScaleXSpringAnim(),springs.getScaleYSpringAnim(),springs.getTranslationYSpringAnim())
+        val starts=floatArrayOf(.61f,.67f,-132f);val speeds=floatArrayOf(-.7f,-.9f,-30f)
+        val before=RectF();val after=RectF()
+        try {
+            for(i in moving.indices) {
+                moving[i].spring=androidx.dynamicanimation.animation.SpringForce(if(i==2) -200f else .55f)
+                moving[i].setStartValue(starts[i]);moving[i].setStartVelocity(speeds[i]);moving[i].start()
+                moving[i].doAnimationFrame(1000L)
+            }
+            geometry.localContent(before,52f)
+            val oldMatrixScale=geometry.scale
+            assertTrue(f.owner.prepareScrollRebase())
+            scroller.scroll=-scope.gap;view.translationX-=615f // original native rebase
+            f.owner.finishScrollRebase(f.owner.transition,f.owner.geometryGeneration)
+            geometry.localContent(after,52f)
+            assertEquals(before.left,after.left,.003f);assertEquals(before.top,after.top,.003f)
+            val startX=view.scaleX;val startY=view.scaleY
+            assertEquals(speeds[0]*startX/starts[0],getField<Float>(moving[0],"mVelocity"),.00001f)
+            assertEquals(speeds[1]*startY/starts[1],getField<Float>(moving[1],"mVelocity"),.00001f)
+            assertEquals(speeds[2]*oldMatrixScale/geometry.scale,getField<Float>(moving[2],"mVelocity"),.0001f)
+            // Native resetTaskView retargets running axes without restarting them.
+            for(i in moving.indices) {
+                moving[i].spring!!.finalPosition=if(i==2) 0f else 1f
+                moving[i].doAnimationFrame(1000L) // first native frame, no elapsed time
+                assertTrue(moving[i].isRunning)
+            }
+            geometry.localContent(after,52f)
+            assertEquals("Native spring cache must use the rebased X scale",startX,view.scaleX,.00001f)
+            assertEquals("Native spring cache must use the rebased Y scale",startY,view.scaleY,.00001f)
+            assertEquals(before.top,after.top,.003f);assertEquals(before.right,after.right,.003f)
+        } finally {
+            moving.forEach { it.cancel() };XposedHelpers.removeAdditionalInstanceField(f.stack,DeckOwner.OWNER);card.release()
+        }
+    }
+    @Test fun scrollRebasePreservesNativeFailureIdentityAndRejectsARetiredGeometry() {
+        for(failed in listOf(false,true)) {
+            val f=fixture();val view=TaskView();f.stack.addView(view);view.layout(0,0,600,1200)
+            val geometry=DeckCardGeometry(view,f.stack)
+            val card=unconstructed(DeckOwner.Card::class.java)
+            val header=DeckHeaderOwner(view.header,view.header.icon,view.header.title,view.header.badge,DeckHeaderConfig(0,0))
+            setField(card,"geometry",geometry);setField(card,"header",header);setField(card,"windowInput",RectF())
+            setField(f.owner,"drawCards",arrayListOf(card))
+            XposedHelpers.setAdditionalInstanceField(f.stack,DeckOwner.OWNER,f.owner)
+            val failure=IllegalStateException("native rebase failed");val result=Any();var calls=0
+            val callback=object: io.github.libxposed.api.XposedInterface.Chain {
+                override fun getExecutable()=Gesture::class.java.getMethod("pose")
+                override fun getThisObject()=f.stack
+                override fun getArg(index: Int): Any?=throw AssertionError("No input rewrite")
+                override fun getArgs(): List<Any?> = throw AssertionError("No input remarshal")
+                override fun proceed(): Any { calls++;if(failed)throw failure;setField(f.owner,"geometryGeneration",1L);return result }
+                override fun proceed(args: Array<Any?>): Any=throw AssertionError("No input remarshal")
+                override fun proceedWith(receiver: Any): Any=throw AssertionError("Native receiver changed")
+                override fun proceedWith(receiver: Any,args: Array<Any?>): Any=throw AssertionError("Native receiver changed")
+            }
+            try {
+                val observed=runCatching { IosRecentsDeckHooks.scrollRebaseHook().intercept(callback) }
+                if(failed) assertSame(failure,observed.exceptionOrNull()) else assertSame(result,observed.getOrThrow())
+                assertEquals(1,calls)
+                assertEquals(0f,view.translationX,0f);assertEquals(1f,view.scaleX,0f)
+            } finally { XposedHelpers.removeAdditionalInstanceField(f.stack,DeckOwner.OWNER);header.close();geometry.release() }
+        }
     }
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun aNewlyVisibleCardStartsAtItsDeckScaleBeforeTheFirstNativeComposition() {
