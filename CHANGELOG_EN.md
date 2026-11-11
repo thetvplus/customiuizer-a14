@@ -6,9 +6,17 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## Unreleased
 
-## r14.27.5 — 2026-11-09
+## r14.27.5 — 2026-11-11
 
 versionCode 305. Changes since r14.27.3:
+
+### Release summary
+
+- Add an optional iOS 12 central volume HUD with vertical adjustment and automatic hiding of the mute and Do Not Disturb shortcuts. Volume percentages can appear in an overlay, a toast capsule or the Dynamic Island.
+- Add optional iOS battery, five-dot cellular signal and notification-shade media styles.
+- Improve foreground card exits, refill and window shadow handoff in DECK, and restore the Dock background and blur when returning Home.
+- Reorganize settings and search paths while preserving the four home entries, existing preferences and backups.
+- Restart the launcher and System UI after updating to apply the affected styles.
 
 ### User changes
 
