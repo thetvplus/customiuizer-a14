@@ -54,6 +54,7 @@ internal class DeckWindowApi(element: Class<*>, private val params: Class<*>, pr
     }
     fun view(value: Any)=fields[11].get(value) as? View
     fun index(value: Any)=fields[18].getInt(value)
+    fun target(value: Any)=fields[2].get(value) as android.graphics.RectF
     fun scaled(value: Any,scale: Float,opening: Boolean,nativeScale: Float=1f): Any {
         // Opening leaves the current presentation; closing arrives at the frozen
         // endpoint with native root scale 1, not its temporary gesture scale.

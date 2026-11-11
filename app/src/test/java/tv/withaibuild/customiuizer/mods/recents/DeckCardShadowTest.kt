@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods.recents
 import android.animation.ObjectAnimator
 import android.graphics.Outline
 import android.graphics.Rect
+import android.graphics.RectF
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.view.animation.LinearInterpolator
@@ -21,6 +22,31 @@ import org.robolectric.shadows.ShadowChoreographer
 @Config(sdk=[34],application=android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DeckCardShadowTest {
+    @Test fun settledWindowDoesNotLoseAndRegainItsOutlineWhenTheThumbnailArrivesLate() {
+        val card=FrameLayout(RuntimeEnvironment.getApplication())
+        val header=View(card.context);val thumbnail=View(card.context)
+        card.addView(header);card.addView(thumbnail)
+        card.layout(0,0,300,700);header.layout(0,0,300,50);thumbnail.layout(0,50,300,700)
+        thumbnail.alpha=0f
+        val shadow=DeckCardShadow(card,header,22f,thumbnail,0f)
+        val bounds=RectF(0f,50f,300f,700f);val outline=Outline()
+        try {
+            for(p in floatArrayOf(0f,.1f,.5f,.9f,1f,.9f,.5f)) {
+                shadow.projectWindow(bounds,p);shadow.getOutline(card,outline)
+                assertEquals(p*p*(3f-2f*p),outline.alpha,.0001f)
+            }
+            shadow.finishWindow(false);shadow.getOutline(card,outline)
+            assertEquals("Cancel restores the native hidden-thumbnail state",0f,outline.alpha,0f)
+            shadow.projectWindow(bounds,1f);shadow.finishWindow(true)
+            for(alpha in floatArrayOf(0f,.15f,.6f,1f)) {
+                thumbnail.alpha=alpha;shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
+                assertEquals("The same projection persists through native finish and thumbnail restore",1f,outline.alpha,0f)
+                val shown=Rect();assertTrue(outline.getRect(shown));assertEquals(Rect(0,50,300,700),shown)
+            }
+            thumbnail.alpha=.4f;shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
+            assertEquals("The thumbnail owns the outline again",.4f,outline.alpha,0f)
+        } finally { shadow.close() }
+    }
     @Test fun fullscreenSnapshotHasNoDeckShadowAndContinuousReversalReusesNativeProgress() {
         val card=FrameLayout(RuntimeEnvironment.getApplication())
         val header=View(card.context);val thumbnail=View(card.context)

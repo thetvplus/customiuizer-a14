@@ -21,7 +21,7 @@ versionCode 305. Changes since r14.27.3:
 - Refine the central volume HUD with vector icons and signed vertical positioning. The central style hides the mute and Do Not Disturb shortcuts and reclaims their space.
 - Make the volume percentage overlay more compact and add an automatic toast capsule or Dynamic Island option. Existing settings keep the overlay by default, and repeated adjustments update the same hint.
 - Restore Dock background and blur when its view reattaches or Home returns. Refine the battery percentage, five-dot spacing and notification-shade media card.
-- Fix DECK card jumps on release, initial refill scale and window shadow handoff. When opening a back card, the foreground cards slide out together at their captured size and spacing.
+- Fix DECK card jumps on release, initial refill scale and window shadow handoff. When opening a back card, foreground cards move toward their recentered positions. The app window and its settled card share one shadow during the swipe.
 
 ### Engineering notes
 

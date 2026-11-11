@@ -259,7 +259,6 @@ internal object IosRecentsDeckHooks {
         }
         after(api.childrenAlpha) { card(it.getThisObject())?.let { selected ->
             selected.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(selected.view))
-            selected.owner.publishSurface(selected)
             selected.header.refreshOpacity(true)
         } }
         after(api.headerTransform) { card(it.getThisObject())?.header?.refreshOpacity(true) }
@@ -336,11 +335,16 @@ internal object IosRecentsDeckHooks {
                     // currentRectFParams. That first frame belongs to the new request.
                     val params=XposedHelpers.getAdditionalInstanceField(element,WINDOW_PENDING)
                         ?: window.current(element) ?: return@before
-                    if(window.scene(params)!=true) return@before
-                    val selected=card(window.view(params)) ?: return@before
-                    val active=selected.owner
+                    val opening=window.scene(params) ?: return@before
                     val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
+                    val active=receipt.owner.get() ?: return@before
                     if(!receipt.matches(active)) return@before
+                    val selected=card(window.view(params)) ?: (if(!opening) active.cardAt(window.index(params)) else null) ?: return@before
+                    if(selected.owner!==active) return@before
+                    if(!opening) {
+                        active.projectClosingWindow(selected,it.getArg(1) as RectF,window.target(params))
+                        return@before
+                    }
                     val progress=it.getArg(3) as Float
                     active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(1) as RectF,progress,
                         ((.4f-progress)/.4f).coerceIn(0f,1f))
@@ -387,21 +391,17 @@ internal object IosRecentsDeckHooks {
                     }
                 })
         }
-        (api.surfaceShadow?.calculate ?: api.surfaceOcclusion?.calculate)?.let { calculate -> after(calculate) {
+        api.surfaceOcclusion?.let { surface -> after(surface.calculate) {
             val result=it.getResult() ?: return@after
             val active=surfaces.get()?.lastOrNull()
-            val targetMode=it.getArg(4) as Int
-            @Suppress("UNCHECKED_CAST")
-            val presentation=if(active==null && targetMode==0 && api.legacySurfaceFrame!=null)
-                (XposedHelpers.getAdditionalInstanceField(it.getArg(5),OPENING_SURFACE) as? WeakReference<DeckOpenAlignment.Surface>)?.get()?.takeIf { it.active }
-                else null
-            api.surfaceShadow?.apply(active ?: latest.get().get(),it.getThisObject()!!,it.getArg(0)!!,targetMode,result,
-                active?.openingTaskId ?: presentation?.taskId ?: -1, active?.openingStartWidth ?: presentation?.startWidth ?: 0f)
-            if(active!=null) api.surfaceOcclusion?.let { surface ->
-                val clipped=surface.apply(active,it.getThisObject()!!,it.getArg(0)!!,targetMode,result)
+            if(active!=null) {
+                val clipped=surface.apply(active,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
                 if(clipped!==result) it.setResult(clipped)
-            } else if(presentation!=null) api.surfaceOcclusion?.let { surface ->
-                val clipped=surface.apply(presentation,it.getThisObject()!!,it.getArg(0)!!,targetMode,result)
+            } else {
+                @Suppress("UNCHECKED_CAST")
+                val presentation=(XposedHelpers.getAdditionalInstanceField(it.getArg(5),OPENING_SURFACE) as? WeakReference<DeckOpenAlignment.Surface>)?.get()
+                    ?: return@after
+                val clipped=surface.apply(presentation,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
                 if(clipped!==result) it.setResult(clipped)
             }
         } }

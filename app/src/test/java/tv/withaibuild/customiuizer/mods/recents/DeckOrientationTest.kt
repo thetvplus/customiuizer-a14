@@ -68,7 +68,6 @@ class DeckOrientationTest {
             for((name,value) in mapOf("api" to api,"stack" to stack,"container" to container,"headerConfig" to DeckHeaderConfig(0,0),
                 "frozen" to frozen,"pairs" to pairs,"cards" to LinkedHashMap<Any,Any>(),
                 "drawCards" to ArrayList<Any>(),"linkedSprings" to ArrayList<Any>(),
-                "surfaceCards" to emptyArray<DeckSurfaceShadow.CardState?>(),
                 "router" to DeckTouchRouter { false },"ticketTimeout" to Runnable {})) setField(owner,name,value)
             setField(owner,"rotation",1)
             setField(owner,"baseAllowed",true);setField(owner,"tasksAllowed",true);setField(owner,"transition",1L)

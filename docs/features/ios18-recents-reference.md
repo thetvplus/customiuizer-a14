@@ -60,7 +60,7 @@ MiuiHome 样本版本为 `RELEASE-4.39.30.8604-08262248`。现有 Catalog 中 fu
 
 22G100 的 `shadowOpacityForLayoutRole:atIndex:`（`0x1d8d0fa18`）恒返 1，`shadowOffsetForIndex:`（`0x1d8d0fa20`）恒返 0，`shadowStyleForLayoutRole:inAppLayout:`（`0x1d8d0fcb8`）恒返 1。这不代表阴影最终为纯黑不透明；具体滤镜仍未恢复，不凭层级主观添加逐卡透明度曲线。
 
-A14 将排序放在共同 16 dp 投影平面上，再保留原有细小排名差；不再将实际 Z 压到不足一个物理像素。卡片自身的原生 Outline 只覆盖快照内容，沿用宿主圆角并响应其设置事件，保留标题及祖先裁切。颜色与投影高度是 Android 调整，不等同 Apple 材质。投影随同一 TaskView 的矩阵、原生内容 alpha、位移和回收更新，没有位图模糊或独立阴影时钟；释放按属性所有权恢复原值。原生窗口交接会让 thumbnail alpha=0 而根 alpha=1；只跟根透明度会在慢速 HOLD 留下大块孤立投影。当前绑定时读取 thumbnail alpha，后续消费原生 setChildrenViewAlpha 更新 Outline alpha，不遮盖壁纸、不改变模糊或应用 Surface。
+A14 将排序放在共同 8 dp 投影平面上，再保留原有细小排名差；不再将实际 Z 压到不足一个物理像素。卡片自身的原生 Outline 只覆盖快照内容，沿用宿主圆角并响应其设置事件，保留标题及祖先裁切。颜色与投影高度是 Android 调整，不等同 Apple 材质。投影随同一 TaskView 的矩阵、原生内容 alpha、位移和回收更新，没有位图模糊或独立阴影时钟；释放按属性所有权恢复原值。原生窗口交接会让 thumbnail alpha=0 而根 alpha=1；只跟根透明度会在慢速 HOLD 留下大块孤立投影。当前绑定时读取 thumbnail alpha，后续消费原生 setChildrenViewAlpha 更新 Outline alpha，不遮盖壁纸、不改变模糊或应用 Surface。
 
 22G100 的 `scaleForIndex:`（`0x1d8b8ee98`）不为被拖卡附加缩小，`opacityForLayoutRole:inAppLayout:atIndex:`（`0x1d8b8f4e8`）仅在配置允许且释放目标指向删除后清零，不支持 MOVE 全程淡出。`handleSwipeToKillEvent:` 区分 translation、progress、isDragging 和 decelerationTargetProgress；越过位移门槛不能替代释放后的业务提交。邻卡 frame / scale / shadow 由临时删除状态与 progress 插值，不能从一个常量恢复全部链路。
 
@@ -121,7 +121,7 @@ Thumbnail 通过冷解析的 mCornerRadius:Int 和原生 setter 同步 Outline�
 
 每次原生重新配置前归还自持参数，成功后再覆盖四轴；end / cancel / 超时 / 旋转释放时仅恢复仍等于本次写入的参数对，后续原生写入优先。失败逐轴回滚，可选动效冷解析失败仅保留原生时序；必需窗口合同失败则 Deck 整批不接管。该变化是 iOS 配置到 Android 原生求解器的映射，并非 UIKit 求解器或全链路等价。WindowElement 的当前显示旋转为 0、90、270° 时共用交接；不要求默认 homeRotation 元数据与其相等。180°、quick switch 或分屏仍保留原生运动，原生坐标转换与参数身份保留。
 
-阴影继续使用同一 TaskView RenderNode，透明度为原生截图 alpha × (1−mFullscreenProgress)，截图不可见 / 未准备时为零，没有引入新滤镜或阴影时钟。16dp 投影平面仍为 Android 工程近似，环境 / 定向颜色保留 HyperOS 当前原值。卡片截图的圆角与裁切由原生 thumbnail 管理，内容投影同步原生半径，不增加另一套曲率。现有 iOS 静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
+阴影使用 TaskView RenderNode。常态透明度为原生截图 alpha × (1−mFullscreenProgress)，应用窗口交接使用下文的同一投影。8 dp 投影平面仍为 Android 工程近似，环境 / 定向颜色保留 HyperOS 当前原值。卡片截图的圆角与裁切由原生 thumbnail 管理，内容投影同步原生半径，不增加另一套曲率。现有 iOS 静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
 
 Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析器，必需布局、触摸、卡池、窗口和生命周期成员仍在冷安装前完整解析。后者已移除旧 Quickstep closing 入口，改由 WindowElement 持有 RectFSpringAnim；不能只放开版本门禁或把旧字段当作参数别名。
 
@@ -134,7 +134,7 @@ Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析�
 
 Nav 可在当前滚动位置尚未变化时，用目标 q 查询窗口矩形。预测位置、尺寸缩放与无标题内容框必须使用该同一 q；冻结结果也区分 q，不混用当前 scale。布局、手势端点与窗口查询的缩放统一到同一受限 presentationCursor，修正离屏来回拖动时位置已限位而比例仍读原始游标的差异。点击打开继续由 TaskViewUtils.getTaskViewStartRectF 消费该内容框并执行 last / current rotation 转换，模块不再在转换后用未旋转的屏幕矩形覆盖结果；8255 / 8604 两份原生消费者已核对。不可见区仅限制候选可见性与指数范围，不设置统一的远左占位坐标。旧端点保留真实入场侧，回填中新可见卡也沿原生进度插值位置与展示缩放；直接使用目标姿态会让左侧边界删除时的右邻卡跳入终点。取消沿同一进度反向接续。
 
-新版普通打开的应用 leash 位于整个 Launcher 之上，TaskView 的 Z 不能让前卡遮住它。恢复原生窗口进度下的邻卡让位，从实际 Deck 起始间距连续展开到原生全屏槽位及间隔，使邻卡在窗口完成前离开应用范围；在 Surface 提交前计算同帧姿态。仅全屏零原点、正向轴对齐矩阵和原生内容框一致时，限制选中应用 Surface 的独占 windowCrop 到前卡左边界；完全遮挡复制原参数仅将 alpha 置零。圆角边界采用保守矩形近似，未恢复像素级原生遮挡。其他目标、坐标不符、旋转 / 分屏均保留原生输出，不修改 layer、leash、矩阵或 finish。交接、取消与回收按所有权释放邻卡变换，不增加预览窗口、快照或第二套动画时钟。
+新版普通打开的应用 leash 位于整个 Launcher 之上，TaskView 的 Z 不能让前卡遮住它。本地 iOS 18.6.2 的 `SBDeckToFullScreenSwitcherModifier.transitionWillBegin` 先提交选中卡的滚动对齐，再提交转场布局选项。A14 用现有 Deck 几何求各前卡重新定位后的端点，从实际姿态按原生窗口进度前往该端点，并以应用窗口的边缘限制遮挡量。在 Surface 提交前计算同帧姿态。仅全屏零原点、正向轴对齐矩阵和原生内容框一致时，限制选中应用 Surface 的独占 windowCrop 到前卡左边界；完全遮挡复制原参数仅将 alpha 置零。圆角边界采用保守矩形近似，未恢复像素级原生遮挡。其他目标、坐标不符、旋转 / 分屏均保留原生输出，不修改 layer、leash、矩阵或 finish。交接、取消与回收按所有权释放邻卡变换，不增加预览窗口、快照或第二套动画时钟。
 
 ## 横屏与卡片大小（2026-11-06）
 
@@ -162,7 +162,7 @@ Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,In
 
 松手的 `changeTaskStackViewScrollAndTaskViewTranslation` 按线性页坐标重置 q 和根 translation，异步布局尚未应用 Deck 新 frame 时会改变实际屏幕位置。现先保存可见内容框，原生方法仍执行一次，随后在同一边界提交新的 Deck frame，并换算根 scale / translation，使屏幕框保持连续。运行中的原生 DynamicAnimation 同步换算已有位置与速度，包含缩放对位移速度的耦合；不取消释放弹簧、不修改目标或开启补偿时钟。相关实例方法、四轴和缓存字段已从 7603 / 8255 / 8604 原件核对。
 
-App Surface 尚可见、thumbnail 尚未接管时，单用 TaskView RenderNode 会使阴影在最后突然出现。具备 A14 SurfaceParams 阴影合同的样本复用原生 closing leash、事务和窗口宽度进度；thumbnail alpha、fullscreenProgress 与根可见性决定投影交还比例。Main 在现有 UI / PreDraw 边界发布打包纯值，手势线程不读 View 或可变卡片集合；相同值不重复提交，退役清零。能力缺失保留卡片原有投影，不新增窗口、滤镜、监听器或时钟。
+App 收回时，原生截图透明度与 fullscreenProgress 的乘积在截图恢复前接近零，单靠该乘积会把投影推迟到最后。两套 Launcher 在各自的原生窗口回调中提供矩形，现有 PreDraw 在宿主写入卡片变换后，将移动窗口换算到同一 TaskView 的 Outline。透明度随原生窗口收拢渐变，抵达端点后使用同一投影保持亮度，直到截图接管。取消或释放所有权时恢复常态。整个交接复用卡片 RenderNode、圆角和绘制帧。
 
 Legacy 后卡打开补齐与 WindowElement 相同的卡片 / Surface 所有权：原生 start 前一次性取消尚在收敛的卡片 springs，再读取 `getStartRect()`。该边界晚于 `setupAnimAndBreakLast`，包含快速打断时原生对 start 的再次改写；创建阶段只保存本次请求的弱引用与票据 / 代际，启动时消费一次。`skipViewChanges`、迟到和失主请求不接管卡片。两种原生启动入口不会重复准备，未改变原生 clip mode 或完成回调。
 

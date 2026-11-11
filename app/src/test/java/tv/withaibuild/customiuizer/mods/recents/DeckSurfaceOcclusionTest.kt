@@ -40,7 +40,8 @@ class DeckSurfaceOcclusionTest {
         val api=DeckSurfaceOcclusion(LegacyHelper::class.java,Remote::class.java,Any::class.java,Any::class.java,Any::class.java,Surface::class.java)
         assertEquals(11,api.calculate.parameterCount)
         val helper=LegacyHelper().apply { mSourceStackBounds.set(0,0,1080,2400);mCurrentRectWithInsets.set(10f,20f,1010f,2020f) }
-        val presentation=DeckOpenAlignment.Surface(7,1080f,2400f,RectF(0f,0f,1000f,2000f),Matrix(),1f,floatArrayOf(300f,0f,900f,2000f),300f)
+        val presentation=DeckOpenAlignment.Surface(7,1080f,2400f,RectF(0f,0f,1000f,2000f),Matrix(),1f,0f,1f,0f,300f,800f,
+            floatArrayOf(300f,0f,900f,2000f,800f))
         presentation.update(RectF(0f,0f,1000f,2000f),0f)
         val target=Remote(7,0,Rect(0,0,1080,2400),android.graphics.Point())
         val first=params();assertSame(first,api.apply(presentation,helper,target,0,first))

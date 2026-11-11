@@ -134,6 +134,12 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
         rect.set(0f,header,view.width.toFloat(),view.height.toFloat()); combined.mapRect(rect)
     }
 
+    fun windowOutline(window: RectF,out: RectF): Boolean {
+        if(!owned || swipe || view.width<=0 || view.height<=0 || !parentMatrix().invert(inverse)) return false
+        return inverse.mapRect(out,window) && !out.isEmpty && out.left.isFinite() && out.top.isFinite() &&
+            out.right.isFinite() && out.bottom.isFinite()
+    }
+
     /** Change native layout coordinates without changing the rendered start pose
      * captured by the next native spring. The stable endpoint remains root=1/0. */
     fun rebaseContent(before: RectF,header: Float,scratch: RectF): Boolean {

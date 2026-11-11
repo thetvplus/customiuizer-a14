@@ -64,10 +64,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     class Card(val owner: DeckOwner,val geometry: DeckCardGeometry,val task: Any,val taskId: Int,var index: Int,val header: DeckHeaderOwner,var depthScale: Float,val shadow: DeckCardShadow) {
         val view get()=geometry.view
         val depth=owner.depthOrder.add(view,owner.depthIndex(taskId,index),shadow.height)
-        val surface=if(owner.api.surfaceShadow!=null && shadow.owned) {
-            val viewport=owner.api.window.get(owner.current.algorithm) as Rect
-            DeckSurfaceShadow.CardState(taskId,viewport.width(),viewport.height(),owner.surfaceToken)
-        } else null
         init {
             geometry.onScaleChanged={ value -> header.pose(value,index,(value*depthScale-1f)/.12f,owner.current.landscape) }
             // Native entry can defer the first scale sample until after layout.
@@ -76,7 +72,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         var animation: ValueAnimator?=null
         val windowInput=RectF()
         fun release() {
-            surface?.publish(0f,0f)
             val cleanup=CleanupActions()
             val previous=animation; animation=null
             cleanup.run { previous?.cancel() }
@@ -179,6 +174,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             model.content(out,model.scale(index,cursor),contentHeader)
             return true
         }
+        fun foregroundExit(index: Int,selected: Int,out: RectF): Boolean =
+            contentAt(index,-(selected+1)*layoutGap,out)
         fun content(index: Int,q: Float,rect: RectF) {
             if(!allowed) return
             frozen[index]?.takeIf { transition!=0L && it.scroll==q }?.let {
@@ -200,10 +197,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         fun updateMinimum() {
             if(base.width()>0f) api.minimum.setFloat(algorithm,api.minimumScroll.invoke(algorithm) as Float)
         }
-        fun widthAt(index: Int,q: Float): Float {
-            val model=metrics ?: return 0f
-            return base.width()*model.scale(index,model.presentationCursor(index,-q/gap))
-        }
     }
     val current=Scope(requireNotNull(api.current.get(stack)))
     private val stable=Scope(requireNotNull(api.stable.get(stack)))
@@ -213,8 +206,11 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     val scroll get()=api.scroll.getFloat(scroller)
     private val cards=LinkedHashMap<View,Card>()
     private val drawCards=ArrayList<Card>(8)
-    val surfaceToken=Any()
-    @Volatile private var surfaceCards=emptyArray<DeckSurfaceShadow.CardState?>()
+    private var closingShadow: Card?=null
+    private var closingShadowSettled=false
+    private var closingShadowProgress=0f
+    private val closingWindow=RectF()
+    private val shadowBounds=RectF()
     private var dragging: Card?=null
     fun trackSwipe(card: Card,raw: Float,delta: Float) {
         if(dragging!==card) { dragging?.geometry?.finishSwipe(); dragging=card }
@@ -260,7 +256,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private val local=Matrix()
     private val surface=Matrix()
     val openingTaskId: Int get()=opening?.selectedId ?: -1
-    val openingStartWidth: Float get()=opening?.startWidth ?: 0f
     private val pairs=IdentityHashMap<Any,Pair<DeckFrame,DeckFrame>>()
     private var interpolation: Float?=null
     private val restoreTransform=api.transform.getDeclaredConstructor().newInstance()
@@ -352,7 +347,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         cards[view]?.takeIf { it.task===task }?.let {
             if(it.index!=frame.index || it.depthScale!=frame.depthScale)
                 it.header.pose(it.geometry.scale,frame.index,(it.geometry.scale*frame.depthScale-1f)/.12f,current.landscape)
-            it.index=frame.index; it.depthScale=frame.depthScale; publishSurface(it); return it
+            it.index=frame.index; it.depthScale=frame.depthScale; return it
         }
         remove(view)
         if(cards.size>=24 || view.animation!=null) return null
@@ -374,8 +369,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             return Card(this,geometry,task,taskId,frame.index,header,frame.depthScale,shadow).also {
                 cards[view]=it; XposedHelpers.setAdditionalInstanceField(view,CARD,it)
                 drawCards.add(it)
-                publishSurface(it)
-                publishSurfaceCards()
                 observeDepth()
             }
         } catch(error: Throwable) {
@@ -399,7 +392,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     fun remove(view: View) {
         val card=cards.remove(view) ?: return
         drawCards.remove(card)
-        publishSurfaceCards()
+        if(closingShadow===card) closingShadow=null
         if(dragging===card) dragging=null
         val cleanup=CleanupActions()
         cleanup.run { clearOpening() }
@@ -412,22 +405,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private fun depthIndex(taskId: Int,fallback: Int) =
         depthIndices.get(taskId,fallback)
     fun reapplyDepth() = depthOrder.apply()
-    fun surfaceCardState(taskId: Int): DeckSurfaceShadow.CardState? {
-        val snapshot=surfaceCards
-        for(i in snapshot.indices) snapshot[i]?.let { if(it.taskId==taskId) return it }
-        return null
-    }
-    private fun publishSurfaceCards() {
-        if(api.surfaceShadow!=null) surfaceCards=Array(drawCards.size) { drawCards[it].surface }
-    }
-    fun publishSurface(card: Card) {
-        card.surface?.publish(surfaceTargetWidth(card.index),
-            (card.shadow.height+1f/(card.depth.index+1))*card.shadow.surfaceShare())
-    }
-    fun surfaceTargetWidth(index: Int): Float {
-        val endpoint=frozen[index]
-        return if(endpoint!=null) endpoint.rect.width() else current.widthAt(index,scroll)
-    }
     fun prepareScrollRebase(): Boolean {
         if(!allowed || transition==0L || dragging!=null) return false
         for(i in 0 until drawCards.size) {
@@ -459,7 +436,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
                     view.pivotX*x-translation*oldPivotX,
                     translation*(oldHeader-oldPivotY)-(header-view.pivotY)*y)
             }
-            publishSurface(card)
         }
     }
     fun snap(scroll: Float): Float? = if(allowed) IosDeckSnap.target(scroll,current.gap,current.count,flingVelocity) else null
@@ -467,8 +443,41 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         val q=scroll
         if(!allowed || !current.contentAt(reference,q,gestureReference) ||
             !current.contentAt(card.index,q,gestureTarget)) return null
+        if(reference==card.index && prepareLocalSpace()) {
+            local.mapRect(shadowBounds,window)
+            projectClosingShadow(card,shadowBounds,gestureReference)
+        }
         return card.windowInput.takeIf { card.geometry.windowInput(window,gestureReference,gestureTarget,
             reference-card.index,gap,current.fullWidth,bend,current.contentHeader,it) }
+    }
+    private fun projectClosingShadow(card: Card,window: RectF,endpoint: RectF) {
+        if(!card.shadow.owned || window.isEmpty || endpoint.isEmpty) return
+        val width=current.fullWidth
+        if(width<=endpoint.width() || !width.isFinite()) return
+        val remaining=window.width()-endpoint.width()
+        if(!remaining.isFinite()) return
+        if(closingShadow!==card) closingShadow?.shadow?.clearWindow()
+        closingShadow=card
+        closingShadowSettled=kotlin.math.abs(remaining)<=1f
+        closingShadowProgress=1f-remaining/(width-endpoint.width())
+        closingWindow.set(window)
+    }
+    fun projectClosingWindow(card: Card,window: RectF,target: RectF) {
+        if(!prepareLocalSpace()) return
+        local.mapRect(gestureReference,target)
+        local.mapRect(shadowBounds,window)
+        projectClosingShadow(card,shadowBounds,gestureReference)
+    }
+    private fun finishClosingShadow() {
+        val card=closingShadow ?: return
+        closingShadow=null
+        if(closingShadowSettled) applyClosingShadow(card)
+        card.shadow.finishWindow(closingShadowSettled)
+    }
+    private fun applyClosingShadow(card: Card) {
+        if(card.geometry.windowOutline(closingWindow,shadowBounds))
+            card.shadow.projectWindow(shadowBounds,closingShadowProgress)
+        else card.shadow.clearWindow()
     }
     fun alignClosing(selected: Card,window: RectF,reference: RectF,alpha: Float) {
         // Native references come from the visual layout. The moving Window is
@@ -479,6 +488,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             if(!prepareLocalSpace()) return
             local.mapRect(gestureReference,window)
         }
+        if(api.profile==DeckLauncherProfile.LEGACY) projectClosingShadow(selected,gestureReference,reference)
         val header=current.contentHeader
         val q=scroll
         for(i in 0 until drawCards.size) {
@@ -502,13 +512,14 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     override fun onPreDraw(): Boolean {
         ModuleHelper.guarded {
             if(allowed) {
+                // Map against the card pose after the native frame writes it.
+                closingShadow?.let(::applyClosingShadow)
                 // Native entry/header animators can write alpha after the first
                 // layout and bypass TaskView's setters. Reconcile on an already
                 // scheduled draw; never request another frame or resolve members.
                 for(i in 0 until drawCards.size) {
                     val card=drawCards[i]
                     card.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(card.view))
-                    publishSurface(card)
                     card.header.refreshOpacity()
                 }
                 if(dragging?.geometry?.updateSwipe()==false) suspend(true)
@@ -552,6 +563,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     fun prepareOpening(selected: Card,start: RectF): Boolean {
         if(!allowed || transition==0L || start.isEmpty) return false
         if(opening?.selectedId==selected.taskId) return true
+        closingShadow?.shadow?.clearWindow();closingShadow=null
+        selected.shadow.clearWindow()
         if(!prepareLocalSpace()) return false
         clearOpening()
         // WindowElement already performs this native handoff before opening.
@@ -563,8 +576,10 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         val bounds=RectF()
         for(card in cards.values) if(card!==selected && card.geometry.owned) {
             card.geometry.localContent(bounds,card.header.view.height.toFloat())
-            alignment.add(card.view,card.header.view,bounds,
-                selected.depth.index-card.depth.index,card.geometry.scale)
+            val slots=selected.depth.index-card.depth.index
+            val exitLeft=if(slots>0 && current.foregroundExit(card.index,selected.index,gestureTarget))
+                gestureTarget.left else gestureReference.right
+            alignment.add(card.view,card.header.view,bounds,slots,card.geometry.scale,exitLeft)
         }
         opening=alignment
         openingIndex=selected.depth.index
@@ -685,6 +700,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     fun endTransition(ticket: Long) {
         if(ticket==0L || ticket!=transition) return
+        finishClosingShadow()
         transition=0; frozen.clear(); stack.removeCallbacks(ticketTimeout)
         val cleanup=CleanupActions()
         val iterator=linkedSprings.iterator()
@@ -710,9 +726,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     private fun restoreCards() {
         dragging=null
-        val published=surfaceCards
-        for(i in published.indices) published[i]?.publish(0f,0f)
-        surfaceCards=emptyArray()
+        closingShadow=null
         drawCards.clear()
         if(cards.isEmpty() && opening==null && depthObserver==null) { router.cancel(); return }
         val cleanup=CleanupActions()

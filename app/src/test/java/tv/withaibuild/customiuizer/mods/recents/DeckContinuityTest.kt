@@ -112,7 +112,8 @@ class DeckContinuityTest {
         val cards=LinkedHashMap<View,DeckOwner.Card>()
         for((name,value) in mapOf("api" to api,"handler" to handler,"stack" to stack,"cards" to cards,
             "drawCards" to ArrayList<DeckOwner.Card>(),"pairs" to IdentityHashMap<Any,Any>(),
-            "surfaceToken" to Any(),"surfaceCards" to emptyArray<DeckSurfaceShadow.CardState?>(),
+            "shadowBounds" to RectF(),
+            "closingWindow" to RectF(),
             "depthOrder" to DeckDepthOrder(stack),"global" to Matrix(),"local" to Matrix(),"surface" to Matrix(),
             "gestureReference" to RectF(),"gestureTarget" to RectF(),"occludingBounds" to RectF(),
             "depthIndices" to android.util.SparseIntArray(),"frozen" to HashMap<Any,Any>(),
@@ -172,89 +173,6 @@ class DeckContinuityTest {
             card.release()
             XposedHelpers.removeAdditionalInstanceField(view,DeckOwner.CARD)
         }
-    }
-    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
-    fun closingLeashProjectsItsShadowContinuouslyAndHandsItBackToTheThumbnail() {
-        val f=fixture();val api=getField<DeckNativeApi>(f.owner,"api")
-        val algorithm=DeckOrientationTest.Algorithm()
-        for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
-            "padding" to "padding","count" to "count","gap" to "gap","headerHeight" to "header"))
-            setField(api,target,algorithm.javaClass.getField(source))
-        setField(api,"visualLandscape",algorithm.javaClass.getMethod("isLandscapeVisually"))
-        setField(api,"scroll",Scroller::class.java.getField("scroll"));setField(f.owner,"scroller",Scroller())
-        setField(f.owner,"headerConfig",DeckHeaderConfig(0,0))
-        val scope=f.owner.Scope(algorithm);setField(f.owner,"current",scope)
-        val frame=Transform();assertTrue(scope.write(0,0f,frame))
-        val surface=DeckSurfaceShadow(DeckSurfaceOcclusionTest.Helper::class.java,DeckSurfaceOcclusionTest.Remote::class.java,
-            Any::class.java,Any::class.java,Any::class.java,DeckSurfaceOcclusionTest.Surface::class.java)
-        setField(api,"surfaceShadow",surface)
-        setField(api,"getThumbnail",TaskView::class.java.getMethod("getThumbnailView"))
-        setField(api,"thumbnailRadius",Thumbnail::class.java.getField("radius"))
-        setField(api,"key",Task::class.java.getField("key"));setField(api,"id",Key::class.java.getField("id"))
-        for((target,source) in mapOf("headerIcon" to "icon","headerTitle" to "title","headerBadge" to "badge"))
-            setField(api,target,Header::class.java.getField(source))
-        val view=TaskView();f.stack.addView(view);view.layout(0,0,1100,600)
-        view.header.layout(0,0,1100,52);view.thumbnail.layout(0,52,1100,600);view.thumbnail.alpha=0f
-        val card=requireNotNull(f.owner.card(view,XposedHelpers.getAdditionalInstanceField(frame,DeckOwner.FRAME) as DeckFrame))
-        val shadow=card.shadow;card.depth.apply()
-        val helper=DeckSurfaceOcclusionTest.Helper().apply { mSourceStackBounds.set(0,0,2400,1080) }
-        val remote=DeckSurfaceOcclusionTest.Remote(7,1,android.graphics.Rect(0,0,2400,1080),android.graphics.Point())
-        fun params(flags: Int=7,radius: Float=0f)=DeckSurfaceOcclusionTest.Surface(Any(),flags,.75f,Matrix(),android.graphics.Rect(0,0,2400,1080),
-            11,Any(),13,Any(),19f,23,true,radius,true)
-        val height=shadow.height+1f;val target=f.owner.surfaceTargetWidth(0)
-        try {
-            for(p in floatArrayOf(0f,.25f,.5f,1f,.5f,0f,1f)) {
-                helper.mCurrentRectWithInsets.set(0f,0f,2400f+(target-2400f)*p,1080f)
-                val data=params();surface.apply(f.owner,helper,remote,1,data)
-                assertEquals(height*p*p*(3f-2f*p),data.shadowRadius,.001f);assertEquals(7 or 0x100,data.flags)
-                assertEquals(.75f,data.alpha,0f);assertEquals(19f,data.cornerRadius,0f)
-                assertEquals(23,data.backgroundBlurRadius);assertEquals(11,data.layer)
-                assertEquals(0f,view.thumbnail.alpha,0f)
-            }
-            val held=params();surface.apply(f.owner,helper,remote,1,held)
-            assertEquals("Stable HOLD adds no duplicate shadow transaction",7,held.flags)
-            val outline=android.graphics.Outline();shadow.getOutline(view,outline);assertEquals(0f,outline.alpha,0f)
-            view.thumbnail.alpha=.25f
-            f.owner.onPreDraw()
-            val shared=params();surface.apply(f.owner,helper,remote,1,shared)
-            assertEquals(height*.75f,shared.shadowRadius,.001f)
-            view.thumbnail.alpha=1f;shadow.syncContentAlpha(0f)
-            f.owner.onPreDraw()
-            val handoff=params();surface.apply(f.owner,helper,remote,1,handoff)
-            assertEquals(0f,handoff.shadowRadius,0f);assertEquals(7 or 0x100,handoff.flags)
-            shadow.getOutline(view,outline);assertEquals(1f,outline.alpha,0f)
-            view.mFullscreenProgress=.4f;f.owner.onPreDraw()
-            val partial=params();surface.apply(f.owner,helper,remote,1,partial)
-            assertEquals(height*.4f,partial.shadowRadius,.001f)
-            shadow.getOutline(view,outline);assertEquals(.6f,outline.alpha,.001f)
-            val native=params(7 or 0x100,23f);surface.apply(f.owner,helper,remote,1,native)
-            assertEquals("An explicit native projection keeps ownership",23f,native.shadowRadius,0f)
-            view.thumbnail.alpha=0f;f.owner.onPreDraw()
-            val again=params()
-            val failure=java.util.concurrent.atomic.AtomicReference<Throwable>()
-            val worker=Thread { try { surface.apply(f.owner,helper,remote,1,again) } catch(error: Throwable) { failure.set(error) } }
-            worker.start();worker.join(1000L)
-            assertFalse("Native gesture thread completed without dispatching to Main",worker.isAlive)
-            assertNull(failure.get())
-            assertEquals(height,again.shadowRadius,.001f)
-            val replaced=params();surface.apply(fixture().owner,helper,remote,1,replaced)
-            assertEquals("A replacement stack cannot inherit the previous leash projection",0f,replaced.shadowRadius,0f)
-            val resumed=params();surface.apply(f.owner,helper,remote,1,resumed)
-            assertEquals(height,resumed.shadowRadius,.001f)
-            val opening=DeckSurfaceOcclusionTest.Remote(7,0,android.graphics.Rect(),android.graphics.Point())
-            val unrelatedOpen=params();surface.apply(f.owner,helper,opening,0,unrelatedOpen)
-            assertEquals(7,unrelatedOpen.flags)
-            for(p in floatArrayOf(1f,.75f,.5f,.25f,0f,.25f)) {
-                helper.mCurrentRectWithInsets.right=2400f+(target-2400f)*p
-                val opened=params();surface.apply(f.owner,helper,opening,0,opened,7,target)
-                assertEquals(height*p*p*(3f-2f*p),opened.shadowRadius,.001f)
-            }
-            f.owner.remove(view)
-            val retired=params();surface.apply(f.owner,helper,remote,1,retired)
-            assertEquals(0f,retired.shadowRadius,0f);assertEquals(7 or 0x100,retired.flags)
-            val other=DeckSurfaceOcclusionTest.Remote(8,1,android.graphics.Rect(),android.graphics.Point())
-            val unrelated=params();surface.apply(f.owner,helper,other,1,unrelated);assertEquals(7,unrelated.flags)
-        } finally { f.owner.remove(view) }
     }
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun aRunningNativeSpringCannotWriteItsOldCoordinatesBackOnTheFirstFrameAfterRebase() {
@@ -381,8 +299,10 @@ class DeckContinuityTest {
             assertTrue(scope.write(0,0f,Transform()))
             val view=TaskView();f.stack.addView(view);view.layout(500,200,1600,800)
             val geometry=DeckCardGeometry(view,f.stack).apply { apply(.8f) }
+            val shadow=DeckCardShadow(view,view.header,22f,view.thumbnail,1f)
             val card=unconstructed(DeckOwner.Card::class.java)
             setField(card,"owner",f.owner);setField(card,"geometry",geometry);setField(card,"index",0)
+            setField(card,"shadow",shadow)
             setField(card,"windowInput",RectF())
             XposedHelpers.setAdditionalInstanceField(view,DeckOwner.CARD,card)
             val completion=Runnable {};val nativeWindow=RectF(0f,0f,2000f,1000f)
@@ -405,7 +325,7 @@ class DeckContinuityTest {
                 assertEquals("Release must start the native card spring instead of snapping its endpoint",animate,args[7])
                 assertSame(completion,args[10])
                 assertEquals(RectF(0f,0f,2000f,1000f),nativeWindow)
-            } finally { XposedHelpers.removeAdditionalInstanceField(view,DeckOwner.CARD);geometry.release() }
+            } finally { XposedHelpers.removeAdditionalInstanceField(view,DeckOwner.CARD);geometry.release();shadow.close() }
         }
     }
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)

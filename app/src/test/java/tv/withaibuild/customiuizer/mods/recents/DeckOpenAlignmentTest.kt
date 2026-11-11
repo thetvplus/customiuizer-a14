@@ -53,8 +53,8 @@ class DeckOpenAlignmentTest {
     }
     @Test fun aFrontCardOutsideTheWindowsVerticalRangeCannotOccludeIt() {
         for(y in floatArrayOf(-2000f,4000f)) {
-            val surface=DeckOpenAlignment.Surface(7,1080f,2400f,RectF(100f,200f,700f,1400f),Matrix(),1f,
-                floatArrayOf(400f,y,1000f,y+1000f),400f)
+            val surface=DeckOpenAlignment.Surface(7,1080f,2400f,RectF(100f,200f,700f,1400f),Matrix(),1f,0f,1f,0f,400f,700f,
+                floatArrayOf(400f,y,1000f,y+1000f,700f))
             for(p in floatArrayOf(0f,.1f,.5f,1f,.5f,0f)) {
                 val current=RectF(100f*(1-p),200f*(1-p),700f+380f*p,1400f+1000f*p)
                 surface.update(current,p)
@@ -84,16 +84,15 @@ class DeckOpenAlignmentTest {
         val h1=View(context); val h2=View(context)
         val start=RectF(100f,200f,700f,1400f)
         val alignment=DeckOpenAlignment(7,start)
-        alignment.add(near,h1,RectF(450f,200f,1050f,1400f),1)
-        alignment.add(far,h2,RectF(500f,200f,1100f,1400f),2)
+        alignment.add(near,h1,RectF(450f,200f,1050f,1400f),1,exitLeft=1000f)
+        alignment.add(far,h2,RectF(500f,200f,1100f,1400f),2,exitLeft=1500f)
         alignment.apply(start,0f,1f)
         assertEquals(0f,near.translationX,0f)
         alignment.apply(RectF(0f,0f,900f,1800f),.5f,.3f)
         assertEquals(1f,near.scaleX,0f)
-        assertEquals(1f,far.scaleX,0f)
         assertEquals(337.5f,near.translationX,.001f)
-        assertEquals(near.translationX,far.translationX,.001f)
-        assertEquals(.3f,h1.alpha,0f)
+        assertEquals(562.5f,far.translationX,.001f)
+        assertEquals(1f,h1.alpha,0f)
         assertEquals(0f,near.translationZ,0f)
         far.translationX=17f // Later native ownership must survive release.
         alignment.release()

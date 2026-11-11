@@ -92,7 +92,6 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val layout=exact(stack,"updateLayoutStyle",voidType)
     val rebaseScroll=exact(stack,"changeTaskStackViewScrollAndTaskViewTranslation",voidType,floatType)
     val cardSprings=DeckCardSpring(taskView)
-    val surfaceShadow=DeckSurfaceShadow.resolve(loader)
     val attached=exact(stack,"onAttachedToWindow",voidType)
     val detached=exact(stack,"onDetachedFromWindow",voidType)
     val configuration=exact(stack,"onConfigurationChanged",voidType,android.content.res.Configuration::class.java)
