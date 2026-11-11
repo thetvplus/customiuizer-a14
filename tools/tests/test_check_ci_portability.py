@@ -138,7 +138,7 @@ class CIPortabilityCheckerTest(unittest.TestCase):
                     on:
                       push:
                         branches:
-                          - main
+                          - master
                     jobs:
                       fast:
                         steps:
@@ -161,7 +161,7 @@ class CIPortabilityCheckerTest(unittest.TestCase):
                     on:
                       push:
                         branches:
-                          - main
+                          - master
                     jobs:
                       fast:
                         steps:

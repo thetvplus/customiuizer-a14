@@ -160,7 +160,7 @@ def check_workflow_file(path: Path) -> list[str]:
 
     # One parsed security contract governs ordinary CI and protected release jobs.
     from ci_contract_scan import scan_workflow
-    violations.extend(scan_workflow(path, "main", "main"))
+    violations.extend(scan_workflow(path, "master", "master"))
     if "devin/a14-rom-intelligence-audit" in text:
         violations.append(f"  {rel}: stale branch devin/a14-rom-intelligence-audit is forbidden")
     return violations
