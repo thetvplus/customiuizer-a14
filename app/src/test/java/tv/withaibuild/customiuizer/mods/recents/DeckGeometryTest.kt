@@ -281,11 +281,11 @@ class DeckGeometryTest {
         assertEquals(.4f,model.presentationCursor(0,.4f),0f)
     }
     @Test fun nativeSpringMayFinishWithoutAFrameworkAnimator() {
-        val completed=mutableListOf<Boolean>()
-        val listener=DeckSpringEndListener({}, completed::add)
+        var completed=0
+        val listener=DeckSpringEndListener({}) { completed++ }
         listener.javaClass.getDeclaredMethod("onAnimationCancel",android.animation.Animator::class.java).invoke(listener,null)
         listener.javaClass.getDeclaredMethod("onAnimationEnd",android.animation.Animator::class.java).invoke(listener,null)
-        assertEquals(listOf(true,false),completed)
+        assertEquals(2,completed)
     }
     @Test fun nativeFullFrameAnchorDepthAndHeaderRemainCoherent() {
         for(w in floatArrayOf(720f,1080f,1440f)) {

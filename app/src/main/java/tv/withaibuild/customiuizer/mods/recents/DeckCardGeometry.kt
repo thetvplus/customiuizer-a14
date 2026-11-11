@@ -151,7 +151,7 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
         return true
     }
 
-    /** Feed the native app-gesture pose solver in its own coordinates. It still
+    /** Feed the native gesture pose solver in its own coordinates. It still
      * owns root properties and springs; the owned matrix must not scale its
      * already-screen-sized window a second time. Window geometry folds page
      * spacing into the real Deck endpoints without another animation clock. */

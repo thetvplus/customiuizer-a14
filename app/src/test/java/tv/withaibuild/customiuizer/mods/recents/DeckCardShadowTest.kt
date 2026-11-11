@@ -21,38 +21,31 @@ import org.robolectric.shadows.ShadowChoreographer
 @Config(sdk=[34],application=android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DeckCardShadowTest {
-    @Test fun settledWindowDoesNotLoseAndRegainItsOutlineWhenTheThumbnailArrivesLate() {
+    @Test fun lateThumbnailRevealAndReversalKeepTheOutlineOnTheVisibleContent() {
         val card=FrameLayout(RuntimeEnvironment.getApplication())
         val header=View(card.context);val thumbnail=View(card.context)
         card.addView(header);card.addView(thumbnail)
         card.layout(0,0,300,700);header.layout(0,0,300,50);thumbnail.layout(0,50,300,700)
         thumbnail.alpha=0f
-        val shadow=DeckCardShadow(card,header,22f,thumbnail,0f)
+        val shadow=DeckCardShadow(card,header,22f,thumbnail,1f)
         val outline=Outline();val shown=Rect()
         try {
-            for(p in floatArrayOf(0f,.1f,.5f,.9f,1f,.9f,.5f)) {
-                shadow.followWindow(p);shadow.getOutline(card,outline)
-                assertEquals(p*p*(3f-2f*p),outline.alpha,.0001f)
-                if(p>0f) {
-                    assertTrue(outline.getRect(shown));assertEquals(Rect(0,50,300,700),shown)
-                }
+            for(progress in floatArrayOf(1f,.5f,0f)) {
+                shadow.syncContentAlpha(progress);shadow.getOutline(card,outline)
+                assertEquals("The card is still waiting for visible content",0f,outline.alpha,0f)
+                assertTrue(outline.isEmpty)
             }
-            shadow.finishWindow(false);shadow.getOutline(card,outline)
-            assertEquals("Cancel restores the native hidden-thumbnail state",0f,outline.alpha,0f)
-            shadow.followWindow(1f);shadow.finishWindow(true)
-            for(alpha in floatArrayOf(0f,.15f,.6f,1f)) {
+            for(alpha in floatArrayOf(.15f,.6f,1f,.4f)) {
                 thumbnail.alpha=alpha;shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
-                assertEquals("The same projection persists through native finish and thumbnail restore",1f,outline.alpha,0f)
+                assertEquals(alpha,outline.alpha,0f)
                 assertTrue(outline.getRect(shown));assertEquals(Rect(0,50,300,700),shown)
             }
-            thumbnail.alpha=.4f;shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
-            assertEquals("The thumbnail owns the outline again",.4f,outline.alpha,0f)
-            shadow.followWindow(.9f);thumbnail.visibility=View.INVISIBLE
+            thumbnail.visibility=View.INVISIBLE
             shadow.syncContentAlpha(0f);shadow.getOutline(card,outline)
             assertEquals(0f,outline.alpha,0f)
             thumbnail.visibility=View.VISIBLE
             shadow.getOutline(card,outline)
-            assertEquals("A recycled visible thumbnail must not inherit the old window opacity",.4f,outline.alpha,0f)
+            assertEquals("A visible thumbnail keeps its own opacity",.4f,outline.alpha,0f)
         } finally { shadow.close() }
     }
     @Test fun fullscreenSnapshotHasNoDeckShadowAndContinuousReversalReusesNativeProgress() {

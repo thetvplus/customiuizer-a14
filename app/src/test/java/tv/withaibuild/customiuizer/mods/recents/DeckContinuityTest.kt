@@ -78,6 +78,7 @@ class DeckContinuityTest {
     class Scroller { @JvmField var scroll=0f }
     class Gesture {
         @JvmField var progress=.3f
+        @JvmField var windowMode=2
         fun quickSwitch()=false
         fun pose()=Unit
     }
@@ -112,7 +113,6 @@ class DeckContinuityTest {
         val cards=LinkedHashMap<View,DeckOwner.Card>()
         for((name,value) in mapOf("api" to api,"handler" to handler,"stack" to stack,"cards" to cards,
             "drawCards" to ArrayList<DeckOwner.Card>(),"pairs" to IdentityHashMap<Any,Any>(),
-            "shadowBounds" to RectF(),
             "depthOrder" to DeckDepthOrder(stack),"global" to Matrix(),"local" to Matrix(),"surface" to Matrix(),
             "gestureReference" to RectF(),"gestureTarget" to RectF(),"occludingBounds" to RectF(),
             "depthIndices" to android.util.SparseIntArray(),"frozen" to HashMap<Any,Any>(),
@@ -281,8 +281,20 @@ class DeckContinuityTest {
             assertNull(card.animation)
         } finally { f.owner.remove(view) }
     }
-    @Test fun releasePoseKeepsTheNativeSpringFlagAndCompletionForBothLauncherFamilies() {
-        for(profile in DeckLauncherProfile.entries) for(animate in listOf(false,true)) {
+    @Test fun releasePoseKeepsTheNativeSpringFlagAndLeavesTheHiddenSnapshotUnshadowed() {
+        verifyGesturePose(reference=0, windowMode=2, admitted=true)
+    }
+
+    @Test fun homeGestureUsesTheDeckPoseForTheVirtualPage() {
+        verifyGesturePose(reference=-1, windowMode=1, admitted=true)
+    }
+
+    @Test fun missingRunningTaskInAnAppGestureKeepsTheNativePose() {
+        verifyGesturePose(reference=-1, windowMode=2, admitted=false)
+    }
+
+    private fun verifyGesturePose(reference: Int, windowMode: Int, admitted: Boolean) {
+        for(profile in DeckLauncherProfile.entries) for(animate in listOf(false,true)) for(index in 0..1) {
             val f=fixture();val api=getField<DeckNativeApi>(f.owner,"api")
             val algorithm=DeckOrientationTest.Algorithm()
             for((target,source) in mapOf("window" to "window","visualInsets" to "insets","base" to "base",
@@ -290,26 +302,35 @@ class DeckContinuityTest {
                 setField(api,target,algorithm.javaClass.getField(source))
             setField(api,"visualLandscape",algorithm.javaClass.getMethod("isLandscapeVisually"))
             setField(api,"profile",profile)
-            setField(api,"appGestureProgress",Gesture::class.java.getField("progress"))
-            setField(api,"appGestureQuickSwitch",Gesture::class.java.getMethod("quickSwitch"))
+            setField(api,"gestureProgress",Gesture::class.java.getField("progress"))
+            setField(api,"gestureQuickSwitch",Gesture::class.java.getMethod("quickSwitch"))
+            setField(api,"navWindowMode",Gesture::class.java.getField("windowMode"))
             setField(api,"scroll",Scroller::class.java.getField("scroll"))
             setField(f.owner,"scroller",Scroller());setField(f.owner,"headerConfig",DeckHeaderConfig(0,0))
             val scope=f.owner.Scope(algorithm);setField(f.owner,"current",scope)
             assertTrue(scope.write(0,0f,Transform()))
             val view=TaskView();f.stack.addView(view);view.layout(500,200,1600,800)
+            view.addView(view.thumbnail);view.thumbnail.layout(0,52,1100,600);view.thumbnail.alpha=0f
             val geometry=DeckCardGeometry(view,f.stack).apply { apply(.8f) }
             val shadow=DeckCardShadow(view,view.header,22f,view.thumbnail,1f)
             val card=unconstructed(DeckOwner.Card::class.java)
-            setField(card,"owner",f.owner);setField(card,"geometry",geometry);setField(card,"index",0)
+            setField(card,"owner",f.owner);setField(card,"geometry",geometry);setField(card,"index",index)
             setField(card,"shadow",shadow)
             setField(card,"windowInput",RectF())
             XposedHelpers.setAdditionalInstanceField(view,DeckOwner.CARD,card)
-            val completion=Runnable {};val nativeWindow=RectF(0f,0f,2000f,1000f)
-            val args=arrayOf<Any?>(view,0,nativeWindow,0,0,25f,1f,animate,.9f,.5f,completion,0f,0f,false,0,.3f,0,android.graphics.Rect())
+            val completion=Runnable {}
+            val endpoint=RectF().also { assertTrue(scope.contentAt(index,0f,it)) }
+            val nativeWindow=RectF().apply {
+                assertTrue(scope.contentAt(0,0f,this))
+                if(reference==-1) offset(width()+25f,0f)
+            }
+            val originalWindow=RectF(nativeWindow)
+            val args=arrayOf<Any?>(view,index,nativeWindow,reference,0,25f,1f,animate,.9f,.5f,completion,0f,0f,false,0,.3f,windowMode,android.graphics.Rect())
+            val gesture=Gesture().apply { this.windowMode=windowMode }
             var calls=0
             val callback=object: io.github.libxposed.api.XposedInterface.Chain {
                 override fun getExecutable()=Gesture::class.java.getMethod("pose")
-                override fun getThisObject()=Gesture()
+                override fun getThisObject()=gesture
                 override fun getArg(index: Int)=args[index]
                 override fun getArgs(): List<Any?> = args.toList()
                 override fun proceed(): Any? { calls++;return null }
@@ -318,12 +339,25 @@ class DeckContinuityTest {
                 override fun proceedWith(receiver: Any,updated: Array<Any?>): Any?=throw AssertionError("Native receiver changed")
             }
             try {
-                IosRecentsDeckHooks.appGesturePoseHook(api).intercept(callback)
+                IosRecentsDeckHooks.gesturePoseHook(api).intercept(callback)
                 assertEquals(1,calls)
-                assertNotSame("The Deck input compensation must actually run",nativeWindow,args[2])
+                if(admitted) {
+                    assertNotSame("The native pose must consume the Deck input for $profile",nativeWindow,args[2])
+                    val input=args[2] as RectF
+                    val nativeCenterX=input.centerX()+(reference-index)*(input.width()+25f)
+                    val nativeCenterY=input.top+300f*.3f*.3f*.3f+(view.height-algorithm.header)*input.width()/view.width*.5f
+                    val frameCenterX=view.left+view.width*.5f
+                    val frameCenterY=view.top+view.height*.5f
+                    assertEquals(endpoint.centerX(),frameCenterX+(nativeCenterX-frameCenterX)*geometry.scale,.001f)
+                    assertEquals(endpoint.centerY(),frameCenterY+(nativeCenterY-frameCenterY)*geometry.scale,.001f)
+                    assertEquals(endpoint.width(),input.width()*geometry.scale,.001f)
+                    val outline=android.graphics.Outline()
+                    shadow.getOutline(view,outline)
+                    assertEquals("An app leash alone cannot cast a shadow from the hidden card",0f,outline.alpha,0f)
+                } else assertSame(nativeWindow,args[2])
                 assertEquals("Release must start the native card spring instead of snapping its endpoint",animate,args[7])
                 assertSame(completion,args[10])
-                assertEquals(RectF(0f,0f,2000f,1000f),nativeWindow)
+                assertEquals(originalWindow,nativeWindow)
             } finally { XposedHelpers.removeAdditionalInstanceField(view,DeckOwner.CARD);geometry.release();shadow.close() }
         }
     }

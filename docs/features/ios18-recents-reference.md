@@ -60,7 +60,7 @@ MiuiHome 样本版本为 `RELEASE-4.39.30.8604-08262248`。现有 Catalog 中 fu
 
 22G100 的 `shadowOpacityForLayoutRole:atIndex:`（`0x1d8d0fa18`）恒返 1，`shadowOffsetForIndex:`（`0x1d8d0fa20`）恒返 0，`shadowStyleForLayoutRole:inAppLayout:`（`0x1d8d0fcb8`）恒返 1。这不代表阴影最终为纯黑不透明；具体滤镜仍未恢复，不凭层级主观添加逐卡透明度曲线。
 
-A14 将排序放在共同 8 dp 投影平面上，再保留原有细小排名差；不再将实际 Z 压到不足一个物理像素。卡片自身的原生 Outline 只覆盖快照内容，沿用宿主圆角并响应其设置事件，保留标题及祖先裁切。颜色与投影高度是 Android 调整，不等同 Apple 材质。投影随同一 TaskView 的矩阵、原生内容 alpha、位移和回收更新，没有位图模糊或独立阴影时钟；释放按属性所有权恢复原值。原生窗口交接会让 thumbnail alpha=0 而根 alpha=1；只跟根透明度会在慢速 HOLD 留下大块孤立投影。当前绑定时读取 thumbnail alpha，后续消费原生 setChildrenViewAlpha 更新 Outline alpha，不遮盖壁纸、不改变模糊或应用 Surface。
+A14 将卡片排序放在共同 8 dp 投影平面上，保留前后排名差。TaskView 的原生 Outline 覆盖快照区域，复用宿主圆角、阴影颜色和祖先裁切。透明度取可见缩略图的 alpha × (1−mFullscreenProgress)，由首次 Outline 和已有 PreDraw 读取。窗口交接期间若缩略图隐藏，Outline 为空。缩略图出现后，内容和投影随同一 TaskView 的矩阵和根 alpha 一起合成。回收时按属性所有权恢复原值。
 
 22G100 的 `scaleForIndex:`（`0x1d8b8ee98`）不为被拖卡附加缩小，`opacityForLayoutRole:inAppLayout:atIndex:`（`0x1d8b8f4e8`）仅在配置允许且释放目标指向删除后清零，不支持 MOVE 全程淡出。`handleSwipeToKillEvent:` 区分 translation、progress、isDragging 和 decelerationTargetProgress；越过位移门槛不能替代释放后的业务提交。邻卡 frame / scale / shadow 由临时删除状态与 progress 插值，不能从一个常量恢复全部链路。
 
@@ -121,7 +121,7 @@ Thumbnail 通过冷解析的 mCornerRadius:Int 和原生 setter 同步 Outline�
 
 每次原生重新配置前归还自持参数，成功后再覆盖四轴；end / cancel / 超时 / 旋转释放时仅恢复仍等于本次写入的参数对，后续原生写入优先。失败逐轴回滚，可选动效冷解析失败仅保留原生时序；必需窗口合同失败则 Deck 整批不接管。该变化是 iOS 配置到 Android 原生求解器的映射，并非 UIKit 求解器或全链路等价。WindowElement 的当前显示旋转为 0、90、270° 时共用交接；不要求默认 homeRotation 元数据与其相等。180°、quick switch 或分屏仍保留原生运动，原生坐标转换与参数身份保留。
 
-阴影使用 TaskView RenderNode。常态透明度为原生截图 alpha × (1−mFullscreenProgress)，应用窗口交接使用下文的同一投影。8 dp 投影平面仍为 Android 工程近似，环境 / 定向颜色保留 HyperOS 当前原值。卡片截图的圆角与裁切由原生 thumbnail 管理，内容投影同步原生半径，不增加另一套曲率。现有 iOS 静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
+8 dp 投影平面是 Android 工程近似。iOS 静态证据确认 opacity=1、offset=0 和 style=1，CoreMaterial 模糊半径与入退场逐帧观感仍待原机对照。
 
 Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析器，必需布局、触摸、卡池、窗口和生命周期成员仍在冷安装前完整解析。后者已移除旧 Quickstep closing 入口，改由 WindowElement 持有 RectFSpringAnim；不能只放开版本门禁或把旧字段当作参数别名。
 
@@ -157,6 +157,8 @@ A14 保留 DeviceConfig / RotationHelper 的原生方向策略，以视觉 viewp
 设置入口为“系统 → 最近任务 → iOS 任务卡片”；“iOS DECK 堆叠任务”使用原键，“卡片比例”控制整体大小。默认自动按 .75 页比例与可用高度求上限，自定义 55–85%，最大显示高度限制为可用高度的 90%；这组范围为 Android 安全映射。新设置关闭 / 自动时不会改变原生业务尺寸或截图宽高比。16:9、19.5:9、20:9、多密度及边界大小有 Host 几何回归，实机覆盖与未覆盖场景分别记录在路线图。
 
 Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable)V，读取同一原生 mPer 并排除 quick switch；7603 / 8255 的横向根姿态与上述 WindowElement 消费者一致。横竖屏现共用同一 iOS 场景表，取消此前仅横屏使用原生节奏的分支。原生圆角更新、截图及完成回调仍在原方法内执行；Host 只验证映射和所有权，不代表设备性能通过。
+
+两类宿主的桌面手势在窗口模式 1 使用 `referenceIndex=-1`，代表首个真实任务右侧的虚拟页。Deck 用首卡端点和原生页间距计算该参考框，与应用入口共用卡片位置、缩放及邻卡收拢计算。应用入口继续用真实运行任务作参考，缺少任务时保留宿主处理。
 
 ## 原生交接连续性（2026-11-09）
 
