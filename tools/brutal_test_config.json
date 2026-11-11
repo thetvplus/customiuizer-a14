@@ -1,7 +1,7 @@
 {
   "name": "A14",
   "schema_version": 2,
-  "expected_branch": "main",
+  "expected_branch": "master",
   "coverage_target": 73,
   "minimum_independent_kills": 10,
   "required_independent_mutations": [
@@ -44,9 +44,9 @@
       "python",
       "tools/ci_contract_scan.py",
       "--expected-branch",
-      "main",
+      "master",
       "--default-branch",
-      "main"
+      "master"
     ],
     [
       "python",
@@ -97,9 +97,9 @@
       "python",
       "tools/ci_contract_scan.py",
       "--expected-branch",
-      "main",
+      "master",
       "--default-branch",
-      "main"
+      "master"
     ],
     "catalog": [
       "python",

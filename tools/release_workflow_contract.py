@@ -8,10 +8,10 @@ from __future__ import annotations
 import copy
 import json
 
-VALIDATE_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_sha == github.sha && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))"
+VALIDATE_IF = "github.repository == 'thetvplus/customiuizer-a14' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'master' && github.event.workflow_run.head_sha == github.sha && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))"
 SIGN_IF = "github.repository == 'thetvplus/customiuizer-a14' && needs.validate.outputs.authorized == 'true' && needs.validate.outputs.ready == 'true'"
 PUBLISH_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && (inputs.destination == 'source' || inputs.destination == 'both')"
-DOCS_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination == 'docs-only'"
+DOCS_IF = "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.destination == 'docs-only'"
 AUTO_PUBLISH_IF = SIGN_IF + " && needs.validate.outputs.destination != 'actions-only'"
 KEYS = ("A14_KEYSTORE_BASE64", "A14_STORE_PASSWORD", "A14_KEY_ALIAS", "A14_KEY_PASSWORD")
 BUILD_COMMAND = ('trap \'rm -rf -- "$RUNNER_TEMP/a14-signing"\' EXIT\n'
@@ -40,8 +40,8 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
         return errors, json.dumps(sanitized)
     need(set(events) <= ({"workflow_dispatch", "workflow_run"} if signed else {"workflow_dispatch"}), "untrusted triggers are forbidden")
     if signed:
-        need(events.get("workflow_run") == {"workflows": ["A14 CI"], "types": ["completed"], "branches": ["main"]},
-             "automatic release may follow only completed main CI")
+        need(events.get("workflow_run") == {"workflows": ["A14 CI"], "types": ["completed"], "branches": ["master"]},
+             "automatic release may follow only completed master CI")
     dispatch = events.get("workflow_dispatch") or {}
     need(isinstance(dispatch, dict), "invalid dispatch configuration")
     if signed:
@@ -95,7 +95,7 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
             env["CUSTOMIUIZER_A14_KEYSTORE_PROPERTIES"] = "${{ runner.temp }}/a14-signing/keystore.properties"
             need(build.get("env") == env and build.get("run", "").strip() == BUILD_COMMAND, "secrets are scoped to the bounded build/cleanup step")
             preflight = [i for i, step in enumerate(steps) if step.get("run") == "python tools/signed_release.py signing-preflight" and "if" not in step]
-            need(len(preflight) == 1 and preflight[0] < index, "source, completed main CI and environment restrictions must be rechecked before exposing keys")
+            need(len(preflight) == 1 and preflight[0] < index, "source, completed master CI and environment restrictions must be rechecked before exposing keys")
             cleanup = [i for i, step in enumerate(steps) if step.get("if") == "always()" and step.get("run") == 'rm -rf -- "$RUNNER_TEMP/a14-signing"']
             uploads = [(i, step) for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/upload-artifact@")]
             need(len(cleanup) == len(candidates) == len(uploads) == 1,
@@ -126,11 +126,11 @@ def check(workflow: dict, filename: str) -> tuple[list[str], str]:
         need(jobs.get("verify", {}).get("permissions") == {"contents": "read", "actions": "read"}, "candidate verification must be read-only")
         receipt = {key: "${{ steps.candidate.outputs." + key + " }}" for key in ("source_sha", "apk_sha256", "run_attempt", "artifact_id")}
         need(jobs.get("verify", {}).get("outputs") == receipt, "verification must pin the original artifact identity")
-        need(jobs.get("verify", {}).get("if") == "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination != 'docs-only'", "promotion must require native manual dispatch and bypass artifacts only for document recovery")
+        need(jobs.get("verify", {}).get("if") == "github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.destination != 'docs-only'", "promotion must require native manual dispatch and bypass artifacts only for document recovery")
         docs = jobs.get("docs", {})
         need(docs.get("if") == DOCS_IF and docs.get("environment") == "release-publishing"
              and docs.get("permissions") == {"contents": "read"} and "needs" not in docs,
-             "document recovery requires trusted main, explicit opt-in and the publishing Environment, without candidate or signing access")
+             "document recovery requires trusted master, explicit opt-in and the publishing Environment, without candidate or signing access")
         need(docs.get("concurrency") == {"group": "a14-release-publish", "cancel-in-progress": "false"}, "document recovery must serialize with publication")
         docs_steps = docs.get("steps", [])
         need(len(docs_steps) == 2 and docs_steps[-1].get("run") == 'python tools/signed_release.py sync-docs --version "$RELEASE_DOC_VERSION" --apply'

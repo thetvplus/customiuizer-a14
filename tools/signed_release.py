@@ -74,7 +74,7 @@ def output(**values) -> None:
 
 def event_source(env: dict = os.environ) -> tuple[str, str]:
     require(env.get("GITHUB_REPOSITORY") == REPO, "Only the upstream repository is allowed")
-    require(env.get("GITHUB_EVENT_NAME") in {"workflow_dispatch", "workflow_run"}, "Signing requires native dispatch or completed main CI")
+    require(env.get("GITHUB_EVENT_NAME") in {"workflow_dispatch", "workflow_run"}, "Signing requires native dispatch or completed master CI")
     ref, sha = env.get("GITHUB_REF", ""), env.get("GITHUB_SHA", "")
     require(ref.startswith("refs/heads/"), "Select an existing branch, not a tag or pull request")
     require(bool(SHA.fullmatch(sha)), "A full triggering commit SHA is required")
@@ -86,12 +86,12 @@ def event_source(env: dict = os.environ) -> tuple[str, str]:
     if env.get("GITHUB_EVENT_NAME") == "workflow_run":
         event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
         record = event.get("workflow_run") or {}
-        require(ref == "refs/heads/main" and event.get("action") == "completed"
-                and record.get("path") == ".github/workflows/a14-ci.yml" and record.get("head_branch") == "main"
+        require(ref == "refs/heads/master" and event.get("action") == "completed"
+                and record.get("path") == ".github/workflows/a14-ci.yml" and record.get("head_branch") == "master"
                 and record.get("head_sha") == sha and record.get("event") in {"push", "workflow_dispatch"}
                 and record.get("head_repository", {}).get("full_name") == REPO
                 and record.get("status") == "completed" and record.get("conclusion") == "success",
-                "Automatic signing requires successful upstream main CI on the native exact SHA")
+                "Automatic signing requires successful upstream master CI on the native exact SHA")
     return ref, sha
 
 
@@ -120,7 +120,7 @@ def ci_status() -> None:
     if os.environ["GITHUB_EVENT_NAME"] == "workflow_run":
         match = automatic_ci()
         output(reuse="true")
-        print(f"Reusing completed main CI run {match['id']} for {sha}")
+        print(f"Reusing completed master CI run {match['id']} for {sha}")
         return
     workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
     records = api(f"repos/{REPO}/actions/workflows/{workflow['id']}/runs?head_sha={sha}&status=success&per_page=30")
@@ -135,24 +135,24 @@ def automatic_ci() -> dict:
     original = event["workflow_run"]
     workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
     record = api(f"repos/{REPO}/actions/runs/{int(original['id'])}")
-    require(trusted_ci(record, sha, workflow["id"]) and record.get("head_branch") == "main"
+    require(trusted_ci(record, sha, workflow["id"]) and record.get("head_branch") == "master"
             and record.get("run_attempt") == original.get("run_attempt"),
-            "Triggering main CI is not successful, or its attempt/source changed")
+            "Triggering master CI is not successful, or its attempt/source changed")
     return record
 
 
-def require_current_main(sha: str) -> None:
-    require(api(f"repos/{REPO}/git/ref/heads/main").get("object", {}).get("sha") == sha,
-            "main moved; validate and confirm its latest commit instead")
+def require_current_master(sha: str) -> None:
+    require(api(f"repos/{REPO}/git/ref/heads/master").get("object", {}).get("sha") == sha,
+            "master moved; validate and confirm its latest commit instead")
 
 
-def require_main_ci(sha: str, *, current: bool = True) -> None:
+def require_master_ci(sha: str, *, current: bool = True) -> None:
     if current:
-        require_current_main(sha)
+        require_current_master(sha)
     workflow = api(f"repos/{REPO}/actions/workflows/a14-ci.yml")
     records = api(f"repos/{REPO}/actions/workflows/{workflow['id']}/runs?head_sha={sha}&status=success&per_page=30")
-    require(any(trusted_ci(record, sha, workflow["id"]) and record.get("head_branch") == "main"
-                for record in records["workflow_runs"]), "Publication requires successful A14 CI on this exact main commit")
+    require(any(trusted_ci(record, sha, workflow["id"]) and record.get("head_branch") == "master"
+                for record in records["workflow_runs"]), "Publication requires successful A14 CI on this exact master commit")
 
 
 def environment_policy() -> None:
@@ -280,14 +280,14 @@ def release_plan() -> None:
     automatic = os.environ["GITHUB_EVENT_NAME"] == "workflow_run"
     if automatic:
         automatic_ci()
-        require_current_main(sha)
+        require_current_master(sha)
     if destination == "actions-only":
         environment_policy()
-        require_main_ci(sha)
+        require_master_ci(sha)
         output(ready="true", destination=destination, prerelease=str(prerelease).lower())
         print("Build a signed candidate only; no Release or tag will be created")
         return
-    require(os.environ["GITHUB_REF"] == "refs/heads/main", "Publish from main after CI; use actions-only on a trusted test branch")
+    require(os.environ["GITHUB_REF"] == "refs/heads/master", "Publish from master after CI; use actions-only on a trusted test branch")
     name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
     existing = optional_api(f"repos/{REPO}/releases/tags/{name}")
     if existing is not None and existing.get("draft") is False:
@@ -299,7 +299,7 @@ def release_plan() -> None:
         return
     release_target(name, code)
     if not automatic:
-        require_main_ci(sha)
+        require_master_ci(sha)
     check_new_release(name, code, sha)
     local_release_notes(name, code)
     review = release_review(name, code, sha)
@@ -386,13 +386,13 @@ def public_release_notes_section(text: str, name: str, code: int, filename: str,
 
 
 def signing_preflight() -> None:
-    """Recheck current main, successful CI and release identity before exposing keys."""
+    """Recheck current master, successful CI and release identity before exposing keys."""
     destination, _ = dispatch_options()
     _, sha = event_source()
     environment_policy()
     if os.environ["GITHUB_EVENT_NAME"] == "workflow_run":
         automatic_ci()
-    require_main_ci(sha)
+    require_master_ci(sha)
     if destination != "actions-only":
         name, code = source_version((ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"))
         release_target(name, code)
@@ -464,8 +464,8 @@ def candidate(folder: Path) -> None:
 def check_run(record: dict, workflow_id: int, *, current_run: bool = False, publication_failed: bool = False) -> None:
     require(record.get("workflow_id") == workflow_id and record.get("path") == WORKFLOW, "Wrong source workflow")
     require(record.get("event") == "workflow_dispatch" or
-            record.get("event") == "workflow_run" and record.get("head_branch") == "main",
-            "Source must be a native dispatch or a main CI release")
+            record.get("event") == "workflow_run" and record.get("head_branch") == "master",
+            "Source must be a native dispatch or a master CI release")
     if current_run:
         # The publish job is still part of this run. It may consume only the
         # successful sign dependency's immutable artifact/receipt, never another
@@ -725,7 +725,7 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
     source = existing[REPO]
     if source is None or source["draft"]:
         release_review(name, code, sha)
-    require_main_ci(sha, current=source is None or source["draft"])
+    require_master_ci(sha, current=source is None or source["draft"])
     check_new_release(name, code, sha, resume=source is not None)
     for repository, tag, env in repositories:
         record = existing[repository]
@@ -777,11 +777,11 @@ def publish_verified(folder: Path, run_id: str, destination: str, metadata: dict
         check_release_identity(draft, created["id"], tag, sha)
         check_release_content(draft, draft_title, expected_notes)
         check_release_assets(draft, folder, filenames, draft=True, prerelease=prerelease)
-        # Before the first publication, current main must still be the verified
+        # Before the first publication, current master must still be the verified
         # source. Once that exact source release is publicly verified, syncing
-        # its unchanged binary must not be invalidated by later main commits.
+        # its unchanged binary must not be invalidated by later master commits.
         if repository == REPO:
-            require_current_main(sha)
+            require_current_master(sha)
         check_tag(repository, tag, sha, env=env)
         run("gh", "release", "edit", tag, "--repo", repository, "--draft=false",
             "--title", name,
@@ -833,10 +833,10 @@ def main() -> int:
             require(args.version is not None and re.fullmatch(r"r14\.\d+\.\d+", args.version), "Select the published version explicitly")
             if os.environ.get("GITHUB_ACTIONS") == "true":
                 ref, _ = event_source()
-                require(ref == "refs/heads/main" and os.environ.get("GITHUB_WORKFLOW_REF") ==
+                require(ref == "refs/heads/master" and os.environ.get("GITHUB_WORKFLOW_REF") ==
                         f"{REPO}/.github/workflows/a14-promote-release.yml@{ref}" and
                         os.environ.get("GITHUB_WORKFLOW_SHA") == os.environ.get("GITHUB_SHA"),
-                        "Document retry requires the native trusted main promotion workflow")
+                        "Document retry requires the native trusted master promotion workflow")
                 event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
                 inputs = event.get("inputs") or {}
                 require(inputs.get("destination") == "docs-only" and inputs.get("version") == args.version,

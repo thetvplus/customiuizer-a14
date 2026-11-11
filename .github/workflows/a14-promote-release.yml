@@ -34,7 +34,7 @@ concurrency:
 jobs:
   verify:
     name: Verify original candidate
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination != 'docs-only'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.destination != 'docs-only'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -110,7 +110,7 @@ jobs:
 
   docs:
     name: Retry published download documents only
-    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.destination == 'docs-only'
+    if: github.repository == 'thetvplus/customiuizer-a14' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.destination == 'docs-only'
     environment: release-publishing
     concurrency:
       group: a14-release-publish

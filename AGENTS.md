@@ -22,8 +22,8 @@
 
 ## Git 与协作
 
-- `main` 是唯一长期稳定版本线。任务分支正常提交，已验证成果通过 Squash PR 整合，正式版本尽量对应一个整合提交。未完成成果留在任务分支。沿用当前聊天的工作分支、Worktree、授权及验证状态；按 [DEVELOPMENT](docs/DEVELOPMENT.md#git-与协作) 的触发条件增量核对归属，不重新发现整个任务。
-- 授权开发任务完成必要验证后，默认 commit / push 对应工作分支，无需再次确认；推送后读回远端完整 SHA。该授权不包含 merge main、tag 或 Release，用户指定的只读 / 停止点优先。
+- `master` 是唯一长期稳定版本线。任务分支正常提交，已验证成果通过 Squash PR 整合，正式版本尽量对应一个整合提交。未完成成果留在任务分支。沿用当前聊天的工作分支、Worktree、授权及验证状态；按 [DEVELOPMENT](docs/DEVELOPMENT.md#git-与协作) 的触发条件增量核对归属，不重新发现整个任务。
+- 授权开发任务完成必要验证后，默认 commit / push 对应工作分支，无需再次确认；推送后读回远端完整 SHA。该授权不包含 merge master、tag 或 Release，用户指定的只读 / 停止点优先。
 - 禁止 force push、破坏性 reset、改写公开历史、无差别 clean 或覆盖未知修改。Review 不建平行分支；同一 Worktree 只有一个写入者，冲突范围先协调。远端不可用时报告协作状态未知。
 
 ## 验证、发布与证据

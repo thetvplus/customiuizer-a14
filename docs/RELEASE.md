@@ -1,8 +1,10 @@
 # 发布与恢复
 
-main 合并、正式签名、tag 与公开发行以当前任务授权为准。普通 Debug / Develop、工作分支验证与本地签名试用分别记录，不能作为已经正式发布的结论。长期发布规则只维护在本页。
+master 合并、正式签名、tag 与公开发行以当前任务授权为准。普通 Debug / Develop、工作分支验证与本地签名试用分别记录，不能作为已经正式发布的结论。长期发布规则只维护在本页。
 
-版本通过 [Squash PR](DEVELOPMENT.md#git-与协作) 整合时，新生成的 `main` 提交是正式源码身份。工作分支的构建与验证作为前置证据，正式签名使用新提交的 exact main CI；正式 APK `sourceCommit`、metadata、双仓 Tag 与发行均绑定这一完整 SHA。累计说明仍以上一实际公开正式版为基线，历史 Tag 与签名产物保留原身份。
+版本通过 [Squash PR](DEVELOPMENT.md#git-与协作) 整合时，新生成的 `master` 提交是正式源码身份。工作分支的构建与验证作为前置证据，正式签名使用新提交的 exact master CI；正式 APK `sourceCommit`、metadata、双仓 Tag 与发行均绑定这一完整 SHA。累计说明仍以上一实际公开正式版为基线，历史 Tag 与签名产物保留原身份。
+
+已公开的旧 metadata 可保留 `refs/heads/main`，仅在已发布资产的文档读回中识别。新的签名、晋升和发布仍须使用 `refs/heads/master`。下载仓库独立使用自己的 `main`。
 
 ## 历史匿名化与已签名版本
 
@@ -10,7 +12,7 @@ main 合并、正式签名、tag 与公开发行以当前任务授权为准。�
 
 旧 metadata 的 source_sha 是原始构建标识，不能改称匿名快照的提交。`tools/release-policy.json` 的 archived_source_snapshots 仅列经独立核验的已发行版本：固定原源码标识、原始 metadata 摘要、APK 摘要、新快照及原 app 树。读回必须同时匹配这些身份、快照 app 树和双仓标签；后续新发行仍绑定真实构建 SHA，不自动增加例外。累计说明与发布安全基线的祖先检查使用已核验的快照，签名 APK 和原始 metadata 继续提供二进制身份。
 
-公开来源说明链接匿名快照，并单独保留原构建标识。原工作流日志与必要发行证据私有归档后撤下旧 Actions，新的 main 另做一次 exact CI；不会为整理历史重复构建或签发同版 APK。旧候选在线恢复不再适用于已撤下的运行。
+公开来源说明链接匿名快照，并单独保留原构建标识。原工作流日志与必要发行证据私有归档后撤下旧 Actions，新的 master 另做一次 exact CI；不会为整理历史重复构建或签发同版 APK。旧候选在线恢复不再适用于已撤下的运行。
 
 GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主线 / 标签改写不能证明这些副本已清除，必要时由仓库所有者联系官方支持。见 [GitHub 敏感数据清理说明](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)。
 
@@ -24,16 +26,16 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 ## Actions 构建与自动发布
 
-启用后只有一条正常路径：**main A14 CI 成功 → 核验来源、版本和说明 → 正式签名一次 → 验收源码仓库 → 同步并验收 Xposed 仓库 → 更新下载文档**。无需人工审批或 Agent 常驻。
+启用后只有一条正常路径：**master A14 CI 成功 → 核验来源、版本和说明 → 正式签名一次 → 验收源码仓库 → 同步并验收 Xposed 仓库 → 更新下载文档**。无需人工审批或 Agent 常驻。
 
-1. 普通 [A14 CI](../.github/workflows/a14-ci.yml) 保持无正式密钥的现有验证；PR、fork、失败 CI、非 main 或已过期 SHA 不能触发正式签名。纯 Markdown 的现有跳过策略不变。
-2. [A14 Signed Build](../.github/workflows/a14-signed-build.yml) 只接受原生 main 事件。`workflow_run` 复查原 CI 的仓库、workflow ID / path、事件、SHA、完成状态与 attempt，并要求仍为当前 main。手动入口也只信任原生 ref / SHA，不接收源码选择输入。
+1. 普通 [A14 CI](../.github/workflows/a14-ci.yml) 保持无正式密钥的现有验证；PR、fork、失败 CI、非 master 或已过期 SHA 不能触发正式签名。纯 Markdown 的现有跳过策略不变。
+2. [A14 Signed Build](../.github/workflows/a14-signed-build.yml) 只接受原生 master 事件。`workflow_run` 复查原 CI 的仓库、workflow ID / path、事件、SHA、完成状态与 attempt，并要求仍为当前 master。手动入口也只信任原生 ref / SHA，不接收源码选择输入。
 3. 已公开的当前版本正常跳过，不初始化 JDK / SDK 或签名。未公开版本先核对指定正式目标、版本递增、完整双语记录、两种基线及 Environment 分支限制。
-4. 签名前重查 exact main 与成功 CI，复用该 CI 的源码、Host、工具、lint、Develop / R8 结果。签名作业只补一次正式 Release 构建、fatal lint、R8 产物及 APK 检查，不再自调度第二条签名运行。
-5. 签名与发布分别使用 `release-signing`、`release-publishing`。两环境均仅允许 main branch，无 Required reviewer、等待计时或外部人工批准；脚本发现配置漂移即失败。普通 CI 不取得正式密钥。
+4. 签名前重查 exact master 与成功 CI，复用该 CI 的源码、Host、工具、lint、Develop / R8 结果。签名作业只补一次正式 Release 构建、fatal lint、R8 产物及 APK 检查，不再自调度第二条签名运行。
+5. 签名与发布分别使用 `release-signing`、`release-publishing`。两环境均仅允许 master branch，无 Required reviewer、等待计时或外部人工批准；脚本发现配置漂移即失败。普通 CI 不取得正式密钥。
 6. 发布先检查两端现有版本、tag、草稿、资产和跨仓凭据；源码公开并核验后才写入下载仓库。两个发布入口共用 `a14-release-publish` 锁。
 
-工作流不自动合并分支，不修改分支保护，不按每次 main 提交重新发行。正常发布作业使用本仓库 `contents:write` 与 `actions:read`；签名仅 `contents:read`、`actions:read`。不需要 OIDC 或 Attestations 权限。
+工作流不自动合并分支，不修改分支保护，不按每次 master 提交重新发行。正常发布作业使用本仓库 `contents:write` 与 `actions:read`；签名仅 `contents:read`、`actions:read`。不需要 OIDC 或 Attestations 权限。
 
 仓库简介与交流群入口统一维护在 `tools/release-policy.json`。双仓库 About 使用短简介与群链接；源码双语 README、下载仓库文档生成器和应用关于页保持相同入口，文档反馈不再链接 Issues。新发布说明在来源信息之后附一行普通群链接，不使用标题或独立大区块；历史原候选恢复仍接受原文，并继续严格核对版本、来源、正文和资产。不为补群链接重建 APK 或修改旧版功能说明。
 
@@ -43,7 +45,7 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 本轮按明确授权撤回 **r14.27.1 / 301** 与原 **r14.27.3 / 303**，原 APK、元数据、发行记录和源码标签已私有归档，双仓旧页面、附件与标签已撤下。替代发行使用 **r14.27.3 / 304**，累计基线改为 r14.26.11，合并两版有效变化并恢复长岛右侧内容的外侧对齐。内部版本号递增供已安装旧版直接升级，不恢复已撤回候选或降低既有发布校验。
 
-本次同名替代仅适用于这次明确授权的撤回与重新发行，不放宽后续 main exact CI、唯一正式签名和双仓读回要求。原已测版本的使用确认不代替此修正的设备观感，本次按要求静态验证；测量边界见[维护路线图](maintenance/A14_REFINEMENT_ROADMAP.md)。
+本次同名替代仅适用于这次明确授权的撤回与重新发行，不放宽后续 master exact CI、唯一正式签名和双仓读回要求。原已测版本的使用确认不代替此修正的设备观感，本次按要求静态验证；测量边界见[维护路线图](maintenance/A14_REFINEMENT_ROADMAP.md)。
 
 历史系列分别保留 **r14.25.9 / 258** 与 **r14.26.11 / 281**。r14.25.9 的说明累计自 r14.24.1，r14.26.11 累计自 r14.25.9，整合各自系列仍有效的功能与修正，排除已被替代或撤回的设计。两版的原 APK、证书、构建元数据和源码快照均不重建、不重签、不移动。
 
@@ -56,25 +58,25 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 ### 手动与恢复入口
 
-手动 A14 Signed Build 默认 `both`，可选 `source` 或 `actions-only`；`prerelease` 默认 false。所有签名包括仅候选都要求当前 main 的 exact CI 通过。`actions-only` 不创建 tag / Release；不能用该选项绕过签名环境或 CI。
+手动 A14 Signed Build 默认 `both`，可选 `source` 或 `actions-only`；`prerelease` 默认 false。所有签名包括仅候选都要求当前 master 的 exact CI 通过。`actions-only` 不创建 tag / Release；不能用该选项绕过签名环境或 CI。
 
 ```sh
 # 仅在正式发行已获授权、配置核对并启用后使用。
-gh workflow run a14-signed-build.yml --ref main
+gh workflow run a14-signed-build.yml --ref master
 # 仅构建签名候选，不公开。
-gh workflow run a14-signed-build.yml --ref main -f destination=actions-only
+gh workflow run a14-signed-build.yml --ref master -f destination=actions-only
 ```
 
 预发行两端均标为 prerelease，不抢占 Latest。正式版本必须高于全部已发布版本（包括预发行），code 也必须递增。新版本按 `release-policy.json` 更新正式目标；纯发布工程维护不自动升版。
 
 ### 一次性配置
 
-两 Environment 选择 **Selected branches and tags**，只添加 `main`、类型 **branch**；不能添加通配符、同名 tag 或临时分支。脚本同时核对策略类型、完整策略数量及名称。
+两 Environment 选择 **Selected branches and tags**，只添加 `master`、类型 **branch**；不能添加通配符、同名 tag 或临时分支。脚本同时核对策略类型、完整策略数量及名称。
 
 | Environment | Secrets | 保护规则 |
 | --- | --- | --- |
-| `release-signing` | `A14_KEYSTORE_BASE64`、`A14_STORE_PASSWORD`、`A14_KEY_ALIAS`、`A14_KEY_PASSWORD` | 仅 main；无人工审批或等待规则 |
-| `release-publishing` | `A14_XPOSED_RELEASE_TOKEN` | 仅 main；无人工审批或等待规则 |
+| `release-signing` | `A14_KEYSTORE_BASE64`、`A14_STORE_PASSWORD`、`A14_KEY_ALIAS`、`A14_KEY_PASSWORD` | 仅 master；无人工审批或等待规则 |
+| `release-publishing` | `A14_XPOSED_RELEASE_TOKEN` | 仅 master；无人工审批或等待规则 |
 
 签名材料为既有 PKCS#12 `.p12`，证书 SHA-256 固定为 `c0eff2dc4e662717195490da78b12a984c6f2e6bd38acf4edad14d53e3d22e70`。只在受限签名步骤恢复临时密钥，先核对证书，结束时始终清理；候选上传和发布时没有私钥。配置步骤不读取或输出 Secret 值。
 
@@ -134,15 +136,15 @@ APK 检查 applicationId、版本、SDK 34、arm64-v8a、不可调试、16 KB zi
 
 ```sh
 # 已核对原候选，并获本次恢复发布授权后使用；没有额外审批文本。
-gh workflow run a14-promote-release.yml --ref main -f build_run_id=<original-run-id> -f destination=both
+gh workflow run a14-promote-release.yml --ref master -f build_run_id=<original-run-id> -f destination=both
 # 两端发行已完成，仅重试下载文档，不重新签名、上传或创建 Release。
-gh workflow run a14-promote-release.yml --ref main -f destination=docs-only -f version=<published-version>
+gh workflow run a14-promote-release.yml --ref master -f destination=docs-only -f version=<published-version>
 ```
 
-原生 main workflow、run ID、destination、prerelease 必须匹配实际 dispatch；不接受额外授权字符串或任意源码输入。恢复使用原 artifact ID / attempt 与完整收据，保持签名和二进制不变。
+原生 master workflow、run ID、destination、prerelease 必须匹配实际 dispatch；不接受额外授权字符串或任意源码输入。恢复使用原 artifact ID / attempt 与完整收据，保持签名和二进制不变。
 
 - 已公开的同一源码发行完全匹配 title、Notes、target SHA、tag、状态和资产时只读跳过；同一候选草稿仅补缺失附件，已有内容不符即失败，不覆盖或删除资产。
-- 首次公开或未公开源码草稿仍要求当前 main 未变且 exact CI 成功。源码已公开后即使 main 前进，也可恢复同一候选的下载仓发布，但原 SHA 成功 main CI 必须保留，两端不能有更高发行。
+- 首次公开或未公开源码草稿仍要求当前 master 未变且 exact CI 成功。源码已公开后即使 master 前进，也可恢复同一候选的下载仓发布，但原 SHA 成功 master CI 必须保留，两端不能有更高发行。
 - Xposed 发布失败保留源码端成功状态；凭据或网络修好后用原 run ID 恢复，不重跑签名、不回删成功发行。跨仓没有原子事务，部分成功必须报告为待恢复。
 - 下载文档失败只重试 docs-only；必须是两端共同最新稳定版，不能借旧候选回退文档。
 
@@ -150,7 +152,7 @@ gh workflow run a14-promote-release.yml --ref main -f destination=docs-only -f v
 
 清理先盘点并固定具体 ID，写入前重新查询活动状态和引用，删除后重新查询实际结果。使用已有 `gh` 与官方 API，不添加常驻清理服务，也不给正常发布作业增添删除权限。
 
-必须保留当前运行、其他 Agent 的活跃构建证据、当前 exact main CI、有效设备验收 CI、实际正式发行仍引用的构建及可恢复候选。恢复完成前保留原运行、attempt、Artifact、metadata、对应 CI 和恢复运行。不得按“失败”或“时间较旧”一刀切删除。
+必须保留当前运行、其他 Agent 的活跃构建证据、当前 exact master CI、有效设备验收 CI、实际正式发行仍引用的构建及可恢复候选。恢复完成前保留原运行、attempt、Artifact、metadata、对应 CI 和恢复运行。不得按“失败”或“时间较旧”一刀切删除。
 
 只有正式双仓完成核验后，或候选已明确撤回且无恢复依赖时，才按授权清理失去价值的临时候选、重复 / 失效 / 无诊断价值的运行及关联产物和日志。当前运行不能自删；需要时在后续维护执行。正式 APK、签名身份、SHA-256、必要构建来源元数据和有效 Git 历史始终保留。
 
