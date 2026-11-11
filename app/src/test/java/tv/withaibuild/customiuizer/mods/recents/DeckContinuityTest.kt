@@ -206,7 +206,7 @@ class DeckContinuityTest {
             for(p in floatArrayOf(0f,.25f,.5f,1f,.5f,0f,1f)) {
                 helper.mCurrentRectWithInsets.set(0f,0f,2400f+(target-2400f)*p,1080f)
                 val data=params();surface.apply(f.owner,helper,remote,1,data)
-                assertEquals(height*p,data.shadowRadius,.001f);assertEquals(7 or 0x100,data.flags)
+                assertEquals(height*p*p*(3f-2f*p),data.shadowRadius,.001f);assertEquals(7 or 0x100,data.flags)
                 assertEquals(.75f,data.alpha,0f);assertEquals(19f,data.cornerRadius,0f)
                 assertEquals(23,data.backgroundBlurRadius);assertEquals(11,data.layer)
                 assertEquals(0f,view.thumbnail.alpha,0f)
@@ -241,6 +241,14 @@ class DeckContinuityTest {
             assertEquals("A replacement stack cannot inherit the previous leash projection",0f,replaced.shadowRadius,0f)
             val resumed=params();surface.apply(f.owner,helper,remote,1,resumed)
             assertEquals(height,resumed.shadowRadius,.001f)
+            val opening=DeckSurfaceOcclusionTest.Remote(7,0,android.graphics.Rect(),android.graphics.Point())
+            val unrelatedOpen=params();surface.apply(f.owner,helper,opening,0,unrelatedOpen)
+            assertEquals(7,unrelatedOpen.flags)
+            for(p in floatArrayOf(1f,.75f,.5f,.25f,0f,.25f)) {
+                helper.mCurrentRectWithInsets.right=2400f+(target-2400f)*p
+                val opened=params();surface.apply(f.owner,helper,opening,0,opened,7,target)
+                assertEquals(height*p*p*(3f-2f*p),opened.shadowRadius,.001f)
+            }
             f.owner.remove(view)
             val retired=params();surface.apply(f.owner,helper,remote,1,retired)
             assertEquals(0f,retired.shadowRadius,0f);assertEquals(7 or 0x100,retired.flags)

@@ -260,6 +260,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private val local=Matrix()
     private val surface=Matrix()
     val openingTaskId: Int get()=opening?.selectedId ?: -1
+    val openingStartWidth: Float get()=opening?.startWidth ?: 0f
     private val pairs=IdentityHashMap<Any,Pair<DeckFrame,DeckFrame>>()
     private var interpolation: Float?=null
     private val restoreTransform=api.transform.getDeclaredConstructor().newInstance()

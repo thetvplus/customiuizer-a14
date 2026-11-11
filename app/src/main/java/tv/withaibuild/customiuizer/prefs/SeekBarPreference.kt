@@ -31,7 +31,7 @@ class SeekBarPreference @JvmOverloads constructor(context: Context, attrs: Attri
     internal fun configureComposeValues(minimum: Int, maximum: Int, step: Int, initial: Int,
         shift: Int, divider: Int, useDivider: Boolean, displayFormat: String?, disabledText: String?, valueNote: String?, plus: Boolean,
     ) {
-        minValue = minimum.coerceAtLeast(0)
+        minValue = minimum.coerceAtMost(Int.MAX_VALUE - 1)
         maxValue = maximum.coerceAtLeast(minValue + 1)
         stepValue = step.coerceAtLeast(1)
         defaultValue = initial.coerceIn(minValue, maxValue)
@@ -52,6 +52,7 @@ class SeekBarPreference @JvmOverloads constructor(context: Context, attrs: Attri
     }
 
     internal val composeMaximum: Int get() = values.progressMax
+    internal val composeSignedInput: Boolean get() = values.minimum.toLong() < negativeShift
     internal val composeProgress: Int get() = values.progress(getValue())
     internal val composeInput: String get() = values.number(getValue())
     internal val composeNote: String? get() = note

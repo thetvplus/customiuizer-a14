@@ -382,7 +382,9 @@ internal fun SettingsPreferenceDialog(preference: Preference, dismiss: () -> Uni
                     OutlinedTextField(text, { if (it.text.length <= 64) { text = it; error = false } else error = true },
                         modifier = Modifier.fillMaxWidth().testTag("setting.input").focusRequester(focus),
                         isError = error, singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = if (preference.composeSignedInput) KeyboardType.Text else KeyboardType.Decimal,
+                            imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { submit() }),
                         supportingText = { if (error) Text(stringResource(R.string.seekbar_value_error)) })
                     LaunchedEffect(preference) {

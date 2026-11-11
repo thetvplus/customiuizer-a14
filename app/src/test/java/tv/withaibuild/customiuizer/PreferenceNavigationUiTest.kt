@@ -1020,6 +1020,11 @@ class PreferenceNavigationUiTest {
         assertTrue(requireNotNull(page.findPreference<Preference>(offsetKey)).isVisible)
         compose.onNodeWithTag(compactKey).assertDoesNotExist()
         compose.onNodeWithTag(offsetKey).assertIsDisplayed()
+        val offset = requireNotNull(page.findPreference<tv.withaibuild.customiuizer.prefs.SeekBarPreference>(offsetKey))
+        assertEquals(-100, offset.getMinValue())
+        assertTrue(offset.submitComposeInput("-25"))
+        assertEquals(-25, requireNotNull(AppHelper.appPrefs).getInt(offsetKey, 0))
+        assertEquals("-25", offset.composeInput)
         pressToolbarBack()
         val directory = currentPage() as SubFragment
         requireNotNull(directory.findPreference<Preference>("pref_key_system_cat_audio")).performClick()

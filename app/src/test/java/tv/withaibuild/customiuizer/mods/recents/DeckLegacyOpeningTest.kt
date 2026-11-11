@@ -78,7 +78,7 @@ class DeckLegacyOpeningTest {
                     IosRecentsDeckHooks.legacyOpeningHook().intercept(chain)
                     assertEquals(1,chain.proceeds)
                     assertEquals("Neighbor remains visible while moving",1f,neighbor.alpha,0f)
-                    assertEquals("Every clip mode uses the shared window pose",1f+progress*.5f,neighbor.scaleX,.0001f)
+                    assertEquals("The foreground card retains its captured size in every clip mode",1f,neighbor.scaleX,.0001f)
                     if(progress==0f) assertEquals(0f,neighbor.translationX,.0001f)
                     else assertTrue("No late fade-only gap",neighbor.translationX>0f)
                     assertEquals("No per-frame argument array or remarshal",0,chain.argumentCopies)

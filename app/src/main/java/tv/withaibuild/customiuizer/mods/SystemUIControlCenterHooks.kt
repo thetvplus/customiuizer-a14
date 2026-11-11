@@ -249,6 +249,7 @@ object SystemUIControlCenterHooks {
 
     @Volatile
     private var volumeModeButtonVisibilitySnapshot: VolumeModeButtonVisibilitySnapshot? = null
+    private var classicVolumeInstalled = false
 
     private var volumeModeButtonObserverRegistered = false
 
@@ -512,8 +513,8 @@ object SystemUIControlCenterHooks {
 
     internal fun refreshVolumeModeButtonVisibilitySnapshot() {
         volumeModeButtonVisibilitySnapshot = VolumeModeButtonVisibilitySnapshot(
-            hideMute = MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_MUTE_KEY, false),
-            hideDnd = MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_DND_KEY, false)
+            hideMute = classicVolumeInstalled || MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_MUTE_KEY, false),
+            hideDnd = classicVolumeInstalled || MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_DND_KEY, false)
         )
     }
 
@@ -564,7 +565,9 @@ object SystemUIControlCenterHooks {
     fun initControlCenter(loader: ClassLoader) {
         if (MainModule.mPrefs.getBoolean(IosVolumeStyle.KEY)) {
             ModuleHelper.guarded {
-                val result = IosVolumeStyle.install(loader)
+                val classic = MainModule.mPrefs.getString(IosVolumeStyle.STYLE_KEY, "1") == "2"
+                val result = IosVolumeStyle.install(loader, classic)
+                classicVolumeInstalled = classic && result == FeatureInstallResult.INSTALLED
                 HookDiagnostics.record(
                     HookDiagnostics.currentProcessName.orEmpty(),
                     HookDiagnostics.Kind.FEATURE,
@@ -592,7 +595,7 @@ object SystemUIControlCenterHooks {
         if (MainModule.mPrefs.getBoolean("system_volumetimer")) {
             VolumeTimerValuesRes(loader)
         }
-        if (MainModule.mPrefs.getBoolean("system_volume_mode_button_colors") ||
+        if (classicVolumeInstalled || MainModule.mPrefs.getBoolean("system_volume_mode_button_colors") ||
             MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_MUTE_KEY) ||
             MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_DND_KEY)
         ) {

@@ -7,7 +7,7 @@ import java.lang.reflect.Modifier
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 
-/** Borrow the native closing leash's projection until its thumbnail takes over.
+/** Share projection between the thumbnail and its native transition leash.
  * One receipt belongs to that native target, not a window or animation manager.
  * Stable values need no extra Surface transaction; native target disposal releases
  * the receipt, and retired geometry clears the projection on its next transaction. */
@@ -43,7 +43,8 @@ internal class DeckSurfaceShadow(helper: Class<*>,remote: Class<*>,targets: Clas
         val state=WeakReference(state)
         @Volatile var last=Float.NaN
     }
-    fun apply(owner: DeckOwner?,helper: Any,remote: Any,targetMode: Int,params: Any) {
+    fun apply(owner: DeckOwner?,helper: Any,remote: Any,targetMode: Int,params: Any,
+        openingTask: Int = -1,openingWidth: Float = 0f) {
         var projection=XposedHelpers.getAdditionalInstanceField(remote,PROJECTION) as? Projection
         val original=flags.getInt(params)
         if(original and SHADOW!=0) { projection?.last=Float.NaN;return }
@@ -51,9 +52,10 @@ internal class DeckSurfaceShadow(helper: Class<*>,remote: Class<*>,targets: Clas
         val state=if(projection==null) owner?.surfaceCardState(task.getInt(remote))
             else projection.state.get()?.takeIf { it.ownerToken===owner?.surfaceToken }
         val values=state?.values ?: 0L
-        val target=Float.fromBits((values ushr 32).toInt())
+        val opening=targetMode==0 && openingTask>=0 && task.getInt(remote)==openingTask
+        val target=if(opening) openingWidth else Float.fromBits((values ushr 32).toInt())
         val level=Float.fromBits(values.toInt())
-        val admitted=state!=null && target>0f && level.isFinite() && mode.getInt(remote)==1 && targetMode==1 &&
+        val admitted=state!=null && target>0f && level.isFinite() && mode.getInt(remote)==targetMode && (targetMode==1 || opening) &&
             state.width==bounds.width() && state.height==bounds.height()
         if(projection==null && !admitted) return
         if(projection==null) {
@@ -64,7 +66,9 @@ internal class DeckSurfaceShadow(helper: Class<*>,remote: Class<*>,targets: Clas
             val width=(current.get(helper) as RectF).width()
             val full=bounds.width().toFloat()
             val progress=if(full>target && target>0f && width.isFinite()) ((full-width)/(full-target)).coerceIn(0f,1f) else 0f
-            level*progress
+            // Ease the native width fraction at both endpoints so takeover and
+            // the fullscreen end do not introduce a sharp change of projection.
+            level*progress*progress*(3f-2f*progress)
         } else 0f
         if(projection.last==value) return
         radius.setFloat(params,value)

@@ -389,16 +389,19 @@ internal object IosRecentsDeckHooks {
         }
         (api.surfaceShadow?.calculate ?: api.surfaceOcclusion?.calculate)?.let { calculate -> after(calculate) {
             val result=it.getResult() ?: return@after
-            api.surfaceShadow?.apply(latest.get().get(),it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
             val active=surfaces.get()?.lastOrNull()
+            val targetMode=it.getArg(4) as Int
+            @Suppress("UNCHECKED_CAST")
+            val presentation=if(active==null && targetMode==0 && api.legacySurfaceFrame!=null)
+                (XposedHelpers.getAdditionalInstanceField(it.getArg(5),OPENING_SURFACE) as? WeakReference<DeckOpenAlignment.Surface>)?.get()?.takeIf { it.active }
+                else null
+            api.surfaceShadow?.apply(active ?: latest.get().get(),it.getThisObject()!!,it.getArg(0)!!,targetMode,result,
+                active?.openingTaskId ?: presentation?.taskId ?: -1, active?.openingStartWidth ?: presentation?.startWidth ?: 0f)
             if(active!=null) api.surfaceOcclusion?.let { surface ->
-                val clipped=surface.apply(active,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
+                val clipped=surface.apply(active,it.getThisObject()!!,it.getArg(0)!!,targetMode,result)
                 if(clipped!==result) it.setResult(clipped)
-            } else api.surfaceOcclusion?.let { surface ->
-                @Suppress("UNCHECKED_CAST")
-                val presentation=(XposedHelpers.getAdditionalInstanceField(it.getArg(5),OPENING_SURFACE) as? WeakReference<DeckOpenAlignment.Surface>)?.get()
-                    ?: return@let
-                val clipped=surface.apply(presentation,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
+            } else if(presentation!=null) api.surfaceOcclusion?.let { surface ->
+                val clipped=surface.apply(presentation,it.getThisObject()!!,it.getArg(0)!!,targetMode,result)
                 if(clipped!==result) it.setResult(clipped)
             }
         } }

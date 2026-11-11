@@ -69,7 +69,7 @@ internal object IosVolumeStyle {
         }
     }
 
-    fun install(loader: ClassLoader): FeatureInstallResult {
+    fun install(loader: ClassLoader, classic: Boolean): FeatureInstallResult {
         val entries = ArrayList<Pair<java.lang.reflect.Method, MethodHook>>()
         fun hookMethod(method: java.lang.reflect.Method, callback: MethodHook) { entries.add(method to callback) }
         fun hookAllMethods(type: Class<*>, name: String, callback: MethodHook) {
@@ -91,7 +91,6 @@ internal object IosVolumeStyle {
             hookMethod(method,callback)
         }
         val startCompact = MainModule.mPrefs.getBoolean(COMPACT_KEY, false)
-        val classic = MainModule.mPrefs.getString(STYLE_KEY, "1") == "2"
         val classicOffset = MainModule.mPrefs.getInt(CLASSIC_OFFSET_KEY, 0).coerceIn(-100, 100)
         val input=NativeInput()
         if (!classic) {
