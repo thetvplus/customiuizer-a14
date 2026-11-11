@@ -3245,8 +3245,8 @@
       "target": "SYSTEM_UI",
       "phase": "PACKAGE_READY",
       "installer": "SystemUiFeatures",
-      "installHook": "SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs))",
-      "enableCondition": "ToastPresentationConfig.read(prefs).enabled",
+      "installHook": "SystemUIToastPresentation.install(lpparam, ToastPresentationConfig.read(mPrefs), mPrefs.getBoolean(\"system_cc_volume_showpct\") && mPrefs.getStringAsInt(\"system_volume_pct_presentation\", 0) == 1)",
+      "enableCondition": "ToastPresentationConfig.read(prefs).enabled || volumeFeedback(prefs)",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
     },
