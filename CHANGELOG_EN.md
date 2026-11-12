@@ -6,6 +6,27 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## Unreleased
 
+## r14.27.7 — 2026-11-12
+
+versionCode 307. Changes since r14.27.5:
+
+### Release summary
+
+- Add per-app system location switching, with list modes and an option to turn location off after removing cards from Recents.
+- Unify DECK entry layout from Home and apps, and draw shadows along the thumbnail's bottom edge. Smooth launcher folder blur transitions and add a width control for the leading edge of Dynamic Island absorption.
+- Refine state management for the Dock, Home Indicator and iOS volume styles.
+
+### User changes
+
+- Select apps under Various → Automatic location. The allowlist turns location on, and the blocklist turns it off. The allowlist can also turn off location enabled by this feature after the last matching card is removed. Restart Android after enabling the feature for the first time.
+- DECK uses the same card layout calculation when entered from Home or an app. Shadows follow the bottom of the thumbnail and fade during the full-screen transition.
+- Launcher folder blur fades smoothly when opening and closing folders.
+- Dynamic Island absorption can size the leading edge automatically or use a custom width set under Effects and Waveform.
+
+### Engineering notes
+
+- Share batch hook installation and rollback between the Dock and Dynamic Island return. Tie Home Indicator drawing to its view, and share column and expansion state handling between the central and side volume styles.
+
 ## r14.27.5 — 2026-11-11
 
 versionCode 305. Changes since r14.27.3:
