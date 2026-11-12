@@ -58,9 +58,9 @@ MiuiHome 样本版本为 `RELEASE-4.39.30.8604-08262248`。现有 Catalog 中 fu
 
 ## 卡片阴影与提交删除
 
-22G100 的 `shadowOpacityForLayoutRole:atIndex:`（`0x1d8d0fa18`）恒返 1，`shadowOffsetForIndex:`（`0x1d8d0fa20`）恒返 0，`shadowStyleForLayoutRole:inAppLayout:`（`0x1d8d0fcb8`）恒返 1。这不代表阴影最终为纯黑不透明；具体滤镜仍未恢复，不凭层级主观添加逐卡透明度曲线。
+22G100 的 `shadowOpacityForLayoutRole:atIndex:`（`0x1d8d0fa18`）恒返 1，`shadowOffsetForIndex:`（`0x1d8d0fa20`）恒返 0，`shadowStyleForLayoutRole:inAppLayout:`（`0x1d8d0fcb8`）恒返 1。另一路径（`0x1d8d0f4c8`）计算 `switcherCardShadowRadius / deckSwitcherPageScale × scaleForIndex`，再用于容器与变换后卡框的判断。实际滤镜和最终像素仍待原机对照。
 
-A14 将排序放在共同 8 dp 投影平面上，再保留原有细小排名差；不再将实际 Z 压到不足一个物理像素。卡片自身的原生 Outline 只覆盖快照内容，沿用宿主圆角并响应其设置事件，保留标题及祖先裁切。颜色与投影高度是 Android 调整，不等同 Apple 材质。投影随同一 TaskView 的矩阵、原生内容 alpha、位移和回收更新，没有位图模糊或独立阴影时钟；释放按属性所有权恢复原值。原生窗口交接会让 thumbnail alpha=0 而根 alpha=1；只跟根透明度会在慢速 HOLD 留下大块孤立投影。当前绑定时读取 thumbnail alpha，后续消费原生 setChildrenViewAlpha 更新 Outline alpha，不遮盖壁纸、不改变模糊或应用 Surface。
+A14 复用 TaskView 的原生前景绘制，从缩略图底缘画一条 5 dp 渐隐，最大黑色 alpha 约 14%。阴影与卡片共用 RenderNode、矩阵和根 alpha。Outline 保留宿主几何，投影 alpha 设为零，Z 只负责排序。现有 PreDraw 仅在底缘或有效透明度变化时更新绘制，透明度取可见缩略图的 alpha × (1−mFullscreenProgress)。宿主裁切和已有 foreground 优先，回收时仅归还本次持有的属性。
 
 22G100 的 `scaleForIndex:`（`0x1d8b8ee98`）不为被拖卡附加缩小，`opacityForLayoutRole:inAppLayout:atIndex:`（`0x1d8b8f4e8`）仅在配置允许且释放目标指向删除后清零，不支持 MOVE 全程淡出。`handleSwipeToKillEvent:` 区分 translation、progress、isDragging 和 decelerationTargetProgress；越过位移门槛不能替代释放后的业务提交。邻卡 frame / scale / shadow 由临时删除状态与 progress 插值，不能从一个常量恢复全部链路。
 
@@ -121,7 +121,7 @@ Thumbnail 通过冷解析的 mCornerRadius:Int 和原生 setter 同步 Outline�
 
 每次原生重新配置前归还自持参数，成功后再覆盖四轴；end / cancel / 超时 / 旋转释放时仅恢复仍等于本次写入的参数对，后续原生写入优先。失败逐轴回滚，可选动效冷解析失败仅保留原生时序；必需窗口合同失败则 Deck 整批不接管。该变化是 iOS 配置到 Android 原生求解器的映射，并非 UIKit 求解器或全链路等价。WindowElement 的当前显示旋转为 0、90、270° 时共用交接；不要求默认 homeRotation 元数据与其相等。180°、quick switch 或分屏仍保留原生运动，原生坐标转换与参数身份保留。
 
-阴影使用 TaskView RenderNode。常态透明度为原生截图 alpha × (1−mFullscreenProgress)，应用窗口交接使用下文的同一投影。8 dp 投影平面仍为 Android 工程近似，环境 / 定向颜色保留 HyperOS 当前原值。卡片截图的圆角与裁切由原生 thumbnail 管理，内容投影同步原生半径，不增加另一套曲率。现有 iOS 静态证据只确认 opacity=1 / offset=0 / style=1，无法据此发明 CoreMaterial 模糊半径或逐卡透明曲线。入退场逐帧、真实首合成帧和全方向交接仍需设备与原机对照。
+底缘渐隐是 Android 工程实现。iOS 实际模糊半径和入退场逐帧观感仍待原机对照。
 
 Legacy 与 WindowElement 使用两类窗口 profile；类存在只选择解析器，必需布局、触摸、卡池、窗口和生命周期成员仍在冷安装前完整解析。后者已移除旧 Quickstep closing 入口，改由 WindowElement 持有 RectFSpringAnim；不能只放开版本门禁或把旧字段当作参数别名。
 
@@ -158,6 +158,8 @@ A14 保留 DeviceConfig / RotationHelper 的原生方向策略，以视觉 viewp
 
 Legacy 同步接入已核对的 NavStubView.updateTaskView(TaskView,Int,RectF,Int,Int,Float,Float,Boolean,Float,Float,Runnable)V，读取同一原生 mPer 并排除 quick switch；7603 / 8255 的横向根姿态与上述 WindowElement 消费者一致。横竖屏现共用同一 iOS 场景表，取消此前仅横屏使用原生节奏的分支。原生圆角更新、截图及完成回调仍在原方法内执行；Host 只验证映射和所有权，不代表设备性能通过。
 
+两类宿主的桌面手势在窗口模式 1 使用 `referenceIndex=-1`，代表首个真实任务右侧的虚拟页。Deck 用首卡端点和原生页间距计算该参考框，与应用入口共用卡片位置、缩放及邻卡收拢计算。应用入口继续用真实运行任务作参考，缺少任务时保留宿主处理。
+
 ## 原生交接连续性（2026-11-09）
 
 松手的 `changeTaskStackViewScrollAndTaskViewTranslation` 按线性页坐标重置 q 和根 translation，异步布局尚未应用 Deck 新 frame 时会改变实际屏幕位置。现先保存可见内容框，原生方法仍执行一次，随后在同一边界提交新的 Deck frame，并换算根 scale / translation，使屏幕框保持连续。运行中的原生 DynamicAnimation 同步换算已有位置与速度，包含缩放对位移速度的耦合；不取消释放弹簧、不修改目标或开启补偿时钟。相关实例方法、四轴和缓存字段已从 7603 / 8255 / 8604 原件核对。
@@ -170,7 +172,7 @@ Legacy 后卡打开补齐与 WindowElement 相同的卡片 / Surface 所有权�
 
 ## 动效统一管理（2026-11-07）
 
-卡片外形与运动策略分开：截图、圆角来源、裁切及阴影颜色沿用 HyperOS 1；窗口入退场、手势松手与点击恢复的几何四轴由同一个 DeckMotion 管理已确认的 iOS 场景。横竖屏没有独立参数或另一套动画时钟，新旧 Launcher 只分别实现 DeckSpringTuning 的原生字段 / SpringBundle 存储与转换，场景表位于 DeckSpringScene。
+卡片外形与运动策略分开：截图、圆角来源和裁切沿用 HyperOS 1；窗口入退场、手势松手与点击恢复的几何四轴由同一个 DeckMotion 管理已确认的 iOS 场景。横竖屏没有独立参数或另一套动画时钟，新旧 Launcher 只分别实现 DeckSpringTuning 的原生字段 / SpringBundle 存储与转换，场景表位于 DeckSpringScene。
 
 同一管理入口负责有限调用范围、实际 spring 身份、ticket、原生场景类型、重定向前归还和结束 / 取消释放。旧版手势进入嵌套 closing 时沿用 GESTURE，不能被内层按钮 TOGGLE 覆盖；closing provider 在同步调用中换 ticket 时只继承同一个 live owner 的手势来源，参数写入仍核验新 ticket。明确标记的 OPEN 优先于外层宽范围的手势，其他 owner 或无关原生场景不继承。
 
@@ -189,7 +191,7 @@ Legacy 后卡打开补齐与 WindowElement 相同的卡片 / Surface 所有权�
 | DeckToFullScreen.handleTransitionEvent 0x1d8db465c | 原生以 transitionID 匹配事件。A14 同次点击的 start-rect 读取改为复用已建立票据、冻结端点和 listener；实际新点击仍可替换票据。前卡打开没有前置遮挡项，直接跳过遮挡扫描；后排仍沿同帧矩阵校正。邻卡更新改为现有列表索引遍历，不新增状态或时钟 |
 | SwipeToKill 的模拟删除、frame / scale / opacity 消费者 | 原生会在临时删除状态中插值邻卡；A14 未松手阶段的完整邻卡模拟及私有 spring 求解器仍未迁移，不能把现有原生回填 / 取消合同视为完整等价 |
 
-本轮优先消除重复交接和无效逐帧工作，卡片仍用 HyperOS 原生圆角与阴影，横竖屏继续共用 Deck 动效入口。代码层的调用 / 遍历减少不换算为实机帧率、延迟或功耗收益。
+本轮优先消除重复交接和无效逐帧工作，卡片继续使用 HyperOS 原生圆角，横竖屏共用 Deck 动效入口。代码层的调用 / 遍历减少不换算为实机帧率、延迟或功耗收益。
 
 ## A14 横屏原件重新分析（2026-11-08）
 
@@ -197,4 +199,4 @@ Legacy 后卡打开补齐与 WindowElement 相同的卡片 / Surface 所有权�
 
 WindowElement 更新同时传递 Window 原始矩形与已旋转 Surface 矩形。邻卡展开将原始 Window 矩形逆映射到任务栈局部空间，保留实际卡片中心，再消除展示缩放对位移的二次缩小；收回时原生布局参考框已是局部坐标，只转换移动窗口。Surface 遮挡按同一局部卡片矩形一次投影到应用方向，复用每 owner 的 Matrix，不逐卡追溯祖先矩阵。旧版最终对齐传递同一个局部 RectF 的情形不做第二次转换；原生四分之一转交换端点宽高时，圆角仍按同一 owner / ticket / spring 的缩放交接。
 
-TaskView.mFullscreenProgress 的原生写入与截图绘制也已从两类原件核对：全屏为 1、任务堆叠为 0。阴影沿此进度与截图可见性连续显隐，首次 outline 仍读取最新截图 alpha；不修改截图透明度、根缩放或原生圆角。不新增监听、滤镜或动画时钟。以上属于静态调用链与 Host 几何证据，横屏持续 HOLD、反向、松手、点击恢复的真实帧时间与功耗仍待设备验收。
+TaskView.mFullscreenProgress 的原生写入与截图绘制也已从两类原件核对：全屏为 1、任务堆叠为 0。底缘阴影沿此进度与截图可见性连续显隐，首次前景绘制读取最新截图 alpha。阴影使用现有 PreDraw 和卡片变换。以上属于静态调用链与 Host 几何证据，横屏持续 HOLD、反向、松手、点击恢复的真实帧时间与功耗仍待设备验收。

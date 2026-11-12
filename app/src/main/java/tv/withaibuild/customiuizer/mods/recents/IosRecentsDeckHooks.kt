@@ -257,15 +257,8 @@ internal object IosRecentsDeckHooks {
         before(api.click) {
             if(it.getArg(0)===it.getThisObject()) card(it.getThisObject())?.owner?.takeIf { value -> value.allowed }?.beginTransition(true)
         }
-        after(api.childrenAlpha) { card(it.getThisObject())?.let { selected ->
-            selected.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(selected.view))
-            selected.header.refreshOpacity(true)
-        } }
+        after(api.childrenAlpha) { card(it.getThisObject())?.header?.refreshOpacity(true) }
         after(api.headerTransform) { card(it.getThisObject())?.header?.refreshOpacity(true) }
-        after(api.setThumbnailRadius) {
-            val thumbnail=it.getThisObject() as View
-            card(thumbnail.parent)?.shadow?.radius((it.getArg(0) as Int).toFloat())
-        }
         // The native getter consumes Scope.content and then maps last/current
         // rotation into the application axes. Do not overwrite its mapped result
         // with an unrotated View rectangle after that conversion.
@@ -335,16 +328,12 @@ internal object IosRecentsDeckHooks {
                     // currentRectFParams. That first frame belongs to the new request.
                     val params=XposedHelpers.getAdditionalInstanceField(element,WINDOW_PENDING)
                         ?: window.current(element) ?: return@before
-                    val opening=window.scene(params) ?: return@before
+                    if(window.scene(params)!=true) return@before
                     val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
                     val active=receipt.owner.get() ?: return@before
                     if(!receipt.matches(active)) return@before
-                    val selected=card(window.view(params)) ?: (if(!opening) active.cardAt(window.index(params)) else null) ?: return@before
+                    val selected=card(window.view(params)) ?: return@before
                     if(selected.owner!==active) return@before
-                    if(!opening) {
-                        active.projectClosingWindow(selected,it.getArg(1) as RectF,window.target(params))
-                        return@before
-                    }
                     val progress=it.getArg(3) as Float
                     active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(1) as RectF,progress,
                         ((.4f-progress)/.4f).coerceIn(0f,1f))
@@ -354,7 +343,7 @@ internal object IosRecentsDeckHooks {
             around(window.closing,always=true,
                 before={ quickSwitch(false); latest.get().get()?.beginTransition(true) },
                 after={
-                    if(it.getThrowable()!=null || it.getResult()==null) latest.get().get()?.let { active -> active.endTransition(active.transition,cancelled=true) }
+                    if(it.getThrowable()!=null || it.getResult()==null) latest.get().get()?.let { active -> active.endTransition(active.transition) }
                 })
             around(window.animate,always=true,
                 before=before@ {
@@ -387,7 +376,7 @@ internal object IosRecentsDeckHooks {
                     else {
                         XposedHelpers.removeAdditionalInstanceField(params,WINDOW_RECEIPT)
                         window.spring(it.getThisObject()!!)?.let { spring -> DeckMotion.clear(spring,active,receipt.ticket) }
-                        active.endTransition(receipt.ticket,cancelled=true)
+                        active.endTransition(receipt.ticket)
                     }
                 })
         }
@@ -405,7 +394,7 @@ internal object IosRecentsDeckHooks {
                 if(clipped!==result) it.setResult(clipped)
             }
         } }
-        entries.add(api.appGesturePose to appGesturePoseHook(api))
+        entries.add(api.gesturePose to gesturePoseHook(api))
         entries.add(api.rebaseScroll to scrollRebaseHook())
         around(api.navToRecents,always=true,
             before={
@@ -478,14 +467,18 @@ internal object IosRecentsDeckHooks {
         }
     }
 
-    internal fun appGesturePoseHook(api: DeckNativeApi): MethodHook = object: MethodHook() {
+    internal fun gesturePoseHook(api: DeckNativeApi): MethodHook = object: MethodHook() {
         override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
             val selected=XposedHelpers.getAdditionalInstanceField(callback.getArg(0),DeckOwner.CARD) as? DeckOwner.Card ?: return@guarded
-            if(if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) callback.getArg(13)==true
-                else api.appGestureQuickSwitch!!.invoke(callback.getThisObject())==true) return@guarded
-            val bend=if(api.profile==DeckLauncherProfile.WINDOW_ELEMENT) callback.getArg(15) as Float
-                else api.appGestureProgress!!.getFloat(callback.getThisObject())
-            selected.owner.appGestureInput(selected,callback.getArg(2) as RectF,callback.getArg(3) as Int,
+            val modern=api.profile==DeckLauncherProfile.WINDOW_ELEMENT
+            if(if(modern) callback.getArg(13)==true else api.gestureQuickSwitch!!.invoke(callback.getThisObject())==true) return@guarded
+            val reference=callback.getArg(3) as Int
+            if(reference==-1) {
+                val mode=if(modern) callback.getArg(16) as Int else api.navWindowMode!!.getInt(callback.getThisObject())
+                if(mode!=1) return@guarded // Only a Home gesture uses -1 as a virtual page.
+            }
+            val bend=if(modern) callback.getArg(15) as Float else api.gestureProgress!!.getFloat(callback.getThisObject())
+            selected.owner.gestureInput(selected,callback.getArg(2) as RectF,reference,
                 callback.getArg(5) as Float,300f*bend*bend*bend)?.let { input ->
                 // Preserve native immediate/spring selection and its current
                 // pose, velocity and completion. Forcing its flag off snaps
