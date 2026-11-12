@@ -1372,4 +1372,12 @@
     <string name="volume_pct_presentation_native">原生悬浮提示</string>
     <string name="volume_pct_presentation_auto">Toast 与动态岛（自动）</string>
     <string name="volume_pct_presentation_summary">优先使用空闲的动态岛或系统 Toast 胶囊，不可用时回退为原生悬浮提示。</string>
+    <string name="system_locationauto_title">自动定位</string>
+    <string name="system_locationauto_summary">选中的应用进入前台时，开启或关闭系统定位。</string>
+    <string name="system_locationauto_enable_summary">首次启用后需重启系统。</string>
+    <string name="system_locationauto_mode">名单模式</string>
+    <string name="system_locationauto_allow">白名单 · 开启定位</string>
+    <string name="system_locationauto_block">黑名单 · 关闭定位</string>
+    <string name="system_locationauto_close">移除卡片后关闭定位</string>
+    <string name="system_locationauto_close_summary">从最近任务移除最后一张匹配卡片后，关闭本功能开启的定位。</string>
 </resources>

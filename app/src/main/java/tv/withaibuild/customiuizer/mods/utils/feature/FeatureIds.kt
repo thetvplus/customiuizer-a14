@@ -1103,6 +1103,11 @@ data object WifiAutomaticSettingsFeatureId : FeatureId {
     override val name = "system_wifi_automatic_settings"
 }
 
+data object LocationAutomationFeatureId : FeatureId {
+    override val id = 266
+    override val name = "system_location_automation"
+}
+
 data object LauncherIosRecentsDeckFeatureId : FeatureId {
     override val id = 266
     override val name = "system_recents_ios18_deck"

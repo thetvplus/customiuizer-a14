@@ -83,6 +83,7 @@
     <item type="id" name="prefs_system_vibration_amp" />
     <item type="id" name="prefs_system_visualizer" />
     <item type="id" name="prefs_system_vpnauto" />
+    <item type="id" name="prefs_system_locationauto" />
     <item type="id" name="prefs_system_wifiauto" />
     <item type="id" name="prefs_various" />
     <item type="id" name="prefs_various_calls" />

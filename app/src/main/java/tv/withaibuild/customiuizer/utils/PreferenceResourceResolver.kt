@@ -7,6 +7,7 @@ import tv.withaibuild.customiuizer.subs.Launcher
 import tv.withaibuild.customiuizer.subs.Controls
 import tv.withaibuild.customiuizer.subs.Various
 import tv.withaibuild.customiuizer.subs.System_AppBehavior
+import tv.withaibuild.customiuizer.subs.System_LocationAutomation
 import tv.withaibuild.customiuizer.subs.System_WifiAutomatic
 import tv.withaibuild.customiuizer.subs.System_VpnAutoSwitch
 
@@ -43,7 +44,8 @@ internal object PreferenceResourceResolver {
     }
 
     fun isStandalonePage(sub: String?): Boolean = when (sub) {
-        "pref_key_system_appbehavior_cat", "pref_key_system_wifiauto_cat", "pref_key_system_vpnauto_cat" -> true
+        "pref_key_system_appbehavior_cat", "pref_key_system_wifiauto_cat", "pref_key_system_vpnauto_cat",
+        "pref_key_system_locationauto_cat" -> true
         else -> false
     }
 
@@ -51,6 +53,7 @@ internal object PreferenceResourceResolver {
         "pref_key_system_appbehavior_cat" -> System_AppBehavior()
         "pref_key_system_wifiauto_cat" -> System_WifiAutomatic()
         "pref_key_system_vpnauto_cat" -> System_VpnAutoSwitch()
+        "pref_key_system_locationauto_cat" -> System_LocationAutomation()
         else -> createCategoryFragment(category, sub)
     }
 
@@ -74,6 +77,7 @@ internal object PreferenceResourceResolver {
         "pref_key_system_appbehavior_cat" -> R.id.prefs_system_appbehavior
         "pref_key_system_wifiauto_cat" -> R.id.prefs_system_wifiauto
         "pref_key_system_vpnauto_cat" -> R.id.prefs_system_vpnauto
+        "pref_key_system_locationauto_cat" -> R.id.prefs_system_locationauto
         "pref_key_system_cat_screen" -> R.id.prefs_system_screen
         "pref_key_system_cat_appearance" -> R.id.prefs_system_appearance
         "pref_key_system_cat_capture" -> R.id.prefs_system_capture

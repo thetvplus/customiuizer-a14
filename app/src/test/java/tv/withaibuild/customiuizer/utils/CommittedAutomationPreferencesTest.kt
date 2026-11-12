@@ -7,6 +7,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import tv.withaibuild.customiuizer.mods.appbehavior.AppBehaviorPolicy
+import tv.withaibuild.customiuizer.mods.locationauto.LocationAutomationOptions
 import tv.withaibuild.customiuizer.mods.utils.PreferenceBootstrap
 
 @RunWith(RobolectricTestRunner::class)
@@ -37,7 +38,7 @@ class CommittedAutomationPreferencesTest {
         }
         val snapshot = read(committed)
         assertEquals(1, committed.getAllCount)
-        assertEquals(13, snapshot.size)
+        assertEquals(17, snapshot.size)
         assertEquals(30, snapshot["pref_key_system_appbehavior_block_limit"])
         assertEquals("[]", snapshot[rules])
         assertFalse(snapshot.containsKey("pref_key_other_private"))
@@ -86,5 +87,31 @@ class CommittedAutomationPreferencesTest {
         assertEquals(65537, (snapshot[rules] as String).length)
         assertTrue(WifiAutomaticSettings.decode(snapshot[rules] as String).isEmpty())
         assertEquals(256, (snapshot["pref_key_system_appbehavior_volume_apps"] as Set<*>).size)
+    }
+
+    @Test fun committedLocationRulesReplaceStaleValuesBeforeObserversRun() {
+        val prefix = "pref_key_system_locationauto_"
+        val stale = FakeSharedPreferences().apply {
+            put(prefix + "enabled", true)
+            put(prefix + "close", true)
+            put(prefix + "apps", setOf("sample.old"))
+        }
+        val committed = FakeSharedPreferences().apply {
+            put(prefix + "enabled", true)
+            put(prefix + "apps", setOf("sample.maps"))
+        }
+        val prefs = PrefMap()
+        val observed = mutableListOf<LocationAutomationOptions>()
+        val bootstrap = PreferenceBootstrap.create(prefs, { stale }) {
+            observed.add(LocationAutomationOptions.read(prefs))
+        }
+        assertTrue(bootstrap.bootstrap())
+        bootstrap.refreshRemoteKey(null, read(committed))
+        committed.put(prefix + "mode", "block")
+        bootstrap.refreshRemoteKey(prefix + "mode", read(committed, prefix + "mode"))
+        assertEquals(listOf(
+            LocationAutomationOptions(true, "allow", setOf("sample.maps"), false),
+            LocationAutomationOptions(true, "block", setOf("sample.maps"), false),
+        ), observed)
     }
 }
