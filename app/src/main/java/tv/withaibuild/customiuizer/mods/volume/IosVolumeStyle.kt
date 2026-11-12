@@ -69,10 +69,14 @@ internal object IosVolumeStyle {
         }
     }
 
+    private class NativeColumn(
+        val item: Any, val root: View, val seek: SeekBar, val fill: View, val track: ViewGroup, val icon: ImageView,
+    )
+
     fun install(loader: ClassLoader, classic: Boolean): FeatureInstallResult {
         val entries = ArrayList<Pair<java.lang.reflect.Method, MethodHook>>()
         fun hookMethod(method: java.lang.reflect.Method, callback: MethodHook) { entries.add(method to callback) }
-        fun hookAllMethods(type: Class<*>, name: String, callback: MethodHook) {
+        fun hookNativeMethod(type: Class<*>, name: String, callback: MethodHook) {
             val column="com.android.systemui.miui.volume.MiuiVolumeDialogImpl\$VolumeColumn"
             val parameters=when(name) {
                 "updateColumnH","updateColumnSliderBlendColor" -> listOf(column)
@@ -90,10 +94,10 @@ internal object IosVolumeStyle {
                 it.parameterTypes.map(Class<*>::getName)==parameters }
             hookMethod(method,callback)
         }
-        val startCompact = MainModule.mPrefs.getBoolean(COMPACT_KEY, false)
-        val classicOffset = MainModule.mPrefs.getInt(CLASSIC_OFFSET_KEY, 0).coerceIn(-100, 100)
-        val input=NativeInput()
-        if (!classic) {
+        val startCompact = !classic && MainModule.mPrefs.getBoolean(COMPACT_KEY, false)
+        val classicOffset = if (classic) MainModule.mPrefs.getInt(CLASSIC_OFFSET_KEY, 0).coerceIn(-100, 100) else 0
+        val input = if (classic) null else NativeInput()
+        if (input != null) {
             val controller=XposedHelpers.findClass("com.android.systemui.volume.VolumeDialogControllerImpl",loader)
             val volumeChanged=controller.getDeclaredMethod("onVolumeChangedW",Int::class.javaPrimitiveType,Int::class.javaPrimitiveType)
                 .apply { require(returnType==Boolean::class.javaPrimitiveType);isAccessible=true }
@@ -117,10 +121,6 @@ internal object IosVolumeStyle {
         val progress = columnType.getDeclaredField("progressView").apply { isAccessible = true }
         val background = columnType.getDeclaredField("progressViewBg").apply { isAccessible = true }
         val icon = columnType.getDeclaredField("icon").apply { isAccessible = true }
-        // The field is declared as framework SeekBar, whose touch handling is
-        // inherited. Observe the plugin override before its relative-axis transform.
-        val nativeTouch = XposedHelpers.findClass("com.android.systemui.miui.volume.MiuiVolumeSeekBar", loader)
-            .getDeclaredMethod("onTouchEvent", MotionEvent::class.java)
         val listenerColumn = listener.getDeclaredField("mColumn").apply { isAccessible = true }
         val streamState = columnType.getDeclaredField("ss").apply { isAccessible = true }
         val cachedIcon = XposedHelpers.findFieldIfExists(columnType, "cachedIconRes")
@@ -134,9 +134,15 @@ internal object IosVolumeStyle {
             return headset?.getBoolean(owner) == false && bluetooth?.getBoolean(state) == false &&
                 dynamic?.getBoolean(state) == false
         }
-        val streamLevel = streamState.type.getDeclaredField("level").apply { isAccessible = true }
-        val streamMin = streamState.type.getDeclaredField("levelMin").apply { isAccessible = true }
-        val streamMax = streamState.type.getDeclaredField("levelMax").apply { isAccessible = true }
+        val updateStream = if (input != null) {
+            val level = streamState.type.getDeclaredField("level").apply { isAccessible = true }
+            val min = streamState.type.getDeclaredField("levelMin").apply { isAccessible = true }
+            val max = streamState.type.getDeclaredField("levelMax").apply { isAccessible = true }
+            val update: (Any, Binding, Boolean) -> Unit = { item, binding, initial ->
+                streamState.get(item)?.let { binding.nativeVolume(level.getInt(it), min.getInt(it), max.getInt(it), initial) }
+            }
+            update
+        } else null
         val fillHeight = progress.type.getDeclaredField("mHeight").apply { isAccessible = true }
         val fillProgress = progress.type.getDeclaredField("mProgress").apply { isAccessible = true }
         val fillSetter = progress.type.getDeclaredMethod("setProgress", Int::class.javaPrimitiveType)
@@ -158,82 +164,75 @@ internal object IosVolumeStyle {
         val clickListener = listenerInfo.type.getDeclaredField("mOnClickListener").apply { isAccessible = true }
         val computeInsets = dialogView.type.declaredMethods.single { it.name == "onComputeInternalInsets" && it.parameterCount == 1 }
         val touchRegion = computeInsets.parameterTypes[0].getDeclaredField("touchableRegion").apply { isAccessible = true }
-        fun clear(owner: Any) {
-            (XposedHelpers.getAdditionalInstanceField(owner, OWNER) as? Session)?.close()
-            XposedHelpers.setAdditionalInstanceField(owner, OWNER, null)
-        }
+        fun session(owner: Any?) = owner?.let { XposedHelpers.getAdditionalInstanceField(it, OWNER) as? Session }
+        fun clear(owner: Any) { session(owner)?.close() }
         fun apply(owner: Any) {
             if (expanded.getBoolean(owner) || !showing.getBoolean(owner)) return
-            val items = (columns.get(owner) as? List<*>) ?: return
-            val bindings = ArrayList<Binding>()
+            val items = columns.get(owner) as? List<*> ?: return
+            val root = dialogView.get(owner) as? View ?: return
+            val content = dialogContent.get(owner) as? View ?: return
+            val count = minOf(items.size, 16)
+            var selected: NativeColumn? = null
+            // Admit exactly one column before changing any native view. The temp
+            // slot can point to a root already present in the normal list.
+            for (index in 0..count) {
+                val item = (if (index == count) temporary.get(owner) else items[index]) ?: continue
+                val columnRoot = view.get(item) as? View ?: continue
+                if (columnRoot === selected?.root || !visibleColumn(columnRoot)) continue
+                if (columnRoot.resources.configuration.orientation == Configuration.ORIENTATION_UNDEFINED) continue
+                val seek = slider.get(item) as? SeekBar ?: continue
+                val fill = progress.get(item) as? View ?: continue
+                val track = background.get(item) as? ViewGroup ?: continue
+                // Unknown track layouts keep their native presentation.
+                if (track.childCount != 1 || track.getChildAt(0) !== fill) continue
+                val image = icon.get(item) as? ImageView ?: continue
+                if (XposedHelpers.getAdditionalInstanceField(columnRoot, BINDING) != null) continue
+                if (selected != null) return
+                selected = NativeColumn(item, columnRoot, seek, fill, track, image)
+            }
+            val column = selected ?: return
+            val more = expandButton.get(root) as? View
+            val originalClick = more?.let { listenerInfo.get(it) }?.let { clickListener.get(it) as? View.OnClickListener }
+            val backdrop = material.isInstance(column.root) && hasBlur.invoke(column.root) == true
+            val nativeViews = arrayOf(column.root, column.seek, column.track)
+            val modes = IntArray(nativeViews.size) { (getViewMode.invoke(nativeViews[it]) as Number).toInt() }
+            val blur = { enabled: Boolean ->
+                val cleanup = CleanupActions()
+                if (backdrop) cleanup.run { setBlur.invoke(column.root, enabled) }
+                for (i in nativeViews.indices) cleanup.run {
+                    val current = (getViewMode.invoke(nativeViews[i]) as Number).toInt()
+                    val target = if (enabled) modes[i] else 0
+                    if (current != target && (!enabled || current == 0)) setViewMode.invoke(nativeViews[i], target)
+                }
+                cleanup.finish()
+            }
+            val nativeFill = blurOpened.invoke(null, column.root.context) == true
+            val binding = Binding(column.root, column.seek, column.fill, column.track, column.icon, nativeFill, startCompact, classic, blur)
+            var adapter: Session? = null
             try {
-                for (item in items.take(16) + listOfNotNull(temporary.get(owner))) {
-                    item ?: continue
-                    val root = view.get(item) as? View ?: continue
-                    if (!visibleColumn(root)) continue
-                    if (root.resources.configuration.orientation == Configuration.ORIENTATION_UNDEFINED) continue
-                    val seek = slider.get(item) as? SeekBar ?: continue
-                    val fill = progress.get(item) as? View ?: continue
-                    val track = background.get(item) as? View ?: continue
-                    // The admitted native track contains only its now-hidden fill.
-                    // Unknown child layouts retain their native presentation.
-                    if (track !is ViewGroup || track.childCount != 1 || track.getChildAt(0) !== fill) continue
-                    val image = icon.get(item) as? ImageView ?: continue
-                    if (XposedHelpers.getAdditionalInstanceField(root, BINDING) != null) continue
-                    val backdrop = material.isInstance(root) && hasBlur.invoke(root) == true
-                    val nativeViews = arrayOf(root, seek, track)
-                    val modes = IntArray(nativeViews.size) { (getViewMode.invoke(nativeViews[it]) as Number).toInt() }
-                    val blur = { enabled: Boolean ->
-                        val cleanup = CleanupActions()
-                        if (backdrop) cleanup.run { setBlur.invoke(root, enabled) }
-                        for (i in nativeViews.indices) cleanup.run {
-                            val current=(getViewMode.invoke(nativeViews[i]) as Number).toInt()
-                            val target=if(enabled) modes[i] else 0
-                            if(current!=target && (!enabled || current==0)) setViewMode.invoke(nativeViews[i],target)
-                        }
-                        cleanup.finish()
+                if (classicIconUpdate != null && cachedIcon != null)
+                    binding.nativeGlyph(cachedIcon.getInt(column.item), speakerRoute(owner, column.item))
+                if (nativeFill) binding.nativeProgress(fillProgress.getInt(column.fill), fillHeight.getInt(column.fill))
+                updateStream?.invoke(column.item, binding, true)
+                XposedHelpers.setAdditionalInstanceField(column.root, BINDING, binding)
+                adapter = Session(root, content, shadowView.get(owner) as? View, binding,
+                    { (getViewMode.invoke(content) as Number).toInt() }, { setViewMode.invoke(content, it) },
+                    { closing ->
+                        input?.session?.let { if (it.get() === closing) it.clear() }
+                        if (session(owner) === closing) XposedHelpers.removeAdditionalInstanceField(owner, OWNER)
+                    }, more, originalClick, classicOffset = classicOffset) {
+                    viewMotion.get(root)?.let { motion ->
+                        // The original dots pass through to the overlapping slider.
+                        // The footer invokes that same guarded native action.
+                        expandSource.setBoolean(motion, false)
+                        motionCallback.get(motion)?.let { expandClick.invoke(it) }
                     }
-                    val nativeFill = blurOpened.invoke(null, root.context) == true
-                    val binding = Binding(root, seek, fill, track, image, nativeFill, startCompact, classic, blur)
-                    bindings.add(binding)
-                    if (classicIconUpdate != null) binding.nativeGlyph(cachedIcon!!.getInt(item), speakerRoute(owner, item))
-                    if (nativeFill) binding.nativeProgress(fillProgress.getInt(fill), fillHeight.getInt(fill))
-                    streamState.get(item)?.let { binding.nativeVolume(streamLevel.getInt(it), streamMin.getInt(it), streamMax.getInt(it),initial=true) }
-                    XposedHelpers.setAdditionalInstanceField(root, BINDING, binding)
                 }
-                if (bindings.size != 1) {
-                    val cleanup = CleanupActions()
-                    bindings.forEach { binding -> cleanup.run { binding.close() } }; cleanup.finish(); return
-                }
-                val root = dialogView.get(owner) as? View
-                val content = dialogContent.get(owner) as? View
-                if (root == null || content == null) {
-                    val cleanup = CleanupActions()
-                    bindings.forEach { binding -> cleanup.run { binding.close() } }; cleanup.finish()
-                }
-                else {
-                    val more = expandButton.get(root) as? View
-                    val originalClick = more?.let { listenerInfo.get(it) }?.let { clickListener.get(it) as? View.OnClickListener }
-                    val adapter = Session(root, content, shadowView.get(owner) as? View, bindings,
-                        { (getViewMode.invoke(content) as Number).toInt() }, { setViewMode.invoke(content, it) },
-                        { closing ->
-                            if(input.session.get()===closing) input.session.clear()
-                            if(XposedHelpers.getAdditionalInstanceField(owner,OWNER)===closing)
-                                XposedHelpers.removeAdditionalInstanceField(owner,OWNER)
-                        }, more, originalClick, classicOffset = classicOffset) {
-                        viewMotion.get(root)?.let { motion ->
-                            // The original dots pass through to the overlapping slider.
-                            // A separate footer invokes that same guarded native action.
-                            expandSource.setBoolean(motion, false)
-                            motionCallback.get(motion)?.let { expandClick.invoke(it) }
-                        }
-                    }
-                    XposedHelpers.setAdditionalInstanceField(owner, OWNER, adapter)
-                    input.session=WeakReference(adapter)
-                }
+                XposedHelpers.setAdditionalInstanceField(owner, OWNER, adapter)
+                if (input != null) input.session = WeakReference(adapter)
             } catch (error: Throwable) {
                 val cleanup = CleanupActions(error)
-                bindings.forEach { binding -> cleanup.run { binding.close() } }
+                cleanup.run { if (adapter != null) adapter.close() else binding.close() }
                 cleanup.finish()
             }
         }
@@ -250,45 +249,41 @@ internal object IosVolumeStyle {
                     }
             })
         }
-        hookAllMethods(dialog, "updateColumnH", object : MethodHook() {
+        val rebindAfterNativeUpdate = object : MethodHook() {
             override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded { callback.getThisObject()?.let(::clear) }
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() == null) callback.getThisObject()?.let(::apply)
             }
-        })
-        hookAllMethods(dialog, "showVolumeDialogH", object : MethodHook() {
+        }
+        hookNativeMethod(dialog, "updateColumnH", rebindAfterNativeUpdate)
+        hookNativeMethod(dialog, "updateExpandedH", rebindAfterNativeUpdate)
+        hookNativeMethod(dialog, "showVolumeDialogH", object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() == null) callback.getThisObject()?.let { clear(it); apply(it) }
             }
         })
-        hookAllMethods(dialog, "updateExpandedH", object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded { callback.getThisObject()?.let(::clear) }
-            override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
-                if (callback.getThrowable() == null) callback.getThisObject()?.let(::apply)
-            }
-        })
-        hookAllMethods(dialog, "destroy", object : MethodHook() {
+        hookNativeMethod(dialog, "destroy", object : MethodHook() {
             override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded { callback.getThisObject()?.let(::clear) }
         })
-        hookAllMethods(dialog, "updateColumnSliderBlendColor", object : MethodHook() {
+        hookNativeMethod(dialog, "updateColumnSliderBlendColor", object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() != null) return@guarded
                 val item = callback.getArg(0) ?: return@guarded
                 val root = view.get(item) as? View ?: return@guarded
-                val session = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), OWNER) as? Session
+                val session = session(callback.getThisObject())
                 if (session != null) session.refreshMaterial()
                 else (XposedHelpers.getAdditionalInstanceField(root, BINDING) as? Binding)?.refreshMaterial()
             }
         })
         // Repeated hardware input retains the current shape/velocity and re-arms
         // only the cosmetic collapse; native showH still owns dismissal timing.
-        if (!classic) hookAllMethods(dialog, "showH", object : MethodHook() {
+        if (input != null) hookNativeMethod(dialog, "showH", object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
-                if (callback.getThrowable() == null) (XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), OWNER) as? Session)?.noteInput(input.isKey())
+                if (callback.getThrowable() == null) session(callback.getThisObject())?.noteInput(input.isKey())
             }
         })
         for (method in if (classic) listOf("onProgressChanged") else listOf("onProgressChanged", "onStartTrackingTouch", "onStopTrackingTouch")) {
-            hookAllMethods(listener, method, object : MethodHook() {
+            hookNativeMethod(listener, method, object : MethodHook() {
                 override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                     if (callback.getThrowable() != null) return@guarded
                     val item = listenerColumn.get(callback.getThisObject()) ?: return@guarded
@@ -310,20 +305,25 @@ internal object IosVolumeStyle {
                 binding.nativeProgress((callback.getArg(0) as Number).toInt(), fillHeight.getInt(source))
             }
         })
-        if (!classic) hookAllMethods(dialog, "updateVolumeColumnH", object : MethodHook() {
+        if (updateStream != null) hookNativeMethod(dialog, "updateVolumeColumnH", object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() != null) return@guarded
                 val column = callback.getArg(0) ?: return@guarded
                 val binding = XposedHelpers.getAdditionalInstanceField(view.get(column), BINDING) as? Binding ?: return@guarded
-                streamState.get(column)?.let { binding.nativeVolume(streamLevel.getInt(it), streamMin.getInt(it), streamMax.getInt(it)) }
+                updateStream(column, binding, false)
             }
         })
-        if (!classic) hookMethod(nativeTouch, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
-                val binding = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), BINDING) as? Binding ?: return@guarded
-                (callback.getArg(0) as? MotionEvent)?.let(binding::observeTouch)
-            }
-        })
+        if (!classic) {
+            // Observe the plugin override before its relative-axis transform.
+            val nativeTouch = XposedHelpers.findClass("com.android.systemui.miui.volume.MiuiVolumeSeekBar", loader)
+                .getDeclaredMethod("onTouchEvent", MotionEvent::class.java)
+            hookMethod(nativeTouch, object : MethodHook() {
+                override fun before(callback: BeforeHookCallback) = ModuleHelper.guarded {
+                    val binding = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), BINDING) as? Binding ?: return@guarded
+                    (callback.getArg(0) as? MotionEvent)?.let(binding::observeTouch)
+                }
+            })
+        }
         hookMethod(background.type.getDeclaredMethod("dispatchDraw", Canvas::class.java), object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
                 if (XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), BINDING) is Binding)
@@ -335,17 +335,17 @@ internal object IosVolumeStyle {
         hookMethod(computeInsets, object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() != null) return@guarded
-                val session = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), OWNER) as? Session ?: return@guarded
+                val session = session(callback.getThisObject()) ?: return@guarded
                 session.includeTouchableRegion(touchRegion.get(callback.getArg(0)) as Region)
             }
         })
-        hookAllMethods(nativeMotion, "createShowAnimator", object : MethodHook() {
+        hookNativeMethod(nativeMotion, "createShowAnimator", object : MethodHook() {
             override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                 if (callback.getThrowable() != null) return@guarded
                 val root = motionRoot.get(callback.getThisObject()) as? View ?: return@guarded
                 // The native factory re-enables its large material shadow after
                 // attachment. Suppress that once without touching its animation.
-                (XposedHelpers.getAdditionalInstanceField(root, OWNER) as? Session)?.refreshMaterial()
+                session(root)?.refreshMaterial()
             }
         })
         return PreparedHookBatch().install(entries)
@@ -376,7 +376,7 @@ internal object IosVolumeStyle {
         return true
     }
 
-    internal class Session(private val root: View, private val content: View, private val shadow: View?, private val bindings: List<Binding>,
+    internal class Session(private val root: View, private val content: View, private val shadow: View?, private val binding: Binding,
         private val readMode: () -> Int, private val writeMode: (Int) -> Unit, private val ended: (Session) -> Unit,
         private val more: View? = null, private val moreClick: View.OnClickListener? = null,
         private val classicOffset: Int = 0,
@@ -400,7 +400,7 @@ internal object IosVolumeStyle {
         private val touchRect = Rect()
         private val moreGlyph = moreImage?.let { MoreGlyph(root.resources.displayMetrics.density) }
         private var hardwareReleased: Runnable?=null
-        private val placement = bindings.singleOrNull()?.takeIf { it.classic }?.let { ClassicVolumePlacement(root, it.trackView, classicOffset, more) }
+        private val placement = binding.takeIf { it.classic }?.let { ClassicVolumePlacement(root, it.trackView, classicOffset, more) }
         init {
             try {
                 root.addOnAttachStateChangeListener(this); content.addOnAttachStateChangeListener(this)
@@ -413,7 +413,7 @@ internal object IosVolumeStyle {
                 }.also { appliedMoreLayout = it }
                 if (moreGlyph != null && moreImage != null) {
                     moreImage.scaleType = ImageView.ScaleType.FIT_XY; moreImage.setImageDrawable(moreGlyph)
-                    bindings.singleOrNull()?.attachMore(moreGlyph, moreImage)
+                    binding.attachMore(moreGlyph, moreImage)
                 }
                 if (moreAction != null && more != null) {
                     // Native columns cover the original dots' hit area. Keep the
@@ -452,21 +452,21 @@ internal object IosVolumeStyle {
             hardwareReleased?.let(root::removeCallbacks)
             val release=Runnable {
                 if(!closed && input.sequence==sequence && input.session.get()===this)
-                    ModuleHelper.guarded { bindings.forEach { it.releaseHardware() } }
+                    ModuleHelper.guarded { binding.releaseHardware() }
             }
             hardwareReleased=release
             root.post(release)
             // close can run on Main between the worker's check and enqueue.
             if(closed) root.removeCallbacks(release)
         }
-        fun noteInput(hardware: Boolean=true) { if (!closed) bindings.forEach { it.noteInput(hardware) } }
+        fun noteInput(hardware: Boolean=true) { if (!closed) binding.noteInput(hardware) }
         fun refreshMaterial() {
             if (closed) return
             // Palette/show factories can replace material after attach. Preserve the
             // latest native objects for expansion, then reassert the one owner.
             suppressParent()
             shadow?.visibility = View.INVISIBLE
-            bindings.forEach { it.refreshMaterial() }
+            binding.refreshMaterial()
         }
         fun includeTouchableRegion(region: Region) {
             if (closed || !root.isShown) return
@@ -482,7 +482,7 @@ internal object IosVolumeStyle {
             if (placement != null) {
                 // Native parent width may still use its narrow-column resource.
                 // Include the real slider and footer, even outside that parent.
-                val track = bindings.single().trackView
+                val track = binding.trackView
                 track.getLocationInWindow(touchLocation)
                 touchRect.union(touchLocation[0], touchLocation[1], touchLocation[0] + track.width, touchLocation[1] + track.height)
                 if (more?.isShown == true) {
@@ -539,7 +539,7 @@ internal object IosVolumeStyle {
             cleanup.run { if (parentSuppressed && content.background == null) content.background = nativeBackground }
             cleanup.run { if (parentSuppressed && readMode() == 0) writeMode(nativeMode) }
             // Binding owns the moving footer until its final pose is restored.
-            bindings.forEach { binding -> cleanup.run { binding.close() } }
+            cleanup.run { binding.close() }
             cleanup.run { ended(this) }
             cleanup.finish()
         }

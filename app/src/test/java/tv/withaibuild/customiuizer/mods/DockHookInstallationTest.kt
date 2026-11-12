@@ -23,6 +23,7 @@ class DockHookInstallationTest {
     private var rejected: Method? = null
     private var fatal: Throwable? = null
     private var fatalCleanup: Throwable? = null
+    private var keepOnUnhook: Method? = null
     private var previous: XposedInterface? = null
 
     @Before fun prepare() {
@@ -44,7 +45,9 @@ class DockHookInstallationTest {
                         when (call.name) {
                             "getExecutable" -> target
                             "unhook" -> {
-                                removed.add(target); callbacks.remove(target)
+                                removed.add(target)
+                                if (target == keepOnUnhook) error("Unhook failed")
+                                callbacks.remove(target)
                                 fatalCleanup?.let { throw it }
                                 null
                             }
@@ -70,6 +73,31 @@ class DockHookInstallationTest {
             assertEquals(methods.take(index).reversed(), removed)
             assertTrue("No partial Dock observer survives a failed group", callbacks.isEmpty())
         }
+    }
+
+    @Test fun failedRollbackLeavesNativeRenderingInControl() {
+        rejected = methods.last()
+        keepOnUnhook = methods.first()
+        val entries = methods.map { method ->
+            method to object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any = error("Failed group ran Dock rendering")
+            }
+        }
+
+        assertFalse(installDockBackgroundHooks(entries))
+        var nativeCalls = 0
+        val chain = object : XposedInterface.Chain {
+            override fun getExecutable() = methods.first()
+            override fun getThisObject() = error("Unexpected owner access")
+            override fun getArgs() = error("Unexpected argument access")
+            override fun getArg(index: Int) = error("Unexpected argument access")
+            override fun proceed(): Any { nativeCalls++; return "native" }
+            override fun proceed(args: Array<Any?>) = error("Unexpected argument rewrite")
+            override fun proceedWith(receiver: Any) = error("Unexpected receiver rewrite")
+            override fun proceedWith(receiver: Any, args: Array<Any?>) = error("Unexpected receiver rewrite")
+        }
+        assertEquals("native", callbacks.getValue(methods.first()).intercept(chain))
+        assertEquals(1, nativeCalls)
     }
 
     @Test fun completeInstallationKeepsEveryCallback() {

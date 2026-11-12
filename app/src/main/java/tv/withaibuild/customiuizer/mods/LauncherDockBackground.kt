@@ -31,8 +31,9 @@ import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.libxposed.api.XposedInterface
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.FatalErrors
+import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
+import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
-import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.CustomMethodUnhooker
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
@@ -319,33 +320,8 @@ object LauncherDockBackground {
     }
 }
 
-/** A failed optional mesh leaves no background/frame Hook installed. */
-internal fun installDockBackgroundHooks(hooks: List<Pair<Method, MethodHook>>): Boolean {
-    val handles = ArrayList<CustomMethodUnhooker>(hooks.size)
-    var complete = false
-    var failure: Throwable? = null
-    try {
-        for ((method, callback) in hooks) handles.add(ModuleHelper.hookMethod(method, callback) ?: return false)
-        complete = true
-        return true
-    } catch (error: Throwable) {
-        failure = error
-        throw error
-    } finally {
-        if (!complete) {
-            var cleanupFailure = failure
-            for (handle in handles.asReversed()) {
-                try { ModuleHelper.guarded { handle.unhook() } }
-                catch (error: Throwable) {
-                    val previous = cleanupFailure
-                    if (previous == null) cleanupFailure = error
-                    else if (previous !== error) previous.addSuppressed(error)
-                }
-            }
-            if (failure == null) cleanupFailure?.let { throw it }
-        }
-    }
-}
+internal fun installDockBackgroundHooks(hooks: List<Pair<Method, MethodHook>>): Boolean =
+    PreparedHookBatch().install(hooks) == FeatureInstallResult.INSTALLED
 
 /** Per-launcher metadata. Only layout events read native views; no icon snapshots or frame polling. */
 internal class DockContentAccess(hotseatType: Class<*>, private val iconType: Class<*>) {

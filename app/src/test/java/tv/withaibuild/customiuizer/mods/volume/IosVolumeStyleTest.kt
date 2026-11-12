@@ -28,6 +28,20 @@ import java.time.Duration
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IosVolumeStyleTest {
+    private fun attachColumn(dialog: FrameLayout): IosVolumeStyle.Binding {
+        val context = dialog.context
+        val column = FrameLayout(context)
+        val slider = SeekBar(context)
+        val fill = View(context)
+        val track = FrameLayout(context)
+        val icon = ImageView(context)
+        // Keep the fixture out of the parent's material and footer assertions.
+        track.addView(fill)
+        for (view in listOf(slider, track, icon)) column.addView(view, FrameLayout.LayoutParams(58, 170))
+        dialog.addView(column, 0, FrameLayout.LayoutParams(58, 170))
+        return IosVolumeStyle.Binding(column, slider, fill, track, icon, startCompact = true)
+    }
+
     @Test fun queuedOldKeyUpCannotReleaseANewerHardwarePress() {
         val host=Robolectric.buildActivity(Activity::class.java).setup().visible().get()
         ShadowChoreographer.setPaused(true)
@@ -40,7 +54,7 @@ class IosVolumeStyleTest {
             for(v in listOf(slider,fill,track,icon)) root.addView(v,FrameLayout.LayoutParams(58,170))
             host.setContentView(root)
             val binding=IosVolumeStyle.Binding(root,slider,fill,track,icon,startCompact=true)
-            val session=IosVolumeStyle.Session(root,root,null,listOf(binding),{0},{},{})
+            val session=IosVolumeStyle.Session(root,root,null,binding,{0},{},{})
             val input=IosVolumeStyle.NativeInput().apply { this.session=java.lang.ref.WeakReference(session) }
             try {
                 val paint=getField<IosVolumeStyle.Track>(binding,"paint")
@@ -154,7 +168,7 @@ class IosVolumeStyleTest {
             }
             host.setContentView(root)
             var ended: IosVolumeStyle.Session?=null
-            val session=IosVolumeStyle.Session(root,root,null,emptyList(),{0},{},{ended=it})
+            val session=IosVolumeStyle.Session(root,root,null,attachColumn(root),{0},{},{ended=it})
             session.close();assertSame(session,ended)
             val before=posts
             session.releaseHardwareAsync(IosVolumeStyle.NativeInput(),0L)
@@ -181,7 +195,7 @@ class IosVolumeStyleTest {
             for(v in listOf(slider,fill,track,icon)) root.addView(v,FrameLayout.LayoutParams(58,170))
             host.setContentView(root)
             val binding=IosVolumeStyle.Binding(root,slider,fill,track,icon,startCompact=true)
-            val session=IosVolumeStyle.Session(root,root,null,listOf(binding),{0},{},{})
+            val session=IosVolumeStyle.Session(root,root,null,binding,{0},{},{})
             val input=IosVolumeStyle.NativeInput()
             input.session=java.lang.ref.WeakReference(session)
             try {
@@ -396,7 +410,7 @@ class IosVolumeStyleTest {
         assertEquals(.7f,fill.alpha,0f); assertEquals(91,slider.layoutParams.width)
         var mode=1
         val parent=FrameLayout(host).apply { background=newer }
-        val session=IosVolumeStyle.Session(root,parent,null,emptyList(),{mode},{mode=it},{})
+        val session=IosVolumeStyle.Session(root,parent,null,attachColumn(root),{mode},{mode=it},{})
         // Closing before attachment must never suppress a material it did not own.
         session.close(); assertSame(newer,parent.background); assertEquals(1,mode)
     }
@@ -407,7 +421,7 @@ class IosVolumeStyleTest {
         val native=ColorDrawable(Color.RED); content.background=native
         var ended=false
         assertThrows(IllegalStateException::class.java) {
-            IosVolumeStyle.Session(root,content,null,emptyList(),{1},{error("mode")},{ended=true})
+            IosVolumeStyle.Session(root,content,null,attachColumn(root),{1},{error("mode")},{ended=true})
         }
         assertSame(native,content.background); assertTrue(ended)
         assertNull(tv.withaibuild.customiuizer.mods.utils.XposedHelpers.getAdditionalInstanceField(root,"a14.iosVolume.owner"))
@@ -417,7 +431,7 @@ class IosVolumeStyleTest {
         val root=FrameLayout(host); val content=FrameLayout(host); val more=ImageView(host)
         root.addView(content); root.addView(more,FrameLayout.LayoutParams(20,20))
         host.setContentView(root)
-        val session=IosVolumeStyle.Session(root,content,null,emptyList(),{0},{},{},more,null,moreAction={})
+        val session=IosVolumeStyle.Session(root,content,null,attachColumn(root),{0},{},{},more,null,moreAction={})
         val current=more.layoutParams as FrameLayout.LayoutParams
         current.width=91; current.topMargin=17
         var clicked=false; more.setOnClickListener { clicked=true }
@@ -431,7 +445,7 @@ class IosVolumeStyleTest {
         val root=FrameLayout(host); val content=FrameLayout(host); val shadow=View(host)
         root.addView(content); root.addView(shadow); host.setContentView(root)
         var mode=1
-        val session=IosVolumeStyle.Session(root,content,shadow,emptyList(),{mode},{mode=it},{})
+        val session=IosVolumeStyle.Session(root,content,shadow,attachColumn(root),{mode},{mode=it},{})
         val newer=ColorDrawable(Color.GRAY)
         content.background=newer; mode=2; shadow.visibility=View.VISIBLE
         session.refreshMaterial()
@@ -734,7 +748,7 @@ class IosVolumeStyleTest {
             val parent = FrameLayout(host); val dialog = FrameLayout(host); val content = FrameLayout(host)
             parent.addView(dialog, FrameLayout.LayoutParams(58, 198)); dialog.addView(content)
             host.setContentView(parent); parent.layout(0, 0, 400, 800); dialog.layout(330, 180, 388, 378)
-            val session = IosVolumeStyle.Session(dialog, content, null, emptyList(), { 0 }, {}, {})
+            val session = IosVolumeStyle.Session(dialog, content, null, attachColumn(dialog), { 0 }, {}, {})
             assertEquals(330f, dialog.x, .01f)
             dialog.x = 360f
             session.close(); assertEquals(360f, dialog.x, .01f)
@@ -772,7 +786,7 @@ class IosVolumeStyleTest {
             more.isFocusableInTouchMode=true; root.isFocusableInTouchMode=true
             var native=0; var intercepted=0
             content.setOnTouchListener { _,_ -> intercepted++; true }
-            val session=IosVolumeStyle.Session(root,content,null,emptyList(),{ 0 },{},{},more,null) { native++ }
+            val session=IosVolumeStyle.Session(root,content,null,attachColumn(root),{ 0 },{},{},more,null) { native++ }
             root.measure(View.MeasureSpec.makeMeasureSpec(100,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(100,View.MeasureSpec.EXACTLY))
             root.layout(0,0,100,100)
             root.requestFocus(); assertFalse(more.hasFocus())
@@ -832,7 +846,7 @@ class IosVolumeStyleTest {
             val listener = View.OnClickListener { original++ }
             more.setOnClickListener(listener); more.isClickable = false
             val layout = more.layoutParams
-            val session = IosVolumeStyle.Session(root, content, null, emptyList(), { 0 }, {}, {}, more, listener) { native++ }
+            val session = IosVolumeStyle.Session(root, content, null, attachColumn(root), { 0 }, {}, {}, more, listener) { native++ }
             assertTrue(more.isClickable); more.performClick(); assertEquals(1, native); assertEquals(0, original)
             session.close(); assertFalse(more.isClickable); assertSame(layout, more.layoutParams)
             assertSame(image, more.drawable); assertEquals(ImageView.ScaleType.CENTER, more.scaleType)
@@ -851,7 +865,7 @@ class IosVolumeStyleTest {
                 override fun onViewAttachedToWindow(v: View) { content.background = native; mode = 1 }
                 override fun onViewDetachedFromWindow(v: View) { content.background = null }
             })
-            val session = IosVolumeStyle.Session(root, content, shadow, emptyList(), { mode }, { mode = it; writes++ }, { ended++ })
+            val session = IosVolumeStyle.Session(root, content, shadow, attachColumn(root), { mode }, { mode = it; writes++ }, { ended++ })
             host.setContentView(root)
             assertNull(content.background); assertEquals(0, mode); assertEquals(View.INVISIBLE, shadow.visibility)
             val firstWrites=writes
