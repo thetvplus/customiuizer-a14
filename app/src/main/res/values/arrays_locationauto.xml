@@ -1,0 +1,10 @@
+<resources>
+    <string-array name="system_locationauto_modes">
+        <item>@string/system_locationauto_allow</item>
+        <item>@string/system_locationauto_block</item>
+    </string-array>
+    <string-array name="system_locationauto_mode_values" translatable="false">
+        <item>allow</item>
+        <item>block</item>
+    </string-array>
+</resources>

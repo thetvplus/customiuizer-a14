@@ -1399,4 +1399,12 @@
     <string name="volume_pct_presentation_native">Native floating hint</string>
     <string name="volume_pct_presentation_auto">Toast and Dynamic Island (automatic)</string>
     <string name="volume_pct_presentation_summary">Use an available Dynamic Island or native Toast capsule; fall back to the floating hint when unavailable.</string>
+    <string name="system_locationauto_title">Automatic location</string>
+    <string name="system_locationauto_summary">Turn system location on or off when selected apps come to the foreground.</string>
+    <string name="system_locationauto_enable_summary">Restart Android after enabling this feature for the first time.</string>
+    <string name="system_locationauto_mode">List mode</string>
+    <string name="system_locationauto_allow">Allowlist · Turn location on</string>
+    <string name="system_locationauto_block">Blocklist · Turn location off</string>
+    <string name="system_locationauto_close">Turn off after removing cards</string>
+    <string name="system_locationauto_close_summary">Turns off location enabled by this feature when the last matching card is removed from Recents.</string>
 </resources>

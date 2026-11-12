@@ -85,6 +85,7 @@ STANDALONE_PAGES = (
     ("pref_key_system_secureqs_cat", "prefs_system_secureqs", "SubFragment", False),
     ("pref_key_system_screenshot_cat", "prefs_system_screenshot", "System_ScreenshotConfig", False),
     ("pref_key_system_vpnauto_cat", "prefs_system_vpnauto", "System_VpnAutoSwitch", False),
+    ("pref_key_system_locationauto_cat", "prefs_system_locationauto", "System_LocationAutomation", False),
     ("pref_key_system_appbehavior_cat", "prefs_system_appbehavior", "System_AppBehavior", False),
     ("pref_key_system_wifiauto_cat", "prefs_system_wifiauto", "System_WifiAutomatic", False),
     ("pref_key_various_calluibright_cat", "prefs_various_calluibright", "Various_CallUIBright", False),

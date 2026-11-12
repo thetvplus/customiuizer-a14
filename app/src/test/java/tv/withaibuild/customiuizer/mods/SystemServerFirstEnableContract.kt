@@ -98,6 +98,7 @@ object SystemServerFirstEnableContract {
         rebootRequired("status_bar_height_insets", "system_statusbarheight", "SystemStatusBarInsetsHooks.StatusBarInsetsHeightHook / StatusBarHeightResources.install", "prefs_system_statusbar"),
         rebootRequired("system_island_application_overlays", "system_island_hide_in_floating_window", "IslandApplicationOverlayHooks.install", "prefs_system_island"),
         rebootRequired("system_vpn_auto_switch", "system_vpnauto_enabled", "VpnAutoSwitchHooks.install", "prefs_system_vpnauto").copy(uiDynamic = false),
+        rebootRequired("system_location_automation", "system_locationauto_enabled", "LocationAutomationHooks.install", "prefs_system_locationauto").copy(uiDynamic = false),
         rebootRequired("system_app_window_behavior", "system_appbehavior_rotation", "AppWindowBehaviorHooks.install", "prefs_system_appbehavior").copy(uiDynamic = false),
         rebootRequired("system_app_volume_memory", "system_appbehavior_volume", "AppVolumeMemoryHooks.install", "prefs_system_appbehavior").copy(uiDynamic = false),
         rebootRequired("system_wifi_automatic_settings", "system_wifiauto_enabled", "WifiAutomationHooks.install", "prefs_system_wifiauto").copy(uiDynamic = false),

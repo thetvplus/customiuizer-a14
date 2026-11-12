@@ -1454,7 +1454,23 @@ object SystemServerFeatures {
             enabled = { prefs -> prefs.getBoolean("system_wifiauto_enabled") },
             factory = { WifiAutomaticSettingsFeature(lpparam) },
         ),
+        LazyFeatureSpec(
+            id = LocationAutomationFeatureId,
+            name = "Location Automation",
+            preferenceKey = "system_locationauto_enabled",
+            target = FeatureTarget.SYSTEM_SERVER,
+            phase = InstallPhase.SYSTEM_SERVER_STARTING,
+            enabled = { prefs -> prefs.getBoolean("system_locationauto_enabled") },
+            factory = { LocationAutomationFeature(lpparam) },
+        ),
 )
+}
+
+internal class LocationAutomationFeature(lpparam: XposedModuleInterface.SystemServerStartingParam) : BaseSystemServerFeature(
+    lpparam, LocationAutomationFeatureId, "Location Automation", "system_locationauto_enabled"
+) {
+    override fun isEnabledCondition(prefs: PrefMap) = prefs.getBoolean("system_locationauto_enabled")
+    override fun installHook() = tv.withaibuild.customiuizer.mods.locationauto.LocationAutomationHooks.install(lpparam.classLoader)
 }
 
 internal class WifiAutomaticSettingsFeature(lpparam: XposedModuleInterface.SystemServerStartingParam) : BaseSystemServerFeature(

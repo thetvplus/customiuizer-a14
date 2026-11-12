@@ -1365,4 +1365,12 @@
     <string name="volume_pct_presentation_native">原生浮動提示</string>
     <string name="volume_pct_presentation_auto">Toast 與動態島（自動）</string>
     <string name="volume_pct_presentation_summary">優先使用閒置的動態島或系統 Toast 膠囊，無法使用時改用原生浮動提示。</string>
+    <string name="system_locationauto_title">自動定位</string>
+    <string name="system_locationauto_summary">選取的應用程式進入前景時，開啟或關閉系統定位。</string>
+    <string name="system_locationauto_enable_summary">首次啟用後需重新啟動系統。</string>
+    <string name="system_locationauto_mode">名單模式</string>
+    <string name="system_locationauto_allow">白名單 · 開啟定位</string>
+    <string name="system_locationauto_block">黑名單 · 關閉定位</string>
+    <string name="system_locationauto_close">移除卡片後關閉定位</string>
+    <string name="system_locationauto_close_summary">從最近使用的應用程式移除最後一張符合條件的卡片後，關閉本功能開啟的定位。</string>
 </resources>

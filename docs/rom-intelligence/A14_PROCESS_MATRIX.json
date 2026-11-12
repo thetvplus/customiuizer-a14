@@ -3369,6 +3369,19 @@
     },
     {
       "featureIdInt": 266,
+      "featureIdName": "system_location_automation",
+      "name": "Location Automation",
+      "preferenceKey": "system_locationauto_enabled",
+      "target": "SYSTEM_SERVER",
+      "phase": "SYSTEM_SERVER_STARTING",
+      "installer": "SystemServerFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.locationauto.LocationAutomationHooks.install(lpparam.classLoader)",
+      "enableCondition": "{ prefs -> prefs.getBoolean(\"system_locationauto_enabled\") }",
+      "allowedProcess": "system_server",
+      "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 266,
       "featureIdName": "system_recents_ios18_deck",
       "name": "Launcher iOS Recents Deck",
       "preferenceKey": "system_recents_ios18_deck",

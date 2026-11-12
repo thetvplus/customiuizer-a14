@@ -17,6 +17,7 @@ class PreferenceResourceResolverTest {
             listOf("pref_key_various", "pref_key_system_appbehavior_cat", "System_AppBehavior", R.id.prefs_system_appbehavior),
             listOf("pref_key_various", "pref_key_system_wifiauto_cat", "System_WifiAutomatic", R.id.prefs_system_wifiauto),
             listOf("pref_key_various", "pref_key_system_vpnauto_cat", "System_VpnAutoSwitch", R.id.prefs_system_vpnauto),
+            listOf("pref_key_various", "pref_key_system_locationauto_cat", "System_LocationAutomation", R.id.prefs_system_locationauto),
             listOf("pref_key_various", "pref_key_various_cat_gboard", "Controls", R.id.prefs_controls_navbar),
             listOf("pref_key_system", "pref_key_system_cat_appearance", "System", R.id.prefs_system_appearance),
             listOf("pref_key_system", "pref_key_system_cat_capture", "System", R.id.prefs_system_capture),
@@ -29,7 +30,8 @@ class PreferenceResourceResolverTest {
     }
 
     @Test fun directStandalonePagesCarryTheirPageKindWithoutChangingCategoryRoutes() {
-        for (key in listOf("pref_key_system_appbehavior_cat", "pref_key_system_wifiauto_cat", "pref_key_system_vpnauto_cat"))
+        for (key in listOf("pref_key_system_appbehavior_cat", "pref_key_system_wifiauto_cat",
+                "pref_key_system_vpnauto_cat", "pref_key_system_locationauto_cat"))
             org.junit.Assert.assertTrue(PreferenceResourceResolver.isStandalonePage(key))
         for (key in listOf(null, "pref_key_system_cat_automation", "pref_key_system_cat_audio",
                 "pref_key_controls_cat_navbar", "unknown"))
