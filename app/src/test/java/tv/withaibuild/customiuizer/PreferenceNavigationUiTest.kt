@@ -159,7 +159,7 @@ class PreferenceNavigationUiTest {
             .putBoolean("pref_key_system_island_media", true).apply()
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries, including Wi-Fi automatic settings, must be indexed", 36, standaloneKeys.size)
+        assertEquals("All standalone page entries must be indexed", 37, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
