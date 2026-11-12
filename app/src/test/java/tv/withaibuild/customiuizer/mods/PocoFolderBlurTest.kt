@@ -1,6 +1,8 @@
 package tv.withaibuild.customiuizer.mods
 
 import android.view.View
+import android.view.animation.Interpolator
+import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.content.ContextWrapper
 import android.content.pm.ApplicationInfo
@@ -110,6 +112,37 @@ class PocoFolderBlurTest {
             }
         })
     private fun allowed(small: Boolean) = call(gate, listOf(small))
+
+    @Test fun onlyTheBlurredWorkspaceIconUsesTheLongerNativeFade() {
+        val context = RuntimeEnvironment.getApplication()
+        val workspaceIcon = Folder()
+        val preview = View(context)
+        val nativeCurve = LinearInterpolator()
+        var blurred = true
+        active[draw] = folderBlurFadeHook(Folder::class.java) { it === workspaceIcon && blurred }
+
+        fun fade(view: View, from: Float, to: Float, duration: Long): List<Any?> {
+            var calls = 0
+            val forwarded = call(draw, listOf(view, from, to, duration, 0L, nativeCurve)) {
+                calls++
+                it
+            }
+            assertEquals(1, calls)
+            @Suppress("UNCHECKED_CAST")
+            return forwarded as List<Any?>
+        }
+
+        val opening = fade(workspaceIcon, 1f, 0f, 25)
+        assertEquals(listOf(workspaceIcon, 1f, 0f, 96L, 0L), opening.take(5))
+        val closing = fade(workspaceIcon, .2f, 1f, 80)
+        assertEquals(listOf(workspaceIcon, .2f, 1f, 144L, 0L), closing.take(5))
+        assertEquals(.5f, (closing[5] as Interpolator).getInterpolation(.5f), .001f)
+        assertSame(nativeCurve, fade(preview, 0f, 1f, 80)[5])
+        assertSame(nativeCurve, fade(workspaceIcon, 0f, 1f, 0)[5])
+        assertSame(nativeCurve, fade(workspaceIcon, 0f, 1f, 180)[5])
+        blurred = false
+        assertEquals(80L, fade(workspaceIcon, 0f, 1f, 80)[3])
+    }
 
     @Test fun modernGateInstallsWithoutTheRemovedWallpaperCallbackOrGeneralBlurHook() {
         assertTrue(hasPocoFolderBlurGate(Native::class.java))

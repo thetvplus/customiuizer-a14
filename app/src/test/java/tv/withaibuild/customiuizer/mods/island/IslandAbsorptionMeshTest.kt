@@ -74,7 +74,7 @@ class IslandAbsorptionMeshTest {
             IslandAbsorptionMesh.fill(vertices, rect, target, t)
             assertEquals(target.centerY() - target.height() * .04f, vertices[1], .001f)
             assertEquals(target.centerX(), (vertices[0] + vertices[2]) * .5f, .001f)
-            assertEquals("The leading footprint uses the moderated destination width", target.width() * .78f,
+            assertEquals("The leading footprint fits the available contact width with a wider edge guard", target.width() * .68f,
                 vertices[2] - vertices[0], .001f)
         }
         for (row in 0..IslandAbsorptionMesh.ROWS) {
@@ -98,6 +98,28 @@ class IslandAbsorptionMeshTest {
             previous = tail
         }
         assertEquals(1f, previous, 0f)
+    }
+
+    @Test fun automaticAndManualWidthsFitBothTheSeedAndTheLandingArea() {
+        val landing = RectF(300f, 20f, 500f, 50f)
+        val source = RectF(50f, 200f, 750f, 1200f)
+        assertEquals(40f * .68f, IslandAbsorptionMesh.headerWidth(40f, landing), .001f)
+        assertEquals(200f * .52f, IslandAbsorptionMesh.headerWidth(300f, landing), .001f)
+        assertEquals(12f, IslandAbsorptionMesh.headerWidth(40f, landing, 1), .001f)
+        assertEquals(150f, IslandAbsorptionMesh.headerWidth(300f, landing, 100), .001f)
+
+        val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
+        val contactLeft = 430f
+        val contactRight = 470f
+        val width = IslandAbsorptionMesh.headerWidth(contactRight - contactLeft, landing, 35)
+        IslandAbsorptionMesh.fill(vertices, source, landing, 0f, contactLeft = contactLeft,
+            contactRight = contactRight, headerWidth = width)
+        assertEquals(source.left, vertices[0], .001f)
+        assertEquals(source.right, vertices[2], .001f)
+        IslandAbsorptionMesh.fill(vertices, source, landing, .16f, contactLeft = contactLeft,
+            contactRight = contactRight, headerWidth = width)
+        assertEquals(443f, vertices[0], .001f)
+        assertEquals(457f, vertices[2], .001f)
     }
 
     @Test fun admissionUsesTheAcceptedReturnProgressRatherThanTheDistanceAlreadyDragged() {
