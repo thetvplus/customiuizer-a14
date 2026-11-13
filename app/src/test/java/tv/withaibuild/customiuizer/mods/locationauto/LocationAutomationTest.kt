@@ -176,7 +176,7 @@ class LocationAutomationTest {
         }) {}
 
         revision++
-        recovered().recoveredTaskRemoved()
+        recovered().unobservedTaskRemoved(0)
         assertTrue(location.enabled)
         assertTrue(location.requests.isEmpty())
 
@@ -184,15 +184,55 @@ class LocationAutomationTest {
         val policy = recovered()
         val task = Any()
         policy.resumed(2, task)
-        policy.recoveredTaskRemoved()
+        policy.unobservedTaskRemoved(0)
         assertTrue(location.enabled)
         policy.removed(2, task, 30)
         clock.idleFor(Duration.ofSeconds(30))
         assertEquals(listOf(false), location.requests)
 
         location.enabled = true
-        recovered().recoveredTaskRemoved()
+        recovered().unobservedTaskRemoved(0)
         assertFalse(location.enabled)
+    }
+
+    @Test fun lastUnobservedCardCanFinishCurrentOwnershipWithConfiguredDelay() {
+        val location = Location()
+        val observed = Any()
+        val maps = ComponentName("example.maps", "Maps")
+        val apps = setOf(maps.packageName)
+        var recent = listOf(recentTask(1, base = maps), recentTask(2, base = maps))
+        var removedId = 1
+        fun tracking() = LocationAutomation(handler, location::change, release = {
+            if (!hasRemainingLocationTasks(recent, removedId, apps)) location.change(false)
+        }) {}
+
+        val first = tracking()
+        first.resumed(1, observed)
+        first.removed(1, observed, 1)
+        clock.idleFor(Duration.ofSeconds(1))
+        assertTrue(location.enabled)
+
+        removedId = 2
+        recent = listOf(recentTask(2, base = maps))
+        tracking().unobservedTaskRemoved(30)
+        clock.idleFor(Duration.ofSeconds(29))
+        assertTrue(location.enabled)
+        clock.idleFor(Duration.ofSeconds(1))
+        assertEquals(listOf(true, false), location.requests)
+    }
+
+    @Test fun unobservedRemovalRestartsTheAllowlistDelayWhileCloseIsPending() {
+        val location = Location()
+        val policy = automation(location)
+        val observed = Any()
+        policy.resumed(1, observed)
+        policy.removed(1, observed, 30)
+        clock.idleFor(Duration.ofSeconds(29))
+        policy.unobservedTaskRemoved(30)
+        clock.idleFor(Duration.ofSeconds(29))
+        assertEquals(listOf(true), location.requests)
+        clock.idleFor(Duration.ofSeconds(1))
+        assertEquals(listOf(true, false), location.requests)
     }
 
     @Test fun nativeRecentTasksPreventClosingForUnobservedMatchingCards() {

@@ -82,8 +82,10 @@ internal class LocationAutomation(
         return true
     }
 
-    fun recoveredTaskRemoved() {
-        if (idle && !overflow) requestClose(0, owned = true)
+    fun unobservedTaskRemoved(delaySeconds: Int) {
+        if (!idle || overflow) return
+        cancelClose()
+        requestClose(delaySeconds, owned = true)
     }
 
     fun requestClose(delaySeconds: Int, owned: Boolean = false) {

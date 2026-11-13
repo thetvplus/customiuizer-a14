@@ -129,10 +129,10 @@ internal object LocationAutomationHooks {
             if (basePackage !in options.apps) return
             val context = ContextResolver.findContext(null) ?: return
             val revision = ownedRevision(context) ?: return
-            if (revision == claimedRevision) return
             val active = tracking ?: startTracking() ?: return
             active.lastRemovedId = id
-            active.policy.recoveredTaskRemoved()
+            val delay = if (revision == claimedRevision) options.closeDelaySeconds else 0
+            active.policy.unobservedTaskRemoved(delay)
         }
 
         @Suppress("DEPRECATION") // Android 14's SettingsProvider owns this persisted row.
@@ -233,6 +233,7 @@ internal object LocationAutomationHooks {
 
 private const val MAX_RECENT_TASKS = 128
 
+@Suppress("DEPRECATION") // persistentId includes tasks that have no running activity.
 internal fun hasRemainingLocationTasks(tasks: List<ActivityManager.RecentTaskInfo>, removedId: Int, apps: Set<String>): Boolean =
     tasks.size >= MAX_RECENT_TASKS || tasks.any {
         it.persistentId != removedId &&
