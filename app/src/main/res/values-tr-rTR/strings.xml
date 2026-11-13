@@ -1367,4 +1367,17 @@ ss - iki basamaklı saniye(09)</string>
     <string name="volume_pct_presentation_native">Yerel kayan gösterge</string>
     <string name="volume_pct_presentation_auto">Toast ve Dynamic Island (otomatik)</string>
     <string name="volume_pct_presentation_summary">Kullanılabilir Dynamic Island veya sistem Toast kapsülünü kullan; kullanılamıyorsa yerel kayan göstergeye dön.</string>
+    <string name="system_island_absorption_header_auto_title">Otomatik emilme genişliği</string>
+    <string name="system_island_absorption_header_width_title">Emilme sırasında üst kenar genişliği</string>
+    <string name="system_island_absorption_header_width_summ">Sayfanın üst kenarını kullanılabilir emilme genişliğinin yüzdesi olarak ayarlayın.</string>
+    <string name="system_locationauto_title">Otomatik konum</string>
+    <string name="system_locationauto_summary">Seçili uygulama ön plana geldiğinde sistem konumunu açar veya kapatır.</string>
+    <string name="system_locationauto_enable_summary">Özelliği ilk kez açtıktan sonra Android’i yeniden başlatın.</string>
+    <string name="system_locationauto_mode">Liste modu</string>
+    <string name="system_locationauto_allow">İzin listesi · Konumu aç</string>
+    <string name="system_locationauto_block">Engelleme listesi · Konumu kapat</string>
+    <string name="system_locationauto_close">Kartlar kaldırıldığında kapat</string>
+    <string name="system_locationauto_close_summary">Son eşleşen kart son kullanılan uygulamalardan kaldırıldığında, bu özelliğin açtığı konumu kapatır.</string>
+    <string name="system_locationauto_close_delay">Konumu kapatma gecikmesi</string>
+    <string name="system_locationauto_close_delay_summary">İzin listesi: son eşleşen kart kaldırılınca başlar. Engelleme listesi: listedeki uygulama ön plana gelince başlar, uygulamadan ayrılınca iptal edilir.</string>
 </resources>

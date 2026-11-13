@@ -1104,7 +1104,7 @@ data object WifiAutomaticSettingsFeatureId : FeatureId {
 }
 
 data object LocationAutomationFeatureId : FeatureId {
-    override val id = 266
+    override val id = 272
     override val name = "system_location_automation"
 }
 

@@ -1361,4 +1361,17 @@
     <string name="volume_pct_presentation_native">標準のフローティング表示</string>
     <string name="volume_pct_presentation_auto">Toast と Dynamic Island（自動）</string>
     <string name="volume_pct_presentation_summary">利用可能な Dynamic Island または標準の Toast カプセルを使用し、利用できない場合は標準のフローティング表示に戻ります。</string>
+    <string name="system_island_absorption_header_auto_title">吸い込み幅を自動調整</string>
+    <string name="system_island_absorption_header_width_title">吸い込み時のページ上端の幅</string>
+    <string name="system_island_absorption_header_width_summ">吸い込みに使える幅に対する割合でページ上端の幅を設定します。</string>
+    <string name="system_locationauto_title">位置情報の自動切り替え</string>
+    <string name="system_locationauto_summary">選択したアプリが前面に出たときに、端末の位置情報をオンまたはオフにします。</string>
+    <string name="system_locationauto_enable_summary">初めて有効にした後は Android を再起動してください。</string>
+    <string name="system_locationauto_mode">リストモード</string>
+    <string name="system_locationauto_allow">許可リスト · 位置情報をオン</string>
+    <string name="system_locationauto_block">ブロックリスト · 位置情報をオフ</string>
+    <string name="system_locationauto_close">カードを削除した後にオフ</string>
+    <string name="system_locationauto_close_summary">最近使ったアプリから最後の対象カードを削除すると、この機能でオンにした位置情報をオフにします。</string>
+    <string name="system_locationauto_close_delay">位置情報をオフにするまでの時間</string>
+    <string name="system_locationauto_close_delay_summary">許可リストでは最後の対象カードを削除したときから計測します。ブロックリストでは対象アプリが前面に出たときから計測し、アプリを離れると中止します。</string>
 </resources>
