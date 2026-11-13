@@ -65,8 +65,8 @@ class SystemServerFeaturesWiringTest {
         val features = SystemServerFeatures.all(fakeSystemServerStartingParam())
 
         assertEquals(
-            "All 58 supported system_server features should be present",
-            58,
+            "All 59 supported system_server features should be present",
+            59,
             features.size
         )
         val uniqueIds = features.map { it.id }.toSet()
@@ -74,6 +74,12 @@ class SystemServerFeaturesWiringTest {
             features.any { it.id == IslandApplicationOverlayFeatureId })
         assertTrue("VPN automation must have its own preference-gated system_server feature",
             features.any { it.id == VpnAutoSwitchFeatureId })
+        val location = features.single { it.id == LocationAutomationFeatureId }
+        assertEquals("system_locationauto_enabled", location.preferenceKey)
+        val locationPrefs = PrefMap().apply { put("system_locationauto_apps", setOf("example.maps")) }
+        assertFalse(location.isEnabled(locationPrefs))
+        locationPrefs.put("system_locationauto_enabled", true)
+        assertTrue(location.isEnabled(locationPrefs))
         assertTrue(features.any { it.id == AppWindowBehaviorFeatureId })
         assertTrue(features.any { it.id == AppVolumeMemoryFeatureId })
         assertEquals("Every feature must have a unique FeatureId", features.size, uniqueIds.size)

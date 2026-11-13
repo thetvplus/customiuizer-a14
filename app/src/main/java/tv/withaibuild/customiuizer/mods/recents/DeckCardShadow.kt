@@ -1,105 +1,79 @@
 package tv.withaibuild.customiuizer.mods.recents
 
 import android.graphics.Outline
+import android.graphics.Rect
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewOutlineProvider
-import tv.withaibuild.customiuizer.mods.utils.CleanupActions
+import kotlin.math.roundToInt
 
-/** One native projection on the TaskView RenderNode. It follows the card's
- * existing matrix/alpha and never borrows the application's Surface. */
-internal class DeckCardShadow(private val view: View, private val header: View, radius: Float,
-    private val content: View,private var fullscreenProgress: Float) :
-    ViewOutlineProvider(), View.OnLayoutChangeListener {
+/** The TaskView RenderNode projects the native thumbnail silhouette. */
+internal class DeckCardShadow(
+    private val view: View,
+    val content: View
+) : ViewOutlineProvider() {
     private val original = view.outlineProvider
-    private var corner = radius
-    private var contentAlpha = contentOpacity(fullscreenProgress)
-    private var closed = false
-    // A clipped root would cut its header with this content-only outline.
-    val owned = !view.clipToOutline
-    // Keep sibling order on one common plane, with a shallower settled shadow
-    // so a dense stack of overlapping outlines does not darken the wallpaper.
-    val height = 8f * view.resources.displayMetrics.density
-    private var windowOpacity = 0f
-    private var awaitingThumbnail = false
+    private val bounds = Rect()
+    // Offset only the projected silhouette to compensate for HWUI's light.
+    private val leftShift = view.resources.displayMetrics.density.roundToInt()
+    private val upShift = (2f * view.resources.displayMetrics.density).roundToInt()
+    private var opacity = 0f
+    private var corner = 0
+    var owned = (view.parent as? ViewGroup)?.clipChildren == false &&
+        !view.clipToOutline && content.parent === view
+        private set
 
-    init {
-        if (owned) {
-            try {
-                view.outlineProvider = this
-                view.addOnLayoutChangeListener(this)
-                header.addOnLayoutChangeListener(this)
-            } catch (error: Throwable) {
-                val cleanup=CleanupActions(error); cleanup.run { close() }; cleanup.finish()
+    init { if (owned) view.outlineProvider = this }
+
+    fun sync(fullscreenProgress: Float, radius: Int, header: Int, entryProgress: Float = 0f) {
+        if (!owned) return
+        if (view.outlineProvider !== this || view.clipToOutline) {
+            close()
+            return
+        }
+        val left = maxOf(0, content.left)
+        // The native match-parent thumbnail translates its Canvas by the
+        // same layout header before drawing the rounded screenshot.
+        val top = maxOf(0, content.top + header)
+        val right = minOf(view.width, content.right)
+        val bottom = minOf(view.height, content.bottom)
+        val visibleOpacity = if (left < right && top < bottom && view.visibility == View.VISIBLE &&
+            view.alpha > 0f && content.parent === view && content.visibility == View.VISIBLE &&
+            content.width > 0 && content.height > 0
+        ) {
+            val thumbnailOpacity = if (fullscreenProgress.isFinite() && content.alpha.isFinite())
+                content.alpha.coerceIn(0f, 1f) * (1f - fullscreenProgress.coerceIn(0f, 1f)) else 0f
+            maxOf(thumbnailOpacity, entryProgress)
+        } else 0f
+        if (visibleOpacity == 0f) {
+            if (opacity != 0f) {
+                opacity = 0f
+                view.invalidateOutline()
             }
+            return
         }
-    }
-
-    fun radius(value: Float) {
-        if (corner == value) return
-        corner = value
-        if (owned && !closed && view.outlineProvider === this) view.invalidateOutline()
-    }
-
-    fun syncContentAlpha(fullscreenProgress: Float) {
-        this.fullscreenProgress=fullscreenProgress
-        val previous=maxOf(contentAlpha,windowOpacity)
-        contentAlpha=contentOpacity(fullscreenProgress)
-        if(!hasContentBounds() || (awaitingThumbnail && contentAlpha>=.999f)) {
-            windowOpacity=0f;awaitingThumbnail=false
-        }
-        if(previous!=maxOf(contentAlpha,windowOpacity) && owned && !closed && view.outlineProvider===this) view.invalidateOutline()
+        if (opacity == visibleOpacity && bounds.left == left && bounds.top == top &&
+            bounds.right == right && bounds.bottom == bottom && corner == radius) return
+        opacity = visibleOpacity
+        bounds.set(left, top, right, bottom)
+        corner = radius
+        view.invalidateOutline()
     }
 
     override fun getOutline(view: View, outline: Outline) {
-        val top = header.height.coerceIn(0, view.height)
-        // Use the card's own silhouette on every ROM. A window-space outline
-        // can survive a legacy rebase and cast a detached rectangular shadow.
-        val opacity=if(hasContentBounds()) maxOf(windowOpacity,contentOpacity(fullscreenProgress)) else 0f
-        if (top == view.height || view.width <= 0 || opacity==0f) outline.setEmpty()
-        else outline.setRoundRect(0, top, view.width, view.height, corner.coerceAtLeast(0f))
-        // The stack's existing pre-draw reconciles native thumbnail writes and
-        // fullscreen progress before projection. No second shadow animation.
-        outline.alpha=opacity
-    }
-
-    private fun hasContentBounds(): Boolean =
-        content.visibility==View.VISIBLE && content.width>0 && content.height>0
-
-    private fun contentOpacity(fullscreenProgress: Float): Float =
-        if(hasContentBounds() && fullscreenProgress.isFinite())
-            content.alpha.coerceIn(0f,1f)*(1f-fullscreenProgress.coerceIn(0f,1f)) else 0f
-
-    fun followWindow(progress: Float) {
-        if(!owned || closed || view.outlineProvider!==this) return
-        val p=progress.coerceIn(0f,1f)
-        awaitingThumbnail=false
-        val next=if(hasContentBounds()) p*p*(3f-2f*p) else 0f
-        val changed=maxOf(contentAlpha,windowOpacity)!=maxOf(contentAlpha,next)
-        windowOpacity=next
-        if(changed) view.invalidateOutline()
-    }
-
-    fun finishWindow(settled: Boolean) {
-        if(windowOpacity==0f) return
-        if(!settled || !hasContentBounds() || contentOpacity(fullscreenProgress)>=.999f) clearWindow()
-        else awaitingThumbnail=true
-    }
-
-    fun clearWindow() {
-        if(windowOpacity==0f) return
-        val changed=windowOpacity>contentAlpha
-        windowOpacity=0f;awaitingThumbnail=false
-        if(changed && view.outlineProvider===this) view.invalidateOutline()
-    }
-
-    override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
-        if (!closed && view.outlineProvider === this) view.invalidateOutline()
+        if (view.clipToOutline) {
+            original?.getOutline(view, outline)
+            return
+        }
+        if (opacity == 0f) outline.setEmpty()
+        else outline.setRoundRect(bounds.left - leftShift, bounds.top - upShift,
+            bounds.right - leftShift, bounds.bottom - upShift, corner.coerceAtLeast(0).toFloat())
+        outline.alpha = opacity
     }
 
     fun close() {
-        if (closed || !owned) return
-        closed = true
-        view.removeOnLayoutChangeListener(this); header.removeOnLayoutChangeListener(this)
+        if (!owned) return
+        owned = false
         if (view.outlineProvider === this) view.outlineProvider = original
     }
 }

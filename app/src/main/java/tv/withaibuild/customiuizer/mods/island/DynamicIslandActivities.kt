@@ -86,6 +86,7 @@ internal data class IslandOptions(
     val waveformGain: Int = 200,
     val returnEffect: IslandReturnEffect = IslandReturnEffect.NONE,
     val mediaApps: Set<String> = emptySet(),
+    val absorptionHeaderPercent: Int = 0,
 ) {
     val returnEffectEnabled: Boolean get() = returnEffect != IslandReturnEffect.NONE
     private val mediaReturningPackages: Set<String> = if (enabled && media && mediaReturn)
@@ -141,7 +142,10 @@ internal data class IslandOptions(
                 prefs.getBoolean("system_island_live_return", true),
                 prefs.getInt("system_island_waveform_gain", 200).coerceIn(100, 800),
                 IslandReturnEffect.read(prefs),
-                prefs.getStringSet("system_island_media_apps").toSet())
+                prefs.getStringSet("system_island_media_apps").toSet(),
+                if (prefs.getBoolean("system_island_absorption_header_auto", true)) 0
+                else prefs.getInt("system_island_absorption_header_width", IslandAbsorptionMesh.DEFAULT_HEADER_PERCENT)
+                    .coerceIn(IslandAbsorptionMesh.MIN_HEADER_PERCENT, IslandAbsorptionMesh.MAX_HEADER_PERCENT))
         }
     }
 }

@@ -1360,4 +1360,17 @@
     <string name="volume_pct_presentation_native">Стандартная плавающая подсказка</string>
     <string name="volume_pct_presentation_auto">Toast и Dynamic Island (автоматически)</string>
     <string name="volume_pct_presentation_summary">Использовать свободный Dynamic Island или системную капсулу Toast, иначе — стандартную плавающую подсказку.</string>
+    <string name="system_island_absorption_header_auto_title">Автоматическая ширина втягивания</string>
+    <string name="system_island_absorption_header_width_title">Ширина верхнего края при втягивании</string>
+    <string name="system_island_absorption_header_width_summ">Задайте ширину верхнего края страницы в процентах от доступной ширины втягивания.</string>
+    <string name="system_locationauto_title">Автоматическое управление геолокацией</string>
+    <string name="system_locationauto_summary">Включает или выключает геолокацию, когда выбранное приложение выходит на передний план.</string>
+    <string name="system_locationauto_enable_summary">После первого включения функции перезагрузите Android.</string>
+    <string name="system_locationauto_mode">Режим списка</string>
+    <string name="system_locationauto_allow">Список разрешений · Включать геолокацию</string>
+    <string name="system_locationauto_block">Список блокировки · Выключать геолокацию</string>
+    <string name="system_locationauto_close">Выключать после удаления карточек</string>
+    <string name="system_locationauto_close_summary">Выключает геолокацию, включённую этой функцией, после удаления последней подходящей карточки из списка недавних.</string>
+    <string name="system_locationauto_close_delay">Задержка выключения геолокации</string>
+    <string name="system_locationauto_close_delay_summary">Список разрешений: отсчёт начинается после удаления последней подходящей карточки. Список блокировки: отсчёт начинается при выходе приложения на передний план и отменяется при уходе с него.</string>
 </resources>

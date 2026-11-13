@@ -63,7 +63,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     class Card(val owner: DeckOwner,val geometry: DeckCardGeometry,val task: Any,val taskId: Int,var index: Int,val header: DeckHeaderOwner,var depthScale: Float,val shadow: DeckCardShadow) {
         val view get()=geometry.view
-        val depth=owner.depthOrder.add(view,owner.depthIndex(taskId,index),shadow.height)
+        val depth=owner.depthOrder.add(view,owner.depthIndex(taskId,index))
         init {
             geometry.onScaleChanged={ value -> header.pose(value,index,(value*depthScale-1f)/.12f,owner.current.landscape) }
             // Native entry can defer the first scale sample until after layout.
@@ -206,9 +206,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     val scroll get()=api.scroll.getFloat(scroller)
     private val cards=LinkedHashMap<View,Card>()
     private val drawCards=ArrayList<Card>(8)
-    private var closingShadow: Card?=null
-    private var closingShadowSettled=false
-    private val shadowBounds=RectF()
     private var dragging: Card?=null
     fun trackSwipe(card: Card,raw: Float,delta: Float) {
         if(dragging!==card) { dragging?.geometry?.finishSwipe(); dragging=card }
@@ -250,6 +247,10 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private val occludingBounds=RectF()
     private val gestureReference=RectF()
     private val gestureTarget=RectF()
+    private val shadowWindow=RectF()
+    private var entryShadow: Card?=null
+    private var entryShadowProgress=0f
+    private var entryShadowSettled=false
     private val global=Matrix()
     private val local=Matrix()
     private val surface=Matrix()
@@ -362,8 +363,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
                 api.headerTitle.get(headerView) as android.widget.TextView,api.headerBadge.get(headerView) as View,headerConfig)
             val taskId=api.id.getInt(api.key.get(task))
             val thumbnail=api.getThumbnail.invoke(view) as View
-            shadow=DeckCardShadow(view,headerView,api.thumbnailRadius.getInt(thumbnail).toFloat(),thumbnail,
-                api.fullscreenProgress.getFloat(view))
+            shadow=DeckCardShadow(view,thumbnail)
             return Card(this,geometry,task,taskId,frame.index,header,frame.depthScale,shadow).also {
                 cards[view]=it; XposedHelpers.setAdditionalInstanceField(view,CARD,it)
                 drawCards.add(it)
@@ -390,7 +390,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     fun remove(view: View) {
         val card=cards.remove(view) ?: return
         drawCards.remove(card)
-        if(closingShadow===card) closingShadow=null
+        if(entryShadow===card) clearEntryShadow()
         if(dragging===card) dragging=null
         val cleanup=CleanupActions()
         cleanup.run { clearOpening() }
@@ -438,39 +438,51 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     fun snap(predicted: Float): Float? = if(allowed && flingVelocity!=0)
         IosDeckSnap.target(predicted,scroll,current.gap,current.count,flingVelocity) else null
-    fun appGestureInput(card: Card,window: RectF,reference: Int,gap: Float,bend: Float): RectF? {
+    fun gestureInput(card: Card,window: RectF,reference: Int,gap: Float,bend: Float): RectF? {
         val q=scroll
-        if(!allowed || !current.contentAt(reference,q,gestureReference) ||
-            !current.contentAt(card.index,q,gestureTarget)) return null
-        if(reference==card.index && transition!=0L && prepareLocalSpace()) {
-            local.mapRect(shadowBounds,window)
-            projectClosingShadow(card,shadowBounds,gestureReference)
+        val anchor=if(reference==-1) 0 else reference
+        if(!allowed || !current.contentAt(anchor,q,gestureReference)) return null
+        if(card.index==anchor) gestureTarget.set(gestureReference)
+        else if(!current.contentAt(card.index,q,gestureTarget)) return null
+        if(reference==-1) {
+            // Home uses a virtual page one slot to the right of the first task.
+            // Derive its endpoint from the real Deck, retaining the native slot offset.
+            gestureReference.offset(gestureReference.width()+gap,0f)
         }
-        return card.windowInput.takeIf { card.geometry.windowInput(window,gestureReference,gestureTarget,
-            reference-card.index,gap,current.fullWidth,bend,current.contentHeader,it) }
+        val slots=reference-card.index
+        val input=card.windowInput
+        if(!bend.isFinite() || !card.geometry.windowPose(window,gestureReference,gestureTarget,slots,
+                gap,current.fullWidth,current.contentHeader,input)) return null
+        if(reference==card.index) followEntryShadow(card,window,gestureReference)
+        // updateTaskView adds its own page offset and vertical bend. Encode
+        // its input here. Closing alignment consumes the same pose directly.
+        input.offset(-slots*(input.width()+gap),-bend)
+        return input
     }
-    private fun projectClosingShadow(card: Card,window: RectF,endpoint: RectF) {
-        if(transition==0L || opening!=null || !card.shadow.owned || window.isEmpty || endpoint.isEmpty) return
-        val width=current.fullWidth
-        if(width<=endpoint.width() || !width.isFinite()) return
-        val remaining=window.width()-endpoint.width()
-        if(!remaining.isFinite()) return
-        if(closingShadow!==card) closingShadow?.shadow?.clearWindow()
-        closingShadow=card
-        closingShadowSettled=kotlin.math.abs(remaining)<=1f
-        card.shadow.followWindow(1f-remaining/(width-endpoint.width()))
-    }
-    fun projectClosingWindow(card: Card,window: RectF,target: RectF) {
+
+    fun followEntryWindow(card: Card,window: RectF,target: RectF) {
         if(!prepareLocalSpace()) return
-        local.mapRect(gestureReference,target)
-        local.mapRect(shadowBounds,window)
-        projectClosingShadow(card,shadowBounds,gestureReference)
+        local.mapRect(shadowWindow,window)
+        local.mapRect(gestureTarget,target)
+        followEntryShadow(card,shadowWindow,gestureTarget)
     }
-    private fun finishClosingShadow(cancelled: Boolean) {
-        val card=closingShadow ?: return
-        closingShadow=null
-        card.shadow.finishWindow(!cancelled && closingShadowSettled)
+
+    private fun followEntryShadow(card: Card,window: RectF,target: RectF) {
+        if(transition==0L || opening!=null || !card.shadow.owned || window.isEmpty || target.isEmpty) return
+        val range=current.fullWidth-target.width()
+        val traveled=current.fullWidth-window.width()
+        if(range<=0f || !range.isFinite() || !traveled.isFinite()) return
+        entryShadow=card
+        entryShadowProgress=(traveled/range).coerceIn(0f,1f)
+        entryShadowSettled=kotlin.math.abs(traveled-range)<=1f
     }
+
+    private fun clearEntryShadow() {
+        entryShadow=null
+        entryShadowProgress=0f
+        entryShadowSettled=false
+    }
+
     fun alignClosing(selected: Card,window: RectF,reference: RectF,alpha: Float) {
         // Native references come from the visual layout. The moving Window is
         // in Home space; the legacy final reconciliation passes one local Rect
@@ -480,15 +492,15 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             if(!prepareLocalSpace()) return
             local.mapRect(gestureReference,window)
         }
-        if(api.profile==DeckLauncherProfile.LEGACY) projectClosingShadow(selected,gestureReference,reference)
+        if(api.profile==DeckLauncherProfile.LEGACY) followEntryShadow(selected,gestureReference,reference)
         val header=current.contentHeader
         val q=scroll
         for(i in 0 until drawCards.size) {
             val card=drawCards[i]
             if(card===selected || !current.contentAt(card.index,q,gestureTarget)) continue
             val slots=selected.index-card.index
-            if(card.geometry.windowInput(gestureReference,reference,gestureTarget,slots,25f,current.fullWidth,0f,header,card.windowInput)) {
-                card.geometry.alignClosing(card.windowInput,slots,25f,header)
+            if(card.geometry.windowPose(gestureReference,reference,gestureTarget,slots,25f,current.fullWidth,header,card.windowInput)) {
+                card.geometry.alignClosing(card.windowInput,header)
                 card.header.view.alpha=alpha
             }
         }
@@ -505,11 +517,17 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         ModuleHelper.guarded {
             if(allowed) {
                 // Native entry/header animators can write alpha after the first
-                // layout and bypass TaskView's setters. Reconcile on an already
-                // scheduled draw; never request another frame or resolve members.
+                // layout and bypass TaskView's setters. Reconcile on this draw.
                 for(i in 0 until drawCards.size) {
                     val card=drawCards[i]
-                    card.shadow.syncContentAlpha(api.fullscreenProgress.getFloat(card.view))
+                    if(card.shadow.owned) {
+                        val fullscreen=api.fullscreenProgress.getFloat(card.view)
+                        if(card===entryShadow && transition==0L &&
+                            (card.shadow.content.visibility!=View.VISIBLE ||
+                                fullscreen<=0f && card.shadow.content.alpha>=1f)) clearEntryShadow()
+                        card.shadow.sync(fullscreen,api.thumbnailRadius.getInt(card.shadow.content),
+                            current.contentHeader.toInt(),if(card===entryShadow) entryShadowProgress else 0f)
+                    }
                     card.header.refreshOpacity()
                 }
                 if(dragging?.geometry?.updateSwipe()==false) suspend(true)
@@ -553,8 +571,6 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     fun prepareOpening(selected: Card,start: RectF): Boolean {
         if(!allowed || transition==0L || start.isEmpty) return false
         if(opening?.selectedId==selected.taskId) return true
-        closingShadow?.shadow?.clearWindow();closingShadow=null
-        selected.shadow.clearWindow()
         if(!prepareLocalSpace()) return false
         clearOpening()
         // WindowElement already performs this native handoff before opening.
@@ -630,10 +646,11 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         // Queries and animation consumers only reuse an existing intent. Native
         // Deck entry and an actual card click are the callers that create one.
         if(!force) return transition
+        clearEntryShadow()
         val cleanup=CleanupActions()
         for(link in linkedSprings.toList()) cleanup.run { releaseSpring(link) }
         linkedSprings.clear()
-        cleanup.run { finishClosingShadow(true) }; cleanup.run { clearOpening() }; cleanup.run { router.cancel() }; cleanup.finish()
+        cleanup.run { clearOpening() }; cleanup.run { router.cancel() }; cleanup.finish()
         transition=++sequence; frozen.clear()
         observeDepth()
         stack.removeCallbacks(ticketTimeout); stack.postDelayed(ticketTimeout,transitionTimeout(2000L))
@@ -641,7 +658,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     fun linkSpring(spring: Any?,ticket: Long) {
         if(ticket==0L || ticket!=transition) return
-        if(spring==null) { endTransition(ticket,cancelled=true); return }
+        if(spring==null) { endTransition(ticket); return }
         if(linkedSprings.any { it.spring.get()===spring && it.ticket==ticket }) return
         val iterator=linkedSprings.iterator()
         while(iterator.hasNext()) {
@@ -670,7 +687,9 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         onUi {
             if(closed) return@onUi
             // A queued native boundary must never end a newer deliberate entry.
+            if(ticket!=transition) return@onUi
             endTransition(ticket,cancelled=true)
+            clearEntryShadow()
             if(gestureBoundary.quickSwitching) retireGeometry() else refresh(false)
         }
     }
@@ -692,7 +711,9 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     fun endTransition(ticket: Long,cancelled: Boolean=false) {
         if(ticket==0L || ticket!=transition) return
-        finishClosingShadow(cancelled)
+        // A settled window can precede the last native thumbnail write.
+        // Keep its projection until that thumbnail takes over.
+        if(cancelled || !entryShadowSettled) clearEntryShadow()
         transition=0; frozen.clear(); stack.removeCallbacks(ticketTimeout)
         val cleanup=CleanupActions()
         val iterator=linkedSprings.iterator()
@@ -718,7 +739,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     private fun restoreCards() {
         dragging=null
-        closingShadow=null
+        clearEntryShadow()
         drawCards.clear()
         if(cards.isEmpty() && opening==null && depthObserver==null) { router.cancel(); return }
         val cleanup=CleanupActions()

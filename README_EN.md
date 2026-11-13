@@ -31,7 +31,7 @@ Availability depends on the ROM and system-app versions. Do not enable this modu
 
 The [documentation index](docs/README.md) covers development, testing, releases and feature contracts. Start with the [shared engineering rules](AGENTS.md) before contributing.
 
-Current source version: `r14.27.5` (versionCode 305). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
+Current source version: `r14.27.7` (versionCode 307). Maintainer: `thetvplus`. Application ID: `tv.withaibuild.customiuizer.r14`.
 
 The iOS gesture indicator requires full-screen gestures and a visible system handle; turn off this module’s Hide gesture line and restart System UI. The [iOS recents deck](docs/features/ios18-recents-reference.md) uses complete native interfaces to admit MIUI / POCO launchers and requires Horizontal Recents; restart the launcher after changing it. Full-screen gestures are recommended.
 

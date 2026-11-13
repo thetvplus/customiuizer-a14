@@ -1360,4 +1360,17 @@
     <string name="volume_pct_presentation_native">Indicador flotante nativo</string>
     <string name="volume_pct_presentation_auto">Toast y Dynamic Island (automático)</string>
     <string name="volume_pct_presentation_summary">Usar Dynamic Island o la cápsula Toast del sistema si están disponibles; en caso contrario, usar el indicador flotante nativo.</string>
+    <string name="system_island_absorption_header_auto_title">Anchura de absorción automática</string>
+    <string name="system_island_absorption_header_width_title">Anchura de la cabecera al absorber</string>
+    <string name="system_island_absorption_header_width_summ">Ajusta la cabecera de la página como porcentaje de la anchura disponible para la absorción.</string>
+    <string name="system_locationauto_title">Ubicación automática</string>
+    <string name="system_locationauto_summary">Activa o desactiva la ubicación del sistema cuando una aplicación seleccionada pasa a primer plano.</string>
+    <string name="system_locationauto_enable_summary">Reinicia Android tras activar esta función por primera vez.</string>
+    <string name="system_locationauto_mode">Modo de lista</string>
+    <string name="system_locationauto_allow">Lista de permitidas · Activar ubicación</string>
+    <string name="system_locationauto_block">Lista de bloqueadas · Desactivar ubicación</string>
+    <string name="system_locationauto_close">Desactivar al quitar las tarjetas</string>
+    <string name="system_locationauto_close_summary">Desactiva la ubicación activada por esta función al quitar la última tarjeta coincidente de Recientes.</string>
+    <string name="system_locationauto_close_delay">Retraso al desactivar la ubicación</string>
+    <string name="system_locationauto_close_delay_summary">Lista de permitidas: empieza al quitar la última tarjeta coincidente. Lista de bloqueadas: empieza cuando una aplicación de la lista pasa a primer plano y se cancela al salir.</string>
 </resources>

@@ -3444,6 +3444,19 @@
       "enableCondition": "{ prefs -> ClassicSignalFeature.evaluateEnabled(prefs) }",
       "allowedProcess": "com.android.systemui",
       "deniedProcess": "miui.systemui.plugin (ClassLoader extracted at runtime)"
+    },
+    {
+      "featureIdInt": 272,
+      "featureIdName": "system_location_automation",
+      "name": "Location Automation",
+      "preferenceKey": "system_locationauto_enabled",
+      "target": "SYSTEM_SERVER",
+      "phase": "SYSTEM_SERVER_STARTING",
+      "installer": "SystemServerFeatures",
+      "installHook": "tv.withaibuild.customiuizer.mods.locationauto.LocationAutomationHooks.install(lpparam.classLoader)",
+      "enableCondition": "{ prefs -> prefs.getBoolean(\"system_locationauto_enabled\") }",
+      "allowedProcess": "system_server",
+      "deniedProcess": ""
     }
   ],
   "scope": [

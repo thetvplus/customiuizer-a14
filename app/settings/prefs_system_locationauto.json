@@ -1,0 +1,62 @@
+{
+  "type": "screen",
+  "attributes": {
+    "android:key": "pref_key_system_locationauto"
+  },
+  "children": [
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_locationauto_enabled",
+        "android:title": "@string/system_locationauto_title",
+        "android:summary": "@string/system_locationauto_enable_summary",
+        "android:defaultValue": "false"
+      }
+    },
+    {
+      "type": "choice",
+      "attributes": {
+        "android:key": "pref_key_system_locationauto_mode",
+        "android:title": "@string/system_locationauto_mode",
+        "android:entries": "@array/system_locationauto_modes",
+        "android:entryValues": "@array/system_locationauto_mode_values",
+        "android:defaultValue": "allow",
+        "app:valueAsSummary": "true",
+        "app:dynamic": "true"
+      }
+    },
+    {
+      "type": "action",
+      "attributes": {
+        "android:key": "pref_key_system_locationauto_apps",
+        "android:title": "@string/select_apps",
+        "app:countAsSummary": "true",
+        "app:dynamic": "true"
+      }
+    },
+    {
+      "type": "toggle",
+      "attributes": {
+        "android:key": "pref_key_system_locationauto_close",
+        "android:title": "@string/system_locationauto_close",
+        "android:summary": "@string/system_locationauto_close_summary",
+        "android:defaultValue": "false",
+        "app:dynamic": "true"
+      }
+    },
+    {
+      "type": "slider",
+      "attributes": {
+        "android:key": "pref_key_system_locationauto_close_delay",
+        "android:title": "@string/system_locationauto_close_delay",
+        "android:summary": "@string/system_locationauto_close_delay_summary",
+        "android:defaultValue": "0",
+        "app:minValue": "0",
+        "app:maxValue": "30",
+        "app:stepValue": "1",
+        "app:format": "@string/format_d_s",
+        "app:dynamic": "true"
+      }
+    }
+  ]
+}

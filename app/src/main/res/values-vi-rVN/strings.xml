@@ -1361,4 +1361,17 @@
     <string name="volume_pct_presentation_native">Chỉ báo nổi gốc</string>
     <string name="volume_pct_presentation_auto">Toast và Dynamic Island (tự động)</string>
     <string name="volume_pct_presentation_summary">Dùng Dynamic Island hoặc viên nang Toast của hệ thống khi có thể; nếu không, dùng chỉ báo nổi gốc.</string>
+    <string name="system_island_absorption_header_auto_title">Tự động điều chỉnh chiều rộng khi hút vào</string>
+    <string name="system_island_absorption_header_width_title">Chiều rộng mép trên khi hút vào</string>
+    <string name="system_island_absorption_header_width_summ">Đặt chiều rộng mép trên của trang theo tỷ lệ phần trăm chiều rộng khả dụng của vùng hút.</string>
+    <string name="system_locationauto_title">Vị trí tự động</string>
+    <string name="system_locationauto_summary">Bật hoặc tắt vị trí của hệ thống khi ứng dụng đã chọn ra tiền cảnh.</string>
+    <string name="system_locationauto_enable_summary">Khởi động lại Android sau khi bật tính năng lần đầu.</string>
+    <string name="system_locationauto_mode">Chế độ danh sách</string>
+    <string name="system_locationauto_allow">Danh sách cho phép · Bật vị trí</string>
+    <string name="system_locationauto_block">Danh sách chặn · Tắt vị trí</string>
+    <string name="system_locationauto_close">Tắt sau khi xóa thẻ</string>
+    <string name="system_locationauto_close_summary">Tắt vị trí do tính năng này bật khi thẻ phù hợp cuối cùng bị xóa khỏi ứng dụng gần đây.</string>
+    <string name="system_locationauto_close_delay">Độ trễ tắt vị trí</string>
+    <string name="system_locationauto_close_delay_summary">Danh sách cho phép: bắt đầu khi xóa thẻ phù hợp cuối cùng. Danh sách chặn: bắt đầu khi ứng dụng trong danh sách ra tiền cảnh và hủy khi rời ứng dụng.</string>
 </resources>

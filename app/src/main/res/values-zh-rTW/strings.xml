@@ -1196,6 +1196,9 @@
     <string name="system_island_waveform_group">波形</string>
     <string name="system_island_motion_group">動畫</string>
     <string name="system_island_return_effect_title">上島效果</string>
+    <string name="system_island_absorption_header_auto_title">自動配合吸入寬度</string>
+    <string name="system_island_absorption_header_width_title">頁面頂部吸入寬度</string>
+    <string name="system_island_absorption_header_width_summ">以可用吸入口寬度的百分比調整頁面頂部。</string>
     <string name="system_island_return_effect_summ">瞬收：頁面消失，島體承接。吸入：頁面連續吸入島中。無：內容照常顯示。</string>
     <string name="system_island_width_group">寬度</string>
     <string name="system_island_return_group">上島效果</string>
@@ -1362,4 +1365,14 @@
     <string name="volume_pct_presentation_native">原生浮動提示</string>
     <string name="volume_pct_presentation_auto">Toast 與動態島（自動）</string>
     <string name="volume_pct_presentation_summary">優先使用閒置的動態島或系統 Toast 膠囊，無法使用時改用原生浮動提示。</string>
+    <string name="system_locationauto_title">自動定位</string>
+    <string name="system_locationauto_summary">選取的應用程式進入前景時，開啟或關閉系統定位。</string>
+    <string name="system_locationauto_enable_summary">首次啟用後需重新啟動系統。</string>
+    <string name="system_locationauto_mode">名單模式</string>
+    <string name="system_locationauto_allow">白名單 · 開啟定位</string>
+    <string name="system_locationauto_block">黑名單 · 關閉定位</string>
+    <string name="system_locationauto_close">移除卡片後關閉定位</string>
+    <string name="system_locationauto_close_summary">從最近使用的應用程式移除最後一張符合條件的卡片後，關閉本功能開啟的定位。</string>
+    <string name="system_locationauto_close_delay">關閉定位延時</string>
+    <string name="system_locationauto_close_delay_summary">白名單在移除最後一張符合條件的卡片後計時。黑名單在符合條件的應用程式進入前景後計時，離開時取消。</string>
 </resources>

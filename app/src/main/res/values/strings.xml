@@ -1234,6 +1234,9 @@
     <string name="system_island_waveform_group">Waveform</string>
     <string name="system_island_motion_group">Animation</string>
     <string name="system_island_return_effect_title">Island effect</string>
+    <string name="system_island_absorption_header_auto_title">Automatic absorption width</string>
+    <string name="system_island_absorption_header_width_title">Absorption header width</string>
+    <string name="system_island_absorption_header_width_summ">Set the page’s leading edge as a percentage of the available intake width.</string>
     <string name="system_island_return_effect_summ">Instant hides the page and lets the island respond. Absorb draws the page into the island. None leaves ordinary content display.</string>
     <string name="system_island_width_group">Width</string>
     <string name="system_island_return_group">Island effect</string>
@@ -1396,4 +1399,14 @@
     <string name="volume_pct_presentation_native">Native floating hint</string>
     <string name="volume_pct_presentation_auto">Toast and Dynamic Island (automatic)</string>
     <string name="volume_pct_presentation_summary">Use an available Dynamic Island or native Toast capsule; fall back to the floating hint when unavailable.</string>
+    <string name="system_locationauto_title">Automatic location</string>
+    <string name="system_locationauto_summary">Turn system location on or off when selected apps come to the foreground.</string>
+    <string name="system_locationauto_enable_summary">Restart Android after enabling this feature for the first time.</string>
+    <string name="system_locationauto_mode">List mode</string>
+    <string name="system_locationauto_allow">Allowlist · Turn location on</string>
+    <string name="system_locationauto_block">Blocklist · Turn location off</string>
+    <string name="system_locationauto_close">Turn off after removing cards</string>
+    <string name="system_locationauto_close_summary">Turns off location enabled by this feature when the last matching card is removed from Recents.</string>
+    <string name="system_locationauto_close_delay">Location turn-off delay</string>
+    <string name="system_locationauto_close_delay_summary">Allow list: starts when the last matching card is removed. Block list: starts when a listed app enters the foreground and cancels when you leave it.</string>
 </resources>

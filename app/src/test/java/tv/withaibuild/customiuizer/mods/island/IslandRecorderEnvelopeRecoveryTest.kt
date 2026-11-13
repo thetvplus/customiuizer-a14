@@ -1,5 +1,6 @@
 package tv.withaibuild.customiuizer.mods.island
 
+import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -13,6 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowBinder
+import org.robolectric.shadows.ShadowSystemClock
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
@@ -30,7 +32,12 @@ class IslandRecorderEnvelopeRecoveryTest {
     @After fun close() { consumer.stop(); scope.cancel(); ShadowBinder.reset() }
 
     private fun samples(count: Int) {
-        repeat(count) { scheduler.advanceTimeBy(IslandRecorderMeter.SAMPLE_INTERVAL_MS); scheduler.runCurrent() }
+        repeat(count) {
+            val interval = IslandRecorderMeter.SAMPLE_INTERVAL_MS
+            ShadowSystemClock.advanceBy(Duration.ofMillis(interval))
+            scheduler.advanceTimeBy(interval)
+            scheduler.runCurrent()
+        }
     }
 
     private fun fullVoice() {

@@ -151,30 +151,29 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
         return true
     }
 
-    /** Feed the native app-gesture pose solver in its own coordinates. It still
-     * owns root properties and springs; the owned matrix must not scale its
-     * already-screen-sized window a second time. Window geometry folds page
-     * spacing into the real Deck endpoints without another animation clock. */
-    fun windowInput(window: RectF,reference: RectF,target: RectF,slots: Int,gap: Float,
-        fullWidth: Float,bend: Float,header: Float,out: RectF): Boolean {
+    /** Map one native window sample to the thumbnail pose before the Deck matrix. */
+    fun windowPose(window: RectF,reference: RectF,target: RectF,slots: Int,gap: Float,
+        fullWidth: Float,header: Float,out: RectF): Boolean {
         if(!owned || swipe || view.width<=0 || view.height<=header || scale<=0f ||
             window.isEmpty || reference.isEmpty || target.isEmpty ||
-            !fullWidth.isFinite() || !bend.isFinite()) return false
+            !fullWidth.isFinite() || fullWidth<=0f || !gap.isFinite()) return false
         // Native may prepare the card before its first layout. Reconcile the
         // matrix here, in the existing pose callback, before using its inverse.
         if((w!=view.width || h!=view.height) && !apply(scale)) return false
         val range=fullWidth-reference.width()
         val p=if(range>0f) ((fullWidth-window.width())/range).coerceIn(0f,1f) else 1f
-        val ratio=window.width()/reference.width()
-        val width=window.width()*(1f+(target.width()/reference.width()-1f)*p)
+        // Interpolate the relative edges once between the full-size pages and
+        // their Deck endpoints. The sampled window still carries native overshoot.
+        val width=window.width()+(target.width()-reference.width())*p
+        if(width<=0f || !width.isFinite()) return false
         val height=width*(view.height-header)/view.width
-        val pages=slots*(window.width()+gap)
-        val dx=pages+((target.centerX()-reference.centerX())*ratio-pages)*p
-        val cy=window.centerY()+(target.centerY()-reference.centerY())*ratio*p
+        val startOffset=slots*(fullWidth+gap)
+        val dx=startOffset+(target.centerX()-reference.centerX()-startOffset)*p
+        val cy=window.centerY()+(target.centerY()-reference.centerY())*p
         val cx=view.left+view.width*.5f; val frameY=view.top+view.height*.5f
         val rawWidth=width/scale
-        val left=cx+(window.centerX()+dx-cx)/scale-rawWidth*.5f-slots*(rawWidth+gap)
-        val top=frameY+(cy-height*.5f-frameY)/scale-bend
+        val left=cx+(window.centerX()+dx-cx)/scale-rawWidth*.5f
+        val top=frameY+(cy-height*.5f-frameY)/scale
         out.set(left,top,left+rawWidth,top+height/scale)
         return true
     }
@@ -182,11 +181,11 @@ internal class DeckCardGeometry(val view: View, val parent: ViewGroup) {
     /** Same horizontal pose consumer as native alignTaskByVisualRectF, with the
      * input already expressed before our presentation matrix. Native close/end
      * callbacks drive this and reset the pose; no independently retained motion. */
-    fun alignClosing(input: RectF,slots: Int,gap: Float,header: Float) {
+    fun alignClosing(input: RectF,header: Float) {
         val s=input.width()/view.width
         view.pivotX=view.width*.5f;view.pivotY=view.height*.5f
         view.scaleX=s;view.scaleY=s
-        view.translationX=input.centerX()-(view.left+view.width*.5f)+slots*(input.width()+gap)
+        view.translationX=input.centerX()-(view.left+view.width*.5f)
         view.translationY=input.top+(view.height-header)*s*.5f-header*s*.5f-(view.top+view.height*.5f)
     }
 

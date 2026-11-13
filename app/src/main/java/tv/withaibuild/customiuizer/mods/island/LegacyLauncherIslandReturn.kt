@@ -323,7 +323,9 @@ internal object LegacyLauncherIslandReturn {
                 val tasks = scope ?: return@dispatch
                 val frame = attempt.state.frame ?: return@dispatch
                 meshAttempt = attempt
-                val progress = mesh.begin(tasks, spring, attempt, frame, options.returnEffect == IslandReturnEffect.INSTANT)
+                val progress = mesh.begin(tasks, spring, attempt, frame,
+                    instant = options.returnEffect == IslandReturnEffect.INSTANT,
+                    headerPercent = options.absorptionHeaderPercent)
                 val message = IslandMusicReturnSignal.encode(frame, SystemClock.uptimeMillis(), attempt.state.sequence)
                     .setAction(IslandMusicReturnSignal.REQUEST).setPackage(IslandMusicReturnSignal.SYSTEM_UI)
                     .putExtra("committed", true).putExtra("gesture", attempt.sequence).putExtra("impulse", .5f)

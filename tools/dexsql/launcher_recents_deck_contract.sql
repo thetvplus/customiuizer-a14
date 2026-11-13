@@ -36,7 +36,7 @@ WHERE class_descriptor LIKE 'Lcom/miui/home/recents/%'
  'initTaskViews','animTo','onUpdate','reset','initAllAnimations',
  'calculateWindowCrop','startClosingWindowToRecentsAnimators',
  'isLandscapeVisually','getRecentsContainerRotation','onDisplayRotationChanged','updateRotation',
- 'updateTaskView','applyParams')
+ 'updateTaskView','applyParams','setFullscreenProgress')
 ORDER BY method_descriptor;
 
 SELECT file_id, class_descriptor, field_descriptor FROM class_fields
@@ -82,8 +82,9 @@ ORDER BY field_descriptor;
 
 -- DOWN is classified before mWindowMode is assigned and the native state
 -- machine runs. Full/half app-to-app intents must not inherit Deck geometry.
+-- Both HOLD paths can display task thumbnails before gesture release.
 SELECT file_id, method_descriptor, access_flags FROM class_methods
 WHERE class_descriptor='Lcom/miui/home/recents/NavStubView;'
- AND method_name IN ('getCurrentWindowMode','isQuickSwitchMode',
- 'performAppToApp','performHalfAppToHalfApp','performAppToRecents')
+ AND method_name IN ('getCurrentWindowMode','isQuickSwitchMode','enterAppHoldState','enterHomeHoldState',
+ 'performAppToApp','performHalfAppToHalfApp','performAppToRecents','performHomeToRecents')
 ORDER BY method_descriptor;

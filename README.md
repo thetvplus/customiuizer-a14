@@ -33,7 +33,7 @@ iOS 手势指示条需要全面屏手势及可见的系统指示条，同时关�
 
 [文档目录](docs/README.md)提供开发、测试、发布和专项说明；参与维护先读[共同工程规则](AGENTS.md)。
 
-当前源码版本：`r14.27.5`（versionCode 305）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
+当前源码版本：`r14.27.7`（versionCode 307）。维护者：`thetvplus`。应用 ID：`tv.withaibuild.customiuizer.r14`。
 
 正式版本与附件以[发布页](https://github.com/thetvplus/customiuizer-a14/releases/latest)为准，变化见[更新记录](CHANGELOG.md)，未决问题见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。
 

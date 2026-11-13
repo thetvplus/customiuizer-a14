@@ -1361,4 +1361,17 @@
     <string name="volume_pct_presentation_native">Indicador flutuante nativo</string>
     <string name="volume_pct_presentation_auto">Toast e Dynamic Island (automático)</string>
     <string name="volume_pct_presentation_summary">Usar o Dynamic Island ou a cápsula Toast do sistema quando disponíveis; caso contrário, usar o indicador flutuante nativo.</string>
+    <string name="system_island_absorption_header_auto_title">Largura de absorção automática</string>
+    <string name="system_island_absorption_header_width_title">Largura do topo na absorção</string>
+    <string name="system_island_absorption_header_width_summ">Ajuste o topo da página como porcentagem da largura disponível para a absorção.</string>
+    <string name="system_locationauto_title">Localização automática</string>
+    <string name="system_locationauto_summary">Ativa ou desativa a localização do sistema quando um app selecionado entra em primeiro plano.</string>
+    <string name="system_locationauto_enable_summary">Reinicie o Android após ativar o recurso pela primeira vez.</string>
+    <string name="system_locationauto_mode">Modo da lista</string>
+    <string name="system_locationauto_allow">Lista de permissões · Ativar localização</string>
+    <string name="system_locationauto_block">Lista de bloqueio · Desativar localização</string>
+    <string name="system_locationauto_close">Desativar após remover cartões</string>
+    <string name="system_locationauto_close_summary">Desativa a localização ativada por este recurso quando o último cartão correspondente é removido dos recentes.</string>
+    <string name="system_locationauto_close_delay">Atraso para desativar a localização</string>
+    <string name="system_locationauto_close_delay_summary">Permissões: começa ao remover o último cartão correspondente. Bloqueio: começa quando um app da lista entra em primeiro plano e é cancelado ao sair.</string>
 </resources>

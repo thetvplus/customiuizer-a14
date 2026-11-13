@@ -112,7 +112,8 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
     private val captureMutex = Mutex()
     private val diagnostics = IslandDiagnostics()
 
-    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame, instant: Boolean = false): IslandReturnProgress.Producer? {
+    fun begin(scope: CoroutineScope, element: Any, copy: Any, frame: IslandMusicReturnSignal.Frame,
+        instant: Boolean = false, headerPercent: Int = 0): IslandReturnProgress.Producer? {
         if (!handler.looper.isCurrentThread) return null
         cancel()
         val root = api.root()?.takeIf { it.isAttachedToWindow && it.isHardwareAccelerated && it.isShown &&
@@ -127,8 +128,8 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
             }
             api.surface(element, copy)?.takeIf { it.isValid } ?: return null
         } else null
-        val active = Session(element, copy, root, surface, frame.landingRectangle(), if (mesh) frame.rectangle() else null, mesh, instant)
-        active.contactLeft = frame.contactLeft; active.contactRight = frame.contactRight
+        val active = Session(element, copy, root, surface, frame.landingRectangle(), if (mesh) frame.rectangle() else null,
+            instant, frame.contactLeft, frame.contactRight, headerPercent)
         session = active
         val generation = epoch
         if (mesh && surface != null) captureJob = scope.launch(Dispatchers.Default) {
@@ -226,7 +227,8 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
         active.radius = radius.coerceAtLeast(0f)
         IslandAbsorptionMesh.fill(drawing.vertices, drawing.handoff.source, drawing.destination, remaining, drawing.rect, intakeY,
             occlusion = if (active.presented) drawing.shellDestination else null,
-            contactLeft = active.contactLeft - drawing.location[0], contactRight = active.contactRight - drawing.location[0])
+            contactLeft = active.contactLeft - drawing.location[0], contactRight = active.contactRight - drawing.location[0],
+            headerWidth = drawing.headerWidth)
         // Keep release opacity until the entire page lies inside the island. Then
         // reveal the real island underneath, rather than leave a separately coloured dot.
         drawing.paint.alpha = (255f * active.nativeAlpha * IslandAbsorptionMesh.mergeOpacity(drawing.rect, drawing.shellDestination)).toInt().coerceIn(0, 255)
@@ -290,7 +292,7 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
     }
 
     /** Drawing state is owned only by an actual absorption session. */
-    private class Mesh {
+    private class Mesh(val headerWidth: Float) {
         val handoff = IslandAbsorptionHandoff()
         val vertices = FloatArray(IslandAbsorptionMesh.FLOATS)
         val location = IntArray(2)
@@ -338,14 +340,16 @@ internal class LauncherWindowAbsorption internal constructor(private val api: Na
     }
 
     private inner class Session(element: Any, val copy: Any, root: View, val surface: SurfaceControl?,
-        val target: RectF, val shellTarget: RectF?, mesh: Boolean, val instant: Boolean) : Drawable(), View.OnAttachStateChangeListener {
+        val target: RectF, val shellTarget: RectF?, val instant: Boolean, val contactLeft: Float, val contactRight: Float,
+        headerPercent: Int) : Drawable(), View.OnAttachStateChangeListener {
         val element = WeakReference(element)
         val rootWidth = root.width
         val rootHeight = root.height
         val root = WeakReference(root)
         val progressChannel = IslandReturnProgress.Producer()
-        val drawing = if (mesh) Mesh() else null
-        var contactLeft = target.left; var contactRight = target.right
+        val drawing = shellTarget?.let {
+            Mesh(IslandAbsorptionMesh.headerWidth(contactRight - contactLeft, target, headerPercent))
+        }
         var texture: Bitmap? = null
         var progress = 0f; var radius = 0f
         var atCommit = Float.NaN

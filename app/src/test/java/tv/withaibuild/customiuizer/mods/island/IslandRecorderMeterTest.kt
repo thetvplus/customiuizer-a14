@@ -2,6 +2,7 @@ package tv.withaibuild.customiuizer.mods.island
 
 import android.os.Binder
 import android.os.SystemClock
+import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -13,6 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowBinder
+import org.robolectric.shadows.ShadowSystemClock
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -69,6 +71,44 @@ class IslandRecorderMeterTest {
             val pausedReads = reads
             scheduler.advanceTimeBy(10_000); scheduler.runCurrent()
             assertEquals(pausedReads, reads)
+        } finally { consumer.stop(); scope.cancel(); ShadowBinder.reset() }
+    }
+
+    @Test fun unavailableRecorderCannotTurnPreDrawIntoBinderSampling() {
+        val scheduler = TestCoroutineScheduler()
+        val dispatcher = StandardTestDispatcher(scheduler)
+        val scope = CoroutineScope(SupervisorJob() + dispatcher)
+        var reads = 0
+        var successorReads = 0
+        var amplitude = -1
+        val frames = mutableListOf<FloatArray?>()
+        val consumer = IslandRecorderMeter.Consumer(scope, dispatcher) { frames.add(it?.copyOf()) }
+        try {
+            ShadowBinder.setCallingUid(1000)
+            val producer = IslandRecorderMeter.producer(1000) { reads++; amplitude }
+            consumer.start(producer); scheduler.runCurrent()
+            val quietFrames = frames.size
+            repeat(11) {
+                ShadowSystemClock.advanceBy(Duration.ofMillis(8))
+                consumer.start(producer); scheduler.runCurrent()
+            }
+            assertEquals("Re-presenting a failed source must not retry before 100 ms", 1, reads)
+            assertEquals(quietFrames, frames.size)
+
+            amplitude = 16384
+            ShadowSystemClock.advanceBy(Duration.ofMillis(12))
+            consumer.start(producer); scheduler.runCurrent()
+            assertEquals(2, reads)
+            assertTrue(frames.last()!!.last() > .49f)
+
+            amplitude = -1
+            ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+            scheduler.advanceTimeBy(100); scheduler.runCurrent()
+            assertEquals(3, reads)
+            val successor = IslandRecorderMeter.producer(1000) { successorReads++; 8192 }
+            consumer.start(successor); scheduler.runCurrent()
+            assertEquals("A new source must start immediately", 1, successorReads)
+            assertTrue(frames.last()!!.last() > .24f)
         } finally { consumer.stop(); scope.cancel(); ShadowBinder.reset() }
     }
 
@@ -138,6 +178,7 @@ class IslandRecorderMeterTest {
             amplitude = -1
             consumer.start(producer); scheduler.runCurrent()
             val unavailableAt = reads
+            ShadowSystemClock.advanceBy(Duration.ofMillis(1000))
             scheduler.advanceTimeBy(1000); scheduler.runCurrent()
             assertEquals(unavailableAt, reads)
             amplitude = 8192

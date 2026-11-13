@@ -7,6 +7,9 @@ import kotlin.math.pow
 internal object IslandAbsorptionMesh {
     const val ROWS = 12
     const val FLOATS = (ROWS + 1) * 4
+    const val MIN_HEADER_PERCENT = 30
+    const val MAX_HEADER_PERCENT = 75
+    const val DEFAULT_HEADER_PERCENT = 55
     private const val BEND_STEPS = 32
     private const val BEND_STRENGTH = 2.6f
 
@@ -53,9 +56,19 @@ internal object IslandAbsorptionMesh {
     fun returnProgress(progress: Float, atCommit: Float): Float =
         ((progress - atCommit) / (1f - atCommit).coerceAtLeast(.01f)).coerceIn(0f, 1f)
 
+    /** The live contact aperture can be a camera-sized seed or an already visible shell. */
+    fun headerWidth(contactWidth: Float, landing: RectF, percent: Int = 0): Float {
+        val available = minOf(contactWidth, landing.width())
+        if (percent != 0) {
+            return available * (percent.coerceIn(MIN_HEADER_PERCENT, MAX_HEADER_PERCENT) / 100f)
+        }
+        return (landing.height() * 2f).coerceIn(available * .52f, available * .68f)
+    }
+
     fun fill(output: FloatArray, rect: RectF, destination: RectF, progress: Float, bounds: RectF? = null,
         intakeY: Float = destination.centerY(), occlusion: RectF? = null,
-        contactLeft: Float = destination.left, contactRight: Float = destination.right): Float {
+        contactLeft: Float = destination.left, contactRight: Float = destination.right,
+        headerWidth: Float = headerWidth(contactRight - contactLeft, destination)): Float {
         require(output.size == FLOATS)
         val t = progress.coerceIn(0f, 1f)
         // Keep the captured page's aspect while the leading edge enters first. The
@@ -65,9 +78,7 @@ internal object IslandAbsorptionMesh {
         val holeHeight = maxOf(1f, destination.height() * .08f)
         val holeTop = intakeY - holeHeight * .5f
         val holeBottom = intakeY + holeHeight * .5f
-        // Widen only the leading footprint. The body keeps the native rectangle
-        // and its existing trailing curve; static island dimensions do not change.
-        val leadingNeck = minOf(destination.width() * .78f, (contactRight - contactLeft) * .8f)
+        val leadingNeck = minOf(rect.width(), headerWidth)
         val trailingNeck = minOf(destination.width() * .36f, destination.height())
         val top = rect.top + (holeTop - rect.top) * leading
         val bottom = rect.bottom + (holeBottom - rect.bottom) * trailing

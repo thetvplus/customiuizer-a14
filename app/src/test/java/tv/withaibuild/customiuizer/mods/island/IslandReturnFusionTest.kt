@@ -293,7 +293,8 @@ class IslandReturnFusionTest {
         val frame = IslandMusicReturnSignal.Frame("chosen.music", UserHandle.getUserHandleForUid(1000),
             300f, 20f, 700f, 60f, 1080, 2400)
         val session = sessionCtor.newInstance(owner, Any(), Any(), root, null,
-            frame.landingRectangle(), frame.rectangle(), mesh, false)
+            frame.landingRectangle(), if (mesh) frame.rectangle() else null,
+            false, frame.contactLeft, frame.contactRight, 0)
         val slot = LauncherWindowAbsorption::class.java.getDeclaredField("session").apply { isAccessible = true }
         slot.set(owner, session)
         try { block(session) } finally { owner.cancel() }

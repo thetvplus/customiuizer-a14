@@ -18,6 +18,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import java.lang.ref.WeakReference
 import java.lang.reflect.Method
 
 @RunWith(RobolectricTestRunner::class)
@@ -81,6 +82,9 @@ class HomeIndicatorLifecycleTest {
         val canvas=Drawing()
         assertFalse(invoke(handle,"onDraw",canvas))
         assertSame(handle.mPaint,canvas.paint)
+        val lookup = XposedHelpers.getAdditionalInstanceField(handle,"a14.home.indicator.owner")
+        assertTrue(lookup is WeakReference<*>)
+        assertNotNull((lookup as WeakReference<*>).get())
         bar.mNavBarMode=0; invoke(bar,"updateIcons",Configuration())
         assertTrue(invoke(handle,"onDraw",Drawing()))
         bar.mNavBarMode=1; invoke(bar,"updateIcons",Configuration())

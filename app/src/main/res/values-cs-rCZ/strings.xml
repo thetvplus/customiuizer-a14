@@ -1368,4 +1368,17 @@
     <string name="volume_pct_presentation_native">Nativní plovoucí ukazatel</string>
     <string name="volume_pct_presentation_auto">Toast a Dynamic Island (automaticky)</string>
     <string name="volume_pct_presentation_summary">Použít dostupný Dynamic Island nebo systémovou kapsli Toast, jinak nativní plovoucí ukazatel.</string>
+    <string name="system_island_absorption_header_auto_title">Automatická šířka pohlcení</string>
+    <string name="system_island_absorption_header_width_title">Šířka horní části při pohlcení</string>
+    <string name="system_island_absorption_header_width_summ">Nastavte šířku horní části stránky v procentech dostupné šířky vstupu.</string>
+    <string name="system_locationauto_title">Automatické určování polohy</string>
+    <string name="system_locationauto_summary">Zapne nebo vypne určování polohy, když vybraná aplikace přejde do popředí.</string>
+    <string name="system_locationauto_enable_summary">Po prvním zapnutí této funkce restartujte Android.</string>
+    <string name="system_locationauto_mode">Režim seznamu</string>
+    <string name="system_locationauto_allow">Seznam povolených · Zapnout polohu</string>
+    <string name="system_locationauto_block">Seznam blokovaných · Vypnout polohu</string>
+    <string name="system_locationauto_close">Vypnout po odebrání karet</string>
+    <string name="system_locationauto_close_summary">Vypne polohu zapnutou touto funkcí po odebrání poslední odpovídající karty z nedávných aplikací.</string>
+    <string name="system_locationauto_close_delay">Prodleva vypnutí polohy</string>
+    <string name="system_locationauto_close_delay_summary">Seznam povolených: po odebrání poslední odpovídající karty. Seznam blokovaných: při přechodu vybrané aplikace do popředí, při jejím opuštění se zruší.</string>
 </resources>

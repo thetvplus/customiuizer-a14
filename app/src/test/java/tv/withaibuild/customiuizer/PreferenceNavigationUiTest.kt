@@ -159,7 +159,7 @@ class PreferenceNavigationUiTest {
             .putBoolean("pref_key_system_island_media", true).apply()
         Helpers.getAllMods(activity, true)
         val standaloneKeys = Helpers.allModsList.filter { it.page != null }.mapNotNull { it.sub }.toSet()
-        assertEquals("All standalone page entries, including Wi-Fi automatic settings, must be indexed", 36, standaloneKeys.size)
+        assertEquals("All standalone page entries must be indexed", 37, standaloneKeys.size)
         val visited = mutableSetOf<String>()
         capturePage("home")
         for (key in arrayOf("pref_key_system", "pref_key_launcher", "pref_key_controls", "pref_key_various")) {
@@ -646,6 +646,29 @@ class PreferenceNavigationUiTest {
         assertTrue("Selected value follows the explanation without competing for its width", selected.top >= detail.bottom)
         settleNavigation()
         capturePage("island-waveform-320-zh")
+    }
+
+    @Test fun absorptionWidthControlsFollowTheEffectAndAutomaticMode() {
+        val island = openIslandPage()
+        requireNotNull(island.findPreference<Preference>("pref_key_system_island_effects_cat")).performClick()
+        settleNavigation()
+        val page = currentPage() as SubFragment
+        val effect = requireNotNull(page.findPreference<ListPreference>("pref_key_system_island_return_effect"))
+        val automatic = requireNotNull(page.findPreference<CheckBoxPreferenceEx>("pref_key_system_island_absorption_header_auto"))
+        val width = requireNotNull(page.findPreference<Preference>("pref_key_system_island_absorption_header_width"))
+        assertFalse(automatic.isVisible)
+        assertFalse(width.isVisible)
+        assertTrue(effect.callChangeListener("absorption"))
+        effect.value = "absorption"
+        assertTrue(automatic.isVisible)
+        assertTrue(automatic.isChecked)
+        assertFalse(width.isVisible)
+        assertTrue(automatic.callChangeListener(false))
+        automatic.isChecked = false
+        assertTrue(width.isVisible)
+        assertTrue(effect.callChangeListener("instant"))
+        assertFalse(automatic.isVisible)
+        assertFalse(width.isVisible)
     }
 
     @Test fun mediaDownActionStaysEditableAndLegacyExpansionHasNoControl() {

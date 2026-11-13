@@ -76,7 +76,7 @@ class ClassicVolumeTest {
             assertEquals(2.6f, matrix[android.graphics.Matrix.MSCALE_X], .001f)
             val more = ImageView(activity)
             root.addView(more, FrameLayout.LayoutParams(58, 28)); more.layout(0, 155, 58, 183)
-            val session = IosVolumeStyle.Session(root, root, null, listOf(binding), { 0 }, {}, {}, more)
+            val session = IosVolumeStyle.Session(root, root, null, binding, { 0 }, {}, {}, more)
             try {
                 val region = android.graphics.Region(0, 0, 30, 30)
                 session.includeTouchableRegion(region)

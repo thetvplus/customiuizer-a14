@@ -48,6 +48,17 @@ class IslandOptionsTest {
             assertEquals(1, options.waveformMode)
         }
     }
+
+    @Test fun absorptionUsesAutomaticWidthUnlessManualIsSelected() {
+        val prefs = PrefMap()
+        assertEquals(0, IslandOptions.read(prefs).absorptionHeaderPercent)
+        prefs.put("system_island_absorption_header_auto", false)
+        assertEquals(55, IslandOptions.read(prefs).absorptionHeaderPercent)
+        prefs.put("system_island_absorption_header_width", 100)
+        assertEquals(75, IslandOptions.read(prefs).absorptionHeaderPercent)
+        prefs.put("system_island_absorption_header_auto", true)
+        assertEquals(0, IslandOptions.read(prefs).absorptionHeaderPercent)
+    }
     @Test fun returnAdmissionUsesEnabledSelectionsAndExclusionWinsForMediaAndNativeActivities() {
         val options = IslandOptions(true, true, true, mediaReturn = true,
             mediaApps = setOf("music.app", "blocked.app"), excludedApps = setOf("blocked.app", IslandLiveKind.CLOCK_PACKAGE),

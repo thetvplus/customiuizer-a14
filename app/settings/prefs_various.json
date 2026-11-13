@@ -437,6 +437,14 @@
           }
         },
         {
+          "type": "action",
+          "attributes": {
+            "android:key": "pref_key_system_locationauto_cat",
+            "android:title": "@string/system_locationauto_title",
+            "android:summary": "@string/system_locationauto_summary"
+          }
+        },
+        {
           "type": "section",
           "attributes": {
             "android:key": "pref_key_system_cat_automation",

@@ -513,8 +513,8 @@ object SystemUIControlCenterHooks {
 
     internal fun refreshVolumeModeButtonVisibilitySnapshot() {
         volumeModeButtonVisibilitySnapshot = VolumeModeButtonVisibilitySnapshot(
-            hideMute = classicVolumeInstalled || MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_MUTE_KEY, false),
-            hideDnd = classicVolumeInstalled || MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_DND_KEY, false)
+            hideMute = !classicVolumeInstalled && MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_MUTE_KEY, false),
+            hideDnd = !classicVolumeInstalled && MainModule.mPrefs.getBoolean(VOLUME_MODE_BUTTON_HIDE_DND_KEY, false)
         )
     }
 
@@ -1043,6 +1043,7 @@ object SystemUIControlCenterHooks {
                     val state=XposedHelpers.getAdditionalInstanceField(
                         footerMode.get(callback.getThisObject()), VOLUME_MODE_SHARED_VISIBILITY_STATE_FIELD
                     ) as? VolumeModeSharedVisibilityState ?: return@guarded
+                    state.expanded = isExpanded.invoke(callback.getThisObject()) as Boolean
                     applyVolumeModeSharedVisibility(state,snapshot.hideMute,snapshot.hideDnd,true)
                 }
             }
@@ -1062,7 +1063,7 @@ object SystemUIControlCenterHooks {
         }
         val layoutNewVisibility = reconcileVolumeModeButtonVisibility(
             state.layoutOwnership,
-            shouldHideVolumeModeContainer(hideMute, hideDnd),
+            (classicVolumeInstalled && !state.expanded) || shouldHideVolumeModeContainer(hideMute, hideDnd),
             layout.visibility
         )
         if (layoutNewVisibility != NO_VISIBILITY_WRITE) {

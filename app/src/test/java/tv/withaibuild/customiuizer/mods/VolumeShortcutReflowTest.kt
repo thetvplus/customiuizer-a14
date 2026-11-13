@@ -209,6 +209,27 @@ class VolumeShortcutReflowTest {
         }
     }
 
+    @Test fun classicVolumeHidesOnlyTheCollapsedModeGroup() {
+        val classic = SystemUIControlCenterHooks::class.java.getDeclaredField("classicVolumeInstalled")
+        classic.isAccessible = true
+        classic.setBoolean(SystemUIControlCenterHooks, true)
+        try {
+            for ((mute, dnd) in listOf(false to false, true to false, false to true, true to true)) {
+                setHidden(mute, dnd)
+                val panel = Panel()
+                for (land in listOf(false, true)) {
+                    panel.applyNative(false, land)
+                    assertEquals(View.GONE, panel.mode.visibility)
+                    assertEquals(View.VISIBLE, panel.root.more.visibility)
+                    panel.applyNative(true, land)
+                    panel.assertCompact(false, false, land)
+                }
+            }
+        } finally {
+            classic.setBoolean(SystemUIControlCenterHooks, false)
+        }
+    }
+
     @Test fun unchangedHelperUpdatesDoNotRequestAnotherLayoutAndUnownedDimensionsSurviveRestore() {
         setHidden(true, false)
         val panel = Panel()

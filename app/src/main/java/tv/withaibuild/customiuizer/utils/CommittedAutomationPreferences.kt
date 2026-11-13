@@ -2,11 +2,13 @@ package tv.withaibuild.customiuizer.utils
 
 import android.content.SharedPreferences
 import android.os.Bundle
+import tv.withaibuild.customiuizer.mods.locationauto.LocationAutomationOptions
 
 /** Fixed cold bridge for system_server frameworks that acknowledge writes but cache old values. */
 internal object CommittedAutomationPreferences {
     private const val APP = "pref_key_system_appbehavior_"
     private const val WIFI = "pref_key_system_wifiauto_"
+    private const val LOCATION = "pref_key_" + LocationAutomationOptions.PREFIX
     private val defaults: Map<String, Any> = buildMap {
         for (name in listOf("rotation", "volume", "brightness", "block")) {
             put(APP + name, false)
@@ -17,6 +19,11 @@ internal object CommittedAutomationPreferences {
         put(APP + "block_limit", 0)
         put(WIFI + "enabled", false)
         put(WIFI + "rules", "")
+        put(LOCATION + "enabled", false)
+        put(LOCATION + "mode", LocationAutomationOptions.ALLOW)
+        put(LOCATION + "apps", emptySet<String>())
+        put(LOCATION + "close", false)
+        put(LOCATION + "close_delay", 0)
     }
 
     fun owns(key: String) = key in defaults

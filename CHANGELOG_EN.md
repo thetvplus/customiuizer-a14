@@ -2,16 +2,39 @@
 
 English | [简体中文](CHANGELOG.md)
 
-Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.11. Superseded releases are retired; original records remain in Git and private archives. Editorial consolidation does not change APKs, signatures or build identities.
+Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.11. Changes from r14.27.3 are consolidated in r14.27.5. Superseded releases are retired; original records remain in Git and private archives. Editorial consolidation does not change APKs, signatures or build identities.
 
 ## Unreleased
 
-## r14.27.5 — 2026-11-11
+## r14.27.7 — 2026-11-13
 
-versionCode 305. Changes since r14.27.3:
+versionCode 307. Changes since r14.27.5:
 
 ### Release summary
 
+- Add per-app system location switching, with list modes and an option to turn location off after removing cards from Recents.
+- Unify DECK entry layout from Home and apps, and improve overlapping card shadows and window handoff. Smooth launcher folder blur transitions and add a width control for the leading edge of Dynamic Island absorption.
+- Refine state management for the Dock, Home Indicator and iOS volume styles.
+
+### User changes
+
+- Select apps under Various → Automatic location. The allowlist turns location on, and the blocklist turns it off. Both modes support a 0–30 second delay before turning location off. The allowlist starts the delay when the last matching card is removed. The blocklist starts it when a listed app enters the foreground. Restart Android after enabling the feature for the first time.
+- DECK uses the same card layout calculation when entered from Home or an app. The native card projects the thumbnail outline, preserving the side shadows of deeper cards and the window handoff.
+- Launcher folder blur fades smoothly when opening and closing folders.
+- Dynamic Island absorption can size the leading edge automatically or use a custom width set under Effects and Waveform.
+- Expanding the central volume panel restores the native mute and Do Not Disturb shortcuts.
+
+### Engineering notes
+
+- Share batch hook installation and rollback between the Dock and Dynamic Island return. Tie Home Indicator drawing to its view, and share column and expansion state handling between the central and side volume styles. Location automation discards collected task references on removal or at the tracking limit.
+
+## r14.27.5 — 2026-11-11
+
+versionCode 305. Changes since r14.26.11:
+
+### Release summary
+
+- Add optional iOS-style stacked Recents, a Home Indicator and a side volume bar. Refine Dynamic Island resizing, activity changes and return animations, and restore outer alignment on the right side of the long island.
 - Add an optional iOS 12 central volume HUD with vertical adjustment and automatic hiding of the mute and Do Not Disturb shortcuts. Volume percentages can appear in an overlay, a toast capsule or the Dynamic Island.
 - Add optional iOS battery, five-dot cellular signal and notification-shade media styles.
 - Improve foreground card exits, refill and window shadow handoff in DECK, and restore the Dock background and blur when returning Home.
@@ -31,29 +54,6 @@ versionCode 305. Changes since r14.27.3:
 - Restore Dock background and blur when its view reattaches or Home returns. Refine the battery percentage, five-dot spacing and notification-shade media card.
 - Fix DECK card jumps on release, initial refill scale and window shadow handoff. When opening a back card, foreground cards move toward their recentered positions. The app window and its settled card share one shadow during the swipe.
 
-### Engineering notes
-
-- Trim preparation for disabled features, verification routing and Agent Skills while retaining build, compatibility and release gates.
-- Add independent behavior regressions, safe imported-log parsing and CodeQL source-extraction checks. Java/Kotlin analysis is available on demand; continuous Security alerts await a main-line setup transition.
-- New presentations are partial adaptations. Real-SIM/dual-SIM/roaming, sustained landscape DECK and first composition, intermittent Dock flashes and long-term resource costs retain their acceptance limits. No unmeasured frame-rate, power or multi-ROM benefit is claimed.
-
-## r14.27.3 — 2026-11-08
-
-versionCode 304. Changes since r14.26.11:
-
-### Release summary
-
-- Add independently enabled iOS DECK task stacking for portrait and landscape on supported launchers.
-- Refine DECK scaling, shadows and task reopening, and fix enlarged cards during quick app switching.
-- Add the iOS home indicator with smoother black/white transitions and an easier-to-find switch.
-- Add the iOS volume bar and an optional narrow default, with touch expansion, overscroll feedback and full controls.
-- Refine island resizing, content transitions and app returns. Restore outer-aligned long-island captions while keeping camera clearance.
-- Update Duo icons, fonts and layout, and simplify settings descriptions while preserving search and upgrades.
-- Fix notification prompts, Control Center feedback, volume buttons and restoration of older settings pages.
-- Restart the launcher and System UI after updating. DECK requires horizontal Recents; the home indicator requires gesture navigation and a visible system handle.
-
-### User changes
-
 - Fix DECK scaling interfering with app switching along the Home Indicator. Quick switch keeps system geometry; entering the deck and opening its cards retain DECK motion.
 - Give DECK, Duo and iOS Home Indicator switches their full feature names for easier discovery and search. Shorten descriptions while preserving setup and restart requirements.
 - Fix position and size jumps when a neighboring card fills the gap after dismissing the leftmost recents deck card.
@@ -62,7 +62,6 @@ versionCode 304. Changes since r14.26.11:
 - Align card and window scaling centers when native entry changes the pivot. Complete handoff checks for both landscape directions and unprepared layouts.
 - Fix double scaling and window misalignment during swipe-up entry on newer launchers. Fold neighboring cards using the current native window, reducing extra spring lag and stepped position changes.
 - Fix rear-card title and icon opacity on swipe-up deck entry without requiring another scroll.
-- Follow native thumbnail opacity and fullscreen progress for card shadows, reducing premature shadows during swipe-up entry. Keep HyperOS 1 corners, screenshot clipping and shadow colors.
 - Reuse the system's retargetable black/white gesture-handle tint animation, with a 250 ms ordinary gesture-mode transition. Preserve explicit window-handoff timing.
 - Restore right alignment for long-island trailing content, mirrored at the outer edge in RTL layouts. Camera clearance constrains the available lane and clipping; resizing and translation preserve the outer margin. Keep existing measured or manual capsule widths without changing text alignment to fill space.
 - Add visible horizontal expansion and recoil on first island appearance, music returning home, and new activity reception. Keep same-size handoffs from ending early, reduce vertical expansion and press enlargement, and preserve interrupted and reversed transitions.
@@ -85,14 +84,9 @@ versionCode 304. Changes since r14.26.11:
 
 ### Engineering notes
 
-- Recheck local iOS 18.6.2 binaries and A14 native call chains. Preserve native scrolling, window springs and lifecycle without adding animation clocks, listeners or threads.
-- Prioritize energy use and response by removing dynamic blur and its effect cache from island content transitions. Keep transforms, clipping, crossfades and one outgoing display list on the existing clock, without additional filters or sampling tasks.
-- Retire cached gesture endpoints with orientation ownership, remove unused island wave/strength handoffs, and reuse immutable receive profiles. Related behavior regressions and Develop / R8 / vital Lint passed, with daily use accepted by the user; pixel equivalence to iOS is not claimed.
-- Recheck launcher mounting and landscape-container paths directly in four A14 ROMs, with master-switch, dependent-setting and search coverage. Daily use has been accepted by the user; no further device pass is requested. No new independent frame-rate or power measurements are claimed.
-- Include effective changes from unpublished r14.26.13 and subsequent candidates, retaining Android 14 / SDK 34, arm64-v8a and libxposed API 102.
-- Retain one island, finite animation clocks, native window springs, system input and safe fallback; resolve modern launcher window interfaces by exact signature. Private iOS materials, complete solvers and pixel parity remain incomplete.
-- Publication requires main / exact CI, the historical certificate and dual-repository verification. Device coverage, measurements and unresolved issues are tracked in the refinement roadmap; Host tests do not establish device acceptance.
-- Replace the withdrawn r14.27.1 / 301 and original r14.27.3 / 303 with internal version number 304, cumulative from r14.26.11. Original binaries, metadata and source tags are privately archived; withdrawn candidates are not promoted.
+- Trim preparation for disabled features, verification routing and Agent Skills while retaining build, compatibility and release gates.
+- Add independent behavior regressions, safe imported-log parsing and CodeQL source-extraction checks. Java/Kotlin analysis is available on demand; continuous CodeQL analysis runs on the default branch.
+- New presentations are partial adaptations. Real-SIM/dual-SIM/roaming, sustained landscape DECK and first composition, intermittent Dock flashes and long-term resource costs retain their acceptance limits. No unmeasured frame-rate, power or multi-ROM benefit is claimed.
 
 ## r14.26.11 — 2026-11-02
 
