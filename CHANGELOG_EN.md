@@ -18,7 +18,7 @@ versionCode 307. Changes since r14.27.5:
 
 ### User changes
 
-- Select apps under Various → Automatic location. The allowlist turns location on, and the blocklist turns it off. Both modes support a 0–30 second delay before turning location off. The allowlist starts the delay when the last matching card is removed. The blocklist starts it when a listed app enters the foreground. Restart Android after enabling the feature for the first time.
+- Select apps under Apps & tools → Automatic location. The allowlist turns location on, and the blocklist turns it off. Both modes support a 0–30 second delay before turning location off. The allowlist starts the delay when the last matching card is removed. The blocklist starts it when a listed app enters the foreground. Restart Android after enabling the feature for the first time.
 - DECK uses the same card layout calculation when entered from Home or an app. The native card projects the thumbnail outline, preserving the side shadows of deeper cards and the window handoff.
 - Launcher folder blur fades smoothly when opening and closing folders.
 - Dynamic Island absorption can size the leading edge automatically or use a custom width set under Effects and Waveform.

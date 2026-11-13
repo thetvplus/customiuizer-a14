@@ -8,12 +8,12 @@ A system UI and interaction customization module maintained for **HyperOS 1 / An
 
 [Telegram community](https://t.me/customiuizerA14)
 
-## Main Features
+## Home page categories
 
-- **System**: status bar, Duo icon, Dynamic Island, notifications, Control Center, lock screen, audio and vibration.
-- **Home screen**: Dock backgrounds and materials, recents deck, layout, folders, app titles and gestures.
-- **Buttons and gestures**: power, volume and fingerprint keys, navigation bar and custom actions.
-- **Apps and maintenance**: installer, app management, permission prompts, and recoverable maintenance and privacy operations.
+- **System** — status bar, Duo icon, Dynamic Island, notifications, Control Center, display and lock screen.
+- **Home screen** — Dock backgrounds and materials, Recents deck, layout, folders, app titles and gestures.
+- **Sound & controls** — volume panel, vibration, power, volume and fingerprint keys, full-screen gestures and navigation bar.
+- **Apps & tools** — app behavior, installer, app management, Wi-Fi and VPN automation, automatic location, maintenance and privacy.
 
 See the [compact feature map](docs/FEATURE_MAP_SIMPLE.md) for all pages. Detailed behavior is documented in the [Dynamic Island](docs/features/island/README.md), [Duo](docs/features/duo-status-bar.md) and [Dock](docs/features/dock/README.md) guides.
 
