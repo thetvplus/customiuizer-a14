@@ -1407,4 +1407,6 @@
     <string name="system_locationauto_block">Blocklist · Turn location off</string>
     <string name="system_locationauto_close">Turn off after removing cards</string>
     <string name="system_locationauto_close_summary">Turns off location enabled by this feature when the last matching card is removed from Recents.</string>
+    <string name="system_locationauto_close_delay">Location turn-off delay</string>
+    <string name="system_locationauto_close_delay_summary">Allow list: starts when the last matching card is removed. Block list: starts when a listed app enters the foreground and cancels when you leave it.</string>
 </resources>

@@ -66,8 +66,13 @@ internal object IosRecentsDeckHooks {
         fun frame(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.FRAME) as? DeckFrame }
             ?.takeIf { !it.owner.closed && it.generation==it.owner.geometryGeneration }
         fun card(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.CARD) as? DeckOwner.Card }
-        fun bind(view: ViewGroup) {
-            if(!view.isAttachedToWindow || owner(view)!=null || !api.horizontal.isInstance(api.current.get(view))) return
+        fun bind(view: ViewGroup,refreshExisting: Boolean=false) {
+            val active=owner(view)
+            if(active!=null) {
+                if(refreshExisting) active.refresh()
+                return
+            }
+            if(!view.isAttachedToWindow || !api.horizontal.isInstance(api.current.get(view))) return
             var parent=view.parent
             while(parent is View && !api.recentsContainer.isInstance(parent)) parent=parent.parent
             val container=parent as? View ?: return
@@ -104,7 +109,7 @@ internal object IosRecentsDeckHooks {
         around(api.layout,
             before={ owner(it.getThisObject())?.close() },
             after={ bind(it.getThisObject() as ViewGroup) })
-        after(api.attached) { bind(it.getThisObject() as ViewGroup); owner(it.getThisObject())?.refresh() }
+        after(api.attached) { bind(it.getThisObject() as ViewGroup,refreshExisting=true) }
         before(api.detached) { owner(it.getThisObject())?.close() }
         around(api.configuration,
             before={ owner(it.getThisObject())?.close() },
@@ -328,12 +333,17 @@ internal object IosRecentsDeckHooks {
                     // currentRectFParams. That first frame belongs to the new request.
                     val params=XposedHelpers.getAdditionalInstanceField(element,WINDOW_PENDING)
                         ?: window.current(element) ?: return@before
-                    if(window.scene(params)!=true) return@before
+                    val opening=window.scene(params) ?: return@before
                     val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
                     val active=receipt.owner.get() ?: return@before
                     if(!receipt.matches(active)) return@before
-                    val selected=card(window.view(params)) ?: return@before
+                    val selected=card(window.view(params))
+                        ?: (if(!opening) active.cardAt(window.index(params)) else null) ?: return@before
                     if(selected.owner!==active) return@before
+                    if(!opening) {
+                        active.followEntryWindow(selected,it.getArg(1) as RectF,window.target(params))
+                        return@before
+                    }
                     val progress=it.getArg(3) as Float
                     active.alignOpening(selected,window.start(it.getThisObject()!!),it.getArg(1) as RectF,progress,
                         ((.4f-progress)/.4f).coerceIn(0f,1f))

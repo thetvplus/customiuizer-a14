@@ -1,9 +1,6 @@
 package tv.withaibuild.customiuizer.mods.recents
 
 import android.animation.ObjectAnimator
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
@@ -20,6 +17,7 @@ import org.robolectric.Robolectric
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowChoreographer
+import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34],application=android.app.Application::class)
@@ -34,98 +32,138 @@ class DeckCardShadowTest {
             card.addView(thumbnail)
             parent.layout(0, 0, 500, 800)
             card.layout(40, 50, 340, 650)
-            thumbnail.layout(0, 45, 300, 600)
+            thumbnail.layout(0, 0, 300, 600)
         }
     }
 
-    @Test fun nativeForegroundDrawsOnlyAShortBottomEdgeInTheCardsPose() {
+    @Test fun projectionUsesTheThumbnailSilhouetteAndLeavesTheHeaderUnclipped() {
         val scene = Scene()
         val card = scene.card
-        val shadow = DeckCardShadow(card, scene.thumbnail, 0f)
-        assertTrue(shadow.owned)
-        assertSame(shadow, card.foreground)
-        val image = Bitmap.createBitmap(500, 800, Bitmap.Config.ARGB_8888)
+        val foreground = ColorDrawable(0xff000000.toInt())
+        card.foreground = foreground
+        scene.thumbnail.layout(6, 0, 293, 590)
+        val shadow = DeckCardShadow(card, scene.thumbnail)
         try {
-            val canvas = Canvas(image)
-            val depth = 5f * card.resources.displayMetrics.density
-            for (offset in listOf(0f, -240f, 75f)) {
-                image.eraseColor(Color.TRANSPARENT)
-                card.translationY = offset
-                card.translationX = 80f
-                scene.parent.draw(canvas)
-                val bottom = (card.bottom + offset).toInt()
-                val center = card.left + 80 + card.width / 2
-                assertEquals(0, Color.alpha(image.getPixel(center, bottom - 1)))
-                val atEdge = Color.alpha(image.getPixel(center, bottom))
-                val half = Color.alpha(image.getPixel(center, bottom + (depth * .5f).toInt()))
-                assertTrue(atEdge in 1..36)
-                assertTrue(half in 1 until atEdge)
-                assertEquals(0, Color.alpha(image.getPixel(center, bottom + depth.toInt() + 1)))
-                assertEquals(0, Color.alpha(image.getPixel(card.left + 80, bottom)))
-                assertEquals(0, Color.alpha(image.getPixel(center, bottom - 50)))
-            }
-        } finally { shadow.close(); image.recycle() }
+            shadow.sync(0f, 18, 45)
+            assertTrue(shadow.owned)
+            assertSame(shadow, card.outlineProvider)
+            assertSame(foreground, card.foreground)
+            val outline = Outline()
+            card.outlineProvider.getOutline(card, outline)
+            val rect = Rect()
+            assertTrue(outline.getRect(rect))
+            val density = card.resources.displayMetrics.density
+            val left = density.roundToInt()
+            val up = (2f * density).roundToInt()
+            assertEquals(Rect(6 - left, 45 - up, 293 - left, 590 - up), rect)
+            assertEquals(18f, outline.radius, 0f)
+            assertEquals(1f, outline.alpha, 0f)
+            assertFalse(card.clipToOutline)
+        } finally { shadow.close() }
     }
 
-    @Test fun reversalHiddenContentAndRelayoutKeepTheShadowAtTheLiveBottom() {
+    @Test fun reversalAndHiddenThumbnailsUpdateOneOutlineBeforeTheNextDraw() {
         val scene = Scene()
         val card = scene.card
         val thumbnail = scene.thumbnail
         thumbnail.alpha = 0f
-        val shadow = DeckCardShadow(card, thumbnail, 0f)
-        val image = Bitmap.createBitmap(500, 800, Bitmap.Config.ARGB_8888)
+        val shadow = DeckCardShadow(card, thumbnail)
         try {
-            fun alpha(y: Int = thumbnail.bottom): Int {
-                image.eraseColor(Color.TRANSPARENT)
-                card.draw(Canvas(image))
-                return Color.alpha(image.getPixel(150, y))
-            }
-            assertEquals(0, alpha())
-            thumbnail.alpha = 1f
-            val full = alpha()
-            assertTrue("First draw reads the current thumbnail", full > 0)
+            val outline = Outline()
+            card.outlineProvider.getOutline(card, outline)
+            assertTrue(outline.isEmpty)
+            thumbnail.alpha = .75f
             for (progress in floatArrayOf(1f, .8f, .4f, 0f, .4f, .8f, 1f, 0f)) {
-                shadow.syncContentAlpha(progress)
-                assertEquals(full * (1f - progress), alpha().toFloat(), 2f)
+                shadow.sync(progress, 18, 45)
+                card.outlineProvider.getOutline(card, outline)
+                assertEquals(.75f * (1f - progress), outline.alpha, 0f)
             }
-            val oldBottom = thumbnail.bottom
-            thumbnail.layout(0, 45, 300, 420)
-            shadow.syncContentAlpha(0f)
-            assertEquals(0, alpha(oldBottom))
-            assertEquals(full, alpha())
+            thumbnail.layout(0, 0, 300, 420)
+            shadow.sync(0f, 27, 45)
+            card.outlineProvider.getOutline(card, outline)
+            val rect = Rect()
+            assertTrue(outline.getRect(rect))
+            assertEquals(420 - (2f * card.resources.displayMetrics.density).roundToInt(), rect.bottom)
+            assertEquals(27f, outline.radius, 0f)
             thumbnail.visibility = View.INVISIBLE
-            assertEquals(0, alpha())
-            thumbnail.visibility = View.VISIBLE
-            thumbnail.layout(0, 45, 1, 420)
-            assertEquals(0, alpha())
-        } finally { shadow.close(); image.recycle() }
+            shadow.sync(0f, 27, 45)
+            card.outlineProvider.getOutline(card, outline)
+            assertTrue(outline.isEmpty)
+            assertEquals(0f, outline.alpha, 0f)
+        } finally { shadow.close() }
     }
 
-    @Test fun shadowSuppressesNativeProjectionAndRestoresOnlyItsOwnProperties() {
+    @Test fun rearProjectionFollowsNativeHoldAndRunningSnapshotJoinsOnHandoff() {
+        val front = Scene()
+        val rear = Scene()
+        val frontShadow = DeckCardShadow(front.card, front.thumbnail)
+        val rearShadow = DeckCardShadow(rear.card, rear.thumbnail)
+        val frontOutline = Outline()
+        val rearOutline = Outline()
+        fun frame(fullscreen: Float) {
+            frontShadow.sync(fullscreen, 18, 45, 1f - fullscreen)
+            rearShadow.sync(fullscreen, 18, 45)
+            frontShadow.getOutline(front.card, frontOutline)
+            rearShadow.getOutline(rear.card, rearOutline)
+        }
+        try {
+            front.thumbnail.alpha = 0f
+            frame(1f)
+            assertTrue(frontOutline.isEmpty)
+            assertTrue(rearOutline.isEmpty)
+            frame(.5f)
+            assertEquals(.5f, frontOutline.alpha, 0f)
+            assertEquals(.5f, rearOutline.alpha, 0f)
+            // Reverse before releasing. Only the native position changes.
+            frame(.75f)
+            assertEquals(.25f, rearOutline.alpha, 0f)
+            assertEquals(.25f, frontOutline.alpha, 0f)
+            frame(1f)
+            assertTrue(rearOutline.isEmpty)
+            frame(.25f)
+            assertEquals(.75f, rearOutline.alpha, 0f)
+            front.thumbnail.alpha = .5f
+            frame(.25f)
+            assertEquals(.75f, frontOutline.alpha, 0f)
+            front.thumbnail.alpha = 1f
+            frame(.25f)
+            assertEquals(rearOutline.alpha, frontOutline.alpha, 0f)
+            frame(0f)
+            assertEquals(1f, frontOutline.alpha, 0f)
+            assertEquals(rearOutline.alpha, frontOutline.alpha, 0f)
+        } finally {
+            frontShadow.close()
+            rearShadow.close()
+        }
+    }
+
+    @Test fun shadowRestoresOnlyItsOwnOutlineAndRespectsNativeClipping() {
         val scene = Scene()
         val card = scene.card
         val original = ViewOutlineProvider.BOUNDS
+        val replacement = ViewOutlineProvider.BACKGROUND
         card.outlineProvider = original
-        val shadow = DeckCardShadow(card, scene.thumbnail, 0f)
-        val outline = Outline()
-        card.outlineProvider.getOutline(card, outline)
-        val rect = Rect()
-        assertTrue(outline.getRect(rect))
-        assertEquals(Rect(0, 0, 300, 600), rect)
-        assertEquals(0f, outline.alpha, 0f)
+        val nativeSpot = 0xff445566.toInt()
+        val ambient = 0xff112233.toInt()
+        card.outlineSpotShadowColor = nativeSpot
+        card.outlineAmbientShadowColor = ambient
+        val shadow = DeckCardShadow(card, scene.thumbnail)
+        assertEquals(nativeSpot, card.outlineSpotShadowColor)
+        assertEquals(ambient, card.outlineAmbientShadowColor)
         shadow.close()
-        assertNull(card.foreground)
         assertSame(original, card.outlineProvider)
-        val next = DeckCardShadow(card, scene.thumbnail, 0f)
-        val replacement = ColorDrawable(Color.BLUE)
-        card.foreground = replacement
-        next.syncContentAlpha(0f)
-        assertSame(replacement, card.foreground)
-        assertSame(original, card.outlineProvider)
-        assertFalse(DeckCardShadow(card, scene.thumbnail, 0f).owned)
-        card.foreground = null
+        assertEquals(nativeSpot, card.outlineSpotShadowColor)
+        val next = DeckCardShadow(card, scene.thumbnail)
+        card.outlineProvider = replacement
+        card.outlineSpotShadowColor = 0xff223344.toInt()
+        next.sync(0f, 18, 45)
+        assertSame(replacement, card.outlineProvider)
+        assertEquals(0xff223344.toInt(), card.outlineSpotShadowColor)
+        card.clipToOutline = true
+        assertFalse(DeckCardShadow(card, scene.thumbnail).owned)
+        card.clipToOutline = false
         scene.parent.clipChildren = true
-        assertFalse(DeckCardShadow(card, scene.thumbnail, 0f).owned)
+        assertFalse(DeckCardShadow(card, scene.thumbnail).owned)
         assertTrue(scene.parent.clipChildren)
     }
 

@@ -104,6 +104,7 @@ class DeckContinuityTest {
         setField(api,"getTask",TaskView::class.java.getMethod("getTask"))
         setField(api,"getHeader",TaskView::class.java.getMethod("getHeaderView"))
         setField(api,"fullscreenProgress",TaskView::class.java.getField("mFullscreenProgress"))
+        setField(api,"thumbnailRadius",Thumbnail::class.java.getField("radius"))
         for((target,source) in mapOf("currentTasks" to "tasks","startTransforms" to "start","endTransforms" to "end"))
             setField(api,target,Handler::class.java.getField(source))
         val owner=unconstructed(DeckOwner::class.java)
@@ -132,7 +133,7 @@ class DeckContinuityTest {
         val view=TaskView();f.stack.addView(view);view.layout(100,200,700,1400)
         val header=DeckHeaderOwner(view.header,view.header.icon,view.header.title,view.header.badge,DeckHeaderConfig(0,0))
         val geometry=DeckCardGeometry(view,f.stack).apply { apply(.8f) }
-        val card=DeckOwner.Card(f.owner,geometry,view.task,7,0,header,1f,DeckCardShadow(view,view.thumbnail,0f))
+        val card=DeckOwner.Card(f.owner,geometry,view.task,7,0,header,1f,DeckCardShadow(view,view.thumbnail))
         f.cards[view]=card;setField(f.owner,"drawCards",arrayListOf(card))
         XposedHelpers.setAdditionalInstanceField(view,DeckOwner.CARD,card)
         val moving=view.getSpringAnimationImpl().getAllSpringAnim()
@@ -194,7 +195,7 @@ class DeckContinuityTest {
         view.header.layout(0,0,view.width,52)
         val header=DeckHeaderOwner(view.header,view.header.icon,view.header.title,view.header.badge,DeckHeaderConfig(0,0))
         val geometry=DeckCardGeometry(view,f.stack).apply { apply(transform.scale) }
-        val shadow=DeckCardShadow(view,view.thumbnail,0f)
+        val shadow=DeckCardShadow(view,view.thumbnail)
         val card=DeckOwner.Card(f.owner,geometry,view.task,0,0,header,1f,shadow)
         f.cards[view]=card;setField(f.owner,"drawCards",arrayListOf(card))
         XposedHelpers.setAdditionalInstanceField(f.stack,DeckOwner.OWNER,f.owner)
@@ -312,7 +313,7 @@ class DeckContinuityTest {
             val view=TaskView();f.stack.addView(view);view.layout(500,200,1600,800)
             view.addView(view.thumbnail);view.thumbnail.layout(0,52,1100,600);view.thumbnail.alpha=0f
             val geometry=DeckCardGeometry(view,f.stack).apply { apply(.8f) }
-            val shadow=DeckCardShadow(view,view.thumbnail,1f)
+            val shadow=DeckCardShadow(view,view.thumbnail)
             val card=unconstructed(DeckOwner.Card::class.java)
             setField(card,"owner",f.owner);setField(card,"geometry",geometry);setField(card,"index",index)
             setField(card,"shadow",shadow)
@@ -351,14 +352,10 @@ class DeckContinuityTest {
                     assertEquals(endpoint.centerX(),frameCenterX+(nativeCenterX-frameCenterX)*geometry.scale,.001f)
                     assertEquals(endpoint.centerY(),frameCenterY+(nativeCenterY-frameCenterY)*geometry.scale,.001f)
                     assertEquals(endpoint.width(),input.width()*geometry.scale,.001f)
-                    assertSame(shadow, view.foreground)
-                    val image=android.graphics.Bitmap.createBitmap(1,1,android.graphics.Bitmap.Config.ARGB_8888)
-                    try {
-                        val canvas=android.graphics.Canvas(image)
-                        canvas.translate(-view.thumbnail.width*.5f,-view.thumbnail.bottom.toFloat())
-                        shadow.draw(canvas)
-                        assertEquals("An app leash alone cannot cast a shadow from the hidden card",0,image.getPixel(0,0))
-                    } finally { image.recycle() }
+                    assertSame(shadow, view.outlineProvider)
+                    val outline=android.graphics.Outline()
+                    shadow.getOutline(view,outline)
+                    assertTrue("An app leash alone cannot cast a shadow from the hidden card",outline.isEmpty)
                 } else assertSame(nativeWindow,args[2])
                 assertEquals("Release must start the native card spring instead of snapping its endpoint",animate,args[7])
                 assertSame(completion,args[10])
@@ -390,7 +387,7 @@ class DeckContinuityTest {
                 for(child in arrayOf(icon,title,badge)) view.header.addView(child)
                 val header=DeckHeaderOwner(view.header,icon,title,badge,DeckHeaderConfig(0,0))
                 val geometry=DeckCardGeometry(view,f.stack).apply { apply(.8f) }
-                val shadow=DeckCardShadow(view,view.thumbnail,0f)
+                val shadow=DeckCardShadow(view,view.thumbnail)
                 DeckOwner.Card(f.owner,geometry,view.task,index,index,header,1f,shadow).also { f.cards[view]=it }
             }
             setField(f.owner,"drawCards",ArrayList(cards))
@@ -499,7 +496,7 @@ class DeckContinuityTest {
         val header=DeckHeaderOwner(view.header,icon,title,badge,DeckHeaderConfig(0,0))
         val geometry=DeckCardGeometry(view,f.stack).apply { apply(.75f) }
         assertNotNull("The old Deck matrix is present before quick-switch admission changes",view.animationMatrix)
-        val shadow=DeckCardShadow(view,view.thumbnail,0f)
+        val shadow=DeckCardShadow(view,view.thumbnail)
         // The pool may already have rebound this View. Native properties belong
         // to the new task and must survive release of the old Deck matrix.
         val card=DeckOwner.Card(f.owner,geometry,Any(),0,0,header,1f,shadow)
@@ -630,7 +627,7 @@ class DeckContinuityTest {
         for(child in arrayOf(icon,title,badge)) header.addView(child)
         val headerOwner=DeckHeaderOwner(header,icon,title,badge,DeckHeaderConfig(0,0))
         val card=unconstructed(DeckOwner.Card::class.java)
-        val shadow=DeckCardShadow(view,View(view.context),0f)
+        val shadow=DeckCardShadow(view,view.thumbnail)
         setField(card,"header",headerOwner);setField(card,"geometry",DeckCardGeometry(view,f.stack))
         setField(card,"shadow",shadow)
         f.cards[view]=card

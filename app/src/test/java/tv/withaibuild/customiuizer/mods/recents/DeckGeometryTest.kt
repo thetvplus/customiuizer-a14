@@ -90,10 +90,10 @@ class DeckGeometryTest {
                 val window=RectF(0f,0f,width,width*(600f-header)/1100f)
                 window.offset(target.centerX()-window.centerX(),target.centerY()-window.centerY())
                 val input=RectF()
-                assertTrue(geometry.windowInput(window,target,target,0,25f,2400f,0f,header,input))
+                assertTrue(geometry.windowPose(window,target,target,0,25f,2400f,header,input))
                 // Both verified native horizontal consumers apply these same
                 // root properties before the owned presentation matrix.
-                geometry.alignClosing(input,0,25f,header)
+                geometry.alignClosing(input,header)
                 val shown=RectF();geometry.screenContent(shown,header)
                 assertEquals(window.left,shown.left,.002f);assertEquals(window.top,shown.top,.002f)
                 assertEquals(window.right,shown.right,.002f);assertEquals(window.bottom,shown.bottom,.002f)
@@ -121,8 +121,9 @@ class DeckGeometryTest {
                     val window=RectF(reference.left*p,reference.top*p,reference.left*p+width,
                         reference.top*p+width*550f/400f)
                     val saved=RectF(window);val input=RectF();val bend=300f*.3f*.3f*.3f
-                    assertTrue(geometry.windowInput(window,reference,target,slots,25f,800f,bend,50f,input))
+                    assertTrue(geometry.windowPose(window,reference,target,slots,25f,800f,50f,input))
                     assertEquals(saved,window)
+                    input.offset(-slots*(input.width()+25f),-bend)
                     // Verified native horizontal updateTaskView consumer: root
                     // width, ordinal page offset, header center and mPer bend.
                     val s=input.width()/view.width
@@ -130,19 +131,21 @@ class DeckGeometryTest {
                     view.translationX=input.centerX()-(view.left+view.width*.5f)+slots*(input.width()+25f)
                     view.translationY=input.top+(view.height-50f)*s*.5f-50f*s*.5f-(view.top+view.height*.5f)+bend
                     val actual=RectF();geometry.screenContent(actual,50f)
-                    val ratio=window.width()/reference.width()
-                    val pages=slots*(window.width()+25f)
-                    val dx=pages+((target.centerX()-reference.centerX())*ratio-pages)*p
-                    assertEquals(window.centerX()+dx,actual.centerX(),.002f)
-                    assertEquals(window.centerY()+(target.centerY()-reference.centerY())*ratio*p,actual.centerY(),.002f)
+                    // The exposed edge follows the same progress as the card width.
+                    // Mixing an already shrunken page spacing toward the endpoint
+                    // compresses the middle of the approach a second time.
+                    val startOffset=slots*(800f+25f)
+                    assertEquals(startOffset+(target.left-reference.left-startOffset)*p,actual.left-window.left,.002f)
+                    assertEquals(startOffset+(target.right-reference.right-startOffset)*p,actual.right-window.right,.002f)
+                    assertEquals((target.centerY()-reference.centerY())*p,actual.centerY()-window.centerY(),.002f)
                     if(!neighbor) assertEquals(window.width(),actual.width(),.002f)
                     if(p==1f) {
                         assertEquals(target.left,actual.left,.002f);assertEquals(target.top,actual.top,.002f)
                         assertEquals(target.right,actual.right,.002f);assertEquals(target.bottom,actual.bottom,.002f)
                         assertEquals(1f,view.scaleX,.002f);assertEquals(0f,view.translationX,.002f);assertEquals(0f,view.translationY,.002f)
                     }
-                    assertTrue(geometry.windowInput(window,reference,target,slots,25f,800f,0f,50f,input))
-                    geometry.alignClosing(input,slots,25f,50f)
+                    assertTrue(geometry.windowPose(window,reference,target,slots,25f,800f,50f,input))
+                    geometry.alignClosing(input,50f)
                     val closing=RectF();geometry.screenContent(closing,50f)
                     assertEquals(actual.left,closing.left,.002f);assertEquals(actual.top,closing.top,.002f)
                     assertEquals(actual.right,closing.right,.002f);assertEquals(actual.bottom,closing.bottom,.002f)
@@ -281,11 +284,11 @@ class DeckGeometryTest {
         assertEquals(.4f,model.presentationCursor(0,.4f),0f)
     }
     @Test fun nativeSpringMayFinishWithoutAFrameworkAnimator() {
-        var completed=0
-        val listener=DeckSpringEndListener({}) { completed++ }
+        val cancelled=mutableListOf<Boolean>()
+        val listener=DeckSpringEndListener({}) { cancelled.add(it) }
         listener.javaClass.getDeclaredMethod("onAnimationCancel",android.animation.Animator::class.java).invoke(listener,null)
         listener.javaClass.getDeclaredMethod("onAnimationEnd",android.animation.Animator::class.java).invoke(listener,null)
-        assertEquals(2,completed)
+        assertEquals(listOf(true,false),cancelled)
     }
     @Test fun nativeFullFrameAnchorDepthAndHeaderRemainCoherent() {
         for(w in floatArrayOf(720f,1080f,1440f)) {

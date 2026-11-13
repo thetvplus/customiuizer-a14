@@ -1,114 +1,79 @@
 package tv.withaibuild.customiuizer.mods.recents
 
-import android.graphics.Canvas
-import android.graphics.ColorFilter
-import android.graphics.LinearGradient
 import android.graphics.Outline
-import android.graphics.Paint
-import android.graphics.PixelFormat
-import android.graphics.Shader
-import android.graphics.drawable.Drawable
+import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
-import tv.withaibuild.customiuizer.mods.utils.CleanupActions
 import kotlin.math.roundToInt
 
-/** The TaskView foreground records the bottom edge in the same RenderNode as the thumbnail. */
-internal class DeckCardShadow(private val view: View, private val content: View,
-    private var fullscreenProgress: Float) : Drawable() {
-    private val originalOutline = view.outlineProvider
-    private val depth = 5f * view.resources.displayMetrics.density
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        shader = LinearGradient(0f, 0f, 0f, depth, intArrayOf(0x24000000, 0x0a000000, 0), null, Shader.TileMode.CLAMP)
-    }
-    private val unlitOutline = object : ViewOutlineProvider() {
-        override fun getOutline(view: View, outline: Outline) {
-            originalOutline?.getOutline(view, outline)
-            outline.alpha = 0f
-        }
-    }
-    private var closed = false
-    private var contentAlpha = 0
-    private var left = 0f
-    private var right = 0f
-    private var bottom = 0f
-    val owned = (view.parent as? ViewGroup)?.clipChildren == false && !view.clipToOutline && view.foreground == null
+/** The TaskView RenderNode projects the native thumbnail silhouette. */
+internal class DeckCardShadow(
+    private val view: View,
+    val content: View
+) : ViewOutlineProvider() {
+    private val original = view.outlineProvider
+    private val bounds = Rect()
+    // Offset only the projected silhouette to compensate for HWUI's light.
+    private val leftShift = view.resources.displayMetrics.density.roundToInt()
+    private val upShift = (2f * view.resources.displayMetrics.density).roundToInt()
+    private var opacity = 0f
+    private var corner = 0
+    var owned = (view.parent as? ViewGroup)?.clipChildren == false &&
+        !view.clipToOutline && content.parent === view
+        private set
 
-    init {
-        if (owned) {
-            try {
-                view.outlineProvider = unlitOutline
-                view.foreground = this
-            } catch (error: Throwable) {
-                val cleanup = CleanupActions(error)
-                cleanup.run { close() }
-                cleanup.finish()
-            }
-        }
-    }
+    init { if (owned) view.outlineProvider = this }
 
-    fun syncContentAlpha(fullscreenProgress: Float) {
-        if (!owned || closed) return
-        if (view.foreground !== this) {
+    fun sync(fullscreenProgress: Float, radius: Int, header: Int, entryProgress: Float = 0f) {
+        if (!owned) return
+        if (view.outlineProvider !== this || view.clipToOutline) {
             close()
             return
         }
-        this.fullscreenProgress = fullscreenProgress
-        if (updateInputs()) view.invalidate()
-    }
-
-    override fun draw(canvas: Canvas) {
-        if (!owned || closed) return
-        // The first display list can record before the first Deck pre-draw.
-        updateInputs()
-        if (contentAlpha == 0) return
-        paint.alpha = contentAlpha
-        val save = canvas.save()
-        canvas.translate(0f, bottom)
-        canvas.drawRoundRect(left, 0f, right, depth, depth, depth, paint)
-        canvas.restoreToCount(save)
-    }
-
-    private fun updateInputs(): Boolean {
-        val alpha = contentOpacity()
-        if (alpha != 0) {
-            val inset = minOf(depth * 2f, content.width * .12f)
-            val nextLeft = maxOf(0, content.left) + inset
-            val nextRight = minOf(view.width, content.right) - inset
-            val nextBottom = minOf(view.height, content.bottom).toFloat()
-            if (nextRight - nextLeft >= depth * 2f && nextBottom > 0f) {
-                if (contentAlpha == alpha && left == nextLeft && right == nextRight && bottom == nextBottom) return false
-                contentAlpha = alpha
-                left = nextLeft
-                right = nextRight
-                bottom = nextBottom
-                return true
+        val left = maxOf(0, content.left)
+        // The native match-parent thumbnail translates its Canvas by the
+        // same layout header before drawing the rounded screenshot.
+        val top = maxOf(0, content.top + header)
+        val right = minOf(view.width, content.right)
+        val bottom = minOf(view.height, content.bottom)
+        val visibleOpacity = if (left < right && top < bottom && view.visibility == View.VISIBLE &&
+            view.alpha > 0f && content.parent === view && content.visibility == View.VISIBLE &&
+            content.width > 0 && content.height > 0
+        ) {
+            val thumbnailOpacity = if (fullscreenProgress.isFinite() && content.alpha.isFinite())
+                content.alpha.coerceIn(0f, 1f) * (1f - fullscreenProgress.coerceIn(0f, 1f)) else 0f
+            maxOf(thumbnailOpacity, entryProgress)
+        } else 0f
+        if (visibleOpacity == 0f) {
+            if (opacity != 0f) {
+                opacity = 0f
+                view.invalidateOutline()
             }
+            return
         }
-        if (contentAlpha == 0) return false
-        contentAlpha = 0
-        return true
+        if (opacity == visibleOpacity && bounds.left == left && bounds.top == top &&
+            bounds.right == right && bounds.bottom == bottom && corner == radius) return
+        opacity = visibleOpacity
+        bounds.set(left, top, right, bottom)
+        corner = radius
+        view.invalidateOutline()
     }
 
-    private fun contentOpacity(): Int {
-        if (view.clipToOutline || content.parent !== view || content.visibility != View.VISIBLE || content.width <= 0 ||
-            content.height <= 0 || !fullscreenProgress.isFinite()) return 0
-        val alpha = content.alpha
-        if (!alpha.isFinite()) return 0
-        return (255f * alpha.coerceIn(0f, 1f) * (1f - fullscreenProgress.coerceIn(0f, 1f))).roundToInt()
+    override fun getOutline(view: View, outline: Outline) {
+        if (view.clipToOutline) {
+            original?.getOutline(view, outline)
+            return
+        }
+        if (opacity == 0f) outline.setEmpty()
+        else outline.setRoundRect(bounds.left - leftShift, bounds.top - upShift,
+            bounds.right - leftShift, bounds.bottom - upShift, corner.coerceAtLeast(0).toFloat())
+        outline.alpha = opacity
     }
-
-    override fun setAlpha(alpha: Int) = Unit
-    override fun setColorFilter(colorFilter: ColorFilter?) = Unit
-    @Deprecated("Required by Drawable") override fun getOpacity() = PixelFormat.TRANSLUCENT
 
     fun close() {
-        if (closed || !owned) return
-        closed = true
-        val cleanup = CleanupActions()
-        cleanup.run { if (view.foreground === this) view.foreground = null }
-        cleanup.run { if (view.outlineProvider === unlitOutline) view.outlineProvider = originalOutline }
-        cleanup.finish()
+        if (!owned) return
+        owned = false
+        if (view.outlineProvider === this) view.outlineProvider = original
     }
 }

@@ -1373,4 +1373,6 @@
     <string name="system_locationauto_block">黑名單 · 關閉定位</string>
     <string name="system_locationauto_close">移除卡片後關閉定位</string>
     <string name="system_locationauto_close_summary">從最近使用的應用程式移除最後一張符合條件的卡片後，關閉本功能開啟的定位。</string>
+    <string name="system_locationauto_close_delay">關閉定位延時</string>
+    <string name="system_locationauto_close_delay_summary">白名單在移除最後一張符合條件的卡片後計時。黑名單在符合條件的應用程式進入前景後計時，離開時取消。</string>
 </resources>

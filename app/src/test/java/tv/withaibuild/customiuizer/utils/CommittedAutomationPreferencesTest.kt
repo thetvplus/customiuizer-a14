@@ -38,9 +38,10 @@ class CommittedAutomationPreferencesTest {
         }
         val snapshot = read(committed)
         assertEquals(1, committed.getAllCount)
-        assertEquals(17, snapshot.size)
+        assertEquals(18, snapshot.size)
         assertEquals(30, snapshot["pref_key_system_appbehavior_block_limit"])
         assertEquals("[]", snapshot[rules])
+        assertEquals(0, snapshot["pref_key_system_locationauto_close_delay"])
         assertFalse(snapshot.containsKey("pref_key_other_private"))
         apps.clear()
         assertEquals(setOf("sample.player"), snapshot["pref_key_system_appbehavior_rotation_apps"])
@@ -109,9 +110,12 @@ class CommittedAutomationPreferencesTest {
         bootstrap.refreshRemoteKey(null, read(committed))
         committed.put(prefix + "mode", "block")
         bootstrap.refreshRemoteKey(prefix + "mode", read(committed, prefix + "mode"))
+        committed.put(prefix + "close_delay", 99)
+        bootstrap.refreshRemoteKey(prefix + "close_delay", read(committed, prefix + "close_delay"))
         assertEquals(listOf(
             LocationAutomationOptions(true, "allow", setOf("sample.maps"), false),
             LocationAutomationOptions(true, "block", setOf("sample.maps"), false),
+            LocationAutomationOptions(true, "block", setOf("sample.maps"), false, 30),
         ), observed)
     }
 }

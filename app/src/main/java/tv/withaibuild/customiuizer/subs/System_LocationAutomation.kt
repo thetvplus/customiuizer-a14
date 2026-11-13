@@ -12,13 +12,25 @@ class System_LocationAutomation : SubFragment() {
         super.onViewCreated(view, savedInstanceState)
         val prefix = "pref_key_system_locationauto_"
         val close = findPreference<Preference>(prefix + "close")
+        val delay = findPreference<Preference>(prefix + "close_delay")
+        var mode = AppHelper.getStringOfAppPrefs(prefix + "mode", LocationAutomationOptions.ALLOW)
+        var autoClose = AppHelper.getBooleanOfAppPrefs(prefix + "close", false)
+        fun refresh() {
+            val allow = mode == LocationAutomationOptions.ALLOW
+            close?.isVisible = allow
+            delay?.isVisible = mode == LocationAutomationOptions.BLOCK || allow && autoClose
+        }
         findPreference<Preference>(prefix + "apps")?.onPreferenceClickListener = openAppsEdit
         findPreference<Preference>(prefix + "mode")?.setOnPreferenceChangeListener { preference, value ->
-            val mode = syncPendingListSelection(preference, value)
-            close?.isVisible = mode == LocationAutomationOptions.ALLOW
+            mode = syncPendingListSelection(preference, value)
+            refresh()
             true
         }
-        close?.isVisible = AppHelper.getStringOfAppPrefs(prefix + "mode", LocationAutomationOptions.ALLOW) ==
-            LocationAutomationOptions.ALLOW
+        close?.setOnPreferenceChangeListener { _, value ->
+            autoClose = value == true
+            refresh()
+            true
+        }
+        refresh()
     }
 }

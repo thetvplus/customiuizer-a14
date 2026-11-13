@@ -152,7 +152,7 @@ class DownloadDocumentsTest(unittest.TestCase):
             with self.context(server):
                 published = docs.published_version(VERSION)
                 with patch.object(release, "ROOT", root), patch.dict(release.POLICY,
-                        consolidated_releases=[historical], archived_source_snapshots={historical: {}}), \
+                        consolidated_releases=[historical], archived_source_snapshots={}), \
                         patch.object(docs, "published_version", return_value={"metadata": {"version_code": 246}}) as verified:
                     result = docs.documents(published)
                     verified.assert_called_once_with(historical, require_download=False, latest_only=False)
@@ -165,10 +165,9 @@ class DownloadDocumentsTest(unittest.TestCase):
                     verified.return_value = {"metadata": {"version_code": 999}}
                     with self.assertRaisesRegex(ValueError, "versionCode differs"):
                         docs.documents(published)
-                with patch.object(release, "ROOT", root), patch.dict(release.POLICY,
-                        consolidated_releases=[historical], archived_source_snapshots={}), \
-                        self.assertRaisesRegex(ValueError, "verified historical"):
-                    docs.documents(published)
+                    verified.side_effect = ValueError("Published metadata violates the A14 release contract")
+                    with self.assertRaisesRegex(ValueError, "violates the A14 release contract"):
+                        docs.documents(published)
                 # A withdrawal may make a consolidated historical version Latest.
                 # Its own notes must still come from its published source, without
                 # accepting maintenance text or requiring a second history lookup.

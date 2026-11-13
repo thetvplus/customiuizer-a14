@@ -23,6 +23,7 @@ internal object CommittedAutomationPreferences {
         put(LOCATION + "mode", LocationAutomationOptions.ALLOW)
         put(LOCATION + "apps", emptySet<String>())
         put(LOCATION + "close", false)
+        put(LOCATION + "close_delay", 0)
     }
 
     fun owns(key: String) = key in defaults

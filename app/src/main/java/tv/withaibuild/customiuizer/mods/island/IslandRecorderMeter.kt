@@ -54,9 +54,13 @@ internal object IslandRecorderMeter {
         private var job: Job? = null
         private var epoch = 0L
         private var retainedOwner: IBinder? = null
+        private var retryAt = 0L
         private val bars = FloatArray(5)
         fun start(next: IBinder) {
             if (owner == next && job?.isActive == true) return
+            // Presentation can call start every frame. A failed read ends the job;
+            // the same visible lease still observes the source cadence.
+            if (retryAt != 0L && retainedOwner == next && SystemClock.uptimeMillis() < retryAt) return
             stop(clearFrame = false); owner = next
             if (retainedOwner != next) { bars.fill(0f); output(bars) }
             retainedOwner = next
@@ -65,7 +69,11 @@ internal object IslandRecorderMeter {
                 var previous = bars.last()
                 while (isActive && generation == epoch) {
                     val start = SystemClock.uptimeMillis()
-                    val raw = withContext(io) { ModuleHelper.guarded<Int?>(null) { read(next) } } ?: break
+                    val raw = withContext(io) { ModuleHelper.guarded<Int?>(null) { read(next) } }
+                    if (raw == null) {
+                        if (generation == epoch) retryAt = start + SAMPLE_INTERVAL_MS
+                        break
+                    }
                     val level = level(raw)
                     // A five-sample envelope, not invented frequency bands. Quiet remains quiet.
                     if (previous < 0f || kotlin.math.abs(level - previous) >= .004f || level == 0f && previous != 0f)
@@ -80,14 +88,17 @@ internal object IslandRecorderMeter {
                 }
                 if (generation == epoch) {
                     owner = null; job = null
-                    bars.fill(0f)
-                    output(bars)
+                    if (bars.any { it != 0f }) {
+                        bars.fill(0f)
+                        output(bars)
+                    }
                 }
             }
         }
         fun stop() = stop(clearFrame = true)
         fun pauseKeepingFrame() = stop(clearFrame = false)
         private fun stop(clearFrame: Boolean) {
+            if (retryAt != 0L) retryAt = 0L
             if (owner == null && job == null && (!clearFrame || retainedOwner == null)) return
             epoch++; owner = null; job?.cancel(); job = null
             if (clearFrame) { retainedOwner = null; bars.fill(0f); output(null) }

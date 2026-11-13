@@ -43,6 +43,20 @@
         "android:defaultValue": "false",
         "app:dynamic": "true"
       }
+    },
+    {
+      "type": "slider",
+      "attributes": {
+        "android:key": "pref_key_system_locationauto_close_delay",
+        "android:title": "@string/system_locationauto_close_delay",
+        "android:summary": "@string/system_locationauto_close_delay_summary",
+        "android:defaultValue": "0",
+        "app:minValue": "0",
+        "app:maxValue": "30",
+        "app:stepValue": "1",
+        "app:format": "@string/format_d_s",
+        "app:dynamic": "true"
+      }
     }
   ]
 }
