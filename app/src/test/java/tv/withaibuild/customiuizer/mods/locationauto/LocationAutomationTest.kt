@@ -1,5 +1,8 @@
 package tv.withaibuild.customiuizer.mods.locationauto
 
+import android.app.ActivityManager
+import android.content.ComponentName
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import java.lang.ref.WeakReference
@@ -191,6 +194,26 @@ class LocationAutomationTest {
         recovered().recoveredTaskRemoved()
         assertFalse(location.enabled)
     }
+
+    @Test fun nativeRecentTasksPreventClosingForUnobservedMatchingCards() {
+        val apps = setOf("example.maps")
+        val maps = ComponentName("example.maps", "Maps")
+        val removed = recentTask(1, base = maps)
+        val other = recentTask(2)
+        assertFalse(hasRemainingLocationTasks(listOf(removed, other), 1, apps))
+        assertTrue(hasRemainingLocationTasks(listOf(removed, recentTask(2, base = maps)), 1, apps))
+        assertTrue(hasRemainingLocationTasks(listOf(removed, recentTask(2, top = maps)), 1, apps))
+        assertFalse(hasRemainingLocationTasks(List(127) { recentTask(it) }, 1, apps))
+        assertTrue(hasRemainingLocationTasks(List(128) { recentTask(it) }, 1, apps))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun recentTask(id: Int, base: ComponentName? = null, top: ComponentName? = null) =
+        ActivityManager.RecentTaskInfo().apply {
+            persistentId = id
+            baseIntent = Intent().setComponent(base)
+            topActivity = top
+        }
 
     @Test fun blocklistKeepsOneDeadlineUntilLeavingAndDoesNotReenable() {
         val location = Location(enabled = true)

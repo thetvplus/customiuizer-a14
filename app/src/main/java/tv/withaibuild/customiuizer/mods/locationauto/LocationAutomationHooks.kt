@@ -173,15 +173,10 @@ internal object LocationAutomationHooks {
             val rules = options?.takeIf { it.tracksTasks } ?: return
             if (!isPrimaryUser()) return
             val revision = ownedRevision(context) ?: return
-            if (revision != claimedRevision) {
-                val am = context.getSystemService(ActivityManager::class.java) ?: return
-                val recent = am.getRecentTasks(MAX_RECOVERED_TASKS, 0)
-                if (recent.size >= MAX_RECOVERED_TASKS || recent.any {
-                    it.persistentId != removedId &&
-                        (it.baseIntent.component?.packageName in rules.apps || it.topActivity?.packageName in rules.apps)
-                }) return
-                if (!isPrimaryUser() || ownedRevision(context) != revision) return
-            }
+            val am = context.getSystemService(ActivityManager::class.java) ?: return
+            val recent = am.getRecentTasks(MAX_RECENT_TASKS, 0)
+            if (hasRemainingLocationTasks(recent, removedId, rules.apps)) return
+            if (!isPrimaryUser() || ownedRevision(context) != revision) return
             if (setIfNeeded(false)) clearOwnership(context)
         }
 
@@ -234,5 +229,12 @@ internal object LocationAutomationHooks {
 
     private const val USER_SWITCHED = "android.intent.action.USER_SWITCHED"
     private const val OWNER_REVISION = "customiuizer_location_owner_revision"
-    private const val MAX_RECOVERED_TASKS = 128
 }
+
+private const val MAX_RECENT_TASKS = 128
+
+internal fun hasRemainingLocationTasks(tasks: List<ActivityManager.RecentTaskInfo>, removedId: Int, apps: Set<String>): Boolean =
+    tasks.size >= MAX_RECENT_TASKS || tasks.any {
+        it.persistentId != removedId &&
+            (it.baseIntent.component?.packageName in apps || it.topActivity?.packageName in apps)
+    }
