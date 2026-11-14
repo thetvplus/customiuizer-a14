@@ -440,7 +440,9 @@ internal object IosRecentsDeckHooks {
         after(api.setOverview) { owner(api.recentsStack.get(it.getThisObject()))?.refresh(false) }
         before(api.splitStart) { latest.get().get()?.suspend(true) }
         after(api.splitEnd) { latest.get().get()?.suspend(false) }
-        return PreparedHookBatch().install(entries)
+        val result = PreparedHookBatch().install(entries)
+        if (result == FeatureInstallResult.INSTALLED) DeckWindowOrientation.install(param.classLoader, api)
+        return result
     }
 
     internal fun legacyOpeningCreated(selected: DeckOwner.Card,params: Any,spring: Any,skip: Boolean) {

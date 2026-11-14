@@ -626,9 +626,9 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         this.surface.reset()
         // Same quarter-turn convention as native transformCoordinate2(0,r).
         // Project into the app Surface's axes once, then reuse it for all cards.
-        when(rotation) {
-            1 -> { this.surface.setRotate(-90f); this.surface.postTranslate(0f,minOf(root.width,root.height).toFloat()) }
-            3 -> { this.surface.setRotate(90f); this.surface.postTranslate(maxOf(root.width,root.height).toFloat(),0f) }
+        if (root.width < root.height) when(rotation) {
+            1 -> { this.surface.setRotate(-90f); this.surface.postTranslate(0f,root.width.toFloat()) }
+            3 -> { this.surface.setRotate(90f); this.surface.postTranslate(root.height.toFloat(),0f) }
         }
         global.postConcat(this.surface)
     }
