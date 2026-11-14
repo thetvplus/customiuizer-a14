@@ -2,13 +2,9 @@
 
 | 任务 | 入口 |
 | --- | --- |
-| 实施代码、工具或工程规则变更 | [安全实施](a14-safe-implementation/SKILL.md) |
-| 只读审查指定 diff | [独立审查](a14-independent-review/SKILL.md) |
+| 实施代码、工具、文档或工程规则变更 | [安全实施](a14-safe-implementation/SKILL.md) |
+| 只读审查指定 diff 的缺陷与回归 | [独立审查](a14-independent-review/SKILL.md) |
 
-保留 25 项：实施与独立审查；Android / Perfetto 性能、ANR、R8、Gradle、Kotlin 并发；Android 安全与测试、静态分析、故障定位和规则编写。Compose 仅保留性能、状态生命周期和现有 UI 测试参考。
+专项任务按已知风险调用对应技能。分析已有 trace 用 Perfetto，录制 Android 性能数据用 Android Profiler。执行 Gradle 用 gradle-run，修改构建配置用 gradle-build。修改 AGENTS 或 Skills 用 writing-for-agents。第三方技能的触发条件见各自的 `SKILL.md`，固定来源、本地修订和安装位置见[来源清单](upstream-sources.json)及 Git diff。
 
-暂停保留视觉设计、组件 / 主题、动效工艺、设计系统、跨平台专用及重复审查资料。需要时从 Git 历史中的[来源清单](upstream-sources.json)恢复对应固定版本，不预装整套工具。Android Profiler 用于录制与专项分析，Perfetto 负责现有设备验证的离线查询；其运行清单、SQL、脚本和许可证一并保留。
-
-第三方技能按问题加载；来源、固定提交、安装路径及本地修订见来源清单和 Git diff。不安装上游启动钩子，不在 Agent 启动时扫描 ROM。目录可发现不代表工具已安装或适用于当前 JDK / Kotlin。
-
-[AGENTS](../../AGENTS.md)和项目合同优先于外部建议。技能及其脚本、参考和许可证仅用于开发，不进入 Android 源码集；不另建技能索引。
+执行脚本前核对所需工具与项目版本。[工程规则](../../AGENTS.md)及项目合同优先于第三方建议。技能、脚本、参考和许可证属于开发资产。

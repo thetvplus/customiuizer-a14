@@ -15,7 +15,9 @@
 
 ## 接入与所有权
 
-设置在“按键与手势 → 导航栏 → iOS 手势指示条”独立分组，组内为“启用”和说明；键为 `controls_ios_home_indicator`，默认关闭，重启 SystemUI 生效。需要系统全面屏手势、可见的原生 Handle，并关闭系统“隐藏全面屏指示条”和米客“隐藏手势提示线”；菜单名称可能随地区 ROM 不同。进入或返回页面时读取系统导航及隐藏开关，不轮询、不改写系统配置，不满足时保留勾选值但禁用入口。生成器保留 `controls_nonavbar` 的 `disableDependentsState=true`，AndroidX 处理依赖，Compose 消费同一个 Preference 的启用状态。仅 SDK 34 / arm64、SystemUI 主进程及完整实例签名通过后安装；设备、地区与构建号不作为通行证。设置进程只判断平台和系统导航选项，实际能力由宿主安装阶段解析；不满足合同只关闭这项绘制替换。
+设置路径为“声音与操作 → 导航栏与输入法 → iOS 手势指示条”。键为 `controls_ios_home_indicator`，默认关闭，重启 SystemUI 生效。需要系统全面屏手势和可见的原生 Handle，并关闭系统“隐藏全面屏指示条”和米客“隐藏手势提示线”。系统菜单名随 ROM 变化。
+
+页面进入或返回时读取导航与隐藏开关。条件不满足时保留勾选值并禁用入口。AndroidX 根据 `controls_nonavbar` 的 `disableDependentsState=true` 计算状态，Compose 消费同一 Preference。宿主在安装阶段检查 SDK 34 / arm64、SystemUI 主进程及完整实例签名，满足后接管绘制。
 
 冷解析绘制、模式更新及普通颜色渐变时长三个 Hook：`NavigationHandle.onDraw(Landroid/graphics/Canvas;)V`、`NavigationBarView.updateIcons(Landroid/content/res/Configuration;)V` 与 `NavigationBarTransitions.getTintAnimationDuration()I`。原生 `NavigationBar.setNavBarMode(I)V` 写入字段后调用 updateIcons 并可能重建 handle；模式字段缓存后，绘制只在主屏、精确 NavigationHandle 类及真实 NavigationBarView 祖先下工作，非手势模式不创建绘制 owner。复用 `mPaint:Landroid/graphics/Paint;`，同时要求实例字段为 final；已查样本均只在构造器写入，宿主重建 / detach 后重新取得当前实例。可替换 Paint 的未知合同保留原生，不逐帧读取字段。不写原生 Paint、布局、alpha、visibility、Insets、焦点或输入。教程、独立控制中心 / 锁屏 handle、未知子类和旋转尺寸尚未对齐时保留原生。
 

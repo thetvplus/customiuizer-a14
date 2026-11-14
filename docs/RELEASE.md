@@ -41,9 +41,9 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 ### 当前正式版本
 
-**r14.27.5 / 305** 已完成双仓发行，正式源码为 `1a64b974b732105837adf6d7f8f9d3756ec12205`，APK SHA-256 为 `99bb4e3b2094d49b6f90bb8c3c719bdf5b5fd78d16e78815a74f06439dbb0645`。历史证书和两仓构建元数据一致。
+**r14.27.7 / 307** 的正式源码为 `a752e3a1689aa982e51aaa78cb3cf79971bd389a`。两仓发行页列出相同的源码和 APK SHA-256 `718928042fdb0ae83bab52823ffc793c876e3f32ec9ea719964e05aa46e722a3`，并附 APK 与构建 metadata。见[源码仓发行](https://github.com/thetvplus/customiuizer-a14/releases/tag/r14.27.7)与[下载仓发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/tag/307-r14.27.7)。
 
-双语 Changelog 将 r14.27.3 / 304 的有效变化累计到 r14.27.5，基线为 r14.26.11。r14.27.7 继续使用实际发布的 r14.27.5 作为说明及安全基线。两版的构建身份以各自正式元数据为准。
+r14.27.7 的说明与安全基线为上一正式版 r14.27.5。r14.27.5 将 r14.27.3 / 304 的有效变化累计到 r14.26.11 之后。各版构建身份以对应发行的正式 metadata 为准。
 
 历史系列分别保留 **r14.25.9 / 258** 与 **r14.26.11 / 281**。r14.25.9 的说明累计自 r14.24.1，r14.26.11 累计自 r14.25.9，整合各自系列仍有效的功能与修正，排除已被替代或撤回的设计。两版的原 APK、证书、构建元数据和源码快照均不重建、不重签、不移动。
 
@@ -126,7 +126,7 @@ APK 检查 applicationId、版本、SDK 34、arm64-v8a、不可调试、16 KB zi
 
 严格顺序为“源码草稿 → 上传缺失资产 → 两资产核验 → 源码公开与读回 → 下载仓 tag / 草稿 → 同资产核验 → 下载仓公开与读回”。每端检查 tag / source、标题、Notes、draft / prerelease、Latest、唯一预期资产、官方 digest 和大小。可信 digest 完整且匹配时无需重复下载；缺失或异常则失败或下载核验。上传退出成功不能作为发布成功。
 
-两仓核验后由 `release_docs.py` 从已公开的最新稳定源码生成下载仓 README、Changelog、SUMMARY。一次非强制 Git 提交更新，提交前重查 Latest / main，提交后核对树内实际 blob；无变化即不写。较旧发行不能覆盖较新文档。
+两仓核验后由 `release_docs.py` 从已公开的最新稳定源码生成下载仓 README、Changelog、SUMMARY。下载仓 README 的安装说明和兼容矩阵固定到该 APK 的源码，项目主页入口用于浏览当前维护文档。一次非强制 Git 提交更新，提交前重查 Latest / main，提交后核对树内实际 blob；无变化即不写。较旧发行不能覆盖较新文档。
 
 ## 同一 APK 按需晋升与故障恢复
 
