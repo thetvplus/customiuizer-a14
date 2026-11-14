@@ -114,7 +114,7 @@ class DeckContinuityTest {
         val cards=LinkedHashMap<View,DeckOwner.Card>()
         for((name,value) in mapOf("api" to api,"handler" to handler,"stack" to stack,"cards" to cards,
             "drawCards" to ArrayList<DeckOwner.Card>(),"pairs" to IdentityHashMap<Any,Any>(),
-            "depthOrder" to DeckDepthOrder(stack),"global" to Matrix(),"local" to Matrix(),"surface" to Matrix(),
+            "depthOrder" to DeckDepthOrder(stack),"global" to Matrix(),"local" to Matrix(),"openingSurface" to Matrix(),
             "gestureReference" to RectF(),"gestureTarget" to RectF(),"occludingBounds" to RectF(),
             "depthIndices" to android.util.SparseIntArray(),"frozen" to HashMap<Any,Any>(),
             "linkedSprings" to ArrayList<Any>(),"router" to DeckTouchRouter { false },
@@ -364,8 +364,77 @@ class DeckContinuityTest {
         }
     }
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun theOpeningGetterUsesTheClickedCardsRenderedContentBeforeNativeRotation() {
+        for(rotation in intArrayOf(0,1,3)) {
+            val f=fixture()
+            val root=FrameLayout(f.stack.context)
+            val container=FrameLayout(f.stack.context)
+            val recents=Recents()
+            root.addView(container);container.addView(recents);recents.addView(f.stack)
+            root.layout(0,0,1080,2400)
+            container.layout(0,0,if(rotation==0) 1080 else 2400,if(rotation==0) 2400 else 1080)
+            container.pivotX=0f;container.pivotY=0f;container.rotation=rotation*90f
+            container.translationX=if(rotation==1) 1080f else 0f
+            container.translationY=if(rotation==3) 2400f else 0f
+            recents.layout(0,0,container.width,container.height);f.stack.layout(36,48,1000,1030)
+            setField(f.owner,"container",container)
+            setField(f.owner,"depthObserver",f.stack.viewTreeObserver)
+            val api=getField<DeckNativeApi>(f.owner,"api")
+            setField(api,"recents",Recents::class.java)
+            setField(api,"overview",Recents::class.java.getField("overview"))
+            setField(api,"split",Recents::class.java.getField("split"))
+            setField(api,"visualLandscape",Visual::class.java.getMethod("isLandscapeVisually"))
+            setField(f.owner,"current",f.owner.Scope(Visual()))
+            val view=TaskView();f.stack.addView(view);view.layout(120,190,920,790)
+            view.header.layout(0,0,800,50)
+            view.pivotX=140f;view.pivotY=110f
+            view.scaleX=.9f;view.scaleY=.85f;view.translationX=90f;view.translationY=-36f
+            val header=DeckHeaderOwner(view.header,view.header.icon,view.header.title,view.header.badge,DeckHeaderConfig(0,0))
+            val geometry=DeckCardGeometry(view,f.stack).apply { apply(.72f) }
+            val card=DeckOwner.Card(f.owner,geometry,view.task,7,0,header,1f,DeckCardShadow(view,view.thumbnail))
+            f.cards[view]=card
+            XposedHelpers.setAdditionalInstanceField(f.stack,DeckOwner.OWNER,f.owner)
+            try {
+                val native=RectF(1f,2f,3f,4f)
+                var calls=0
+                val hook=IosRecentsDeckHooks.openingContentHook()
+                fun query(task: Any): RectF {
+                    val chain=object: io.github.libxposed.api.XposedInterface.Chain {
+                        override fun getExecutable()=TaskView::class.java.getMethod("getTask")
+                        override fun getThisObject()=f.stack
+                        override fun getArg(index: Int)=task
+                        override fun getArgs()=listOf(task)
+                        override fun proceed(): Any { calls++;return RectF(native) }
+                        override fun proceed(args: Array<Any?>): Any=throw AssertionError("Native arguments changed")
+                        override fun proceedWith(receiver: Any): Any=throw AssertionError("Native owner changed")
+                        override fun proceedWith(receiver: Any,args: Array<Any?>): Any=throw AssertionError("Native owner changed")
+                    }
+                    return hook.intercept(chain) as RectF
+                }
+                assertEquals(native,query(view.task)) // Existing entry ticket is insufficient.
+                f.owner.beginOpening(card)
+                assertEquals(native,query(Task()))
+                for(translation in floatArrayOf(90f,24f)) {
+                    view.translationX=translation
+                    val result=query(view.task)
+                    val expected=RectF();geometry.screenContent(expected,50f)
+                    val toScreen=Matrix();container.transformMatrixToGlobal(toScreen);toScreen.mapRect(result)
+                    for((edge,actual) in listOf(expected.left to result.left,expected.top to result.top,
+                        expected.right to result.right,expected.bottom to result.bottom))
+                        assertEquals("Native rotation $rotation must land on the rendered card",edge,actual,.003f)
+                }
+                f.owner.endTransition(f.owner.transition,cancelled=true)
+                assertEquals(native,query(view.task))
+                assertEquals(5,calls)
+            } finally {
+                XposedHelpers.removeAdditionalInstanceField(f.stack,DeckOwner.OWNER)
+                card.release()
+            }
+        }
+    }
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun fixedPortraitWindowKeepsOpeningAndOcclusionInTheVisualTaskSpaceInBothLandscapeDirections() {
-        for(rotation in intArrayOf(1,3)) for(selectedIndex in 0..1) {
+        for(rotation in intArrayOf(1,3)) for(selectedIndex in 0..1) for(profile in DeckLauncherProfile.entries) {
             val f=fixture()
             val root=FrameLayout(f.stack.context)
             val container=FrameLayout(f.stack.context)
@@ -374,8 +443,14 @@ class DeckContinuityTest {
             container.pivotX=0f;container.pivotY=0f;container.rotation=rotation*90f
             container.translationX=if(rotation==1) 1080f else 0f
             container.translationY=if(rotation==3) 2400f else 0f
+            setField(f.owner,"container",container)
             setField(f.owner,"rotation",rotation)
             val api=getField<DeckNativeApi>(f.owner,"api")
+            setField(api,"profile",profile)
+            if(profile==DeckLauncherProfile.LEGACY) {
+                setField(api,"cardSprings",DeckCardSpring(TaskView::class.java))
+                setField(api,"surfaceOcclusion",unconstructed(DeckSurfaceOcclusion::class.java))
+            }
             setField(api,"visualLandscape",Visual::class.java.getMethod("isLandscapeVisually"))
             setField(f.owner,"current",f.owner.Scope(Visual()))
             val cards=(0..1).map { index ->
@@ -416,8 +491,18 @@ class DeckContinuityTest {
                 if(selectedIndex==1) {
                     val shown=RectF();selected.geometry.localContent(shown,0f)
                     val front=RectF();neighbor.geometry.localContent(front,0f)
-                    assertEquals("Surface clipping uses the same visual X axis",front.left,
-                        f.owner.openingBoundary(shown)!!,.003f)
+                    if(profile==DeckLauncherProfile.LEGACY) {
+                        val surface=requireNotNull(f.owner.openingSurface())
+                        surface.update(start,0f)
+                        assertEquals("Legacy projects the front card to the visual Surface X axis",
+                            front.left,surface.boundary(shown),.003f)
+                    } else {
+                        f.owner.setOpeningSurfaceSpace(rotation,start,shown)
+                        assertEquals("WindowElement uses the same visual X axis",front.left,
+                            f.owner.openingBoundary(shown)!!,.003f)
+                        f.owner.setOpeningSurfaceSpace(0,start,shown)
+                        assertNull("A frame from incompatible native axes retains native clipping",f.owner.openingBoundary(shown))
+                    }
                 }
                 for(progress in floatArrayOf(.5f,0f,1f)) {
                     val end=RectF(0f,0f,1080f,2400f)

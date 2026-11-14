@@ -24,6 +24,16 @@ WHERE (class_descriptor='Lcom/miui/home/recents/NavStubView;' AND field_name IN 
  OR (class_descriptor='Lcom/miui/home/recents/views/RecentsContainer;' AND field_name='mIsNeedSkipTouch')
 ORDER BY file_id, field_descriptor;
 
+-- Card opening consumes this Task overload before the native direction conversion.
+-- Entry and predicted-scroll queries use the index overloads instead.
+SELECT file_id, method_descriptor, access_flags FROM class_methods
+WHERE method_descriptor='Lcom/miui/home/recents/views/TaskStackView;->getTaskViewWithoutHeaderRectF(Lcom/android/systemui/shared/recents/model/Task;)Landroid/graphics/RectF;'
+ORDER BY file_id;
+
+SELECT DISTINCT file_id, method, callee FROM method_calls
+WHERE callee='Lcom/miui/home/recents/views/TaskStackView;->getTaskViewWithoutHeaderRectF(Lcom/android/systemui/shared/recents/model/Task;)Landroid/graphics/RectF;'
+ORDER BY file_id, method;
+
 SELECT file_id, descriptor, superclass_descriptor FROM classes
 WHERE descriptor IN ('Lcom/miui/home/recents/views/TaskStackView;',
  'Lcom/miui/home/recents/views/TaskStackLayoutAlgorithm;',

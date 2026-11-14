@@ -242,6 +242,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private val callbacks=Handler(Looper.getMainLooper())
     private class FrozenContent(val rect: RectF,val scale: Float,val scroll: Float)
     private val frozen=HashMap<Int,FrozenContent>(2)
+    private var clickedCard: Card?=null
     private var opening: DeckOpenAlignment?=null
     private var openingIndex=-1
     private val occludingBounds=RectF()
@@ -253,7 +254,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     private var entryShadowSettled=false
     private val global=Matrix()
     private val local=Matrix()
-    private val surface=Matrix()
+    private val openingSurface=Matrix()
+    private var openingSurfaceReady=false
     val openingTaskId: Int get()=opening?.selectedId ?: -1
     private val pairs=IdentityHashMap<Any,Pair<DeckFrame,DeckFrame>>()
     private var interpolation: Float?=null
@@ -389,6 +391,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
     fun remove(view: View) {
         val card=cards.remove(view) ?: return
+        if(clickedCard===card) clickedCard=null
         drawCards.remove(card)
         if(entryShadow===card) clearEntryShadow()
         if(dragging===card) dragging=null
@@ -567,6 +570,37 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         stack.transformMatrixToGlobal(global)
         return global.invert(local)
     }
+
+    fun beginOpening(selected: Card) {
+        if(allowed && beginTransition(true)!=0L) clickedCard=selected
+    }
+
+    private fun stackToVisualSpace(out: Matrix): Boolean {
+        out.reset()
+        var child: View=stack
+        while(child!==container) {
+            val parent=child.parent as? View ?: return false
+            out.postConcat(child.matrix)
+            out.postTranslate((child.left-parent.scrollX).toFloat(),(child.top-parent.scrollY).toFloat())
+            child=parent
+        }
+        return true
+    }
+
+    fun openingContent(task: Any, rect: RectF) {
+        val selected=clickedCard ?: return
+        if(!allowed || selected.task!==task || cards[selected.view]!==selected ||
+            selected.view.parent!==stack || !selected.geometry.owned || selected.view.visibility!=View.VISIBLE ||
+            !stackToVisualSpace(local)) return
+        // Native expects the unrotated coordinates of the visual Recents
+        // container. Include offsets within it and leave its rotation to native.
+        selected.geometry.localContent(gestureReference,selected.header.view.height.toFloat())
+        if(gestureReference.isEmpty || !local.mapRect(gestureReference) ||
+            !gestureReference.left.isFinite() || !gestureReference.top.isFinite() ||
+            !gestureReference.right.isFinite() || !gestureReference.bottom.isFinite()) return
+        rect.set(gestureReference)
+    }
+
     /** Capture before Legacy's UI callback can fade the same native neighbors. */
     fun prepareOpening(selected: Card,start: RectF): Boolean {
         if(!allowed || transition==0L || start.isEmpty) return false
@@ -589,51 +623,61 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         }
         opening=alignment
         openingIndex=selected.depth.index
-        if(api.profile==DeckLauncherProfile.LEGACY && api.surfaceOcclusion!=null) {
-            prepareSurfaceSpace()
-            alignment.prepareSurface(local,global,current.fullWidth,current.fullHeight)
-        }
+        // Legacy crop admits only zero-origin Surface bounds matching the visual
+        // viewport. Prepare the stack projection once before leaving Main.
+        if(api.profile==DeckLauncherProfile.LEGACY && api.surfaceOcclusion!=null &&
+            stackToVisualSpace(openingSurface))
+            alignment.prepareSurface(local,openingSurface,current.fullWidth,current.fullHeight)
         return true
     }
     fun openingSurface()=opening?.surface
     fun alignOpening(selected: Card,start: RectF,current: RectF,progress: Float,headerAlpha: Float,
-        nativeFaded: Boolean=false) {
-        if(!prepareOpening(selected,start) || !prepareLocalSpace()) return
+        nativeFaded: Boolean=false): Boolean {
+        if(!prepareOpening(selected,start) || !prepareLocalSpace()) return false
         local.mapRect(gestureTarget,current)
         opening?.apply(gestureTarget,progress,headerAlpha,nativeFaded)
+        return true
     }
+    fun setOpeningSurfaceSpace(rotation: Int,window: RectF,surface: RectF) {
+        openingSurfaceReady=false
+        if(openingIndex<=0 || window.isEmpty || surface.isEmpty) return
+        // WindowElement sends both rectangles from the same native frame. Its
+        // actual quarter turn can differ from the Launcher View's dimensions.
+        openingSurface.setRotate(when(rotation) {
+            0 -> 0f
+            1 -> -90f
+            3 -> 90f
+            else -> return
+        })
+        openingSurface.mapRect(occludingBounds,window)
+        if(!(kotlin.math.abs(surface.width()-occludingBounds.width())<=.01f &&
+            kotlin.math.abs(surface.height()-occludingBounds.height())<=.01f)) return
+        openingSurface.postTranslate(surface.centerX()-occludingBounds.centerX(),
+            surface.centerY()-occludingBounds.centerY())
+        openingSurface.preConcat(global)
+        openingSurfaceReady=true
+    }
+
     fun openingBoundary(surface: RectF): Float? {
         // Opening the front card has no prior occluder. Avoid traversing cards
         // and their global matrices for every Surface frame in this common case.
-        if(opening==null || openingIndex<=0) return null
-        prepareSurfaceSpace()
+        if(!openingSurfaceReady) return null
         var edge=Float.POSITIVE_INFINITY
         for(i in 0 until drawCards.size) {
             val card=drawCards[i]
             if(card.depth.index<openingIndex && card.geometry.owned &&
                 card.view.visibility==View.VISIBLE && card.view.alpha>.01f) {
                 card.geometry.localContent(occludingBounds,card.header.view.height.toFloat())
-                global.mapRect(occludingBounds)
+                openingSurface.mapRect(occludingBounds)
                 if(RectF.intersects(surface,occludingBounds)) edge=minOf(edge,occludingBounds.left)
             }
         }
         return edge.takeIf { it.isFinite() }
     }
-    private fun prepareSurfaceSpace() {
-        global.reset()
-        stack.transformMatrixToGlobal(global)
-        val root=stack.rootView
-        this.surface.reset()
-        // Same quarter-turn convention as native transformCoordinate2(0,r).
-        // Project into the app Surface's axes once, then reuse it for all cards.
-        if (root.width < root.height) when(rotation) {
-            1 -> { this.surface.setRotate(-90f); this.surface.postTranslate(0f,root.width.toFloat()) }
-            3 -> { this.surface.setRotate(90f); this.surface.postTranslate(root.height.toFloat(),0f) }
-        }
-        global.postConcat(this.surface)
-    }
     private fun clearOpening() {
-        val previous=opening; opening=null; openingIndex=-1; previous?.release()
+        val previous=opening; opening=null; openingIndex=-1
+        openingSurfaceReady=false
+        previous?.release()
     }
     fun beginTransition(force: Boolean=false): Long {
         if(closed || !baseAllowed || !tasksAllowed || suspended || gestureBoundary.quickSwitching || !ValueAnimator.areAnimatorsEnabled()) return 0L
@@ -646,6 +690,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         // Queries and animation consumers only reuse an existing intent. Native
         // Deck entry and an actual card click are the callers that create one.
         if(!force) return transition
+        clickedCard=null
         clearEntryShadow()
         val cleanup=CleanupActions()
         for(link in linkedSprings.toList()) cleanup.run { releaseSpring(link) }
@@ -714,7 +759,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         // A settled window can precede the last native thumbnail write.
         // Keep its projection until that thumbnail takes over.
         if(cancelled || !entryShadowSettled) clearEntryShadow()
-        transition=0; frozen.clear(); stack.removeCallbacks(ticketTimeout)
+        transition=0; clickedCard=null; frozen.clear(); stack.removeCallbacks(ticketTimeout)
         val cleanup=CleanupActions()
         val iterator=linkedSprings.iterator()
         while(iterator.hasNext()) {
@@ -729,7 +774,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         suspended=value
         val cleanup=CleanupActions()
         if(value) {
-            transition=0; frozen.clear(); stack.removeCallbacks(ticketTimeout)
+            transition=0; clickedCard=null; frozen.clear(); stack.removeCallbacks(ticketTimeout)
             for(link in linkedSprings.toList()) cleanup.run { releaseSpring(link) }
             linkedSprings.clear()
             cleanup.run { restoreCards() }
@@ -738,6 +783,7 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         cleanup.finish()
     }
     private fun restoreCards() {
+        clickedCard=null
         dragging=null
         clearEntryShadow()
         drawCards.clear()

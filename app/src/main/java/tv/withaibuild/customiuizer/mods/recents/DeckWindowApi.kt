@@ -44,7 +44,7 @@ internal class DeckWindowApi(element: Class<*>, private val params: Class<*>, pr
         // Native homeRotation defaults to zero. Fixed-window phone landscape
         // legitimately updates currentDisplayRotation to 1/3 after animTo starts.
         if(!params.isInstance(value) || fields[10].getBoolean(value) || fields[19].getBoolean(value)) return null
-        val rotation=fields[15].getInt(value)
+        val rotation=rotation(value)
         if(rotation!=0 && rotation!=1 && rotation!=3) return null
         return when((fields[7].get(value) as? Enum<*>)?.name) {
             "OPEN_FROM_RECENTS" -> true
@@ -53,6 +53,7 @@ internal class DeckWindowApi(element: Class<*>, private val params: Class<*>, pr
         }
     }
     fun view(value: Any)=fields[11].get(value) as? View
+    fun rotation(value: Any)=fields[15].getInt(value)
     fun index(value: Any)=fields[18].getInt(value)
     fun target(value: Any)=fields[2].get(value) as android.graphics.RectF
     fun scaled(value: Any,scale: Float,opening: Boolean,nativeScale: Float=1f): Any {
