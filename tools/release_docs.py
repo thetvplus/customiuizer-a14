@@ -191,8 +191,11 @@ def documents(published: dict) -> dict[str, str]:
                          f"[{'源码提交' if chinese else 'Source commit'}]({source_url}/commit/{sha}): `{sha}`\n\n"
                          f"## {'本版变化' if chinese else 'Changes'}\n\n{current}\n\n"
                          f"## {'安装与兼容' if chinese else 'Installation and compatibility'}\n\n{install}\n\n"
-                         f"[{'使用说明与支持' if chinese else 'Usage and support'}]({source_url}/tree/{sha}) · "
-                         f"[{'兼容矩阵' if chinese else 'Compatibility'}]({source_url}/blob/{sha}/COMPATIBILITY.md)\n\n"
+                         f"[{'本版使用说明' if chinese else 'Published usage guide'}]"
+                         f"({source_url}/blob/{sha}/{'README.md' if chinese else 'README_EN.md'}) · "
+                         f"[{'本版兼容矩阵' if chinese else 'Published compatibility matrix'}]({source_url}/blob/{sha}/COMPATIBILITY.md) · "
+                         f"[{'项目主页' if chinese else 'Project home'}]({source_url}"
+                         f"{'' if chinese else '/blob/master/README_EN.md'})\n\n"
                          + ("此仓库只维护正式下载说明。开发分支的未发布内容不代表本 APK 的功能或验收结果。\n" if chinese else
                             "This repository documents published downloads. Unreleased development changes do not describe this APK or its device acceptance.\n"))
         if sha != meta["source_sha"]:

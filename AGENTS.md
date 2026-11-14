@@ -22,7 +22,8 @@
 
 ## Git 与协作
 
-- `master` 是唯一长期稳定版本线。任务分支正常提交，已验证成果通过 Squash PR 整合，正式版本尽量对应一个整合提交。未完成成果留在任务分支。沿用当前聊天的工作分支、Worktree、授权及验证状态；按 [DEVELOPMENT](docs/DEVELOPMENT.md#git-与协作) 的触发条件增量核对归属，不重新发现整个任务。
+- `master` 是唯一长期稳定版本线。未完成成果留在任务分支，已验证成果通过 Squash PR 整合。正式版以 1–2 个主线提交为目标，集成范围、标题与例外见 [主线提交与发行节奏](docs/DEVELOPMENT.md#主线提交与发行节奏)。
+- 续接沿用当前聊天的分支、Worktree、授权及证据。首次写入、任务切换或发生冲突时，[核对任务归属](docs/DEVELOPMENT.md#git-与协作)。
 - 授权开发任务完成必要验证后，默认 commit / push 对应工作分支，无需再次确认；推送后读回远端完整 SHA。该授权不包含 merge master、tag 或 Release，用户指定的只读 / 停止点优先。
 - 禁止 force push、破坏性 reset、改写公开历史、无差别 clean 或覆盖未知修改。Review 不建平行分支；同一 Worktree 只有一个写入者，冲突范围先协调。远端不可用时报告协作状态未知。
 
@@ -41,7 +42,8 @@
 | 功能 / 设置 / Hook 定位 | 先 `rg` 查键、Feature / Installer 和实际源码；页面导航用[简版地图](docs/FEATURE_MAP_SIMPLE.md)，键与条件用[详细地图](docs/FEATURE_MAP.md) |
 | 关联摘要、大型 JSON | [TOOLS](docs/TOOLS.md#辅助数据按需查询)的筛选与分页；已知路径直接读 |
 | ROM 私有接口、签名或 ClassLoader 不确定 | [DexSQL](docs/rom-intelligence/DEXSQL.md#离线-rom-知识库)：复用 Catalog，再 locate / search；来源变化或缓存缺失才 update / prepare。HyperOS 3 / dada 仅 REFERENCE_ONLY，不能提供 A14 ABI / 资源合同 |
-| 环境、生成、Git | [DEVELOPMENT](docs/DEVELOPMENT.md) |
-| 选测、行为 / 设备 / Hook 验证 | [TESTING](docs/TESTING.md#执行分级) → 按需用[自主验证入口](docs/AGENTIC_VERIFICATION.md) |
+| 构建环境 / 生成设置或矩阵 | [环境](docs/DEVELOPMENT.md#环境) / [构建与生成物](docs/DEVELOPMENT.md#构建与生成物) |
+| 选测 / 真机行为与 Hook 取证 | [执行分级](docs/TESTING.md#执行分级) / [设备入口](docs/AGENTIC_VERIFICATION.md#设备入口) |
+| Issue 收口 | [核对完成条件与验收证据](docs/DEVELOPMENT.md#issue-收口) |
 | 实施 / 只读审查 / 专项工具 | [项目 Skills](.agents/skills/README.md) |
 | 文档职责、更新与删除 | [DOCS_STYLE](docs/DOCS_STYLE.md)；总目录只维护在 [docs/README](docs/README.md) |

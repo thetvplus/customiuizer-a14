@@ -116,8 +116,11 @@ class DownloadDocumentsTest(unittest.TestCase):
         self.assertIn(server.metadata["apk"], result["README.md"])
         self.assertIn("/commit/" + SHA, result["README_EN.md"])
         for filename in ("README.md", "README_EN.md"):
+            self.assertIn(f"/blob/{SHA}/{filename})", result[filename])
+            self.assertIn(f"/blob/{SHA}/COMPATIBILITY.md)", result[filename])
             self.assertEqual(1, result[filename].count(release.POLICY["community_url"]))
             self.assertNotIn("/issues", result[filename])
+        self.assertIn("/blob/master/README_EN.md)", result["README_EN.md"])
 
     def test_readme_uses_authored_summary_but_changelog_keeps_the_full_user_details(self):
         server = Server()
