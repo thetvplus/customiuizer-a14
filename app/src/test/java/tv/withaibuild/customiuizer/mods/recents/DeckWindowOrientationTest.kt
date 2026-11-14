@@ -1,7 +1,9 @@
 package tv.withaibuild.customiuizer.mods.recents
 
 import android.app.Activity
-import android.content.pm.ActivityInfo
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 import android.content.res.Configuration
 import android.view.Surface
 import android.view.View
@@ -12,59 +14,52 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "port")
 class DeckWindowOrientationTest {
-    @Test fun matchingGestureRequestsItsDirectionAndRestoresTheLatestNativeRequest() {
+    @Test fun rapidReentryUsesTheNativeDisplayLockAndRestoresNativePolicy() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val nav = View(activity)
+        val helper = Any()
         val calls = mutableListOf<Int>()
-        lateinit var holder: DeckWindowOrientation
-        val request: (Activity, Int) -> Unit = { launcher, orientation ->
-            calls.add(holder.interceptRequest(launcher, orientation))
-        }
-        holder = DeckWindowOrientation(request, request)
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        holder.capture(activity, nav, Surface.ROTATION_270, false)
-        holder.commit(activity)
-        assertEquals(listOf(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE), calls)
-        assertFalse(holder.landscapeWindow)
-        assertTrue(holder.configuration(activity, Configuration.ORIENTATION_LANDSCAPE))
-        val container = Any()
-        holder.bindLandscapeContainer(activity, container)
-        assertTrue(holder.ownsLandscapeContainer(container))
-        assertFalse(holder.ownsLandscapeContainer(Any()))
-        assertFalse(holder.configuration(activity, Configuration.ORIENTATION_LANDSCAPE))
-        assertEquals(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE,
-            holder.interceptRequest(activity, ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED))
-        holder.exit(activity)
-        assertFalse(holder.landscapeWindow)
-        assertFalse(holder.ownsLandscapeContainer(container))
-        assertEquals(listOf(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE,
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED), calls)
+        lateinit var state: DeckWindowOrientation
+        state = DeckWindowOrientation { calls.add(state.orientation(it, 3, SCREEN_ORIENTATION_PORTRAIT)) }
+
+        state.begin(activity, nav, helper, Surface.ROTATION_90)
+        assertEquals(SCREEN_ORIENTATION_PORTRAIT, state.orientation(Any(), 3, SCREEN_ORIENTATION_PORTRAIT))
+        assertEquals(SCREEN_ORIENTATION_UNSPECIFIED, state.orientation(helper, 1, SCREEN_ORIENTATION_UNSPECIFIED))
+        assertEquals(SCREEN_ORIENTATION_UNSPECIFIED, state.orientation(helper, 3, SCREEN_ORIENTATION_UNSPECIFIED))
+        state.finishGesture(nav, inOverview = false)
+        state.begin(activity, nav, helper, Surface.ROTATION_0)
+        state.begin(activity, nav, helper, Surface.ROTATION_270)
+        state.begin(activity, nav, helper, Surface.ROTATION_270)
+        state.finishGesture(nav, inOverview = true)
+        assertEquals(listOf(SCREEN_ORIENTATION_LOCKED, SCREEN_ORIENTATION_PORTRAIT, SCREEN_ORIENTATION_LOCKED), calls)
+        state.exit(activity)
+        assertEquals(SCREEN_ORIENTATION_PORTRAIT, calls.last())
     }
 
-    @Test fun portraitAndCancelledOrUnrelatedGesturesLeaveTheWindowAlone() {
-        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+    @Test fun landscapeHandoffUsesCurrentConfigurationAndMatchingContainer() {
+        val controller = Robolectric.buildActivity(Activity::class.java).setup()
+        val activity = controller.get()
         val nav = View(activity)
-        val calls = mutableListOf<Int>()
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        val request: (Activity, Int) -> Unit = { _, orientation -> calls.add(orientation) }
-        val holder = DeckWindowOrientation(request, request)
-        holder.capture(activity, nav, Surface.ROTATION_90, false)
-        val other = Robolectric.buildActivity(Activity::class.java).setup().get()
-        holder.commit(other)
-        holder.finishGesture(nav)
-        holder.commit(activity)
-        holder.capture(activity, nav, Surface.ROTATION_0, false)
-        holder.commit(activity)
-        assertEquals(listOf(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT), calls)
-        assertEquals(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE,
-            DeckWindowOrientation.orientationFor(Surface.ROTATION_90, true))
-        assertEquals(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
-            DeckWindowOrientation.orientationFor(Surface.ROTATION_270, true))
+        val helper = Any()
+        val container = Any()
+        val state = DeckWindowOrientation {}
+        state.begin(activity, nav, helper, Surface.ROTATION_270)
+        state.finishGesture(View(activity), inOverview = false)
+        state.finishGesture(nav, inOverview = true)
+        assertFalse(state.landscapeWindow)
+        assertFalse(state.bindLandscapeContainer(activity, Configuration.ORIENTATION_PORTRAIT, container))
+        RuntimeEnvironment.setQualifiers("land")
+        assertTrue(state.landscapeWindow)
+        assertTrue(state.bindLandscapeContainer(activity, Configuration.ORIENTATION_LANDSCAPE, container))
+        assertTrue(state.ownsLandscapeContainer(container))
+        assertFalse(state.ownsLandscapeContainer(Any()))
+        state.exit(activity)
+        assertFalse(state.ownsLandscapeContainer(container))
     }
 }

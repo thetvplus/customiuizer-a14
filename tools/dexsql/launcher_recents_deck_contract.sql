@@ -7,20 +7,20 @@ SELECT file_id, method_descriptor, access_flags FROM class_methods
 WHERE (class_descriptor='Lcom/miui/home/launcher/DeviceConfig;'
  AND method_name='isKeepRecentsViewPortrait')
  OR (class_descriptor='Lcom/miui/home/recents/util/RotationHelper;'
- AND method_name IN ('notifyChange','updateMultiWindowRotationRequest'))
+ AND method_name IN ('notifyChange','getScreenOrientationByRequest','updateMultiWindowRotationRequest','onMultiWindowModeChanged'))
  OR (class_descriptor='Lcom/miui/home/launcher/util/UiThreadHelper;' AND method_name='setOrientationAsync')
  OR (class_descriptor='Lcom/miui/home/launcher/Launcher;'
- AND method_name IN ('getRecentsContainer','onConfigurationChanged','onStop'))
+ AND method_name IN ('getRecentsContainer','getRotationHelper','getCurrentDisplayRotation','isInState','onConfigurationChanged','onStop'))
  OR (class_descriptor='Lcom/miui/home/recents/OverviewState;' AND method_name IN ('onStateEnabled','onExitState'))
- OR (class_descriptor='Lcom/miui/home/recents/NavStubView;' AND method_name IN ('getCurrentWindowMode','finalization'))
+ OR (class_descriptor='Lcom/miui/home/recents/NavStubView;' AND method_name IN ('getCurrentWindowMode','performAppToRecents','finalization'))
  OR (class_descriptor='Lcom/miui/home/recents/views/RecentsContainer;'
- AND method_name IN ('exitLandscapeOverview','onDisplayRotationChanged','setIsNeedSkipTouch'))
+ AND method_name IN ('isInLandscapeOverview','exitLandscapeOverview','onDisplayRotationChanged','setIsNeedSkipTouch'))
 ORDER BY method_descriptor;
 
 SELECT file_id, field_descriptor, access_flags FROM class_fields
-WHERE (class_descriptor='Lcom/miui/home/recents/NavStubView;' AND field_name='mLauncher')
- OR (class_descriptor IN ('Lcom/miui/home/recents/OverviewState;','Lcom/miui/home/launcher/LauncherState;')
- AND field_name='mIsFromFsGesture')
+WHERE (class_descriptor='Lcom/miui/home/recents/NavStubView;' AND field_name IN ('mLauncher','mWindowMode'))
+ OR (class_descriptor='Lcom/miui/home/recents/util/RotationHelper;' AND field_name='mLauncher')
+ OR (class_descriptor='Lcom/miui/home/launcher/LauncherState;' AND field_name='OVERVIEW')
  OR (class_descriptor='Lcom/miui/home/recents/views/RecentsContainer;' AND field_name='mIsNeedSkipTouch')
 ORDER BY file_id, field_descriptor;
 
