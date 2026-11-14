@@ -3,6 +3,7 @@ package tv.withaibuild.customiuizer.mods.utils.feature
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.mods.System as ModsSystem
 import tv.withaibuild.customiuizer.mods.Various
+import tv.withaibuild.customiuizer.mods.homeindicator.HomeIndicatorHooks
 import tv.withaibuild.customiuizer.mods.island.IslandNativeAppSource
 import tv.withaibuild.customiuizer.mods.utils.FeatureDefinition
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
@@ -16,10 +17,20 @@ object CommonPackageFeatures {
     @JvmStatic
     fun hasEnabledFeature(prefs: PrefMap, packageName: String): Boolean =
         StatusBarHeightFeature.evaluateEnabled(prefs, packageName) ||
-            AlarmCompatFeature.evaluateEnabled(prefs, packageName) || IslandNativeAppSource.enabled(prefs, packageName)
+            AlarmCompatFeature.evaluateEnabled(prefs, packageName) || IslandNativeAppSource.enabled(prefs, packageName) ||
+            LauncherHomeIndicatorFeature.enabled(prefs, packageName)
 
     @JvmStatic
     fun all(lpparam: PackageReadyParam, mPrefs: PrefMap): List<FeatureSpec> = listOf(
+        LazyFeatureSpec(
+            id = LauncherHomeIndicatorFeatureId,
+            name = "Launcher iOS Home Indicator",
+            preferenceKey = "controls_ios_home_indicator",
+            target = FeatureTarget.ANY,
+            phase = InstallPhase.PACKAGE_READY,
+            enabled = { prefs -> LauncherHomeIndicatorFeature.enabled(prefs, lpparam.packageName.orEmpty()) },
+            factory = { LauncherHomeIndicatorFeature(lpparam) },
+        ),
         LazyFeatureSpec(
             id = IslandLiveSourceFeatureId,
             name = "Island Native Activity Sources",
@@ -48,6 +59,23 @@ object CommonPackageFeatures {
             factory = { AlarmCompatFeature(lpparam, mPrefs) },
         ),
     )
+}
+
+internal class LauncherHomeIndicatorFeature(private val param: PackageReadyParam) : FeatureDefinition {
+    override val id = LauncherHomeIndicatorFeatureId
+    override val name = "Launcher iOS Home Indicator"
+    override val preferenceKey = HomeIndicatorHooks.KEY
+    override val target = FeatureTarget.ANY
+    override val phase = InstallPhase.PACKAGE_READY
+
+    override fun isEnabled(prefs: PrefMap) = enabled(prefs, param.packageName.orEmpty())
+    override fun install() = HomeIndicatorHooks.installLauncher(param)
+
+    companion object {
+        fun enabled(prefs: PrefMap, packageName: String): Boolean =
+            HomeIndicatorHooks.supportsLauncher(packageName) &&
+                IosHomeIndicatorFeature.evaluateEnabled(prefs)
+    }
 }
 
 internal class IslandLiveSourceFeature(lpparam: PackageReadyParam, mPrefs: PrefMap) : BasePackageReadyFeature(

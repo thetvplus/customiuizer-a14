@@ -9,6 +9,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.view.View
 import android.view.WindowManager
+import android.view.Surface
 import android.widget.FrameLayout
 import io.github.libxposed.api.XposedInterface
 import org.junit.Assert.*
@@ -24,9 +25,21 @@ import java.lang.reflect.Method
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34], application=android.app.Application::class)
 class HomeIndicatorLifecycleTest {
-    class Handle(context: Context): View(context) {
+    open class Handle(context: Context): View(context) {
         @JvmField val mPaint=Paint().apply { isAntiAlias=true }
         public override fun onDraw(canvas: Canvas) {}
+    }
+    class FakeNavBar(context: Context): View(context) {
+        @JvmField val mPaint = Paint()
+        @JvmField val mOffset = 240
+        @JvmField val mNavShowWidth = 120
+        public override fun onDraw(canvas: Canvas) {}
+    }
+    class OrientedHandle(context: Context): Handle(context) {
+        @JvmField var mDeltaRotation = Surface.ROTATION_90
+        fun computeHomeHandleBounds() = if (mDeltaRotation == Surface.ROTATION_90)
+            RectF(12f, 90f, 24f, 210f) else RectF(56f, 270f, 68f, 390f)
+        override fun onDraw(canvas: Canvas) {}
     }
     class Bar(context: Context): FrameLayout(context) {
         @JvmField var mNavBarMode=2
@@ -121,6 +134,64 @@ class HomeIndicatorLifecycleTest {
         assertTrue(support.supported(34,arrayOf("arm64-v8a","armeabi-v7a")))
         assertFalse(support.supported(35,arrayOf("arm64-v8a")))
         assertFalse(support.supported(34,arrayOf("x86_64")))
+    }
+
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun launcherLandscapeUsesLocalAxesAndNativeCenterInPortraitWindow() {
+        val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        try {
+            val host = controller.get()
+            val nav = FakeNavBar(host)
+            host.setContentView(nav)
+            val screen = host.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
+            nav.layout(0, 0, maxOf(screen.height(), screen.width()), 80)
+            val (method, hook) = HomeIndicatorHooks.prepareLauncher(FakeNavBar::class.java)
+            val canvas = Drawing()
+            assertFalse(invokeDraw(nav, method, hook, canvas))
+            assertSame(nav.mPaint, canvas.paint)
+            assertEquals(300f, canvas.bounds.centerX(), 1f)
+            assertTrue(canvas.bounds.width() > canvas.bounds.height())
+            host.setContentView(View(host))
+            assertNull(XposedHelpers.getAdditionalInstanceField(nav, "a14.home.indicator.owner"))
+        } finally { controller.pause().stop().destroy() }
+    }
+
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun secondaryHandleRebuildsForOppositeEdgeWithoutSizeChange() {
+        val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        try {
+            val nav = OrientedHandle(controller.get())
+            controller.get().setContentView(nav)
+            nav.layout(0, 0, 80, 480)
+            val (method, hook) = HomeIndicatorHooks.prepareOriented(Handle::class.java, OrientedHandle::class.java)
+            val left = Drawing()
+            assertFalse(invokeDraw(nav, method, hook, left))
+            assertSame(nav.mPaint, left.paint)
+            assertEquals(150f, left.bounds.centerY(), 1f)
+            assertTrue(left.bounds.centerX() < 40f)
+            nav.mDeltaRotation = Surface.ROTATION_270
+            val right = Drawing()
+            assertFalse(invokeDraw(nav, method, hook, right))
+            assertEquals(330f, right.bounds.centerY(), 1f)
+            assertTrue(right.bounds.centerX() > 40f)
+        } finally { controller.pause().stop().destroy() }
+    }
+
+    private fun invokeDraw(
+        view: View, method: Method, hook: tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook, canvas: Canvas,
+    ): Boolean {
+        var native = false
+        hook.intercept(object : XposedInterface.Chain {
+            override fun getExecutable() = method
+            override fun getThisObject() = view
+            override fun getArgs(): List<Any?> = listOf(canvas)
+            override fun getArg(index: Int) = canvas
+            override fun proceed(): Any? { native = true; return null }
+            override fun proceed(args: Array<Any?>) = proceed()
+            override fun proceedWith(receiver: Any) = proceed()
+            override fun proceedWith(receiver: Any, args: Array<Any?>) = proceed()
+        })
+        return native
     }
     private fun scene(block: (Bar,Handle,(View,String,Any)->Boolean)->Unit) {
         val controller=Robolectric.buildActivity(Activity::class.java).setup()

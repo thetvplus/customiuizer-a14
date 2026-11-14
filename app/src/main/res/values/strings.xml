@@ -1356,7 +1356,7 @@
     <string name="system_ios_desktop_title">iOS task cards</string>
     <string name="system_ios_volume_group_title">iOS volume</string>
     <string name="controls_ios_home_indicator_title">iOS Home Indicator</string>
-    <string name="controls_ios_home_indicator_summ">Use full-screen gestures and keep the system handle visible. Turn off both system and module options that hide it; restart System UI to apply.</string>
+    <string name="controls_ios_home_indicator_summ">Use full-screen gestures and keep the system handle visible. Restart System UI and the launcher to apply the change.</string>
     <string name="settings_category_statusbar">Status bar &amp; Dynamic Island</string>
     <string name="settings_category_notifications">Notifications &amp; Control center</string>
     <string name="settings_category_system">Display &amp; Lock screen</string>

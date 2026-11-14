@@ -1332,7 +1332,7 @@
     <string name="system_ios_desktop_title">iOS 任务卡片</string>
     <string name="system_ios_volume_group_title">iOS 音量</string>
     <string name="controls_ios_home_indicator_title">iOS 手势指示条</string>
-    <string name="controls_ios_home_indicator_summ">使用全面屏手势并保留系统指示条。关闭系统与米客的隐藏指示条选项，重启系统界面生效。</string>
+    <string name="controls_ios_home_indicator_summ">使用全面屏手势并保留系统指示条。修改后重启系统界面和桌面生效。</string>
     <string name="settings_category_statusbar">状态栏与动态岛</string>
     <string name="settings_category_notifications">通知与控制中心</string>
     <string name="settings_category_system">屏幕与锁屏</string>

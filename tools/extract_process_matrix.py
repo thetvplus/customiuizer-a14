@@ -214,6 +214,8 @@ def map_processes(target: str, installer_base: str, pref: str, install_hook: str
         if installer_base == "CommonPackageFeatures":
             if pref == "system_statusbarheight":
                 return ["android", "com.android.systemui", "com.miui.home"], []
+            if pref == "controls_ios_home_indicator":
+                return ["com.miui.home", "com.mi.android.globallauncher"], ["secondary processes"]
             return ["any scoped package where hasEnabledFeature() is true"], []
         if installer_base == "InputMethodFeatures":
             return [

@@ -1322,7 +1322,7 @@
     <string name="system_ios_desktop_title">iOS 工作卡片</string>
     <string name="system_ios_volume_group_title">iOS 音量</string>
     <string name="controls_ios_home_indicator_title">iOS 手勢指示條</string>
-    <string name="controls_ios_home_indicator_summ">使用全螢幕手勢並保留系統指示條。關閉系統與米客的隱藏指示條選項，重新啟動系統介面後生效。</string>
+    <string name="controls_ios_home_indicator_summ">使用全螢幕手勢並保留系統指示條。修改後重新啟動系統介面和桌面生效。</string>
     <string name="settings_category_statusbar">狀態列與動態島</string>
     <string name="settings_category_notifications">通知與控制中心</string>
     <string name="settings_category_system">螢幕與鎖定畫面</string>

@@ -3457,6 +3457,19 @@
       "enableCondition": "{ prefs -> prefs.getBoolean(\"system_locationauto_enabled\") }",
       "allowedProcess": "system_server",
       "deniedProcess": ""
+    },
+    {
+      "featureIdInt": 273,
+      "featureIdName": "launcher_ios_home_indicator",
+      "name": "Launcher iOS Home Indicator",
+      "preferenceKey": "controls_ios_home_indicator",
+      "target": "ANY",
+      "phase": "PACKAGE_READY",
+      "installer": "CommonPackageFeatures (MainModule)",
+      "installHook": "HomeIndicatorHooks.installLauncher(param)",
+      "enableCondition": "{ prefs -> LauncherHomeIndicatorFeature.enabled(prefs, lpparam.packageName.orEmpty()) }",
+      "allowedProcess": "com.miui.home; com.mi.android.globallauncher",
+      "deniedProcess": "secondary processes"
     }
   ],
   "scope": [
