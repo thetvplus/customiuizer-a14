@@ -81,7 +81,7 @@
 
 ## 待实机验收
 
-- 横屏最近任务由 Launcher 的 `FakeNavigationBarView` 接管；Quick Switch 独立窗口由 SystemUI 管理。Home Indicator 分别复用各宿主的原生颜色、中心和显隐。fuxi TW 已验证 0° / 90° / 270° 使用同一状态栏高度，双向横屏 Deck 保留状态栏可见性并能点卡返回。固定竖屏 Launcher 窗口内的系统图标方向仍待适配。DexSQL 已覆盖 fuxi CN / TW、munch ID、duchamp CN 的相关声明，其他 ROM、Quick Switch 实机效果和转场观感仍待验。
+- 横屏最近任务由 Launcher 的 `FakeNavigationBarView` 接管；Quick Switch 独立窗口由 SystemUI 管理。Home Indicator 分别复用各宿主的原生颜色、中心和显隐。fuxi TW 已验证 0° / 90° / 270° 使用同一状态栏高度，双向横屏 Deck 保留状态栏可见性并能点卡返回。Deck 在固定竖屏的 Launcher 窗口内旋转时，系统图标继续跟随 Launcher 窗口方向。DexSQL 已覆盖 fuxi CN / TW、munch ID、duchamp CN 的相关声明，其他 ROM、Quick Switch 实机效果和转场观感仍待验。
 
 后卡打开时，Legacy 与 WindowElement 共用前卡的重定位与让位计算。重新解码 22G100 确认 iPhone 稳态卡片使用居中 30 pt、0.18 的单层弥散投影，手势进入多任务状态时目标阴影 alpha 已为 1。A14 首卡在截图接管前由原生窗口缩放驱动同一 Outline，截图稳定后接手，回滑与取消消费原生姿态，见 [DECK 阴影证据](../features/ios18-recents-reference.md)。既有 xaga 八卡样本的 GPU P50 约 3.24 ms，P95 基线约 3.65 ms，偏移后为 3.70–4.48 ms。弥散曲线、Launcher 内截图交接、暗色观感和转场帧时间待对应候选复验。中央音量折叠时隐藏静音和勿扰快捷区，展开恢复两项原生控件。垂直微调保留带符号的原设置值。
 
