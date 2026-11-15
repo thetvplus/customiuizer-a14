@@ -127,6 +127,16 @@ class HomeIndicatorLifecycleTest {
         bar.removeView(inflated)
         assertNull(XposedHelpers.getAdditionalInstanceField(inflated,"a14.home.indicator.owner"))
     }
+    @Test fun windowWidthMismatchKeepsNativeDrawingUntilLayoutRecovers() = scene { bar, handle, invoke ->
+        val root = bar.rootView
+        val width = root.width
+        val height = root.height
+        assertFalse(invoke(handle, "onDraw", Drawing()))
+        root.layout(0, 0, width - 1, height)
+        assertTrue(invoke(handle, "onDraw", Drawing()))
+        root.layout(0, 0, width, height)
+        assertFalse(invoke(handle, "onDraw", Drawing()))
+    }
     @Test fun incompleteNativeContractFailsBeforeAnyHookCanInstall() {
         assertThrows(NoSuchFieldException::class.java) { HomeIndicatorHooks.prepare(Incomplete::class.java,Bar::class.java,Transitions::class.java) }
         assertThrows(IllegalArgumentException::class.java) { HomeIndicatorHooks.prepare(MutablePaint::class.java,Bar::class.java,Transitions::class.java) }

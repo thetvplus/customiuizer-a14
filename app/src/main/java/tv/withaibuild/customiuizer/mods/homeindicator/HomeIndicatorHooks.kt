@@ -181,7 +181,7 @@ internal object HomeIndicatorHooks {
                         bind(view, navigation, paint.get(view) as Paint)
                     }
                     if (XposedHelpers.getAdditionalInstanceField(owner.navigation, MODE) != true) return@guarded
-                    if (owner.draw(callback.getArg(0) as Canvas)) callback.returnAndSkip(null)
+                    if (owner.draw(callback.getArg(0) as Canvas, requireFullWidth = true)) callback.returnAndSkip(null)
                 }
             })
     }
@@ -211,12 +211,15 @@ internal object HomeIndicatorHooks {
             canvas: Canvas,
             rotation: Int = Surface.ROTATION_0,
             geometry: (View, Rect, Int) -> HomeIndicatorGeometry.Frame? = bottomGeometry,
+            requireFullWidth: Boolean = false,
         ): Boolean {
             val root = navigation.rootView
             val currentRotation = view.display?.rotation ?: return false
             if (w != view.width || h != view.height || rootWidth != root.width || rootHeight != root.height ||
                 displayRotation != currentRotation || handleRotation != rotation) {
                 val screen = windows.maximumWindowMetrics.bounds
+                // Leave the cache untouched so either side of a pending resize can catch up.
+                if (requireFullWidth && root.width != screen.width()) return false
                 val frame = geometry(view, screen, rotation)
                 w = view.width; h = view.height; rootWidth = root.width; rootHeight = root.height
                 displayRotation = currentRotation; handleRotation = rotation
