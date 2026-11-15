@@ -18,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.ref.WeakReference
 import java.lang.reflect.Method
@@ -157,7 +158,7 @@ class HomeIndicatorLifecycleTest {
             nav.layout(0, 0, maxOf(screen.height(), screen.width()), 80)
             val (method, hook) = HomeIndicatorHooks.prepareLauncher(FakeNavBar::class.java)
             val canvas = Drawing()
-            assertFalse(invokeDraw(nav, method, hook, canvas))
+            assertFalse(invokeHook(nav, method, hook, canvas))
             assertSame(nav.mPaint, canvas.paint)
             assertEquals(300f, canvas.bounds.centerX(), 1f)
             assertTrue(canvas.bounds.width() > canvas.bounds.height())
@@ -175,27 +176,25 @@ class HomeIndicatorLifecycleTest {
             nav.layout(0, 0, 80, 480)
             val (method, hook) = HomeIndicatorHooks.prepareOriented(Handle::class.java, OrientedHandle::class.java)
             val left = Drawing()
-            assertFalse(invokeDraw(nav, method, hook, left))
+            assertFalse(invokeHook(nav, method, hook, left))
             assertSame(nav.mPaint, left.paint)
             assertEquals(150f, left.bounds.centerY(), 1f)
             assertTrue(left.bounds.centerX() < 40f)
             nav.mDeltaRotation = Surface.ROTATION_270
             val right = Drawing()
-            assertFalse(invokeDraw(nav, method, hook, right))
+            assertFalse(invokeHook(nav, method, hook, right))
             assertEquals(330f, right.bounds.centerY(), 1f)
             assertTrue(right.bounds.centerX() > 40f)
         } finally { controller.pause().stop().destroy() }
     }
 
-    private fun invokeDraw(
-        view: View, method: Method, hook: tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook, canvas: Canvas,
-    ): Boolean {
+    private fun invokeHook(view: View, method: Method, hook: MethodHook, arg: Any): Boolean {
         var native = false
         hook.intercept(object : XposedInterface.Chain {
             override fun getExecutable() = method
             override fun getThisObject() = view
-            override fun getArgs(): List<Any?> = listOf(canvas)
-            override fun getArg(index: Int) = canvas
+            override fun getArgs(): List<Any?> = listOf(arg)
+            override fun getArg(index: Int) = arg
             override fun proceed(): Any? { native = true; return null }
             override fun proceed(args: Array<Any?>) = proceed()
             override fun proceedWith(receiver: Any) = proceed()
@@ -214,18 +213,7 @@ class HomeIndicatorLifecycleTest {
             val hooks=HomeIndicatorHooks.prepare(Handle::class.java,Bar::class.java,Transitions::class.java).toMap()
             block(bar,handle) { receiver,name,arg ->
                 val method=receiver.javaClass.getDeclaredMethod(name,if(name=="onDraw") Canvas::class.java else Configuration::class.java)
-                var native=false
-                val chain=object: XposedInterface.Chain {
-                    override fun getExecutable(): Method=method
-                    override fun getThisObject(): Any=receiver
-                    override fun getArgs(): List<Any?> = listOf(arg)
-                    override fun getArg(index: Int): Any=arg
-                    override fun proceed(): Any? { native=true;return null }
-                    override fun proceed(args: Array<Any?>)=proceed()
-                    override fun proceedWith(receiver: Any)=proceed()
-                    override fun proceedWith(receiver: Any,args: Array<Any?>)=proceed()
-                }
-                hooks.getValue(method).intercept(chain);native
+                invokeHook(receiver,method,hooks.getValue(method),arg)
             }
         } finally { controller.pause().stop().destroy() }
     }

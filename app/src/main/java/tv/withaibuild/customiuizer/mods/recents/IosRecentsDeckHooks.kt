@@ -41,6 +41,7 @@ internal object IosRecentsDeckHooks {
         fun matches(active: DeckOwner)=owner.get()===active && active.allowed &&
             active.transition==ticket && ticket!=0L && active.geometryGeneration==generation
     }
+    private fun card(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.CARD) as? DeckOwner.Card }
 
     fun install(param: PackageReadyParam,prefs: PrefMap): FeatureInstallResult {
         val entries=ArrayList<Pair<Method,MethodHook>>()
@@ -65,7 +66,6 @@ internal object IosRecentsDeckHooks {
         fun owner(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.OWNER) as? DeckOwner }
         fun frame(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.FRAME) as? DeckFrame }
             ?.takeIf { !it.owner.closed && it.generation==it.owner.geometryGeneration }
-        fun card(value: Any?)=value?.let { XposedHelpers.getAdditionalInstanceField(it,DeckOwner.CARD) as? DeckOwner.Card }
         fun bind(view: ViewGroup,refreshExisting: Boolean=false) {
             val active=owner(view)
             if(active!=null) {
@@ -322,37 +322,7 @@ internal object IosRecentsDeckHooks {
             })
         }
         api.windowElement?.let { window ->
-            around(window.update,always=true,
-                before=before@ {
-                    val scope=surfaces.get() ?: ArrayList<DeckOwner?>(2).also(surfaces::set)
-                    scope.add(null)
-                    val element=it.getThisObject()!!
-                    // startInMainThread can synchronously draw before animTo stores
-                    // currentRectFParams. That first frame belongs to the new request.
-                    val nativeParams=window.current(element)
-                    val params=XposedHelpers.getAdditionalInstanceField(element,WINDOW_PENDING)
-                        ?: nativeParams ?: return@before
-                    val opening=window.scene(params) ?: return@before
-                    val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
-                    val active=receipt.owner.get() ?: return@before
-                    if(!receipt.matches(active)) return@before
-                    val selected=card(window.view(params))
-                        ?: (if(!opening) active.cardAt(window.index(params)) else null) ?: return@before
-                    if(selected.owner!==active) return@before
-                    if(!opening) {
-                        active.followEntryWindow(selected,it.getArg(1) as RectF,window.target(params))
-                        return@before
-                    }
-                    val progress=it.getArg(3) as Float
-                    val current=it.getArg(1) as RectF
-                    if(!active.alignOpening(selected,window.start(element),current,progress,
-                        ((.4f-progress)/.4f).coerceIn(0f,1f))) return@before
-                    // getRotationRect uses currentRectFParams even if the new
-                    // animation's first synchronous frame uses a pending receipt.
-                    active.setOpeningSurfaceSpace(window.rotation(nativeParams ?: params),current,it.getArg(6) as RectF)
-                    scope[scope.lastIndex]=active
-                },
-                after={ surfaces.get()?.let { scope -> if(scope.isNotEmpty()) scope.removeAt(scope.lastIndex) } })
+            entries.add(window.update to windowUpdateHook(window,surfaces))
             around(window.closing,always=true,
                 before={ quickSwitch(false); latest.get().get()?.beginTransition(true) },
                 after={
@@ -393,20 +363,7 @@ internal object IosRecentsDeckHooks {
                     }
                 })
         }
-        api.surfaceOcclusion?.let { surface -> after(surface.calculate) {
-            val result=it.getResult() ?: return@after
-            val active=surfaces.get()?.lastOrNull()
-            if(active!=null) {
-                val clipped=surface.apply(active,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
-                if(clipped!==result) it.setResult(clipped)
-            } else {
-                @Suppress("UNCHECKED_CAST")
-                val presentation=(XposedHelpers.getAdditionalInstanceField(it.getArg(5),OPENING_SURFACE) as? WeakReference<DeckOpenAlignment.Surface>)?.get()
-                    ?: return@after
-                val clipped=surface.apply(presentation,it.getThisObject()!!,it.getArg(0)!!,it.getArg(4) as Int,result)
-                if(clipped!==result) it.setResult(clipped)
-            }
-        } }
+        api.surfaceOcclusion?.let { entries.add(it.calculate to surfaceOcclusionHook(it,surfaces)) }
         entries.add(api.gesturePose to gesturePoseHook(api))
         entries.add(api.rebaseScroll to scrollRebaseHook())
         around(api.navToRecents,always=true,
@@ -445,6 +402,57 @@ internal object IosRecentsDeckHooks {
         after(api.splitEnd) { latest.get().get()?.suspend(false) }
         return PreparedHookBatch().install(entries)
     }
+
+    internal fun windowUpdateHook(window: DeckWindowApi,surfaces: ThreadLocal<ArrayList<DeckOwner?>>): MethodHook = paired(
+        beforeBlock=before@ {
+            val scope=surfaces.get() ?: ArrayList<DeckOwner?>(2).also(surfaces::set)
+            scope.add(null)
+            val element=it.getThisObject()!!
+            // startInMainThread can synchronously draw before animTo stores
+            // currentRectFParams. That first frame belongs to the new request.
+            val pending=XposedHelpers.getAdditionalInstanceField(element,WINDOW_PENDING)
+            val params=pending ?: window.current(element) ?: return@before
+            val opening=window.scene(params) ?: return@before
+            val receipt=XposedHelpers.getAdditionalInstanceField(params,WINDOW_RECEIPT) as? WindowReceipt ?: return@before
+            val active=receipt.owner.get() ?: return@before
+            if(!receipt.matches(active)) return@before
+            val selected=card(window.view(params))
+                ?: (if(!opening) active.cardAt(window.index(params)) else null) ?: return@before
+            if(selected.owner!==active) return@before
+            if(!opening) {
+                active.followEntryWindow(selected,it.getArg(1) as RectF,window.target(params))
+                return@before
+            }
+            val progress=it.getArg(3) as Float
+            val current=it.getArg(1) as RectF
+            if(!active.alignOpening(selected,window.start(element),current,progress,
+                ((.4f-progress)/.4f).coerceIn(0f,1f))) return@before
+            // getRotationRect uses currentRectFParams even if the new
+            // animation's first synchronous frame uses a pending receipt.
+            val nativeParams=if(pending==null) params else window.current(element) ?: params
+            if(active.prepareOpeningSurface(window.rotation(nativeParams),current,it.getArg(6) as RectF))
+                scope[scope.lastIndex]=active
+        },
+        afterBlock={ surfaces.get()?.let { scope -> if(scope.isNotEmpty()) scope.removeAt(scope.lastIndex) } },
+        always=true)
+
+    internal fun surfaceOcclusionHook(surface: DeckSurfaceOcclusion,surfaces: ThreadLocal<ArrayList<DeckOwner?>>): MethodHook =
+        object: MethodHook() {
+            override fun after(callback: AfterHookCallback)=ModuleHelper.guarded {
+                if(callback.getThrowable()!=null) return@guarded
+                val result=callback.getResult() ?: return@guarded
+                val active=surfaces.get()?.lastOrNull()
+                val clipped=if(active!=null) {
+                    surface.apply(active,callback.getThisObject()!!,callback.getArg(0)!!,callback.getArg(4) as Int,result)
+                } else {
+                    @Suppress("UNCHECKED_CAST")
+                    val presentation=(XposedHelpers.getAdditionalInstanceField(callback.getArg(5),OPENING_SURFACE) as? WeakReference<DeckOpenAlignment.Surface>)?.get()
+                        ?: return@guarded
+                    surface.apply(presentation,callback.getThisObject()!!,callback.getArg(0)!!,callback.getArg(4) as Int,result)
+                }
+                if(clipped!==result) callback.setResult(clipped)
+            }
+        }
 
     // Only TaskViewUtils's opening getter takes a Task. Its caller still
     // converts from the visual Recents container to the native window axes.

@@ -24,14 +24,20 @@ class DeckWindowApiTest {
         fun animTo(value: Any) { currentRectFParams=value as Params }
         fun updateElementValue(a: Float,b: RectF,c: Float,d: Float,e: Boolean,f: android.graphics.Rect,g: RectF) {}
     }
-    class Spring { fun getStartRect()=RectF(1f,2f,3f,4f) }
+    class Spring {
+        val start=RectF(1f,2f,3f,4f)
+        fun getStartRect()=start
+    }
     class Provider { fun getClosingWindowToRecentAnimParams(a: Any,b: Any,c: Any): Any=a }
     class StaticElement { companion object { @JvmStatic fun animTo(value: Any) {} } }
-    private val api=DeckWindowApi(Element::class.java,Params::class.java,Provider::class.java,
-        Any::class.java,Any::class.java,Any::class.java)
-    private fun params(type: Type,rotation: Int=0,split: Boolean=false,homeRotation: Int=0)=Params(Any(),RectF(1f,2f,3f,4f),
-        RectF(10f,20f,30f,40f),12f,18f,.2f,.9f,type,true,false,false,null,Any(),Any(),false,
-        rotation,homeRotation,true,7,split,true)
+    companion object {
+        internal fun windowApi()=DeckWindowApi(Element::class.java,Params::class.java,Provider::class.java,
+            Any::class.java,Any::class.java,Any::class.java)
+        internal fun params(type: Type,rotation: Int=0,split: Boolean=false,homeRotation: Int=0,view: View?=null)=
+            Params(Any(),RectF(1f,2f,3f,4f),RectF(10f,20f,30f,40f),12f,18f,.2f,.9f,type,true,false,false,view,
+                Any(),Any(),false,rotation,homeRotation,true,7,split,true)
+    }
+    private val api=windowApi()
     @Test fun newWindowCopiesOnlyTheCorrespondingCardRadiusAndPreservesItsNativeOwners() {
         for(type in arrayOf(Type.OPEN_FROM_RECENTS,Type.CLOSE_TO_RECENTS)) {
             val original=params(type); val opening=api.scene(original)!!

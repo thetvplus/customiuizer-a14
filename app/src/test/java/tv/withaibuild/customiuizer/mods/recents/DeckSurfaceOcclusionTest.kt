@@ -26,7 +26,10 @@ class DeckSurfaceOcclusionTest {
         val mSourceStackBounds=Rect();val mCurrentRectWithInsets=RectF()
         fun calculateSurfaceParams(a: Remote,b: Remote,c: Remote,d: Any,e: Int,f: Any,g: Any,h: Int,i: Any,j: Boolean,k: Boolean): Surface=error("not executed")
     }
-    private fun api()=DeckSurfaceOcclusion(Helper::class.java,Remote::class.java,Any::class.java,Any::class.java,Any::class.java,Surface::class.java)
+    companion object {
+        internal fun api()=DeckSurfaceOcclusion(Helper::class.java,Remote::class.java,Any::class.java,Any::class.java,Any::class.java,Surface::class.java)
+        internal fun params(crop: Rect=Rect(10,20,1010,2020))=Surface(Any(),7,.75f,Matrix(),crop,11,Any(),13,Any(),19f,23,true,29f,true)
+    }
     @Test fun sameArityWithWrongParametersOrReturnTypeCannotAdmitSurfaceWrites() {
         assertThrows(NoSuchMethodException::class.java) {
             DeckSurfaceOcclusion(Helper::class.java,Any::class.java,Any::class.java,Any::class.java,Any::class.java,Surface::class.java)
@@ -35,7 +38,6 @@ class DeckSurfaceOcclusionTest {
             DeckSurfaceOcclusion(Helper::class.java,Remote::class.java,Any::class.java,Any::class.java,Any::class.java,Any::class.java)
         }
     }
-    private fun params()=Surface(Any(),7,.75f,Matrix(),Rect(10,20,1010,2020),11,Any(),13,Any(),19f,23,true,29f,true)
     @Test fun legacyElevenArgumentSurfaceRetainsTheSameCropAndRetirementContract() {
         val api=DeckSurfaceOcclusion(LegacyHelper::class.java,Remote::class.java,Any::class.java,Any::class.java,Any::class.java,Surface::class.java)
         assertEquals(11,api.calculate.parameterCount)

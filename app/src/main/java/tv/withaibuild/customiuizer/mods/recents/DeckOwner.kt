@@ -631,36 +631,36 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         return true
     }
     fun openingSurface()=opening?.surface
+    /** Move the neighbors and report whether earlier cards can occlude the opening app. */
     fun alignOpening(selected: Card,start: RectF,current: RectF,progress: Float,headerAlpha: Float,
         nativeFaded: Boolean=false): Boolean {
         if(!prepareOpening(selected,start) || !prepareLocalSpace()) return false
         local.mapRect(gestureTarget,current)
         opening?.apply(gestureTarget,progress,headerAlpha,nativeFaded)
-        return true
+        return openingIndex>0
     }
-    fun setOpeningSurfaceSpace(rotation: Int,window: RectF,surface: RectF) {
+    fun prepareOpeningSurface(rotation: Int,window: RectF,surface: RectF): Boolean {
         openingSurfaceReady=false
-        if(openingIndex<=0 || window.isEmpty || surface.isEmpty) return
+        if(window.isEmpty || surface.isEmpty) return false
         // WindowElement sends both rectangles from the same native frame. Its
         // actual quarter turn can differ from the Launcher View's dimensions.
         openingSurface.setRotate(when(rotation) {
             0 -> 0f
             1 -> -90f
             3 -> 90f
-            else -> return
+            else -> return false
         })
         openingSurface.mapRect(occludingBounds,window)
         if(!(kotlin.math.abs(surface.width()-occludingBounds.width())<=.01f &&
-            kotlin.math.abs(surface.height()-occludingBounds.height())<=.01f)) return
+            kotlin.math.abs(surface.height()-occludingBounds.height())<=.01f)) return false
         openingSurface.postTranslate(surface.centerX()-occludingBounds.centerX(),
             surface.centerY()-occludingBounds.centerY())
         openingSurface.preConcat(global)
         openingSurfaceReady=true
+        return true
     }
 
     fun openingBoundary(surface: RectF): Float? {
-        // Opening the front card has no prior occluder. Avoid traversing cards
-        // and their global matrices for every Surface frame in this common case.
         if(!openingSurfaceReady) return null
         var edge=Float.POSITIVE_INFINITY
         for(i in 0 until drawCards.size) {
