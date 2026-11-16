@@ -50,13 +50,14 @@ r14.23.3 起最低要求 API 102，直接使用原生 Hook 安装和 Service 能
 
 这些是选定声明与 Host 回归证据，不证明资源布局、窗口时序、主题或实机矩阵通过。资源继续按当前宿主名称和实际控件类型解析，不复用样本整数 ID。四份离线 ROM 尚缺对应候选的完整实机验收；HyperOS 3 / Android 16 仅为隔离研究参考，不参与 A14 运行准入。
 
-- 新增默认关闭的 iOS Home Indicator，仅在 SDK / ABI、主屏手势模式及完整绘制合同下替换原生填充，设备、地区与构建号不参与准入。已核对 fuxi CN / TW、munch ID、duchamp CN、fuxi TW .7 与 xaga IN V816.0.9.0.ULOINXM 的 SystemUI，独立宿主与不满足绘制合同的实现回退；几何、签名和完整场景边界见[专项说明](docs/features/ios18-home-indicator.md)。Deck 另按其完整任务和窗口合同准入。
+- iOS Home Indicator 默认关闭。普通 SystemUI 手势条、SystemUI 横屏副手势条和 Launcher 手势条按各自的主进程与绘制合同接入。普通 SystemUI 样本包括 fuxi CN / TW、munch ID、duchamp CN、fuxi TW .7 与 xaga IN V816.0.9.0.ULOINXM。原生尺寸未就绪或 ABI 缺失时保留原生绘制。[手势指示条专项说明](docs/features/ios18-home-indicator.md)
 
 - 动态岛在主屏横屏和竖屏均可呈现，持续系统活动统一短岛；横屏的宽度、侧边挖孔与余量合同见[动态岛说明](docs/features/island/README.md#形态位置与输入)。现有原生窗口返回 / 吸入只在已核实的正向竖屏路径生效，横屏使用普通上岛过渡。新横屏场景尚待最终同 APK 录屏与设备验收。
 
 - Dock 的宿主安装点、两区相同 Launcher 样本与材质限制统一见 [Dock 说明](docs/features/dock/README.md)。这些静态结果不等于动画、编辑或动态壁纸已通过设备验收。
-- iOS 堆叠式最近任务按完整原生 ABI 接入，不再限定 8255 / 8604 版本号；Legacy 与 WindowElement 分别解析真实窗口消费者。已补齐 POCO 7603 的属性式弹簧接口，保留原生转换、取消和结束链。POCO 只在主进程按开关安装 Deck 与文件夹模糊，不启用整个 Launcher catalog。缺少可选动效接口时仅保留原生窗口时序，必需卡片 / 输入 / 窗口合同不完整则整项回退。7603 已完成静态调用链核查，尚未完成该版本实机矩阵。音量与 Duo 已分别复核 fuxi CN / TW、munch ID、duchamp CN 的插件 / SystemUI 完整目标签名；签名存在不等于所有设备运行通过，查询与限制见[音量参考](docs/features/ios18-motion-reference.md)和[Duo 说明](docs/features/duo-status-bar.md#图形与兼容边界2026-11-06)。
-- 文件夹图标模糊分别接入 MIUI 与 POCO，POCO 仅限 `com.mi.android.globallauncher` 主进程的独立开关，不获得其他 Launcher 功能。已核实的两种文件夹 ABI 保留原生硬件、系统模糊与默认图标限制，未知声明不安装；文件夹展开背景是另一功能。尚未实测的深浅色 / 壁纸 / 主题 / 省电 / 动态切换矩阵见[待验项](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)，不能宣称所有 POCO ROM 完整兼容。
+- iOS 堆叠式最近任务按完整原生 ABI 接入。Legacy 与 WindowElement 分别对接原生窗口，POCO 7603 使用属性式弹簧和原生取消、结束链。可选动画接口缺失时使用原生窗口时序，必需卡片、输入或窗口接口缺失时整项回退。7603 的调用链已有静态证据，实机矩阵待验。POCO 的独立功能范围见[进程路由](ARCHITECTURE.md#入口与进程路由)。[任务堆叠参考](docs/features/ios18-recents-reference.md)
+- 音量与 Duo 已核对 fuxi CN / TW、munch ID 和 duchamp CN 的插件或 SystemUI 目标签名。场景限制见[音量参考](docs/features/ios18-motion-reference.md)与[Duo 说明](docs/features/duo-status-bar.md#图形与兼容边界2026-11-06)。
+- 文件夹图标模糊在 MIUI 与 POCO 主进程分别接入。两种已核实 ABI 都沿用硬件、系统模糊和默认图标条件。文件夹展开背景有独立开关。深浅色、壁纸、主题、省电和动态切换仍见[待验项](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 - 2026-11-08 原件直查补核 Dock、Duo、Home Indicator 与动态岛，未复用 ROM 索引。四份 A14 原件的相关 ABI 与调用顺序可覆盖现有入口；POCO Dock 与 Launcher 原生返回上岛仍未被功能路由启用，不能因同名接口存在认定已支持。SystemUI 中的普通动态岛、Duo 和手势指示条独立判断，不受此 Launcher 边界影响。结论及实机限制见[静态复核与证据](docs/maintenance/A14_REFINEMENT_ROADMAP.md#验证与证据)。
 - 隐藏输入法收回键只处理 SystemUI 当前 NavigationBarView 的返回按钮：原生图标更新成功、手势导航模式 2、IME BACK_ALT 位 1 且原生按钮可见时设为 INVISIBLE。保留原生隐藏、三键 / 两键、主页 / 最近任务、导航区域及输入法窗口布局。上述 CN / TW 样本的两字段、四方法及图标更新 Smali 一致，原生 QuickStepContract 也确认模式 2；安装前完整核对实例签名，允许同一所有者的基类实现，缺失则仅跳过本功能。该证据不覆盖所有地区 / 机型或输入法自行绘制导航按钮的实现；设备边界见[待验项](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 - 隐藏导航栏只覆盖主屏，原生窗口状态准备仅处理主屏导航窗口；CN / TW 样本确认 `OverviewProxyService$6.setWindowState(III)` 和唯一三参数创建方法，缺少完整合同则保留原生。光标控制沿用已授权且被框架识别的输入法进程，判断当前编辑器，不依赖 SystemUI 前台监控；应用状态自定义菜单必须与当前包 / UID / Context 用户匹配，未知或跨用户不猜测写入。待实机范围见[待验项](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。

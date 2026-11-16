@@ -71,7 +71,7 @@ Agent 按完整任务差异选择现有门禁、设备重放与各层待验边�
 
 同一 job 执行 Python / 源码契约、Full、一次 Develop 和 fatal lint；所有成功运行保留唯一 Develop APK 与 mapping，R8 输出始终检查。工具 / CI / catalog / matrix、tag 和手动运行另做矩阵确定性与必需独立 mutation。需要诊断可重复性时才做两次隔离构建与 `apk_semantic_diff.py`，不加入日常 CI。
 
-CodeQL Default setup 保留 Python / Actions。[Kotlin CodeQL](../.github/workflows/a14-codeql-kotlin.yml) 手动入口尚在候选分支，合入 master 后才进入默认分支工作流；已有 PR 提取试验的实际结果见[当前状态](maintenance/A14_REFINEMENT_ROADMAP.md#仓库安全待办)。入口复用现有 JDK / SDK / Gradle，只编译生产 Kotlin / Java，分析后由 `check_codeql_extraction.py` 核对全部已跟踪主源码的成功提取及非零 Kotlin 代码指标。SARIF 保留 7 天，暂不重复上传 Security；Java/Kotlin 的持续告警接入须在主线迁移 Advanced setup 后再停用 Default，不能提前留下扫描空档。提取失败与安全发现分别报告，不以零告警证明绝对安全，也不增加正式发行门禁。
+CodeQL Default setup 持续扫描 Python 和 Actions。master 上的手动 [Kotlin CodeQL](../.github/workflows/a14-codeql-kotlin.yml) 使用项目 JDK、SDK 和 Gradle 编译生产 Kotlin / Java，由 `check_codeql_extraction.py` 核对主源码提取及 Kotlin 代码指标，SARIF 保留 7 天。Java/Kotlin 的持续告警接入仍待 Advanced setup，迁移前保留现有默认扫描。提取试验和待办见[路线图](maintenance/A14_REFINEMENT_ROADMAP.md#仓库安全待办)。
 
 [依赖图](../.github/workflows/a14-dependency-graph.yml) 单独手动运行，只解析依赖并由隔离作业提交，不重复 CI 或构建 APK。仓库 Actions 白名单须同时允许 `setup-gradle` 与 `dependency-submission`，不能只允许前者而留下失效入口。
 

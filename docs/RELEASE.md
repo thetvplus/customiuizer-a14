@@ -2,7 +2,7 @@
 
 master 合并、正式签名、tag 与公开发行以当前任务授权为准。普通 Debug / Develop、工作分支验证与本地签名试用分别记录，不能作为已经正式发布的结论。长期发布规则只维护在本页。
 
-版本通过 [Squash PR](DEVELOPMENT.md#git-与协作) 整合时，新生成的 `master` 提交是正式源码身份。工作分支的构建与验证作为前置证据，正式签名使用新提交的 exact master CI；正式 APK `sourceCommit`、metadata、双仓 Tag 与发行均绑定这一完整 SHA。累计说明仍以上一实际公开正式版为基线，历史 Tag 与签名产物保留原身份。
+版本通过 [Squash PR](DEVELOPMENT.md#git-与协作) 整合时，新生成的 `master` 提交是正式源码身份。工作分支的构建与验证作为前置证据，正式签名使用新提交的 exact master CI；正式 APK `sourceCommit`、metadata、双仓 Tag 与发行均绑定这一完整 SHA。发布安全基线取上一实际公开正式版，累计说明基线按下文登记。历史 Tag 与签名产物保留原身份。
 
 已公开的旧 metadata 可保留 `refs/heads/main`，仅在已发布资产的文档读回中识别。新的签名、晋升和发布仍须使用 `refs/heads/master`。下载仓库独立使用自己的 `main`。
 
@@ -41,11 +41,9 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 ### 当前正式版本
 
-**r14.27.7 / 307** 的正式源码为 `a752e3a1689aa982e51aaa78cb3cf79971bd389a`。两仓发行页列出相同的源码和 APK SHA-256 `718928042fdb0ae83bab52823ffc793c876e3f32ec9ea719964e05aa46e722a3`，并附 APK 与构建 metadata。见[源码仓发行](https://github.com/thetvplus/customiuizer-a14/releases/tag/r14.27.7)与[下载仓发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/tag/307-r14.27.7)。
+**r14.27.9 / 310** 的正式源码为 `9224160f6b13be43a9dd4a6da8a1ff92a0e795c0`。两仓 APK 均为 6,293,117 字节，SHA-256 为 `d2bd1f64612eb2d5b4184a8ee87907cadd902631a6767520b725cf8efc138bfa`，构建 metadata 摘要一致。[源码仓发行](https://github.com/thetvplus/customiuizer-a14/releases/tag/r14.27.9) · [下载仓发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/tag/310-r14.27.9)
 
-r14.27.7 的说明与安全基线为上一正式版 r14.27.5。r14.27.5 将 r14.27.3 / 304 的有效变化累计到 r14.26.11 之后。各版构建身份以对应发行的正式 metadata 为准。
-
-r14.27.9 / 310 的摘要对照 r14.27.7 的实际实现，双语累计记录覆盖自 r14.26.11 起仍有效的变化。发布安全基线继续从实际 Latest 读取。309 已用于本地试用，正式候选使用 310。
+r14.27.9 的摘要与安全基线均以实际公开的 r14.27.7 为准。双语更新记录累计自 r14.26.11。309 已用于本地试用，正式发行为 310。r14.27.5 与 r14.27.7 保留双仓原发行页面、Tag、签名 APK 和 metadata，累计展示指向 r14.27.9。
 
 历史系列分别保留 **r14.25.9 / 258** 与 **r14.26.11 / 281**。r14.25.9 的说明累计自 r14.24.1，r14.26.11 累计自 r14.25.9，整合各自系列仍有效的功能与修正，排除已被替代或撤回的设计。两版的原 APK、证书、构建元数据和源码快照均不重建、不重签、不移动。
 
@@ -89,15 +87,15 @@ gh workflow run a14-signed-build.yml --ref master -f destination=actions-only
 - 安全基线读取实际 Latest、正式状态、tag / source SHA、APK 与构建元数据摘要、历史证书及 A14 平台契约。只发布源码的一次真实正式发行也可成为源码安全基线。
 - 累计基线由 `cumulative_releases.<version>.notes_base` 指定。早期版本没有现代 metadata 附件时，仍必须核验实际稳定 Release、tag 解析出的完整 SHA 和该源码声明的版本。
 - 校验“说明基线 → 当前稳定安全基线 → 最终候选”的 Git 祖先关系，并查看说明基线到候选 exact SHA 的完整 diff。双语 `自 … 起的变更 / Changes since …` 使用说明基线。
-- 历史系列按保留最高版累计：r14.25.9 自 r14.24.1 起，r14.26.11 自 r14.25.9 起。去重并排除被替代、撤回或尚未实现的内容；原始记录留在 Git 历史与私有归档，r14.24.1 及更早章节保持原文。
+- 历史系列按保留最高版累计。r14.25.9 自 r14.24.1 起，r14.26.11 自 r14.25.9 起，r14.27.9 自 r14.26.11 起。累计内容保留仍然有效的变化。逐版原文保留在发行标签或私有归档，r14.24.1 及更早章节保留原文。
 
-日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。首次准备可使用 `prepare_release.py --dry-run` 预览；当前版本已准备，检查一致性即可：
+日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。准备时使用 `prepare_release.py --dry-run` 预览，再检查版本一致性。
 
 ```sh
 python tools/check_release_metadata.py
 ```
 
-准备工具先验证全部输入，再统一更新五个版本文件；不 commit、push、打 tag 或发布。本次 r14.27.3 / 304 为明确授权的同名替代，五处元数据与累计说明已单独核对，不放宽准备工具的常规升版规则，也不把元数据准备当成签名或发行成功。后续版本按发布策略递增，不创建额外试用版名称。旧 `--supersede / --base-version` 仅兼容旧的源码整理用途，不能与 `--notes-base` 混用。
+准备工具先验证全部输入，再统一更新 Gradle、双语 README 和双语 Changelog。版本按发布策略递增。整理已发行系列时，`--notes-base` 指定累计基线并保留历史节。`--supersede / --base-version` 仅供旧版源码整理，作为独立模式使用。
 
 ### Release Notes 质量
 
