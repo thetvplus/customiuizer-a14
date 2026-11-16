@@ -1,45 +1,34 @@
 package tv.withaibuild.customiuizer.mods.notificationautoexpand
 
+import android.app.Notification
+import android.os.Process
+import android.service.notification.StatusBarNotification
 import io.github.libxposed.api.XposedInterface
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Before
 import org.junit.Test
-import tv.withaibuild.customiuizer.MainModule
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.reflect.Executable
-import java.util.concurrent.atomic.AtomicReference
 
-/**
- * Component tests for [NotificationAutoExpandEffect].
- *
- * Evidence classification: RUNTIME_TESTED_COMPONENT.
- */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = android.app.Application::class)
 class NotificationAutoExpandEffectTest {
 
-    @Before
-    fun setUp() {
-        MainModule.mPrefs.clear()
-    }
-
-    // -------------------------------------------------------------------------
-    // A. FAST ORACLE
-    // -------------------------------------------------------------------------
     @Test
     fun fast_mOnKeyguardTrue_proceedsWithoutGetEntryOrReads() {
-        val row = NotificationAutoExpandFixtures.ExpandableNotificationRow("com.example").apply {
-            mOnKeyguard = true
-        }
-        val effect = fastEffect()
+        val row = NotificationAutoExpandFixtures.ThrowingGetEntryRow().apply { mOnKeyguard = true }
+        val effect = fastEffectForRoot(row.javaClass)
         val chain = makeChain(row)
 
         effect.intercept(chain)
 
         assertEquals(1, chain.proceedCount)
-        assertTrue("row must not have been expanded", row.expandedPackages.isEmpty())
     }
 
     @Test
@@ -99,48 +88,49 @@ class NotificationAutoExpandEffectTest {
     }
 
     @Test
-    fun fast_mode1_doesNotExpand() {
-        val row = NotificationAutoExpandFixtures.ExpandableNotificationRow("com.any").apply {
-            mOnKeyguard = false
+    fun inactiveAndMalformedModesLeaveNativeInChargeBeforeReadingTheRow() {
+        val row = NotificationAutoExpandFixtures.ThrowingGetEntryRow()
+        for (mode in listOf("1", "4", "not a number")) {
+            val chain = makeChain(row)
+            fastEffectForRoot(row.javaClass, modeRaw = mode).intercept(chain)
+            assertEquals(1, chain.proceedCount)
         }
-        val effect = fastEffect(modeRaw = "1", selectedApps = setOf("com.any"))
-        val chain = makeChain(row)
-
-        effect.intercept(chain)
-
-        assertEquals(1, chain.proceedCount)
-        assertTrue("mode 1 must not expand", row.expandedPackages.isEmpty())
     }
 
-    // -------------------------------------------------------------------------
-    // B. FAST ELIGIBILITY
-    // -------------------------------------------------------------------------
+    @Test
+    fun nativePackageOverrideAndPreferenceGenerationSurviveAnInFlightRefresh() {
+        val prefs = preferences("3", setOf("com.effective"))
+        val notification = object : StatusBarNotification(
+            "com.source", "com.source", 1, null, 1000, 1, 0, Notification(), Process.myUserHandle(), 0,
+        ) {
+            override fun getPackageName() = "com.effective"
+        }
+        val row = object : NotificationAutoExpandFixtures.BaseExpandableNotificationRow() {
+            var expansions = 0
+            private val nativeEntry = object { @JvmField val mSbn = notification }
+
+            fun getEntry(): Any {
+                prefs.replaceSnapshot(mapOf("system_expandnotifs" to "3", "system_expandnotifs_apps" to setOf("com.other")))
+                return nativeEntry
+            }
+
+            fun setSystemExpanded(expanded: Boolean) { if (expanded) expansions++ }
+        }
+        val effect = NotificationAutoExpandEffect(NotificationAutoExpandResolver.resolve(row.javaClass)!!, prefs)
+        repeat(2) {
+            val chain = makeChain(row)
+            effect.intercept(chain)
+            assertEquals(1, chain.proceedCount)
+            assertEquals(1, row.expansions)
+        }
+    }
+
     @Test
     fun fast_abiNull_selectsLegacy() {
         val row = NotificationAutoExpandFixtures.ExpandableNotificationRow("com.legacy").apply {
             mOnKeyguard = false
         }
-        MainModule.mPrefs.put("system_expandnotifs", "3")
-        MainModule.mPrefs.put("system_expandnotifs_apps", setOf("com.legacy"))
-
-        val effect = legacyEffect()
-        val chain = makeChain(row)
-
-        effect.intercept(chain)
-
-        assertEquals(1, chain.proceedCount)
-        assertTrue("legacy mode 3 with selected app must expand", row.expandedPackages.contains("com.legacy"))
-    }
-
-    @Test
-    fun fast_snapshotNull_selectsLegacy() {
-        val row = NotificationAutoExpandFixtures.ExpandableNotificationRow("com.legacy").apply {
-            mOnKeyguard = false
-        }
-        MainModule.mPrefs.put("system_expandnotifs", "3")
-        MainModule.mPrefs.put("system_expandnotifs_apps", setOf("com.legacy"))
-
-        val effect = NotificationAutoExpandEffect(fastAbi(), AtomicReference(null))
+        val effect = NotificationAutoExpandEffect(null, preferences("3", setOf("com.legacy")))
         val chain = makeChain(row)
 
         effect.intercept(chain)
@@ -154,34 +144,14 @@ class NotificationAutoExpandEffectTest {
         val row = NotificationAutoExpandFixtures.SubExpandableNotificationRow("com.legacy").apply {
             mOnKeyguard = false
         }
-        MainModule.mPrefs.put("system_expandnotifs", "3")
-        MainModule.mPrefs.put("system_expandnotifs_apps", setOf("com.legacy"))
-
-        val effect = fastEffect()
+        (row as NotificationAutoExpandFixtures.BaseExpandableNotificationRow).mOnKeyguard = true
+        val effect = fastEffect(modeRaw = "3", selectedApps = setOf("com.legacy"))
         val chain = makeChain(row)
 
         effect.intercept(chain)
 
         assertEquals(1, chain.proceedCount)
         assertTrue("legacy mode 3 with selected app must expand", row.expandedPackages.contains("com.legacy"))
-    }
-
-    // -------------------------------------------------------------------------
-    // C. FAST FAILURE BOUNDARIES
-    // -------------------------------------------------------------------------
-    @Test(expected = NumberFormatException::class)
-    fun fast_malformedModeRaw_throwsBeforeProceed() {
-        val row = NotificationAutoExpandFixtures.ExpandableNotificationRow("com.example").apply {
-            mOnKeyguard = false
-        }
-        val effect = fastEffect(modeRaw = "not a number", selectedApps = emptySet())
-        val chain = makeChain(row)
-
-        try {
-            effect.intercept(chain)
-        } finally {
-            assertEquals("chain.proceed must not be called when parsing fails", 0, chain.proceedCount)
-        }
     }
 
     @Test
@@ -315,9 +285,6 @@ class NotificationAutoExpandEffectTest {
         assertEquals(1, row.expandedPackages.size)
     }
 
-    // -------------------------------------------------------------------------
-    // D. EXCEPTION MAPPING
-    // -------------------------------------------------------------------------
     @Test(expected = IllegalAccessError::class)
     fun fast_mOnKeyguardIllegalAccess_exceptionMappedToIllegalAccessError() {
         val row = NotificationAutoExpandFixtures.PrivateFieldRow().apply { setMOnKeyguard(false) }
@@ -326,7 +293,7 @@ class NotificationAutoExpandEffectTest {
         )!!
         abi.mOnKeyguardField.isAccessible = false
 
-        val effect = NotificationAutoExpandEffect(abi, AtomicReference(snapshot()))
+        val effect = NotificationAutoExpandEffect(abi, preferences())
         val chain = makeChain(row)
 
         try {
@@ -351,7 +318,7 @@ class NotificationAutoExpandEffectTest {
         )
 
         val row = NotificationAutoExpandFixtures.ExpandableNotificationRow("com.example").apply { mOnKeyguard = false }
-        val effect = NotificationAutoExpandEffect(abi, AtomicReference(snapshot()))
+        val effect = NotificationAutoExpandEffect(abi, preferences())
         val chain = makeChain(row)
 
         try {
@@ -362,11 +329,8 @@ class NotificationAutoExpandEffectTest {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
     private fun fastEffect(
-        modeRaw: String = "1",
+        modeRaw: String = "2",
         selectedApps: Set<String> = emptySet(),
     ): NotificationAutoExpandEffect {
         return fastEffectForRoot(
@@ -378,30 +342,17 @@ class NotificationAutoExpandEffectTest {
 
     private fun fastEffectForRoot(
         rootClass: Class<*>,
-        modeRaw: String = "1",
+        modeRaw: String = "2",
         selectedApps: Set<String> = emptySet(),
     ): NotificationAutoExpandEffect {
         return NotificationAutoExpandEffect(
             NotificationAutoExpandResolver.resolve(rootClass)!!,
-            AtomicReference(snapshot(modeRaw, selectedApps)),
+            preferences(modeRaw, selectedApps),
         )
     }
 
-    private fun legacyEffect(): NotificationAutoExpandEffect {
-        return NotificationAutoExpandEffect(null, AtomicReference(null))
-    }
-
-    private fun snapshot(
-        modeRaw: String = "1",
-        selectedApps: Set<String> = emptySet(),
-    ): NotificationAutoExpandSnapshot {
-        return NotificationAutoExpandSnapshot(modeRaw, selectedApps)
-    }
-
-    private fun fastAbi(): NotificationAutoExpandAbi {
-        return NotificationAutoExpandResolver.resolve(
-            NotificationAutoExpandFixtures.ExpandableNotificationRow::class.java,
-        )!!
+    private fun preferences(mode: String = "2", apps: Set<String> = emptySet()) = PrefMap().apply {
+        replaceSnapshot(mapOf("system_expandnotifs" to mode, "system_expandnotifs_apps" to apps))
     }
 
     private fun makeChain(target: Any?, throwOnProceed: Boolean = false): FakeChain {

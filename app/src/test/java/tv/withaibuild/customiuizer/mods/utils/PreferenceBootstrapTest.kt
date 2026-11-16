@@ -170,6 +170,38 @@ class PreferenceBootstrapTest {
     }
 
     @Test
+    fun bootstrapRetriesOnlyThePublicationReadAfterRegisteringTheListener() {
+        val fake = FakeSharedPreferences()
+        var reads = 0
+        var registrations = 0
+        val remote = object : SharedPreferences by fake {
+            override fun getAll(): Map<String, *> {
+                if (++reads == 2) throw IllegalStateException("publication read failed")
+                return fake.all
+            }
+
+            override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+                registrations++
+                fake.registerOnSharedPreferenceChangeListener(listener)
+            }
+        }
+        val prefs = PrefMap()
+        val changes = mutableListOf<String?>()
+        val bootstrap = PreferenceBootstrap.create(prefs, { remote }, changes::add)
+
+        assertFalse(bootstrap.bootstrap())
+        assertTrue(bootstrap.isListenerRegistered())
+        assertEquals(0, prefs.size())
+        fake.put("pref_key_system_statusbarheight", 24)
+
+        assertTrue(bootstrap.bootstrap())
+        assertEquals(24, prefs.getInt("system_statusbarheight", 0))
+        assertEquals(1, registrations)
+        assertTrue(changes.isEmpty())
+        assertEquals(3, reads)
+    }
+
+    @Test
     fun bootstrap_listenerRegistered_onlyOnce() {
         val fake = FakeSharedPreferences()
         var registerCount = 0

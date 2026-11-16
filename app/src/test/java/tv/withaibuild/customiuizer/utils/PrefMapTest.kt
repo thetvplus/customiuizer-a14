@@ -5,6 +5,22 @@ import org.junit.Test
 
 class PrefMapTest {
     @Test
+    fun snapshotReadersReuseAnUnmodifiableViewUntilPublication() {
+        val prefs = PrefMap()
+        prefs.replaceSnapshot(mapOf("mode" to "2", "apps" to setOf("first")))
+        val first = prefs.getAll()
+        assertSame(first, prefs.getAll())
+        assertThrows(UnsupportedOperationException::class.java) {
+            (first as MutableMap<String, Any>)["mode"] = "3"
+        }
+        prefs.put("mode", "3")
+        prefs.remove("apps")
+        assertEquals(mapOf("mode" to "2", "apps" to setOf("first")), first)
+        assertEquals(mapOf("mode" to "3"), prefs.getAll())
+        assertSame(prefs.getAll(), prefs.getAll())
+    }
+
+    @Test
     fun normalizesRemoteKeysOnlyWhenStored() {
         val prefs = PrefMap()
 

@@ -82,7 +82,7 @@ internal class WifiAutomationAccess(private val context: Context, private val lo
 
     override fun vpn(): VpnAutoSwitchCoordinator.Backend? = if (needsVpn || vpnAccess.isInitialized()) vpnAccess.value else null
     override fun vpnBusy(): Boolean = MainModule.mPrefs.getBoolean("system_vpnauto_enabled") || VpnAutoSwitchHooks.busyForWifi()
-    override fun vpnTarget() = VpnAutoSwitchSettings.Options.read(MainModule.mPrefs).target
+    override fun vpnTarget() = VpnAutoSwitchSettings.Target.read(MainModule.mPrefs.getAll())
 
     private inline fun <T> identity(block: () -> T): T {
         val token = Binder.clearCallingIdentity()

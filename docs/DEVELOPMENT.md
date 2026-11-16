@@ -18,15 +18,6 @@
 
 分支清理须有当前授权、成果等价纳入和可恢复来源，确认 HEAD 未变化且无开放 PR、活动 Worktree 或协作依赖；先保存远端成果，再逐支处理。
 
-### 默认分支切换
-
-从 `main` 切换到 `master` 时，先确认没有同名目标引用，盘点仍打开的 PR、运行中的签名 / 发布，以及需要保留原 ref 的候选。当前未获发布确认的版本留在任务分支。切换按以下顺序进行：
-
-1. 暂停 A14 Signed Build 和 A14 Promote Release，并核查没有进行中的签名 / 发布。先单独 Squash 合入只允许 PR CI 同时接受 `main` / `master` 的过渡修改。此时 push CI 与可信发布来源仍是 `main`。
-2. 保留经典保护，在 GitHub 重命名默认分支，核对 `master` 的 SHA 与切换前 `main` 相同、保护生效、原 PR 基线正确。局部克隆更新原有稳定分支的 upstream 和 `origin/HEAD`，工作分支不改名。
-3. 向 `master` 提交切换 PR，使 PR / push CI、手动依赖图、发布工作流和源码策略改用 `master`。过渡配置能为该 PR 运行 `Fast CI`。两套发布 Environment 的唯一分支策略由 `main` 改为 `master`，下载仓库配置不变。
-4. 核对 GitHub Actions 提供的 `Fast CI` 及规则目标后，启用 Ruleset。验证普通 PR、对话解决和 Squash 路径，再撤下重复的经典保护。验证期间可恢复经典规则或退回过渡提交。正式发布工作流在版本验收和明确授权后启用，并以当时 `master` 的完整 SHA 重新验证。
-
 ### 提交、推送与确认
 
 已授权实施的开发任务通过必要验证并审阅完整 diff 后，默认 commit / push 到当前任务对应的工作分支，不再询问是否保存到远端；用户明确要求只读、暂不提交 / 推送或停止时优先遵守。长任务可按已验证且可独立回退的阶段成果提交、推送，不为每次改文件创建碎片提交。默认授权只覆盖任务工作分支；若当前在 master，先建立或切换到所属任务分支，不能据此直推 master、创建 Tag 或发布 Release。
@@ -54,12 +45,6 @@ GitHub CLI / API 仅作为已有 Git 网络故障证据下的备用路径。先�
 - PowerShell 按目录与 `rg -g '*.kt'` 等过滤器检索，不向工具传入未展开的路径通配符。经 Python / 受管执行器启动 Gradle 时使用绝对 `gradlew.bat` 路径（`verify.py` 已处理），避免把 POSIX 的 `./gradlew` 传入 Windows 子进程。
 
 默认使用官方仓库。`-PuseChinaMirrors=true` 选择已有镜像；libxposed 始终独占 Maven Central。保留 [verification-metadata.xml](../gradle/verification-metadata.xml) 中的产物校验，其范围不覆盖所有依赖。Gradle 宿主 Kotlin 与 APK 的 BOM / stdlib 属于不同 classpath，按实际解析图审查，不强行统一。
-
-## 日常验证
-
-[TESTING](TESTING.md#执行分级)统一维护 Quick / Standard / Deep / Release 的命令和复用条件；其余章节解释各层证明范围。
-
-升级可为安全、能力、兼容或维护；保留官方来源、差异、回退和相应回归，不自动授权合并或发布。性能证据见 [OPTIMIZATION_GATES](OPTIMIZATION_GATES.md)。
 
 ## 构建与生成物
 

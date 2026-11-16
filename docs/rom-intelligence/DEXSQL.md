@@ -17,7 +17,7 @@ vendor / ODM 指纹可能沿用旧平台，不能替代 system 的 SDK 或作为
 ### 跨版本参考隔离
 
 生产检索要求 system SDK 34、Android 14、HyperOS 主版本 1 的属性同时成立，目录名称不授予权限。
-已确认的 fuxi CN、fuxi TW、munch ID 与 duchamp CN 可作 A14 静态取证；实际 duchamp 目录标签保留原拼写，以 ODM device 为准，不移动解析目录。
+样本及功能准入见[兼容矩阵](../../COMPATIBILITY.md#a14-样本与能力准入)。Catalog 以 ODM device 识别 duchamp，保留原目录名。
 `dada-cn-A16-HyperOS3` 的实际 SDK 36 / HyperOS 3 标记为 `REFERENCE_ONLY`；未知元数据标 `UNCLASSIFIED`。
 旧 Catalog 升级后先拒绝未分类样本，显式 `update` 只刷新身份；默认不遍历 reference 的内容。
 默认 `locate / search / prepare / compare / benchmark` 均排除参考样本，显式给出其名称也不会绕过。

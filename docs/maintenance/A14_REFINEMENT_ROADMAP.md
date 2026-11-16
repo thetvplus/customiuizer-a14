@@ -122,6 +122,8 @@
 - 音量 HUD 的 PreDraw 与输入区域分别消费原生位置，系统在 ViewRoot 保留 Insets 快照。媒体样式复用 Drawable，ConstraintSet 只在载入或重绑失效后准备。岛体保留按可见性停止的采样和有限动画，重复效果对象由 Android 14 的 RenderNode 去重。Dock、Duo、按需安装及扫描桥保留现有触发与释放边界。
 - 锁屏专辑图仍按 Bitmap 代际和目标尺寸去重，使用有界结果缓存和串行后台模糊。真实缓存命中率、未命中频率与宿主 CPU 成本待测。当前候选的输入延迟、UI / RenderThread P95/P99、GPU 和长期 PSS 也需同 ROM 的前后对照，下面的历史开关数据保留其原有证据边界。
 - 音量自动隐藏直接读取已发布的 `PrefMap`，同一回调只取当前分支所需的一个设置。动态岛同一可见所有者复用弱引用，无变换时直接使用屏幕矩形。Dock 已读取的模糊策略用于当次材质安装，DECK 单次布局复用已读取的卡片边界。当前改动的真实宿主交互与可比设备性能待验。
+- 通知自动展开通过同一 `PrefMap` 版本读取模式和名单。无效模式直接交还原生，使用 `StatusBarNotification.getPackageName()` 的虚调用保留 ROM 包名覆写。fuxi CN / TW、duchamp CN、munch ID 和从连接设备只读取得的 xaga 样本均确认 `RowAppearanceCoordinator.onAfterRenderEntry` 调用该宿主的 `setFeedbackIcon`。fuxi CN 的 Smali 另确认原生先执行自身展开决定，覆写 getter 读取 `mPkgName`。这是静态调用证据，当前候选的 Hook 成功与端到端展开仍待实机。
+- 偏好监听已注册时，启动重试直接读取发布快照。Wi-Fi 自动化读取 VPN 目标时只取类型和 ID，完整应用名单仍由 VPN 自动切换消费。
 
 ### 实机成本与 Native 取舍（2026-11-08）
 

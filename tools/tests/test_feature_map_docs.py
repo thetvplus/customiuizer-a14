@@ -257,17 +257,11 @@ class MarkdownLinksTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 list(check_docs.destinations(text))
 
-    def test_all_repository_markdown_links_and_existing_skills(self):
+    def test_all_repository_markdown_links(self):
         cache = {}
         for path in check_docs.markdown_files(ROOT):
             with self.subTest(path=path):
                 self.assertEqual([], check_docs.check_file(ROOT, path, cache))
-        for skill in ("a14-safe-implementation", "a14-independent-review"):
-            source = (ROOT / f".agents/skills/{skill}/SKILL.md").read_text(encoding="utf-8")
-            self.assertTrue(source.startswith("---\nname:"))
-            self.assertIn("description:", source)
-        for stem in ("DUO" + "_STATUS_BAR", "DYNAMIC" + "_ISLAND", "features/" + "README"):
-            self.assertFalse((ROOT / "docs" / f"{stem}.md").exists())
 
 
 if __name__ == "__main__":

@@ -27,6 +27,7 @@ import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
+import tv.withaibuild.customiuizer.testsupport.installPreferenceReadProbe
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 private val NETSPEED_NUMBER_VIEW_TAG = ResourceHooks.getFakeResId("netspeed_number_view")
@@ -62,10 +63,7 @@ private fun countingPrefMap(values: Map<String, Any>): Pair<PrefMap, CountingMap
     val prefMap = PrefMap().apply { clear() }
     val countingMap = CountingMap().apply { putAll(values) }
 
-    val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-    snapshotField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    (snapshotField.get(prefMap) as AtomicReference<Map<String, Any>>).set(countingMap)
+    prefMap.installPreferenceReadProbe(countingMap)
 
     return prefMap to countingMap
 }
@@ -73,10 +71,7 @@ private fun countingPrefMap(values: Map<String, Any>): Pair<PrefMap, CountingMap
 private fun countingMainPrefs(values: Map<String, Any>): CountingMap {
     val countingMap = CountingMap().apply { putAll(values) }
     MainModule.mPrefs.clear()
-    val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-    snapshotField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+    MainModule.mPrefs.installPreferenceReadProbe(countingMap)
     return countingMap
 }
 
