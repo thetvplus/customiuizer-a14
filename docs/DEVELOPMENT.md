@@ -14,7 +14,7 @@
 
 1. 在任务分支保留可独立验证和回退的阶段提交。需要把多个任务纳入同一正式版时，用短期 `release/<version>` 分支整合，核对范围、冲突与各项验证，再发 Squash PR。
 2. 从上一实际公开版的源码 Tag 到新版本 Tag，目标是 1–2 个 `master` 第一父提交。通常一个发行 Squash 即可；需要独立回退或提前交付的维护可占第二个提交。安全修复或仓库治理必须单独落地时，在 PR 说明超出目标的原因。小改动可随下一版整合。
-3. Squash 标题采用 `release: <version> — <版本主题>`。从用户可感知的动作或变化取短句，紧扣实际内容。例如 `release: r14.27.7 — Let cards glide, keep location on cue`。独立维护保留 `docs:`、`ci:`、`security:` 或 `fix:` 前缀，并写明具体对象。涉及范围、取舍和验证写在 PR，用户变化写入双语 Changelog。
+3. Squash 标题采用 `release: <version> — <版本主题>`，主题取自用户可感知的变化。独立维护保留 `docs:`、`ci:`、`security:` 或 `fix:` 前缀，并写明具体对象。范围、取舍和验证写入 PR，用户变化写入双语 Changelog。
 4. Squash 后按最终提交的树、有效差异和验证核对成果。用 `git rev-list --first-parent --count <上一公开Tag>..<新Tag>` 核对提交数。未发布的集成问题通过新 PR 修正；已公开提交、Tag 和签名来源按 [RELEASE](RELEASE.md) 保留。合并、Tag 和正式发布各自使用当前任务的明确授权。
 
 ### Issue 收口

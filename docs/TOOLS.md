@@ -53,7 +53,7 @@ python tools/query_aux_data.py context --key launcher_dock_background --full
 | `hazards` | `tools/SOURCE_HAZARD_BASELINE.json` | 已存基线，查询不重新扫描或接受新增风险 |
 | `context` | Process Matrix、当前源码 / 设置 JSON / 平台资源、既有 ROM Catalog；`agent_context.py` 仅为此入口的实现模块 | 原设置键精确关联，次级键与词法依赖标为 CANDIDATE；引用实际源码行号，不把候选调用图或 DEX 当实机证据 |
 
-`context` 默认读取当前工作区；`--repo-root` 可指定最新有效源码，不能默认为远端 main。
+`context` 默认读取当前工作区。用 `--repo-root` 指定其他有效源码工作区。
 它在既有外部 Catalog SQLite 中按工作区、文件状态及提取器哈希增量保存源码事实，不另建数据库 / MCP。
 只枚举 Git 的相关源码文件名并检查状态；热查询不重读未变化的源码，不扫描 ROM。新文件、未提交修改、删除和切换源码会使相应事实失效。
 源码 / 设置 JSON / 平台资源是事实来源，Matrix 只提供路由视图；`matrixStale` 或 `matrixWarning` 出现时先核对并运行原生成器。
