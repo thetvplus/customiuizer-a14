@@ -381,7 +381,6 @@
     <string name="system_animationscale_window_title">ウィンドウ</string>
     <string name="system_animationscale_transition_title">トランジション</string>
     <string name="system_animationscale_animator_title">Animator再生時間</string>
-    <string name="launcher_gestures">ジェスチャー</string>
     <string name="launcher_gestures_action">アクション</string>
     <string name="launcher_gestures_setting">トグルの設定</string>
     <string name="launcher_gestures_launch">起動をするアプリ</string>
@@ -560,7 +559,6 @@
     <string name="appsort_frequency">使用頻度</string>
     <string name="appsort_storage">使用済みのストレージ</string>
     <string name="appsort_install">インストール日時</string>
-    <string name="gboard">キーボード配置</string>
     <string name="calls">通話</string>
     <string name="array_default">デフォルト</string>
     <string name="array_system_default">システム</string>
@@ -1004,7 +1002,6 @@
     <string name="prefs_group_style">スタイル</string>
     <string name="prefs_group_behavior">動作</string>
     <string name="prefs_group_layout">レイアウト</string>
-    <string name="prefs_group_volume_panel">音量パネル</string>
     <string name="prefs_group_animation_wallpaper">アニメーションと壁紙</string>
     <string name="prefs_group_widgets">ウィジェット</string>
     <string name="prefs_group_workspace_gestures">ホーム画面のジェスチャー</string>
@@ -1021,7 +1018,6 @@
     <string name="system_toast_center_title">垂直方向の調整</string>
     <string name="system_toast_center_summ">正値で下、負値で上に移動します。</string>
     <string name="prefs_group_actions">操作</string>
-    <string name="prefs_group_animation">アニメーション</string>
     <string name="prefs_group_appearance">配置と外観</string>
     <string name="prefs_group_apps">アプリ</string>
     <string name="prefs_group_authentication">認証</string>
@@ -1037,11 +1033,8 @@
     <string name="prefs_group_compatibility">互換性</string>
     <string name="prefs_group_connectivity">接続</string>
     <string name="prefs_group_content">表示内容</string>
-    <string name="prefs_group_daily">通話と入力</string>
     <string name="prefs_group_devices">デバイスと接続</string>
-    <string name="prefs_group_display_sound">画面・音・バイブ</string>
     <string name="prefs_group_dual_sim">デュアル SIM</string>
-    <string name="prefs_group_feedback">ジェスチャーと通知</string>
     <string name="prefs_group_image">画像と保存先</string>
     <string name="prefs_group_interaction">操作</string>
     <string name="prefs_group_lock_content">ロック画面の内容</string>
@@ -1057,18 +1050,14 @@
     <string name="prefs_group_rules">ルールと制限</string>
     <string name="prefs_group_schedule">時間帯</string>
     <string name="prefs_group_screen_timeout">画面オフと充電</string>
-    <string name="prefs_group_screenshot">スクリーンショット</string>
-    <string name="prefs_group_security_advanced">セキュリティと詳細設定</string>
     <string name="prefs_group_securitycenter">セキュリティアプリ</string>
     <string name="prefs_group_sharing">共有と開く方法</string>
     <string name="prefs_group_sidebar">サイドバー</string>
     <string name="prefs_group_signal_text">電波強度の数値表示</string>
     <string name="prefs_group_spacing">余白と配置</string>
-    <string name="prefs_group_status_data">時計・バッテリー・データ</string>
     <string name="prefs_group_status_icons">ステータスアイコン</string>
     <string name="prefs_group_system_status">システムの状態</string>
     <string name="prefs_group_system_tools">システムツール</string>
-    <string name="prefs_group_system_ui">システム UI</string>
     <string name="prefs_group_telemetry">診断と統計</string>
     <string name="prefs_group_text">文字のスタイル</string>
     <string name="prefs_group_tiles">クイック設定タイル</string>
@@ -1079,7 +1068,6 @@
     <string name="system_mods_backlight">明るさ</string>
     <string name="preference_unavailable">非対応</string>
     <string name="preference_applies_immediately">有効化後は即時調整可能</string>
-    <string name="launcher_mods_other">ホームの配置</string>
     <string name="system_volumedialogdelay_expanded_title">展開時の自動非表示</string>
 
     <string name="system_clock_fixed_width_title">幅を固定</string>
@@ -1203,7 +1191,6 @@
     <string name="launcher_folder_icon_blur_summ">ランチャー標準のぼかしを使用します。システムの背景ぼかしと標準アイコンが必要です。適用するにはランチャーを再起動してください。</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">ネットワーク接続</string>
     <string name="system_vpnauto_title">VPN の自動切り替え</string>
     <string name="system_vpnauto_summary">選択したアプリを開くと、指定した VPN に接続</string>
     <string name="system_vpnauto_enable_summary">初めて有効にした後は端末を再起動してください。その後のルール変更では再起動は不要です。</string>
@@ -1316,7 +1303,6 @@
     <string name="system_recents_deck_motion_title">iOS ウィンドウアニメーション</string>
     <string name="system_recents_deck_motion_summ">アプリを開く動きと履歴への移行を調整します。オフでは標準の動作を使います。ランチャーの再起動で反映されます。</string>
     <string name="system_ios_desktop_title">iOS タスクカード</string>
-    <string name="system_ios_volume_group_title">iOS 音量</string>
     <string name="controls_ios_home_indicator_title">iOS ホームインジケータ</string>
     <string name="controls_ios_home_indicator_summ">対応する ROM、全画面ジェスチャー、表示中のシステムインジケーターが必要です。設定 → ホーム画面 → システムナビゲーションでジェスチャーを選び、全画面インジケーターの非表示をオフにしてください。本モジュールのジェスチャーライン非表示もオフにしてください。メニュー名は ROM により異なります。システム UI の再起動で反映されます。</string>
     <string name="settings_category_statusbar">ステータスバーとDynamic Island</string>
@@ -1349,7 +1335,6 @@
     <string name="settings_ios_volume">iOS音量HUD</string>
     <string name="settings_status_icons">ステータスアイコン</string>
     <string name="settings_launcher_layout">ホームの配置とアニメーション</string>
-    <string name="settings_app_behavior">アプリの動作</string>
     <string name="settings_sound_vibration">サウンドとバイブ</string>
     <string name="settings_keywords_controls">ボタンとジェスチャー buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">アプリとメンテナンス apps tools maintenance compatibility</string>

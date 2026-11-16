@@ -403,7 +403,6 @@
     <string name="system_animationscale_window_title">窗口</string>
     <string name="system_animationscale_transition_title">过渡</string>
     <string name="system_animationscale_animator_title">值动画</string>
-    <string name="launcher_gestures">手势</string>
     <string name="launcher_gestures_action">动作</string>
     <string name="launcher_gestures_setting">切换设置</string>
     <string name="launcher_gestures_launch">启动应用</string>
@@ -584,7 +583,6 @@
     <string name="appsort_frequency">使用频率</string>
     <string name="appsort_storage">存储占用</string>
     <string name="appsort_install">安装时间</string>
-    <string name="gboard">键盘布局</string>
     <string name="calls">通话</string>
     <string name="array_default">默认</string>
     <string name="array_system_default">跟随系统</string>
@@ -1017,7 +1015,6 @@
     <string name="prefs_group_style">样式</string>
     <string name="prefs_group_behavior">行为</string>
     <string name="prefs_group_layout">布局</string>
-    <string name="prefs_group_volume_panel">音量面板</string>
     <string name="prefs_group_animation_wallpaper">动画与壁纸</string>
     <string name="prefs_group_widgets">小部件</string>
     <string name="prefs_group_workspace_gestures">桌面手势</string>
@@ -1031,7 +1028,6 @@
     <string name="system_toast_center_title">垂直偏移</string>
     <string name="system_toast_center_summ">正值下移，负值上移。</string>
     <string name="prefs_group_actions">动作</string>
-    <string name="prefs_group_animation">动画</string>
     <string name="prefs_group_appearance">布局与外观</string>
     <string name="prefs_group_apps">应用</string>
     <string name="prefs_group_authentication">身份验证</string>
@@ -1047,11 +1043,8 @@
     <string name="prefs_group_compatibility">兼容性</string>
     <string name="prefs_group_connectivity">连接</string>
     <string name="prefs_group_content">显示内容</string>
-    <string name="prefs_group_daily">通话与输入</string>
     <string name="prefs_group_devices">设备与连接</string>
-    <string name="prefs_group_display_sound">屏幕、声音与振动</string>
     <string name="prefs_group_dual_sim">双卡信号</string>
-    <string name="prefs_group_feedback">手势与提示</string>
     <string name="prefs_group_image">图像与保存</string>
     <string name="prefs_group_interaction">交互</string>
     <string name="prefs_group_lock_content">锁屏内容</string>
@@ -1067,18 +1060,14 @@
     <string name="prefs_group_rules">规则与限制</string>
     <string name="prefs_group_schedule">时段</string>
     <string name="prefs_group_screen_timeout">息屏与充电</string>
-    <string name="prefs_group_screenshot">截图</string>
-    <string name="prefs_group_security_advanced">安全与高级设置</string>
     <string name="prefs_group_securitycenter">手机管家</string>
     <string name="prefs_group_sharing">分享与打开方式</string>
     <string name="prefs_group_sidebar">侧边栏</string>
     <string name="prefs_group_signal_text">信号数字</string>
     <string name="prefs_group_spacing">间距与对齐</string>
-    <string name="prefs_group_status_data">时钟、电量与数据</string>
     <string name="prefs_group_status_icons">状态图标</string>
     <string name="prefs_group_system_status">系统状态</string>
     <string name="prefs_group_system_tools">系统工具</string>
-    <string name="prefs_group_system_ui">系统界面</string>
     <string name="prefs_group_telemetry">诊断与统计</string>
     <string name="prefs_group_text">文字样式</string>
     <string name="prefs_group_tiles">快捷磁贴</string>
@@ -1089,7 +1078,6 @@
     <string name="system_mods_backlight">亮度</string>
     <string name="preference_unavailable">不支持</string>
     <string name="preference_applies_immediately">启用后可即时调整</string>
-    <string name="launcher_mods_other">桌面布局</string>
     <string name="system_volumedialogdelay_expanded_title">展开时自动隐藏</string>
 
     <string name="system_clock_fixed_width_title">固定宽度</string>
@@ -1216,7 +1204,6 @@
     <string name="launcher_folder_icon_blur_summ">使用桌面原生模糊绘制文件夹图标背景。需系统支持并启用背景模糊及默认图标，重启桌面后生效。</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">网络连接</string>
     <string name="system_vpnauto_title">VPN 自动开关</string>
     <string name="system_vpnauto_summary">打开选定应用时，自动连接一个指定 VPN</string>
     <string name="system_vpnauto_enable_summary">首次启用后需重启设备，之后修改规则无需重启。</string>
@@ -1330,7 +1317,6 @@
     <string name="system_recents_deck_motion_title">iOS 窗口动效</string>
     <string name="system_recents_deck_motion_summ">为打开应用和进入堆叠使用 iOS 动效；关闭后保留堆叠，使用系统动效。更改后重启桌面。</string>
     <string name="system_ios_desktop_title">iOS 任务卡片</string>
-    <string name="system_ios_volume_group_title">iOS 音量</string>
     <string name="controls_ios_home_indicator_title">iOS 手势指示条</string>
     <string name="controls_ios_home_indicator_summ">使用全面屏手势并保留系统指示条。修改后重启系统界面和桌面生效。</string>
     <string name="settings_category_statusbar">状态栏与动态岛</string>
@@ -1363,7 +1349,6 @@
     <string name="settings_ios_volume">iOS 音量 HUD</string>
     <string name="settings_status_icons">状态图标</string>
     <string name="settings_launcher_layout">桌面布局与动画</string>
-    <string name="settings_app_behavior">应用行为</string>
     <string name="settings_sound_vibration">声音与振动</string>
     <string name="settings_keywords_controls">按键与手势 buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">应用与维护 apps tools maintenance compatibility</string>

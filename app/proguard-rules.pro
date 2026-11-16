@@ -1,6 +1,5 @@
 # Xposed
 -adaptresourcefilecontents META-INF/xposed/java_init.list
--dontwarn io.github.libxposed.annotation.**
 -keep,allowoptimization,allowobfuscation public class * extends io.github.libxposed.api.XposedModule {
     public <init>();
 }
@@ -23,6 +22,12 @@
 -repackageclasses
 
 -dontwarn kotlin.jvm.internal.SourceDebugExtension
--dontwarn android.**
--dontwarn miui.**
+# Private types in signatures of the compileOnly HyperOS framework stubs.
+# The module does not link these types directly.
+-dontwarn android.app.ActivityTaskManager$RootTaskInfo
+-dontwarn android.content.pm.ParceledListSlice
+-dontwarn android.util.Singleton
+-dontwarn com.android.internal.app.ILocationBlurry
+-dontwarn miui.content.res.ThemeResources$LoadThemeConfigHelper
+-dontwarn miui.content.res.ThemeResources$MetaData
 -dontnote android.**, miui.**, com.android.**

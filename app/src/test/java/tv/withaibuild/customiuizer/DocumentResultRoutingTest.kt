@@ -17,9 +17,9 @@ import org.robolectric.annotation.Config
 class RestoreResultPage : PreferenceFragmentBase() {
     var restored: Uri? = null
     var viewCreations = 0
-    override fun onCreateView(inflater: android.view.LayoutInflater, container: android.view.ViewGroup?, state: Bundle?): android.view.View {
+    override fun onCreateView(inflater: android.view.LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?): android.view.View {
         viewCreations++
-        return super.onCreateView(inflater, container, state)
+        return super.onCreateView(inflater, container, savedInstanceState)
     }
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceScreen = preferenceManager.createPreferenceScreen(requireContext())

@@ -376,7 +376,6 @@
     <string name="system_animationscale_window_title">Okna</string>
     <string name="system_animationscale_transition_title">Přechody</string>
     <string name="system_animationscale_animator_title">Hodnota animátorů</string>
-    <string name="launcher_gestures">Gesta</string>
     <string name="launcher_gestures_action">Akce</string>
     <string name="launcher_gestures_setting">Nastavení přepínání</string>
     <string name="launcher_gestures_launch">Aplikace ke spuštění</string>
@@ -559,7 +558,6 @@
     <string name="appsort_frequency">Četnost použití</string>
     <string name="appsort_storage">Využití úložiště</string>
     <string name="appsort_install">Čas instalace</string>
-    <string name="gboard">Rozložení klávesnice</string>
     <string name="calls">Hovory</string>
     <string name="array_default">Výchozí</string>
     <string name="array_system_default">Systém</string>
@@ -1011,7 +1009,6 @@
     <string name="prefs_group_style">Styl</string>
     <string name="prefs_group_behavior">Chování</string>
     <string name="prefs_group_layout">Rozložení</string>
-    <string name="prefs_group_volume_panel">Panel hlasitosti</string>
     <string name="prefs_group_animation_wallpaper">Animace a tapeta</string>
     <string name="prefs_group_widgets">Widgety</string>
     <string name="prefs_group_workspace_gestures">Gesta domovské obrazovky</string>
@@ -1028,7 +1025,6 @@
     <string name="system_toast_center_title">Svislý posun</string>
     <string name="system_toast_center_summ">Kladná hodnota posune dolů, záporná nahoru.</string>
     <string name="prefs_group_actions">Akce</string>
-    <string name="prefs_group_animation">Animace</string>
     <string name="prefs_group_appearance">Rozložení a vzhled</string>
     <string name="prefs_group_apps">Aplikace</string>
     <string name="prefs_group_authentication">Ověření</string>
@@ -1044,11 +1040,8 @@
     <string name="prefs_group_compatibility">Kompatibilita</string>
     <string name="prefs_group_connectivity">Připojení</string>
     <string name="prefs_group_content">Obsah</string>
-    <string name="prefs_group_daily">Hovory a zadávání</string>
     <string name="prefs_group_devices">Zařízení a připojení</string>
-    <string name="prefs_group_display_sound">Obrazovka, zvuk a vibrace</string>
     <string name="prefs_group_dual_sim">Dvě SIM</string>
-    <string name="prefs_group_feedback">Gesta a odezva</string>
     <string name="prefs_group_image">Obrázek a uložení</string>
     <string name="prefs_group_interaction">Ovládání</string>
     <string name="prefs_group_lock_content">Obsah zamykací obrazovky</string>
@@ -1064,18 +1057,14 @@
     <string name="prefs_group_rules">Pravidla a omezení</string>
     <string name="prefs_group_schedule">Časový plán</string>
     <string name="prefs_group_screen_timeout">Zhasnutí a nabíjení</string>
-    <string name="prefs_group_screenshot">Snímky obrazovky</string>
-    <string name="prefs_group_security_advanced">Zabezpečení a pokročilé</string>
     <string name="prefs_group_securitycenter">Zabezpečení</string>
     <string name="prefs_group_sharing">Sdílení a otevírání</string>
     <string name="prefs_group_sidebar">Postranní panel</string>
     <string name="prefs_group_signal_text">Číselná síla signálu</string>
     <string name="prefs_group_spacing">Odstupy a zarovnání</string>
-    <string name="prefs_group_status_data">Hodiny, baterie a údaje</string>
     <string name="prefs_group_status_icons">Stavové ikony</string>
     <string name="prefs_group_system_status">Stav systému</string>
     <string name="prefs_group_system_tools">Systémové nástroje</string>
-    <string name="prefs_group_system_ui">Systémové rozhraní</string>
     <string name="prefs_group_telemetry">Diagnostika a statistiky</string>
     <string name="prefs_group_text">Styl textu</string>
     <string name="prefs_group_tiles">Dlaždice rychlého nastavení</string>
@@ -1086,7 +1075,6 @@
     <string name="system_mods_backlight">Jas</string>
     <string name="preference_unavailable">Nedostupné</string>
     <string name="preference_applies_immediately">Okamžité úpravy po aktivaci</string>
-    <string name="launcher_mods_other">Rozložení plochy</string>
     <string name="system_volumedialogdelay_expanded_title">Automatické skrytí po rozbalení</string>
 
     <string name="system_clock_fixed_width_title">Pevná šířka</string>
@@ -1210,7 +1198,6 @@
     <string name="launcher_folder_icon_blur_summ">Použije nativní rozmazání ikon složek. Vyžaduje systémové rozmazání pozadí a výchozí ikony. Pro použití restartujte launcher.</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">Síťová připojení</string>
     <string name="system_vpnauto_title">Automatická VPN</string>
     <string name="system_vpnauto_summary">Připojit jednu VPN při otevření vybrané aplikace</string>
     <string name="system_vpnauto_enable_summary">Po prvním zapnutí restartujte zařízení. Další změny pravidel nevyžadují restart.</string>
@@ -1323,7 +1310,6 @@
     <string name="system_recents_deck_motion_title">Animace oken iOS</string>
     <string name="system_recents_deck_motion_summ">Upraví otevírání aplikací a přechod do přehledu. Vypnutím obnovíte původní animace. Restartujte spouštěč.</string>
     <string name="system_ios_desktop_title">Karty úloh iOS</string>
-    <string name="system_ios_volume_group_title">Hlasitost iOS</string>
     <string name="controls_ios_home_indicator_title">Indikátor gest iOS</string>
     <string name="controls_ios_home_indicator_summ">Vyžaduje gesta na celou obrazovku, viditelný systémový indikátor a podporovanou ROM. V Nastavení → Domovská obrazovka → Navigace systému zvolte gesta a vypněte skrytí indikátoru. Vypněte také skrytí čáry gest v tomto modulu. Názvy nabídek se mohou lišit. Restartujte systémové rozhraní.</string>
     <string name="settings_category_statusbar">Stavový řádek a Dynamic Island</string>
@@ -1356,7 +1342,6 @@
     <string name="settings_ios_volume">Panel hlasitosti iOS</string>
     <string name="settings_status_icons">Stavové ikony</string>
     <string name="settings_launcher_layout">Rozložení plochy a animace</string>
-    <string name="settings_app_behavior">Chování aplikací</string>
     <string name="settings_sound_vibration">Zvuk a vibrace</string>
     <string name="settings_keywords_controls">Tlačítka a gesta buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">Aplikace a údržba apps tools maintenance compatibility</string>

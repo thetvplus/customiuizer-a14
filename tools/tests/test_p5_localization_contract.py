@@ -367,46 +367,30 @@ class P5LocalizationContractTest(unittest.TestCase):
                         violations.append(f"{f.relative_to(REPO)} android:{attr}={val!r}")
         self.assertFalse(violations, "\n".join(violations))
 
-    def test_user_visible_strings_exist_in_all_formal_locales(self):
-        base, base_non_tr, _ = _load_strings(RES / "values" / "strings.xml")
-        locales = discover_formal_locales()
-        locale_data = {loc: _load_strings(RES / loc / "strings.xml") for loc in locales}
-        locale_strings = {loc: d[0] for loc, d in locale_data.items()}
-
-        required = _find_user_visible_string_refs() - base_non_tr
-
-        missing_base = [k for k in required if k not in base]
-        self.assertFalse(missing_base, f"Missing in values: {missing_base}")
-
-        missing_by_locale = {}
-        for loc in locales:
-            missing = [k for k in required if k not in locale_strings[loc]]
-            if missing:
-                missing_by_locale[loc] = missing
-        self.assertFalse(missing_by_locale, f"Missing translations: {missing_by_locale}")
-
-    def test_placeholder_parity(self):
+    def test_user_visible_strings_exist_and_preserve_placeholders(self):
         base, base_non_tr, base_non_fmt = _load_strings(RES / "values" / "strings.xml")
-        locales = discover_formal_locales()
-        locale_data = {loc: _load_strings(RES / loc / "strings.xml") for loc in locales}
-        locale_strings = {loc: d[0] for loc, d in locale_data.items()}
-        locale_non_fmt = {loc: d[2] for loc, d in locale_data.items()}
-
         required = _find_user_visible_string_refs() - base_non_tr
+        missing_base = sorted(required - base.keys())
+        with self.subTest(locale="values"):
+            self.assertFalse(missing_base, f"Missing in values: {missing_base}")
 
-        mismatches = []
-        for loc in locales:
-            loc_map = locale_strings[loc]
-            for key in required:
-                if key not in base or key not in loc_map:
-                    continue
-                if key in base_non_fmt or key in locale_non_fmt[loc]:
-                    continue
-                base_contract = _extract_placeholders(base[key])
-                loc_contract = _extract_placeholders(loc_map[key])
-                if base_contract != loc_contract:
-                    mismatches.append(f"{loc}/{key}: {base_contract} != {loc_contract}")
-        self.assertFalse(mismatches, "\n".join(mismatches[:50]))
+        base_formats = {
+            key: _extract_placeholders(base[key])
+            for key in (required & base.keys()) - base_non_fmt
+        }
+        for locale in discover_formal_locales():
+            localized, _, non_formatted = _load_strings(RES / locale / "strings.xml")
+            with self.subTest(locale=locale, contract="presence"):
+                missing = sorted(required - localized.keys())
+                self.assertFalse(missing, f"Missing translations: {missing}")
+            mismatches = []
+            for key in sorted((base_formats.keys() & localized.keys()) - non_formatted):
+                expected = base_formats[key]
+                actual = _extract_placeholders(localized[key])
+                if expected != actual:
+                    mismatches.append(f"{key}: {expected} != {actual}")
+            with self.subTest(locale=locale, contract="placeholders"):
+                self.assertFalse(mismatches, "\n".join(mismatches[:50]))
 
     def test_user_visible_string_arrays_have_resolved_translations(self):
         """Base string-arrays that reference @string/... must resolve to

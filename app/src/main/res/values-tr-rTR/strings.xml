@@ -335,7 +335,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_animationscale_window_title">Pencereler</string>
     <string name="system_animationscale_transition_title">Geçişler</string>
     <string name="system_animationscale_animator_title">Değer animatörleri</string>
-    <string name="launcher_gestures">Hareketler</string>
     <string name="launcher_gestures_action">Hareketler</string>
     <string name="launcher_gestures_setting">Geçiş için ayar</string>
     <string name="launcher_gestures_launch">Başlatılacak uygulama</string>
@@ -505,7 +504,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="appsort_frequency">Kullanım sıklığı</string>
     <string name="appsort_storage">Kullanılan depolama</string>
     <string name="appsort_install">Kurulum süresi</string>
-    <string name="gboard">Klavye düzeni</string>
     <string name="calls">Aramalar</string>
     <string name="array_default">Varsayılan</string>
     <string name="array_system_default">Sistem</string>
@@ -1010,7 +1008,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="prefs_group_style">Stil</string>
     <string name="prefs_group_behavior">Davranış</string>
     <string name="prefs_group_layout">Düzen</string>
-    <string name="prefs_group_volume_panel">Ses paneli</string>
     <string name="prefs_group_animation_wallpaper">Animasyonlar ve duvar kağıdı</string>
     <string name="prefs_group_widgets">Widget\'lar</string>
     <string name="prefs_group_workspace_gestures">Ana ekran hareketleri</string>
@@ -1027,7 +1024,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_toast_center_title">Dikey kaydırma</string>
     <string name="system_toast_center_summ">Pozitif aşağı, negatif yukarı taşır.</string>
     <string name="prefs_group_actions">Eylemler</string>
-    <string name="prefs_group_animation">Animasyonlar</string>
     <string name="prefs_group_appearance">Düzen ve görünüm</string>
     <string name="prefs_group_apps">Uygulamalar</string>
     <string name="prefs_group_authentication">Kimlik doğrulama</string>
@@ -1043,11 +1039,8 @@ ss - iki basamaklı saniye(09)</string>
     <string name="prefs_group_compatibility">Uyumluluk</string>
     <string name="prefs_group_connectivity">Bağlantılar</string>
     <string name="prefs_group_content">İçerik</string>
-    <string name="prefs_group_daily">Aramalar ve klavye</string>
     <string name="prefs_group_devices">Cihazlar ve bağlantılar</string>
-    <string name="prefs_group_display_sound">Ekran, ses ve titreşim</string>
     <string name="prefs_group_dual_sim">Çift SIM</string>
-    <string name="prefs_group_feedback">Hareketler ve bildirimler</string>
     <string name="prefs_group_image">Görüntü ve kayıt</string>
     <string name="prefs_group_interaction">Etkileşim</string>
     <string name="prefs_group_lock_content">Kilit ekranı içeriği</string>
@@ -1063,18 +1056,14 @@ ss - iki basamaklı saniye(09)</string>
     <string name="prefs_group_rules">Kurallar ve kısıtlamalar</string>
     <string name="prefs_group_schedule">Zamanlama</string>
     <string name="prefs_group_screen_timeout">Ekran kapatma ve şarj</string>
-    <string name="prefs_group_screenshot">Ekran görüntüleri</string>
-    <string name="prefs_group_security_advanced">Güvenlik ve gelişmiş</string>
     <string name="prefs_group_securitycenter">Güvenlik uygulaması</string>
     <string name="prefs_group_sharing">Paylaşma ve açma</string>
     <string name="prefs_group_sidebar">Kenar çubuğu</string>
     <string name="prefs_group_signal_text">Sayısal sinyal gücü</string>
     <string name="prefs_group_spacing">Boşluk ve hizalama</string>
-    <string name="prefs_group_status_data">Saat, pil ve veriler</string>
     <string name="prefs_group_status_icons">Durum simgeleri</string>
     <string name="prefs_group_system_status">Sistem durumu</string>
     <string name="prefs_group_system_tools">Sistem araçları</string>
-    <string name="prefs_group_system_ui">Sistem arayüzü</string>
     <string name="prefs_group_telemetry">Tanılama ve istatistik</string>
     <string name="prefs_group_text">Metin stili</string>
     <string name="prefs_group_tiles">Hızlı ayar kutucukları</string>
@@ -1085,7 +1074,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_mods_backlight">Parlaklık</string>
     <string name="preference_unavailable">Desteklenmiyor</string>
     <string name="preference_applies_immediately">Etkinleştirmeden sonra anlık ayar</string>
-    <string name="launcher_mods_other">Ana ekran düzeni</string>
     <string name="system_volumedialogdelay_expanded_title">Genişletilmişken otomatik gizle</string>
 
     <string name="system_clock_fixed_width_title">Sabit genişlik</string>
@@ -1209,7 +1197,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="launcher_folder_icon_blur_summ">Klasörlerde yerel bulanıklığı kullanır. Sistem arka plan bulanıklığı ve varsayılan simgeler gerektirir. Uygulamak için başlatıcıyı yeniden başlatın.</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">Ağ bağlantıları</string>
     <string name="system_vpnauto_title">Otomatik VPN</string>
     <string name="system_vpnauto_summary">Seçilen bir uygulama açıldığında tek bir VPN bağla</string>
     <string name="system_vpnauto_enable_summary">İlk etkinleştirmeden sonra cihazı yeniden başlatın. Sonrasında kurallar yeniden başlatmadan değiştirilebilir.</string>
@@ -1322,7 +1309,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_recents_deck_motion_title">iOS pencere hareketi</string>
     <string name="system_recents_deck_motion_summ">Uygulama açılışını ve son görevlere geçişi düzenler. Özgün hareket için kapatın. Başlatıcıyı yeniden başlatın.</string>
     <string name="system_ios_desktop_title">iOS görev kartları</string>
-    <string name="system_ios_volume_group_title">iOS ses düzeyi</string>
     <string name="controls_ios_home_indicator_title">iOS hareket göstergesi</string>
     <string name="controls_ios_home_indicator_summ">Tam ekran hareketleri, görünür sistem göstergesi ve desteklenen ROM gerekir. Ayarlar → Ana ekran → Sistem gezintisi altında Hareketler seçeneğini seçin ve Tam ekran göstergesini gizle seçeneğini kapatın. Bu modüldeki hareket çizgisini gizleme seçeneğini de kapatın. Menü adları ROM’a göre değişebilir. Sistem arayüzünü yeniden başlatın.</string>
     <string name="settings_category_statusbar">Durum çubuğu ve Dynamic Island</string>
@@ -1355,7 +1341,6 @@ ss - iki basamaklı saniye(09)</string>
     <string name="settings_ios_volume">iOS ses göstergesi</string>
     <string name="settings_status_icons">Durum simgeleri</string>
     <string name="settings_launcher_layout">Ana ekran düzeni ve animasyon</string>
-    <string name="settings_app_behavior">Uygulama davranışı</string>
     <string name="settings_sound_vibration">Ses ve titreşim</string>
     <string name="settings_keywords_controls">Tuşlar ve hareketler buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">Uygulamalar ve bakım apps tools maintenance compatibility</string>

@@ -48,13 +48,16 @@ class ModuleRegistrationTest {
         ReceiverRegistry.replaceModuleRegistration("staleRegKey", cleanup)
         assertEquals("first cleanup must not run on first install", 0, attempts.get())
 
-        ReceiverRegistry.replaceModuleRegistration("staleRegKey") {}
+        ReceiverRegistry.removeModuleRegistration("staleRegKey")
         assertEquals("first cleanup must run once when replaced", 1, attempts.get())
+        assertFalse(getModuleRegistrationsMap().containsKey("staleRegKey"))
         assertTrue("stale queue must contain the failed cleanup", getStaleModuleRegistrationsMap().containsKey("staleRegKey"))
 
-        ReceiverRegistry.replaceModuleRegistration("staleRegKey") {}
+        ReceiverRegistry.removeModuleRegistration("staleRegKey")
         assertEquals("cleanup must be retried exactly once", 2, attempts.get())
         assertFalse("stale queue must be empty after successful retry", getStaleModuleRegistrationsMap().containsKey("staleRegKey"))
+        ReceiverRegistry.removeModuleRegistration("staleRegKey")
+        assertEquals(2, attempts.get())
     }
 
     @Test
@@ -91,6 +94,19 @@ class ModuleRegistrationTest {
         assertEquals("a retry must detach its batch before calling user cleanup", 2, attempts.get())
         assertEquals(1, nestedCleanup.get())
         assertTrue(getStaleModuleRegistrationsMap().isEmpty())
+    }
+
+    @Test
+    fun removalPreservesRegistrationInstalledByCleanup() {
+        var replacementCleanups = 0
+        ReceiverRegistry.replaceModuleRegistration("reentry") {
+            ReceiverRegistry.replaceModuleRegistration("reentry") { replacementCleanups++ }
+        }
+
+        ReceiverRegistry.removeModuleRegistration("reentry")
+        assertEquals(0, replacementCleanups)
+        ReceiverRegistry.removeModuleRegistration("reentry")
+        assertEquals(1, replacementCleanups)
     }
 
     @Test

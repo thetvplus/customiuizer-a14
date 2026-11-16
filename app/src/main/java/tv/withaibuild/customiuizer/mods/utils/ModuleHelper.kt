@@ -691,6 +691,7 @@ class ModuleHelper private constructor() {
         fun replaceModuleRegistration(key: String, cleanup: Runnable): Boolean =
             ReceiverRegistry.replaceModuleRegistration(key, cleanup)
 
+        fun removeModuleRegistration(key: String) = ReceiverRegistry.removeModuleRegistration(key)
 
         /**
          * Exception handler for every coroutine scope the module runs inside a host process.
