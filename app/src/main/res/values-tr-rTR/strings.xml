@@ -1310,7 +1310,7 @@ ss - iki basamaklı saniye(09)</string>
     <string name="system_recents_deck_motion_summ">Uygulama açılışını ve son görevlere geçişi düzenler. Özgün hareket için kapatın. Başlatıcıyı yeniden başlatın.</string>
     <string name="system_ios_desktop_title">iOS görev kartları</string>
     <string name="controls_ios_home_indicator_title">iOS hareket göstergesi</string>
-    <string name="controls_ios_home_indicator_summ">Tam ekran hareketleri, görünür sistem göstergesi ve desteklenen ROM gerekir. Ayarlar → Ana ekran → Sistem gezintisi altında Hareketler seçeneğini seçin ve Tam ekran göstergesini gizle seçeneğini kapatın. Bu modüldeki hareket çizgisini gizleme seçeneğini de kapatın. Menü adları ROM’a göre değişebilir. Sistem arayüzünü yeniden başlatın.</string>
+    <string name="controls_ios_home_indicator_summ">Tam ekran hareketleri, görünür sistem göstergesi ve desteklenen ROM gerekir. Ayarlar → Ana ekran → Sistem gezintisi altında Hareketler seçeneğini seçin ve Tam ekran göstergesini gizle seçeneğini kapatın. Bu modüldeki hareket çizgisini gizleme seçeneğini de kapatın. Menü adları ROM’a göre değişebilir. Sistem arayüzünü ve başlatıcıyı yeniden başlatın.</string>
     <string name="settings_category_statusbar">Durum çubuğu ve Dynamic Island</string>
     <string name="settings_category_notifications">Bildirimler ve denetim merkezi</string>
     <string name="settings_category_system">Ekran ve kilit ekranı</string>

@@ -1311,7 +1311,7 @@
     <string name="system_recents_deck_motion_summ">Upraví otevírání aplikací a přechod do přehledu. Vypnutím obnovíte původní animace. Restartujte spouštěč.</string>
     <string name="system_ios_desktop_title">Karty úloh iOS</string>
     <string name="controls_ios_home_indicator_title">Indikátor gest iOS</string>
-    <string name="controls_ios_home_indicator_summ">Vyžaduje gesta na celou obrazovku, viditelný systémový indikátor a podporovanou ROM. V Nastavení → Domovská obrazovka → Navigace systému zvolte gesta a vypněte skrytí indikátoru. Vypněte také skrytí čáry gest v tomto modulu. Názvy nabídek se mohou lišit. Restartujte systémové rozhraní.</string>
+    <string name="controls_ios_home_indicator_summ">Vyžaduje gesta na celou obrazovku, viditelný systémový indikátor a podporovanou ROM. V Nastavení → Domovská obrazovka → Navigace systému zvolte gesta a vypněte skrytí indikátoru. Vypněte také skrytí čáry gest v tomto modulu. Názvy nabídek se mohou lišit. Restartujte systémové rozhraní a domovskou obrazovku.</string>
     <string name="settings_category_statusbar">Stavový řádek a Dynamic Island</string>
     <string name="settings_category_notifications">Oznámení a ovládací centrum</string>
     <string name="settings_category_system">Displej a zámek obrazovky</string>

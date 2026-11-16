@@ -1304,7 +1304,7 @@
     <string name="system_recents_deck_motion_summ">アプリを開く動きと履歴への移行を調整します。オフでは標準の動作を使います。ランチャーの再起動で反映されます。</string>
     <string name="system_ios_desktop_title">iOS タスクカード</string>
     <string name="controls_ios_home_indicator_title">iOS ホームインジケータ</string>
-    <string name="controls_ios_home_indicator_summ">対応する ROM、全画面ジェスチャー、表示中のシステムインジケーターが必要です。設定 → ホーム画面 → システムナビゲーションでジェスチャーを選び、全画面インジケーターの非表示をオフにしてください。本モジュールのジェスチャーライン非表示もオフにしてください。メニュー名は ROM により異なります。システム UI の再起動で反映されます。</string>
+    <string name="controls_ios_home_indicator_summ">対応する ROM、全画面ジェスチャー、表示中のシステムインジケーターが必要です。設定 → ホーム画面 → システムナビゲーションでジェスチャーを選び、全画面インジケーターの非表示をオフにしてください。本モジュールのジェスチャーライン非表示もオフにしてください。メニュー名は ROM により異なります。変更を反映するには、システム UI とランチャーを再起動してください。</string>
     <string name="settings_category_statusbar">ステータスバーとDynamic Island</string>
     <string name="settings_category_notifications">通知とコントロールセンター</string>
     <string name="settings_category_system">画面とロック画面</string>

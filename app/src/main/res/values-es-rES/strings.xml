@@ -1303,7 +1303,7 @@
     <string name="system_recents_deck_motion_summ">Ajusta la apertura de apps y la entrada a recientes. Desactívalo para usar las animaciones originales. Reinicia el lanzador.</string>
     <string name="system_ios_desktop_title">Tarjetas de tareas iOS</string>
     <string name="controls_ios_home_indicator_title">Indicador de gestos de iOS</string>
-    <string name="controls_ios_home_indicator_summ">Requiere gestos a pantalla completa, un indicador visible y una ROM compatible. En Ajustes → Pantalla de inicio → Navegación del sistema, elige Gestos y desactiva Ocultar indicador de pantalla completa. Desactiva también Ocultar línea de gestos en este módulo. Los nombres pueden variar según la ROM. Reinicia la interfaz del sistema.</string>
+    <string name="controls_ios_home_indicator_summ">Requiere gestos a pantalla completa, un indicador visible y una ROM compatible. En Ajustes → Pantalla de inicio → Navegación del sistema, elige Gestos y desactiva Ocultar indicador de pantalla completa. Desactiva también Ocultar línea de gestos en este módulo. Los nombres pueden variar según la ROM. Reinicia la interfaz del sistema y el lanzador.</string>
     <string name="settings_category_statusbar">Barra de estado y Dynamic Island</string>
     <string name="settings_category_notifications">Notificaciones y centro de control</string>
     <string name="settings_category_system">Pantalla y bloqueo</string>

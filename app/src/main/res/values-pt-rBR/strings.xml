@@ -1304,7 +1304,7 @@
     <string name="system_recents_deck_motion_summ">Ajusta a abertura de apps e a entrada nos recentes. Desative para usar as animações originais. Reinicie o iniciador.</string>
     <string name="system_ios_desktop_title">Cartões de tarefas iOS</string>
     <string name="controls_ios_home_indicator_title">Indicador de gestos do iOS</string>
-    <string name="controls_ios_home_indicator_summ">Requer gestos em tela cheia, indicador visível e ROM compatível. Em Configurações → Tela inicial → Navegação do sistema, selecione Gestos e desative Ocultar indicador de tela cheia. Desative também Ocultar linha de gestos neste módulo. Os nomes variam conforme a ROM. Reinicie a interface do sistema.</string>
+    <string name="controls_ios_home_indicator_summ">Requer gestos em tela cheia, indicador visível e ROM compatível. Em Configurações → Tela inicial → Navegação do sistema, selecione Gestos e desative Ocultar indicador de tela cheia. Desative também Ocultar linha de gestos neste módulo. Os nomes variam conforme a ROM. Reinicie a interface do sistema e o iniciador.</string>
     <string name="settings_category_statusbar">Barra de status e Dynamic Island</string>
     <string name="settings_category_notifications">Notificações e central de controle</string>
     <string name="settings_category_system">Tela e bloqueio</string>
