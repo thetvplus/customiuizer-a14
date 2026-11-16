@@ -25,7 +25,7 @@ This summary compares the shipped r14.27.7 implementation. See the [changelog](h
 
 - DECK shares its card layout across Home and app entry. Card size is adjustable, titles and icons fade by depth, and the window animation can be turned off separately.
 - Refined DECK handoff during held swipes, front and rear card openings, rapid cancellation, backfill after removal and landscape resizing. Native cards render thumbnail shadows. Quick switching along the gesture indicator keeps native geometry.
-- The iOS gesture indicator follows native visibility, light and dark transitions, and gesture input, including native landscape handles. Enable full-screen gestures, keep the system indicator visible and restart System UI.
+- The iOS gesture indicator follows native visibility, light and dark transitions, and gesture input, including native landscape handles. Enable full-screen gestures, keep the system indicator visible and restart Launcher and System UI.
 - The side volume style supports a narrow default, expansion while dragging and recoil. The center style supports vertical adjustment, hides shortcuts when collapsed and restores native mute and Do Not Disturb when expanded. Both retain native volume steps, routing and expansion controls.
 - Show volume percentage in a floating overlay, Toast capsule or Dynamic Island. Consecutive changes update the same indicator.
 - Refined the Island's first appearance, activity changes, press feedback, rapid reversals and recoil. Wide layouts align content to the outside edges in either layout direction. Notifications update their actions while remaining visible, and landscape alarms and timers give the native window room.
