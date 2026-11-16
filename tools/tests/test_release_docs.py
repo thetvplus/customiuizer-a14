@@ -196,6 +196,9 @@ class DownloadDocumentsTest(unittest.TestCase):
                 result = docs.documents(published)
                 for filename in ("README.md", "README_EN.md", "CHANGELOG.md", "CHANGELOG_CN.md"):
                     self.assertIn("Approved milestone summary.", result[filename])
+                    self.assertNotIn("User change 0.", result[filename])
+                for filename in ("CHANGELOG.md", "CHANGELOG_CN.md"):
+                    self.assertNotIn("r14.25.1", result[filename])
                 with self.assertRaisesRegex(ValueError, "both repositories"):
                     docs.documents(dict(published, download=None))
                 with self.assertRaisesRegex(ValueError, "original release"):
