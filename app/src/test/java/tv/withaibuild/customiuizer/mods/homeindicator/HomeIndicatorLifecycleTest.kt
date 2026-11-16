@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
 import android.view.View
 import android.view.WindowManager
@@ -60,8 +59,11 @@ class HomeIndicatorLifecycleTest {
     private class Drawing: Canvas() {
         var paint: Paint?=null
         val bounds=RectF()
-        override fun drawPath(path: Path, paint: Paint) {
-            this.paint=paint; path.computeBounds(bounds,true)
+        override fun drawRoundRect(rect: RectF, rx: Float, ry: Float, paint: Paint) {
+            this.paint=paint; bounds.set(rect)
+            val capRadius=minOf(rect.width(),rect.height())*.5f
+            assertEquals(capRadius,rx,0f)
+            assertEquals(capRadius,ry,0f)
         }
     }
     @Test fun gestureTintUsesTheNativeAnimatorBudgetWithoutCreatingADrawingOwner() {
@@ -147,8 +149,7 @@ class HomeIndicatorLifecycleTest {
         assertFalse(support.supported(34,arrayOf("x86_64")))
     }
 
-    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
-    fun launcherLandscapeUsesLocalAxesAndNativeCenterInPortraitWindow() {
+    @Test fun launcherLandscapeUsesLocalAxesAndNativeCenterInPortraitWindow() {
         val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
         try {
             val host = controller.get()
@@ -167,8 +168,7 @@ class HomeIndicatorLifecycleTest {
         } finally { controller.pause().stop().destroy() }
     }
 
-    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
-    fun secondaryHandleRebuildsForOppositeEdgeWithoutSizeChange() {
+    @Test fun secondaryHandleRebuildsForOppositeEdgeWithoutSizeChange() {
         val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
         try {
             val nav = OrientedHandle(controller.get())

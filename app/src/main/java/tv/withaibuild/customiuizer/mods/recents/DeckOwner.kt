@@ -602,14 +602,15 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
     }
 
     /** Capture before Legacy's UI callback can fade the same native neighbors. */
-    fun prepareOpening(selected: Card,start: RectF): Boolean {
+    fun prepareOpening(selected: Card,start: RectF,forFrame: Boolean=false): Boolean {
         if(!allowed || transition==0L || start.isEmpty) return false
-        if(opening?.selectedId==selected.taskId) return true
+        if(opening?.selectedId==selected.taskId) return !forFrame || prepareLocalSpace()
         if(!prepareLocalSpace()) return false
         clearOpening()
         // WindowElement already performs this native handoff before opening.
         // Legacy leaves its settling card springs alive until animation end.
-        if(api.profile==DeckLauncherProfile.LEGACY)
+        val legacy=api.profile==DeckLauncherProfile.LEGACY
+        if(legacy)
             for(i in 0 until drawCards.size) api.cardSprings.cancel(drawCards[i].view)
         local.mapRect(gestureReference,start)
         val alignment=DeckOpenAlignment(selected.taskId,RectF(gestureReference))
@@ -625,16 +626,17 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         openingIndex=selected.depth.index
         // Legacy crop admits only zero-origin Surface bounds matching the visual
         // viewport. Prepare the stack projection once before leaving Main.
-        if(api.profile==DeckLauncherProfile.LEGACY && api.surfaceOcclusion!=null &&
+        if(legacy && api.surfaceOcclusion!=null &&
             stackToVisualSpace(openingSurface))
             alignment.prepareSurface(local,openingSurface,current.fullWidth,current.fullHeight)
-        return true
+        // Legacy spring cancellation can run native callbacks during capture.
+        return !forFrame || !legacy || prepareLocalSpace()
     }
     fun openingSurface()=opening?.surface
     /** Move the neighbors and report whether earlier cards can occlude the opening app. */
     fun alignOpening(selected: Card,start: RectF,current: RectF,progress: Float,headerAlpha: Float,
         nativeFaded: Boolean=false): Boolean {
-        if(!prepareOpening(selected,start) || !prepareLocalSpace()) return false
+        if(!prepareOpening(selected,start,forFrame=true)) return false
         local.mapRect(gestureTarget,current)
         opening?.apply(gestureTarget,progress,headerAlpha,nativeFaded)
         return openingIndex>0

@@ -2,10 +2,8 @@ package tv.withaibuild.customiuizer.mods.homeindicator
 
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.Matrix
 import android.os.Build
 import android.view.Surface
 import android.view.View
@@ -18,7 +16,6 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallbac
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
-import tv.withaibuild.customiuizer.utils.G4RoundRectGeometry
 import tv.withaibuild.customiuizer.utils.HomeIndicatorSupport
 import tv.withaibuild.customiuizer.mods.utils.HookDiagnostics
 import java.lang.ref.WeakReference
@@ -46,13 +43,12 @@ internal object HomeIndicatorHooks {
         if (result != FeatureInstallResult.INSTALLED) return result
         // The secondary window is optional on a ROM. Missing ABI leaves only
         // that window native and never rolls back the ordinary handle.
-        val oriented = XposedHelpers.findClassIfExists("${NAVIGATION}gestural.QuickswitchOrientedNavHandle", loader)
-            ?: return result
-        val entry = ModuleHelper.guarded<Pair<Method, MethodHook>?>(null) {
-            prepareOriented(handle, oriented)
-        } ?: return result
-        val secondary = PreparedHookBatch().install(listOf(entry))
-        if (secondary != FeatureInstallResult.INSTALLED) XposedHelpers.log("[HomeIndicator] secondary handle: $secondary")
+        ModuleHelper.guarded {
+            val oriented = XposedHelpers.findClassIfExists("${NAVIGATION}gestural.QuickswitchOrientedNavHandle", loader)
+                ?: return@guarded
+            val secondary = PreparedHookBatch().install(listOf(prepareOriented(handle, oriented)))
+            if (secondary != FeatureInstallResult.INSTALLED) XposedHelpers.log("[HomeIndicator] secondary handle: $secondary")
+        }
         return result
     }
 
@@ -198,15 +194,14 @@ internal object HomeIndicatorHooks {
     }
 
     private class Owner(val view: View, val navigation: View, val paint: Paint) : View.OnAttachStateChangeListener {
-        private val path = Path()
-        private val transform = Matrix()
+        private val bounds = RectF()
         private val windows = navigation.context.getSystemService(WindowManager::class.java)
         private var w = -1; private var h = -1
         private var rootWidth = -1
         private var rootHeight = -1
         private var displayRotation = -1
         private var handleRotation = -1
-        private var ready = false
+        private var radius = 0f
         fun draw(
             canvas: Canvas,
             rotation: Int = Surface.ROTATION_0,
@@ -223,27 +218,19 @@ internal object HomeIndicatorHooks {
                 val frame = geometry(view, screen, rotation)
                 w = view.width; h = view.height; rootWidth = root.width; rootHeight = root.height
                 displayRotation = currentRotation; handleRotation = rotation
-                path.rewind()
-                ready = frame != null
+                radius = (frame?.height ?: 0f) * .5f
                 if (frame != null) {
-                    G4RoundRectGeometry.build(path, frame.width, frame.height, frame.height * .5f, 1f)
-                    path.offset(frame.left, frame.top)
+                    val right = frame.left + frame.width
+                    val bottom = frame.top + frame.height
                     when (rotation) {
-                        Surface.ROTATION_90 -> {
-                            transform.setRotate(90f)
-                            transform.postTranslate(w.toFloat(), 0f)
-                            path.transform(transform)
-                        }
-                        Surface.ROTATION_270 -> {
-                            transform.setRotate(-90f)
-                            transform.postTranslate(0f, h.toFloat())
-                            path.transform(transform)
-                        }
+                        Surface.ROTATION_90 -> bounds.set(w - bottom, frame.left, w - frame.top, right)
+                        Surface.ROTATION_270 -> bounds.set(frame.top, h - right, bottom, h - frame.left)
+                        else -> bounds.set(frame.left, frame.top, right, bottom)
                     }
                 }
             }
-            if (!ready) return false
-            canvas.drawPath(path, paint)
+            if (radius == 0f) return false
+            canvas.drawRoundRect(bounds, radius, radius, paint)
             return true
         }
         override fun onViewAttachedToWindow(v: View) = Unit
@@ -251,7 +238,7 @@ internal object HomeIndicatorHooks {
             v.removeOnAttachStateChangeListener(this)
             if (owner(v) === this)
                 XposedHelpers.removeAdditionalInstanceField(v, OWNER)
-            path.rewind(); ready = false
+            radius = 0f
         }
     }
 }

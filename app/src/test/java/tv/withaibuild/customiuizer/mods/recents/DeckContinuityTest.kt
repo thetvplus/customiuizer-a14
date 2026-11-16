@@ -63,6 +63,11 @@ class DeckContinuityTest {
         fun getSpringAnimationImpl()=springs
     }
     class NativeStack : FrameLayout(RuntimeEnvironment.getApplication()) {
+        var globalTransformCalls=0
+        override fun transformMatrixToGlobal(matrix: Matrix) {
+            globalTransformCalls++
+            super.transformMatrixToGlobal(matrix)
+        }
         fun nativeUpdate(view: TaskView,out: Transform,ignoredTiming: Any) {
             view.layout(out.rect.left.toInt(),out.rect.top.toInt(),out.rect.right.toInt(),out.rect.bottom.toInt())
         }
@@ -515,7 +520,7 @@ class DeckContinuityTest {
     }
     private fun verifyWindowElementCrop(selected: DeckOwner.Card,neighbor: DeckOwner.Card,start: RectF,rotation: Int,behind: Boolean) {
         val owner=selected.owner
-        val stack=owner.stack
+        val stack=owner.stack as NativeStack
         setField(owner.current,"fullWidth",stack.width.toFloat())
         setField(owner.current,"fullHeight",stack.height.toFloat())
         val window=DeckWindowApiTest.windowApi()
@@ -545,8 +550,10 @@ class DeckContinuityTest {
             assertEquals(if(shouldClip) front.left.toInt() else originalRight,result.windowCrop.right)
         }
         fun updateFrame(surfaceRect: RectF,shouldClip: Boolean) {
+            val transforms=stack.globalTransformCalls
             val chain=Chain(window.update,element,listOf(0f,start,0f,0f,false,Rect(),surfaceRect)) { cropFrame(shouldClip);null }
             update.intercept(chain)
+            assertEquals("Use the same stack transform throughout a native frame",1,stack.globalTransformCalls-transforms)
             assertEquals("Only a card with a predecessor reads Surface geometry",if(behind) 1 else 0,chain.reads[6])
         }
         updateFrame(shown,behind)

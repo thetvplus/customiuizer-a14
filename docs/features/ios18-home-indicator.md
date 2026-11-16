@@ -7,7 +7,7 @@
 | 原生证据 → 消费者 | Android 实现 | 差异与等级 |
 | --- | --- | --- |
 | MaterialKit `0x215347214` 默认高度 5 / 边距 8；`0x215342bf0` 宽度插值 | `HomeIndicatorGeometry` 转写宽度、居中及像素对齐算术 | 原生静态确认；Android 使用短边 402 的设计坐标，再乘实际短边像素 / 402。这是明确的比例映射，不是实测 UIScreen、pt=dp 或原机几何等价 |
-| SpringBoard `0x1d8621bcc` / `0x1d86239ec` 基础 frame 与 delegate 额外间距 | 原生 handle 内构建一份 G4 共享几何的圆端 Path | 数学重建 + Android 近似；原生 View 小于目标宽度时限制到其宽度，不扩张触摸或窗口。无 iOS delegate 输入，不猜测键盘额外间距 |
+| SpringBoard `0x1d8621bcc` / `0x1d86239ec` 基础 frame 与 delegate 额外间距 | 原生 handle 内用 Canvas 圆角矩形绘制圆端 | 数学重建 + Android 近似；原生 View 小于目标宽度时限制到其宽度，不扩张触摸或窗口。无 iOS delegate 输入，不猜测键盘额外间距 |
 | `SBHomeGrabberView → SBFHomeAffordanceView → MTLumaDodgePillView → MTPillView` | `NavigationHandle.onDraw(Canvas)V` 单次替换填充，使用原生 `mPaint` | Android 近似。专用 cornerContents、亮度滤镜和私有合成未迁移；沿用系统 LightBar 颜色，禁止后台截图取色 |
 | 触摸唤回、隐藏原因、所有权与旋转双信号 | 完全沿用 Android 原生导航 View 的 visibility / alpha / 旋转与输入 | 原生静态合同已读；iOS 状态机没有安全的同构 Android 输入，未另建计时器或手势求解器。不能称原生动态确认 |
 
@@ -19,7 +19,7 @@
 
 冷解析绘制、模式更新及普通颜色渐变时长三个 Hook：`NavigationHandle.onDraw(Landroid/graphics/Canvas;)V`、`NavigationBarView.updateIcons(Landroid/content/res/Configuration;)V` 与 `NavigationBarTransitions.getTintAnimationDuration()I`。原生 `NavigationBar.setNavBarMode(I)V` 写入字段后调用 updateIcons 并可能重建 handle；模式字段缓存后，绘制只在主屏、精确 NavigationHandle 类及真实 NavigationBarView 祖先下工作，非手势模式不创建绘制 owner。复用 `mPaint:Landroid/graphics/Paint;`，同时要求实例字段为 final；已查样本均只在构造器写入，宿主重建 / detach 后重新取得当前实例。可替换 Paint 的未知合同保留原生，不逐帧读取字段。不写原生 Paint、布局、alpha、visibility、Insets、焦点或输入。教程、独立控制中心 / 锁屏 handle、未知子类和旋转尺寸尚未对齐时保留原生。
 
-每个 handle 惰性持有一份 Path 和尺寸缓存，尺寸变化才通过 WindowManager.maximumWindowMetrics 获取当前屏幕几何并重建（SystemUI Resources 在横屏可保留竖屏值）；颜色由原生 Paint 更新，静止时无帧调度。detach 解除自身 attach listener 和附加 owner；没有全局 View 表、悬浮窗口、Bitmap、RenderEffect、跨进程通信或独立动画时钟。完整 Hook 批次未提交或几何无法容纳时不跳过原生绘制。关闭并重启后没有自持原生属性需要归还。
+每个 handle 惰性缓存绘制矩形与圆端半径。尺寸或旋转变化时通过 WindowManager.maximumWindowMetrics 获取当前屏幕几何并重算（SystemUI Resources 在横屏可保留竖屏值）；颜色由原生 Paint 更新，静止时无帧调度。detach 解除自身 attach listener 和附加 owner；没有全局 View 表、悬浮窗口、Bitmap、RenderEffect、跨进程通信或独立动画时钟。完整 Hook 批次未提交或几何无法容纳时不跳过原生绘制。关闭并重启后没有自持原生属性需要归还。
 
 ## 场景策略
 
