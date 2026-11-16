@@ -176,7 +176,7 @@ class LocationAutomationTest {
         }) {}
 
         revision++
-        recovered().unobservedTaskRemoved(0)
+        recovered().unobservedTaskRemoved(1, 0)
         assertTrue(location.enabled)
         assertTrue(location.requests.isEmpty())
 
@@ -184,14 +184,14 @@ class LocationAutomationTest {
         val policy = recovered()
         val task = Any()
         policy.resumed(2, task)
-        policy.unobservedTaskRemoved(0)
+        policy.unobservedTaskRemoved(1, 0)
         assertTrue(location.enabled)
         policy.removed(2, task, 30)
         clock.idleFor(Duration.ofSeconds(30))
         assertEquals(listOf(false), location.requests)
 
         location.enabled = true
-        recovered().unobservedTaskRemoved(0)
+        recovered().unobservedTaskRemoved(1, 0)
         assertFalse(location.enabled)
     }
 
@@ -201,20 +201,19 @@ class LocationAutomationTest {
         val maps = ComponentName("example.maps", "Maps")
         val apps = setOf(maps.packageName)
         var recent = listOf(recentTask(1, base = maps), recentTask(2, base = maps))
-        var removedId = 1
-        fun tracking() = LocationAutomation(handler, location::change, release = {
+        fun tracking() = LocationAutomation(handler, location::change, release = { removedId ->
             if (!hasRemainingLocationTasks(recent, removedId, apps)) location.change(false)
         }) {}
 
         val first = tracking()
         first.resumed(1, observed)
         first.removed(1, observed, 1)
+        assertFalse(first.removed(2, Any()))
         clock.idleFor(Duration.ofSeconds(1))
         assertTrue(location.enabled)
 
-        removedId = 2
         recent = listOf(recentTask(2, base = maps))
-        tracking().unobservedTaskRemoved(30)
+        tracking().unobservedTaskRemoved(2, 30)
         clock.idleFor(Duration.ofSeconds(29))
         assertTrue(location.enabled)
         clock.idleFor(Duration.ofSeconds(1))
@@ -228,7 +227,7 @@ class LocationAutomationTest {
         policy.resumed(1, observed)
         policy.removed(1, observed, 30)
         clock.idleFor(Duration.ofSeconds(29))
-        policy.unobservedTaskRemoved(30)
+        policy.unobservedTaskRemoved(2, 30)
         clock.idleFor(Duration.ofSeconds(29))
         assertEquals(listOf(true), location.requests)
         clock.idleFor(Duration.ofSeconds(1))

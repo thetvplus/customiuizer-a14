@@ -65,6 +65,7 @@ public final class NotificationAutoExpandFixtures {
 
     /** Subclass used to test strict subclass mismatch at runtime. */
     public static class SubExpandableNotificationRow extends ExpandableNotificationRow {
+        public boolean mOnKeyguard;
         public SubExpandableNotificationRow(String packageName) {
             super(packageName);
         }

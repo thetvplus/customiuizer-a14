@@ -1,17 +1,12 @@
 package tv.withaibuild.customiuizer.mods.volumedialogautohide
 
 import android.view.accessibility.AccessibilityManager
+import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 
-/**
- * Thin hook installer for the VolumeDialogAutohideDelay feature.
- *
- * Resolves the frozen ABI, installs the process-scoped runtime state, and wires
- * the [MethodHook] to the [VolumeDialogAutohideDelayEffect].
- */
 internal object VolumeDialogAutohideDelayHook {
 
     @JvmStatic
@@ -21,8 +16,7 @@ internal object VolumeDialogAutohideDelayHook {
         ) ?: return
         val recommend = resolveTimeoutRecommendation(dialogClass) ?: return
         val abi = VolumeDialogAutohideDelayResolver.resolve(dialogClass)
-        val runtimeState = VolumeDialogAutohideDelayRuntimeState.install()
-        val effect = VolumeDialogAutohideDelayEffect(abi, runtimeState.snapshotRef, recommend)
+        val effect = VolumeDialogAutohideDelayEffect(abi, MainModule.mPrefs, recommend)
 
         val hook = object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
@@ -38,7 +32,7 @@ internal object VolumeDialogAutohideDelayHook {
     }
 
     // The native manager already holds the accessibility timeout settings. Resolve its field once
-    // for this plugin loader; an unknown ABI leaves the original method and observer untouched.
+    // for this loader. An unknown manager field leaves the native timeout in charge.
     internal fun resolveTimeoutRecommendation(dialogClass: Class<*>): ((Any?, Int, Int) -> Int?)? {
         val managerField = XposedHelpers.findFieldIfExists(dialogClass, "mAccessibilityMgr") ?: return null
         if (!AccessibilityManager::class.java.isAssignableFrom(managerField.type)) return null

@@ -31,7 +31,7 @@
 
 维护任务从[工程规则](AGENTS.md)进入。设置声明位于 [app/settings](app/settings)，宿主进程路由、Hook 安装与源码入口见[架构](ARCHITECTURE.md#入口与进程路由)，实机待验与证据见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md)。其他专题见[文档目录](docs/README.md)。
 
-当前源码版本为 `r14.27.7`（versionCode 307），应用 ID 为 `tv.withaibuild.customiuizer.r14`。正式 APK 和源码身份见[发布记录](docs/RELEASE.md#当前正式版本)。
+当前源码版本为 `r14.27.9`（versionCode 310），应用 ID 为 `tv.withaibuild.customiuizer.r14`。正式 APK 和源码身份见[发布记录](docs/RELEASE.md#当前正式版本)。
 
 ## 支持与许可
 

@@ -126,8 +126,11 @@ class DockBackgroundTest {
         val panel = host.getChildAt(0) as DockBackgroundView
         assertEquals(0, panel.childCount)
         assertEquals(1, DockWindowManagerShadow.listenerCount())
+        shadowOf(Looper.getMainLooper()).idle()
+        val reads = DockWindowManagerShadow.policyReads
         DockWindowManagerShadow.change(true)
         shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, DockWindowManagerShadow.policyReads - reads)
         assertEquals(1, panel.childCount)
         val material = panel.getChildAt(0) as NativeMaterial
         DockWindowManagerShadow.change(false)

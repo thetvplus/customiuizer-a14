@@ -7,8 +7,32 @@ SELECT file_id, method_descriptor, access_flags FROM class_methods
 WHERE (class_descriptor='Lcom/miui/home/launcher/DeviceConfig;'
  AND method_name='isKeepRecentsViewPortrait')
  OR (class_descriptor='Lcom/miui/home/recents/util/RotationHelper;'
- AND method_name IN ('notifyChange','updateMultiWindowRotationRequest'))
+ AND method_name IN ('notifyChange','getScreenOrientationByRequest','updateMultiWindowRotationRequest','onMultiWindowModeChanged'))
+ OR (class_descriptor='Lcom/miui/home/launcher/util/UiThreadHelper;' AND method_name='setOrientationAsync')
+ OR (class_descriptor='Lcom/miui/home/launcher/Launcher;'
+ AND method_name IN ('getRecentsContainer','getRotationHelper','getCurrentDisplayRotation','isInState','onConfigurationChanged','onStop'))
+ OR (class_descriptor='Lcom/miui/home/recents/OverviewState;' AND method_name IN ('onStateEnabled','onExitState'))
+ OR (class_descriptor='Lcom/miui/home/recents/NavStubView;' AND method_name IN ('getCurrentWindowMode','performAppToRecents','finalization'))
+ OR (class_descriptor='Lcom/miui/home/recents/views/RecentsContainer;'
+ AND method_name IN ('isInLandscapeOverview','exitLandscapeOverview','onDisplayRotationChanged','setIsNeedSkipTouch'))
 ORDER BY method_descriptor;
+
+SELECT file_id, field_descriptor, access_flags FROM class_fields
+WHERE (class_descriptor='Lcom/miui/home/recents/NavStubView;' AND field_name IN ('mLauncher','mWindowMode'))
+ OR (class_descriptor='Lcom/miui/home/recents/util/RotationHelper;' AND field_name='mLauncher')
+ OR (class_descriptor='Lcom/miui/home/launcher/LauncherState;' AND field_name='OVERVIEW')
+ OR (class_descriptor='Lcom/miui/home/recents/views/RecentsContainer;' AND field_name='mIsNeedSkipTouch')
+ORDER BY file_id, field_descriptor;
+
+-- Card opening consumes this Task overload before the native direction conversion.
+-- Entry and predicted-scroll queries use the index overloads instead.
+SELECT file_id, method_descriptor, access_flags FROM class_methods
+WHERE method_descriptor='Lcom/miui/home/recents/views/TaskStackView;->getTaskViewWithoutHeaderRectF(Lcom/android/systemui/shared/recents/model/Task;)Landroid/graphics/RectF;'
+ORDER BY file_id;
+
+SELECT DISTINCT file_id, method, callee FROM method_calls
+WHERE callee='Lcom/miui/home/recents/views/TaskStackView;->getTaskViewWithoutHeaderRectF(Lcom/android/systemui/shared/recents/model/Task;)Landroid/graphics/RectF;'
+ORDER BY file_id, method;
 
 SELECT file_id, descriptor, superclass_descriptor FROM classes
 WHERE descriptor IN ('Lcom/miui/home/recents/views/TaskStackView;',

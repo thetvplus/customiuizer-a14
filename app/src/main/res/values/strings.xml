@@ -425,7 +425,6 @@
     <string name="system_animationscale_transition_title">Transitions</string>
     <string name="system_animationscale_animator_title">Value animators</string>
 
-    <string name="launcher_gestures">Gestures</string>
     <string name="launcher_gestures_action">Action</string>
     <string name="launcher_gestures_setting">Setting to toggle</string>
     <string name="launcher_gestures_launch">App to launch</string>
@@ -620,7 +619,6 @@
     <string name="appsort_storage">Used storage</string>
     <string name="appsort_install">Installation time</string>
 
-    <string name="gboard">Keyboard layout</string>
     <string name="calls">Calls</string>
 
     <string name="array_default">Default</string>
@@ -1045,7 +1043,6 @@
     <string name="prefs_group_style">Style</string>
     <string name="prefs_group_behavior">Behavior</string>
     <string name="prefs_group_layout">Layout</string>
-    <string name="prefs_group_volume_panel">Volume panel</string>
     <string name="prefs_group_animation_wallpaper">Animations and wallpaper</string>
     <string name="prefs_group_widgets">Widgets</string>
     <string name="prefs_group_workspace_gestures">Workspace gestures</string>
@@ -1059,7 +1056,6 @@
     <string name="system_toast_center_title">Vertical offset</string>
     <string name="system_toast_center_summ">Positive moves down; negative moves up.</string>
     <string name="prefs_group_actions">Actions</string>
-    <string name="prefs_group_animation">Animations</string>
     <string name="prefs_group_appearance">Layout &amp; appearance</string>
     <string name="prefs_group_apps">Apps</string>
     <string name="prefs_group_authentication">Authentication</string>
@@ -1075,11 +1071,8 @@
     <string name="prefs_group_compatibility">Compatibility</string>
     <string name="prefs_group_connectivity">Connections</string>
     <string name="prefs_group_content">Content</string>
-    <string name="prefs_group_daily">Calls &amp; keyboard</string>
     <string name="prefs_group_devices">Devices &amp; connections</string>
-    <string name="prefs_group_display_sound">Screen, sound &amp; vibration</string>
     <string name="prefs_group_dual_sim">Dual SIM</string>
-    <string name="prefs_group_feedback">Gestures &amp; feedback</string>
     <string name="prefs_group_image">Image &amp; storage</string>
     <string name="prefs_group_interaction">Interaction</string>
     <string name="prefs_group_lock_content">Lock screen content</string>
@@ -1095,18 +1088,14 @@
     <string name="prefs_group_rules">Rules &amp; restrictions</string>
     <string name="prefs_group_schedule">Schedule</string>
     <string name="prefs_group_screen_timeout">Screen off &amp; charging</string>
-    <string name="prefs_group_screenshot">Screenshots</string>
-    <string name="prefs_group_security_advanced">Security &amp; advanced</string>
     <string name="prefs_group_securitycenter">Security app</string>
     <string name="prefs_group_sharing">Sharing &amp; opening</string>
     <string name="prefs_group_sidebar">Sidebar</string>
     <string name="prefs_group_signal_text">Signal strength text</string>
     <string name="prefs_group_spacing">Spacing &amp; alignment</string>
-    <string name="prefs_group_status_data">Clock, battery &amp; data</string>
     <string name="prefs_group_status_icons">Status icons</string>
     <string name="prefs_group_system_status">System status</string>
     <string name="prefs_group_system_tools">System tools</string>
-    <string name="prefs_group_system_ui">System interface</string>
     <string name="prefs_group_telemetry">Diagnostics &amp; analytics</string>
     <string name="prefs_group_text">Text style</string>
     <string name="prefs_group_tiles">Quick settings tiles</string>
@@ -1117,7 +1106,6 @@
     <string name="system_mods_backlight">Brightness</string>
     <string name="preference_unavailable">Unavailable</string>
     <string name="preference_applies_immediately">Live adjustment after activation</string>
-    <string name="launcher_mods_other">Home layout</string>
     <string name="system_volumedialogdelay_expanded_title">Auto-hide: expanded</string>
 
     <string name="system_clock_fixed_width_title">Fixed width</string>
@@ -1244,7 +1232,6 @@
     <string name="launcher_folder_icon_blur_summ">Use native launcher blur for folder icons. Requires system background blur and default icons. Restart the launcher to apply.</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">Connectivity</string>
     <string name="system_vpnauto_title">Automatic VPN</string>
     <string name="system_vpnauto_summary">Connect one VPN when any selected app opens</string>
     <string name="system_vpnauto_enable_summary">Restart the device after first enabling. Rules can then be changed without restarting.</string>
@@ -1354,9 +1341,8 @@
     <string name="system_recents_deck_motion_title">iOS window motion</string>
     <string name="system_recents_deck_motion_summ">Use iOS motion when opening apps and entering the deck. Turn off to keep the deck with system motion; restart the launcher after changes.</string>
     <string name="system_ios_desktop_title">iOS task cards</string>
-    <string name="system_ios_volume_group_title">iOS volume</string>
     <string name="controls_ios_home_indicator_title">iOS Home Indicator</string>
-    <string name="controls_ios_home_indicator_summ">Use full-screen gestures and keep the system handle visible. Turn off both system and module options that hide it; restart System UI to apply.</string>
+    <string name="controls_ios_home_indicator_summ">Use full-screen gestures and keep the system handle visible. Restart System UI and the launcher to apply the change.</string>
     <string name="settings_category_statusbar">Status bar &amp; Dynamic Island</string>
     <string name="settings_category_notifications">Notifications &amp; Control center</string>
     <string name="settings_category_system">Display &amp; Lock screen</string>
@@ -1387,7 +1373,6 @@
     <string name="settings_ios_volume">iOS volume HUD</string>
     <string name="settings_status_icons">Status icons</string>
     <string name="settings_launcher_layout">Home layout &amp; Animation</string>
-    <string name="settings_app_behavior">App behavior</string>
     <string name="settings_sound_vibration">Sound &amp; vibration</string>
     <string name="settings_keywords_controls">Buttons &amp; gestures buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">Apps &amp; maintenance apps tools maintenance compatibility</string>

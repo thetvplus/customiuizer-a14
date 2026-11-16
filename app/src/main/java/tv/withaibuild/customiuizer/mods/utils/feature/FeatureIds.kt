@@ -1118,6 +1118,11 @@ data object IosHomeIndicatorFeatureId : FeatureId {
     override val name = "controls_ios_home_indicator"
 }
 
+data object LauncherHomeIndicatorFeatureId : FeatureId {
+    override val id = 273
+    override val name = "launcher_ios_home_indicator"
+}
+
 data object PocoRecentsDeckFeatureId : FeatureId {
     override val id = 268
     override val name = "poco_recents_deck"

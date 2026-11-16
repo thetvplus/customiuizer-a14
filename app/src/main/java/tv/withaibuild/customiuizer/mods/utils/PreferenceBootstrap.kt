@@ -169,6 +169,8 @@ class PreferenceBootstrap private constructor(
      */
     private fun doBootstrapLocked(): Boolean {
         val remote = remotePrefs ?: return false
+        // The watcher is already live after a failed publication read.
+        if (listenerRegistered) return publishSecondSnapshotLocked(remote)
 
         val first = getAllOrFail(remote) ?: return false
 
@@ -178,37 +180,24 @@ class PreferenceBootstrap private constructor(
             State.SNAPSHOT_PENDING_LISTENER
         }
 
-        if (!listenerRegistered) {
-            val newListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                ModuleHelper.guarded { onPreferenceChanged(key) }
-            }
-            listener = newListener
-
-            return try {
-                remote.registerOnSharedPreferenceChangeListener(newListener)
-                listenerRegistered = true
-                initAttempts = 0
-                emptyPendingAttempts = 0
-                // A live watcher is in place. Take the second snapshot and publish.
-                publishSecondSnapshotLocked(remote)
-            } catch (vm: VirtualMachineError) {
-                listener = null
-                currentState = State.UNAVAILABLE
-                throw vm
-            } catch (td: ThreadDeath) {
-                listener = null
-                currentState = State.UNAVAILABLE
-                throw td
-            } catch (t: Throwable) {
-                listener = null
-                currentState = State.UNAVAILABLE
-                HookDiagnostics.recordPreferencesUnavailable(t.javaClass.name, "registerOnSharedPreferenceChangeListener")
-                false
-            }
-        } else {
-            // Listener already registered; this is a retry. Take a fresh snapshot.
-            return publishSecondSnapshotLocked(remote)
+        val newListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            ModuleHelper.guarded { onPreferenceChanged(key) }
         }
+        listener = newListener
+
+        try {
+            remote.registerOnSharedPreferenceChangeListener(newListener)
+        } catch (error: Throwable) {
+            listener = null
+            currentState = State.UNAVAILABLE
+            FatalErrors.unwrapAndRethrowIfFatal(error)
+            HookDiagnostics.recordPreferencesUnavailable(error.javaClass.name, "registerOnSharedPreferenceChangeListener")
+            return false
+        }
+        listenerRegistered = true
+        initAttempts = 0
+        emptyPendingAttempts = 0
+        return publishSecondSnapshotLocked(remote)
     }
 
     private fun publishSecondSnapshotLocked(remote: SharedPreferences): Boolean {

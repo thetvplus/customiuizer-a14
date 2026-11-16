@@ -31,7 +31,7 @@ Enable one CustoMIUIzer module per device. Feature-specific prerequisites and re
 
 Start maintenance tasks with the [engineering rules](AGENTS.md). Settings are declared in [app/settings](app/settings). See the [architecture](ARCHITECTURE.md#入口与进程路由) for host-process routing, hook installation, and source entry points, and the [roadmap](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for device acceptance and outstanding work. Other references are listed in the [documentation index](docs/README.md).
 
-The source version is `r14.27.7` (versionCode 307), with application ID `tv.withaibuild.customiuizer.r14`. See the [release record](docs/RELEASE.md#当前正式版本) for the published APK and its source identity.
+The source version is `r14.27.9` (versionCode 310), with application ID `tv.withaibuild.customiuizer.r14`. See the [release record](docs/RELEASE.md#当前正式版本) for the published APK and its source identity.
 
 ## Support and License
 

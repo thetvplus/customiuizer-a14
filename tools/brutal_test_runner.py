@@ -471,12 +471,12 @@ def maybe_extra_mutators() -> dict[str, Callable[[Path, dict], None]]:
 def mutate_observer_pref_key(root: Path, cfg: dict) -> None:
     path = (
         root
-        / "app/src/main/java/tv/withaibuild/customiuizer/mods/notificationautoexpand/NotificationAutoExpandRuntimeState.kt"
+        / "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherIconHooks.kt"
     )
     replace_first(
         path,
-        r"onPreferenceChanged\(key\)",
-        'if (key == "pref_key_brutal") return@guarded\n            onPreferenceChanged(key)',
+        r"if \(key == null \|\|\s*key == PREF_TITLE_FONT_SIZE",
+        'if (key == null ||\n                    key == "pref_key_launcher_titlefontsize"',
     )
 
 

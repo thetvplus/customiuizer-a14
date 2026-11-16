@@ -381,7 +381,6 @@
     <string name="system_animationscale_window_title">Cửa sổ</string>
     <string name="system_animationscale_transition_title">Chuyển tiếp</string>
     <string name="system_animationscale_animator_title">Giá trị hoạt ảnh</string>
-    <string name="launcher_gestures">Cử chỉ</string>
     <string name="launcher_gestures_action">Hành động</string>
     <string name="launcher_gestures_setting">Chuyển đổi cài đặt</string>
     <string name="launcher_gestures_launch">Bắt đầu ứng dụng</string>
@@ -560,7 +559,6 @@
     <string name="appsort_frequency">Tần suất sử dụng</string>
     <string name="appsort_storage">Lưu trữ đã dùng</string>
     <string name="appsort_install">Thời gian cài đặt</string>
-    <string name="gboard">Bố cục bàn phím</string>
     <string name="calls">Cuộc gọi</string>
     <string name="array_default">Mặc định</string>
     <string name="array_system_default">Hệ thống</string>
@@ -1004,7 +1002,6 @@
     <string name="prefs_group_style">Kiểu</string>
     <string name="prefs_group_behavior">Hành vi</string>
     <string name="prefs_group_layout">Bố cục</string>
-    <string name="prefs_group_volume_panel">Bảng âm lượng</string>
     <string name="prefs_group_animation_wallpaper">Hoạt ảnh và hình nền</string>
     <string name="prefs_group_widgets">Tiện ích</string>
     <string name="prefs_group_workspace_gestures">Cử chỉ màn hình chính</string>
@@ -1021,7 +1018,6 @@
     <string name="system_toast_center_title">Độ lệch dọc</string>
     <string name="system_toast_center_summ">Số dương dịch xuống, số âm dịch lên.</string>
     <string name="prefs_group_actions">Thao tác</string>
-    <string name="prefs_group_animation">Hiệu ứng</string>
     <string name="prefs_group_appearance">Bố cục và giao diện</string>
     <string name="prefs_group_apps">Ứng dụng</string>
     <string name="prefs_group_authentication">Xác thực</string>
@@ -1037,11 +1033,8 @@
     <string name="prefs_group_compatibility">Tương thích</string>
     <string name="prefs_group_connectivity">Kết nối</string>
     <string name="prefs_group_content">Nội dung</string>
-    <string name="prefs_group_daily">Cuộc gọi và nhập liệu</string>
     <string name="prefs_group_devices">Thiết bị và kết nối</string>
-    <string name="prefs_group_display_sound">Màn hình, âm thanh và rung</string>
     <string name="prefs_group_dual_sim">Hai SIM</string>
-    <string name="prefs_group_feedback">Cử chỉ và phản hồi</string>
     <string name="prefs_group_image">Ảnh và lưu trữ</string>
     <string name="prefs_group_interaction">Tương tác</string>
     <string name="prefs_group_lock_content">Nội dung màn hình khóa</string>
@@ -1057,18 +1050,14 @@
     <string name="prefs_group_rules">Quy tắc và giới hạn</string>
     <string name="prefs_group_schedule">Lịch trình</string>
     <string name="prefs_group_screen_timeout">Tắt màn hình và sạc</string>
-    <string name="prefs_group_screenshot">Ảnh chụp màn hình</string>
-    <string name="prefs_group_security_advanced">Bảo mật và nâng cao</string>
     <string name="prefs_group_securitycenter">Bảo mật</string>
     <string name="prefs_group_sharing">Chia sẻ và mở</string>
     <string name="prefs_group_sidebar">Thanh bên</string>
     <string name="prefs_group_signal_text">Cường độ tín hiệu dạng số</string>
     <string name="prefs_group_spacing">Khoảng cách và căn chỉnh</string>
-    <string name="prefs_group_status_data">Đồng hồ, pin và dữ liệu</string>
     <string name="prefs_group_status_icons">Biểu tượng trạng thái</string>
     <string name="prefs_group_system_status">Trạng thái hệ thống</string>
     <string name="prefs_group_system_tools">Công cụ hệ thống</string>
-    <string name="prefs_group_system_ui">Giao diện hệ thống</string>
     <string name="prefs_group_telemetry">Chẩn đoán và phân tích</string>
     <string name="prefs_group_text">Kiểu chữ</string>
     <string name="prefs_group_tiles">Ô cài đặt nhanh</string>
@@ -1079,7 +1068,6 @@
     <string name="system_mods_backlight">Độ sáng</string>
     <string name="preference_unavailable">Không hỗ trợ</string>
     <string name="preference_applies_immediately">Điều chỉnh ngay sau khi kích hoạt</string>
-    <string name="launcher_mods_other">Bố cục màn hình chính</string>
     <string name="system_volumedialogdelay_expanded_title">Tự ẩn khi mở rộng</string>
 
     <string name="system_clock_fixed_width_title">Chiều rộng cố định</string>
@@ -1203,7 +1191,6 @@
     <string name="launcher_folder_icon_blur_summ">Dùng hiệu ứng mờ gốc cho thư mục. Cần làm mờ nền hệ thống và biểu tượng mặc định. Khởi động lại trình khởi chạy để áp dụng.</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">Kết nối mạng</string>
     <string name="system_vpnauto_title">VPN tự động</string>
     <string name="system_vpnauto_summary">Kết nối một VPN khi mở ứng dụng đã chọn</string>
     <string name="system_vpnauto_enable_summary">Khởi động lại thiết bị sau lần bật đầu tiên. Sau đó có thể đổi quy tắc mà không cần khởi động lại.</string>
@@ -1316,9 +1303,8 @@
     <string name="system_recents_deck_motion_title">Chuyển động cửa sổ iOS</string>
     <string name="system_recents_deck_motion_summ">Điều chỉnh mở ứng dụng và vào tác vụ gần đây. Tắt để dùng chuyển động gốc. Khởi động lại trình khởi chạy để áp dụng.</string>
     <string name="system_ios_desktop_title">Thẻ tác vụ iOS</string>
-    <string name="system_ios_volume_group_title">Âm lượng iOS</string>
     <string name="controls_ios_home_indicator_title">Thanh cử chỉ iOS</string>
-    <string name="controls_ios_home_indicator_summ">Cần ROM được hỗ trợ, cử chỉ toàn màn hình và thanh chỉ báo hệ thống đang hiển thị. Trong Cài đặt → Màn hình chính → Điều hướng hệ thống, chọn Cử chỉ và tắt Ẩn chỉ báo toàn màn hình. Đồng thời tắt tùy chọn ẩn thanh cử chỉ trong mô-đun này. Tên mục có thể khác tùy ROM. Khởi động lại giao diện hệ thống để áp dụng.</string>
+    <string name="controls_ios_home_indicator_summ">Cần ROM được hỗ trợ, cử chỉ toàn màn hình và thanh chỉ báo hệ thống đang hiển thị. Trong Cài đặt → Màn hình chính → Điều hướng hệ thống, chọn Cử chỉ và tắt Ẩn chỉ báo toàn màn hình. Đồng thời tắt tùy chọn ẩn thanh cử chỉ trong mô-đun này. Tên mục có thể khác tùy ROM. Khởi động lại giao diện hệ thống và trình khởi chạy để áp dụng.</string>
     <string name="settings_category_statusbar">Thanh trạng thái và Dynamic Island</string>
     <string name="settings_category_notifications">Thông báo và trung tâm điều khiển</string>
     <string name="settings_category_system">Màn hình và màn hình khóa</string>
@@ -1349,7 +1335,6 @@
     <string name="settings_ios_volume">Âm lượng iOS</string>
     <string name="settings_status_icons">Biểu tượng trạng thái</string>
     <string name="settings_launcher_layout">Bố cục màn hình chính và hoạt ảnh</string>
-    <string name="settings_app_behavior">Hành vi ứng dụng</string>
     <string name="settings_sound_vibration">Âm thanh và rung</string>
     <string name="settings_keywords_controls">Phím và cử chỉ buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">Ứng dụng và bảo trì apps tools maintenance compatibility</string>

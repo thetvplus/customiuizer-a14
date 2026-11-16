@@ -13,6 +13,14 @@ internal object VpnAutoSwitchSettings {
 
     data class Target(val kind: String, val id: String) {
         val valid: Boolean get() = id.isNotBlank() && id.length <= 256 && (kind == "app" || kind == "system")
+
+        companion object {
+            fun read(values: Map<String, Any>): Target {
+                val kind = values["${PREFIX}kind"] as? String ?: "app"
+                val key = if (kind == "system") "${PREFIX}profile" else "${PREFIX}client"
+                return Target(kind, values[key] as? String ?: "")
+            }
+        }
     }
 
     data class Options(val enabled: Boolean, val target: Target, val apps: Set<String>, val autoClose: Boolean,
@@ -25,8 +33,7 @@ internal object VpnAutoSwitchSettings {
         companion object {
             fun read(prefs: PrefMap): Options {
                 val values = prefs.getAll()
-                val kind = values["${PREFIX}kind"] as? String ?: "app"
-                val target = Target(kind, values["${PREFIX}${if (kind == "system") "profile" else "client"}"] as? String ?: "")
+                val target = Target.read(values)
                 val apps = (values["${PREFIX}apps"] as? Set<*>)?.filterIsInstance<String>()?.toSet().orEmpty()
                 val selected = if (apps.size > MAX_APPS) emptySet() else apps.filterTo(HashSet()) {
                     it.isNotBlank() && (target.kind != "app" || it != target.id)

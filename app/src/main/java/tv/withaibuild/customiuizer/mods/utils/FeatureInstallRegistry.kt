@@ -10,14 +10,12 @@ import tv.withaibuild.customiuizer.utils.PrefMap
  * once, creates the [FeatureDefinition] only when enabled, and records the result. A failing
  * feature does not stop installation of the remaining features.
  *
- * This registry is intentionally a plain (non-concurrent) structure because it is only used from
- * the single LSPosed init thread during one installation call.  The process-scoped state is held
- * in [FeatureInstallState].
+ * Registration order is installation order. [FeatureInstallState] owns the process-scoped
+ * installation claim across registry instances.
  */
 class FeatureInstallRegistry {
 
-    private val orderedFeatures = ArrayList<FeatureSpec>()
-    private val definitions = HashMap<FeatureId, FeatureSpec>()
+    private val definitions = LinkedHashMap<FeatureId, FeatureSpec>()
 
     /**
      * Register a feature spec.  Safe to call multiple times with the same spec.
@@ -38,9 +36,6 @@ class FeatureInstallRegistry {
             )
             throw IllegalArgumentException(message)
         }
-        if (existing == null) {
-            orderedFeatures.add(feature)
-        }
     }
 
     /**
@@ -58,7 +53,7 @@ class FeatureInstallRegistry {
         collectResults: Boolean = false,
     ): List<FeatureInstallResult> {
         val results = if (collectResults) ArrayList<FeatureInstallResult>() else null
-        for (spec in orderedFeatures) {
+        for (spec in definitions.values) {
             if (spec.target != target && spec.target != FeatureTarget.ANY) continue
             if (spec.phase != phase) continue
             val result = installOne(spec, prefs)
@@ -86,7 +81,7 @@ class FeatureInstallRegistry {
                     val reportable = FatalErrors.unwrapAndRethrowIfFatal(t)
                     XposedHelpers.log(reportable)
                     recordInstallFailure(spec, reportable)
-                    FeatureInstallResult.FAILED_TRANSIENT
+                    return FeatureInstallResult.FAILED_TRANSIENT
                 }
                 FeatureInstallState.set(id, toState(result))
                 result
@@ -95,7 +90,6 @@ class FeatureInstallRegistry {
     }
 
     private fun recordInstallFailure(spec: FeatureSpec, t: Throwable) {
-        if (t is OutOfMemoryError) throw t
         HookDiagnostics.record(
             process = HookDiagnostics.currentProcessName ?: android.os.Process.myPid().toString(),
             kind = HookDiagnostics.Kind.FEATURE,

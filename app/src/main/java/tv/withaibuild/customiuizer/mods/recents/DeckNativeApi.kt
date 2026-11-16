@@ -98,6 +98,7 @@ internal class DeckNativeApi(private val loader: ClassLoader,val profile: DeckLa
     val bounds=exact(horizontal,"getTaskViewTransform",voidType,Int::class.javaPrimitiveType!!,floatType,transform)
     val minimumScroll=exact(horizontal,"calculateMinScrollP",floatType)
     val content=exact(algorithm,"getTaskViewWithoutHeaderRectF",android.graphics.RectF::class.java,Int::class.javaPrimitiveType!!,floatType)
+    val openingContent=exact(stack,"getTaskViewWithoutHeaderRectF",android.graphics.RectF::class.java,task)
     val taskTransform=exact(algorithm,"getTaskViewTransform",transform,task,floatType,transform)
     val apply=exact(transform,"applyToTaskView",voidType,taskView,java.util.ArrayList::class.java,props,Boolean::class.javaPrimitiveType!!)
     val copy=exact(transform,"copyFrom",voidType,transform)

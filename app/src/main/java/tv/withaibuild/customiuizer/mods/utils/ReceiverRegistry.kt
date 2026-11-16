@@ -463,14 +463,11 @@ object ReceiverRegistry {
     }
 
     private class ModuleRegistration(
-        val key: String,
         val cleanup: Runnable,
-        val generation: Long = moduleRegistrationGeneration.incrementAndGet(),
         val state: AtomicReference<RegistrationState> = AtomicReference(RegistrationState.PENDING_REGISTER)
     )
 
     private val moduleRegistrations = ConcurrentHashMap<String, ModuleRegistration>()
-    private val moduleRegistrationGeneration = AtomicLong(0)
 
     private const val MAX_STALE_MODULE_REGISTRATIONS = 3
     private val staleModuleRegistrations = ConcurrentHashMap<String, ConcurrentLinkedDeque<ModuleRegistration>>()
@@ -493,19 +490,12 @@ object ReceiverRegistry {
         // Retry stale cleanups before touching the active slot.
         retryStaleModuleRegistrations(key)
 
-        val newReg = ModuleRegistration(key, cleanup)
+        val newReg = ModuleRegistration(cleanup)
 
         val previous = moduleRegistrations.put(key, newReg)
 
         try {
-            if (previous != null) {
-                previous.state.set(RegistrationState.PENDING_UNREGISTER)
-                if (!runModuleCleanup(previous)) {
-                    recordStaleModuleRegistration(key, previous)
-                } else {
-                    previous.state.set(RegistrationState.RELEASED)
-                }
-            }
+            if (previous != null) releaseModuleRegistration(key, previous)
         } catch (t: Throwable) {
             moduleRegistrations.remove(key, newReg)
             throw t
@@ -521,6 +511,21 @@ object ReceiverRegistry {
 
         newReg.state.set(RegistrationState.ACTIVE)
         return true
+    }
+
+    fun removeModuleRegistration(key: String) {
+        retryStaleModuleRegistrations(key)
+        val previous = moduleRegistrations.remove(key) ?: return
+        releaseModuleRegistration(key, previous)
+    }
+
+    private fun releaseModuleRegistration(key: String, reg: ModuleRegistration) {
+        reg.state.set(RegistrationState.PENDING_UNREGISTER)
+        if (runModuleCleanup(reg)) {
+            reg.state.set(RegistrationState.RELEASED)
+        } else {
+            recordStaleModuleRegistration(key, reg)
+        }
     }
 
     private fun runModuleCleanup(reg: ModuleRegistration): Boolean {

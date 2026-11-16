@@ -6,6 +6,43 @@ Valid r14.25 changes are consolidated in r14.25.9 and r14.26 changes in r14.26.1
 
 ## Unreleased
 
+## r14.27.9 — 2026-11-16
+
+versionCode 310. Changes since r14.26.11:
+
+### Release summary
+
+This summary compares the shipped r14.27.7 implementation. See the [changelog](https://github.com/thetvplus/customiuizer-a14/blob/r14.27.9/CHANGELOG_EN.md#r14279--2026-11-16) for cumulative changes.
+
+- Refined DECK's window coordinates and occlusion when opening a card in landscape. Opening the front card skips unnecessary window clipping.
+- The iOS gesture indicator now styles native landscape handles in Launcher and System UI. Native drawing continues while the window size settles.
+- Improved Dock blur preparation when returning from Recents and reduced the work Dynamic Island does to update status-bar occlusion.
+- Delayed location shutoff keeps the identity of the task that scheduled it so that unrelated task removals cannot interfere with the last-card check.
+- Simplified volume auto-hide and notification auto-expand while preserving their settings and behavior.
+- Restart Launcher and System UI after upgrading. Reboot Android after first enabling location automation.
+
+### User changes
+
+- DECK shares its card layout across Home and app entry. Card size is adjustable, titles and icons fade by depth, and the window animation can be turned off separately.
+- Refined DECK handoff during held swipes, front and rear card openings, rapid cancellation, backfill after removal and landscape resizing. Native cards render thumbnail shadows. Quick switching along the gesture indicator keeps native geometry.
+- The iOS gesture indicator follows native visibility, light and dark transitions, and gesture input, including native landscape handles. Enable full-screen gestures, keep the system indicator visible and restart Launcher and System UI.
+- The side volume style supports a narrow default, expansion while dragging and recoil. The center style supports vertical adjustment, hides shortcuts when collapsed and restores native mute and Do Not Disturb when expanded. Both retain native volume steps, routing and expansion controls.
+- Show volume percentage in a floating overlay, Toast capsule or Dynamic Island. Consecutive changes update the same indicator.
+- Refined the Island's first appearance, activity changes, press feedback, rapid reversals and recoil. Wide layouts align content to the outside edges in either layout direction. Notifications update their actions while remaining visible, and landscape alarms and timers give the native window room.
+- The Island can size the absorption head automatically or use the width set in Motion and Waveform. Media return, recall and picture-in-picture retain native handoff.
+- Optional iOS battery, five-dot cellular signal and notification-shade media styles preserve native status, media sessions and controls. Duo retains priority and has updated wireless glyphs, digits, spacing and transitions.
+- Fixed Dock background blur after reattachment and return from Recents. Launcher folders fade blur on open and close.
+- Location automation under Apps and Tools supports a 0–30 second shutoff delay. The allow list can enable location and turn off module-enabled location after the last matching task card is removed. The block list turns off location while a matching app enters the foreground.
+- Updated settings categories, labels and search paths while retaining the four home entries. Fixed settings categories that could become inaccessible after restoring an older backup.
+- Reduced duplicate Control Center feedback and improved cleanup for device monitoring, key actions and the Recents menu after cancellation or host recreation.
+- If Island notices or return animations stop working, check mode, app lists and the return toggle.
+
+### Engineering notes
+
+- Consolidated host Hook installation and fallback, preference publication and observers, and Dock material and window styling ownership. Narrowed R8 missing-class rules for private HyperOS types.
+- A delayed location shutoff retains the task ID that scheduled it. Location mode, app list and delay are read from the same published snapshot.
+- DECK first composition and sustained landscape tracking, full Dynamic Island visual handoff and long-term resource costs remain on the device acceptance roadmap.
+
 ## r14.27.7 — 2026-11-13
 
 versionCode 307. Changes since r14.27.5:

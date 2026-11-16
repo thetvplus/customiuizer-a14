@@ -5,57 +5,13 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 
-/**
- * Cold resolver for the Notification Auto-Expand frozen ABI.
- *
- * Reflection and class discovery happens once during hook installation. The output is an
- * immutable [NotificationAutoExpandAbi]. Hot paths must not perform any further discovery or
- * resolution of the three frozen members (`mOnKeyguard`, `getEntry`, `setSystemExpanded`) and
- * must not perform [ClassLoader] lookups or `findClass`/`findClassIfExists` calls.
- *
- * The retained LEGACY helpers `mSbn` and `getPackageName` remain dynamic and may use their
- * normal XposedHelpers caching semantics; they are not resolved by this ABI.
- *
- * The resolver returns `null` (expected miss / ordinary failure) to select the complete
- * legacy XposedHelpers path. Fatal errors are propagated immediately.
- */
 internal object NotificationAutoExpandResolver {
 
-    private const val TARGET_CLASS = "com.android.systemui.statusbar.notification.row.ExpandableNotificationRow"
     private const val FIELD_M_ON_KEYGUARD = "mOnKeyguard"
     private const val METHOD_GET_ENTRY = "getEntry"
     private const val METHOD_SET_SYSTEM_EXPANDED = "setSystemExpanded"
 
-    /**
-     * Resolves the frozen ABI from [classLoader].
-     *
-     * @return A frozen [NotificationAutoExpandAbi] if the root class, the primitive-boolean
-     *         `mOnKeyguard` field, the zero-argument `getEntry` method, and the one-argument
-     *         `setSystemExpanded` method resolve, or `null` to select the complete legacy
-     *         XposedHelpers fallback.
-     */
-    @JvmStatic
-    fun resolve(classLoader: ClassLoader?): NotificationAutoExpandAbi? {
-        return try {
-            val resolutionRootClass = XposedHelpers.findClassIfExists(TARGET_CLASS, classLoader)
-                ?: run { missing("target class not found: $TARGET_CLASS"); return null }
-            resolveFromClass(resolutionRootClass)
-        } catch (t: Throwable) {
-            FatalErrors.unwrapAndRethrowIfFatal(t)
-            XposedHelpers.log(t)
-            null
-        }
-    }
-
-    /**
-     * Testable overload that allows the caller to specify the resolution root class.
-     */
-    @JvmStatic
     fun resolve(resolutionRootClass: Class<*>): NotificationAutoExpandAbi? {
-        return resolveFromClass(resolutionRootClass)
-    }
-
-    private fun resolveFromClass(resolutionRootClass: Class<*>): NotificationAutoExpandAbi? {
         return try {
             val mOnKeyguardField = resolvePrimitiveBooleanField(resolutionRootClass, FIELD_M_ON_KEYGUARD)
                 ?: run { missing("$FIELD_M_ON_KEYGUARD is not primitive boolean on ${resolutionRootClass.name}"); return null }

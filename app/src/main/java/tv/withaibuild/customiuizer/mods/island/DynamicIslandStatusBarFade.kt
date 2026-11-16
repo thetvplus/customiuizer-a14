@@ -40,14 +40,17 @@ internal object DynamicIslandStatusBarFade {
         if (contentsRef?.get() !== contents) {
             compact?.restore()
             compact = null
+            contentsRef = WeakReference(contents)
         }
-        contentsRef = WeakReference(contents)
         if (ownerRef?.get() != null) applyBounds()
     }
 
     fun acquire(owner: Any, bounds: Rect) {
-        if (ownerRef?.get() === owner && islandBounds == bounds) return
-        ownerRef = WeakReference(owner)
+        if (ownerRef?.get() === owner) {
+            if (islandBounds == bounds) return
+        } else {
+            ownerRef = WeakReference(owner)
+        }
         islandBounds.set(bounds)
         applyBounds()
     }

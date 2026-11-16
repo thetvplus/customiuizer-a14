@@ -15,6 +15,7 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.R
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
+import tv.withaibuild.customiuizer.testsupport.installPreferenceReadProbe
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.util.concurrent.atomic.AtomicReference
 
@@ -39,24 +40,11 @@ private class DetailedCountingMap : AbstractMap<String, Any>() {
 private fun countingMainPrefs(values: Map<String, Any>): DetailedCountingMap {
     val countingMap = DetailedCountingMap().apply { putAll(values) }
     MainModule.mPrefs.clear()
-    val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-    snapshotField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val snapshot = snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>
-    snapshot.set(countingMap)
+    MainModule.mPrefs.installPreferenceReadProbe(countingMap)
     return countingMap
 }
 
-private fun prefMapWith(values: Map<String, Any>): PrefMap {
-    val prefMap = PrefMap().apply { clear() }
-    val countingMap = DetailedCountingMap().apply { putAll(values) }
-    val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-    snapshotField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val snapshot = snapshotField.get(prefMap) as AtomicReference<Map<String, Any>>
-    snapshot.set(countingMap)
-    return prefMap
-}
+private fun prefMapWith(values: Map<String, Any>) = PrefMap().apply { replaceSnapshot(values) }
 
 @Suppress("DEPRECATION")
 private class FakeModuleResources : Resources(null, DisplayMetrics().apply { density = 2.0f }, Configuration()) {
@@ -146,10 +134,8 @@ class DetailedNetSpeedHotPathTest {
     // 1. 首次 snapshot 构建读取全部相关 key 一次
     @Test
     fun buildDetailedNetSpeedFormatSnapshot_readsAllRelevantKeysOnce() {
-        val prefs = prefMapWith(defaultValues())
-        val countingMap = (prefs::class.java.getDeclaredField("snapshot").also { it.isAccessible = true }
-            .get(prefs) as? AtomicReference<*>)?.get() as? DetailedCountingMap
-            ?: error("could not retrieve counting map")
+        val countingMap = DetailedCountingMap().apply { putAll(defaultValues()) }
+        val prefs = PrefMap().apply { installPreferenceReadProbe(countingMap) }
         countingMap.reset()
 
         SystemUIStatusBarHooks.buildDetailedNetSpeedFormatSnapshot(prefs)

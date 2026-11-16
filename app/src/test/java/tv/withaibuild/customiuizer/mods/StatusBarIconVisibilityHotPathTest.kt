@@ -14,6 +14,7 @@ import org.junit.Test
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.PreferenceObserverRegistry
+import tv.withaibuild.customiuizer.testsupport.installPreferenceReadProbe
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -39,10 +40,7 @@ private class StatusBarCountingMap : AbstractMap<String, Any>() {
 private fun countingMainPrefs(values: Map<String, Any>): StatusBarCountingMap {
     val countingMap = StatusBarCountingMap().apply { putAll(values) }
     MainModule.mPrefs.clear()
-    val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-    snapshotField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+    MainModule.mPrefs.installPreferenceReadProbe(countingMap)
     return countingMap
 }
 
@@ -135,10 +133,7 @@ class StatusBarIconVisibilityHotPathTest {
         val values = allKeys().associateWith { true }
         val countingMap = StatusBarCountingMap().apply { putAll(values) }
         val prefs = PrefMap().apply { clear() }
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        prefs.installPreferenceReadProbe(countingMap)
         return SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
     }
 
@@ -241,10 +236,7 @@ class StatusBarIconVisibilityHotPathTest {
         val values = allKeys().associateWith { true }
         val countingMap = StatusBarCountingMap().apply { putAll(values) }
         val prefs = PrefMap().apply { clear() }
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        prefs.installPreferenceReadProbe(countingMap)
 
         SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
 
@@ -484,10 +476,7 @@ class StatusBarIconVisibilityHotPathTest {
         val key = "system_statusbaricons_wifi"
         val countingMap = StatusBarCountingMap().apply { putAll(mapOf(key to true)) }
         val prefs = PrefMap().apply { clear() }
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        prefs.installPreferenceReadProbe(countingMap)
 
         val snapshot = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         assertTrue(snapshot.hideWifi)
@@ -504,10 +493,7 @@ class StatusBarIconVisibilityHotPathTest {
         )
         val countingMap = StatusBarCountingMap().apply { putAll(values) }
         val prefs = PrefMap().apply { clear() }
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        prefs.installPreferenceReadProbe(countingMap)
 
         val snapshot = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         assertTrue(snapshot.hideWifi)
@@ -565,10 +551,7 @@ class StatusBarIconVisibilityHotPathTest {
         val values = allKeys().associateWith { false }
         val countingMap = StatusBarCountingMap().apply { putAll(values) }
         val prefs = PrefMap().apply { clear() }
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        prefs.installPreferenceReadProbe(countingMap)
 
         val first = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         val second = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
@@ -607,10 +590,7 @@ class StatusBarIconVisibilityHotPathTest {
         val values = allKeys().associateWith { false }
         val countingMap = StatusBarCountingMap().apply { putAll(values) }
         val prefs = PrefMap().apply { clear() }
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        prefs.installPreferenceReadProbe(countingMap)
 
         val first = SystemUIStatusBarHooks.buildStatusBarIconVisibilitySnapshot(prefs)
         resetStatusBarIconVisibilitySnapshot()

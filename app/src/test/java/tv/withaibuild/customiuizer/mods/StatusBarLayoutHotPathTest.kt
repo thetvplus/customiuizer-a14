@@ -9,6 +9,7 @@ import org.junit.Before
 import org.junit.Test
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.PreferenceObserverRegistry
+import tv.withaibuild.customiuizer.testsupport.installPreferenceReadProbe
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -53,10 +54,7 @@ class StatusBarLayoutHotPathTest {
         values["system_statusbar_showdevicetemperature"] = true
         val countingMap = LayoutCountingMap().apply { putAll(values) }
         val prefs = PrefMap().apply { clear() }
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        prefs.installPreferenceReadProbe(countingMap)
 
         SystemUIStatusBarHooks.buildStatusBarLayoutSnapshot(prefs)
 
@@ -68,10 +66,7 @@ class StatusBarLayoutHotPathTest {
     fun hotHelpers_100Calls_zeroPrefReads() {
         val snapshot = SystemUIStatusBarHooks.buildStatusBarLayoutSnapshot(MainModule.mPrefs)
         val countingMap = LayoutCountingMap()
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(countingMap)
+        MainModule.mPrefs.installPreferenceReadProbe(countingMap)
         countingMap.reset()
 
         repeat(100) { index ->
@@ -167,19 +162,12 @@ class StatusBarLayoutHotPathTest {
         mobileShownName: String = "",
     ): StatusBarLayoutSnapshot {
         val idGenerator = AtomicLong(1L)
-        val prefs = PrefMap().apply { clear() }
         val values = layoutKeys().associateWith { defaultFor(it) }.toMutableMap()
         values["system_4gtolte"] = convert4gToLte
         values["system_statusbar_mobile_showname"] = mobileShownName
-        val snapshotField = PrefMap::class.java.getDeclaredField("snapshot")
-        snapshotField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(prefs) as AtomicReference<Map<String, Any>>).set(values)
         // Build through production so field mapping stays in one place.
-        MainModule.mPrefs.clear()
-        @Suppress("UNCHECKED_CAST")
-        (snapshotField.get(MainModule.mPrefs) as AtomicReference<Map<String, Any>>).set(values)
-        val built = SystemUIStatusBarHooks.buildStatusBarLayoutSnapshot(MainModule.mPrefs)
+        val prefs = PrefMap().apply { replaceSnapshot(values) }
+        val built = SystemUIStatusBarHooks.buildStatusBarLayoutSnapshot(prefs)
         return built.copy(id = idGenerator.get(), convert4gToLte = convert4gToLte, mobileShownName = mobileShownName)
     }
 

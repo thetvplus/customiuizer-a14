@@ -4,7 +4,6 @@ import io.github.libxposed.api.XposedModuleInterface
 import java.io.FileNotFoundException
 import java.lang.reflect.Modifier
 import java.util.Properties
-import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -20,6 +19,7 @@ import tv.withaibuild.customiuizer.mods.utils.FeatureInstallStateTestAccess
 import tv.withaibuild.customiuizer.mods.utils.FeatureTarget
 import tv.withaibuild.customiuizer.mods.utils.InstallPhase
 import tv.withaibuild.customiuizer.mods.utils.feature.ChargingInfoFeature
+import tv.withaibuild.customiuizer.testsupport.installPreferenceReadProbe
 import tv.withaibuild.customiuizer.utils.PrefMap
 
 class ChargingInfoHotPathTest {
@@ -636,9 +636,7 @@ class ChargingInfoHotPathTest {
     private fun countingPrefMap(values: Map<String, Any>): Pair<PrefMap, CountingMap> {
         val prefs = PrefMap()
         val counting = CountingMap(HashMap(values))
-        val field = PrefMap::class.java.getDeclaredField("snapshot").apply { isAccessible = true }
-        val snapshot = field.get(prefs) as AtomicReference<Map<String, Any>>
-        snapshot.set(counting)
+        prefs.installPreferenceReadProbe(counting)
         return prefs to counting
     }
 

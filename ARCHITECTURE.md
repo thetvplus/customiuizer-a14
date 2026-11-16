@@ -83,6 +83,8 @@ FeatureSpec 的元数据 / 惰性工厂、FeatureDefinition 的安装行为和 R
 
 ## 设置、生成与持久化
 
+进程内偏好由 `PreferenceBootstrap` 发布到 `PrefMap`，观察者在发布后接收变化。多键策略从一次 `getAll()` 读取同一版本的只读映射。只有即时生效的宿主操作或可复用的派生结果才需要独立观察者。Wi-Fi 自动化复用 VPN 目标解析，应用名单由 VPN 自动切换消费。
+
 `app/settings/prefs_*.json` 是设置定义的唯一来源；`generatePreferenceArtifacts` 生成按需 Kotlin 页面工厂、非 UI 的紧凑搜索索引和当前偏好目录到 `app/build/generated/`。应用自有布局和菜单不保留 XML 副本；Manifest、值资源、向量、快捷方式及备份规则仍使用平台资源格式。Compose 仅属于设置进程，Dynamic Island / Dock 和宿主状态栏仍由原生 View / Canvas / ROM View 构造。
 
 AndroidX Preference 只承载已有持久化、依赖与控制器行为，Compose 绘制分组、选择器和编辑页，不创建 Preference RecyclerView。工厂先完成模型树，再在正确 manager 根下暂绑依赖并解除初始绑定；页面 onAttached 只建立一次实际监听，detach 解除。模型观察者只递增变化行，层级或分组改变才重建可见序列。编辑草稿由对应编辑器保存，取消 / detach 不遍历 View 或提交临时值；禁用、隐藏或移除设置会关闭旧编辑器。可见列表的图标解码复用现有 LRU，在有界 IO 并发中执行，单图边长最多 256 px，不恢复旧适配器、独立常驻线程池或 XML 绑定。搜索保留控制器、目标键和导航元数据；恢复按当前偏好契约校准，生成输入与 AGP 依赖见 [DEVELOPMENT](docs/DEVELOPMENT.md#构建与生成物)。当前页面与稳定键导航见[功能地图](docs/FEATURE_MAP.md)，其独立生成不改变运行时产物。

@@ -371,7 +371,6 @@
     <string name="system_animationscale_window_title">Окна</string>
     <string name="system_animationscale_transition_title">Переходы</string>
     <string name="system_animationscale_animator_title">Аниматоры значений</string>
-    <string name="launcher_gestures">Жесты</string>
     <string name="launcher_gestures_action">Действие</string>
     <string name="launcher_gestures_setting">Настройка для переключения</string>
     <string name="launcher_gestures_launch">Приложение для запуска</string>
@@ -547,7 +546,6 @@
     <string name="appsort_frequency">Частота использования</string>
     <string name="appsort_storage">Занимаемое место</string>
     <string name="appsort_install">Время установки</string>
-    <string name="gboard">Раскладка клавиатуры</string>
     <string name="calls">Звонки</string>
     <string name="array_default">Стандарт</string>
     <string name="array_system_default">Система</string>
@@ -1003,7 +1001,6 @@
     <string name="prefs_group_style">Стиль</string>
     <string name="prefs_group_behavior">Поведение</string>
     <string name="prefs_group_layout">Макет</string>
-    <string name="prefs_group_volume_panel">Панель громкости</string>
     <string name="prefs_group_animation_wallpaper">Анимация и обои</string>
     <string name="prefs_group_widgets">Виджеты</string>
     <string name="prefs_group_workspace_gestures">Жесты рабочего стола</string>
@@ -1020,7 +1017,6 @@
     <string name="system_toast_center_title">Смещение по вертикали</string>
     <string name="system_toast_center_summ">Плюс — вниз, минус — вверх.</string>
     <string name="prefs_group_actions">Действия</string>
-    <string name="prefs_group_animation">Анимация</string>
     <string name="prefs_group_appearance">Макет и оформление</string>
     <string name="prefs_group_apps">Приложения</string>
     <string name="prefs_group_authentication">Аутентификация</string>
@@ -1036,11 +1032,8 @@
     <string name="prefs_group_compatibility">Совместимость</string>
     <string name="prefs_group_connectivity">Подключения</string>
     <string name="prefs_group_content">Содержимое</string>
-    <string name="prefs_group_daily">Звонки и ввод</string>
     <string name="prefs_group_devices">Устройства и подключения</string>
-    <string name="prefs_group_display_sound">Экран, звук и вибрация</string>
     <string name="prefs_group_dual_sim">Две SIM-карты</string>
-    <string name="prefs_group_feedback">Жесты и уведомления</string>
     <string name="prefs_group_image">Изображение и сохранение</string>
     <string name="prefs_group_interaction">Взаимодействие</string>
     <string name="prefs_group_lock_content">Содержимое экрана блокировки</string>
@@ -1056,18 +1049,14 @@
     <string name="prefs_group_rules">Правила и ограничения</string>
     <string name="prefs_group_schedule">Расписание</string>
     <string name="prefs_group_screen_timeout">Выключение экрана и зарядка</string>
-    <string name="prefs_group_screenshot">Снимки экрана</string>
-    <string name="prefs_group_security_advanced">Безопасность и дополнительно</string>
     <string name="prefs_group_securitycenter">Безопасность</string>
     <string name="prefs_group_sharing">Обмен и открытие</string>
     <string name="prefs_group_sidebar">Боковая панель</string>
     <string name="prefs_group_signal_text">Уровень сигнала цифрами</string>
     <string name="prefs_group_spacing">Отступы и выравнивание</string>
-    <string name="prefs_group_status_data">Часы, батарея и данные</string>
     <string name="prefs_group_status_icons">Значки состояния</string>
     <string name="prefs_group_system_status">Состояние системы</string>
     <string name="prefs_group_system_tools">Системные инструменты</string>
-    <string name="prefs_group_system_ui">Системный интерфейс</string>
     <string name="prefs_group_telemetry">Диагностика и аналитика</string>
     <string name="prefs_group_text">Стиль текста</string>
     <string name="prefs_group_tiles">Плитки быстрых настроек</string>
@@ -1078,7 +1067,6 @@
     <string name="system_mods_backlight">Яркость</string>
     <string name="preference_unavailable">Недоступно</string>
     <string name="preference_applies_immediately">Настройка без перезапуска после активации</string>
-    <string name="launcher_mods_other">Макет рабочего стола</string>
     <string name="system_volumedialogdelay_expanded_title">Скрытие в развёрнутом виде</string>
 
     <string name="system_clock_fixed_width_title">Фиксированная ширина</string>
@@ -1202,7 +1190,6 @@
     <string name="launcher_folder_icon_blur_summ">Использует штатное размытие папок. Требуются системное размытие фона и стандартные значки. Для применения перезапустите рабочий стол.</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">Сетевые подключения</string>
     <string name="system_vpnauto_title">Автопереключение VPN</string>
     <string name="system_vpnauto_summary">Подключать одну VPN при открытии выбранных приложений</string>
     <string name="system_vpnauto_enable_summary">После первого включения перезагрузите устройство. Затем правила можно менять без перезагрузки.</string>
@@ -1315,9 +1302,8 @@
     <string name="system_recents_deck_motion_title">Анимация окон iOS</string>
     <string name="system_recents_deck_motion_summ">Настраивает открытие приложений и переход к недавним. Выключите для исходной анимации системы. Перезапустите лаунчер.</string>
     <string name="system_ios_desktop_title">Карточки задач iOS</string>
-    <string name="system_ios_volume_group_title">Громкость iOS</string>
     <string name="controls_ios_home_indicator_title">Индикатор жестов iOS</string>
-    <string name="controls_ios_home_indicator_summ">Нужны полноэкранные жесты, видимый системный индикатор и поддерживаемая ROM. В Настройки → Рабочий стол → Системная навигация выберите жесты и отключите скрытие полноэкранного индикатора. Также отключите скрытие линии жестов в этом модуле. Названия меню зависят от ROM. Перезапустите системный интерфейс.</string>
+    <string name="controls_ios_home_indicator_summ">Нужны полноэкранные жесты, видимый системный индикатор и поддерживаемая ROM. В Настройки → Рабочий стол → Системная навигация выберите жесты и отключите скрытие полноэкранного индикатора. Также отключите скрытие линии жестов в этом модуле. Названия меню зависят от ROM. Перезапустите системный интерфейс и приложение рабочего стола.</string>
     <string name="settings_category_statusbar">Строка состояния и Dynamic Island</string>
     <string name="settings_category_notifications">Уведомления и центр управления</string>
     <string name="settings_category_system">Экран и блокировка</string>
@@ -1348,7 +1334,6 @@
     <string name="settings_ios_volume">Громкость в стиле iOS</string>
     <string name="settings_status_icons">Значки состояния</string>
     <string name="settings_launcher_layout">Рабочий стол и анимация</string>
-    <string name="settings_app_behavior">Поведение приложений</string>
     <string name="settings_sound_vibration">Звук и вибрация</string>
     <string name="settings_keywords_controls">Кнопки и жесты buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">Приложения и обслуживание apps tools maintenance compatibility</string>

@@ -26,7 +26,6 @@ internal object WifiAutomationHooks {
     @Volatile private var context: Context? = null
     private lateinit var loader: ClassLoader
     private lateinit var handler: Handler
-    private var options = Config.Options(false, emptyList())
     private var runtime: Runtime? = null
     private var watching = false
     private val user = ActivityManager::class.java.getDeclaredMethod("getCurrentUser")
@@ -69,7 +68,7 @@ internal object WifiAutomationHooks {
 
     private fun refresh() {
         val ctx = context ?: return
-        options = Config.read(MainModule.mPrefs)
+        val options = Config.read(MainModule.mPrefs)
         if (!options.active) {
             runtime?.close(user.invoke(null) == 0 && boot.invoke(null, "sys.boot_completed", false) == true)
             if (runtime?.restoring != true) runtime = null
@@ -242,9 +241,15 @@ internal object WifiAutomationHooks {
             val value = callback
             callback = null
             try {
-                if (registered && value != null) { registered = false; ModuleHelper.replaceModuleRegistration("wifiAutomaticNetwork") {} }
+                if (registered && value != null) {
+                    registered = false
+                    ModuleHelper.removeModuleRegistration("wifiAutomaticNetwork")
+                }
             } finally {
-                if (observing) { observing = false; ModuleHelper.replaceModuleRegistration("wifiAutomaticProperties") {} }
+                if (observing) {
+                    observing = false
+                    ModuleHelper.removeModuleRegistration("wifiAutomaticProperties")
+                }
             }
         }
         fun close(restore: Boolean) {

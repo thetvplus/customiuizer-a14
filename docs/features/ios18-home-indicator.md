@@ -7,7 +7,7 @@
 | 原生证据 → 消费者 | Android 实现 | 差异与等级 |
 | --- | --- | --- |
 | MaterialKit `0x215347214` 默认高度 5 / 边距 8；`0x215342bf0` 宽度插值 | `HomeIndicatorGeometry` 转写宽度、居中及像素对齐算术 | 原生静态确认；Android 使用短边 402 的设计坐标，再乘实际短边像素 / 402。这是明确的比例映射，不是实测 UIScreen、pt=dp 或原机几何等价 |
-| SpringBoard `0x1d8621bcc` / `0x1d86239ec` 基础 frame 与 delegate 额外间距 | 原生 handle 内构建一份 G4 共享几何的圆端 Path | 数学重建 + Android 近似；原生 View 小于目标宽度时限制到其宽度，不扩张触摸或窗口。无 iOS delegate 输入，不猜测键盘额外间距 |
+| SpringBoard `0x1d8621bcc` / `0x1d86239ec` 基础 frame 与 delegate 额外间距 | 原生 handle 内用 Canvas 圆角矩形绘制圆端 | 数学重建 + Android 近似；原生 View 小于目标宽度时限制到其宽度，不扩张触摸或窗口。无 iOS delegate 输入，不猜测键盘额外间距 |
 | `SBHomeGrabberView → SBFHomeAffordanceView → MTLumaDodgePillView → MTPillView` | `NavigationHandle.onDraw(Canvas)V` 单次替换填充，使用原生 `mPaint` | Android 近似。专用 cornerContents、亮度滤镜和私有合成未迁移；沿用系统 LightBar 颜色，禁止后台截图取色 |
 | 触摸唤回、隐藏原因、所有权与旋转双信号 | 完全沿用 Android 原生导航 View 的 visibility / alpha / 旋转与输入 | 原生静态合同已读；iOS 状态机没有安全的同构 Android 输入，未另建计时器或手势求解器。不能称原生动态确认 |
 
@@ -15,13 +15,13 @@
 
 ## 接入与所有权
 
-设置路径为“声音与操作 → 导航栏与输入法 → iOS 手势指示条”。键为 `controls_ios_home_indicator`，默认关闭，重启 SystemUI 生效。需要系统全面屏手势和可见的原生 Handle，并关闭系统“隐藏全面屏指示条”和米客“隐藏手势提示线”。系统菜单名随 ROM 变化。
+设置路径为“声音与操作 → 导航栏与输入法 → iOS 手势指示条”。键为 `controls_ios_home_indicator`，默认关闭。启用或关闭后重启桌面和 SystemUI。需要系统全面屏手势和可见的原生 Handle，并关闭系统“隐藏全面屏指示条”和米客“隐藏手势提示线”。系统菜单名随 ROM 变化。
 
-页面进入或返回时读取导航与隐藏开关。条件不满足时保留勾选值并禁用入口。AndroidX 根据 `controls_nonavbar` 的 `disableDependentsState=true` 计算状态，Compose 消费同一 Preference。宿主在安装阶段检查 SDK 34 / arm64、SystemUI 主进程及完整实例签名，满足后接管绘制。
+页面进入或返回时读取导航与隐藏开关。条件不满足时保留勾选值并禁用入口。AndroidX 根据 `controls_nonavbar` 的 `disableDependentsState=true` 计算状态，Compose 消费同一 Preference。宿主检查 SDK 34 / arm64、各自的主进程及绘制签名。SystemUI 可独立接管横屏副手势条，桌面在自己的进程中接管原生手势条。
 
 冷解析绘制、模式更新及普通颜色渐变时长三个 Hook：`NavigationHandle.onDraw(Landroid/graphics/Canvas;)V`、`NavigationBarView.updateIcons(Landroid/content/res/Configuration;)V` 与 `NavigationBarTransitions.getTintAnimationDuration()I`。原生 `NavigationBar.setNavBarMode(I)V` 写入字段后调用 updateIcons 并可能重建 handle；模式字段缓存后，绘制只在主屏、精确 NavigationHandle 类及真实 NavigationBarView 祖先下工作，非手势模式不创建绘制 owner。复用 `mPaint:Landroid/graphics/Paint;`，同时要求实例字段为 final；已查样本均只在构造器写入，宿主重建 / detach 后重新取得当前实例。可替换 Paint 的未知合同保留原生，不逐帧读取字段。不写原生 Paint、布局、alpha、visibility、Insets、焦点或输入。教程、独立控制中心 / 锁屏 handle、未知子类和旋转尺寸尚未对齐时保留原生。
 
-每个 handle 惰性持有一份 Path 和尺寸缓存，尺寸变化才通过 WindowManager.maximumWindowMetrics 获取当前屏幕几何并重建（SystemUI Resources 在横屏可保留竖屏值）；颜色由原生 Paint 更新，静止时无帧调度。detach 解除自身 attach listener 和附加 owner；没有全局 View 表、悬浮窗口、Bitmap、RenderEffect、跨进程通信或独立动画时钟。完整 Hook 批次未提交或几何无法容纳时不跳过原生绘制。关闭并重启后没有自持原生属性需要归还。
+每个 handle 惰性缓存绘制矩形与圆端半径。尺寸或旋转变化时通过 WindowManager.maximumWindowMetrics 获取当前屏幕几何并重算（SystemUI Resources 在横屏可保留竖屏值）；颜色由原生 Paint 更新，静止时无帧调度。detach 解除自身 attach listener 和附加 owner；没有全局 View 表、悬浮窗口、Bitmap、RenderEffect、跨进程通信或独立动画时钟。完整 Hook 批次未提交或几何无法容纳时不跳过原生绘制。关闭并重启后没有自持原生属性需要归还。
 
 ## 场景策略
 
@@ -40,7 +40,7 @@
 | 锁屏、解锁、通知中心、控制中心、电源菜单、AOD、受保护或未知界面 | 仅已经准入的普通导航 handle 可接管；独立宿主保留原生，不跨宿主强制显示 |
 | 竖屏、横屏、180°、旋转中断、密度变化 | 宿主尺寸与当前显示宽度一致才消费新几何；复用原生旋转和重建，不新增旋转时钟 |
 | 深浅色、亮度、壁纸、省电、系统动画关闭 | 原生 Paint / alpha / 策略继续生效；无持续取色、呼吸或浮动动画 |
-| 导航模式切换、关闭、SystemUI 重启 | 模式非 2 时原生绘制；重建后惰性接管。关闭需重启 SystemUI；Home / Back / Recents 输入从未被接管 |
+| 导航模式切换、关闭、宿主重启 | 模式非 2 时原生绘制；重建后惰性接管。关闭需重启桌面和 SystemUI。Home / Back / Recents 输入沿用系统 |
 
 ## ROM 静态合同
 

@@ -353,7 +353,6 @@
     <string name="system_animationscale_window_title">Ventanas</string>
     <string name="system_animationscale_transition_title">Transiciones</string>
     <string name="system_animationscale_animator_title">Valores de la animación</string>
-    <string name="launcher_gestures">Gestos</string>
     <string name="launcher_gestures_action">Acción</string>
     <string name="launcher_gestures_setting">Ajustes para alternar</string>
     <string name="launcher_gestures_launch">App para iniciar</string>
@@ -524,7 +523,6 @@
     <string name="appsort_frequency">Frecuencia de uso</string>
     <string name="appsort_storage">Uso de almacenamiento</string>
     <string name="appsort_install">Hora de instalación</string>
-    <string name="gboard">Diseño del teclado</string>
     <string name="calls">Llamadas</string>
     <string name="array_default">Predeterminado</string>
     <string name="array_system_default">Sistema</string>
@@ -1003,7 +1001,6 @@
     <string name="prefs_group_style">Estilo</string>
     <string name="prefs_group_behavior">Comportamiento</string>
     <string name="prefs_group_layout">Distribución</string>
-    <string name="prefs_group_volume_panel">Panel de volumen</string>
     <string name="prefs_group_animation_wallpaper">Animaciones y fondo de pantalla</string>
     <string name="prefs_group_widgets">Widgets</string>
     <string name="prefs_group_workspace_gestures">Gestos de la pantalla de inicio</string>
@@ -1020,7 +1017,6 @@
     <string name="system_toast_center_title">Desplazamiento vertical</string>
     <string name="system_toast_center_summ">Positivo baja; negativo sube.</string>
     <string name="prefs_group_actions">Acciones</string>
-    <string name="prefs_group_animation">Animaciones</string>
     <string name="prefs_group_appearance">Diseño y apariencia</string>
     <string name="prefs_group_apps">Aplicaciones</string>
     <string name="prefs_group_authentication">Autenticación</string>
@@ -1036,11 +1032,8 @@
     <string name="prefs_group_compatibility">Compatibilidad</string>
     <string name="prefs_group_connectivity">Conexiones</string>
     <string name="prefs_group_content">Contenido</string>
-    <string name="prefs_group_daily">Llamadas y teclado</string>
     <string name="prefs_group_devices">Dispositivos y conexiones</string>
-    <string name="prefs_group_display_sound">Pantalla, sonido y vibración</string>
     <string name="prefs_group_dual_sim">Doble SIM</string>
-    <string name="prefs_group_feedback">Gestos y avisos</string>
     <string name="prefs_group_image">Imagen y almacenamiento</string>
     <string name="prefs_group_interaction">Interacción</string>
     <string name="prefs_group_lock_content">Contenido de pantalla de bloqueo</string>
@@ -1056,18 +1049,14 @@
     <string name="prefs_group_rules">Reglas y restricciones</string>
     <string name="prefs_group_schedule">Horario</string>
     <string name="prefs_group_screen_timeout">Apagado de pantalla y carga</string>
-    <string name="prefs_group_screenshot">Capturas de pantalla</string>
-    <string name="prefs_group_security_advanced">Seguridad y avanzado</string>
     <string name="prefs_group_securitycenter">Seguridad</string>
     <string name="prefs_group_sharing">Compartir y abrir</string>
     <string name="prefs_group_sidebar">Barra lateral</string>
     <string name="prefs_group_signal_text">Señal en números</string>
     <string name="prefs_group_spacing">Espaciado y alineación</string>
-    <string name="prefs_group_status_data">Reloj, batería y datos</string>
     <string name="prefs_group_status_icons">Iconos de estado</string>
     <string name="prefs_group_system_status">Estado del sistema</string>
     <string name="prefs_group_system_tools">Herramientas del sistema</string>
-    <string name="prefs_group_system_ui">Interfaz del sistema</string>
     <string name="prefs_group_telemetry">Diagnóstico y estadísticas</string>
     <string name="prefs_group_text">Estilo de texto</string>
     <string name="prefs_group_tiles">Paneles de ajustes rápidos</string>
@@ -1078,7 +1067,6 @@
     <string name="system_mods_backlight">Brillo</string>
     <string name="preference_unavailable">No disponible</string>
     <string name="preference_applies_immediately">Ajuste inmediato tras activar</string>
-    <string name="launcher_mods_other">Diseño de inicio</string>
     <string name="system_volumedialogdelay_expanded_title">Ocultar al expandir</string>
 
     <string name="system_clock_fixed_width_title">Ancho fijo</string>
@@ -1202,7 +1190,6 @@
     <string name="launcher_folder_icon_blur_summ">Usa el desenfoque nativo para las carpetas. Requiere desenfoque del sistema e iconos predeterminados. Reinicia el lanzador para aplicar.</string>
 
     <!-- Automatic VPN -->
-    <string name="system_vpnauto_group">Conexiones de red</string>
     <string name="system_vpnauto_title">VPN automática</string>
     <string name="system_vpnauto_summary">Conectar una VPN al abrir cualquier aplicación seleccionada</string>
     <string name="system_vpnauto_enable_summary">Reinicia el dispositivo tras activarla por primera vez. Después puedes cambiar las reglas sin reiniciar.</string>
@@ -1315,9 +1302,8 @@
     <string name="system_recents_deck_motion_title">Animación de ventanas de iOS</string>
     <string name="system_recents_deck_motion_summ">Ajusta la apertura de apps y la entrada a recientes. Desactívalo para usar las animaciones originales. Reinicia el lanzador.</string>
     <string name="system_ios_desktop_title">Tarjetas de tareas iOS</string>
-    <string name="system_ios_volume_group_title">Volumen iOS</string>
     <string name="controls_ios_home_indicator_title">Indicador de gestos de iOS</string>
-    <string name="controls_ios_home_indicator_summ">Requiere gestos a pantalla completa, un indicador visible y una ROM compatible. En Ajustes → Pantalla de inicio → Navegación del sistema, elige Gestos y desactiva Ocultar indicador de pantalla completa. Desactiva también Ocultar línea de gestos en este módulo. Los nombres pueden variar según la ROM. Reinicia la interfaz del sistema.</string>
+    <string name="controls_ios_home_indicator_summ">Requiere gestos a pantalla completa, un indicador visible y una ROM compatible. En Ajustes → Pantalla de inicio → Navegación del sistema, elige Gestos y desactiva Ocultar indicador de pantalla completa. Desactiva también Ocultar línea de gestos en este módulo. Los nombres pueden variar según la ROM. Reinicia la interfaz del sistema y el lanzador.</string>
     <string name="settings_category_statusbar">Barra de estado y Dynamic Island</string>
     <string name="settings_category_notifications">Notificaciones y centro de control</string>
     <string name="settings_category_system">Pantalla y bloqueo</string>
@@ -1348,7 +1334,6 @@
     <string name="settings_ios_volume">Volumen de iOS</string>
     <string name="settings_status_icons">Iconos de estado</string>
     <string name="settings_launcher_layout">Diseño de inicio y animación</string>
-    <string name="settings_app_behavior">Comportamiento de aplicaciones</string>
     <string name="settings_sound_vibration">Sonido y vibración</string>
     <string name="settings_keywords_controls">Botones y gestos buttons gestures keys sound audio volume vibration</string>
     <string name="settings_keywords_tools">Aplicaciones y mantenimiento apps tools maintenance compatibility</string>

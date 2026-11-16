@@ -76,6 +76,8 @@ GitHub CLI / API 仅作为已有 Git 网络故障证据下的备用路径。先�
 
 生成 res / Kotlin 和各变体 provenance assets 用 AGP `addGeneratedSourceDirectory` 声明消费依赖；独立 lint 的 provenance 依赖用公开 PreBuild 生命周期 API 注册，不匹配内部任务名。
 
+R8 的 HyperOS 缺失类规则按完整类名覆盖 `compileOnly` 框架声明中的私有类型。新缺失类先核对引用方与最终 DEX。Xposed 入口随 R8 改名同步写入 `META-INF/xposed/java_init.list`。
+
 Feature / routing 变化后运行 `python tools/extract_process_matrix.py`，检查 JSON / CSV diff 及 [确定性门禁](TESTING.md#独立故障验证)。ROM / APK / mapping / 日志与签名材料按根规则留在忽略目录或仓库外。
 
 页面导航文档按需运行 `python tools/generate_feature_map.py`，过期检查用 `--check`；`python tools/check_docs.py` 检查仓库 Markdown 的本地链接、锚点和图片。两者独立于 Gradle，不改变分页 / 搜索 / 偏好目录生成物。职责与更新标准见 [DOCS_STYLE](DOCS_STYLE.md)。

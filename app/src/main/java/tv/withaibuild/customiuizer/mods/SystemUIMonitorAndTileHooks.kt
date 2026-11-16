@@ -99,9 +99,10 @@ object SystemUIMonitorAndTileHooks {
         })
         ModuleHelper.findAndHookMethod(NfcTileCls, lpparam.classLoader, "handleSetListening", Boolean::class.javaPrimitiveType!!, object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
-                val tileName = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "customName") as String?
+                val tile = callback.getThisObject()
+                val tileName = XposedHelpers.getAdditionalInstanceField(tile, "customName") as String?
                 if (tileName != null) {
-                    val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
+                    val mContext = XposedHelpers.getObjectField(tile, "mContext") as Context
                     val mListening = callback.getArg(0) as Boolean
                     when (tileName) {
                         "custom_5G" -> {
@@ -109,23 +110,23 @@ object SystemUIMonitorAndTileHooks {
                             if (mListening) {
                                 val contentObserver = object : ContentObserver(Handler(mContext.mainLooper)) {
                                     override fun onChange(selfChange: Boolean) = ModuleHelper.guarded {
-                                        XposedHelpers.callMethod(callback.getThisObject(), "refreshState")
+                                        XposedHelpers.callMethod(tile, "refreshState")
                                     }
                                 }
                                 resolver.registerContentObserver(Settings.Global.getUriFor("fiveg_user_enable"), false, contentObserver)
                                 resolver.registerContentObserver(Settings.Global.getUriFor("dual_nr_enabled"), false, contentObserver)
                                 ModuleHelper.replaceModuleRegistration("custom_5G_tile_listener") { resolver.unregisterContentObserver(contentObserver) }
                             } else {
-                                ModuleHelper.replaceModuleRegistration("custom_5G_tile_listener") {}
+                                ModuleHelper.removeModuleRegistration("custom_5G_tile_listener")
                             }
                         }
                         "custom_FPS" -> {
                             if (mListening) {
                                 val ServiceManager = XposedHelpers.findClass("android.os.ServiceManager", lpparam.classLoader)
                                 val mSurfaceFlinger = XposedHelpers.callStaticMethod(ServiceManager, "getService", "SurfaceFlinger")
-                                XposedHelpers.setAdditionalInstanceField(callback.getThisObject(), "mSurfaceFlinger", mSurfaceFlinger)
+                                XposedHelpers.setAdditionalInstanceField(tile, "mSurfaceFlinger", mSurfaceFlinger)
                             } else {
-                                XposedHelpers.removeAdditionalInstanceField(callback.getThisObject(), "mSurfaceFlinger")
+                                XposedHelpers.removeAdditionalInstanceField(tile, "mSurfaceFlinger")
                             }
                         }
                         "custom_floatingtime" -> {
@@ -133,13 +134,13 @@ object SystemUIMonitorAndTileHooks {
                             if (mListening) {
                                 val contentObserver = object : ContentObserver(Handler(mContext.mainLooper)) {
                                     override fun onChange(selfChange: Boolean) = ModuleHelper.guarded {
-                                        XposedHelpers.callMethod(callback.getThisObject(), "refreshState")
+                                        XposedHelpers.callMethod(tile, "refreshState")
                                     }
                                 }
                                 resolver.registerContentObserver(Settings.System.getUriFor("miui_time_floating_window"), false, contentObserver)
                                 ModuleHelper.replaceModuleRegistration("custom_floatingtime_tile_listener") { resolver.unregisterContentObserver(contentObserver) }
                             } else {
-                                ModuleHelper.replaceModuleRegistration("custom_floatingtime_tile_listener") {}
+                                ModuleHelper.removeModuleRegistration("custom_floatingtime_tile_listener")
                             }
                         }
                     }

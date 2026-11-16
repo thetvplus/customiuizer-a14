@@ -70,8 +70,10 @@ class DynamicIslandStatusBarFadeTest {
 
     @Test fun changedPhysicalBoundsRestoreAnIconAsSoonAsItIsClear() {
         DynamicIslandStatusBarFade.acquire(islandA, bounds)
+        val lease = DynamicIslandStatusBarFade.ownerRef
         DynamicIslandStatusBarFade.acquire(islandA, Rect(bounds.left + 50, bounds.top, bounds.right - 50, bounds.bottom))
         assertEquals(.6f, covered.alpha); assertEquals(.8f, clear.alpha)
+        assertSame(lease, DynamicIslandStatusBarFade.ownerRef)
     }
 
     @Test fun missingOrReplacedRomHierarchyNeverFallsBackToHidingAllContents() {

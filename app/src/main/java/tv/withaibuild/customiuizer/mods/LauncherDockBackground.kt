@@ -486,22 +486,23 @@ internal class DockBackgroundView(
         super.onAttachedToWindow()
         ModuleHelper.guarded {
             syncSceneFromHost()
-            readScreenRadius(rootWindowInsets)
-            navigationInsets = rootWindowInsets?.getInsets(WindowInsets.Type.navigationBars()) ?: Insets.NONE
+            val insets = rootWindowInsets
+            readScreenRadius(insets)
+            navigationInsets = insets?.getInsets(WindowInsets.Type.navigationBars()) ?: Insets.NONE
             materialUnavailable = false
             observeBlurPolicy(true)
-            installMaterial()
+            reconcileNativeMaterial(prepareOnAttach = true)
             syncNativeMaterialVisibility(isShown)
             refreshAppearance()
             scheduleGeometry()
         }
     }
 
-    private fun installMaterial() {
-        if (nativeMaterial != null || materialUnavailable || materialConstructor == null || config.material != 2 || config.opacity == 0 || !blurAllowed()) return
+    private fun installMaterial(constructor: Constructor<*>) {
+        if (nativeMaterial != null || materialUnavailable) return
         var candidate: View? = null
         try {
-            candidate = materialConstructor.newInstance(context) as View
+            candidate = constructor.newInstance(context) as View
             googleBlur = XposedHelpers.callMethod(candidate, "isGoogleBlurSupported") == true
             val supported = googleBlur || XposedHelpers.callMethod(candidate, "isBackdropBlurSupported") == true
             if (!supported) { materialUnavailable = true; return }
@@ -698,10 +699,19 @@ internal class DockBackgroundView(
 
     private fun refreshBlurPolicy() {
         if (!isAttachedToWindow) return
-        if (!blurAllowed()) retireMaterial()
-        else if (windowVisibility == VISIBLE && (isShown || editingAnimation != null)) installMaterial()
+        reconcileNativeMaterial()
         syncNativeMaterialVisibility(isShown || editingAnimation != null)
         scheduleVisualSync()
+    }
+
+    private fun reconcileNativeMaterial(prepareOnAttach: Boolean = false) {
+        val constructor = materialConstructor ?: return
+        if (config.material != 2 || config.opacity == 0) return
+        if (!blurAllowed()) retireMaterial()
+        // Prepare the inactive child before layout even if Overview currently hides the Dock.
+        else if (prepareOnAttach || windowVisibility == VISIBLE && (isShown || editingAnimation != null)) {
+            installMaterial(constructor)
+        }
     }
 
     private fun observeBlurPolicy(visible: Boolean) {

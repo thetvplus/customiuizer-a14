@@ -22,9 +22,15 @@ class PrefMap {
 
     private val parsedIntCache = ConcurrentHashMap<String, CachedInt>()
 
-    private val snapshot = AtomicReference<Map<String, Any>>(emptyMap())
+    // Copy from the owned map on writes. The Java read-only view wraps entries during iteration.
+    private class Snapshot(val values: Map<String, Any>) {
+        val readOnly = Collections.unmodifiableMap(values)
+    }
 
-    private fun currentSnapshot(): Map<String, Any> = snapshot.get()
+    private val emptySnapshot = Snapshot(emptyMap())
+    private val snapshot = AtomicReference(emptySnapshot)
+
+    private fun currentSnapshot(): Map<String, Any> = snapshot.get().values
 
     private fun getValue(key: String): Any? {
         return currentSnapshot()[canonicalPreferenceKey(key) ?: key]
@@ -44,7 +50,7 @@ class PrefMap {
                 normalized[canonicalPreferenceKey(key) ?: key] = value
             }
         }
-        snapshot.set(normalized)
+        snapshot.set(Snapshot(normalized))
         parsedIntCache.clear()
     }
 
@@ -61,9 +67,9 @@ class PrefMap {
 
         while (true) {
             val old = snapshot.get()
-            val new = HashMap<String, Any>(old)
+            val new = HashMap<String, Any>(old.values)
             new[normalized] = value
-            if (snapshot.compareAndSet(old, new)) break
+            if (snapshot.compareAndSet(old, Snapshot(new))) break
         }
     }
 
@@ -76,15 +82,15 @@ class PrefMap {
 
         while (true) {
             val old = snapshot.get()
-            val new = HashMap<String, Any>(old)
+            val new = HashMap<String, Any>(old.values)
             new.remove(normalized)
-            if (snapshot.compareAndSet(old, new)) break
+            if (snapshot.compareAndSet(old, Snapshot(new))) break
         }
     }
 
     /** Clear the entire snapshot. */
     fun clear() {
-        snapshot.set(emptyMap())
+        snapshot.set(emptySnapshot)
         parsedIntCache.clear()
     }
 
@@ -109,13 +115,13 @@ class PrefMap {
     operator fun contains(key: String): Boolean = currentSnapshot().containsKey(key)
 
     /**
-     * Returns the current published snapshot as an unmodifiable map.
+     * Returns the same unmodifiable map until the next publication.
      *
      * Callers that need a consistent view of multiple keys should read the snapshot once with
      * this method, rather than call the typed getters repeatedly. The typed getters each read
      * the current snapshot independently, so a sequence of them may observe different snapshots.
      */
-    fun getAll(): Map<String, Any> = snapshot.get().let { Collections.unmodifiableMap(it) }
+    fun getAll(): Map<String, Any> = snapshot.get().readOnly
 
     fun getInt(key: String, defaultValue: Int): Int {
         val value = getValue(key)

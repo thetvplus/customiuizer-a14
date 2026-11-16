@@ -6,7 +6,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.fail
 import org.junit.Test
-import tv.withaibuild.customiuizer.mods.utils.FatalErrors
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 
@@ -17,9 +16,6 @@ import java.lang.reflect.Method
  */
 class NotificationAutoExpandResolverTest {
 
-    // -------------------------------------------------------------------------
-    // A. EXACT ROOT RESOLUTION
-    // -------------------------------------------------------------------------
     @Test
     fun resolve_exactRoot_resolvesPrimitiveBooleanFieldAndMethods() {
         val abi = NotificationAutoExpandResolver.resolve(
@@ -48,9 +44,6 @@ class NotificationAutoExpandResolverTest {
         assertResolvedPrimitiveBoolean(abi.mOnKeyguardField, "mOnKeyguard")
     }
 
-    // -------------------------------------------------------------------------
-    // B. PRIMITIVE BOOLEAN ENFORCEMENT
-    // -------------------------------------------------------------------------
     @Test
     fun resolve_wrapperMOnKeyguard_rejects() {
         val abi = NotificationAutoExpandResolver.resolve(
@@ -59,9 +52,6 @@ class NotificationAutoExpandResolverTest {
         assertNull("Resolver must reject wrapper mOnKeyguard", abi)
     }
 
-    // -------------------------------------------------------------------------
-    // C. MISSING MEMBER REJECTION
-    // -------------------------------------------------------------------------
     @Test
     fun resolve_missingMOnKeyguard_rejects() {
         val abi = NotificationAutoExpandResolver.resolve(
@@ -86,9 +76,6 @@ class NotificationAutoExpandResolverTest {
         assertNull("Resolver must reject missing setSystemExpanded", abi)
     }
 
-    // -------------------------------------------------------------------------
-    // D. ZERO-ARG GET_ENTRY SELECTION
-    // -------------------------------------------------------------------------
     @Test
     fun resolve_getEntry_zeroArgSelected() {
         val abi = NotificationAutoExpandResolver.resolve(
@@ -115,9 +102,6 @@ class NotificationAutoExpandResolverTest {
         )
     }
 
-    // -------------------------------------------------------------------------
-    // E. BOOLEAN.CLASS BEST-MATCH BEHAVIOR
-    // -------------------------------------------------------------------------
     @Test
     fun resolve_setSystemExpandedWithBoxedBoolean_resolves() {
         val abi = NotificationAutoExpandResolver.resolve(
@@ -154,38 +138,6 @@ class NotificationAutoExpandResolverTest {
         )
     }
 
-    // -------------------------------------------------------------------------
-    // F. ORDINARY RESOLUTION FAILURE
-    // -------------------------------------------------------------------------
-    @Test
-    fun resolve_ordinaryClassLoadingFailure_returnsNull() {
-        val throwingLoader = object : ClassLoader() {
-            override fun loadClass(name: String?): Class<*> {
-                throw IllegalStateException("simulated ordinary class-loading failure")
-            }
-        }
-
-        val abi = NotificationAutoExpandResolver.resolve(throwingLoader)
-        assertNull("Resolver must return null on ordinary class-loading failure", abi)
-    }
-
-    // -------------------------------------------------------------------------
-    // G. FATAL RESOLUTION FAILURE
-    // -------------------------------------------------------------------------
-    @Test(expected = OutOfMemoryError::class)
-    fun resolve_fatalClassLoadingFailure_propagates() {
-        val throwingLoader = object : ClassLoader() {
-            override fun loadClass(name: String?): Class<*> {
-                throw OutOfMemoryError("simulated fatal class-loading failure")
-            }
-        }
-
-        NotificationAutoExpandResolver.resolve(throwingLoader)
-    }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
     private fun assertResolvedPrimitiveBoolean(field: Field, name: String) {
         assertNotNull("$name field must resolve", field)
         assertEquals("$name field must be primitive boolean", java.lang.Boolean.TYPE, field.type)
