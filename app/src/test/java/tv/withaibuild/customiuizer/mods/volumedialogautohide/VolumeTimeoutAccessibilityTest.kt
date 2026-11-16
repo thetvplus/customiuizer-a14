@@ -5,7 +5,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import java.lang.reflect.Executable
-import java.util.concurrent.atomic.AtomicReference
+import tv.withaibuild.customiuizer.utils.PrefMap
 
 class VolumeTimeoutAccessibilityTest {
     @Test
@@ -79,7 +79,10 @@ class VolumeTimeoutAccessibilityTest {
     private fun effect(configured: Int = 2500, recommend: (Any?, Int, Int) -> Int?) =
         VolumeDialogAutohideDelayEffect(
             VolumeDialogAutohideDelayResolver.resolve(VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl::class.java),
-            AtomicReference(VolumeDialogAutohideDelaySnapshot(configured, configured)),
+            PrefMap().apply {
+                put("system_volumedialogdelay_expanded", configured)
+                put("system_volumedialogdelay_collapsed", configured)
+            },
             recommend,
         )
 

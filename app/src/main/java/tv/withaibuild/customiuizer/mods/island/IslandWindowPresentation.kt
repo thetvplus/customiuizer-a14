@@ -63,15 +63,9 @@ internal class IslandWindowPresentation(
     private fun refreshFrame() {
         val event = identity ?: return
         val view = target()
-        var parent: View? = view
-        var opaque = true
-        while (parent != null) {
-            if (parent.alpha <= .01f) { opaque = false; break }
-            parent = parent.parent as? View
-        }
         val drawable = eligible() && root.isAttachedToWindow && view.isAttachedToWindow &&
             view.windowVisibility == View.VISIBLE && view.isShown && view.isLaidOut &&
-            !view.isLayoutRequested && view.width > 0 && view.height > 0 && opaque &&
+            !view.isLayoutRequested && view.width > 0 && view.height > 0 && hasVisibleAlpha(view) &&
             view.getGlobalVisibleRect(bounds) && !bounds.isEmpty
         if (!drawable) {
             release()
@@ -89,17 +83,32 @@ internal class IslandWindowPresentation(
             view.getLocationOnScreen(screenPosition)
             // ViewRootImpl does not apply a window root's own matrix to its global
             // visible rect. Map it explicitly, including drawing into Surface outsets.
-            transformedBounds.set(0f, 0f, view.width.toFloat(), view.height.toFloat())
-            view.matrix.mapRect(transformedBounds)
-            transformedOrigin[0] = 0f; transformedOrigin[1] = 0f
-            view.matrix.mapPoints(transformedOrigin)
-            transformedBounds.offset(screenPosition[0] - transformedOrigin[0], screenPosition[1] - transformedOrigin[1])
-            bounds.set(floor(transformedBounds.left).toInt(), floor(transformedBounds.top).toInt(),
-                ceil(transformedBounds.right).toInt(), ceil(transformedBounds.bottom).toInt())
+            val matrix = view.matrix
+            if (matrix.isIdentity) {
+                bounds.set(screenPosition[0], screenPosition[1],
+                    screenPosition[0] + view.width, screenPosition[1] + view.height)
+            } else {
+                transformedBounds.set(0f, 0f, view.width.toFloat(), view.height.toFloat())
+                matrix.mapRect(transformedBounds)
+                transformedOrigin.fill(0f)
+                matrix.mapPoints(transformedOrigin)
+                transformedBounds.offset(screenPosition[0] - transformedOrigin[0], screenPosition[1] - transformedOrigin[1])
+                bounds.set(floor(transformedBounds.left).toInt(), floor(transformedBounds.top).toInt(),
+                    ceil(transformedBounds.right).toInt(), ceil(transformedBounds.bottom).toInt())
+            }
             DynamicIslandStatusBarFade.acquire(event, bounds)
         }
         if (phase != Phase.EXITING) phase = Phase.VISIBLE
         presented()
+    }
+
+    private fun hasVisibleAlpha(view: View): Boolean {
+        var ancestor: View? = view
+        while (ancestor != null) {
+            if (ancestor.alpha <= .01f) return false
+            ancestor = ancestor.parent as? View
+        }
+        return true
     }
 
     private fun release() {

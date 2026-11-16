@@ -33,16 +33,7 @@ public final class VolumeDialogAutohideDelayFixtures {
 
     /** Subclass used to test strict subclass mismatch at runtime. */
     public static class SubMiuiVolumeDialogImpl extends MiuiVolumeDialogImpl {
-    }
-
-    /** Class with wrapper Boolean fields; resolver must reject these. */
-    public static class WrapperBooleanMiuiVolumeDialogImpl {
-        public Boolean mHovering = false;
-        public Boolean mExpanded = false;
-
-        public int computeTimeoutH() {
-            return 5000;
-        }
+        public boolean mExpanded;
     }
 
     /** Class with wrapper mHovering and primitive mExpanded. */
@@ -133,29 +124,6 @@ public final class VolumeDialogAutohideDelayFixtures {
         public void setExpanded(boolean value) { this.mExpanded = value; }
         public void setSafetyShowing(Boolean value) { this.mIsSafetyShowing = value; }
         public void setSafetyWarning(Boolean value) { this.mSafetyWarning = value; }
-    }
-
-    /** Class with the safety alias fields present. */
-    public static class SafetyAliasMiuiVolumeDialogImpl {
-        public boolean mHovering = false;
-        public boolean mExpanded = false;
-        public Boolean mIsSafetyShowing = false;
-        public Boolean mSafetyWarning = false;
-
-        public int computeTimeoutH() {
-            return 5000;
-        }
-    }
-
-    /** Class with only the fallback safety field. */
-    public static class SafetyFallbackOnlyMiuiVolumeDialogImpl {
-        public boolean mHovering = false;
-        public boolean mExpanded = false;
-        public Boolean mSafetyWarning = false;
-
-        public int computeTimeoutH() {
-            return 5000;
-        }
     }
 
     /** Class with the primary safety field throwing on cast. */

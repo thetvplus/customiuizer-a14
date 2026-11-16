@@ -110,7 +110,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
             private set
         val base get()=api.base.get(algorithm) as RectF
         val count get()=api.count.getInt(algorithm)
-        val gap: Float get()=1f+api.gap.getFloat(algorithm)/base.width().coerceAtLeast(1f)
+        val gap: Float get()=normalizedGap(base.width())
+        private fun normalizedGap(width: Float): Float = 1f+api.gap.getFloat(algorithm)/width.coerceAtLeast(1f)
         fun geometryValid(): Boolean {
             val window=api.window.get(algorithm) as Rect
             val insets=api.visualInsets.get(algorithm) as Rect
@@ -119,9 +120,10 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
         }
         fun write(index: Int,q: Float,out: Any): Boolean {
             val taskCount=count
-            if(!allowed || index !in 0 until taskCount || !q.isFinite()) {
+            val deckAllowed=allowed
+            if(!deckAllowed || index !in 0 until taskCount || !q.isFinite()) {
                 XposedHelpers.removeAdditionalInstanceField(out,FRAME)
-                if(!allowed && !suspended) restoreCards()
+                if(!deckAllowed && !suspended) restoreCards()
                 return false
             }
             val bounds=base
@@ -149,7 +151,8 @@ internal class DeckOwner(val stack: ViewGroup,val api: DeckNativeApi,private val
                 contentHeader=api.headerHeight.getInt(algorithm).toFloat()
             }
             val model=metrics!!
-            layoutGap=gap;layoutCount=taskCount
+            layoutGap=normalizedGap(bounds.width())
+            layoutCount=taskCount
             val requested=-q/layoutGap
             val candidate=model.candidate(index,taskCount,requested)
             val presentation=model.presentationCursor(index,requested)

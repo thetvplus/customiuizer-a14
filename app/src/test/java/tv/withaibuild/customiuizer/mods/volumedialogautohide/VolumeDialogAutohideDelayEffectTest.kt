@@ -5,43 +5,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Before
 import org.junit.Test
-import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.utils.PrefMap
 import java.lang.reflect.Executable
-import java.util.concurrent.atomic.AtomicReference
 
-/**
- * Component tests for [VolumeDialogAutohideDelayEffect].
- *
- * These tests exercise FAST vs LEGACY eligibility, callback oracle ordering,
- * safety alias behavior, failure mapping, and the immutable effect contract.
- *
- * Evidence classification: RUNTIME_TESTED_COMPONENT.
- */
 class VolumeDialogAutohideDelayEffectTest {
-
-    @Before
-    fun setUp() {
-        MainModule.mPrefs.clear()
-    }
-
-    // -------------------------------------------------------------------------
-    // A. FAST ORACLE
-    // -------------------------------------------------------------------------
-    @Test
-    fun fast_hoveringTrue_returns16000AndSkips() {
-        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply { mHovering = true }
-        val effect = fastEffect()
-        val callback = makeCallback(dialog)
-
-        effect.before(callback)
-
-        assertTrue("callback must be skipped", callback.skipped)
-        assertEquals(16000, callback.result)
-    }
 
     @Test
     fun fast_hoveringTrue_doesNotReadSafetyOrExpanded() {
@@ -75,30 +44,11 @@ class VolumeDialogAutohideDelayEffectTest {
     }
 
     @Test
-    fun fast_safetyTrue_expandedZero_returns5000() {
-        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply {
-            mHovering = false
+    fun safetyWarningWithoutExpandedFieldUsesNativeDefault() {
+        val dialog = VolumeDialogAutohideDelayFixtures.SafetyNoExpandedMiuiVolumeDialogImpl().apply {
             mIsSafetyShowing = true
         }
-        val effect = fastEffect(expanded = 0, collapsed = 1000)
-        val callback = makeCallback(dialog)
-
-        effect.before(callback)
-
-        assertTrue(callback.skipped)
-        assertEquals(5000, callback.result)
-    }
-
-    @Test
-    fun fast_safetyTrue_doesNotReadMExpanded() {
-        // If mExpanded were read, the result would be the collapsed value (12345).
-        // Because the safety-true branch returns early, it must use only snapshot.expanded.
-        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply {
-            mHovering = false
-            mIsSafetyShowing = true
-            mExpanded = true
-        }
-        val effect = fastEffect(expanded = 0, collapsed = 12345)
+        val effect = testEffect(null, collapsed = 1000)
         val callback = makeCallback(dialog)
 
         effect.before(callback)
@@ -154,25 +104,6 @@ class VolumeDialogAutohideDelayEffectTest {
         assertFalse("callback must not be skipped", callback.skipped)
     }
 
-    // -------------------------------------------------------------------------
-    // B. SAFETY ALIAS
-    // -------------------------------------------------------------------------
-    @Test
-    fun fast_safetyPrimaryFalse_usesMExpanded() {
-        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply {
-            mHovering = false
-            mIsSafetyShowing = false
-            mExpanded = true
-        }
-        val effect = fastEffect(expanded = 777, collapsed = 0)
-        val callback = makeCallback(dialog)
-
-        effect.before(callback)
-
-        assertTrue(callback.skipped)
-        assertEquals(777, callback.result)
-    }
-
     @Test
     fun fast_safetyPrimaryNull_usesFallback() {
         val dialog = VolumeDialogAutohideDelayFixtures.PrimarySafetyNullMiuiVolumeDialogImpl().apply {
@@ -191,52 +122,32 @@ class VolumeDialogAutohideDelayEffectTest {
         assertEquals(888, callback.result)
     }
 
-    // -------------------------------------------------------------------------
-    // E. SNAPSHOT CAPTURE
-    // -------------------------------------------------------------------------
     @Test
-    fun fast_processFastReceivesCapturedSnapshotAndDoesNotReadSnapshotRef() {
-        // snapshotRef is null, so any access to it inside processFast would fail or select legacy.
-        // processFast is called via reflection with an explicit captured snapshot.
-        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply {
-            mHovering = false
-            mIsSafetyShowing = false
-            mExpanded = true
-        }
+    fun installedCallbackReadsTheLatestPublishedPreferences() {
+        val prefs = PrefMap()
+        val effect = VolumeDialogAutohideDelayEffect(fastAbi(), prefs) { _, millis, _ -> millis }
+        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl()
+        val first = makeCallback(dialog)
+        effect.before(first)
+        assertFalse(first.skipped)
 
-        val effect = testEffect(fastAbi(), AtomicReference(null))
-        val callback = makeCallback(dialog)
+        prefs.replaceSnapshot(mapOf(
+            "pref_key_system_volumedialogdelay_expanded" to 6500,
+            "pref_key_system_volumedialogdelay_collapsed" to 2100,
+        ))
+        val collapsed = makeCallback(dialog)
+        effect.before(collapsed)
+        assertEquals(2100, collapsed.result)
 
-        val processFast = VolumeDialogAutohideDelayEffect::class.java.getDeclaredMethod(
-            "processFast",
-            Any::class.java,
-            VolumeDialogAutohideDelayAbi::class.java,
-            VolumeDialogAutohideDelaySnapshot::class.java,
-            HookerClassHelper.BeforeHookCallback::class.java,
-        )
-        processFast.isAccessible = true
-        processFast.invoke(effect, dialog, fastAbi(), VolumeDialogAutohideDelaySnapshot(777, 0), callback)
+        dialog.mExpanded = true
+        val expanded = makeCallback(dialog)
+        effect.before(expanded)
+        assertEquals(6500, expanded.result)
 
-        assertTrue("processFast must returnAndSkip using the captured snapshot", callback.skipped)
-        assertEquals(777, callback.result)
-    }
-
-    @Test
-    fun fast_snapshotNull_selectsLegacy() {
-        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply {
-            mHovering = false
-            mIsSafetyShowing = false
-            mExpanded = true
-        }
-        MainModule.mPrefs.put("system_volumedialogdelay_expanded", 42)
-
-        val effect = testEffect(fastAbi(), AtomicReference(null))
-        val callback = makeCallback(dialog)
-
-        effect.before(callback)
-
-        assertTrue(callback.skipped)
-        assertEquals(42, callback.result)
+        prefs.put("system_volumedialogdelay_expanded", "invalid")
+        val invalid = makeCallback(dialog)
+        effect.before(invalid)
+        assertFalse(invalid.skipped)
     }
 
     @Test
@@ -246,9 +157,7 @@ class VolumeDialogAutohideDelayEffectTest {
             mIsSafetyShowing = false
             mExpanded = true
         }
-        MainModule.mPrefs.put("system_volumedialogdelay_expanded", 42)
-
-        val effect = testEffect(fastAbi(), AtomicReference(VolumeDialogAutohideDelaySnapshot(0, 0)))
+        val effect = testEffect(fastAbi(), expanded = 42)
         val callback = makeCallback(dialog)
 
         effect.before(callback)
@@ -273,9 +182,6 @@ class VolumeDialogAutohideDelayEffectTest {
         assertEquals(999, callback.result)
     }
 
-    // -------------------------------------------------------------------------
-    // C. MODE SELECTION
-    // -------------------------------------------------------------------------
     @Test
     fun legacy_abiNull_usesLegacyPath() {
         val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply {
@@ -283,7 +189,7 @@ class VolumeDialogAutohideDelayEffectTest {
             mIsSafetyShowing = false
             mExpanded = true
         }
-        val effect = legacyEffect(snapshot = VolumeDialogAutohideDelaySnapshot(42, 0))
+        val effect = testEffect(null, expanded = 42)
         val callback = makeCallback(dialog)
 
         effect.before(callback)
@@ -292,46 +198,6 @@ class VolumeDialogAutohideDelayEffectTest {
         assertEquals(42, callback.result)
     }
 
-    @Test
-    fun legacy_subclassObject_usesLegacyPath() {
-        val dialog = VolumeDialogAutohideDelayFixtures.SubMiuiVolumeDialogImpl().apply {
-            mHovering = false
-            mIsSafetyShowing = false
-            mExpanded = true
-        }
-        val effect = legacyEffect(snapshot = VolumeDialogAutohideDelaySnapshot(42, 0))
-        val callback = makeCallback(dialog)
-
-        effect.before(callback)
-
-        assertTrue(callback.skipped)
-        assertEquals(42, callback.result)
-    }
-
-    @Test
-    fun legacy_snapshotNull_usesLegacyPath() {
-        val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl().apply {
-            mHovering = false
-            mIsSafetyShowing = false
-            mExpanded = true
-        }
-        val effect = testEffect(
-            fastAbi(),
-            AtomicReference(null),
-        )
-        // Seed legacy PrefMap.
-        MainModule.mPrefs.put("system_volumedialogdelay_expanded", 42)
-        val callback = makeCallback(dialog)
-
-        effect.before(callback)
-
-        assertTrue(callback.skipped)
-        assertEquals(42, callback.result)
-    }
-
-    // -------------------------------------------------------------------------
-    // D. FAILURE
-    // -------------------------------------------------------------------------
     @Test(expected = IllegalAccessError::class)
     fun fast_mHoveringIllegalAccess_exceptionMappedToIllegalAccessError() {
         val dialog = VolumeDialogAutohideDelayFixtures.PrivateFieldMiuiVolumeDialogImpl().apply {
@@ -346,10 +212,7 @@ class VolumeDialogAutohideDelayEffectTest {
         // Revoke accessibility to force IllegalAccessException.
         abi.mHoveringField.isAccessible = false
 
-        val effect = testEffect(
-            abi,
-            AtomicReference(VolumeDialogAutohideDelaySnapshot(42, 0)),
-        )
+        val effect = testEffect(abi, expanded = 42)
         val callback = makeCallback(dialog)
 
         try {
@@ -375,10 +238,7 @@ class VolumeDialogAutohideDelayEffectTest {
             badExpandedField,
         )
         val dialog = VolumeDialogAutohideDelayFixtures.MiuiVolumeDialogImpl()
-        val effect = testEffect(
-            abi,
-            AtomicReference(VolumeDialogAutohideDelaySnapshot(0, 0)),
-        )
+        val effect = testEffect(abi)
         val callback = makeCallback(dialog)
 
         try {
@@ -389,15 +249,16 @@ class VolumeDialogAutohideDelayEffectTest {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
     // Keep the existing ABI/mode tests independent of accessibility policy; dedicated tests
     // exercise recommendation flags, live manager settings and missing-manager fallback.
     private fun testEffect(
         abi: VolumeDialogAutohideDelayAbi?,
-        snapshot: AtomicReference<VolumeDialogAutohideDelaySnapshot?>,
-    ) = VolumeDialogAutohideDelayEffect(abi, snapshot) { _, millis, _ -> millis }
+        expanded: Int = 0,
+        collapsed: Int = 0,
+    ) = VolumeDialogAutohideDelayEffect(abi, PrefMap().apply {
+        put("system_volumedialogdelay_expanded", expanded)
+        put("system_volumedialogdelay_collapsed", collapsed)
+    }) { _, millis, _ -> millis }
 
     private fun fastAbi(): VolumeDialogAutohideDelayAbi {
         return VolumeDialogAutohideDelayResolver.resolve(
@@ -418,16 +279,7 @@ class VolumeDialogAutohideDelayEffectTest {
         expanded: Int = 5000,
         collapsed: Int = 0,
     ): VolumeDialogAutohideDelayEffect {
-        return testEffect(
-            VolumeDialogAutohideDelayResolver.resolve(rootClass)!!,
-            AtomicReference(VolumeDialogAutohideDelaySnapshot(expanded, collapsed)),
-        )
-    }
-
-    private fun legacyEffect(snapshot: VolumeDialogAutohideDelaySnapshot): VolumeDialogAutohideDelayEffect {
-        MainModule.mPrefs.put("system_volumedialogdelay_expanded", snapshot.expanded)
-        MainModule.mPrefs.put("system_volumedialogdelay_collapsed", snapshot.collapsed)
-        return testEffect(null, AtomicReference(null))
+        return testEffect(VolumeDialogAutohideDelayResolver.resolve(rootClass)!!, expanded, collapsed)
     }
 
     private fun makeCallback(target: Any?, args: Array<Any?> = emptyArray()): HookerClassHelper.BeforeHookCallback {

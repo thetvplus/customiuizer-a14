@@ -1,7 +1,8 @@
 package tv.withaibuild.customiuizer.mods
 
 import android.app.Activity
-import android.view.GestureDetector
+import android.content.Context
+import android.content.ContextWrapper
 import android.view.MotionEvent
 import android.widget.FrameLayout
 import org.junit.Assert.*
@@ -15,11 +16,22 @@ import tv.withaibuild.customiuizer.MainModule
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class LauncherDockGestureTest {
+    @Test fun hotSeatsReuseTheirOwnNativeDetector() {
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        val first = FrameLayout(context)
+        val second = FrameLayout(context)
+        val detector = LauncherGestureHooks.obtainHotSeatDetector(first)
+        assertNotSame(detector, LauncherGestureHooks.obtainHotSeatDetector(second))
+        assertSame(detector, LauncherGestureHooks.obtainHotSeatDetector(first))
+    }
+
     @Test fun observerFailureCannotSkipNativeTouchAndNativeExceptionsKeepTheirIdentity() {
-        val factory = LauncherGestureHooks.hotSeatDetectorFactory
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
         val event = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 0f, 0f, 0)
-        val owner = FrameLayout(activity.get())
+        var detectorFailure: Throwable = IllegalStateException("detector unavailable")
+        val owner = FrameLayout(object : ContextWrapper(activity.get()) {
+            override fun getApplicationContext(): Context = throw detectorFailure
+        })
         var nativeCalls = 0
         var nativeFailure: Throwable? = null
         val chain = java.lang.reflect.Proxy.newProxyInstance(io.github.libxposed.api.XposedInterface.Chain::class.java.classLoader,
@@ -32,7 +44,6 @@ class LauncherDockGestureTest {
             }
         } as io.github.libxposed.api.XposedInterface.Chain
         try {
-            LauncherGestureHooks.hotSeatDetectorFactory = { _, _ -> throw IllegalStateException("detector unavailable") }
             val hook = LauncherGestureHooks.hotSeatTouchHook()
             assertEquals(false, hook.intercept(chain))
             assertEquals(1, nativeCalls)
@@ -41,10 +52,10 @@ class LauncherDockGestureTest {
             assertSame(failure, assertThrows(Throwable::class.java) { hook.intercept(chain) })
             assertEquals(2, nativeCalls)
             val fatal = OutOfMemoryError("detector fatal")
-            LauncherGestureHooks.hotSeatDetectorFactory = { _, _ -> throw fatal }
+            detectorFailure = fatal
             assertSame(fatal, assertThrows(Throwable::class.java) { hook.intercept(chain) })
             assertEquals(2, nativeCalls)
-        } finally { LauncherGestureHooks.hotSeatDetectorFactory = factory; event.recycle(); activity.pause().stop().destroy() }
+        } finally { event.recycle(); activity.pause().stop().destroy() }
     }
 
     @Test fun horizontalFlingRequiresBothDisplacementAndVelocityToFavorItsOwnAxis() {
@@ -55,9 +66,7 @@ class LauncherDockGestureTest {
         try {
             val owner = FrameLayout(activity.get())
             activity.get().setContentView(owner)
-            val constructor = Class.forName("tv.withaibuild.customiuizer.mods.LauncherGestureHooks\$SwipeListenerHorizontal")
-                .getDeclaredConstructor(Any::class.java).apply { isAccessible = true }
-            val listener = constructor.newInstance(owner) as GestureDetector.SimpleOnGestureListener
+            val listener = LauncherGestureHooks.SwipeListenerHorizontal(owner)
             fun fling(x: Float, y: Float, vx: Float, vy: Float): Boolean {
                 val down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 0f, 0f, 0)
                 val up = MotionEvent.obtain(0, 100, MotionEvent.ACTION_UP, x, y, 0)

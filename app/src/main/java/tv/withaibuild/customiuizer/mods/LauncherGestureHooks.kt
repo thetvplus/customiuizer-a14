@@ -35,23 +35,11 @@ object LauncherGestureHooks {
 
     private const val HOTSEAT_HORIZONTAL_DETECTOR_KEY = "customiuizer_hotseat_horizontal_detector"
 
-    /**
-     * Factory for the HotSeats horizontal swipe detector.
-     *
-     * In production this builds a [GestureDetector] bound to a specific HotSeats owner. Tests
-     * can replace the factory to avoid real Android object construction.
-     */
-    @JvmField
-    internal var hotSeatDetectorFactory: (Any, Context?) -> Any = { owner, context ->
-        GestureDetector(context, SwipeListenerHorizontal(owner))
-    }
-
-    internal fun obtainHotSeatDetector(hotSeat: Any): Any {
-        val existing = XposedHelpers.getAdditionalInstanceField(hotSeat, HOTSEAT_HORIZONTAL_DETECTOR_KEY)
+    internal fun obtainHotSeatDetector(hotSeat: ViewGroup): GestureDetector {
+        val existing = XposedHelpers.getAdditionalInstanceField(hotSeat, HOTSEAT_HORIZONTAL_DETECTOR_KEY) as? GestureDetector
         if (existing != null) return existing
 
-        val context = (hotSeat as? View)?.context?.applicationContext
-        val detector = hotSeatDetectorFactory(hotSeat, context)
+        val detector = GestureDetector(hotSeat.context.applicationContext, SwipeListenerHorizontal(hotSeat))
         XposedHelpers.setAdditionalInstanceField(hotSeat, HOTSEAT_HORIZONTAL_DETECTOR_KEY, detector)
         return detector
     }
@@ -341,8 +329,8 @@ object LauncherGestureHooks {
         override fun intercept(chain: XposedInterface.Chain): Any? {
             ModuleHelper.guarded {
                 val ev = chain.getArg(0) as? MotionEvent ?: return@guarded
-                val detector = obtainHotSeatDetector(chain.getThisObject()) as GestureDetector
-                detector.onTouchEvent(ev)
+                val hotSeat = chain.getThisObject() as? ViewGroup ?: return@guarded
+                obtainHotSeatDetector(hotSeat).onTouchEvent(ev)
             }
             // Optional gesture observation cannot skip native dispatch after a module error.
             // The native call remains outside the guard, with its result/exception intact.
@@ -350,21 +338,10 @@ object LauncherGestureHooks {
         }
     }
 
-    private class SwipeListenerHorizontal(cellLayout: Any) : GestureDetector.SimpleOnGestureListener() {
-        private val SWIPE_MIN_DISTANCE_HORIZ: Int
-        private val SWIPE_THRESHOLD_VELOCITY: Int
-        private val ownerRef: WeakReference<ViewGroup> = WeakReference(cellLayout as? ViewGroup)
-
-        init {
-            val context = ownerRef.get()?.context
-            val density = context?.resources?.displayMetrics?.density ?: 1.0f
-            SWIPE_MIN_DISTANCE_HORIZ = Math.round(75 * density)
-            SWIPE_THRESHOLD_VELOCITY = Math.round(33 * density)
-        }
-
-        override fun onDown(e: MotionEvent): Boolean {
-            return false
-        }
+    internal class SwipeListenerHorizontal(hotSeat: ViewGroup) : GestureDetector.SimpleOnGestureListener() {
+        private val ownerRef = WeakReference(hotSeat)
+        private val minDistance = Math.round(75 * hotSeat.resources.displayMetrics.density)
+        private val minVelocity = Math.round(33 * hotSeat.resources.displayMetrics.density)
 
         override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
             if (e1 == null) return false
@@ -374,10 +351,10 @@ object LauncherGestureHooks {
             val dy = e2.y - e1.y
             if (Math.abs(dx) <= Math.abs(dy) || Math.abs(velocityX) <= Math.abs(velocityY)) return false
 
-            if (dx > SWIPE_MIN_DISTANCE_HORIZ && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY)
+            if (dx > minDistance && Math.abs(velocityX) > minVelocity)
                 return GlobalActions.handleAction(context, "launcher_swiperight")
 
-            if (-dx > SWIPE_MIN_DISTANCE_HORIZ && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY)
+            if (-dx > minDistance && Math.abs(velocityX) > minVelocity)
                 return GlobalActions.handleAction(context, "launcher_swipeleft")
 
             return false
