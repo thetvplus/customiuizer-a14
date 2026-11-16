@@ -26,13 +26,17 @@ internal data class LocationAutomationOptions(
         const val ALLOW = "allow"
         const val BLOCK = "block"
 
-        fun read(prefs: PrefMap) = LocationAutomationOptions(
-            prefs.getBoolean(PREFIX + "enabled"),
-            prefs.getString(PREFIX + "mode", ALLOW),
-            prefs.getStringSet(PREFIX + "apps"),
-            prefs.getBoolean(PREFIX + "close"),
-            prefs.getInt(PREFIX + "close_delay", 0).coerceIn(0, 30),
-        )
+        @Suppress("UNCHECKED_CAST") // PreferenceBootstrap publishes owned String sets.
+        fun read(prefs: PrefMap): LocationAutomationOptions {
+            val values = prefs.getAll()
+            return LocationAutomationOptions(
+                values[PREFIX + "enabled"] as? Boolean ?: false,
+                values[PREFIX + "mode"] as? String ?: ALLOW,
+                (values[PREFIX + "apps"] as? Set<String>).orEmpty(),
+                values[PREFIX + "close"] as? Boolean ?: false,
+                (values[PREFIX + "close_delay"] as? Int ?: 0).coerceIn(0, 30),
+            )
+        }
     }
 }
 
@@ -41,7 +45,7 @@ internal class LocationAutomation(
     private val handler: Handler,
     private val change: (Boolean) -> Boolean,
     private val acquire: () -> Boolean = { change(true) },
-    private val release: () -> Unit = { change(false) },
+    private val release: (removedId: Int) -> Unit = { change(false) },
     private val finished: () -> Unit,
 ) {
     private val tasks = HashMap<Int, WeakReference<Any>>()
@@ -49,12 +53,13 @@ internal class LocationAutomation(
     private var overflow = false
     val idle: Boolean get() = tasks.isEmpty()
     private var closePending = false
-    private var closeOwned = false
+    private var closingTaskId: Int? = null
     private val close = Runnable {
         ModuleHelper.guarded {
             closePending = false
             try {
-                if (closeOwned) release() else change(false)
+                val removedId = closingTaskId
+                if (removedId != null) release(removedId) else change(false)
             } finally { finished() }
         }
     }
@@ -76,21 +81,23 @@ internal class LocationAutomation(
         tasks.remove(id)
         discardCollectedTasks()
         if (idle) {
-            if (ownsLocation && !overflow) requestClose(delaySeconds, owned = true)
+            if (ownsLocation && !overflow) requestClose(delaySeconds, id)
             else finished()
         }
         return true
     }
 
-    fun unobservedTaskRemoved(delaySeconds: Int) {
+    fun unobservedTaskRemoved(id: Int, delaySeconds: Int) {
         if (!idle || overflow) return
         cancelClose()
-        requestClose(delaySeconds, owned = true)
+        requestClose(delaySeconds, id)
     }
 
-    fun requestClose(delaySeconds: Int, owned: Boolean = false) {
+    fun requestClose(delaySeconds: Int) = requestClose(delaySeconds, null)
+
+    private fun requestClose(delaySeconds: Int, removedId: Int?) {
         if (closePending) return
-        closeOwned = owned
+        closingTaskId = removedId
         if (delaySeconds == 0) close.run()
         else {
             closePending = handler.postDelayed(close, delaySeconds * 1000L)

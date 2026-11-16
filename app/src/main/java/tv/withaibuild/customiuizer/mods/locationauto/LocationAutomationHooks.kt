@@ -122,7 +122,6 @@ internal object LocationAutomationHooks {
         fun removeTask(id: Int, owner: Any, basePackage: String?, options: LocationAutomationOptions) {
             if (!isPrimaryUser()) return
             tracking?.let { active ->
-                active.lastRemovedId = id
                 val delay = if (claimedRevision == null) 0 else options.closeDelaySeconds
                 if (active.policy.removed(id, owner, delay) || !active.policy.idle) return
             }
@@ -130,9 +129,8 @@ internal object LocationAutomationHooks {
             val context = ContextResolver.findContext(null) ?: return
             val revision = ownedRevision(context) ?: return
             val active = tracking ?: startTracking() ?: return
-            active.lastRemovedId = id
             val delay = if (revision == claimedRevision) options.closeDelaySeconds else 0
-            active.policy.unobservedTaskRemoved(delay)
+            active.policy.unobservedTaskRemoved(id, delay)
         }
 
         @Suppress("DEPRECATION") // Android 14's SettingsProvider owns this persisted row.
@@ -204,9 +202,8 @@ internal object LocationAutomationHooks {
         }
 
         private inner class Tracking(val context: Context) : BroadcastReceiver() {
-            var lastRemovedId = -1
             val policy = LocationAutomation(handler, ::setIfNeeded,
-                acquire = { acquire(context) }, release = { release(context, lastRemovedId) }) {
+                acquire = { acquire(context) }, release = { release(context, it) }) {
                 if (tracking === this) stopTracking()
             }
 

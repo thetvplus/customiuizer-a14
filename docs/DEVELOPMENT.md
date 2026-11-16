@@ -6,17 +6,20 @@
 
 `master` 的仓库 Ruleset 要求 Squash PR、线性历史、解决对话及 GitHub Actions 的 `Fast CI`。禁止强推和删除，审批人数为零。签名提交、部署检查和锁分支保持关闭。迁移时先保留经典保护，确认新规则生效再撤去重叠配置。正式签名与发布仍须满足 [RELEASE](RELEASE.md) 的 exact master CI、来源和环境门禁。
 
-日常开发、修复与实验在任务分支进行，保留有意义的阶段提交。单个完整任务可直接通过 Squash PR 整合。多个任务确需一起验收时，使用短期 `release/<version>` 分支，逐项核对纳入范围、冲突、其他协作者的成果和验证证据，再由该分支发起 Squash PR。`master` 合并、Tag 和正式发布各自需要明确授权。
+- **首次写入、任务切换或冲突**。核对相关 Issue / PR、工作树、HEAD、Worktree 和目标远端。独立任务使用对应工作分支，记录范围和下一步。一个 Worktree 由一方写入；范围冲突时暂停重叠部分。
+- **续接与交接**。沿用当前任务，刷新已变化的归属、授权和证据。共享写入前核对涉及的引用和 diff。远端不可用时将协作状态标为未知。交接记录任务入口、分支、HEAD、变更、验证、待办和推送状态。
+- **分支清理**。在已授权、成果等价纳入且存在可恢复来源时，确认 HEAD、开放 PR、活动 Worktree 和协作依赖。先保存远端成果，再逐支清理。
 
-默认一个正式版本对应一个整合提交，标题采用 `release: r14.27.5 — <核心变化>`。细节和证据写入 PR 与双语 Changelog。独立安全、CI、文档维护或必要修复可使用 `security:`、`ci:`、`docs:`、`fix:`，在 PR 说明独立整合的原因。小改动无需单独升版。Squash 后以最终提交及 PR 追溯来源，通过树、有效差异与验证核对成果等价性，不能以开发提交是否为祖先判断是否遗漏。合并后结束已完成的任务分支，仍按下述安全条件清理。未发布整合发现问题时可暂停发布或经 PR 修正，公开 Tag 保留原 SHA。
+### 主线提交与发行节奏
 
-首次初始化或明确切换独立任务、实际写入冲突、关键上下文失效时，定向核对任务归属、相关 Issue / PR、工作树、HEAD、Worktree 和目标远端；不扫描全部历史任务。新聊天优先接续已有任务。同一聊天的追加要求、纠正、状态询问及压缩恢复沿用分支、授权和可信证据，只刷新失效部分。
+1. 在任务分支保留可独立验证和回退的阶段提交。需要把多个任务纳入同一正式版时，用短期 `release/<version>` 分支整合，核对范围、冲突与各项验证，再发 Squash PR。
+2. 从上一实际公开版的源码 Tag 到新版本 Tag，目标是 1–2 个 `master` 第一父提交。通常一个发行 Squash 即可；需要独立回退或提前交付的维护可占第二个提交。安全修复或仓库治理必须单独落地时，在 PR 说明超出目标的原因。小改动可随下一版整合。
+3. Squash 标题采用 `release: <version> — <版本主题>`。从用户可感知的动作或变化取短句，紧扣实际内容。例如 `release: r14.27.7 — Let cards glide, keep location on cue`。独立维护保留 `docs:`、`ci:`、`security:` 或 `fix:` 前缀，并写明具体对象。涉及范围、取舍和验证写在 PR，用户变化写入双语 Changelog。
+4. Squash 后按最终提交的树、有效差异和验证核对成果。用 `git rev-list --first-parent --count <上一公开Tag>..<新Tag>` 核对提交数。未发布的集成问题通过新 PR 修正；已公开提交、Tag 和签名来源按 [RELEASE](RELEASE.md) 保留。合并、Tag 和正式发布各自使用当前任务的明确授权。
 
-独立任务原则上一个 Issue / 工作分支。首次写入或归属变化时更新分支、HEAD、负责范围和下一步，之后复用；认领不是原子锁，冲突只停止受影响范围。同一 Worktree 只有一个写入者，只读审查可共享，不另建 Agent 状态系统。
+### Issue 收口
 
-共享写入只核对相关归属与状态；push / merge 增量核对目标、来源、祖先关系、diff、工作区和授权，发布另按 [RELEASE](RELEASE.md)。远端不可用则标明未知，不推定无人协作。交接保留 Issue / Branch / HEAD / Changes / Verification / Remaining 及推送状态。
-
-分支清理须有当前授权、成果等价纳入和可恢复来源，确认 HEAD 未变化且无开放 PR、活动 Worktree 或协作依赖；先保存远端成果，再逐支处理。
+逐项对照 Issue 的完成条件和当前候选证据。代码已合入时记录实现来源；要求实机、视觉或组合验收的条目继续跟踪到相应证据通过。完成后说明覆盖范围，再按完成关闭。明确终止或转移跟踪的条目说明原因和后续入口，按对应状态关闭。公开记录遵循 [证据边界](../AGENTS.md#验证发布与证据)。
 
 ### 提交、推送与确认
 
@@ -46,6 +49,12 @@ GitHub CLI / API 仅作为已有 Git 网络故障证据下的备用路径。先�
 
 默认使用官方仓库。`-PuseChinaMirrors=true` 选择已有镜像；libxposed 始终独占 Maven Central。保留 [verification-metadata.xml](../gradle/verification-metadata.xml) 中的产物校验，其范围不覆盖所有依赖。Gradle 宿主 Kotlin 与 APK 的 BOM / stdlib 属于不同 classpath，按实际解析图审查，不强行统一。
 
+## 日常验证
+
+[TESTING](TESTING.md#执行分级)统一维护 Quick / Standard / Deep / Release 的命令和复用条件；其余章节解释各层证明范围。
+
+升级可为安全、能力、兼容或维护；保留官方来源、差异、回退和相应回归，不自动授权合并或发布。性能证据见 [OPTIMIZATION_GATES](OPTIMIZATION_GATES.md)。
+
 ## 构建与生成物
 
 ```powershell
@@ -67,7 +76,7 @@ GitHub CLI / API 仅作为已有 Git 网络故障证据下的备用路径。先�
 
 生成 res / Kotlin 和各变体 provenance assets 用 AGP `addGeneratedSourceDirectory` 声明消费依赖；独立 lint 的 provenance 依赖用公开 PreBuild 生命周期 API 注册，不匹配内部任务名。
 
-R8 的 HyperOS 缺失类规则按完整类名记录，覆盖 `compileOnly` 框架声明中的私有类型。新增缺失类先查引用方和最终 DEX，再决定补齐依赖或收窄规则。Xposed 模块入口随 R8 改名同步写入 `META-INF/xposed/java_init.list`，Hooker 类保留宿主加载隔离。
+R8 的 HyperOS 缺失类规则按完整类名覆盖 `compileOnly` 框架声明中的私有类型。新缺失类先核对引用方与最终 DEX。Xposed 入口随 R8 改名同步写入 `META-INF/xposed/java_init.list`。
 
 Feature / routing 变化后运行 `python tools/extract_process_matrix.py`，检查 JSON / CSV diff 及 [确定性门禁](TESTING.md#独立故障验证)。ROM / APK / mapping / 日志与签名材料按根规则留在忽略目录或仓库外。
 
