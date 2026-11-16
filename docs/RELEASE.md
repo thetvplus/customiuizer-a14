@@ -21,7 +21,7 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 - 仅发行 HyperOS 1 / Android 14 / SDK 34 / arm64-v8a，保持既有 applicationId、libxposed API 102 与历史签名证书。
 - `versionName` 为 `r14.x.y`；`versionCode` 单调增加。Gradle、双语 README 与双语 Changelog 一起准备和检查。
 - 源码 tag 为 `<versionName>`，下载仓库 tag 为 `<versionCode>-<versionName>`；新 tag 均绑定构建 APK 的完整 source SHA。下载仓库 metadata main 单独维护。
-- 保留真实历史发行身份、APK 来源和源码提交；不移动历史 tag，不重写旧源码。被替代版本经授权清理后，可将有效变化并入累计版本并移除独立展示章节，原文保留在 Git 历史中。用户明确授权替代发行清理时，仅在双仓新版验收后删除被替代的公开页面、附件与标签，保留 r14.24.1 及更早正式版。
+- 保留当前正式标签及其源码提交。阶段收口获授权时，先验收双仓当前版并归档退役版本的原 APK、构建元数据、发行正文及 Git 引用，再撤下旧公开发行及标签。Git 提交的身份包含父链，按阶段收口公开展示时保留真实签名溯源。
 - README 的源码版本不代表公开状态；以两仓库 Release 及实际资产读回判断是否完成发行。
 
 ## Actions 构建与自动发布
@@ -43,14 +43,7 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 **r14.27.9 / 310** 的正式源码为 `9224160f6b13be43a9dd4a6da8a1ff92a0e795c0`。两仓 APK 均为 6,293,117 字节，SHA-256 为 `d2bd1f64612eb2d5b4184a8ee87907cadd902631a6767520b725cf8efc138bfa`，构建 metadata 摘要一致。[源码仓发行](https://github.com/thetvplus/customiuizer-a14/releases/tag/r14.27.9) · [下载仓发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/tag/310-r14.27.9)
 
-r14.27.9 的摘要与安全基线均以实际公开的 r14.27.7 为准。双语更新记录累计自 r14.26.11。309 已用于本地试用，正式发行为 310。r14.27.5 与 r14.27.7 保留双仓原发行页面、Tag、签名 APK 和 metadata，累计展示指向 r14.27.9。
-
-历史系列分别保留 **r14.25.9 / 258** 与 **r14.26.11 / 281**。r14.25.9 的说明累计自 r14.24.1，r14.26.11 累计自 r14.25.9，整合各自系列仍有效的功能与修正，排除已被替代或撤回的设计。两版的原 APK、证书、构建元数据和源码快照均不重建、不重签、不移动。
-
-- [r14.25.9 源码快照](https://github.com/thetvplus/customiuizer-a14/tree/r14.25.9)：APK SHA-256 为 `ca953506bcc06f01a4d5b0ca169d524eb9134d15d346c1ceb86d0101175e64b1`。
-- [r14.26.11 源码快照](https://github.com/thetvplus/customiuizer-a14/tree/r14.26.11)：APK SHA-256 为 `4a2d34d1e6ffd42c895f8def321932b1a0972a4ee12c51dc084afd7bca752410`。
-
-经明确授权，r14.25.5、r14.25.7、r14.26.5、r14.26.9 的公开页面、附件与双仓标签撤下，逐版说明、原 APK / metadata 和源码标签私有归档。历史系列归并保留 r14.24.1 及更早正式版；r14.27 的紧急撤回与替代按本节单独执行，源码历史保持不变。
+r14.27.9 是当前阶段基线。公开说明呈现本阶段仍有效的功能与升级方式，后续版本从 r14.27.9 开始核对变更和版本递增。退役版本的原始发行记录和资产按阶段收口规则归档。当前公开说明见[中文更新记录](../CHANGELOG.md)与[英文更新记录](../CHANGELOG_EN.md)。
 
 升级后部分动态岛配置可能需要重新确认；未显示或无法返回时检查模式、媒体 / 消息名单、返回开关与效果，按需重新选择并重启相关进程。累计说明继续保留此提示，静态说明不代替实机性能和功耗测量。
 
@@ -87,7 +80,7 @@ gh workflow run a14-signed-build.yml --ref master -f destination=actions-only
 - 安全基线读取实际 Latest、正式状态、tag / source SHA、APK 与构建元数据摘要、历史证书及 A14 平台契约。只发布源码的一次真实正式发行也可成为源码安全基线。
 - 累计基线由 `cumulative_releases.<version>.notes_base` 指定。早期版本没有现代 metadata 附件时，仍必须核验实际稳定 Release、tag 解析出的完整 SHA 和该源码声明的版本。
 - 校验“说明基线 → 当前稳定安全基线 → 最终候选”的 Git 祖先关系，并查看说明基线到候选 exact SHA 的完整 diff。双语 `自 … 起的变更 / Changes since …` 使用说明基线。
-- 历史系列按保留最高版累计。r14.25.9 自 r14.24.1 起，r14.26.11 自 r14.25.9 起，r14.27.9 自 r14.26.11 起。累计内容保留仍然有效的变化。逐版原文保留在发行标签或私有归档，r14.24.1 及更早章节保留原文。
+- 阶段总结从正式源码核对仍有效的能力。下一阶段使用当前正式标签作为起点。旧版对照需要原始记录时查发行标签或私有归档。
 
 日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。准备时使用 `prepare_release.py --dry-run` 预览，再检查版本一致性。
 
@@ -107,7 +100,7 @@ python tools/check_release_metadata.py
 
 Release Notes 优先使用候选 exact source SHA 中独立撰写的双语「发行摘要 / Release summary」，简洁描述用户变化与必要操作；两仓一致。详细用户变化和工程节继续保留在源码 Changelog，下载仓库 Changelog 保留完整用户变化，README 使用摘要。没有摘要的旧版沿用原用户节；旧版布局仍从原始 SHA 识别，不读取最新分支替代原版说明。来源、原始构建链接、APK 摘要及历史证书保持独立核验；历史发行说明获授权精简时，只修改正文，保留来源与资产身份并读回。
 
-历史累计记录仅对 `consolidated_releases` 显式登记且仍公开的旧版本读取当前维护 Changelog。同步前复核签名元数据、资产摘要和实际源码 tag。已匿名化的版本同时核对固定快照绑定。当前版本说明、作用域与 APK 身份绑定实际发行 SHA。
+历史累计记录仅对 `consolidated_releases` 显式登记且仍公开的旧版本读取当前维护 Changelog。当前正式版的授权编辑由 `published_notes_revisions` 绑定原始源码 SHA，下载文档在验证双仓发行和资产后读取维护版 Changelog。作用域和 APK 身份继续读取正式标签，首次发布与候选恢复仍使用原始构建记录。
 
 ## APK、候选与双仓验收
 

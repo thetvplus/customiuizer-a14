@@ -184,6 +184,23 @@ class DownloadDocumentsTest(unittest.TestCase):
                         self.assertIn("User change 0.", result[filename])
             self.assertEqual([], server.writes)
 
+    def test_editorial_notes_require_both_releases_bound_to_the_original_source(self):
+        server = Server()
+        with self.context(server), tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            published = docs.published_version(VERSION)
+            for filename, _ in release.CURRENT_CHANGELOGS:
+                (root / filename).write_text(
+                    f"## {VERSION}\n\nversionCode 248.\n\n- Approved milestone summary.\n", encoding="utf-8")
+            with patch.object(release, "ROOT", root), patch.dict(release.POLICY, published_notes_revisions={VERSION: SHA}):
+                result = docs.documents(published)
+                for filename in ("README.md", "README_EN.md", "CHANGELOG.md", "CHANGELOG_CN.md"):
+                    self.assertIn("Approved milestone summary.", result[filename])
+                with self.assertRaisesRegex(ValueError, "both repositories"):
+                    docs.documents(dict(published, download=None))
+                with self.assertRaisesRegex(ValueError, "original release"):
+                    docs.documents(dict(published, source_sha="b" * 40))
+
     def test_community_link_is_shared_by_source_docs_and_app_build(self):
         url = release.POLICY["community_url"]
         self.assertEqual("https://t.me/customiuizerA14", url)

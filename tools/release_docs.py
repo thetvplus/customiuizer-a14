@@ -126,6 +126,10 @@ def documents(published: dict) -> dict[str, str]:
     meta, record = published["metadata"], published["source"]
     name, code, sha, apk = (meta[key] for key in ("version_name", "version_code", "source_sha", "apk"))
     sha = published.get("source_sha", sha)
+    editorial_source = release.POLICY.get("published_notes_revisions", {}).get(name)
+    if editorial_source is not None:
+        release.require(editorial_source == meta["source_sha"] == sha and published.get("download") is not None,
+                        "Editorial notes require the verified original release in both repositories")
     root = release.api(f"repos/{release.REPO}/contents?ref={sha}")
     layout = source_changelogs({item["name"] for item in root if item.get("type") == "file"})
     scope = [line.strip() for line in source_text("app/src/main/resources/META-INF/xposed/scope.list", sha).splitlines()
@@ -150,6 +154,10 @@ def documents(published: dict) -> dict[str, str]:
     for filename, language in layout:
         chinese = language == "简体中文"
         text = source_text(filename, sha)
+        if editorial_source is not None:
+            release.release_notes_section(text, name, code, filename)
+            source_file = next(path for path, lang in release.CURRENT_CHANGELOGS if lang == language)
+            text = (release.ROOT / source_file).read_text(encoding="utf-8")
         sections = changelog_sections(text)
         current = release.public_release_notes_section(text, name, code, filename, language=language)
         history = []

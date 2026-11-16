@@ -12,22 +12,9 @@
     "version_name": "r14.27.9",
     "minimum_version_code": 310
   },
-  "cumulative_releases": {
-    "r14.25.9": {
-      "notes_base": "r14.24.1"
-    },
-    "r14.26.11": {
-      "notes_base": "r14.25.9"
-    },
-    "r14.27.5": {
-      "notes_base": "r14.26.11"
-    },
-    "r14.27.7": {
-      "notes_base": "r14.27.5"
-    },
-    "r14.27.9": {
-      "notes_base": "r14.26.11"
-    }
+  "cumulative_releases": {},
+  "published_notes_revisions": {
+    "r14.27.9": "9224160f6b13be43a9dd4a6da8a1ff92a0e795c0"
   },
   "commit_identity": {
     "name": "thetvplus",
@@ -49,10 +36,5 @@
       "app_tree": "80afb9dc2f929239031efef7c3db543749a783de"
     }
   },
-  "consolidated_releases": [
-    "r14.25.9",
-    "r14.26.11",
-    "r14.27.5",
-    "r14.27.7"
-  ]
+  "consolidated_releases": []
 }
