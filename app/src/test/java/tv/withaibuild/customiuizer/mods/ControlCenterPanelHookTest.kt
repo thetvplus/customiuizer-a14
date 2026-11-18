@@ -14,6 +14,8 @@ import miui.systemui.controlcenter.panel.main.MainPanelController
 import miui.systemui.controlcenter.panel.main.footer.FooterSpaceController
 import miui.systemui.controlcenter.panel.main.qs.EditButtonController
 import miui.systemui.controlcenter.panel.main.qs.QSListController
+import miui.systemui.controlcenter.panel.main.recyclerview.MainPanelAdapter
+import miui.systemui.controlcenter.panel.main.recyclerview.MainPanelListItem
 import miui.systemui.controlcenter.panel.main.security.SecurityFooterController
 import miui.systemui.controlcenter.qs.tileview.QSTileItemView
 import miui.systemui.util.CommonUtils
@@ -153,6 +155,56 @@ class ControlCenterPanelHookTest {
         assertTrue(owner.rightPanelContent.isEmpty())
     }
 
+    @Test fun customSpansReadEachLeftAdaptersCurrentContentAndKeepRightSpansNative() = withGridHooks(
+        install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = false, hideSecurity = false) },
+    ) { installed ->
+        val first = MainPanelContentDistributor(emptyList())
+        val second = MainPanelContentDistributor(emptyList())
+        val constructor = MainPanelContentDistributor::class.java.declaredConstructors.single()
+        for (owner in listOf(first, second)) {
+            installed.invoke(constructor, owner) {}
+            assertEquals(5, owner.leftAdapter.layoutManager.columns)
+            assertEquals(2, owner.rightAdapter.layoutManager.columns)
+        }
+        first.leftAdapter.contentMap[0] = listOf(MainPanelListItem { 2 }, MainPanelListItem { 7 })
+        first.leftAdapter.contentMap[1] = listOf(MainPanelListItem { 0 })
+        second.leftAdapter.contentMap[0] = listOf(MainPanelListItem { 3 })
+        first.rightAdapter.contentMap[0] = listOf(MainPanelListItem { 7 })
+        var nativeCalls = 0
+        fun span(adapter: MainPanelAdapter, position: Int): Any? {
+            val lookup = adapter.layoutManager.spanSizeLookup
+            val target = lookup.javaClass.getDeclaredMethod("getSpanSize", Int::class.javaPrimitiveType)
+            return installed.invoke(target, lookup, position) {
+                nativeCalls++
+                lookup.getSpanSize(position)
+            }
+        }
+
+        assertEquals(2, span(first.leftAdapter, 0))
+        assertEquals(5, span(first.leftAdapter, 1))
+        assertEquals(1, span(first.leftAdapter, 2))
+        assertEquals(5, span(first.leftAdapter, 3))
+        assertEquals(5, span(first.leftAdapter, -1))
+        first.leftAdapter.contentMap = linkedMapOf(0 to listOf(MainPanelListItem { 5 }))
+        assertEquals(5, span(first.leftAdapter, 0))
+        assertEquals(3, span(second.leftAdapter, 0))
+        assertEquals(0, nativeCalls)
+        assertEquals(4, span(first.rightAdapter, 0))
+        assertEquals(1, nativeCalls)
+    }
+
+    @Test fun failedSpanHookDoesNotApplyCustomColumnsOrDisableHiddenItems() = withGridHooks(
+        install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = true, hideSecurity = false) },
+        reject = { it.name == "getSpanSize" },
+    ) { installed ->
+        val tile = QSListController()
+        val owner = MainPanelContentDistributor(listOf(tile, EditButtonController()))
+        installed.invoke(owner.javaClass.declaredConstructors.single(), owner) {}
+        assertEquals(listOf(tile), owner.childControllers)
+        assertEquals(2, owner.leftAdapter.layoutManager.columns)
+        assertTrue(installed.keys.none { it.name == "distributePanels" })
+    }
+
     private fun Map<Executable, XposedInterface.Hooker>.distribute(owner: MainPanelContentDistributor, horizontal: Boolean) {
         val method = owner.javaClass.getDeclaredMethod("distributePanels", Boolean::class.javaPrimitiveType)
         invoke(method, owner, horizontal) { owner.distributePanels(horizontal) }
@@ -160,6 +212,7 @@ class ControlCenterPanelHookTest {
 
     private fun withGridHooks(
         install: (ClassLoader) -> Unit = { SystemUIControlCenterHooks.SystemCCGridHookLoader(it, 5) },
+        reject: (Executable) -> Boolean = { false },
         test: (Map<Executable, XposedInterface.Hooker>) -> Unit,
     ) {
         val previous = XposedHelpers.moduleInst
@@ -173,6 +226,7 @@ class ControlCenterPanelHookTest {
                     override fun setExceptionMode(mode: XposedInterface.ExceptionMode): XposedInterface.HookBuilder = this
                     override fun setId(id: String?): XposedInterface.HookBuilder = error("No new ID")
                     override fun intercept(hooker: XposedInterface.Hooker): XposedInterface.HookHandle {
+                        check(!reject(target))
                         assertNull(installed.put(target, hooker))
                         return Proxy.newProxyInstance(javaClass.classLoader, arrayOf(XposedInterface.HookHandle::class.java)) { _, _, _ -> null } as XposedInterface.HookHandle
                     }
@@ -189,20 +243,15 @@ class ControlCenterPanelHookTest {
         member: Executable,
         owner: Any,
         vararg args: Any?,
-        proceed: () -> Unit,
-    ) {
-        getValue(member).intercept(object : XposedInterface.Chain {
-            override fun getExecutable() = member
-            override fun getThisObject() = owner
-            override fun getArgs(): List<Any?> = error("Read only the arguments used by the hook")
-            override fun getArg(index: Int): Any? = args[index]
-            override fun proceed(): Any? {
-                proceed.invoke()
-                return null
-            }
-            override fun proceed(args: Array<Any?>): Any? = error("The hook must preserve the native arguments")
-            override fun proceedWith(thisObject: Any): Any? = error("The hook must preserve the native owner")
-            override fun proceedWith(thisObject: Any, args: Array<Any?>): Any? = error("The hook must preserve the native call")
-        })
-    }
+        proceed: () -> Any?,
+    ): Any? = getValue(member).intercept(object : XposedInterface.Chain {
+        override fun getExecutable() = member
+        override fun getThisObject() = owner
+        override fun getArgs(): List<Any?> = error("Read only the arguments used by the hook")
+        override fun getArg(index: Int): Any? = args[index]
+        override fun proceed(): Any? = proceed.invoke()
+        override fun proceed(args: Array<Any?>): Any? = error("The hook must preserve the native arguments")
+        override fun proceedWith(thisObject: Any): Any? = error("The hook must preserve the native owner")
+        override fun proceedWith(thisObject: Any, args: Array<Any?>): Any? = error("The hook must preserve the native call")
+    })
 }

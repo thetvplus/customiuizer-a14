@@ -1341,7 +1341,8 @@ object SystemUIControlCenterHooks {
             XposedHelpers.findClass("$panelPackage.security.SecurityFooterController", pluginLoader)
         } else null
         val childControllers = if (hideEdit || hideSecurity) distributor.getDeclaredField("childControllers") else null
-        val prepareLookup = if (customGrid) prepareGridSpanLookup(pluginLoader, columns) else null
+        val bindLeftGrid = if (customGrid) prepareGridSpanLookup(distributor, pluginLoader, columns) else null
+        if (bindLeftGrid == null && childControllers == null) return@guarded
         val constructor = distributor.declaredConstructors.single()
         val initialize = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
@@ -1356,13 +1357,13 @@ object SystemUIControlCenterHooks {
                         }
                     }
                 }
-                if (prepareLookup != null) configureLeftPanelColumns(owner, columns, prepareLookup)
+                bindLeftGrid?.invoke(owner)
             }
         }
         check(ModuleHelper.findAndHookConstructor(
             distributor.name, pluginLoader, *constructor.parameterTypes, initialize,
         ) != null)
-        if (customGrid) {
+        if (bindLeftGrid != null) {
             val qsList = XposedHelpers.findClass("$panelPackage.qs.QSListController", pluginLoader)
             val footerSpace = XposedHelpers.findClass("$panelPackage.footer.FooterSpaceController", pluginLoader)
             val inited = XposedHelpers.findField(distributor, "inited")
@@ -1396,33 +1397,50 @@ object SystemUIControlCenterHooks {
         }
     }
 
-    private fun prepareGridSpanLookup(pluginLoader: ClassLoader, cols: Int): (Class<*>) -> Unit {
-        val adapterClass = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.recyclerview.MainPanelAdapter", pluginLoader)
+    private const val LEFT_GRID_ADAPTER = "a14LeftGridAdapter"
 
-        val spanSizeHook = object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val adapter = XposedHelpers.getSurroundingThis(callback.getThisObject())
-                val leftAdapter = XposedHelpers.getAdditionalInstanceField(adapter, "leftAdapter") != null
-                if (leftAdapter) {
-                    val companion = XposedHelpers.getStaticObjectField(adapterClass, "Companion")
-                    val contentMap = XposedHelpers.getObjectField(adapter, "contentMap")
-                    val panelItem = XposedHelpers.callMethod(companion, "getItem", contentMap, callback.getArg(0))
-                    if (panelItem == null) {
-                        callback.returnAndSkip(cols)
-                    } else {
-                        callback.returnAndSkip(XposedHelpers.callMethod(panelItem, "getSpanSize"))
+    private fun prepareGridSpanLookup(distributor: Class<*>, pluginLoader: ClassLoader, columns: Int): ((Any) -> Unit)? =
+        ModuleHelper.guarded(null) {
+            val adapter = distributor.getDeclaredField("leftAdapter")
+            val adapterClass = adapter.type
+            val layoutManager = adapterClass.getDeclaredField("layoutManager")
+            val lookupClass = XposedHelpers.findClass(adapterClass.name + "\$layoutManager\$1\$1", pluginLoader)
+            val lookupMethod = layoutManager.type.getMethod("getSpanSizeLookup")
+            val setSpanCount = layoutManager.type.getMethod("setSpanCount", Int::class.javaPrimitiveType)
+            val contentMap = adapterClass.getDeclaredField("contentMap")
+            val companionField = adapterClass.getDeclaredField("Companion")
+            val companion = companionField.get(null)
+            val getItem = companionField.type.getDeclaredMethod("getItem", Map::class.java, Int::class.javaPrimitiveType)
+                .apply { isAccessible = true }
+            val itemSpanSize = getItem.returnType.getMethod("getSpanSize")
+
+            val getSpanSize = lookupClass.getDeclaredMethod("getSpanSize", Int::class.javaPrimitiveType)
+            check(ModuleHelper.hookMethod(getSpanSize, object : MethodHook() {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val owner = (XposedHelpers.getAdditionalInstanceField(chain.thisObject, LEFT_GRID_ADAPTER) as? WeakReference<*>)?.get()
+                        ?: return chain.proceed()
+                    val span = ModuleHelper.guarded<Int?>(null) {
+                        val position = chain.getArg(0) as Int
+                        if (position < 0) return@guarded columns
+                        // The ROM replaces contentMap on rebuild. Always use the current map.
+                        val item = getItem.invoke(companion, contentMap.get(owner), position) ?: return@guarded columns
+                        (itemSpanSize.invoke(item) as Int).coerceIn(1, columns)
                     }
+                    return span ?: chain.proceed()
                 }
-            }
-        }
+            }) != null)
 
-        val spanHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
-        return { lookupClass ->
-            spanHooks.getOrPut(lookupClass) { HookInstallStateMachine() }.install {
-                ModuleHelper.findAndHookMethod(lookupClass, "getSpanSize", Int::class.javaPrimitiveType!!, spanSizeHook) != null
+            val bind: (Any) -> Unit = { owner ->
+                val leftAdapter = adapter.get(owner)
+                val manager = layoutManager.get(leftAdapter)
+                val lookup = lookupMethod.invoke(manager)
+                check(lookupClass.isInstance(lookup))
+                setSpanCount.invoke(manager, columns)
+                // The adapter retains its lookup. Keep the association weak in the other direction.
+                XposedHelpers.setAdditionalInstanceField(lookup, LEFT_GRID_ADAPTER, WeakReference(leftAdapter))
             }
+            bind
         }
-    }
 
     @JvmStatic
     fun CCBluetoothAsCardHook(pluginLoader: ClassLoader) {
@@ -1772,17 +1790,6 @@ object SystemUIControlCenterHooks {
 
     private val mPct: TextView?
         get() = mPctRef?.get()
-
-    internal fun configureLeftPanelColumns(distributor: Any, columns: Int, prepareLookup: (Class<*>) -> Unit) {
-        // A14 distributor owns explicit left/right adapters. Bind every left instance,
-        // independently from once-per-class method installation and factory call order.
-        val left = XposedHelpers.getObjectField(distributor, "leftAdapter")
-        XposedHelpers.setAdditionalInstanceField(left, "leftAdapter", true)
-        val manager = XposedHelpers.getObjectField(left, "layoutManager")
-        val lookup = XposedHelpers.callMethod(manager, "getSpanSizeLookup")
-        prepareLookup(lookup.javaClass)
-        XposedHelpers.callMethod(manager, "setSpanCount", columns)
-    }
 
     private const val PCT_SOURCE_BRIGHTNESS = 2
     private const val PCT_SOURCE_VOLUME = 3
