@@ -39,6 +39,8 @@ python tools/hook_body_prefmap_scan.py --check
 
 使用相同场景的基线 / 候选，记录必要的构建、APK、ROM、开关、实际刷新率、热状态、操作窗口、样本与噪声。原始数据私有保存；自动化 helper、截图和层级抓取不得混入模块性能采样。没有有效对照不判回归通过，差异小于噪声保持不可判定。设备入口与有界清理见[自主验证](AGENTIC_VERIFICATION.md#缺陷注入与性能闭环)。
 
+刷新率对照读取实际 display mode、render frame rate 与 FrameTimeline，并在采样结束后恢复原值。报告 GPU 用时或功耗需要相应数据源；GPU memory、UI 和 RenderThread 时长各自只描述对应指标。
+
 | 目标 | 可复用的比较方法 |
 | --- | --- |
 | Hook 参数、输入与偏好 | 实际适配器 / 状态机的调用计数，包含参数改写、原生异常、fatal 和取消；关键断言放在被测回调外，避免异常隔离吞掉失败 |

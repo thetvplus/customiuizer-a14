@@ -1,26 +1,24 @@
 ---
 name: independent-review
-description: Independently review a specified Git diff for actionable defects, regressions, security, performance and compatibility risks. Read-only; do not implement fixes or approve the author's work.
+description: 只读独立审查 A14 指定的 Git diff，报告可确认的缺陷、回归及安全、性能或兼容风险。全项目维护或审查后实施改动走 a14-safe-implementation。
 ---
 
 # 独立审查
 
-Use applicable [AGENTS](../../../AGENTS.md) instructions already in context. Review the specified exact base/head, with surrounding callers, tests and specialist contracts only as needed; do not rediscover unchanged ownership / remote state or expand into an unrelated full audit.
+沿用已加载的 [AGENTS](../../../AGENTS.md)。固定本次 base / head，按需读调用者、测试和专项合同。
 
 ## 审查边界
 
-- Remain read-only: no source, test, configuration, Git or worktree mutations; no commits, merges or pushes.
-- Do not rely on the author's conclusions as proof or approve work on the author's behalf. Claim executed checks only when their results are verified.
-- Report defects introduced or materially worsened by the diff, not unrelated audits, stylistic preferences or speculative optimization.
+- 审查期间保持源码、配置、引用与 Worktree 只读。
+- 独立核对实际输入和执行结果，审查结论不代替合并批准。
+- 只报告该 diff 引入或加重的具体问题。
 
 ## 审查方法
 
-Trace changed behavior through callers, state ownership, lifecycle and realistic failure paths. Check correctness, security / data integrity, crashes, races, leaks, platform compatibility and critical missing regression coverage.
+追踪变更到实际调用者、状态所有者、生命周期和失败路径。核对正确性、安全与数据完整性、崩溃、竞态、泄漏、平台兼容及关键回归覆盖。
 
-For architecture, scheduling, caches or drawing changes, examine benefit, resource bounds, invalidation, cancellation, stale results and rollback scope. More classes, memory, dependencies or APK bytes alone do not establish a defect. Distinguish absent measurements from a confirmed regression; Host JVM results cannot prove ART, PSS or frame-time gains. Safety, compatibility and maintenance can justify a change without performance gains.
+架构、调度、缓存或绘制有变化时，检查实际收益、资源上界、失效、取消、迟到结果和回退范围。按 [性能证据合同](../../../docs/OPTIMIZATION_GATES.md#改动与证据)区分测量缺口与已证实回归。
 
 ## 审查结论
 
-List confirmed actionable findings in severity order (P0 critical, P1 high, P2 medium, P3 low). Give a concise title, precise file / line, trigger, impact, supporting evidence and minimal correction. Avoid duplicates and invented reproduction or test results.
-
-If none are confirmed, state “No confirmed findings in the reviewed scope.” Then identify material unverified risks or testing gaps. Final approval remains outside this review.
+按严重度列出已确认问题（P0 严重、P1 高、P2 中、P3 低），注明文件与行号、触发条件、影响、证据和最小修正。没有确认问题时说明审查范围，并列出仍影响判断的验证缺口。

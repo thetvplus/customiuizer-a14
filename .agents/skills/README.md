@@ -2,9 +2,10 @@
 
 | 任务 | 入口 |
 | --- | --- |
-| 实施代码、工具、文档或工程规则变更 | [安全实施](a14-safe-implementation/SKILL.md) |
+| 实施变更、项目维护或审查后的修正 | [安全实施](a14-safe-implementation/SKILL.md) |
 | 只读审查指定 diff 的缺陷与回归 | [独立审查](a14-independent-review/SKILL.md) |
+| 采集 Android 性能数据 / 分析已有 trace | [Android Profiler](android/skills/profilers/android-profiler/SKILL.md) / [Perfetto 分析](Gracker/Perfetto-Skills/skills/perfetto-performance-analysis/SKILL.md) |
+| 执行 Gradle / 修改 Android 构建配置 | [gradle-run](chrisbanes/skills/skills/gradle-run/SKILL.md) / [gradle-build](siifii/android-agent-engineering/skills/gradle-build/SKILL.md) |
+| 编写 AGENTS 或 Skills / 操作 GitHub | [writing-for-agents](mattpocock/skills/skills/productivity/writing-for-agents/SKILL.md) / [gh-cli](trailofbits/skills/plugins/gh-cli/skills/gh-cli/SKILL.md) |
 
-专项任务按已知风险调用对应技能。分析已有 trace 用 Perfetto，录制 Android 性能数据用 Android Profiler。执行 Gradle 用 gradle-run，修改构建配置用 gradle-build。修改 AGENTS 或 Skills 用 writing-for-agents。第三方技能的触发条件见各自的 `SKILL.md`，固定来源、本地修订和安装位置见[来源清单](upstream-sources.json)及 Git diff。
-
-执行脚本前核对所需工具与项目版本。[工程规则](../../AGENTS.md)及项目合同优先于第三方建议。技能、脚本、参考和许可证属于开发资产。
+其他专项技能按各自 `SKILL.md` 的触发条件使用，来源和安装位置见[固定来源清单](upstream-sources.json)，本地修订见 Git。运行技能脚本前按[工程规则](../../AGENTS.md)核对项目合同与工具版本。
