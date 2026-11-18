@@ -659,6 +659,7 @@ object SystemUIControlCenterHooks {
 
     private const val HEADER_STEP_VIEW = "controlCenterStepView"
 
+    @SuppressLint("AppCompatCustomView") // Created programmatically inside the SystemUI plugin with its native theme.
     private class HeaderStepView(val carrier: TextView) : TextView(carrier.context)
 
     private fun hookHeaderSteps(loader: ClassLoader, controller: Class<*>) {

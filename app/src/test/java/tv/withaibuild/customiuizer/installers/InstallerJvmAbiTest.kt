@@ -215,7 +215,7 @@ class InstallerJvmAbiTest(
     }
 
     private fun projectRoot(): File {
-        val dir = File(System.getProperty("user.dir"))
+        val dir = File(System.getProperty("user.dir").orEmpty()).absoluteFile
         return if (File(dir, "app/src").isDirectory) dir else dir.parentFile
     }
 }

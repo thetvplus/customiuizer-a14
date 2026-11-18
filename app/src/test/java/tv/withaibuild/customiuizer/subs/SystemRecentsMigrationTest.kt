@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import tv.withaibuild.customiuizer.testsupport.repositorySource
 
 class SystemRecentsMigrationTest {
 
@@ -29,7 +29,7 @@ class SystemRecentsMigrationTest {
 
     @Test
     fun migrationRunsBeforeXmlInflation() {
-        val source = source("app/src/main/java/tv/withaibuild/customiuizer/subs/System.kt").readText()
+        val source = repositorySource("app/src/main/java/tv/withaibuild/customiuizer/subs/System.kt")
         val body = source.substringAfter("override fun onCreatePreferences(")
             .substringBefore("override fun onCreate(")
 
@@ -39,14 +39,5 @@ class SystemRecentsMigrationTest {
         assertTrue("migration must be called", migrationIndex != -1)
         assertTrue("super.onCreatePreferences must exist", superIndex != -1)
         assertTrue("migration must run before super", migrationIndex < superIndex)
-    }
-
-    private fun source(path: String): File {
-        var directory = File(java.lang.System.getProperty("user.dir").orEmpty()).absoluteFile
-        while (true) {
-            val candidate = File(directory, path)
-            if (candidate.isFile) return candidate
-            directory = directory.parentFile ?: error("Repository root not found for $path")
-        }
     }
 }

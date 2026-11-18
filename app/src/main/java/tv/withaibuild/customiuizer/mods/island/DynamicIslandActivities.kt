@@ -1,5 +1,6 @@
 package tv.withaibuild.customiuizer.mods.island
 
+import android.annotation.SuppressLint
 import android.graphics.drawable.Drawable
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -183,6 +184,7 @@ internal object IslandToastText {
         "Video saved to" to "Video saved", "File saved to" to "File saved", "Saved to" to "Saved",
     )
 
+    @SuppressLint("SdCardPath") // Recognize the legacy spelling in SystemUI's message text.
     private fun savedDestination(text: String): String? {
         for ((prefix, summary) in destinations) {
             if (!text.startsWith(prefix)) continue

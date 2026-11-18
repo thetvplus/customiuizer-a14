@@ -207,7 +207,11 @@ Develop / Release 原有优化、资源压缩与签名隔离保持。R8 分析�
 
 - 独立依赖图在 [master 运行](https://github.com/thetvplus/customiuizer-a14/actions/runs/43043479358)完成生成与隔离提交。迁移前 [main 运行](https://github.com/thetvplus/customiuizer-a14/actions/runs/42529732427)保留首次验收依据。依赖输入变更后按 [CI 入口](../TESTING.md#ci)刷新。
 - 旧版 Guava、Bouncy Castle、Commons Lang 和 HttpClient 的告警曾来自 AGP 独立的 `androidLintTool`。补齐版本约束后，定向 Lint 通过，APK / JVM 测试运行时依赖清单与修复前一致。2026-11-18 仓库 API 返回 0 条开放的 Dependabot 告警，证据范围限于已提交的依赖图和 GitHub 当前告警状态。
-- Gradle 9.8.2 内置 Guava 33.4.6-jre 的 CVE-2026-102554 宿主风险仍待上游发行版处理，区别于项目可约束的依赖。生产 APK 不含完整 Guava；不改 Gradle 发行包内部文件或固定摘要。
+- Gradle Wrapper 升至带三项安全修复的 9.9.1，发行包和 Wrapper JAR 以 Gradle 官方 SHA-256 核对。该发行包仍含 Guava 33.4.6-jre，CVE-2026-102554 的 Gradle 内置依赖风险仍待上游更新。可约束的 AGP、Lint 和 JVM 测试依赖使用 Guava 33.8.0-jre 和 Bouncy Castle 1.87，Commons Lang 更新至 3.22.0，Robolectric 更新至 4.18。 [Gradle 发行说明](https://docs.gradle.org/9.9.1/release-notes.html) · [Bouncy Castle 安全修复](https://www.bouncycastle.org/resources/new-release-bouncy-castle-java-1-87/)
+- 本机补齐 Oracle JDK 27.0.1.1 的 11 月安全更新。CI 继续使用带签名校验的 Temurin 27，Temurin 对应补丁由上游发布后选取。JVM 目标仍为 26。 [Oracle 发行说明](https://www.oracle.com/java/technologies/javase/27-0-1-1-relnotes.html) · [Temurin 发布状态](https://adoptium.net/support)
+- 应用列表清理和最近任务旧值转换使用 `apply()` 发布内存值并异步持久化。偏好合同迁移继续同步提交并返回真实结果。系统保存提示对 `/sdcard/` 的处理仅识别宿主消息中的旧路径拼写。控制中心的步数 View 由插件创建，继续使用原生主题和 `TextView`，只在该类声明 AppCompat Lint 例外。
+- JDK 27 的 JVM 回归仍报告 DECK 测试夹具通过 `ReflectionHelpers` 写入 `final` 字段。后续用构造流程重建这些夹具，保留生产字段的只读合同与现有 JVM 访问限制。
+- 本地使用 JDK 27.0.1.1 验证 4,613 项 JVM 测试、完整 Debug Lint、Develop/R8 和 APK Hook API 边界。Debug Lint 有 0 个错误、327 个警告。AGP、Lint、JVM 测试和 Develop 的实际依赖图已核对，Develop 运行时仅包含本轮更新的 Commons Lang。
 - CodeQL Default setup 当前保留 Python / Actions，JS 已停用；两份 JS 随无消费者的设计工具删除。候选 `c156bc45` 的两项真实扫描无告警；日志解析器的指数回溯有独立超时复现与修复回归，另三项旧告警属于已移除、仅支持 npm/PyPI/Go 的辅助工具，不手工关闭 main 的历史告警。Java/Kotlin 的原 autobuild 因缺 JDK 27 失败。[手动构建试验](https://github.com/thetvplus/customiuizer-a14/actions/runs/42510958785) 已用 JDK 27.0.1 / Kotlin 2.4.21 / CodeQL 2.27.4 实际提取全部 429 个 Kotlin、5 个 Java 主源码及 3 个生成文件，Kotlin/Java 代码指标为 87,476/1,340 行，分析无告警；不据此扩大到未测工具版本或 Hook 行为。保留按需入口与提取完整性门禁，不新增定时扫描或重复 Python/Actions；SARIF 暂不上传 Security，持续 Java/Kotlin 告警接入仍待主线 Advanced 迁移。
 
 ## 验证与证据

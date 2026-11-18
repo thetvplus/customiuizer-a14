@@ -1,5 +1,6 @@
 package tv.withaibuild.customiuizer.utils;
 
+import android.app.Application;
 import android.content.SharedPreferences;
 import android.os.RemoteException;
 import io.github.libxposed.service.RemotePreferences;
@@ -22,7 +23,7 @@ import static org.junit.Assert.*;
 
 /** Uses the real service SDK: its optimistic cache changes even when Binder rejects a commit. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 34, manifest = Config.NONE)
+@Config(sdk = 34, application = Application.class)
 public class XposedServiceMirrorCommitTest {
     @Test
     public void failedCommitStaysUndeliveredAcrossCachedRetryAndRecoversAfterFreshBind() throws Throwable {

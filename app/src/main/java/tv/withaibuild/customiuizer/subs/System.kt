@@ -162,13 +162,7 @@ class System : SubFragment() {
         val prefs = AppHelper.appPrefs ?: return
         val raw = prefs.all?.get("pref_key_system_recents_card_style") ?: return
         val migrated = legacyRecentsCardStyleToBoolean(raw) ?: return
-        val editor = prefs.edit()
-        editor.remove("pref_key_system_recents_card_style")
-        editor.putBoolean("pref_key_system_recents_card_style", migrated)
-        val committed = editor.commit()
-        if (!committed) {
-            AppHelper.appPrefs?.edit()?.remove("pref_key_system_recents_card_style")?.commit()
-        }
+        prefs.edit().putBoolean("pref_key_system_recents_card_style", migrated).apply()
     }
 
     internal companion object {

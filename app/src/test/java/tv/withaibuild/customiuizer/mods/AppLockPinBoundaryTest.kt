@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.io.File
+import tv.withaibuild.customiuizer.testsupport.repositorySource
 import java.lang.reflect.Executable
 import java.lang.reflect.InvocationTargetException
 
@@ -110,10 +110,8 @@ class AppLockPinBoundaryTest {
     }
 
     @Test fun theConstructorInstallerUsesTheTestedCallback() {
-        var root = File(java.lang.System.getProperty("user.dir")).absoluteFile
-        val relative = "app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt"
-        while (!File(root, relative).isFile) root = root.parentFile ?: error("Repository not found")
-        val source = File(root, relative).readText().replace("\r\n", "\n")
+        val source = repositorySource("app/src/main/java/tv/withaibuild/customiuizer/mods/SystemLockScreenHooks.kt")
+            .replace("\r\n", "\n")
         val start = source.indexOf("fun ScrambleAppLockPINHook(")
         val end = source.indexOf("internal fun createScrambleAppLockPinHook()", start)
         assertTrue(start >= 0 && end > start)

@@ -29,11 +29,11 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
         // Host build tools only: these constraints do not enter the APK.
         constraints {
-            add("classpath", "com.google.guava:guava:33.7.2-jre") {
-                because("CVE-2026-102554; host deserialization allocation bounds")
+            add("classpath", "com.google.guava:guava:33.8.0-jre") {
+                because("Host deserialization allocation and hash-flooding fixes")
             }
-            add("classpath", "org.apache.commons:commons-lang3:3.21.0") {
-                because("CVE-2025-48924; use the already validated Commons version")
+            add("classpath", "org.apache.commons:commons-lang3:3.22.0") {
+                because("Keep the host classpath aligned with the project's Commons Lang version")
             }
             add("classpath", "org.bitbucket.b_c:jose4j:0.9.6") {
                 because("CVE-2024-29371")
@@ -41,13 +41,13 @@ buildscript {
             add("classpath", "org.jdom:jdom2:2.0.6.1") {
                 because("CVE-2021-33813")
             }
-            add("classpath", "org.bouncycastle:bcprov-jdk18on:1.86") {
-                because("Bouncy Castle security fixes through CVE-2026-13506")
+            add("classpath", "org.bouncycastle:bcprov-jdk18on:1.87") {
+                because("Bouncy Castle 1.87 host cryptography and certificate validation fixes")
             }
-            add("classpath", "org.bouncycastle:bcpkix-jdk18on:1.86") {
+            add("classpath", "org.bouncycastle:bcpkix-jdk18on:1.87") {
                 because("Keep the Bouncy Castle modules aligned")
             }
-            add("classpath", "org.bouncycastle:bcutil-jdk18on:1.86") {
+            add("classpath", "org.bouncycastle:bcutil-jdk18on:1.87") {
                 because("Keep the Bouncy Castle modules aligned")
             }
         }

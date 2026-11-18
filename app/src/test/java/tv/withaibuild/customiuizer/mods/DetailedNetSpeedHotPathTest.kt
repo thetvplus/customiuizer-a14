@@ -306,7 +306,7 @@ class DetailedNetSpeedHotPathTest {
 
         val modRes = FakeModuleResources()
         repeat(100) {
-            SystemUIStatusBarHooks.humanReadableByteCount((it * 1024L).toLong(), snapshot, modRes)
+            SystemUIStatusBarHooks.humanReadableByteCount(it * 1024L, snapshot, modRes)
         }
 
         assertEquals(initialReads, countingMap.readCount())
