@@ -7,8 +7,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.database.Cursor
 import android.net.Uri
+import android.text.TextUtils
 import android.view.View
 import android.widget.TextView
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,10 +28,10 @@ import kotlin.coroutines.coroutineContext
 /**
  * Control-center step counter.
  *
- * - Views are held as weak references and expire naturally when the header is
- *   destroyed, so a detached view never prevents garbage collection.
- * - TIME_TICK receiver is registered only when at least one view is alive and
- *   the screen is on, and unregistered when the last view dies or the screen
+ * - Attached views are held by weak reference. Detached views can render the
+ *   last value without starting observers or queries.
+ * - TIME_TICK receiver is registered only when a view is attached and
+ *   the screen is on, and unregistered when the last view detaches or the screen
  *   turns off. Both transitions cancel pending refresh work.
  * - Screen on/off is observed through [ScreenStateController] instead of
  *   polling [PowerManager.isInteractive] on every tick.
@@ -56,6 +58,16 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
     private var scope: CoroutineScope = newScope()
     private val queryMutex = Mutex()
 
+    private val attachmentListener = object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(view: View) = ModuleHelper.guarded {
+            addStepView(view as TextView)
+        }
+
+        override fun onViewDetachedFromWindow(view: View) = ModuleHelper.guarded {
+            removeStepView(view as TextView)
+        }
+    }
+
     private fun newScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + ModuleHelper.coroutineFailureHandler)
 
@@ -64,7 +76,7 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         if (isOn) {
             if (hasActiveViews()) {
                 ensureTickRegistered(ctx)
-                requestRefresh(ctx)
+                requestRefresh()
             }
         } else {
             cancelUpdates()
@@ -74,36 +86,36 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
 
     @JvmStatic
     fun bindStepView(sv: TextView) {
-        sv.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(view: View) = ModuleHelper.guarded {
-                addStepView(view as TextView)
-            }
-
-            override fun onViewDetachedFromWindow(view: View) = ModuleHelper.guarded {
-                removeStepView(view as TextView)
-            }
-        })
-        addStepView(sv)
+        sv.addOnAttachStateChangeListener(attachmentListener)
+        if (sv.isAttachedToWindow) addStepView(sv) else showCachedSteps(sv)
     }
 
     private fun addStepView(sv: TextView) {
         cleanupDeadViews()
         if (stepViewList.any { it.get() === sv }) return
+        val firstView = stepViewList.isEmpty()
         val ctx = context
         // A failed screen registration must leave this attachment retryable.
         if (ctx != null) ensureScreenStateRegistered(ctx)
         stepViewList.add(WeakReference(sv))
-        stepsWithGoal?.let { sv.text = it }
+        showCachedSteps(sv)
 
-        if (ctx == null) return
-        if (ScreenStateController.isScreenOn()) {
-            ensureTickRegistered(ctx)
-        }
+        if (ctx == null || !ScreenStateController.isScreenOn()) return
+        ensureTickRegistered(ctx)
+        if (firstView) scheduleInitialRefresh()
+    }
 
-        pendingUpdateJob?.cancel()
+    private fun showCachedSteps(view: TextView) {
+        val text = stepsWithGoal ?: return
+        if (!TextUtils.equals(view.text, text)) view.text = text
+    }
+
+    private fun scheduleInitialRefresh() {
+        if (pendingUpdateJob != null || refreshJob?.isActive == true) return
         pendingUpdateJob = scope.launch {
-            delay(3000L)
-            requestRefresh(ctx)
+            delay(3_000L)
+            pendingUpdateJob = null
+            requestRefresh()
         }
     }
 
@@ -113,7 +125,6 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
     }
 
     @JvmStatic
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun initContext(context: Context) {
         // Cancel any pending work from a previous context and recreate the scope.
         scope.cancel()
@@ -134,15 +145,17 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         // screen is on; do not pay for TIME_TICK while no one is observing.
         timeTickReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) = ModuleHelper.guarded {
-                if (!ScreenStateController.isScreenOn()) return@guarded
-                requestRefresh(context)
+                if (timeTickReceiver === this && timeTickRegistered) requestRefresh()
             }
         }
 
         if (hasActiveViews()) {
             val ctx = this.context ?: return
             ensureScreenStateRegistered(ctx)
-            if (ScreenStateController.isScreenOn()) ensureTickRegistered(ctx)
+            if (ScreenStateController.isScreenOn()) {
+                ensureTickRegistered(ctx)
+                scheduleInitialRefresh()
+            }
         }
     }
 
@@ -183,7 +196,7 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         try {
             ctx.registerReceiver(
                 timeTickReceiver,
-                IntentFilter("android.intent.action.TIME_TICK"),
+                IntentFilter(Intent.ACTION_TIME_TICK),
                 Context.RECEIVER_NOT_EXPORTED
             )
             timeTickRegistered = true
@@ -205,14 +218,17 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         }
     }
 
-    private fun requestRefresh(context: Context) {
+    private fun requestRefresh() {
+        val ctx = context ?: return
         if (!ScreenStateController.isScreenOn()) return
         if (!hasActiveViews()) {
             releaseInactiveState()
             return
         }
         if (refreshJob?.isActive == true) return
-        refreshJob = scope.launch { refreshSteps(context) }
+        pendingUpdateJob?.cancel()
+        pendingUpdateJob = null
+        refreshJob = scope.launch { refreshSteps(ctx) }
     }
 
     private suspend fun refreshSteps(context: Context) {
@@ -237,7 +253,6 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
         if (newText == stepsWithGoal) return
         stepsWithGoal = newText
 
-        cleanupDeadViews()
         for (ref in stepViewList) {
             ref.get()?.text = newText
         }
@@ -259,6 +274,8 @@ object StepCounterController : ScreenStateController.ScreenStateListener {
                 null
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            FatalErrors.unwrapAndRethrowIfFatal(t)
             XposedHelpers.log(t)
             null
         } finally {
