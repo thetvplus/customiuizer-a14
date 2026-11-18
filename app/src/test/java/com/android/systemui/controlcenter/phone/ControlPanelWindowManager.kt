@@ -1,6 +1,7 @@
 package com.android.systemui.controlcenter.phone
 
 import android.view.MotionEvent
+import android.view.ViewGroup
 
 /** Only the fields and signature used by the two fuxi ROMs, without vendor implementation code. */
 @Suppress("UNUSED_PARAMETER")
@@ -14,6 +15,9 @@ class ControlPanelWindowManager {
     class Controller { @JvmField var useControlCenter = true }
     class WindowView {
         var dispatches = 0
+        var root: ViewGroup? = null
+        fun getView() = root
+
         fun handleMotionEvent(event: MotionEvent, fromStatusBar: Boolean): Boolean {
             dispatches++
             return true

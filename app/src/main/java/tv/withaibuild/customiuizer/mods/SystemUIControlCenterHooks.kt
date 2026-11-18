@@ -40,14 +40,12 @@ import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.BeforeHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
-import java.util.concurrent.ConcurrentHashMap
 import tv.withaibuild.customiuizer.mods.volume.IosVolumeStyle
 import tv.withaibuild.customiuizer.mods.volume.VolumePercentageFeedback
 import tv.withaibuild.customiuizer.mods.island.DynamicIslandStatusBarFade
 import tv.withaibuild.customiuizer.mods.utils.FeatureInstallResult
 import tv.withaibuild.customiuizer.mods.utils.PreparedHookBatch
 import tv.withaibuild.customiuizer.mods.utils.HookDiagnostics
-import tv.withaibuild.customiuizer.mods.utils.HookInstallStateMachine
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.StepCounterController
@@ -1812,7 +1810,7 @@ object SystemUIControlCenterHooks {
     private var mPctRef: WeakReference<TextView>? = null
     private var mPctOwnerRef: WeakReference<Any>? = null
     private var volumePctFeedback: VolumePercentageFeedback? = null
-    private var volumePctValue = -1
+    private var pctValue = -1
     private var volumePctStream = -1
 
     private val mPct: TextView?
@@ -1840,8 +1838,7 @@ object SystemUIControlCenterHooks {
 
     private fun applyPctTopMargin(pct: TextView, container: View, source: Int) {
         val lp = (pct.layoutParams as? FrameLayout.LayoutParams) ?: return
-        lp.gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
-        lp.topMargin = if (source == PCT_SOURCE_VOLUME) {
+        val top = if (source == PCT_SOURCE_VOLUME) {
             resolveVolumePctTopMarginPx(statusBarBottomPx(container))
         } else {
             Math.round(
@@ -1849,7 +1846,10 @@ object SystemUIControlCenterHooks {
                     pct.resources.displayMetrics.density
             )
         }
-        pct.layoutParams = lp
+        if (lp.topMargin != top) {
+            lp.topMargin = top
+            pct.layoutParams = lp
+        }
     }
 
     private fun ownedPct(owner: Any?, source: Int): TextView? {
@@ -1930,11 +1930,12 @@ object SystemUIControlCenterHooks {
             container.addView(pct)
             mPctRef = WeakReference(pct)
             mPctOwnerRef = WeakReference(owner)
+            pctValue = -1
         }
         applyPctTopMargin(pct, container, source)
         pct.setTag(source)
         pct.visibility = View.GONE
-        if (source == PCT_SOURCE_VOLUME) { volumePctValue = -1; volumePctStream = -1 }
+        if (source == PCT_SOURCE_VOLUME) { pctValue = -1; volumePctStream = -1 }
         return pct
     }
 
@@ -1957,64 +1958,55 @@ object SystemUIControlCenterHooks {
         removePct(ownedPct(owner, source))
     }
 
-    private fun startShowPct(lpparam: PackageReadyParam, mContext: Context, owner: Any) {
-        val controlCenter = ModuleHelper.getDepInstance(lpparam.classLoader, "com.android.systemui.controlcenter.phone.ControlPanelWindowManager")
-        val controlCenterWindowView = XposedHelpers.getObjectField(controlCenter, "windowView")
-        val windowView = XposedHelpers.callMethod(controlCenterWindowView, "getView") as ViewGroup
-        initPct(windowView, PCT_SOURCE_BRIGHTNESS, mContext, owner).visibility = View.VISIBLE
-    }
-
     @JvmStatic
     fun BrightnessPctHook(lpparam: PackageReadyParam) {
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "onStart", object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val owner = callback.getThisObject() ?: return
-                val mContext = XposedHelpers.getObjectField(owner, "mContext") as Context
-                startShowPct(lpparam, mContext, owner)
-            }
-        })
+        val loader = lpparam.classLoader
+        val controller = XposedHelpers.findClass("com.android.systemui.controlcenter.policy.MiuiBrightnessController", loader)
+        val slider = XposedHelpers.findClass("com.android.systemui.plugins.miui.controlcenter.ToggleSliderBase", loader)
+        val brightnessUtils = XposedHelpers.findClass("com.android.systemui.controlcenter.policy.BrightnessUtils", loader)
+        val gammaMax = XposedHelpers.getStaticIntField(brightnessUtils, "GAMMA_SPACE_MAX")
+        check(gammaMax > 0)
+        val context = XposedHelpers.findField(controller, "mContext")
+        val managerName = "com.android.systemui.controlcenter.phone.ControlPanelWindowManager"
+        val windowView = XposedHelpers.findField(XposedHelpers.findClass(managerName, loader), "windowView")
+        val intType = Int::class.javaPrimitiveType
+        val boolType = Boolean::class.javaPrimitiveType
+        val onStart = controller.getDeclaredMethod("onStart", intType)
+        val onStop = controller.getDeclaredMethod("onStop", intType)
+        val onChanged = controller.getDeclaredMethod("onChanged", slider, boolType, boolType, intType, boolType)
 
-        val sliderHooks = ConcurrentHashMap<Class<*>, HookInstallStateMachine>()
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "setToggleSliderBase", object : MethodHook() {
-            override fun after(callback: AfterHookCallback): Unit = ModuleHelper.guarded {
-                if (callback.getThrowable() != null) return
-                val slider = callback.getArg(0) ?: return
-                if (slider.javaClass.simpleName == "ToggleSliderViewHolder") return
-                val listener = XposedHelpers.getObjectField(slider, "mOnSeekBarChangeListener") ?: return
-                // Each listener belongs to its current controller; the class-wide hook
-                // never captures the first slider/controller or ignores replacements.
-                XposedHelpers.setAdditionalInstanceField(listener, "a14.brightnessOwner", WeakReference(callback.getThisObject()))
-                sliderHooks.getOrPut(listener.javaClass) { HookInstallStateMachine() }.install {
-                    ModuleHelper.findAndHookMethod(listener.javaClass, "onStartTrackingTouch", SeekBar::class.java, object : MethodHook() {
-                        override fun before(callback: BeforeHookCallback): Unit = ModuleHelper.guarded {
-                            val reference = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "a14.brightnessOwner") as? WeakReference<*>
-                            val owner = reference?.get() ?: return
-                            val context = XposedHelpers.getObjectField(owner, "mContext") as Context
-                            startShowPct(lpparam, context, owner)
-                        }
-                    }) != null
-                }
-            }
-        })
+        fun updateBrightness(pct: TextView, level: Int) {
+            val percent = level.coerceIn(0, gammaMax) * 100 / gammaMax
+            if (pctValue == percent) return
+            pctValue = percent
+            pct.text = "$percent%"
+        }
 
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "onStop", object : MethodHook() {
+        val start = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                removePct(callback.getThisObject(), PCT_SOURCE_BRIGHTNESS)
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject() ?: return
+                val manager = ModuleHelper.getDepInstance(loader, managerName) ?: return
+                val window = windowView.get(manager) ?: return
+                val container = XposedHelpers.callMethod(window, "getView") as? ViewGroup ?: return
+                val pct = initPct(container, PCT_SOURCE_BRIGHTNESS, context.get(owner) as Context, owner)
+                updateBrightness(pct, callback.getArg(0) as Int)
+                pct.visibility = View.VISIBLE
             }
-        })
-
-        val BrightnessUtils = XposedHelpers.findClassIfExists("com.android.systemui.controlcenter.policy.BrightnessUtils", lpparam.classLoader)
-        ModuleHelper.hookAllMethods("com.android.systemui.controlcenter.policy.MiuiBrightnessController", lpparam.classLoader, "onChanged", object : MethodHook() {
+        }
+        val changed = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
                 val pct = ownedPct(callback.getThisObject(), PCT_SOURCE_BRIGHTNESS) ?: return
-                val currentLevel = callback.getArg(3) as Int
-                if (BrightnessUtils != null) {
-                    val maxLevel = XposedHelpers.getStaticObjectField(BrightnessUtils, "GAMMA_SPACE_MAX") as Int
-                    pct.text = ((currentLevel * 100) / maxLevel).toString() + "%"
-                }
+                updateBrightness(pct, callback.getArg(3) as Int)
             }
-        })
+        }
+        val stop = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                removePct(callback.getThisObject(), PCT_SOURCE_BRIGHTNESS)
+            }
+        }
+        check(PreparedHookBatch().install(listOf(onStart to start, onChanged to changed, onStop to stop)).isActive)
     }
 
     @JvmStatic
@@ -2034,11 +2026,11 @@ object SystemUIControlCenterHooks {
                 val mDialogView = dialogView.get(owner) as View
                 val windowView = mDialogView.parent as? ViewGroup ?: return
                 progressHook.clearTracking()
-                initPct(windowView, PCT_SOURCE_VOLUME, mDialogView.context, owner)
+                val pct = initPct(windowView, PCT_SOURCE_VOLUME, mDialogView.context, owner)
                 // Native state can be unchanged on show, so no SeekBar callback is guaranteed.
                 for (column in (columns.get(owner) as? List<*>).orEmpty()) {
                     if (column != null) (slider.get(column) as? SeekBar)?.let {
-                        progressHook.update(owner, column, it)
+                        progressHook.update(pct, owner, column, it)
                     }
                 }
             }
@@ -2046,7 +2038,8 @@ object SystemUIControlCenterHooks {
 
         ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "dismissH", Int::class.javaPrimitiveType!!, VolumePercentageDismissHook())
 
-        ModuleHelper.hookAllMethods(listenerClass, "onProgressChanged", progressHook)
+        ModuleHelper.findAndHookMethod(listenerClass, "onProgressChanged", SeekBar::class.java,
+            Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType, progressHook)
         for (event in listOf("onStartTrackingTouch", "onStopTrackingTouch")) {
             ModuleHelper.findAndHookMethod(listenerClass, event, SeekBar::class.java, object : MethodHook() {
                 override fun after(callback: AfterHookCallback) {
@@ -2061,9 +2054,10 @@ object SystemUIControlCenterHooks {
                 override fun after(callback: AfterHookCallback) = ModuleHelper.guarded {
                     if (callback.getThrowable() != null) return@guarded
                     val owner = callback.getThisObject() ?: return@guarded
+                    val pct = ownedPct(owner, PCT_SOURCE_VOLUME) ?: return@guarded
                     val column = callback.getArg(0) ?: return@guarded
                     val seekBar = slider.get(column) as? SeekBar ?: return@guarded
-                    progressHook.update(owner, column, seekBar)
+                    progressHook.update(pct, owner, column, seekBar)
                 }
             })
         ModuleHelper.findAndHookMethod(MiuiVolumeDialogImpl, "destroy", object : MethodHook() {
@@ -2104,20 +2098,19 @@ object SystemUIControlCenterHooks {
             if (callback.getThrowable() != null) return
             val listener = callback.getThisObject() ?: return
             val owner = ownerField.get(listener) ?: return
+            val pct = ownedPct(owner, PCT_SOURCE_VOLUME) ?: return
             val column = columnField.get(listener) ?: return
-            update(owner, column, callback.getArg(0) as SeekBar,
-                (callback.getArg(1) as Int).takeIf { callback.getArg(2) == true })
+            val userProgress = if (callback.getArg(2) == true) callback.getArg(1) as Int else null
+            update(pct, owner, column, callback.getArg(0) as SeekBar, userProgress)
         }
 
-        fun update(owner: Any, column: Any, seekBar: SeekBar, userProgress: Int? = null) {
-            val pct = ownedPct(owner, PCT_SOURCE_VOLUME) ?: return
+        fun update(pct: TextView, owner: Any, column: Any, seekBar: SeekBar, userProgress: Int? = null) {
             val stream = streamField.getInt(column)
             if (stream == 10) return
             val dragged = tracking.get()
             if (userProgress == null && (if (dragged != null) dragged !== column else stream != activeField.getInt(owner))) return
             val ss = stateField.get(column) ?: return
-            val anim = animField.get(column) as? ObjectAnimator
-            val currentLevel = userProgress ?: if (anim?.isRunning == true) targetField.getInt(column)
+            val currentLevel = userProgress ?: if ((animField.get(column) as? ObjectAnimator)?.isRunning == true) targetField.getInt(column)
                 else levelField.getInt(ss) * 1000
             val levelMin = minimumField.getInt(ss)
             var adjustedLevel = currentLevel
@@ -2129,7 +2122,7 @@ object SystemUIControlCenterHooks {
             if (maxLevel <= 0) {
                 pct.visibility = View.GONE
                 volumePctFeedback?.release()
-                volumePctValue = -1
+                pctValue = -1
                 return
             }
             adjustedLevel = adjustedLevel.coerceIn(0, max)
@@ -2138,7 +2131,7 @@ object SystemUIControlCenterHooks {
                 adjustedLevel = if (adjustedLevel == max) maxLevel else ((adjustedLevel.toFloat() / max) * i3).toInt() + 1
             }
             val percent = (adjustedLevel * 100) / maxLevel
-            if (volumePctValue == percent && volumePctStream == stream) {
+            if (pctValue == percent && volumePctStream == stream) {
                 // No new text, layout or animation for repeated animation frames. A preempted
                 // or expired external surface still exposes the already prepared native hint.
                 if (pct.visibility == View.GONE && volumePctFeedback?.isPresented() != true) {
@@ -2147,7 +2140,7 @@ object SystemUIControlCenterHooks {
                 }
                 return
             }
-            volumePctValue = percent
+            pctValue = percent
             volumePctStream = stream
             val text = "$percent%"
             if (pct.text.toString() != text) pct.text = text
