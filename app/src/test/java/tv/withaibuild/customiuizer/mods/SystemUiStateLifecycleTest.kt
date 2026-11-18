@@ -119,13 +119,40 @@ class SystemUiStateLifecycleTest {
         assertEquals(3, manager.windowView!!.dispatches)
         bar.mUseControlCenter = false
         assertFalse(handle(MotionEvent.ACTION_DOWN, 30f))
-        assertEquals(3, manager.windowView!!.dispatches)
+        val window = requireNotNull(manager.windowView)
+        assertEquals(3, window.dispatches)
         assertEquals(7, bar.nativeEvents)
+        bar.mUseControlCenter = true
+
+        fun assertShadeReceivesGesture(reason: String) {
+            val before = bar.nativeEvents
+            assertFalse(reason, handle(MotionEvent.ACTION_DOWN, 30f))
+            assertFalse(bar.mMotionToControlCenter)
+            assertFalse(handle(MotionEvent.ACTION_MOVE, 170f))
+            assertFalse(handle(MotionEvent.ACTION_UP, 170f))
+            assertEquals(before + 3, bar.nativeEvents)
+        }
+
+        manager.added = false
+        assertShadeReceivesGesture("Window not added")
+        assertEquals(3, window.dispatches)
+        manager.added = true
+        window.acceptsMotion = false
+        assertShadeReceivesGesture("Plugin declines the down event")
+        assertEquals(4, window.dispatches)
         manager.windowView = null
+        assertShadeReceivesGesture("Plugin window unavailable")
         val down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 30f, 5f, 0)
         try {
             assertFalse(dispatch(down, 200f))
         } finally { down.recycle() }
+
+        manager.windowView = window
+        window.acceptsMotion = true
+        assertTrue(handle(MotionEvent.ACTION_DOWN, 30f))
+        assertTrue(handle(MotionEvent.ACTION_UP, 170f))
+        assertFalse(bar.mMotionToControlCenter)
+        assertEquals(6, window.dispatches)
     }
 
     @Test

@@ -2266,6 +2266,9 @@ object SystemUIControlCenterHooks {
         val window = managerClass.getDeclaredField("windowView").apply { isAccessible = true }
         val handleMotionEvent = window.type.getMethod("handleMotionEvent", MotionEvent::class.java, Boolean::class.javaPrimitiveType)
 
+        class DownDispatch(val event: MotionEvent) { var accepted = false }
+        val activeDown = ThreadLocal<DownDispatch>()
+
         val statusBar = object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 val event = chain.getArg(0) as? MotionEvent ?: return chain.proceed()
@@ -2277,14 +2280,20 @@ object SystemUIControlCenterHooks {
                     // so the original still processes focused notifications and owns UP/CANCEL.
                     (event.rawX < bar.width / 2f).also { if (it) motionToControlCenter.setBoolean(bar, true) }
                 }
-                if (fromLeft != false) return chain.proceed()
+                if (fromLeft == null) return chain.proceed()
+
+                // The native status bar returns its latch, ignoring the manager's dispatch result.
+                val down = if (fromLeft) DownDispatch(event) else null
+                val previous = activeDown.get()
+                activeDown.set(down)
+                var accepted = false
                 try {
-                    chain.proceed()
+                    accepted = chain.proceed() == true && down?.accepted == true
+                    return accepted
                 } finally {
-                    // The paired manager hook declined this right DOWN. Let the shade handle it.
-                    ModuleHelper.guarded { motionToControlCenter.setBoolean(bar, false) }
+                    if (previous == null) activeDown.remove() else activeDown.set(previous)
+                    if (!accepted) ModuleHelper.guarded { motionToControlCenter.setBoolean(bar, false) }
                 }
-                return false
             }
         }
         val windowManager = object : MethodHook() {
@@ -2292,7 +2301,8 @@ object SystemUIControlCenterHooks {
                 val manager = chain.thisObject
                 if (!added.getBoolean(manager) || !useControlCenter.getBoolean(controller.get(manager))) return@guarded false
                 val event = chain.getArg(0) as MotionEvent
-                val startX = if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                val isDown = event.actionMasked == MotionEvent.ACTION_DOWN
+                val startX = if (isDown) {
                     event.rawX.also { downX.setFloat(manager, it) }
                 } else {
                     downX.getFloat(manager)
@@ -2301,7 +2311,12 @@ object SystemUIControlCenterHooks {
                 val fromLeft = startX < width / 2f
                 if (!fromLeft) return@guarded false
                 val view = window.get(manager) ?: return@guarded false
-                handleMotionEvent.invoke(view, event, true) as Boolean
+                val accepted = handleMotionEvent.invoke(view, event, true) as Boolean
+                if (accepted && isDown) {
+                    val down = activeDown.get()
+                    if (down?.event === event) down.accepted = true
+                }
+                accepted
             }
         }
         check(PreparedHookBatch().install(listOf(handleEvent to statusBar, dispatchEvent to windowManager)).isActive)

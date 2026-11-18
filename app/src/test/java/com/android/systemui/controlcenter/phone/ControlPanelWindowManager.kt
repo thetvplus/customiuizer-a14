@@ -15,12 +15,13 @@ class ControlPanelWindowManager {
     class Controller { @JvmField var useControlCenter = true }
     class WindowView {
         var dispatches = 0
+        var acceptsMotion = true
         var root: ViewGroup? = null
         fun getView() = root
 
         fun handleMotionEvent(event: MotionEvent, fromStatusBar: Boolean): Boolean {
             dispatches++
-            return true
+            return acceptsMotion
         }
     }
 }
