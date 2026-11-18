@@ -4,6 +4,33 @@ English | [简体中文](CHANGELOG.md)
 
 ## Unreleased
 
+## r14.27.10 — 2026-11-18
+
+versionCode 311. Changes since r14.27.9:
+
+### Release summary
+
+- **Control Center**. Fix swapped pull-down gestures and refine custom tile columns and panel layout in portrait and landscape.
+- **Status bar**. Dual-row signal indicators refresh the second SIM independently. Network speed follows the system refresh and reset.
+- **Volume and brightness**. Percentages follow native slider progress, and the extended Do Not Disturb timer uses the system control.
+- **Home screen**. Refine icon titles, folder layout and double-tap handling in the native launcher.
+
+Restart Launcher and System UI after upgrading.
+
+### User changes
+
+- With notification shade and Control Center gestures swapped, the notification shade can continue a pull-down when Control Center declines it.
+- Custom Control Center tile columns adapt to portrait and landscape. If the tile layout hook is unavailable, the system panel layout and column count are retained. The edit entry and security notice can still be hidden independently.
+- The Control Center carrier text follows system visibility. Step counts start refreshing when the header attaches, move as it expands and follow the system privacy indicator's visibility rules.
+- Dual-row indicators update the second SIM when the primary SIM state is unchanged and restore the single-SIM display after switching back. Detailed network speed uses the system refresh and reset, and battery styles use the system battery state.
+- Volume and brightness percentages use native slider progress. Extended timer intervals and labels line up with the native slider in portrait and landscape.
+- Refine the native entry points for home-screen icon title size, folder width and double-tap gestures on the verified MiuiHome and POCO Launcher versions.
+
+### Engineering notes
+
+- Control Center tile layout hooks install as a group and bind spans per panel instance. Step-count observers are released when the last view detaches. Build and test dependencies were updated.
+- Device verification of layouts, SIMs, theme changes and host performance is pending. See the [refinement roadmap](docs/maintenance/A14_REFINEMENT_ROADMAP.md) for checked ROMs and remaining scenarios.
+
 ## r14.27.9 — 2026-11-16
 
 versionCode 310. A stable milestone for HyperOS 1 / Android 14.

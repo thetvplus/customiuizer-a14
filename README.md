@@ -33,7 +33,7 @@
 - 设置声明见 [app/settings](app/settings)，宿主进程路由与 Hook 安装见[架构](ARCHITECTURE.md#入口与进程路由)。
 - 专题说明见[文档目录](docs/README.md)，设备覆盖与待验见[当前精修状态](docs/maintenance/A14_REFINEMENT_ROADMAP.md#待实机验收)。
 
-当前源码版本为 `r14.27.9`（versionCode 310），应用 ID 为 `tv.withaibuild.customiuizer.r14`。正式 APK 和源码身份见[发布记录](docs/RELEASE.md#当前正式版本)。
+当前源码版本为 `r14.27.10`（versionCode 311），应用 ID 为 `tv.withaibuild.customiuizer.r14`。正式 APK 和源码身份见[发布记录](docs/RELEASE.md#当前正式版本)。
 
 ## 支持与许可
 

@@ -41,6 +41,10 @@ GitHub 管理的 PR 引用、缓存及外部克隆可能仍保留旧对象；主
 
 ### 当前正式版本
 
+正式版本、APK 及对应的构建元数据以两仓的 Latest 为准。[源码仓 Latest](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [下载仓 Latest](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/latest)
+
+#### r14.27.9 阶段基线
+
 **r14.27.9 / 310** 的正式源码为 `9224160f6b13be43a9dd4a6da8a1ff92a0e795c0`。两仓 APK 均为 6,293,117 字节，SHA-256 为 `d2bd1f64612eb2d5b4184a8ee87907cadd902631a6767520b725cf8efc138bfa`，构建 metadata 摘要一致。[源码仓发行](https://github.com/thetvplus/customiuizer-a14/releases/tag/r14.27.9) · [下载仓发行](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/releases/tag/310-r14.27.9)
 
 r14.27.9 是当前阶段基线。公开说明呈现本阶段仍有效的功能与升级方式，后续版本从 r14.27.9 开始核对变更和版本递增。退役版本的原始发行记录和资产按阶段收口规则归档。当前公开说明见[中文更新记录](../CHANGELOG.md)与[英文更新记录](../CHANGELOG_EN.md)。
