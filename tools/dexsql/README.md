@@ -26,7 +26,7 @@
 | `launcher_recents_deck_contract.sql` | A14 Launcher | Deck 类继承、完整方法 / 字段描述符、内容 alpha 与触摸 / 回弹直接调用者及字段读写；用关键 Smali 确认调用顺序，按样本哈希比较，不跨 Dataset 连接局部索引。 |
 | `navigation_gestures_contract.sql` | Launcher | 返回区域初始化 / setSize、侧滑停顿、快速切换和输入声明；核对无参初始化、字段重置及配置变化调用者。 |
 | `home_indicator_contract.sql` | A14 SystemUI、MiuiHome / POCO | 普通 NavigationHandle、Quick Switch 独立窗口及横屏最近任务 FakeNavigationBarView 的绘制与可见性入口；结合 Smali 和实机明确每个 owner。 |
-| `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明；保留各 owner 的失效与刷新边界。 |
+| `statusbar_layout_refresh.sql` | SystemUI | Insets / 开孔、布局重建、网络订阅与电池回调声明，以及双卡图标状态与原生绘制调用。 |
 | `statusbar_gestures_contract.sql` | SystemUI + 控制中心 plugin | 状态栏拦截 / 触摸分发、插件 owner 的 attach / destroy 与 external 标志调用；独立于 Launcher 导航链。 |
 | `toast_presentation_contract.sql` | SystemUI 与 boot framework.jar | 普通 Toast 的窗口插入 / 回收、旋转重排、安全区与原生 StrongToast 文本模型；decode 核对 text_bitmap 分支、展示门禁、队列和 finishToken，不能只凭方法存在判定兼容。 |
 | `island_activity_contract.sql` | 双区域 SystemUI 与 boot framework.jar | 原生主播放器、媒体 / 状态栏 / Keyguard 回调及通知接管字段；decode 复核独立锁屏门禁、bind 提交、Heads-up 内容释放与列表可见性的边界。 |
