@@ -135,6 +135,8 @@ r14.27.9 的 309 试用包经受控重建确认 SystemUI 加载 API 102。离线
 - DexSQL 对 duchamp CN、fuxi CN / TW 和 munch ID 的 SystemUI 核对了 `MiuiClock` 三参数构造器、时钟和通知图标的 `onDarkChanged` 签名，以及第二行网速的 `setNetworkSpeedIcon(NetworkSpeedState)`。四份样本的双参数时钟构造器均委托到三参数构造器。网速调用来自原生控制器的初始化、文本更新和可见性更新。
 - 四份样本的 `MiuiBatteryMeterView.updateAll()` 都读取自身声明的数字、百分比和标记 `TextView`。模块在安装时解析同一组字段。默认样式且没有基线时直接返回，自定义及恢复路径每个字段只读一次。基线随原生子视图更换而刷新，恢复默认后释放。字段或安装点缺失时由 Feature 安装边界隔离。Android 14 Host 覆盖恢复、重复更新、替换子视图和 Battery4 的边距归属。
 - StrongToast 在存在高度匹配基线时才查找并恢复原生子视图。岛体几何与窗口生命周期由动态岛路径负责，StrongToast 已移除无生产调用的旧几何实现及对应专项。
+- 网速样式跟随四份 ROM 经 `StatusIconDisplayable` 分发的 `NetworkSpeedView.onDensityOrFontScaleChanged()`。原生更新数字、单位和暗色状态后，模块恢复这两个子视图的字形并使完整样式失效。选择时钟样式时在应用样式的位置恢复字形。移除进程级 `TextView.setTextAppearance` Hook 和只剩测试调用的样式分支。
+- 温度与电流监控按原生 `NetworkSpeedController` 构造签名读取 Context 和后台 Looper。单行自定义图标只在准确的 `IconManager.addHolder(int, String, boolean, StatusBarIconHolder)` 安装成功后注册。普通图标只访问 holder 的 `mType`，原生链继续执行一次。网速格式、时钟控制器、移动信号状态与暗色回调、挖孔布局也改用四份样本共同的确切签名。
 - 当前候选的 SystemUI 实装、主题与字体重载、第二行网速和宿主性能仍待对应 ROM 实机验收。静态签名通过只覆盖四份离线样本。
 
 ### 实机成本与 Native 取舍（2026-11-08）

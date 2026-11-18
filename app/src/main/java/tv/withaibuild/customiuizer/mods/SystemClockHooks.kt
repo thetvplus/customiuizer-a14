@@ -1022,7 +1022,11 @@ object SystemClockHooks {
             }
         }
         if (enableWeatherParam || hasClockWork) {
-            ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.MiuiStatusBarClockController", lpparam.classLoader, scheduleHook)
+            ModuleHelper.findAndHookConstructor(
+                "com.android.systemui.statusbar.policy.MiuiStatusBarClockController", lpparam.classLoader,
+                Context::class.java, "com.android.systemui.statusbar.policy.ConfigurationController",
+                "com.android.keyguard.KeyguardUpdateMonitor", scheduleHook,
+            )
         }
 
         ModuleHelper.findAndHookConstructor("com.android.systemui.statusbar.views.MiuiClock", lpparam.classLoader,

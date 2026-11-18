@@ -232,6 +232,9 @@ object SystemUIStatusBarHooks {
 
     val textIconTagId = ResourceHooks.getFakeResId("text_icon_tag")
 
+    private const val MOBILE_VIEW_CLASS = "com.android.systemui.statusbar.StatusBarMobileView"
+    private const val MOBILE_ICON_STATE_CLASS = "com.android.systemui.statusbar.phone.StatusBarSignalPolicy\$MobileIconState"
+
     private val viewInitedTag = ResourceHooks.getFakeResId("view_inited_tag")
 
     /** Additional instance field key for the last full [NetSpeedTextStyleSnapshot] id applied to a view. */
@@ -1025,7 +1028,7 @@ object SystemUIStatusBarHooks {
 
         installStatusBarViewLifecycleHook(lpparam)
 
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", lpparam.classLoader, "updateCutoutLocation", object : MethodHook(-1000) {
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", lpparam.classLoader, "updateCutoutLocation", object : MethodHook(-1000) {
             override fun after(callback: AfterHookCallback) {
                 val mCurrentStatusBarType = XposedHelpers.getObjectField(callback.getThisObject(), "mCurrentStatusBarType") as Int
                 val leftLayout = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "leftLayout") as LinearLayout?
@@ -1170,7 +1173,7 @@ object SystemUIStatusBarHooks {
                 } else mainLabel
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateUpdateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, stateUpdateHook)
         // Both fuxi ROMs call updateState from these two entry points. Refresh once after the
         // caller finishes, including the initial-state branch that never calls updateState.
         ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "setDripEnd", Boolean::class.javaPrimitiveType!!, stateUpdateHook)
@@ -1185,7 +1188,7 @@ object SystemUIStatusBarHooks {
         })
         val dualRows = currentOrBuildStatusBarLayoutSnapshot().digitalSignalDualRows
         if (dualRows) {
-            ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", object : MethodHook() {
+            ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", String::class.java, List::class.java, object : MethodHook() {
                 override fun before(callback: BeforeHookCallback) {
                     val iconStates = callback.getArg(1) as List<*>
                     if (iconStates.size == 2) {
@@ -1334,7 +1337,7 @@ object SystemUIStatusBarHooks {
         val systemUIRes = arrayOfNulls<Resources>(1)
         val signalResToLevelMap = SparseIntArray()
         val signalStates = intArrayOf(-1, -1) // main-subId, sub-level
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", object : MethodHook() {
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", lpparam.classLoader, "setMobileIcons", String::class.java, List::class.java, object : MethodHook() {
             private var isHooked = false
             override fun before(callback: BeforeHookCallback) {
                 if (!isHooked) {
@@ -1396,8 +1399,8 @@ object SystemUIStatusBarHooks {
                 }
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateUpdateHook)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", stateUpdateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, stateUpdateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateState", MOBILE_ICON_STATE_CLASS, stateUpdateHook)
 
         val resetImageDrawable = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
@@ -1423,7 +1426,10 @@ object SystemUIStatusBarHooks {
                 applyDualSignalDrawables(callback.getThisObject(), mobileIconState, signalStates[1], systemUIRes[0], signalResToLevelMap, dualSignalResIds, selectedIconStyle)
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "onDarkChanged", onDarkChangedSetter)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "onDarkChanged",
+            ArrayList::class.java, Float::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
+            Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!,
+            onDarkChangedSetter)
 
         val rightMargin = MainModule.mPrefs.getInt("system_statusbar_dualsimin2rows_rightmargin", 0)
         val leftMargin = MainModule.mPrefs.getInt("system_statusbar_dualsimin2rows_leftmargin", 0)
@@ -2056,7 +2062,7 @@ object SystemUIStatusBarHooks {
             }
         })
 
-        ModuleHelper.hookAllMethods(NetworkSpeedController, "updateText", object : MethodHook() {
+        ModuleHelper.findAndHookMethod(NetworkSpeedController, "updateText", Array<String>::class.java, object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
                 val context = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
                 val modRes = ModuleHelper.getModuleRes(context)
@@ -2377,54 +2383,20 @@ object SystemUIStatusBarHooks {
     /**
      * Applies the network-speed text style to [speedView].
      *
-     * The style is fully reversible: the original system-provided state is captured once per view
-     * and the full apply path derives the complete target state from [original] + [snapshot].
-     * Setters are applied in a single guarded block; if any setter throws a non-fatal exception the
-     * function returns without marking the snapshot as completed, so the next call with the same
-     * snapshot can retry.
-     *
-     * Callers:
-     * - `NetworkSpeedView.setNetworkSpeed` per tick: `typefaceOnly = false`.  This path short-circuits
-     *   when the last full-style [snapshot.id] has already been applied to this [speedView], so the
-     *   common per-second case performs zero full-style setters.
-     * - `NetworkSpeedView.onFinishInflate`: `typefaceOnly = false`.  Full style is applied once and
-     *   the view is marked as styled.
-     * - `TextView.setTextAppearance` after-hook: `typefaceOnly = true`.  After the framework or
-     *   `onFinishInflate` applies a text appearance, this only restores the network-speed typeface
-     *   and fake-bold state.  It also invalidates the cached original style and last full snapshot so
-     *   the next full apply re-captures the new baseline.
-     *
-     * Hot-path invariants:
-     * - No [MainModule.mPrefs] reads.
-     * - No reflection, resource-name searches, or temporary collections.
-     * - Logical configuration is converted to physical pixels on demand using the View's
-     *   current resources, so density/fontScale changes never use stale px values.
-     * - The last full [NetSpeedTextStyleSnapshot.id] is stored as an additional instance field on
-     *   [speedView]; when the same [snapshot] has already been fully applied, [typefaceOnly] = false
-     *   returns early and touches no setters.
+     * The native baseline is captured once per view. A failed apply leaves the snapshot
+     * incomplete so the next native update can retry. Steady text updates with the same
+     * snapshot return before reading the children or calling setters.
      */
-    internal fun applyNetSpeedTextStyle(speedView: LinearLayout, snapshot: NetSpeedTextStyleSnapshot, typefaceOnly: Boolean) {
+    internal fun applyNetSpeedTextStyle(speedView: LinearLayout, snapshot: NetSpeedTextStyleSnapshot) {
         if (speedView.tag as? String == "slot_text_icon") return
 
         val lastFullId = XposedHelpers.getAdditionalInstanceField(speedView, NETSPEED_LAST_FULL_STYLE_SNAPSHOT_ID) as? Long
-        if (!typefaceOnly && lastFullId == snapshot.id) {
-            // setNetworkSpeed per-second path: same view, same snapshot, full style already applied.
-            return
-        }
+        if (lastFullId == snapshot.id) return
 
         val numberText = getNetSpeedNumberView(speedView) ?: return
         val unitText = getNetSpeedUnitView(speedView)
-
         val speedStyle = snapshot.speedStyle
         val bold = snapshot.bold
-
-        if (typefaceOnly) {
-            ensureNetSpeedTypeface(numberText, bold)
-            if (speedStyle == 1) {
-                unitText?.let { ensureNetSpeedTypeface(it, bold) }
-            }
-            return
-        }
 
         // Guard: the original baseline cannot be captured before the framework has attached a real
         // LinearLayout.LayoutParams to the number view.  Creating a guessed LP here would poison
@@ -2584,11 +2556,11 @@ object SystemUIStatusBarHooks {
     private fun onNetworkSpeedValueSet(speedView: LinearLayout) {
         if (speedView.tag as? String == "slot_text_icon") return
         val snapshot = currentOrBuildNetSpeedTextStyleSnapshot()
-        applyNetSpeedTextStyle(speedView, snapshot, typefaceOnly = false)
+        applyNetSpeedTextStyle(speedView, snapshot)
     }
 
     /**
-     * Handles `TextView.setTextAppearance` for the network-speed number/unit TextViews.
+     * Reconciles the typeface after the native font/density update or the clock style is applied.
      *
      * Records the new base typeface, restores the network-speed typeface and fake-bold state,
      * and invalidates the cached full-style snapshot id on the parent.  The original style
@@ -2615,7 +2587,7 @@ object SystemUIStatusBarHooks {
     /**
      * Handles `NetworkSpeedView.onFinishInflate`. Creates the typeface state tags and either
      * applies the full custom style directly or first applies a system clock-style text appearance
-     * (whose after-hook then restores only the typeface).  In the useClockStyle path the full
+     * and reconciles the typeface. In the useClockStyle path the full
      * NetworkSpeed custom style is still applied afterwards, so the captured baseline is the
      * clock-styled appearance while the final visible state is the custom NetworkSpeed style.
      */
@@ -2640,11 +2612,27 @@ object SystemUIStatusBarHooks {
             val styleId = speedView.resources.getIdentifier("TextAppearance.StatusBar.Clock", "style", "com.android.systemui")
             if (styleId != 0) {
                 numberText.setTextAppearance(styleId)
-                if (snapshot.speedStyle == 1) unitText?.setTextAppearance(styleId)
+                onNetworkSpeedTextAppearanceChanged(numberText, speedView)
+                if (snapshot.speedStyle == 1 && unitText != null) {
+                    unitText.setTextAppearance(styleId)
+                    onNetworkSpeedTextAppearanceChanged(unitText, speedView)
+                }
             }
         }
 
-        applyNetSpeedTextStyle(speedView, snapshot, typefaceOnly = false)
+        applyNetSpeedTextStyle(speedView, snapshot)
+    }
+
+    internal fun onNetworkSpeedDensityChanged(speedView: LinearLayout) {
+        val state = netSpeedRuntimeState?.styleState ?: return
+        // The tagged children were prepared during inflation. Other NetworkSpeedView uses
+        // (including the synthetic status icons) have no style state to restore.
+        (speedView.getTag(state.numberViewTag) as? TextView)?.let {
+            onNetworkSpeedTextAppearanceChanged(it, speedView)
+        }
+        (speedView.getTag(state.unitViewTag) as? TextView)?.let {
+            onNetworkSpeedTextAppearanceChanged(it, speedView)
+        }
     }
 
     @JvmStatic
@@ -2653,21 +2641,24 @@ object SystemUIStatusBarHooks {
         // observer is bound to the module singleton and is registered only on first use.
         ensureNetSpeedRuntimeState().ensureStyleState()
 
-        ModuleHelper.hookAllMethods("android.widget.TextView", lpparam.classLoader, "setTextAppearance", object : MethodHook() {
+        val viewClass = "com.android.systemui.statusbar.views.NetworkSpeedView"
+        ModuleHelper.findAndHookMethod(viewClass, lpparam.classLoader, "onDensityOrFontScaleChanged", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
-                val textChild = callback.getThisObject() as? TextView ?: return
-                onNetworkSpeedTextAppearanceChanged(textChild)
+                if (callback.getThrowable() != null) return
+                val networkLayout = callback.getThisObject() as LinearLayout
+                onNetworkSpeedDensityChanged(networkLayout)
             }
         })
 
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.views.NetworkSpeedView", lpparam.classLoader, "setNetworkSpeed", object : MethodHook() {
+        ModuleHelper.findAndHookMethod(viewClass, lpparam.classLoader, "setNetworkSpeed",
+            String::class.java, String::class.java, object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 val networkLayout = callback.getThisObject() as? LinearLayout ?: return
                 onNetworkSpeedValueSet(networkLayout)
             }
         })
 
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.views.NetworkSpeedView", lpparam.classLoader, "onFinishInflate", object : MethodHook() {
+        ModuleHelper.findAndHookMethod(viewClass, lpparam.classLoader, "onFinishInflate", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 val networkLayout = callback.getThisObject() as? LinearLayout ?: return
                 onNetworkSpeedViewInflated(networkLayout)
@@ -2720,7 +2711,7 @@ object SystemUIStatusBarHooks {
     @JvmStatic
     fun MobileTypeSingleHook(lpparam: PackageReadyParam) {
         ensureStatusBarLayoutRuntimeState()
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateMobileTypeLayout", HookerClassHelper.DO_NOTHING)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateMobileTypeLayout", MOBILE_ICON_STATE_CLASS, HookerClassHelper.DO_NOTHING)
         val stateHook = object : MethodHook(XposedInterface.PRIORITY_HIGHEST) {
             private var initAction = false
 
@@ -2744,8 +2735,8 @@ object SystemUIStatusBarHooks {
                 }
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateHook)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateState", MOBILE_ICON_STATE_CLASS, stateHook)
 
         val initHook = object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
@@ -2937,8 +2928,8 @@ object SystemUIStatusBarHooks {
                 effect.before(callback)
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", stateHook)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, stateHook)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateState", MOBILE_ICON_STATE_CLASS, stateHook)
     }
 
     @JvmStatic
@@ -3075,8 +3066,8 @@ object SystemUIStatusBarHooks {
                 }
             }
         }
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "applyMobileState", hideMobileActivity)
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.StatusBarMobileView", lpparam.classLoader, "updateState", hideMobileActivity)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "applyMobileState", MOBILE_ICON_STATE_CLASS, hideMobileActivity)
+        ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, "updateState", MOBILE_ICON_STATE_CLASS, hideMobileActivity)
     }
 
     private fun optionalMobileIcon(type: Class<*>, name: String): java.lang.reflect.Field? =

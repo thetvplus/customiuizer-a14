@@ -2,7 +2,6 @@ package tv.withaibuild.customiuizer.mods.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -141,23 +140,5 @@ class DeviceInfoPlacementTest {
         )
         assertFalse(placement.hasDeviceInfoWork)
         assertTrue(placement.controllerManagedIconTypes.isEmpty())
-    }
-
-    @Test
-    fun uniqueInstanceResolvesSingleMatch() {
-        val args = arrayOf<Any?>("keep", 1, "match")
-        assertEquals("match", findUniqueInstance(args) { it is String && it == "match" })
-    }
-
-    @Test
-    fun uniqueInstanceRejectsDuplicates() {
-        val args = arrayOf<Any?>("a", "b")
-        assertNull(findUniqueInstance(args) { it is String })
-    }
-
-    @Test
-    fun uniqueInstanceIgnoresNulls() {
-        val args = arrayOf<Any?>(null, 7, null)
-        assertEquals(7, findUniqueInstance(args) { it is Int })
     }
 }

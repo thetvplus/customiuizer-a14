@@ -45,19 +45,19 @@ class C4HideIconsSignalB2StructuralTest {
             body.occurrenceCount("effect.before(callback)"),
         )
 
-        // Both methods are installed via hookAllMethods on the StatusBarMobileView hook surface.
+        // Both native entries are installed once with the MobileIconState signature.
         assertEquals(
             "applyMobileState must be installed exactly once in this hook",
             1,
             body.occurrenceCount(
-                "ModuleHelper.hookAllMethods(\"com.android.systemui.statusbar.StatusBarMobileView\", lpparam.classLoader, \"applyMobileState\", stateHook)",
+                "ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, \"applyMobileState\", MOBILE_ICON_STATE_CLASS, stateHook)",
             ),
         )
         assertEquals(
             "updateState must be installed exactly once in this hook",
             1,
             body.occurrenceCount(
-                "ModuleHelper.hookAllMethods(\"com.android.systemui.statusbar.StatusBarMobileView\", lpparam.classLoader, \"updateState\", stateHook)",
+                "ModuleHelper.findAndHookMethod(MOBILE_VIEW_CLASS, lpparam.classLoader, \"updateState\", MOBILE_ICON_STATE_CLASS, stateHook)",
             ),
         )
     }
