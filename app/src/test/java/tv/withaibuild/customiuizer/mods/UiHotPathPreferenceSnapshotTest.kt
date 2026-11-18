@@ -28,16 +28,16 @@ class UiHotPathPreferenceSnapshotTest {
 
     @Test
     fun folderLayoutReadsSnapshotAndCachedFields() {
-        val source = source("app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherFolderHooks.kt")
-        val body = hookBody(
-            "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherFolderHooks.kt",
-            "\"onLayout\"",
-        )
+        val path = "app/src/main/java/tv/withaibuild/customiuizer/mods/LauncherFolderHooks.kt"
+        val install = methodBody(path, "fun FolderColumnsHook")
+        val body = methodBody(path, "fun folderLayoutHook")
 
         assertFalse("onLayout is a layout callback", body.contains("MainModule.mPrefs"))
         assertFalse("field lookups belong to the cold path", body.contains("XposedHelpers.getObjectField"))
         assertTrue(body.contains("folderWidthEnabled"))
-        assertTrue(source.contains("private fun resolveFolderLayoutFields("))
+        assertTrue(install.contains("findFieldIfExists(folder, \"mContent\")"))
+        assertTrue(install.contains("findFieldIfExists(folder, \"mFakeIcon\")"))
+        assertTrue(install.contains("folderLayoutHook(content, fakeIcon)"))
     }
 
     @Test

@@ -1,11 +1,14 @@
 package tv.withaibuild.customiuizer.mods
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
+import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
@@ -165,13 +168,75 @@ class PassiveFeatureBoundaryTest {
         val reference = TextView(title.context)
         reference.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
         MainModule.mPrefs.put("launcher_titlefontsize", 12); refresh()
-        val hook = LauncherIconHooks.wallpaperTitleFontHook()
+        val hook = LauncherIconHooks.wallpaperTitleFontHook("com.miui.home")
         val chain = Chain(args = listOf(null, title), native = { title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f) })
         repeat(100) { hook.intercept(chain) }
         assertEquals(100, chain.calls)
         assertEquals(reference.textSize, title.textSize)
         val failure = IllegalStateException("native")
         assertSame(failure, assertThrows(IllegalStateException::class.java) { hook.intercept(Chain(failure = failure)) })
+    }
+
+    @Test fun stableTitleSizeSkipsTheSetterAndNativeSizeChangesAreReconciled() {
+        val title = object : TextView(RuntimeEnvironment.getApplication()) {
+            var sizeWrites = 0
+            override fun setTextSize(unit: Int, size: Float) {
+                sizeWrites++
+                super.setTextSize(unit, size)
+            }
+        }
+        MainModule.mPrefs.put("launcher_titlefontsize", 12); refresh()
+        val hook = LauncherIconHooks.titleFontHook { _, _ -> title }
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+        title.sizeWrites = 0
+        val chain = Chain()
+        hook.intercept(chain)
+        val px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, title.resources.displayMetrics)
+        assertEquals(px, title.textSize, 0f)
+        hook.intercept(chain)
+        assertEquals(1, title.sizeWrites)
+        assertEquals(2, chain.calls)
+
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+        hook.intercept(chain)
+        assertEquals(px, title.textSize, 0f)
+        assertEquals(3, title.sizeWrites)
+    }
+
+    @Test fun folderWidthAndIconLayoutOnlyWriteWhenNeeded() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val content = object : View(context) {
+            var writes = 0
+            override fun setLayoutParams(params: ViewGroup.LayoutParams?) {
+                writes++
+                super.setLayoutParams(params)
+            }
+        }
+        val icon = object : View(context) {
+            var layouts = 0
+            override fun layout(left: Int, top: Int, right: Int, bottom: Int) {
+                layouts++
+                super.layout(left, top, right, bottom)
+            }
+        }
+        content.layoutParams = ViewGroup.LayoutParams(320, 200)
+        content.writes = 0
+        repeat(2) { LauncherFolderHooks.applyFolderWidth(content) }
+        assertEquals(ViewGroup.LayoutParams.MATCH_PARENT, content.layoutParams.width)
+        assertEquals(1, content.writes)
+
+        content.layout(10, 20, 330, 220)
+        repeat(2) { LauncherFolderHooks.layoutFolderFakeIcon(content, icon) }
+        assertEquals(1, icon.layouts)
+        assertEquals(listOf(10, 20, 330, 340), listOf(icon.left, icon.top, icon.right, icon.bottom))
+        icon.requestLayout()
+        LauncherFolderHooks.layoutFolderFakeIcon(content, icon)
+        assertEquals(2, icon.layouts)
+
+        content.layout(20, 30, 340, 230)
+        LauncherFolderHooks.layoutFolderFakeIcon(content, icon)
+        assertEquals(3, icon.layouts)
+        assertEquals(350, icon.bottom)
     }
 
     @Test fun titleDefaultsKeepNativeFontAndMarginAndSuccessfulOverridesStayInsideTheirRange() {

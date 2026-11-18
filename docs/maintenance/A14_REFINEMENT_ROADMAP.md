@@ -140,6 +140,12 @@ r14.27.9 的 309 试用包经受控重建确认 SystemUI 加载 API 102。离线
 - 四份 ROM 的网速后台 Handler 在原生 `200001` 节拍结束后安排 4 秒后继。间隔 Hook 仅处理控制器当前后台 Handler 的成功回调，恢复 4 秒时复用原生消息。详细网速在原生隐藏状态跳过网络查询、接口采样和自定义格式化，并保留 `updateVisibility` 传入的 `EMPTY` 清空数组。上下行样本按控制器发布为一对，原生重置或无可用默认网络时重新取基线。
 - 当前候选的 SystemUI 实装、主题与字体重载、第二行网速和宿主性能仍待对应 ROM 实机验收。静态签名通过只覆盖四份离线样本。
 
+### Launcher 原生入口维护
+
+- MiuiHome 8604 与 POCO 7603 的 `ItemIcon.mTitleView` 均指向实际标题 View。`ShortcutIcon.fromXml` 的包装重载委托到主实现，桌面标题在原生创建、外观变化后按当前资源换算字号，尺寸相同直接跳过写入。壁纸路径按各宿主资源包定位 `icon_title`。
+- 文件夹宽度与方形占位图使用安装时解析的原生字段。重复宽度赋值和边界相同的布局被跳过，待处理的原生布局请求仍会执行。`Folder.onLayout(boolean, int, int, int, int)` 及助手手势 `handleTouchEvent(MotionEvent, View)` 按两种 Launcher 的共同签名安装。
+- 桌面双击状态挂在 Workspace 的 View tag，三参数原生构造成功后初始化。触摸分发直接读取该 tag，动作执行时取当前 View 的 Context。横竖屏桌面、文件夹过渡、标题重绑及 POCO 真机效果待验。
+
 ### 实机成本与 Native 取舍（2026-11-08）
 
 基于 `40f42fe346e6f247fecd65f5f13cea497fa531c3` 的准确 Develop 产物。单一 HyperOS 1 / Android 14 设备，实际 120 Hz、热状态 0、固定方向；自动化、截图和内存查询不进入 trace 操作窗口。以下是同 APK 的目标功能组合开 / 关，关闭侧仍保留其它原有配置，不是代码优化前后或纯原生系统对照。每场景三组交替，取各侧中位数；最大组内极差只作描述性噪声参考，不是显著性检验。
