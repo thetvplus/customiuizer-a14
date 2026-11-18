@@ -7,6 +7,8 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Color
 import android.util.DisplayMetrics
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import io.github.libxposed.api.XposedInterface
 import org.junit.Assert.assertEquals
@@ -86,6 +88,76 @@ class DualRowSignalBindingTest {
     }
 
     @Test
+    fun aSecondaryOnlyChangeRefreshesEachExistingViewWithoutRepaintingItsPrimaryRow() {
+        val binding = binding()
+        val primary = publishPair(binding)
+        val views = List(2) {
+            MobileView(null).also { view ->
+                binding.stateUpdate.intercept(Chain(view, primary, applyMethod) {
+                    view.mState = primary
+                    binding.drawAfterDarkness.intercept(Chain(view))
+                })
+                assertEquals(View.VISIBLE, view.mSmallRoaming.visibility)
+                assertEquals(View.GONE, view.mSmallHd.visibility)
+            }
+        }
+        publishPair(binding, secondarySignalId = 5)
+        for (view in views) {
+            val chain = Chain(view, primary, applyMethod) // Equal native state skips darkness.
+            binding.stateUpdate.intercept(chain)
+            binding.stateUpdate.intercept(chain)
+            assertEquals(2, chain.nativeCalls)
+            assertEquals(listOf(130), view.mMobile.resourceWrites)
+            assertEquals(listOf(210, 240), view.mSmallRoaming.resourceWrites)
+        }
+    }
+
+    @Test
+    fun aNativeRedrawAlreadyUsesTheNewSecondaryLevel() {
+        val binding = binding()
+        val primary = publishPair(binding)
+        val view = MobileView(primary)
+        binding.drawAfterDarkness.intercept(Chain(view))
+        val next = IconState(7, 2)
+        publishPair(binding, secondarySignalId = 3)
+
+        binding.stateUpdate.intercept(Chain(view, next, applyMethod) {
+            binding.stateUpdate.intercept(Chain(view, next, updateMethod) {
+                view.mState = next
+                binding.drawAfterDarkness.intercept(Chain(view))
+            })
+        })
+
+        assertEquals(listOf(130, 110), view.mMobile.resourceWrites)
+        assertEquals(listOf(210, 220), view.mSmallRoaming.resourceWrites)
+    }
+
+    @Test
+    fun aNativeSubscriptionRebuildOrSingleSimPublishClearsThePairForReplacementViews() {
+        for (rebuild in listOf(false, true)) {
+            val binding = binding()
+            val primary = publishPair(binding)
+            if (rebuild) {
+                binding.afterSubscriptionsChanged.intercept(Chain(Any(), listOf(primary), applyMethod) {
+                    // setSubs can republish the previous pair before removing its icons.
+                    publishPair(binding)
+                })
+            } else {
+                binding.capturePair.intercept(Chain(controller(SignalResources()), listOf(primary)))
+            }
+            val replacement = MobileView(primary)
+            binding.drawAfterDarkness.intercept(Chain(replacement))
+            assertEquals(emptyList<Int>(), replacement.mMobile.resourceWrites)
+            assertEquals(emptyList<Int>(), replacement.mSmallRoaming.resourceWrites)
+
+            publishPair(binding)
+            binding.drawAfterDarkness.intercept(Chain(replacement))
+            assertEquals(listOf(130), replacement.mMobile.resourceWrites)
+            assertEquals(listOf(210), replacement.mSmallRoaming.resourceWrites)
+        }
+    }
+
+    @Test
     fun inactiveStatesAndFailedNativeDarknessDoNotDrawOverTheRom() {
         val binding = binding()
         val primary = publishPair(binding)
@@ -135,14 +207,22 @@ class DualRowSignalBindingTest {
         @JvmField var activityOut = false
     }
 
-    private class MobileView(@JvmField val mState: IconState?) {
+    private class MobileView(@JvmField var mState: IconState?) : FrameLayout(RuntimeEnvironment.getApplication()) {
         @JvmField val mMobile = RecordingImage()
-        @JvmField val mSmallRoaming = RecordingImage()
+        @JvmField val mSmallRoaming = RecordingImage().apply { visibility = View.GONE }
         @JvmField val mSmallHd = ImageView(RuntimeEnvironment.getApplication())
         @JvmField val mMobileRoaming = ImageView(RuntimeEnvironment.getApplication())
         @JvmField var mLight = true
         @JvmField var mUseTint = false
     }
+
+    private class MobileMethods {
+        fun applyMobileState() = Unit
+        fun updateState() = Unit
+    }
+
+    private val applyMethod = MobileMethods::class.java.getDeclaredMethod("applyMobileState")
+    private val updateMethod = MobileMethods::class.java.getDeclaredMethod("updateState")
 
     private class RecordingImage : ImageView(RuntimeEnvironment.getApplication()) {
         val resourceWrites = mutableListOf<Int>()
@@ -159,19 +239,23 @@ class DualRowSignalBindingTest {
         }
     }
 
-    private class Chain(private val receiver: Any, private val states: List<IconState>? = null,
+    private class Chain(private val receiver: Any, private val argument: Any? = null,
+        private val method: Executable? = null,
         private val native: () -> Unit = {}) : XposedInterface.Chain {
         var nativeCalls = 0
         var argumentCopies = 0
         var argumentReplacements = 0
 
-        override fun getExecutable(): Executable = error("signature already resolved")
+        override fun getExecutable(): Executable = checkNotNull(method)
         override fun getThisObject(): Any = receiver
         override fun getArgs(): List<Any?> {
             argumentCopies++
-            return listOf("mobile", states)
+            return if (receiver is IconController) listOf("mobile", argument) else listOf(argument)
         }
-        override fun getArg(index: Int): Any = checkNotNull(states).also { check(index == 1) }
+        override fun getArg(index: Int): Any? {
+            check(index == if (receiver is IconController) 1 else 0)
+            return argument
+        }
         override fun proceed(): Any? {
             nativeCalls++
             native()

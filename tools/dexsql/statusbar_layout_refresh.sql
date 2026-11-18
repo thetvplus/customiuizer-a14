@@ -9,7 +9,9 @@ WHERE (class_descriptor = 'Lcom/android/systemui/statusbar/phone/StatusBarConten
  OR (class_descriptor = 'Lcom/android/systemui/statusbar/connectivity/NetworkControllerImpl;'
  AND method_name IN ('updateMobileControllers','doUpdateMobileControllers'))
  OR (class_descriptor = 'Lcom/android/systemui/statusbar/phone/StatusBarIconControllerImpl;'
- AND method_name = 'setMobileIcons')
+ AND method_name IN ('setMobileIcons','removeAllIconsForSlot'))
+ OR (class_descriptor = 'Lcom/android/systemui/statusbar/phone/MiuiStatusBarSignalPolicy;'
+ AND method_name = 'setSubs')
  OR (class_descriptor = 'Lcom/android/systemui/statusbar/StatusBarMobileView;'
  AND method_name IN ('applyMobileState','updateState','setDripEnd','onDarkChanged','applyDarknessInternal'))
  OR (class_descriptor = 'Lcom/android/systemui/statusbar/views/MiuiBatteryMeterView;'
@@ -31,4 +33,12 @@ ORDER BY file_id,field_descriptor;
 -- Decode onDarkChanged to confirm this draw call follows its native tint and image writes.
 SELECT file_id, method, callee FROM method_calls
 WHERE callee = 'Lcom/android/systemui/statusbar/StatusBarMobileView;->applyDarknessInternal()V'
+ OR (method LIKE 'Lcom/android/systemui/statusbar/StatusBarMobileView;->applyMobileState(%'
+ AND callee IN (
+ 'Lcom/android/systemui/statusbar/phone/StatusBarSignalPolicy$MobileIconState;->equals(Ljava/lang/Object;)Z',
+ 'Lcom/android/systemui/statusbar/StatusBarMobileView;->updateState(Lcom/android/systemui/statusbar/phone/StatusBarSignalPolicy$MobileIconState;)Z'))
+ OR (method = 'Lcom/android/systemui/statusbar/phone/MiuiStatusBarSignalPolicy;->setSubs(Ljava/util/List;)V'
+ AND callee IN (
+ 'Lcom/android/systemui/statusbar/phone/StatusBarIconControllerImpl;->removeAllIconsForSlot(Ljava/lang/String;)V',
+ 'Lcom/android/systemui/statusbar/phone/StatusBarIconControllerImpl;->setMobileIcons(Ljava/lang/String;Ljava/util/List;)V'))
 ORDER BY file_id, method;

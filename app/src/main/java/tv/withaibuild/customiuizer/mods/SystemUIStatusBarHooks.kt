@@ -1248,6 +1248,7 @@ object SystemUIStatusBarHooks {
     private val DUAL_SIGNAL_BLACK_TINT by lazy { ColorStateList.valueOf(Color.BLACK) }
 
     private val MOBILE_STATE_SYNC_FIELDS = arrayOf("showName", "activityIn", "activityOut", "dataConnected")
+    private val dualSignalLevelTag = ResourceHooks.getFakeResId("dual_signal_secondary_level")
 
     internal class DualRowSignalBinding(
         controllerClass: Class<*>,
@@ -1257,7 +1258,7 @@ object SystemUIStatusBarHooks {
         private val hasTintAssets: Boolean,
     ) {
         private val context = XposedHelpers.findField(controllerClass, "mContext")
-        val currentState: Field = XposedHelpers.findField(viewClass, "mState")
+        private val currentState = XposedHelpers.findField(viewClass, "mState")
         private val primaryImage = XposedHelpers.findField(viewClass, "mMobile")
         private val secondaryImage = XposedHelpers.findField(viewClass, "mSmallRoaming")
         private val roamingImage = XposedHelpers.findField(viewClass, "mMobileRoaming")
@@ -1278,7 +1279,10 @@ object SystemUIStatusBarHooks {
         val capturePair = object : MethodHook() {
             override fun before(callback: BeforeHookCallback) {
                 val states = callback.getArg(1) as List<*>
-                if (states.size != 2) return
+                if (states.size != 2) {
+                    primarySubId = -1
+                    return
+                }
                 val res = resources ?: (context.get(callback.getThisObject()) as Context).resources.also { res ->
                     for (level in 0..5) {
                         levels.put(res.getIdentifier("stat_sys_signal_$level", "drawable", "com.android.systemui"), level)
@@ -1297,14 +1301,71 @@ object SystemUIStatusBarHooks {
             }
         }
 
+        val afterSubscriptionsChanged = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (primarySubId == -1 || callback.getThrowable() != null) return
+                // setSubs may publish the old list before removing its views, then return without publishing another list.
+                if ((callback.getArg(0) as List<*>).size != 2) primarySubId = -1
+            }
+        }
+
         private fun isPrimary(state: Any): Boolean =
             primarySubId != -1 && subId.getInt(state) == primarySubId &&
                 visible.getBoolean(state) && !airplane.getBoolean(state)
 
-        fun updateVisibility(view: Any?, state: Any) {
+        private fun updateVisibility(view: Any?, state: Any) {
             if (!isPrimary(state)) return
             (hdImage.get(view) as ImageView?)?.visibility = View.GONE
             (secondaryImage.get(view) as ImageView?)?.visibility = View.VISIBLE
+        }
+
+        val stateUpdate = object : MethodHook() {
+            private var initAction = false
+
+            override fun before(callback: BeforeHookCallback) {
+                if (callback.getMember().name != "updateState") {
+                    initAction = primarySubId != -1 && currentState.get(callback.getThisObject()) == null
+                }
+            }
+
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getMember().name == "updateState") {
+                    if (primarySubId == -1 || callback.getThrowable() != null) return
+                    val state = callback.getArg(0) ?: return
+                    updateVisibility(callback.getThisObject(), state)
+                    return
+                }
+                val wasInitializing = initAction
+                initAction = false
+                if (primarySubId == -1 || callback.getThrowable() != null) return
+                val view = callback.getThisObject() as View
+                if (wasInitializing) {
+                    val state = callback.getArg(0) ?: return
+                    updateVisibility(view, state)
+                } else {
+                    refreshSecondary(view)
+                }
+            }
+        }
+
+        private fun colorMode(view: View, isLight: Boolean): Int = when {
+            hasTintAssets && useTint.getBoolean(view) -> 2
+            isLight -> 0
+            else -> 1
+        }
+
+        private fun refreshSecondary(view: View) {
+            val displayed = view.getTag(dualSignalLevelTag) as? Int ?: return
+            val level = secondaryLevel
+            if (displayed == level) return
+            val state = currentState.get(view) ?: return
+            if (!isPrimary(state)) return
+            val secondary = secondaryImage.get(view) as ImageView? ?: return
+            val drawable = drawables[1][level][colorMode(view, light.getBoolean(view))]
+            if (drawable == 0) return
+            // Equal primary states bypass native drawing. Replace only the changed lower row.
+            secondary.setImageResource(drawable)
+            view.setTag(dualSignalLevelTag, level)
         }
 
         // Preserve the final drawable write for paired SIMs when the dots style also hooks this method.
@@ -1312,20 +1373,17 @@ object SystemUIStatusBarHooks {
             override fun after(callback: AfterHookCallback) {
                 if (callback.getThrowable() != null) return
                 val res = resources ?: return
-                val view = callback.getThisObject()
+                val view = callback.getThisObject() as View
                 val state = currentState.get(view) ?: return
                 if (!isPrimary(state)) return
                 val primary = primaryImage.get(view) as ImageView? ?: return
                 val secondary = secondaryImage.get(view) as ImageView? ?: return
                 val isLight = light.getBoolean(view)
-                val mode = when {
-                    hasTintAssets && useTint.getBoolean(view) -> 2
-                    isLight -> 0
-                    else -> 1
-                }
+                val mode = colorMode(view, isLight)
                 val primaryLevel = getSignalLevel(res, strength.getInt(state), levels)
+                val level = secondaryLevel
                 val primaryDrawable = drawables[0][primaryLevel][mode]
-                val secondaryDrawable = drawables[1][secondaryLevel][mode]
+                val secondaryDrawable = drawables[1][level][mode]
                 if (primaryDrawable == 0 || secondaryDrawable == 0) return
                 primary.setImageResource(primaryDrawable)
                 secondary.setImageResource(secondaryDrawable)
@@ -1333,6 +1391,7 @@ object SystemUIStatusBarHooks {
                     ?: if (isLight) DUAL_SIGNAL_WHITE_TINT else DUAL_SIGNAL_BLACK_TINT
                 primary.imageTintList = tint
                 secondary.imageTintList = tint
+                view.setTag(dualSignalLevelTag, level)
             }
         }
     }
@@ -1343,6 +1402,7 @@ object SystemUIStatusBarHooks {
         val mobileView = XposedHelpers.findClass(MOBILE_VIEW_CLASS, loader)
         val mobileState = XposedHelpers.findClass(MOBILE_ICON_STATE_CLASS, loader)
         val iconController = XposedHelpers.findClass("com.android.systemui.statusbar.phone.StatusBarIconControllerImpl", loader)
+        val signalPolicy = XposedHelpers.findClass("com.android.systemui.statusbar.phone.MiuiStatusBarSignalPolicy", loader)
         val application = XposedHelpers.findClass("com.android.systemui.SystemUIApplication", loader)
 
         val colorModeList = arrayOf("", "dark", "tint")
@@ -1375,30 +1435,12 @@ object SystemUIStatusBarHooks {
             }
         }
 
-        val stateUpdateHook = object : MethodHook() {
-            private var initAction = false
-            override fun before(callback: BeforeHookCallback) {
-                if (callback.getMember().name == "updateState") {
-                    return
-                }
-                initAction = binding.currentState.get(callback.getThisObject()) == null
-            }
-            override fun after(callback: AfterHookCallback) {
-                if (callback.getMember().name != "updateState") {
-                    val wasInitializing = initAction
-                    initAction = false
-                    if (!wasInitializing) return
-                }
-                if (callback.getThrowable() != null) return
-                val state = callback.getArg(0) ?: return
-                binding.updateVisibility(callback.getThisObject(), state)
-            }
-        }
         val entries = mutableListOf(
             application.getDeclaredMethod("onCreate") to prepareAssets,
             iconController.getDeclaredMethod("setMobileIcons", String::class.java, List::class.java) to binding.capturePair,
-            mobileView.getDeclaredMethod("applyMobileState", mobileState) to stateUpdateHook,
-            mobileView.getDeclaredMethod("updateState", mobileState) to stateUpdateHook,
+            signalPolicy.getDeclaredMethod("setSubs", List::class.java) to binding.afterSubscriptionsChanged,
+            mobileView.getDeclaredMethod("applyMobileState", mobileState) to binding.stateUpdate,
+            mobileView.getDeclaredMethod("updateState", mobileState) to binding.stateUpdate,
             // The ROM's onDarkChanged ends here after writing the native tint and drawables.
             mobileView.getDeclaredMethod("applyDarknessInternal") to binding.drawAfterDarkness,
         )
