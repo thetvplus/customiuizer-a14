@@ -56,28 +56,10 @@ class ModuleHelperFatalBoundaryTest {
         assertSame(ModuleHelper.NOT_EXIST_SYMBOL, result)
     }
 
-    @Test
-    fun scanForCpuThermalIdReturnsFirstMatch() {
-        val result = ModuleHelper.scanForCpuThermalId(
-            listZones = { intArrayOf(2, 4, 6, 8, 10) },
-            readType = { index -> if (index == 10) "cpu-0" else null }
-        )
-        assertEquals(10, result)
-    }
-
-    @Test
-    fun scanForCpuThermalIdReturnsMinusOneWhenNoMatch() {
-        val result = ModuleHelper.scanForCpuThermalId(
-            listZones = { intArrayOf(1, 2, 3) },
-            readType = { null }
-        )
-        assertEquals(-1, result)
-    }
-
     @Test(expected = ThreadDeath::class)
-    fun scanForCpuThermalIdPropagatesDirectThreadDeath() {
+    fun thermalTypeReadPropagatesDirectThreadDeath() {
         try {
-            ModuleHelper.scanForCpuThermalId(
+            ModuleHelper.resolveCpuThermalSource(
                 listZones = { intArrayOf(2) },
                 readType = { throw ThreadDeath() }
             )
@@ -87,9 +69,9 @@ class ModuleHelperFatalBoundaryTest {
     }
 
     @Test(expected = OutOfMemoryError::class)
-    fun scanForCpuThermalIdPropagatesDirectOutOfMemoryError() {
+    fun thermalTypeReadPropagatesDirectOutOfMemoryError() {
         try {
-            ModuleHelper.scanForCpuThermalId(
+            ModuleHelper.resolveCpuThermalSource(
                 listZones = { intArrayOf(2) },
                 readType = { throw OutOfMemoryError("oom") }
             )
@@ -99,9 +81,9 @@ class ModuleHelperFatalBoundaryTest {
     }
 
     @Test(expected = InternalError::class)
-    fun scanForCpuThermalIdPropagatesWrappedVirtualMachineError() {
+    fun thermalTypeReadPropagatesWrappedVirtualMachineError() {
         try {
-            ModuleHelper.scanForCpuThermalId(
+            ModuleHelper.resolveCpuThermalSource(
                 listZones = { intArrayOf(2) },
                 readType = { throw java.lang.reflect.InvocationTargetException(InternalError("vm"), null) }
             )
@@ -111,28 +93,11 @@ class ModuleHelperFatalBoundaryTest {
     }
 
     @Test
-    fun scanForCpuThermalIdIgnoresOrdinaryErrors() {
-        var callCount = 0
-        val result = ModuleHelper.scanForCpuThermalId(
-            listZones = { intArrayOf(4, 6) },
-            readType = { index ->
-                callCount++
-                if (index == 4) throw RuntimeException("transient")
-                if (index == 6) "cpu_big-0"
-                else null
-            }
-        )
-        assertEquals(6, result)
-        assertTrue(callCount > 1)
-    }
-
-    @Test
     fun getCPUThermalIdMemoizesNoMatchResult() {
         // Reset static state so this test is independent.
         setThermalId(-1)
         setThermalIdScanned(false)
 
-        var callCount = 0
         val result = ModuleHelper.getCPUThermalId()
         assertEquals(-1, result)
         assertTrue(getThermalIdScanned())

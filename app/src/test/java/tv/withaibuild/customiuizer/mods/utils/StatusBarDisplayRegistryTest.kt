@@ -30,7 +30,7 @@ class StatusBarDisplayRegistryTest {
         val stateB = registry.getOrCreatePending(b)
 
         assertNotSame(stateA, stateB)
-        assertEquals(2, registry.allStates().size)
+        assertEquals(2, registry.allStatesSnapshot().size)
     }
 
     @Test
@@ -60,7 +60,7 @@ class StatusBarDisplayRegistryTest {
         registry.bind(display0Owner, 0)
         registry.bind(display1Owner, 1)
 
-        assertEquals(2, registry.allStates().size)
+        assertEquals(2, registry.allStatesSnapshot().size)
         assertSame(display0Owner, registry.get(0)?.generation?.get())
         assertSame(display1Owner, registry.get(1)?.generation?.get())
 
@@ -92,7 +92,7 @@ class StatusBarDisplayRegistryTest {
         val bound = registry.bind(owner, 0)
         assertSame(pending, bound)
         assertSame(bound, registry.get(0))
-        assertTrue(registry.allStates().none { it === pending && it !== bound })
+        assertTrue(registry.allStatesSnapshot().none { it === pending && it !== bound })
     }
 
     @Test
@@ -103,7 +103,7 @@ class StatusBarDisplayRegistryTest {
         registry.bind(owner0!!, 0)
         registry.bind(owner1!!, 1)
 
-        assertEquals(2, registry.allStates().size)
+        assertEquals(2, registry.allStatesSnapshot().size)
 
         owner0 = null
         owner1 = null
@@ -113,7 +113,7 @@ class StatusBarDisplayRegistryTest {
         Thread.sleep(50)
 
         registry.prune()
-        assertEquals(0, registry.allStates().size)
+        assertEquals(0, registry.allStatesSnapshot().size)
     }
 
     @Test
@@ -147,7 +147,7 @@ class StatusBarDisplayRegistryTest {
 
         registry.prune()
         assertEquals(listOf("cleanup"), cleanups)
-        assertEquals(0, registry.allStates().size)
+        assertEquals(0, registry.allStatesSnapshot().size)
     }
 
     @Test
@@ -166,7 +166,7 @@ class StatusBarDisplayRegistryTest {
 
         registry.prune()
         assertEquals(listOf("cleanup"), cleanups)
-        assertEquals(0, registry.allStates().size)
+        assertEquals(0, registry.allStatesSnapshot().size)
     }
 
     @Test
@@ -186,7 +186,7 @@ class StatusBarDisplayRegistryTest {
 
         registry.prune()
         assertEquals(1, state.registrations.size)
-        assertEquals(1, registry.allStates().size)
+        assertEquals(1, registry.allStatesSnapshot().size)
     }
 
     @Test
@@ -195,7 +195,7 @@ class StatusBarDisplayRegistryTest {
         val owner = Any()
         registry.bind(owner, 0)
         registry.prune()
-        assertEquals(1, registry.allStates().size)
+        assertEquals(1, registry.allStatesSnapshot().size)
     }
 
     @Test
@@ -214,7 +214,7 @@ class StatusBarDisplayRegistryTest {
         // The row is still reachable as a literal, but the generation is gone.
         // The state should be cleaned and removed.
         registry.prune()
-        assertEquals(0, registry.allStates().size)
+        assertEquals(0, registry.allStatesSnapshot().size)
     }
 
     @Test
@@ -244,7 +244,7 @@ class StatusBarDisplayRegistryTest {
         Thread.sleep(50)
 
         registry.prune()
-        assertEquals(0, registry.allStates().size)
+        assertEquals(0, registry.allStatesSnapshot().size)
     }
 
     @Test

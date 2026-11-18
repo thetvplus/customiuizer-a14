@@ -12,6 +12,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.text.format.DateFormat
+import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -1024,7 +1025,8 @@ object SystemClockHooks {
             ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.MiuiStatusBarClockController", lpparam.classLoader, scheduleHook)
         }
 
-        ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.views.MiuiClock", lpparam.classLoader, object : MethodHook() {
+        ModuleHelper.findAndHookConstructor("com.android.systemui.statusbar.views.MiuiClock", lpparam.classLoader,
+            Context::class.java, AttributeSet::class.java, Int::class.javaPrimitiveType!!, object : MethodHook() {
             override fun intercept(chain: XposedInterface.Chain): Any? {
                 var result: Any?
                 var throwable: Throwable? = null
@@ -1036,10 +1038,7 @@ object SystemClockHooks {
                 }
                 try {
                     val thisObject = chain.thisObject
-                    val args = chain.args
-
                     val clock = thisObject as TextView
-                    if (args.size != 3) { return XposedHelpers.throwOrReturn(throwable, result) }
                     val clockId = HookUtils.getResId(clock.resources, "clock", "id", "com.android.systemui")
                     val bigClockId = HookUtils.getResId(clock.resources, "big_time", "id", "com.android.systemui")
                     val dateClockId = HookUtils.getResId(clock.resources, "date_time", "id", "com.android.systemui")
@@ -1217,7 +1216,9 @@ object SystemClockHooks {
                     return XposedHelpers.throwOrReturn(throwable, result)
                 }
             })
-            ModuleHelper.hookAllMethods("com.android.systemui.statusbar.views.MiuiClock", lpparam.classLoader, "onDarkChanged", object : MethodHook() {
+            ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.views.MiuiClock", lpparam.classLoader, "onDarkChanged",
+                ArrayList::class.java, Float::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
+                Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Boolean::class.javaPrimitiveType!!, object : MethodHook() {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
                     var skipped = false
                     var result: Any? = null

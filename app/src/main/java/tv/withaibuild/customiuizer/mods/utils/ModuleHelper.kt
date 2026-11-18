@@ -901,15 +901,6 @@ class ModuleHelper private constructor() {
             return thermalId
         }
 
-        /**
-         * Scans thermal zones for a CPU sensor. [listZones] and [readType] are injected so unit
-         * tests can simulate topology and I/O without touching the filesystem.
-         */
-        internal fun scanForCpuThermalId(
-            listZones: () -> IntArray,
-            readType: (Int) -> String?
-        ): Int = resolveCpuThermalSource(listZones, readType).zoneId
-
         internal data class CpuThermalResolution(val zoneId: Int, val type: String?)
 
         internal fun resolveCpuThermalSource(

@@ -191,11 +191,6 @@ class StatusBarDisplayRegistry<O : Any, R : Any>(
     }
 
     /**
-     * All current display states.
-     */
-    fun allDisplayStates(): Collection<StatusBarDisplayState<O, R>> = byDisplay.values
-
-    /**
      * A snapshot of all display and pending states. The snapshot is taken on the caller's thread
      * and is safe to iterate without concurrent modification as long as all registry mutation is
      * also single-threaded.
@@ -205,10 +200,4 @@ class StatusBarDisplayRegistry<O : Any, R : Any>(
             addAll(byDisplay.values)
             addAll(pendingByOwner.allValuesSnapshot())
         }
-
-    /**
-     * @deprecated use [allStatesSnapshot] on the main thread.
-     */
-    @Suppress("unused")
-    fun allStates(): Collection<StatusBarDisplayState<O, R>> = allStatesSnapshot()
 }

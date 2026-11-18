@@ -1,506 +1,170 @@
 package tv.withaibuild.customiuizer.mods
 
-import android.content.res.Resources
+import android.app.Application
 import android.graphics.Typeface
-import android.text.TextPaint
-import android.util.DisplayMetrics
 import android.util.TypedValue
 import android.view.View
-import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import tv.withaibuild.customiuizer.mods.SystemUIBatteryHooks.BatteryMeterFields
+import tv.withaibuild.customiuizer.mods.SystemUIBatteryHooks.BatteryStyle
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class, qualifiers = "xhdpi")
 class BatteryViewStateTest {
+    private val fields = BatteryMeterFields.resolve(BatteryView::class.java)
+    private val view = BatteryView()
 
     @Test
-    fun defaultUntouchedAfterRestore() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
+    fun appliesCustomStyleAndRestoresNativeAppearance() {
+        val digit = view.mBatteryTextDigitView
+        val percent = view.mBatteryPercentView
+        val mark = view.mBatteryPercentMarkView
+        val nativeTypeface = digit.typeface
 
-        val custom = customStyle()
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-        assertFalse(SystemUIBatteryHooks.matchesBaseline(view, baseline))
+        update(style(swap = true, digitSize = 12f, markSize = 10f, bold = true, rightMargin = 4f,
+            leftMargin = 6f, verticalOffset = 12, markOffset = 20))
+        assertSame(percent, view.getChildAt(0))
+        assertSame(mark, view.getChildAt(1))
+        assertEquals(24f, digit.textSize, 0f)
+        assertEquals(24f, percent.textSize, 0f)
+        assertEquals(20f, mark.textSize, 0f)
+        assertSame(Typeface.DEFAULT_BOLD, digit.typeface)
+        assertSame(Typeface.DEFAULT_BOLD, percent.typeface)
+        assertEquals(12, percent.paddingStart)
+        assertEquals(4, percent.paddingTop)
+        assertEquals(12, mark.paddingTop)
+        assertEquals(8, mark.paddingEnd)
 
-        SystemUIBatteryHooks.restoreBatteryBaseline(view, baseline)
-        assertTrue("default style must restore original baseline", SystemUIBatteryHooks.matchesBaseline(view, baseline))
+        update(style())
+        assertSame(digit, view.getChildAt(0))
+        assertSame(percent, view.getChildAt(1))
+        assertSame(mark, view.getChildAt(2))
+        assertEquals(15f, digit.textSize, 0f)
+        assertEquals(15f, percent.textSize, 0f)
+        assertEquals(15f, mark.textSize, 0f)
+        assertSame(nativeTypeface, digit.typeface)
+        assertSame(nativeTypeface, percent.typeface)
+        assertEquals(4, percent.paddingStart)
+        assertEquals(0, percent.paddingTop)
+        assertEquals(2, mark.paddingTop)
+        assertEquals(0, mark.paddingEnd)
     }
 
     @Test
-    fun fontCustomToDefault() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
+    fun repeatedUpdatesDoNotReorderAndNativePropertyWritesAreReconciled() {
+        val custom = style(swap = true, digitSize = 12f)
+        update(custom)
+        view.childMutations = 0
 
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = false,
-            fontSizeDp = 12.0f,
-            markFontSizeDp = 7.5f,
-            bold = false,
-            leftMarginDp = 0f,
-            rightMarginDp = 0f,
-            verticalOffset = 8,
-            markVerticalOffset = 17,
-            battery4 = false
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
+        update(custom)
+        assertEquals(0, view.childMutations)
 
-        val digitSize = view.mBatteryTextDigitView.textSize
-        val percentSize = view.mBatteryPercentView.textSize
-        assertNotEquals(baseline.digitTextSize, digitSize)
-        assertNotEquals(baseline.percentTextSize, percentSize)
+        view.mBatteryTextDigitView.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f)
+        update(custom)
+        assertEquals(24f, view.mBatteryTextDigitView.textSize, 0f)
+        assertEquals(0, view.childMutations)
 
-        SystemUIBatteryHooks.restoreBatteryBaseline(view, baseline)
-
-        assertEquals(baseline.digitTextSize, view.mBatteryTextDigitView.textSize, 0.001f)
-        assertEquals(baseline.percentTextSize, view.mBatteryPercentView.textSize, 0.001f)
+        update(style())
+        assertSame(view.mBatteryTextDigitView, view.getChildAt(0))
+        assertEquals(15f, view.mBatteryTextDigitView.textSize, 0f)
     }
 
     @Test
-    fun boldCustomToDefault() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
+    fun customRightMarginFollowsNativePercentageStyle() {
+        update(style(rightMargin = 6f, battery4 = true))
+        assertEquals(12, view.mBatteryPercentView.paddingEnd)
+        assertEquals(0, view.mBatteryPercentMarkView.paddingEnd)
 
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = false,
-            fontSizeDp = 7.5f,
-            markFontSizeDp = 7.5f,
-            bold = true,
-            leftMarginDp = 0f,
-            rightMarginDp = 0f,
-            verticalOffset = 8,
-            markVerticalOffset = 17,
-            battery4 = false
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        assertEquals(Typeface.DEFAULT_BOLD, view.mBatteryTextDigitView.typeface)
-        assertEquals(Typeface.DEFAULT_BOLD, view.mBatteryPercentView.typeface)
-
-        SystemUIBatteryHooks.restoreBatteryBaseline(view, baseline)
-
-        assertEquals(baseline.digitTypeface, view.mBatteryTextDigitView.typeface)
-        assertEquals(baseline.percentTypeface, view.mBatteryPercentView.typeface)
+        update(style(rightMargin = 6f))
+        assertEquals(0, view.mBatteryPercentView.paddingEnd)
+        assertEquals(12, view.mBatteryPercentMarkView.paddingEnd)
     }
 
     @Test
-    fun paddingCustomToDefault() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
+    fun nativeStyleRemainsUntouchedAndSuppliesLatestBaseline() {
+        update(style(battery4 = true))
+        assertEquals(4, view.mBatteryPercentView.paddingStart)
+        assertEquals(2, view.mBatteryPercentMarkView.paddingTop)
 
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = false,
-            fontSizeDp = 7.5f,
-            markFontSizeDp = 7.5f,
-            bold = false,
-            leftMarginDp = 8f,
-            rightMarginDp = 4f,
-            verticalOffset = 12,
-            markVerticalOffset = 20,
-            battery4 = false
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        val percentPad = capturedPadding(view.mBatteryPercentView)
-        assertNotEquals(baseline.percentPadding, percentPad)
-
-        SystemUIBatteryHooks.restoreBatteryBaseline(view, baseline)
-
-        assertEquals(baseline.percentPadding, capturedPadding(view.mBatteryPercentView))
-        assertEquals(baseline.markPadding, capturedPadding(view.mBatteryPercentMarkView))
+        view.mBatteryTextDigitView.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f)
+        update(style(digitSize = 12f))
+        update(style())
+        assertEquals(18f, view.mBatteryTextDigitView.textSize, 0f)
     }
 
     @Test
-    fun markPaddingCustomToDefault() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = false,
-            fontSizeDp = 7.5f,
-            markFontSizeDp = 13.0f,
-            bold = false,
-            leftMarginDp = 0f,
-            rightMarginDp = 0f,
-            verticalOffset = 8,
-            markVerticalOffset = 20,
-            battery4 = false
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        assertNotEquals(baseline.markTextSize, view.mBatteryPercentMarkView.textSize)
-
-        val markPad = capturedPadding(view.mBatteryPercentMarkView)
-        assertNotEquals(baseline.markPadding, markPad)
-
-        SystemUIBatteryHooks.restoreBatteryBaseline(view, baseline)
-
-        assertEquals(baseline.markPadding, capturedPadding(view.mBatteryPercentMarkView))
-    }
-
-    @Test
-    fun swapCustomToDefault() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-
-        assertTrue(baseline.percentIndex != 0 || baseline.markIndex != 1)
-
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = true,
-            fontSizeDp = 7.5f,
-            markFontSizeDp = 7.5f,
-            bold = false,
-            leftMarginDp = 0f,
-            rightMarginDp = 0f,
-            verticalOffset = 8,
-            markVerticalOffset = 17,
-            battery4 = false
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        assertEquals(0, view.indexOfChild(view.mBatteryPercentView))
-        assertEquals(1, view.indexOfChild(view.mBatteryPercentMarkView))
-
-        SystemUIBatteryHooks.restoreBatteryBaseline(view, baseline)
-
-        assertEquals(baseline.percentIndex, view.indexOfChild(view.mBatteryPercentView))
-        assertEquals(baseline.markIndex, view.indexOfChild(view.mBatteryPercentMarkView))
-    }
-
-    @Test
-    fun sameCustomStyleDoesNotRearrangeChildren() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-
-        val custom = customStyle()
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-        val afterFirst = view.childCount
-
-        view.resetMutationCount()
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        // No views should have been added or removed on re-application.
-        assertEquals(afterFirst, view.childCount)
-        assertEquals(0, view.mutationCount)
-        assertEquals(0, view.indexOfChild(view.mBatteryPercentView))
-        assertEquals(1, view.indexOfChild(view.mBatteryPercentMarkView))
-    }
-
-    @Test
-    fun battery4WithDefaultMarginsPreservesOemPadding() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = false,
-            fontSizeDp = 7.5f,
-            markFontSizeDp = 7.5f,
-            bold = false,
-            leftMarginDp = 0f,
-            rightMarginDp = 0f,
-            verticalOffset = 8,
-            markVerticalOffset = 17,
-            battery4 = true
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        assertEquals(baseline.percentPadding, capturedPadding(view.mBatteryPercentView))
-        assertEquals(baseline.markPadding, capturedPadding(view.mBatteryPercentMarkView))
-    }
-
-    @Test
-    fun battery4CustomRightMarginGoesToPercent() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = false,
-            fontSizeDp = 7.5f,
-            markFontSizeDp = 7.5f,
-            bold = false,
-            leftMarginDp = 0f,
-            rightMarginDp = 6f,
-            verticalOffset = 8,
-            markVerticalOffset = 17,
-            battery4 = true
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        val metrics = view.resources.displayMetrics
-        val rightMarginPx = (6f * metrics.density).toInt()
-
-        val percentPad = capturedPadding(view.mBatteryPercentView)
-        val markPad = capturedPadding(view.mBatteryPercentMarkView)
-
-        assertEquals("percent view should carry the right margin", rightMarginPx, percentPad.end)
-        assertEquals("mark view should not carry the right margin", 0, markPad.end)
-    }
-
-    @Test
-    fun nonBattery4CustomRightMarginGoesToMark() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-
-        val custom = SystemUIBatteryHooks.BatteryStyle(
-            swap = false,
-            fontSizeDp = 7.5f,
-            markFontSizeDp = 7.5f,
-            bold = false,
-            leftMarginDp = 0f,
-            rightMarginDp = 6f,
-            verticalOffset = 8,
-            markVerticalOffset = 17,
-            battery4 = false
-        )
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        val metrics = view.resources.displayMetrics
-        val rightMarginPx = (6f * metrics.density).toInt()
-
-        val percentPad = capturedPadding(view.mBatteryPercentView)
-        val markPad = capturedPadding(view.mBatteryPercentMarkView)
-
-        assertEquals("percent view should not carry the right margin", 0, percentPad.end)
-        assertEquals("mark view should carry the right margin", rightMarginPx, markPad.end)
-    }
-
-    @Test
-    fun moduleReorderDoesNotInvalidateBaseline() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-        val state = SystemUIBatteryHooks.BatteryViewState()
-        state.baseline = baseline
-
-        val swapStyle = customStyle()
-        SystemUIBatteryHooks.reconcileBatteryView(view, swapStyle, state)
-
-        // After swap: [percent, mark, digit]
-        assertEquals(0, view.indexOfChild(view.mBatteryPercentView))
-        assertEquals(1, view.indexOfChild(view.mBatteryPercentMarkView))
-        assertEquals(2, view.indexOfChild(view.mBatteryTextDigitView))
-
-        // The same children are still present; only order changed.
-        assertFalse("module reorder must not be treated as child replacement", SystemUIBatteryHooks.childIdentitiesChanged(view, baseline.childIds))
-        assertSame("baseline must not be recaptured on module reorder", baseline, state.baseline)
-        assertTrue("swapped state must still match target style", SystemUIBatteryHooks.matchesTarget(view, baseline, swapStyle))
-
-        val defaultStyle = defaultStyle()
-        SystemUIBatteryHooks.reconcileBatteryView(view, defaultStyle, state)
-
-        // Restore brings back the original OEM order.
-        assertEquals(baseline.percentIndex, view.indexOfChild(view.mBatteryPercentView))
-        assertEquals(baseline.markIndex, view.indexOfChild(view.mBatteryPercentMarkView))
-        assertSame("baseline must stay the same after restore", baseline, state.baseline)
-    }
-
-    @Test
-    fun swapAcrossRepeatedUpdateKeepsOriginalBaseline() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-        val state = SystemUIBatteryHooks.BatteryViewState()
-        state.baseline = baseline
-
-        val swapStyle = customStyle()
-
-        // First updateAll
-        SystemUIBatteryHooks.reconcileBatteryView(view, swapStyle, state)
-        assertSame(baseline, state.baseline)
-
-        view.resetMutationCount()
-
-        // Second updateAll with the same style
-        SystemUIBatteryHooks.reconcileBatteryView(view, swapStyle, state)
-        assertSame("repeated update must not recapture baseline", baseline, state.baseline)
-        assertTrue("repeated update must keep matching target", SystemUIBatteryHooks.matchesTarget(view, baseline, swapStyle))
-        assertEquals(0, view.mutationCount)
-
-        // Back to default
-        SystemUIBatteryHooks.reconcileBatteryView(view, defaultStyle(), state)
-        assertEquals(baseline.percentIndex, view.indexOfChild(view.mBatteryPercentView))
-        assertEquals(baseline.markIndex, view.indexOfChild(view.mBatteryPercentMarkView))
-    }
-
-    @Test
-    fun childReplacementRecapturesBaseline() {
-        val view = createBatteryView()
-        val baseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-
-        val custom = customStyle()
-        SystemUIBatteryHooks.applyBatteryStyle(view, baseline, custom)
-
-        // Simulate ROM replacing the mark view with a new instance.
-        val newMark = FakeTextView()
-        newMark.setTextSize(TypedValue.COMPLEX_UNIT_PX, baseline.markTextSize)
+    fun replacingNativeChildRebasesOnItsNewAppearance() {
+        val custom = style(markSize = 10f)
+        update(custom)
+        val replacement = TextView(view.context).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f)
+        }
         view.removeView(view.mBatteryPercentMarkView)
-        view.mBatteryPercentMarkView = newMark
-        view.addView(newMark)
+        view.mBatteryPercentMarkView = replacement
+        view.addView(replacement)
 
-        val changed = SystemUIBatteryHooks.childIdentitiesChanged(view, baseline.childIds)
-        assertTrue("child identity change must be detected", changed)
-
-        val newBaseline = SystemUIBatteryHooks.captureBatteryBaseline(view)!!
-        assertEquals(view.indexOfChild(newMark), newBaseline.markIndex)
+        update(custom)
+        assertEquals(20f, replacement.textSize, 0f)
+        update(style())
+        assertEquals(17f, replacement.textSize, 0f)
     }
 
-    private fun createBatteryView(): FakeBatteryView {
-        val view = FakeBatteryView()
-        view.mBatteryTextDigitView = FakeTextView()
-        view.mBatteryPercentView = FakeTextView()
-        view.mBatteryPercentMarkView = FakeTextView()
-
-        // Default text sizes in px from 7.5dp (density 2.0).
-        view.mBatteryTextDigitView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 7.5f)
-        view.mBatteryPercentView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 7.5f)
-        view.mBatteryPercentMarkView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 7.5f)
-
-        view.mBatteryPercentView.setPaddingRelative(4, 0, 0, 0)
-        view.mBatteryPercentMarkView.setPaddingRelative(0, 2, 0, 0)
-
-        // Add views in original order: [digit, percent, mark] with percent at index 1, mark at index 2.
-        view.addView(view.mBatteryTextDigitView)
-        view.addView(view.mBatteryPercentView)
-        view.addView(view.mBatteryPercentMarkView)
-
-        return view
+    @Test
+    fun keepsDeclaredHostFieldsForSubclassInstances() {
+        val subclass = object : BatteryView() {}
+        SystemUIBatteryHooks.reconcileBatteryView(subclass, style(digitSize = 12f), fields)
+        assertEquals(24f, subclass.mBatteryTextDigitView.textSize, 0f)
     }
 
-    private fun customStyle(): SystemUIBatteryHooks.BatteryStyle = SystemUIBatteryHooks.BatteryStyle(
-        swap = true,
-        fontSizeDp = 12.0f,
-        markFontSizeDp = 10.0f,
-        bold = true,
-        leftMarginDp = 6f,
-        rightMarginDp = 4f,
-        verticalOffset = 12,
-        markVerticalOffset = 20,
-        battery4 = false
-    )
+    private fun update(style: BatteryStyle) = SystemUIBatteryHooks.reconcileBatteryView(view, style, fields)
 
-    private fun defaultStyle(): SystemUIBatteryHooks.BatteryStyle = SystemUIBatteryHooks.BatteryStyle(
-        swap = false,
-        fontSizeDp = 7.5f,
-        markFontSizeDp = 7.5f,
-        bold = false,
-        leftMarginDp = 0f,
-        rightMarginDp = 0f,
-        verticalOffset = 8,
-        markVerticalOffset = 17,
-        battery4 = false
-    )
+    private fun style(
+        swap: Boolean = false,
+        digitSize: Float = 7.5f,
+        markSize: Float = 7.5f,
+        bold: Boolean = false,
+        leftMargin: Float = 0f,
+        rightMargin: Float = 0f,
+        verticalOffset: Int = 8,
+        markOffset: Int = 17,
+        battery4: Boolean = false,
+    ) = BatteryStyle(swap, digitSize, markSize, bold, leftMargin, rightMargin, verticalOffset, markOffset, battery4)
 
-    private fun capturedPadding(view: TextView): SystemUIBatteryHooks.Padding = SystemUIBatteryHooks.Padding(
-        view.paddingStart,
-        view.paddingTop,
-        view.paddingEnd,
-        view.paddingBottom
-    )
+    private open class BatteryView : LinearLayout(RuntimeEnvironment.getApplication()) {
+        val mBatteryTextDigitView = textView()
+        val mBatteryPercentView = textView()
+        var mBatteryPercentMarkView = textView()
+        var childMutations = 0
 
-    @Suppress("DEPRECATION")
-    private class FakeResources(density: Float = 2.0f) : Resources(null, DisplayMetrics().apply { this.density = density }, android.content.res.Configuration()) {
-        val metrics = DisplayMetrics().apply { this.density = density }
-        override fun getDisplayMetrics(): DisplayMetrics = metrics
-    }
-
-    private class FakeTextView(density: Float = 2.0f) : TextView(null) {
-        private val fakePaint = TextPaint()
-        private var storedTypeface: Typeface? = null
-        private var storedTextSize: Float = 0f
-        private var storedPaddingStart: Int = 0
-        private var storedPaddingTop: Int = 0
-        private var storedPaddingEnd: Int = 0
-        private var storedPaddingBottom: Int = 0
-        private var storedPaddingLeft: Int = 0
-        private var storedPaddingRight: Int = 0
-
-        val fakeResources = FakeResources(density)
-
-        override fun getResources(): Resources = fakeResources
-
-        override fun getPaint(): TextPaint = fakePaint
-
-        override fun getTypeface(): Typeface? = storedTypeface
-
-        override fun getTextSize(): Float = storedTextSize
-
-        override fun getPaddingStart(): Int = if (storedPaddingStart != 0) storedPaddingStart else storedPaddingLeft
-
-        override fun getPaddingTop(): Int = storedPaddingTop
-
-        override fun getPaddingEnd(): Int = if (storedPaddingEnd != 0) storedPaddingEnd else storedPaddingRight
-
-        override fun getPaddingBottom(): Int = storedPaddingBottom
-
-        override fun getPaddingLeft(): Int = storedPaddingLeft
-
-        override fun getPaddingRight(): Int = storedPaddingRight
-
-        override fun setTypeface(tf: Typeface?) {
-            storedTypeface = tf
-        }
-
-        override fun setTextSize(unit: Int, size: Float) {
-            storedTextSize = when (unit) {
-                TypedValue.COMPLEX_UNIT_DIP -> size * fakeResources.displayMetrics.density
-                else -> size
-            }
-        }
-
-        override fun setPaddingRelative(start: Int, top: Int, end: Int, bottom: Int) {
-            storedPaddingStart = start
-            storedPaddingTop = top
-            storedPaddingEnd = end
-            storedPaddingBottom = bottom
-        }
-
-        override fun setPadding(left: Int, top: Int, right: Int, bottom: Int) {
-            storedPaddingLeft = left
-            storedPaddingTop = top
-            storedPaddingRight = right
-            storedPaddingBottom = bottom
-        }
-    }
-
-    private class FakeBatteryView : LinearLayout(null) {
-        lateinit var mBatteryTextDigitView: TextView
-        lateinit var mBatteryPercentView: TextView
-        lateinit var mBatteryPercentMarkView: TextView
-
-        private val backingChildren = mutableListOf<View>()
-        var mutationCount = 0
-            private set
-
-        override fun getResources(): Resources = FakeResources()
-        override fun getChildCount(): Int = backingChildren.size
-        override fun getChildAt(index: Int): View = backingChildren[index]
-        override fun indexOfChild(child: View?): Int = if (child == null) -1 else backingChildren.indexOf(child)
-
-        override fun addView(child: View?) {
-            if (child == null) return
-            addView(child, -1)
+        init {
+            mBatteryPercentView.setPaddingRelative(4, 0, 0, 0)
+            mBatteryPercentMarkView.setPaddingRelative(0, 2, 0, 0)
+            addView(mBatteryTextDigitView)
+            addView(mBatteryPercentView)
+            addView(mBatteryPercentMarkView)
         }
 
         override fun addView(child: View?, index: Int) {
-            if (child == null) return
-            mutationCount++
-            if (index < 0 || index > backingChildren.size) {
-                backingChildren.add(child)
-            } else {
-                backingChildren.add(index, child)
-            }
+            childMutations++
+            super.addView(child, index)
         }
 
-        override fun removeView(child: View?) {
-            if (child == null) return
-            mutationCount++
-            backingChildren.remove(child)
+        override fun removeView(view: View?) {
+            childMutations++
+            super.removeView(view)
         }
 
-        fun resetMutationCount() {
-            mutationCount = 0
+        private fun textView() = TextView(context).apply {
+            typeface = Typeface.DEFAULT
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f)
         }
     }
 }

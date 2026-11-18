@@ -706,10 +706,11 @@ object SystemUIStatusBarHooks {
     private fun installNetSpeedSecondRowHook(lpparam: PackageReadyParam) {
         netSpeedSecondRowClassLoader = lpparam.classLoader
         netSpeedSecondRowHookInstaller.install {
-            ModuleHelper.hookAllMethodsSilently(
+            ModuleHelper.findAndHookMethodSilently(
                 "com.android.systemui.statusbar.phone.StatusBarIconControllerImpl",
                 lpparam.classLoader,
                 "setNetworkSpeedIcon",
+                "com.android.systemui.statusbar.policy.NetworkSpeedState",
                 netSpeedSecondRowHookCallback,
             )
         }

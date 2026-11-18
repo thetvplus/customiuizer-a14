@@ -31,7 +31,7 @@ class DeviceInfoThermalResolverTest {
 
     @Test
     fun discoversOddAndHighCpuZones() {
-        val result = ModuleHelper.scanForCpuThermalId(
+        val result = ModuleHelper.resolveCpuThermalSource(
             listZones = { intArrayOf(7, 45, 64) },
             readType = { index ->
                 when (index) {
@@ -42,27 +42,27 @@ class DeviceInfoThermalResolverTest {
                 }
             }
         )
-        assertEquals(45, result)
+        assertEquals(45, result.zoneId)
     }
 
     @Test
     fun prefersExactCpuOverCpuss() {
-        val result = ModuleHelper.scanForCpuThermalId(
+        val result = ModuleHelper.resolveCpuThermalSource(
             listZones = { intArrayOf(1, 64) },
             readType = { index ->
                 if (index == 1) "cpuss-0-usr" else "cpu-1-0-usr"
             }
         )
-        assertEquals(64, result)
+        assertEquals(64, result.zoneId)
     }
 
     @Test
     fun acceptsCpussWhenNoExactCpuExists() {
-        val result = ModuleHelper.scanForCpuThermalId(
+        val result = ModuleHelper.resolveCpuThermalSource(
             listZones = { intArrayOf(12) },
             readType = { "cpuss-1-usr" }
         )
-        assertEquals(12, result)
+        assertEquals(12, result.zoneId)
     }
 
     @Test
@@ -86,37 +86,37 @@ class DeviceInfoThermalResolverTest {
                 ModuleHelper.rankCpuThermalType(type).name
             )
         }
-        val result = ModuleHelper.scanForCpuThermalId(
+        val result = ModuleHelper.resolveCpuThermalSource(
             listZones = { IntArray(rejected.size) { it } },
             readType = { rejected[it] }
         )
-        assertEquals(-1, result)
+        assertEquals(-1, result.zoneId)
     }
 
     @Test
     fun unreadableZoneDoesNotStopScan() {
-        val result = ModuleHelper.scanForCpuThermalId(
+        val result = ModuleHelper.resolveCpuThermalSource(
             listZones = { intArrayOf(3, 7) },
             readType = { index ->
                 if (index == 3) throw RuntimeException("unreadable")
                 "cpu-0"
             }
         )
-        assertEquals(7, result)
+        assertEquals(7, result.zoneId)
     }
 
     @Test
     fun ordinaryListFailureFailOpensToNoMatch() {
-        val result = ModuleHelper.scanForCpuThermalId(
+        val result = ModuleHelper.resolveCpuThermalSource(
             listZones = { throw IllegalStateException("list failed") },
             readType = { "cpu-0" }
         )
-        assertEquals(-1, result)
+        assertEquals(-1, result.zoneId)
     }
 
     @Test(expected = ThreadDeath::class)
     fun listZonesPropagatesThreadDeath() {
-        ModuleHelper.scanForCpuThermalId(
+        ModuleHelper.resolveCpuThermalSource(
             listZones = { throw ThreadDeath() },
             readType = { "cpu-0" }
         )
@@ -124,7 +124,7 @@ class DeviceInfoThermalResolverTest {
 
     @Test(expected = OutOfMemoryError::class)
     fun listZonesPropagatesOutOfMemoryError() {
-        ModuleHelper.scanForCpuThermalId(
+        ModuleHelper.resolveCpuThermalSource(
             listZones = { throw OutOfMemoryError("oom") },
             readType = { "cpu-0" }
         )
@@ -132,7 +132,7 @@ class DeviceInfoThermalResolverTest {
 
     @Test(expected = InternalError::class)
     fun listZonesPropagatesWrappedVirtualMachineError() {
-        ModuleHelper.scanForCpuThermalId(
+        ModuleHelper.resolveCpuThermalSource(
             listZones = { throw InvocationTargetException(InternalError("vm"), null) },
             readType = { "cpu-0" }
         )

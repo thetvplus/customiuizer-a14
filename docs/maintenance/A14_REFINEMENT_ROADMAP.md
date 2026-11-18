@@ -130,6 +130,13 @@ r14.27.9 的 309 试用包经受控重建确认 SystemUI 加载 API 102。离线
 - 通知自动展开通过同一 `PrefMap` 版本读取模式和名单。无效模式直接交还原生，使用 `StatusBarNotification.getPackageName()` 的虚调用保留 ROM 包名覆写。fuxi CN / TW、duchamp CN、munch ID 和从连接设备只读取得的 xaga 样本均确认 `RowAppearanceCoordinator.onAfterRenderEntry` 调用该宿主的 `setFeedbackIcon`。fuxi CN 的 Smali 另确认原生先执行自身展开决定，覆写 getter 读取 `mPkgName`。这是静态调用证据，当前候选的 Hook 成功与端到端展开仍待实机。
 - 偏好监听已注册时，启动重试直接读取发布快照。Wi-Fi 自动化读取 VPN 目标时只取类型和 ID，完整应用名单仍由 VPN 自动切换消费。
 
+### SystemUI 原生入口维护
+
+- DexSQL 对 duchamp CN、fuxi CN / TW 和 munch ID 的 SystemUI 核对了 `MiuiClock` 三参数构造器、时钟和通知图标的 `onDarkChanged` 签名，以及第二行网速的 `setNetworkSpeedIcon(NetworkSpeedState)`。四份样本的双参数时钟构造器均委托到三参数构造器。网速调用来自原生控制器的初始化、文本更新和可见性更新。
+- 四份样本的 `MiuiBatteryMeterView.updateAll()` 都读取自身声明的数字、百分比和标记 `TextView`。模块在安装时解析同一组字段。默认样式且没有基线时直接返回，自定义及恢复路径每个字段只读一次。基线随原生子视图更换而刷新，恢复默认后释放。字段或安装点缺失时由 Feature 安装边界隔离。Android 14 Host 覆盖恢复、重复更新、替换子视图和 Battery4 的边距归属。
+- StrongToast 在存在高度匹配基线时才查找并恢复原生子视图。岛体几何与窗口生命周期由动态岛路径负责，StrongToast 已移除无生产调用的旧几何实现及对应专项。
+- 当前候选的 SystemUI 实装、主题与字体重载、第二行网速和宿主性能仍待对应 ROM 实机验收。静态签名通过只覆盖四份离线样本。
+
 ### 实机成本与 Native 取舍（2026-11-08）
 
 基于 `40f42fe346e6f247fecd65f5f13cea497fa531c3` 的准确 Develop 产物。单一 HyperOS 1 / Android 14 设备，实际 120 Hz、热状态 0、固定方向；自动化、截图和内存查询不进入 trace 操作窗口。以下是同 APK 的目标功能组合开 / 关，关闭侧仍保留其它原有配置，不是代码优化前后或纯原生系统对照。每场景三组交替，取各侧中位数；最大组内极差只作描述性噪声参考，不是显著性检验。

@@ -7,20 +7,21 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import java.lang.System
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import tv.withaibuild.customiuizer.MainModule
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.AfterHookCallback
 import tv.withaibuild.customiuizer.mods.utils.HookerClassHelper.MethodHook
 import tv.withaibuild.customiuizer.mods.utils.ModuleHelper
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
-import tv.withaibuild.customiuizer.mods.battery.BatteryStyleEffect
-import tv.withaibuild.customiuizer.mods.battery.BatteryStyleResolver
 import tv.withaibuild.customiuizer.utils.BatteryIndicator
+import java.lang.System
+import java.lang.reflect.Field
 
 @Suppress("MemberVisibilityCanBePrivate")
 object SystemUIBatteryHooks {
     private const val StatusBarCls = "com.android.systemui.statusbar.phone.CentralSurfacesImpl"
+
+    private const val BATTERY_BASELINE_FIELD = "customiuizer_battery_view_state"
 
     private const val PREF_SWAP = "system_statusbaricons_swap_batteryicon_percentage"
     private const val PREF_FONT_SIZE = "system_statusbar_batterystyle_fontsize"
@@ -61,16 +62,13 @@ object SystemUIBatteryHooks {
         val verticalOffset: Int,
         val markVerticalOffset: Int,
         val battery4: Boolean,
-    )
+    ) {
+        val customized = swap || fontSizeDp != 7.5f || markFontSizeDp != 7.5f || bold ||
+            leftMarginDp != 0f || rightMarginDp != 0f || verticalOffset != 8 || markVerticalOffset != 17
+    }
 
     @Volatile
     internal var batteryStyle: BatteryStyle? = null
-
-    /**
-     * Immutable fallback effect for direct helper/test calls that do not supply an effect.
-     * It is never mutated after initialization and is not used by the production hook callback.
-     */
-    private val FALLBACK_BATTERY_STYLE_EFFECT = BatteryStyleEffect(null)
 
     @Volatile
     private var batteryStyleObserverRegistered = false
@@ -123,11 +121,6 @@ object SystemUIBatteryHooks {
         parent.addView(view, index)
     }
 
-    private fun setTextSizeIfChanged(view: TextView, sizeDp: Float) {
-        val target = sizeDp * view.resources.displayMetrics.density
-        if (view.textSize != target) view.setTextSize(TypedValue.COMPLEX_UNIT_DIP, sizeDp)
-    }
-
     private fun setPaddingRelativeIfChanged(view: TextView, start: Int, top: Int, end: Int, bottom: Int) {
         if (view.paddingStart == start && view.paddingTop == top &&
             view.paddingEnd == end && view.paddingBottom == bottom
@@ -177,7 +170,8 @@ object SystemUIBatteryHooks {
             }
         })
 
-        ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.NotificationIconAreaController", lpparam.classLoader, "onDarkChanged", object : MethodHook() {
+        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.NotificationIconAreaController", lpparam.classLoader, "onDarkChanged",
+            ArrayList::class.java, Float::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
                 val indicator = XposedHelpers.getAdditionalInstanceField(callback.getThisObject(), "mBatteryIndicator") as BatteryIndicator?
                 indicator?.onDarkModeChanged(callback.getArg(1) as Float, callback.getArg(2) as Int)
@@ -204,72 +198,66 @@ object SystemUIBatteryHooks {
 
     @JvmStatic
     fun StatusBarStyleBatteryIconHook(lpparam: PackageReadyParam) {
-        installBatteryStyleSnapshot()
-        val abi = BatteryStyleResolver.resolve(lpparam.classLoader)
-        val effect = BatteryStyleEffect(abi)
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.views.MiuiBatteryMeterView", lpparam.classLoader, "updateAll", object : MethodHook() {
+        val ownerClass = XposedHelpers.findClass(
+            "com.android.systemui.statusbar.views.MiuiBatteryMeterView", lpparam.classLoader,
+        )
+        val fields = BatteryMeterFields.resolve(ownerClass)
+        checkNotNull(ModuleHelper.findAndHookMethod(ownerClass, "updateAll", object : MethodHook() {
             override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
                 val style = batteryStyle ?: return
-                val owner = callback.getThisObject() ?: return
-                val batteryView = owner as? ViewGroup ?: return
-                val state = getOrCreateBatteryViewState(owner)
-                reconcileBatteryView(batteryView, style, state, effect)
+                val owner = callback.getThisObject() as ViewGroup
+                reconcileBatteryView(owner, style, fields)
             }
-        })
+        }))
+        installBatteryStyleSnapshot()
     }
 
-    internal fun reconcileBatteryView(
-        parent: ViewGroup,
-        style: BatteryStyle,
-        state: BatteryViewState,
-        effect: BatteryStyleEffect = FALLBACK_BATTERY_STYLE_EFFECT,
+    internal class BatteryMeterFields private constructor(
+        val digit: Field,
+        val percent: Field,
+        val mark: Field,
     ) {
-        val baseline = state.baseline
-
-        val childrenChanged = baseline == null || childIdentitiesChanged(parent, baseline.childIds)
-        val newBaseline = when {
-            baseline == null -> captureBatteryBaseline(parent, effect)
-            childrenChanged -> captureBatteryBaseline(parent, effect)
-            state.appliedStyle == null && !matchesBaseline(parent, baseline, effect) -> captureBatteryBaseline(parent, effect)
-            else -> baseline
-        }
-        if (newBaseline == null) return
-        state.baseline = newBaseline
-
-        val defaultStyle = isBatteryStyleDefault(style)
-        when {
-            defaultStyle -> {
-                if (state.appliedStyle != null || !matchesBaseline(parent, newBaseline, effect)) {
-                    restoreBatteryBaseline(parent, newBaseline, effect)
-                }
-                state.appliedStyle = null
-            }
-            state.appliedStyle != style || !matchesTarget(parent, newBaseline, style, effect) -> {
-                applyBatteryStyle(parent, newBaseline, style, effect)
-                state.appliedStyle = style
-            }
+        companion object {
+            fun resolve(owner: Class<*>): BatteryMeterFields = BatteryMeterFields(
+                owner.getDeclaredField("mBatteryTextDigitView").apply { isAccessible = true },
+                owner.getDeclaredField("mBatteryPercentView").apply { isAccessible = true },
+                owner.getDeclaredField("mBatteryPercentMarkView").apply { isAccessible = true },
+            )
         }
     }
 
-    private fun isBatteryStyleDefault(style: BatteryStyle): Boolean {
-        return !style.swap &&
-            style.fontSizeDp == 7.5f &&
-            style.markFontSizeDp == 7.5f &&
-            !style.bold &&
-            style.leftMarginDp == 0f &&
-            style.rightMarginDp == 0f &&
-            style.verticalOffset == 8 &&
-            style.markVerticalOffset == 17
+    internal fun reconcileBatteryView(parent: ViewGroup, style: BatteryStyle, fields: BatteryMeterFields) {
+        val previous = XposedHelpers.getAdditionalInstanceField(parent, BATTERY_BASELINE_FIELD) as? BatteryBaseline
+        if (previous == null && !style.customized) return
+
+        val digit = fields.digit.get(parent) as? TextView ?: return
+        val percent = fields.percent.get(parent) as? TextView ?: return
+        val mark = fields.mark.get(parent) as? TextView ?: return
+        val sameChildren = previous != null && !childIdentitiesChanged(parent, previous.childIds)
+
+        if (!style.customized) {
+            if (sameChildren) restoreBatteryBaseline(parent, digit, percent, mark, previous)
+            XposedHelpers.removeAdditionalInstanceField(parent, BATTERY_BASELINE_FIELD)
+            return
+        }
+
+        val baseline = if (sameChildren) previous else {
+            captureBatteryBaseline(parent, digit, percent, mark).also {
+                XposedHelpers.setAdditionalInstanceField(parent, BATTERY_BASELINE_FIELD, it)
+            }
+        }
+        applyBatteryStyle(parent, digit, percent, mark, baseline, style)
     }
 
-    internal data class Padding(
+    private data class Padding(
         val start: Int,
         val top: Int,
         val end: Int,
         val bottom: Int
     )
 
-    internal data class BatteryBaseline(
+    private class BatteryBaseline(
         val percentIndex: Int,
         val markIndex: Int,
         val digitTextSize: Float,
@@ -282,21 +270,7 @@ object SystemUIBatteryHooks {
         val childIds: List<Int>
     )
 
-    internal data class BatteryViewState(
-        var baseline: BatteryBaseline? = null,
-        var appliedStyle: BatteryStyle? = null
-    )
-
-    internal fun getOrCreateBatteryViewState(owner: Any): BatteryViewState {
-        var state = XposedHelpers.getAdditionalInstanceField(owner, "customiuizer_battery_view_state") as? BatteryViewState
-        if (state == null) {
-            state = BatteryViewState()
-            XposedHelpers.setAdditionalInstanceField(owner, "customiuizer_battery_view_state", state)
-        }
-        return state
-    }
-
-    internal fun childIdentitiesChanged(parent: ViewGroup, childIds: List<Int>): Boolean {
+    private fun childIdentitiesChanged(parent: ViewGroup, childIds: List<Int>): Boolean {
         if (parent.childCount != childIds.size) return true
         outer@ for (i in 0 until parent.childCount) {
             val currentId = System.identityHashCode(parent.getChildAt(i))
@@ -308,14 +282,12 @@ object SystemUIBatteryHooks {
         return false
     }
 
-    internal fun captureBatteryBaseline(
+    private fun captureBatteryBaseline(
         owner: ViewGroup,
-        effect: BatteryStyleEffect = FALLBACK_BATTERY_STYLE_EFFECT,
-    ): BatteryBaseline? {
-        val useFast = effect.useFastPath(owner)
-        val digitView = effect.readDigitView(owner, useFast) ?: return null
-        val percentView = effect.readPercentView(owner, useFast) ?: return null
-        val markView = effect.readMarkView(owner, useFast) ?: return null
+        digitView: TextView,
+        percentView: TextView,
+        markView: TextView,
+    ): BatteryBaseline {
         return BatteryBaseline(
             percentIndex = owner.indexOfChild(percentView),
             markIndex = owner.indexOfChild(markView),
@@ -330,109 +302,7 @@ object SystemUIBatteryHooks {
         )
     }
 
-    internal fun matchesBaseline(
-        parent: ViewGroup,
-        baseline: BatteryBaseline,
-        effect: BatteryStyleEffect = FALLBACK_BATTERY_STYLE_EFFECT,
-    ): Boolean {
-        val useFast = effect.useFastPath(parent)
-        val digitView = effect.readDigitView(parent, useFast) ?: return false
-        val percentView = effect.readPercentView(parent, useFast) ?: return false
-        val markView = effect.readMarkView(parent, useFast) ?: return false
-        return parent.indexOfChild(percentView) == baseline.percentIndex &&
-            parent.indexOfChild(markView) == baseline.markIndex &&
-            digitView.textSize == baseline.digitTextSize &&
-            percentView.textSize == baseline.percentTextSize &&
-            markView.textSize == baseline.markTextSize &&
-            digitView.typeface === baseline.digitTypeface &&
-            percentView.typeface === baseline.percentTypeface &&
-            paddingEquals(percentView, baseline.percentPadding) &&
-            paddingEquals(markView, baseline.markPadding)
-    }
-
-    private fun paddingEquals(view: TextView, padding: Padding): Boolean {
-        return view.paddingStart == padding.start &&
-            view.paddingTop == padding.top &&
-            view.paddingEnd == padding.end &&
-            view.paddingBottom == padding.bottom
-    }
-
-    internal fun matchesTarget(
-        parent: ViewGroup,
-        baseline: BatteryBaseline,
-        style: BatteryStyle,
-        effect: BatteryStyleEffect = FALLBACK_BATTERY_STYLE_EFFECT,
-    ): Boolean {
-        val useFast = effect.useFastPath(parent)
-        val digitView = effect.readDigitView(parent, useFast) ?: return false
-        val percentView = effect.readPercentView(parent, useFast) ?: return false
-        val markView = effect.readMarkView(parent, useFast) ?: return false
-        val metrics = parent.resources.displayMetrics
-
-        val percentIndex = parent.indexOfChild(percentView)
-        val markIndex = parent.indexOfChild(markView)
-        if (style.swap) {
-            if (percentIndex != 0 || markIndex != 1) return false
-        } else {
-            if (percentIndex != baseline.percentIndex || markIndex != baseline.markIndex) return false
-        }
-
-        val targetDigitSize = expectedTextSize(digitView, style.fontSizeDp, baseline.digitTextSize)
-        val targetPercentSize = expectedTextSize(percentView, style.fontSizeDp, baseline.percentTextSize)
-        val targetMarkSize = expectedTextSize(markView, style.markFontSizeDp, baseline.markTextSize)
-        if (digitView.textSize != targetDigitSize) return false
-        if (percentView.textSize != targetPercentSize) return false
-        if (markView.textSize != targetMarkSize) return false
-
-        val targetDigitTypeface = if (style.bold) Typeface.DEFAULT_BOLD else baseline.digitTypeface
-        val targetPercentTypeface = if (style.bold) Typeface.DEFAULT_BOLD else baseline.percentTypeface
-        if (digitView.typeface !== targetDigitTypeface) return false
-        if (percentView.typeface !== targetPercentTypeface) return false
-
-        val leftMargin = dipToPx(style.leftMarginDp, metrics)
-        val topMargin = if (style.verticalOffset == 8) 0 else dipToPx((style.verticalOffset - 8) * 0.5f, metrics)
-        val rightMargin = dipToPx(style.rightMarginDp, metrics)
-        val rightMarginOnPercent = if (style.battery4) rightMargin else 0
-        val rightMarginOnMark = if (style.battery4) 0 else rightMargin
-        val markTopMargin = if (style.markVerticalOffset == 17 && style.verticalOffset == 8) {
-            topMargin
-        } else {
-            dipToPx((style.markVerticalOffset - 8) * 0.5f, metrics)
-        }
-
-        val useBaselinePercent = style.leftMarginDp == 0f && style.rightMarginDp == 0f && style.verticalOffset == 8
-        val useBaselineMark = style.rightMarginDp == 0f &&
-            ((style.markVerticalOffset == 17 && style.verticalOffset == 8) ||
-                (style.markVerticalOffset == style.verticalOffset && style.markVerticalOffset == 17))
-
-        if (useBaselinePercent) {
-            if (!paddingEquals(percentView, baseline.percentPadding)) return false
-        } else {
-            if (percentView.paddingStart != leftMargin ||
-                percentView.paddingTop != topMargin ||
-                percentView.paddingEnd != rightMarginOnPercent ||
-                percentView.paddingBottom != 0
-            ) {
-                return false
-            }
-        }
-
-        if (useBaselineMark) {
-            if (!paddingEquals(markView, baseline.markPadding)) return false
-        } else {
-            if (markView.paddingStart != 0 ||
-                markView.paddingTop != markTopMargin ||
-                markView.paddingEnd != rightMarginOnMark ||
-                markView.paddingBottom != 0
-            ) {
-                return false
-            }
-        }
-
-        return true
-    }
-
-    internal fun expectedTextSize(view: TextView, sizeDp: Float, baselineSize: Float): Float {
+    private fun expectedTextSize(view: TextView, sizeDp: Float, baselineSize: Float): Float {
         return if (sizeDp == 7.5f) baselineSize else sizeDp * view.resources.displayMetrics.density
     }
 
@@ -440,16 +310,13 @@ object SystemUIBatteryHooks {
         return (dp * metrics.density).toInt()
     }
 
-    internal fun restoreBatteryBaseline(
+    private fun restoreBatteryBaseline(
         parent: ViewGroup,
+        digitView: TextView,
+        percentView: TextView,
+        markView: TextView,
         baseline: BatteryBaseline,
-        effect: BatteryStyleEffect = FALLBACK_BATTERY_STYLE_EFFECT,
     ) {
-        val useFast = effect.useFastPath(parent)
-        val digitView = effect.readDigitView(parent, useFast) ?: return
-        val percentView = effect.readPercentView(parent, useFast) ?: return
-        val markView = effect.readMarkView(parent, useFast) ?: return
-
         restoreChildOrder(parent, percentView, markView, baseline.percentIndex, baseline.markIndex)
 
         setTextSizePxIfChanged(digitView, baseline.digitTextSize)
@@ -463,16 +330,14 @@ object SystemUIBatteryHooks {
         setPaddingRelativeIfChanged(markView, baseline.markPadding)
     }
 
-    internal fun applyBatteryStyle(
+    private fun applyBatteryStyle(
         parent: ViewGroup,
+        digitView: TextView,
+        percentView: TextView,
+        markView: TextView,
         baseline: BatteryBaseline,
         style: BatteryStyle,
-        effect: BatteryStyleEffect = FALLBACK_BATTERY_STYLE_EFFECT,
     ) {
-        val useFast = effect.useFastPath(parent)
-        val digitView = effect.readDigitView(parent, useFast) ?: return
-        val percentView = effect.readPercentView(parent, useFast) ?: return
-        val markView = effect.readMarkView(parent, useFast) ?: return
         val metrics = parent.resources.displayMetrics
 
         if (style.swap) {
@@ -481,27 +346,11 @@ object SystemUIBatteryHooks {
             restoreChildOrder(parent, percentView, markView, baseline.percentIndex, baseline.markIndex)
         }
 
-        if (style.fontSizeDp == 7.5f) {
-            setTextSizePxIfChanged(digitView, baseline.digitTextSize)
-            setTextSizePxIfChanged(percentView, baseline.percentTextSize)
-        } else {
-            setTextSizeIfChanged(digitView, style.fontSizeDp)
-            setTextSizeIfChanged(percentView, style.fontSizeDp)
-        }
-
-        if (style.markFontSizeDp == 7.5f) {
-            setTextSizePxIfChanged(markView, baseline.markTextSize)
-        } else {
-            setTextSizeIfChanged(markView, style.markFontSizeDp)
-        }
-
-        if (style.bold) {
-            setTypefaceIfChanged(digitView, Typeface.DEFAULT_BOLD)
-            setTypefaceIfChanged(percentView, Typeface.DEFAULT_BOLD)
-        } else {
-            setTypefaceIfChanged(digitView, baseline.digitTypeface)
-            setTypefaceIfChanged(percentView, baseline.percentTypeface)
-        }
+        setTextSizePxIfChanged(digitView, expectedTextSize(digitView, style.fontSizeDp, baseline.digitTextSize))
+        setTextSizePxIfChanged(percentView, expectedTextSize(percentView, style.fontSizeDp, baseline.percentTextSize))
+        setTextSizePxIfChanged(markView, expectedTextSize(markView, style.markFontSizeDp, baseline.markTextSize))
+        setTypefaceIfChanged(digitView, if (style.bold) Typeface.DEFAULT_BOLD else baseline.digitTypeface)
+        setTypefaceIfChanged(percentView, if (style.bold) Typeface.DEFAULT_BOLD else baseline.percentTypeface)
 
         val leftMargin = dipToPx(style.leftMarginDp, metrics)
         val topMargin = if (style.verticalOffset == 8) 0 else dipToPx((style.verticalOffset - 8) * 0.5f, metrics)
