@@ -608,11 +608,11 @@ object SystemUIControlCenterHooks {
         if (MainModule.mPrefs.getBoolean("system_cc_volume_showpct")) {
             ShowVolumePctHook(loader)
         }
-        if (MainModule.mPrefs.getBoolean("system_qs_hideoperator")
-            || MainModule.mPrefs.getBoolean("system_cc_hideoperator_delimiter")
-            || MainModule.mPrefs.getBoolean("system_cc_show_stepcount")
-        ) {
-            CCHeaderHook(loader)
+        val hideOperator = MainModule.mPrefs.getBoolean("system_qs_hideoperator")
+        val hideDelimiter = MainModule.mPrefs.getBoolean("system_cc_hideoperator_delimiter")
+        val showSteps = MainModule.mPrefs.getBoolean("system_cc_show_stepcount")
+        if (hideOperator || hideDelimiter || showSteps) {
+            CCHeaderHook(loader, hideOperator, hideDelimiter, showSteps)
         }
         if (gridColumns > 4) {
             SystemCCGridHookLoader(loader, gridColumns)
@@ -637,95 +637,110 @@ object SystemUIControlCenterHooks {
         }
     }
 
-    @JvmStatic
-    fun CCHeaderHook(classLoader: ClassLoader) {
-        val hideOperator = MainModule.mPrefs.getBoolean("system_qs_hideoperator")
-        val hideDelimiter = MainModule.mPrefs.getBoolean("system_cc_hideoperator_delimiter")
-        val showStep = MainModule.mPrefs.getBoolean("system_cc_show_stepcount")
-        val stepViewId = ResourceHooks.getFakeResId("cc_step_view")
-        val tag = "StepInControlCenter"
-        val hideViewHook = object : MethodHook() {
-            override fun after(callback: AfterHookCallback) {
-                val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                if (hideOperator || hideDelimiter) {
-                    val resId = headerView.resources.getIdentifier("header_carrier_view", "id", "miui.systemui.plugin")
-                    val mCarrierText = headerView.findViewById<TextView>(resId)
-                    if (hideOperator) {
-                        mCarrierText.text = ""
-                    } else {
-                        mCarrierText.text = mCarrierText.text.toString().replace(" | ", "")
-                    }
-                }
-                if (showStep) {
-                    val stepView = headerView.findViewWithTag<TextView>(tag)
-                    if (stepView != null) {
-                        val promptInfo = XposedHelpers.getObjectField(callback.getThisObject(), "promptInfo")
-                        val miuiPromptInfo = XposedHelpers.getObjectField(callback.getThisObject(), "miuiPromptInfo")
-                        var viz = View.GONE
-                        if (promptInfo == null && miuiPromptInfo == null) {
-                            val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", classLoader)
-                            val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                            val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", headerView.context) as Boolean
-                            if (verticalMode) {
-                                viz = View.VISIBLE
-                            }
+    internal fun CCHeaderHook(classLoader: ClassLoader, hideOperator: Boolean, hideDelimiter: Boolean, showStep: Boolean) =
+        ModuleHelper.guarded {
+            val controller = XposedHelpers.findClass("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader)
+            if (hideOperator || hideDelimiter) {
+                val setCarrierText = controller.getDeclaredMethod(
+                    "onCreate\$lambda-2\$lambda-0", controller, String::class.java,
+                )
+                ModuleHelper.hookMethod(setCarrierText, object : MethodHook() {
+                    override fun before(callback: BeforeHookCallback) {
+                        val text = callback.getArg(1) as String?
+                        if (hideOperator) {
+                            if (text != "") callback.getArgs()[1] = ""
+                        } else if (text?.contains(" | ") == true) {
+                            callback.getArgs()[1] = text.replace(" | ", "")
                         }
-                        stepView.visibility = viz
                     }
+                })
+            }
+            if (showStep) hookHeaderSteps(classLoader, controller)
+        }
+
+    private const val HEADER_STEP_VIEW = "controlCenterStepView"
+
+    private class HeaderStepView(val carrier: TextView) : TextView(carrier.context)
+
+    private fun hookHeaderSteps(loader: ClassLoader, controller: Class<*>) {
+        val getView = controller.getMethod("getView")
+        val ids = XposedHelpers.findClass("miui.systemui.controlcenter.R\$id", loader)
+        val carrierId = ids.getDeclaredField("header_carrier_view").getInt(null)
+        val iconsId = ids.getDeclaredField("header_status_bar_icons").getInt(null)
+        val styles = XposedHelpers.findClass("miui.systemui.controlcenter.R\$style", loader)
+        val textAppearance = styles.getDeclaredField("TextAppearance_Header_Text").getInt(null)
+        val layoutParams = XposedHelpers.findClass("androidx.constraintlayout.widget.ConstraintLayout\$LayoutParams", loader)
+        val newParams = layoutParams.getConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+        val bottomToTop = layoutParams.getDeclaredField("bottomToTop")
+        val endToStart = layoutParams.getDeclaredField("endToStart")
+        val stepViewId = ResourceHooks.getFakeResId("cc_step_view")
+
+        fun boundStep(owner: Any?) =
+            (XposedHelpers.getAdditionalInstanceField(owner, HEADER_STEP_VIEW) as? WeakReference<*>)?.get() as? HeaderStepView
+
+        val createStep = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val owner = callback.getThisObject()
+                val header = getView.invoke(owner) as ViewGroup
+                if (boundStep(owner)?.parent === header) return
+                val carrier = header.findViewById<TextView>(carrierId) ?: return
+                val stepView = HeaderStepView(carrier).apply {
+                    id = stepViewId
+                    visibility = View.GONE
+                    setTextAppearance(textAppearance)
                 }
+                val wrapContent = ViewGroup.LayoutParams.WRAP_CONTENT
+                val params = newParams.newInstance(wrapContent, wrapContent) as ViewGroup.MarginLayoutParams
+                bottomToTop.setInt(params, iconsId)
+                endToStart.setInt(params, carrierId)
+                header.addView(stepView, params)
+                XposedHelpers.setAdditionalInstanceField(owner, HEADER_STEP_VIEW, WeakReference(stepView))
+                StepCounterController.bindStepView(stepView)
             }
         }
-        ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "adjustCarrierOrPrompt", hideViewHook)
-
-        if (showStep) {
-            ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "onExpandChange", Float::class.javaPrimitiveType!!, object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                    val stepView = headerView.findViewWithTag<TextView>(tag)
-                    if (stepView != null) {
-                        stepView.translationY = callback.getArg(0) as Float
-                    }
-                }
-            })
-            val initStepViewHook = object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                    var stepView = headerView.findViewWithTag<TextView>(tag)
-                    if (stepView == null) {
-                        stepView = TextView(headerView.context)
-                        stepView.id = stepViewId
-                        val res = headerView.resources
-                        val styleId = res.getIdentifier("TextAppearance.Header.Text", "style", "miui.systemui.plugin")
-                        stepView.setTextAppearance(styleId)
-                        stepView.setTag(tag)
-                        headerView.addView(stepView)
-                        StepCounterController.bindStepView(stepView)
-                    }
-                }
+        val adjustVisibility = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val step = boundStep(callback.getThisObject()) ?: return
+                val carrier = step.carrier
+                // Only the vertical carrier is anchored above the icons. Its visibility already reflects privacy prompts.
+                val aboveIcons = bottomToTop.getInt(carrier.layoutParams) == iconsId
+                val visibility = if (aboveIcons && carrier.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+                if (step.visibility != visibility) step.visibility = visibility
             }
-            ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "createStatusBarViews", initStepViewHook)
-
-            ModuleHelper.findAndHookMethod("miui.systemui.controlcenter.panel.main.header.StatusHeaderController", classLoader, "updateConstraint", object : MethodHook() {
-                override fun after(callback: AfterHookCallback) {
-                    val headerView = XposedHelpers.callMethod(callback.getThisObject(), "getView") as ViewGroup
-                    val CommonUtils = XposedHelpers.findClass("miui.systemui.util.CommonUtils", classLoader)
-                    val INSTANCE = XposedHelpers.getStaticObjectField(CommonUtils, "INSTANCE")
-                    val verticalMode = XposedHelpers.callMethod(INSTANCE, "getInVerticalMode", headerView.context) as Boolean
-                    if (verticalMode) {
-                        val ConstraintSetClass = classLoader.loadClass("androidx.constraintlayout.widget.ConstraintSet")
-                        val constraintSet = XposedHelpers.newInstance(ConstraintSetClass)
-                        XposedHelpers.callMethod(constraintSet, "clone", headerView)
-                        val carrierId = headerView.resources.getIdentifier("header_carrier_view", "id", "miui.systemui.plugin")
-                        val iconsId = headerView.resources.getIdentifier("header_status_bar_icons", "id", "miui.systemui.plugin")
-                        val dimId = headerView.resources.getIdentifier("header_carrier_vertical_mode_margin_bottom", "dimen", "miui.systemui.plugin")
-                        val marginBottom = headerView.resources.getDimensionPixelSize(dimId)
-                        XposedHelpers.callMethod(constraintSet, "connect", stepViewId, 4, iconsId, 3, marginBottom)
-                        XposedHelpers.callMethod(constraintSet, "connect", stepViewId, 7, carrierId, 6, HookUtils.dp2px(4f).toInt())
-                        XposedHelpers.callMethod(constraintSet, "applyTo", headerView)
-                    }
-                }
-            })
         }
+        val adjustMargins = object : MethodHook() {
+            override fun after(callback: AfterHookCallback) {
+                if (callback.getThrowable() != null) return
+                val step = boundStep(callback.getThisObject()) ?: return
+                val carrierParams = step.carrier.layoutParams as ViewGroup.MarginLayoutParams
+                if (bottomToTop.getInt(carrierParams) != iconsId) return
+                val params = step.layoutParams as ViewGroup.MarginLayoutParams
+                val endMargin = (4f * step.resources.displayMetrics.density).toInt()
+                if (params.bottomMargin == carrierParams.bottomMargin && params.marginEnd == endMargin) return
+                params.bottomMargin = carrierParams.bottomMargin
+                params.marginEnd = endMargin
+                step.layoutParams = params
+            }
+        }
+        val translateStep = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val result = chain.proceed()
+                ModuleHelper.guarded {
+                    val step = boundStep(chain.thisObject) ?: return@guarded
+                    val translation = chain.getArg(0) as Float
+                    if (step.translationY != translation) step.translationY = translation
+                }
+                return result
+            }
+        }
+        check(PreparedHookBatch().install(listOf(
+            controller.getDeclaredMethod("createStatusBarViews") to createStep,
+            controller.getDeclaredMethod("adjustCarrierOrPrompt") to adjustVisibility,
+            controller.getDeclaredMethod("updateConstraint") to adjustMargins,
+            controller.getDeclaredMethod("onExpandChange", Float::class.javaPrimitiveType) to translateStep,
+        )).isActive)
     }
 
     @JvmStatic

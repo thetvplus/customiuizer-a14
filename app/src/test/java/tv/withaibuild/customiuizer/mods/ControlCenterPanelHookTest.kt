@@ -3,10 +3,13 @@ package tv.withaibuild.customiuizer.mods
 import android.app.Application
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.view.View
 import android.view.View.MeasureSpec
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Executable
 import java.lang.reflect.Proxy
@@ -15,6 +18,7 @@ import miui.systemui.controlcenter.panel.main.MainPanelContent
 import miui.systemui.controlcenter.panel.main.MainPanelContentDistributor
 import miui.systemui.controlcenter.panel.main.MainPanelController
 import miui.systemui.controlcenter.panel.main.footer.FooterSpaceController
+import miui.systemui.controlcenter.panel.main.header.StatusHeaderController
 import miui.systemui.controlcenter.panel.main.qs.EditButtonController
 import miui.systemui.controlcenter.panel.main.qs.QSListController
 import miui.systemui.controlcenter.panel.main.recyclerview.MainPanelAdapter
@@ -33,7 +37,86 @@ import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class ControlCenterPanelHookTest {
-    @Test fun verticalStackKeepsTheLeftPanelAttachedAndHorizontalUsesNativeMargins() = withGridHooks { installed ->
+    @Test fun carrierTextUsesOneNativeWriteAndOnlyRewritesChangedInput() {
+        for (hideOperator in listOf(false, true)) {
+            withControlCenterHooks(install = {
+                SystemUIControlCenterHooks.CCHeaderHook(it, hideOperator, hideDelimiter = true, showStep = false)
+            }) { installed ->
+                val type = StatusHeaderController::class.java
+                val method = type.getDeclaredMethod("onCreate\$lambda-2\$lambda-0", type, String::class.java)
+                val owner = StatusHeaderController(RuntimeEnvironment.getApplication())
+                fun dispatch(text: String, expected: String) {
+                    val rewrite: ((Array<Any?>) -> Any?)? = if (text == expected) null else { args ->
+                        assertSame(owner, args[0])
+                        StatusHeaderController.`onCreate$lambda-2$lambda-0`(owner, args[1] as String)
+                    }
+                    installed.invoke(method, null, owner, text, rewrite = rewrite) {
+                        StatusHeaderController.`onCreate$lambda-2$lambda-0`(owner, text)
+                    }
+                    assertEquals(expected, owner.carrier.text.toString())
+                }
+
+                dispatch("", "")
+                dispatch("A | B | C", if (hideOperator) "" else "ABC")
+                dispatch("Carrier", if (hideOperator) "" else "Carrier")
+                assertEquals(3, owner.carrierWrites)
+                assertEquals(setOf(method), installed.keys)
+            }
+        }
+    }
+
+    @Test fun stepViewFollowsTheNativeCarrierGeometryAndPrivacyState() = withControlCenterHooks(install = {
+        SystemUIControlCenterHooks.CCHeaderHook(it, hideOperator = false, hideDelimiter = false, showStep = true)
+    }) { installed ->
+        val context = RuntimeEnvironment.getApplication().createConfigurationContext(Configuration().apply { densityDpi = 240 })
+        val owner = StatusHeaderController(context)
+        val type = StatusHeaderController::class.java
+        fun create() = installed.invoke(type.getDeclaredMethod("createStatusBarViews"), owner, proceed = owner::createStatusBarViews)
+        fun update() = installed.invoke(type.getDeclaredMethod("updateConstraint"), owner, proceed = owner::updateConstraint)
+        fun adjust() = installed.invoke(type.getDeclaredMethod("adjustCarrierOrPrompt"), owner, proceed = owner::adjustCarrierOrPrompt)
+        val header = owner.getView()
+        create()
+        create()
+        assertEquals(3, header.childCount)
+        val step = header.getChildAt(2) as TextView
+        val params = step.layoutParams as ConstraintLayout.LayoutParams
+        assertEquals(View.GONE, step.visibility)
+
+        update()
+        adjust()
+        assertEquals(View.VISIBLE, step.visibility)
+        assertEquals(owner.carrier.id, params.endToStart)
+        assertEquals(owner.icons.id, params.bottomToTop)
+        assertEquals(owner.verticalBottomMargin, params.bottomMargin)
+        assertEquals(6, params.marginEnd)
+        val spec = MeasureSpec.makeMeasureSpec(400, MeasureSpec.EXACTLY)
+        header.measure(spec, spec)
+        header.layout(0, 0, 400, 400)
+        update()
+        assertFalse(step.isLayoutRequested)
+
+        owner.privacyPrompt = true
+        adjust()
+        assertEquals(View.GONE, step.visibility)
+        owner.privacyPrompt = false
+        owner.vertical = false
+        update()
+        adjust()
+        assertEquals(View.VISIBLE, owner.carrier.visibility)
+        assertEquals(View.GONE, step.visibility)
+        owner.vertical = true
+        owner.verticalBottomMargin = 36
+        update()
+        adjust()
+        assertEquals(36, params.bottomMargin)
+        assertEquals(View.VISIBLE, step.visibility)
+
+        val expand = type.getDeclaredMethod("onExpandChange", Float::class.javaPrimitiveType)
+        installed.invoke(expand, owner, 14f) { owner.onExpandChange(14f) }
+        assertEquals(owner.carrier.translationY, step.translationY, 0f)
+    }
+
+    @Test fun verticalStackKeepsTheLeftPanelAttachedAndHorizontalUsesNativeMargins() = withControlCenterHooks { installed ->
         val target = MainPanelController::class.java.getDeclaredMethod("setUseSeparatedPanels", Boolean::class.javaObjectType)
         val owner = MainPanelController(RuntimeEnvironment.getApplication())
         val stack = owner.horizontalMainPanel
@@ -73,7 +156,7 @@ class ControlCenterPanelHookTest {
         assertEquals(4, nativeCalls)
     }
 
-    @Test fun onlyChangedStackedDimensionsRequestLayout() = withGridHooks { installed ->
+    @Test fun onlyChangedStackedDimensionsRequestLayout() = withControlCenterHooks { installed ->
         val owner = MainPanelController(RuntimeEnvironment.getApplication())
         val target = MainPanelController::class.java.getDeclaredMethod("setUseSeparatedPanels", Boolean::class.javaObjectType)
         val resize = MainPanelController::class.java.getDeclaredMethod("updatePanelSize")
@@ -108,7 +191,7 @@ class ControlCenterPanelHookTest {
         assertTrue(panels.all { it.layoutParams.height == MATCH_PARENT })
     }
 
-    @Test fun nativeTileInflateAndResizeUseTheSameCustomGeometry() = withGridHooks { installed ->
+    @Test fun nativeTileInflateAndResizeUseTheSameCustomGeometry() = withControlCenterHooks { installed ->
         val type = QSTileItemView::class.java
         val inflate = type.getDeclaredMethod("onFinishInflate")
         val updateHeight = type.getDeclaredMethod("updateContainerHeight").apply { isAccessible = true }
@@ -137,7 +220,7 @@ class ControlCenterPanelHookTest {
         }
     }
 
-    @Test fun panelAnimationMirrorsOnlyChangedAlphaInNativeVerticalMode() = withGridHooks { installed ->
+    @Test fun panelAnimationMirrorsOnlyChangedAlphaInNativeVerticalMode() = withControlCenterHooks { installed ->
         val config = Configuration().apply { orientation = Configuration.ORIENTATION_LANDSCAPE }
         val context = RuntimeEnvironment.getApplication().createConfigurationContext(config)
         val owner = MainPanelAnimController(context)
@@ -168,7 +251,7 @@ class ControlCenterPanelHookTest {
         }
     }
 
-    @Test fun verticalRebuildMovesAvailableControllersInNativeOrder() = withGridHooks(
+    @Test fun verticalRebuildMovesAvailableControllersInNativeOrder() = withControlCenterHooks(
         install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = false, hideSecurity = false) },
     ) { installed ->
         val qs = QSListController()
@@ -200,7 +283,7 @@ class ControlCenterPanelHookTest {
         assertEquals(listOf(first, last), right)
     }
 
-    @Test fun combinedOptionsKeepTheNativeSourceListAndBindOnlyTheLeftGrid() = withGridHooks(
+    @Test fun combinedOptionsKeepTheNativeSourceListAndBindOnlyTheLeftGrid() = withControlCenterHooks(
         install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = true, hideSecurity = true) },
     ) { installed ->
         val qs = QSListController()
@@ -221,7 +304,7 @@ class ControlCenterPanelHookTest {
         assertTrue(owner.rightPanelContent.isEmpty())
     }
 
-    @Test fun customSpansReadEachLeftAdaptersCurrentContentAndKeepRightSpansNative() = withGridHooks(
+    @Test fun customSpansReadEachLeftAdaptersCurrentContentAndKeepRightSpansNative() = withControlCenterHooks(
         install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = false, hideSecurity = false) },
     ) { installed ->
         val first = MainPanelContentDistributor(emptyList())
@@ -259,7 +342,7 @@ class ControlCenterPanelHookTest {
         assertEquals(1, nativeCalls)
     }
 
-    @Test fun failedSpanHookDoesNotApplyCustomColumnsOrDisableHiddenItems() = withGridHooks(
+    @Test fun failedSpanHookDoesNotApplyCustomColumnsOrDisableHiddenItems() = withControlCenterHooks(
         install = { SystemUIControlCenterHooks.hookPanelContent(it, 5, hideEdit = true, hideSecurity = false) },
         reject = { it.name == "getSpanSize" },
     ) { installed ->
@@ -276,7 +359,7 @@ class ControlCenterPanelHookTest {
         invoke(method, owner, horizontal) { owner.distributePanels(horizontal) }
     }
 
-    private fun withGridHooks(
+    private fun withControlCenterHooks(
         install: (ClassLoader) -> Unit = { SystemUIControlCenterHooks.SystemCCGridHookLoader(it, 5) },
         reject: (Executable) -> Boolean = { false },
         test: (Map<Executable, XposedInterface.Hooker>) -> Unit,
@@ -307,16 +390,17 @@ class ControlCenterPanelHookTest {
 
     private fun Map<Executable, XposedInterface.Hooker>.invoke(
         member: Executable,
-        owner: Any,
+        owner: Any?,
         vararg args: Any?,
+        rewrite: ((Array<Any?>) -> Any?)? = null,
         proceed: () -> Any?,
     ): Any? = getValue(member).intercept(object : XposedInterface.Chain {
         override fun getExecutable() = member
         override fun getThisObject() = owner
-        override fun getArgs(): List<Any?> = error("Read only the arguments used by the hook")
+        override fun getArgs(): List<Any?> = if (rewrite != null) args.toList() else error("Read only the arguments used by the hook")
         override fun getArg(index: Int): Any? = args[index]
         override fun proceed(): Any? = proceed.invoke()
-        override fun proceed(args: Array<Any?>): Any? = error("The hook must preserve the native arguments")
+        override fun proceed(args: Array<Any?>): Any? = requireNotNull(rewrite)(args)
         override fun proceedWith(thisObject: Any): Any? = error("The hook must preserve the native owner")
         override fun proceedWith(thisObject: Any, args: Array<Any?>): Any? = error("The hook must preserve the native call")
     })
