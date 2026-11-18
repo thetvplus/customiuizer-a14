@@ -86,10 +86,11 @@ gh workflow run a14-signed-build.yml --ref master -f destination=actions-only
 - 校验“说明基线 → 当前稳定安全基线 → 最终候选”的 Git 祖先关系，并查看说明基线到候选 exact SHA 的完整 diff。双语 `自 … 起的变更 / Changes since …` 使用说明基线。
 - 阶段总结从正式源码核对仍有效的能力。下一阶段使用当前正式标签作为起点。旧版对照需要原始记录时查发行标签或私有归档。
 
-日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。准备时使用 `prepare_release.py --dry-run` 预览，再检查版本一致性。
+日常维护 `CHANGELOG.md` 的“未发布”和 `CHANGELOG_EN.md` 的“Unreleased”。用户内容与工程记录分别放在 `用户变化 / User changes`、`工程说明 / Engineering notes`。准备时使用 `prepare_release.py --dry-run` 预览。升版时同步更新 `release-policy.json` 和 `FormalTargetAndNotesTest` 的正式目标，再检查版本一致性。
 
 ```sh
 python tools/check_release_metadata.py
+python -m unittest tools.tests.test_signed_release.FormalTargetAndNotesTest
 ```
 
 准备工具先验证全部输入，再统一更新 Gradle、双语 README 和双语 Changelog。版本按发布策略递增。整理已发行系列时，`--notes-base` 指定累计基线并保留历史节。`--supersede / --base-version` 仅供旧版源码整理，作为独立模式使用。
