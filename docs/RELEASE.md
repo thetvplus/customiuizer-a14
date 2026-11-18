@@ -124,7 +124,7 @@ APK 检查 applicationId、版本、SDK 34、arm64-v8a、不可调试、16 KB zi
 
 严格顺序为“源码草稿 → 上传缺失资产 → 两资产核验 → 源码公开与读回 → 下载仓 tag / 草稿 → 同资产核验 → 下载仓公开与读回”。每端检查 tag / source、标题、Notes、draft / prerelease、Latest、唯一预期资产、官方 digest 和大小。可信 digest 完整且匹配时无需重复下载；缺失或异常则失败或下载核验。上传退出成功不能作为发布成功。
 
-两仓核验后由 `release_docs.py` 从已公开的最新稳定源码生成下载仓 README、Changelog、SUMMARY。下载仓 README 的安装说明和兼容矩阵固定到该 APK 的源码，项目主页入口用于浏览当前维护文档。一次非强制 Git 提交更新，提交前重查 Latest / main，提交后核对树内实际 blob；无变化即不写。较旧发行不能覆盖较新文档。
+两仓核验后由 `release_docs.py` 从已公开的最新稳定源码生成下载仓 README、Changelog、SUMMARY。下载仓 README 的安装说明和兼容矩阵固定到该 APK 的源码，项目主页入口用于浏览当前维护文档。语言切换和更新记录使用下载仓的绝对链接，供 GitHub 和 Xposed 模块站共用。一次非强制 Git 提交更新，提交前重查 Latest / main，提交后核对树内实际 blob；无变化即不写。较旧发行不能覆盖较新文档。
 
 ## 同一 APK 按需晋升与故障恢复
 

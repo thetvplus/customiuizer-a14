@@ -4,7 +4,7 @@
 
 CustoMIUIzer A14 is an Xposed module for customizing the system UI, launcher, and interactions on **HyperOS 1 / Android 14**. It supports **arm64-v8a** and requires **libxposed API 102 or later**. See the [compatibility matrix](COMPATIBILITY.md) for ROM and host-app requirements.
 
-[Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Changelog](CHANGELOG_EN.md)
+[Download the official release](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Xposed download repository](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14/blob/main/README_EN.md) · [Changelog](CHANGELOG_EN.md)
 
 [Telegram community](https://t.me/customiuizerA14)
 

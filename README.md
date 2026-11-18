@@ -4,7 +4,7 @@
 
 米客 A14 是基于 CustoMIUIzer 的 Xposed 模块，用于定制 **HyperOS 1 / Android 14** 的系统界面、桌面和交互。支持 **arm64-v8a**，框架最低要求为 **libxposed API 102**。具体功能的 ROM 和宿主版本要求见[兼容矩阵](COMPATIBILITY.md)。
 
-[下载正式版](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [更新记录](CHANGELOG.md)
+[下载正式版](https://github.com/thetvplus/customiuizer-a14/releases/latest) · [Xposed 下载仓](https://github.com/Xposed-Modules-Repo/tv.withaibuild.customiuizer.r14) · [更新记录](CHANGELOG.md)
 
 [Telegram 交流群](https://t.me/customiuizerA14)
 
