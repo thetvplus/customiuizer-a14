@@ -2220,58 +2220,59 @@ object SystemUIControlCenterHooks {
 
     @JvmStatic
     fun SwitchCCAndNotificationHook(lpparam: PackageReadyParam) {
-        ModuleHelper.findAndHookMethod("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", lpparam.classLoader, "handleEvent", MotionEvent::class.java, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val mPanelController = XposedHelpers.getObjectField(callback.getThisObject(), "mPanelController")
-                val useCC = XposedHelpers.callMethod(mPanelController, "isExpandable") as Boolean
-                if (useCC) {
-                    val bar = callback.getThisObject() as FrameLayout
-                    val mControlPanelWindowManager = XposedHelpers.getObjectField(callback.getThisObject(), "mControlPanelWindowManager")
-                    if (callback.getArgs().isEmpty()) {
-                        callback.returnAndSkip(false)
-                        return
-                    }
-                    val dispatchToControlPanel = XposedHelpers.callMethod(mControlPanelWindowManager, "dispatchToControlPanel", callback.getArg(0), bar.width.toFloat()) as Boolean
-                    XposedHelpers.callMethod(mControlPanelWindowManager, "setTransToControlPanel", dispatchToControlPanel)
-                    callback.returnAndSkip(dispatchToControlPanel)
-                    return
+        val loader = lpparam.classLoader
+        val barClass = XposedHelpers.findClass("com.android.systemui.statusbar.phone.MiuiPhoneStatusBarView", loader)
+        val managerClass = XposedHelpers.findClass("com.android.systemui.controlcenter.phone.ControlPanelWindowManager", loader)
+        val handleEvent = barClass.getDeclaredMethod("handleEvent", MotionEvent::class.java)
+        val dispatchEvent = managerClass.getDeclaredMethod("dispatchToControlPanel", MotionEvent::class.java, Float::class.javaPrimitiveType)
+        val barUsesControlCenter = barClass.getDeclaredField("mUseControlCenter").apply { isAccessible = true }
+        val motionToControlCenter = barClass.getDeclaredField("mMotionToControlCenter").apply { isAccessible = true }
+        val added = managerClass.getDeclaredField("added").apply { isAccessible = true }
+        val controller = managerClass.getDeclaredField("controlCenterController").apply { isAccessible = true }
+        val useControlCenter = controller.type.getDeclaredField("useControlCenter").apply { isAccessible = true }
+        val downX = managerClass.getDeclaredField("downX").apply { isAccessible = true }
+        val window = managerClass.getDeclaredField("windowView").apply { isAccessible = true }
+        val handleMotionEvent = window.type.getMethod("handleMotionEvent", MotionEvent::class.java, Boolean::class.javaPrimitiveType)
+
+        val statusBar = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                val event = chain.getArg(0) as? MotionEvent ?: return chain.proceed()
+                if (event.actionMasked != MotionEvent.ACTION_DOWN) return chain.proceed()
+                val bar = chain.thisObject as View
+                val fromLeft = ModuleHelper.guarded<Boolean?>(null) {
+                    if (!barUsesControlCenter.getBoolean(bar)) return@guarded null
+                    // The ROM only sets this latch on a right DOWN. Seed it for a left DOWN
+                    // so the original still processes focused notifications and owns UP/CANCEL.
+                    (event.rawX < bar.width / 2f).also { if (it) motionToControlCenter.setBoolean(bar, true) }
                 }
-                callback.returnAndSkip(false)
-            }
-        })
-        ModuleHelper.findAndHookMethod("com.android.systemui.controlcenter.phone.ControlPanelWindowManager", lpparam.classLoader, "dispatchToControlPanel", MotionEvent::class.java, Float::class.javaPrimitiveType!!, object : MethodHook() {
-            override fun before(callback: BeforeHookCallback) {
-                val added = XposedHelpers.getBooleanField(callback.getThisObject(), "added")
-                if (added) {
-                    val controlCenterController = XposedHelpers.getObjectField(callback.getThisObject(), "controlCenterController")
-                    val useCC = XposedHelpers.getBooleanField(controlCenterController, "useControlCenter")
-                    if (useCC) {
-                        if (callback.getArgs().size < 2) {
-                            callback.returnAndSkip(false)
-                            return
-                        }
-                        val motionEvent = callback.getArg(0) as? MotionEvent ?: return
-                        if (motionEvent.actionMasked == MotionEvent.ACTION_DOWN) {
-                            XposedHelpers.setFloatField(callback.getThisObject(), "downX", motionEvent.rawX)
-                        }
-                        val controlCenterWindowView = XposedHelpers.getObjectField(callback.getThisObject(), "windowView")
-                        if (controlCenterWindowView == null) {
-                            callback.returnAndSkip(false)
-                        } else {
-                            val mDownX = XposedHelpers.getFloatField(callback.getThisObject(), "downX")
-                            val width = callback.getArg(1) as? Float ?: return
-                            if (mDownX < width / 2.0f) {
-                                callback.returnAndSkip(XposedHelpers.callMethod(controlCenterWindowView, "handleMotionEvent", motionEvent, true))
-                            } else {
-                                callback.returnAndSkip(false)
-                            }
-                        }
-                        return
-                    }
+                if (fromLeft != false) return chain.proceed()
+                try {
+                    chain.proceed()
+                } finally {
+                    // The paired manager hook declined this right DOWN. Let the shade handle it.
+                    ModuleHelper.guarded { motionToControlCenter.setBoolean(bar, false) }
                 }
-                callback.returnAndSkip(false)
+                return false
             }
-        })
+        }
+        val windowManager = object : MethodHook() {
+            override fun intercept(chain: XposedInterface.Chain): Any? = ModuleHelper.guarded(false) {
+                val manager = chain.thisObject
+                if (!added.getBoolean(manager) || !useControlCenter.getBoolean(controller.get(manager))) return@guarded false
+                val event = chain.getArg(0) as MotionEvent
+                val startX = if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    event.rawX.also { downX.setFloat(manager, it) }
+                } else {
+                    downX.getFloat(manager)
+                }
+                val width = chain.getArg(1) as Float
+                val fromLeft = startX < width / 2f
+                if (!fromLeft) return@guarded false
+                val view = window.get(manager) ?: return@guarded false
+                handleMotionEvent.invoke(view, event, true) as Boolean
+            }
+        }
+        check(PreparedHookBatch().install(listOf(handleEvent to statusBar, dispatchEvent to windowManager)).isActive)
     }
 
 }

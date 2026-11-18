@@ -738,7 +738,10 @@ internal object IosVolumeStyle {
         }
         fun nativeVolume(level: Int, minimum: Int, maximum: Int,initial: Boolean=false) {
             val changed = level != nativeLevel
-            if(changed || minimum!=nativeMin || maximum!=nativeMax) paint.releaseEndpoint()
+            if (changed || minimum != nativeMin || maximum != nativeMax) {
+                if (nativeLevel == nativeMin || nativeLevel == nativeMax) root.removeCallbacks(hardwareRelease)
+                paint.releaseEndpoint()
+            }
             if(initial) levelChangedForInput=false else if(changed) levelChangedForInput=true
             nativeLevel = level; nativeMin = minimum; nativeMax = maximum
             if (changed && hardwarePending) consumeHardwareEndpoint()
@@ -749,10 +752,13 @@ internal object IosVolumeStyle {
             val advance = !levelChangedForInput
             levelChangedForInput = false
             if (closed || tracking || !root.isShown || nativeMax <= nativeMin) return
-            when (nativeLevel) {
-                nativeMax -> { allowStretch(); paint.endpointKick(1f,advance) }
-                nativeMin -> { allowStretch(); paint.endpointKick(-1f,advance) }
+            val direction = when (nativeLevel) {
+                nativeMax -> 1f
+                nativeMin -> -1f
+                else -> return
             }
+            allowStretch()
+            paint.endpointKick(direction, advance)
             root.removeCallbacks(hardwareRelease)
             root.postDelayed(hardwareRelease,600L)
         }

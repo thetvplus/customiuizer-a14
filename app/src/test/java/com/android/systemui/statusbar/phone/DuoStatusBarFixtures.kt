@@ -1,7 +1,29 @@
 package com.android.systemui.statusbar.phone
 
-class MiuiPhoneStatusBarView {
-    fun handleEvent(@Suppress("UNUSED_PARAMETER") event: android.view.MotionEvent) = false
+import android.content.Context
+import android.view.MotionEvent
+import android.widget.FrameLayout
+
+class MiuiPhoneStatusBarView(context: Context) : FrameLayout(context) {
+    @JvmField var mUseControlCenter = true
+    @JvmField var mMotionToControlCenter = false
+    var nativeEvents = 0
+        private set
+    var dispatchToControlPanel: (MotionEvent, Float) -> Unit = { _, _ -> }
+
+    fun handleEvent(event: MotionEvent): Boolean {
+        nativeEvents++
+        val action = event.actionMasked
+        if (mUseControlCenter && action == MotionEvent.ACTION_DOWN && event.rawX >= width / 2f) {
+            mMotionToControlCenter = true
+        }
+        val routed = mUseControlCenter && mMotionToControlCenter
+        if (routed) dispatchToControlPanel(event, width.toFloat())
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            mMotionToControlCenter = false
+        }
+        return routed
+    }
 }
 class KeyguardStatusBarView
 
