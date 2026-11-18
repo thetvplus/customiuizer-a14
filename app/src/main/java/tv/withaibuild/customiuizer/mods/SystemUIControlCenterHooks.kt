@@ -51,6 +51,7 @@ import tv.withaibuild.customiuizer.mods.utils.ResourceHooks
 import tv.withaibuild.customiuizer.mods.utils.StepCounterController
 import tv.withaibuild.customiuizer.mods.utils.XposedHelpers
 import java.util.ArrayList
+import java.util.Locale
 import java.lang.System
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -1524,53 +1525,60 @@ object SystemUIControlCenterHooks {
     }
 
     @JvmStatic
-    fun VolumeTimerValuesRes(pluginLoader: ClassLoader) {
-        ModuleHelper.findAndHookMethod("com.android.systemui.miui.volume.MiuiVolumeTimerDrawableHelper", pluginLoader, "initTimerString", VolumeTimerLabelsHook())
-        ModuleHelper.findAndHookMethod("com.android.systemui.miui.volume.TimerItem", pluginLoader, "getTimePos", Int::class.javaPrimitiveType!!, VolumeTimerPositionHook())
-
-        ModuleHelper.guarded {
-            val helperClass = XposedHelpers.findClass(
-                "com.android.systemui.miui.volume.MiuiVolumeTimerDrawableHelper", pluginLoader,
-            )
-            ModuleHelper.findAndHookMethod(helperClass, "updateDrawables", VolumeTimerSegmentHook(helperClass))
-        }
+    fun VolumeTimerValuesRes(pluginLoader: ClassLoader) = ModuleHelper.guarded {
+        val volumePackage = "com.android.systemui.miui.volume"
+        val helperClass = XposedHelpers.findClass("$volumePackage.MiuiVolumeTimerDrawableHelper", pluginLoader)
+        val itemClass = XposedHelpers.findClass("$volumePackage.TimerItem", pluginLoader)
+        val seekBarClass = XposedHelpers.findClass("$volumePackage.MiuiVolumeTimerSeekBar", pluginLoader)
+        val dimens = XposedHelpers.findClass("$volumePackage.R\$dimen", pluginLoader)
+        val margin = dimens.getDeclaredField("miui_volume_timer_seekbar_margin_left").getInt(null)
+        check(PreparedHookBatch().install(listOf(
+            helperClass.getDeclaredMethod("initTimerString") to VolumeTimerLabelsHook(helperClass, seekBarClass),
+            itemClass.getDeclaredMethod("getTimePos", Int::class.javaPrimitiveType) to VolumeTimerPositionHook(itemClass, margin),
+            helperClass.getDeclaredMethod("updateDrawables") to VolumeTimerSegmentHook(helperClass),
+        )).isActive)
     }
 
-    internal class VolumeTimerPositionHook : MethodHook() {
+    internal class VolumeTimerPositionHook(itemClass: Class<*>, private val marginId: Int) : MethodHook() {
+        private val timeView = XposedHelpers.findField(itemClass, "mTimerTime")
+        private val context = XposedHelpers.findField(itemClass, "mContext")
+        private val widthId = XposedHelpers.findField(itemClass, "mTimerSeekbarWidth")
+        private val segment = XposedHelpers.findField(itemClass, "mDeterminedSegment")
+
         override fun before(callback: BeforeHookCallback) {
-            val timer = XposedHelpers.getObjectField(callback.getThisObject(), "mTimerTime")
-            val halfTimerWidth = (XposedHelpers.callMethod(timer, "getWidth") as Int) / 2.0f
-            val mContext = XposedHelpers.getObjectField(callback.getThisObject(), "mContext") as Context
-            val mTimerSeekbarWidth = ModuleHelper.getObjectFieldSilently(callback.getThisObject(), "mTimerSeekbarWidth")
-            val seekbarWidthResId: Int
-            if (mTimerSeekbarWidth == ModuleHelper.NOT_EXIST_SYMBOL) {
-                seekbarWidthResId = mContext.resources.getIdentifier("miui_volume_timer_seekbar_width", "dimen", "miui.systemui.plugin")
-            } else {
-                seekbarWidthResId = mTimerSeekbarWidth as Int
-            }
-            if (seekbarWidthResId == 0) return
-            val mTimerSeekbarMarginLeft = mContext.resources.getIdentifier("miui_volume_timer_seekbar_margin_left", "dimen", "miui.systemui.plugin")
-            if (mTimerSeekbarMarginLeft == 0) return
-            val seekWidth = mContext.resources.getDimension(seekbarWidthResId)
-            val marginLeft = mContext.resources.getDimensionPixelSize(mTimerSeekbarMarginLeft)
-            val seg = XposedHelpers.getObjectField(callback.getThisObject(), "mDeterminedSegment") as Int
-            callback.returnAndSkip(seekWidth / 10 * seg + marginLeft - halfTimerWidth)
+            val item = callback.getThisObject()
+            val label = timeView.get(item) as View
+            val resources = (context.get(item) as Context).resources
+            val interval = resources.getDimension(widthId.getInt(item)) / VolumeTimerValues.lastSegment
+            val margin = resources.getDimensionPixelSize(marginId)
+            callback.returnAndSkip(interval * segment.getInt(item) + margin - label.width * .5f)
         }
     }
 
-    internal class VolumeTimerLabelsHook : MethodHook() {
+    internal class VolumeTimerLabelsHook(helperClass: Class<*>, private val seekBarClass: Class<*>) : MethodHook() {
+        private val context = XposedHelpers.findField(helperClass, "mContext")
+        private val timer = XposedHelpers.findField(helperClass, "mTimer")
+        private val segmentTitles = XposedHelpers.findField(helperClass, "mTimeSegmentTitle")
+        private val setTimeSegments = seekBarClass.getMethod("setTimeSegments", IntArray::class.java)
+        // Only durations are shared. Each helper owns its array and its original off label.
+        @Volatile private var localizedDurations: Pair<Locale, Array<String>>? = null
+
         override fun after(callback: AfterHookCallback) {
             if (callback.getThrowable() != null) return
             val helper = callback.getThisObject()
-            val nativeTitles = XposedHelpers.getObjectField(helper, "mTimeSegmentTitle") as? Array<*> ?: return
+            val seekBar = timer.get(helper)
+            if (!seekBarClass.isInstance(seekBar)) return
+            val nativeTitles = segmentTitles.get(helper) as? Array<*> ?: return
             val offLabel = nativeTitles.firstOrNull() as? String ?: return
             val titles = ModuleHelper.guarded<Array<String>?>(null) {
-                val context = XposedHelpers.getObjectField(helper, "mContext") as Context
-                val locale = context.resources.configuration.locales[0] ?: return@guarded null
-                VolumeTimerValues.labels(locale, offLabel)
+                val locale = (context.get(helper) as Context).resources.configuration.locales[0] ?: return@guarded null
+                val cached = localizedDurations
+                val durations = if (cached?.first == locale) cached.second else
+                    VolumeTimerValues.labels(locale, "").also { localizedDurations = locale to it }
+                durations.copyOf().apply { this[0] = offLabel }
             } ?: VolumeTimerValues.labels(null, offLabel)
-            // Always publish a whole array; the ROM clamps extended choices to its last title.
-            XposedHelpers.setObjectField(helper, "mTimeSegmentTitle", titles)
+            setTimeSegments.invoke(seekBar, VolumeTimerValues.segments())
+            segmentTitles.set(helper, titles)
         }
     }
 

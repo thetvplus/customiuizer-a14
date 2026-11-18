@@ -7,7 +7,10 @@ WHERE (class_descriptor = 'Lcom/android/systemui/miui/volume/MiuiRingerModeLayou
    OR (class_descriptor = 'Lcom/android/systemui/miui/volume/MiuiVolumeDialogView;'
   AND method_name = 'updateFooterVisibility')
    OR (class_descriptor = 'Lcom/android/systemui/miui/volume/MiuiVolumeTimerDrawableHelper;'
-  AND method_name IN ('initTimerString', 'updateCountDownStateText', 'updateDrawables'))
+  AND method_name IN ('<init>', 'initTimerString', 'updateCountDownStateText', 'updateDrawables'))
+   OR (class_descriptor IN ('Lcom/android/systemui/miui/volume/MiuiVolumeTimerSeekBar;',
+                           'Lcom/android/systemui/miui/volume/MiuiVerticalVolumeTimerSeekBar;')
+  AND method_name = '<init>')
    OR (class_descriptor = 'Lcom/android/systemui/miui/volume/TimerItem;'
   AND method_name IN ('<init>', 'getTimePos'))
    OR (class_descriptor = 'Lcom/android/systemui/miui/widget/TimerSeekBar;'
@@ -29,9 +32,11 @@ WHERE (class_descriptor = 'Lcom/android/systemui/miui/volume/MiuiRingerModeLayou
    OR (class_descriptor = 'Lcom/android/systemui/miui/volume/MiuiVolumeDialogView;'
   AND field_name = 'mRingerModeLayout')
    OR (class_descriptor = 'Lcom/android/systemui/miui/volume/MiuiVolumeTimerDrawableHelper;'
-  AND field_name IN ('mCurrentSegment', 'mDeterminedSegment', 'mTimeSegmentTitle', 'mContext'))
+  AND field_name IN ('mCurrentSegment', 'mDeterminedSegment', 'mTimeSegmentTitle', 'mContext', 'mTimer'))
    OR (class_descriptor = 'Lcom/android/systemui/miui/volume/TimerItem;'
   AND field_name IN ('mContext', 'mDeterminedSegment', 'mTimerSeekbarWidth', 'mTimerTime'))
+   OR (class_descriptor = 'Lcom/android/systemui/miui/volume/R$dimen;'
+  AND field_name = 'miui_volume_timer_seekbar_margin_left')
    OR (class_descriptor = 'Lcom/android/systemui/miui/volume/MiuiVolumeDialogImpl;'
   AND field_name IN ('mHovering', 'mExpanded', 'mIsSafetyShowing', 'mSafetyWarning',
                      'mAccessibilityMgr', 'mDialogView', 'mWindow', 'mShowing', 'mActiveStream'))

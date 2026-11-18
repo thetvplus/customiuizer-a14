@@ -24,10 +24,10 @@ import java.util.concurrent.ExecutionException
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class VolumeTimerLabelsHookTest {
-    private val hook = SystemUIControlCenterHooks.VolumeTimerLabelsHook()
+    private val hook = SystemUIControlCenterHooks.VolumeTimerLabelsHook(TimerHelper::class.java, TimerView::class.java)
 
     @Test
-    fun resourceSecondsAndLabelsShareTheElevenOrderedChoices() {
+    fun timerSecondsAndLabelsShareTheElevenOrderedChoices() {
         val expected = intArrayOf(0, 1800, 3600, 7200, 10800, 14400, 18000, 21600, 28800, 36000, 43200)
         assertArrayEquals(expected, VolumeTimerValues.segments())
         val callerOwned = VolumeTimerValues.segments()
@@ -83,36 +83,41 @@ class VolumeTimerLabelsHookTest {
     }
 
     @Test
-    fun theNativeOffLabelDoesNotDependOnAnotherResourceLookup() {
-        val helper = helper(Locale.US, "Native off translation")
-        hook.intercept(Chain(helper))
-        assertEquals("Native off translation", helper.mTimeSegmentTitle!![0])
-        assertEquals(0, (helper.mContext.resources as TimerResources).identifierReads)
+    fun sameLocaleTimersKeepTheirOwnArraysAndNativeOffLabels() {
+        val first = helper(Locale.US, "Silence off")
+        hook.intercept(Chain(first))
+        first.mTimeSegmentTitle!![10] = "Changed by an owner"
+        first.mTimer.segments[10] = 1
+
+        val second = TimerHelper(TimerContext(TimerResources(Locale.US)), arrayOf("DND off"), VerticalTimerView())
+        hook.intercept(Chain(second))
+        assertEquals("DND off", second.mTimeSegmentTitle!![0])
+        assertEquals("12 hours", second.mTimeSegmentTitle!![10])
+        assertArrayEquals(VolumeTimerValues.segments(), second.mTimer.segments)
+        assertEquals(0, (second.mContext.resources as TimerResources).identifierReads)
     }
 
     @Test
-    fun missingPluginStringNamesDoNotPreventAnElevenLabelArray() {
-        val resources = TimerResources(Locale.US).apply { missingNames = true }
-        val helper = TimerHelper(TimerContext(resources), arrayOf("Off", "30 minutes", "1 hour", "2 hours", "8 hours"))
-        hook.intercept(Chain(helper))
-        assertEquals(11, helper.mTimeSegmentTitle!!.size)
-        assertEquals("12 hours", helper.mTimeSegmentTitle!![10])
-    }
-
-    @Test
-    fun aConfigurationFailurePublishesAllElevenChoicesWithoutMutatingTheNativeArray() {
-        val resources = TimerResources(Locale.US).apply {
-            configurationFailure = Resources.NotFoundException("configuration unavailable")
+    fun aMissingLocaleUsesTheFallbackAndKeepsAllNativeTimerChoicesAligned() {
+        for (failConfiguration in listOf(false, true)) {
+            val failure = Resources.NotFoundException("locale unavailable")
+            val resources = TimerResources(Locale.US).apply {
+                if (failConfiguration) configurationFailure = failure
+            }
+            val context = TimerContext(resources).apply {
+                if (!failConfiguration) this.failure = failure
+            }
+            val helper = TimerHelper(context, arrayOf("Off", "30 minutes", "1 hour", "2 hours", "8 hours"))
+            val original = helper.mTimeSegmentTitle
+            val result = Any()
+            val chain = Chain(helper, result)
+            assertSame(result, hook.intercept(chain))
+            assertArrayEquals(arrayOf("Off", "30 minutes", "1 hour", "2 hours", "8 hours"), original)
+            assertArrayEquals(VolumeTimerValues.segments(), helper.mTimer.segments)
+            assertArrayEquals(arrayOf("Off", "30 min", "1 h", "2 h", "3 h", "4 h", "5 h",
+                "6 h", "8 h", "10 h", "12 h"), helper.mTimeSegmentTitle)
+            assertEquals(1, chain.proceedCount)
         }
-        val helper = TimerHelper(TimerContext(resources), arrayOf("Off", "30 minutes", "1 hour", "2 hours", "8 hours"))
-        val original = helper.mTimeSegmentTitle
-        val result = Any()
-        val chain = Chain(helper, result)
-        assertSame(result, hook.intercept(chain))
-        assertArrayEquals(arrayOf("Off", "30 minutes", "1 hour", "2 hours", "8 hours"), original)
-        assertEquals(11, helper.mTimeSegmentTitle!!.size)
-        assertEquals("12 h", helper.mTimeSegmentTitle!![10])
-        assertEquals(1, chain.proceedCount)
     }
 
     @Test
@@ -158,42 +163,13 @@ class VolumeTimerLabelsHookTest {
     }
 
     @Test
-    fun anOrdinaryResourceFailureKeepsTheNativeResultAndAllTimerChoices() {
-        val context = TimerContext(TimerResources(Locale.US)).apply {
-            failure = Resources.NotFoundException("resources unavailable")
-        }
-        val helper = TimerHelper(context, arrayOf("Off"))
-        val original = helper.mTimeSegmentTitle
-        val result = Any()
-        val chain = Chain(helper, result)
-        assertSame(result, hook.intercept(chain))
-        assertArrayEquals(arrayOf("Off"), original)
-        assertEquals(11, helper.mTimeSegmentTitle!!.size)
-        assertEquals("12 h", helper.mTimeSegmentTitle!![10])
-        assertEquals(1, chain.proceedCount)
-    }
-
-    @Test
-    fun aResourceFailureMustNotClampTheTwelveHourLabelToEightHours() {
-        val context = TimerContext(TimerResources(Locale.US)).apply {
-            failure = Resources.NotFoundException("resources unavailable")
-        }
-        val helper = TimerHelper(context, arrayOf("Off", "30 minutes", "1 hour", "2 hours", "8 hours"))
-        hook.intercept(Chain(helper))
-        val titles = helper.mTimeSegmentTitle!!
-        // The ROM constrains the determined segment to the title array's last index.
-        assertEquals("12 h", titles[10.coerceIn(0, titles.lastIndex)])
-        assertArrayEquals(arrayOf("Off", "30 min", "1 h", "2 h", "3 h", "4 h", "5 h",
-            "6 h", "8 h", "10 h", "12 h"), titles)
-    }
-
-    @Test
     fun missingOrEmptyNativeTitlesKeepNativeBehavior() {
         for (titles in listOf(null, emptyArray<String>())) {
             val helper = TimerHelper(TimerContext(TimerResources(Locale.US)), titles)
             val chain = Chain(helper)
             hook.intercept(chain)
             assertSame(titles, helper.mTimeSegmentTitle)
+            assertEquals(0, helper.mTimer.segments.size)
             assertEquals(0, (helper.mContext as TimerContext).resourceReads)
             assertEquals(1, chain.proceedCount)
         }
@@ -224,13 +200,20 @@ class VolumeTimerLabelsHookTest {
     private class TimerHelper(
         @JvmField val mContext: Context,
         @JvmField var mTimeSegmentTitle: Array<String>?,
+        @JvmField val mTimer: TimerView = TimerView(),
     )
+
+    open class TimerView {
+        @JvmField var segments = IntArray(0)
+        fun setTimeSegments(value: IntArray) { segments = value }
+    }
+
+    private class VerticalTimerView : TimerView()
 
     @Suppress("DEPRECATION")
     private class TimerResources(var locale: Locale) :
         Resources(RuntimeEnvironment.getApplication().assets, DisplayMetrics(), Configuration()) {
         var identifierReads = 0
-        var missingNames = false
         var configurationFailure: Throwable? = null
 
         override fun getConfiguration(): Configuration {
@@ -240,39 +223,9 @@ class VolumeTimerLabelsHookTest {
 
         override fun getIdentifier(name: String?, defType: String?, defPackage: String?): Int {
             identifierReads++
-            if (missingNames) return 0
-            return when (name) {
-                "timer_off" -> 1
-                "timer_30_minutes" -> 2
-                "timer_1_hour" -> 3
-                else -> 0
-            }
+            return 0
         }
 
-        override fun getString(id: Int): String = when (id) {
-            1 -> when (locale.language) {
-                "ru" -> "Откл"
-                "cs" -> "Vyp."
-                "zh" -> if (locale.country == "TW") "關閉" else "关闭"
-                else -> "Off"
-            }
-            2 -> when (locale.language) {
-                "ru" -> "%d минут"
-                "cs" -> "%d minut"
-                "zh" -> if (locale.country == "TW") "%d分鐘" else "%d分钟"
-                else -> "%d minutes"
-            }
-            3 -> when (locale.language) {
-                "ru" -> "%d час"
-                "cs" -> "%d hodina"
-                "zh" -> if (locale.country == "TW") "%d小時" else "%d小时"
-                else -> "%d hour"
-            }
-            else -> throw NotFoundException("missing timer resource")
-        }
-
-        override fun getString(id: Int, vararg formatArgs: Any?): String =
-            String.format(locale, getString(id), *formatArgs)
     }
 
     private class TimerContext(private val timerResources: Resources) : ContextWrapper(null) {
@@ -304,4 +257,5 @@ class VolumeTimerLabelsHookTest {
         override fun proceedWith(receiver: Any): Any? = error("not used")
         override fun proceedWith(receiver: Any, args: Array<Any>): Any? = error("not used")
     }
+
 }

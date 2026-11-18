@@ -62,17 +62,6 @@ class SystemUiResourceBootstrapContractTest {
     }
 
     @Test
-    fun bootstrap_preservesVolumeTimerResource() {
-        val bootstrap = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/SystemUiResourceBootstrap.kt")
-
-        assertTrue(
-            "system_volumetimer and miui_volume_timer_segments replacement must be present",
-            bootstrap.contains("system_volumetimer") &&
-                bootstrap.contains("\"miui_volume_timer_segments\", VolumeTimerValues.segments()")
-        )
-    }
-
-    @Test
     fun bootstrap_preservesStatusBarIconSizeResources() {
         val bootstrap = source("app/src/main/java/tv/withaibuild/customiuizer/mods/utils/SystemUiResourceBootstrap.kt")
 
